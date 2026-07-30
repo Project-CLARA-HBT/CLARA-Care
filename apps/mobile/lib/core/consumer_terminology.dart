@@ -110,6 +110,54 @@ enum ConsumerTerm {
   lifeMapOneQuestion,
   lifeMapViewHistory,
   lifeMapLoadFailed,
+  medicinesMyMedicines,
+  medicinesCabinet,
+  medicinesSafety,
+  medicinesLoginRequired,
+  medicinesLoadFailed,
+  medicinesProfileRequiredTitle,
+  medicinesProfileRequiredDescription,
+  medicinesReload,
+  medicinesEmptyTitle,
+  medicinesEmptyDescription,
+  medicinesAdd,
+  medicinesUnnamed,
+  medicinesEnded,
+  medicinesActive,
+  medicinesSourceMatched,
+  medicinesUnverified,
+  medicinesActionsTooltip,
+  medicinesEditNewVersion,
+  medicinesEndCourse,
+  medicinesEndConfirmTitle,
+  medicinesEndConfirmDescription,
+  medicinesEndAuditReason,
+  medicinesCancel,
+  medicinesConfirm,
+  medicinesNameRequired,
+  medicinesLoginToAdd,
+  medicinesEditReasonRequired,
+  medicinesSaveFailed,
+  medicinesAddTitle,
+  medicinesEditTitle,
+  medicinesNameLabel,
+  medicinesNameHint,
+  medicinesDoseLabel,
+  medicinesDoseHint,
+  medicinesScheduleLabel,
+  medicinesScheduleHint,
+  medicinesRouteLabel,
+  medicinesRouteHint,
+  medicinesFormLabel,
+  medicinesFormHint,
+  medicinesEditReasonLabel,
+  medicinesEditReasonHint,
+  medicinesSave,
+  medicinesSaveNewVersion,
+  medicinesSafetyTitle,
+  medicinesSafetyDescription,
+  medicinesOpenCabinet,
+  medicinesSafetyNotice,
 }
 
 extension ConsumerTermContractKey on ConsumerTerm {
@@ -280,6 +328,69 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapOneQuestion: 'Một câu hỏi',
     ConsumerTerm.lifeMapViewHistory: 'Xem lịch sử',
     ConsumerTerm.lifeMapLoadFailed: 'Không thể tải LifeMap. Vui lòng thử lại.',
+    ConsumerTerm.medicinesMyMedicines: 'Thuốc của tôi',
+    ConsumerTerm.medicinesCabinet: 'Tủ thuốc',
+    ConsumerTerm.medicinesSafety: 'An toàn',
+    ConsumerTerm.medicinesLoginRequired:
+        'Bạn cần đăng nhập để xem danh sách thuốc.',
+    ConsumerTerm.medicinesLoadFailed:
+        'Không thể tải danh sách thuốc. Vui lòng thử lại.',
+    ConsumerTerm.medicinesProfileRequiredTitle: 'Chưa có hồ sơ sức khỏe',
+    ConsumerTerm.medicinesProfileRequiredDescription:
+        'Bạn cần tạo hồ sơ sức khỏe trước khi thêm thuốc. Sau khi có hồ sơ, '
+            'danh sách thuốc của bạn sẽ hiển thị ở đây.',
+    ConsumerTerm.medicinesReload: 'Tải lại',
+    ConsumerTerm.medicinesEmptyTitle: 'Chưa có thuốc nào',
+    ConsumerTerm.medicinesEmptyDescription:
+        'Thêm thuốc bạn đang dùng để CLARA giúp theo dõi. Thông tin chỉ được '
+            'lưu khi bạn tự xác nhận.',
+    ConsumerTerm.medicinesAdd: 'Thêm thuốc',
+    ConsumerTerm.medicinesUnnamed: 'Thuốc chưa đặt tên',
+    ConsumerTerm.medicinesEnded: 'Đã kết thúc',
+    ConsumerTerm.medicinesActive: 'Đang dùng',
+    ConsumerTerm.medicinesSourceMatched: 'Đã khớp nguồn',
+    ConsumerTerm.medicinesUnverified: 'Chưa xác minh',
+    ConsumerTerm.medicinesActionsTooltip: 'Thao tác với thuốc',
+    ConsumerTerm.medicinesEditNewVersion: 'Sửa bằng phiên bản mới',
+    ConsumerTerm.medicinesEndCourse: 'Ghi nhận đã kết thúc',
+    ConsumerTerm.medicinesEndConfirmTitle: 'Ghi nhận đã kết thúc?',
+    ConsumerTerm.medicinesEndConfirmDescription:
+        'Thao tác này chỉ cập nhật hồ sơ của bạn, không phải khuyến nghị dừng '
+            'thuốc. Không tự ý ngừng thuốc nếu chưa trao đổi với chuyên gia y tế.',
+    ConsumerTerm.medicinesEndAuditReason:
+        'Người dùng xác nhận kết thúc trên ứng dụng di động',
+    ConsumerTerm.medicinesCancel: 'Hủy',
+    ConsumerTerm.medicinesConfirm: 'Ghi nhận',
+    ConsumerTerm.medicinesNameRequired: 'Vui lòng nhập tên thuốc.',
+    ConsumerTerm.medicinesLoginToAdd: 'Bạn cần đăng nhập để thêm thuốc.',
+    ConsumerTerm.medicinesEditReasonRequired: 'Vui lòng nhập lý do chỉnh sửa.',
+    ConsumerTerm.medicinesSaveFailed: 'Không thể lưu thuốc. Vui lòng thử lại.',
+    ConsumerTerm.medicinesAddTitle: 'Thêm thuốc',
+    ConsumerTerm.medicinesEditTitle: 'Sửa thông tin thuốc',
+    ConsumerTerm.medicinesNameLabel: 'Tên thuốc *',
+    ConsumerTerm.medicinesNameHint: 'Ví dụ: Paracetamol',
+    ConsumerTerm.medicinesDoseLabel: 'Liều dùng',
+    ConsumerTerm.medicinesDoseHint: 'Ví dụ: 500mg',
+    ConsumerTerm.medicinesScheduleLabel: 'Lịch dùng',
+    ConsumerTerm.medicinesScheduleHint: 'Ví dụ: 2 lần/ngày sau ăn',
+    ConsumerTerm.medicinesRouteLabel: 'Đường dùng',
+    ConsumerTerm.medicinesRouteHint: 'Ví dụ: Uống',
+    ConsumerTerm.medicinesFormLabel: 'Dạng thuốc',
+    ConsumerTerm.medicinesFormHint: 'Ví dụ: Viên nén',
+    ConsumerTerm.medicinesEditReasonLabel: 'Lý do chỉnh sửa *',
+    ConsumerTerm.medicinesEditReasonHint: 'Ví dụ: Sửa thông tin đã nhập nhầm',
+    ConsumerTerm.medicinesSave: 'Lưu thuốc',
+    ConsumerTerm.medicinesSaveNewVersion: 'Lưu phiên bản mới',
+    ConsumerTerm.medicinesSafetyTitle: 'Kiểm tra tương tác thuốc',
+    ConsumerTerm.medicinesSafetyDescription:
+        'Việc kiểm tra tương tác thuốc được thực hiện trong Tủ thuốc. Khi bạn '
+            'thêm từ hai loại thuốc trở lên, CLARA sẽ rà soát các tương tác có '
+            'thể xảy ra dựa trên danh sách đó.',
+    ConsumerTerm.medicinesOpenCabinet: 'Mở Tủ thuốc',
+    ConsumerTerm.medicinesSafetyNotice:
+        'CLARA là trợ lý hỗ trợ quyết định, không thay thế bác sĩ. Kết quả kiểm '
+            'tra chỉ mang tính tham khảo — hãy trao đổi với dược sĩ hoặc bác sĩ '
+            'trước khi thay đổi cách dùng thuốc.',
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
@@ -339,7 +450,8 @@ class ConsumerTerminology {
             'diagnosis. CLARA offers general support and does not replace your doctor.',
     ConsumerTerm.onboardingSaveFailed:
         'We could not save this. Please try again.',
-    ConsumerTerm.lifeMapProfileRequiredTitle: 'Create your health profile first',
+    ConsumerTerm.lifeMapProfileRequiredTitle:
+        'Create your health profile first',
     ConsumerTerm.lifeMapProfileRequiredDescription:
         'Create your health profile before making a care plan in LifeMap. '
             'This is a personal plan, not a diagnosis.',
@@ -375,11 +487,76 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapTaskJourney: 'Care journey',
     ConsumerTerm.lifeMapUnnamedJourney: 'Unnamed care journey',
     ConsumerTerm.lifeMapTaskName: 'Task name',
-    ConsumerTerm.lifeMapTaskNameHint: 'For example: Measure blood pressure in the morning',
+    ConsumerTerm.lifeMapTaskNameHint:
+        'For example: Measure blood pressure in the morning',
     ConsumerTerm.lifeMapUnnamedTask: 'Unnamed task',
     ConsumerTerm.lifeMapOneQuestion: 'One question',
     ConsumerTerm.lifeMapViewHistory: 'View history',
-    ConsumerTerm.lifeMapLoadFailed:
-        'We could not load LifeMap. Try again.',
+    ConsumerTerm.lifeMapLoadFailed: 'We could not load LifeMap. Try again.',
+    ConsumerTerm.medicinesMyMedicines: 'My medicines',
+    ConsumerTerm.medicinesCabinet: 'Medicine cabinet',
+    ConsumerTerm.medicinesSafety: 'Safety',
+    ConsumerTerm.medicinesLoginRequired:
+        'Please sign in to view your medicine list.',
+    ConsumerTerm.medicinesLoadFailed:
+        'We could not load your medicine list. Try again.',
+    ConsumerTerm.medicinesProfileRequiredTitle: 'Health profile required',
+    ConsumerTerm.medicinesProfileRequiredDescription:
+        'Create your health profile before adding medicine. Your medicine list '
+            'will appear here once it is ready.',
+    ConsumerTerm.medicinesReload: 'Reload',
+    ConsumerTerm.medicinesEmptyTitle: 'No medicines yet',
+    ConsumerTerm.medicinesEmptyDescription:
+        'Add medicines you are taking so CLARA can help you keep track. '
+            'Information is saved only after you confirm it.',
+    ConsumerTerm.medicinesAdd: 'Add medicine',
+    ConsumerTerm.medicinesUnnamed: 'Unnamed medicine',
+    ConsumerTerm.medicinesEnded: 'Ended',
+    ConsumerTerm.medicinesActive: 'Taking now',
+    ConsumerTerm.medicinesSourceMatched: 'Source matched',
+    ConsumerTerm.medicinesUnverified: 'Not verified',
+    ConsumerTerm.medicinesActionsTooltip: 'Medicine actions',
+    ConsumerTerm.medicinesEditNewVersion: 'Edit as a new version',
+    ConsumerTerm.medicinesEndCourse: 'Record as ended',
+    ConsumerTerm.medicinesEndConfirmTitle: 'Record this medicine as ended?',
+    ConsumerTerm.medicinesEndConfirmDescription:
+        'This only updates your record; it is not advice to stop the medicine. '
+            'Do not stop a medicine without speaking with a health professional.',
+    ConsumerTerm.medicinesEndAuditReason:
+        'User recorded the medicine as ended in the mobile app',
+    ConsumerTerm.medicinesCancel: 'Cancel',
+    ConsumerTerm.medicinesConfirm: 'Record',
+    ConsumerTerm.medicinesNameRequired: 'Enter the medicine name.',
+    ConsumerTerm.medicinesLoginToAdd: 'Please sign in to add a medicine.',
+    ConsumerTerm.medicinesEditReasonRequired: 'Enter a reason for this edit.',
+    ConsumerTerm.medicinesSaveFailed:
+        'We could not save this medicine. Try again.',
+    ConsumerTerm.medicinesAddTitle: 'Add medicine',
+    ConsumerTerm.medicinesEditTitle: 'Edit medicine details',
+    ConsumerTerm.medicinesNameLabel: 'Medicine name *',
+    ConsumerTerm.medicinesNameHint: 'For example: Paracetamol',
+    ConsumerTerm.medicinesDoseLabel: 'Dose',
+    ConsumerTerm.medicinesDoseHint: 'For example: 500 mg',
+    ConsumerTerm.medicinesScheduleLabel: 'Schedule',
+    ConsumerTerm.medicinesScheduleHint: 'For example: twice daily after food',
+    ConsumerTerm.medicinesRouteLabel: 'Route',
+    ConsumerTerm.medicinesRouteHint: 'For example: by mouth',
+    ConsumerTerm.medicinesFormLabel: 'Form',
+    ConsumerTerm.medicinesFormHint: 'For example: tablet',
+    ConsumerTerm.medicinesEditReasonLabel: 'Reason for edit *',
+    ConsumerTerm.medicinesEditReasonHint:
+        'For example: correct an entry mistake',
+    ConsumerTerm.medicinesSave: 'Save medicine',
+    ConsumerTerm.medicinesSaveNewVersion: 'Save new version',
+    ConsumerTerm.medicinesSafetyTitle: 'Check medicine interactions',
+    ConsumerTerm.medicinesSafetyDescription:
+        'Medicine-interaction checks happen in Medicine cabinet. When you add '
+            'two or more medicines there, CLARA reviews potential interactions '
+            'against that list.',
+    ConsumerTerm.medicinesOpenCabinet: 'Open medicine cabinet',
+    ConsumerTerm.medicinesSafetyNotice:
+        'CLARA is a decision-support assistant, not a substitute for a doctor. '
+            'Check results are for reference only — speak with a pharmacist or '
+            'doctor before changing how you use a medicine.',
   };
 }

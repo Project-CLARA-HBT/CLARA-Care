@@ -194,6 +194,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             resolver: resolver,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(

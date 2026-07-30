@@ -20,12 +20,14 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
 import '../../theme/tokens.dart';
 import '../../theme/web_palette.dart';
 import '../../widgets/error_retry_view.dart';
 import '../redesign/cabinet_screen_v3.dart';
+import '../language_controller.dart';
 import '../states/empty_state.dart';
 
 /// A confirmed medication course, projected from the API list payload.
@@ -83,11 +85,13 @@ class MedicinesHub extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     required this.resolver,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final MobileFeatureFlagResolver resolver;
+  final LanguageController? languageController;
 
   @override
   State<MedicinesHub> createState() => _MedicinesHubState();
@@ -96,12 +100,25 @@ class MedicinesHub extends StatefulWidget {
 class _MedicinesHubState extends State<MedicinesHub> {
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController == null) {
+      return _buildHub(ConsumerTerminology.forLocale(null));
+    }
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) => _buildHub(
+        ConsumerTerminology.forLocale(languageController.languageCode),
+      ),
+    );
+  }
+
+  Widget _buildHub(ConsumerTerminology copy) {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Thuốc'),
-          bottom: const TabBar(
+          title: Text(copy[ConsumerTerm.navigationMedicines]),
+          bottom: TabBar(
             // >= 48dp tap targets: labels get generous vertical padding and the
             // indicator spans the full tab. Semantics come from the text labels.
             labelPadding: EdgeInsets.symmetric(
@@ -111,18 +128,18 @@ class _MedicinesHubState extends State<MedicinesHub> {
             tabs: <Widget>[
               Tab(
                 height: kMinTouchTarget,
-                icon: Icon(Icons.medication_outlined),
-                text: 'Thuốc của tôi',
+                icon: const Icon(Icons.medication_outlined),
+                text: copy[ConsumerTerm.medicinesMyMedicines],
               ),
               Tab(
                 height: kMinTouchTarget,
-                icon: Icon(Icons.inventory_2_outlined),
-                text: 'Tủ thuốc',
+                icon: const Icon(Icons.inventory_2_outlined),
+                text: copy[ConsumerTerm.medicinesCabinet],
               ),
               Tab(
                 height: kMinTouchTarget,
-                icon: Icon(Icons.health_and_safety_outlined),
-                text: 'An toàn',
+                icon: const Icon(Icons.health_and_safety_outlined),
+                text: copy[ConsumerTerm.medicinesSafety],
               ),
             ],
           ),
@@ -132,6 +149,7 @@ class _MedicinesHubState extends State<MedicinesHub> {
             _MyMedicinesTab(
               apiClient: widget.apiClient,
               sessionStore: widget.sessionStore,
+              copy: copy,
             ),
             // Embed the existing consent-gated cabinet surface as-is.
             CabinetScreenV3(
@@ -139,7 +157,7 @@ class _MedicinesHubState extends State<MedicinesHub> {
               sessionStore: widget.sessionStore,
               resolver: widget.resolver,
             ),
-            const _SafetyTab(),
+            _SafetyTab(copy: copy),
           ],
         ),
       ),
@@ -155,10 +173,12 @@ class _MyMedicinesTab extends StatefulWidget {
   const _MyMedicinesTab({
     required this.apiClient,
     required this.sessionStore,
+    required this.copy,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+  final ConsumerTerminology copy;
 
   @override
   State<_MyMedicinesTab> createState() => _MyMedicinesTabState();
@@ -184,7 +204,7 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
     if (token == null || token.isEmpty) {
       setState(() {
         _loading = false;
-        _error = 'Bạn cần đăng nhập để xem danh sách thuốc.';
+        _error = widget.copy[ConsumerTerm.medicinesLoginRequired];
         _noProfile = false;
       });
       return;
@@ -219,7 +239,7 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = kDefaultErrorMessage;
+        _error = widget.copy[ConsumerTerm.medicinesLoadFailed];
       });
     }
   }
@@ -245,6 +265,7 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
         child: _AddCourseForm(
           apiClient: widget.apiClient,
           sessionStore: widget.sessionStore,
+          copy: widget.copy,
         ),
       ),
     );
@@ -264,6 +285,7 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
         child: _AddCourseForm(
           apiClient: widget.apiClient,
           sessionStore: widget.sessionStore,
+          copy: widget.copy,
           existing: course,
         ),
       ),
@@ -275,19 +297,16 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Ghi nhận đã kết thúc?'),
-        content: const Text(
-          'Thao tác này chỉ cập nhật hồ sơ của bạn, không phải khuyến nghị dừng thuốc. '
-          'Không tự ý ngừng thuốc nếu chưa trao đổi với chuyên gia y tế.',
-        ),
+        title: Text(widget.copy[ConsumerTerm.medicinesEndConfirmTitle]),
+        content: Text(widget.copy[ConsumerTerm.medicinesEndConfirmDescription]),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Hủy'),
+            child: Text(widget.copy[ConsumerTerm.medicinesCancel]),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Ghi nhận'),
+            child: Text(widget.copy[ConsumerTerm.medicinesConfirm]),
           ),
         ],
       ),
@@ -300,7 +319,7 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
         accessToken: token,
         courseId: course.id,
         version: course.version,
-        reason: 'Người dùng xác nhận kết thúc trên ứng dụng di động',
+        reason: widget.copy[ConsumerTerm.medicinesEndAuditReason],
       );
       await _load();
     } on ApiException catch (error) {
@@ -318,7 +337,7 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddSheet,
         icon: const Icon(Icons.add),
-        label: const Text('Thêm thuốc'),
+        label: Text(widget.copy[ConsumerTerm.medicinesAdd]),
       ),
     );
   }
@@ -333,13 +352,12 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
     if (_noProfile) {
       return ClaraEmptyState(
         icon: Icons.person_outline,
-        title: 'Chưa có hồ sơ sức khỏe',
-        message:
-            'Bạn cần tạo hồ sơ sức khỏe trước khi thêm thuốc. Sau khi có hồ sơ, danh sách thuốc của bạn sẽ hiển thị ở đây.',
+        title: widget.copy[ConsumerTerm.medicinesProfileRequiredTitle],
+        message: widget.copy[ConsumerTerm.medicinesProfileRequiredDescription],
         action: FilledButton.icon(
           onPressed: _load,
           icon: const Icon(Icons.refresh),
-          label: const Text('Tải lại'),
+          label: Text(widget.copy[ConsumerTerm.medicinesReload]),
           style: FilledButton.styleFrom(
             minimumSize: const Size(kMinTouchTarget, kMinTouchTarget),
           ),
@@ -349,13 +367,12 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
     if (_courses.isEmpty) {
       return ClaraEmptyState(
         icon: Icons.medication_outlined,
-        title: 'Chưa có thuốc nào',
-        message:
-            'Thêm loại thuốc bạn đang dùng để CLARA giúp theo dõi. Thông tin chỉ được lưu khi bạn tự xác nhận.',
+        title: widget.copy[ConsumerTerm.medicinesEmptyTitle],
+        message: widget.copy[ConsumerTerm.medicinesEmptyDescription],
         action: FilledButton.icon(
           onPressed: _openAddSheet,
           icon: const Icon(Icons.add),
-          label: const Text('Thêm thuốc'),
+          label: Text(widget.copy[ConsumerTerm.medicinesAdd]),
           style: FilledButton.styleFrom(
             minimumSize: const Size(kMinTouchTarget, kMinTouchTarget),
           ),
@@ -378,6 +395,7 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
             const SizedBox(height: ClaraTokens.spaceSm),
         itemBuilder: (context, index) => _CourseCard(
           course: _courses[index],
+          copy: widget.copy,
           onEdit: () => _openEditSheet(_courses[index]),
           onEnd: () => _endCourse(_courses[index]),
         ),
@@ -389,11 +407,13 @@ class _MyMedicinesTabState extends State<_MyMedicinesTab> {
 class _CourseCard extends StatelessWidget {
   const _CourseCard({
     required this.course,
+    required this.copy,
     required this.onEdit,
     required this.onEnd,
   });
 
   final _MedicationCourse course;
+  final ConsumerTerminology copy;
   final VoidCallback onEdit;
   final VoidCallback onEnd;
 
@@ -424,7 +444,7 @@ class _CourseCard extends StatelessWidget {
                 children: [
                   Text(
                     course.medicationName.isEmpty
-                        ? 'Thuốc chưa đặt tên'
+                        ? copy[ConsumerTerm.medicinesUnnamed]
                         : course.medicationName,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
@@ -447,15 +467,15 @@ class _CourseCard extends StatelessWidget {
                       Chip(
                         label: Text(
                           course.status == 'ended'
-                              ? 'Đã kết thúc'
-                              : 'Đang dùng',
+                              ? copy[ConsumerTerm.medicinesEnded]
+                              : copy[ConsumerTerm.medicinesActive],
                         ),
                       ),
                       Chip(
                         label: Text(
                           course.reconciliationStatus == 'matched'
-                              ? 'Đã khớp nguồn'
-                              : 'Chưa xác minh',
+                              ? copy[ConsumerTerm.medicinesSourceMatched]
+                              : copy[ConsumerTerm.medicinesUnverified],
                         ),
                       ),
                     ],
@@ -464,20 +484,20 @@ class _CourseCard extends StatelessWidget {
               ),
             ),
             PopupMenuButton<String>(
-              tooltip: 'Thao tác với thuốc',
+              tooltip: copy[ConsumerTerm.medicinesActionsTooltip],
               onSelected: (value) {
                 if (value == 'edit') onEdit();
                 if (value == 'end') onEnd();
               },
               itemBuilder: (_) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'edit',
-                  child: Text('Sửa bằng phiên bản mới'),
+                  child: Text(copy[ConsumerTerm.medicinesEditNewVersion]),
                 ),
                 if (course.status != 'ended')
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'end',
-                    child: Text('Ghi nhận đã kết thúc'),
+                    child: Text(copy[ConsumerTerm.medicinesEndCourse]),
                   ),
               ],
             ),
@@ -492,11 +512,13 @@ class _AddCourseForm extends StatefulWidget {
   const _AddCourseForm({
     required this.apiClient,
     required this.sessionStore,
+    required this.copy,
     this.existing,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+  final ConsumerTerminology copy;
   final _MedicationCourse? existing;
 
   @override
@@ -541,13 +563,13 @@ class _AddCourseFormState extends State<_AddCourseForm> {
   Future<void> _submit() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Vui lòng nhập tên thuốc.');
+      setState(() => _error = widget.copy[ConsumerTerm.medicinesNameRequired]);
       return;
     }
 
     final token = widget.sessionStore.accessToken;
     if (token == null || token.isEmpty) {
-      setState(() => _error = 'Bạn cần đăng nhập để thêm thuốc.');
+      setState(() => _error = widget.copy[ConsumerTerm.medicinesLoginToAdd]);
       return;
     }
 
@@ -571,7 +593,7 @@ class _AddCourseFormState extends State<_AddCourseForm> {
         if (reason.length < 2) {
           setState(() {
             _saving = false;
-            _error = 'Vui lòng nhập lý do chỉnh sửa.';
+            _error = widget.copy[ConsumerTerm.medicinesEditReasonRequired];
           });
           return;
         }
@@ -594,14 +616,14 @@ class _AddCourseFormState extends State<_AddCourseForm> {
       setState(() {
         _saving = false;
         _error = e.statusCode == 409
-            ? 'Bạn cần tạo hồ sơ sức khỏe trước khi thêm thuốc.'
+            ? widget.copy[ConsumerTerm.medicinesProfileRequiredDescription]
             : e.message;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = 'Không thể lưu thuốc. Vui lòng thử lại.';
+        _error = widget.copy[ConsumerTerm.medicinesSaveFailed];
       });
     }
   }
@@ -619,7 +641,9 @@ class _AddCourseFormState extends State<_AddCourseForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              widget.existing == null ? 'Thêm thuốc' : 'Sửa thông tin thuốc',
+              widget.existing == null
+                  ? widget.copy[ConsumerTerm.medicinesAddTitle]
+                  : widget.copy[ConsumerTerm.medicinesEditTitle],
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -629,10 +653,10 @@ class _AddCourseFormState extends State<_AddCourseForm> {
               controller: _nameController,
               enabled: !_saving,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Tên thuốc *',
-                hintText: 'Ví dụ: Paracetamol',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: widget.copy[ConsumerTerm.medicinesNameLabel],
+                hintText: widget.copy[ConsumerTerm.medicinesNameHint],
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: ClaraTokens.spaceMd),
@@ -640,10 +664,10 @@ class _AddCourseFormState extends State<_AddCourseForm> {
               controller: _doseController,
               enabled: !_saving,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Liều dùng',
-                hintText: 'Ví dụ: 500mg',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: widget.copy[ConsumerTerm.medicinesDoseLabel],
+                hintText: widget.copy[ConsumerTerm.medicinesDoseHint],
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: ClaraTokens.spaceMd),
@@ -651,10 +675,10 @@ class _AddCourseFormState extends State<_AddCourseForm> {
               controller: _scheduleController,
               enabled: !_saving,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Lịch dùng',
-                hintText: 'Ví dụ: 2 lần/ngày sau ăn',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: widget.copy[ConsumerTerm.medicinesScheduleLabel],
+                hintText: widget.copy[ConsumerTerm.medicinesScheduleHint],
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: ClaraTokens.spaceMd),
@@ -665,10 +689,10 @@ class _AddCourseFormState extends State<_AddCourseForm> {
                     controller: _routeController,
                     enabled: !_saving,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Đường dùng',
-                      hintText: 'Ví dụ: Uống',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: widget.copy[ConsumerTerm.medicinesRouteLabel],
+                      hintText: widget.copy[ConsumerTerm.medicinesRouteHint],
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
@@ -683,10 +707,10 @@ class _AddCourseFormState extends State<_AddCourseForm> {
                     onSubmitted: widget.existing == null && !_saving
                         ? (_) => _submit()
                         : null,
-                    decoration: const InputDecoration(
-                      labelText: 'Dạng thuốc',
-                      hintText: 'Ví dụ: Viên nén',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: widget.copy[ConsumerTerm.medicinesFormLabel],
+                      hintText: widget.copy[ConsumerTerm.medicinesFormHint],
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
@@ -699,10 +723,10 @@ class _AddCourseFormState extends State<_AddCourseForm> {
                 enabled: !_saving,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _saving ? null : _submit(),
-                decoration: const InputDecoration(
-                  labelText: 'Lý do chỉnh sửa *',
-                  hintText: 'Ví dụ: Sửa thông tin đã nhập nhầm',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: widget.copy[ConsumerTerm.medicinesEditReasonLabel],
+                  hintText: widget.copy[ConsumerTerm.medicinesEditReasonHint],
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ],
@@ -729,8 +753,8 @@ class _AddCourseFormState extends State<_AddCourseForm> {
                     )
                   : Text(
                       widget.existing == null
-                          ? 'Lưu thuốc'
-                          : 'Lưu phiên bản mới',
+                          ? widget.copy[ConsumerTerm.medicinesSave]
+                          : widget.copy[ConsumerTerm.medicinesSaveNewVersion],
                     ),
             ),
           ],
@@ -745,7 +769,9 @@ class _AddCourseFormState extends State<_AddCourseForm> {
 // =============================================================================
 
 class _SafetyTab extends StatelessWidget {
-  const _SafetyTab();
+  const _SafetyTab({required this.copy});
+
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) {
@@ -772,7 +798,7 @@ class _SafetyTab extends StatelessWidget {
                     const SizedBox(width: ClaraTokens.spaceSm),
                     Expanded(
                       child: Text(
-                        'Kiểm tra tương tác thuốc',
+                        copy[ConsumerTerm.medicinesSafetyTitle],
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -782,9 +808,7 @@ class _SafetyTab extends StatelessWidget {
                 ),
                 const SizedBox(height: ClaraTokens.spaceMd),
                 Text(
-                  'Việc kiểm tra tương tác thuốc (DDI) được thực hiện ngay trong tab "Tủ thuốc". '
-                  'Khi bạn thêm từ hai loại thuốc trở lên vào tủ thuốc, CLARA sẽ giúp rà soát các '
-                  'tương tác có thể xảy ra dựa trên danh sách đó.',
+                  copy[ConsumerTerm.medicinesSafetyDescription],
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -799,7 +823,7 @@ class _SafetyTab extends StatelessWidget {
                     return OutlinedButton.icon(
                       onPressed: () => controller.animateTo(1),
                       icon: const Icon(Icons.inventory_2_outlined),
-                      label: const Text('Mở Tủ thuốc'),
+                      label: Text(copy[ConsumerTerm.medicinesOpenCabinet]),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(kMinTouchTarget),
                       ),
@@ -828,9 +852,7 @@ class _SafetyTab extends StatelessWidget {
                 const SizedBox(width: ClaraTokens.spaceSm),
                 Expanded(
                   child: Text(
-                    'CLARA là trợ lý hỗ trợ quyết định, không thay thế bác sĩ. '
-                    'Kết quả kiểm tra chỉ mang tính tham khảo — hãy trao đổi với '
-                    'dược sĩ hoặc bác sĩ trước khi thay đổi cách dùng thuốc.',
+                    copy[ConsumerTerm.medicinesSafetyNotice],
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: scheme.onSurface,
                     ),
