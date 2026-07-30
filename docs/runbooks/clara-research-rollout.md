@@ -4,7 +4,8 @@ Spec: `clara-research` · Task 22 (final checkpoint / staged enablement).
 
 This runbook covers the staged enablement of the CLARA Research enhancement:
 agentic query decomposition + bounded gap-fill, recency/trust-tier ranking,
-PICO framing, GRADE certainty labels, consensus + conflicting-evidence,
+PICO framing, provenance-based source signals (not a full GRADE assessment),
+consensus + conflicting-evidence,
 claim-level NLI verdicts, claim-to-study traceability + Citation Registry,
 clarifying questions, progressive disclosure, role-adaptive output,
 consent-gated personalization, export/share, the Vietnamese golden-set quality
@@ -118,9 +119,11 @@ files and has no runtime effect. Roll back the new output by setting
    confirm the backend is healthy first.
 3. Restart/redeploy the API and ML services so the new config is read at start.
 4. Confirm activation via trace/telemetry on a `deep`/`deep_beta` request: the
-   enabled stages (decomposition, gap-fill pass count, ranking, PICO, GRADE,
-   consensus, traced claims) should appear in the result payload; with flags off
-   those keys are omitted.
+   enabled stages (decomposition, gap-fill pass count, ranking, PICO,
+   provenance-based source signals, consensus, traced claims) should appear in
+   the result payload; with flags off those keys are omitted. Source signals are
+   a heuristic/provenance aid, not a formal GRADE certainty or recommendation-
+   strength judgement.
 
 ## Stage 2 — Verify guardrail preservation + golden-set quality gate (staging)
 
