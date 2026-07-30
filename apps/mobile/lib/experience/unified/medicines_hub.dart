@@ -156,6 +156,7 @@ class _MedicinesHubState extends State<MedicinesHub> {
               apiClient: widget.apiClient,
               sessionStore: widget.sessionStore,
               resolver: widget.resolver,
+              languageController: widget.languageController,
             ),
             _SafetyTab(copy: copy),
           ],

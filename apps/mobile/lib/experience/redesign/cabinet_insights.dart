@@ -141,12 +141,14 @@ class CabinetHealthCard extends StatelessWidget {
   const CabinetHealthCard({
     super.key,
     required this.insights,
+    this.locale,
     this.onTapExpiring,
     this.onTapExpired,
     this.onTapReview,
   });
 
   final CabinetInsights insights;
+  final String? locale;
   final VoidCallback? onTapExpiring;
   final VoidCallback? onTapExpired;
   final VoidCallback? onTapReview;
@@ -159,9 +161,16 @@ class CabinetHealthCard extends StatelessWidget {
     final status = theme.extension<ClaraStatusColors>() ??
         ClaraStatusColors.of(theme.brightness);
 
+    final normalizedLocale = locale?.trim().toLowerCase();
+    final english =
+        normalizedLocale == 'en' || normalizedLocale?.startsWith('en-') == true;
     final headline = insights.hasAttentionItems
-        ? 'Tủ thuốc cần bạn để ý một vài mục'
-        : 'Tủ thuốc của bạn đang ổn';
+        ? (english
+            ? 'A few medicines in your cabinet need attention'
+            : 'Tủ thuốc cần bạn để ý một vài mục')
+        : (english
+            ? 'Your medicine cabinet looks up to date'
+            : 'Tủ thuốc của bạn đang ổn');
     final headlineIcon = insights.hasAttentionItems
         ? Icons.notifications_active_outlined
         : Icons.verified_outlined;
@@ -169,7 +178,8 @@ class CabinetHealthCard extends StatelessWidget {
         insights.hasAttentionItems ? status.warning : status.success;
 
     return ClaraCard.static_(
-      semanticLabel: 'Tổng quan sức khỏe tủ thuốc',
+      semanticLabel:
+          english ? 'Medicine cabinet overview' : 'Tổng quan sức khỏe tủ thuốc',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -197,20 +207,20 @@ class CabinetHealthCard extends StatelessWidget {
               _InsightStat(
                 icon: Icons.medication_outlined,
                 value: '${insights.total}',
-                label: 'thuốc',
+                label: english ? 'medicines' : 'thuốc',
                 tint: scheme.primary,
               ),
               _InsightStat(
                 icon: Icons.science_outlined,
                 value: '${insights.distinctIngredients}',
-                label: 'hoạt chất',
+                label: english ? 'ingredients' : 'hoạt chất',
                 tint: scheme.primary,
               ),
               if (insights.expired > 0)
                 _InsightStat(
                   icon: Icons.event_busy_outlined,
                   value: '${insights.expired}',
-                  label: 'đã hết hạn',
+                  label: english ? 'expired' : 'đã hết hạn',
                   tint: scheme.error,
                   onTap: onTapExpired,
                 ),
@@ -218,7 +228,7 @@ class CabinetHealthCard extends StatelessWidget {
                 _InsightStat(
                   icon: Icons.hourglass_bottom_outlined,
                   value: '${insights.expiringSoon}',
-                  label: 'sắp hết hạn',
+                  label: english ? 'expires soon' : 'sắp hết hạn',
                   tint: status.warning,
                   onTap: onTapExpiring,
                 ),
@@ -226,7 +236,7 @@ class CabinetHealthCard extends StatelessWidget {
                 _InsightStat(
                   icon: Icons.help_outline,
                   value: '${insights.needsReview}',
-                  label: 'cần xem lại',
+                  label: english ? 'review needed' : 'cần xem lại',
                   tint: status.warning,
                   onTap: onTapReview,
                 ),
@@ -234,7 +244,7 @@ class CabinetHealthCard extends StatelessWidget {
                 _InsightStat(
                   icon: Icons.inventory_2_outlined,
                   value: '${insights.lowStock}',
-                  label: 'sắp hết',
+                  label: english ? 'low stock' : 'sắp hết',
                   tint: status.warning,
                 ),
             ],

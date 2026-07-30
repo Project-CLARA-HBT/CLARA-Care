@@ -146,6 +146,7 @@ class _RedesignRootState extends State<RedesignRoot> {
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             resolver: resolver,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(

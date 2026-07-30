@@ -40,6 +40,7 @@ import '../../widgets/error_retry_view.dart';
 import '../../widgets/offline_banner.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
+import '../language_controller.dart';
 import 'cabinet_insights.dart';
 import 'cabinet_medicine_detail.dart';
 import 'cabinet_ocr_sheet.dart';
@@ -52,6 +53,191 @@ const int _kMinimumDdiMedicines = 2;
 const int _kExpiringSoonDays = 30;
 
 String _str(Object? value) => value == null ? '' : value.toString();
+
+/// Static, product-level copy owned by the Cabinet surface. It deliberately
+/// does not translate medicine names, server error details, normalization
+/// values, or DDI findings: those remain authoritative clinical/API content.
+class _CabinetCopy {
+  const _CabinetCopy._(this._messages);
+
+  factory _CabinetCopy.forLocale(String? locale) {
+    final normalized = locale?.trim().toLowerCase();
+    return _CabinetCopy._(
+      normalized == 'en' || normalized?.startsWith('en-') == true ? _en : _vi,
+    );
+  }
+
+  final Map<String, String> _messages;
+
+  String operator [](String key) => _messages[key]!;
+
+  String format(String key, Map<String, Object?> values) {
+    return this[key].replaceAllMapped(RegExp(r'\{(\w+)\}'), (match) {
+      final value = values[match.group(1)];
+      return value == null ? match.group(0)! : value.toString();
+    });
+  }
+
+  static const Map<String, String> _vi = <String, String>{
+    'sessionExpired': 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+    'consentLoadFailed':
+        'Không thể kiểm tra điều khoản y tế. Vui lòng thử lại.',
+    'consentCheckRequired': 'Vui lòng tick xác nhận trước khi tiếp tục.',
+    'consentSaveFailed': 'Không thể lưu xác nhận. Vui lòng thử lại.',
+    'cabinetLoadFailed': 'Không thể tải tủ thuốc. Vui lòng thử lại.',
+    'saveFailed': 'Không thể lưu thuốc. Vui lòng thử lại.',
+    'deleteFailed': 'Không thể xóa thuốc. Vui lòng thử lại.',
+    'offlineMutationBlocked':
+        'Bạn đang ngoại tuyến. Kết nối mạng để thực hiện thay đổi này.',
+    'ddiMinimum':
+        'Cần ít nhất 2 thuốc khác nhau trong tủ để kiểm tra tương tác.',
+    'ddiFailed':
+        'Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại.',
+    'title': 'Tủ thuốc cá nhân',
+    'scanLabel': 'Quét nhãn thuốc',
+    'addMedicine': 'Thêm thuốc',
+    'cabinetMedicines': 'Thuốc trong tủ',
+    'clearFilter': 'Bỏ lọc',
+    'emptyTitle': 'Tủ thuốc trống',
+    'emptyDescription':
+        'Thêm thuốc bạn đang dùng để theo dõi hạn dùng và kiểm tra tương tác.',
+    'filteredEmptyTitle': 'Không có thuốc khớp bộ lọc',
+    'filteredEmptyDescription': 'Chạm "Bỏ lọc" để xem lại toàn bộ tủ thuốc.',
+    'ddiPanelLabel': 'Kiểm tra tương tác thuốc trong tủ',
+    'ddiTitle': 'Kiểm tra tương tác trong tủ thuốc',
+    'ddiDescription': 'Cần ít nhất 2 thuốc khác nhau. Hiện có {count} thuốc.',
+    'checkInteractions': 'Kiểm tra tương tác',
+    'error': 'Lỗi',
+    'quantity': 'SL: {quantity}',
+    'medicineSemantic': 'Thuốc {drug}',
+    'medicineInfo': 'Thông tin thuốc {drug}',
+    'askClara': 'Hỏi CLARA về thuốc này',
+    'editMedicine': 'Sửa {drug}',
+    'edit': 'Sửa',
+    'deleteMedicine': 'Xóa {drug}',
+    'delete': 'Xóa',
+    'activeIngredient': 'Hoạt chất: {ingredient}',
+    'manufacturer': 'Nhà sản xuất: {manufacturer}',
+    'note': 'Ghi chú: {note}',
+    'reviewName': 'Cần xem lại tên thuốc',
+    'expiry': 'Hạn dùng',
+    'expired': 'Đã hết hạn (HSD: {date})',
+    'expiringSoon': 'Sắp hết hạn (HSD: {date})',
+    'valid': 'Còn hạn (HSD: {date})',
+    'unavailableTitle': 'Tủ thuốc chưa được bật',
+    'unavailableDescription':
+        'Tính năng tủ thuốc chưa khả dụng cho tài khoản của bạn.',
+    'disclaimerSemantic': 'Tuyên bố miễn trừ trách nhiệm y tế',
+    'disclaimerTitle': 'Tuyên bố miễn trừ trách nhiệm y tế',
+    'disclaimerBody':
+        'CLARA chỉ hỗ trợ cảnh báo an toàn thuốc và không thay thế bác sĩ. '
+            'Không sử dụng ứng dụng để tự chẩn đoán, tự kê đơn hoặc tự điều '
+            'chỉnh liều dùng.',
+    'consentVersion': 'Phiên bản điều khoản hiện tại: {version}',
+    'consentCheck':
+        'Tôi đã đọc, hiểu và đồng ý với tuyên bố miễn trừ trách nhiệm y tế của CLARA.',
+    'agreeContinue': 'Đồng ý và tiếp tục',
+    'retryConsent': 'Thử kiểm tra lại',
+    'deleteTitle': 'Xóa thuốc',
+    'deleteDescription': 'Xóa "{drug}" khỏi tủ thuốc?',
+    'cancel': 'Hủy',
+    'editorEditTitle': 'Sửa thuốc',
+    'editorAddTitle': 'Thêm thuốc',
+    'medicineNameRequired': 'Vui lòng nhập tên thuốc.',
+    'invalidQuantity': 'Số lượng không hợp lệ.',
+    'invalidExpiry': 'Hạn dùng phải theo định dạng YYYY-MM-DD.',
+    'medicineName': 'Tên thuốc *',
+    'brandName': 'Tên thương mại',
+    'manufacturerField': 'Nhà sản xuất',
+    'dosage': 'Hàm lượng / liều',
+    'dosageForm': 'Dạng bào chế',
+    'quantityField': 'Số lượng',
+    'expiryField': 'Hạn dùng (YYYY-MM-DD)',
+    'noteField': 'Ghi chú',
+    'save': 'Lưu',
+    'add': 'Thêm',
+  };
+
+  static const Map<String, String> _en = <String, String>{
+    'sessionExpired': 'Your session has expired. Please sign in again.',
+    'consentLoadFailed': 'We could not check the medical terms. Try again.',
+    'consentCheckRequired': 'Please confirm before continuing.',
+    'consentSaveFailed': 'We could not save your confirmation. Try again.',
+    'cabinetLoadFailed': 'We could not load your medicine cabinet. Try again.',
+    'saveFailed': 'We could not save this medicine. Try again.',
+    'deleteFailed': 'We could not delete this medicine. Try again.',
+    'offlineMutationBlocked':
+        'You are offline. Connect to the internet to make this change.',
+    'ddiMinimum': 'Add at least 2 different medicines to check interactions.',
+    'ddiFailed':
+        'We could not check medicine interactions right now. Try again.',
+    'title': 'Personal medicine cabinet',
+    'scanLabel': 'Scan medicine label',
+    'addMedicine': 'Add medicine',
+    'cabinetMedicines': 'Medicines in your cabinet',
+    'clearFilter': 'Clear filter',
+    'emptyTitle': 'Your medicine cabinet is empty',
+    'emptyDescription':
+        'Add medicines you take to track expiry dates and check interactions.',
+    'filteredEmptyTitle': 'No medicines match this filter',
+    'filteredEmptyDescription':
+        'Tap "Clear filter" to see all medicines in your cabinet.',
+    'ddiPanelLabel': 'Check medicine interactions in your cabinet',
+    'ddiTitle': 'Check interactions in your cabinet',
+    'ddiDescription':
+        'At least 2 different medicines are needed. You currently have {count}.',
+    'checkInteractions': 'Check interactions',
+    'error': 'Error',
+    'quantity': 'Qty: {quantity}',
+    'medicineSemantic': 'Medicine {drug}',
+    'medicineInfo': 'Medicine information for {drug}',
+    'askClara': 'Ask CLARA about this medicine',
+    'editMedicine': 'Edit {drug}',
+    'edit': 'Edit',
+    'deleteMedicine': 'Delete {drug}',
+    'delete': 'Delete',
+    'activeIngredient': 'Active ingredient: {ingredient}',
+    'manufacturer': 'Manufacturer: {manufacturer}',
+    'note': 'Note: {note}',
+    'reviewName': 'Review medicine name',
+    'expiry': 'Expiry date',
+    'expired': 'Expired (expiry: {date})',
+    'expiringSoon': 'Expires soon (expiry: {date})',
+    'valid': 'In date (expiry: {date})',
+    'unavailableTitle': 'Medicine cabinet is not enabled',
+    'unavailableDescription':
+        'The medicine-cabinet feature is not available for your account.',
+    'disclaimerSemantic': 'Medical disclaimer',
+    'disclaimerTitle': 'Medical disclaimer',
+    'disclaimerBody':
+        'CLARA only supports medicine-safety alerts and does not replace a doctor. '
+            'Do not use the app to self-diagnose, prescribe for yourself, or change '
+            'your own dose.',
+    'consentVersion': 'Current terms version: {version}',
+    'consentCheck':
+        'I have read, understood, and agree to CLARA\'s medical disclaimer.',
+    'agreeContinue': 'Agree and continue',
+    'retryConsent': 'Check again',
+    'deleteTitle': 'Delete medicine',
+    'deleteDescription': 'Remove "{drug}" from your medicine cabinet?',
+    'cancel': 'Cancel',
+    'editorEditTitle': 'Edit medicine',
+    'editorAddTitle': 'Add medicine',
+    'medicineNameRequired': 'Enter a medicine name.',
+    'invalidQuantity': 'Enter a valid quantity.',
+    'invalidExpiry': 'Use the YYYY-MM-DD format for the expiry date.',
+    'medicineName': 'Medicine name *',
+    'brandName': 'Brand name',
+    'manufacturerField': 'Manufacturer',
+    'dosage': 'Strength / dose',
+    'dosageForm': 'Dosage form',
+    'quantityField': 'Quantity',
+    'expiryField': 'Expiry date (YYYY-MM-DD)',
+    'noteField': 'Note',
+    'save': 'Save',
+    'add': 'Add',
+  };
+}
 
 /// Expiry status derived solely from an item's expiry field (Requirement 5.3);
 /// never invents data the API does not provide.
@@ -128,6 +314,7 @@ class CabinetScreenV3 extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     required this.resolver,
+    this.languageController,
     ConnectivityService? connectivity,
     CareguardOfflineCache? offlineCache,
   })  : _connectivity = connectivity,
@@ -136,6 +323,10 @@ class CabinetScreenV3 extends StatefulWidget {
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final MobileFeatureFlagResolver resolver;
+
+  /// Optional app-wide locale state. The surface remains Vietnamese-first for
+  /// legacy callers that do not yet provide the controller.
+  final LanguageController? languageController;
 
   /// Optional connectivity signal. When omitted a default (always-online in the
   /// absence of a probe) service is created; tests inject a fake to drive the
@@ -229,6 +420,9 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
 
   bool get _isOnline => _connectivity.currentValue;
 
+  _CabinetCopy get _copy =>
+      _CabinetCopy.forLocale(widget.languageController?.languageCode);
+
   // --- Consent (INV-1) -----------------------------------------------------
 
   Future<void> _loadConsent() async {
@@ -236,7 +430,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     if (token == null) {
       setState(() {
         _consentLoading = false;
-        _consentError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _consentError = _copy['sessionExpired'];
       });
       return;
     }
@@ -261,8 +455,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       setState(() => _consentError = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _consentError =
-          'Không thể kiểm tra điều khoản y tế. Vui lòng thử lại.');
+      setState(() => _consentError = _copy['consentLoadFailed']);
     } finally {
       if (mounted) {
         setState(() => _consentLoading = false);
@@ -274,8 +467,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     final token = _token;
     if (token == null || _requiredVersion.isEmpty) return;
     if (!_consentChecked) {
-      setState(
-          () => _consentError = 'Vui lòng tick xác nhận trước khi tiếp tục.');
+      setState(() => _consentError = _copy['consentCheckRequired']);
       return;
     }
     setState(() {
@@ -293,8 +485,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       setState(() => _consentError = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(
-          () => _consentError = 'Không thể lưu xác nhận. Vui lòng thử lại.');
+      setState(() => _consentError = _copy['consentSaveFailed']);
     } finally {
       if (mounted) {
         setState(() => _consentSaving = false);
@@ -330,8 +521,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       setState(() => _cabinetError = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(
-          () => _cabinetError = 'Không thể tải tủ thuốc. Vui lòng thử lại.');
+      setState(() => _cabinetError = _copy['cabinetLoadFailed']);
     } finally {
       if (mounted) {
         setState(() => _cabinetLoading = false);
@@ -343,21 +533,21 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     // Block the mutation while offline; the editor sheet is never opened so
     // there is no entered input to lose (Req 5.5).
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy['offlineMutationBlocked']);
       return;
     }
     final payload = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => _CabinetItemEditor(existing: existing),
+      builder: (_) => _CabinetItemEditor(copy: _copy, existing: existing),
     );
     if (payload == null) return;
     final token = _token;
     if (token == null) return;
     // Re-check connectivity after the (async) sheet closes.
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy['offlineMutationBlocked']);
       return;
     }
 
@@ -377,28 +567,29 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       // Surface server-side validation / duplicate (409) messages inline.
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể lưu thuốc. Vui lòng thử lại.');
+      _showSnack(_copy['saveFailed']);
     }
   }
 
   Future<void> _deleteItem(_CabinetMedicine item) async {
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy['offlineMutationBlocked']);
       return;
     }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Xóa thuốc'),
-        content: Text('Xóa "${item.drugName}" khỏi tủ thuốc?'),
+        title: Text(_copy['deleteTitle']),
+        content:
+            Text(_copy.format('deleteDescription', {'drug': item.drugName})),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Hủy'),
+            child: Text(_copy['cancel']),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Xóa'),
+            child: Text(_copy['delete']),
           ),
         ],
       ),
@@ -407,7 +598,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     final token = _token;
     if (token == null) return;
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy['offlineMutationBlocked']);
       return;
     }
     try {
@@ -417,7 +608,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể xóa thuốc. Vui lòng thử lại.');
+      _showSnack(_copy['deleteFailed']);
     }
   }
 
@@ -434,7 +625,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
   /// cabinet so the newly-added medicines appear.
   Future<void> _scanLabel() async {
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy['offlineMutationBlocked']);
       return;
     }
     final token = _token;
@@ -510,7 +701,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
   /// the safety disclaimer and never prescribes a personal dosage.
   Future<void> _openMedicineDetail(_CabinetMedicine item) async {
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy['offlineMutationBlocked']);
       return;
     }
     final token = _token;
@@ -543,8 +734,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       setState(() {
         _ddiView = null;
         _ddiOfflineCachedAt = null;
-        _ddiError =
-            'Cần ít nhất 2 thuốc khác nhau trong tủ để kiểm tra tương tác.';
+        _ddiError = _copy['ddiMinimum'];
       });
       return;
     }
@@ -592,8 +782,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     } on ApiException catch (error) {
       await _handleDdiFailure(error, error.message);
     } catch (error) {
-      await _handleDdiFailure(error,
-          'Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại.');
+      await _handleDdiFailure(error, _copy['ddiFailed']);
     } finally {
       if (mounted) {
         setState(() => _ddiLoading = false);
@@ -629,13 +818,25 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController == null) {
+      return _buildScaffold(context);
+    }
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
+    final copy = _copy;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tủ thuốc cá nhân'),
+        title: Text(copy['title']),
         actions: [
           if (_cabinetEnabled && _consentAccepted)
             IconButton(
-              tooltip: 'Quét nhãn thuốc',
+              tooltip: copy['scanLabel'],
               icon: const Icon(Icons.document_scanner_outlined),
               onPressed: _scanLabel,
             ),
@@ -645,7 +846,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
           ? FloatingActionButton.extended(
               onPressed: () => _addOrEditItem(),
               icon: const Icon(Icons.add),
-              label: const Text('Thêm thuốc'),
+              label: Text(copy['addMedicine']),
             )
           : null,
       body: SafeArea(child: _buildBody(context)),
@@ -655,13 +856,14 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
   Widget _buildBody(BuildContext context) {
     // CRUD gate off ⇒ inert placeholder, no network call (fail-closed).
     if (!_cabinetEnabled) {
-      return const _UnavailablePlaceholder();
+      return _UnavailablePlaceholder(copy: _copy);
     }
     if (_consentLoading) {
       return const ClaraSkeletonList(itemCount: 4);
     }
     if (!_consentAccepted) {
       return _ConsentGate(
+        copy: _copy,
         requiredVersion: _requiredVersion,
         checked: _consentChecked,
         saving: _consentSaving,
@@ -695,6 +897,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
                 if (_items.isNotEmpty) ...[
                   CabinetHealthCard(
                     insights: _insights,
+                    locale: widget.languageController?.languageCode,
                     onTapExpired: () => _toggleBucketFilter(
                       CabinetExpiryBucket.expired,
                     ),
@@ -716,15 +919,15 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
                 ],
                 Row(
                   children: [
-                    const Expanded(
-                      child: SectionHeader(title: 'Thuốc trong tủ'),
+                    Expanded(
+                      child: SectionHeader(title: _copy['cabinetMedicines']),
                     ),
                     if (_hasActiveFilter)
                       TextButton.icon(
                         onPressed: _clearFilters,
                         icon:
                             const Icon(Icons.filter_alt_off_outlined, size: 18),
-                        label: const Text('Bỏ lọc'),
+                        label: Text(_copy['clearFilter']),
                       ),
                   ],
                 ),
@@ -738,12 +941,10 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
                 else if (_items.isEmpty)
                   ClaraEmptyState(
                     icon: Icons.medication_outlined,
-                    title: 'Tủ thuốc trống',
-                    message:
-                        'Thêm thuốc bạn đang dùng để theo dõi hạn dùng và kiểm '
-                        'tra tương tác.',
+                    title: _copy['emptyTitle'],
+                    message: _copy['emptyDescription'],
                     action: ClaraButton.primary(
-                      label: 'Thêm thuốc',
+                      label: _copy['addMedicine'],
                       icon: Icons.add,
                       onPressed: () => _addOrEditItem(),
                     ),
@@ -751,10 +952,10 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
                 else if (_visibleItems.isEmpty)
                   ClaraEmptyState(
                     icon: Icons.filter_alt_outlined,
-                    title: 'Không có thuốc khớp bộ lọc',
-                    message: 'Chạm "Bỏ lọc" để xem lại toàn bộ tủ thuốc.',
+                    title: _copy['filteredEmptyTitle'],
+                    message: _copy['filteredEmptyDescription'],
                     action: ClaraButton.secondary(
-                      label: 'Bỏ lọc',
+                      label: _copy['clearFilter'],
                       icon: Icons.filter_alt_off_outlined,
                       onPressed: _clearFilters,
                     ),
@@ -787,22 +988,22 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     return Padding(
       padding: const EdgeInsets.only(bottom: ClaraTokens.spaceMd),
       child: ClaraCard.static_(
-        semanticLabel: 'Kiểm tra tương tác thuốc trong tủ',
+        semanticLabel: _copy['ddiPanelLabel'],
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Kiểm tra tương tác trong tủ thuốc',
+              _copy['ddiTitle'],
               style: theme.textTheme.titleSmall,
             ),
             const SizedBox(height: ClaraTokens.spaceXs),
             Text(
-              'Cần ít nhất 2 thuốc khác nhau. Hiện có $_distinctMedicineCount thuốc.',
+              _copy.format('ddiDescription', {'count': _distinctMedicineCount}),
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             ClaraButton.primary(
-              label: 'Kiểm tra tương tác',
+              label: _copy['checkInteractions'],
               icon: Icons.medication_liquid,
               loading: _ddiLoading,
               onPressed: hasEnough ? _runDdiCheck : null,
@@ -812,7 +1013,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
               StatusByText(
                 label: _ddiError!,
                 level: A11yStatusLevel.danger,
-                semanticsPrefix: 'Lỗi',
+                semanticsPrefix: _copy['error'],
               ),
             ],
           ],
@@ -827,12 +1028,13 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       if (item.brandName.isNotEmpty) item.brandName,
       if (item.dosage.isNotEmpty) item.dosage,
       if (item.dosageForm.isNotEmpty) item.dosageForm,
-      if (item.quantity > 0) 'SL: ${item.quantity}',
+      if (item.quantity > 0)
+        _copy.format('quantity', {'quantity': item.quantity}),
     ];
     final expiryStatus = _expiryStatusFor(item.expiresOn);
 
     return ClaraCard.static_(
-      semanticLabel: 'Thuốc ${item.drugName}',
+      semanticLabel: _copy.format('medicineSemantic', {'drug': item.drugName}),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -847,26 +1049,29 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
                 ),
               ),
               MinTapTarget(
-                semanticsLabel: 'Thông tin thuốc ${item.drugName}',
+                semanticsLabel:
+                    _copy.format('medicineInfo', {'drug': item.drugName}),
                 child: IconButton(
                   icon: const Icon(Icons.auto_awesome_outlined),
-                  tooltip: 'Hỏi CLARA về thuốc này',
+                  tooltip: _copy['askClara'],
                   onPressed: () => _openMedicineDetail(item),
                 ),
               ),
               MinTapTarget(
-                semanticsLabel: 'Sửa ${item.drugName}',
+                semanticsLabel:
+                    _copy.format('editMedicine', {'drug': item.drugName}),
                 child: IconButton(
                   icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Sửa',
+                  tooltip: _copy['edit'],
                   onPressed: () => _addOrEditItem(existing: item),
                 ),
               ),
               MinTapTarget(
-                semanticsLabel: 'Xóa ${item.drugName}',
+                semanticsLabel:
+                    _copy.format('deleteMedicine', {'drug': item.drugName}),
                 child: IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  tooltip: 'Xóa',
+                  tooltip: _copy['delete'],
                   onPressed: () => _deleteItem(item),
                 ),
               ),
@@ -877,7 +1082,10 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
                   item.drugName.toLowerCase()) ...[
             const SizedBox(height: ClaraTokens.spaceXs),
             Text(
-              'Hoạt chất: ${item.normalizedName}',
+              _copy.format(
+                'activeIngredient',
+                {'ingredient': item.normalizedName},
+              ),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -889,22 +1097,25 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
           if (item.manufacturer.isNotEmpty) ...[
             const SizedBox(height: ClaraTokens.spaceXs),
             Text(
-              'Nhà sản xuất: ${item.manufacturer}',
+              _copy.format('manufacturer', {'manufacturer': item.manufacturer}),
               style: theme.textTheme.bodySmall,
             ),
           ],
           if (item.note.isNotEmpty) ...[
             const SizedBox(height: ClaraTokens.spaceXs),
-            Text('Ghi chú: ${item.note}', style: theme.textTheme.bodySmall),
+            Text(
+              _copy.format('note', {'note': item.note}),
+              style: theme.textTheme.bodySmall,
+            ),
           ],
           if (expiryStatus != _ExpiryStatus.none) ...[
             const SizedBox(height: ClaraTokens.spaceSm),
-            _buildExpiryStatus(item.expiresOn, expiryStatus),
+            _buildExpiryStatus(context, item.expiresOn, expiryStatus),
           ],
           if (item.needsReview) ...[
             const SizedBox(height: ClaraTokens.spaceSm),
-            const ClaraChip(
-              label: 'Cần xem lại tên thuốc',
+            ClaraChip(
+              label: _copy['reviewName'],
               icon: Icons.help_outline,
             ),
           ],
@@ -913,29 +1124,33 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     );
   }
 
-  Widget _buildExpiryStatus(String expiresOn, _ExpiryStatus status) {
-    final display = _formatExpiry(expiresOn);
+  Widget _buildExpiryStatus(
+    BuildContext context,
+    String expiresOn,
+    _ExpiryStatus status,
+  ) {
+    final display = _formatExpiry(context, expiresOn);
     switch (status) {
       case _ExpiryStatus.expired:
         return StatusByText(
-          label: 'Đã hết hạn (HSD: $display)',
+          label: _copy.format('expired', {'date': display}),
           level: A11yStatusLevel.danger,
           icon: Icons.event_busy,
-          semanticsPrefix: 'Hạn dùng',
+          semanticsPrefix: _copy['expiry'],
         );
       case _ExpiryStatus.expiringSoon:
         return StatusByText(
-          label: 'Sắp hết hạn (HSD: $display)',
+          label: _copy.format('expiringSoon', {'date': display}),
           level: A11yStatusLevel.warning,
           icon: Icons.event_available,
-          semanticsPrefix: 'Hạn dùng',
+          semanticsPrefix: _copy['expiry'],
         );
       case _ExpiryStatus.valid:
         return StatusByText(
-          label: 'Còn hạn (HSD: $display)',
+          label: _copy.format('valid', {'date': display}),
           level: A11yStatusLevel.success,
           icon: Icons.event_available,
-          semanticsPrefix: 'Hạn dùng',
+          semanticsPrefix: _copy['expiry'],
         );
       case _ExpiryStatus.none:
         return const SizedBox.shrink();
@@ -957,25 +1172,26 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     return _ExpiryStatus.valid;
   }
 
-  String _formatExpiry(String expiresOn) {
+  String _formatExpiry(BuildContext context, String expiresOn) {
     final parsed = DateTime.tryParse(expiresOn.trim());
     if (parsed == null) return expiresOn.trim();
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(parsed.day)}/${two(parsed.month)}/${parsed.year}';
+    return MaterialLocalizations.of(context).formatMediumDate(parsed);
   }
 }
 
 /// Shown when `selfmed_cabinet_mobile_enabled` is off: the surface is inert and
 /// no network call is made, preserving the pre-feature app (fail-closed).
 class _UnavailablePlaceholder extends StatelessWidget {
-  const _UnavailablePlaceholder();
+  const _UnavailablePlaceholder({required this.copy});
+
+  final _CabinetCopy copy;
 
   @override
   Widget build(BuildContext context) {
-    return const ClaraEmptyState(
+    return ClaraEmptyState(
       icon: Icons.medication_outlined,
-      title: 'Tủ thuốc chưa được bật',
-      message: 'Tính năng tủ thuốc chưa khả dụng cho tài khoản của bạn.',
+      title: copy['unavailableTitle'],
+      message: copy['unavailableDescription'],
     );
   }
 }
@@ -985,6 +1201,7 @@ class _UnavailablePlaceholder extends StatelessWidget {
 /// `SelfMedConsentGate` copy on the V3 design system.
 class _ConsentGate extends StatelessWidget {
   const _ConsentGate({
+    required this.copy,
     required this.requiredVersion,
     required this.checked,
     required this.saving,
@@ -995,6 +1212,7 @@ class _ConsentGate extends StatelessWidget {
   });
 
   final String requiredVersion;
+  final _CabinetCopy copy;
   final bool checked;
   final bool saving;
   final String? error;
@@ -1009,24 +1227,22 @@ class _ConsentGate extends StatelessWidget {
       padding: const EdgeInsets.all(ClaraTokens.spaceMd),
       children: [
         ClaraCard.static_(
-          semanticLabel: 'Tuyên bố miễn trừ trách nhiệm y tế',
+          semanticLabel: copy['disclaimerSemantic'],
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Tuyên bố miễn trừ trách nhiệm y tế',
+                copy['disclaimerTitle'],
                 style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
-              const Text(
-                'CLARA chỉ hỗ trợ cảnh báo an toàn thuốc và không thay thế bác sĩ. '
-                'Không sử dụng ứng dụng để tự chẩn đoán, tự kê đơn hoặc tự điều '
-                'chỉnh liều dùng.',
-              ),
+              Text(copy['disclaimerBody']),
               const SizedBox(height: ClaraTokens.spaceSm),
               Text(
-                'Phiên bản điều khoản hiện tại: '
-                '${requiredVersion.isEmpty ? "-" : requiredVersion}',
+                copy.format(
+                  'consentVersion',
+                  {'version': requiredVersion.isEmpty ? '-' : requiredVersion},
+                ),
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
@@ -1035,14 +1251,11 @@ class _ConsentGate extends StatelessWidget {
                 onChanged: (value) => onCheckedChanged(value ?? false),
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
-                title: const Text(
-                  'Tôi đã đọc, hiểu và đồng ý với tuyên bố miễn trừ trách nhiệm '
-                  'y tế của CLARA.',
-                ),
+                title: Text(copy['consentCheck']),
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
               ClaraButton.primary(
-                label: 'Đồng ý và tiếp tục',
+                label: copy['agreeContinue'],
                 loading: saving,
                 onPressed: checked ? onAccept : null,
               ),
@@ -1051,11 +1264,11 @@ class _ConsentGate extends StatelessWidget {
                 StatusByText(
                   label: error!,
                   level: A11yStatusLevel.danger,
-                  semanticsPrefix: 'Lỗi',
+                  semanticsPrefix: copy['error'],
                 ),
                 const SizedBox(height: ClaraTokens.spaceSm),
                 ClaraButton.secondary(
-                  label: 'Thử kiểm tra lại',
+                  label: copy['retryConsent'],
                   onPressed: onRetry,
                 ),
               ],
@@ -1071,9 +1284,10 @@ class _ConsentGate extends StatelessWidget {
 /// drug name, brand, manufacturer, dosage, dosage form, quantity, expiry, note.
 /// Returns a payload map via `Navigator.pop` or `null` when cancelled.
 class _CabinetItemEditor extends StatefulWidget {
-  const _CabinetItemEditor({this.existing});
+  const _CabinetItemEditor({required this.copy, this.existing});
 
   final _CabinetMedicine? existing;
+  final _CabinetCopy copy;
 
   @override
   State<_CabinetItemEditor> createState() => _CabinetItemEditorState();
@@ -1126,7 +1340,7 @@ class _CabinetItemEditorState extends State<_CabinetItemEditor> {
   void _submit() {
     final name = _drugName.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Vui lòng nhập tên thuốc.');
+      setState(() => _error = widget.copy['medicineNameRequired']);
       return;
     }
     final quantityText = _quantity.text.trim();
@@ -1134,14 +1348,14 @@ class _CabinetItemEditorState extends State<_CabinetItemEditor> {
     if (quantityText.isNotEmpty) {
       final parsed = num.tryParse(quantityText);
       if (parsed == null || parsed < 0) {
-        setState(() => _error = 'Số lượng không hợp lệ.');
+        setState(() => _error = widget.copy['invalidQuantity']);
         return;
       }
       quantity = parsed;
     }
     final expiry = _expiresOn.text.trim();
     if (expiry.isNotEmpty && DateTime.tryParse(expiry) == null) {
-      setState(() => _error = 'Hạn dùng phải theo định dạng YYYY-MM-DD.');
+      setState(() => _error = widget.copy['invalidExpiry']);
       return;
     }
 
@@ -1173,32 +1387,34 @@ class _CabinetItemEditorState extends State<_CabinetItemEditor> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isEdit ? 'Sửa thuốc' : 'Thêm thuốc',
+              isEdit
+                  ? widget.copy['editorEditTitle']
+                  : widget.copy['editorAddTitle'],
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: ClaraTokens.spaceMd),
-            _field(_drugName, 'Tên thuốc *'),
-            _field(_brandName, 'Tên thương mại'),
-            _field(_manufacturer, 'Nhà sản xuất'),
-            _field(_dosage, 'Hàm lượng / liều'),
-            _field(_dosageForm, 'Dạng bào chế'),
+            _field(_drugName, widget.copy['medicineName']),
+            _field(_brandName, widget.copy['brandName']),
+            _field(_manufacturer, widget.copy['manufacturerField']),
+            _field(_dosage, widget.copy['dosage']),
+            _field(_dosageForm, widget.copy['dosageForm']),
             _field(
               _quantity,
-              'Số lượng',
+              widget.copy['quantityField'],
               keyboardType: TextInputType.number,
             ),
             _field(
               _expiresOn,
-              'Hạn dùng (YYYY-MM-DD)',
+              widget.copy['expiryField'],
               keyboardType: TextInputType.datetime,
             ),
-            _field(_note, 'Ghi chú'),
+            _field(_note, widget.copy['noteField']),
             if (_error != null) ...[
               const SizedBox(height: ClaraTokens.spaceSm),
               StatusByText(
                 label: _error!,
                 level: A11yStatusLevel.danger,
-                semanticsPrefix: 'Lỗi',
+                semanticsPrefix: widget.copy['error'],
               ),
             ],
             const SizedBox(height: ClaraTokens.spaceMd),
@@ -1206,14 +1422,14 @@ class _CabinetItemEditorState extends State<_CabinetItemEditor> {
               children: [
                 Expanded(
                   child: ClaraButton.secondary(
-                    label: 'Hủy',
+                    label: widget.copy['cancel'],
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
                 const SizedBox(width: ClaraTokens.spaceMd),
                 Expanded(
                   child: ClaraButton.primary(
-                    label: isEdit ? 'Lưu' : 'Thêm',
+                    label: isEdit ? widget.copy['save'] : widget.copy['add'],
                     onPressed: _submit,
                   ),
                 ),
