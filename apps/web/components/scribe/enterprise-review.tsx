@@ -62,6 +62,7 @@ import {
   speakerChip,
   toggleEmCptSelection,
   type GroundingStatus,
+  type ScribeStageId,
   type ScribeStageStatus,
 } from "@/lib/scribe-review";
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
@@ -113,14 +114,6 @@ const STAGE_DOT_CLASSES: Record<ScribeStageStatus, string> = {
   completed: "bg-emerald-500",
   failed: "bg-rose-500",
   warning: "bg-amber-500",
-};
-
-const STAGE_STATUS_LABELS: Record<ScribeStageStatus, string> = {
-  pending: "đang chờ",
-  in_progress: "đang xử lý",
-  completed: "hoàn tất",
-  failed: "lỗi",
-  warning: "cảnh báo",
 };
 
 // Grounding chip tones (Req 12.7): grounded statements are evidenced, unverified
@@ -891,7 +884,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
 
   return (
     <div className="col-span-12 grid grid-cols-12 gap-5">
-      {renderProcessPanel({ stages, sessionStatus })}
+      {renderProcessPanel({ language, stages, sessionStatus })}
       {renderTranscriptColumn({
         language,
         consentCaptured,
@@ -969,9 +962,11 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
 // ---------------------------------------------------------------------------
 
 function renderProcessPanel({
+  language,
   stages,
   sessionStatus,
 }: {
+  language: UILanguage;
   stages: ReturnType<typeof computePipelineStages>;
   sessionStatus: string;
 }) {
@@ -979,12 +974,12 @@ function renderProcessPanel({
     <aside className="col-span-12 xl:col-span-3 space-y-3">
       <div className={panelPaddedClass} data-testid="scribe-process-panel">
         <div className="flex items-center justify-between">
-          <h2 className={sectionTitleClass}>Luồng xử lý</h2>
+          <h2 className={sectionTitleClass}>{t(language, "scribe.enterprise.process.title")}</h2>
           <span className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-bold text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
-            {sessionStatus || "draft"}
+            {sessionStatus || t(language, "scribe.enterprise.process.sessionDraft")}
           </span>
         </div>
-        <ol className="mt-3 space-y-3">
+        <ol className="mt-3 space-y-3" aria-label={t(language, "scribe.enterprise.process.stagesLabel")}>
           {stages.map((stage, index) => (
             <li key={stage.id} className="flex gap-3">
               <div className="flex flex-col items-center">
@@ -994,9 +989,11 @@ function renderProcessPanel({
                 ) : null}
               </div>
               <div>
-                <p className={`text-sm font-bold ${bodyTextClass}`}>{stage.label}</p>
+                <p className={`text-sm font-bold ${bodyTextClass}`}>
+                  {processStageLabel(language, stage.id, stage.label)}
+                </p>
                 <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${mutedTextClass}`}>
-                  {STAGE_STATUS_LABELS[stage.status]}
+                  {processStatusLabel(language, stage.status)}
                 </p>
                 {stage.detail ? (
                   <p className={`mt-0.5 text-[11px] leading-4 ${secondaryTextClass}`}>{stage.detail}</p>
@@ -1008,6 +1005,38 @@ function renderProcessPanel({
       </div>
     </aside>
   );
+}
+
+function processStageLabel(language: UILanguage, stage: ScribeStageId, fallback: string): string {
+  switch (stage) {
+    case "consent":
+      return t(language, "scribe.enterprise.process.stage.consent");
+    case "transcribe":
+      return t(language, "scribe.enterprise.process.stage.transcribe");
+    case "generate":
+      return t(language, "scribe.enterprise.process.stage.generate");
+    case "sign":
+      return t(language, "scribe.enterprise.process.stage.sign");
+    case "export":
+      return t(language, "scribe.enterprise.process.stage.export");
+    default:
+      return fallback;
+  }
+}
+
+function processStatusLabel(language: UILanguage, status: ScribeStageStatus): string {
+  switch (status) {
+    case "pending":
+      return t(language, "scribe.enterprise.process.status.pending");
+    case "in_progress":
+      return t(language, "scribe.enterprise.process.status.inProgress");
+    case "completed":
+      return t(language, "scribe.enterprise.process.status.completed");
+    case "failed":
+      return t(language, "scribe.enterprise.process.status.failed");
+    case "warning":
+      return t(language, "scribe.enterprise.process.status.warning");
+  }
 }
 
 function renderTranscriptColumn(props: {
