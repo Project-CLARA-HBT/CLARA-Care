@@ -28,11 +28,11 @@ function getDetectionKey(item: ScanDetection, index: number): string {
   return `${item.normalized_name}-${item.evidence}-${index}`;
 }
 
-function normalizationLabel(source: string | null | undefined): string {
-  if (source === "db") return "Khớp chuẩn";
-  if (source === "candidate") return "Cần kiểm tra lại";
-  if (source === "fallback") return "Độ khớp tay: thấp";
-  return "Chưa rõ";
+function normalizationLabel(source: string | null | undefined, language: ReturnType<typeof useUILanguage>): string {
+  if (source === "db") return t(language, "medicines.cabinet.guided.normalization.matched");
+  if (source === "candidate") return t(language, "medicines.cabinet.guided.normalization.candidate");
+  if (source === "fallback") return t(language, "medicines.cabinet.guided.normalization.fallback");
+  return t(language, "medicines.cabinet.guided.normalization.unknown");
 }
 
 function normalizationTone(source: string | null | undefined): BadgeTone {
@@ -105,22 +105,26 @@ export default function CabinetAddPage() {
   const parsedQuantity = Math.max(1, Number.isFinite(Number(manualQuantity)) ? Math.floor(Number(manualQuantity)) : 1);
   const stepItems = [
     {
-      title: "Upload đơn thuốc",
-      status: scanFile ? "Đã chọn file" : "Chưa hoàn thành",
+      title: t(language, "medicines.cabinet.guided.step.upload.title"),
+      status: scanFile ? t(language, "medicines.cabinet.guided.step.upload.selected") : t(language, "medicines.cabinet.guided.step.upload.pending"),
       completed: Boolean(scanFile),
       active: !scanFile,
       optional: false
     },
     {
-      title: "Dán nội dung OCR",
-      status: detections.length ? "Đã có dữ liệu OCR" : scanText.trim() ? "Đang nhập nội dung" : "Chưa có dữ liệu",
+      title: t(language, "medicines.cabinet.guided.step.paste.title"),
+      status: detections.length
+        ? t(language, "medicines.cabinet.guided.step.paste.ready")
+        : scanText.trim()
+          ? t(language, "medicines.cabinet.guided.step.paste.entering")
+          : t(language, "medicines.cabinet.guided.step.paste.pending"),
       completed: detections.length > 0,
       active: Boolean(scanFile || scanText.trim()) && detections.length === 0,
       optional: false
     },
     {
-      title: "Thêm thủ công",
-      status: "Dùng nếu OCR chưa đúng",
+      title: t(language, "medicines.cabinet.guided.step.manual.title"),
+      status: t(language, "medicines.cabinet.guided.step.manual.status"),
       completed: false,
       active: Boolean(manualDrugName.trim() || manualDosage.trim()),
       optional: true
@@ -146,7 +150,7 @@ export default function CabinetAddPage() {
 
   const onScanFile = async () => {
     if (!scanFile) {
-      setScanNotice("Vui lòng chọn file ảnh/PDF đơn thuốc trước khi quét.");
+      setScanNotice(t(language, "medicines.cabinet.guided.notice.fileRequired"));
       return;
     }
 
@@ -156,9 +160,11 @@ export default function CabinetAddPage() {
       const found = await scanReceiptFile(scanFile);
       setDetections(found);
       resetSelection(found);
-      setScanNotice(found.length ? `Nhận diện được ${found.length} thuốc từ file.` : "Không nhận diện được thuốc từ file.");
+      setScanNotice(found.length
+        ? t(language, "medicines.cabinet.guided.notice.fileDetected", { count: found.length })
+        : t(language, "medicines.cabinet.guided.notice.fileNotDetected"));
     } catch (cause) {
-      setScanNotice(cause instanceof Error ? cause.message : "Không thể nhận diện thuốc từ file.");
+      setScanNotice(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.guided.notice.fileScanError"));
     } finally {
       setIsScanningFile(false);
     }
@@ -175,7 +181,7 @@ export default function CabinetAddPage() {
   const onScanText = async () => {
     const text = scanText.trim();
     if (!text) {
-      setScanNotice("Vui lòng dán hoặc nhập nội dung thuốc trước khi nhận diện.");
+      setScanNotice(t(language, "medicines.cabinet.guided.notice.textRequired"));
       return;
     }
 
@@ -185,9 +191,11 @@ export default function CabinetAddPage() {
       const found = await scanReceiptText(text);
       setDetections(found);
       resetSelection(found);
-      setScanNotice(found.length ? `Nhận diện được ${found.length} thuốc từ nội dung đã dán.` : "Không nhận diện được thuốc từ nội dung đã dán.");
+      setScanNotice(found.length
+        ? t(language, "medicines.cabinet.guided.notice.textDetected", { count: found.length })
+        : t(language, "medicines.cabinet.guided.notice.textNotDetected"));
     } catch (cause) {
-      setScanNotice(cause instanceof Error ? cause.message : "Không thể nhận diện thuốc từ nội dung đã dán.");
+      setScanNotice(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.guided.notice.textScanError"));
     } finally {
       setIsScanningText(false);
     }
@@ -196,16 +204,16 @@ export default function CabinetAddPage() {
   const onImportSelected = async () => {
     if (!selectedDetections.length) return;
     if (pendingLowConfidenceSelections.length) {
-      setScanNotice("Cần xác nhận các thuốc nhận diện chưa chắc chắn trước khi nhập.");
+      setScanNotice(t(language, "medicines.cabinet.guided.notice.confirmBeforeImport"));
       return;
     }
     setIsImporting(true);
     setScanNotice("");
     try {
       const inserted = await importDetections(selectedDetections);
-      setScanNotice(`Đã thêm ${inserted} thuốc vào tủ thuốc.`);
+      setScanNotice(t(language, "medicines.cabinet.guided.notice.imported", { count: inserted }));
     } catch (cause) {
-      setScanNotice(cause instanceof Error ? cause.message : "Không thể nhập dữ liệu vào tủ thuốc.");
+      setScanNotice(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.guided.notice.importError"));
     } finally {
       setIsImporting(false);
     }
@@ -281,8 +289,8 @@ export default function CabinetAddPage() {
 
   return (
     <PageShell
-      title="Thêm Thuốc"
-      description="Tải ảnh đơn thuốc, dán nội dung thuốc hoặc nhập thủ công từng thuốc vào tủ thuốc cá nhân."
+      title={t(language, "medicines.cabinet.guided.page.title")}
+      description={t(language, "medicines.cabinet.guided.page.description")}
     >
       <MedicalConsentGate>
         <div className="space-y-5">
@@ -301,7 +309,7 @@ export default function CabinetAddPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Bước {index + 1}</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.step.number", { number: index + 1 })}</p>
                     <h2 className="mt-1 text-base font-bold text-[color:var(--text-primary)]">{step.title}</h2>
                   </div>
                   <span
@@ -314,7 +322,7 @@ export default function CabinetAddPage() {
                           : "border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]",
                     ].join(" ")}
                   >
-                    {step.completed ? <span className="material-symbols-outlined text-[16px]">check</span> : step.optional ? "Tùy chọn" : index + 1}
+                    {step.completed ? <span className="material-symbols-outlined text-[16px]">check</span> : step.optional ? t(language, "medicines.cabinet.guided.optional") : index + 1}
                   </span>
                 </div>
                 <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">{step.status}</p>
@@ -325,16 +333,16 @@ export default function CabinetAddPage() {
           <section className={cardClass}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Bước 1</p>
-                <h2 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">Tải ảnh đơn thuốc / hóa đơn</h2>
-                <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">Kéo thả ảnh/PDF đơn thuốc vào đây hoặc bấm Chọn file.</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.step.number", { number: 1 })}</p>
+                <h2 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.guided.file.title")}</h2>
+                <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.file.description")}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button as="link" href="/medicines?tab=cabinet" variant="secondary">
-                  Quay lại tủ thuốc
+                  {t(language, "medicines.cabinet.guided.file.back")}
                 </Button>
                 <Button as="link" href="/medicines?tab=safety" variant="secondary">
-                  Sang kiểm tra tương tác
+                  {t(language, "medicines.cabinet.guided.file.openSafety")}
                 </Button>
               </div>
             </div>
@@ -353,21 +361,21 @@ export default function CabinetAddPage() {
               />
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-lg font-bold text-[color:var(--text-primary)]">Kéo thả ảnh/PDF đơn thuốc vào đây</p>
-                  <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">Hỗ trợ ảnh đơn thuốc, hóa đơn thuốc hoặc file PDF.</p>
+                  <p className="text-lg font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.guided.file.dropTitle")}</p>
+                  <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.file.fileTypes")}</p>
                   {scanFile ? (
                     <p className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-2 text-sm font-semibold text-[var(--status-ok-text)]">
-                      Đã chọn: {scanFile.name}
+                      {t(language, "medicines.cabinet.guided.file.selected", { filename: scanFile.name })}
                     </p>
                   ) : (
-                    <p className={helperTextClass}>Chọn file ảnh/PDF trước để quét OCR.</p>
+                    <p className={helperTextClass}>{t(language, "medicines.cabinet.guided.file.required")}</p>
                   )}
                 </div>
                 <label
                   htmlFor="scan-file-input"
                   className="inline-flex min-h-[var(--touch-target-min)] cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-sm)] transition hover:bg-[var(--brand-700)]"
                 >
-                  Chọn file
+                  {t(language, "medicines.cabinet.guided.file.choose")}
                 </label>
               </div>
 
@@ -376,26 +384,26 @@ export default function CabinetAddPage() {
                   onClick={() => void onScanFile()}
                   disabled={!canScanFile}
                   loading={isScanningFile}
-                  loadingLabel="Đang nhận diện..."
+                  loadingLabel={t(language, "medicines.cabinet.guided.scanning")}
                 >
-                  Nhận diện thuốc từ file
+                  {t(language, "medicines.cabinet.guided.file.scan")}
                 </Button>
-                {!scanFile ? <span className="text-sm font-medium text-[color:var(--text-muted)]">Chọn file ảnh/PDF trước để quét OCR.</span> : null}
+                {!scanFile ? <span className="text-sm font-medium text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.file.required")}</span> : null}
               </div>
             </div>
           </section>
 
           <section className={cardClass}>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Bước 2</p>
-            <h3 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">Nhập hoặc dán nội dung thuốc</h3>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.step.number", { number: 2 })}</p>
+            <h3 className="mt-2 text-2xl font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.guided.paste.title")}</h3>
             <p className="mt-2 text-base font-medium text-[color:var(--text-muted)]">
-              Nếu OCR ngoài đã có sẵn nội dung, bạn có thể dán vào đây để nhận diện nhanh hơn.
+              {t(language, "medicines.cabinet.guided.paste.description")}
             </p>
 
             <Textarea
               value={scanText}
               onChange={(event) => setScanText(event.target.value)}
-              placeholder={"Ví dụ:\naspirin 81mg\nmetformin 500mg\namlodipine 5mg"}
+              placeholder={t(language, "medicines.cabinet.guided.paste.placeholder")}
               wrapperClassName="mt-4"
               className="min-h-[220px]"
             />
@@ -404,12 +412,12 @@ export default function CabinetAddPage() {
               onClick={() => void onScanText()}
               disabled={!canScanText}
               loading={isScanningText}
-              loadingLabel="Đang nhận diện..."
+              loadingLabel={t(language, "medicines.cabinet.guided.scanning")}
               className="mt-4"
             >
-              Nhận diện từ nội dung đã dán
+              {t(language, "medicines.cabinet.guided.paste.scan")}
             </Button>
-            {!scanText.trim() ? <p className={helperTextClass}>Dán hoặc nhập nội dung trước để tiếp tục.</p> : null}
+            {!scanText.trim() ? <p className={helperTextClass}>{t(language, "medicines.cabinet.guided.paste.required")}</p> : null}
 
             {scanNotice ? (
               <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm font-semibold text-[color:var(--text-muted)]">
@@ -420,32 +428,32 @@ export default function CabinetAddPage() {
             {detections.length ? (
               <div className="mt-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-base font-bold text-[color:var(--text-primary)]">Danh sách thuốc nhận diện</p>
+                  <p className="text-base font-bold text-[color:var(--text-primary)]">{t(language, "medicines.cabinet.guided.detections.title")}</p>
                   <Badge tone="neutral">
-                    Đã chọn {selectedDetections.length}/{detections.length}
+                    {t(language, "medicines.cabinet.guided.detections.selected", { selected: selectedDetections.length, total: detections.length })}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button variant="secondary" onClick={() => onSelectAllDetections(true)}>
-                    Chọn tất cả
+                    {t(language, "medicines.cabinet.guided.detections.selectAll")}
                   </Button>
                   <Button variant="secondary" onClick={() => onSelectAllDetections(false)}>
-                    Bỏ chọn tất cả
+                    {t(language, "medicines.cabinet.guided.detections.clearAll")}
                   </Button>
                   <Button
                     onClick={() => onConfirmAllLowConfidence(true)}
                     disabled={!lowConfidenceTotal}
                     className="border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)] hover:bg-[var(--status-warn-bg)]"
                   >
-                    Xác nhận các thuốc cần kiểm tra lại
+                    {t(language, "medicines.cabinet.guided.detections.confirmAll")}
                   </Button>
                 </div>
                 {!lowConfidenceTotal ? (
-                  <p className={helperTextClass}>Không có thuốc nhận diện chưa chắc chắn cần duyệt thêm.</p>
+                  <p className={helperTextClass}>{t(language, "medicines.cabinet.guided.detections.noReview")}</p>
                 ) : null}
                 {pendingLowConfidenceSelections.length ? (
                   <p className="rounded-[var(--radius-md)] border-2 border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-sm font-semibold text-[var(--status-warn-text)]">
-                    Còn {pendingLowConfidenceSelections.length}/{selectedLowConfidenceTotal} thuốc cần kiểm tra lại trước khi nhập.
+                    {t(language, "medicines.cabinet.guided.detections.reviewRemaining", { pending: pendingLowConfidenceSelections.length, total: selectedLowConfidenceTotal })}
                   </p>
                 ) : null}
 
@@ -477,21 +485,21 @@ export default function CabinetAddPage() {
                             <p className="text-lg font-bold text-[color:var(--text-primary)]">{item.drug_name}</p>
                             {(item.dosage || item.brand_name || item.manufacturer) ? (
                               <p className="mt-1 text-sm font-medium text-[color:var(--text-muted)]">
-                                {item.dosage ? `Liều: ${item.dosage}` : "Liều: N/A"}
+                                {t(language, "medicines.cabinet.guided.detections.dose", { dose: item.dosage || t(language, "medicines.cabinet.guided.notAvailable") })}
                                 {" · "}
-                                {item.brand_name ? `Brand: ${item.brand_name}` : "Brand: N/A"}
+                                {t(language, "medicines.cabinet.guided.detections.brand", { brand: item.brand_name || t(language, "medicines.cabinet.guided.notAvailable") })}
                                 {" · "}
-                                {item.manufacturer ? `Hãng: ${item.manufacturer}` : "Hãng: N/A"}
+                                {t(language, "medicines.cabinet.guided.detections.manufacturer", { manufacturer: item.manufacturer || t(language, "medicines.cabinet.guided.notAvailable") })}
                               </p>
                             ) : null}
-                            <p className="mt-1 text-sm font-medium text-[color:var(--text-muted)]">Bằng chứng: {item.evidence}</p>
+                            <p className="mt-1 text-sm font-medium text-[color:var(--text-muted)]">{t(language, "medicines.cabinet.guided.detections.evidence", { evidence: item.evidence })}</p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               <Badge tone={confidenceTone(item.confidence)}>
-                                OCR {Math.round(item.confidence * 100)}%
+                                {t(language, "medicines.cabinet.guided.detections.ocr")}
                               </Badge>
                               {item.mapping_source ? (
                                 <Badge tone={normalizationTone(item.mapping_source)}>
-                                  {normalizationLabel(item.mapping_source)}
+                                  {normalizationLabel(item.mapping_source, language)}
                                 </Badge>
                               ) : null}
                             </div>
@@ -506,7 +514,7 @@ export default function CabinetAddPage() {
                               className="h-6 w-6 rounded border-[color:var(--status-warn-border)] text-[var(--warn-500)] focus:ring-[color:var(--status-warn-border)]"
                             />
                             <span className="text-sm font-semibold text-[var(--status-warn-text)]">
-                              Tôi xác nhận thuốc OCR này đúng trước khi nhập.
+                              {t(language, "medicines.cabinet.guided.detections.confirmOne")}
                             </span>
                           </label>
                         ) : null}
@@ -519,17 +527,17 @@ export default function CabinetAddPage() {
                   onClick={() => void onImportSelected()}
                   disabled={!canImportSelected}
                   loading={isImporting}
-                  loadingLabel="Đang thêm vào tủ..."
+                  loadingLabel={t(language, "medicines.cabinet.guided.detections.importing")}
                 >
-                  {`Thêm ${selectedDetections.length} thuốc vào tủ`}
+                  {t(language, "medicines.cabinet.guided.detections.import", { count: selectedDetections.length })}
                 </Button>
                 {!canImportSelected ? (
                   <p className={helperTextClass}>
                     {selectedDetections.length === 0
-                      ? "Chọn ít nhất 1 thuốc nhận diện để thêm vào tủ."
+                      ? t(language, "medicines.cabinet.guided.detections.selectRequired")
                       : pendingLowConfidenceSelections.length > 0
-                        ? "Xác nhận các thuốc cần kiểm tra lại trước khi thêm vào tủ."
-                        : "Đang xử lý, vui lòng chờ."}
+                        ? t(language, "medicines.cabinet.guided.detections.confirmRequired")
+                        : t(language, "medicines.cabinet.guided.detections.processing")}
                   </p>
                 ) : null}
               </div>

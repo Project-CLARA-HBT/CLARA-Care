@@ -14,6 +14,7 @@ import {
   abandonLifeMapCaptureSession,
   actOnLifeMapReviewFinding,
   askLifeMap,
+  createLifeMapVisitPreparationDraft,
   correctLifeMapEvent,
   disputeLifeMapEvent,
   createLifeMapTask,
@@ -48,6 +49,7 @@ import {
   type LifeMapRevisionComparison,
   type LifeMapReviewFinding,
   type LifeMapSummary,
+  type LifeMapVisitPreparationDraft,
   type MedicationNormalizationProposal,
   type LifeMapToday,
   type LifeMapReplay,
@@ -174,6 +176,7 @@ export default function LifeMapPage() {
   const [captureEnabled, setCaptureEnabled] = useState(false);
   const [questionEnabled, setQuestionEnabled] = useState(false);
   const [askEnabled, setAskEnabled] = useState(false);
+  const [visitPreparationEnabled, setVisitPreparationEnabled] = useState(false);
   const [reviewEnabled, setReviewEnabled] = useState(false);
   const [summaryEnabled, setSummaryEnabled] = useState(false);
   const [summaryLevel, setSummaryLevel] = useState<"day" | "week" | "episode">(
@@ -211,6 +214,8 @@ export default function LifeMapPage() {
   const [correctionText, setCorrectionText] = useState("");
   const [askQuery, setAskQuery] = useState("");
   const [askAnswer, setAskAnswer] = useState<LifeMapAskAnswer | null>(null);
+  const [visitPreparationDraft, setVisitPreparationDraft] =
+    useState<LifeMapVisitPreparationDraft | null>(null);
   const [reviewFindings, setReviewFindings] = useState<
     LifeMapReviewFinding[]
   >([]);
@@ -244,6 +249,9 @@ export default function LifeMapPage() {
         setCaptureEnabled(Boolean(capabilities.lifemap_capture));
         setQuestionEnabled(Boolean(capabilities.lifemap_next_question_v2));
         setAskEnabled(Boolean(capabilities.lifemap_ask_ai));
+        setVisitPreparationEnabled(
+          Boolean(capabilities.lifemap_vietnamese_drafts),
+        );
         setReviewEnabled(Boolean(capabilities.lifemap_ai_review_findings));
         setSummaryEnabled(Boolean(capabilities.lifemap_ai_summaries));
         if (capabilities.lifemap_baselines_v2) {
@@ -254,6 +262,7 @@ export default function LifeMapPage() {
         setCaptureEnabled(false);
         setQuestionEnabled(false);
         setAskEnabled(false);
+        setVisitPreparationEnabled(false);
         setReviewEnabled(false);
         setSummaryEnabled(false);
       });
@@ -660,6 +669,30 @@ export default function LifeMapPage() {
     }
   };
 
+  const createVisitPreparationDraft = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      // This endpoint is deliberately read-only: it receives only the selected
+      // scope, returns exact revision citations, and cannot write LifeMap.
+      setVisitPreparationDraft(
+        await createLifeMapVisitPreparationDraft(
+          "",
+          language,
+          episodeId || undefined,
+        ),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : copy("lifemap.visitPrep.error"),
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const scanReviewFindings = async () => {
     setSaving(true);
     setError("");
@@ -815,6 +848,163 @@ export default function LifeMapPage() {
                       <p className="mt-4 text-xs text-[var(--text-muted)]">
                         {copy("lifemap.ask.disclosure", {
                           mode: askAnswer.disclosure.mode,
+                        })}
+                      </p>
+                    </div>
+                  ) : null}
+                </SurfaceCard>
+              ) : null}
+
+              {visitPreparationEnabled ? (
+                <SurfaceCard className="overflow-hidden">
+                  <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
+                    <Badge tone="brand">{copy("lifemap.visitPrep.badge")}</Badge>
+                    <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
+                      {copy("lifemap.visitPrep.title")}
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                      {copy("lifemap.visitPrep.description")}
+                    </p>
+                  </div>
+                  <div className="space-y-3 p-5">
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      {episodeId
+                        ? copy("lifemap.visitPrep.selectedEpisode")
+                        : copy("lifemap.visitPrep.allRecords")}
+                    </p>
+                    <Button
+                      icon="clinical_notes"
+                      loading={saving}
+                      loadingLabel={copy("lifemap.visitPrep.loading")}
+                      onClick={() => void createVisitPreparationDraft()}
+                    >
+                      {copy("lifemap.visitPrep.create")}
+                    </Button>
+                  </div>
+                  {visitPreparationDraft ? (
+                    <div
+                      className="space-y-4 border-t border-[color:var(--shell-border)] p-5"
+                      aria-live="polite"
+                    >
+                      <div>
+                        <h3 className="font-semibold text-[var(--text-primary)]">
+                          {visitPreparationDraft.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                          {copy("lifemap.visitPrep.reviewOnly")}
+                        </p>
+                      </div>
+                      {visitPreparationDraft.status === "emergency_escalation" ? (
+                        <p
+                          className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-sm text-[var(--status-danger-text)]"
+                          role="alert"
+                        >
+                          {visitPreparationDraft.answer}
+                        </p>
+                      ) : visitPreparationDraft.plain_language_summary ? (
+                        <div className="space-y-4">
+                          <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                              {copy("lifemap.visitPrep.importantNow")}
+                            </p>
+                            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
+                              {visitPreparationDraft.plain_language_summary.important_now}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">
+                              {copy("lifemap.visitPrep.basedOn")}
+                            </p>
+                            {visitPreparationDraft.plain_language_summary.based_on.length ? (
+                              <ul className="mt-2 space-y-2">
+                                {visitPreparationDraft.plain_language_summary.based_on.map(
+                                  (source) => (
+                                    <li
+                                      key={source.citation_ids.join("-")}
+                                      className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-primary)]"
+                                    >
+                                      <p>{source.text}</p>
+                                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                        {copy("lifemap.visitPrep.source", {
+                                          date: formatLocaleDate(
+                                            language,
+                                            source.occurred_at,
+                                          ),
+                                          revision: source.citation_ids.join(", "),
+                                        })}
+                                      </p>
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            ) : (
+                              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                {copy("lifemap.visitPrep.noSources")}
+                              </p>
+                            )}
+                          </div>
+                          {visitPreparationDraft.questions_to_consider.length ? (
+                            <div>
+                              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                {copy("lifemap.visitPrep.questions")}
+                              </p>
+                              <ul className="mt-2 space-y-2 text-sm leading-6 text-[var(--text-primary)]">
+                                {visitPreparationDraft.questions_to_consider.map(
+                                  (question) => (
+                                    <li
+                                      key={`${question.text}-${question.citation_ids.join("-")}`}
+                                      className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3"
+                                    >
+                                      <p>{question.text}</p>
+                                      {question.citation_ids.length ? (
+                                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                          {copy("lifemap.visitPrep.revisionSource", {
+                                            revision: question.citation_ids.join(", "),
+                                          })}
+                                        </p>
+                                      ) : null}
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          ) : null}
+                          {visitPreparationDraft.plain_language_summary.uncertainty
+                            .length ? (
+                            <div className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]">
+                              <span>{copy("lifemap.visitPrep.uncertainty")}</span>
+                              <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {visitPreparationDraft.plain_language_summary.uncertainty.map(
+                                  (item, index) => (
+                                    <li key={`${item}-${index}`}>{item}</li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          ) : null}
+                          <div className="space-y-2 text-sm text-[var(--text-secondary)]">
+                            <p>
+                              <span className="font-medium text-[var(--text-primary)]">
+                                {copy("lifemap.visitPrep.nextStep")}
+                              </span>{" "}
+                              {visitPreparationDraft.plain_language_summary.next_step}
+                            </p>
+                            <p>
+                              <span className="font-medium text-[var(--text-primary)]">
+                                {copy("lifemap.visitPrep.urgentHelp")}
+                              </span>{" "}
+                              {visitPreparationDraft.plain_language_summary.urgent_help}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          {copy("lifemap.visitPrep.noSources")}
+                        </p>
+                      )}
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {copy("lifemap.visitPrep.provenance", {
+                          count: visitPreparationDraft.source_revision_ids.length,
                         })}
                       </p>
                     </div>

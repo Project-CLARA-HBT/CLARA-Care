@@ -212,6 +212,7 @@ export type LifeMapAskAnswer = {
 export type LifeMapVisitPreparationDraft = {
   status: "ready" | "abstained" | "emergency_escalation";
   title: string;
+  answer?: string;
   plain_language_summary?: {
     status: "ready" | "abstained";
     important_now: string;
@@ -230,12 +231,12 @@ export type LifeMapVisitPreparationDraft = {
   source_revision_ids: string[];
   evidence: LifeMapAskEvidence[];
   disclosure: {
-    mode: string;
-    medical_advice: false;
+    mode?: string;
+    medical_advice?: false;
     mutates_lifemap: false;
     draft_only: true;
-    requires_user_review: true;
-    preserves_truth_state: true;
+    requires_user_review?: true;
+    preserves_truth_state?: true;
   };
 };
 
