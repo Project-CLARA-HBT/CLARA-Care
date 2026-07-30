@@ -52,6 +52,16 @@ describe("primary shell i18n hard-coded copy scanner", () => {
     }
   });
 
+  it("keeps LifeMap's task-first query and summary entry points catalog-backed", () => {
+    const source = readFileSync(resolve(ROOT, "app/lifemap/page.tsx"), "utf8");
+    expect(source).toContain('from "@/lib/i18n/catalog"');
+    expect(source).toContain('from "@/lib/use-ui-language"');
+    expect(source).toContain('copy("lifemap.ask.title")');
+    expect(source).toContain('copy("lifemap.summary.title")');
+    expect(source).toContain("formatLocaleDate(language, source.occurred_at");
+    expect(source).toContain("formatLocaleDate(language, claim.occurred_at");
+  });
+
   it("keeps the Visit preparation flow catalog-backed and locale-formatted", () => {
     const source = readFileSync(resolve(ROOT, "app/visits/page.tsx"), "utf8");
     expect(source).toContain('from "@/lib/use-ui-language"');

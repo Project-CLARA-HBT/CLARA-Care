@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Field, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
+import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   acceptLifeMapTask,
   abandonLifeMapCaptureSession,
@@ -50,23 +52,29 @@ import {
 } from "@/lib/lifemap";
 import { getProfileContext } from "@/lib/profile-context-api";
 
-const priorities = [
-  ["routine", "Khi thuận tiện"],
-  ["soon", "Sớm"],
-  ["urgent", "Cần ưu tiên"],
-] as const;
-
 function priorityTone(priority: string): "danger" | "warn" | "brand" {
   if (priority === "urgent") return "danger";
   if (priority === "soon") return "warn";
   return "brand";
 }
 
-function priorityLabel(priority: string): string {
-  return priorities.find(([key]) => key === priority)?.[1] ?? priority;
+function priorityLabel(
+  priority: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  if (priority === "urgent") return copy("lifemap.priority.urgent");
+  if (priority === "soon") return copy("lifemap.priority.soon");
+  if (priority === "routine") return copy("lifemap.priority.routine");
+  return priority;
 }
 
 export default function LifeMapPage() {
+  const language = useUILanguage();
+  const copy = useCallback(
+    (key: UITranslationKey, values?: Record<string, string | number>) =>
+      t(language, key, values ?? {}),
+    [language],
+  );
   const [data, setData] = useState<LifeMapToday | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -126,11 +134,11 @@ export default function LifeMapPage() {
       setEpisodeId((current) => current || next.episodes[0]?.id || "");
       setDisputes(await getLifeMapDisputes());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Kiểm tra kết nối rồi thử lại.");
+      setError(cause instanceof Error ? cause.message : copy("today.connectionError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [copy]);
 
   useEffect(() => {
     void load();
@@ -188,7 +196,7 @@ export default function LifeMapPage() {
       rememberCapture(session);
       if (session.persisted) setCaptureText("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể bắt đầu ghi nhận.");
+      setError(cause instanceof Error ? cause.message : copy("lifemap.error.startCapture"));
     } finally {
       setSaving(false);
     }
@@ -199,13 +207,13 @@ export default function LifeMapPage() {
     if (!captureFile) return;
     setSaving(true);
     setError("");
-    setCaptureJobStatus("Đang tải tệp an toàn…");
+    setCaptureJobStatus(copy("lifemap.capture.uploading"));
     try {
       const session = await startLifeMapArtifactCapture(captureKind);
-      if (!session.id) throw new Error("Phiên ghi nhận không hợp lệ.");
+      if (!session.id) throw new Error(copy("lifemap.error.invalidCaptureSession"));
       rememberCapture(session);
       const uploaded = await uploadLifeMapCaptureArtifact(session.id, captureFile);
-      setCaptureJobStatus("Đang đọc nội dung. Chưa có dữ liệu nào được xác nhận.");
+      setCaptureJobStatus(copy("lifemap.capture.reading"));
       for (let attempt = 0; attempt < 45; attempt += 1) {
         const job = await getLifeMapCaptureJob(uploaded.job.id);
         if (job.status === "completed") {
@@ -225,15 +233,15 @@ export default function LifeMapPage() {
           return;
         }
         if (job.status === "failed") {
-          throw new Error("Không thể đọc tệp an toàn. Bản gốc vẫn chưa được xác nhận.");
+          throw new Error(copy("lifemap.error.readCapture"));
         }
         await new Promise((resolve) => window.setTimeout(resolve, 1000));
       }
       setCaptureJobStatus(
-        "Tác vụ vẫn đang xử lý. Bạn có thể quay lại để tiếp tục xem xét.",
+        copy("lifemap.capture.processing"),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xử lý tệp.");
+      setError(cause instanceof Error ? cause.message : copy("lifemap.error.processCapture"));
     } finally {
       setSaving(false);
     }
@@ -596,8 +604,8 @@ export default function LifeMapPage() {
   return (
     <PageShell
       variant="plain"
-      title="LifeMap"
-      description="Tổ chức các điều bạn muốn theo dõi thành hành trình nhỏ, có thể xem lại và thay đổi bất cứ lúc nào."
+      title={copy("lifemap.title")}
+      description={copy("lifemap.description")}
     >
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-5">
@@ -610,13 +618,12 @@ export default function LifeMapPage() {
               {askEnabled ? (
                 <SurfaceCard className="overflow-hidden">
                   <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
-                    <Badge tone="brand">AI có dẫn nguồn</Badge>
+                    <Badge tone="brand">{copy("lifemap.ask.badge")}</Badge>
                     <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
-                      Hỏi LifeMap của tôi
+                      {copy("lifemap.ask.title")}
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                      Chỉ tra cứu dữ liệu bạn được phép xem. CLARA không chẩn đoán,
-                      kê đơn hay tự thay đổi LifeMap.
+                      {copy("lifemap.ask.description")}
                     </p>
                   </div>
                   <form
@@ -624,19 +631,19 @@ export default function LifeMapPage() {
                     onSubmit={(event) => void submitAsk(event)}
                   >
                     <Textarea
-                      label="Bạn muốn tìm điều gì?"
+                      label={copy("lifemap.ask.label")}
                       value={askQuery}
                       onChange={(event) => setAskQuery(event.target.value)}
-                      placeholder="Ví dụ: Các ghi nhận đau đầu gần đây của tôi là gì?"
-                      hint="Câu trả lời sẽ chỉ ra đúng bản ghi và phiên bản đã dùng."
+                      placeholder={copy("lifemap.ask.placeholder")}
+                      hint={copy("lifemap.ask.hint")}
                     />
                     <Button
                       type="submit"
                       icon="search"
                       loading={saving}
-                      loadingLabel="Đang tra cứu…"
+                      loadingLabel={copy("lifemap.ask.loading")}
                     >
-                      Tra cứu
+                      {copy("lifemap.ask.submit")}
                     </Button>
                   </form>
                   {askAnswer ? (
@@ -663,9 +670,14 @@ export default function LifeMapPage() {
                                 </p>
                                 {source ? (
                                   <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                                    Nguồn: {source.attribution} ·{" "}
-                                    {new Date(source.occurred_at).toLocaleString("vi-VN")} ·
-                                    phiên bản {source.revision_id.slice(0, 8)}
+                                    {copy("lifemap.ask.source", {
+                                      attribution: source.attribution,
+                                      date: formatLocaleDate(language, source.occurred_at, {
+                                        dateStyle: "medium",
+                                        timeStyle: "short",
+                                      }),
+                                      revision: source.revision_id.slice(0, 8),
+                                    })}
                                   </p>
                                 ) : null}
                               </li>
@@ -677,12 +689,13 @@ export default function LifeMapPage() {
                       askAnswer.conflicting.length ||
                       askAnswer.stale.length ? (
                         <p className="mt-3 text-sm text-[var(--status-warn-text)]">
-                          Có thông tin đang tranh chấp, mâu thuẫn hoặc đã cũ; CLARA
-                          không tự giải quyết thay bạn.
+                          {copy("lifemap.ask.caution")}
                         </p>
                       ) : null}
                       <p className="mt-4 text-xs text-[var(--text-muted)]">
-                        Chế độ: {askAnswer.disclosure.mode}. Không phải tư vấn y tế.
+                        {copy("lifemap.ask.disclosure", {
+                          mode: askAnswer.disclosure.mode,
+                        })}
                       </p>
                     </div>
                   ) : null}
@@ -693,18 +706,17 @@ export default function LifeMapPage() {
                 <SurfaceCard className="p-5">
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <Badge tone="brand">Tóm tắt có dẫn nguồn</Badge>
+                      <Badge tone="brand">{copy("lifemap.summary.badge")}</Badge>
                       <h2 className="mt-2 font-semibold text-[var(--text-primary)]">
-                        Nhìn lại LifeMap
+                        {copy("lifemap.summary.title")}
                       </h2>
                       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                        Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang
-                        tranh chấp hay mâu thuẫn.
+                        {copy("lifemap.summary.description")}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-end gap-2">
                       <Select
-                        label="Phạm vi"
+                        label={copy("lifemap.summary.scope")}
                         value={summaryLevel}
                         onChange={(event) => {
                           setSummaryLevel(
@@ -713,10 +725,10 @@ export default function LifeMapPage() {
                           setLifeMapSummary(null);
                         }}
                       >
-                        <option value="day">Theo ngày</option>
-                        <option value="week">Theo tuần</option>
+                        <option value="day">{copy("lifemap.summary.day")}</option>
+                        <option value="week">{copy("lifemap.summary.week")}</option>
                         <option value="episode" disabled={!episodeId}>
-                          Hành trình đang chọn
+                          {copy("lifemap.summary.episode")}
                         </option>
                       </Select>
                       <Button
@@ -726,7 +738,7 @@ export default function LifeMapPage() {
                         loading={saving}
                         onClick={() => void loadSummary()}
                       >
-                        Tạo tóm tắt
+                        {copy("lifemap.summary.create")}
                       </Button>
                     </div>
                   </div>
@@ -753,11 +765,14 @@ export default function LifeMapPage() {
                                   >
                                     <p>{claim.text}</p>
                                     <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                                      {claim.attribution} ·{" "}
-                                      {new Date(claim.occurred_at).toLocaleString(
-                                        "vi-VN",
-                                      )}{" "}
-                                      · nguồn {claim.citation_ids.join(", ")}
+                                      {copy("lifemap.summary.citation", {
+                                        attribution: claim.attribution,
+                                        date: formatLocaleDate(language, claim.occurred_at, {
+                                          dateStyle: "medium",
+                                          timeStyle: "short",
+                                        }),
+                                        sources: claim.citation_ids.join(", "),
+                                      })}
                                     </p>
                                     {claim.truth_state !== "confirmed" ? (
                                       <Badge tone="warn">
@@ -772,12 +787,11 @@ export default function LifeMapPage() {
                         </ol>
                       ) : (
                         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                          Chưa đủ bản ghi để tạo tóm tắt.
+                          {copy("lifemap.summary.empty")}
                         </p>
                       )}
                       <p className="mt-3 text-xs text-[var(--text-muted)]">
-                        Bản tóm tắt xác định theo quy tắc, không phải tư vấn y tế.
-                        Mọi nội dung đều giữ liên kết đến bản ghi nguồn.
+                        {copy("lifemap.summary.notice")}
                       </p>
                     </div>
                   ) : null}
@@ -912,7 +926,7 @@ export default function LifeMapPage() {
                           </Button>
                         ) : null}
                         <Badge tone={priorityTone(episode.priority)}>
-                          {priorityLabel(episode.priority)}
+                          {priorityLabel(episode.priority, copy)}
                         </Badge>
                       </li>
                     ))}
