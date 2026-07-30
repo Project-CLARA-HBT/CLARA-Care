@@ -56,7 +56,7 @@ closed JSON and is followed by deterministic safety policy.
 | PR-10 Council | partial | Structured intake, specialist/shadow and ablation paths exist; fixed-weight heuristic does not drive deterministic triage and the consumer UI no longer presents it as neural or as a percentage. |
 | PR-11 Research verifier | partial/pre-existing | Claim/citation tracing and research-quality harness exist; reviewed RAG gold set is absent. |
 | PR-12 LifeMap | partial/pre-existing | Revision/provenance/capture review and Vietnamese locale support exist; broader NL-query/visit-summary evaluation needs approved cases. |
-| PR-13 CLARA-Eval VN | implemented foundation | `0b103426`: nine tracks, suite configs, manifests, smoke/nightly/release/judge artifacts and CI integration. Product quality metrics remain `not_measured` until approved data/execution exists. |
+| PR-13 CLARA-Eval VN | implemented foundation | `0b103426`: nine tracks, suite configs, manifests, smoke/nightly/release/judge artifacts and CI integration. `59722a20` adds metric-specific evidence gaps and exact measurement commands for all six judge headlines. Product quality metrics remain `not_measured` until approved data/execution exists. |
 | PR-14 security/ops | partial | Release gate now fails closed on missing locked evidence; restore/security certification evidence remains an external operational task. |
 | PR-15 mobile parity | partial/incremental | Unified mobile, locale wiring and consent paths exist. Checkpoint `mobile-unified-locale-nav` makes the shipped Unified shell rebuild its four task destinations and primary Ask action when the persisted locale changes; `flutter test test/unified_root_test.dart` and targeted `flutter analyze` passed. A shared web/mobile catalog and device E2E execution remain outstanding. |
 
@@ -92,6 +92,7 @@ Executed in this workspace:
 | Eval release suite | expected non-zero (2): no approved locked/live evidence; diagnostics written |
 | Model registry focused suite | pass: 39 tests (registry, Council shadow, capture triage, main API) |
 | RAG registry runtime seam | pass: 34 focused RAG/registry tests; direct provider construction is absent from `rag/pipeline.py` |
+| RAG full Ruff/mypy | not clean: focused undefined-name Ruff check passed, but the existing full selected files report 60 Ruff findings and 52 mypy findings; they were not suppressed or weakened by this work. |
 | Vietnamese language/router focused suite | pass: 14 tests |
 | LifeMap intelligence/invariant suite | pass: 9 tests (read-only ask, exact revision citations, profile scope and truth-state-preserving summaries) |
 | CareGuard normalization/DrugBank focused suite | pass: 42 tests |
@@ -123,6 +124,14 @@ Council ablation, model latency and cost metrics are explicitly `not_measured`
 with a reason and a command. This repository contains no approved reviewed
 corpus, immutable retrieval snapshot, licensed full DrugBank benchmark, live
 provider trace, cost ledger or human-study result to compute them.
+
+Manifest version `2026-07-30.foundation.2` records a specific evidence gap for
+each headline, rather than falling back to a generic report message: noisy
+Vietnamese emergency corpus, pharmacist-adjudicated Vietnamese medication
+mapping, licensed full-DrugBank pairs/index, Vietnamese gold claims with an
+immutable retrieval snapshot, consented clinician edit-time study, and an
+aggregate routing usage ledger respectively. These entries are metadata only,
+not benchmark values.
 
 The static active-eval baseline is NO-GO, not a release approval: its DDI,
 fallback and refusal runtime counts were zero and latency samples were absent.
