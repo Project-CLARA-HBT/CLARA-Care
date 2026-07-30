@@ -3,6 +3,8 @@
 import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { acceptConsent, getConsentStatus } from "@/lib/consent";
+import { formatLocaleDate, t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type MedicalConsentGateProps = {
   children: ReactNode;
@@ -16,6 +18,7 @@ type MedicalConsentGateProps = {
  * failure behaviour.
  */
 export default function MedicalConsentGate({ children }: MedicalConsentGateProps) {
+  const language = useUILanguage();
   const [isLoading, setIsLoading] = useState(true);
   const [accepted, setAccepted] = useState(false);
   const [requiredVersion, setRequiredVersion] = useState("");
@@ -25,7 +28,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
   const [error, setError] = useState("");
 
   const acceptedAtDisplay = acceptedAt
-    ? new Date(acceptedAt).toLocaleString("vi-VN", { dateStyle: "medium", timeStyle: "short" })
+    ? formatLocaleDate(language, acceptedAt, { dateStyle: "medium", timeStyle: "short" })
     : null;
 
   const refreshConsent = async (): Promise<boolean> => {
@@ -38,7 +41,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
       return status.accepted;
     } catch (cause) {
       setAccepted(false);
-      setError(cause instanceof Error ? cause.message : "Không thể kiểm tra consent y tế.");
+      setError(cause instanceof Error ? cause.message : t(language, "medicines.consent.checkError"));
       return false;
     }
   };
@@ -55,7 +58,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
   const onAccept = async () => {
     if (!requiredVersion) return;
     if (!checked) {
-      setError("Vui lòng tick xác nhận trước khi tiếp tục.");
+      setError(t(language, "medicines.consent.acknowledgementRequired"));
       return;
     }
 
@@ -65,10 +68,10 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
       await acceptConsent({ consent_version: requiredVersion, accepted: true });
       const unlocked = await refreshConsent();
       if (!unlocked) {
-        setError("Đã lưu xác nhận nhưng chưa lấy lại trạng thái mới. Vui lòng thử kiểm tra lại.");
+        setError(t(language, "medicines.consent.saveIncomplete"));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu xác nhận consent.");
+      setError(cause instanceof Error ? cause.message : t(language, "medicines.consent.saveError"));
     } finally {
       setIsSaving(false);
     }
@@ -83,7 +86,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
   if (isLoading) {
     return (
       <section className="chrome-panel rounded-[1.5rem] p-6">
-        <p className="text-base font-semibold text-[var(--text-primary)]">Đang kiểm tra điều khoản sử dụng y tế...</p>
+        <p className="text-base font-semibold text-[var(--text-primary)]">{t(language, "medicines.consent.loading")}</p>
       </section>
     );
   }
@@ -92,26 +95,25 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
     return (
       <section className="chrome-panel rounded-[1.5rem] border border-amber-300/60 p-6">
         <p className="inline-flex rounded-full border border-amber-300/55 bg-amber-100/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">
-          Bước bắt buộc trước khi dùng
+          {t(language, "medicines.consent.requiredStep")}
         </p>
-        <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">Tuyên bố miễn trừ trách nhiệm y tế</h2>
+        <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">{t(language, "medicines.consent.title")}</h2>
         <p className="mt-3 max-w-4xl text-base leading-7 text-[var(--text-secondary)]">
-          CLARA chỉ hỗ trợ cảnh báo an toàn thuốc và không thay thế bác sĩ. Không sử dụng ứng dụng để tự chẩn đoán,
-          tự kê đơn hoặc tự điều chỉnh liều dùng.
+          {t(language, "medicines.consent.description")}
         </p>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          Xem đầy đủ tại{" "}
+          {t(language, "medicines.consent.readFull")} {" "}
           <Link href="/legal/consent" className="font-semibold text-blue-700 hover:underline dark:text-cyan-300">
-            Đồng thuận sử dụng y tế
+            {t(language, "medicines.consent.consentLink")}
           </Link>
-          {" "}và{" "}
+          {" "}{t(language, "medicines.consent.and")} {" "}
           <Link href="/legal/privacy" className="font-semibold text-blue-700 hover:underline dark:text-cyan-300">
-            Chính sách quyền riêng tư
+            {t(language, "medicines.consent.privacyLink")}
           </Link>
           .
         </p>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          Phiên bản điều khoản hiện tại: <span className="font-semibold">{requiredVersion || "-"}</span>
+          {t(language, "medicines.consent.version")}: <span className="font-semibold">{requiredVersion || "-"}</span>
         </p>
 
         <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
@@ -122,7 +124,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
             className="mt-1 h-6 w-6 rounded border-[color:var(--shell-border)]"
           />
           <span className="text-sm font-medium leading-6 text-[var(--text-primary)]">
-            Tôi đã đọc, hiểu và đồng ý với tuyên bố miễn trừ trách nhiệm y tế của CLARA.
+            {t(language, "medicines.consent.acknowledgement")}
           </span>
         </label>
 
@@ -132,19 +134,19 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
           disabled={isSaving || !checked}
           className="mt-4 min-h-12 rounded-xl border border-blue-700 bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:border-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
         >
-          {isSaving ? "Đang lưu xác nhận..." : "Đồng ý và tiếp tục"}
+          {isSaving ? t(language, "medicines.consent.saving") : t(language, "medicines.consent.accept")}
         </button>
 
         {error ? (
           <div className="mt-3 space-y-2 rounded-xl border border-red-300/50 bg-red-500/10 p-3">
             <p className="text-sm text-red-200">{error}</p>
-            <p className="text-xs text-red-100/90">Nếu mạng hoặc phiên đăng nhập vừa thay đổi, vui lòng kiểm tra lại trạng thái consent.</p>
+            <p className="text-xs text-red-100/90">{t(language, "medicines.consent.retryNotice")}</p>
             <button
               type="button"
               onClick={() => void onRetryStatus()}
               className="inline-flex min-h-11 items-center rounded-xl border border-red-300/55 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/30"
             >
-              Thử kiểm tra lại consent
+              {t(language, "medicines.consent.retry")}
             </button>
           </div>
         ) : null}
@@ -161,10 +163,12 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
           </span>
           <div>
             <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-100">
-              Bạn đã đồng ý điều khoản sử dụng y tế của CLARA
+              {t(language, "medicines.consent.acceptedTitle")}
             </p>
             <p className="text-xs text-emerald-700 dark:text-emerald-100/85">
-              {acceptedAtDisplay ? `Đã xác nhận lúc ${acceptedAtDisplay}` : "Có thể bắt đầu sử dụng tủ thuốc."}
+              {acceptedAtDisplay
+                ? t(language, "medicines.consent.acceptedAt", { date: acceptedAtDisplay })
+                : t(language, "medicines.consent.acceptedReady")}
             </p>
           </div>
         </div>
