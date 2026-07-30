@@ -63,6 +63,107 @@ class DdiAlert {
   }
 }
 
+/// A DrugBank identity offered by the server for an unresolved cabinet label.
+///
+/// This is not a local normalization, an AI suggestion, or a risk result. The
+/// user may choose one only to resubmit it to the owner-scoped API, which
+/// verifies the cabinet item, raw alias, DrugBank ID, and index version again.
+class CareguardClarificationCandidate {
+  const CareguardClarificationCandidate({
+    required this.drugbankId,
+    required this.normalizedName,
+    required this.activeIngredients,
+    required this.sourceVersion,
+  });
+
+  final String drugbankId;
+  final String normalizedName;
+  final List<String> activeIngredients;
+  final String sourceVersion;
+
+  factory CareguardClarificationCandidate.fromJson(Map<String, dynamic> json) {
+    final rawIngredients = json['active_ingredients'];
+    return CareguardClarificationCandidate(
+      drugbankId: _trimmed(json['drugbank_id']),
+      normalizedName: _trimmed(json['normalized_name']),
+      activeIngredients: rawIngredients is List
+          ? rawIngredients
+              .map(_trimmed)
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false)
+          : const <String>[],
+      sourceVersion: _trimmed(json['source_version']),
+    );
+  }
+
+  /// A malformed candidate is never selectable. This ensures the app cannot
+  /// manufacture a DrugBank choice when the source-backed contract is absent.
+  bool get isSourceBacked =>
+      drugbankId.isNotEmpty &&
+      normalizedName.isNotEmpty &&
+      sourceVersion.isNotEmpty;
+}
+
+/// A terminal, fail-closed clarification request from CareGuard.
+class CareguardMedicationClarification {
+  const CareguardMedicationClarification({
+    required this.cabinetItemId,
+    required this.inputAlias,
+    required this.candidates,
+  });
+
+  final int cabinetItemId;
+  final String inputAlias;
+  final List<CareguardClarificationCandidate> candidates;
+
+  factory CareguardMedicationClarification.fromJson(Map<String, dynamic> json) {
+    final itemId = json['cabinet_item_id'];
+    final rawCandidates = json['candidates'];
+    return CareguardMedicationClarification(
+      cabinetItemId: itemId is num ? itemId.toInt() : 0,
+      inputAlias: _trimmed(json['input_alias']),
+      candidates: rawCandidates is List
+          ? rawCandidates
+              .whereType<Map>()
+              .map(
+                (candidate) => CareguardClarificationCandidate.fromJson(
+                  candidate.cast<String, dynamic>(),
+                ),
+              )
+              .where((candidate) => candidate.isSourceBacked)
+              .toList(growable: false)
+          : const <CareguardClarificationCandidate>[],
+    );
+  }
+
+  bool get isValid => cabinetItemId > 0 && inputAlias.isNotEmpty;
+}
+
+String _trimmed(Object? value) => value?.toString().trim() ?? '';
+
+/// Parses only CareGuard's explicit terminal clarification state.
+///
+/// `null` means this was not a clarification response. An empty list means the
+/// server intentionally withheld a usable source-backed choice, so callers
+/// must show the incomplete-check state and must not render or cache a DDI
+/// result. Invalid rows are dropped rather than guessed.
+List<CareguardMedicationClarification>? medicationClarificationsFromPayload(
+  Map<String, dynamic> payload,
+) {
+  if (payload['status'] != 'requires_medication_clarification') return null;
+  final raw = payload['clarifications'];
+  if (raw is! List) return const <CareguardMedicationClarification>[];
+  return raw
+      .whereType<Map>()
+      .map(
+        (item) => CareguardMedicationClarification.fromJson(
+          item.cast<String, dynamic>(),
+        ),
+      )
+      .where((item) => item.isValid)
+      .toList(growable: false);
+}
+
 /// End_User DDI projection: only risk level, alerts, recommendations, and
 /// reference sources. Runtime mode, fallback flags, connector identifiers, and
 /// `source_errors` are intentionally excluded (Requirements 3.1, 3.4, 3.6).

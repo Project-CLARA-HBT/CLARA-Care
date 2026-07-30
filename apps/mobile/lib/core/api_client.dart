@@ -289,6 +289,7 @@ class LifeMapVisitPreparationDraft {
 
   final String status;
   final String title;
+
   /// Present only on the server's emergency fast path. This remains a
   /// server-authored escalation message, never a locally generated rewrite.
   final String? emergencyAnswer;
@@ -689,6 +690,31 @@ class ApiClient {
     return _post(
       '/api/v1/careguard/analyze',
       body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Runs the owner-scoped cabinet DDI contract. Unlike [analyzeCareguard],
+  /// this route can accept a previous *source-backed* clarification selection;
+  /// the API revalidates ownership, raw alias, DrugBank identifier and source
+  /// version. It never writes or confirms a cabinet medicine.
+  Future<Map<String, dynamic>> autoCheckCareguardCabinet({
+    required String accessToken,
+    List<String> symptoms = const <String>[],
+    Map<String, dynamic> labs = const <String, dynamic>{},
+    List<String> allergies = const <String>[],
+    String locale = 'vi',
+    List<Map<String, dynamic>> resolutions = const <Map<String, dynamic>>[],
+  }) {
+    return _post(
+      '/api/v1/careguard/cabinet/auto-ddi-check',
+      body: <String, dynamic>{
+        'symptoms': symptoms,
+        'labs': labs,
+        'allergies': allergies,
+        'locale': locale == 'en' ? 'en' : 'vi',
+        if (resolutions.isNotEmpty) 'resolutions': resolutions,
+      },
       accessToken: accessToken,
     );
   }

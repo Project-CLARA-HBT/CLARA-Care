@@ -64,6 +64,30 @@ The API still has to establish owner scope before sending this internal packet;
 selections are request-scoped and must not silently overwrite the user’s cabinet
 record.
 
+### Mobile terminal-state handling
+
+The Flutter manual CareGuard screen treats
+`requires_medication_clarification` as a failed-closed incomplete check: it
+does not build `DdiUserView`, display an unknown or all-clear result, or write
+the payload to the offline DDI cache. That direct `/careguard/analyze` request
+does not carry the owner-scoped cabinet item contract, so mobile offers no
+local/LLM identity picker there; it directs the person to check the package or
+use their Medicine Cabinet.
+
+Both Flutter cabinet surfaces instead call
+`POST /careguard/cabinet/auto-ddi-check`. When the terminal state contains a
+valid cabinet item, raw alias and complete source-backed DrugBank candidate,
+they display only the returned candidates. A selection resubmits the exact
+`cabinet_item_id`, `input_alias`, `drugbank_id`, and `drugbank_version` to the
+same endpoint. It remains request-scoped: the mobile client never edits the
+cabinet record, picks an identity itself, calls an LLM, or caches the terminal
+state. A cabinet refresh clears pending selections before another recheck.
+
+The client surface is activated only by the existing server-side
+`CAREGUARD_MEDICATION_CLARIFICATION_ENABLED` response behavior. Rolling that
+flag back restores the prior completed-result path; no stored client state or
+migration must be rolled back.
+
 When strict DrugBank is required and the verified index is unavailable, the
 existing unavailable result remains authoritative. With the clarification flag
 on, an unavailable indexed dictionary also blocks a partial DDI conclusion even

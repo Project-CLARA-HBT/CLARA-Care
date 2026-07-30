@@ -27,8 +27,9 @@ import 'ddi_result_view.dart';
 /// Build-time, client-readable feature flag. Override with
 /// `--dart-define=CAREGUARD_MOBILE_CABINET_ENABLED=true`. Defaults to OFF so the
 /// cabinet screen is never exposed unless explicitly enabled (Requirement 8.3).
-const bool kCareguardMobileCabinetEnabled =
-    bool.fromEnvironment('CAREGUARD_MOBILE_CABINET_ENABLED', defaultValue: false);
+const bool kCareguardMobileCabinetEnabled = bool.fromEnvironment(
+    'CAREGUARD_MOBILE_CABINET_ENABLED',
+    defaultValue: false);
 
 /// Minimum number of distinct medicines required before a DDI check may run,
 /// mirroring the web two-medicine guard (Requirements 8.1, 3.1).
@@ -125,6 +126,9 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
   bool _ddiLoading = false;
   String? _ddiError;
   DdiUserView? _ddiView;
+  List<CareguardMedicationClarification>? _ddiClarifications;
+  Map<int, CareguardClarificationCandidate> _selectedClarifications =
+      <int, CareguardClarificationCandidate>{};
 
   @override
   void initState() {
@@ -156,7 +160,8 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
       _consentError = null;
     });
     try {
-      final status = await widget.apiClient.getConsentStatus(accessToken: token);
+      final status =
+          await widget.apiClient.getConsentStatus(accessToken: token);
       final accepted = status['accepted'] == true;
       if (!mounted) return;
       setState(() {
@@ -171,7 +176,8 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
       setState(() => _consentError = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _consentError = 'Không thể kiểm tra điều khoản y tế. Vui lòng thử lại.');
+      setState(() => _consentError =
+          'Không thể kiểm tra điều khoản y tế. Vui lòng thử lại.');
     } finally {
       if (mounted) {
         setState(() => _consentLoading = false);
@@ -183,7 +189,8 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
     final token = _token;
     if (token == null || _requiredVersion.isEmpty) return;
     if (!_consentChecked) {
-      setState(() => _consentError = 'Vui lòng tick xác nhận trước khi tiếp tục.');
+      setState(
+          () => _consentError = 'Vui lòng tick xác nhận trước khi tiếp tục.');
       return;
     }
     setState(() {
@@ -201,7 +208,8 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
       setState(() => _consentError = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _consentError = 'Không thể lưu xác nhận. Vui lòng thử lại.');
+      setState(
+          () => _consentError = 'Không thể lưu xác nhận. Vui lòng thử lại.');
     } finally {
       if (mounted) {
         setState(() => _consentSaving = false);
@@ -219,7 +227,8 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
       _cabinetError = null;
     });
     try {
-      final data = await widget.apiClient.getCareguardCabinet(accessToken: token);
+      final data =
+          await widget.apiClient.getCareguardCabinet(accessToken: token);
       final rawItems = data['items'];
       final items = <CabinetItem>[];
       if (rawItems is List) {
@@ -230,13 +239,20 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
         }
       }
       if (!mounted) return;
-      setState(() => _items = items);
+      setState(() {
+        _items = items;
+        // Cabinet rows may have changed since a prior clarification. Do not
+        // reuse a source-backed selection against a potentially new item.
+        _ddiClarifications = null;
+        _selectedClarifications = <int, CareguardClarificationCandidate>{};
+      });
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _cabinetError = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _cabinetError = 'Không thể tải tủ thuốc. Vui lòng thử lại.');
+      setState(
+          () => _cabinetError = 'Không thể tải tủ thuốc. Vui lòng thử lại.');
     } finally {
       if (mounted) {
         setState(() => _cabinetLoading = false);
@@ -318,8 +334,37 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
 
   // --- In-cabinet DDI check (Req 8.1, 8.4) ---------------------------------
 
-  int get _distinctMedicineCount =>
-      _items.map((item) => item.distinctKey).where((k) => k.isNotEmpty).toSet().length;
+  int get _distinctMedicineCount => _items
+      .map((item) => item.distinctKey)
+      .where((k) => k.isNotEmpty)
+      .toSet()
+      .length;
+
+  bool get _clarificationsComplete =>
+      _ddiClarifications != null &&
+      _ddiClarifications!.isNotEmpty &&
+      _ddiClarifications!.every(
+        (clarification) =>
+            clarification.candidates.isNotEmpty &&
+            _selectedClarifications.containsKey(clarification.cabinetItemId),
+      );
+
+  List<Map<String, dynamic>> get _selectedResolutions =>
+      _ddiClarifications
+          ?.map((clarification) {
+            final candidate =
+                _selectedClarifications[clarification.cabinetItemId];
+            if (candidate == null) return null;
+            return <String, dynamic>{
+              'cabinet_item_id': clarification.cabinetItemId,
+              'input_alias': clarification.inputAlias,
+              'drugbank_id': candidate.drugbankId,
+              'drugbank_version': candidate.sourceVersion,
+            };
+          })
+          .whereType<Map<String, dynamic>>()
+          .toList(growable: false) ??
+      const <Map<String, dynamic>>[];
 
   Future<void> _runDdiCheck() async {
     final token = _token;
@@ -330,15 +375,18 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
     if (_distinctMedicineCount < _minimumDdiMedicines) {
       setState(() {
         _ddiView = null;
+        _ddiClarifications = null;
+        _selectedClarifications = <int, CareguardClarificationCandidate>{};
         _ddiError = 'Cần ít nhất 2 thuốc trong tủ để kiểm tra tương tác.';
       });
       return;
     }
 
-    final medicines = _items
-        .map((item) => item.drugName.trim())
-        .where((name) => name.isNotEmpty)
-        .toList();
+    if (_ddiClarifications != null && !_clarificationsComplete) {
+      setState(() => _ddiError =
+          'Hãy chọn thuốc có nguồn DrugBank cho từng mục trước khi kiểm tra lại.');
+      return;
+    }
 
     setState(() {
       _ddiLoading = true;
@@ -355,24 +403,37 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
     );
 
     try {
-      final response = await widget.apiClient.analyzeCareguard(
+      final response = await widget.apiClient.autoCheckCareguardCabinet(
         accessToken: token,
-        payload: {
-          'medications': medicines,
-          'allergies': <String>[],
-          'symptoms': <String>[],
-          'labs': <String, dynamic>{},
-        },
+        allergies: const <String>[],
+        symptoms: const <String>[],
+        labs: const <String, dynamic>{},
+        locale: 'vi',
+        resolutions: _selectedResolutions,
       );
       if (!mounted) return;
-      setState(() => _ddiView = DdiUserView.fromPayload(response));
+      final clarifications = medicationClarificationsFromPayload(response);
+      if (clarifications != null) {
+        setState(() {
+          _ddiView = null;
+          _ddiClarifications = clarifications;
+          _selectedClarifications = <int, CareguardClarificationCandidate>{};
+          _ddiError = null;
+        });
+        return;
+      }
+      setState(() {
+        _ddiView = DdiUserView.fromPayload(response);
+        _ddiClarifications = null;
+        _selectedClarifications = <int, CareguardClarificationCandidate>{};
+      });
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _ddiError = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() =>
-          _ddiError = 'Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại.');
+      setState(() => _ddiError =
+          'Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại.');
     } finally {
       if (mounted) {
         setState(() => _ddiLoading = false);
@@ -454,8 +515,8 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         _ddiError!,
-                        style:
-                            TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
                       ),
                     ),
                 ],
@@ -463,6 +524,20 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
             ),
           ),
           if (_ddiView != null) DdiResultView(view: _ddiView!),
+          if (_ddiClarifications != null)
+            DdiMedicationClarificationView(
+              clarifications: _ddiClarifications!,
+              selected: _selectedClarifications,
+              loading: _ddiLoading,
+              onSelected: (clarification, candidate) => setState(() {
+                _selectedClarifications =
+                    Map<int, CareguardClarificationCandidate>.from(
+                  _selectedClarifications,
+                )..[clarification.cabinetItemId] = candidate;
+                _ddiError = null;
+              }),
+              onResubmit: _runDdiCheck,
+            ),
           const SizedBox(height: 12),
           if (_cabinetLoading) const LinearProgressIndicator(),
           if (_cabinetError != null)
@@ -476,7 +551,8 @@ class _CareguardCabinetScreenState extends State<CareguardCabinetScreen> {
           if (!_cabinetLoading && _items.isEmpty && _cabinetError == null)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('Tủ thuốc trống. Thêm thuốc để bắt đầu.')),
+              child:
+                  Center(child: Text('Tủ thuốc trống. Thêm thuốc để bắt đầu.')),
             ),
           ..._items.map(_buildItemTile),
         ],
@@ -605,7 +681,8 @@ class _ConsentGate extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton(
@@ -653,8 +730,8 @@ class _CabinetItemEditorState extends State<_CabinetItemEditor> {
     _manufacturer = TextEditingController(text: e?.manufacturer ?? '');
     _dosage = TextEditingController(text: e?.dosage ?? '');
     _dosageForm = TextEditingController(text: e?.dosageForm ?? '');
-    _quantity =
-        TextEditingController(text: (e != null && e.quantity > 0) ? '${e.quantity}' : '');
+    _quantity = TextEditingController(
+        text: (e != null && e.quantity > 0) ? '${e.quantity}' : '');
     _note = TextEditingController(text: e?.note ?? '');
   }
 

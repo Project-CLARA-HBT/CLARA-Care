@@ -132,6 +132,20 @@ class _CareguardScreenState extends State<CareguardScreen> {
         return;
       }
 
+      // A clarification response is an explicit terminal pre-check state, not
+      // a DDI result. The manual screen has no owner-scoped cabinet item ID or
+      // auto-DDI resubmission contract, so it must not offer a local identity
+      // choice, project an unknown result, or cache it as an all-clear.
+      if (medicationClarificationsFromPayload(response) != null) {
+        setState(() {
+          _view = null;
+          _offlineCachedAt = null;
+          _error =
+              'Chưa thể hoàn tất kiểm tra vì cần xác định chính xác tên thuốc. Hãy kiểm tra vỏ thuốc hoặc dùng Tủ thuốc để chọn thuốc có nguồn DrugBank.';
+        });
+        return;
+      }
+
       final view = DdiUserView.fromPayload(response);
       if (!mounted) {
         return;
@@ -166,7 +180,8 @@ class _CareguardScreenState extends State<CareguardScreen> {
         return;
       }
       setState(() {
-        _error = 'Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại.';
+        _error =
+            'Không thể kiểm tra tương tác thuốc lúc này. Vui lòng thử lại.';
       });
     } finally {
       if (mounted) {
@@ -247,7 +262,8 @@ class _CareguardScreenState extends State<CareguardScreen> {
               _error!,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-          if (view != null) DdiResultView(view: view, offlineCachedAt: _offlineCachedAt),
+          if (view != null)
+            DdiResultView(view: view, offlineCachedAt: _offlineCachedAt),
         ],
       ),
     );

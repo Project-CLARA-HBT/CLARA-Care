@@ -15,8 +15,9 @@ class _DdiResultCopy {
 
   final bool _english;
 
-  String get offlineLabel =>
-      _english ? 'offline / not real-time' : 'ngoại tuyến / không phải thời gian thực';
+  String get offlineLabel => _english
+      ? 'offline / not real-time'
+      : 'ngoại tuyến / không phải thời gian thực';
   String cachedResult(String timestamp) => _english
       ? 'Showing the most recently saved result ($timestamp). It may be out of date.'
       : 'Đang hiển thị kết quả lưu gần nhất ($timestamp). Kết quả có thể đã cũ.';
@@ -196,6 +197,169 @@ class DdiResultView extends StatelessWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// Terminal, fail-closed CareGuard state shown before a DDI result exists.
+///
+/// This deliberately does not reuse [DdiResultView]: there is no risk level,
+/// all-clear, recommendation, source cache, or conclusion while one or more
+/// cabinet labels have no verified DrugBank identity. When candidates are
+/// present, the choices are exactly those supplied by the API and can only be
+/// returned to the owner-scoped cabinet recheck endpoint by [onResubmit].
+class DdiMedicationClarificationView extends StatelessWidget {
+  const DdiMedicationClarificationView({
+    super.key,
+    required this.clarifications,
+    required this.selected,
+    required this.onSelected,
+    required this.onResubmit,
+    this.loading = false,
+  });
+
+  final List<CareguardMedicationClarification> clarifications;
+  final Map<int, CareguardClarificationCandidate> selected;
+  final void Function(
+    CareguardMedicationClarification clarification,
+    CareguardClarificationCandidate candidate,
+  ) onSelected;
+  final VoidCallback? onResubmit;
+  final bool loading;
+
+  bool get _isComplete =>
+      clarifications.isNotEmpty &&
+      clarifications.every(
+        (clarification) =>
+            clarification.candidates.isNotEmpty &&
+            selected.containsKey(clarification.cabinetItemId),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final english =
+        Localizations.localeOf(context).languageCode.toLowerCase() == 'en';
+    final title = english
+        ? 'The interaction check is not complete yet'
+        : 'Chưa thể hoàn tất kiểm tra tương tác';
+    final explanation = english
+        ? 'We need you to choose the exact medicine for the item below before DrugBank can compare your medicines. This is not a result or an all-clear.'
+        : 'Bạn cần chọn đúng thuốc cho mục bên dưới trước khi DrugBank có thể so sánh các thuốc. Đây chưa phải là kết quả và không có nghĩa là an toàn.';
+    final noCandidate = english
+        ? 'There is no safe source-backed choice for this medicine. Check the package or edit the medicine in your cabinet, then try again.'
+        : 'Chưa có lựa chọn an toàn có nguồn cho thuốc này. Hãy kiểm tra vỏ thuốc hoặc sửa thuốc trong tủ, rồi thử lại.';
+    final source = english ? 'DrugBank source' : 'Nguồn DrugBank';
+    final resubmit = english
+        ? 'Check again with selected medicines'
+        : 'Kiểm tra lại với thuốc đã chọn';
+
+    return Card(
+      color: Colors.amber.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.amber.shade900),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Colors.amber.shade900,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(explanation),
+            const SizedBox(height: 12),
+            if (clarifications.isEmpty)
+              Text(noCandidate)
+            else
+              ...clarifications.map((clarification) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ClarificationChoices(
+                      clarification: clarification,
+                      selected: selected[clarification.cabinetItemId],
+                      onSelected: onSelected,
+                      noCandidate: noCandidate,
+                      sourceLabel: source,
+                    ),
+                  )),
+            if (clarifications.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              FilledButton.icon(
+                onPressed: loading || !_isComplete ? null : onResubmit,
+                icon: loading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(resubmit),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ClarificationChoices extends StatelessWidget {
+  const _ClarificationChoices({
+    required this.clarification,
+    required this.selected,
+    required this.onSelected,
+    required this.noCandidate,
+    required this.sourceLabel,
+  });
+
+  final CareguardMedicationClarification clarification;
+  final CareguardClarificationCandidate? selected;
+  final void Function(
+    CareguardMedicationClarification clarification,
+    CareguardClarificationCandidate candidate,
+  ) onSelected;
+  final String noCandidate;
+  final String sourceLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    if (clarification.candidates.isEmpty) {
+      return Text('${clarification.inputAlias}: $noCandidate');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          clarification.inputAlias,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        ...clarification.candidates.map(
+          (candidate) => RadioListTile<String>(
+            contentPadding: EdgeInsets.zero,
+            value: candidate.drugbankId,
+            groupValue: selected?.drugbankId,
+            onChanged: (_) => onSelected(clarification, candidate),
+            title: Text(candidate.normalizedName),
+            subtitle: Text(
+              [
+                if (candidate.activeIngredients.isNotEmpty)
+                  candidate.activeIngredients.join(', '),
+                '$sourceLabel: ${candidate.sourceVersion}',
+              ].join('\n'),
+            ),
+          ),
+        ),
       ],
     );
   }

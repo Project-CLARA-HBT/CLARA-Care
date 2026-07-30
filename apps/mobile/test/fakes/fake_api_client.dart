@@ -239,6 +239,28 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<Map<String, dynamic>> autoCheckCareguardCabinet({
+    required String accessToken,
+    List<String> symptoms = const <String>[],
+    Map<String, dynamic> labs = const <String, dynamic>{},
+    List<String> allergies = const <String>[],
+    String locale = 'vi',
+    List<Map<String, dynamic>> resolutions = const <Map<String, dynamic>>[],
+  }) {
+    return _dispatch(
+      'autoCheckCareguardCabinet',
+      <String, Object?>{
+        'symptoms': symptoms,
+        'labs': labs,
+        'allergies': allergies,
+        'locale': locale,
+        'resolutions': resolutions,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>> getCareguardCabinet(
       {required String accessToken}) {
     return _dispatch('getCareguardCabinet', const {}, accessToken: accessToken);

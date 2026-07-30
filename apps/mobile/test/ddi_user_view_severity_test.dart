@@ -78,4 +78,55 @@ void main() {
       expect(restored.sources, contains('DrugBank'));
     });
   });
+
+  group('CareGuard medication clarification terminal state', () {
+    test('parses only an explicit, source-backed clarification selection', () {
+      final clarifications = medicationClarificationsFromPayload({
+        'status': 'requires_medication_clarification',
+        'clarifications': [
+          {
+            'cabinet_item_id': 7,
+            'input_alias': 'panadol xanh',
+            'candidates': [
+              {
+                'drugbank_id': 'DB00316',
+                'normalized_name': 'Acetaminophen',
+                'active_ingredients': ['Acetaminophen'],
+                'source_version': 'drugbank-2026-07',
+              },
+              // Missing source version: never turn this into a selectable
+              // local/LLM identity.
+              {
+                'drugbank_id': 'DB-bad',
+                'normalized_name': 'Unknown',
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(clarifications, hasLength(1));
+      expect(clarifications!.single.cabinetItemId, 7);
+      expect(clarifications.single.candidates, hasLength(1));
+      expect(clarifications.single.candidates.single.drugbankId, 'DB00316');
+      expect(
+        clarifications.single.candidates.single.sourceVersion,
+        'drugbank-2026-07',
+      );
+    });
+
+    test('does not reinterpret non-terminal data as a clarification', () {
+      expect(
+        medicationClarificationsFromPayload({'risk_tier': 'low'}),
+        isNull,
+      );
+      expect(
+        medicationClarificationsFromPayload({
+          'status': 'requires_medication_clarification',
+          'clarifications': 'not-a-list',
+        }),
+        isEmpty,
+      );
+    });
+  });
 }

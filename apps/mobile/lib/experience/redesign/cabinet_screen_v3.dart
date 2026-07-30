@@ -365,6 +365,9 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
   String? _ddiError;
   DdiUserView? _ddiView;
   DateTime? _ddiOfflineCachedAt;
+  List<CareguardMedicationClarification>? _ddiClarifications;
+  Map<int, CareguardClarificationCandidate> _selectedClarifications =
+      <int, CareguardClarificationCandidate>{};
 
   late final ConnectivityService _connectivity;
   DefaultConnectivityService? _ownedConnectivity;
@@ -515,7 +518,13 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
         }
       }
       if (!mounted) return;
-      setState(() => _items = items);
+      setState(() {
+        _items = items;
+        // A cabinet refresh can replace an item or its raw alias. Never carry
+        // an old source-backed choice forward to a different cabinet state.
+        _ddiClarifications = null;
+        _selectedClarifications = <int, CareguardClarificationCandidate>{};
+      });
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _cabinetError = error.message);
@@ -724,6 +733,32 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       .toSet()
       .length;
 
+  bool get _clarificationsComplete =>
+      _ddiClarifications != null &&
+      _ddiClarifications!.isNotEmpty &&
+      _ddiClarifications!.every(
+        (clarification) =>
+            clarification.candidates.isNotEmpty &&
+            _selectedClarifications.containsKey(clarification.cabinetItemId),
+      );
+
+  List<Map<String, dynamic>> get _selectedResolutions =>
+      _ddiClarifications
+          ?.map((clarification) {
+            final candidate =
+                _selectedClarifications[clarification.cabinetItemId];
+            if (candidate == null) return null;
+            return <String, dynamic>{
+              'cabinet_item_id': clarification.cabinetItemId,
+              'input_alias': clarification.inputAlias,
+              'drugbank_id': candidate.drugbankId,
+              'drugbank_version': candidate.sourceVersion,
+            };
+          })
+          .whereType<Map<String, dynamic>>()
+          .toList(growable: false) ??
+      const <Map<String, dynamic>>[];
+
   Future<void> _runDdiCheck() async {
     final token = _token;
     if (token == null) return;
@@ -734,15 +769,22 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       setState(() {
         _ddiView = null;
         _ddiOfflineCachedAt = null;
+        _ddiClarifications = null;
+        _selectedClarifications = <int, CareguardClarificationCandidate>{};
         _ddiError = _copy['ddiMinimum'];
       });
       return;
     }
 
-    final medicines = _items
-        .map((item) => item.drugName.trim())
-        .where((name) => name.isNotEmpty)
-        .toList();
+    if (_ddiClarifications != null && !_clarificationsComplete) {
+      setState(() => _ddiError = widget.languageController?.languageCode
+                  .toLowerCase()
+                  .startsWith('en') ==
+              true
+          ? 'Choose a DrugBank-backed medicine for each item before checking again.'
+          : 'Hãy chọn thuốc có nguồn DrugBank cho từng mục trước khi kiểm tra lại.');
+      return;
+    }
 
     setState(() {
       _ddiLoading = true;
@@ -760,16 +802,31 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
     );
 
     try {
-      final response = await widget.apiClient.analyzeCareguard(
+      final response = await widget.apiClient.autoCheckCareguardCabinet(
         accessToken: token,
-        payload: {
-          'medications': medicines,
-          'allergies': <String>[],
-          'symptoms': <String>[],
-          'labs': <String, dynamic>{},
-        },
+        allergies: const <String>[],
+        symptoms: const <String>[],
+        labs: const <String, dynamic>{},
+        locale: widget.languageController?.languageCode
+                    .toLowerCase()
+                    .startsWith('en') ==
+                true
+            ? 'en'
+            : 'vi',
+        resolutions: _selectedResolutions,
       );
       if (!mounted) return;
+      final clarifications = medicationClarificationsFromPayload(response);
+      if (clarifications != null) {
+        setState(() {
+          _ddiView = null;
+          _ddiOfflineCachedAt = null;
+          _ddiClarifications = clarifications;
+          _selectedClarifications = <int, CareguardClarificationCandidate>{};
+          _ddiError = null;
+        });
+        return;
+      }
       final view = DdiUserView.fromPayload(response);
       // Persist the last-known projection for the offline stale path (the cache
       // is a no-op unless the offline-fallback flag is enabled).
@@ -778,6 +835,8 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
       setState(() {
         _ddiView = view;
         _ddiOfflineCachedAt = null;
+        _ddiClarifications = null;
+        _selectedClarifications = <int, CareguardClarificationCandidate>{};
       });
     } on ApiException catch (error) {
       await _handleDdiFailure(error, error.message);
@@ -914,6 +973,20 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
                     DdiResultView(
                       view: _ddiView!,
                       offlineCachedAt: _ddiOfflineCachedAt,
+                    ),
+                  if (_ddiClarifications != null)
+                    DdiMedicationClarificationView(
+                      clarifications: _ddiClarifications!,
+                      selected: _selectedClarifications,
+                      loading: _ddiLoading,
+                      onSelected: (clarification, candidate) => setState(() {
+                        _selectedClarifications =
+                            Map<int, CareguardClarificationCandidate>.from(
+                          _selectedClarifications,
+                        )..[clarification.cabinetItemId] = candidate;
+                        _ddiError = null;
+                      }),
+                      onResubmit: _runDdiCheck,
                     ),
                   const SizedBox(height: ClaraTokens.spaceMd),
                 ],
