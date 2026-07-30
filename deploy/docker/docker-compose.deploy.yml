@@ -44,6 +44,10 @@ services:
       # Must not be lower than the governed DeepSeek V4 synthesis deadline.
       ML_SERVICE_TIMEOUT_SECONDS: ${ML_SERVICE_TIMEOUT_SECONDS:-60}
       DEEPSEEK_TIMEOUT_SECONDS: ${DEEPSEEK_TIMEOUT_SECONDS:-60}
+      # The API proxy must outlive the ML ASR decode budget.  Keep this at or
+      # above SCRIBE_ASR_TIMEOUT_SECONDS (150s by default) so a healthy Scribe
+      # transcription is not cancelled by the gateway before ML can respond.
+      ML_SCRIBE_TIMEOUT_SECONDS: ${ML_SCRIBE_TIMEOUT_SECONDS:-180}
       ML_RESEARCH_TIMEOUT_SECONDS: ${ML_RESEARCH_TIMEOUT_SECONDS:-300}
       RESEARCH_JOB_MAX_WORKERS: ${RESEARCH_JOB_MAX_WORKERS:-8}
       UPLOAD_MALWARE_SCAN_REQUIRED: ${UPLOAD_MALWARE_SCAN_REQUIRED:-false}
