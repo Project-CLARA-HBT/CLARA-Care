@@ -2545,6 +2545,24 @@ def _apply_research_quality_gates(
             return 0
         return int(numeric)
 
+    def is_nonnegative_integral_number(value: Any) -> bool:
+        if isinstance(value, bool):
+            return False
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return False
+        return math.isfinite(numeric) and numeric >= 0 and numeric.is_integer()
+
+    def is_unit_interval_number(value: Any) -> bool:
+        if isinstance(value, bool):
+            return False
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return False
+        return math.isfinite(numeric) and 0.0 <= numeric <= 1.0
+
     real_citations = [item for item in citations if is_resolvable_citation(item)]
     unsupported = gated.get("unsupported_claims")
     unsupported_count = len(unsupported) if isinstance(unsupported, list) else 0
@@ -2553,10 +2571,9 @@ def _apply_research_quality_gates(
         str(gated.get("answer_markdown") or gated.get("answer") or "").strip()
     )
     mode = _coerce_research_mode(request_payload)
+    raw_verification_matrix = gated.get("verification_matrix")
     verification_matrix = (
-        gated.get("verification_matrix")
-        if isinstance(gated.get("verification_matrix"), dict)
-        else {}
+        raw_verification_matrix if isinstance(raw_verification_matrix, dict) else {}
     )
     verification_summary = (
         verification_matrix.get("summary")
@@ -2568,6 +2585,49 @@ def _apply_research_quality_gates(
         if isinstance(verification_matrix.get("rows"), list)
         else []
     )
+    verification_state = str(verification_matrix.get("state") or "").strip().lower()
+    verification_version = str(verification_matrix.get("version") or "").strip()
+    verifier_counts_well_formed = (
+        is_nonnegative_integral_number(verification_summary.get("total_claims"))
+        and is_nonnegative_integral_number(verification_summary.get("supported_claims"))
+    )
+    verifier_total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
+    verifier_supported_claims = safe_nonnegative_int(
+        verification_summary.get("supported_claims")
+    )
+    verifier_support_ratio = verification_summary.get("support_ratio")
+    verifier_ratio_matches_counts = False
+    if is_unit_interval_number(verifier_support_ratio) and verifier_counts_well_formed:
+        if verifier_total_claims == 0:
+            verifier_ratio_matches_counts = float(verifier_support_ratio) == 0.0
+        elif verifier_supported_claims <= verifier_total_claims:
+            verifier_ratio_matches_counts = (
+                abs(
+                    float(verifier_support_ratio)
+                    - (verifier_supported_claims / verifier_total_claims)
+                )
+                <= 0.0001
+            )
+    verifier_summary_complete = (
+        verifier_counts_well_formed
+        and verifier_supported_claims <= verifier_total_claims
+        and verifier_ratio_matches_counts
+    )
+    verifier_contract_reason: str | None = None
+    if answer_present:
+        if not isinstance(raw_verification_matrix, dict):
+            verifier_contract_reason = "verification_unavailable"
+        elif verification_state in {"skipped", "disabled"}:
+            verifier_contract_reason = "verification_skipped"
+        elif verification_state in {"unavailable", "error"}:
+            verifier_contract_reason = "verification_unavailable"
+        elif (
+            verification_state not in {"verified", "warning"}
+            or not verification_version
+            or not verifier_summary_complete
+            or not isinstance(verification_matrix.get("rows"), list)
+        ):
+            verifier_contract_reason = "verification_invalid"
     unsupported_from_verifier = sum(
         1
         for row in verification_rows
@@ -2601,17 +2661,21 @@ def _apply_research_quality_gates(
         if isinstance(support_ratio_raw, (int, float))
         else None
     )
+    total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
     gate_reasons: list[str] = []
     if answer_present and citation_count == 0:
         gate_reasons.append("no_citations")
     if answer_present and not has_retrieved_evidence:
         gate_reasons.append("no_retrieved_evidence")
+    if verifier_contract_reason:
+        gate_reasons.append(verifier_contract_reason)
     if unsupported_count:
         gate_reasons.append("unsupported_claims")
     if (
         answer_present
         and support_ratio is not None
         and support_ratio <= 0.0
+        and total_claims > 0
     ):
         gate_reasons.append("zero_claim_support")
     quality_gate = {
@@ -2619,6 +2683,12 @@ def _apply_research_quality_gates(
         "passed": not gate_reasons,
         "citation_count": citation_count,
         "unsupported_claim_count": unsupported_count,
+        "verifier": {
+            "state": verification_state or "unavailable",
+            "version": verification_version or None,
+            "row_count": len(verification_rows),
+            "total_claims": total_claims,
+        },
         "answer_present": answer_present,
         "reasons": gate_reasons,
         "mode": mode,

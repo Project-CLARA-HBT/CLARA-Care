@@ -11087,6 +11087,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
     verification_matrix_payload = {
         "version": str(verification_matrix_summary.get("version") or "claim-v2-nli"),
+        # Stable release-gate state. The API must not infer verifier presence
+        # from a citation or an empty row list: disabled/skipped verification
+        # is an explicit safe-abstention condition for factual research prose.
+        "state": verification_state,
         "rows": verification_matrix_rows,
         "summary": verification_matrix_summary,
         "contradiction_summary": contradiction_summary,
@@ -11158,6 +11162,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 },
             )
         )
+    # A safety override may downgrade the state after the matrix was built.
+    # Keep the release-gate contract aligned with the final deterministic policy.
+    verification_matrix_payload["state"] = verification_state
     verification_matrix_payload["safety_override"] = safety_override
     if research_mode == "deep_beta":
         quality_gate_started = perf_counter()
@@ -11240,6 +11247,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "evidence_count": factcheck_result.evidence_count,
         "note": factcheck_result.note,
         "verification_matrix": {
+            "state": verification_state,
+            "version": verification_matrix_payload["version"],
             "summary": verification_matrix_summary,
             "contradiction_summary": contradiction_summary,
             "safety_override": safety_override,
