@@ -3849,21 +3849,24 @@ export default function ChatWorkspacePage() {
             <div className="mx-auto mb-2 w-full max-w-3xl px-3">
               <article
                 role="group"
-                aria-label={isEnglishUI ? "Clarifying questions" : "Câu hỏi làm rõ"}
+                aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.aria")}
                 className="rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_-28px_rgba(180,83,9,0.4)] dark:border-amber-600/55 dark:bg-amber-950/35 dark:text-amber-100"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <p className="font-semibold leading-6">
-                    {isEnglishUI
-                      ? "Your query is a bit broad. Answer a few questions so the deep run targets your intent, or skip to run as-is."
-                      : "Câu hỏi còn khá rộng. Trả lời vài câu để phiên nghiên cứu sâu bám đúng ý bạn, hoặc bỏ qua để chạy nguyên văn."}
-                  </p>
+                  <div>
+                    <h3 className="font-semibold leading-6">
+                      {t(uiLanguage, "chat.legacyWorkspace.clarify.title")}
+                    </h3>
+                    <p className="mt-1 text-[13px] leading-5">
+                      {t(uiLanguage, "chat.legacyWorkspace.clarify.description")}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={onDismissClarify}
                     disabled={isSubmitting}
                     className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-200 dark:hover:bg-amber-900/40"
-                    aria-label={isEnglishUI ? "Dismiss" : "Đóng"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.dismiss")}
                   >
                     ✕
                   </button>
@@ -3881,7 +3884,8 @@ export default function ChatWorkspacePage() {
                         value={clarifyGate.answers[question.id] ?? ""}
                         onChange={(event) => onChangeClarifyAnswer(question.id, event.target.value)}
                         disabled={isSubmitting}
-                        placeholder={isEnglishUI ? "Your answer (optional)" : "Câu trả lời của bạn (không bắt buộc)"}
+                        aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.answerPlaceholder")}
+                        placeholder={t(uiLanguage, "chat.legacyWorkspace.clarify.answerPlaceholder")}
                         className="min-h-[34px] w-full rounded-lg border border-amber-300/80 bg-white/80 px-2.5 text-[13px] text-amber-950 outline-none focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-600/60 dark:bg-amber-950/40 dark:text-amber-50"
                       />
                     </label>
@@ -3895,7 +3899,7 @@ export default function ChatWorkspacePage() {
                     disabled={isSubmitting}
                     className="inline-flex items-center rounded-full bg-amber-600 px-3.5 py-1.5 text-[13px] font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isEnglishUI ? "Answer & start research" : "Trả lời & bắt đầu nghiên cứu"}
+                    {t(uiLanguage, "chat.legacyWorkspace.clarify.submit")}
                   </button>
                   <button
                     type="button"
@@ -3903,7 +3907,7 @@ export default function ChatWorkspacePage() {
                     disabled={isSubmitting}
                     className="inline-flex items-center rounded-full border border-amber-400/80 px-3.5 py-1.5 text-[13px] font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-100 dark:hover:bg-amber-900/40"
                   >
-                    {isEnglishUI ? "Skip & run original query" : "Bỏ qua & chạy câu hỏi gốc"}
+                    {t(uiLanguage, "chat.legacyWorkspace.clarify.skip")}
                   </button>
                 </div>
               </article>
