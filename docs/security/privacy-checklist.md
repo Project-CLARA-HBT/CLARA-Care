@@ -22,7 +22,12 @@ Use this operational checklist before a release; it is not a certification.
       JSONL/free-text query data were not uploaded.
 - [ ] Model/prompt/retrieval manifests are immutable and rollback choice is
       documented before enabling a risky model path.
-- [ ] Upload type/size, retention and deletion propagation checks passed.
+- [ ] Untrusted PHR OCR and Research uploads passed bounded-read,
+      filename/MIME/magic-byte regression checks. If
+      `UPLOAD_MALWARE_SCAN_REQUIRED=true`, a reachable ClamAV INSTREAM service
+      returned clean verdicts and an unavailable scanner was verified to fail
+      closed (503), never fail open.
+- [ ] Upload retention and deletion propagation checks passed.
 - [ ] Dependency, secret, SAST/container scans and restore drill have current
       evidence; otherwise release remains blocked.
 - [ ] Release locked suite is measured, not merely structurally green.

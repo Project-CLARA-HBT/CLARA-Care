@@ -367,6 +367,22 @@ def test_property14_ocr_confirm_blocks_low_confidence() -> None:
     assert resp.status_code == 422
 
 
+def test_phr_ocr_rejects_disguised_document_before_ocr_bridge() -> None:
+    """The review-only OCR route still enforces the upload boundary first."""
+
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
+    token = _login("phr-ocr-upload-safety@example.com")
+
+    response = client.post(
+        "/api/v1/phr/import/ocr/scan",
+        headers=_auth(token),
+        files={"file": ("receipt.pdf", b"not a PDF", "application/pdf")},
+    )
+
+    assert response.status_code == 415
+    assert "khớp định dạng" in response.json()["detail"]
+
+
 # ---------------------------------------------------------------------------
 # Property 21 — RBAC and owner-only access
 # ---------------------------------------------------------------------------

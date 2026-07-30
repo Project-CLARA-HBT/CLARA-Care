@@ -544,6 +544,20 @@ class Settings(BaseSettings):
         default="",
         validation_alias="RESEARCH_UPLOAD_OBJECT_STORE_URL",
     )
+    upload_malware_scan_required: bool = Field(
+        default=False,
+        validation_alias="UPLOAD_MALWARE_SCAN_REQUIRED",
+    )
+    upload_malware_clamav_host: str = Field(
+        default="",
+        validation_alias="UPLOAD_MALWARE_CLAMAV_HOST",
+    )
+    upload_malware_clamav_port: int = Field(
+        default=3310,
+        validation_alias="UPLOAD_MALWARE_CLAMAV_PORT",
+        ge=1,
+        le=65535,
+    )
 
     # --- Platform hardening feature flags (additive; default off/behavior-preserving) ---
     # Every flag below gates a new runtime behavior and defaults to the value that

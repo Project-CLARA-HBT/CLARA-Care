@@ -37,6 +37,12 @@ from clara_api.core.config import Settings, get_settings
 from clara_api.core.consent import PHR_CONSENT_PURPOSES, PhrConsentService
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
+from clara_api.core.upload_safety import (
+    UploadMalwareScannerUnavailable,
+    UploadSafetyError,
+    read_upload_bytes_with_limit,
+    verify_upload,
+)
 from clara_api.db.models import (
     PhrObservation,
     PhrProfile,
@@ -1142,9 +1148,31 @@ async def scan_phr_ocr(
 
     file_name = file.filename or "uploaded-document"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await file.read()
+    file_bytes = await read_upload_bytes_with_limit(file, max_bytes=20 * 1024 * 1024)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file upload")
+    try:
+        verified = verify_upload(
+            filename=file_name,
+            content_type=content_type,
+            data=file_bytes,
+            fallback_filename="uploaded-document",
+            malware_scan_required=settings.upload_malware_scan_required,
+            clamav_host=settings.upload_malware_clamav_host,
+            clamav_port=settings.upload_malware_clamav_port,
+        )
+    except UploadMalwareScannerUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Không thể kiểm tra an toàn tệp lúc này. Vui lòng thử lại sau.",
+        ) from exc
+    except UploadSafetyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Tệp tải lên không khớp định dạng được phép.",
+        ) from exc
+    file_name = verified.filename
+    content_type = verified.media_type
     extracted_text, _engine, _raw = _scan_with_tgc_ocr(file_bytes, file_name, content_type)
     detections = _enforce_low_confidence_manual_confirm(
         _detect_drugs_from_text(extracted_text, db=db)

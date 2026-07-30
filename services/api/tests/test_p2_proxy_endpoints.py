@@ -372,6 +372,19 @@ def test_research_upload_file_rejects_payload_over_size_limit(
     assert "File vượt quá giới hạn" in response.json()["detail"]
 
 
+def test_research_upload_rejects_disguised_binary_or_mime() -> None:
+    token = _login("alice@research.clara")
+
+    response = client.post(
+        "/api/v1/research/upload-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("scan.pdf", b"not actually a pdf", "application/pdf")},
+    )
+
+    assert response.status_code == 415
+    assert "khớp định dạng" in response.json()["detail"]
+
+
 def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPatch) -> None:
     token = _login("alice@research.clara")
 

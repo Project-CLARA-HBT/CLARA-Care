@@ -50,6 +50,13 @@ from clara_api.core.research_upload_store import (
 )
 from clara_api.core.security import TokenPayload
 from clara_api.core.timeouts import resolve_sync_research_timeout
+from clara_api.core.upload_safety import (
+    UploadMalwareScannerUnavailable,
+    UploadSafetyError,
+    VerifiedUpload,
+    read_upload_bytes_with_limit,
+    verify_upload,
+)
 from clara_api.db.models import (
     FederatedSourceRecord,
     KnowledgeDocument,
@@ -232,41 +239,32 @@ _PROVIDER_SECRET_KEYS = frozenset(
 )
 
 
-async def _read_upload_bytes_with_limit(file: UploadFile, *, max_bytes: int) -> bytes:
-    chunks: list[bytes] = []
-    total = 0
-    while True:
-        chunk = await file.read(1024 * 1024)
-        if not chunk:
-            break
-        total += len(chunk)
-        if total > max_bytes:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File vượt quá giới hạn {max_bytes // (1024 * 1024)}MB",
-            )
-        chunks.append(chunk)
-    return b"".join(chunks)
+def _validate_upload_safety(
+    *, file_name: str, content_type: str, file_bytes: bytes
+) -> VerifiedUpload:
+    """Apply the shared deterministic content and optional ClamAV boundary."""
 
-
-def _validate_upload_safety(*, file_name: str, content_type: str, file_bytes: bytes) -> None:
-    size = len(file_bytes)
-    if size > _MAX_RESEARCH_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File vượt quá giới hạn {_MAX_RESEARCH_UPLOAD_BYTES // (1024 * 1024)}MB",
+    settings = get_settings()
+    try:
+        return verify_upload(
+            filename=file_name,
+            content_type=content_type,
+            data=file_bytes,
+            fallback_filename="uploaded-file",
+            malware_scan_required=settings.upload_malware_scan_required,
+            clamav_host=settings.upload_malware_clamav_host,
+            clamav_port=settings.upload_malware_clamav_port,
         )
-
-    allowed = (
-        _is_text_file(file_name, content_type)
-        or _is_pdf_file(file_name, content_type)
-        or _is_image_file(file_name, content_type)
-    )
-    if not allowed:
+    except UploadMalwareScannerUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Không thể kiểm tra an toàn tệp lúc này. Vui lòng thử lại sau.",
+        ) from exc
+    except UploadSafetyError as exc:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Định dạng file không được hỗ trợ cho research upload",
-        )
+            detail="Tệp tải lên không khớp định dạng được phép.",
+        ) from exc
 
 
 def _load_research_rag_runtime(db: Session) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -4601,14 +4599,16 @@ async def upload_file_to_knowledge_source(
 
         file_name = file.filename or "uploaded-file"
         content_type = file.content_type or "application/octet-stream"
-        file_bytes = await _read_upload_bytes_with_limit(
+        file_bytes = await read_upload_bytes_with_limit(
             file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES
         )
         if not file_bytes:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
-        _validate_upload_safety(
+        verified = _validate_upload_safety(
             file_name=file_name, content_type=content_type, file_bytes=file_bytes
         )
+        file_name = verified.filename
+        content_type = verified.media_type
 
         extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
         preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
@@ -4704,10 +4704,14 @@ async def upload_research_file(
 
     file_name = file.filename or "uploaded-file"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await _read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
+    file_bytes = await read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
-    _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
+    verified = _validate_upload_safety(
+        file_name=file_name, content_type=content_type, file_bytes=file_bytes
+    )
+    file_name = verified.filename
+    content_type = verified.media_type
 
     extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
     preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
