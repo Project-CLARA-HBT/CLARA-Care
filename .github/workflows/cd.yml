@@ -39,7 +39,7 @@ jobs:
       registry_repo: ${{ steps.ctx.outputs.registry_repo }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Resolve deploy context
         id: ctx
@@ -87,7 +87,7 @@ jobs:
       REGISTRY_REPO: ${{ needs.preflight.outputs.registry_repo }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Login GHCR
         uses: docker/login-action@v4
@@ -220,7 +220,7 @@ jobs:
       REGISTRY_REPO: ${{ needs.preflight.outputs.registry_repo }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Login GHCR
         uses: docker/login-action@v4

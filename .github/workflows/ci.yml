@@ -35,7 +35,7 @@ jobs:
       python_changed_files: ${{ steps.filter.outputs.python_changed_files }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Filter paths
         id: filter
@@ -91,7 +91,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -207,7 +207,7 @@ jobs:
       needs.changes.outputs.ci == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate shell script syntax
         run: |
@@ -228,7 +228,7 @@ jobs:
       needs.changes.outputs.ci == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -326,7 +326,7 @@ jobs:
       AUTH_BOOTSTRAP_ADMIN_ENABLED: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -371,7 +371,7 @@ jobs:
       needs.changes.outputs.ci == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -416,7 +416,7 @@ jobs:
       needs.changes.outputs.ci == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -541,7 +541,7 @@ jobs:
       needs.changes.outputs.ci == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -618,7 +618,7 @@ jobs:
       needs.changes.outputs.ci == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Prepare env file
         run: |
@@ -674,7 +674,7 @@ jobs:
       needs.changes.outputs.ci == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Prepare env file
         run: |
