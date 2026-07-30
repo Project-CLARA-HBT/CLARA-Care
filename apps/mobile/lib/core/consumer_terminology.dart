@@ -174,6 +174,55 @@ enum ConsumerTerm {
   lifeMapReviewDismiss,
   lifeMapReviewRecorded,
   lifeMapReviewLoadFailed,
+  lifeMapCaptureSectionTitle,
+  lifeMapCaptureCreateDescription,
+  lifeMapCaptureInputLabel,
+  lifeMapCaptureInputHint,
+  lifeMapCaptureCreate,
+  lifeMapCaptureArtifactTitle,
+  lifeMapCaptureArtifactDescription,
+  lifeMapCaptureSourceType,
+  lifeMapCaptureMedicationLabel,
+  lifeMapCaptureVisitDocument,
+  lifeMapCaptureTakePhoto,
+  lifeMapCaptureChoosePhoto,
+  lifeMapCaptureCreateFailed,
+  lifeMapCaptureImageInvalid,
+  lifeMapCaptureUploading,
+  lifeMapCaptureReading,
+  lifeMapCaptureUploadFailed,
+  lifeMapCaptureReadingFailed,
+  lifeMapCaptureJobPending,
+  lifeMapCaptureRefreshFailed,
+  lifeMapCaptureConfirmFailed,
+  lifeMapCaptureAbandonOffline,
+  lifeMapCaptureEmergencyFallback,
+  lifeMapCaptureDeleteSourceDraft,
+  lifeMapCaptureDraft,
+  lifeMapCaptureRejected,
+  lifeMapCaptureConfirmed,
+  lifeMapCaptureOnlineNotice,
+  lifeMapCaptureLowConfidence,
+  lifeMapCaptureMissingFields,
+  lifeMapCaptureUnsafe,
+  lifeMapCaptureNormalizeTitle,
+  lifeMapCaptureNormalizeLoading,
+  lifeMapCaptureNormalizeUnavailable,
+  lifeMapCaptureNormalizeProposal,
+  lifeMapCaptureNormalizeUseCode,
+  lifeMapCaptureNormalizeUseCodeNotice,
+  lifeMapCaptureEdit,
+  lifeMapCaptureReject,
+  lifeMapCaptureConfirm,
+  lifeMapCaptureAbandon,
+  lifeMapCaptureProcessing,
+  lifeMapCaptureCheckResult,
+  lifeMapCaptureEditTitle,
+  lifeMapCaptureEditSave,
+  lifeMapCaptureSourceImageLabel,
+  lifeMapCaptureSourcePreviewError,
+  lifeMapCaptureSourcePreview,
+  lifeMapCaptureSourceUncached,
   medicinesMyMedicines,
   medicinesCabinet,
   medicinesSafety,
@@ -733,6 +782,75 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapReviewRecorded: 'Đã ghi nhận lựa chọn của bạn.',
     ConsumerTerm.lifeMapReviewLoadFailed:
         'Không thể kiểm tra thông tin. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapCaptureSectionTitle: 'Ghi nhận nhanh',
+    ConsumerTerm.lifeMapCaptureCreateDescription:
+        'Tạo bản nháp để xem lại trước khi đưa vào LifeMap.',
+    ConsumerTerm.lifeMapCaptureInputLabel: 'Điều bạn muốn ghi lại',
+    ConsumerTerm.lifeMapCaptureInputHint: 'Ví dụ: Tối qua tôi ngủ khoảng 7 giờ',
+    ConsumerTerm.lifeMapCaptureCreate: 'Tạo bản nháp',
+    ConsumerTerm.lifeMapCaptureArtifactTitle: 'Ghi nhận từ ảnh',
+    ConsumerTerm.lifeMapCaptureArtifactDescription:
+        'Ảnh chỉ tạo dữ liệu nháp. Bạn phải đối chiếu nguồn, sửa trường thiếu và xác nhận rõ ràng trước khi lưu.',
+    ConsumerTerm.lifeMapCaptureSourceType: 'Loại nguồn',
+    ConsumerTerm.lifeMapCaptureMedicationLabel: 'Nhãn thuốc',
+    ConsumerTerm.lifeMapCaptureVisitDocument: 'Tài liệu khám',
+    ConsumerTerm.lifeMapCaptureTakePhoto: 'Chụp ảnh',
+    ConsumerTerm.lifeMapCaptureChoosePhoto: 'Chọn ảnh',
+    ConsumerTerm.lifeMapCaptureCreateFailed:
+        'Không thể tạo bản nháp. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapCaptureImageInvalid:
+        'Ảnh phải nhỏ hơn 10 MB và không được để trống.',
+    ConsumerTerm.lifeMapCaptureUploading: 'Đang tải nguồn an toàn…',
+    ConsumerTerm.lifeMapCaptureReading:
+        'Nguồn đang được đọc. Chưa có dữ liệu nào được xác nhận.',
+    ConsumerTerm.lifeMapCaptureUploadFailed:
+        'Không thể tải nguồn. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapCaptureReadingFailed:
+        'Không thể đọc nguồn. Bản nháp chưa được xác nhận.',
+    ConsumerTerm.lifeMapCaptureJobPending:
+        'Tác vụ vẫn đang xử lý. Hãy kiểm tra lại sau.',
+    ConsumerTerm.lifeMapCaptureRefreshFailed:
+        'Không thể làm mới bản nháp. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapCaptureConfirmFailed:
+        'Không thể xác nhận bản ghi. Vui lòng thử lại.',
+    ConsumerTerm.lifeMapCaptureAbandonOffline:
+        'Cần kết nối mạng để hủy bản nháp.',
+    ConsumerTerm.lifeMapCaptureEmergencyFallback:
+        'Nếu bạn đang gặp nguy hiểm ngay lập tức, hãy gọi cấp cứu địa phương hoặc đến cơ sở cấp cứu gần nhất.',
+    ConsumerTerm.lifeMapCaptureDeleteSourceDraft: 'Xóa bản nháp nguồn',
+    ConsumerTerm.lifeMapCaptureDraft: 'Bản nháp chưa xác nhận',
+    ConsumerTerm.lifeMapCaptureRejected: 'Bản nháp đã bị từ chối',
+    ConsumerTerm.lifeMapCaptureConfirmed: 'Bản ghi đã xác nhận',
+    ConsumerTerm.lifeMapCaptureOnlineNotice:
+        'Chỉ xử lý khi có mạng. CLARA không tự xác nhận và dữ liệu ngoại tuyến có thể đã cũ.',
+    ConsumerTerm.lifeMapCaptureLowConfidence:
+        'Một số trường có độ tin cậy thấp. Hãy đối chiếu nguồn.',
+    ConsumerTerm.lifeMapCaptureMissingFields: 'Cần bổ sung: {fields}',
+    ConsumerTerm.lifeMapCaptureUnsafe:
+        'Nguồn có nội dung không an toàn; không thể xác nhận.',
+    ConsumerTerm.lifeMapCaptureNormalizeTitle: 'Chuẩn hóa tên thuốc',
+    ConsumerTerm.lifeMapCaptureNormalizeLoading: 'Đang kiểm tra từ điển thuốc…',
+    ConsumerTerm.lifeMapCaptureNormalizeUnavailable:
+        'Chưa tìm thấy mã chuẩn phù hợp. Tên gốc vẫn được giữ nguyên và chưa được chuẩn hóa.',
+    ConsumerTerm.lifeMapCaptureNormalizeProposal: 'Đề xuất: {name} · RxNorm {code}',
+    ConsumerTerm.lifeMapCaptureNormalizeUseCode: 'Dùng mã chuẩn này cho hồ sơ thuốc',
+    ConsumerTerm.lifeMapCaptureNormalizeUseCodeNotice:
+        'Bản ghi chỉ được tạo sau khi bạn xác nhận.',
+    ConsumerTerm.lifeMapCaptureEdit: 'Chỉnh sửa',
+    ConsumerTerm.lifeMapCaptureReject: 'Từ chối',
+    ConsumerTerm.lifeMapCaptureConfirm: 'Xác nhận',
+    ConsumerTerm.lifeMapCaptureAbandon: 'Hủy và xóa bản nháp',
+    ConsumerTerm.lifeMapCaptureProcessing: 'Bản nháp nguồn đang xử lý',
+    ConsumerTerm.lifeMapCaptureCheckResult: 'Kiểm tra kết quả',
+    ConsumerTerm.lifeMapCaptureEditTitle: 'Chỉnh sửa bản nháp',
+    ConsumerTerm.lifeMapCaptureEditSave: 'Lưu chỉnh sửa',
+    ConsumerTerm.lifeMapCaptureSourceImageLabel: 'Ảnh nguồn {name}',
+    ConsumerTerm.lifeMapCaptureSourcePreviewError:
+        'Không thể hiển thị ảnh nguồn.',
+    ConsumerTerm.lifeMapCaptureSourcePreview:
+        'Nguồn: {name} · chỉ giữ tạm trong bộ nhớ khi xem xét.',
+    ConsumerTerm.lifeMapCaptureSourceUncached:
+        'Ảnh nguồn không được lưu vào bộ nhớ đệm trên thiết bị. Hãy đối chiếu lại bản gốc trước khi xác nhận.',
     ConsumerTerm.medicinesMyMedicines: 'Thuốc của tôi',
     ConsumerTerm.medicinesCabinet: 'Tủ thuốc',
     ConsumerTerm.medicinesSafety: 'An toàn',
@@ -1319,6 +1437,75 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapReviewRecorded: 'Your choice was recorded.',
     ConsumerTerm.lifeMapReviewLoadFailed:
         'We could not check this information. Try again.',
+    ConsumerTerm.lifeMapCaptureSectionTitle: 'Quick capture',
+    ConsumerTerm.lifeMapCaptureCreateDescription:
+        'Create a draft to review before it goes into LifeMap.',
+    ConsumerTerm.lifeMapCaptureInputLabel: 'What would you like to record?',
+    ConsumerTerm.lifeMapCaptureInputHint: 'For example: I slept about 7 hours last night',
+    ConsumerTerm.lifeMapCaptureCreate: 'Create draft',
+    ConsumerTerm.lifeMapCaptureArtifactTitle: 'Capture from a photo',
+    ConsumerTerm.lifeMapCaptureArtifactDescription:
+        'A photo only creates a draft. Check the source, fix missing fields, and explicitly confirm before saving.',
+    ConsumerTerm.lifeMapCaptureSourceType: 'Source type',
+    ConsumerTerm.lifeMapCaptureMedicationLabel: 'Medicine label',
+    ConsumerTerm.lifeMapCaptureVisitDocument: 'Visit document',
+    ConsumerTerm.lifeMapCaptureTakePhoto: 'Take photo',
+    ConsumerTerm.lifeMapCaptureChoosePhoto: 'Choose photo',
+    ConsumerTerm.lifeMapCaptureCreateFailed:
+        'We could not create the draft. Try again.',
+    ConsumerTerm.lifeMapCaptureImageInvalid:
+        'The image must be non-empty and smaller than 10 MB.',
+    ConsumerTerm.lifeMapCaptureUploading: 'Uploading the source securely…',
+    ConsumerTerm.lifeMapCaptureReading:
+        'The source is being read. No information has been confirmed.',
+    ConsumerTerm.lifeMapCaptureUploadFailed:
+        'We could not upload the source. Try again.',
+    ConsumerTerm.lifeMapCaptureReadingFailed:
+        'We could not read the source. The draft was not confirmed.',
+    ConsumerTerm.lifeMapCaptureJobPending:
+        'The task is still processing. Check again later.',
+    ConsumerTerm.lifeMapCaptureRefreshFailed:
+        'We could not refresh the draft. Try again.',
+    ConsumerTerm.lifeMapCaptureConfirmFailed:
+        'We could not confirm the record. Try again.',
+    ConsumerTerm.lifeMapCaptureAbandonOffline:
+        'A network connection is required to discard this draft.',
+    ConsumerTerm.lifeMapCaptureEmergencyFallback:
+        'If you may be in immediate danger, call local emergency services or go to the nearest emergency department.',
+    ConsumerTerm.lifeMapCaptureDeleteSourceDraft: 'Delete source draft',
+    ConsumerTerm.lifeMapCaptureDraft: 'Draft not confirmed',
+    ConsumerTerm.lifeMapCaptureRejected: 'Draft rejected',
+    ConsumerTerm.lifeMapCaptureConfirmed: 'Record confirmed',
+    ConsumerTerm.lifeMapCaptureOnlineNotice:
+        'This is only processed online. CLARA never confirms it automatically, and offline information may be stale.',
+    ConsumerTerm.lifeMapCaptureLowConfidence:
+        'Some fields have low confidence. Check the source.',
+    ConsumerTerm.lifeMapCaptureMissingFields: 'Missing: {fields}',
+    ConsumerTerm.lifeMapCaptureUnsafe:
+        'The source contains unsafe content and cannot be confirmed.',
+    ConsumerTerm.lifeMapCaptureNormalizeTitle: 'Normalize medicine name',
+    ConsumerTerm.lifeMapCaptureNormalizeLoading: 'Checking the medicine dictionary…',
+    ConsumerTerm.lifeMapCaptureNormalizeUnavailable:
+        'No matching standard code was found. The original name is retained and has not been normalized.',
+    ConsumerTerm.lifeMapCaptureNormalizeProposal: 'Suggestion: {name} · RxNorm {code}',
+    ConsumerTerm.lifeMapCaptureNormalizeUseCode: 'Use this standard code for my medicine record',
+    ConsumerTerm.lifeMapCaptureNormalizeUseCodeNotice:
+        'The record is created only after you confirm it.',
+    ConsumerTerm.lifeMapCaptureEdit: 'Edit',
+    ConsumerTerm.lifeMapCaptureReject: 'Reject',
+    ConsumerTerm.lifeMapCaptureConfirm: 'Confirm',
+    ConsumerTerm.lifeMapCaptureAbandon: 'Discard and delete draft',
+    ConsumerTerm.lifeMapCaptureProcessing: 'Source draft is processing',
+    ConsumerTerm.lifeMapCaptureCheckResult: 'Check result',
+    ConsumerTerm.lifeMapCaptureEditTitle: 'Edit draft',
+    ConsumerTerm.lifeMapCaptureEditSave: 'Save changes',
+    ConsumerTerm.lifeMapCaptureSourceImageLabel: 'Source image {name}',
+    ConsumerTerm.lifeMapCaptureSourcePreviewError:
+        'We could not display the source image.',
+    ConsumerTerm.lifeMapCaptureSourcePreview:
+        'Source: {name} · retained in memory only while you review it.',
+    ConsumerTerm.lifeMapCaptureSourceUncached:
+        'The source image is not stored in the device cache. Check the original before confirming.',
     ConsumerTerm.medicinesMyMedicines: 'My medicines',
     ConsumerTerm.medicinesCabinet: 'Medicine cabinet',
     ConsumerTerm.medicinesSafety: 'Safety',
