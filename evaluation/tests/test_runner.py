@@ -74,6 +74,25 @@ class EvalRunnerTests(unittest.TestCase):
             self.assertTrue((output / "index.html").is_file())
             self.assertTrue((output / "summary.md").is_file())
             self.assertTrue((output / "examples").is_dir())
+            summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+            headlines = summary["judge_headlines"]
+            self.assertEqual(len(headlines), 6)
+            self.assertEqual(
+                [row["metric_id"] for row in headlines],
+                [
+                    "emergency_recall",
+                    "medication_normalization_top1",
+                    "critical_ddi_recall",
+                    "unsupported_claim_rate",
+                    "clinician_edit_time_reduction",
+                    "large_llm_cost_reduction",
+                ],
+            )
+            self.assertTrue(all(row["state"] == "not_measured" for row in headlines))
+            self.assertTrue(all(row["value"] is None for row in headlines))
+            index = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn("Sáu chỉ số chính cho BGK", index)
+            self.assertEqual(index.count('class="headline"'), 6)
             with (output / "critical-errors.csv").open(encoding="utf-8") as handle:
                 rows = list(csv.DictReader(handle))
             self.assertTrue(rows)

@@ -45,8 +45,14 @@ DEFAULT_REQUIRED_METRICS: dict[str, tuple[str, ...]] = {
         "critical_ddi_recall",
         "required_source_fail_closed",
         "vietnamese_normalization_critical_recall",
+        "medication_normalization_top1",
     ),
-    "scribe_asr": ("medical_term_wer", "safety_term_recall", "pii_redaction_pass_rate"),
+    "scribe_asr": (
+        "medical_term_wer",
+        "safety_term_recall",
+        "pii_redaction_pass_rate",
+        "clinician_edit_time_reduction",
+    ),
     "lifemap_invariants": (
         "invariant_pass_rate",
         "owner_scope_pass_rate",
@@ -58,6 +64,7 @@ DEFAULT_REQUIRED_METRICS: dict[str, tuple[str, ...]] = {
         "route_policy_pass_rate",
         "latency_p95_ms",
         "estimated_cost_usd",
+        "large_llm_cost_reduction",
     ),
 }
 

@@ -113,7 +113,11 @@ focused tests; run the direct command below before release.
 ## Evaluation results, critical errors and cost/latency
 
 `artifacts/judge-report/` is generated on demand and is ignored by git. The
-report emits one genuine measurement: checked-in fixture manifest integrity.
+judge landing page shows exactly the six requested judge headline measures
+(Vietnamese emergency recall, medication-normalization top-1, severe DrugBank
+DDI recall, unsupported RAG claim rate, Scribe clinician edit-time reduction,
+and router large-LLM cost reduction). The report emits one genuine measurement:
+checked-in fixture manifest integrity.
 All clinical quality, human usability, DrugBank recall, ASR WER, RAG quality,
 Council ablation, model latency and cost metrics are explicitly `not_measured`
 with a reason and a command. This repository contains no approved reviewed

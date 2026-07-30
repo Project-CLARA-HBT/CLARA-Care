@@ -37,6 +37,18 @@ REPORT_SCHEMA_VERSION = "clara-eval-vn.report.v1"
 RUNNER_VERSION = "2026-07-30.1"
 DEFAULT_MANIFEST = Path("evaluation/clara_eval/datasets/manifest.json")
 
+# The judge view has a deliberately fixed, decision-relevant headline set.
+# Values are populated only when an approved execution supplies them; the
+# offline foundation report renders ``not measured`` with its evidence gap.
+JUDGE_HEADLINE_METRICS: tuple[tuple[str, str], ...] = (
+    ("emergency_recall", "Emergency recall trên tiếng Việt nhiễu"),
+    ("medication_normalization_top1", "Medication normalization top-1"),
+    ("critical_ddi_recall", "Severe DDI recall với full DrugBank"),
+    ("unsupported_claim_rate", "Research unsupported claim rate"),
+    ("clinician_edit_time_reduction", "Scribe clinician edit-time reduction"),
+    ("large_llm_cost_reduction", "Large-LLM token/cost reduction nhờ router"),
+)
+
 
 def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -286,11 +298,26 @@ def _write_summary(path: Path, report: dict[str, Any]) -> None:
         "",
         f"```bash\n{report['next_measurement_command']}\n```",
         "",
-        "## Track status",
+        "## Sáu chỉ số chính cho BGK",
         "",
-        "| Track | Status | Reason |",
-        "| --- | --- | --- |",
+        "| Chỉ số | Trạng thái | Lý do | Lệnh đo |",
+        "| --- | --- | --- | --- |",
     ]
+    for metric in report["judge_headlines"]:
+        lines.append(
+            "| "
+            f"{metric['label_vi']} | {metric['state']} | {metric['reason']} | "
+            f"`{metric['measurement_command']}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Track status",
+            "",
+            "| Track | Status | Reason |",
+            "| --- | --- | --- |",
+        ]
+    )
     for track in report["tracks"]:
         lines.append(f"| {track['label_vi']} | not measured | {track['reason']} |")
     lines.append("")
@@ -298,6 +325,15 @@ def _write_summary(path: Path, report: dict[str, Any]) -> None:
 
 
 def _write_html(path: Path, report: dict[str, Any]) -> None:
+    headline_cards = "\n".join(
+        '<article class="headline">'
+        f"<h3>{html.escape(metric['label_vi'])}</h3>"
+        f'<p class="status">{html.escape(metric["state"])}</p>'
+        f"<p>{html.escape(metric['reason'])}</p>"
+        f"<code>{html.escape(metric['measurement_command'])}</code>"
+        "</article>"
+        for metric in report["judge_headlines"]
+    )
     table_rows = "\n".join(
         "<tr>"
         f"<td>{html.escape(track['label_vi'])}</td>"
@@ -311,11 +347,12 @@ def _write_html(path: Path, report: dict[str, Any]) -> None:
 <html lang=\"vi\">
 <head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
 <title>CLARA-Eval VN Judge Report</title>
-<style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#172033}}table{{border-collapse:collapse;width:100%}}th,td{{border:1px solid #d7deea;padding:.7rem;text-align:left;vertical-align:top}}th{{background:#eff5ff}}.status{{background:#fff3cd;padding:.2rem .4rem;border-radius:.25rem}}code{{white-space:normal}}</style>
+<style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#172033}}table{{border-collapse:collapse;width:100%}}th,td{{border:1px solid #d7deea;padding:.7rem;text-align:left;vertical-align:top}}th{{background:#eff5ff}}.headlines{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem}}.headline{{border:1px solid #d7deea;border-radius:.5rem;padding:1rem}}.headline h3{{margin-top:0}}.status{{display:inline-block;background:#fff3cd;padding:.2rem .4rem;border-radius:.25rem}}code{{white-space:normal}}</style>
 </head><body>
 <h1>CLARA-Eval VN — Judge Report</h1>
 <p>Suite <code>{html.escape(report["suite"])}</code> · generated {html.escape(report["generated_at"])}</p>
-<p><strong>Integrity evidence measured:</strong> {report["integrity"]["value"]:.0%}. Clinical/model quality is not inferred from the checked-in synthetic fixtures.</p>
+<p>Dataset manifest integrity was verified. Clinical/model quality is not inferred from the checked-in synthetic fixtures.</p>
+<h2>Sáu chỉ số chính cho BGK</h2><section class="headlines">{headline_cards}</section>
 <h2>Track status</h2><table><thead><tr><th>Track</th><th>Status</th><th>Why</th><th>How to measure</th></tr></thead><tbody>{table_rows}</tbody></table>
 <h2>Artifacts</h2><p>Machine-readable metrics, dataset/model manifests, critical-error and ablation tables are adjacent to this file.</p>
 </body></html>"""
@@ -354,6 +391,7 @@ def _summary_json(report: dict[str, Any]) -> dict[str, Any]:
             metric["state"] == "not_measured" for metric in metrics
         ),
         "integrity": report["integrity"],
+        "judge_headlines": report["judge_headlines"],
         "next_measurement_command": report["next_measurement_command"],
     }
 
@@ -392,6 +430,18 @@ def build_report(
         for track in EvalTrack
         if track.value in config.enabled_tracks
     ]
+    metrics_by_id = {str(metric["metric_id"]): metric for metric in metric_rows}
+    judge_headlines = [
+        {
+            "metric_id": metric_id,
+            "label_vi": label_vi,
+            "state": metrics_by_id[metric_id]["state"],
+            "value": metrics_by_id[metric_id]["value"],
+            "reason": metrics_by_id[metric_id]["reason"],
+            "measurement_command": metrics_by_id[metric_id]["measurement_command"],
+        }
+        for metric_id, label_vi in JUDGE_HEADLINE_METRICS
+    ]
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,
         "runner_version": RUNNER_VERSION,
@@ -401,6 +451,7 @@ def build_report(
         "integrity": metric_rows[0],
         "metrics": metric_rows,
         "tracks": tracks,
+        "judge_headlines": judge_headlines,
         "live_dependencies_requested": config.requires_live_dependencies,
         "live_dependencies_executed": False,
         "next_measurement_command": _required_live_command(config),
