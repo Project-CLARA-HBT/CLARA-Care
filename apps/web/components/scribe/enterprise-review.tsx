@@ -648,7 +648,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
   const onGenerateNote = useCallback(async () => {
     if (!sessionId) return;
     if (!transcriptReady) {
-      pushNotice("error", "Bản ghi đang trống.");
+      pushNotice("error", t(language, "scribe.enterprise.note.error.emptyTranscript"));
       return;
     }
     setGenerating(true);
@@ -668,7 +668,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       setNoteVersionNo(nextVersion);
       void loadGrounding(nextVersion);
       void loadCoding(nextVersion);
-      pushNotice("success", "Đã soạn ghi chú theo mẫu.");
+      pushNotice("success", t(language, "scribe.enterprise.note.notice.generated"));
     } catch (error) {
       if (isMissingCapability(error)) {
         // Sign-workflow/templates flag off ⇒ fall back to the legacy SOAP path.
@@ -687,17 +687,25 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
           // Legacy path also produces no coding suggestions; clear them too.
           setEmCptSuggestions([]);
           setEmCptSelections(initialEmCptSelections());
-          pushNotice("success", "Đã tạo ghi chú SOAP (chế độ tiêu chuẩn).");
+          pushNotice("success", t(language, "scribe.enterprise.note.notice.generatedFallback"));
         } catch (fallbackError) {
-          pushNotice("error", fallbackError instanceof Error ? fallbackError.message : "Không thể soạn ghi chú.");
+          pushNotice(
+            "error",
+            fallbackError instanceof Error
+              ? fallbackError.message
+              : t(language, "scribe.enterprise.note.error.generate"),
+          );
         }
       } else {
-        pushNotice("error", error instanceof Error ? error.message : "Không thể soạn ghi chú.");
+        pushNotice(
+          "error",
+          error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.generate"),
+        );
       }
     } finally {
       setGenerating(false);
     }
-  }, [onSessionChange, pushNotice, sessionId, templateId, transcriptDraft, transcriptReady, loadGrounding, loadCoding, noteVersionNo]);
+  }, [onSessionChange, pushNotice, sessionId, templateId, transcriptDraft, transcriptReady, loadGrounding, loadCoding, noteVersionNo, language]);
 
   const onSaveNoteEdits = useCallback(async () => {
     if (!sessionId) return;
@@ -709,13 +717,16 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       });
       onSessionChange(updated);
       setNoteVersionNo((current) => (current ?? 0) + 1);
-      pushNotice("success", "Đã lưu chỉnh sửa ghi chú.");
+      pushNotice("success", t(language, "scribe.enterprise.note.notice.saved"));
     } catch (error) {
-      pushNotice("error", error instanceof Error ? error.message : "Không thể lưu ghi chú.");
+      pushNotice(
+        "error",
+        error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.save"),
+      );
     } finally {
       setSavingNote(false);
     }
-  }, [noteSections, noteTemplateId, onSessionChange, pushNotice, sessionId]);
+  }, [noteSections, noteTemplateId, onSessionChange, pushNotice, sessionId, language]);
 
   // --- sign ----------------------------------------------------------------
   const onSign = useCallback(async () => {
@@ -725,24 +736,32 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       const updated = await signScribeNote(sessionId);
       onSessionChange(updated);
       setSigned(true);
-      pushNotice("success", "Đã ký ghi chú lâm sàng.");
+      pushNotice("success", t(language, "scribe.enterprise.note.notice.signed"));
     } catch (error) {
       if (isMissingCapability(error)) {
         try {
           const updated = await updateScribeSession(sessionId, { status: "finalized" });
           onSessionChange(updated);
           setSigned(true);
-          pushNotice("success", "Đã hoàn tất ghi chú (chế độ tiêu chuẩn).");
+          pushNotice("success", t(language, "scribe.enterprise.note.notice.signedFallback"));
         } catch (fallbackError) {
-          pushNotice("error", fallbackError instanceof Error ? fallbackError.message : "Không thể ký ghi chú.");
+          pushNotice(
+            "error",
+            fallbackError instanceof Error
+              ? fallbackError.message
+              : t(language, "scribe.enterprise.note.error.sign"),
+          );
         }
       } else {
-        pushNotice("error", error instanceof Error ? error.message : "Không thể ký ghi chú.");
+        pushNotice(
+          "error",
+          error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.sign"),
+        );
       }
     } finally {
       setSigning(false);
     }
-  }, [onSessionChange, pushNotice, sessionId]);
+  }, [onSessionChange, pushNotice, sessionId, language]);
 
   const onAmend = useCallback(async () => {
     if (!sessionId) return;
@@ -756,11 +775,14 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       setNoteVersionNo(nextVersion);
       void loadGrounding(nextVersion);
       void loadCoding(nextVersion);
-      pushNotice("success", "Đã tạo bản sửa đổi mới (amended).");
+      pushNotice("success", t(language, "scribe.enterprise.note.notice.amended"));
     } catch (error) {
-      pushNotice("error", error instanceof Error ? error.message : "Không thể tạo bản sửa đổi.");
+      pushNotice(
+        "error",
+        error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.amend"),
+      );
     }
-  }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft, loadGrounding, loadCoding, noteVersionNo]);
+  }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft, loadGrounding, loadCoding, noteVersionNo, language]);
 
   // --- export --------------------------------------------------------------
   const onExport = useCallback(
@@ -778,18 +800,24 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
           downloadBlob(result.filename, result.blob);
         }
         setExported(true);
-        pushNotice("success", `Đã xuất bản ghi chú (${format.toUpperCase()}).`);
+        pushNotice(
+          "success",
+          t(language, "scribe.enterprise.note.notice.exported", { format: format.toUpperCase() }),
+        );
       } catch (error) {
         if (isMissingCapability(error)) {
-          pushNotice("error", "Tính năng xuất bản chưa được bật cho phiên này.");
+          pushNotice("error", t(language, "scribe.enterprise.note.error.exportUnavailable"));
         } else {
-          pushNotice("error", error instanceof Error ? error.message : "Không thể xuất bản ghi chú.");
+          pushNotice(
+            "error",
+            error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.export"),
+          );
         }
       } finally {
         setExportingFormat(null);
       }
     },
-    [pushNotice, sessionId]
+    [pushNotice, sessionId, language]
   );
 
   // --- cleanup -------------------------------------------------------------
@@ -890,6 +918,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         onUploadClick: () => fileInputRef.current?.click(),
       })}
       {renderNoteColumn({
+        language,
         templateId,
         onTemplateChange: setTemplateId,
         generating,
@@ -1184,6 +1213,7 @@ function speakerLabel(language: UILanguage, speaker: "clinician" | "patient" | "
 }
 
 function renderNoteColumn(props: {
+  language: UILanguage;
   templateId: string;
   onTemplateChange: (value: string) => void;
   generating: boolean;
@@ -1221,7 +1251,7 @@ function renderNoteColumn(props: {
   return (
     <aside className="col-span-12 xl:col-span-4 space-y-4">
       <div className={panelPaddedClass}>
-        <h3 className={sectionTitleClass}>Mẫu ghi chú</h3>
+        <h3 className={sectionTitleClass}>{t(props.language, "scribe.enterprise.note.templateTitle")}</h3>
         <div className="mt-3 flex gap-2">
           <select
             value={props.templateId}
@@ -1232,7 +1262,7 @@ function renderNoteColumn(props: {
           >
             {SCRIBE_REVIEW_TEMPLATES.map((template) => (
               <option key={template.id} value={template.id}>
-                {template.label}
+                {templateLabel(props.language, template.id, template.label)}
               </option>
             ))}
           </select>
@@ -1243,17 +1273,21 @@ function renderNoteColumn(props: {
             className={primaryButtonClass}
             data-testid="scribe-generate-note"
           >
-            {props.generating ? "Đang soạn..." : "Soạn ghi chú"}
+            {props.generating
+              ? t(props.language, "scribe.enterprise.note.generating")
+              : t(props.language, "scribe.enterprise.note.generate")}
           </button>
         </div>
       </div>
 
       <div className={panelPaddedClass}>
         <div className="flex items-center justify-between">
-          <h3 className={sectionTitleClass}>Ghi chú lâm sàng</h3>
+          <h3 className={sectionTitleClass}>{t(props.language, "scribe.enterprise.note.title")}</h3>
           {editorLocked ? (
             <span className="rounded-full border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100">
-              {props.exported ? "Đã xuất bản" : "Đã ký"}
+              {props.exported
+                ? t(props.language, "scribe.enterprise.note.exported")
+                : t(props.language, "scribe.enterprise.note.signed")}
             </span>
           ) : null}
         </div>
@@ -1261,7 +1295,7 @@ function renderNoteColumn(props: {
         <div className="mt-3 space-y-3">
           {props.noteSections.length === 0 ? (
             <p className={`text-sm font-medium ${secondaryTextClass}`}>
-              Chưa có ghi chú. Chọn mẫu và bấm “Soạn ghi chú”.
+              {t(props.language, "scribe.enterprise.note.empty")}
             </p>
           ) : (
             props.noteSections.map((section) => (
@@ -1284,7 +1318,9 @@ function renderNoteColumn(props: {
         {props.noteReady && !editorLocked ? (
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={props.onSaveNoteEdits} disabled={props.savingNote} className={secondaryButtonClass}>
-              {props.savingNote ? "Đang lưu..." : "Lưu chỉnh sửa"}
+              {props.savingNote
+                ? t(props.language, "scribe.action.saving")
+                : t(props.language, "scribe.enterprise.note.saveEdits")}
             </button>
             <button
               type="button"
@@ -1293,7 +1329,9 @@ function renderNoteColumn(props: {
               className={primaryButtonClass}
               data-testid="scribe-sign"
             >
-              {props.signing ? "Đang ký..." : "Ký ghi chú"}
+              {props.signing
+                ? t(props.language, "scribe.enterprise.note.signing")
+                : t(props.language, "scribe.enterprise.note.sign")}
             </button>
           </div>
         ) : null}
@@ -1324,12 +1362,14 @@ function renderNoteColumn(props: {
                   className={secondaryButtonClass}
                   data-testid={`scribe-export-${format}`}
                 >
-                  {props.exportingFormat === format ? "Đang xuất..." : `Xuất ${format.toUpperCase()}`}
+                  {props.exportingFormat === format
+                    ? t(props.language, "scribe.enterprise.note.exporting")
+                    : t(props.language, "scribe.enterprise.note.export", { format: format.toUpperCase() })}
                 </button>
               ))}
             </div>
             <button type="button" onClick={props.onAmend} className={`w-full ${secondaryButtonClass}`}>
-              Tạo bản sửa đổi (amend)
+              {t(props.language, "scribe.enterprise.note.amend")}
             </button>
             {renderAddendumPanel({
               available: props.addendumAvailable,
@@ -1345,6 +1385,23 @@ function renderNoteColumn(props: {
       </div>
     </aside>
   );
+}
+
+function templateLabel(language: UILanguage, templateId: string, fallback: string): string {
+  switch (templateId) {
+    case "soap":
+      return t(language, "scribe.enterprise.note.template.soap");
+    case "h_and_p":
+      return t(language, "scribe.enterprise.note.template.historyPhysical");
+    case "progress_note":
+      return t(language, "scribe.enterprise.note.template.progressNote");
+    case "referral_letter":
+      return t(language, "scribe.enterprise.note.template.referralLetter");
+    case "vn_benh_an":
+      return t(language, "scribe.enterprise.note.template.vnMedicalRecord");
+    default:
+      return fallback;
+  }
 }
 
 // ---------------------------------------------------------------------------
