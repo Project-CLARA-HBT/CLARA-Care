@@ -240,6 +240,10 @@ enum ConsumerTerm {
   lifeMapQuestionCreateDraft,
   lifeMapQuestionDraftCreated,
   lifeMapQuestionLoadFailed,
+  lifeMapBaselineSectionTitle,
+  lifeMapBaselineNotice,
+  lifeMapBaselineSamples,
+  lifeMapBaselineInsufficientData,
   medicinesMyMedicines,
   medicinesCabinet,
   medicinesSafety,
@@ -893,6 +897,12 @@ class ConsumerTerminology {
         'Đã tạo bản nháp. Hãy kiểm tra rồi xác nhận.',
     ConsumerTerm.lifeMapQuestionLoadFailed:
         'Không thể tải câu hỏi. Vui lòng thử lại khi có mạng.',
+    ConsumerTerm.lifeMapBaselineSectionTitle: 'Thay đổi so với chính bạn',
+    ConsumerTerm.lifeMapBaselineNotice:
+        'Không phải mức bình thường lâm sàng hay chẩn đoán.',
+    ConsumerTerm.lifeMapBaselineSamples:
+        '{days} ngày dữ liệu · {version}',
+    ConsumerTerm.lifeMapBaselineInsufficientData: 'Chưa đủ dữ liệu',
     ConsumerTerm.medicinesMyMedicines: 'Thuốc của tôi',
     ConsumerTerm.medicinesCabinet: 'Tủ thuốc',
     ConsumerTerm.medicinesSafety: 'An toàn',
@@ -1573,6 +1583,11 @@ class ConsumerTerminology {
         'Draft created. Review it, then explicitly confirm.',
     ConsumerTerm.lifeMapQuestionLoadFailed:
         'We could not load the question. Try again with a network connection.',
+    ConsumerTerm.lifeMapBaselineSectionTitle: 'Changes relative to you',
+    ConsumerTerm.lifeMapBaselineNotice:
+        'This is not a clinical normal range or a diagnosis.',
+    ConsumerTerm.lifeMapBaselineSamples: '{days} days of data · {version}',
+    ConsumerTerm.lifeMapBaselineInsufficientData: 'Not enough data',
     ConsumerTerm.medicinesMyMedicines: 'My medicines',
     ConsumerTerm.medicinesCabinet: 'Medicine cabinet',
     ConsumerTerm.medicinesSafety: 'Safety',

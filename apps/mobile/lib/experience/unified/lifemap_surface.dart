@@ -1335,7 +1335,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         ],
 
         if (_baselines.isNotEmpty) ...[
-          const SectionHeader(title: 'Thay đổi so với chính bạn'),
+          SectionHeader(title: _copy[ConsumerTerm.lifeMapBaselineSectionTitle]),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               ClaraTokens.spaceMd,
@@ -1348,7 +1348,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Không phải mức bình thường lâm sàng hay chẩn đoán.',
+                    _copy[ConsumerTerm.lifeMapBaselineNotice],
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -1359,13 +1359,18 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(_str(item['signal_key'])),
                       subtitle: Text(
-                        '${_str(item['sample_days'])} ngày dữ liệu · '
-                        '${_str(item['rule_version'])}',
+                        _copy.format(
+                          ConsumerTerm.lifeMapBaselineSamples,
+                          <String, Object?>{
+                            'days': _str(item['sample_days']),
+                            'version': _str(item['rule_version']),
+                          },
+                        ),
                       ),
                       trailing: Text(
                         item['status'] == 'ready'
                             ? '${_str(item['personal_median'])} ${_str(item['unit'])}'
-                            : 'Chưa đủ dữ liệu',
+                            : _copy[ConsumerTerm.lifeMapBaselineInsufficientData],
                         style: theme.textTheme.labelLarge,
                       ),
                     ),
