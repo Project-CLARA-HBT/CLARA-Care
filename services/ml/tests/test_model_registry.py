@@ -243,7 +243,7 @@ def test_kill_switch_preserves_primary_even_if_rollback_is_requested() -> None:
     assert selection.rollback_applied is False
 
 
-def test_task_client_uses_selected_rollback_and_keeps_audio_endpoint_scoped() -> None:
+def test_task_client_uses_selected_rollback_without_an_audio_provider_seam() -> None:
     client, selection = build_task_client(
         ModelTask.SCRIBE_TRANSCRIPTION,
         _settings(
@@ -252,14 +252,13 @@ def test_task_client_uses_selected_rollback_and_keeps_audio_endpoint_scoped() ->
         ),
         timeout_seconds=90.0,
         retries_per_base=0,
-        audio=True,
     )
 
     assert selection.rollback_applied is True
     assert client.model == "deepseek-previous"
     assert client._timeout_seconds == 90.0
     assert client._retries_per_base == 0
-    assert client._audio_base_urls == ["https://audio.example.invalid/v1"]
+    assert client._audio_base_urls == []
 
 
 def test_asr_payload_model_is_registry_owned_and_not_a_v4_text_route() -> None:

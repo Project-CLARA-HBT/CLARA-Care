@@ -8,9 +8,11 @@ all current request paths happen to exercise the registry.
 from __future__ import annotations
 
 import ast
+import inspect
 from pathlib import Path
 
 from clara_ml.llm.deepseek_client import DeepSeekClient
+from clara_ml.llm.model_registry import build_task_client
 
 
 ML_ROOT = Path(__file__).resolve().parents[1]
@@ -46,3 +48,7 @@ def test_only_task_registry_constructs_production_deepseek_clients() -> None:
 
 def test_client_exposes_no_runtime_constructor_bypass() -> None:
     assert not hasattr(DeepSeekClient, "from_runtime")
+
+
+def test_text_task_builder_cannot_be_reused_for_audio_transport() -> None:
+    assert "audio" not in inspect.signature(build_task_client).parameters

@@ -47,7 +47,9 @@ selects the text-client transport and request budget, while
 `DEEPSEEK_AUDIO_MODEL` remains a separately configured audio model sent only
 to the transcription endpoint. Local Whisper, PhoWhisper, and Google STT stay
 behind the typed ASR provider seam; none can be selected by end-user request
-data. These exceptions must not be repurposed for text generation.
+data. `build_task_client` is text-only; audio transport construction must use
+`build_asr_task_client`. These exceptions must not be repurposed for text
+generation.
 
 The shadow router may receive a deterministic packet plus optional validated
 V4 Flash Vietnamese clinical-language source spans. The registry task accepts

@@ -537,7 +537,6 @@ def build_task_client(
     *,
     timeout_seconds: float | None = None,
     retries_per_base: int | None = None,
-    audio: bool = False,
 ) -> tuple[DeepSeekClient, ModelSelection]:
     """Build a policy-selected DeepSeek client for a registered task.
 
@@ -582,7 +581,6 @@ def build_task_client(
         max_concurrency=int(getattr(settings, "llm_global_max_concurrency", 2)),
         min_interval_seconds=float(getattr(settings, "llm_global_min_interval_seconds", 0.4)),
         request_jitter_seconds=float(getattr(settings, "llm_global_jitter_seconds", 0.15)),
-        audio_base_url=_text(settings, "deepseek_audio_base_url") if audio else "",
         generation_temperature=contract.temperature,
         generation_max_tokens=contract.max_tokens,
     )
