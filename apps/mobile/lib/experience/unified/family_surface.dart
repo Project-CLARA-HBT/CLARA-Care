@@ -187,8 +187,11 @@ class _AccessLogEntry {
   const _AccessLogEntry({
     required this.id,
     required this.actor,
+    required this.actorCode,
     required this.action,
+    required this.actionCode,
     required this.outcome,
+    required this.outcomeCode,
     required this.createdAt,
   });
 
@@ -196,16 +199,97 @@ class _AccessLogEntry {
       _AccessLogEntry(
         id: _str(json['id']),
         actor: _firstNonEmpty(<Object?>[json['actor_label']]),
+        actorCode: _str(json['actor_code']),
         action: _str(json['action']),
+        actionCode: _str(json['action_code']),
         outcome: _str(json['outcome']),
+        outcomeCode: _str(json['outcome_code']),
         createdAt: _str(json['created_at']),
       );
 
   final String id;
   final String actor;
+  final String actorCode;
   final String action;
+  final String actionCode;
   final String outcome;
+  final String outcomeCode;
   final String createdAt;
+}
+
+String _accessLogActorLabel(ConsumerTerminology copy, _AccessLogEntry entry) {
+  switch (entry.actorCode) {
+    case 'owner':
+      return copy[ConsumerTerm.familyAccessLogActorOwner];
+    case 'supporter':
+      return copy[ConsumerTerm.familyAccessLogActorSupporter];
+    case 'system':
+      return copy[ConsumerTerm.familyAccessLogActorSystem];
+    default:
+      return entry.actor.isEmpty
+          ? copy[ConsumerTerm.familyAccessLogActorOther]
+          : entry.actor;
+  }
+}
+
+String _accessLogActionLabel(ConsumerTerminology copy, _AccessLogEntry entry) {
+  switch (entry.actionCode.isEmpty ? entry.action : entry.actionCode) {
+    case 'view':
+      return copy[ConsumerTerm.familyAccessLogActionView];
+    case 'add_observation':
+      return copy[ConsumerTerm.familyAccessLogActionAddObservation];
+    case 'complete_task':
+      return copy[ConsumerTerm.familyAccessLogActionCompleteTask];
+    case 'invitation_accept':
+    case 'invitation.accept':
+      return copy[ConsumerTerm.familyAccessLogActionInvitationAccept];
+    case 'grant_revoke':
+    case 'grant.revoke':
+      return copy[ConsumerTerm.familyAccessLogActionGrantRevoke];
+    case 'grant_renewal_invited':
+    case 'grant.renewal_invited':
+      return copy[ConsumerTerm.familyAccessLogActionGrantRenewalInvited];
+    case 'notification_acknowledged':
+    case 'notification.acknowledged':
+      return copy[ConsumerTerm.familyAccessLogActionNotificationAcknowledged];
+    default:
+      return copy[ConsumerTerm.familyAccessLogActionOther];
+  }
+}
+
+String _accessLogOutcomeCode(_AccessLogEntry entry) {
+  switch (entry.outcomeCode) {
+    case 'allowed':
+    case 'denied':
+    case 'failed':
+    case 'unknown':
+      return entry.outcomeCode;
+  }
+  switch (entry.outcome) {
+    case 'success':
+    case 'allowed':
+      return 'allowed';
+    case 'denied':
+      return 'denied';
+    case 'failure':
+    case 'failed':
+      return 'failed';
+    default:
+      return 'unknown';
+  }
+}
+
+String _accessLogOutcomeLabel(ConsumerTerminology copy, _AccessLogEntry entry) {
+  switch (_accessLogOutcomeCode(entry)) {
+    case 'allowed':
+      return copy[ConsumerTerm.familyAccessLogOutcomeAllowed];
+    case 'denied':
+      return copy[ConsumerTerm.familyAccessLogOutcomeDenied];
+    case 'failed':
+      return copy[ConsumerTerm.familyAccessLogOutcomeFailed];
+    default:
+      return copy[ConsumerTerm.familyAccessLogOutcomeUnknown];
+  }
 }
 
 /// The Family surface: minimal, consent-based sharing with supporters.
@@ -711,8 +795,9 @@ class _FamilySurfaceState extends State<FamilySurface> {
                   ),
                   child: ClaraCard.static_(
                     child: Text(
-                      '${entry.actor.isEmpty ? copy[ConsumerTerm.familySupporter] : entry.actor}'
-                      ' · ${entry.action} · ${entry.outcome}'
+                      '${_accessLogActorLabel(copy, entry)}'
+                      ' · ${_accessLogActionLabel(copy, entry)}'
+                      ' · ${_accessLogOutcomeLabel(copy, entry)}'
                       '${entry.createdAt.isEmpty ? '' : '\n${_localizedDateTime(context, entry.createdAt)}'}',
                     ),
                   ),

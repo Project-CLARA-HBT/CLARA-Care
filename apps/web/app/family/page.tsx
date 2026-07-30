@@ -12,6 +12,7 @@ import Button from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import type { UILanguage } from "@/lib/ui-language";
 import {
   acceptFamilyInvitation,
   createFamilyInvitation,
@@ -24,6 +25,45 @@ import {
   type FamilyAccessLog,
   type FamilyGrant,
 } from "@/lib/visit-family";
+
+function FamilyAccessLogRow({
+  log,
+  language,
+  actorLabel,
+  actionLabel,
+  outcomeCode,
+  outcomeLabel,
+  objectLabel,
+}: {
+  log: FamilyAccessLog;
+  language: UILanguage;
+  actorLabel: string;
+  actionLabel: string;
+  outcomeCode: string;
+  outcomeLabel: string;
+  objectLabel: string;
+}) {
+  const allowed = outcomeCode === "allowed";
+  return (
+    <div className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3">
+      <span
+        className={`material-symbols-outlined text-base ${
+          allowed ? "text-[var(--status-ok-text)]" : "text-[var(--status-danger-text)]"
+        }`}
+      >
+        {allowed ? "verified_user" : "gpp_bad"}
+      </span>
+      <div>
+        <p className="text-sm font-medium text-[var(--text-primary)]">
+          {actorLabel} · {actionLabel} · {outcomeLabel}
+        </p>
+        <p className="text-xs text-[var(--text-muted)]">
+          {objectLabel} · {formatLocaleDate(language, log.created_at, { dateStyle: "medium", timeStyle: "short" })}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function FamilyPage() {
   const language = useUILanguage();
@@ -44,11 +84,36 @@ export default function FamilyPage() {
     if (action === "complete_task") return copy("familyCircle.permission.completeTask");
     return copy("familyCircle.permission.other");
   };
-  const outcomeLabel = (outcome: string) => {
-    if (outcome === "allowed") return copy("familyCircle.outcome.allowed");
-    if (outcome === "denied") return copy("familyCircle.outcome.denied");
-    if (outcome === "unknown") return copy("familyCircle.outcome.unknown");
-    return copy("familyCircle.outcome.other");
+  const accessLogActorLabel = (code: string | undefined, fallback: string) => {
+    if (code === "owner") return copy("familyCircle.accessLog.actor.owner");
+    if (code === "supporter") return copy("familyCircle.accessLog.actor.supporter");
+    if (code === "system") return copy("familyCircle.accessLog.actor.system");
+    return fallback || copy("familyCircle.accessLog.actor.other");
+  };
+  const accessLogActionLabel = (code: string | undefined) => {
+    if (code === "view") return copy("familyCircle.accessLog.action.view");
+    if (code === "add_observation") return copy("familyCircle.accessLog.action.addObservation");
+    if (code === "complete_task") return copy("familyCircle.accessLog.action.completeTask");
+    if (code === "invitation_accept" || code === "invitation.accept") return copy("familyCircle.accessLog.action.invitationAccept");
+    if (code === "grant_revoke" || code === "grant.revoke") return copy("familyCircle.accessLog.action.grantRevoke");
+    if (code === "grant_renewal_invited" || code === "grant.renewal_invited") return copy("familyCircle.accessLog.action.grantRenewalInvited");
+    if (code === "notification_acknowledged" || code === "notification.acknowledged") return copy("familyCircle.accessLog.action.notificationAcknowledged");
+    return copy("familyCircle.accessLog.action.other");
+  };
+  const accessLogOutcomeCode = (code: string | undefined, legacy: string) => {
+    if (code === "allowed" || code === "denied" || code === "failed" || code === "unknown") {
+      return code;
+    }
+    if (legacy === "success") return "allowed";
+    if (legacy === "denied") return "denied";
+    if (legacy === "failure" || legacy === "failed") return "failed";
+    return "unknown";
+  };
+  const accessLogOutcomeLabel = (code: string) => {
+    if (code === "allowed") return copy("familyCircle.accessLog.outcome.allowed");
+    if (code === "denied") return copy("familyCircle.accessLog.outcome.denied");
+    if (code === "failed") return copy("familyCircle.accessLog.outcome.failed");
+    return copy("familyCircle.accessLog.outcome.unknown");
   };
   const [grants, setGrants] = useState<FamilyGrant[]>([]);
   const [relationships, setRelationships] = useState<FamilyGrant[]>([]);
@@ -247,26 +312,16 @@ export default function FamilyPage() {
                 <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.accessLog.title")}</h2>
                 <div className="mt-4 space-y-2">
                   {logs.slice(0, 20).map((log) => (
-                    <div key={log.id} className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3">
-                      <span
-                        className={`material-symbols-outlined text-base ${
-                          log.outcome === "allowed"
-                            ? "text-[var(--status-ok-text)]"
-                            : "text-[var(--status-danger-text)]"
-                        }`}
-                      >
-                        {log.outcome === "allowed" ? "verified_user" : "gpp_bad"}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">
-                          {log.actor_label} · {actionLabel(log.action)} · {outcomeLabel(log.outcome)}
-                        </p>
-                        <p className="text-xs text-[var(--text-muted)]">
-                          {objectLabel(log.object_type)} ·{" "}
-                          {formatLocaleDate(language, log.created_at, { dateStyle: "medium", timeStyle: "short" })}
-                        </p>
-                      </div>
-                    </div>
+                    <FamilyAccessLogRow
+                      key={log.id}
+                      log={log}
+                      language={language}
+                      actorLabel={accessLogActorLabel(log.actor_code, log.actor_label)}
+                      actionLabel={accessLogActionLabel(log.action_code || log.action)}
+                      outcomeCode={accessLogOutcomeCode(log.outcome_code, log.outcome)}
+                      outcomeLabel={accessLogOutcomeLabel(accessLogOutcomeCode(log.outcome_code, log.outcome))}
+                      objectLabel={objectLabel(log.object_type)}
+                    />
                   ))}
                   {!logs.length ? (
                     <p className="text-sm text-[var(--text-secondary)]">{copy("familyCircle.accessLog.empty")}</p>

@@ -117,11 +117,20 @@ export type FamilyGrant = {
 
 export type FamilyAccessLog = {
   id: string;
+  /** Legacy Vietnamese label retained by the API for older clients. */
   actor_label: string;
+  /** Stable locale-neutral presentation code; absent only with older APIs. */
+  actor_code?: "owner" | "supporter" | "system" | string;
   object_type: string;
   object_id: string;
+  /** Legacy append-only audit action retained for compatibility. */
   action: string;
+  /** Bounded locale-neutral rendering code. */
+  action_code?: string;
+  /** Legacy audit outcome retained for compatibility. */
   outcome: string;
+  /** Bounded locale-neutral rendering code. */
+  outcome_code?: "allowed" | "denied" | "failed" | "unknown" | string;
   purpose: string;
   created_at: string;
 };

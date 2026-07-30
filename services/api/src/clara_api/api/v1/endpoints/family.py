@@ -17,6 +17,7 @@ from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    FamilyAccessLog,
     FamilyAccessGrant,
     LifeMapCareTask,
     LifeMapEpisode,
@@ -649,6 +650,12 @@ def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> lis
                     if row.actor_user_id is not None
                     else "Hệ thống"
                 ),
+                # Stable, locale-neutral presentation codes. Keep the legacy
+                # actor_label/action/outcome fields below for older clients,
+                # but let current web/mobile clients render these codes with
+                # their own catalogs instead of coupling API data to Vietnamese
+                # display text.
+                "actor_code": _access_log_actor_code(row, owner_id=owner.id),
                 "grant_id": (
                     grant_public_ids.get(row.grant_id)
                     if row.grant_id is not None
@@ -657,7 +664,9 @@ def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> lis
                 "object_type": row.object_type,
                 "object_id": row.object_id,
                 "action": row.action,
+                "action_code": _access_log_action_code(row.action),
                 "outcome": row.outcome,
+                "outcome_code": _access_log_outcome_code(row.outcome),
                 "purpose": row.purpose,
                 "created_at": row.created_at,
             }
@@ -665,6 +674,39 @@ def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> lis
         ]
     except DomainNotFoundError as error:
         _raise(error)
+
+
+def _access_log_actor_code(row: FamilyAccessLog, *, owner_id: int) -> str:
+    if row.actor_user_id == owner_id:
+        return "owner"
+    if row.actor_user_id is not None:
+        return "supporter"
+    return "system"
+
+
+def _access_log_action_code(value: str | None) -> str:
+    # The ledger's raw action is preserved for audit compatibility. This
+    # bounded presentation projection avoids turning future/internal actions
+    # into untranslated client copy.
+    return {
+        "view": "view",
+        "add_observation": "add_observation",
+        "complete_task": "complete_task",
+        "invitation.accept": "invitation_accept",
+        "grant.revoke": "grant_revoke",
+        "grant.renewal_invited": "grant_renewal_invited",
+        "notification.acknowledged": "notification_acknowledged",
+    }.get(str(value or "").strip().lower(), "other")
+
+
+def _access_log_outcome_code(value: str | None) -> str:
+    return {
+        "success": "allowed",
+        "allowed": "allowed",
+        "denied": "denied",
+        "failure": "failed",
+        "failed": "failed",
+    }.get(str(value or "").strip().lower(), "unknown")
 
 
 @router.post("/profiles/{profile_id}/caregiver-observations", status_code=status.HTTP_201_CREATED)
