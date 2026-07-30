@@ -318,6 +318,34 @@ enum ConsumerTerm {
   connectedHealthDeleteConfirmAction,
   connectedHealthDeleteSuccess,
   connectedHealthCancel,
+  livingEvidenceTitle,
+  livingEvidenceSafetyNotice,
+  livingEvidenceReviewedChanges,
+  livingEvidenceNotificationSemanticLabel,
+  livingEvidenceRead,
+  livingEvidenceMarkRead,
+  livingEvidenceSubscriptions,
+  livingEvidenceEmptyTitle,
+  livingEvidenceEmptyDescription,
+  livingEvidenceNewQuestion,
+  livingEvidenceJourneyLabel,
+  livingEvidenceQuestionLabel,
+  livingEvidenceContextLabel,
+  livingEvidenceCreateAndFollow,
+  livingEvidenceLoadFailed,
+  livingEvidenceRunIncomplete,
+  livingEvidenceCreateFailed,
+  livingEvidenceIntervalFailed,
+  livingEvidenceStopFailed,
+  livingEvidenceSubscriptionTitle,
+  livingEvidenceApplicabilityPending,
+  livingEvidenceNoContradictions,
+  livingEvidenceContradictionsCount,
+  livingEvidenceIntervalLabel,
+  livingEvidenceEveryDay,
+  livingEvidenceEveryWeek,
+  livingEvidenceEveryThirtyDays,
+  livingEvidenceStopFollowing,
 }
 
 extension ConsumerTermContractKey on ConsumerTerm {
@@ -771,6 +799,48 @@ class ConsumerTerminology {
     ConsumerTerm.connectedHealthDeleteSuccess:
         'Đã xóa dữ liệu đã nhập từ nguồn này.',
     ConsumerTerm.connectedHealthCancel: 'Hủy',
+    // Living Evidence keeps findings read-only until the service's reviewed
+    // change workflow has released them. These terms never translate source
+    // text, clinical claims, or raw API errors.
+    ConsumerTerm.livingEvidenceTitle: 'Bằng chứng đang cập nhật',
+    ConsumerTerm.livingEvidenceSafetyNotice:
+        'CLARA chỉ thông báo thay đổi quan trọng sau khi chuyên gia rà soát. '
+            'Kết quả tìm kiếm mới không tự trở thành khuyến nghị.',
+    ConsumerTerm.livingEvidenceReviewedChanges: 'Thay đổi đã được rà soát',
+    ConsumerTerm.livingEvidenceNotificationSemanticLabel:
+        'Mở thông báo thay đổi bằng chứng',
+    ConsumerTerm.livingEvidenceRead: 'Đã đọc',
+    ConsumerTerm.livingEvidenceMarkRead: 'Chạm để đánh dấu đã đọc',
+    ConsumerTerm.livingEvidenceSubscriptions: 'Theo dõi của bạn',
+    ConsumerTerm.livingEvidenceEmptyTitle: 'Chưa theo dõi câu hỏi nào',
+    ConsumerTerm.livingEvidenceEmptyDescription:
+        'Tạo câu hỏi bên dưới để bắt đầu.',
+    ConsumerTerm.livingEvidenceNewQuestion: 'Tạo câu hỏi mới',
+    ConsumerTerm.livingEvidenceJourneyLabel: 'Hành trình LifeMap',
+    ConsumerTerm.livingEvidenceQuestionLabel: 'Điều bạn muốn biết',
+    ConsumerTerm.livingEvidenceContextLabel:
+        'Bối cảnh đã xác nhận (không bắt buộc)',
+    ConsumerTerm.livingEvidenceCreateAndFollow: 'Xác nhận, tìm và theo dõi',
+    ConsumerTerm.livingEvidenceLoadFailed:
+        'Chưa thể tải theo dõi bằng chứng.',
+    ConsumerTerm.livingEvidenceRunIncomplete:
+        'Lần tìm bằng chứng chưa hoàn tất; không có kết luận nào được phát hành.',
+    ConsumerTerm.livingEvidenceCreateFailed:
+        'Chưa thể tạo theo dõi bằng chứng.',
+    ConsumerTerm.livingEvidenceIntervalFailed: 'Không thể cập nhật tần suất.',
+    ConsumerTerm.livingEvidenceStopFailed: 'Không thể dừng theo dõi.',
+    ConsumerTerm.livingEvidenceSubscriptionTitle: 'Theo dõi bằng chứng',
+    ConsumerTerm.livingEvidenceApplicabilityPending:
+        'Khả năng áp dụng chưa được đánh giá.',
+    ConsumerTerm.livingEvidenceNoContradictions:
+        'Mâu thuẫn: chưa được đánh giá hoặc chưa có báo cáo.',
+    ConsumerTerm.livingEvidenceContradictionsCount:
+        'Mâu thuẫn cần đối chiếu: {count}.',
+    ConsumerTerm.livingEvidenceIntervalLabel: 'Tần suất kiểm tra',
+    ConsumerTerm.livingEvidenceEveryDay: 'Mỗi ngày',
+    ConsumerTerm.livingEvidenceEveryWeek: 'Mỗi tuần',
+    ConsumerTerm.livingEvidenceEveryThirtyDays: 'Mỗi 30 ngày',
+    ConsumerTerm.livingEvidenceStopFollowing: 'Dừng theo dõi',
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
@@ -1161,5 +1231,45 @@ class ConsumerTerminology {
     ConsumerTerm.connectedHealthDeleteSuccess:
         'Imported data from this source was deleted.',
     ConsumerTerm.connectedHealthCancel: 'Cancel',
+    ConsumerTerm.livingEvidenceTitle: 'Living evidence',
+    ConsumerTerm.livingEvidenceSafetyNotice:
+        'CLARA notifies you only about important changes after expert review. '
+            'New search results do not automatically become recommendations.',
+    ConsumerTerm.livingEvidenceReviewedChanges: 'Reviewed changes',
+    ConsumerTerm.livingEvidenceNotificationSemanticLabel:
+        'Open evidence-change notification',
+    ConsumerTerm.livingEvidenceRead: 'Read',
+    ConsumerTerm.livingEvidenceMarkRead: 'Tap to mark as read',
+    ConsumerTerm.livingEvidenceSubscriptions: 'Following',
+    ConsumerTerm.livingEvidenceEmptyTitle: 'You are not following a question',
+    ConsumerTerm.livingEvidenceEmptyDescription:
+        'Create a question below to start.',
+    ConsumerTerm.livingEvidenceNewQuestion: 'Create a question',
+    ConsumerTerm.livingEvidenceJourneyLabel: 'LifeMap journey',
+    ConsumerTerm.livingEvidenceQuestionLabel: 'What you want to know',
+    ConsumerTerm.livingEvidenceContextLabel:
+        'Confirmed context (optional)',
+    ConsumerTerm.livingEvidenceCreateAndFollow: 'Confirm, search, and follow',
+    ConsumerTerm.livingEvidenceLoadFailed:
+        'We could not load evidence tracking.',
+    ConsumerTerm.livingEvidenceRunIncomplete:
+        'The evidence search did not finish; no conclusion was released.',
+    ConsumerTerm.livingEvidenceCreateFailed:
+        'We could not create evidence tracking.',
+    ConsumerTerm.livingEvidenceIntervalFailed:
+        'We could not update the frequency.',
+    ConsumerTerm.livingEvidenceStopFailed: 'We could not stop following.',
+    ConsumerTerm.livingEvidenceSubscriptionTitle: 'Evidence tracking',
+    ConsumerTerm.livingEvidenceApplicabilityPending:
+        'Applicability has not been assessed.',
+    ConsumerTerm.livingEvidenceNoContradictions:
+        'Contradictions: not assessed or no report is available.',
+    ConsumerTerm.livingEvidenceContradictionsCount:
+        'Contradictions to review: {count}.',
+    ConsumerTerm.livingEvidenceIntervalLabel: 'Check frequency',
+    ConsumerTerm.livingEvidenceEveryDay: 'Every day',
+    ConsumerTerm.livingEvidenceEveryWeek: 'Every week',
+    ConsumerTerm.livingEvidenceEveryThirtyDays: 'Every 30 days',
+    ConsumerTerm.livingEvidenceStopFollowing: 'Stop following',
   };
 }

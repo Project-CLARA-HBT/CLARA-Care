@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
@@ -17,6 +18,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
+import '../language_controller.dart';
 
 List<Map<String, dynamic>> _rows(Map<String, dynamic> response) {
   final raw = response['data'] ?? response['items'] ?? response['results'];
@@ -34,10 +36,12 @@ class LivingEvidenceSurface extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+  final LanguageController? languageController;
 
   @override
   State<LivingEvidenceSurface> createState() => _LivingEvidenceSurfaceState();
@@ -55,6 +59,10 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
   List<Map<String, dynamic>> _notifications = const [];
   final Map<String, Map<String, dynamic>> _applicability = {};
   final Map<String, Map<String, dynamic>> _contradictions = {};
+
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
 
   String? get _token {
     final value = widget.sessionStore.accessToken;
@@ -79,7 +87,7 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
     if (token == null) {
       setState(() {
         _loading = false;
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _error = _copy[ConsumerTerm.sessionExpired];
       });
       return;
     }
@@ -132,7 +140,7 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
         _loading = false;
         _error = error is ApiException
             ? error.message
-            : 'Chưa thể tải theo dõi bằng chứng.';
+            : _copy[ConsumerTerm.livingEvidenceLoadFailed];
       });
     }
   }
@@ -177,7 +185,7 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
       if (_text(run['status']) != 'completed') {
         throw ApiException(
           message:
-              'Lần tìm bằng chứng chưa hoàn tất; không có kết luận nào được phát hành.',
+              _copy[ConsumerTerm.livingEvidenceRunIncomplete],
         );
       }
       await widget.apiClient.subscribeToEvidenceRun(
@@ -192,7 +200,7 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
       setState(() {
         _error = error is ApiException
             ? error.message
-            : 'Chưa thể tạo theo dõi bằng chứng.';
+            : _copy[ConsumerTerm.livingEvidenceCreateFailed];
       });
     } finally {
       if (mounted) setState(() => _working = false);
@@ -214,7 +222,7 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
       if (mounted) {
         setState(() => _error = error is ApiException
             ? error.message
-            : 'Không thể cập nhật tần suất.');
+            : _copy[ConsumerTerm.livingEvidenceIntervalFailed]);
       }
     } finally {
       if (mounted) setState(() => _working = false);
@@ -234,7 +242,9 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
     } catch (error) {
       if (mounted) {
         setState(() => _error =
-            error is ApiException ? error.message : 'Không thể dừng theo dõi.');
+            error is ApiException
+                ? error.message
+                : _copy[ConsumerTerm.livingEvidenceStopFailed]);
       }
     } finally {
       if (mounted) setState(() => _working = false);
@@ -253,8 +263,19 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController != null) {
+      return AnimatedBuilder(
+        animation: languageController,
+        builder: (context, _) => _buildSurface(context),
+      );
+    }
+    return _buildSurface(context);
+  }
+
+  Widget _buildSurface(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Bằng chứng đang cập nhật')),
+      appBar: AppBar(title: Text(_copy[ConsumerTerm.livingEvidenceTitle])),
       body: SafeArea(
         child: _loading
             ? const ClaraSkeletonList(itemCount: 4)
@@ -275,20 +296,23 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                                   color: Theme.of(context).colorScheme.error),
                             ),
                           ),
-                        const Text(
-                          'CLARA chỉ thông báo thay đổi quan trọng sau khi chuyên gia rà soát. Kết quả tìm kiếm mới không tự trở thành khuyến nghị.',
+                        Text(
+                          _copy[ConsumerTerm.livingEvidenceSafetyNotice],
                         ),
                         const SizedBox(height: ClaraTokens.spaceMd),
                         if (_notifications.isNotEmpty) ...[
-                          const SectionHeader(
-                              title: 'Thay đổi đã được rà soát'),
+                          SectionHeader(
+                            title: _copy[
+                                ConsumerTerm.livingEvidenceReviewedChanges],
+                          ),
                           for (final item in _notifications)
                             Padding(
                               padding: const EdgeInsets.only(
                                   bottom: ClaraTokens.spaceSm),
                               child: ClaraCard(
                                 semanticLabel:
-                                    'Mở thông báo thay đổi bằng chứng',
+                                    _copy[ConsumerTerm
+                                        .livingEvidenceNotificationSemanticLabel],
                                 onTap: () => _read(item),
                                 child: ListTile(
                                   contentPadding: EdgeInsets.zero,
@@ -299,21 +323,25 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                                   ),
                                   subtitle: Text(
                                     _text(item['status']) == 'read'
-                                        ? 'Đã đọc'
-                                        : 'Chạm để đánh dấu đã đọc',
+                                        ? _copy[ConsumerTerm.livingEvidenceRead]
+                                        : _copy[ConsumerTerm
+                                            .livingEvidenceMarkRead],
                                   ),
                                 ),
                               ),
                             ),
                         ],
-                        const SectionHeader(title: 'Theo dõi của bạn'),
+                        SectionHeader(
+                          title: _copy[ConsumerTerm.livingEvidenceSubscriptions],
+                        ),
                         if (_subscriptions
                             .where((item) => _text(item['status']) == 'active')
                             .isEmpty)
-                          const ClaraEmptyState(
+                          ClaraEmptyState(
                             icon: Icons.fact_check_outlined,
-                            title: 'Chưa theo dõi câu hỏi nào',
-                            message: 'Tạo câu hỏi bên dưới để bắt đầu.',
+                            title: _copy[ConsumerTerm.livingEvidenceEmptyTitle],
+                            message: _copy[
+                                ConsumerTerm.livingEvidenceEmptyDescription],
                           )
                         else
                           for (final item in _subscriptions.where(
@@ -321,7 +349,9 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                           ))
                             _subscriptionCard(item),
                         const SizedBox(height: ClaraTokens.spaceMd),
-                        const SectionHeader(title: 'Tạo câu hỏi mới'),
+                        SectionHeader(
+                          title: _copy[ConsumerTerm.livingEvidenceNewQuestion],
+                        ),
                         ClaraCard.static_(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -329,8 +359,9 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                               if (_episodes.isNotEmpty)
                                 DropdownButtonFormField<String>(
                                   initialValue: _episodeId,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Hành trình LifeMap',
+                                  decoration: InputDecoration(
+                                    labelText: _copy[
+                                        ConsumerTerm.livingEvidenceJourneyLabel],
                                   ),
                                   items: _episodes.map((episode) {
                                     return DropdownMenuItem<String>(
@@ -348,8 +379,9 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                                 controller: _question,
                                 minLines: 2,
                                 maxLines: 5,
-                                decoration: const InputDecoration(
-                                  labelText: 'Điều bạn muốn biết',
+                                decoration: InputDecoration(
+                                  labelText: _copy[
+                                      ConsumerTerm.livingEvidenceQuestionLabel],
                                 ),
                               ),
                               const SizedBox(height: ClaraTokens.spaceSm),
@@ -357,14 +389,15 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                                 controller: _context,
                                 minLines: 1,
                                 maxLines: 3,
-                                decoration: const InputDecoration(
-                                  labelText:
-                                      'Bối cảnh đã xác nhận (không bắt buộc)',
+                                decoration: InputDecoration(
+                                  labelText: _copy[
+                                      ConsumerTerm.livingEvidenceContextLabel],
                                 ),
                               ),
                               const SizedBox(height: ClaraTokens.spaceMd),
                               ClaraButton.primary(
-                                label: 'Xác nhận, tìm và theo dõi',
+                                label: _copy[
+                                    ConsumerTerm.livingEvidenceCreateAndFollow],
                                 loading: _working,
                                 onPressed:
                                     _episodes.isEmpty ? null : _createAndRun,
@@ -394,28 +427,43 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Theo dõi bằng chứng',
+              _copy[ConsumerTerm.livingEvidenceSubscriptionTitle],
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: ClaraTokens.spaceXs),
             Text(
               applicability?['safe_message']?.toString() ??
-                  'Khả năng áp dụng chưa được đánh giá.',
+                  _copy[ConsumerTerm.livingEvidenceApplicabilityPending],
             ),
             const SizedBox(height: ClaraTokens.spaceXs),
             Text(
               contradictionCount == 0
-                  ? 'Mâu thuẫn: chưa được đánh giá hoặc chưa có báo cáo.'
-                  : 'Mâu thuẫn cần đối chiếu: $contradictionCount.',
+                  ? _copy[ConsumerTerm.livingEvidenceNoContradictions]
+                  : _copy.format(
+                      ConsumerTerm.livingEvidenceContradictionsCount,
+                      <String, Object?>{'count': contradictionCount},
+                    ),
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             DropdownButtonFormField<int>(
               initialValue: interval,
-              decoration: const InputDecoration(labelText: 'Tần suất kiểm tra'),
-              items: const [
-                DropdownMenuItem(value: 24, child: Text('Mỗi ngày')),
-                DropdownMenuItem(value: 168, child: Text('Mỗi tuần')),
-                DropdownMenuItem(value: 720, child: Text('Mỗi 30 ngày')),
+              decoration: InputDecoration(
+                labelText: _copy[ConsumerTerm.livingEvidenceIntervalLabel],
+              ),
+              items: [
+                DropdownMenuItem(
+                  value: 24,
+                  child: Text(_copy[ConsumerTerm.livingEvidenceEveryDay]),
+                ),
+                DropdownMenuItem(
+                  value: 168,
+                  child: Text(_copy[ConsumerTerm.livingEvidenceEveryWeek]),
+                ),
+                DropdownMenuItem(
+                  value: 720,
+                  child: Text(
+                    _copy[ConsumerTerm.livingEvidenceEveryThirtyDays],
+                  ),
               ],
               onChanged: _working
                   ? null
@@ -425,7 +473,7 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             ClaraButton.secondary(
-              label: 'Dừng theo dõi',
+              label: _copy[ConsumerTerm.livingEvidenceStopFollowing],
               onPressed: _working ? null : () => _revoke(item),
             ),
           ],

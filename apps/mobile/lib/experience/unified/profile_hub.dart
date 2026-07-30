@@ -121,6 +121,7 @@ class ProfileHub extends StatelessWidget {
         builder: (_) => LivingEvidenceSurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
+          languageController: languageController,
         ),
       ),
     );
