@@ -14,6 +14,7 @@
     "navigation.lifeMap": {"vi": "Hành trình sức khỏe", "en": "Health journey"},
     "navigation.medicines": {"vi": "Thuốc", "en": "Medicines"},
     "navigation.profile": {"vi": "Hồ sơ", "en": "Profile"},
+    "navigation.more": {"vi": "Thêm", "en": "More"},
     "today.title": {"vi": "Hôm nay", "en": "Today"},
     "today.openLifeMap": {"vi": "Mở hành trình sức khỏe", "en": "Open health journey"},
     "today.pending": {"vi": "Việc đang chờ", "en": "Pending tasks"},
