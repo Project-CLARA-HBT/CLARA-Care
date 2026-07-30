@@ -264,6 +264,7 @@ def profile_capabilities(
             "lifemap_fhir_import": settings.lifemap_fhir_import_enabled,
             "lifemap_ask_ai": settings.lifemap_ask_ai_enabled,
             "lifemap_ai_summaries": settings.lifemap_ai_summaries_enabled,
+            "lifemap_vietnamese_drafts": settings.lifemap_vietnamese_drafts_enabled,
             "lifemap_ai_entity_resolution": settings.lifemap_ai_entity_resolution_enabled,
             "lifemap_ai_review_findings": settings.lifemap_ai_review_findings_enabled,
             "lifemap_ai_pattern_shadow": settings.lifemap_ai_pattern_shadow_enabled,

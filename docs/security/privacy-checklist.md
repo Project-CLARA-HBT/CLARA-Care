@@ -15,8 +15,11 @@ Use this operational checklist before a release; it is not a certification.
       exercised flag rollback (`ENCODER_SLM_SHADOW_ENABLED=false`).
 - [ ] Logs, telemetry, workflow artifacts and judge report were reviewed for
       names, email, free-text clinical queries and drug lists.
+- [ ] Preview email delivery logs only the action/mode. They must not contain a
+      recipient, OTP, reset token, verification token, or signed action link.
 - [ ] CI/CD uploaded only status/readiness diagnostics and the artifact safety
-      guard passed; raw container logs and runtime `.env` were not uploaded.
+      guard passed; raw container logs, runtime `.env`, and mined hard-negative
+      JSONL/free-text query data were not uploaded.
 - [ ] Model/prompt/retrieval manifests are immutable and rollback choice is
       documented before enabling a risky model path.
 - [ ] Upload type/size, retention and deletion propagation checks passed.

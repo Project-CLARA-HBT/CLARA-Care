@@ -786,6 +786,7 @@ def test_v2_and_ai_capabilities_default_off_and_are_server_authoritative() -> No
         "lifemap_fhir_export",
         "lifemap_ask_ai",
         "lifemap_ai_summaries",
+        "lifemap_vietnamese_drafts",
         "lifemap_ai_entity_resolution",
         "lifemap_ai_review_findings",
         "lifemap_ai_pattern_shadow",

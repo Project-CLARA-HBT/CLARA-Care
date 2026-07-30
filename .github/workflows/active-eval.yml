@@ -371,6 +371,8 @@ jobs:
           path: |
             artifacts/round2/${{ steps.ctx.outputs.run_id }}*
             artifacts/clara-eval-vn/nightly-${{ steps.ctx.outputs.run_id }}
-            data/demo/hard-negative-mined-*.jsonl
-            data/demo/hard-negative-mined-*.summary.json
+          # Hard-negative JSONL can contain free-text queries derived from
+          # controlled evaluation inputs. Keep it in the governed data store;
+          # it is never a CI artifact, even when an individual run is known to
+          # use synthetic fixtures.
           if-no-files-found: ignore

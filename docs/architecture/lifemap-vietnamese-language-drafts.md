@@ -5,6 +5,12 @@ Vietnamese-first read endpoint for preparing a discussion with a health
 professional. It is available only when `LIFEMAP_VIETNAMESE_DRAFTS_ENABLED`
 is enabled.
 
+The task-first web entry point is `/lifemap/visit-prep`. It first reads the
+server-authoritative `lifemap_vietnamese_drafts` profile capability, then shows
+one editable preparation step. The browser never persists the draft, health
+records, or capability result. A user may copy the draft for their own visit,
+but copy is not an export, a LifeMap command, or a confirmation action.
+
 The endpoint resolves the caller's LifeMap profile scope and medical consent
 before retrieving records. Its response contains only current revisions from
 that profile. It returns a consumer summary, exact cited source text, and
@@ -28,5 +34,5 @@ the same revision ids and uncertainty flags as the underlying deterministic
 summary, so presentation cannot mask a disputed, conflicting, or stale record.
 
 Rollback: set `LIFEMAP_VIETNAMESE_DRAFTS_ENABLED=false`. The endpoint returns
-the existing feature-disabled response; no migration or persisted data needs
-to be reverted.
+the existing feature-disabled response and the web entry shows an unavailable
+state; no migration or persisted data needs to be reverted.

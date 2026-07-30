@@ -1,8 +1,10 @@
+import logging
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from clara_api.core.config import get_settings
+from clara_api.core.auth_email import dispatch_action_email
 from clara_api.main import app
 
 client = TestClient(app)
@@ -88,4 +90,31 @@ def test_forgot_password_smtp_mode_hides_token(monkeypatch) -> None:
     assert payload["accepted"] is True
     assert payload["email_delivery_status"] == "sent"
     assert payload["reset_token_preview"] is None
+    _clear_settings_cache()
+
+
+def test_preview_email_log_never_contains_recipient_or_action_token(
+    monkeypatch, caplog
+) -> None:
+    """Preview mode must not turn a local log collector into a token store."""
+
+    monkeypatch.setenv("AUTH_EMAIL_DELIVERY_MODE", "preview")
+    monkeypatch.setenv("AUTH_PUBLIC_WEB_BASE_URL", "https://theclaracare.com")
+    _clear_settings_cache()
+    recipient = "private.patient@example.com"
+    token = "action-token-must-not-be-logged"
+
+    with caplog.at_level(logging.INFO, logger="clara_api.core.auth_email"):
+        status = dispatch_action_email(
+            get_settings(),
+            action="reset_password",
+            recipient=recipient,
+            token=token,
+        )
+
+    assert status == "preview"
+    rendered = "\n".join(record.getMessage() for record in caplog.records)
+    assert recipient not in rendered
+    assert token not in rendered
+    assert "theclaracare.com" not in rendered
     _clear_settings_cache()

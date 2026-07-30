@@ -78,7 +78,7 @@ jobs:
           set -euo pipefail
           flutter build apk --release \
             --dart-define=MOBILE_EXPERIENCE_V2_ENABLED=true \
-            --dart-define=CLARA_API_BASE_URL=https://clara.thiennn.icu
+            --dart-define=CLARA_API_BASE_URL=https://theclaracare.com
 
       - name: Stage APK
         working-directory: apps/mobile

@@ -48,7 +48,7 @@ const QUICK_ACTIONS = [
     description: "today.recordDescription",
   },
   {
-    href: "/visits",
+    href: "/lifemap/visit-prep",
     icon: "event_available",
     title: "today.visitTitle",
     description: "today.visitDescription",

@@ -11,6 +11,7 @@ vi.mock("@/lib/http-client", () => ({
 
 import {
   askLifeMap,
+  createLifeMapVisitPreparationDraft,
   actOnLifeMapReviewFinding,
   correctLifeMapEvent,
   disputeLifeMapEvent,
@@ -129,6 +130,23 @@ describe("LifeMap Universal Capture client", () => {
       query: "Các ghi nhận gần đây?",
       episode_id: "episode/id",
       locale: "vi",
+    });
+  });
+
+  it("creates a read-only, user-review visit draft through the governed endpoint", async () => {
+    post.mockResolvedValueOnce({
+      data: {
+        status: "ready",
+        draft_only: true,
+        questions_to_consider: [],
+        source_revision_ids: [],
+      },
+    });
+    await createLifeMapVisitPreparationDraft("Tôi muốn hỏi về đau đầu", "en", "episode/id");
+    expect(post).toHaveBeenCalledWith("/lifemap/v2/visit-preparation-drafts", {
+      query: "Tôi muốn hỏi về đau đầu",
+      locale: "en",
+      episode_id: "episode/id",
     });
   });
 

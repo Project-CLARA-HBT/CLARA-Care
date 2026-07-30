@@ -165,6 +165,36 @@ export type LifeMapAskAnswer = {
   };
 };
 
+export type LifeMapVisitPreparationDraft = {
+  status: "ready" | "abstained" | "emergency_escalation";
+  title: string;
+  plain_language_summary?: {
+    status: "ready" | "abstained";
+    important_now: string;
+    based_on: Array<{
+      text: string;
+      citation_ids: string[];
+      occurred_at: string;
+      truth_state: string;
+    }>;
+    uncertainty: string[];
+    next_step: string;
+    urgent_help: string;
+    input_revision_ids: string[];
+  };
+  questions_to_consider: Array<{ text: string; citation_ids: string[] }>;
+  source_revision_ids: string[];
+  evidence: LifeMapAskEvidence[];
+  disclosure: {
+    mode: string;
+    medical_advice: false;
+    mutates_lifemap: false;
+    draft_only: true;
+    requires_user_review: true;
+    preserves_truth_state: true;
+  };
+};
+
 export type LifeMapReviewFinding = {
   id: string;
   kind: "duplicate" | "contradiction" | "missingness" | "model_proposal";
@@ -425,6 +455,23 @@ export async function askLifeMap(
       episode_id: episodeId || null,
       locale,
     })
+  ).data;
+}
+
+export async function createLifeMapVisitPreparationDraft(
+  query: string,
+  locale: "vi" | "en" = "vi",
+  episodeId?: string,
+): Promise<LifeMapVisitPreparationDraft> {
+  return (
+    await api.post<LifeMapVisitPreparationDraft>(
+      "/lifemap/v2/visit-preparation-drafts",
+      {
+        query,
+        locale,
+        episode_id: episodeId || null,
+      },
+    )
   ).data;
 }
 

@@ -4,7 +4,7 @@
 [![Phát hành](https://github.com/Project-CLARA-HBT/CLARA-Care/actions/workflows/release.yml/badge.svg)](https://github.com/Project-CLARA-HBT/CLARA-Care/actions/workflows/release.yml)
 [![Triển khai](https://github.com/Project-CLARA-HBT/CLARA-Care/actions/workflows/cd.yml/badge.svg)](https://github.com/Project-CLARA-HBT/CLARA-Care/actions/workflows/cd.yml)
 [![Giấy phép](https://img.shields.io/github/license/Project-CLARA-HBT/CLARA-Care)](LICENSE)
-[![Website](https://img.shields.io/badge/Website-clara.thiennn.icu-0A66C2?logo=google-chrome&logoColor=white)](https://clara.thiennn.icu)
+[![Website](https://img.shields.io/badge/Website-theclaracare.com-0A66C2?logo=google-chrome&logoColor=white)](https://theclaracare.com)
 
 Nền tảng trợ lý y khoa đa mô-đun theo định hướng **Safety-first AI** cho bối cảnh gia đình và hội chẩn tham khảo.
 
@@ -30,7 +30,7 @@ Thay vì cạnh tranh bằng “trả lời nhanh nhất”, CLARA tập trung v
 ### 1.3 Council AI theo mô hình “human-in-the-loop ready”
 - Hội chẩn đa chuyên khoa với conflict list, consensus, divergence notes.
 - Timeline suy luận và citation quality để reviewer theo dõi logic từng bước.
-- Neural scoring chạy **shadow mode** (decision support), chưa thay thế rule-engine.
+- Tín hiệu theo **quy tắc cố định** chỉ chạy shadow mode (decision support), chưa thay thế rule-engine.
 
 ### 1.4 Demo Resilience thiết kế từ đầu
 - Có gate deploy + smoke test cho research/careguard/auth.
@@ -52,7 +52,7 @@ Thay vì cạnh tranh bằng “trả lời nhanh nhất”, CLARA tập trung v
 ### 2.3 CLARA Council
 - Intake -> hội chẩn -> workspace phân tích.
 - Các màn chuyên biệt: Analyze / Details / Citations / Research / Deepdive.
-- Result hiển thị consensus quality + escalation + reasoning timeline + neural shadow risk.
+- Result hiển thị consensus quality + escalation + reasoning timeline + rule-shadow risk.
 
 ### 2.4 CLARA Scribe (nền)
 - SOAP scribe ở mức nền để chuẩn hóa đầu ra ghi chú lâm sàng tham khảo.

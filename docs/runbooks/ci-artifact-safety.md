@@ -20,6 +20,11 @@ The CI and CD workflows consequently upload only:
 - Docker Compose service status; and
 - evaluator outputs generated from the sanitized fixture set.
 
+Mined hard-negative JSONL is deliberately excluded from uploads. It may contain
+free-text query material even when a run begins with synthetic fixtures; retain
+it only in the governed evaluation-data store and publish aggregate evidence
+through CLARA-Eval artifacts instead.
+
 They do not upload `docker compose logs`. A guard failure means no artifact is
 uploaded, and the workflow must be investigated rather than bypassed.
 
