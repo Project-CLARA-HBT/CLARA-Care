@@ -101,6 +101,7 @@ class MoreScreenV3 extends StatelessWidget {
         builder: (_) => ConnectedHealthScreen(
           apiClient: apiClient,
           sessionStore: sessionStore,
+          languageController: languageController,
         ),
       ),
     );

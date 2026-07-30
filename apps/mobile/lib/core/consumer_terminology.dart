@@ -286,6 +286,38 @@ enum ConsumerTerm {
   familyRenewed,
   familyRenewFailed,
   familyLoadFailed,
+  connectedHealthTitle,
+  connectedHealthIntroTitle,
+  connectedHealthIntroDescription,
+  connectedHealthSourcesTitle,
+  connectedHealthBeforeConnectingTitle,
+  connectedHealthChooseDataTitle,
+  connectedHealthChooseDataDescription,
+  connectedHealthPrivateDataTitle,
+  connectedHealthPrivateDataDescription,
+  connectedHealthEmptyTitle,
+  connectedHealthEmptyDescription,
+  connectedHealthFallbackSourceTitle,
+  connectedHealthAllowedData,
+  connectedHealthPause,
+  connectedHealthResume,
+  connectedHealthDisconnect,
+  connectedHealthDeleteImportedData,
+  connectedHealthStatusHealthy,
+  connectedHealthStatusConnected,
+  connectedHealthStatusPaused,
+  connectedHealthStatusNeedsReauth,
+  connectedHealthStatusDisconnected,
+  connectedHealthStatusUnknown,
+  connectedHealthLoadFailedTitle,
+  connectedHealthDisconnectConfirmTitle,
+  connectedHealthDisconnectConfirmDescription,
+  connectedHealthDisconnectConfirmAction,
+  connectedHealthDeleteConfirmTitle,
+  connectedHealthDeleteConfirmDescription,
+  connectedHealthDeleteConfirmAction,
+  connectedHealthDeleteSuccess,
+  connectedHealthCancel,
 }
 
 extension ConsumerTermContractKey on ConsumerTerm {
@@ -582,8 +614,7 @@ class ConsumerTerminology {
         'CLARA giúp chuẩn bị cho cuộc trao đổi với bác sĩ, không chẩn đoán hay '
             'kê đơn. Chỉ nội dung bạn tự chọn và duyệt mới được sử dụng.',
     ConsumerTerm.visitDetailConcernsTitle: '1. Điều cần hỏi',
-    ConsumerTerm.visitDetailConcernLabel:
-        'Điều bạn muốn trao đổi với bác sĩ',
+    ConsumerTerm.visitDetailConcernLabel: 'Điều bạn muốn trao đổi với bác sĩ',
     ConsumerTerm.visitDetailSaveConcern: 'Lưu điều cần hỏi',
     ConsumerTerm.visitDetailDocumentsTitle: '2. Tài liệu bạn chọn',
     ConsumerTerm.visitDetailDocumentsDescription:
@@ -614,15 +645,15 @@ class ConsumerTerminology {
     ConsumerTerm.visitDetailPackMedications: 'Thuốc đã xác nhận',
     ConsumerTerm.visitDetailPackEpisodes: 'Hành trình liên quan',
     ConsumerTerm.visitDetailPackEvents: 'Diễn biến đã xác nhận',
-    ConsumerTerm.visitDetailPackInstructions:
-        'Chỉ dẫn bác sĩ bạn đã xác nhận',
+    ConsumerTerm.visitDetailPackInstructions: 'Chỉ dẫn bác sĩ bạn đã xác nhận',
     ConsumerTerm.visitDetailCreatePack: 'Tạo và duyệt gói',
     ConsumerTerm.visitDetailCreateNewPackVersion: 'Tạo phiên bản mới',
     ConsumerTerm.visitDetailApprovedPackVersion:
         'Phiên bản {version} đã được bạn duyệt.',
     ConsumerTerm.visitDetailCreateShare: 'Tạo liên kết 7 ngày',
     ConsumerTerm.visitDetailRevokeShare: 'Thu hồi liên kết',
-    ConsumerTerm.visitDetailScribeConsentTitle: 'Đồng ý ghi âm riêng cho buổi này',
+    ConsumerTerm.visitDetailScribeConsentTitle:
+        'Đồng ý ghi âm riêng cho buổi này',
     ConsumerTerm.visitDetailScribeConsentDescription:
         'Bạn có thể rút lại ngay. Chưa có đồng ý thì Scribe không được xử lý.',
     ConsumerTerm.visitDetailScribeConsentGranted: 'Đã đồng ý cho buổi này',
@@ -631,7 +662,8 @@ class ConsumerTerminology {
         'Không thể tải dữ liệu buổi khám. Vui lòng thử lại.',
     ConsumerTerm.visitDetailActionFailed:
         'Không thể hoàn tất thao tác. Vui lòng thử lại.',
-    ConsumerTerm.visitDetailConcernRequired: 'Hãy nhập điều bạn muốn hỏi bác sĩ.',
+    ConsumerTerm.visitDetailConcernRequired:
+        'Hãy nhập điều bạn muốn hỏi bác sĩ.',
     ConsumerTerm.visitDetailDocumentRequired:
         'Hãy đặt tên và dán nội dung tài liệu bạn đã chọn.',
     ConsumerTerm.familyTitle: 'Người thân & chia sẻ',
@@ -688,13 +720,57 @@ class ConsumerTerminology {
     ConsumerTerm.familyGrantUnavailable:
         'Quyền truy cập này không thể thu hồi.',
     ConsumerTerm.familyRevoked: 'Đã thu hồi quyền truy cập.',
-    ConsumerTerm.familyRevokeFailed:
-        'Không thể thu hồi. Vui lòng thử lại.',
+    ConsumerTerm.familyRevokeFailed: 'Không thể thu hồi. Vui lòng thử lại.',
     ConsumerTerm.familyRenewed:
         'Đã tạo mã gia hạn; người nhận cần chấp nhận lại.',
     ConsumerTerm.familyRenewFailed: 'Không thể tạo lời mời gia hạn.',
     ConsumerTerm.familyLoadFailed:
         'Không thể tải thông tin chia sẻ. Vui lòng thử lại.',
+    ConsumerTerm.connectedHealthTitle: 'Dữ liệu sức khỏe',
+    ConsumerTerm.connectedHealthIntroTitle: 'Kết nối khi bạn muốn',
+    ConsumerTerm.connectedHealthIntroDescription:
+        'CLARA chỉ đọc các nhóm dữ liệu bạn cho phép. Bạn có thể tạm dừng, '
+            'ngắt kết nối hoặc xóa dữ liệu bất cứ lúc nào.',
+    ConsumerTerm.connectedHealthSourcesTitle: 'Nguồn đã kết nối',
+    ConsumerTerm.connectedHealthBeforeConnectingTitle: 'Trước khi kết nối',
+    ConsumerTerm.connectedHealthChooseDataTitle: 'Bạn chọn dữ liệu được dùng',
+    ConsumerTerm.connectedHealthChooseDataDescription:
+        'Ví dụ: bước chân, giấc ngủ hoặc nhịp tim. CLARA không suy đoán khi '
+            'dữ liệu thiếu.',
+    ConsumerTerm.connectedHealthPrivateDataTitle:
+        'Dữ liệu cá nhân không tự động gửi vào chat',
+    ConsumerTerm.connectedHealthPrivateDataDescription:
+        'Bạn cần cho phép mục đích hỗ trợ sức khỏe trước khi dữ liệu được đưa '
+            'vào gợi ý cá nhân.',
+    ConsumerTerm.connectedHealthEmptyTitle: 'Chưa có nguồn nào được kết nối',
+    ConsumerTerm.connectedHealthEmptyDescription:
+        'Khi tính năng kết nối trên thiết bị sẵn sàng, CLARA sẽ luôn hỏi quyền '
+            'trước khi đọc dữ liệu.',
+    ConsumerTerm.connectedHealthFallbackSourceTitle: 'Nguồn sức khỏe',
+    ConsumerTerm.connectedHealthAllowedData: 'Được phép: {types}',
+    ConsumerTerm.connectedHealthPause: 'Tạm dừng',
+    ConsumerTerm.connectedHealthResume: 'Tiếp tục',
+    ConsumerTerm.connectedHealthDisconnect: 'Ngắt kết nối',
+    ConsumerTerm.connectedHealthDeleteImportedData: 'Xóa dữ liệu',
+    ConsumerTerm.connectedHealthStatusHealthy: 'Đã cập nhật',
+    ConsumerTerm.connectedHealthStatusConnected: 'Sẵn sàng',
+    ConsumerTerm.connectedHealthStatusPaused: 'Đang tạm dừng',
+    ConsumerTerm.connectedHealthStatusNeedsReauth: 'Cần cấp quyền lại',
+    ConsumerTerm.connectedHealthStatusDisconnected: 'Đã ngắt kết nối',
+    ConsumerTerm.connectedHealthStatusUnknown: 'Chưa rõ',
+    ConsumerTerm.connectedHealthLoadFailedTitle: 'Chưa thể tải nguồn sức khỏe',
+    ConsumerTerm.connectedHealthDisconnectConfirmTitle:
+        'Ngắt kết nối nguồn này?',
+    ConsumerTerm.connectedHealthDisconnectConfirmDescription:
+        'Dữ liệu đã nhập vẫn được giữ lại. Bạn có thể xóa riêng dữ liệu đó bên dưới.',
+    ConsumerTerm.connectedHealthDisconnectConfirmAction: 'Ngắt kết nối',
+    ConsumerTerm.connectedHealthDeleteConfirmTitle: 'Xóa dữ liệu đã nhập?',
+    ConsumerTerm.connectedHealthDeleteConfirmDescription:
+        'Việc này xóa các quan sát và tổng hợp từ nguồn này. Không thể hoàn tác.',
+    ConsumerTerm.connectedHealthDeleteConfirmAction: 'Xóa dữ liệu',
+    ConsumerTerm.connectedHealthDeleteSuccess:
+        'Đã xóa dữ liệu đã nhập từ nguồn này.',
+    ConsumerTerm.connectedHealthCancel: 'Hủy',
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
@@ -968,7 +1044,8 @@ class ConsumerTerminology {
         'Consent to recording for this visit',
     ConsumerTerm.visitDetailScribeConsentDescription:
         'You can withdraw it immediately. Without consent, Scribe cannot process recording.',
-    ConsumerTerm.visitDetailScribeConsentGranted: 'Consent granted for this visit',
+    ConsumerTerm.visitDetailScribeConsentGranted:
+        'Consent granted for this visit',
     ConsumerTerm.visitDetailScribeConsentNotGranted: 'Recording not consented',
     ConsumerTerm.visitDetailLoadFailed:
         'We could not load this visit. Try again.',
@@ -1029,15 +1106,60 @@ class ConsumerTerminology {
         'This notification cannot be acknowledged.',
     ConsumerTerm.familyAcknowledgeFailed:
         'We could not acknowledge this. Try again.',
-    ConsumerTerm.familyGrantUnavailable:
-        'This access grant cannot be revoked.',
+    ConsumerTerm.familyGrantUnavailable: 'This access grant cannot be revoked.',
     ConsumerTerm.familyRevoked: 'Access revoked.',
     ConsumerTerm.familyRevokeFailed: 'We could not revoke access. Try again.',
     ConsumerTerm.familyRenewed:
         'Renewal code created; the recipient must accept it again.',
-    ConsumerTerm.familyRenewFailed:
-        'We could not create a renewal invitation.',
+    ConsumerTerm.familyRenewFailed: 'We could not create a renewal invitation.',
     ConsumerTerm.familyLoadFailed:
         'We could not load sharing details. Try again.',
+    ConsumerTerm.connectedHealthTitle: 'Health data',
+    ConsumerTerm.connectedHealthIntroTitle: 'Connect when you want',
+    ConsumerTerm.connectedHealthIntroDescription:
+        'CLARA reads only the data categories you allow. You can pause, '
+            'disconnect, or delete imported data at any time.',
+    ConsumerTerm.connectedHealthSourcesTitle: 'Connected sources',
+    ConsumerTerm.connectedHealthBeforeConnectingTitle: 'Before you connect',
+    ConsumerTerm.connectedHealthChooseDataTitle:
+        'You choose which data is used',
+    ConsumerTerm.connectedHealthChooseDataDescription:
+        'For example: steps, sleep, or heart rate. CLARA does not make up '
+            'missing data.',
+    ConsumerTerm.connectedHealthPrivateDataTitle:
+        'Personal data is not sent to chat automatically',
+    ConsumerTerm.connectedHealthPrivateDataDescription:
+        'You must allow the health-support purpose before data is used in '
+            'personal guidance.',
+    ConsumerTerm.connectedHealthEmptyTitle: 'No source is connected yet',
+    ConsumerTerm.connectedHealthEmptyDescription:
+        'When a device connection is available, CLARA will always ask for '
+            'permission before reading its data.',
+    ConsumerTerm.connectedHealthFallbackSourceTitle: 'Health source',
+    ConsumerTerm.connectedHealthAllowedData: 'Allowed: {types}',
+    ConsumerTerm.connectedHealthPause: 'Pause',
+    ConsumerTerm.connectedHealthResume: 'Resume',
+    ConsumerTerm.connectedHealthDisconnect: 'Disconnect',
+    ConsumerTerm.connectedHealthDeleteImportedData: 'Delete data',
+    ConsumerTerm.connectedHealthStatusHealthy: 'Up to date',
+    ConsumerTerm.connectedHealthStatusConnected: 'Ready',
+    ConsumerTerm.connectedHealthStatusPaused: 'Paused',
+    ConsumerTerm.connectedHealthStatusNeedsReauth: 'Permission needed again',
+    ConsumerTerm.connectedHealthStatusDisconnected: 'Disconnected',
+    ConsumerTerm.connectedHealthStatusUnknown: 'Unknown',
+    ConsumerTerm.connectedHealthLoadFailedTitle:
+        'We could not load health sources',
+    ConsumerTerm.connectedHealthDisconnectConfirmTitle:
+        'Disconnect this source?',
+    ConsumerTerm.connectedHealthDisconnectConfirmDescription:
+        'Imported data stays available. You can delete that data separately below.',
+    ConsumerTerm.connectedHealthDisconnectConfirmAction: 'Disconnect',
+    ConsumerTerm.connectedHealthDeleteConfirmTitle: 'Delete imported data?',
+    ConsumerTerm.connectedHealthDeleteConfirmDescription:
+        'This deletes observations and summaries from this source. It cannot be undone.',
+    ConsumerTerm.connectedHealthDeleteConfirmAction: 'Delete data',
+    ConsumerTerm.connectedHealthDeleteSuccess:
+        'Imported data from this source was deleted.',
+    ConsumerTerm.connectedHealthCancel: 'Cancel',
   };
 }
