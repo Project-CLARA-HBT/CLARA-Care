@@ -1246,7 +1246,9 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
         ],
 
         if (_disputes.isNotEmpty) ...[
-          const SectionHeader(title: 'Thông tin đang được xem xét'),
+          SectionHeader(
+            title: _copy[ConsumerTerm.lifeMapDisputeQueueTitle],
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               ClaraTokens.spaceMd,
@@ -1259,13 +1261,15 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'CLARA không tự chọn bên nào đúng. Mỗi quyết định tạo '
-                    'một phiên bản mới và giữ lịch sử nguồn.',
+                    _copy[ConsumerTerm.lifeMapDisputeQueueNotice],
                     style: theme.textTheme.bodyMedium,
                   ),
                   ..._disputes.map((item) {
                     final open = _str(item['status']) == 'open';
                     final clinical = item['requires_clinical_review'] == true;
+                    final statusTerm = open
+                        ? ConsumerTerm.lifeMapDisputeQueueOpen
+                        : ConsumerTerm.lifeMapDisputeQueueResolved;
                     return Padding(
                       padding: const EdgeInsets.only(top: ClaraTokens.spaceMd),
                       child: DecoratedBox(
@@ -1281,19 +1285,25 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${_str(item['event_type'])} · '
-                                'phiên bản ${_str(item['revision'])}',
+                                _copy.format(
+                                  ConsumerTerm.lifeMapDisputeQueueVersion,
+                                  <String, Object?>{
+                                    'eventType': _str(item['event_type']),
+                                    'revision': _str(item['revision']),
+                                  },
+                                ),
                                 style: theme.textTheme.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               const SizedBox(height: ClaraTokens.spaceXs),
-                              Text(open ? 'Đang mở' : 'Đã xử lý'),
+                              Text(_copy[statusTerm]),
                               if (open && clinical) ...[
                                 const SizedBox(height: ClaraTokens.spaceSm),
                                 Text(
-                                  'Loại thông tin này cần người có quyền '
-                                  'lâm sàng kiểm tra nguồn.',
+                                  _copy[
+                                    ConsumerTerm.lifeMapDisputeQueueClinicalReview
+                                  ],
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.error,
                                   ),
@@ -1302,7 +1312,9 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                               if (open && !clinical) ...[
                                 const SizedBox(height: ClaraTokens.spaceSm),
                                 ClaraButton.secondary(
-                                  label: 'Xác nhận sau khi kiểm tra nguồn',
+                                  label: _copy[
+                                    ConsumerTerm.lifeMapDisputeQueueResolve
+                                  ],
                                   icon: Icons.verified_outlined,
                                   onPressed: () => _resolveDispute(item),
                                 ),

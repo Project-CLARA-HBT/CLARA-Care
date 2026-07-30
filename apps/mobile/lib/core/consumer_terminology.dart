@@ -163,6 +163,13 @@ enum ConsumerTerm {
   lifeMapDisputeLabel,
   lifeMapDisputeSubmit,
   lifeMapDisputeSubmitted,
+  lifeMapDisputeQueueTitle,
+  lifeMapDisputeQueueNotice,
+  lifeMapDisputeQueueVersion,
+  lifeMapDisputeQueueOpen,
+  lifeMapDisputeQueueResolved,
+  lifeMapDisputeQueueClinicalReview,
+  lifeMapDisputeQueueResolve,
   lifeMapSummarySectionTitle,
   lifeMapSummaryDescription,
   lifeMapSummaryScope,
@@ -838,6 +845,18 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapDisputeSubmit: 'Gửi',
     ConsumerTerm.lifeMapDisputeSubmitted:
         'Đã đưa thông tin vào hàng đợi xem xét.',
+    ConsumerTerm.lifeMapDisputeQueueTitle: 'Thông tin đang được xem xét',
+    ConsumerTerm.lifeMapDisputeQueueNotice:
+        'CLARA không tự chọn bên nào đúng. Mỗi quyết định tạo một phiên bản mới '
+            'và giữ lịch sử nguồn.',
+    ConsumerTerm.lifeMapDisputeQueueVersion:
+        '{eventType} · phiên bản {revision}',
+    ConsumerTerm.lifeMapDisputeQueueOpen: 'Đang mở',
+    ConsumerTerm.lifeMapDisputeQueueResolved: 'Đã xử lý',
+    ConsumerTerm.lifeMapDisputeQueueClinicalReview:
+        'Loại thông tin này cần người có quyền lâm sàng kiểm tra nguồn.',
+    ConsumerTerm.lifeMapDisputeQueueResolve:
+        'Xác nhận sau khi kiểm tra nguồn',
     ConsumerTerm.lifeMapSummarySectionTitle: 'Nhìn lại LifeMap',
     ConsumerTerm.lifeMapSummaryDescription:
         'Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang tranh chấp hay mâu thuẫn.',
@@ -1586,6 +1605,19 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapDisputeSubmit: 'Send',
     ConsumerTerm.lifeMapDisputeSubmitted:
         'This information was sent to the review queue.',
+    ConsumerTerm.lifeMapDisputeQueueTitle: 'Information under review',
+    ConsumerTerm.lifeMapDisputeQueueNotice:
+        'CLARA does not choose which side is correct. Each decision creates a '
+            'new version and keeps the source history.',
+    ConsumerTerm.lifeMapDisputeQueueVersion:
+        '{eventType} · version {revision}',
+    ConsumerTerm.lifeMapDisputeQueueOpen: 'Open',
+    ConsumerTerm.lifeMapDisputeQueueResolved: 'Resolved',
+    ConsumerTerm.lifeMapDisputeQueueClinicalReview:
+        'This type of information needs someone with clinical authority to '
+            'review the source.',
+    ConsumerTerm.lifeMapDisputeQueueResolve:
+        'Confirm after reviewing the source',
     ConsumerTerm.lifeMapSummarySectionTitle: 'Review LifeMap',
     ConsumerTerm.lifeMapSummaryDescription:
         'Groups existing records without changing which information is confirmed, disputed, or conflicting.',
