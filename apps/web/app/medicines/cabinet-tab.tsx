@@ -7,6 +7,8 @@ import { SurfaceCard, EmptyState, InlineError } from "@/components/ui/surface";
 import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
 import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
 import { trackCareguardViewed } from "@/lib/analytics/events";
+import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type TimelineEntry = {
   id: number;
@@ -15,11 +17,11 @@ type TimelineEntry = {
   note: string;
 };
 
-function sourceLabel(source: string): string {
-  if (source === "ocr") return "OCR";
-  if (source === "manual") return "Thủ công";
-  if (source === "barcode") return "Barcode";
-  if (source === "imported") return "Import";
+function sourceLabel(language: "vi" | "en", source: string): string {
+  if (source === "ocr") return t(language, "medicines.cabinet.source.ocr");
+  if (source === "manual") return t(language, "medicines.cabinet.source.manual");
+  if (source === "barcode") return t(language, "medicines.cabinet.source.barcode");
+  if (source === "imported") return t(language, "medicines.cabinet.source.imported");
   return source;
 }
 
@@ -31,12 +33,12 @@ function sourceTone(source: string): BadgeTone {
   return "neutral";
 }
 
-function normalizationLabel(source: string | null | undefined): string {
-  if (source === "db" || source === "matched") return "Khớp chuẩn";
-  if (source === "candidate") return "Cần kiểm tra lại";
-  if (source === "needs_review") return "Cần xem lại";
-  if (source === "fallback") return "Nhập thủ công";
-  return "Chưa rõ";
+function normalizationLabel(language: "vi" | "en", source: string | null | undefined): string {
+  if (source === "db" || source === "matched") return t(language, "medicines.cabinet.normalization.matched");
+  if (source === "candidate") return t(language, "medicines.cabinet.normalization.candidate");
+  if (source === "needs_review") return t(language, "medicines.cabinet.normalization.review");
+  if (source === "fallback") return t(language, "medicines.cabinet.normalization.manual");
+  return t(language, "medicines.cabinet.normalization.unknown");
 }
 
 function normalizationTone(source: string | null | undefined): BadgeTone {
@@ -47,11 +49,11 @@ function normalizationTone(source: string | null | undefined): BadgeTone {
   return "neutral";
 }
 
-function formatDate(value: string | null): string {
-  if (!value) return "Chưa có";
+function formatDate(language: "vi" | "en", value: string | null): string {
+  if (!value) return t(language, "medicines.cabinet.notAvailable");
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Chưa có";
-  return date.toLocaleDateString("vi-VN");
+  if (Number.isNaN(date.getTime())) return t(language, "medicines.cabinet.notAvailable");
+  return formatLocaleDate(language, date);
 }
 
 function normalizeText(value: string | null | undefined): string {
@@ -62,20 +64,21 @@ function includesAny(text: string, tokens: string[]): boolean {
   return tokens.some((token) => text.includes(token));
 }
 
-function timelineLabelForItem(item: CabinetItem): string {
+function timelineLabelForItem(language: "vi" | "en", item: CabinetItem): string {
   const dosageText = normalizeText(item.dosage);
   const noteText = normalizeText(item.note);
   const fullText = `${dosageText} ${noteText}`;
 
-  if (includesAny(fullText, ["sáng", "morning", "breakfast"])) return "Buổi sáng";
-  if (includesAny(fullText, ["trưa", "noon", "lunch"])) return "Buổi trưa";
-  if (includesAny(fullText, ["chiều", "afternoon"])) return "Buổi chiều";
-  if (includesAny(fullText, ["tối", "đêm", "night", "evening", "bedtime"])) return "Buổi tối";
-  return "Theo dõi";
+  if (includesAny(fullText, ["sáng", "morning", "breakfast"])) return t(language, "medicines.cabinet.morning");
+  if (includesAny(fullText, ["trưa", "noon", "lunch"])) return t(language, "medicines.cabinet.noon");
+  if (includesAny(fullText, ["chiều", "afternoon"])) return t(language, "medicines.cabinet.afternoon");
+  if (includesAny(fullText, ["tối", "đêm", "night", "evening", "bedtime"])) return t(language, "medicines.cabinet.evening");
+  return t(language, "medicines.cabinet.following");
 }
 
 export default function MedicinesCabinetTab() {
-  const [cabinetLabel, setCabinetLabel] = useState("Tủ thuốc cá nhân");
+  const language = useUILanguage();
+  const [cabinetLabel, setCabinetLabel] = useState("");
   const [items, setItems] = useState<CabinetItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -130,11 +133,11 @@ export default function MedicinesCabinetTab() {
     (): TimelineEntry[] =>
       topItems.slice(0, 3).map((item, idx) => ({
         id: item.id,
-        time: idx === 0 ? "Tiếp theo" : timelineLabelForItem(item),
+        time: idx === 0 ? t(language, "medicines.cabinet.next") : timelineLabelForItem(language, item),
         title: item.drug_name,
-        note: item.dosage || "Cần bổ sung liều dùng",
+        note: item.dosage || t(language, "medicines.cabinet.addDose"),
       })),
-    [topItems]
+    [language, topItems]
   );
 
   const refreshCabinet = async () => {
@@ -142,10 +145,12 @@ export default function MedicinesCabinetTab() {
     setIsLoading(true);
     try {
       const response = await getCabinet();
-      setCabinetLabel(response.label || "Tủ thuốc cá nhân");
+      // Keep an absent API label empty so the render-time fallback responds to
+      // a locale change without requiring another network request.
+      setCabinetLabel(response.label || "");
       setItems(response.items ?? []);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải tủ thuốc.");
+      setError(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.loadError"));
     } finally {
       setIsLoading(false);
     }
@@ -164,10 +169,10 @@ export default function MedicinesCabinetTab() {
     setError("");
     try {
       await deleteCabinetItem(itemId);
-      setNotice("Đã xóa thuốc khỏi tủ.");
+      setNotice(t(language, "medicines.cabinet.deleted"));
       await refreshCabinet();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xóa thuốc.");
+      setError(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.deleteError"));
     }
   };
 
@@ -177,43 +182,43 @@ export default function MedicinesCabinetTab() {
         <SurfaceCard className="p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">{cabinetLabel}</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">{cabinetLabel || t(language, "medicines.cabinet.defaultLabel")}</h2>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                Thêm các thuốc bạn đang dùng để CLARA kiểm tra tương tác và nhắc lịch dùng thuốc.
+                {t(language, "medicines.cabinet.description")}
               </p>
             </div>
             <div className="flex flex-col items-start gap-2">
               <div className="flex flex-wrap gap-2">
                 <Button as="link" href="/selfmed/add" icon="add">
-                  Thêm thuốc
+                  {t(language, "medicines.cabinet.add")}
                 </Button>
                 {canCheckInteractions ? (
                   <Button as="link" href="/medicines?tab=safety" variant="secondary">
-                    Kiểm tra tương tác thuốc
+                    {t(language, "medicines.cabinet.checkInteractions")}
                   </Button>
                 ) : (
                   <Button
                     variant="secondary"
                     disabled
-                    title="Cần thêm ít nhất 2 thuốc để kiểm tra tương tác."
+                    title={t(language, "medicines.cabinet.needsTwo")}
                   >
-                    Kiểm tra tương tác thuốc
+                    {t(language, "medicines.cabinet.checkInteractions")}
                   </Button>
                 )}
                 <Button variant="ghost" icon="refresh" onClick={() => void refreshCabinet()}>
-                  Làm mới
+                  {t(language, "medicines.cabinet.refresh")}
                 </Button>
               </div>
               {!canCheckInteractions ? (
-                <p className="text-xs text-[var(--text-muted)]">Cần thêm ít nhất 2 thuốc để kiểm tra tương tác.</p>
+                <p className="text-xs text-[var(--text-muted)]">{t(language, "medicines.cabinet.needsTwo")}</p>
               ) : null}
             </div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-            <span className="inline-flex items-center gap-1"><i className="fa fa-lock" aria-hidden="true" /> Kiểm tra an toàn qua nguồn được xác minh</span>
-            <span className="inline-flex items-center gap-1"><i className="fa fa-database" aria-hidden="true" /> Dữ liệu lưu trên tài khoản</span>
-            <span className="inline-flex items-center gap-1"><i className="fa fa-clock-o" aria-hidden="true" /> Có thể cập nhật bất cứ lúc nào</span>
+            <span className="inline-flex items-center gap-1"><i className="fa fa-lock" aria-hidden="true" /> {t(language, "medicines.cabinet.verifiedSource")}</span>
+            <span className="inline-flex items-center gap-1"><i className="fa fa-database" aria-hidden="true" /> {t(language, "medicines.cabinet.accountData")}</span>
+            <span className="inline-flex items-center gap-1"><i className="fa fa-clock-o" aria-hidden="true" /> {t(language, "medicines.cabinet.updateAnytime")}</span>
           </div>
         </SurfaceCard>
 
@@ -221,39 +226,38 @@ export default function MedicinesCabinetTab() {
           <div className="col-span-12 lg:col-span-8 space-y-6">
             <SurfaceCard className="p-6">
               <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">Mức sẵn sàng của dữ liệu</h3>
+                <h3 className="text-sm uppercase tracking-widest text-[var(--text-secondary)]">{t(language, "medicines.cabinet.readiness")}</h3>
                 <Badge tone={stats.total === 0 || stats.missingDosage > 0 ? "warn" : "ok"}>
-                  {stats.total === 0 ? "CHƯA CÓ THUỐC" : stats.missingDosage > 0 ? "CẦN BỔ SUNG" : "ĐỦ DỮ LIỆU CƠ BẢN"}
+                  {stats.total === 0 ? t(language, "medicines.cabinet.noMedicines") : stats.missingDosage > 0 ? t(language, "medicines.cabinet.needsMore") : t(language, "medicines.cabinet.ready")}
                 </Badge>
               </div>
 
               <p className="mb-5 text-xs leading-5 text-[var(--text-secondary)]">
-                Đây là kiểm tra độ đầy đủ và hạn dùng của dữ liệu, không phải điểm rủi ro y khoa.
-                Cảnh báo tương tác chỉ xuất hiện sau khi bạn chủ động kiểm tra qua nguồn DrugBank được xác minh.
+                {t(language, "medicines.cabinet.readinessDescription")}
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Dữ liệu để kiểm tra tương tác</p>
+                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{t(language, "medicines.cabinet.interactionData")}</p>
                     <p className="text-sm font-medium text-[var(--text-primary)]">
-                      {(stats.total ?? 0) < 2 ? "Cần ít nhất 2 thuốc" : `${stats.total} hoạt chất trong tủ`}
+                      {(stats.total ?? 0) < 2 ? t(language, "medicines.cabinet.atLeastTwo") : t(language, "medicines.cabinet.medicinesInCabinet", { count: formatLocaleNumber(language, stats.total) })}
                     </p>
                   </div>
                   <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Độ đầy đủ dữ liệu</p>
+                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{t(language, "medicines.cabinet.completeness")}</p>
                     <p className="text-sm font-medium text-[var(--text-primary)]">
-                      {stats.missingDosage > 0 ? `${stats.missingDosage} thuốc thiếu liều` : "Đã đủ dữ liệu cơ bản"}
+                      {stats.missingDosage > 0 ? t(language, "medicines.cabinet.missingDose", { count: formatLocaleNumber(language, stats.missingDosage) }) : t(language, "medicines.cabinet.basicDataReady")}
                     </p>
                   </div>
                   <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Hạn dùng</p>
+                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{t(language, "medicines.cabinet.expiry")}</p>
                     <p className="text-sm font-medium text-[var(--text-primary)]">
-                      {stats.expired > 0 ? `${stats.expired} mục đã hết hạn` : stats.expiringSoon > 0 ? `${stats.expiringSoon} mục sắp hết hạn` : "Chưa có mục quá hạn"}
+                      {stats.expired > 0 ? t(language, "medicines.cabinet.expiredCount", { count: formatLocaleNumber(language, stats.expired) }) : stats.expiringSoon > 0 ? t(language, "medicines.cabinet.expiringCount", { count: formatLocaleNumber(language, stats.expiringSoon) }) : t(language, "medicines.cabinet.noneExpired")}
                     </p>
                   </div>
                   <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Nguồn nhập</p>
+                    <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{t(language, "medicines.cabinet.entrySources")}</p>
                     <p className="text-sm font-medium text-[var(--text-primary)]">
-                      {stats.fromOcr} OCR · {stats.manual} thủ công
+                      {t(language, "medicines.cabinet.sourceCounts", { ocr: formatLocaleNumber(language, stats.fromOcr), manual: formatLocaleNumber(language, stats.manual) })}
                     </p>
                   </div>
               </div>
@@ -261,19 +265,19 @@ export default function MedicinesCabinetTab() {
 
             <article className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-lg font-bold text-[var(--text-primary)]">Danh Sách Thuốc Hiện Tại</h3>
-                <span className="text-xs text-[var(--text-muted)]">{stats.total} hoạt chất đang sử dụng</span>
+                <h3 className="text-lg font-bold text-[var(--text-primary)]">{t(language, "medicines.cabinet.currentList")}</h3>
+                <span className="text-xs text-[var(--text-muted)]">{t(language, "medicines.cabinet.currentCount", { count: formatLocaleNumber(language, stats.total) })}</span>
               </div>
 
-              {isLoading ? <p className="text-sm text-[var(--text-secondary)]">Đang tải tủ thuốc...</p> : null}
+              {isLoading ? <p className="text-sm text-[var(--text-secondary)]">{t(language, "medicines.cabinet.loading")}</p> : null}
               {error ? <InlineError message={error} onRetry={() => void refreshCabinet()} /> : null}
               {notice ? <p className="text-sm font-medium text-[var(--status-ok-text)]">{notice}</p> : null}
 
               {!isLoading && topItems.length === 0 ? (
                 <EmptyState
                   icon="medication"
-                  title="Tủ thuốc đang trống."
-                  description='Bắt đầu bằng "Thêm Thuốc Mới" để nhập tay hoặc quét OCR.'
+                  title={t(language, "medicines.cabinet.emptyTitle")}
+                  description={t(language, "medicines.cabinet.emptyDescription")}
                 />
               ) : null}
 
@@ -287,24 +291,24 @@ export default function MedicinesCabinetTab() {
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         <h4 className="truncate text-lg font-bold text-[var(--text-primary)]">{item.drug_name}</h4>
-                        <Badge tone={sourceTone(item.source)}>{sourceLabel(item.source)}</Badge>
+                        <Badge tone={sourceTone(item.source)}>{sourceLabel(language, item.source)}</Badge>
                         {(item.normalization_status ?? item.normalization_source) ? (
                           <Badge tone={normalizationTone(item.normalization_status ?? item.normalization_source)}>
-                            {normalizationLabel(item.normalization_status ?? item.normalization_source)}
+                            {normalizationLabel(language, item.normalization_status ?? item.normalization_source)}
                           </Badge>
                         ) : null}
                       </div>
 
                       <p className="text-sm text-[var(--text-secondary)]">
-                        Liều dùng: {item.dosage || "Chưa có"} · Số lượng: {item.quantity}
+                        {t(language, "medicines.cabinet.doseValue", { dose: item.dosage || t(language, "medicines.cabinet.notAvailable"), quantity: formatLocaleNumber(language, item.quantity) })}
                       </p>
                       <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        Tên thương mại: {item.brand_name || "Chưa có"} · Hãng: {item.manufacturer || "Chưa có"}
+                        {t(language, "medicines.cabinet.brandValue", { brand: item.brand_name || t(language, "medicines.cabinet.notAvailable"), manufacturer: item.manufacturer || t(language, "medicines.cabinet.notAvailable") })}
                       </p>
 
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-[var(--text-muted)]">
                         <span className="inline-flex items-center gap-1">
-                          <i className="fa fa-calendar" aria-hidden="true" /> HSD: {formatDate(item.expires_on)}
+                          <i className="fa fa-calendar" aria-hidden="true" /> {t(language, "medicines.cabinet.expiryValue", { date: formatDate(language, item.expires_on) })}
                         </span>
                         {item.ocr_confidence !== null ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-[var(--status-ok-text)]">
@@ -315,23 +319,23 @@ export default function MedicinesCabinetTab() {
                     </div>
 
                     <div className="text-right">
-                      <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Số lượng</p>
-                      <p className="text-xl font-extrabold text-[var(--text-primary)]">{item.quantity}</p>
+                      <p className="mb-1 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{t(language, "medicines.cabinet.quantity")}</p>
+                      <p className="text-xl font-extrabold text-[var(--text-primary)]">{formatLocaleNumber(language, item.quantity)}</p>
                       <Button
                         variant="danger"
                         size="sm"
                         className="mt-3"
                         onClick={() => void onDelete(item.id)}
                       >
-                        Xóa
+                        {t(language, "medicines.cabinet.delete")}
                       </Button>
                     </div>
                   </div>
 
                   <div className="border-t border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-3">
                     <div className="flex flex-wrap items-center gap-4 text-[10px] text-[var(--text-muted)]">
-                      <span className="inline-flex items-center gap-1"><i className="fa fa-shield" aria-hidden="true" /> Đã lưu vào tủ thuốc</span>
-                      <span className="inline-flex items-center gap-1"><i className="fa fa-history" aria-hidden="true" /> Cập nhật: {formatDate(item.updated_at)}</span>
+                      <span className="inline-flex items-center gap-1"><i className="fa fa-shield" aria-hidden="true" /> {t(language, "medicines.cabinet.saved")}</span>
+                      <span className="inline-flex items-center gap-1"><i className="fa fa-history" aria-hidden="true" /> {t(language, "medicines.cabinet.updated", { date: formatDate(language, item.updated_at) })}</span>
                     </div>
                   </div>
                 </SurfaceCard>
@@ -341,7 +345,7 @@ export default function MedicinesCabinetTab() {
 
           <div className="col-span-12 lg:col-span-4 space-y-6">
             <SurfaceCard className="p-6">
-              <h3 className="mb-6 text-sm uppercase tracking-widest text-[var(--text-secondary)]">Lịch Trình Dùng Thuốc</h3>
+              <h3 className="mb-6 text-sm uppercase tracking-widest text-[var(--text-secondary)]">{t(language, "medicines.cabinet.timeline")}</h3>
               {timelineItems.length > 0 ? (
                 <div className="relative space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-[color:var(--shell-border)]">
                   {timelineItems.map((entry, idx) => (
@@ -360,7 +364,7 @@ export default function MedicinesCabinetTab() {
                 </div>
               ) : (
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Chưa có dữ liệu lịch trình từ tủ thuốc. Hãy thêm thuốc hoặc cập nhật liều dùng để hệ thống tạo timeline.
+                  {t(language, "medicines.cabinet.timelineEmpty")}
                 </p>
               )}
             </SurfaceCard>
@@ -368,21 +372,20 @@ export default function MedicinesCabinetTab() {
             <section className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6">
               <div className="mb-4 flex items-center gap-3">
                 <span className="material-symbols-outlined text-[var(--text-brand)]">verified_user</span>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--text-primary)]">Kiểm Tra An Toàn Được Xác Minh</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--text-primary)]">{t(language, "medicines.cabinet.verifiedTitle")}</h3>
               </div>
               <p className="text-xs leading-5 text-[var(--text-secondary)]">
-                CLARA không suy luận cảnh báo từ tên thuốc trong tủ. Hãy mở kiểm tra tương tác để gửi các thuốc đã chọn
-                tới luồng DrugBank/FIDES; nếu nguồn xác minh không sẵn sàng, kết quả sẽ bị chặn an toàn.
+                {t(language, "medicines.cabinet.verifiedDescription")}
               </p>
               {stats.expired > 0 || stats.expiringSoon > 0 || stats.missingDosage > 0 ? (
                 <ul className="mt-4 space-y-2 text-xs text-[var(--text-secondary)]">
-                  {stats.expired > 0 ? <li>• {stats.expired} mục đã hết hạn trong dữ liệu tủ.</li> : null}
-                  {stats.expiringSoon > 0 ? <li>• {stats.expiringSoon} mục sẽ hết hạn trong 30 ngày.</li> : null}
-                  {stats.missingDosage > 0 ? <li>• {stats.missingDosage} mục chưa có thông tin liều.</li> : null}
+                  {stats.expired > 0 ? <li>• {t(language, "medicines.cabinet.expiredCount", { count: formatLocaleNumber(language, stats.expired) })}</li> : null}
+                  {stats.expiringSoon > 0 ? <li>• {t(language, "medicines.cabinet.expiringCount", { count: formatLocaleNumber(language, stats.expiringSoon) })}</li> : null}
+                  {stats.missingDosage > 0 ? <li>• {t(language, "medicines.cabinet.missingDose", { count: formatLocaleNumber(language, stats.missingDosage) })}</li> : null}
                 </ul>
               ) : null}
               <Button as="link" href="/medicines?tab=safety" variant="secondary" block className="mt-4 text-[10px] uppercase tracking-widest">
-                Mở kiểm tra tương tác
+                {t(language, "medicines.cabinet.openSafety")}
               </Button>
             </section>
 

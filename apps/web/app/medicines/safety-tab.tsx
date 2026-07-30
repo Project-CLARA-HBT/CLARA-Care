@@ -9,13 +9,11 @@ import SelfMedConsentGate from "@/components/selfmed/selfmed-consent-gate";
 import {
   DdiUserView,
   MINIMUM_DDI_MEDICINES,
-  formatCareguardRiskLabel,
   requiresTwoMedicines,
   toCareguardUserMessage,
   toDdiUserView
 } from "@/lib/careguard";
 import {
-  CAREGUARD_OFFLINE_LABEL,
   cacheDdiUserView,
   isCareguardOfflineFallbackEnabled,
   isLikelyOfflineError,
@@ -23,12 +21,14 @@ import {
 } from "@/lib/careguard-offline";
 import { CabinetItem, getCabinet, runCabinetAutoDdi } from "@/lib/selfmed";
 import { trackCareguardDdiChecked, trackCareguardViewed } from "@/lib/analytics/events";
+import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
-function formatOfflineCachedAt(cachedAt: string): string | null {
+function formatOfflineCachedAt(language: "vi" | "en", cachedAt: string): string | null {
   const parsed = new Date(cachedAt);
   if (Number.isNaN(parsed.getTime())) return null;
   try {
-    return parsed.toLocaleString("vi-VN");
+    return formatLocaleDate(language, parsed, { dateStyle: "medium", timeStyle: "short" });
   } catch {
     return parsed.toISOString();
   }
@@ -65,7 +65,16 @@ function riskPanelClass(value: string | null | undefined): string {
   return "border-[color:var(--shell-border)] bg-[var(--surface-muted)]";
 }
 
+function riskLabel(language: "vi" | "en", value: string | null | undefined): string {
+  const level = riskLevel(value);
+  if (level === "high") return t(language, "medicines.safety.risk.high");
+  if (level === "medium") return t(language, "medicines.safety.risk.medium");
+  if (level === "low") return t(language, "medicines.safety.risk.low");
+  return t(language, "medicines.safety.risk.unknown");
+}
+
 export default function MedicinesSafetyTab() {
+  const language = useUILanguage();
   const [items, setItems] = useState<CabinetItem[]>([]);
   const [isLoadingCabinet, setIsLoadingCabinet] = useState(true);
   const [cabinetError, setCabinetError] = useState("");
@@ -92,7 +101,7 @@ export default function MedicinesSafetyTab() {
       const response = await getCabinet();
       setItems(response.items ?? []);
     } catch (cause) {
-      setCabinetError(toCareguardUserMessage(cause, "Không thể tải tủ thuốc lúc này. Vui lòng thử lại."));
+      setCabinetError(toCareguardUserMessage(cause, t(language, "medicines.safety.loadError")));
     } finally {
       setIsLoadingCabinet(false);
     }
@@ -112,7 +121,7 @@ export default function MedicinesSafetyTab() {
     // the End_User to add at least two and do NOT call the DDI analysis
     // (Requirement 3.5).
     if (needsMoreMedicines) {
-      setError(`Cần ít nhất ${MINIMUM_DDI_MEDICINES} thuốc trong tủ để kiểm tra tương tác. Vui lòng thêm thuốc.`);
+      setError(t(language, "medicines.safety.needsTwo", { count: MINIMUM_DDI_MEDICINES }));
       return;
     }
     setIsChecking(true);
@@ -146,7 +155,7 @@ export default function MedicinesSafetyTab() {
         }
       }
       setError(
-        toCareguardUserMessage(cause, "Không thể hoàn tất phân tích tương tác thuốc. Vui lòng thử lại.")
+        toCareguardUserMessage(cause, t(language, "medicines.list.checkError"))
       );
     } finally {
       setIsChecking(false);
@@ -159,15 +168,15 @@ export default function MedicinesSafetyTab() {
         <section className="chrome-panel rounded-[1.35rem] p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Mô-đun an toàn thuốc</p>
-              <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">Kiểm tra tương tác trong tủ thuốc</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "medicines.safety.module")}</p>
+              <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.title")}</h2>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button as="link" href="/medicines?tab=cabinet" variant="secondary">
-                Về tủ thuốc
+                {t(language, "medicines.safety.back")}
               </Button>
               <Button as="link" href="/selfmed/add">
-                Thêm thuốc
+                {t(language, "medicines.cabinet.add")}
               </Button>
             </div>
           </div>
@@ -176,18 +185,18 @@ export default function MedicinesSafetyTab() {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="chrome-panel rounded-[1.35rem] p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-xl font-semibold text-[var(--text-primary)]">Thuốc đang có trong tủ</h3>
+              <h3 className="text-xl font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.inCabinet")}</h3>
               <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-xs text-[var(--text-secondary)]">
-                {items.length} thuốc
+                {t(language, "medicines.safety.count", { count: formatLocaleNumber(language, items.length) })}
               </span>
             </div>
 
-            {isLoadingCabinet ? <p className="mt-3 text-sm text-[var(--text-secondary)]">Đang tải danh mục thuốc...</p> : null}
+            {isLoadingCabinet ? <p className="mt-3 text-sm text-[var(--text-secondary)]">{t(language, "medicines.safety.loading")}</p> : null}
             {cabinetError ? <div className="mt-3"><InlineError message={cabinetError} onRetry={() => void refreshCabinet()} /></div> : null}
 
             {!isLoadingCabinet && !items.length ? (
               <div className="mt-3 rounded-2xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5">
-                <p className="text-sm text-[var(--text-secondary)]">Tủ thuốc chưa có dữ liệu. Vui lòng thêm thuốc trước khi kiểm tra tương tác.</p>
+                <p className="text-sm text-[var(--text-secondary)]">{t(language, "medicines.safety.empty")}</p>
               </div>
             ) : null}
 
@@ -199,7 +208,7 @@ export default function MedicinesSafetyTab() {
                     className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3"
                   >
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{item.drug_name}</p>
-                    <p className="mt-1 text-xs text-[var(--text-secondary)]">{item.dosage || "Chưa có liều"}</p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">{item.dosage || t(language, "medicines.safety.noDose")}</p>
                   </li>
                 ))}
               </ul>
@@ -207,16 +216,16 @@ export default function MedicinesSafetyTab() {
           </section>
 
           <section className="chrome-panel rounded-[1.35rem] p-5 sm:p-6">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)]">Thiết lập kiểm tra</h3>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">Có thể thêm dị ứng để tăng độ chính xác cảnh báo.</p>
+            <h3 className="text-xl font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.setup")}</h3>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">{t(language, "medicines.safety.setupDescription")}</p>
 
             <Textarea
-              label="Dị ứng"
+              label={t(language, "medicines.safety.allergies")}
               optional
               wrapperClassName="mt-3"
               value={allergiesInput}
               onChange={(event) => setAllergiesInput(event.target.value)}
-              placeholder="Mỗi dòng một dị ứng hoặc phân tách bằng dấu phẩy"
+              placeholder={t(language, "medicines.safety.allergyPlaceholder")}
               className="min-h-[140px]"
             />
 
@@ -225,12 +234,12 @@ export default function MedicinesSafetyTab() {
               onClick={() => void onRunDdi()}
               disabled={isChecking || needsMoreMedicines}
               loading={isChecking}
-              loadingLabel="Đang kiểm tra tương tác..."
+              loadingLabel={t(language, "medicines.safety.checking")}
             >
-              Kiểm tra tương tác thuốc
+              {t(language, "medicines.cabinet.checkInteractions")}
             </Button>
 
-            {needsMoreMedicines ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">Cần ít nhất {MINIMUM_DDI_MEDICINES} thuốc trong tủ để kiểm tra tương tác.</p> : null}
+            {needsMoreMedicines ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">{t(language, "medicines.safety.needsTwo", { count: MINIMUM_DDI_MEDICINES })}</p> : null}
             {error ? <div className="mt-2"><InlineError message={error} onRetry={() => void onRunDdi()} /></div> : null}
           </section>
         </div>
@@ -239,21 +248,21 @@ export default function MedicinesSafetyTab() {
           <section className={`chrome-panel rounded-[1.35rem] border p-5 sm:p-6 ${riskPanelClass(result.riskLevel)}`}>
             {offlineCachedAt ? (
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2">
-                <Badge tone="warn">{CAREGUARD_OFFLINE_LABEL}</Badge>
+                <Badge tone="warn">{t(language, "medicines.safety.offline")}</Badge>
                 <span className="text-xs text-[var(--status-warn-text)]">
                   {(() => {
-                    const at = formatOfflineCachedAt(offlineCachedAt);
+                    const at = formatOfflineCachedAt(language, offlineCachedAt);
                     return at
-                      ? `Đang hiển thị kết quả lưu gần nhất (${at}). Kết quả có thể đã cũ.`
-                      : "Đang hiển thị kết quả lưu gần nhất. Kết quả có thể đã cũ.";
+                      ? t(language, "medicines.safety.cachedResult", { date: at })
+                      : t(language, "medicines.safety.cachedResultNoDate");
                   })()}
                 </span>
               </div>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Kết quả tổng quan</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.overview")}</p>
               <Badge tone={riskTone(result.riskLevel)}>
-                Mức rủi ro: {formatCareguardRiskLabel(result.riskLevel)}
+                {t(language, "medicines.safety.risk", { risk: riskLabel(language, result.riskLevel) })}
               </Badge>
             </div>
 
@@ -264,7 +273,7 @@ export default function MedicinesSafetyTab() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{alert.message}</p>
                       <Badge tone={riskTone(alert.severity)}>
-                        {formatCareguardRiskLabel(alert.severity)}
+                        {riskLabel(language, alert.severity)}
                       </Badge>
                     </div>
                     {alert.details ? <p className="mt-1 text-xs text-[var(--text-secondary)]">{alert.details}</p> : null}
@@ -272,12 +281,12 @@ export default function MedicinesSafetyTab() {
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-[var(--text-secondary)]">Chưa ghi nhận cảnh báo tương tác rõ ràng.</p>
+              <p className="mt-3 text-sm text-[var(--text-secondary)]">{t(language, "medicines.safety.noAlerts")}</p>
             )}
 
             {result.recommendations.length ? (
               <article className="mt-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Khuyến nghị</p>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.recommendations")}</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--text-secondary)]">
                   {result.recommendations.map((item, index) => (
                     <li key={`${item}-${index}`}>{item}</li>
@@ -287,7 +296,7 @@ export default function MedicinesSafetyTab() {
             ) : null}
 
             <article className="mt-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Nguồn tham khảo</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.sources")}</p>
               {result.sources.length ? (
                 <ul className="mt-1 flex flex-wrap gap-2">
                   {result.sources.map((source, index) => (
@@ -310,7 +319,7 @@ export default function MedicinesSafetyTab() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">Chưa có dữ liệu nguồn tham khảo.</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">{t(language, "medicines.safety.noSources")}</p>
               )}
             </article>
           </section>

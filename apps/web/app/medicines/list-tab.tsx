@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   checkDrugBankDdi,
   correctMedicationCourse,
@@ -17,6 +19,7 @@ import {
 } from "@/lib/medication-courses";
 
 export default function MedicinesListTab() {
+  const language = useUILanguage();
   const [courses, setCourses] = useState<MedicationCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,11 +40,11 @@ export default function MedicinesListTab() {
     try {
       setCourses(await getMedicationCourses());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Kiểm tra kết nối rồi thử lại.");
+      setError(cause instanceof Error ? cause.message : t(language, "medicines.list.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     void load();
@@ -60,7 +63,7 @@ export default function MedicinesListTab() {
           schedule_text: schedule.trim(),
           route_text: route.trim(),
           form_text: form.trim(),
-          reason: "Người dùng chỉnh sửa theo nguồn đang có",
+          reason: t(language, "medicines.list.correctionReason"),
         });
       } else {
         await createMedicationCourse({
@@ -82,7 +85,7 @@ export default function MedicinesListTab() {
       setResult(null);
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu thuốc.");
+      setError(cause instanceof Error ? cause.message : t(language, "medicines.list.saveError"));
     } finally {
       setSaving(false);
     }
@@ -101,7 +104,7 @@ export default function MedicinesListTab() {
         ),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể hoàn tất kiểm tra tương tác.");
+      setError(cause instanceof Error ? cause.message : t(language, "medicines.list.checkError"));
     } finally {
       setChecking(false);
     }
@@ -120,7 +123,7 @@ export default function MedicinesListTab() {
   const end = async (course: MedicationCourse) => {
     if (
       !window.confirm(
-        "Xác nhận ghi nhận thuốc này đã kết thúc? Đây chỉ là cập nhật hồ sơ, không phải lời khuyên ngừng thuốc.",
+        t(language, "medicines.list.endConfirm"),
       )
     ) {
       return;
@@ -131,11 +134,11 @@ export default function MedicinesListTab() {
       await endMedicationCourse(
         course.id,
         course.version,
-        "Người dùng cập nhật trạng thái hồ sơ",
+        t(language, "medicines.list.endReason"),
       );
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể cập nhật thuốc.");
+      setError(cause instanceof Error ? cause.message : t(language, "medicines.list.endError"));
     } finally {
       setSaving(false);
     }
@@ -155,24 +158,24 @@ export default function MedicinesListTab() {
             <SurfaceCard className="overflow-hidden">
               <div className="flex flex-col gap-3 border-b border-[color:var(--shell-border)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="font-semibold text-[var(--text-primary)]">Thuốc đang theo dõi</h2>
+                  <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.list.trackedTitle")}</h2>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Chỉ dữ liệu bạn xác nhận mới có mặt ở đây.
+                    {t(language, "medicines.list.trackedDescription")}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button as="link" href="/medicines/add" size="sm" icon="add">
-                    Thêm thuốc theo từng bước
+                    {t(language, "medicines.list.addStepByStep")}
                   </Button>
                   <Button
                     size="sm"
                     disabled={activeCourses.length < 2}
                     loading={checking}
-                    loadingLabel="Đang đối chiếu DrugBank…"
+                    loadingLabel={t(language, "medicines.list.checkingDrugbank")}
                     onClick={() => void check()}
                     icon="labs"
                   >
-                    Kiểm tra tương tác DrugBank
+                    {t(language, "medicines.list.checkDrugbank")}
                   </Button>
                 </div>
               </div>
@@ -197,7 +200,7 @@ export default function MedicinesListTab() {
                             course.route_text,
                             course.form_text,
                           ].filter(Boolean).join(" · ") ||
-                            "Chưa có liều/lịch dùng"}
+                            t(language, "medicines.list.noDoseOrSchedule")}
                         </p>
                         {course.drugbank_id ? (
                           <p className="mt-1 text-xs text-[var(--text-muted)]">
@@ -210,7 +213,7 @@ export default function MedicinesListTab() {
                           tone={course.status === "active" ? "ok" : "neutral"}
                           icon={course.status === "active" ? "check_circle" : "history"}
                         >
-                          {course.status === "active" ? "Đang theo dõi" : "Đã kết thúc"}
+                          {course.status === "active" ? t(language, "medicines.list.active") : t(language, "medicines.list.ended")}
                         </Badge>
                         <Badge
                           tone={
@@ -218,8 +221,8 @@ export default function MedicinesListTab() {
                           }
                         >
                           {course.reconciliation_status === "matched"
-                            ? "Đã đối chiếu"
-                            : "Chưa đối chiếu chuẩn"}
+                            ? t(language, "medicines.list.reconciled")
+                            : t(language, "medicines.list.notReconciled")}
                         </Badge>
                         <div className="flex gap-1">
                           <Button
@@ -228,7 +231,7 @@ export default function MedicinesListTab() {
                             icon="edit"
                             onClick={() => edit(course)}
                           >
-                            Sửa
+                            {t(language, "medicines.list.edit")}
                           </Button>
                           {course.status === "active" ? (
                             <Button
@@ -237,7 +240,7 @@ export default function MedicinesListTab() {
                               icon="stop_circle"
                               onClick={() => void end(course)}
                             >
-                              Kết thúc
+                              {t(language, "medicines.list.end")}
                             </Button>
                           ) : null}
                         </div>
@@ -249,8 +252,8 @@ export default function MedicinesListTab() {
                 <div className="p-5">
                   <EmptyState
                     icon="medication"
-                    title="Chưa có thuốc nào"
-                    description="Thêm thuốc bạn đang dùng để theo dõi. Đừng dùng danh sách này thay cho đơn hoặc hướng dẫn của bác sĩ."
+                    title={t(language, "medicines.list.emptyTitle")}
+                    description={t(language, "medicines.list.emptyDescription")}
                   />
                 </div>
               )}
@@ -267,10 +270,10 @@ export default function MedicinesListTab() {
                   </span>
                   <div>
                     <p className="font-semibold text-[var(--text-primary)]">
-                      Kết quả đã đối chiếu DrugBank
+                      {t(language, "medicines.list.verifiedResult")}
                     </p>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Nguồn phiên bản: {result.source_version}
+                      {t(language, "medicines.list.sourceVersion", { version: result.source_version })}
                     </p>
                   </div>
                 </div>
@@ -281,18 +284,17 @@ export default function MedicinesListTab() {
                         key={index}
                         className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]"
                       >
-                        <p className="font-semibold">{alert.severity ?? "Cảnh báo"}</p>
+                        <p className="font-semibold">{alert.severity ?? t(language, "medicines.list.alert")}</p>
                         <p className="mt-1">
                           {alert.message ||
-                            "Có tương tác cần được dược sĩ hoặc bác sĩ đánh giá."}
+                            t(language, "medicines.list.alertFallback")}
                         </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <p className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-3 text-sm text-[var(--status-ok-text)]">
-                    DrugBank không ghi nhận cảnh báo DDI cho các thuốc đã chọn trong lần đối chiếu
-                    này. Điều này không thay thế tư vấn cá nhân từ dược sĩ hoặc bác sĩ.
+                    {t(language, "medicines.list.noAlerts")}
                   </p>
                 )}
                 {result.recommendation ? (
@@ -309,48 +311,48 @@ export default function MedicinesListTab() {
       <aside className="space-y-5">
         <SurfaceCard className="p-5">
           <h2 className="font-semibold text-[var(--text-primary)]">
-            {editing ? "Sửa bản ghi thuốc" : "Thêm thuốc đã xác nhận"}
+            {editing ? t(language, "medicines.list.editTitle") : t(language, "medicines.list.addTitle")}
           </h2>
           <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-            Nhập theo nhãn hoặc đơn của bạn; CLARA không suy đoán thuốc.
+            {t(language, "medicines.list.formDescription")}
           </p>
           <form className="mt-4 space-y-3.5" onSubmit={(event) => void add(event)}>
             <Field
-              label="Tên thuốc"
+              label={t(language, "medicines.list.medicationName")}
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
             <Field
-              label="Liều dùng"
+              label={t(language, "medicines.list.dose")}
               optional
               value={dose}
               onChange={(event) => setDose(event.target.value)}
-              placeholder="Ví dụ: 500 mg"
+              placeholder={t(language, "medicines.list.doseExample")}
             />
             <Field
-              label="Lịch dùng"
+              label={t(language, "medicines.list.schedule")}
               optional
               value={schedule}
               onChange={(event) => setSchedule(event.target.value)}
-              placeholder="Ví dụ: buổi tối"
+              placeholder={t(language, "medicines.list.scheduleExample")}
             />
             <Field
-              label="Đường dùng"
+              label={t(language, "medicines.list.route")}
               optional
               value={route}
               onChange={(event) => setRoute(event.target.value)}
-              placeholder="Ví dụ: uống"
+              placeholder={t(language, "medicines.list.routeExample")}
             />
             <Field
-              label="Dạng bào chế"
+              label={t(language, "medicines.list.form")}
               optional
               value={form}
               onChange={(event) => setForm(event.target.value)}
-              placeholder="Ví dụ: viên nén"
+              placeholder={t(language, "medicines.list.formExample")}
             />
             <Field
-              label="DrugBank ID"
+              label={t(language, "medicines.list.drugbankId")}
               optional
               value={drugbankId}
               onChange={(event) => setDrugbankId(event.target.value)}
@@ -361,10 +363,10 @@ export default function MedicinesListTab() {
               variant="secondary"
               block
               loading={saving}
-              loadingLabel="Đang lưu…"
+              loadingLabel={t(language, "medicines.list.saving")}
               icon="save"
             >
-              {editing ? "Lưu phiên bản mới" : "Lưu thuốc đã xác nhận"}
+              {editing ? t(language, "medicines.list.saveNew") : t(language, "medicines.list.saveConfirmed")}
             </Button>
             {editing ? (
               <Button
@@ -381,22 +383,22 @@ export default function MedicinesListTab() {
                   setDrugbankId("");
                 }}
               >
-                Hủy chỉnh sửa
+                {t(language, "medicines.list.cancelEdit")}
               </Button>
             ) : null}
           </form>
         </SurfaceCard>
 
         <SurfaceCard className="p-5">
-          <h2 className="font-semibold text-[var(--text-primary)]">Tủ thuốc</h2>
+          <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.list.cabinetTitle")}</h2>
           <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-            Quét nhãn, theo dõi hạn dùng và quản lý các mục trong tủ thuốc tại tab riêng.
+            {t(language, "medicines.list.cabinetDescription")}
           </p>
           <Link
             href="/medicines?tab=cabinet"
             className="focus-ring mt-4 inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-[var(--text-brand)] hover:underline"
           >
-            Mở tủ thuốc
+            {t(language, "medicines.list.openCabinet")}
             <span className="material-symbols-outlined text-base" aria-hidden="true">
               arrow_forward
             </span>
