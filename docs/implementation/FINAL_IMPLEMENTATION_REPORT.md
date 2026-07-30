@@ -97,6 +97,8 @@ Executed in this workspace:
 | Current web production build | pass: Next production build completed after current UI/router checkpoints |
 | Renderer contract/fidelity + emergency response integration | pass: 18 focused tests; Ruff and mypy clean for renderer and `medical_answer_v2` |
 | Task-first Today/navigation | pass: focused lint, TypeScript and 11 navigation/i18n/static surface tests |
+| Mobile Unified locale navigation | pass: `flutter test test/unified_root_test.dart` (5 tests) and targeted `flutter analyze` (no issues) |
+| Mobile debug APK build | environment-blocked: Snap Flutter reported missing `cap_dac_override`; no APK result is claimed |
 | Static active-eval | executed after portable previous-run selector fix, NO-GO as expected; it recorded zero runtime measurements and no latency samples |
 
 `make` itself is unavailable in this workspace (`make: command not found`), so
