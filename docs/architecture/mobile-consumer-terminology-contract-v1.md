@@ -20,8 +20,11 @@ disposition. Those remain owned by the appropriate safety-aware runtime.
 
 ## Contract rules
 
-1. Change the JSON source and both checked-in projections in one change. Run
-   `npm run consumer-terminology:check` from `apps/web` before committing.
+1. Change the JSON source, then run
+   `npm run consumer-terminology:generate` from `apps/web`. It deterministically
+   updates both checked-in projections. Run
+   `npm run consumer-terminology:check` from `apps/web` before committing; CI
+   verifies the projections are not stale before it checks their shell wiring.
 2. Add each `ConsumerTerm` to both `vi` and `en` maps in one change.
 3. Keep existing key names stable through a mobile release window; add a new
    key instead of changing a meaning in place.

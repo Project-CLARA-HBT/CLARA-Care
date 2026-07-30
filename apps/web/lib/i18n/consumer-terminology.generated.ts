@@ -1,8 +1,8 @@
 import type { UILanguage } from "@/lib/ui-language";
 
 // GENERATED FROM contracts/consumer-terminology/consumer-terminology.v1.json.
-// Do not use this catalog for medical free text, names, API errors, safety
-// dispositions, consent/RBAC, LifeMap provenance, or telemetry.
+// Static product wording only. This is not a clinical-language translation
+// layer and must not receive medical free text, PII, state, or safety data.
 export const CONSUMER_TERMINOLOGY_VERSION = "2026-07-30.v1" as const;
 
 export const CONSUMER_TERMINOLOGY_MESSAGES = {

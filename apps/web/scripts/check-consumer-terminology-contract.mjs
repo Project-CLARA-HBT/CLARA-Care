@@ -80,14 +80,38 @@ expect(
     mobileResolver.includes("kConsumerTerminologyContractVersion"),
   "mobile resolver must consume the shared terminology projection",
 );
-for (const term of [
-  "actionAskClara",
-  "navigationToday",
-  "navigationLifeMap",
-  "navigationMedicines",
-  "navigationProfile",
-]) {
-  expect(mobileShell.includes(`ConsumerTerm.${term}`), `Unified shell is not wired to ${term}`);
+const mobileSharedTerms = {
+  actionAskClara: "action.askClara",
+  actionComplete: "action.complete",
+  actionOpen: "action.open",
+  actionRetry: "action.retry",
+  navigationToday: "navigation.today",
+  navigationLifeMap: "navigation.lifeMap",
+  navigationMedicines: "navigation.medicines",
+  navigationProfile: "navigation.profile",
+  todayTitle: "today.title",
+  todayOpenLifeMap: "today.openLifeMap",
+  todayPending: "today.pending",
+  todayAccepted: "today.accepted",
+  todayEpisodes: "today.episodes",
+  todayConfirmation: "today.confirmation",
+  todayNoDueDate: "today.noDueDate",
+  todayDueDate: "today.dueDate",
+  todayEmptyTitle: "today.emptyTitle",
+  todayEmptyDescription: "today.emptyDescription",
+};
+for (const [term, key] of Object.entries(mobileSharedTerms)) {
+  expect(source.messages[key] != null, `source omits mapped mobile term ${key}`);
+  expect(
+    mobileResolver.includes(`ConsumerTerm.${term} => '${key}'`),
+    `mobile resolver does not map ${term} to ${key}`,
+  );
+}
+for (const term of ["actionAskClara", "navigationToday", "navigationLifeMap", "navigationMedicines", "navigationProfile"]) {
+  expect(
+    mobileShell.includes(`ConsumerTerm.${term}`),
+    `Unified shell is not wired to ${term}`,
+  );
 }
 
 if (failed) process.exit(1);

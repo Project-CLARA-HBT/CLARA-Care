@@ -12,10 +12,11 @@ catalog parity/scanner checks, secret/PII-log review, `make eval-smoke`, and
 inputs are unmeasured.
 
 For shared task-first consumer wording, run
-`cd apps/web && npm run consumer-terminology:check`. It compares the canonical
-VI/EN JSON contract with both checked-in web and Flutter projections and their
-actual shell wiring; it does not accept clinical free text or runtime medical
-state as translation input.
+`cd apps/web && npm run consumer-terminology:generate` deterministically
+projects the canonical VI/EN JSON contract to both checked-in web and Flutter
+sources. `npm run consumer-terminology:check` then fails if either projection
+is stale and checks their actual shell wiring; neither command accepts clinical
+free text or runtime medical state as translation input.
 
 On pull requests and main-branch changes that affect `apps/web` (or CI), the
 required CI gate runs Vitest and Playwright's `core-experience` suite. The E2E

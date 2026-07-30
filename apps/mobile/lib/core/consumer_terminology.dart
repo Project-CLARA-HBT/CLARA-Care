@@ -6,8 +6,8 @@
 /// canonical and are rendered by their owning safety-aware surfaces.
 ///
 /// The keys in this contract mirror the stable consumer terms in
-/// `apps/web/lib/i18n/catalog.ts`. Keeping the public key names identical lets
-/// a future catalog generator consume this contract without changing callers.
+/// `apps/web/lib/i18n/catalog.ts`. The checked-in web and Flutter projections
+/// are generated from one JSON source without changing callers.
 /// See `docs/architecture/mobile-consumer-terminology-contract-v1.md`.
 library;
 
