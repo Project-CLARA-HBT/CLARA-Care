@@ -30,6 +30,27 @@ enum ConsumerTerm {
   navigationLifeMap,
   navigationMedicines,
   navigationProfile,
+  profileHubToolsAndPrivacy,
+  profileHubVisitsTitle,
+  profileHubVisitsDescription,
+  profileHubFamilyTitle,
+  profileHubFamilyDescription,
+  profileHubEvidenceTitle,
+  profileHubEvidenceDescription,
+  profileHubCommunityTitle,
+  profileHubCommunityDescription,
+  profileHubHealthDataTitle,
+  profileHubHealthDataDescription,
+  profileHubClinicalNotesTitle,
+  profileHubClinicalNotesDescription,
+  profileHubCaseConsultationTitle,
+  profileHubCaseConsultationDescription,
+  profileHubConsentTitle,
+  profileHubConsentDescription,
+  profileHubDataRightsTitle,
+  profileHubDataRightsDescription,
+  profileHubSettingsTitle,
+  profileHubSettingsDescription,
   todayTitle,
   todayOpenLifeMap,
   todayPending,
@@ -336,6 +357,36 @@ class ConsumerTerminology {
   }
 
   static const Map<ConsumerTerm, String> _viMessages = {
+    ConsumerTerm.profileHubToolsAndPrivacy: 'Công cụ & quyền riêng tư',
+    ConsumerTerm.profileHubVisitsTitle: 'Chuẩn bị đi khám',
+    ConsumerTerm.profileHubVisitsDescription:
+        'Gom câu hỏi và thông tin cho buổi khám',
+    ConsumerTerm.profileHubFamilyTitle: 'Người thân & chia sẻ',
+    ConsumerTerm.profileHubFamilyDescription:
+        'Chia sẻ tối thiểu với người hỗ trợ, có thể thu hồi',
+    ConsumerTerm.profileHubEvidenceTitle: 'Bằng chứng đang cập nhật',
+    ConsumerTerm.profileHubEvidenceDescription:
+        'Theo dõi thay đổi đã được chuyên gia rà soát',
+    ConsumerTerm.profileHubCommunityTitle: 'Cộng đồng',
+    ConsumerTerm.profileHubCommunityDescription:
+        'Chia sẻ và hỏi đáp cùng cộng đồng sức khỏe',
+    ConsumerTerm.profileHubHealthDataTitle: 'Dữ liệu sức khỏe',
+    ConsumerTerm.profileHubHealthDataDescription:
+        'Quản lý các nguồn bạn đã cho phép kết nối',
+    ConsumerTerm.profileHubClinicalNotesTitle: 'Ghi chú lâm sàng',
+    ConsumerTerm.profileHubClinicalNotesDescription:
+        'Ghi âm và tạo ghi chú SOAP',
+    ConsumerTerm.profileHubCaseConsultationTitle: 'Hội chẩn ca bệnh',
+    ConsumerTerm.profileHubCaseConsultationDescription:
+        'Tập hợp góc nhìn đa chuyên khoa cho ca khó',
+    ConsumerTerm.profileHubConsentTitle: 'Quyền riêng tư & đồng ý',
+    ConsumerTerm.profileHubConsentDescription: 'Quản lý đồng ý theo mục đích',
+    ConsumerTerm.profileHubDataRightsTitle: 'Quyền dữ liệu cá nhân',
+    ConsumerTerm.profileHubDataRightsDescription:
+        'Xuất, chỉnh sửa, hạn chế hoặc xoá dữ liệu của bạn',
+    ConsumerTerm.profileHubSettingsTitle: 'Cài đặt',
+    ConsumerTerm.profileHubSettingsDescription:
+        'Giao diện, ngôn ngữ, tài khoản và quyền riêng tư',
     ConsumerTerm.todayUnnamedTask: 'Việc chưa đặt tên',
     ConsumerTerm.todayProfileRequiredTitle: 'Hãy tạo hồ sơ sức khỏe trước',
     ConsumerTerm.todayProfileRequiredDescription:
@@ -647,6 +698,36 @@ class ConsumerTerminology {
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
+    ConsumerTerm.profileHubToolsAndPrivacy: 'Tools & privacy',
+    ConsumerTerm.profileHubVisitsTitle: 'Prepare for a visit',
+    ConsumerTerm.profileHubVisitsDescription:
+        'Gather questions and details for your appointment',
+    ConsumerTerm.profileHubFamilyTitle: 'Family & sharing',
+    ConsumerTerm.profileHubFamilyDescription:
+        'Share the minimum with a supporter; revoke anytime',
+    ConsumerTerm.profileHubEvidenceTitle: 'Living evidence',
+    ConsumerTerm.profileHubEvidenceDescription:
+        'Follow changes reviewed by experts',
+    ConsumerTerm.profileHubCommunityTitle: 'Community',
+    ConsumerTerm.profileHubCommunityDescription:
+        'Share and ask questions with the health community',
+    ConsumerTerm.profileHubHealthDataTitle: 'Health data',
+    ConsumerTerm.profileHubHealthDataDescription:
+        'Manage the sources you allowed to connect',
+    ConsumerTerm.profileHubClinicalNotesTitle: 'Clinical notes',
+    ConsumerTerm.profileHubClinicalNotesDescription:
+        'Record and create a SOAP note',
+    ConsumerTerm.profileHubCaseConsultationTitle: 'Case consultation',
+    ConsumerTerm.profileHubCaseConsultationDescription:
+        'Bring together specialist perspectives for complex cases',
+    ConsumerTerm.profileHubConsentTitle: 'Privacy & consent',
+    ConsumerTerm.profileHubConsentDescription: 'Manage consent by purpose',
+    ConsumerTerm.profileHubDataRightsTitle: 'Personal data rights',
+    ConsumerTerm.profileHubDataRightsDescription:
+        'Export, correct, restrict, or delete your data',
+    ConsumerTerm.profileHubSettingsTitle: 'Settings',
+    ConsumerTerm.profileHubSettingsDescription:
+        'Appearance, language, account, and privacy',
     ConsumerTerm.todayUnnamedTask: 'Unnamed task',
     ConsumerTerm.todayProfileRequiredTitle: 'Create your health profile first',
     ConsumerTerm.todayProfileRequiredDescription:

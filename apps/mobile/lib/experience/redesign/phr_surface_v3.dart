@@ -42,6 +42,7 @@ import '../../theme/glass/glass_surface.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
+import '../language_controller.dart';
 import 'phr_completeness.dart';
 
 /// The redesigned PHR ("Hồ sơ sức khỏe") surface. See file header.
@@ -51,18 +52,24 @@ class PhrSurfaceV3 extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     required this.resolver,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final MobileFeatureFlagResolver resolver;
+  final LanguageController? languageController;
 
   @override
   State<PhrSurfaceV3> createState() => _PhrSurfaceV3State();
 }
 
 class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
-  static const PhrStrings _s = PhrStrings(PhrLang.vi);
+  PhrStrings get _s => PhrStrings(
+        widget.languageController?.languageCode == 'en'
+            ? PhrLang.en
+            : PhrLang.vi,
+      );
 
   bool _loading = false;
   bool _saving = false;
@@ -187,6 +194,7 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
   /// what the user currently sees/typed, not just the last-saved snapshot.
   PhrCompleteness _computeCompleteness(PhrRecordModel record) {
     return PhrCompleteness.compute(
+      english: widget.languageController?.languageCode == 'en',
       fullName: _fullName.text,
       dateOfBirth: _dob.text,
       gender: _gender.text,
@@ -265,6 +273,15 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController == null) return _buildScaffold();
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) => _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       appBar: AppBar(
         title: Text(_s.title),
@@ -334,9 +351,10 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
             ),
             child: PhrCompletenessCard(
               completeness: _computeCompleteness(record),
-              title: 'Mức độ hoàn thiện hồ sơ',
-              completeMessage: 'Hồ sơ của bạn đã đầy đủ thông tin quan trọng.',
-              nextUpLabel: 'Nên bổ sung',
+              title: _s.completenessTitle,
+              completeMessage: _s.completenessComplete,
+              nextUpLabel: _s.completenessNextUp,
+              english: widget.languageController?.languageCode == 'en',
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceSm),
@@ -354,17 +372,26 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
           _buildProfileCard(),
           SectionHeader(
             title: _s.sectionAllergies,
-            trailing: _AddButton(onPressed: () => _editAllergy(null)),
+            trailing: _AddButton(
+              label: _s.add,
+              onPressed: () => _editAllergy(null),
+            ),
           ),
           _buildAllergyList(record),
           SectionHeader(
             title: _s.sectionConditions,
-            trailing: _AddButton(onPressed: () => _editCondition(null)),
+            trailing: _AddButton(
+              label: _s.add,
+              onPressed: () => _editCondition(null),
+            ),
           ),
           _buildConditionList(record),
           SectionHeader(
             title: _s.sectionMedications,
-            trailing: _AddButton(onPressed: () => _editMedication(null)),
+            trailing: _AddButton(
+              label: _s.add,
+              onPressed: () => _editMedication(null),
+            ),
           ),
           _buildMedicationList(record),
         ],
@@ -508,6 +535,8 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
               ].join(' · '),
               source: _s.sourceLabel(a.informationSource),
               verification: _s.verificationLabel(a.verificationStatus),
+              editTooltip: _s.edit,
+              deleteTooltip: _s.delete,
               onEdit: () => _editAllergy(a),
               onDelete: () => setState(() => record.allergies.remove(a)),
             ),
@@ -530,6 +559,8 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
               ].join(' · '),
               source: _s.sourceLabel(c.informationSource),
               verification: _s.verificationLabel(c.verificationStatus),
+              editTooltip: _s.edit,
+              deleteTooltip: _s.delete,
               onEdit: () => _editCondition(c),
               onDelete: () => setState(() => record.conditions.remove(c)),
             ),
@@ -553,6 +584,8 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
               ].join(' · '),
               source: _s.sourceLabel(m.informationSource),
               verification: _s.verificationLabel(m.verificationStatus),
+              editTooltip: _s.edit,
+              deleteTooltip: _s.delete,
               onEdit: () => _editMedication(m),
               onDelete: () => setState(() => record.medications.remove(m)),
             ),
@@ -687,8 +720,9 @@ class _PhrSurfaceV3State extends State<PhrSurfaceV3> {
 // --- Shared small widgets ------------------------------------------------------
 
 class _AddButton extends StatelessWidget {
-  const _AddButton({required this.onPressed});
+  const _AddButton({required this.label, required this.onPressed});
 
+  final String label;
   final VoidCallback onPressed;
 
   @override
@@ -696,7 +730,7 @@ class _AddButton extends StatelessWidget {
     return TextButton.icon(
       onPressed: onPressed,
       icon: const Icon(Icons.add, size: 18),
-      label: const Text('Thêm'),
+      label: Text(label),
     );
   }
 }
@@ -737,6 +771,8 @@ class _EntryCard extends StatelessWidget {
     required this.subtitle,
     required this.source,
     required this.verification,
+    required this.editTooltip,
+    required this.deleteTooltip,
     required this.onEdit,
     required this.onDelete,
   });
@@ -745,6 +781,8 @@ class _EntryCard extends StatelessWidget {
   final String subtitle;
   final String source;
   final String verification;
+  final String editTooltip;
+  final String deleteTooltip;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -765,12 +803,12 @@ class _EntryCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: 'Sửa',
+                tooltip: editTooltip,
                 icon: const Icon(Icons.edit_outlined, size: 20),
                 onPressed: onEdit,
               ),
               IconButton(
-                tooltip: 'Xóa',
+                tooltip: deleteTooltip,
                 icon: const Icon(Icons.delete_outline, size: 20),
                 onPressed: onDelete,
               ),

@@ -14,6 +14,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
 import '../../screens/consent_center_screen.dart';
@@ -81,17 +82,15 @@ class ProfileHub extends StatelessWidget {
   bool get _canCouncil =>
       kCouncilMobileParityEnabled && (role == 'doctor' || role == 'admin');
 
-  List<_ProfileEntry> _entries({required bool english}) {
+  List<_ProfileEntry> _entries(ConsumerTerminology copy) {
     final entries = <_ProfileEntry>[];
 
     // Visit preparation — collecting concerns/intake for an appointment.
     entries.add(
       _ProfileEntry(
         icon: Icons.event_note_outlined,
-        title: english ? 'Prepare for a visit' : 'Chuẩn bị đi khám',
-        subtitle: english
-            ? 'Gather questions and details for your appointment'
-            : 'Gom câu hỏi và thông tin cho buổi khám',
+        title: copy[ConsumerTerm.profileHubVisitsTitle],
+        subtitle: copy[ConsumerTerm.profileHubVisitsDescription],
         builder: (_) => VisitsSurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -104,10 +103,8 @@ class ProfileHub extends StatelessWidget {
     entries.add(
       _ProfileEntry(
         icon: Icons.family_restroom_outlined,
-        title: english ? 'Family & sharing' : 'Người thân & chia sẻ',
-        subtitle: english
-            ? 'Share the minimum with a supporter; revoke anytime'
-            : 'Chia sẻ tối thiểu với người hỗ trợ, có thể thu hồi',
+        title: copy[ConsumerTerm.profileHubFamilyTitle],
+        subtitle: copy[ConsumerTerm.profileHubFamilyDescription],
         builder: (_) => FamilySurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -119,10 +116,8 @@ class ProfileHub extends StatelessWidget {
     entries.add(
       _ProfileEntry(
         icon: Icons.fact_check_outlined,
-        title: english ? 'Living evidence' : 'Bằng chứng đang cập nhật',
-        subtitle: english
-            ? 'Follow changes reviewed by experts'
-            : 'Theo dõi thay đổi đã được chuyên gia rà soát',
+        title: copy[ConsumerTerm.profileHubEvidenceTitle],
+        subtitle: copy[ConsumerTerm.profileHubEvidenceDescription],
         builder: (_) => LivingEvidenceSurface(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -134,10 +129,8 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.forum_outlined,
-          title: english ? 'Community' : 'Cộng đồng',
-          subtitle: english
-              ? 'Share and ask questions with the health community'
-              : 'Chia sẻ và hỏi đáp cùng cộng đồng sức khỏe',
+          title: copy[ConsumerTerm.profileHubCommunityTitle],
+          subtitle: copy[ConsumerTerm.profileHubCommunityDescription],
           builder: (_) => SocialSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
@@ -149,10 +142,8 @@ class ProfileHub extends StatelessWidget {
     entries.add(
       _ProfileEntry(
         icon: Icons.monitor_heart_outlined,
-        title: english ? 'Health data' : 'Dữ liệu sức khỏe',
-        subtitle: english
-            ? 'Manage the sources you allowed to connect'
-            : 'Quản lý các nguồn bạn đã cho phép kết nối',
+        title: copy[ConsumerTerm.profileHubHealthDataTitle],
+        subtitle: copy[ConsumerTerm.profileHubHealthDataDescription],
         builder: (_) => ConnectedHealthScreen(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -164,10 +155,8 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.mic_none_outlined,
-          title: english ? 'Clinical notes' : 'Ghi chú lâm sàng',
-          subtitle: english
-              ? 'Record and create a SOAP note'
-              : 'Ghi âm và tạo ghi chú SOAP',
+          title: copy[ConsumerTerm.profileHubClinicalNotesTitle],
+          subtitle: copy[ConsumerTerm.profileHubClinicalNotesDescription],
           builder: (_) => ScribeSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
@@ -182,10 +171,8 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.groups_outlined,
-          title: english ? 'Case consultation' : 'Hội chẩn ca bệnh',
-          subtitle: english
-              ? 'Bring together specialist perspectives for complex cases'
-              : 'Tập hợp góc nhìn đa chuyên khoa cho ca khó',
+          title: copy[ConsumerTerm.profileHubCaseConsultationTitle],
+          subtitle: copy[ConsumerTerm.profileHubCaseConsultationDescription],
           builder: (_) => CouncilSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
@@ -198,10 +185,8 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.privacy_tip_outlined,
-          title: english ? 'Privacy & consent' : 'Quyền riêng tư & đồng ý',
-          subtitle: english
-              ? 'Manage consent by purpose'
-              : 'Quản lý đồng ý theo mục đích',
+          title: copy[ConsumerTerm.profileHubConsentTitle],
+          subtitle: copy[ConsumerTerm.profileHubConsentDescription],
           builder: (_) => ConsentCenterScreen(
             resolver: resolver,
             sessionStore: sessionStore,
@@ -211,10 +196,8 @@ class ProfileHub extends StatelessWidget {
       entries.add(
         _ProfileEntry(
           icon: Icons.manage_search_outlined,
-          title: english ? 'Personal data rights' : 'Quyền dữ liệu cá nhân',
-          subtitle: english
-              ? 'Export, correct, restrict, or delete your data'
-              : 'Xuất, chỉnh sửa, hạn chế hoặc xoá dữ liệu của bạn',
+          title: copy[ConsumerTerm.profileHubDataRightsTitle],
+          subtitle: copy[ConsumerTerm.profileHubDataRightsDescription],
           builder: (_) => DsarScreen(
             resolver: resolver,
             // The DSAR surface sends only the chosen coarse request kind.
@@ -233,10 +216,8 @@ class ProfileHub extends StatelessWidget {
     entries.add(
       _ProfileEntry(
         icon: Icons.settings_outlined,
-        title: english ? 'Settings' : 'Cài đặt',
-        subtitle: english
-            ? 'Appearance, language, account, and privacy'
-            : 'Giao diện, ngôn ngữ, tài khoản và quyền riêng tư',
+        title: copy[ConsumerTerm.profileHubSettingsTitle],
+        subtitle: copy[ConsumerTerm.profileHubSettingsDescription],
         builder: (_) => SettingsScreenV3(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -257,21 +238,21 @@ class ProfileHub extends StatelessWidget {
   Widget build(BuildContext context) {
     final languageController = this.languageController;
     if (languageController == null) {
-      return _buildLocalized(context, english: false);
+      return _buildLocalized(context, ConsumerTerminology.forLocale(null));
     }
     return AnimatedBuilder(
       animation: languageController,
       builder: (context, _) => _buildLocalized(
         context,
-        english: languageController.languageCode == 'en',
+        ConsumerTerminology.forLocale(languageController.languageCode),
       ),
     );
   }
 
-  Widget _buildLocalized(BuildContext context, {required bool english}) {
-    final entries = _entries(english: english);
+  Widget _buildLocalized(BuildContext context, ConsumerTerminology copy) {
+    final entries = _entries(copy);
     return Scaffold(
-      appBar: AppBar(title: Text(english ? 'Profile' : 'Hồ sơ')),
+      appBar: AppBar(title: Text(copy[ConsumerTerm.navigationProfile])),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceSm),
@@ -284,7 +265,7 @@ class ProfileHub extends StatelessWidget {
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             SectionHeader(
-              title: english ? 'Tools & privacy' : 'Công cụ & quyền riêng tư',
+              title: copy[ConsumerTerm.profileHubToolsAndPrivacy],
             ),
             Padding(
               padding: const EdgeInsets.symmetric(
