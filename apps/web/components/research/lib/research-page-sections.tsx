@@ -327,6 +327,7 @@ export function ResearchMainCard({
                 stripSafetyMatrixSection={false}
                 stripMermaidBlocks={true}
                 stripChartSpecBlocks={true}
+                uiLanguage={language}
               />
             </div>
           </article>
@@ -371,6 +372,7 @@ export function ResearchMainCard({
                 stripSafetyMatrixSection={false}
                 stripMermaidBlocks={true}
                 stripChartSpecBlocks={true}
+                uiLanguage={language}
               />
             </div>
 

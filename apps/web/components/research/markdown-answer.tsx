@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toPng } from "html-to-image";
 import type { UILanguage } from "@/lib/ui-language";
+import { formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { exportWorkspaceDocxFromMarkdown } from "@/lib/workspace";
 import {
   citationRegistryAnchorId,
@@ -45,12 +46,14 @@ export type MarkdownAnswerProps = {
 
 type MermaidBlockProps = {
   code: string;
+  uiLanguage: UILanguage;
 };
 
 type CodeFenceProps = {
   code: string;
   language?: string;
   isChartSpec: boolean;
+  uiLanguage: UILanguage;
 };
 
 type ChartSpecData = {
@@ -305,21 +308,21 @@ function parseChartSpec(code: string): ChartSpecData | null {
   return { type, title, labels, values };
 }
 
-function formatChartValue(value: number): string {
+function formatChartValue(uiLanguage: UILanguage, value: number): string {
   if (!Number.isFinite(value)) return "0";
-  if (Math.abs(value) >= 1000) return value.toLocaleString("vi-VN");
+  if (Math.abs(value) >= 1000) return formatLocaleNumber(uiLanguage, value);
   if (Math.abs(value) >= 1) return value.toFixed(2).replace(/\.00$/, "");
   return value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-function ChartSpecPreview({ spec }: { spec: ChartSpecData }) {
+function ChartSpecPreview({ spec, uiLanguage }: { spec: ChartSpecData; uiLanguage: UILanguage }) {
   const max = Math.max(...spec.values, 0.000001);
   const total = spec.values.reduce((sum, item) => sum + Math.max(item, 0), 0);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900/60">
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">
-        Chart Preview · {spec.type.toUpperCase()}
+        {t(uiLanguage, "markdownAnswer.chart.preview")} · {spec.type.toUpperCase()}
       </p>
       <h4 className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{spec.title}</h4>
       {spec.type === "pie" ? (
@@ -331,7 +334,7 @@ function ChartSpecPreview({ spec }: { spec: ChartSpecData }) {
               <div key={`${label}-${index}`} className="space-y-1">
                 <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
                   <span>{label}</span>
-                  <span>{formatChartValue(value)} ({pct.toFixed(1)}%)</span>
+                  <span>{formatChartValue(uiLanguage, value)} ({pct.toFixed(1)}%)</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                   <div
@@ -357,7 +360,7 @@ function ChartSpecPreview({ spec }: { spec: ChartSpecData }) {
                     style={{ width: `${Math.min(Math.max(ratio * 100, 0), 100)}%` }}
                   />
                 </div>
-                <span className="font-medium text-slate-700 dark:text-slate-200">{formatChartValue(value)}</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">{formatChartValue(uiLanguage, value)}</span>
               </div>
             );
           })}
@@ -432,7 +435,7 @@ function buildMermaidRenderCandidates(rawCode: string): string[] {
   return Array.from(new Set([base, relaxed].filter(Boolean)));
 }
 
-function MermaidBlock({ code }: MermaidBlockProps) {
+function MermaidBlock({ code, uiLanguage }: MermaidBlockProps) {
   const [svg, setSvg] = useState<string>("");
   const [error, setError] = useState<string>("");
 
@@ -498,7 +501,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
   if (error) {
     return (
       <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
-        Lỗi Mermaid: {error}
+        {t(uiLanguage, "markdownAnswer.mermaid.error")}: {error}
       </div>
     );
   }
@@ -506,7 +509,7 @@ function MermaidBlock({ code }: MermaidBlockProps) {
   if (!svg) {
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
-        Đang dựng sơ đồ Mermaid...
+        {t(uiLanguage, "markdownAnswer.mermaid.loading")}
       </div>
     );
   }
@@ -514,9 +517,9 @@ function MermaidBlock({ code }: MermaidBlockProps) {
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-white">
       <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
-        <span>Mermaid Diagram</span>
+        <span>{t(uiLanguage, "markdownAnswer.mermaid.diagram")}</span>
         <span className="rounded-full border border-cyan-300/60 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-700 dark:text-cyan-200">
-          an toàn
+          {t(uiLanguage, "markdownAnswer.mermaid.safe")}
         </span>
       </div>
       <div
@@ -859,7 +862,7 @@ function flattenMarkdownChildren(value: unknown): string {
   return "";
 }
 
-function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
+function CodeFence({ code, language, isChartSpec, uiLanguage }: CodeFenceProps) {
   const [notice, setNotice] = useState<"" | "success" | "error">("");
   const label = getFenceLanguageLabel(language);
   const chartSpec = useMemo(
@@ -886,16 +889,24 @@ function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-slate-900 text-slate-100 dark:border-slate-700">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/80 bg-slate-950/50 px-3 py-2">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-slate-300">
-          <span className="font-semibold">{isChartSpec ? "chart spec" : "code block"}</span>
+          <span className="font-semibold">
+            {isChartSpec
+              ? t(uiLanguage, "markdownAnswer.code.chartSpec")
+              : t(uiLanguage, "markdownAnswer.code.block")}
+          </span>
           <span className="rounded-full border border-slate-600 px-2 py-0.5">{label}</span>
         </div>
         <button
           type="button"
           onClick={() => void onCopy()}
           className="rounded-md border border-slate-600 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
-          aria-label="Sao chép code block"
+          aria-label={t(uiLanguage, "markdownAnswer.code.copyAria")}
         >
-          {notice === "success" ? "Đã copy" : notice === "error" ? "Copy lỗi" : "Copy"}
+          {notice === "success"
+            ? t(uiLanguage, "markdownAnswer.code.copied")
+            : notice === "error"
+              ? t(uiLanguage, "markdownAnswer.code.copyFailed")
+              : t(uiLanguage, "markdownAnswer.code.copy")}
         </button>
       </div>
       <pre className="overflow-x-auto p-3 text-[13px] leading-6">
@@ -903,20 +914,22 @@ function CodeFence({ code, language, isChartSpec }: CodeFenceProps) {
       </pre>
       {chartSpec ? (
         <div className="border-t border-slate-700/80 bg-slate-950/40 p-3">
-          <ChartSpecPreview spec={chartSpec} />
+          <ChartSpecPreview spec={chartSpec} uiLanguage={uiLanguage} />
         </div>
       ) : null}
       {isChartSpec ? (
         <p className="border-t border-slate-700/80 bg-slate-950/40 px-3 py-2 text-[11px] text-slate-300">
-          Block này là spec dữ liệu biểu đồ. CLARA đã render preview trực tiếp nếu parse được.
+          {t(uiLanguage, "markdownAnswer.chartSpec.notice")}
         </p>
       ) : null}
     </section>
   );
 }
 
-function formatTrustTier(trustTier?: number): string | null {
-  return typeof trustTier === "number" && Number.isFinite(trustTier) ? `Tier ${trustTier}` : null;
+function formatTrustTier(uiLanguage: UILanguage, trustTier?: number): string | null {
+  return typeof trustTier === "number" && Number.isFinite(trustTier)
+    ? t(uiLanguage, "markdownAnswer.citationRegistry.trustTier", { tier: trustTier })
+    : null;
 }
 
 /**
@@ -928,24 +941,22 @@ function formatTrustTier(trustTier?: number): string | null {
  */
 function CitationRegistryAppendix({
   entries,
-  isEnglishUI,
+  uiLanguage,
 }: {
   entries: ResearchTier2CitationRegistryEntry[];
-  isEnglishUI: boolean;
+  uiLanguage: UILanguage;
 }) {
   if (!entries.length) return null;
-
-  const heading = isEnglishUI ? "Citation Registry" : "Danh mục trích dẫn";
 
   return (
     <section className="mt-6 border-t border-slate-200 pt-3 dark:border-slate-700">
       <h2 className="text-[0.96rem] font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-        {heading}
+        {t(uiLanguage, "markdownAnswer.citationRegistry.title")}
       </h2>
       <ol className="mt-2.5 space-y-2">
         {entries.map((entry, index) => {
           const anchorId = citationRegistryAnchorId(entry.citationId);
-          const trustTier = formatTrustTier(entry.trustTier);
+          const trustTier = formatTrustTier(uiLanguage, entry.trustTier);
           const meta = [entry.sourceType, trustTier, entry.publishedAt].filter(Boolean);
           const href = sanitizeHref(entry.url);
           return (
@@ -1052,8 +1063,6 @@ export default function MarkdownAnswer({
       ),
     [citationRegistry]
   );
-  const isEnglishUI = uiLanguage === "en";
-
   if (!renderedMarkdown) {
     return null;
   }
@@ -1061,7 +1070,7 @@ export default function MarkdownAnswer({
   const onExportMarkdown = () => {
     const blob = new Blob([renderedMarkdown], { type: "text/markdown;charset=utf-8" });
     downloadBlob(blob, `${exportBaseName}.md`);
-    setExportNotice(isEnglishUI ? "Markdown exported." : "Đã xuất file Markdown.");
+    setExportNotice(t(uiLanguage, "markdownAnswer.export.markdownSuccess"));
     window.setTimeout(() => setExportNotice(""), 1400);
   };
 
@@ -1072,16 +1081,14 @@ export default function MarkdownAnswer({
         title: exportBaseName,
       });
       downloadBlob(blob, `${exportBaseName}.docx`);
-      setExportNotice(isEnglishUI ? "DOCX exported." : "Đã xuất file DOCX.");
+      setExportNotice(t(uiLanguage, "markdownAnswer.export.docxSuccess"));
     } catch (cause) {
       const reason =
         cause instanceof Error && cause.message
           ? cause.message
-          : isEnglishUI
-            ? "Unknown error."
-            : "Lỗi không xác định.";
+          : t(uiLanguage, "markdownAnswer.export.unknownError");
       setExportNotice(
-        isEnglishUI ? `DOCX export failed: ${reason}` : `Xuất DOCX thất bại: ${reason}`
+        t(uiLanguage, "markdownAnswer.export.docxFailed", { reason })
       );
     }
     window.setTimeout(() => setExportNotice(""), 1600);
@@ -1089,15 +1096,15 @@ export default function MarkdownAnswer({
 
   const onCopyMarkdown = async () => {
     if (!navigator?.clipboard) {
-      setExportNotice(isEnglishUI ? "Clipboard unavailable." : "Clipboard không khả dụng.");
+      setExportNotice(t(uiLanguage, "markdownAnswer.export.clipboardUnavailable"));
       window.setTimeout(() => setExportNotice(""), 1400);
       return;
     }
     try {
       await navigator.clipboard.writeText(renderedMarkdown);
-      setExportNotice(isEnglishUI ? "Markdown copied." : "Đã copy markdown.");
+      setExportNotice(t(uiLanguage, "markdownAnswer.export.copySuccess"));
     } catch {
-      setExportNotice(isEnglishUI ? "Unable to copy markdown." : "Không thể copy markdown.");
+      setExportNotice(t(uiLanguage, "markdownAnswer.export.copyFailed"));
     }
     window.setTimeout(() => setExportNotice(""), 1400);
   };
@@ -1105,9 +1112,7 @@ export default function MarkdownAnswer({
   const onExportPng = async () => {
     const node = document.getElementById(contentId);
     if (!node) {
-      setExportNotice(
-        isEnglishUI ? "No content available for PNG export." : "Không tìm thấy nội dung để xuất PNG."
-      );
+      setExportNotice(t(uiLanguage, "markdownAnswer.export.pngNoContent"));
       window.setTimeout(() => setExportNotice(""), 1400);
       return;
     }
@@ -1120,9 +1125,9 @@ export default function MarkdownAnswer({
       const response = await fetch(dataUrl);
       const blob = await response.blob();
       downloadBlob(blob, `${exportBaseName}.png`);
-      setExportNotice(isEnglishUI ? "PNG exported." : "Đã xuất PNG.");
+      setExportNotice(t(uiLanguage, "markdownAnswer.export.pngSuccess"));
     } catch {
-      setExportNotice(isEnglishUI ? "PNG export failed." : "Xuất PNG thất bại.");
+      setExportNotice(t(uiLanguage, "markdownAnswer.export.pngFailed"));
     }
     window.setTimeout(() => setExportNotice(""), 1600);
   };
@@ -1135,7 +1140,10 @@ export default function MarkdownAnswer({
     <div className="medical-markdown prose prose-slate max-w-none text-slate-950 dark:prose-invert dark:text-slate-100 prose-p:my-2 prose-p:leading-[1.75] prose-li:leading-[1.68] prose-headings:tracking-tight">
       <div className="mb-1 flex items-center justify-end gap-1">
         <details className="group relative">
-          <summary className="list-none rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1 text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300">
+          <summary
+            aria-label={t(uiLanguage, "markdownAnswer.actions.more")}
+            className="list-none rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1 text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
+          >
             <span className="material-symbols-outlined text-[14px]">more_horiz</span>
           </summary>
           <div className="absolute right-0 z-10 mt-2 w-40 space-y-1 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl">
@@ -1144,28 +1152,28 @@ export default function MarkdownAnswer({
               onClick={onCopyMarkdown}
               className="block w-full rounded-xl px-3 py-2 text-left text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
             >
-              {isEnglishUI ? "Copy markdown" : "Sao chép markdown"}
+              {t(uiLanguage, "markdownAnswer.action.copyMarkdown")}
             </button>
             <button
               type="button"
               onClick={onExportMarkdown}
               className="block w-full rounded-xl px-3 py-2 text-left text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
             >
-              {isEnglishUI ? "Export .md" : "Xuất .md"}
+              {t(uiLanguage, "markdownAnswer.action.exportMarkdown")}
             </button>
             <button
               type="button"
               onClick={() => void onExportDocx()}
               className="block w-full rounded-xl px-3 py-2 text-left text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
             >
-              {isEnglishUI ? "Export .docx" : "Xuất .docx"}
+              {t(uiLanguage, "markdownAnswer.action.exportDocx")}
             </button>
             <button
               type="button"
               onClick={() => void onExportPng()}
               className="block w-full rounded-xl px-3 py-2 text-left text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
             >
-              {isEnglishUI ? "Export .png" : "Xuất .png"}
+              {t(uiLanguage, "markdownAnswer.action.exportPng")}
             </button>
           </div>
         </details>
@@ -1267,11 +1275,11 @@ export default function MarkdownAnswer({
               if (!enableMermaid) {
                 return (
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
-                    Mermaid đã được rút gọn để tập trung vào phần phân tích chính.
+                    {t(uiLanguage, "markdownAnswer.mermaid.hidden")}
                   </div>
                 );
               }
-              return <MermaidBlock code={code} />;
+              return <MermaidBlock code={code} uiLanguage={uiLanguage} />;
             }
 
             if (isInline) {
@@ -1286,7 +1294,7 @@ export default function MarkdownAnswer({
             }
 
             const isChartSpec = language ? CHART_SPEC_LANGUAGES.has(language) : false;
-            return <CodeFence code={code} language={language} isChartSpec={isChartSpec} />;
+            return <CodeFence code={code} language={language} isChartSpec={isChartSpec} uiLanguage={uiLanguage} />;
           },
           table: ({ children }) => (
             <div className="mt-3 overflow-x-auto rounded-[0.85rem] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40">
@@ -1328,7 +1336,7 @@ export default function MarkdownAnswer({
       >
         {renderedMarkdown}
       </ReactMarkdown>
-      <CitationRegistryAppendix entries={citationRegistry ?? []} isEnglishUI={isEnglishUI} />
+      <CitationRegistryAppendix entries={citationRegistry ?? []} uiLanguage={uiLanguage} />
       </div>
     </div>
   );
