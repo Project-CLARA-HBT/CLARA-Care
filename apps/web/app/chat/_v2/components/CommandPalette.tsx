@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import type { UseCommandPalette } from "@/app/chat/_v2/hooks/useCommandPalette";
 import { useFocusTrap } from "@/app/chat/_v2/lib/useFocusTrap";
@@ -41,7 +42,7 @@ export default function CommandPalette({ palette, uiLanguage }: CommandPalettePr
   const inputRef = useRef<HTMLInputElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const isEn = uiLanguage === "en";
+  const copy = (key: UITranslationKey) => t(uiLanguage, key);
 
   // Keep Tab focus inside the palette dialog while open (Req 5.1, 5.4).
   useFocusTrap(isOpen, dialogRef);
@@ -73,7 +74,7 @@ export default function CommandPalette({ palette, uiLanguage }: CommandPalettePr
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-950/45 px-4 pt-[10vh] backdrop-blur-sm">
       <button
         type="button"
-        aria-label={isEn ? "Close command palette" : "Đóng command palette"}
+        aria-label={copy("chat.commandPalette.closeAria")}
         onClick={close}
         className="absolute inset-0"
       />
@@ -81,11 +82,11 @@ export default function CommandPalette({ palette, uiLanguage }: CommandPalettePr
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={isEn ? "Command palette" : "Bảng lệnh"}
+        aria-label={copy("chat.commandPalette.title")}
         className="relative w-full max-w-2xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-2xl"
       >
         <label className="sr-only" htmlFor="chat-v2-command-input">
-          {isEn ? "Search commands" : "Tìm lệnh"}
+          {copy("chat.commandPalette.searchLabel")}
         </label>
         <input
           id="chat-v2-command-input"
@@ -123,15 +124,13 @@ export default function CommandPalette({ palette, uiLanguage }: CommandPalettePr
                 break;
             }
           }}
-          placeholder={
-            isEn ? "Find an action... (new chat, export, share...)" : "Tìm hành động..."
-          }
+          placeholder={copy("chat.commandPalette.searchPlaceholder")}
           className="min-h-[42px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)] outline-none focus-visible:border-[color:var(--shell-border-strong)] focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)]"
         />
         <ul
           id={LISTBOX_ID}
           role="listbox"
-          aria-label={isEn ? "Actions" : "Hành động"}
+          aria-label={copy("chat.commandPalette.actions")}
           className="mt-2 max-h-[58vh] space-y-1 overflow-y-auto pr-1"
         >
           {filtered.length ? (
@@ -171,7 +170,7 @@ export default function CommandPalette({ palette, uiLanguage }: CommandPalettePr
               aria-disabled="true"
               className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-4 text-sm text-[var(--text-muted)]"
             >
-              {isEn ? "No matching action." : "Không có hành động phù hợp."}
+              {copy("chat.commandPalette.noMatches")}
             </li>
           )}
         </ul>

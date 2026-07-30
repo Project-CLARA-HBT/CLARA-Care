@@ -170,6 +170,23 @@ const MIGRATED_SURFACES = [
       "toLocaleDateString()",
     ],
   },
+  {
+    path: "app/chat/_v2/components/CommandPalette.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "chat.commandPalette.title",
+      "chat.commandPalette.searchPlaceholder",
+      "chat.commandPalette.noMatches",
+    ],
+    forbidden: [
+      "Đóng command palette",
+      "Close command palette",
+      "Tìm hành động...",
+      "Find an action... (new chat, export, share...)",
+      "Không có hành động phù hợp.",
+      "No matching action.",
+    ],
+  },
 ];
 
 function fail(message) {
