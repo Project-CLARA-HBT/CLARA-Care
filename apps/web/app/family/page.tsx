@@ -88,8 +88,8 @@ export default function FamilyPage() {
       };
       setShareable(nextShareable);
       setObjectId((current) => current || nextShareable.episode[0]?.id || "");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("familyCircle.loadError"));
+    } catch {
+      setError(copy("familyCircle.loadError"));
     } finally {
       setLoading(false);
     }
@@ -112,8 +112,8 @@ export default function FamilyPage() {
       setCreatedToken(result.token);
       setEmail("");
       setObjectId("");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("familyCircle.createError"));
+    } catch {
+      setError(copy("familyCircle.createError"));
     } finally {
       setSaving(false);
     }
@@ -127,8 +127,8 @@ export default function FamilyPage() {
       await acceptFamilyInvitation(inviteToken.trim());
       setInviteToken("");
       await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("familyCircle.acceptError"));
+    } catch {
+      setError(copy("familyCircle.acceptError"));
     } finally {
       setSaving(false);
     }
@@ -140,8 +140,8 @@ export default function FamilyPage() {
     try {
       await revokeFamilyGrant(grantId);
       await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("familyCircle.revokeError"));
+    } catch {
+      setError(copy("familyCircle.revokeError"));
     } finally {
       setSaving(false);
     }
@@ -157,8 +157,8 @@ export default function FamilyPage() {
         new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       );
       setCreatedToken(result.token);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("familyCircle.renewError"));
+    } catch {
+      setError(copy("familyCircle.renewError"));
     } finally {
       setSaving(false);
     }
