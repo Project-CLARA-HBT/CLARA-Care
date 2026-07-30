@@ -31,7 +31,7 @@ const SCENE_HEIGHT = 700;
 const NODES: FlowNode[] = [
   { id: "input", title: "Case Intake", subtitle: "Transcript / Audio", x: 56, y: 286, kind: "core" },
   { id: "extract", title: "Intake Extractor", subtitle: "DeepSeek + fallback", x: 270, y: 286, kind: "core" },
-  { id: "quality", title: "Quality Gate", subtitle: "Data score + confidence", x: 484, y: 286, kind: "core" },
+  { id: "quality", title: "Quality Gate", subtitle: "Evidence and missing-data checks", x: 484, y: 286, kind: "core" },
   { id: "orchestrator", title: "Council Orchestrator", subtitle: "Specialist routing", x: 698, y: 286, kind: "core" },
   { id: "safety", title: "Safety Guard", subtitle: "Red-flag + negation", x: 912, y: 196, kind: "core" },
   { id: "consensus", title: "Consensus Engine", subtitle: "Conflict + triage", x: 1126, y: 286, kind: "core" },

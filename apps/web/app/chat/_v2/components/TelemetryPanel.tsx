@@ -6,15 +6,12 @@ import type { UserRole } from "@/lib/auth-store";
 import type { UILanguage } from "@/lib/ui-language";
 import type { ResearchTier2Result } from "@/lib/research";
 import RoleGatedTelemetry from "@/components/telemetry/telemetry-panel";
-import {
-  buildSourceIntel,
-  resolveTelemetryConfidence,
-} from "@/app/chat/_v2/lib/telemetry-format";
+import { buildSourceIntel } from "@/app/chat/_v2/lib/telemetry-format";
 
 /**
  * Detailed telemetry panel for the rebuilt CLARA Chat (CHAT_V2).
  *
- * Confidence + source-intel detail. Wrapped in the shared role-gated
+ * Source-intel detail. Wrapped in the shared role-gated
  * `TelemetryPanel` so the detailed view renders ONLY for admins (Requirement
  * 6.6; design Property P7); non-admins get nothing here (detailed telemetry is
  * admin-only — their answer view already carries the safety summary). This
@@ -29,10 +26,7 @@ export type TelemetryPanelProps = {
 
 export default function TelemetryPanel({ role, result, uiLanguage }: TelemetryPanelProps) {
   const isEn = uiLanguage === "en";
-  const confidence = useMemo(() => resolveTelemetryConfidence(result), [result]);
   const sourceIntel = useMemo(() => buildSourceIntel(result), [result]);
-
-  const confidenceDisplay = confidence === undefined ? "--" : confidence.toFixed(2);
 
   return (
     <RoleGatedTelemetry role={role} className="w-full">
@@ -43,15 +37,6 @@ export default function TelemetryPanel({ role, result, uiLanguage }: TelemetryPa
         <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
           {isEn ? "Telemetry" : "Theo dõi"}
         </p>
-
-        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
-          <p className="text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-            {isEn ? "Confidence" : "Độ tin cậy"}
-          </p>
-          <p className="mt-0.5 text-lg font-semibold text-[var(--text-primary)]">
-            {confidenceDisplay}
-          </p>
-        </div>
 
         <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <div className="flex items-center justify-between gap-2">

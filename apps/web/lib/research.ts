@@ -135,13 +135,6 @@ export type ResearchTier2VerificationMatrixEntry = {
   note?: string;
   source?: string;
   evidence: string[];
-  /**
-   * GRADE evidence-certainty label for the claim (high | moderate | low |
-   * very_low) when `RESEARCH_GRADE_ENABLED` assigned one (Requirement 8.4).
-   * Absent when no label has been assigned, so the UI never renders a
-   * certainty label before assignment.
-   */
-  certainty?: string;
 };
 
 export type ResearchTier2ContradictionSummary = {
@@ -352,7 +345,6 @@ export type ResearchTier2TracedClaim = {
   claim: string;
   citationIds: string[];
   verdict?: string;
-  certainty?: string;
 };
 
 export type ResearchTier2Result = {
@@ -1720,67 +1712,6 @@ function parseEvidenceList(value: unknown): string[] {
   );
 }
 
-const _CERTAINTY_LABELS = new Set(["high", "moderate", "low", "very_low"]);
-
-/**
- * Normalizes a raw GRADE certainty value to one of the canonical labels
- * {high, moderate, low, very_low}. Returns `undefined` for any absent or
- * out-of-set value so a certainty label is only ever surfaced once a real
- * label has been assigned (Requirement 8.4, design §8). Tolerates spacing and
- * casing variants such as "Very Low" / "very-low".
- */
-function normalizeCertaintyLabel(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
-  return _CERTAINTY_LABELS.has(normalized) ? normalized : undefined;
-}
-
-/**
- * Builds a claim-text → certainty-label lookup from the optional `grade` and
- * `traced_claims` payload arrays (design §8). Only entries that carry a valid
- * assigned label are recorded, so claims without an assigned label never gain
- * a certainty value (Requirement 8.4). Keys are normalized claim text for a
- * tolerant match against the verification matrix.
- */
-function buildCertaintyByClaim(...payloads: unknown[]): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const payload of payloads) {
-    if (!Array.isArray(payload)) continue;
-    for (const item of payload) {
-      const row = asRecord(item);
-      if (!row) continue;
-      const claim =
-        asText(row.claim) ??
-        asText(row.statement) ??
-        asText(row.text) ??
-        asText(row.title);
-      if (!claim) continue;
-      const certainty = normalizeCertaintyLabel(
-        asText(row.certainty) ??
-        asText(row.grade_certainty) ??
-        asText(row.gradeCertainty) ??
-        asText(row.grade)
-      );
-      if (!certainty) continue;
-      const key = claim.trim().toLowerCase();
-      if (!map.has(key)) map.set(key, certainty);
-    }
-  }
-  return map;
-}
-
-function applyCertaintyToMatrix(
-  matrix: ResearchTier2VerificationMatrixEntry[],
-  certaintyByClaim: Map<string, string>
-): ResearchTier2VerificationMatrixEntry[] {
-  if (!certaintyByClaim.size) return matrix;
-  return matrix.map((entry) => {
-    if (entry.certainty) return entry;
-    const certainty = certaintyByClaim.get(entry.claim.trim().toLowerCase());
-    return certainty ? { ...entry, certainty } : entry;
-  });
-}
-
 /**
  * Coerces a raw consensus count to a non-negative integer, tolerating numeric
  * strings. Out-of-range / missing values collapse to 0 so the rendered counts
@@ -1915,8 +1846,8 @@ function parseCitationIdList(value: unknown): string[] {
 
 /**
  * Parses a single traced claim `{claim, citation_ids[]}` (Requirement 11.1).
- * Returns null for rows without claim text. The certainty value is normalized
- * to the canonical GRADE set so it can be reused for display gating (R8.4).
+ * Legacy certainty fields are intentionally ignored: no source metadata is a
+ * formal GRADE assessment or recommendation-strength judgement.
  */
 function parseTracedClaim(value: unknown): ResearchTier2TracedClaim | null {
   const row = asRecord(value);
@@ -1941,10 +1872,7 @@ function parseTracedClaim(value: unknown): ResearchTier2TracedClaim | null {
   return {
     claim,
     citationIds,
-    verdict: asText(row.verdict) ?? asText(row.support_status) ?? asText(row.supportStatus),
-    certainty: normalizeCertaintyLabel(
-      asText(row.certainty) ?? asText(row.grade_certainty) ?? asText(row.gradeCertainty)
-    )
+    verdict: asText(row.verdict) ?? asText(row.support_status) ?? asText(row.supportStatus)
   };
 }
 
@@ -2083,12 +2011,6 @@ function parseVerificationMatrixEntry(value: unknown): ResearchTier2Verification
     asText(row.claim_type) ??
     asText(row.claimType);
   const severity = asText(row.severity);
-  const certainty = normalizeCertaintyLabel(
-    asText(row.certainty) ??
-    asText(row.grade_certainty) ??
-    asText(row.gradeCertainty) ??
-    asText(row.grade)
-  );
   const confidence =
     asNumber(row.confidence) ??
     asNumber(row.score) ??
@@ -2135,8 +2057,7 @@ function parseVerificationMatrixEntry(value: unknown): ResearchTier2Verification
     evidenceRef,
     note,
     source,
-    evidence,
-    ...(certainty ? { certainty } : {})
+    evidence
   };
 }
 
@@ -3526,13 +3447,6 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
   const verificationMatrix = dedupeVerificationMatrix(
     parseVerificationMatrix(verificationPayload)
   );
-  const verificationMatrixWithCertainty = applyCertaintyToMatrix(
-    verificationMatrix,
-    buildCertaintyByClaim(
-      pickFromRecords(telemetryRecords, ["grade", "grade_labels", "gradeLabels"]),
-      pickFromRecords(telemetryRecords, ["traced_claims", "tracedClaims"])
-    )
-  );
   const consensus = parseConsensusEntries(
     pickFromRecords(telemetryRecords, [
       "consensus",
@@ -3619,7 +3533,7 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     docs,
     scores,
     sourceReasoning,
-    verificationMatrix: verificationMatrixWithCertainty,
+    verificationMatrix,
     consensus,
     safetyOverride,
     contradictionSummary,

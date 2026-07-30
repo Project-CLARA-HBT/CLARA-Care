@@ -31,7 +31,8 @@ ML flags (`services/ml/src/clara_ml/config.py`):
 | `RESEARCH_GAP_FILL_MAX_PASSES`                | `2`     | ML-side gap-fill pass bound (0–8)                 |
 | `RESEARCH_RECENCY_TRUST_RANKING_ENABLED`      | `false` | Composite trust-tier/recency ranking + surfacing  |
 | `RESEARCH_PICO_ENABLED`                        | `false` | PICO framing with named-rejection semantics       |
-| `RESEARCH_GRADE_ENABLED`                       | `false` | GRADE certainty + recommendation-strength labels  |
+| `RESEARCH_EVIDENCE_SIGNALS_ENABLED`            | `false` | Provenance-only source metadata for verified claims |
+| `RESEARCH_GRADE_ENABLED`                       | `false` | Deprecated compatibility key; does not enable GRADE output |
 | `RESEARCH_CONSENSUS_ENABLED`                   | `false` | Support/contrast/neutral counts + conflict section|
 | `RESEARCH_CLAIM_TRACE_ENABLED`                 | `false` | Traced claims + Citation Registry appendix        |
 | `RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED`        | `false` | Exclusive normal/researcher/doctor output profiles|
@@ -81,12 +82,20 @@ The web mobile deep-mode surface is additionally gated by the
    - Wave A (retrieval quality): `RESEARCH_QUERY_DECOMPOSITION_ENABLED`,
      `RESEARCH_GAP_FILL_ENABLED`, `RESEARCH_RECENCY_TRUST_RANKING_ENABLED`.
    - Wave B (evidence presentation): `RESEARCH_PICO_ENABLED`,
-     `RESEARCH_GRADE_ENABLED`, `RESEARCH_CONSENSUS_ENABLED`,
+     `RESEARCH_EVIDENCE_SIGNALS_ENABLED`, `RESEARCH_CONSENSUS_ENABLED`,
      `RESEARCH_CLAIM_TRACE_ENABLED`, `RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED`.
    - Wave C (surface/IO): `RESEARCH_CLARIFYING_QUESTIONS_ENABLED`,
      `RESEARCH_ROLE_GATED_TELEMETRY_ENABLED`, `RESEARCH_PERSONALIZATION_ENABLED`,
      `RESEARCH_EXPORT_ENABLED`, `RESEARCH_SHARE_ENABLED`,
      `RESEARCH_DURABLE_UPLOADS_ENABLED` (+ `RESEARCH_UPLOAD_OBJECT_STORE_URL`).
+
+`RESEARCH_EVIDENCE_SIGNALS_ENABLED` is deliberately provenance-only: it emits
+the retrieved source id, source type, internal authority band, publication date,
+and whether the claim directly resolved to that source. It must not be described
+as GRADE, evidence certainty, recommendation strength, or a treatment decision.
+`RESEARCH_GRADE_ENABLED` remains accepted only to avoid breaking old environment
+files and has no runtime effect. Roll back the new output by setting
+`RESEARCH_EVIDENCE_SIGNALS_ENABLED=false`; no data migration is required.
 2. For durable uploads, provision and set `RESEARCH_UPLOAD_OBJECT_STORE_URL`
    before enabling `RESEARCH_DURABLE_UPLOADS_ENABLED`. If the backend is
    unreachable while the flag is on, uploads surface a 503 (no silent data loss);

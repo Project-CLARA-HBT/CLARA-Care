@@ -102,7 +102,7 @@ def test_build_tier2_optional_payload_carries_every_field_when_supplied():
         ),
         citation_registry=[{"citation_id": "c1"}],
         traced_claims=[{"claim": "x", "citation_ids": ["c1"], "verdict": "supported"}],
-        grade=[{"claim": "x", "certainty": "moderate"}],
+        evidence_signals=[{"claim": "x", "schema_version": "research-evidence-signal-v1"}],
         consensus=[{"claim": "x", "support": 3, "contrast": 1, "neutral": 0}],
         conflicting_evidence=[{"claim": "x", "contrasting_citation_ids": ["c5"]}],
         subquestions=["q1", "q2"],
@@ -114,7 +114,7 @@ def test_build_tier2_optional_payload_carries_every_field_when_supplied():
         "pico",
         "citation_registry",
         "traced_claims",
-        "grade",
+        "evidence_signals",
         "consensus",
         "conflicting_evidence",
         "subquestions",
@@ -303,9 +303,7 @@ def test_build_citations_omits_provenance_when_rank_disabled():
     assert citations[0].source_type is None
 
 
-# --- R8: GRADE certainty + recommendation-strength labeling ---
-
-_GRADE_CERTAINTY_SET = {"high", "moderate", "low", "very_low"}
+# --- Provenance-only source metadata signals ----------------------------------------------
 
 
 def _claim_row(claim, *, status="supported", evidence_ref=None, claim_type="general"):
@@ -317,100 +315,46 @@ def _claim_row(claim, *, status="supported", evidence_ref=None, claim_type="gene
     }
 
 
-def test_evidence_hierarchy_rank_mapping():
-    # Strongest → weakest per the design Evidence-Hierarchy table.
-    assert tier2._evidence_hierarchy_rank("systematic_review") == 1
-    assert tier2._evidence_hierarchy_rank("meta-analysis") == 1
-    assert tier2._evidence_hierarchy_rank("guideline") == 1
-    assert tier2._evidence_hierarchy_rank("randomized_controlled_trial") == 2
-    assert tier2._evidence_hierarchy_rank("cohort") == 3
-    assert tier2._evidence_hierarchy_rank("case_series") == 4
-    # Unknown / expert opinion / unranked web defaults to the weakest band.
-    assert tier2._evidence_hierarchy_rank("expert_opinion") == 5
-    assert tier2._evidence_hierarchy_rank(None) == 5
-    assert tier2._evidence_hierarchy_rank("") == 5
+def test_evidence_signals_disabled_returns_none():
+    assert tier2._build_evidence_signals([_claim_row("a claim", evidence_ref="s1")], [], enabled=False) is None
 
 
-def test_grade_certainty_label_in_set_and_endpoints():
-    # Strongest evidence (tier 1 + systematic review) → high; weakest → very_low (R8.1, R8.2).
-    assert tier2._grade_certainty_label(1, 1) == "high"
-    assert tier2._grade_certainty_label(4, 5) == "very_low"
-    for tier in (1, 2, 3, 4, None):
-        for rank in (1, 2, 3, 4, 5):
-            assert tier2._grade_certainty_label(tier, rank) in _GRADE_CERTAINTY_SET
-
-
-def test_grade_certainty_monotonic_in_evidence_strength():
-    # Property 13 core: a stronger trust_tier or hierarchy rank never lowers certainty.
-    order = {label: i for i, label in enumerate(tier2._GRADE_CERTAINTY_ORDER)}
-    # Stronger trust_tier (lower number) at fixed rank is non-decreasing in certainty.
-    for rank in (1, 2, 3, 4, 5):
-        levels = [order[tier2._grade_certainty_label(t, rank)] for t in (4, 3, 2, 1)]
-        assert levels == sorted(levels)
-    # Stronger hierarchy rank (lower number) at fixed tier is non-decreasing in certainty.
-    for tier in (1, 2, 3, 4):
-        levels = [order[tier2._grade_certainty_label(tier, r)] for r in (5, 4, 3, 2, 1)]
-        assert levels == sorted(levels)
-
-
-def test_is_recommendation_claim_detects_vi_and_en():
-    assert tier2._is_recommendation_claim("Bệnh nhân nên dùng thuốc vào buổi sáng")
-    assert tier2._is_recommendation_claim("Khuyến nghị theo dõi INR định kỳ")
-    assert tier2._is_recommendation_claim("Patients should monitor for bleeding")
-    assert tier2._is_recommendation_claim("We recommend dose reduction in CKD")
-    # A plain factual claim is not a recommendation.
-    assert not tier2._is_recommendation_claim("Warfarin ức chế vitamin K epoxide reductase")
-    assert not tier2._is_recommendation_claim("Paracetamol is metabolized in the liver")
-
-
-def test_assign_grade_labels_disabled_returns_none():
-    # R8.5 / R20.2: flag off => no labels and the field is omitted downstream.
-    rows = [_claim_row("a claim", evidence_ref="s1")]
-    assert tier2._assign_grade_labels(rows, [], enabled=False) is None
-
-
-def test_assign_grade_labels_high_certainty_from_strong_source():
+def test_evidence_signals_emit_direct_source_metadata_without_grade_or_strength():
     context = [_row("s1", tier=1, date="2023-01-01", source_type="systematic_review")]
-    rows = [_claim_row("Treatment reduces mortality", evidence_ref="s1")]
-    labels = tier2._assign_grade_labels(rows, context, enabled=True)
-    assert labels == [{"claim": "Treatment reduces mortality", "certainty": "high"}]
+    signals = tier2._build_evidence_signals(
+        [_claim_row("Treatment reduces mortality", evidence_ref="s1")], context, enabled=True
+    )
+    assert signals == [
+        {
+            "schema_version": "research-evidence-signal-v1",
+            "display_mode": "professional_metadata_only",
+            "claim": "Treatment reduces mortality",
+            "verification_status": "supported",
+            "source_binding": "direct",
+            "source_metadata": [
+                {
+                    "source_id": "s1",
+                    "source_type": "systematic_review",
+                    "trust_tier": 1,
+                    "published_at": "2023-01-01",
+                }
+            ],
+            "notice": "Source metadata only; not a GRADE certainty or recommendation strength.",
+        }
+    ]
+    assert "certainty" not in signals[0]
+    assert "recommendation_strength" not in signals[0]
 
 
-def test_assign_grade_labels_unresolved_unsupported_claim_is_very_low():
-    # A claim with no resolvable supporting source and a non-supported status → very_low.
-    rows = [_claim_row("Unbacked statement", status="insufficient", evidence_ref=None)]
-    labels = tier2._assign_grade_labels(rows, [], enabled=True)
-    assert labels == [{"claim": "Unbacked statement", "certainty": "very_low"}]
-
-
-def test_assign_grade_labels_supported_claim_falls_back_to_corpus_best():
-    # evidence_ref does not resolve, but the supported claim is grounded in the corpus.
-    context = [_row("s1", tier=2, date="2022-01-01", source_type="randomized_controlled_trial")]
-    rows = [_claim_row("Grounded but unreferenced", status="supported", evidence_ref="missing")]
-    labels = tier2._assign_grade_labels(rows, context, enabled=True)
-    assert len(labels) == 1
-    assert labels[0]["certainty"] in _GRADE_CERTAINTY_SET
-    # tier 2 + RCT (rank 2): score 2 + 3 = 5 → moderate.
-    assert labels[0]["certainty"] == "moderate"
-
-
-def test_assign_grade_labels_recommendation_carries_strength():
-    strong_ctx = [_row("s1", tier=1, date="2023-01-01", source_type="systematic_review")]
-    rec_rows = [_claim_row("Patients should start therapy early", evidence_ref="s1")]
-    labels = tier2._assign_grade_labels(rec_rows, strong_ctx, enabled=True)
-    assert labels[0]["recommendation_strength"] == "strong"
-
-    weak_ctx = [_row("s2", tier=4, source_type="expert_opinion")]
-    weak_rows = [_claim_row("We recommend caution", evidence_ref="s2")]
-    weak_labels = tier2._assign_grade_labels(weak_rows, weak_ctx, enabled=True)
-    assert weak_labels[0]["recommendation_strength"] == "conditional"
-
-
-def test_assign_grade_labels_non_recommendation_has_no_strength_key():
+def test_evidence_signals_never_borrow_corpus_metadata_for_unresolved_claims():
     context = [_row("s1", tier=1, source_type="systematic_review")]
-    rows = [_claim_row("Drug X inhibits enzyme Y", evidence_ref="s1")]
-    labels = tier2._assign_grade_labels(rows, context, enabled=True)
-    assert "recommendation_strength" not in labels[0]
+    signals = tier2._build_evidence_signals(
+        [_claim_row("Grounded but unreferenced", status="supported", evidence_ref="missing")],
+        context,
+        enabled=True,
+    )
+    assert signals[0]["source_binding"] == "unresolved"
+    assert signals[0]["source_metadata"] == []
 
 
 # --- R9: Evidence-agreement (Consensus) view + conflicting-evidence section -----------------
@@ -561,7 +505,6 @@ def test_build_claim_trace_disabled_returns_none():
         verification_rows=[_claim_row("c", evidence_ref="s1")],
         citations=[_trace_citation("s1")],
         retrieved_context=[_row("s1", tier=1)],
-        grade_labels=None,
         enabled=False,
     )
     assert traced is None
@@ -585,7 +528,6 @@ def test_build_claim_trace_registry_has_full_provenance():
         verification_rows=[],
         citations=[_trace_citation("s1")],
         retrieved_context=context,
-        grade_labels=None,
         enabled=True,
     )
     assert registry == [
@@ -600,16 +542,14 @@ def test_build_claim_trace_registry_has_full_provenance():
     assert traced == []
 
 
-def test_build_claim_trace_links_supported_claim_with_certainty():
+def test_build_claim_trace_links_supported_claim_without_source_derived_certainty():
     # R11.1: a supported claim is linked to its specific supporting citation id(s).
     context = [{"id": "s1", "source": "pubmed", "trust_tier": 1, "source_type": "rct"}]
     rows = [_claim_row("Treatment helps", status="supported", evidence_ref="s1")]
-    grade = [{"claim": "Treatment helps", "certainty": "high"}]
     traced, _ = tier2._build_claim_trace(
         verification_rows=rows,
         citations=[_trace_citation("s1")],
         retrieved_context=context,
-        grade_labels=grade,
         enabled=True,
     )
     assert traced == [
@@ -617,7 +557,6 @@ def test_build_claim_trace_links_supported_claim_with_certainty():
             "claim": "Treatment helps",
             "citation_ids": ["s1"],
             "verdict": "supported",
-            "certainty": "high",
         }
     ]
 
@@ -630,7 +569,6 @@ def test_build_claim_trace_suppresses_unsupported_claim():
         verification_rows=rows,
         citations=[_trace_citation("s1")],
         retrieved_context=context,
-        grade_labels=None,
         enabled=True,
     )
     assert traced == []
@@ -645,7 +583,6 @@ def test_build_claim_trace_suppresses_supported_claim_without_resolvable_citatio
         verification_rows=rows,
         citations=[_trace_citation("s1")],
         retrieved_context=context,
-        grade_labels=None,
         enabled=True,
     )
     assert traced == []
@@ -659,7 +596,6 @@ def test_build_claim_trace_default_trust_tier_and_source_type_when_unknown():
         verification_rows=[],
         citations=[_trace_citation("s1")],
         retrieved_context=context,
-        grade_labels=None,
         enabled=True,
     )
     assert registry[0]["trust_tier"] == tier2._DEFAULT_CITATION_TRUST_TIER
@@ -679,7 +615,6 @@ def test_build_claim_trace_registry_is_superset_of_traced_citation_ids():
         verification_rows=rows,
         citations=[_trace_citation("s1"), _trace_citation("s2")],
         retrieved_context=context,
-        grade_labels=None,
         enabled=True,
     )
     registry_ids = {entry["citation_id"] for entry in registry}

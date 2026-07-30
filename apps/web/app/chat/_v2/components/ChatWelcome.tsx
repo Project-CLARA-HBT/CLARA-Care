@@ -88,7 +88,7 @@ const CONTENT: Record<
           icon: "manage_search",
           label: "Tổng quan bằng chứng",
           prompt:
-            "Tổng hợp bằng chứng gần đây về chủ đề này và phân loại theo độ tin cậy.",
+            "Tổng hợp bằng chứng gần đây về chủ đề này, nêu nguồn đã dùng và các giới hạn còn lại.",
         },
         {
           icon: "difference",
@@ -119,7 +119,7 @@ const CONTENT: Record<
           icon: "manage_search",
           label: "Evidence overview",
           prompt:
-            "Synthesize recent evidence on this topic and grade its reliability.",
+            "Synthesize recent evidence on this topic, state the sources used, and explain remaining limitations.",
         },
         {
           icon: "difference",

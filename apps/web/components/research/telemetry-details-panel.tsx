@@ -340,14 +340,6 @@ export default function TelemetryDetailsPanel({
                         {item.severity}
                       </span>
                     ) : null}
-                    {item.certainty ? (
-                      <span
-                        className="rounded-full border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                        title="GRADE evidence certainty"
-                      >
-                        certainty: {item.certainty.replace(/_/g, " ")}
-                      </span>
-                    ) : null}
                   </div>
                   <p className="mt-1">
                     {item.verdict ? `verdict: ${item.verdict}` : "verdict: n/a"}

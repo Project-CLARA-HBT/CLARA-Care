@@ -186,7 +186,12 @@ def build_config_snapshot(settings: Any | None = None) -> dict[str, Any]:
             get("research_recency_trust_ranking_enabled", False)
         ),
         "research_pico_enabled": bool(get("research_pico_enabled", False)),
+        # `research_grade_enabled` is retained for deployment compatibility
+        # only. It never authorizes formal GRADE/recommendation-strength output.
         "research_grade_enabled": bool(get("research_grade_enabled", False)),
+        "research_evidence_signals_enabled": bool(
+            get("research_evidence_signals_enabled", False)
+        ),
         "research_consensus_enabled": bool(get("research_consensus_enabled", False)),
         "research_claim_trace_enabled": bool(get("research_claim_trace_enabled", False)),
         "research_role_adaptive_output_enabled": bool(

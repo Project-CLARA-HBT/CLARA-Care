@@ -1021,6 +1021,15 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RESEARCH_GRADE_ENABLED",
     )
+    # Deprecated compatibility switch.  This value is intentionally no longer
+    # used to emit GRADE labels or recommendation strength: source type and an
+    # internal authority tier alone cannot perform a formal GRADE assessment.
+    # Retain it only so existing deployments do not fail configuration parsing.
+    # Use RESEARCH_EVIDENCE_SIGNALS_ENABLED for the provenance-only replacement.
+    research_evidence_signals_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_EVIDENCE_SIGNALS_ENABLED",
+    )
     research_consensus_enabled: bool = Field(
         default=False,
         validation_alias="RESEARCH_CONSENSUS_ENABLED",
