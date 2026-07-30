@@ -820,6 +820,9 @@ class Settings(BaseSettings):
     lifemap_ai_summaries_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_SUMMARIES_ENABLED"
     )
+    lifemap_vietnamese_drafts_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_VIETNAMESE_DRAFTS_ENABLED"
+    )
     lifemap_ai_entity_resolution_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_ENTITY_RESOLUTION_ENABLED"
     )

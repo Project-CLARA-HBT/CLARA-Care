@@ -34,6 +34,19 @@ AskIntent = Literal[
     "explanation",
 ]
 
+
+def _consumer_copy(locale: str, *, vietnamese: str, english: str) -> str:
+    """Select bounded consumer wording without changing the source facts.
+
+    LifeMap's consumer language is intentionally assembled from fixed copy and
+    exact revision text.  This keeps the draft useful in Vietnamese while
+    ensuring that a wording layer cannot silently introduce a diagnosis,
+    medication instruction, or a new truth-state.
+    """
+
+    return vietnamese if locale.startswith("vi") else english
+
+
 _INTENT_HINTS: tuple[tuple[AskIntent, tuple[str, ...]], ...] = (
     ("comparison", ("compare", "change", "different", "so sanh", "thay doi")),
     ("visit_preparation", ("visit", "doctor", "appointment", "kham", "bac si")),
@@ -380,6 +393,164 @@ def verify_grounded_answer(
     }
 
 
+def consumer_summary(
+    evidence: list[EvidenceRow], *, locale: str
+) -> dict[str, object]:
+    """Return a plain-language, revision-bound summary for a consumer.
+
+    This is presentation-only output: each factual item is an exact revision
+    copy with an evidence id, and the non-factual guidance is fixed safety
+    wording.  It must never be persisted as a LifeMap event or treated as a
+    clinical recommendation.
+    """
+
+    ordered = sorted(evidence, key=lambda row: (row.occurred_at, row.revision_id))
+    uncertain = [
+        row.evidence_id
+        for row in ordered
+        if row.truth_state in {"disputed", "conflicting", "stale"}
+    ]
+    if not ordered:
+        return {
+            "status": "abstained",
+            "important_now": _consumer_copy(
+                locale,
+                vietnamese="Chưa có ghi nhận phù hợp trong phạm vi bạn đã chọn.",
+                english="There are no matching records in the selected scope.",
+            ),
+            "based_on": [],
+            "uncertainty": ["no_matching_evidence"],
+            "next_step": _consumer_copy(
+                locale,
+                vietnamese=(
+                    "Bạn có thể bổ sung thông tin hoặc kiểm tra lại phạm vi "
+                    "thời gian."
+                ),
+                english="You can add information or review the selected time range.",
+            ),
+            "urgent_help": _consumer_copy(
+                locale,
+                vietnamese=(
+                    "Nếu có dấu hiệu khẩn cấp, hãy gọi cấp cứu địa phương "
+                    "hoặc đến khoa cấp cứu gần nhất."
+                ),
+                english=(
+                    "For emergency symptoms, call local emergency services "
+                    "or go to the nearest emergency department."
+                ),
+            ),
+            "input_revision_ids": [],
+            "draft_only": True,
+        }
+    return {
+        "status": "ready",
+        "important_now": _consumer_copy(
+            locale,
+            vietnamese=f"Có {len(ordered)} ghi nhận trong phạm vi bạn đã chọn.",
+            english=f"There are {len(ordered)} records in the selected scope.",
+        ),
+        "based_on": [
+            {
+                "text": row.text,
+                "citation_ids": [row.evidence_id],
+                "occurred_at": row.occurred_at.isoformat(),
+                "truth_state": row.truth_state,
+            }
+            for row in ordered[:8]
+        ],
+        "uncertainty": uncertain,
+        "next_step": _consumer_copy(
+            locale,
+            vietnamese=(
+                "Hãy kiểm tra lại các ghi nhận trước khi dùng chúng để trao "
+                "đổi với nhân viên y tế."
+            ),
+            english=(
+                "Review these records before using them in a conversation "
+                "with a health professional."
+            ),
+        ),
+        "urgent_help": _consumer_copy(
+            locale,
+            vietnamese=(
+                "Nếu có dấu hiệu khẩn cấp, hãy gọi cấp cứu địa phương hoặc "
+                "đến khoa cấp cứu gần nhất."
+            ),
+            english=(
+                "For emergency symptoms, call local emergency services or "
+                "go to the nearest emergency department."
+            ),
+        ),
+        "input_revision_ids": [row.revision_id for row in ordered],
+        "draft_only": True,
+    }
+
+
+def visit_preparation_draft(
+    evidence: list[EvidenceRow], *, locale: str
+) -> dict[str, object]:
+    """Create a consumer-editable visit-preparation draft from exact facts.
+
+    The questions deliberately avoid interpretation.  They are prompts a
+    person may edit before a visit, not clinical instructions and not a
+    mutation of the LifeMap truth state.
+    """
+
+    summary = consumer_summary(evidence, locale=locale)
+    source_rows = summary["based_on"]
+    if not isinstance(source_rows, list) or not source_rows:
+        return {
+            "status": "abstained",
+            "title": _consumer_copy(
+                locale,
+                vietnamese="Bản nháp chuẩn bị buổi khám",
+                english="Visit preparation draft",
+            ),
+            "plain_language_summary": summary,
+            "questions_to_consider": [],
+            "source_revision_ids": [],
+            "draft_only": True,
+            "requires_user_review": True,
+        }
+    questions: list[dict[str, object]] = []
+    for row in source_rows:
+        if not isinstance(row, dict):
+            continue
+        text = row.get("text")
+        citations = row.get("citation_ids")
+        if not isinstance(text, str) or not isinstance(citations, list):
+            continue
+        questions.append(
+            {
+                "text": _consumer_copy(
+                    locale,
+                    vietnamese=(
+                        f"Tôi muốn trao đổi về ghi nhận này: “{text}”. "
+                        "Điều gì là quan trọng để tôi theo dõi hoặc hỏi thêm?"
+                    ),
+                    english=(
+                        f"I would like to discuss this record: “{text}”. "
+                        "What is important for me to monitor or ask about?"
+                    ),
+                ),
+                "citation_ids": citations,
+            }
+        )
+    return {
+        "status": "ready",
+        "title": _consumer_copy(
+            locale,
+            vietnamese="Bản nháp chuẩn bị buổi khám",
+            english="Visit preparation draft",
+        ),
+        "plain_language_summary": summary,
+        "questions_to_consider": questions,
+        "source_revision_ids": summary["input_revision_ids"],
+        "draft_only": True,
+        "requires_user_review": True,
+    }
+
+
 def hierarchical_summary(
     evidence: list[EvidenceRow],
     *,
@@ -436,6 +607,7 @@ def hierarchical_summary(
             if locale.startswith("vi")
             else f"Summary of {len(ordered)} source-cited records."
         ),
+        "consumer_summary": consumer_summary(ordered, locale=locale),
         "children": children,
         "input_revision_ids": [row.revision_id for row in ordered],
         "conflicting": [

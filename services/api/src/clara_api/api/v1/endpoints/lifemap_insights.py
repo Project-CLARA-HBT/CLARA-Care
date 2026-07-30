@@ -45,6 +45,7 @@ from clara_api.lifemap.intelligence import (
     retrieve_revision_evidence,
     route_ask_query,
     verify_grounded_answer,
+    visit_preparation_draft,
 )
 from clara_api.lifemap.next_best_question import compute_next_best_question
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
@@ -75,6 +76,17 @@ class AskLifeMapRequest(BaseModel):
     start_at: datetime | None = None
     end_at: datetime | None = None
     limit: int = Field(default=20, ge=1, le=50)
+
+
+class VisitPreparationDraftRequest(BaseModel):
+    """Read-only scope for a consumer-editable, provenance-bound draft."""
+
+    query: str = Field(default="", max_length=500)
+    locale: str = Field(default="vi", pattern=r"^(vi|en)(-[A-Za-z]{2})?$")
+    episode_id: str | None = None
+    start_at: datetime | None = None
+    end_at: datetime | None = None
+    limit: int = Field(default=12, ge=1, le=20)
 
 
 def _scope(
@@ -118,6 +130,32 @@ _ASK_LIFEMAP_USE_CASE = {
     "allowed_data_classes": ["lifemap"],
     "requires_consent": True,
 }
+
+
+def _emergency_visit_draft(locale: str) -> dict:
+    return {
+        "status": "emergency_escalation",
+        "title": (
+            "Hãy tìm hỗ trợ khẩn cấp ngay"
+            if locale.startswith("vi")
+            else "Get emergency help now"
+        ),
+        "answer": (
+            "Hãy gọi cấp cứu địa phương ngay hoặc đến khoa cấp cứu gần nhất."
+            if locale.startswith("vi")
+            else (
+                "Call local emergency services now or go to the nearest "
+                "emergency department."
+            )
+        ),
+        "questions_to_consider": [],
+        "source_revision_ids": [],
+        "disclosure": {
+            "mutates_lifemap": False,
+            "draft_only": True,
+            "retrieval_bypassed": True,
+        },
+    }
 
 
 @router.post("/lifemap/v2/ask")
@@ -276,6 +314,70 @@ def ask_lifemap_v2(
         "template": "ask-lifemap-v1",
         "retrieval_index": "profile-temporal-hybrid-current-revisions-v1",
         "policy": "lifemap-ai-safe-read-v1",
+    }
+
+
+@router.post("/lifemap/v2/visit-preparation-drafts")
+def create_visit_preparation_draft_v2(
+    payload: VisitPreparationDraftRequest,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict:
+    """Build a Vietnamese-first, read-only visit-preparation draft.
+
+    The endpoint only exposes current revisions from the authorised profile.
+    It returns fixed wording plus exact cited source text and intentionally has
+    no command, event, revision, or confirmation path.
+    """
+
+    if not get_settings().lifemap_vietnamese_drafts_enabled:
+        raise HTTPException(
+            status_code=404, detail={"code": "feature_not_enabled"}
+        )
+    route = route_ask_query(payload.query)
+    if route.emergency:
+        return _emergency_visit_draft(payload.locale)
+    if route.blocked_reason:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": route.blocked_reason,
+                "message": (
+                    "Bản nháp này chỉ giúp chuẩn bị trao đổi khi đi khám; "
+                    "không chẩn đoán, kê đơn hoặc đưa liều cá nhân."
+                ),
+            },
+        )
+    scope = _scope(db, token, x_profile)
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    episode = (
+        _episode_for_profile(db, scope.profile.id, payload.episode_id)
+        if payload.episode_id
+        else None
+    )
+    evidence = retrieve_revision_evidence(
+        db,
+        profile_id=scope.profile.id,
+        query=payload.query,
+        episode_id=episode.id if episode else None,
+        start_at=payload.start_at,
+        end_at=payload.end_at,
+        limit=payload.limit,
+    )
+    draft = visit_preparation_draft(evidence, locale=payload.locale)
+    return {
+        **draft,
+        "evidence": [row.public_dict() for row in evidence],
+        "disclosure": {
+            "mode": "deterministic_provenance_bound_draft_v1",
+            "medical_advice": False,
+            "mutates_lifemap": False,
+            "draft_only": True,
+            "requires_user_review": True,
+            "preserves_truth_state": True,
+        },
+        "policy": "lifemap-visit-preparation-draft-safe-read-v1",
     }
 
 

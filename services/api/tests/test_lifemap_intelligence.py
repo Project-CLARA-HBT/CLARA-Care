@@ -11,6 +11,7 @@ from clara_api.core.config import get_settings
 from clara_api.db.models import (
     AIContextManifest,
     FamilyAccessGrant,
+    LifeMapEvent,
     MLInferenceManifest,
     PhrProfile,
 )
@@ -21,6 +22,7 @@ from clara_api.lifemap.intelligence import (
     hierarchical_summary,
     route_ask_query,
     verify_grounded_answer,
+    visit_preparation_draft,
 )
 from clara_api.main import app
 
@@ -150,6 +152,38 @@ def test_hierarchical_summary_preserves_order_truth_and_exact_citations() -> Non
     ]
     assert summary["disputed"] == ["ev:r1"]
     assert summary["fallback_used"] is True
+    consumer = summary["consumer_summary"]
+    assert consumer["draft_only"] is True
+    assert consumer["based_on"][1]["citation_ids"] == ["ev:r1"]
+    assert consumer["uncertainty"] == ["ev:r1"]
+
+
+def test_visit_preparation_draft_is_editable_and_exact_revision_bound() -> None:
+    row = EvidenceRow(
+        evidence_id="ev:r1",
+        revision_id="r1",
+        event_id="e1",
+        event_type="symptom_report",
+        occurred_at=datetime(2026, 7, 29, tzinfo=UTC),
+        recorded_at=datetime(2026, 7, 29, 1, tzinfo=UTC),
+        truth_state="confirmed",
+        source_kind="reported",
+        attribution="user_report",
+        text="Đau đầu nhẹ sau khi ngủ muộn",
+    )
+    draft = visit_preparation_draft([row], locale="vi")
+    assert draft["draft_only"] is True
+    assert draft["requires_user_review"] is True
+    assert draft["source_revision_ids"] == ["r1"]
+    assert draft["questions_to_consider"] == [
+        {
+            "text": (
+                "Tôi muốn trao đổi về ghi nhận này: “Đau đầu nhẹ sau khi ngủ muộn”. "
+                "Điều gì là quan trọng để tôi theo dõi hoặc hỏi thêm?"
+            ),
+            "citation_ids": ["ev:r1"],
+        }
+    ]
 
 
 def test_ask_endpoint_is_revision_cited_and_persists_private_lineage(monkeypatch) -> None:
@@ -217,6 +251,53 @@ def test_ask_endpoint_is_revision_cited_and_persists_private_lineage(monkeypatch
             "fallback_used",
             "locale",
         }
+
+
+def test_visit_preparation_endpoint_is_consent_scoped_and_does_not_write_lifemap(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(get_settings(), "lifemap_vietnamese_drafts_enabled", True)
+    headers = _account()
+    created = client.post(
+        "/api/v1/lifemap/events",
+        headers={**headers, "Idempotency-Key": uuid4().hex},
+        json={
+            "event_type": "symptom_report",
+            "occurred_at": "2026-07-28T08:00:00Z",
+            "payload": {"summary": "Ho khan về đêm"},
+            "truth_state": "confirmed",
+        },
+    )
+    assert created.status_code == 201, created.text
+    with SessionLocal() as db:
+        before = len(db.execute(select(LifeMapEvent)).scalars().all())
+
+    response = client.post(
+        "/api/v1/lifemap/v2/visit-preparation-drafts",
+        headers=headers,
+        json={"locale": "vi"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["disclosure"] == {
+        "mode": "deterministic_provenance_bound_draft_v1",
+        "medical_advice": False,
+        "mutates_lifemap": False,
+        "draft_only": True,
+        "requires_user_review": True,
+        "preserves_truth_state": True,
+    }
+    evidence_ids = {row["evidence_id"] for row in body["evidence"]}
+    assert body["source_revision_ids"] == [
+        row["revision_id"] for row in body["evidence"]
+    ]
+    assert all(
+        set(question["citation_ids"]) <= evidence_ids
+        for question in body["questions_to_consider"]
+    )
+    with SessionLocal() as db:
+        after = len(db.execute(select(LifeMapEvent)).scalars().all())
+    assert after == before
 
 
 def test_emergency_fast_path_does_not_require_a_profile(monkeypatch) -> None:
