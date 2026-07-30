@@ -27,12 +27,26 @@ passes its already-authorized DeepSeek connection values through a read-only
 settings overlay to the `RAG_SYNTHESIS` contract. It therefore keeps the
 legacy short override timeout while applying the same prompt version and
 rollback selection as the default RAG client. It does not construct a provider
-client directly.
+client directly. `DeepSeekClient` intentionally has no public
+``from_runtime`` helper: every production construction must enter through
+`build_task_client`, so a future caller cannot select a model or provider
+outside a typed task contract.
 
 The registry selects only the provider/model boundary. It never converts a
 heuristic, embedding scorer or fixed-weight Council rule into a neural model,
 and it never permits LLM output to confirm a LifeMap record, prescribe, change
 a dose, authorize access or replace DrugBank authority.
+
+## Deliberate non-text-model exceptions
+
+The registry covers generative DeepSeek text tasks. It does not claim to
+govern deterministic code, embeddings, encoder-SLM shadow inference, or ASR
+provider selection. In particular, Scribe's `SCRIBE_TRANSCRIPTION` contract
+selects the text-client transport and request budget, while
+`DEEPSEEK_AUDIO_MODEL` remains a separately configured audio model sent only
+to the transcription endpoint. Local Whisper, PhoWhisper, and Google STT stay
+behind the typed ASR provider seam; none can be selected by end-user request
+data. These exceptions must not be repurposed for text generation.
 
 The shadow router may receive deterministic Vietnamese clinical-language cues,
 but publishes only bounded categories/counts (negation, experiencer,
