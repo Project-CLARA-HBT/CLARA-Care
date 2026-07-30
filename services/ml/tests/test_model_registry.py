@@ -122,6 +122,20 @@ def test_lifemap_text_draft_extraction_is_governed_by_flash_contract() -> None:
     )
 
 
+def test_clinical_language_source_spans_are_governed_by_flash_contract() -> None:
+    selection = resolve_model_selection(
+        ModelTask.CLINICAL_LANGUAGE_EXTRACTION,
+        _settings(),
+    )
+
+    assert selection.model == "deepseek-v4-flash"
+    assert selection.model_profile == "flash"
+    assert selection.prompt_version == "clinical-language-source-spans.vi.v1"
+    assert TASK_CONTRACTS[selection.task].output_contract == (
+        "exact_source_spans_closed_categories_metadata_or_review_only"
+    )
+
+
 def test_task_client_applies_its_versioned_generation_contract() -> None:
     client, selection = build_task_client(ModelTask.LIFEMAP_VISIT_EXTRACTION, _settings())
 

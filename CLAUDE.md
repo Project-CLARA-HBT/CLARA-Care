@@ -176,6 +176,18 @@ redacted copy only after emergency/legal guards and cannot alter an answer,
 route, authorization, DrugBank/FIDES verdict or LifeMap truth state. Disable
 the flag and restart ML to roll it back immediately.
 
+The separately governed `CLINICAL_LANGUAGE_EXTRACTION` task uses V4 Flash only
+for checksum-bound, closed-category Unicode source spans. It is off by default
+(`CLINICAL_LANGUAGE_LLM_EXTRACTION_ENABLED=false`), is invoked only after the
+deterministic chat/Council emergency path, and fails soft to the deterministic
+Vietnamese packet. It never decides urgency, access, consent, truth-state,
+DrugBank normalization or a DDI conclusion. Optional
+`CAREGUARD_CLINICAL_SPAN_AUGMENTATION_ENABLED=true` additionally supplies only
+validated original medication substrings to the existing deterministic
+Vietnamese/DrugBank resolver; it cannot introduce a canonical drug, dose,
+DrugBank ID, interaction or recommendation. Disable either flag and restart ML
+for an immediate rollback.
+
 LifeMap free-text capture is separately dark by default. When both
 `LIFEMAP_CAPTURE_ENABLED` and `LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED` are
 enabled in API and ML, the V4 Flash text-draft task may classify at most five

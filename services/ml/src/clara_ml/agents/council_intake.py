@@ -7,6 +7,7 @@ from typing import Any
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.llm.model_registry import ModelTask, build_asr_task_client, build_task_client
+from clara_ml.nlp_vi import enrich_clinical_utterance_with_llm
 
 #: Sentinel ``model_used`` value for the degraded heuristic extraction path.
 _HEURISTIC_FALLBACK_MODEL = "heuristic-fallback-v1"
@@ -206,6 +207,29 @@ def _compute_intake_data_quality(
         "non_empty_sections": non_empty_sections,
         "total_observations": total_observations,
         "missing_sections": missing_sections,
+    }
+
+
+def clinical_packet_metadata(transcript: str) -> dict[str, Any] | None:
+    """Return a PII-free, review-only projection of validated source spans.
+
+    This deliberately does not add model-extracted symptoms, medicines or labs
+    to ``council_payload``. The caller's structured fields and deterministic
+    Council red-flag floor remain authoritative until a human reviews them.
+    """
+
+    packet = enrich_clinical_utterance_with_llm(transcript, settings=settings)
+    if packet.implementation != "hybrid_source_spans_v1":
+        return None
+    counts: dict[str, int] = {}
+    for span in packet.source_spans:
+        counts[span.category] = counts.get(span.category, 0) + 1
+    return {
+        "status": "review_only",
+        "source_span_count": len(packet.source_spans),
+        "category_counts": counts,
+        "model_version": packet.extractor_model_version,
+        "prompt_version": packet.extractor_prompt_version,
     }
 
 

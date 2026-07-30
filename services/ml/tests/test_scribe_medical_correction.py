@@ -20,7 +20,7 @@ def test_correction_returns_source_spanned_review_proposal_without_mutating_text
                 content=(
                     '{"suggestions":[{"source_text":"panado",'
                     '"replacement_text":"Panadol","kind":"medication_term",'
-                    '"rationale":"Possible brand spelling."}]}'
+                    '"rationale":"Possible brand spelling.","start":22,"end":28}]}'
                 )
             )
 
@@ -59,9 +59,9 @@ def test_correction_rejects_new_dose_and_unbound_source(monkeypatch) -> None:
                 content=(
                     '{"suggestions":['
                     '{"source_text":"para","replacement_text":"paracetamol 500mg",'
-                    '"kind":"medication_term","rationale":"unsafe"},'
+                    '"kind":"medication_term","rationale":"unsafe","start":9,"end":13},'
                     '{"source_text":"missing","replacement_text":"x",'
-                    '"kind":"clinical_term","rationale":"unbound"}]}'
+                    '"kind":"clinical_term","rationale":"unbound","start":0,"end":7}]}'
                 )
             )
 
@@ -78,3 +78,28 @@ def test_correction_rejects_new_dose_and_unbound_source(monkeypatch) -> None:
 
     assert result["suggestions"] == []
     assert result["applied"] is False
+
+
+def test_correction_rejects_repeated_text_with_a_mismatched_declared_span(monkeypatch) -> None:
+    class Client:
+        def generate(self, *_args, **_kwargs):
+            return SimpleNamespace(
+                content=(
+                    '{"suggestions":[{"source_text":"para",'
+                    '"replacement_text":"Panadol","kind":"medication_term",'
+                    '"rationale":"wrong occurrence","start":0,"end":4}]}'
+                )
+            )
+
+    selection = SimpleNamespace(
+        task=SimpleNamespace(value="scribe_asr_correction"),
+        prompt_version="scribe-asr-correction.v1",
+        contract_schema_version="clara.task-contracts.v2",
+        rollback_applied=False,
+    )
+    monkeypatch.setattr(correction.settings, "scribe_medical_correction_enabled", True)
+    monkeypatch.setattr(correction, "build_task_client", lambda *_args: (Client(), selection))
+
+    result = correction.propose_medical_asr_corrections("x para va para", language="vi")
+
+    assert result["suggestions"] == []

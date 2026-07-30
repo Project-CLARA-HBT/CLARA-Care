@@ -1246,6 +1246,50 @@ def test_council_consult_with_transcript_and_overrides(monkeypatch: pytest.Monke
     assert isinstance(body["intake"]["warnings"], list)
 
 
+def test_council_packet_is_review_only_and_skipped_for_emergency(monkeypatch: pytest.MonkeyPatch):
+    def _fake_run_council_intake(**_kwargs):
+        return {
+            "council_payload": {
+                "symptoms": ["fatigue"],
+                "labs": {},
+                "medications": [],
+                "history": [],
+            },
+            "model_used": "heuristic-fallback-v1",
+            "warnings": [],
+            "missing_fields": [],
+        }
+
+    monkeypatch.setattr("clara_ml.main.run_council_intake", _fake_run_council_intake)
+    monkeypatch.setattr(
+        "clara_ml.main.clinical_packet_metadata",
+        lambda _text: {"status": "review_only", "source_span_count": 1, "category_counts": {"symptom": 1}},
+    )
+
+    safe = client.post("/v1/council/consult", json={"transcript": "mệt"})
+
+    assert safe.status_code == 200
+    assert safe.json()["intake"]["clinical_packet"]["status"] == "review_only"
+    assert "clinical_packet" not in safe.json()["intake"] or "mệt" not in str(safe.json()["intake"])
+
+    called = False
+
+    def _must_not_run(_text: str):
+        nonlocal called
+        called = True
+        return {"status": "review_only"}
+
+    monkeypatch.setattr("clara_ml.main.clinical_packet_metadata", _must_not_run)
+    emergency = client.post(
+        "/v1/council/consult",
+        json={"transcript": "đau ngực", "symptoms": ["chest pain"]},
+    )
+
+    assert emergency.status_code == 200
+    assert emergency.json()["emergency_escalation"]["triggered"] is True
+    assert called is False
+
+
 def test_council_consult_missing_input_returns_400():
     response = client.post("/v1/council/consult", json={})
 

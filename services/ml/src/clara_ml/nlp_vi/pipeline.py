@@ -168,3 +168,36 @@ def analyze_clinical_utterance(text: str, *, intent: str = "unknown") -> Clinica
         ambiguities=ambiguities,
         requires_clarification=bool(ambiguities),
     )
+
+
+def enrich_clinical_utterance_with_llm(
+    text: str,
+    *,
+    settings: object,
+    intent: str = "unknown",
+) -> ClinicalUtterance:
+    """Add validated LLM source spans to the deterministic packet, fail-soft.
+
+    This function does not replace deterministic extraction and deliberately
+    cannot change emergency/legal routing.  It returns the exact deterministic
+    packet whenever rollout is disabled, the input is too large, registry/model
+    output is unavailable, or validation fails.
+    """
+
+    packet = analyze_clinical_utterance(text, intent=intent)
+    if not bool(getattr(settings, "clinical_language_llm_extraction_enabled", False)):
+        return packet
+    try:
+        from .llm_extraction import extract_source_spans
+
+        spans, metadata = extract_source_spans(text, settings=settings)
+    except Exception:  # noqa: BLE001 - source text/upstream detail must not escape
+        return packet
+    return packet.model_copy(
+        update={
+            "source_spans": spans,
+            "extractor_model_version": metadata.get("model_version"),
+            "extractor_prompt_version": metadata.get("prompt_version"),
+            "implementation": "hybrid_source_spans_v1",
+        }
+    )

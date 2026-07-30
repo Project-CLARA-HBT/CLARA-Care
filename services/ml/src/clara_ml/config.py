@@ -19,6 +19,20 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED",
     )
+    # Optional V4 Flash source-span extraction for Vietnamese clinical language.
+    # It is metadata/review-only and never replaces deterministic safeguards.
+    clinical_language_llm_extraction_enabled: bool = Field(
+        default=False,
+        validation_alias="CLINICAL_LANGUAGE_LLM_EXTRACTION_ENABLED",
+    )
+    # Permit source-span candidates to be supplied to the deterministic
+    # CareGuard normalizer. This requires the parent extraction flag and is
+    # separately default-off because it can affect which original text tokens
+    # are checked by DrugBank; it never supplies a canonical drug or DDI fact.
+    careguard_clinical_span_augmentation_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_CLINICAL_SPAN_AUGMENTATION_ENABLED",
+    )
     default_embedder: str = "bge-m3"
     embedding_api_key: str = Field(
         default="",

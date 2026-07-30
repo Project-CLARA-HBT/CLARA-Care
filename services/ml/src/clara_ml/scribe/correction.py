@@ -55,6 +55,8 @@ def _suggestions(transcript: str, value: object) -> list[CorrectionSuggestion]:
         replacement = str(raw.get("replacement_text") or "").strip()
         kind = str(raw.get("kind") or "").strip().lower()
         rationale = str(raw.get("rationale") or "").strip()
+        start = raw.get("start")
+        end = raw.get("end")
         if (
             not source
             or not replacement
@@ -63,15 +65,20 @@ def _suggestions(transcript: str, value: object) -> list[CorrectionSuggestion]:
             or len(replacement) > 160
             or len(rationale) > 400
             or kind not in {"medication_term", "clinical_term", "procedure_term"}
+            or isinstance(start, bool)
+            or not isinstance(start, int)
+            or isinstance(end, bool)
+            or not isinstance(end, int)
+            or start < 0
+            or end <= start
+            or end > len(transcript)
+            or transcript[start:end] != source
             # Medication/dose changes require a separate terminology workflow;
             # this correction surface may not introduce quantities.
             or any(char.isdigit() for char in replacement)
         ):
             continue
-        start = transcript.find(source)
-        if start < 0:
-            continue
-        span = (start, start + len(source))
+        span = (start, end)
         if span in used_spans:
             continue
         used_spans.add(span)
@@ -115,8 +122,11 @@ def propose_medical_asr_corrections(transcript: str, *, language: str) -> dict[s
             (
                 "Review this Vietnamese medical-ASR transcript for possible term errors. "
                 "Return JSON only: {\"suggestions\":[{\"source_text\":string,"
-                "\"replacement_text\":string,\"kind\":\"medication_term|clinical_term|procedure_term\","
-                "\"rationale\":string}]}. Every source_text must be an exact substring. "
+                "\"replacement_text\":string,\"kind\":"
+                "\"medication_term|clinical_term|procedure_term\","
+                "\"rationale\":string,\"start\":integer,\"end\":integer}]}. "
+                "Every source_text must exactly equal TRANSCRIPT[start:end], "
+                "using zero-based Python/Unicode offsets. "
                 "Do not add or change medication dose, diagnosis, instruction, or facts. "
                 "Return an empty list when uncertain.\n\nTRANSCRIPT=\n"
                 + text

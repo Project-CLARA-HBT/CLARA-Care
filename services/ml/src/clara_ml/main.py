@@ -18,7 +18,7 @@ from starlette.concurrency import run_in_threadpool
 from clara_ml import admin_rag_handlers
 from clara_ml.agents.careguard import run_careguard_analyze
 from clara_ml.agents.council import run_council
-from clara_ml.agents.council_intake import run_council_intake
+from clara_ml.agents.council_intake import clinical_packet_metadata, run_council_intake
 from clara_ml.agents.research_tier2 import (
     _build_source_aware_query_plan,
     _refine_query_plan_with_llm,
@@ -1218,16 +1218,6 @@ def routed_chat_infer(payload: dict) -> dict:
             }
         )
 
-    # The hybrid router is currently shadow-only. It receives only redacted
-    # input and can never alter the deterministic emergency/legal outcome or
-    # the legacy RAG route. Its published metadata excludes uncalibrated
-    # confidence and free-text rationale.
-    task_route_shadow = build_shadow_task_route(
-        pii.redacted_text,
-        legacy_route=route,
-        semantic_route=semantic_route,
-    )
-
     if route.emergency:
         emergency_answer = (
             "Possible emergency detected. Call local emergency services immediately "
@@ -1297,6 +1287,17 @@ def routed_chat_infer(payload: dict) -> dict:
             },
             default_action="escalate",
         )
+
+    # The hybrid router is shadow-only and starts only after the deterministic
+    # emergency fast path has returned. Its optional V4 Flash language packet
+    # receives PII-redacted input and can only enrich categorical metadata;
+    # it cannot alter emergency/legal/legacy route output.
+    task_route_shadow = build_shadow_task_route(
+        pii.redacted_text,
+        legacy_route=route,
+        semantic_route=semantic_route,
+        settings=settings,
+    )
 
     # The optional Encoder-SLM is intentionally invoked only after the
     # deterministic emergency and legal guards have decided it is safe to
@@ -2352,6 +2353,15 @@ def council_consult(payload: dict) -> dict:
             # not propagate a confidence percentage into the Council result.
             "review_required": True,
         }
+        emergency = result.get("emergency_escalation")
+        emergency_triggered = isinstance(emergency, dict) and bool(emergency.get("triggered"))
+        # Never invoke optional language extraction on an emergency Council
+        # case. For non-emergencies it remains a PII-free, review-only packet;
+        # it is not merged into the authoritative Council payload.
+        if not emergency_triggered:
+            clinical_packet = clinical_packet_metadata(transcript)
+            if clinical_packet is not None:
+                result["intake"]["clinical_packet"] = clinical_packet
     return result
 
 

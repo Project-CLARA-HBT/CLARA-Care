@@ -16,7 +16,8 @@ model profile for safe operational correlation, never user text or prompt
 content.
 
 The current registry covers the medical safety router, LifeMap Ask semantic
-routing, LifeMap Capture triage, free-text draft extraction and visit extraction, Scribe note/transcription, Council shadow assessment,
+routing, LifeMap Capture triage, free-text draft extraction and visit extraction,
+Vietnamese clinical-language source-span extraction, Scribe note/transcription, Council shadow assessment,
 LLM-assisted RAG reranking, evidence-bound NLI claim verification, Research
 query planning, and Research reasoning/deep-beta reasoning. Those
 callers still retain their existing emergency, legal, provenance, template,
@@ -48,11 +49,23 @@ to the transcription endpoint. Local Whisper, PhoWhisper, and Google STT stay
 behind the typed ASR provider seam; none can be selected by end-user request
 data. These exceptions must not be repurposed for text generation.
 
-The shadow router may receive deterministic Vietnamese clinical-language cues,
-but publishes only bounded categories/counts (negation, experiencer,
-temporality, severity cue, unit count and medication-candidate count). It does
-not publish source text, a medication name, a dose, confidence or free-text
-rationale in telemetry.
+The shadow router may receive a deterministic packet plus optional validated
+V4 Flash Vietnamese clinical-language source spans. The registry task accepts
+only a checksum-bound, closed category and Unicode offsets; application code
+reconstructs and validates every span. It publishes only bounded
+categories/counts (negation, experiencer, temporality, severity cue, unit count
+and medication-candidate count), never source text, a medication name, dose,
+confidence or free-text rationale in telemetry. `CLINICAL_LANGUAGE_LLM_EXTRACTION_ENABLED`
+is off by default and fails soft to the deterministic packet.
+
+For a separately approved CareGuard rollout,
+`CAREGUARD_CLINICAL_SPAN_AUGMENTATION_ENABLED` may feed only exact medication
+substrings from the original input to the existing deterministic Vietnamese and
+DrugBank resolver. The model cannot supply a canonical name, DrugBank ID, dose,
+DDI pair, risk or recommendation; disable either flag to restore the legacy
+input set immediately. Council exposes the packet only as review-only metadata
+after deterministic Council emergency handling, and Scribe corrections require
+their own exact transcript offsets before a clinician can review them.
 
 ## Optional Encoder-SLM shadow
 

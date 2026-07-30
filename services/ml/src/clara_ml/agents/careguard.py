@@ -12,6 +12,7 @@ from clara_ml.clients.drug_sources import DrugSourceClient
 from clara_ml.config import settings
 from clara_ml.language_renderer import RenderingInput, render_explanation
 from clara_ml.language_renderer.schemas import ActionCode, Audience, Severity
+from clara_ml.nlp_vi import enrich_clinical_utterance_with_llm
 
 
 @dataclass(frozen=True)
@@ -540,6 +541,49 @@ def _normalize_medications_with_vn_dictionary(
         "pair_coverage_ratio": round(min(max(pair_coverage_ratio, 0.0), 1.0), 3),
         "normalized_inputs": normalized_inputs[:20],
         "drugbank_dictionary_version": drugbank_dictionary_version,
+    }
+
+
+def _augment_raw_medications_with_validated_spans(
+    raw_medications: list[str],
+) -> tuple[list[str], dict[str, object]]:
+    """Optionally add exact original medication spans to deterministic lookup.
+
+    The model cannot provide a normalized drug, DrugBank ID, dose, interaction,
+    severity, or recommendation. It may only nominate an exact substring of
+    the user's original input; deterministic Vietnamese/DrugBank resolution is
+    still the sole authority for what is actually checked.
+    """
+
+    baseline = list(raw_medications)
+    if not (
+        settings.clinical_language_llm_extraction_enabled
+        and settings.careguard_clinical_span_augmentation_enabled
+        and baseline
+    ):
+        return baseline, {"state": "disabled", "added_candidate_count": 0}
+    source_text = "\n".join(baseline)
+    packet = enrich_clinical_utterance_with_llm(source_text, settings=settings)
+    if packet.implementation != "hybrid_source_spans_v1":
+        return baseline, {"state": "fallback", "added_candidate_count": 0}
+
+    candidates = list(baseline)
+    seen = {item.casefold().strip() for item in candidates}
+    for span in packet.source_spans:
+        if span.category != "medication":
+            continue
+        candidate = source_text[span.start : span.end].strip()
+        # A candidate spanning separate input rows is ambiguous. Preserve the
+        # raw rows and do not manufacture a joined medication name.
+        if not candidate or "\n" in candidate or candidate.casefold() in seen:
+            continue
+        seen.add(candidate.casefold())
+        candidates.append(candidate)
+    return candidates, {
+        "state": "used",
+        "added_candidate_count": len(candidates) - len(baseline),
+        "model_version": packet.extractor_model_version,
+        "prompt_version": packet.extractor_prompt_version,
     }
 
 
@@ -1391,6 +1435,9 @@ def _drugbank_required_unavailable_result(
             "normalized_medication_count": len(medications),
             "raw_medication_count": len(raw_medications),
             "normalized_inputs": vn_dictionary_metadata.get("normalized_inputs", []),
+            "clinical_span_augmentation": vn_dictionary_metadata.get(
+                "clinical_span_augmentation", {"state": "disabled", "added_candidate_count": 0}
+            ),
             "source_used": [],
             "source_errors": {
                 "drugbank": [f"required_source_{readiness_state}"],
@@ -1458,6 +1505,9 @@ def _rules_unavailable_result(
             "normalized_medication_count": len(medications),
             "raw_medication_count": len(raw_medications),
             "normalized_inputs": vn_dictionary_metadata.get("normalized_inputs", []),
+            "clinical_span_augmentation": vn_dictionary_metadata.get(
+                "clinical_span_augmentation", {"state": "disabled", "added_candidate_count": 0}
+            ),
             "source_used": [],
             "source_errors": {"local_rules": ["rules_unavailable"]},
             "openfda_pairs_checked": 0,
@@ -1471,7 +1521,13 @@ def run_careguard_analyze(payload: dict) -> dict:
     locale = str(payload.get("locale") or "vi").strip() or "vi"
     symptoms = _normalize_text_list(payload.get("symptoms"))
     raw_medications = _normalize_text_list(payload.get("medications"))
-    medications, vn_dictionary_metadata = _normalize_medications_with_vn_dictionary(raw_medications)
+    normalizer_inputs, clinical_span_augmentation = _augment_raw_medications_with_validated_spans(
+        raw_medications
+    )
+    medications, vn_dictionary_metadata = _normalize_medications_with_vn_dictionary(
+        normalizer_inputs
+    )
+    vn_dictionary_metadata["clinical_span_augmentation"] = clinical_span_augmentation
     allergies = _normalize_text_list(payload.get("allergies"))
     labs = payload.get("labs")
 
@@ -1664,6 +1720,9 @@ def run_careguard_analyze(payload: dict) -> dict:
                 "normalized_medication_count": len(medications),
                 "raw_medication_count": len(raw_medications),
                 "normalized_inputs": vn_dictionary_metadata["normalized_inputs"],
+                "clinical_span_augmentation": vn_dictionary_metadata.get(
+                    "clinical_span_augmentation", {"state": "disabled", "added_candidate_count": 0}
+                ),
                 "source_used": source_used,
                 "source_errors": source_errors,
                 "drugbank": {
