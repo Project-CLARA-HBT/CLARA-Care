@@ -35,6 +35,13 @@ from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.ocr_correction import OcrCorrectionResult, correct_ocr_text
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
+from clara_api.core.upload_safety import (
+    UploadMalwareScannerUnavailable,
+    UploadSafetyError,
+    VerifiedUpload,
+    read_upload_bytes_with_limit,
+    verify_upload,
+)
 from clara_api.db.models import (
     LifeMapCaptureCandidate,
     LifeMapCaptureReviewAction,
@@ -1635,6 +1642,42 @@ def _scan_with_tgc_ocr(
     raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=last_error)
 
 
+def _verify_careguard_ocr_upload(
+    *, file_name: str, content_type: str, file_bytes: bytes
+) -> VerifiedUpload:
+    """Fail closed before a medication image leaves the API boundary.
+
+    Cabinet OCR historically called its providers immediately after a byte-size
+    check. That accepted a client-claimed MIME type and bypassed the shared
+    malware policy used by PHR and Research uploads. The OCR provider must only
+    receive a file whose bytes, filename and declared media type agree; when a
+    configured malware scanner cannot return a clean verdict, no provider call
+    is made.
+    """
+
+    settings = get_settings()
+    try:
+        return verify_upload(
+            filename=file_name,
+            content_type=content_type,
+            data=file_bytes,
+            fallback_filename="medication-label",
+            malware_scan_required=settings.upload_malware_scan_required,
+            clamav_host=settings.upload_malware_clamav_host,
+            clamav_port=settings.upload_malware_clamav_port,
+        )
+    except UploadMalwareScannerUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Không thể kiểm tra an toàn tệp lúc này. Vui lòng thử lại sau.",
+        ) from exc
+    except UploadSafetyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Tệp tải lên không khớp định dạng được phép.",
+        ) from exc
+
+
 @router.get("/cabinet", response_model=MedicineCabinetResponse)
 def get_cabinet(
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
@@ -2125,14 +2168,16 @@ async def scan_cabinet_file(
     user = _require_user(token, db)
     file_name = file.filename or "uploaded-receipt"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await file.read()
+    file_bytes = await read_upload_bytes_with_limit(file, max_bytes=20 * 1024 * 1024)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
-    if len(file_bytes) > 20 * 1024 * 1024:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="File vượt quá 20MB",
-        )
+    verified_upload = _verify_careguard_ocr_upload(
+        file_name=file_name,
+        content_type=content_type,
+        file_bytes=file_bytes,
+    )
+    file_name = verified_upload.filename
+    content_type = verified_upload.media_type
 
     extracted_text, used_endpoint, ocr_provider = _scan_with_tgc_ocr(
         file_bytes=file_bytes,

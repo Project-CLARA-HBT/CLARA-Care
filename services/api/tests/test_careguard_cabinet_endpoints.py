@@ -12,6 +12,9 @@ from clara_api.main import app
 client = TestClient(app)
 
 
+_JPEG_BYTES = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+
+
 def _login_without_consent(email: str) -> str:
     response = client.post("/api/v1/auth/login", json={"email": email, "password": "secret123"})
     assert response.status_code == 200
@@ -404,7 +407,7 @@ def test_scan_file_uses_tgc_ocr(monkeypatch) -> None:
     response = client.post(
         "/api/v1/careguard/cabinet/scan-file",
         headers={"Authorization": f"Bearer {token}"},
-        files={"file": ("receipt.jpg", b"fake-image-data", "image/jpeg")},
+        files={"file": ("receipt.jpg", _JPEG_BYTES, "image/jpeg")},
     )
     assert response.status_code == 200
     payload = response.json()
@@ -449,7 +452,7 @@ def test_scan_file_tgc_ocr_fallbacks_multipart_field(monkeypatch) -> None:
     response = client.post(
         "/api/v1/careguard/cabinet/scan-file",
         headers={"Authorization": f"Bearer {token}"},
-        files={"file": ("receipt.jpg", b"fake-image-data", "image/jpeg")},
+        files={"file": ("receipt.jpg", _JPEG_BYTES, "image/jpeg")},
     )
     assert response.status_code == 200
     payload = response.json()
@@ -458,6 +461,50 @@ def test_scan_file_tgc_ocr_fallbacks_multipart_field(monkeypatch) -> None:
     assert "file" in fields_seen
     assert "image" in fields_seen
     assert json_calls == 0
+
+
+def test_scan_file_rejects_mismatched_upload_before_ocr_provider(monkeypatch) -> None:
+    token = _login("scan-file-safety-type@example.com")
+
+    def _ocr_must_not_run(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("unsafe upload must not reach the OCR provider")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.careguard._scan_with_tgc_ocr",
+        _ocr_must_not_run,
+    )
+
+    response = client.post(
+        "/api/v1/careguard/cabinet/scan-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("medication.jpg", b"not actually a jpeg", "image/jpeg")},
+    )
+
+    assert response.status_code == 415
+    assert "định dạng được phép" in response.json()["detail"]
+
+
+def test_scan_file_fails_closed_when_required_malware_scan_is_unavailable(monkeypatch) -> None:
+    token = _login("scan-file-safety-malware@example.com")
+    monkeypatch.setattr(get_settings(), "upload_malware_scan_required", True)
+    monkeypatch.setattr(get_settings(), "upload_malware_clamav_host", "")
+
+    def _ocr_must_not_run(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("unscanned upload must not reach the OCR provider")
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.careguard._scan_with_tgc_ocr",
+        _ocr_must_not_run,
+    )
+
+    response = client.post(
+        "/api/v1/careguard/cabinet/scan-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("medication.jpg", _JPEG_BYTES, "image/jpeg")},
+    )
+
+    assert response.status_code == 503
+    assert "kiểm tra an toàn tệp" in response.json()["detail"]
 
 
 def test_vn_dictionary_requires_doctor_role() -> None:
