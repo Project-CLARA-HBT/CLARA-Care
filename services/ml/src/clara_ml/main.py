@@ -31,7 +31,12 @@ from clara_ml.factcheck import run_fides_lite
 from clara_ml.lifemap.capture_extraction import extract_capture_text_validated
 from clara_ml.lifemap.visit_extraction import extract_visit_instructions
 from clara_ml.llm.deepseek_client import DeepSeekClient
-from clara_ml.llm.model_registry import ModelTask, build_task_client
+from clara_ml.llm.model_registry import (
+    ModelTask,
+    build_asr_task_client,
+    build_task_client,
+    resolve_asr_model_selection,
+)
 from clara_ml.medical_answer_v2 import build_medical_answer_v2
 from clara_ml.medical_harness import postprocess_stages, preflight_harness
 from clara_ml.model_router import (
@@ -214,17 +219,21 @@ def _build_scribe_audio_client() -> DeepSeekClient:
     contract instead of inheriting the shorter generic LLM timeout.
     """
 
-    client, _selection = build_task_client(
-        ModelTask.SCRIBE_TRANSCRIPTION,
+    client, _selection = build_asr_task_client(
         settings,
         timeout_seconds=max(
             float(settings.deepseek_timeout_seconds),
             float(settings.scribe_asr_timeout_seconds),
         ),
         retries_per_base=0,
-        audio=True,
     )
     return client
+
+
+def _resolve_scribe_audio_model() -> str:
+    """Return the registry-owned ASR payload model for the batch route."""
+
+    return resolve_asr_model_selection(settings).model
 
 
 def _now_iso() -> str:
@@ -2010,12 +2019,14 @@ async def scribe_transcribe(
         started_at = perf_counter()
         # ``DeepSeekClient`` uses blocking HTTP.  Keep the ML event loop
         # responsive while CPU Whisper performs a potentially long decode.
+        audio_client = _build_scribe_audio_client()
+        audio_model = _resolve_scribe_audio_model()
         transcript_text = await run_in_threadpool(
-            _build_scribe_audio_client().transcribe_audio,
+            audio_client.transcribe_audio,
             audio_bytes=audio_bytes,
             filename=audio_file.filename or "scribe-audio.webm",
             content_type=audio_content_type,
-            model=settings.deepseek_audio_model,
+            model=audio_model,
             language=resolved_language,
             prompt=resolved_prompt,
         )
@@ -2049,7 +2060,7 @@ async def scribe_transcribe(
         "text": transcript_text,
         "no_speech_detected": no_speech_detected,
         "language": resolved_language or "",
-        "model_used": settings.deepseek_audio_model,
+        "model_used": audio_model,
         "chunk_index": chunk_index,
         "session_id": session_id,
         "processing_ms": round(processing_ms, 3),

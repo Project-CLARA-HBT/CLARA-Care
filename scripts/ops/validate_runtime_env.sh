@@ -80,6 +80,7 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
   must_set_non_empty "DEEPSEEK_MODEL"
   must_set_non_empty "DEEPSEEK_PRO_MODEL"
   must_set_non_empty "DEEPSEEK_FLASH_MODEL"
+  must_set_non_empty "DEEPSEEK_AUDIO_MODEL"
   must_set_non_empty "DEEPSEEK_TIMEOUT_SECONDS"
   must_set_non_empty "ML_SERVICE_TIMEOUT_SECONDS"
   if [[ "${ENV_VALUES[DEEPSEEK_MODEL]:-}" != "${ENV_VALUES[DEEPSEEK_PRO_MODEL]:-}" ]]; then

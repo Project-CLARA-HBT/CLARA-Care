@@ -14,9 +14,11 @@ from clara_ml.llm.model_registry import (
     TASK_CONTRACTS,
     TASK_CONTRACT_SCHEMA_VERSION,
     ModelTask,
+    build_asr_task_client,
     build_task_client,
     load_task_contracts,
     resolve_encoder_shadow_selection,
+    resolve_asr_model_selection,
     resolve_model_selection,
 )
 
@@ -40,6 +42,7 @@ def _settings(**overrides: object) -> SimpleNamespace:
         "llm_global_min_interval_seconds": 0.4,
         "llm_global_jitter_seconds": 0.15,
         "deepseek_audio_base_url": "https://audio.example.invalid/v1",
+        "deepseek_audio_model": "whisper-1",
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -163,6 +166,26 @@ def test_task_client_uses_selected_rollback_and_keeps_audio_endpoint_scoped() ->
     assert client._timeout_seconds == 90.0
     assert client._retries_per_base == 0
     assert client._audio_base_urls == ["https://audio.example.invalid/v1"]
+
+
+def test_asr_payload_model_is_registry_owned_and_not_a_v4_text_route() -> None:
+    client, selection = build_asr_task_client(
+        _settings(),
+        timeout_seconds=90.0,
+        retries_per_base=0,
+    )
+
+    assert selection.task is ModelTask.SCRIBE_TRANSCRIPTION
+    assert selection.provider == "deepseek_audio"
+    assert selection.model == "whisper-1"
+    assert selection.model_version == "whisper-1.audio.v1"
+    assert client.model == selection.model
+    assert client._audio_base_urls == ["https://audio.example.invalid/v1"]
+
+
+def test_asr_selection_fails_closed_when_audio_model_is_missing() -> None:
+    with pytest.raises(ValueError, match="deepseek_audio_model_required"):
+        resolve_asr_model_selection(_settings(deepseek_audio_model=""))
 
 
 def test_model_selection_telemetry_excludes_connection_values(

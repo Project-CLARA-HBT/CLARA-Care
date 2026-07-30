@@ -6,7 +6,7 @@ from typing import Any
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
-from clara_ml.llm.model_registry import ModelTask, build_task_client
+from clara_ml.llm.model_registry import ModelTask, build_asr_task_client, build_task_client
 
 #: Sentinel ``model_used`` value for the degraded heuristic extraction path.
 _HEURISTIC_FALLBACK_MODEL = "heuristic-fallback-v1"
@@ -438,11 +438,19 @@ def run_council_intake(
         if client is None:
             raise RuntimeError("Governed Council intake model is unavailable for audio transcription")
         try:
-            transcript_text = client.transcribe_audio(
+            audio_client, audio_selection = build_asr_task_client(
+                settings,
+                timeout_seconds=max(
+                    float(settings.deepseek_timeout_seconds),
+                    float(settings.scribe_asr_timeout_seconds),
+                ),
+                retries_per_base=0,
+            )
+            transcript_text = audio_client.transcribe_audio(
                 audio_bytes=audio_bytes,
                 filename=audio_filename,
                 content_type=audio_content_type,
-                model=settings.deepseek_audio_model,
+                model=audio_selection.model,
                 language=settings.deepseek_audio_language,
                 prompt="Medical interview in Vietnamese. Return complete transcript.",
             )

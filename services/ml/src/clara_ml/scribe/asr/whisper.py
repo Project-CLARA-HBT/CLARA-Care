@@ -12,7 +12,7 @@ import logging
 from collections.abc import Iterable, Iterator
 
 from clara_ml.config import settings
-from clara_ml.llm.model_registry import ModelTask, build_task_client
+from clara_ml.llm.model_registry import build_asr_task_client, resolve_asr_model_selection
 from clara_ml.scribe.asr.base import AsrEvent, AsrResult, AsrSegment
 
 logger = logging.getLogger(__name__)
@@ -35,15 +35,13 @@ class WhisperDeepSeekAsr:
         # Local CPU Whisper can legitimately take longer than a text LLM
         # request. Give it one bounded attempt; retrying the same audio while
         # the first decode still consumes CPU creates a timeout storm.
-        client, _ = build_task_client(
-            ModelTask.SCRIBE_TRANSCRIPTION,
+        client, _ = build_asr_task_client(
             settings,
             timeout_seconds=max(
                 float(settings.deepseek_timeout_seconds),
                 float(settings.scribe_asr_timeout_seconds),
             ),
             retries_per_base=0,
-            audio=True,
         )
         return client
 
@@ -54,11 +52,15 @@ class WhisperDeepSeekAsr:
         if not audio:
             return AsrResult(segments=[], language=lang, provider=self.name, degraded_count=0)
         try:
-            text = self._build_client().transcribe_audio(
+            client = self._build_client()
+            # Audio model selection is registry-owned and intentionally
+            # distinct from V4 Pro/Flash text task routing.
+            selection = resolve_asr_model_selection(settings)
+            text = client.transcribe_audio(
                 audio_bytes=audio,
                 filename="scribe-audio.webm",
                 content_type=content_type or "application/octet-stream",
-                model=settings.deepseek_audio_model,
+                model=selection.model,
                 language=lang or None,
                 prompt=(
                     "Medical consultation audio in Vietnamese. Keep English drug/procedure "

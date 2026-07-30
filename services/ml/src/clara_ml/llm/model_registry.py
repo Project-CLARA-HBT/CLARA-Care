@@ -97,6 +97,25 @@ class EncoderShadowSelection:
     contract_schema_version: str = ""
 
 
+@dataclass(frozen=True)
+class AsrModelSelection:
+    """Deployment-owned selection for the audio transcription endpoint.
+
+    Audio transcription is intentionally separate from the V4 Pro/Flash text
+    route.  Treating Whisper (or another ASR model) as a Flash text model makes
+    observability and rollback deceptive.  This narrow selection is only for
+    ``SCRIBE_TRANSCRIPTION`` and never accepts request-owned provider/model
+    inputs.
+    """
+
+    task: ModelTask
+    provider: str
+    model: str
+    model_version: str
+    prompt_version: str
+    contract_schema_version: str
+
+
 TASK_CONTRACTS_PATH = (
     Path(__file__).resolve().parents[3] / "config" / "task_contracts" / "contracts.json"
 )
@@ -385,6 +404,38 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
     )
 
 
+def resolve_asr_model_selection(settings: Any) -> AsrModelSelection:
+    """Resolve the sole DeepSeek-compatible ASR payload model.
+
+    The audio model remains operator-configured because audio endpoints do not
+    accept V4 text-model identifiers.  The choice is nevertheless registry
+    governed, contract-scoped and emitted without endpoint, credentials or
+    transcript content.  An empty audio model fails closed before an upstream
+    request is made.
+    """
+
+    task = ModelTask.SCRIBE_TRANSCRIPTION
+    contract = task_contract(task)
+    model = _text(settings, "deepseek_audio_model")
+    if not model:
+        raise ValueError("deepseek_audio_model_required")
+    selection = AsrModelSelection(
+        task=task,
+        provider="deepseek_audio",
+        model=model,
+        model_version=f"{model}.audio.v1",
+        prompt_version=contract.prompt_version,
+        contract_schema_version=TASK_CONTRACT_SCHEMA_VERSION,
+    )
+    logger.info(
+        "asr_model_selected task=%s provider=%s version=%s",
+        selection.task.value,
+        selection.provider,
+        selection.model_version,
+    )
+    return selection
+
+
 def build_task_client(
     task: ModelTask,
     settings: Any,
@@ -433,5 +484,44 @@ def build_task_client(
         min_interval_seconds=float(getattr(settings, "llm_global_min_interval_seconds", 0.4)),
         request_jitter_seconds=float(getattr(settings, "llm_global_jitter_seconds", 0.15)),
         audio_base_url=_text(settings, "deepseek_audio_base_url") if audio else "",
+    )
+    return client, selection
+
+
+def build_asr_task_client(
+    settings: Any,
+    *,
+    timeout_seconds: float | None = None,
+    retries_per_base: int | None = None,
+) -> tuple[DeepSeekClient, AsrModelSelection]:
+    """Build the governed client for ``audio/transcriptions`` only.
+
+    It intentionally has no text-model fallback: retrying an audio request on
+    V4 Pro/Flash would be an invalid provider request and could make the model
+    disclosure misleading.  Text extraction after transcription must build its
+    own task client through :func:`build_task_client`.
+    """
+
+    selection = resolve_asr_model_selection(settings)
+    client = DeepSeekClient(
+        api_key=_text(settings, "deepseek_api_key"),
+        base_url=_text(settings, "deepseek_base_url"),
+        model=selection.model,
+        fallback_model="",
+        timeout_seconds=(
+            float(timeout_seconds)
+            if timeout_seconds is not None
+            else float(getattr(settings, "deepseek_timeout_seconds", 45.0))
+        ),
+        retries_per_base=(
+            int(retries_per_base)
+            if retries_per_base is not None
+            else int(getattr(settings, "deepseek_retries_per_base", 0))
+        ),
+        retry_backoff_seconds=float(getattr(settings, "deepseek_retry_backoff_seconds", 0.25)),
+        max_concurrency=int(getattr(settings, "llm_global_max_concurrency", 2)),
+        min_interval_seconds=float(getattr(settings, "llm_global_min_interval_seconds", 0.4)),
+        request_jitter_seconds=float(getattr(settings, "llm_global_jitter_seconds", 0.15)),
+        audio_base_url=_text(settings, "deepseek_audio_base_url"),
     )
     return client, selection
