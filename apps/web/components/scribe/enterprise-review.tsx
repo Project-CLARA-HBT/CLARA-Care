@@ -66,7 +66,7 @@ import {
   type GroundingStatus,
   type ScribeStageStatus,
 } from "@/lib/scribe-review";
-import { t } from "@/lib/i18n/catalog";
+import { formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
 
@@ -1337,6 +1337,7 @@ function renderNoteColumn(props: {
         ) : null}
 
         {renderGroundingPanel({
+          language: props.language,
           grounding: props.grounding,
           segments: props.transcriptSegments,
           expandedStatement: props.expandedStatement,
@@ -1404,6 +1405,12 @@ function templateLabel(language: UILanguage, templateId: string, fallback: strin
   }
 }
 
+function groundingStatusLabel(language: UILanguage, status: GroundingStatus): string {
+  return status === "grounded"
+    ? t(language, "scribe.enterprise.grounding.status.grounded")
+    : t(language, "scribe.enterprise.grounding.status.unverified");
+}
+
 // ---------------------------------------------------------------------------
 // Grounding panel (Requirement 12.7) — per-statement grounded/unverified chips
 // with transcript-span drill-down + an unverified-candidate review panel. The
@@ -1412,11 +1419,13 @@ function templateLabel(language: UILanguage, templateId: string, fallback: strin
 // ---------------------------------------------------------------------------
 
 function renderGroundingPanel({
+  language,
   grounding,
   segments,
   expandedStatement,
   onToggleStatement,
 }: {
+  language: UILanguage;
   grounding: ScribeGroundingReport | null;
   segments: ScribeStreamSegment[];
   expandedStatement: string | null;
@@ -1431,16 +1440,21 @@ function renderGroundingPanel({
   return (
     <div className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800" data-testid="scribe-grounding">
       <div className="flex items-center justify-between gap-2">
-        <h4 className={sectionTitleClass}>Đối chiếu bản ghi</h4>
+        <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.grounding.title")}</h4>
         <span
           className="rounded-full border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100"
           data-testid="scribe-grounding-rate"
         >
-          {formatGroundedClaimRate(grounding.grounded_claim_rate)} có dẫn chứng
+          {t(language, "scribe.enterprise.grounding.rate", {
+            rate: formatGroundedClaimRate(grounding.grounded_claim_rate),
+          })}
         </span>
       </div>
       <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
-        {grounded.length} câu có dẫn chứng · {unverified.length} câu chưa xác minh
+        {t(language, "scribe.enterprise.grounding.summary", {
+          grounded: formatLocaleNumber(language, grounded.length),
+          unverified: formatLocaleNumber(language, unverified.length),
+        })}
       </p>
 
       {significant.length > 0 ? (
@@ -1463,21 +1477,30 @@ function renderGroundingPanel({
                   onClick={() => onToggleStatement(key)}
                   className="flex w-full items-start gap-2 text-left"
                   aria-expanded={open}
+                  aria-label={t(
+                    language,
+                    open
+                      ? "scribe.enterprise.grounding.collapseStatement"
+                      : "scribe.enterprise.grounding.expandStatement",
+                    { statement: statement.statement },
+                  )}
                 >
                   <span className="mt-0.5 shrink-0 rounded-full border border-current px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em]">
-                    {chip.label}
+                    {groundingStatusLabel(language, chip.status)}
                   </span>
                   <span className={`flex-1 text-sm leading-5 ${bodyTextClass}`}>
                     {statement.statement}
                     {chip.critical ? (
                       <span className="ml-1 text-[10px] font-black uppercase text-rose-600 dark:text-rose-300">
-                        · an toàn
+                        · {t(language, "scribe.enterprise.grounding.critical")}
                       </span>
                     ) : null}
                   </span>
                   <span className={`mt-0.5 text-[10px] font-bold ${mutedTextClass}`}>
                     {statement.supporting_span_ids.length > 0
-                      ? `${statement.supporting_span_ids.length} đoạn`
+                      ? t(language, "scribe.enterprise.grounding.spanCount", {
+                          count: formatLocaleNumber(language, statement.supporting_span_ids.length),
+                        })
                       : open
                         ? "▲"
                         : "▾"}
@@ -1487,7 +1510,7 @@ function renderGroundingPanel({
                   <div className="mt-2 space-y-1" data-testid="scribe-grounding-spans">
                     {spans.length === 0 ? (
                       <p className={`text-[11px] italic ${mutedTextClass}`}>
-                        Không có đoạn bản ghi nào hỗ trợ câu này.
+                        {t(language, "scribe.enterprise.grounding.noSupportingSpans")}
                       </p>
                     ) : (
                       spans.map((span, spanIndex) => (
@@ -1497,10 +1520,12 @@ function renderGroundingPanel({
                         >
                           <p className={`text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
                             {span.spanId}
-                            {span.resolved ? ` · ${speakerChip(span.speaker).label}` : " · chưa khớp"}
+                            {span.resolved
+                              ? ` · ${speakerLabel(language, span.speaker)}`
+                              : ` · ${t(language, "scribe.enterprise.grounding.unresolved")}`}
                           </p>
                           <p className={`text-sm leading-5 ${secondaryTextClass}`}>
-                            {span.text || "(không tìm thấy nội dung)"}
+                            {span.text || t(language, "scribe.enterprise.grounding.noContent")}
                           </p>
                         </div>
                       ))
@@ -1519,11 +1544,12 @@ function renderGroundingPanel({
           data-testid="scribe-unverified-candidates"
         >
           <h5 className="text-[11px] font-black uppercase tracking-[0.14em] text-rose-700 dark:text-rose-200">
-            Cần bác sĩ xác nhận ({candidates.length})
+            {t(language, "scribe.enterprise.grounding.candidatesTitle", {
+              count: formatLocaleNumber(language, candidates.length),
+            })}
           </h5>
           <p className={`mt-1 text-[11px] leading-4 ${secondaryTextClass}`}>
-            Các phát biểu an toàn quan trọng dưới đây không có dẫn chứng trong bản ghi nên không được
-            khẳng định trong ghi chú.
+            {t(language, "scribe.enterprise.grounding.candidatesDescription")}
           </p>
           <ul className="mt-2 space-y-1">
             {candidates.map((candidate, index) => (
