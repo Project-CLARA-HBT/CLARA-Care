@@ -234,6 +234,7 @@ jobs:
           test -f "${output}/dataset-manifest.json"
           test -f "${output}/retrieval-snapshot.json"
           test -f "${output}/latency-cost.json"
+          test -f "${output}/confidence-intervals.json"
 
       - name: Publish active eval stage status
         if: ${{ always() && steps.guard.outputs.should_run == 'true' }}

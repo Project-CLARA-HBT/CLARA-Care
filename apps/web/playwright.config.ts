@@ -31,7 +31,10 @@ export default defineConfig({
       "npm run build && cp -R public .next/standalone/ && mkdir -p .next/standalone/.next && cp -R .next/static .next/standalone/.next/ && HOSTNAME=127.0.0.1 PORT=3000 node .next/standalone/server.js",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    // The optimized production build is deliberately used for E2E. It can
+    // exceed two minutes on a one-CPU CI runner, so retain a bounded five
+    // minute startup window rather than reporting a false application failure.
+    timeout: 300_000,
     env: {
       ...process.env,
       AUTH_BYPASS: "true",
