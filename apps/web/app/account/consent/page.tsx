@@ -18,6 +18,11 @@ import {
   onUILanguageChange,
   type UILanguage,
 } from "@/lib/ui-language";
+import {
+  formatLocaleDate,
+  t,
+  type UITranslationKey,
+} from "@/lib/i18n/catalog";
 
 /**
  * Consent Center (regulatory-compliance Requirement 2.6, Property P10; PHR
@@ -37,8 +42,8 @@ import {
  */
 
 type PurposeCopy = {
-  label: Record<UILanguage, string>;
-  desc: Record<UILanguage, string>;
+  label: UITranslationKey;
+  description: UITranslationKey;
   /** Core service consent is the lawful basis for the product and is locked on. */
   locked?: boolean;
 };
@@ -53,91 +58,31 @@ const PURPOSE_ORDER: ConsentPurpose[] = [
 
 const PURPOSE_COPY: Record<ConsentPurpose, PurposeCopy> = {
   core_service: {
-    label: { vi: "Dịch vụ cốt lõi", en: "Core service" },
-    desc: {
-      vi: "Xử lý cần thiết để cung cấp chức năng cốt lõi của CLARA. Đây là căn cứ pháp lý của dịch vụ và không thể tắt khi đang dùng.",
-      en: "Processing necessary to provide CLARA's core functionality. This is the lawful basis for the service and cannot be turned off while in use.",
-    },
+    label: "consent.purpose.coreService.label",
+    description: "consent.purpose.coreService.description",
     locked: true,
   },
   personalization: {
-    label: { vi: "Cá nhân hóa", en: "Personalization" },
-    desc: {
-      vi: "Dùng hồ sơ sức khỏe cá nhân (PHR), tủ thuốc và dị ứng của bạn để cá nhân hóa câu trả lời và kiểm tra tương tác thuốc.",
-      en: "Use your personal health record (PHR), medicine cabinet, and allergies to personalize answers and interaction checks.",
-    },
+    label: "consent.purpose.personalization.label",
+    description: "consent.purpose.personalization.description",
   },
   research: {
-    label: { vi: "Nghiên cứu", en: "Research use" },
-    desc: {
-      vi: "Cho phép dùng dữ liệu đã khử định danh để cải thiện chất lượng truy xuất và kiểm chứng bằng chứng.",
-      en: "Allow de-identified data to be used to improve retrieval quality and evidence verification.",
-    },
+    label: "consent.purpose.research.label",
+    description: "consent.purpose.research.description",
   },
   cross_border_processing: {
-    label: {
-      vi: "Xử lý bởi mô hình bên thứ ba / xuyên biên giới",
-      en: "Third-party / cross-border model processing",
-    },
-    desc: {
-      vi: "Cho phép gửi dữ liệu cần thiết tới mô hình ngôn ngữ ngoài lãnh thổ Việt Nam. Khi tắt, hệ thống dùng đường xử lý nội địa hoặc trả lời dự phòng nội bộ.",
-      en: "Allow necessary data to be sent to a language model outside Vietnam. When off, the system uses an in-country path or a local fallback answer.",
-    },
+    label: "consent.purpose.crossBorder.label",
+    description: "consent.purpose.crossBorder.description",
   },
   sharing: {
-    label: { vi: "Chia sẻ", en: "Sharing" },
-    desc: {
-      vi: "Cho phép tạo liên kết chia sẻ chỉ đọc cho hồ sơ và cuộc trò chuyện của bạn (ví dụ chia sẻ PHR với người chăm sóc hoặc bác sĩ).",
-      en: "Allow creating read-only share links for your records and conversations (e.g. sharing your PHR with a caregiver or clinician).",
-    },
+    label: "consent.purpose.sharing.label",
+    description: "consent.purpose.sharing.description",
   },
   ai_transparency: {
-    label: { vi: "Minh bạch AI", en: "AI transparency" },
-    desc: {
-      vi: "Xác nhận thông báo minh bạch về hệ thống AI.",
-      en: "Acknowledgement of the AI system transparency notice.",
-    },
+    label: "consent.purpose.aiTransparency.label",
+    description: "consent.purpose.aiTransparency.description",
   },
 };
-
-const COPY = {
-  vi: {
-    title: "Trung tâm đồng thuận",
-    description:
-      "Cấp hoặc rút đồng thuận cho từng mục đích xử lý dữ liệu cá nhân của bạn. Rút đồng thuận dễ dàng như khi cấp.",
-    loading: "Đang tải trạng thái đồng thuận...",
-    loadError: "Không thể tải trạng thái đồng thuận. Vui lòng thử lại.",
-    disabled:
-      "Tính năng quản lý đồng thuận theo mục đích hiện chưa được bật cho môi trường này.",
-    granted: "Đã đồng ý",
-    notGranted: "Chưa đồng ý",
-    locked: "Bắt buộc",
-    enableAction: "Bật",
-    disableAction: "Tắt",
-    saving: "Đang lưu...",
-    sensitiveNote:
-      "Dữ liệu sức khỏe, truy vấn lâm sàng, PHR, tủ thuốc, dị ứng và bệnh nền được coi là dữ liệu cá nhân nhạy cảm theo Nghị định 13/2023/NĐ-CP và chỉ được xử lý theo đồng thuận của bạn.",
-    updatedAt: "Cập nhật",
-  },
-  en: {
-    title: "Consent Center",
-    description:
-      "Grant or withdraw consent for each purpose your personal data is processed for. Withdrawal is as easy as granting.",
-    loading: "Loading consent status...",
-    loadError: "Could not load consent status. Please try again.",
-    disabled:
-      "Purpose-based consent management is not enabled for this environment yet.",
-    granted: "Granted",
-    notGranted: "Not granted",
-    locked: "Required",
-    enableAction: "Enable",
-    disableAction: "Disable",
-    saving: "Saving...",
-    sensitiveNote:
-      "Health data, clinical queries, PHR, medicine cabinet, allergies, and conditions are treated as sensitive personal data under Decree 13/2023/NĐ-CP and are processed only per your consent.",
-    updatedAt: "Updated",
-  },
-} as const;
 
 export default function ConsentCenterPage() {
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
@@ -147,7 +92,22 @@ export default function ConsentCenterPage() {
   const [pending, setPending] = useState<ConsentPurpose | null>(null);
   const [consentMap, setConsentMap] = useState<Record<string, ConsentRecord>>({});
 
-  const text = useMemo(() => COPY[uiLanguage], [uiLanguage]);
+  const text = useMemo(
+    () => ({
+      title: t(uiLanguage, "consent.title"),
+      description: t(uiLanguage, "consent.description"),
+      loading: t(uiLanguage, "consent.loading"),
+      loadError: t(uiLanguage, "consent.loadError"),
+      disabled: t(uiLanguage, "consent.disabled"),
+      granted: t(uiLanguage, "consent.granted"),
+      notGranted: t(uiLanguage, "consent.notGranted"),
+      locked: t(uiLanguage, "consent.locked"),
+      saving: t(uiLanguage, "consent.saving"),
+      sensitiveNote: t(uiLanguage, "consent.sensitiveNote"),
+      updatedAt: t(uiLanguage, "consent.updatedAt"),
+    }),
+    [uiLanguage],
+  );
   const flagOn = isGranularConsentEnabled();
 
   useEffect(() => {
@@ -240,15 +200,18 @@ export default function ConsentCenterPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-[var(--text-primary)]">
-                          {copy.label[uiLanguage]}
+                          {t(uiLanguage, copy.label)}
                         </p>
                         <p className="mt-1 text-[13px] leading-6 text-[var(--text-secondary)]">
-                          {copy.desc[uiLanguage]}
+                          {t(uiLanguage, copy.description)}
                         </p>
                         {record?.updated_at ? (
                           <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                             {text.updatedAt}:{" "}
-                            {new Date(record.updated_at).toLocaleString()}
+                            {formatLocaleDate(uiLanguage, record.updated_at, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
                           </p>
                         ) : null}
                       </div>
@@ -265,7 +228,7 @@ export default function ConsentCenterPage() {
                             type="button"
                             role="switch"
                             aria-checked={granted}
-                            aria-label={copy.label[uiLanguage]}
+                            aria-label={t(uiLanguage, copy.label)}
                             disabled={isPending}
                             onClick={() => void onToggle(purpose, !granted)}
                             className={[
