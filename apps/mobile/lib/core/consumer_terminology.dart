@@ -346,6 +346,56 @@ enum ConsumerTerm {
   livingEvidenceEveryWeek,
   livingEvidenceEveryThirtyDays,
   livingEvidenceStopFollowing,
+  // Community wording is mobile-local static UI copy. It never translates
+  // member posts, moderation results, or any health/PHR data from the API.
+  socialSessionExpired,
+  socialLoadFailed,
+  socialNoCommunities,
+  socialConsentTitle,
+  socialConsentDescription,
+  socialConsentAgree,
+  socialLater,
+  socialTitle,
+  socialProfileTooltip,
+  socialPost,
+  socialConsentCardSemanticLabel,
+  socialConsentCardTitle,
+  socialConsentCardDescription,
+  socialJoin,
+  socialCommunities,
+  socialFeed,
+  socialEmptyFeed,
+  socialReactionSent,
+  socialReactionHelpful,
+  socialAnonymous,
+  socialDisclaimer,
+  socialMembers,
+  socialJoined,
+  socialUnavailableTitle,
+  socialUnavailableDescription,
+  socialComposeTitle,
+  socialCommunityLabel,
+  socialPostTitleLabel,
+  socialPostBodyLabel,
+  socialComposeRequired,
+  socialComments,
+  socialEmptyComments,
+  socialCommentLabel,
+  socialCommentJoinRequired,
+  socialModerationBlocked,
+  socialReportTitle,
+  socialReportDescription,
+  socialCancel,
+  socialReport,
+  socialReportSent,
+  socialClose,
+  socialProfileTitle,
+  socialDisplayNameLabel,
+  socialBioLabel,
+  socialSaveProfile,
+  socialProfileSaved,
+  socialDoctor,
+  socialResearcher,
 }
 
 extension ConsumerTermContractKey on ConsumerTerm {
@@ -821,8 +871,7 @@ class ConsumerTerminology {
     ConsumerTerm.livingEvidenceContextLabel:
         'Bối cảnh đã xác nhận (không bắt buộc)',
     ConsumerTerm.livingEvidenceCreateAndFollow: 'Xác nhận, tìm và theo dõi',
-    ConsumerTerm.livingEvidenceLoadFailed:
-        'Chưa thể tải theo dõi bằng chứng.',
+    ConsumerTerm.livingEvidenceLoadFailed: 'Chưa thể tải theo dõi bằng chứng.',
     ConsumerTerm.livingEvidenceRunIncomplete:
         'Lần tìm bằng chứng chưa hoàn tất; không có kết luận nào được phát hành.',
     ConsumerTerm.livingEvidenceCreateFailed:
@@ -841,6 +890,72 @@ class ConsumerTerminology {
     ConsumerTerm.livingEvidenceEveryWeek: 'Mỗi tuần',
     ConsumerTerm.livingEvidenceEveryThirtyDays: 'Mỗi 30 ngày',
     ConsumerTerm.livingEvidenceStopFollowing: 'Dừng theo dõi',
+    ConsumerTerm.socialSessionExpired:
+        'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+    ConsumerTerm.socialLoadFailed:
+        'Không thể tải cộng đồng lúc này. Vui lòng thử lại.',
+    ConsumerTerm.socialNoCommunities: 'Chưa có cộng đồng để đăng bài.',
+    ConsumerTerm.socialConsentTitle: 'Tham gia cộng đồng CLARA',
+    ConsumerTerm.socialConsentDescription:
+        'Cộng đồng là nơi chia sẻ kinh nghiệm và hỗ trợ nhau. Đây KHÔNG phải '
+            'tư vấn y tế: không kê đơn, chẩn đoán hay chỉ định liều dùng. Nội '
+            'dung được kiểm duyệt để giữ an toàn. Bạn đồng ý quy tắc ứng xử và '
+            'quyền riêng tư của cộng đồng?',
+    ConsumerTerm.socialConsentAgree: 'Tôi đồng ý tham gia',
+    ConsumerTerm.socialLater: 'Để sau',
+    ConsumerTerm.socialTitle: 'Cộng đồng',
+    ConsumerTerm.socialProfileTooltip: 'Hồ sơ cộng đồng',
+    ConsumerTerm.socialPost: 'Đăng bài',
+    ConsumerTerm.socialConsentCardSemanticLabel: 'Tham gia cộng đồng',
+    ConsumerTerm.socialConsentCardTitle: 'Tham gia để đăng bài & bình luận',
+    ConsumerTerm.socialConsentCardDescription:
+        'Bạn vẫn có thể đọc bài. Đồng ý quy tắc cộng đồng để tham gia chia sẻ.',
+    ConsumerTerm.socialJoin: 'Tham gia',
+    ConsumerTerm.socialCommunities: 'Cộng đồng',
+    ConsumerTerm.socialFeed: 'Bảng tin',
+    ConsumerTerm.socialEmptyFeed:
+        'Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ.',
+    ConsumerTerm.socialReactionSent: 'Đã gửi phản hồi hữu ích.',
+    ConsumerTerm.socialReactionHelpful: 'Hữu ích',
+    ConsumerTerm.socialAnonymous: 'ẩn danh',
+    ConsumerTerm.socialDisclaimer:
+        'Cộng đồng là nơi hỗ trợ ngang hàng, không thay thế tư vấn của bác sĩ. '
+            'Nội dung kê đơn/chẩn đoán/liều dùng cá nhân sẽ bị chặn.',
+    ConsumerTerm.socialMembers: '{count} thành viên',
+    ConsumerTerm.socialJoined: 'Đã tham gia',
+    ConsumerTerm.socialUnavailableTitle: 'Cộng đồng sắp ra mắt',
+    ConsumerTerm.socialUnavailableDescription:
+        'Tính năng cộng đồng sức khỏe đang được chuẩn bị và sẽ sớm mở.',
+    ConsumerTerm.socialComposeTitle: 'Chia sẻ với cộng đồng',
+    ConsumerTerm.socialCommunityLabel: 'Cộng đồng',
+    ConsumerTerm.socialPostTitleLabel: 'Tiêu đề',
+    ConsumerTerm.socialPostBodyLabel: 'Nội dung',
+    ConsumerTerm.socialComposeRequired:
+        'Vui lòng nhập tiêu đề, nội dung và chọn cộng đồng.',
+    ConsumerTerm.socialComments: 'Bình luận',
+    ConsumerTerm.socialEmptyComments:
+        'Chưa có bình luận. Hãy là người đầu tiên.',
+    ConsumerTerm.socialCommentLabel: 'Viết bình luận…',
+    ConsumerTerm.socialCommentJoinRequired: 'Tham gia cộng đồng để bình luận.',
+    ConsumerTerm.socialModerationBlocked:
+        'Bình luận không phù hợp quy tắc cộng đồng (không kê đơn/chẩn đoán/liều '
+            'dùng) hoặc có dấu hiệu khẩn cấp.',
+    ConsumerTerm.socialReportTitle: 'Báo cáo bài viết',
+    ConsumerTerm.socialReportDescription:
+        'Báo cáo nội dung vi phạm quy tắc cộng đồng (kê đơn/chẩn đoán/liều '
+            'dùng cá nhân, spam, hoặc không phù hợp). Đội ngũ kiểm duyệt sẽ xem xét.',
+    ConsumerTerm.socialCancel: 'Hủy',
+    ConsumerTerm.socialReport: 'Báo cáo',
+    ConsumerTerm.socialReportSent: 'Đã gửi báo cáo. Cảm ơn bạn.',
+    ConsumerTerm.socialClose: 'Đóng',
+    ConsumerTerm.socialProfileTitle: 'Hồ sơ cộng đồng',
+    ConsumerTerm.socialDisplayNameLabel: 'Tên hiển thị',
+    ConsumerTerm.socialBioLabel:
+        'Giới thiệu (không chia sẻ thông tin y tế cá nhân)',
+    ConsumerTerm.socialSaveProfile: 'Lưu hồ sơ',
+    ConsumerTerm.socialProfileSaved: 'Đã lưu hồ sơ cộng đồng.',
+    ConsumerTerm.socialDoctor: 'Bác sĩ',
+    ConsumerTerm.socialResearcher: 'Nhà nghiên cứu',
   };
 
   static const Map<ConsumerTerm, String> _enMessages = {
@@ -1247,8 +1362,7 @@ class ConsumerTerminology {
     ConsumerTerm.livingEvidenceNewQuestion: 'Create a question',
     ConsumerTerm.livingEvidenceJourneyLabel: 'LifeMap journey',
     ConsumerTerm.livingEvidenceQuestionLabel: 'What you want to know',
-    ConsumerTerm.livingEvidenceContextLabel:
-        'Confirmed context (optional)',
+    ConsumerTerm.livingEvidenceContextLabel: 'Confirmed context (optional)',
     ConsumerTerm.livingEvidenceCreateAndFollow: 'Confirm, search, and follow',
     ConsumerTerm.livingEvidenceLoadFailed:
         'We could not load evidence tracking.',
@@ -1271,5 +1385,72 @@ class ConsumerTerminology {
     ConsumerTerm.livingEvidenceEveryWeek: 'Every week',
     ConsumerTerm.livingEvidenceEveryThirtyDays: 'Every 30 days',
     ConsumerTerm.livingEvidenceStopFollowing: 'Stop following',
+    ConsumerTerm.socialSessionExpired:
+        'Your session has expired. Please sign in again.',
+    ConsumerTerm.socialLoadFailed:
+        'We could not load the community. Try again.',
+    ConsumerTerm.socialNoCommunities:
+        'There are no communities to post in yet.',
+    ConsumerTerm.socialConsentTitle: 'Join the CLARA community',
+    ConsumerTerm.socialConsentDescription:
+        'The community is a place to share experience and support one another. '
+            'It is NOT medical advice: no prescribing, diagnosis, or personal '
+            'dosage advice. Content is moderated for safety. Do you agree to the '
+            'community rules and privacy terms?',
+    ConsumerTerm.socialConsentAgree: 'I agree to join',
+    ConsumerTerm.socialLater: 'Not now',
+    ConsumerTerm.socialTitle: 'Community',
+    ConsumerTerm.socialProfileTooltip: 'Community profile',
+    ConsumerTerm.socialPost: 'Post',
+    ConsumerTerm.socialConsentCardSemanticLabel: 'Join the community',
+    ConsumerTerm.socialConsentCardTitle: 'Join to post and comment',
+    ConsumerTerm.socialConsentCardDescription:
+        'You can still read posts. Agree to the community rules to take part.',
+    ConsumerTerm.socialJoin: 'Join',
+    ConsumerTerm.socialCommunities: 'Communities',
+    ConsumerTerm.socialFeed: 'Feed',
+    ConsumerTerm.socialEmptyFeed: 'No posts yet. Be the first to share.',
+    ConsumerTerm.socialReactionSent: 'Your helpful reaction was sent.',
+    ConsumerTerm.socialReactionHelpful: 'Helpful',
+    ConsumerTerm.socialAnonymous: 'anonymous',
+    ConsumerTerm.socialDisclaimer:
+        'The community is for peer support and does not replace a doctor. '
+            'Personal prescribing, diagnosis, and dosage content is blocked.',
+    ConsumerTerm.socialMembers: '{count} members',
+    ConsumerTerm.socialJoined: 'Joined',
+    ConsumerTerm.socialUnavailableTitle: 'Community is coming soon',
+    ConsumerTerm.socialUnavailableDescription:
+        'The health community feature is being prepared and will open soon.',
+    ConsumerTerm.socialComposeTitle: 'Share with the community',
+    ConsumerTerm.socialCommunityLabel: 'Community',
+    ConsumerTerm.socialPostTitleLabel: 'Title',
+    ConsumerTerm.socialPostBodyLabel: 'Content',
+    ConsumerTerm.socialComposeRequired:
+        'Enter a title and content, then choose a community.',
+    ConsumerTerm.socialComments: 'Comments',
+    ConsumerTerm.socialEmptyComments:
+        'No comments yet. Be the first to comment.',
+    ConsumerTerm.socialCommentLabel: 'Write a comment…',
+    ConsumerTerm.socialCommentJoinRequired: 'Join the community to comment.',
+    ConsumerTerm.socialModerationBlocked:
+        'This comment does not follow the community rules (no prescribing, '
+            'diagnosis, or dosage advice), or it may show an emergency sign.',
+    ConsumerTerm.socialReportTitle: 'Report post',
+    ConsumerTerm.socialReportDescription:
+        'Report content that breaks the community rules (personal prescribing, '
+            'diagnosis, dosage advice, spam, or other unsuitable content). Our '
+            'moderation team will review it.',
+    ConsumerTerm.socialCancel: 'Cancel',
+    ConsumerTerm.socialReport: 'Report',
+    ConsumerTerm.socialReportSent: 'Your report was sent. Thank you.',
+    ConsumerTerm.socialClose: 'Close',
+    ConsumerTerm.socialProfileTitle: 'Community profile',
+    ConsumerTerm.socialDisplayNameLabel: 'Display name',
+    ConsumerTerm.socialBioLabel:
+        'About you (do not share personal health information)',
+    ConsumerTerm.socialSaveProfile: 'Save profile',
+    ConsumerTerm.socialProfileSaved: 'Community profile saved.',
+    ConsumerTerm.socialDoctor: 'Doctor',
+    ConsumerTerm.socialResearcher: 'Researcher',
   };
 }

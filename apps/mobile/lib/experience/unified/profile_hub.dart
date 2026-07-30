@@ -135,6 +135,7 @@ class ProfileHub extends StatelessWidget {
           builder: (_) => SocialSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
+            languageController: languageController,
           ),
         ),
       );
