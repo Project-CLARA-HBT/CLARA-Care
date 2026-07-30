@@ -228,6 +228,11 @@ const MIGRATED_SURFACES = [
     required: ["@/lib/i18n/catalog", "chat.flowTimeline.heading"],
     forbidden: ["Reasoning flow", "Luồng suy luận"],
   },
+  {
+    path: "app/chat/_v2/components/MessageLog.tsx",
+    required: ["@/lib/i18n/catalog", "chat.messageLog.aria"],
+    forbidden: ['"Conversation"', '"Cuộc trò chuyện"'],
+  },
 ];
 
 function fail(message) {

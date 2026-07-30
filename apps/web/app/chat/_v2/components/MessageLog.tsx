@@ -4,6 +4,7 @@ import { memo, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import type { UILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/i18n/catalog";
 import type { UserRole } from "@/lib/auth-store";
 import type { ConversationItem } from "@/components/research/lib/research-page-types";
 import TurnView from "@/app/chat/_v2/components/TurnView";
@@ -54,8 +55,6 @@ function MessageLog({
     });
   }, [turns.length, isRunning, prefersReducedMotion]);
 
-  const isEn = uiLanguage === "en";
-
   return (
     <div
       ref={scrollRef}
@@ -63,7 +62,7 @@ function MessageLog({
       role="log"
       aria-live="polite"
       aria-relevant="additions text"
-      aria-label={isEn ? "Conversation" : "Cuộc trò chuyện"}
+      aria-label={t(uiLanguage, "chat.messageLog.aria")}
     >
       <div
         style={{ height: `${virtualizer.getTotalSize()}px` }}
