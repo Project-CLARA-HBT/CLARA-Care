@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import NavItem from "@/components/navigation/nav-item";
 import { getMobilePrimaryNav, isActiveRoute, type UserRole } from "@/lib/navigation.config";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type MobileBottomNavProps = {
   role: UserRole;
@@ -10,13 +12,14 @@ type MobileBottomNavProps = {
 
 export default function MobileBottomNav({ role }: MobileBottomNavProps) {
   const pathname = usePathname();
+  const language = useUILanguage();
   if (pathname === "/research" || pathname.startsWith("/research/")) {
     return null;
   }
-  const items = getMobilePrimaryNav(role);
+  const items = getMobilePrimaryNav(role, language);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--shell-border)] bg-[var(--surface-header)] pb-[env(safe-area-inset-bottom,0px)] lg:hidden" aria-label="Điều hướng chính">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--shell-border)] bg-[var(--surface-header)] pb-[env(safe-area-inset-bottom,0px)] lg:hidden" aria-label={t(language, "navigation.primary")}>
       <div className="mx-auto max-w-2xl px-1 py-1">
         <ul
           className="grid gap-1.5"

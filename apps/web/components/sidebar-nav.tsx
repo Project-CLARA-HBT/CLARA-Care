@@ -51,7 +51,7 @@ export default function SidebarNav({
   activeProfile = null,
 }: SidebarNavProps) {
   const pathname = usePathname();
-  const groups = getGroupedNavItems(role);
+  const groups = getGroupedNavItems(role, uiLanguage);
   const homeHref = getRoleHomePath(role);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const roleLabel = t(uiLanguage, ROLE_LABEL_KEYS[role]);

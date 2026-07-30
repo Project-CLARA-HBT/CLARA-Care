@@ -264,7 +264,10 @@ export default function AppShell({ children }: Props) {
     return () => media.removeListener(onChange);
   }, [themePreference]);
 
-  const mobileNavGroups = useMemo(() => getGroupedNavItems(role), [role]);
+  const mobileNavGroups = useMemo(
+    () => getGroupedNavItems(role, uiLanguage),
+    [role, uiLanguage],
+  );
 
   useEffect(() => {
     if (isPublicRoute(pathname)) return;
