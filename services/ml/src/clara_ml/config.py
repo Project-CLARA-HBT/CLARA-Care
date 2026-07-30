@@ -943,6 +943,14 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RAG_INGESTION_ENABLED",
     )
+    # A corpus-wide watermark backfill can issue network requests to every
+    # enabled source. Keep it independently dark even when incremental
+    # ingestion is enabled; operators must explicitly opt in to this broader
+    # admin/scheduler operation.
+    rag_backfill_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_BACKFILL_ENABLED",
+    )
     rag_entity_normalization_enabled: bool = Field(
         default=False,
         validation_alias="RAG_ENTITY_NORMALIZATION_ENABLED",

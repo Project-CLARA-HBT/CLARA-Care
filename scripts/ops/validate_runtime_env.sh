@@ -111,6 +111,22 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
   fi
 fi
 
+# A watermark backfill is broader than ordinary incremental ingestion: it can
+# contact every enabled upstream source. The runtime must make that opt-in
+# explicit and keep the persistent corpus plane available; otherwise refuse to
+# launch a configuration that can only fail mid-run.
+backfill_enabled_normalized="$(printf '%s' "${ENV_VALUES[RAG_BACKFILL_ENABLED]:-false}" | tr '[:upper:]' '[:lower:]')"
+if [[ "${backfill_enabled_normalized}" == "true" ]] || [[ "${backfill_enabled_normalized}" == "1" ]]; then
+  if [[ "${ENV_VALUES[RAG_INGESTION_ENABLED]:-}" != "true" ]]; then
+    echo "[env-guard] RAG_BACKFILL_ENABLED=true requires RAG_INGESTION_ENABLED=true" >&2
+    errors=$((errors + 1))
+  fi
+  if [[ "${ENV_VALUES[RAG_PERSISTENT_STORE_ENABLED]:-}" != "true" ]]; then
+    echo "[env-guard] RAG_BACKFILL_ENABLED=true requires RAG_PERSISTENT_STORE_ENABLED=true" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
 # A strict CareGuard deployment has no safe curated/LLM substitute for DrugBank
 # DDI conclusions. Catch contradictory or unprovisioned bind-mount settings
 # before compose starts a container that must fail closed at request time.
