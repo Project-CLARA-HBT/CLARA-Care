@@ -338,7 +338,9 @@ class _ChatScreenState extends State<ChatScreen> {
     // Offline guard: block the request, keep the typed input (Req 9.5).
     final connectivity = widget.connectivity;
     if (connectivity != null && !connectivity.currentValue) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(widget.isEnglish
+          ? 'No network connection. Your message is still here; please try again when you are back online.'
+          : kOfflineMutationBlockedMessage);
       return;
     }
 
@@ -879,7 +881,12 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           children: [
             if (widget.connectivity != null)
-              OfflineBanner(connectivity: widget.connectivity!),
+              OfflineBanner(
+                connectivity: widget.connectivity!,
+                message: widget.isEnglish
+                    ? 'You are offline. Some features may be unavailable.'
+                    : kDefaultOfflineMessage,
+              ),
             if (_emergencyActive) _EmergencyBanner(isEnglish: widget.isEnglish),
             _StandingDisclaimer(isEnglish: widget.isEnglish),
             _ChatModeSelector(
