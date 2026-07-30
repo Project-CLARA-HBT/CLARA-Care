@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import html
 import json
 import os
@@ -36,6 +37,7 @@ from .tracks import TRACK_METADATA, EvalTrack
 REPORT_SCHEMA_VERSION = "clara-eval-vn.report.v1"
 RUNNER_VERSION = "2026-07-30.1"
 DEFAULT_MANIFEST = Path("evaluation/clara_eval/datasets/manifest.json")
+TASK_CONTRACT_MANIFEST = Path("services/ml/config/task_contracts/contracts.json")
 
 # The judge view has a deliberately fixed, decision-relevant headline set.
 # Values are populated only when an approved execution supplies them; the
@@ -176,6 +178,72 @@ def _integrity_metric(manifest: DatasetManifest) -> dict[str, Any]:
     }
 
 
+def _task_contract_snapshot(root: Path) -> dict[str, Any]:
+    """Capture the checked-in model contract configuration without a model call.
+
+    This is intentionally distinct from a runtime selection trace: it proves
+    which reviewed contract/prompt versions were packaged with the evaluation
+    revision, but never claims a provider used them or exposes credentials.
+    """
+
+    path = root / TASK_CONTRACT_MANIFEST
+    try:
+        raw = path.read_bytes()
+        value = json.loads(raw)
+    except (OSError, json.JSONDecodeError):
+        return {
+            "state": "unavailable",
+            "reason": "Versioned ML task-contract manifest was not readable at this repository revision.",
+            "path": str(TASK_CONTRACT_MANIFEST),
+        }
+    if not isinstance(value, dict) or not isinstance(value.get("schema_version"), str):
+        return {
+            "state": "invalid",
+            "reason": "Versioned ML task-contract manifest did not match the expected top-level shape.",
+            "path": str(TASK_CONTRACT_MANIFEST),
+        }
+    contracts = value.get("contracts")
+    if not isinstance(contracts, dict):
+        return {
+            "state": "invalid",
+            "reason": "Versioned ML task-contract manifest has no contract object.",
+            "path": str(TASK_CONTRACT_MANIFEST),
+        }
+    rows: list[dict[str, Any]] = []
+    for task, contract in sorted(contracts.items()):
+        if not isinstance(task, str) or not isinstance(contract, dict):
+            return {
+                "state": "invalid",
+                "reason": "Versioned ML task-contract manifest contains an invalid task entry.",
+                "path": str(TASK_CONTRACT_MANIFEST),
+            }
+        prompt_version = contract.get("prompt_version")
+        if not isinstance(prompt_version, str) or not prompt_version.strip():
+            return {
+                "state": "invalid",
+                "reason": "Versioned ML task-contract manifest contains a task without a prompt version.",
+                "path": str(TASK_CONTRACT_MANIFEST),
+            }
+        rows.append(
+            {
+                "task": task,
+                "prompt_version": prompt_version,
+                "risk_level": contract.get("risk_level"),
+                "allowed_model_tiers": contract.get("allowed_model_tiers"),
+                "output_contract": contract.get("output_contract"),
+                "shadow_only": contract.get("shadow_only"),
+            }
+        )
+    return {
+        "state": "configured_not_executed",
+        "path": str(TASK_CONTRACT_MANIFEST),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "schema_version": value["schema_version"],
+        "contracts": rows,
+        "reason": "Checked-in task contracts were captured; no provider invocation or runtime selection trace was executed.",
+    }
+
+
 def _model_manifest(root: Path, config: SuiteConfig, run_at: str) -> dict[str, Any]:
     """Describe observed configuration shape; never expose secret values."""
 
@@ -186,6 +254,8 @@ def _model_manifest(root: Path, config: SuiteConfig, run_at: str) -> dict[str, A
         "CLARA_EVAL_LOCKED_DATASET_REF",
         "CLARA_EVAL_RELEASE_REF",
     ]
+    task_contracts = _task_contract_snapshot(root)
+    configured = task_contracts["state"] == "configured_not_executed"
     return {
         "schema_version": "clara-eval-vn.model-manifest.v1",
         "generated_at": run_at,
@@ -195,15 +265,24 @@ def _model_manifest(root: Path, config: SuiteConfig, run_at: str) -> dict[str, A
             name: bool(os.environ.get(name)) for name in environment_names
         },
         "model_registry": {
-            "state": "not_measured",
-            "reason": "No versioned runtime model-resolution event was executed by this offline foundation runner.",
+            "state": "configured_not_executed" if configured else task_contracts["state"],
+            "reason": (
+                "Versioned task contracts were captured, but no runtime model-resolution event was executed."
+                if configured
+                else task_contracts["reason"]
+            ),
             "measurement_command": _required_live_command(config),
         },
         "prompt_version": {
-            "state": "not_measured",
-            "reason": "No centrally versioned prompt invocation was captured in this run.",
+            "state": "configured_not_executed" if configured else task_contracts["state"],
+            "reason": (
+                "Prompt versions were read from versioned task contracts; no live prompt invocation was captured."
+                if configured
+                else task_contracts["reason"]
+            ),
             "measurement_command": _required_live_command(config),
         },
+        "task_contract_snapshot": task_contracts,
         "rollback": {
             "state": "documented",
             "method": "Select the prior registry/prompt configuration and disable the affected feature flag before redeploying.",

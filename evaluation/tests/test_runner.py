@@ -56,6 +56,18 @@ class EvalRunnerTests(unittest.TestCase):
                 all(row["state"] == "not_measured" for row in product_metrics)
             )
             self.assertTrue(all(row["measurement_command"] for row in product_metrics))
+            model_manifest = json.loads(
+                (output / "model-manifest.json").read_text(encoding="utf-8")
+            )
+            contracts = model_manifest["task_contract_snapshot"]
+            self.assertEqual(contracts["state"], "configured_not_executed")
+            self.assertEqual(contracts["schema_version"], "clara.task-contracts.v1")
+            self.assertTrue(contracts["sha256"])
+            self.assertTrue(contracts["contracts"])
+            self.assertEqual(
+                model_manifest["model_registry"]["state"],
+                "configured_not_executed",
+            )
 
     def test_judge_report_has_the_required_machine_and_human_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
