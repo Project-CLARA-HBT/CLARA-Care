@@ -811,6 +811,25 @@ export type CouncilCaseListResponse = {
   total: number;
 };
 
+/** A completed Research snapshot that is eligible for Council shadow review. */
+export type CouncilEvidenceSnapshotOption = {
+  job_id: string;
+  captured_at?: string | null;
+  evidence_count: number;
+  categories: string[];
+};
+
+/** Append-only, non-clinical projection of an attached shadow packet. */
+export type CouncilEvidenceAttachment = {
+  id: number;
+  case_id: number;
+  research_job_id: string;
+  retrieval_snapshot_id: string;
+  evidence_count: number;
+  categories: string[];
+  created_at: string;
+};
+
 export type CouncilCaseCreatePayload = {
   title?: string;
   intake_mode?: string;
@@ -843,6 +862,39 @@ export async function getLatestCouncilCase(): Promise<CouncilCaseRecord> {
 
 export async function getCouncilCase(caseId: number): Promise<CouncilCaseRecord> {
   const response = await api.get<CouncilCaseRecord>(`/council/cases/${caseId}`);
+  return response.data;
+}
+
+export async function listCouncilEvidenceSnapshotOptions(
+  caseId: number
+): Promise<CouncilEvidenceSnapshotOption[]> {
+  const response = await api.get<{ items?: CouncilEvidenceSnapshotOption[] }>(
+    `/council/cases/${caseId}/evidence-snapshots`
+  );
+  return Array.isArray(response.data.items) ? response.data.items : [];
+}
+
+export async function listCouncilEvidenceAttachments(
+  caseId: number
+): Promise<CouncilEvidenceAttachment[]> {
+  const response = await api.get<{ items?: CouncilEvidenceAttachment[] }>(
+    `/council/cases/${caseId}/evidence-attachments`
+  );
+  return Array.isArray(response.data.items) ? response.data.items : [];
+}
+
+/**
+ * The API accepts only an owner-scoped job ID and constructs the opaque packet
+ * itself. No research prose, citation text, URL, score, or packet object is
+ * ever accepted from the browser.
+ */
+export async function attachCouncilEvidenceSnapshot(
+  caseId: number,
+  jobId: string
+): Promise<CouncilEvidenceAttachment> {
+  const response = await api.post<CouncilEvidenceAttachment>(
+    `/council/cases/${caseId}/evidence-snapshots/${encodeURIComponent(jobId)}/attach`
+  );
   return response.data;
 }
 

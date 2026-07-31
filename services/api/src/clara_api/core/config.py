@@ -718,6 +718,13 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="COUNCIL_MODEL_DISCLOSURE_ENABLED",
     )
+    # API peer of the ML shadow gate.  With this false, no Council endpoint
+    # lists or writes Research snapshot attachments and no packet is added to
+    # the internal run payload, preserving the legacy path before ML is called.
+    council_evidence_packet_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED",
+    )
     council_observability_enabled: bool = Field(
         default=False,
         validation_alias="COUNCIL_OBSERVABILITY_ENABLED",

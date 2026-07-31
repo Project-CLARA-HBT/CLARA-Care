@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import UTC, datetime
 from time import perf_counter
 from typing import Any
@@ -15,7 +16,14 @@ from clara_api.core.config import get_settings
 from clara_api.core.council_orchestration import CouncilOrchestrationService
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import CouncilCase, CouncilOversightAction, CouncilRun, User
+from clara_api.db.models import (
+    CouncilCase,
+    CouncilEvidenceAttachment,
+    CouncilOversightAction,
+    CouncilRun,
+    ResearchJob,
+    User,
+)
 from clara_api.db.session import get_db
 from clara_api.schemas import CouncilRunRequest
 
@@ -31,6 +39,40 @@ _ALLOWED_AUDIO_TYPES = {
     "audio/mp4",
     "audio/x-m4a",
     "application/octet-stream",
+}
+_COUNCIL_EVIDENCE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+_COUNCIL_EVIDENCE_CATEGORIES = frozenset(
+    {
+        "clinical_guideline",
+        "systematic_review",
+        "randomized_trial",
+        "observational_study",
+        "regulatory_label",
+        "public_health_guidance",
+    }
+)
+
+# Research provenance uses source-type labels rather than the deliberately
+# smaller Council shadow taxonomy.  This conversion is an allowlist: unknown
+# labels are excluded rather than guessed or promoted into clinical evidence.
+_COUNCIL_EVIDENCE_CATEGORY_BY_SOURCE_TYPE = {
+    "guideline": "clinical_guideline",
+    "clinical_guideline": "clinical_guideline",
+    "systematic_review": "systematic_review",
+    "meta_analysis": "systematic_review",
+    "randomized_trial": "randomized_trial",
+    "randomized_controlled_trial": "randomized_trial",
+    "rct": "randomized_trial",
+    "primary_trial": "randomized_trial",
+    "observational": "observational_study",
+    "observational_study": "observational_study",
+    "cohort": "observational_study",
+    "case_control": "observational_study",
+    "regulatory_label": "regulatory_label",
+    "drug_label": "regulatory_label",
+    "public_health": "public_health_guidance",
+    "public_health_guidance": "public_health_guidance",
+    "government_guidance": "public_health_guidance",
 }
 
 DOCTOR_ROLE_DEP = Depends(require_roles("doctor"))
@@ -78,6 +120,35 @@ class CouncilCaseResponse(BaseModel):
 class CouncilCaseListResponse(BaseModel):
     items: list[CouncilCaseResponse]
     total: int
+
+
+class CouncilEvidenceSnapshotOption(BaseModel):
+    """A completed owner-scoped snapshot selectable for Council shadow only."""
+
+    job_id: str
+    captured_at: datetime | None = None
+    evidence_count: int
+    categories: list[str]
+
+
+class CouncilEvidenceSnapshotOptionsResponse(BaseModel):
+    items: list[CouncilEvidenceSnapshotOption]
+
+
+class CouncilEvidenceAttachmentResponse(BaseModel):
+    """Public projection of an append-only Council shadow attachment."""
+
+    id: int
+    case_id: int
+    research_job_id: str
+    retrieval_snapshot_id: str
+    evidence_count: int
+    categories: list[str]
+    created_at: datetime
+
+
+class CouncilEvidenceAttachmentListResponse(BaseModel):
+    items: list[CouncilEvidenceAttachmentResponse]
 
 
 class CouncilRunRecordResponse(BaseModel):
@@ -203,6 +274,16 @@ def _get_owned_case(db: Session, *, user_id: int, case_id: int) -> CouncilCase:
     return case_item
 
 
+def _require_council_evidence_packet_shadow_enabled() -> None:
+    """Fail closed before any selector, attachment write, or ML packet injection."""
+
+    if not get_settings().council_evidence_packet_shadow_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nguồn nghiên cứu cho Council shadow chưa được bật.",
+        )
+
+
 def _as_dict(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
@@ -269,6 +350,182 @@ def _normalize_run_payload(value: dict[str, Any] | None) -> dict[str, Any]:
         "specialist_count": specialist_count,
         "specialists": specialists,
     }
+
+
+def _council_evidence_category(value: object) -> str | None:
+    """Translate an allowlisted Research provenance label to a shadow category."""
+
+    normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return _COUNCIL_EVIDENCE_CATEGORY_BY_SOURCE_TYPE.get(normalized)
+
+
+def _validated_council_evidence_packet(value: object) -> dict[str, Any] | None:
+    """Revalidate the stored opaque packet before every internal ML call.
+
+    A database attachment is not implicitly trusted at a second security
+    boundary.  This mirrors the ML validator while keeping API independent of
+    ML source imports, rejects all content-bearing extras, and never returns an
+    empty evidence packet.
+    """
+
+    if not isinstance(value, dict):
+        return None
+    if set(value) != {"tool", "retrieval_snapshot_id", "evidence"}:
+        return None
+    if value.get("tool") != "retrieval_snapshot":
+        return None
+    snapshot_id = value.get("retrieval_snapshot_id")
+    if not isinstance(snapshot_id, str) or not _COUNCIL_EVIDENCE_ID_RE.fullmatch(snapshot_id):
+        return None
+    raw_evidence = value.get("evidence")
+    if not isinstance(raw_evidence, list) or not raw_evidence:
+        return None
+
+    evidence: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in raw_evidence:
+        if not isinstance(item, dict) or set(item) != {"evidence_id", "category"}:
+            return None
+        evidence_id = item.get("evidence_id")
+        category = item.get("category")
+        if (
+            not isinstance(evidence_id, str)
+            or not _COUNCIL_EVIDENCE_ID_RE.fullmatch(evidence_id)
+            or not isinstance(category, str)
+            or category not in _COUNCIL_EVIDENCE_CATEGORIES
+        ):
+            return None
+        if evidence_id in seen:
+            continue
+        seen.add(evidence_id)
+        evidence.append({"evidence_id": evidence_id, "category": category})
+        if len(evidence) >= 12:
+            break
+
+    if not evidence:
+        return None
+    return {
+        "tool": "retrieval_snapshot",
+        "retrieval_snapshot_id": snapshot_id,
+        "evidence": evidence,
+    }
+
+
+def _council_packet_from_research_snapshot(job: ResearchJob) -> dict[str, Any] | None:
+    """Build the only Council-eligible projection from a completed Research job.
+
+    The original Research snapshot remains owner-isolated in ``research_jobs``.
+    Council receives only identifier/category pairs from its citation registry;
+    it never receives titles, URLs, source text, scores, claims, prompts, or
+    result prose.  Missing/unknown provenance fails closed for attachment.
+    """
+
+    if job.status != "completed" or not isinstance(job.evidence_snapshot_json, dict):
+        return None
+    snapshot = job.evidence_snapshot_json
+    snapshot_id = snapshot.get("evidence_sha256")
+    if not isinstance(snapshot_id, str) or not _COUNCIL_EVIDENCE_ID_RE.fullmatch(snapshot_id):
+        return None
+    registry = snapshot.get("citation_registry")
+    if not isinstance(registry, list):
+        return None
+
+    evidence: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in registry:
+        if not isinstance(item, dict):
+            continue
+        evidence_id = item.get("citation_id")
+        category = _council_evidence_category(item.get("source_type"))
+        if (
+            not isinstance(evidence_id, str)
+            or not _COUNCIL_EVIDENCE_ID_RE.fullmatch(evidence_id)
+            or category is None
+            or evidence_id in seen
+        ):
+            continue
+        seen.add(evidence_id)
+        evidence.append({"evidence_id": evidence_id, "category": category})
+        if len(evidence) >= 12:
+            break
+
+    return _validated_council_evidence_packet(
+        {
+            "tool": "retrieval_snapshot",
+            "retrieval_snapshot_id": snapshot_id,
+            "evidence": evidence,
+        }
+    )
+
+
+def _evidence_packet_summary(packet: dict[str, Any]) -> tuple[int, list[str]]:
+    evidence = packet.get("evidence")
+    items = evidence if isinstance(evidence, list) else []
+    categories = sorted(
+        {
+            str(item.get("category"))
+            for item in items
+            if isinstance(item, dict) and isinstance(item.get("category"), str)
+        }
+    )
+    return len(items), categories
+
+
+def _serialize_evidence_attachment(
+    attachment: CouncilEvidenceAttachment,
+) -> CouncilEvidenceAttachmentResponse:
+    packet = _validated_council_evidence_packet(attachment.evidence_packet_json)
+    evidence_count, categories = _evidence_packet_summary(packet or {})
+    return CouncilEvidenceAttachmentResponse(
+        id=attachment.id,
+        case_id=attachment.case_id,
+        research_job_id=attachment.research_job_public_id,
+        retrieval_snapshot_id=attachment.retrieval_snapshot_id,
+        evidence_count=evidence_count,
+        categories=categories,
+        created_at=attachment.created_at,
+    )
+
+
+def _latest_case_evidence_packet(
+    db: Session,
+    *,
+    case_id: int,
+    user_id: int,
+) -> dict[str, Any] | None:
+    """Return the newest valid attachment without allowing case payload injection."""
+
+    rows = db.execute(
+        select(CouncilEvidenceAttachment)
+        .where(
+            CouncilEvidenceAttachment.case_id == case_id,
+            CouncilEvidenceAttachment.user_id == user_id,
+        )
+        .order_by(CouncilEvidenceAttachment.created_at.desc(), CouncilEvidenceAttachment.id.desc())
+    ).scalars()
+    for attachment in rows:
+        packet = _validated_council_evidence_packet(attachment.evidence_packet_json)
+        if packet is not None:
+            return packet
+    return None
+
+
+def _with_server_evidence_packet(
+    db: Session,
+    *,
+    case_item: CouncilCase,
+    user_id: int,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Copy a normalized run payload and add only a server-built shadow packet."""
+
+    result = dict(payload)
+    if not get_settings().council_evidence_packet_shadow_enabled:
+        return result
+    packet = _latest_case_evidence_packet(db, case_id=case_item.id, user_id=user_id)
+    if packet is not None:
+        result["council_evidence_packet"] = packet
+    return result
 
 
 def _serialize_case(case_item: CouncilCase) -> CouncilCaseResponse:
@@ -599,6 +856,133 @@ def get_council_case(
     return _serialize_case(case_item)
 
 
+@router.get(
+    "/cases/{case_id}/evidence-snapshots",
+    response_model=CouncilEvidenceSnapshotOptionsResponse,
+)
+def list_council_evidence_snapshot_options(
+    case_id: int,
+    limit: int = Query(default=20, ge=1, le=50),
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> CouncilEvidenceSnapshotOptionsResponse:
+    """List only usable own Research snapshots for the explicit Council review step.
+
+    The list intentionally has no query text, answer, citation title, URL, score,
+    claim, or source text.  A client cannot provide an evidence packet; it can
+    only select a completed job that belongs to the authenticated doctor.
+    """
+
+    _require_council_evidence_packet_shadow_enabled()
+    user = _get_user_by_token(db, token)
+    _get_owned_case(db, user_id=user.id, case_id=case_id)
+    jobs = db.execute(
+        select(ResearchJob)
+        .where(
+            ResearchJob.user_id == user.id,
+            ResearchJob.status == "completed",
+        )
+        .order_by(ResearchJob.completed_at.desc(), ResearchJob.id.desc())
+        .limit(limit)
+    ).scalars()
+
+    items: list[CouncilEvidenceSnapshotOption] = []
+    for job in jobs:
+        packet = _council_packet_from_research_snapshot(job)
+        if packet is None:
+            continue
+        evidence_count, categories = _evidence_packet_summary(packet)
+        items.append(
+            CouncilEvidenceSnapshotOption(
+                job_id=job.job_id,
+                captured_at=job.completed_at,
+                evidence_count=evidence_count,
+                categories=categories,
+            )
+        )
+    return CouncilEvidenceSnapshotOptionsResponse(items=items)
+
+
+@router.get(
+    "/cases/{case_id}/evidence-attachments",
+    response_model=CouncilEvidenceAttachmentListResponse,
+)
+def list_council_evidence_attachments(
+    case_id: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> CouncilEvidenceAttachmentListResponse:
+    """List the case's append-only opaque attachments, newest first."""
+
+    _require_council_evidence_packet_shadow_enabled()
+    user = _get_user_by_token(db, token)
+    case_item = _get_owned_case(db, user_id=user.id, case_id=case_id)
+    rows = db.execute(
+        select(CouncilEvidenceAttachment)
+        .where(
+            CouncilEvidenceAttachment.case_id == case_item.id,
+            CouncilEvidenceAttachment.user_id == user.id,
+        )
+        .order_by(CouncilEvidenceAttachment.created_at.desc(), CouncilEvidenceAttachment.id.desc())
+    ).scalars().all()
+    return CouncilEvidenceAttachmentListResponse(
+        items=[_serialize_evidence_attachment(item) for item in rows]
+    )
+
+
+@router.post(
+    "/cases/{case_id}/evidence-snapshots/{job_id}/attach",
+    response_model=CouncilEvidenceAttachmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def attach_council_evidence_snapshot(
+    case_id: int,
+    job_id: str,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> CouncilEvidenceAttachmentResponse:
+    """Append a server-built completed Research snapshot to a Council case.
+
+    This is a reviewed audit event, not a retrieval or clinical-content transfer.
+    The database record remains immutable; a later choice creates another row
+    and run-time selection uses the newest valid packet.  Disabling the ML
+    shadow flag leaves the deterministic Council path unchanged.
+    """
+
+    _require_council_evidence_packet_shadow_enabled()
+    user = _get_user_by_token(db, token)
+    case_item = _get_owned_case(db, user_id=user.id, case_id=case_id)
+    job = db.execute(
+        select(ResearchJob).where(
+            ResearchJob.job_id == job_id,
+            ResearchJob.user_id == user.id,
+            ResearchJob.status == "completed",
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        # Keep owner isolation: another user's job and an unknown id are both 404.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Research snapshot không khả dụng.")
+    packet = _council_packet_from_research_snapshot(job)
+    if packet is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Research snapshot chưa có provenance phù hợp để dùng ở chế độ shadow.",
+        )
+
+    attachment = CouncilEvidenceAttachment(
+        case_id=case_item.id,
+        user_id=user.id,
+        research_job_id=job.id,
+        research_job_public_id=job.job_id,
+        retrieval_snapshot_id=packet["retrieval_snapshot_id"],
+        evidence_packet_json=packet,
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return _serialize_evidence_attachment(attachment)
+
+
 @router.patch("/cases/{case_id}", response_model=CouncilCaseResponse)
 def update_council_case(
     case_id: int,
@@ -699,7 +1083,16 @@ def run_council_case(
     # call or a second, divergent execution path.
     service = CouncilOrchestrationService(proxy=proxy_ml_post)
     _run_started = perf_counter()
-    raw_result = service.run_with_policy(current_payload)
+    # The only evidence-packet ingress is the newest API-created, owner-scoped
+    # attachment. ``current_payload`` remains the normalized clinical case
+    # input and never accepts client-supplied retrieval text or packet fields.
+    ml_payload = _with_server_evidence_packet(
+        db,
+        case_item=case_item,
+        user_id=user.id,
+        payload=current_payload,
+    )
+    raw_result = service.run_with_policy(ml_payload)
     # Preserve a valid ML-side disclosure when available. If the Council run
     # does not carry one, only the intake's operational model id is considered;
     # transcript and other clinical fields are deliberately never inspected.
@@ -807,6 +1200,12 @@ def run_council_case_stream(
             detail="Case chưa có dữ liệu đầu vào để chạy council.",
         )
 
+    ml_payload = _with_server_evidence_packet(
+        db,
+        case_item=case_item,
+        user_id=user.id,
+        payload=current_payload,
+    )
     url = f"{settings.ml_service_url.rstrip('/')}/v1/council/run/stream"
     headers: dict[str, str] = {"Accept": "text/event-stream"}
     if settings.ml_internal_api_key.strip():
@@ -851,7 +1250,7 @@ def run_council_case_stream(
         try:
             with httpx.Client(timeout=timeout) as client:
                 with client.stream(
-                    "POST", url, json=current_payload, headers=headers
+                    "POST", url, json=ml_payload, headers=headers
                 ) as upstream:
                     if upstream.status_code >= 400:
                         upstream.read()

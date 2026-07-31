@@ -11,11 +11,16 @@ import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-tex
 import {
   CouncilAiDisclosure,
   CouncilCaseRecord,
+  CouncilEvidenceAttachment,
+  CouncilEvidenceSnapshotOption,
   CouncilRunRecord,
   CouncilStreamStage,
+  attachCouncilEvidenceSnapshot,
   buildSnapshotFromCouncilCase,
   getActiveCouncilCaseId,
   getCouncilCase,
+  listCouncilEvidenceAttachments,
+  listCouncilEvidenceSnapshotOptions,
   getCouncilRuns,
   getLatestCouncilCase,
   isCouncilModelDisclosureEnabled,
@@ -343,6 +348,16 @@ export default function CouncilPage() {
   const [streamStages, setStreamStages] = useState<CouncilStreamStage[]>([]);
   const [runNotice, setRunNotice] = useState("");
   const [runHistory, setRunHistory] = useState<CouncilRunRecord[]>([]);
+  const [evidenceOptions, setEvidenceOptions] = useState<
+    CouncilEvidenceSnapshotOption[]
+  >([]);
+  const [evidenceAttachments, setEvidenceAttachments] = useState<
+    CouncilEvidenceAttachment[]
+  >([]);
+  const [evidenceShadowAvailable, setEvidenceShadowAvailable] = useState(false);
+  const [selectedEvidenceJobId, setSelectedEvidenceJobId] = useState("");
+  const [isAttachingEvidence, setIsAttachingEvidence] = useState(false);
+  const [evidenceNotice, setEvidenceNotice] = useState("");
   const [oversightPaused, setOversightPaused] = useState(false);
   const streamingEnabled = isCouncilStreamingEnabled();
   const oversightEnabled = isCouncilOversightEnabled();
@@ -396,6 +411,7 @@ export default function CouncilPage() {
       setRunHistory([]);
       return;
     }
+    setEvidenceShadowAvailable(false);
     let active = true;
     const loadRuns = async () => {
       try {
@@ -407,6 +423,43 @@ export default function CouncilPage() {
       }
     };
     void loadRuns();
+    return () => {
+      active = false;
+    };
+  }, [activeCaseId]);
+
+  // This selector receives only completed owner-scoped Research job IDs and
+  // opaque provenance counts/categories. It intentionally never loads query
+  // text, report prose, citation titles, URLs, or a client-built packet.
+  useEffect(() => {
+    if (!activeCaseId) {
+      setEvidenceOptions([]);
+      setEvidenceAttachments([]);
+      setSelectedEvidenceJobId("");
+      setEvidenceShadowAvailable(false);
+      return;
+    }
+    let active = true;
+    const loadEvidence = async () => {
+      try {
+        const [options, attachments] = await Promise.all([
+          listCouncilEvidenceSnapshotOptions(activeCaseId),
+          listCouncilEvidenceAttachments(activeCaseId),
+        ]);
+        if (!active) return;
+        setEvidenceOptions(options);
+        setEvidenceAttachments(attachments);
+        setEvidenceShadowAvailable(true);
+      } catch {
+        // This optional shadow-review aid must never block the Council case.
+        if (active) {
+          setEvidenceOptions([]);
+          setEvidenceAttachments([]);
+          setEvidenceShadowAvailable(false);
+        }
+      }
+    };
+    void loadEvidence();
     return () => {
       active = false;
     };
@@ -497,6 +550,27 @@ export default function CouncilPage() {
       setRunNotice(safeUserFacingError(cause, t(language, "council.error.run")));
     } finally {
       setIsRunning(false);
+    }
+  };
+
+  const handleAttachEvidence = async () => {
+    if (!caseItem || !selectedEvidenceJobId || isAttachingEvidence) return;
+    setIsAttachingEvidence(true);
+    setEvidenceNotice("");
+    try {
+      const attached = await attachCouncilEvidenceSnapshot(
+        caseItem.id,
+        selectedEvidenceJobId,
+      );
+      setEvidenceAttachments((current) => [attached, ...current]);
+      setSelectedEvidenceJobId("");
+      setEvidenceNotice(t(language, "council.evidence.attached"));
+    } catch (cause) {
+      setEvidenceNotice(
+        safeUserFacingError(cause, t(language, "council.evidence.attachError")),
+      );
+    } finally {
+      setIsAttachingEvidence(false);
     }
   };
 
@@ -1119,6 +1193,85 @@ export default function CouncilPage() {
                   </p>
                 ) : null}
               </div>
+
+              {evidenceShadowAvailable ? (
+              <div className="mt-6 border-t border-[color:var(--shell-border)] pt-5 dark:border-sky-700/60">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined mt-0.5 text-lg text-[color:var(--brand-600)] dark:text-sky-200">
+                    verified
+                  </span>
+                  <div>
+                    <h4 className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
+                      {t(language, "council.evidence.title")}
+                    </h4>
+                    <p className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}>
+                      {t(language, "council.evidence.description")}
+                    </p>
+                  </div>
+                </div>
+
+                {evidenceAttachments.length > 0 ? (
+                  <p className={`mt-3 text-xs font-semibold ${SECONDARY_TEXT_CLASS}`}>
+                    {t(language, "council.evidence.current", {
+                      count: evidenceAttachments[0].evidence_count,
+                      date: formatRunTimestamp(language, evidenceAttachments[0].created_at),
+                    })}
+                  </p>
+                ) : (
+                  <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
+                    {t(language, "council.evidence.noneAttached")}
+                  </p>
+                )}
+
+                {evidenceOptions.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    <label className={`block text-xs font-bold ${BODY_TEXT_CLASS}`} htmlFor="council-evidence-snapshot">
+                      {t(language, "council.evidence.selectorLabel")}
+                    </label>
+                    <select
+                      id="council-evidence-snapshot"
+                      value={selectedEvidenceJobId}
+                      onChange={(event) => setSelectedEvidenceJobId(event.target.value)}
+                      className="min-h-[44px] w-full rounded-lg border border-[color:var(--shell-border)] bg-white px-3 text-sm text-[color:var(--text-primary)] dark:border-sky-700 dark:bg-slate-950 dark:text-slate-100"
+                    >
+                      <option value="">{t(language, "council.evidence.selectorPlaceholder")}</option>
+                      {evidenceOptions.map((option) => (
+                        <option key={option.job_id} value={option.job_id}>
+                          {t(language, "council.evidence.option", {
+                            count: option.evidence_count,
+                            date: option.captured_at
+                              ? formatRunTimestamp(language, option.captured_at)
+                              : t(language, "council.history.timestampUnknown"),
+                          })}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleAttachEvidence()}
+                      disabled={!selectedEvidenceJobId || isAttachingEvidence}
+                      className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 text-sm font-bold text-[color:var(--text-primary)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                    >
+                      <span className={`material-symbols-outlined text-[18px] ${isAttachingEvidence ? "animate-spin" : ""}`}>
+                        {isAttachingEvidence ? "progress_activity" : "attach_file"}
+                      </span>
+                      {isAttachingEvidence
+                        ? t(language, "council.evidence.attaching")
+                        : t(language, "council.evidence.attach")}
+                    </button>
+                  </div>
+                ) : (
+                  <p className={`mt-4 text-xs ${MUTED_TEXT_CLASS}`}>
+                    {t(language, "council.evidence.noEligible")}
+                  </p>
+                )}
+                {evidenceNotice ? (
+                  <p aria-live="polite" className={`mt-3 text-xs font-semibold ${SECONDARY_TEXT_CLASS}`}>
+                    {evidenceNotice}
+                  </p>
+                ) : null}
+              </div>
+              ) : null}
             </article>
 
             {runHistory.length > 0 ? (
