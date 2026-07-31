@@ -1,5 +1,8 @@
 "use client";
 
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+
 type CouncilFlowCanvasProps = {
   isEmergency: boolean;
   needsMoreInfo: boolean;
@@ -8,8 +11,8 @@ type CouncilFlowCanvasProps = {
 
 type FlowNode = {
   id: string;
-  title: string;
-  subtitle: string;
+  titleKey: UITranslationKey;
+  subtitleKey: UITranslationKey;
   x: number;
   y: number;
   kind: "core" | "branch";
@@ -29,16 +32,16 @@ const SCENE_WIDTH = 1560;
 const SCENE_HEIGHT = 700;
 
 const NODES: FlowNode[] = [
-  { id: "input", title: "Case Intake", subtitle: "Transcript / Audio", x: 56, y: 286, kind: "core" },
-  { id: "extract", title: "Intake Extractor", subtitle: "DeepSeek + fallback", x: 270, y: 286, kind: "core" },
-  { id: "quality", title: "Quality Gate", subtitle: "Evidence and missing-data checks", x: 484, y: 286, kind: "core" },
-  { id: "orchestrator", title: "Council Orchestrator", subtitle: "Specialist routing", x: 698, y: 286, kind: "core" },
-  { id: "safety", title: "Safety Guard", subtitle: "Red-flag + negation", x: 912, y: 196, kind: "core" },
-  { id: "consensus", title: "Consensus Engine", subtitle: "Conflict + triage", x: 1126, y: 286, kind: "core" },
-  { id: "citations", title: "Evidence Builder", subtitle: "Citations + trace", x: 912, y: 376, kind: "branch" },
-  { id: "followup", title: "Follow-up Branch", subtitle: "Needs more info", x: 698, y: 466, kind: "branch" },
-  { id: "emergency", title: "Emergency Branch", subtitle: "Immediate escalation", x: 1126, y: 56, kind: "branch" },
-  { id: "workspace", title: "Council Workspace", subtitle: "Analyze / Details / Deepdive", x: 1340, y: 286, kind: "core" },
+  { id: "input", titleKey: "council.flow.node.input.title", subtitleKey: "council.flow.node.input.subtitle", x: 56, y: 286, kind: "core" },
+  { id: "extract", titleKey: "council.flow.node.extract.title", subtitleKey: "council.flow.node.extract.subtitle", x: 270, y: 286, kind: "core" },
+  { id: "quality", titleKey: "council.flow.node.quality.title", subtitleKey: "council.flow.node.quality.subtitle", x: 484, y: 286, kind: "core" },
+  { id: "orchestrator", titleKey: "council.flow.node.orchestrator.title", subtitleKey: "council.flow.node.orchestrator.subtitle", x: 698, y: 286, kind: "core" },
+  { id: "safety", titleKey: "council.flow.node.safety.title", subtitleKey: "council.flow.node.safety.subtitle", x: 912, y: 196, kind: "core" },
+  { id: "consensus", titleKey: "council.flow.node.consensus.title", subtitleKey: "council.flow.node.consensus.subtitle", x: 1126, y: 286, kind: "core" },
+  { id: "citations", titleKey: "council.flow.node.citations.title", subtitleKey: "council.flow.node.citations.subtitle", x: 912, y: 376, kind: "branch" },
+  { id: "followup", titleKey: "council.flow.node.followup.title", subtitleKey: "council.flow.node.followup.subtitle", x: 698, y: 466, kind: "branch" },
+  { id: "emergency", titleKey: "council.flow.node.emergency.title", subtitleKey: "council.flow.node.emergency.subtitle", x: 1126, y: 56, kind: "branch" },
+  { id: "workspace", titleKey: "council.flow.node.workspace.title", subtitleKey: "council.flow.node.workspace.subtitle", x: 1340, y: 286, kind: "core" },
 ];
 
 const EDGES: FlowEdge[] = [
@@ -149,9 +152,10 @@ function isNodeHighlighted(node: FlowNode, props: CouncilFlowCanvasProps): boole
 }
 
 export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
+  const language = useUILanguage();
   const reviewState = props.needsMoreInfo
-    ? "cần bổ sung thông tin"
-    : "cần người có chuyên môn rà soát";
+    ? t(language, "council.flow.review.needsMoreInfo")
+    : t(language, "council.flow.review.professionalReview");
 
   return (
     <section className="relative overflow-hidden rounded-[1.7rem] border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_10%_8%,rgba(96,165,250,0.24),transparent_30%),radial-gradient(circle_at_92%_86%,rgba(59,130,246,0.18),transparent_34%),linear-gradient(160deg,rgba(255,255,255,0.92),rgba(241,245,249,0.86))] p-4 shadow-[0_24px_70px_rgba(15,23,42,0.14)] dark:bg-[radial-gradient(circle_at_10%_8%,rgba(96,165,250,0.16),transparent_34%),radial-gradient(circle_at_92%_86%,rgba(59,130,246,0.14),transparent_36%),linear-gradient(160deg,rgba(2,6,23,0.9),rgba(15,23,42,0.88))] dark:shadow-[0_28px_80px_rgba(2,6,23,0.72)] sm:p-5 [--c-node-inactive-fill:#e2e8f0] [--c-node-inactive-stroke:#94a3b8] [--c-node-inactive-title:#334155] [--c-node-inactive-subtitle:#64748b] [--c-node-core-fill:#dff6ff] [--c-node-core-stroke:#2563eb] [--c-node-core-title:#0f172a] [--c-node-core-subtitle:#1e40af] [--c-node-branch-fill:#e2e8f0] [--c-node-branch-stroke:#94a3b8] [--c-node-branch-title:#334155] [--c-node-branch-subtitle:#64748b] [--c-node-followup-fill:#fef3c7] [--c-node-followup-stroke:#f59e0b] [--c-node-followup-title:#92400e] [--c-node-followup-subtitle:#b45309] [--c-node-emergency-fill:#fee2e2] [--c-node-emergency-stroke:#ef4444] [--c-node-emergency-title:#991b1b] [--c-node-emergency-subtitle:#b91c1c] [--c-node-citations-fill:#dcfce7] [--c-node-citations-stroke:#22c55e] [--c-node-citations-title:#166534] [--c-node-citations-subtitle:#15803d] [--c-edge-core:#2563eb] [--c-edge-muted:#94a3b8] [--c-edge-warning:#f59e0b] [--c-edge-danger:#ef4444] dark:[--c-node-inactive-fill:#0f172a] dark:[--c-node-inactive-stroke:#475569] dark:[--c-node-inactive-title:#cbd5e1] dark:[--c-node-inactive-subtitle:#94a3b8] dark:[--c-node-core-fill:#172554] dark:[--c-node-core-stroke:#60a5fa] dark:[--c-node-core-title:#e0f2fe] dark:[--c-node-core-subtitle:#93c5fd] dark:[--c-node-branch-fill:#1e293b] dark:[--c-node-branch-stroke:#64748b] dark:[--c-node-branch-title:#cbd5e1] dark:[--c-node-branch-subtitle:#94a3b8] dark:[--c-node-followup-fill:#451a03] dark:[--c-node-followup-stroke:#fbbf24] dark:[--c-node-followup-title:#fde68a] dark:[--c-node-followup-subtitle:#fcd34d] dark:[--c-node-emergency-fill:#450a0a] dark:[--c-node-emergency-stroke:#f87171] dark:[--c-node-emergency-title:#fecaca] dark:[--c-node-emergency-subtitle:#fca5a5] dark:[--c-node-citations-fill:#052e16] dark:[--c-node-citations-stroke:#4ade80] dark:[--c-node-citations-title:#bbf7d0] dark:[--c-node-citations-subtitle:#86efac] dark:[--c-edge-core:#60a5fa] dark:[--c-edge-muted:#64748b] dark:[--c-edge-warning:#fbbf24] dark:[--c-edge-danger:#f87171]">
@@ -159,12 +163,12 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Council Flow Canvas</p>
-          <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)] sm:text-xl">Pipeline hội chẩn dạng futuristic, tối ưu dark/light</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{t(language, "council.flow.eyebrow")}</p>
+          <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)] sm:text-xl">{t(language, "council.flow.title")}</h3>
         </div>
         <div className="flex flex-wrap gap-1.5 text-[11px]">
           <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-[var(--text-secondary)]">
-            review: {reviewState}
+            {t(language, "council.flow.review", { state: reviewState })}
           </span>
           <span
             className={`rounded-full border px-2 py-1 ${
@@ -173,7 +177,7 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
                 : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
             }`}
           >
-            needs_more_info: {props.needsMoreInfo ? "on" : "off"}
+            {t(language, "council.flow.needsMoreInfo", { state: t(language, props.needsMoreInfo ? "council.flow.state.on" : "council.flow.state.off") })}
           </span>
           <span
             className={`rounded-full border px-2 py-1 ${
@@ -182,20 +186,20 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
                 : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
             }`}
           >
-            emergency: {props.isEmergency ? "on" : "off"}
+            {t(language, "council.flow.emergency", { state: t(language, props.isEmergency ? "council.flow.state.on" : "council.flow.state.off") })}
           </span>
         </div>
       </div>
 
       <div className="relative mt-4 flex flex-wrap items-center gap-2 text-[11px]">
         <span className="rounded-full border border-cyan-300/70 bg-cyan-100/90 px-2.5 py-1 font-semibold text-cyan-800 dark:border-cyan-500/45 dark:bg-cyan-950/50 dark:text-cyan-200">
-          core path
+          {t(language, "council.flow.legend.core")}
         </span>
         <span className="rounded-full border border-amber-300/70 bg-amber-100/90 px-2.5 py-1 font-semibold text-amber-800 dark:border-amber-500/45 dark:bg-amber-950/50 dark:text-amber-200">
-          needs_more_info
+          {t(language, "council.flow.legend.needsMoreInfo")}
         </span>
         <span className="rounded-full border border-rose-300/70 bg-rose-100/90 px-2.5 py-1 font-semibold text-rose-800 dark:border-rose-500/45 dark:bg-rose-950/50 dark:text-rose-200">
-          emergency
+          {t(language, "council.flow.legend.emergency")}
         </span>
       </div>
 
@@ -204,7 +208,7 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
           viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
           className="h-[440px] w-[1400px] min-w-[1200px]"
           role="img"
-          aria-label="Council consultation flow canvas"
+          aria-label={t(language, "council.flow.aria")}
         >
           <defs>
             <marker id="council-flow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
@@ -279,10 +283,10 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
                   filter={highlighted ? "url(#council-flow-glow)" : undefined}
                 />
                 <text x={node.x + 12} y={node.y + 26} fontSize={14} fontWeight={700} fill={palette.title}>
-                  {node.title}
+                  {t(language, node.titleKey)}
                 </text>
                 <text x={node.x + 12} y={node.y + 46} fontSize={12} fill={palette.subtitle}>
-                  {node.subtitle}
+                  {t(language, node.subtitleKey)}
                 </text>
               </g>
             );

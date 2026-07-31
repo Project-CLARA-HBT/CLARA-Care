@@ -209,7 +209,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:?ML_INTERNAL_API_KEY is required}
-      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.yescale.vip/v1}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.yescale.io/v1}
       # Audio (Whisper) đi qua adapter local — yescale group `deepseek` không có model audio.
       DEEPSEEK_AUDIO_BASE_URL: ${DEEPSEEK_AUDIO_BASE_URL_DOCKER:-http://asr:8090/v1}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-pro}
