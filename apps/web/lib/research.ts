@@ -347,6 +347,26 @@ export type ResearchTier2TracedClaim = {
   verdict?: string;
 };
 
+/**
+ * A deliberately small, consumer-safe projection of the API research release
+ * gate. It is not a clinical score or a model-confidence signal: it tells the
+ * renderer whether the API released factual prose after checking evidence and
+ * which bounded gate conditions prevented release when it did not.
+ */
+export type ResearchEvidenceRelease = {
+  passed: boolean;
+  reasons: ResearchEvidenceReleaseReason[];
+};
+
+export type ResearchEvidenceReleaseReason =
+  | "no_citations"
+  | "no_retrieved_evidence"
+  | "verification_unavailable"
+  | "verification_skipped"
+  | "verification_invalid"
+  | "unsupported_claims"
+  | "zero_claim_support";
+
 export type ResearchTier2Result = {
   answer: string;
   citations: Tier2Citation[];
@@ -369,6 +389,11 @@ export type ResearchTier2Result = {
    * payloads, preserving the existing result shape.
    */
   citationRegistry: ResearchTier2CitationRegistryEntry[];
+  /**
+   * API-owned evidence-release decision. It is present when the research
+   * quality gate returned a valid projection; absent for legacy records.
+   */
+  evidenceRelease?: ResearchEvidenceRelease;
   debug: ResearchTier2DebugMeta;
   verificationStatus?: {
     verdict?: string;
@@ -613,6 +638,34 @@ function asBoolean(value: unknown): boolean | undefined {
   if (["true", "1", "yes", "y", "on"].includes(text)) return true;
   if (["false", "0", "no", "n", "off"].includes(text)) return false;
   return undefined;
+}
+
+const EVIDENCE_RELEASE_REASONS = new Set<ResearchEvidenceReleaseReason>([
+  "no_citations",
+  "no_retrieved_evidence",
+  "verification_unavailable",
+  "verification_skipped",
+  "verification_invalid",
+  "unsupported_claims",
+  "zero_claim_support",
+]);
+
+function parseEvidenceRelease(value: unknown): ResearchEvidenceRelease | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  const passed = asBoolean(record.passed);
+  if (passed === undefined) return undefined;
+
+  const rawReasons = Array.isArray(record.reasons) ? record.reasons : [];
+  const reasons = rawReasons.reduce<ResearchEvidenceReleaseReason[]>((items, item) => {
+    const reason = asText(item) as ResearchEvidenceReleaseReason | undefined;
+    if (reason && EVIDENCE_RELEASE_REASONS.has(reason) && !items.includes(reason)) {
+      items.push(reason);
+    }
+    return items;
+  }, []);
+
+  return { passed, reasons };
 }
 
 function asId(value: unknown): string | undefined {
@@ -3571,6 +3624,12 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
       : typeof data.fallback_used === "boolean"
         ? data.fallback_used
         : undefined;
+  // The API quality gate is the sole authority for releasing research prose.
+  // Parse only its bounded, non-PII release decision; do not surface raw
+  // verifier rows, model confidence, provider errors, or prompt telemetry.
+  const evidenceRelease = parseEvidenceRelease(
+    (data as Record<string, unknown>).quality_gate ?? metadata.quality_gate
+  );
   const rawVerificationState = asText(metadata.verification_status);
   const retrievalStackMode = normalizeResearchRetrievalStackMode(
     asText(metadata.retrieval_stack_mode) ??
@@ -3599,6 +3658,7 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     flowEvents,
     tracedClaims,
     citationRegistry,
+    evidenceRelease,
     debug: {
       pipeline: asText(metadata.pipeline),
       responseStyle: asText(metadata.response_style),

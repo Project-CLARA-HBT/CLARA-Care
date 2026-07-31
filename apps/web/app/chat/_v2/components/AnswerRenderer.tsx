@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import type { UILanguage } from "@/lib/ui-language";
 import type { ResearchResult } from "@/components/research/lib/research-page-types";
+import type { ResearchEvidenceReleaseReason } from "@/lib/research";
 import { isDegradedAnswer } from "@/app/chat/_v2/lib/chat-format";
 import { Badge } from "@/app/chat/_v2/components/primitives";
 import {
@@ -37,6 +38,25 @@ export type AnswerRendererProps = {
   role?: UserRole;
 };
 
+const RELEASE_REASON_KEYS: Record<
+  ResearchEvidenceReleaseReason,
+  UITranslationKey
+> = {
+  no_citations: "chat.answerRenderer.releaseBoundary.reason.noCitations",
+  no_retrieved_evidence:
+    "chat.answerRenderer.releaseBoundary.reason.noRetrievedEvidence",
+  verification_unavailable:
+    "chat.answerRenderer.releaseBoundary.reason.verificationUnavailable",
+  verification_skipped:
+    "chat.answerRenderer.releaseBoundary.reason.verificationSkipped",
+  verification_invalid:
+    "chat.answerRenderer.releaseBoundary.reason.verificationInvalid",
+  unsupported_claims:
+    "chat.answerRenderer.releaseBoundary.reason.unsupportedClaims",
+  zero_claim_support:
+    "chat.answerRenderer.releaseBoundary.reason.zeroClaimSupport",
+};
+
 function AnswerRenderer({
   result,
   uiLanguage,
@@ -53,6 +73,8 @@ function AnswerRenderer({
     result.tier === "tier2" ? (result.tracedClaims ?? []) : [];
   const citationRegistry =
     result.tier === "tier2" ? (result.citationRegistry ?? []) : [];
+  const evidenceRelease =
+    result.tier === "tier2" ? result.evidenceRelease : undefined;
   const answer =
     tracedClaims.length && citationRegistry.length
       ? injectTracedClaimAnchors(baseAnswer, tracedClaims, citationRegistry)
@@ -66,6 +88,28 @@ function AnswerRenderer({
         <Badge tone="warn">
           {copy("chat.answerRenderer.degraded")}
         </Badge>
+      ) : null}
+
+      {evidenceRelease && !evidenceRelease.passed ? (
+        <section
+          className="rounded-2xl border border-amber-300/60 bg-amber-50/85 p-3 text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/35 dark:text-amber-100"
+          role="status"
+          aria-label={copy("chat.answerRenderer.releaseBoundary.aria")}
+        >
+          <p className="text-sm font-semibold">
+            {copy("chat.answerRenderer.releaseBoundary.title")}
+          </p>
+          <p className="mt-1 text-xs leading-5">
+            {copy("chat.answerRenderer.releaseBoundary.description")}
+          </p>
+          {evidenceRelease.reasons.length ? (
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5">
+              {evidenceRelease.reasons.map((reason) => (
+                <li key={reason}>{copy(RELEASE_REASON_KEYS[reason])}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
       ) : null}
 
       <div className="medical-markdown prose prose-sm max-w-none text-[var(--text-primary)] prose-headings:text-[var(--text-primary)] prose-a:text-[var(--text-brand)] prose-strong:text-[var(--text-primary)]">
