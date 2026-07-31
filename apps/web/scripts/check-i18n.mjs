@@ -361,6 +361,29 @@ const MIGRATED_SURFACES = [
       "Tiếp tục kiểm tra tương tác",
     ],
   },
+  {
+    // The workflow diagram is End_User-visible chrome. Its labels must stay
+    // catalog-backed, including the SVG accessibility name, while its actual
+    // safety/routing state remains deterministic component data.
+    path: "components/council/council-flow-canvas.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "useUILanguage",
+      "council.flow.aria",
+      "council.flow.node.input.title",
+      "council.flow.node.emergency.subtitle",
+      "council.flow.review.needsMoreInfo",
+    ],
+    forbidden: [
+      "Council Flow Canvas",
+      "Pipeline hội chẩn dạng futuristic, tối ưu dark/light",
+      "Council consultation flow canvas",
+      'title: "Case Intake"',
+      'subtitle: "Immediate escalation"',
+      '"cần bổ sung thông tin"',
+      '"cần người có chuyên môn rà soát"',
+    ],
+  },
 ];
 
 function fail(message) {
