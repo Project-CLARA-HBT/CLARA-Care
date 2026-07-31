@@ -11,7 +11,7 @@ chúng không phải đích điều hướng mới và không tạo ra mô hình
 | `/careguard` | `/medicines?tab=safety` | Alias redirect ở server. Giữ lại khi còn liên kết đã lưu. |
 | `/selfmed/add` | `/medicines/cabinet/add` | Entry tương thích cho bookmark cũ. Cả hai route dùng cùng `components/medicines/cabinet-add-page.tsx`; link mới chỉ dùng route Medicines chuẩn và vẫn consent-gate. |
 | `/chat` với `NEXT_PUBLIC_CHAT_V2=false` | `/chat` V2 mặc định | Rollback có kiểm soát. Runbook Chat V2 sở hữu quyết định loại bỏ sau này. |
-| `/research/*` | `/chat` | Ranh giới tương thích redirect hiện có. |
+| `/research`, `/research/analyze`, `/research/citations`, `/research/deepdive`, `/research/details` | `/chat` | Alias redirect ở server. Các URL này không còn dựng workspace nghiên cứu thứ hai. |
 
 ## Bất biến
 
@@ -33,6 +33,13 @@ và UX phải thực hiện trên component Medicines một lần duy nhất.
 `components/medicines/medical-consent-gate.tsx` là boundary đồng thuận duy nhất
 cho tủ thuốc, quét toa và kiểm tra tương tác. Không được tạo consent gate riêng
 cho alias lịch sử vì sẽ làm sai khác chính sách hoặc trạng thái đồng thuận.
+
+`app/research/research-workspace.tsx` là implementation lịch sử được lưu lại
+ngoài mọi route đang hoạt động để phục vụ audit/rollback có review riêng. Năm
+route Research lịch sử ở bảng trên chỉ import `next/navigation` và redirect về
+`/chat`; chúng không import, bundle, hay gọi API qua workspace đó.
+`/research/source-hub` không phải alias: đó là công cụ nguồn chuyên môn có
+RBAC riêng và vẫn là route hoạt động.
 
 ## Rollback
 
