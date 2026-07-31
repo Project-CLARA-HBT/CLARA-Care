@@ -6,7 +6,7 @@ import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
 import { trackCouncilViewed } from "@/lib/analytics/events";
-import { t } from "@/lib/i18n/catalog";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 import {
@@ -21,31 +21,34 @@ import { buildCouncilView } from "@/lib/council-view";
 
 type WorkspaceTab = "analyze" | "details" | "citations" | "research" | "deepdive";
 
-const TAB_META: Record<WorkspaceTab, { title: string; description: string; eyebrow: string }> = {
+const TAB_META: Record<
+  WorkspaceTab,
+  { title: UITranslationKey; description: UITranslationKey; eyebrow: UITranslationKey }
+> = {
   analyze: {
-    title: "Council Analyze",
-    description: "Tín hiệu chính, risk drivers và action items từ kết quả hội chẩn.",
-    eyebrow: "Analyze",
+    title: "council.workspace.analyze.title",
+    description: "council.workspace.analyze.description",
+    eyebrow: "council.workspace.analyze.eyebrow",
   },
   details: {
-    title: "Council Details",
-    description: "Tín hiệu và khuyến nghị có cấu trúc theo từng chuyên khoa.",
-    eyebrow: "Details",
+    title: "council.workspace.details.title",
+    description: "council.workspace.details.description",
+    eyebrow: "council.workspace.details.eyebrow",
   },
   citations: {
-    title: "Council Citations",
-    description: "Nguồn chứng cứ và quality signal cho từng citation.",
-    eyebrow: "Citations",
+    title: "council.workspace.citations.title",
+    description: "council.workspace.citations.description",
+    eyebrow: "council.workspace.citations.eyebrow",
   },
   research: {
-    title: "Council Research",
-    description: "Highlights, open questions và next steps cho vòng phân tích tiếp theo.",
-    eyebrow: "Research",
+    title: "council.workspace.research.title",
+    description: "council.workspace.research.description",
+    eyebrow: "council.workspace.research.eyebrow",
   },
   deepdive: {
-    title: "Council Deepdive",
-    description: "Tổng hợp sâu theo các phần chuyên môn có thể rà soát.",
-    eyebrow: "Deepdive",
+    title: "council.workspace.deepdive.title",
+    description: "council.workspace.deepdive.description",
+    eyebrow: "council.workspace.deepdive.eyebrow",
   },
 };
 
@@ -94,36 +97,42 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
   const meta = TAB_META[tab];
 
   return (
-    <PageShell title={meta.title} description={meta.description} variant="plain">
+    <PageShell title={t(language, meta.title)} description={t(language, meta.description)} variant="plain">
       <div className="space-y-5">
         <CouncilWorkspaceNav />
 
         {!view ? (
           <CouncilEmptyState
-            title="Chưa có dữ liệu hội chẩn"
-            description={loadError || "Hãy tạo ca mới để mở khóa các tab workspace."}
+            title={t(language, "council.workspace.empty.title")}
+            description={loadError || t(language, "council.workspace.empty.description")}
           />
         ) : null}
 
         {view && tab === "analyze" ? (
-          <CouncilSection eyebrow={meta.eyebrow} title="Phân tích tín hiệu hội chẩn">
+          <CouncilSection eyebrow={t(language, meta.eyebrow)} title={t(language, "council.workspace.analyze.heading")}>
             <div className="grid gap-3 md:grid-cols-3">
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Key Signals</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+                  {t(language, "council.workspace.analyze.keySignals")}
+                </p>
                 <div className="mt-2">
-                  <CouncilList items={view.analyze.keySignals.map(stripTelemetryLabels)} emptyText="Không có key signal." />
+                  <CouncilList items={view.analyze.keySignals.map(stripTelemetryLabels)} emptyText={t(language, "council.workspace.analyze.keySignalsEmpty")} />
                 </div>
               </article>
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Risk Drivers</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+                  {t(language, "council.workspace.analyze.riskDrivers")}
+                </p>
                 <div className="mt-2">
-                  <CouncilList items={view.analyze.riskDrivers.map(stripTelemetryLabels)} emptyText="Không có risk driver nổi bật." />
+                  <CouncilList items={view.analyze.riskDrivers.map(stripTelemetryLabels)} emptyText={t(language, "council.workspace.analyze.riskDriversEmpty")} />
                 </div>
               </article>
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Action Items</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+                  {t(language, "council.workspace.analyze.actionItems")}
+                </p>
                 <div className="mt-2">
-                  <CouncilList items={view.analyze.actionItems.map(stripTelemetryLabels)} emptyText="Không có action item." />
+                  <CouncilList items={view.analyze.actionItems.map(stripTelemetryLabels)} emptyText={t(language, "council.workspace.analyze.actionItemsEmpty")} />
                 </div>
               </article>
             </div>
@@ -131,7 +140,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
         ) : null}
 
         {view && tab === "details" ? (
-          <CouncilSection eyebrow={meta.eyebrow} title="Chi tiết theo chuyên khoa">
+          <CouncilSection eyebrow={t(language, meta.eyebrow)} title={t(language, "council.workspace.details.heading")}>
             <div className="grid gap-3 md:grid-cols-2">
               {view.details.specialistLogs.map((item, index) => (
                 <article
@@ -142,7 +151,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                   <div className="mt-2">
                     <CouncilList
                       items={item.findings.map(stripTelemetryLabels)}
-                      emptyText="Chưa có tín hiệu có cấu trúc để hiển thị."
+                      emptyText={t(language, "council.workspace.details.empty")}
                     />
                   </div>
                   {item.recommendation ? (
@@ -155,7 +164,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
         ) : null}
 
         {view && tab === "citations" ? (
-          <CouncilSection eyebrow={meta.eyebrow} title="Nguồn chứng cứ">
+          <CouncilSection eyebrow={t(language, meta.eyebrow)} title={t(language, "council.workspace.citations.heading")}>
             {view.citations.length ? (
               <div className="grid gap-3 md:grid-cols-2">
                 {view.citations.map((item, index) => (
@@ -164,7 +173,9 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                     className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3"
                   >
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">{item.source || "Clinical source"}</p>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      {item.source || t(language, "council.workspace.citations.sourceFallback")}
+                    </p>
                     {item.snippet ? (
                       <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">{stripTelemetryLabels(item.snippet)}</p>
                     ) : null}
@@ -175,37 +186,43 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                         rel="noreferrer"
                         className="mt-2 inline-flex text-xs font-semibold text-cyan-600 hover:underline dark:text-cyan-300"
                       >
-                        Mở nguồn
+                        {t(language, "council.workspace.citations.openSource")}
                       </a>
                     ) : null}
                   </article>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-[var(--text-secondary)]">Không có citation trong snapshot này.</p>
+              <p className="text-sm text-[var(--text-secondary)]">{t(language, "council.workspace.citations.empty")}</p>
             )}
           </CouncilSection>
         ) : null}
 
         {view && tab === "research" ? (
-          <CouncilSection eyebrow={meta.eyebrow} title="Research slices">
+          <CouncilSection eyebrow={t(language, meta.eyebrow)} title={t(language, "council.workspace.research.heading")}>
             <div className="grid gap-3 md:grid-cols-3">
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Highlights</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+                  {t(language, "council.workspace.research.highlights")}
+                </p>
                 <div className="mt-2">
-                  <CouncilList items={view.research.highlights.map(stripTelemetryLabels)} emptyText="Không có highlights." />
+                  <CouncilList items={view.research.highlights.map(stripTelemetryLabels)} emptyText={t(language, "council.workspace.research.highlightsEmpty")} />
                 </div>
               </article>
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Open Questions</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+                  {t(language, "council.workspace.research.openQuestions")}
+                </p>
                 <div className="mt-2">
-                  <CouncilList items={view.research.openQuestions.map(stripTelemetryLabels)} emptyText="Không có open questions." />
+                  <CouncilList items={view.research.openQuestions.map(stripTelemetryLabels)} emptyText={t(language, "council.workspace.research.openQuestionsEmpty")} />
                 </div>
               </article>
               <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Next Steps</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+                  {t(language, "council.workspace.research.nextSteps")}
+                </p>
                 <div className="mt-2">
-                  <CouncilList items={view.research.nextSteps.map(stripTelemetryLabels)} emptyText="Không có next steps." />
+                  <CouncilList items={view.research.nextSteps.map(stripTelemetryLabels)} emptyText={t(language, "council.workspace.research.nextStepsEmpty")} />
                 </div>
               </article>
             </div>
@@ -213,7 +230,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
         ) : null}
 
         {view && tab === "deepdive" ? (
-          <CouncilSection eyebrow={meta.eyebrow} title="Deepdive sections">
+          <CouncilSection eyebrow={t(language, meta.eyebrow)} title={t(language, "council.workspace.deepdive.heading")}>
             <div className="space-y-3">
               {view.deepDive.sections.map((section, index) => (
                 <article
@@ -222,7 +239,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">{section.title}</p>
                   <div className="mt-2">
-                    <CouncilList items={section.items.map(stripTelemetryLabels)} emptyText="Không có dữ liệu cho section này." />
+                    <CouncilList items={section.items.map(stripTelemetryLabels)} emptyText={t(language, "council.workspace.deepdive.empty")} />
                   </div>
                 </article>
               ))}

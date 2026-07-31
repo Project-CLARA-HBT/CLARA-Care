@@ -296,9 +296,14 @@ const MIGRATED_SURFACES = [
     path: "app/chat/_legacy/page-legacy.tsx",
     required: [
       "@/lib/i18n/catalog",
+      "safeUserFacingError",
       "QUICK_PROMPT_KEYS",
       "chat.legacyWorkspace.quickPrompt.metformin",
       "chat.legacyWorkspace.quickPrompt.sideEffects",
+      "chat.legacyWorkspace.error.submit",
+      "chat.legacyWorkspace.notice.bulkUpdated",
+      "chat.legacyWorkspace.confirm.bulkDelete",
+      "chat.legacyWorkspace.notice.conversationExported",
     ],
     forbidden: [
       "Tôi đang uống metformin, cần lưu ý gì?",
@@ -311,6 +316,11 @@ const MIGRATED_SURFACES = [
       "Help me understand this lab result.",
       "When should I see a doctor?",
       "What common side effects can this medicine cause?",
+      "Hãy chọn conversation trước khi chạy bulk action.",
+      "Đã cập nhật ${result.updated_count} conversation.",
+      "Xóa ${selectedConversationIds.length} conversation đã chọn?",
+      "Đã export conversation #${conversationId} (${format}).",
+      "Tiêu đề note không được để trống.",
     ],
   },
   {

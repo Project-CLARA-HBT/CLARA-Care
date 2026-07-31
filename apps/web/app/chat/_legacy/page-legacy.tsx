@@ -28,7 +28,7 @@ import { getRole, type UserRole } from "@/lib/auth-store";
 import { getChatIntentDebug, getChatReply, sendChatMessage, streamChatMessage } from "@/lib/chat";
 import { trackChatMessageSent } from "@/lib/analytics/events";
 import {
-  sanitizeUpstreamError,
+  safeUserFacingError,
   stripTelemetryLabels,
   toModeLabel,
 } from "@/lib/user-facing-text";
@@ -226,6 +226,21 @@ function isNotFoundLikeError(cause: unknown): boolean {
     message.includes("404") ||
     message.includes("không tồn tại")
   );
+}
+
+/**
+ * Never surface a raw API/transport error in the consumer workspace. The
+ * catalog fallback describes the failed action in the selected UI language;
+ * `safeUserFacingError` only preserves a short, already human-readable
+ * message and rejects stack traces, transport detail, timeouts, and other
+ * operational content.
+ */
+function safeWorkspaceError(
+  cause: unknown,
+  language: UILanguage,
+  fallbackKey: UITranslationKey
+): string {
+  return safeUserFacingError(cause, t(language, fallbackKey));
 }
 
 function buildConversationMarkdownExport(
@@ -1233,18 +1248,14 @@ export default function ChatWorkspacePage() {
             };
           });
           setConversations(fallbackItems);
-          setNotice(
-            "Workspace API chưa sẵn sàng, đang dùng lịch sử research làm nguồn conversation."
-          );
+          setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.researchHistoryFallback"));
           return fallbackItems;
         } catch {
           // continue to generic error handler below.
         }
       }
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không thể tải danh sách hội thoại workspace."
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.loadConversations")
       );
       return [];
     } finally {
@@ -1253,6 +1264,7 @@ export default function ChatWorkspacePage() {
   }, [
     activeConversationId,
     selectedFolderFilterId,
+    uiLanguage,
     workspaceApiUnavailable,
   ]);
 
@@ -1320,14 +1332,20 @@ export default function ChatWorkspacePage() {
         setWorkspaceApiUnavailable(true);
       }
       if (bootstrapErrors.length) {
-        setNotice(`Workspace loaded with partial data (${bootstrapErrors.join(", ")}).`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.partialData", {
+            sources: bootstrapErrors.join(", "),
+          })
+        );
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải workspace chat.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.loadWorkspace")
+      );
     } finally {
       setIsLoadingWorkspace(false);
     }
-  }, [loadConversations, loadNotes, loadShares, loadSuggestions]);
+  }, [loadConversations, loadNotes, loadShares, loadSuggestions, uiLanguage]);
 
   const loadConversationTurns = useCallback(async (conversationId: number, fallbackItem?: WorkspaceConversationItem) => {
     setIsLoadingTurns(true);
@@ -1341,7 +1359,11 @@ export default function ChatWorkspacePage() {
         }
         setConversationTurns([]);
         if (fallbackItem) {
-          setNotice(`Conversation #${fallbackItem.conversation_id} chưa có message chi tiết.`);
+          setNotice(
+            t(uiLanguage, "chat.legacyWorkspace.notice.noDetailedMessages", {
+              id: fallbackItem.conversation_id,
+            })
+          );
         }
         return;
       }
@@ -1365,19 +1387,19 @@ export default function ChatWorkspacePage() {
       const localTurns = localTurnsByConversationId[conversationId];
       if (Array.isArray(localTurns) && localTurns.length) {
         setConversationTurns(localTurns);
-        setNotice(`Đang hiển thị bản local cache cho conversation #${conversationId}.`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.localCache", { id: conversationId })
+        );
       } else {
         setConversationTurns([]);
       }
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không thể tải tin nhắn của conversation."
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.loadMessages")
       );
     } finally {
       setIsLoadingTurns(false);
     }
-  }, [localTurnsByConversationId]);
+  }, [localTurnsByConversationId, uiLanguage]);
 
   useEffect(() => {
     void loadStaticWorkspaceData();
@@ -1411,15 +1433,15 @@ export default function ChatWorkspacePage() {
     };
   }, [activeConversationId]);
 
-  const copyText = useCallback(async (value: string, successNotice = "Đã copy.") => {
+  const copyText = useCallback(async (value: string, successNotice?: string) => {
     if (!value.trim()) return;
     try {
       await navigator.clipboard.writeText(value);
-      setNotice(successNotice);
+      setNotice(successNotice ?? t(uiLanguage, "chat.legacyWorkspace.notice.copySuccess"));
     } catch {
-      window.prompt("Copy", value);
+      window.prompt(t(uiLanguage, "chat.legacyWorkspace.action.copyPrompt"), value);
     }
-  }, []);
+  }, [uiLanguage]);
 
   useEffect(() => {
     const keyword = searchText.trim();
@@ -1438,7 +1460,7 @@ export default function ChatWorkspacePage() {
       } catch (cause) {
         if (!active) return;
         setSearchResult(null);
-        setError(cause instanceof Error ? cause.message : "Không thể tìm kiếm trong workspace.");
+        setError(safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.search"));
       } finally {
         if (active) setIsSearching(false);
       }
@@ -1448,7 +1470,7 @@ export default function ChatWorkspacePage() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [searchText]);
+  }, [searchText, uiLanguage]);
 
   const displayedConversations = useMemo(() => {
     if (searchResult) return searchResult.conversations;
@@ -1565,11 +1587,11 @@ export default function ChatWorkspacePage() {
   const applyBulkMetaUpdate = useCallback(
     async (payload: { folderId?: number | null; isFavorite?: boolean }) => {
       if (workspaceApiUnavailable) {
-        setNotice("Workspace API chưa sẵn sàng nên bulk metadata đang tạm khóa.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.bulkMetadataUnavailable"));
         return;
       }
       if (!selectedConversationIds.length) {
-        setNotice("Hãy chọn conversation trước khi chạy bulk action.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.selectForBulkAction"));
         return;
       }
       try {
@@ -1623,20 +1645,30 @@ export default function ChatWorkspacePage() {
           });
         }
         await refreshSummary();
-        setNotice(`Đã cập nhật ${result.updated_count} conversation.`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.bulkUpdated", {
+            count: result.updated_count,
+          })
+        );
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể cập nhật bulk metadata.");
+        setError(
+          safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.bulkUpdate")
+        );
       }
     },
-    [activeConversationId, refreshSummary, selectedConversationIds, workspaceApiUnavailable]
+    [activeConversationId, refreshSummary, selectedConversationIds, uiLanguage, workspaceApiUnavailable]
   );
 
   const bulkDeleteSelectedConversations = useCallback(async () => {
     if (!selectedConversationIds.length) {
-      setNotice("Hãy chọn conversation trước khi xóa.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.selectForDelete"));
       return;
     }
-    const confirmed = window.confirm(`Xóa ${selectedConversationIds.length} conversation đã chọn?`);
+    const confirmed = window.confirm(
+      t(uiLanguage, "chat.legacyWorkspace.confirm.bulkDelete", {
+        count: selectedConversationIds.length,
+      })
+    );
     if (!confirmed) return;
     let deletedCount = 0;
     for (const conversationId of selectedConversationIds) {
@@ -1668,20 +1700,26 @@ export default function ChatWorkspacePage() {
       setConversationTurns([]);
     }
     await Promise.all([loadConversations(), refreshSummary()]);
-    setNotice(`Đã xóa ${deletedCount}/${selectedConversationIds.length} conversation.`);
+    setNotice(
+      t(uiLanguage, "chat.legacyWorkspace.notice.bulkDeleted", {
+        deleted: deletedCount,
+        total: selectedConversationIds.length,
+      })
+    );
   }, [
     activeConversationId,
     loadConversations,
     localConversationIdSet,
     refreshSummary,
     selectedConversationIds,
+    uiLanguage,
     workspaceApiUnavailable,
   ]);
 
   const bulkExportSelectedConversations = useCallback(
     async (format: "markdown" | "docx") => {
       if (!selectedConversationIds.length) {
-        setNotice("Hãy chọn conversation trước khi export.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.selectForExport"));
         return;
       }
       let successCount = 0;
@@ -1730,13 +1768,20 @@ export default function ChatWorkspacePage() {
           // Keep exporting remaining conversations.
         }
       }
-      setNotice(`Đã export ${successCount}/${selectedConversationIds.length} conversation (${format}).`);
+      setNotice(
+        t(uiLanguage, "chat.legacyWorkspace.notice.bulkExported", {
+          success: successCount,
+          total: selectedConversationIds.length,
+          format,
+        })
+      );
     },
     [
       displayedConversations,
       localConversationIdSet,
       localTurnsByConversationId,
       selectedConversationIds,
+      uiLanguage,
       workspaceApiUnavailable,
     ]
   );
@@ -1977,7 +2022,7 @@ export default function ChatWorkspacePage() {
               donePayload = result;
             },
             onError: (msg) => {
-              throw new Error(msg || "chat stream error");
+              throw new Error(msg || t(uiLanguage, "chat.legacyWorkspace.error.chatStream"));
             },
           }, uiLanguage);
         } catch {
@@ -1987,7 +2032,7 @@ export default function ChatWorkspacePage() {
         const chatPayload = donePayload ?? (await sendChatMessage(message, uiLanguage));
         const reply = getChatReply(chatPayload) ?? (streamedAnswer.trim() || null);
         if (!reply) {
-          throw new Error("Chưa có phản hồi chat hợp lệ.");
+          throw new Error(t(uiLanguage, "chat.legacyWorkspace.error.noValidChatResponse"));
         }
         nextResult = {
           tier: "tier1",
@@ -2017,7 +2062,7 @@ export default function ChatWorkspacePage() {
 
         const normalized = normalizeResearchTier2(finalPayload);
         if (!normalized.answer && !normalized.citations.length) {
-          throw new Error("Chưa có phản hồi research hợp lệ.");
+          throw new Error(t(uiLanguage, "chat.legacyWorkspace.error.noValidResearchResponse"));
         }
 
         nextResult = {
@@ -2098,15 +2143,13 @@ export default function ChatWorkspacePage() {
         setActiveConversationMeta(localConversationItem);
         didPersistLocally = true;
         setError(
-          persistError instanceof Error
-            ? `Đã trả lời nhưng lưu hội thoại thất bại: ${sanitizeUpstreamError(
-                persistError.message
-              )}`
-            : "Đã trả lời nhưng lưu hội thoại thất bại."
+          safeWorkspaceError(
+            persistError,
+            uiLanguage,
+            "chat.legacyWorkspace.error.answerPersist"
+          )
         );
-        setNotice(
-          "Đã lưu local cache cho conversation hiện tại. Backend sync sẽ tự khôi phục sau."
-        );
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.currentConversationSavedLocally"));
       }
 
       if (targetConversationId) {
@@ -2134,11 +2177,7 @@ export default function ChatWorkspacePage() {
         if (found) setActiveConversationMeta(found);
       }
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? sanitizeUpstreamError(cause.message)
-          : "Không thể xử lý câu hỏi."
-      );
+      setError(safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.submit"));
     } finally {
       setIsSubmitting(false);
     }
@@ -2178,7 +2217,7 @@ export default function ChatWorkspacePage() {
     isFavorite?: boolean;
   }) => {
     if (workspaceApiUnavailable) {
-      setNotice("Workspace API chưa sẵn sàng nên metadata conversation đang tạm khóa.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.metadataUnavailable"));
       return;
     }
     const conversationId = asConversationId(activeConversationId);
@@ -2192,7 +2231,9 @@ export default function ChatWorkspacePage() {
       });
       await refreshSummary();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể cập nhật metadata conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.updateMetadata")
+      );
     }
   };
 
@@ -2204,9 +2245,11 @@ export default function ChatWorkspacePage() {
       setFolders((prev) => [created, ...prev]);
       setScopeFolderDraft("");
       await refreshSummary();
-      setNotice(`Đã tạo folder \"${created.name}\".`);
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.folderCreated", { name: created.name }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo folder.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.createFolder")
+      );
     }
   };
 
@@ -2218,9 +2261,11 @@ export default function ChatWorkspacePage() {
     try {
       const updated = await updateWorkspaceFolder(folder.id, { name });
       setFolders((prev) => prev.map((item) => (item.id === folder.id ? updated : item)));
-      setNotice(`Đã cập nhật folder \"${updated.name}\".`);
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.folderRenamed", { name: updated.name }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đổi tên folder.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.renameFolder")
+      );
     }
   };
 
@@ -2234,34 +2279,38 @@ export default function ChatWorkspacePage() {
       setFolders((prev) => prev.filter((item) => item.id !== folder.id));
       if (selectedFolderFilterId === folder.id) setSelectedFolderFilterId(null);
       await refreshSummary();
-      setNotice("Đã xóa folder.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.folderDeleted"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xóa folder.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.deleteFolder")
+      );
     }
   };
 
   const onCreateInlineNote = useCallback(async (fromLatestAnswer: boolean) => {
     if (fromLatestAnswer) {
       if (!latestAnswer.trim()) {
-        setNotice("Chưa có câu trả lời để lưu note.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.noAnswerForNote"));
         return;
       }
       setEditingNoteId(null);
-      setNoteTitleDraft(latestTurn?.query.slice(0, 90) || "Ghi chú từ câu trả lời mới");
+      setNoteTitleDraft(
+        latestTurn?.query.slice(0, 90) || t(uiLanguage, "chat.legacyWorkspace.notes.answerTitle")
+      );
       setNoteMarkdownDraft(latestAnswer);
       setNoteTagsDraft("answer,auto");
       return;
     }
     setEditingNoteId(null);
-    setNoteTitleDraft("Ghi chú mới");
+    setNoteTitleDraft(t(uiLanguage, "chat.legacyWorkspace.notes.newTitle"));
     setNoteMarkdownDraft("");
     setNoteTagsDraft("");
-  }, [latestAnswer, latestTurn?.query]);
+  }, [latestAnswer, latestTurn?.query, uiLanguage]);
 
   const onSaveNoteDraft = async () => {
     const title = parsePromptText(noteTitleDraft);
     if (!title) {
-      setError("Tiêu đề note không được để trống.");
+      setError(t(uiLanguage, "chat.legacyWorkspace.error.noteTitleRequired"));
       return;
     }
     const content = noteMarkdownDraft.trim();
@@ -2276,7 +2325,7 @@ export default function ChatWorkspacePage() {
           conversationId: activeId,
         });
         setNotes((prev) => prev.map((item) => (item.id === editingNoteId ? updated : item)));
-        setNotice("Đã cập nhật note.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.noteUpdated"));
       } else {
         const created = await createWorkspaceNote({
           title,
@@ -2285,7 +2334,7 @@ export default function ChatWorkspacePage() {
           conversationId: activeId,
         });
         setNotes((prev) => [created, ...prev]);
-        setNotice("Đã lưu note thành công.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.noteSaved"));
       }
       setEditingNoteId(null);
       setNoteTitleDraft("");
@@ -2293,7 +2342,7 @@ export default function ChatWorkspacePage() {
       setNoteTagsDraft("");
       await refreshSummary();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu note.");
+      setError(safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.saveNote"));
     }
   };
 
@@ -2305,7 +2354,9 @@ export default function ChatWorkspacePage() {
   };
 
   const onDeleteNote = async (note: WorkspaceNote) => {
-    const confirmed = window.confirm(`Xóa note "${note.title}"?`);
+    const confirmed = window.confirm(
+      t(uiLanguage, "chat.legacyWorkspace.confirm.deleteNote", { name: note.title })
+    );
     if (!confirmed) return;
     try {
       await deleteWorkspaceNote(note.id);
@@ -2317,9 +2368,9 @@ export default function ChatWorkspacePage() {
         setNoteTagsDraft("");
       }
       await refreshSummary();
-      setNotice("Đã xóa note.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.noteDeleted"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xóa note.");
+      setError(safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.deleteNote"));
     }
   };
 
@@ -2327,7 +2378,7 @@ export default function ChatWorkspacePage() {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
     if (workspaceApiUnavailable) {
-      setNotice("Workspace API chưa sẵn sàng nên chưa thể tạo public share lúc này.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.shareUnavailable"));
       return;
     }
 
@@ -2338,28 +2389,32 @@ export default function ChatWorkspacePage() {
       });
       setShareInfo(share);
       await loadShares();
-      await copyText(share.public_url, "Đã copy link share public.");
+      await copyText(share.public_url, t(uiLanguage, "chat.legacyWorkspace.notice.shareCopied"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể chia sẻ conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.createShare")
+      );
     }
-  }, [activeConversationId, copyText, loadShares, workspaceApiUnavailable]);
+  }, [activeConversationId, copyText, loadShares, uiLanguage, workspaceApiUnavailable]);
 
   const onRevokeShareActiveConversation = useCallback(async () => {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
     if (workspaceApiUnavailable) {
-      setNotice("Workspace API chưa sẵn sàng nên chưa thể revoke share lúc này.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.revokeShareUnavailable"));
       return;
     }
     try {
       await revokeWorkspaceConversationShare(conversationId);
       setShareInfo(null);
       await loadShares();
-      setNotice("Đã thu hồi liên kết public.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.shareRevoked"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể thu hồi liên kết.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.revokeShare")
+      );
     }
-  }, [activeConversationId, loadShares, workspaceApiUnavailable]);
+  }, [activeConversationId, loadShares, uiLanguage, workspaceApiUnavailable]);
 
   const onOpenConversationFromShare = useCallback(
     async (shareItem: WorkspaceConversationShareListItem) => {
@@ -2377,9 +2432,13 @@ export default function ChatWorkspacePage() {
         await onSelectConversation(resolved);
         return;
       }
-      setNotice(`Không tìm thấy conversation #${shareItem.conversation_id} trong workspace hiện tại.`);
+      setNotice(
+        t(uiLanguage, "chat.legacyWorkspace.notice.sharedConversationMissing", {
+          id: shareItem.conversation_id,
+        })
+      );
     },
-    [displayedConversations, loadConversations, mergedConversations, onSelectConversation]
+    [displayedConversations, loadConversations, mergedConversations, onSelectConversation, uiLanguage]
   );
 
   const onExportActiveConversation = useCallback(async (format: "markdown" | "docx") => {
@@ -2394,12 +2453,21 @@ export default function ChatWorkspacePage() {
       if (!workspaceApiUnavailable) {
         const blob = await exportWorkspaceConversation(conversationId, format);
         triggerBlobDownload(blob, `conversation-${conversationId}.${format === "markdown" ? "md" : "docx"}`);
-        setNotice(`Đã export conversation #${conversationId} (${format}).`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.conversationExported", {
+            id: conversationId,
+            format,
+          })
+        );
         return;
       }
       if (format === "markdown") {
         triggerBlobDownload(new Blob([localMarkdown], { type: "text/markdown;charset=utf-8" }), `conversation-${conversationId}.md`);
-        setNotice(`Đã export conversation #${conversationId} (markdown local).`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.conversationExportedLocal", {
+            id: conversationId,
+          })
+        );
         return;
       }
       if (format === "docx" && localMarkdown.trim()) {
@@ -2408,7 +2476,7 @@ export default function ChatWorkspacePage() {
           title: "clara-chat-export",
         });
         triggerBlobDownload(fallbackBlob, "clara-chat-export.docx");
-        setNotice("Đã export DOCX từ nội dung hiện tại.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.docxExportedFromCurrent"));
       }
     } catch (cause) {
       if (format === "docx" && localMarkdown.trim()) {
@@ -2418,25 +2486,26 @@ export default function ChatWorkspacePage() {
             title: "clara-chat-export",
           });
           triggerBlobDownload(fallbackBlob, "clara-chat-export.docx");
-          setNotice("Đã export DOCX từ nội dung hiện tại.");
+          setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.docxExportedFromCurrent"));
           return;
         } catch {
           triggerBlobDownload(
             new Blob([localMarkdown], { type: "text/markdown;charset=utf-8" }),
             `conversation-${conversationId}.md`
           );
-          setNotice(
-            "DOCX chưa sẵn ở backend hiện tại, đã fallback export Markdown để không mất dữ liệu."
-          );
+          setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.docxFallbackToMarkdown"));
           return;
         }
       }
-      setError(cause instanceof Error ? cause.message : "Không thể export conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.exportConversation")
+      );
     }
   }, [
     activeConversationId,
     activeConversationMeta?.title,
     localTurnsByConversationId,
+    uiLanguage,
     workspaceApiUnavailable,
   ]);
 
@@ -2452,23 +2521,27 @@ export default function ChatWorkspacePage() {
           item.conversation_id === conversationId ? { ...item, title } : item
         )
       );
-      setNotice("Đã đổi tên conversation (local cache).");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.conversationRenamedLocal"));
       return;
     }
     try {
       const updated = await updateWorkspaceConversation(conversationId, { title });
       setConversationMetaPatch(conversationId, { title: updated.title });
-      setNotice("Đã đổi tên conversation.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.conversationRenamed"));
       await loadConversations(conversationId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đổi tên conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.renameConversation")
+      );
     }
   };
 
   const onDeleteActiveConversation = async () => {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
-    const confirmed = window.confirm("Xóa conversation hiện tại?");
+    const confirmed = window.confirm(
+      t(uiLanguage, "chat.legacyWorkspace.confirm.deleteActiveConversation")
+    );
     if (!confirmed) return;
     const localExists = localFallbackConversations.some(
       (item) => item.conversation_id === conversationId
@@ -2493,9 +2566,11 @@ export default function ChatWorkspacePage() {
       setConversationTurns([]);
       setShareInfo(null);
       await refreshSummary();
-      setNotice("Đã xóa conversation.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.conversationDeleted"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xóa conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.deleteConversation")
+      );
     }
   };
 
