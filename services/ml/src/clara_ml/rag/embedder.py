@@ -91,7 +91,7 @@ class HttpEmbeddingClient:
     just like production.
 
     The legacy :meth:`embed_batch` / :meth:`embed` methods are preserved for the
-    existing in-memory retrieval callers (``DocumentScorer``, ``NeuralReranker``,
+    existing in-memory retrieval callers (``DocumentScorer``, ``EvidenceReranker``,
     ``InMemoryRetriever``). They route through the same production fail-loud
     logic, but in non-production they degrade gracefully (explicit, logged zero
     sentinels — never the old silent hash) so the legacy path keeps serving.

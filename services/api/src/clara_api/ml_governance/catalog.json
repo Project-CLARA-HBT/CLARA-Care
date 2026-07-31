@@ -76,7 +76,7 @@
       "id": "embedding-cosine-reranker-v1",
       "kind": "deterministic_reranker",
       "provider": "CLARA deterministic code",
-      "implementation": "clara_ml.rag.retrieval.reranker.NeuralReranker",
+      "implementation": "clara_ml.rag.retrieval.reranker.EvidenceReranker",
       "intended_use": "Reorder an already authorized retrieval candidate set",
       "forbidden_uses": ["expand authorization scope", "generate evidence", "diagnosis"],
       "owner": "RAG Platform",

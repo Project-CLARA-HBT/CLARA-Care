@@ -36,7 +36,7 @@ Module path:
 - `services/ml/src/clara_ml/rag/retrieval/reranker.py`
 
 Public API:
-- `NeuralReranker.rerank(query: str, documents: Sequence[Document], top_k: int | None = None)`
+- `EvidenceReranker.rerank(query: str, documents: Sequence[Document], top_k: int | None = None)`
 - Returns `RerankResult` with:
   - `documents: list[Document]`
   - `metadata: dict[str, Any]`

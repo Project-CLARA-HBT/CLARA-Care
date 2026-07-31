@@ -6710,7 +6710,13 @@ def _final_context_passed_llm_relevance_floor(
         if not isinstance(index_phase, dict):
             continue
         rerank = index_phase.get("rerank")
-        rerank = rerank.get("neural") if isinstance(rerank, dict) else None
+        rerank = (
+            rerank.get("evidence")
+            if isinstance(rerank, dict) and isinstance(rerank.get("evidence"), dict)
+            else rerank.get("neural")
+            if isinstance(rerank, dict)
+            else None
+        )
         if not isinstance(rerank, dict):
             continue
         if not bool(rerank.get("rerank_llm_used")):

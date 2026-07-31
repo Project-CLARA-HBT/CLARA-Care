@@ -385,7 +385,7 @@ const NODES: FlowNodeDef[] = [
     title: "Evidence Index + Rerank",
     subtitle: "evidence_search / evidence_index / graphrag_sidecar",
     description:
-      "Dedupe + evidence search + hybrid ranking, sau đó đi qua neural reranker và GraphRAG sidecar (khi bật) để chọn evidence chất lượng cao.",
+      "Dedupe + evidence search + hybrid ranking, sau đó đi qua evidence reranker và GraphRAG sidecar (khi bật) để chọn evidence chất lượng cao.",
     riskNote:
       "Nếu reranker không có timeout-safe fallback thì một connector chậm có thể làm gãy toàn bộ flow.",
     x: 1640,

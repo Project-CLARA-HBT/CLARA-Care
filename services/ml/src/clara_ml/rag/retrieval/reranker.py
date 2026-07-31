@@ -32,8 +32,13 @@ class RerankResult:
     metadata: dict[str, Any]
 
 
-class NeuralReranker:
-    """Neural reranker using embedding cosine similarity with safe fallbacks."""
+class EvidenceReranker:
+    """Evidence reranker using embedding cosine similarity with safe fallbacks.
+
+    The name describes its safety boundary: it can only reorder the retrieved
+    evidence candidates it receives.  It does not broaden retrieval scope or
+    create clinical evidence.
+    """
 
     _CACHE_LOCK = Lock()
     _CACHE: ClassVar[OrderedDict[str, tuple[float, list[Document], dict[str, Any]]]] = OrderedDict()
@@ -728,3 +733,9 @@ class NeuralReranker:
     def clear_cache(cls) -> None:
         with cls._CACHE_LOCK:
             cls._CACHE.clear()
+
+
+# Compatibility alias for one release cycle.  New production call sites must
+# import ``EvidenceReranker``; this alias protects installed integrations and
+# old pickled/import references without changing the reranking algorithm.
+NeuralReranker = EvidenceReranker

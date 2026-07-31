@@ -1,6 +1,12 @@
 from .domain import Document
 
-__all__ = ["Document", "InMemoryRetriever", "NeuralReranker", "RerankResult"]
+__all__ = [
+    "Document",
+    "InMemoryRetriever",
+    "EvidenceReranker",
+    "NeuralReranker",
+    "RerankResult",
+]
 
 
 def __getattr__(name: str):
@@ -8,8 +14,12 @@ def __getattr__(name: str):
         from .in_memory import InMemoryRetriever
 
         return InMemoryRetriever
-    if name in {"NeuralReranker", "RerankResult"}:
-        from .reranker import NeuralReranker, RerankResult
+    if name in {"EvidenceReranker", "NeuralReranker", "RerankResult"}:
+        from .reranker import EvidenceReranker, NeuralReranker, RerankResult
 
-        return {"NeuralReranker": NeuralReranker, "RerankResult": RerankResult}[name]
+        return {
+            "EvidenceReranker": EvidenceReranker,
+            "NeuralReranker": NeuralReranker,
+            "RerankResult": RerankResult,
+        }[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

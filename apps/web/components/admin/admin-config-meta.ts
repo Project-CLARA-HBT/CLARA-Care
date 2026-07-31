@@ -18,8 +18,8 @@ export const FLOW_FLAG_META: Record<FlowToggleKey, { label: string; hint: string
     hint: "Bật mô hình NLI để chấm quan hệ claim-evidence."
   },
   rag_reranker_enabled: {
-    label: "Neural Reranker",
-    hint: "Bật reranker neural để ưu tiên bằng chứng chất lượng cao."
+    label: "Evidence Reranker",
+    hint: "Bật reranker bằng chứng để ưu tiên nguồn chất lượng cao."
   },
   rag_nli_enabled: {
     label: "RAG NLI",

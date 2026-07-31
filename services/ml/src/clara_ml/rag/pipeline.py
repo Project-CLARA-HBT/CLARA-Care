@@ -717,23 +717,27 @@ class RagPipelineP1:
             parsed_duration = None
 
         rerank_payload = dict(rerank) if isinstance(rerank, dict) else {}
-        neural_payload = (
-            rerank_payload.get("neural") if isinstance(rerank_payload.get("neural"), dict) else {}
+        evidence_payload = (
+            rerank_payload.get("evidence")
+            if isinstance(rerank_payload.get("evidence"), dict)
+            else rerank_payload.get("neural")
+            if isinstance(rerank_payload.get("neural"), dict)
+            else {}
         )
         if "rerank_latency_ms" not in rerank_payload:
-            rerank_payload["rerank_latency_ms"] = neural_payload.get("rerank_latency_ms")
+            rerank_payload["rerank_latency_ms"] = evidence_payload.get("rerank_latency_ms")
         if "rerank_topn" not in rerank_payload:
-            rerank_payload["rerank_topn"] = neural_payload.get("rerank_topn")
+            rerank_payload["rerank_topn"] = evidence_payload.get("rerank_topn")
         if "rerank_model" not in rerank_payload:
-            rerank_payload["rerank_model"] = neural_payload.get("rerank_model")
+            rerank_payload["rerank_model"] = evidence_payload.get("rerank_model")
         if "rerank_timed_out" not in rerank_payload:
-            rerank_payload["rerank_timed_out"] = bool(neural_payload.get("rerank_timed_out"))
+            rerank_payload["rerank_timed_out"] = bool(evidence_payload.get("rerank_timed_out"))
         if "rerank_reason" not in rerank_payload:
-            rerank_payload["rerank_reason"] = neural_payload.get("rerank_reason")
+            rerank_payload["rerank_reason"] = evidence_payload.get("rerank_reason")
         if "rerank_cache_hit" not in rerank_payload:
-            rerank_payload["rerank_cache_hit"] = bool(neural_payload.get("rerank_cache_hit"))
+            rerank_payload["rerank_cache_hit"] = bool(evidence_payload.get("rerank_cache_hit"))
         if "rerank_cache_age_ms" not in rerank_payload:
-            rerank_payload["rerank_cache_age_ms"] = neural_payload.get("rerank_cache_age_ms")
+            rerank_payload["rerank_cache_age_ms"] = evidence_payload.get("rerank_cache_age_ms")
         return {
             "retrieved_count": len(docs),
             "source_counts": self._source_counts(docs),
@@ -2062,13 +2066,13 @@ class RagPipelineP1:
                 return None
 
             from clara_ml.rag.embedder import HttpEmbeddingClient
-            from clara_ml.rag.retrieval.reranker import NeuralReranker
+            from clara_ml.rag.retrieval.reranker import EvidenceReranker
             from clara_ml.rag.store.hybrid_retriever import HybridRetriever
 
             retriever = HybridRetriever.from_engine(
                 engine,
                 embedder=HttpEmbeddingClient(),
-                reranker=NeuralReranker(),
+                reranker=EvidenceReranker(),
                 query_expander=self._build_query_expander(),
             )
             self._hybrid_retriever = retriever

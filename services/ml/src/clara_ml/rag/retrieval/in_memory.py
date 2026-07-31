@@ -9,7 +9,7 @@ from clara_ml.rag.embedder import EmbeddingUnavailableError, HttpEmbeddingClient
 from .document_builder import DocumentBuilder
 from .domain import Document
 from .external_gateway import ExternalSourceGateway
-from .reranker import NeuralReranker
+from .reranker import EvidenceReranker
 from .score_engine import DocumentScorer
 from .text_utils import dedupe_documents, query_terms, safe_weight
 
@@ -36,7 +36,7 @@ class InMemoryRetriever:
         self.builder = DocumentBuilder()
         self.external_gateway = ExternalSourceGateway()
         self.scorer = DocumentScorer(embedder=embedder)
-        self.reranker = NeuralReranker()
+        self.reranker = EvidenceReranker()
         self.documents = [
             self.builder.normalized_document(doc, default_source="internal") for doc in documents
         ]
@@ -140,12 +140,12 @@ class InMemoryRetriever:
             errors.setdefault(source, []).append(error_name)
         return errors
 
-    def _resolve_neural_reranker(self, *, enabled_override: bool | None) -> NeuralReranker:
+    def _resolve_evidence_reranker(self, *, enabled_override: bool | None) -> EvidenceReranker:
         if not isinstance(enabled_override, bool):
             return self.reranker
         if bool(self.reranker.enabled) == enabled_override:
             return self.reranker
-        return NeuralReranker(
+        return EvidenceReranker(
             enabled=enabled_override,
             model_name=self.reranker.model_name,
             top_n=self.reranker.top_n,
@@ -203,12 +203,12 @@ class InMemoryRetriever:
                 source_policies=source_policies,
                 score_trace=score_trace,
             )
-            neural_reranker = self._resolve_neural_reranker(
+            evidence_reranker = self._resolve_evidence_reranker(
                 enabled_override=rag_reranker_enabled,
             )
-            rerank_result = neural_reranker.rerank(ranking_query, ranked, top_k=top_k)
+            rerank_result = evidence_reranker.rerank(ranking_query, ranked, top_k=top_k)
             ranked = rerank_result.documents
-            neural_rerank = (
+            evidence_rerank = (
                 rerank_result.metadata if isinstance(rerank_result.metadata, dict) else {}
             )
         except EmbeddingUnavailableError:
@@ -258,7 +258,7 @@ class InMemoryRetriever:
                     (float(score), str(doc.id), degraded_doc, len(score_trace) - 1)
                 )
             ranked_rows.sort(key=lambda row: (-row[0], row[1]))
-            neural_reranker = self._resolve_neural_reranker(
+            evidence_reranker = self._resolve_evidence_reranker(
                 enabled_override=rag_reranker_enabled,
             )
             llm_info: dict[str, Any] = {"status": "skipped"}
@@ -267,17 +267,17 @@ class InMemoryRetriever:
             llm_rejected_count = 0
             llm_unscored_count = 0
             diversified_pool: list[tuple[float, str, Document, int]] = []
-            if neural_reranker.llm_enabled and ranked_rows:
+            if evidence_reranker.llm_enabled and ranked_rows:
                 pool_limit = min(
                     len(ranked_rows),
-                    max(int(top_k), min(neural_reranker.llm_top_n, 24)),
+                    max(int(top_k), min(evidence_reranker.llm_top_n, 24)),
                 )
                 diversified_pool = self._diversified_degraded_pool(
                     ranked_rows,
                     limit=pool_limit,
                 )
                 llm_started = perf_counter()
-                llm_scores, llm_info = neural_reranker._llm_score_documents(
+                llm_scores, llm_info = evidence_reranker._llm_score_documents(
                     query=ranking_query,
                     documents=[row[2] for row in diversified_pool],
                 )
@@ -291,12 +291,12 @@ class InMemoryRetriever:
                             score_trace[trace_index]["rerank_llm_score"] = None
                             score_trace[trace_index]["rejected_by_llm_not_scored"] = True
                             continue
-                        if float(llm_score) < neural_reranker.llm_min_score:
+                        if float(llm_score) < evidence_reranker.llm_min_score:
                             llm_rejected_count += 1
                             score_trace[trace_index]["rerank_llm_score"] = float(llm_score)
                             score_trace[trace_index]["rejected_by_llm_relevance_floor"] = True
                             continue
-                        normalized_lexical = neural_reranker._squash_score(lexical_score)
+                        normalized_lexical = evidence_reranker._squash_score(lexical_score)
                         combined_score = (0.20 * normalized_lexical) + (0.80 * llm_score)
                         metadata = dict(doc.metadata or {})
                         metadata["score"] = float(combined_score)
@@ -320,10 +320,10 @@ class InMemoryRetriever:
             for row in selected_rows:
                 score_trace[row[3]]["selected"] = True
             ranked = [row[2] for row in selected_rows]
-            neural_rerank = {
+            evidence_rerank = {
                 "rerank_enabled": bool(llm_scores),
                 "rerank_model": (
-                    str(llm_info.get("model") or neural_reranker.model_name)
+                    str(llm_info.get("model") or evidence_reranker.model_name)
                     if llm_scores
                     else "deterministic-lexical-v1"
                 ),
@@ -333,8 +333,8 @@ class InMemoryRetriever:
                 "rerank_latency_ms": llm_latency_ms,
                 "rerank_topn": len(diversified_pool),
                 "rerank_timeout_ms": (
-                    neural_reranker.llm_timeout_ms
-                    if neural_reranker.llm_enabled
+                    evidence_reranker.llm_timeout_ms
+                    if evidence_reranker.llm_enabled
                     else 0
                 ),
                 "rerank_input_count": len(diversified_pool),
@@ -352,7 +352,7 @@ class InMemoryRetriever:
                 "rerank_llm_used": bool(llm_scores),
                 "rerank_llm_status": llm_info.get("status"),
                 "rerank_llm_error": llm_info.get("error"),
-                "rerank_llm_min_score": neural_reranker.llm_min_score,
+                "rerank_llm_min_score": evidence_reranker.llm_min_score,
                 "rerank_llm_rejected_count": llm_rejected_count,
                 "rerank_llm_unscored_count": llm_unscored_count,
             }
@@ -378,7 +378,7 @@ class InMemoryRetriever:
             "ranking_fallback": (
                 (
                     "llm_dominant_degraded"
-                    if bool(neural_rerank.get("rerank_llm_used"))
+                    if bool(evidence_rerank.get("rerank_llm_used"))
                     else "deterministic_lexical"
                 )
                 if ranking_degraded
@@ -386,14 +386,17 @@ class InMemoryRetriever:
             ),
             "rerank": {
                 **biomedical_rerank,
-                "neural": neural_rerank,
-                "rerank_latency_ms": neural_rerank.get("rerank_latency_ms"),
-                "rerank_topn": neural_rerank.get("rerank_topn"),
-                "rerank_model": neural_rerank.get("rerank_model"),
-                "rerank_timed_out": bool(neural_rerank.get("rerank_timed_out")),
-                "rerank_reason": neural_rerank.get("rerank_reason"),
-                "rerank_cache_hit": bool(neural_rerank.get("rerank_cache_hit")),
-                "rerank_cache_age_ms": neural_rerank.get("rerank_cache_age_ms"),
+                "evidence": evidence_rerank,
+                # ``neural`` is retained as a trace compatibility alias for
+                # downstream release consumers during the naming migration.
+                "neural": evidence_rerank,
+                "rerank_latency_ms": evidence_rerank.get("rerank_latency_ms"),
+                "rerank_topn": evidence_rerank.get("rerank_topn"),
+                "rerank_model": evidence_rerank.get("rerank_model"),
+                "rerank_timed_out": bool(evidence_rerank.get("rerank_timed_out")),
+                "rerank_reason": evidence_rerank.get("rerank_reason"),
+                "rerank_cache_hit": bool(evidence_rerank.get("rerank_cache_hit")),
+                "rerank_cache_age_ms": evidence_rerank.get("rerank_cache_age_ms"),
             },
             "score_trace": score_trace,
             "top_documents": self._trace_top_docs(ranked),

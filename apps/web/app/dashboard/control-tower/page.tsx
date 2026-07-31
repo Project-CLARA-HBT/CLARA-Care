@@ -76,8 +76,8 @@ const FLOW_FLAGS: Array<{ key: FlowFlagKey; label: string; hint: string; group: 
   },
   {
     key: "rag_reranker_enabled",
-    label: "Neural Reranker",
-    hint: "Bật reranker neural để ưu tiên bằng chứng chất lượng cao.",
+    label: "Evidence Reranker",
+    hint: "Bật reranker bằng chứng để ưu tiên nguồn chất lượng cao.",
     group: "retrieval"
   },
   {

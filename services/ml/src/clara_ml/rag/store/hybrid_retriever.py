@@ -73,7 +73,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports (no runtime cost)
     from sqlalchemy.orm import Session
 
     from clara_ml.rag.embedder import HttpEmbeddingClient
-    from clara_ml.rag.retrieval.reranker import NeuralReranker
+    from clara_ml.rag.retrieval.reranker import EvidenceReranker
 
 __all__ = [
     "RetrievalFilters",
@@ -170,7 +170,8 @@ class HybridRetriever:
     sparse_index:
         The injected :class:`SparseIndex` providing the BM25 / bge-m3 sparse arm.
     reranker:
-        The cross-encoder reranker (``rag.retrieval.reranker.NeuralReranker``);
+        The cross-encoder evidence reranker
+        (``rag.retrieval.reranker.EvidenceReranker``);
         its ``rerank`` reorders the fused candidates and never invents/drops one.
     session_factory:
         Zero-argument callable returning a :class:`~sqlalchemy.orm.Session`, used
@@ -199,7 +200,7 @@ class HybridRetriever:
         *,
         embedder: "HttpEmbeddingClient",
         sparse_index: SparseIndex,
-        reranker: "NeuralReranker",
+        reranker: "EvidenceReranker",
         session_factory: Callable[[], "Session"] | None = None,
         dense_search: DenseSearchFn | None = None,
         query_expander: Any | None = None,
@@ -229,7 +230,7 @@ class HybridRetriever:
         engine: "Engine",
         *,
         embedder: "HttpEmbeddingClient",
-        reranker: "NeuralReranker",
+        reranker: "EvidenceReranker",
         sparse_index: SparseIndex | None = None,
         query_expander: Any | None = None,
         candidate_n: int = DEFAULT_CANDIDATE_N,
