@@ -304,17 +304,6 @@ class LlmGenerator(Protocol):
     def generate(self, prompt: str, system_prompt: str | None = None) -> DeepSeekResponse: ...
 
 
-class _RegistrySettingsOverlay:
-    """Compatibility helper for tests; not used by production model routing."""
-
-    def __init__(self, base: Any, **overrides: object) -> None:
-        self._base = base
-        self._overrides = overrides
-
-    def __getattr__(self, name: str) -> Any:
-        return self._overrides.get(name, getattr(self._base, name))
-
-
 class RagPipelineP1:
     """P1 pipeline: retrieve -> LLM answer (if available) -> deterministic fallback."""
 
@@ -1596,61 +1585,6 @@ class RagPipelineP1:
         )
         return any(signal in message for signal in retryable_signals)
 
-    def _matches_configured_deepseek_env(self, llm_runtime: Any, settings: Any) -> bool:
-        """True when ``llm_runtime`` exactly matches the configured DeepSeek env.
-
-        Used by :meth:`resolve_llm_client` to decide whether the default client
-        (with its longer timeout) can be reused instead of building a capped
-        runtime-override client (Requirement 2.3, design Property 2). Reuse is
-        only safe when DeepSeek-only mode is active, a default client exists,
-        and the supplied runtime points at the same provider/key/base/model.
-        """
-        if not settings.llm_deepseek_only:
-            return False
-        if self._llm_client is None:
-            return False
-        if not isinstance(llm_runtime, dict):
-            return False
-        provider = str(llm_runtime.get("provider") or "").strip().lower()
-        api_key = str(llm_runtime.get("api_key") or "").strip()
-        base_url = str(llm_runtime.get("base_url") or "").strip()
-        model = str(llm_runtime.get("model") or "").strip()
-        return (
-            provider == "deepseek"
-            and api_key == str(self._deepseek_api_key or "").strip()
-            and base_url == str(settings.deepseek_base_url or "").strip()
-            and model == str(settings.deepseek_model or "").strip()
-        )
-
-    @staticmethod
-    def _runtime_client_timeout_seconds(settings: Any) -> float:
-        """Timeout (seconds) applied to an *explicit* runtime override client.
-
-        A runtime override client is intentionally capped to a short ceiling so
-        a stuck runtime endpoint cannot block the pipeline. This cap must never
-        be applied to the default DeepSeek client, whose longer timeout is
-        preserved by :meth:`resolve_llm_client` (Requirement 2.3).
-        """
-        runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
-        return max(2.0, min(runtime_timeout_seconds, 18.0))
-
-    @staticmethod
-    def _registry_settings_for_values(
-        settings: Any,
-        *,
-        api_key: str,
-        base_url: str,
-        model: str,
-    ) -> _RegistrySettingsOverlay:
-        """Adapt internal runtime values without bypassing the model registry."""
-
-        return _RegistrySettingsOverlay(
-            settings,
-            deepseek_api_key=api_key,
-            deepseek_base_url=base_url,
-            deepseek_model=model,
-        )
-
     def resolve_llm_client(self, llm_runtime: Any, settings: Any = None) -> LlmGenerator | None:
         """Return the registry-built default client, never a runtime override.
 
@@ -1662,17 +1596,6 @@ class RagPipelineP1:
 
         del llm_runtime, settings
         return self._llm_client
-
-    def _resolve_runtime_llm_client(self, llm_runtime: Any) -> tuple[LlmGenerator | None, str]:
-        """Resolve the LLM client + api key that ``run`` should use.
-
-        Thin integration seam over :meth:`resolve_llm_client` that also resolves
-        the api key ``run`` uses for its presence/strict-mode checks.
-        """
-        del llm_runtime
-        runtime_llm_api_key = (self._deepseek_api_key or "").strip()
-        runtime_llm_client = self.resolve_llm_client(None, settings)
-        return runtime_llm_client, runtime_llm_api_key
 
     @staticmethod
     def _build_no_rag_prompt(query: str, *, answer_language: str = "vi") -> str:
@@ -3520,7 +3443,12 @@ class RagPipelineP1:
                 trace=trace,
             )
 
-        runtime_llm_client, runtime_llm_api_key = self._resolve_runtime_llm_client(llm_runtime)
+        # A historical runtime payload is accepted above for response-shape
+        # compatibility only. Provider/model/credential selection is owned by
+        # the deployment registry and cannot be changed per request.
+        del llm_runtime
+        runtime_llm_client = self._llm_client
+        runtime_llm_api_key = (self._deepseek_api_key or "").strip()
 
         if not generation_enabled:
             used_stages.append("retrieval_only")
