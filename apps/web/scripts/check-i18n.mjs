@@ -140,6 +140,28 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    // Visit preparation is intentionally a two-step, review-only flow. The
+    // generated draft and cited source records remain immutable; the only
+    // editable field is client-memory notes that are neither persisted nor
+    // submitted to LifeMap.
+    path: "app/lifemap/visit-prep/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "StepProgress",
+      "visitPrep.step.scope",
+      "visitPrep.step.review",
+      "visitPrep.localNotes.label",
+      "setNotes",
+      "onNotesChange",
+    ],
+    forbidden: [
+      "Your notes or questions",
+      "Ghi chú hoặc câu hỏi của bạn",
+      "localStorage",
+      "sessionStorage",
+    ],
+  },
+  {
     path: "app/chat/_v2/components/ChatWelcome.tsx",
     required: [
       "@/lib/i18n/catalog",
