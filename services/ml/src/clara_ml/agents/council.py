@@ -7,6 +7,7 @@ from itertools import combinations
 from typing import Any
 
 from clara_ml.agents.council_heuristic_risk import score_council_rule_shadow
+from clara_ml.agents.council_medication_safety import evaluate_council_medication_safety
 from clara_ml.config import settings
 
 SUPPORTED_SPECIALISTS = (
@@ -619,7 +620,12 @@ def _build_consensus_metadata(
     }
 
 
-def _consensus_summary(assessments: list[SpecialistAssessment], consensus_triage: str) -> str:
+def _consensus_summary(
+    assessments: list[SpecialistAssessment],
+    consensus_triage: str,
+    *,
+    medication_safety_floor: str | None = None,
+) -> str:
     finding_counts: dict[str, int] = {}
     for item in assessments:
         for finding in item.key_findings:
@@ -631,6 +637,11 @@ def _consensus_summary(assessments: list[SpecialistAssessment], consensus_triage
     else:
         shared_text = "no repeated cross-specialty finding"
 
+    if medication_safety_floor in _TRIAGE_SCORE:
+        return (
+            f"Rule-specialist consensus is {consensus_triage}; shared signals: {shared_text}. "
+            "A deterministic medication-safety floor remains prioritized over this consensus."
+        )
     return (
         f"Council consensus triage is {consensus_triage}; shared signals: {shared_text}. "
         "Highest-acuity specialist concern remains prioritized."
@@ -1063,13 +1074,18 @@ def _build_escalation_metadata(
     red_flags: list[str],
     red_flag_matches: list[dict[str, str]],
     assessments: list[SpecialistAssessment],
+    medication_safety_floor: str | None = None,
 ) -> dict[str, Any]:
-    if red_flags:
+    if red_flags or medication_safety_floor == "emergency_escalation":
         priority = "critical"
         recommended_sla_minutes = 5
         requires_human_handoff = True
     else:
-        highest_score = max(_TRIAGE_SCORE[item.triage] for item in assessments)
+        highest_score = max(
+            _TRIAGE_SCORE[item.triage] for item in assessments
+        )
+        if medication_safety_floor in _TRIAGE_SCORE:
+            highest_score = max(highest_score, _TRIAGE_SCORE[medication_safety_floor])
         if highest_score >= _TRIAGE_SCORE["emergency_escalation"]:
             priority = "urgent"
             recommended_sla_minutes = 30
@@ -1254,11 +1270,27 @@ def _final_recommendation(
     red_flags: list[str],
     assessments: list[SpecialistAssessment],
     needs_more_info: bool,
+    medication_safety_floor: str | None = None,
 ) -> str:
     if red_flags:
         return (
             "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency "
             "services immediately while preparing rapid specialist handoff."
+        )
+
+    # A DrugBank-backed safety floor is deterministic and cannot be lowered by
+    # an incomplete intake or the rule-specialist consensus.  The wording stays
+    # intentionally non-prescriptive and does not expose medication names or
+    # interaction source text.
+    if medication_safety_floor == "emergency_escalation":
+        return (
+            "Medication safety screening requires emergency in-person evaluation. "
+            "Do not change medication use based on this Council result alone."
+        )
+    if medication_safety_floor == "same_day_review":
+        return (
+            "Medication safety screening requires same-day review with a clinician or pharmacist. "
+            "Do not change medication use based on this Council result alone."
         )
 
     if needs_more_info:
@@ -1284,6 +1316,22 @@ def _final_recommendation(
     )
 
 
+def _apply_triage_floor(consensus_triage: str, floor: object) -> str:
+    """Return the highest valid deterministic Council triage.
+
+    The helper accepts untyped tool output defensively.  It never lowers a
+    Council recommendation and deliberately has no model dependency.
+    """
+
+    baseline_score = _TRIAGE_SCORE.get(consensus_triage, _TRIAGE_SCORE["routine_follow_up"])
+    if not isinstance(floor, str) or floor not in _TRIAGE_SCORE:
+        return consensus_triage
+    return max(
+        (consensus_triage, floor),
+        key=lambda value: _TRIAGE_SCORE.get(value, baseline_score),
+    )
+
+
 def run_council(payload: dict) -> dict:
     symptoms = _normalize_text_list(payload.get("symptoms"))
     labs = _normalize_labs(payload.get("labs"))
@@ -1300,10 +1348,41 @@ def run_council(payload: dict) -> dict:
     assessments_payload = [_public_specialist_assessment(item) for item in assessments]
 
     red_flags, red_flag_matches, negated_red_flag_matches = _detect_red_flags(symptoms)
+    # The optional Council medication-safety tool is strictly deterministic.
+    # It calls CareGuard with a required DrugBank source and never contributes
+    # raw output to the LLM case packet below.  With the default-off flag the
+    # result shape and execution path remain byte-compatible with the legacy
+    # rule Council.
+    medication_safety: dict[str, Any] | None = None
+    if settings.council_medication_safety_enabled and medications:
+        medication_safety = evaluate_council_medication_safety(medications)
+    medication_safety_floor = (
+        medication_safety.get("triage_floor")
+        if isinstance(medication_safety, dict)
+        else None
+    )
     conflicts = _build_conflicts(assessments)
-    consensus_triage = _consensus_triage(assessments)
-    consensus_metadata = _build_consensus_metadata(assessments, consensus_triage, conflicts)
-    consensus_summary = _consensus_summary(assessments, consensus_triage)
+    baseline_consensus_triage = _consensus_triage(assessments)
+    consensus_triage = _apply_triage_floor(
+        baseline_consensus_triage,
+        medication_safety_floor,
+    )
+    consensus_metadata = _build_consensus_metadata(
+        assessments,
+        baseline_consensus_triage,
+        conflicts,
+    )
+    if consensus_triage != baseline_consensus_triage:
+        consensus_metadata["baseline_winning_triage"] = baseline_consensus_triage
+        consensus_metadata["winning_triage"] = consensus_triage
+        consensus_metadata["safety_floor_applied"] = True
+    consensus_summary = _consensus_summary(
+        assessments,
+        baseline_consensus_triage,
+        medication_safety_floor=(
+            medication_safety_floor if isinstance(medication_safety_floor, str) else None
+        ),
+    )
     divergence_notes = _divergence_notes(assessments, conflicts)
 
     data_quality = _compute_data_quality(symptoms, labs, medications, history)
@@ -1323,6 +1402,7 @@ def run_council(payload: dict) -> dict:
         red_flags,
         assessments,
         needs_more_info,
+        medication_safety_floor,
     )
 
     citations = _build_citations(
@@ -1340,6 +1420,7 @@ def run_council(payload: dict) -> dict:
         red_flags=red_flags,
         red_flag_matches=red_flag_matches,
         assessments=assessments,
+        medication_safety_floor=medication_safety_floor,
     )
 
     if red_flags:
@@ -1385,11 +1466,11 @@ def run_council(payload: dict) -> dict:
         "final_recommendation": final_recommendation,
         "estimated_duration_minutes": estimated_duration_minutes,
         "emergency_escalation": {
-            "triggered": bool(red_flags),
+            "triggered": bool(red_flags) or medication_safety_floor == "emergency_escalation",
             "red_flags": red_flags,
             "action": (
                 "immediate_emergency_referral"
-                if red_flags
+                if red_flags or medication_safety_floor == "emergency_escalation"
                 else "standard_multidisciplinary_pathway"
             ),
             "negated_red_flags": negated_red_flag_matches,
@@ -1444,6 +1525,25 @@ def run_council(payload: dict) -> dict:
             "specialist_sections": assessments_payload,
         },
     }
+
+    if medication_safety is not None:
+        # This bounded projection includes only state, the deployment dataset
+        # version, opaque run-local alert identifiers, and a deterministic
+        # review/triage floor. It must never contain a raw medication, source
+        # error, interaction statement, or CareGuard result object.
+        result["medication_safety"] = medication_safety
+        result["analyze"]["medication_safety_review_required"] = bool(
+            medication_safety.get("review_required")
+        )
+        result["assessment_completeness"]["medication_safety_review_required"] = bool(
+            medication_safety.get("review_required")
+        )
+        result["analyze"]["emergency_triggered"] = bool(
+            result["emergency_escalation"]["triggered"]
+        )
+        result["deepdive"]["cross_specialty"]["highest_triage_score"] = _TRIAGE_SCORE[
+            consensus_triage
+        ]
 
     # --- Clinician-review safety directive (Requirement 3.5) ----------------
     # Attached unconditionally to EVERY run_council envelope — emergency

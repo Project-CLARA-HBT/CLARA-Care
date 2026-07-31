@@ -69,6 +69,21 @@ export default function CouncilResultPage() {
     if (value == null || Number.isNaN(value)) return "-";
     return value.toFixed(2);
   };
+  const medicationSafety = snapshot?.result.medicationSafety ?? null;
+  const medicationSafetyLabel = medicationSafety
+    ? medicationSafety.state === "checked"
+      ? t(language, "council.result.medicationSafety.checked")
+      : medicationSafety.state === "requires_clarification"
+        ? t(language, "council.result.medicationSafety.clarification")
+        : t(language, "council.result.medicationSafety.unavailable")
+    : "";
+  const medicationSafetyHint = medicationSafety?.drugbankVersion
+    ? t(language, "council.result.medicationSafety.version", {
+        version: medicationSafety.drugbankVersion,
+      })
+    : medicationSafety
+      ? t(language, "council.result.medicationSafety.noVersion")
+      : "";
 
   return (
     <PageShell
@@ -146,11 +161,28 @@ export default function CouncilResultPage() {
                   value={view.quality.ruleShadowEnabled ? view.quality.ruleShadowBand || t(language, "council.result.ruleRiskPresent") : t(language, "council.result.ruleRiskDisabled")}
                   hint={t(language, "council.result.ruleRiskHint")}
                 />
+                {medicationSafety ? (
+                  <CouncilMetricCard
+                    label={t(language, "council.result.medicationSafety.label")}
+                    value={medicationSafetyLabel}
+                    hint={medicationSafetyHint}
+                  />
+                ) : null}
               </div>
 
               {view.summary.escalationReason ? (
                 <p className="mt-3 rounded-xl border border-red-300/40 bg-red-50/80 px-3 py-2 text-sm text-red-700 dark:border-red-700/45 dark:bg-red-950/20 dark:text-red-300">
                   {t(language, "council.result.escalationReason", { reason: stripTelemetryLabels(view.summary.escalationReason) })}
+                </p>
+              ) : null}
+
+              {medicationSafety?.reviewRequired ? (
+                <p className="mt-3 rounded-xl border border-amber-300/55 bg-amber-50/80 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/45 dark:bg-amber-950/25 dark:text-amber-200">
+                  {medicationSafety.state === "requires_clarification"
+                    ? t(language, "council.result.medicationSafety.clarificationNotice")
+                    : medicationSafety.state === "unavailable"
+                      ? t(language, "council.result.medicationSafety.unavailableNotice")
+                      : t(language, "council.result.medicationSafety.reviewNotice")}
                 </p>
               ) : null}
 

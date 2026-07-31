@@ -107,6 +107,16 @@ export type CouncilAiDisclosure = {
   isFallback: boolean;
 };
 
+/** Sanitized deterministic Council → CareGuard safety projection only. */
+export type CouncilMedicationSafety = {
+  state: "checked" | "unavailable" | "requires_clarification";
+  drugbankState: "ready" | "unavailable" | "disabled" | "unknown";
+  drugbankVersion: string;
+  alertIds: string[];
+  triageFloor: "routine_follow_up" | "same_day_review" | "emergency_escalation" | null;
+  reviewRequired: boolean;
+};
+
 export type CouncilRunRawResponse = {
   [key: string]: unknown;
 };
@@ -128,6 +138,7 @@ export type CouncilRunResult = {
   reasoningTimeline: CouncilReasoningTimelineStep[];
   ruleShadow: CouncilRuleShadow | null;
   aiDisclosure: CouncilAiDisclosure | null;
+  medicationSafety: CouncilMedicationSafety | null;
   analysisSections: {
     analyze: string[];
     details: string[];
@@ -456,6 +467,47 @@ function parseCouncilDisclosure(value: unknown): CouncilAiDisclosure | null {
   };
 }
 
+function parseCouncilMedicationSafety(value: unknown): CouncilMedicationSafety | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const state = asText(record.state);
+  if (state !== "checked" && state !== "unavailable" && state !== "requires_clarification") {
+    return null;
+  }
+  const rawDrugbankState = asText(record.drugbank_state ?? record.drugbankState);
+  const drugbankState =
+    rawDrugbankState === "ready" ||
+    rawDrugbankState === "unavailable" ||
+    rawDrugbankState === "disabled"
+      ? rawDrugbankState
+      : "unknown";
+  const version = asText(record.drugbank_version ?? record.drugbankVersion) ?? "";
+  const drugbankVersion =
+    version.includes("/") || version.includes("\\") || /[\r\n]/.test(version)
+      ? ""
+      : version.slice(0, 160);
+  const alertIds = parseStringArray(record.alert_ids ?? record.alertIds)
+    .filter((item) => /^council-ddi-alert-\d+$/.test(item))
+    .slice(0, 12);
+  const triageFloorRaw = asText(record.triage_floor ?? record.triageFloor);
+  const triageFloor =
+    triageFloorRaw === "routine_follow_up" ||
+    triageFloorRaw === "same_day_review" ||
+    triageFloorRaw === "emergency_escalation"
+      ? triageFloorRaw
+      : null;
+
+  return {
+    state,
+    drugbankState,
+    drugbankVersion,
+    alertIds,
+    triageFloor,
+    reviewRequired: parseBoolean(record.review_required ?? record.reviewRequired),
+  };
+}
+
 function formatLabsInput(value: unknown): string {
   const rows = Array.isArray(value) ? value : [];
   const formattedRows = rows
@@ -608,6 +660,9 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
   const reasoningTimeline = parseReasoningTimeline(pickUnknown(candidates, ["reasoning_timeline"]));
   const ruleShadow = parseRuleShadow(pickUnknown(candidates, ["rule_shadow"]));
   const aiDisclosure = parseCouncilDisclosure(pickUnknown(candidates, ["ai_disclosure", "aiDisclosure"]));
+  const medicationSafety = parseCouncilMedicationSafety(
+    pickUnknown(candidates, ["medication_safety", "medicationSafety"])
+  );
 
   const policyAction = parseText(pickUnknown(candidates, ["policy_action", "action"])).toLowerCase();
   const explicitEmergencyFlag = parseBoolean(
@@ -677,6 +732,7 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     reasoningTimeline,
     ruleShadow,
     aiDisclosure,
+    medicationSafety,
     analysisSections
   };
 }

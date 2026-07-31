@@ -441,6 +441,12 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
                 setNoteTemplateId(result.note.template_id ?? templateId);
               }
             }
+            const correction = result.medical_correction;
+            if (correction?.status === "review_required") {
+              setMedicalCorrections(normalizeMedicalCorrections(correction.suggestions));
+            } else {
+              setMedicalCorrections([]);
+            }
           },
           onError: (message) => {
             sawError = true;
@@ -843,40 +849,6 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       }));
   }, [segments, transcriptDraft]);
 
-  const applyMedicalCorrection = useCallback(
-    (suggestion: ScribeMedicalCorrectionSuggestion) => {
-      if (alreadySigned) return;
-      const start = suggestion.start;
-      const end = suggestion.end;
-      if (
-        start < 0 ||
-        end <= start ||
-        transcriptDraft.slice(start, end) !== suggestion.source_text
-      ) {
-        pushNotice(
-          "error",
-          "Bản ghi đã thay đổi nên đề xuất này không còn khớp. Hãy tự đối chiếu trước khi sửa.",
-        );
-        return;
-      }
-      setTranscriptDraft(
-        `${transcriptDraft.slice(0, start)}${suggestion.replacement_text}${transcriptDraft.slice(end)}`,
-      );
-      setMedicalCorrections((current) =>
-        current.filter(
-          (item) =>
-            !(
-              item.start === suggestion.start &&
-              item.end === suggestion.end &&
-              item.source_text === suggestion.source_text
-            ),
-        ),
-      );
-      pushNotice("success", "Đã áp dụng một đề xuất sau khi bạn xác nhận.");
-    },
-    [alreadySigned, pushNotice, transcriptDraft],
-  );
-
   if (!session) {
     return (
       <div className={`col-span-12 ${panelPaddedClass}`}>
@@ -910,7 +882,6 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         onStartRecording,
         onStopRecording: stopMediaRecorder,
         onTranscriptChange: setTranscriptDraft,
-        onApplyMedicalCorrection: applyMedicalCorrection,
         onUploadClick: () => fileInputRef.current?.click(),
       })}
       {renderNoteColumn({
@@ -1064,7 +1035,6 @@ function renderTranscriptColumn(props: {
   onStartRecording: () => void;
   onStopRecording: () => void;
   onTranscriptChange: (value: string) => void;
-  onApplyMedicalCorrection: (suggestion: ScribeMedicalCorrectionSuggestion) => void;
   onUploadClick: () => void;
 }) {
   const consentGateOpen = props.consentRequired && !props.consentCaptured;
@@ -1195,14 +1165,6 @@ function renderTranscriptColumn(props: {
                     <span className="font-semibold">“{suggestion.replacement_text}”</span>
                   </p>
                   <p className={`mt-1 text-[11px] ${mutedTextClass}`}>{suggestion.rationale}</p>
-                  <button
-                    type="button"
-                    className={`mt-2 ${secondaryButtonClass}`}
-                    disabled={props.alreadySigned}
-                    onClick={() => props.onApplyMedicalCorrection(suggestion)}
-                  >
-                    {t(props.language, "scribe.enterprise.corrections.apply")}
-                  </button>
                 </li>
               ))}
             </ul>

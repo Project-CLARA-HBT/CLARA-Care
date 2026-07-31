@@ -593,6 +593,8 @@ export type ScribeStreamDone = {
   transcript?: string;
   segments?: ScribeStreamSegment[];
   note?: ScribeStreamNote;
+  /** Review-only terminology candidates; the client must never auto-apply them. */
+  medical_correction?: ScribeMedicalCorrectionResult;
   asr_meta?: ScribeStreamAsrMeta;
   [key: string]: unknown;
 };

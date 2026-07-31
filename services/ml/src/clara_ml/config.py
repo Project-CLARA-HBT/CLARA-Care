@@ -907,6 +907,13 @@ class Settings(BaseSettings):
         ge=400,
         le=4000,
     )
+    # Optional deterministic Council → CareGuard/DrugBank safety floor. This
+    # is intentionally independent of the LLM shadow path: it never supplies
+    # an LLM prompt and can only raise review/triage urgency.
+    council_medication_safety_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_MEDICATION_SAFETY_ENABLED",
+    )
 
     # --- Council upgrade feature flags (additive; default OFF) ---------------
     # ML-side gates for the Council upgrade, mirroring the COUNCIL_RULE_SHADOW_*
