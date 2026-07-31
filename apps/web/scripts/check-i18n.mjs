@@ -362,6 +362,25 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    // The ecosystem center exposes operational data, but its shell and error
+    // boundary must respect the selected locale without changing telemetry.
+    path: "app/dashboard/ecosystem/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "@/lib/use-ui-language",
+      "safeUserFacingError",
+      "ecosystem.pageTitle",
+      "ecosystem.error.load",
+      "formatLocaleDate(language",
+    ],
+    forbidden: [
+      'title="Technical Monitoring Hub"',
+      "Ecosystem Control Plane",
+      "Không thể tải trung tâm hệ sinh thái. Vui lòng thử lại.",
+      'toLocaleString("vi-VN")',
+    ],
+  },
+  {
     // Council overview presents safety-oriented chrome around structured,
     // dynamic specialist and clinical content. This gate covers only the
     // static chrome; it intentionally does not constrain clinical outputs.

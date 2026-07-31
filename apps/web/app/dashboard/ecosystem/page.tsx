@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import { formatLocaleDate, t, UI_MESSAGES, type UITranslationKey } from "@/lib/i18n/catalog";
 import { SystemEcosystemSnapshot, getSystemEcosystem, isAccessDeniedError, normalizeSystemEcosystem } from "@/lib/system";
+import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 const EMPTY_SNAPSHOT: SystemEcosystemSnapshot = {
   generatedAt: null,
@@ -18,31 +21,37 @@ const EMPTY_SNAPSHOT: SystemEcosystemSnapshot = {
   federationAlerts: []
 };
 
-function formatCount(value: number | null): string {
+function formatCount(language: "vi" | "en", value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "--";
-  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US", { maximumFractionDigits: 0 }).format(value);
 }
 
-function formatPercent(value: number | null): string {
+function formatPercent(language: "vi" | "en", value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "--";
-  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(value)}%`;
+  return `${new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US", { maximumFractionDigits: 2 }).format(value)}%`;
 }
 
-function formatMs(value: number | null): string {
+function formatMs(language: "vi" | "en", value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "--";
-  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(value)} ms`;
+  return `${new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US", { maximumFractionDigits: 2 }).format(value)} ms`;
 }
 
-function formatHours(value: number | null): string {
+function formatHours(language: "vi" | "en", value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "--";
-  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(value)} h`;
+  return `${new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US", { maximumFractionDigits: 2 }).format(value)} h`;
 }
 
-function formatDateTime(value: string | null): string {
+function formatDateTime(language: "vi" | "en", value: string | null): string {
   if (!value) return "--";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString("vi-VN");
+  return formatLocaleDate(language, parsed, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function labelFor(language: "vi" | "en", prefix: string, value: string): string {
+  const normalized = value.trim().toLowerCase();
+  const key = `${prefix}.${normalized}` as UITranslationKey;
+  return key in (language === "vi" ? UI_MESSAGES.vi : UI_MESSAGES.en) ? t(language, key) : value;
 }
 
 function statusClass(status: string): string {
@@ -102,6 +111,11 @@ function barWidth(value: number | null, max: number): string {
 }
 
 export default function EcosystemCenterPage() {
+  const language = useUILanguage();
+  const copy = useCallback(
+    (key: UITranslationKey, values?: Record<string, string | number>) => t(language, key, values),
+    [language],
+  );
   const [snapshot, setSnapshot] = useState<SystemEcosystemSnapshot>(EMPTY_SNAPSHOT);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -114,31 +128,33 @@ export default function EcosystemCenterPage() {
     const criticalAlerts = snapshot.summary.criticalAlertCount ?? 0;
     return [
       {
-        label: "Tổng đối tác",
-        value: formatCount(snapshot.summary.partnersTotal),
-        helper: "Endpoint được monitor liên tục",
+        label: copy("ecosystem.summary.partnersTotal"),
+        value: formatCount(language, snapshot.summary.partnersTotal),
+        helper: copy("ecosystem.summary.partnersTotal.helper"),
         tone: "neutral"
       },
       {
-        label: "Đối tác đang lỗi",
-        value: formatCount(snapshot.summary.partnersDown),
-        helper: partnerDown > 0 ? "Cần xử lý ngay" : "Không phát hiện downtime",
+        label: copy("ecosystem.summary.partnersDown"),
+        value: formatCount(language, snapshot.summary.partnersDown),
+        helper: partnerDown > 0 ? copy("ecosystem.summary.partnersDown.action") : copy("ecosystem.summary.partnersDown.clear"),
         tone: partnerDown > 0 ? "danger" : "good"
       },
       {
-        label: "Nguồn có trust thấp",
-        value: formatCount(snapshot.summary.trustLowCount),
-        helper: trustLow > 0 ? "Ưu tiên kiểm tra đồng bộ" : "Mức tin cậy ổn định",
+        label: copy("ecosystem.summary.trustLow"),
+        value: formatCount(language, snapshot.summary.trustLowCount),
+        helper: trustLow > 0 ? copy("ecosystem.summary.trustLow.action") : copy("ecosystem.summary.trustLow.clear"),
         tone: trustLow > 0 ? "warning" : "good"
       },
       {
-        label: "Cảnh báo nghiêm trọng",
-        value: formatCount(snapshot.summary.criticalAlertCount),
-        helper: criticalAlerts > 0 ? "Yêu cầu phản ứng khẩn cấp" : "Không có critical alert",
+        label: copy("ecosystem.summary.criticalAlerts"),
+        value: formatCount(language, snapshot.summary.criticalAlertCount),
+        helper: criticalAlerts > 0 ? copy("ecosystem.summary.criticalAlerts.action") : copy("ecosystem.summary.criticalAlerts.clear"),
         tone: criticalAlerts > 0 ? "danger" : "good"
       }
     ];
   }, [
+    copy,
+    language,
     snapshot.summary.criticalAlertCount,
     snapshot.summary.partnersDown,
     snapshot.summary.partnersTotal,
@@ -201,32 +217,29 @@ export default function EcosystemCenterPage() {
     } catch (refreshError) {
       if (isAccessDeniedError(refreshError)) {
         setForbidden(true);
-      } else if (refreshError instanceof Error && refreshError.message.trim()) {
-        setError(refreshError.message);
       } else {
-        setError("Không thể tải trung tâm hệ sinh thái. Vui lòng thử lại.");
+        setError(safeUserFacingError(refreshError, copy("ecosystem.error.load")));
       }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [copy]);
 
   useEffect(() => {
     void onRefresh();
   }, [onRefresh]);
 
   return (
-    <PageShell title="Technical Monitoring Hub">
+    <PageShell title={copy("ecosystem.pageTitle")}>
       <div className="space-y-5">
         <section className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-slate-100 shadow-lg shadow-slate-900/10 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Ecosystem Control Plane</p>
-              <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">Technical Monitoring Hub</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">{copy("ecosystem.eyebrow")}</p>
+              <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">{copy("ecosystem.pageTitle")}</h2>
               <p className="max-w-3xl text-sm leading-6 text-slate-300">
-                Quan sát sức khỏe liên thông toàn hệ thống với 4 vùng trọng tâm: summary vận hành, partner health, trust scores
-                và hàng đợi alerts cần phản ứng.
+                {copy("ecosystem.description")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -234,7 +247,7 @@ export default function EcosystemCenterPage() {
                 href="/dashboard"
                 className="inline-flex min-h-11 items-center rounded-lg border border-slate-500 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:border-slate-300 hover:bg-slate-700/70"
               >
-                Về bảng điều khiển
+                {copy("ecosystem.backToDashboard")}
               </Link>
               <button
                 type="button"
@@ -242,20 +255,20 @@ export default function EcosystemCenterPage() {
                 disabled={isRefreshing}
                 className="inline-flex min-h-11 items-center rounded-lg bg-cyan-500 px-3 py-1.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isRefreshing ? "Đang làm mới..." : "Làm mới snapshot"}
+                {isRefreshing ? copy("ecosystem.refreshing") : copy("ecosystem.refresh")}
               </button>
             </div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
             <span className="rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1">
-              Cập nhật: {snapshot.generatedAt ? formatDateTime(snapshot.generatedAt) : "chưa có dữ liệu"}
+              {copy("ecosystem.updated", { date: snapshot.generatedAt ? formatDateTime(language, snapshot.generatedAt) : copy("ecosystem.noData") })}
             </span>
             <span className="rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1">
-              Partners: {formatCount(snapshot.summary.partnersTotal)}
+              {copy("ecosystem.partners", { count: formatCount(language, snapshot.summary.partnersTotal) })}
             </span>
             <span className="rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1">
-              Unacknowledged alerts: {formatCount(alertOverview.unacknowledged)}
+              {copy("ecosystem.unacknowledgedAlerts", { count: formatCount(language, alertOverview.unacknowledged) })}
             </span>
           </div>
 
@@ -283,13 +296,13 @@ export default function EcosystemCenterPage() {
 
         {isLoading ? (
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            Đang tải dữ liệu monitoring hub...
+            {copy("ecosystem.loading")}
           </div>
         ) : null}
 
         {forbidden ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Bạn không đủ quyền truy cập Trung tâm hệ sinh thái. Tính năng này chỉ dành cho vai trò bác sĩ (403).
+            {copy("ecosystem.accessDenied")}
           </div>
         ) : null}
 
@@ -303,18 +316,18 @@ export default function EcosystemCenterPage() {
               <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Partner Health Matrix</p>
-                    <h3 className="mt-1 text-base font-semibold text-slate-900">Tình trạng đối tác tích hợp</h3>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{copy("ecosystem.partnerHealth.eyebrow")}</p>
+                    <h3 className="mt-1 text-base font-semibold text-slate-900">{copy("ecosystem.partnerHealth.title")}</h3>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 font-medium text-emerald-700">
-                      Healthy: {formatCount(partnerHealthOverview.healthy)}
+                      {copy("ecosystem.status.healthy")}: {formatCount(language, partnerHealthOverview.healthy)}
                     </span>
                     <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 font-medium text-amber-700">
-                      Degraded: {formatCount(partnerHealthOverview.degraded)}
+                      {copy("ecosystem.status.degraded")}: {formatCount(language, partnerHealthOverview.degraded)}
                     </span>
                     <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 font-medium text-red-700">
-                      Down: {formatCount(partnerHealthOverview.down)}
+                      {copy("ecosystem.status.down")}: {formatCount(language, partnerHealthOverview.down)}
                     </span>
                   </div>
                 </div>
@@ -327,21 +340,21 @@ export default function EcosystemCenterPage() {
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-sm font-semibold text-slate-900">{row.partner}</p>
                             <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${statusClass(row.status)}`}>
-                              {row.status}
+                              {labelFor(language, "ecosystem.status", row.status)}
                             </span>
                           </div>
                           <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
                             <div>
-                              <dt>Độ trễ</dt>
-                              <dd className="font-medium text-slate-800">{formatMs(row.latencyMs)}</dd>
+                              <dt>{copy("ecosystem.field.latency")}</dt>
+                              <dd className="font-medium text-slate-800">{formatMs(language, row.latencyMs)}</dd>
                             </div>
                             <div>
-                              <dt>Tỷ lệ lỗi</dt>
-                              <dd className="font-medium text-slate-800">{formatPercent(row.errorRatePct)}</dd>
+                              <dt>{copy("ecosystem.field.errorRate")}</dt>
+                              <dd className="font-medium text-slate-800">{formatPercent(language, row.errorRatePct)}</dd>
                             </div>
                             <div className="col-span-2">
-                              <dt>Kiểm tra gần nhất</dt>
-                              <dd className="font-medium text-slate-800">{formatDateTime(row.lastCheck)}</dd>
+                              <dt>{copy("ecosystem.field.lastCheck")}</dt>
+                              <dd className="font-medium text-slate-800">{formatDateTime(language, row.lastCheck)}</dd>
                             </div>
                           </dl>
                         </article>
@@ -354,19 +367,19 @@ export default function EcosystemCenterPage() {
                           <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
                             <tr>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Đối tác
+                                {copy("ecosystem.field.partner")}
                               </th>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Trạng thái
+                                {copy("ecosystem.field.status")}
                               </th>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Độ trễ
+                                {copy("ecosystem.field.latency")}
                               </th>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Tỷ lệ lỗi
+                                {copy("ecosystem.field.errorRate")}
                               </th>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Kiểm tra gần nhất
+                                {copy("ecosystem.field.lastCheck")}
                               </th>
                             </tr>
                           </thead>
@@ -378,12 +391,12 @@ export default function EcosystemCenterPage() {
                                   <span
                                     className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${statusClass(row.status)}`}
                                   >
-                                    {row.status}
+                                    {labelFor(language, "ecosystem.status", row.status)}
                                   </span>
                                 </td>
                                 <td className="px-3 py-2.5 text-slate-700">
                                   <div className="space-y-1.5">
-                                    <p className="font-medium tabular-nums text-slate-900">{formatMs(row.latencyMs)}</p>
+                                    <p className="font-medium tabular-nums text-slate-900">{formatMs(language, row.latencyMs)}</p>
                                     <div className="h-1.5 rounded-full bg-slate-200">
                                       <div
                                         className="h-1.5 rounded-full bg-cyan-500"
@@ -393,8 +406,8 @@ export default function EcosystemCenterPage() {
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-3 py-2.5 font-medium tabular-nums text-slate-700">{formatPercent(row.errorRatePct)}</td>
-                                <td className="px-3 py-2.5 text-slate-700">{formatDateTime(row.lastCheck)}</td>
+                                <td className="px-3 py-2.5 font-medium tabular-nums text-slate-700">{formatPercent(language, row.errorRatePct)}</td>
+                                <td className="px-3 py-2.5 text-slate-700">{formatDateTime(language, row.lastCheck)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -403,15 +416,15 @@ export default function EcosystemCenterPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-3 text-sm text-slate-600">Chưa có dữ liệu tình trạng đối tác.</p>
+                  <p className="mt-3 text-sm text-slate-600">{copy("ecosystem.partnerHealth.empty")}</p>
                 )}
               </section>
 
               <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Data Trust Scores</p>
-                  <h3 className="mt-1 text-base font-semibold text-slate-900">Độ tin cậy nguồn dữ liệu</h3>
-                  <p className="mt-1 text-xs text-slate-500">Theo dõi score, freshness và drift risk để phát hiện lệch dữ liệu sớm.</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{copy("ecosystem.dataTrust.eyebrow")}</p>
+                  <h3 className="mt-1 text-base font-semibold text-slate-900">{copy("ecosystem.dataTrust.title")}</h3>
+                  <p className="mt-1 text-xs text-slate-500">{copy("ecosystem.dataTrust.description")}</p>
                 </div>
 
                 {snapshot.dataTrustScores.length ? (
@@ -422,27 +435,27 @@ export default function EcosystemCenterPage() {
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <p className="text-sm font-semibold text-slate-900">{row.source}</p>
                             <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${trustScoreClass(row.trustScore)}`}>
-                              score: {formatCount(row.trustScore)}
+                              {copy("ecosystem.field.score")}: {formatCount(language, row.trustScore)}
                             </span>
                           </div>
                           <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
                             <div>
-                              <dt>Freshness</dt>
-                              <dd className="font-medium text-slate-800">{formatHours(row.freshnessHours)}</dd>
+                              <dt>{copy("ecosystem.field.freshness")}</dt>
+                              <dd className="font-medium text-slate-800">{formatHours(language, row.freshnessHours)}</dd>
                             </div>
                             <div>
-                              <dt>Drift risk</dt>
+                              <dt>{copy("ecosystem.field.driftRisk")}</dt>
                               <dd>
                                 <span
                                   className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase ${driftRiskClass(row.driftRisk)}`}
                                 >
-                                  {row.driftRisk}
+                                  {labelFor(language, "ecosystem.driftRisk", row.driftRisk)}
                                 </span>
                               </dd>
                             </div>
                             <div className="col-span-2">
-                              <dt>Lần refresh gần nhất</dt>
-                              <dd className="font-medium text-slate-800">{formatDateTime(row.lastRefresh)}</dd>
+                              <dt>{copy("ecosystem.field.lastRefresh")}</dt>
+                              <dd className="font-medium text-slate-800">{formatDateTime(language, row.lastRefresh)}</dd>
                             </div>
                           </dl>
                         </article>
@@ -455,19 +468,19 @@ export default function EcosystemCenterPage() {
                           <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
                             <tr>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Nguồn dữ liệu
+                                {copy("ecosystem.field.dataSource")}
                               </th>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Điểm trust
+                                {copy("ecosystem.field.trustScore")}
                               </th>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Freshness
+                                {copy("ecosystem.field.freshness")}
                               </th>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Drift risk
+                                {copy("ecosystem.field.driftRisk")}
                               </th>
                               <th scope="col" className="px-3 py-2.5 font-semibold">
-                                Lần refresh gần nhất
+                                {copy("ecosystem.field.lastRefresh")}
                               </th>
                             </tr>
                           </thead>
@@ -480,7 +493,7 @@ export default function EcosystemCenterPage() {
                                     <span
                                       className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${trustScoreClass(row.trustScore)}`}
                                     >
-                                      {formatCount(row.trustScore)}
+                                      {formatCount(language, row.trustScore)}
                                     </span>
                                     <div className="h-1.5 rounded-full bg-slate-200">
                                       <div
@@ -491,15 +504,15 @@ export default function EcosystemCenterPage() {
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-3 py-2.5 font-medium tabular-nums text-slate-700">{formatHours(row.freshnessHours)}</td>
+                                <td className="px-3 py-2.5 font-medium tabular-nums text-slate-700">{formatHours(language, row.freshnessHours)}</td>
                                 <td className="px-3 py-2.5">
                                   <span
                                     className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold uppercase ${driftRiskClass(row.driftRisk)}`}
                                   >
-                                    {row.driftRisk}
+                                    {labelFor(language, "ecosystem.driftRisk", row.driftRisk)}
                                   </span>
                                 </td>
-                                <td className="px-3 py-2.5 text-slate-700">{formatDateTime(row.lastRefresh)}</td>
+                                <td className="px-3 py-2.5 text-slate-700">{formatDateTime(language, row.lastRefresh)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -508,7 +521,7 @@ export default function EcosystemCenterPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-3 text-sm text-slate-600">Chưa có dữ liệu điểm tin cậy.</p>
+                  <p className="mt-3 text-sm text-slate-600">{copy("ecosystem.dataTrust.empty")}</p>
                 )}
               </section>
             </div>
@@ -516,21 +529,21 @@ export default function EcosystemCenterPage() {
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Federation Alerts</p>
-                  <h3 className="mt-1 text-base font-semibold text-slate-900">Alert queue theo mức độ ưu tiên</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{copy("ecosystem.alerts.eyebrow")}</p>
+                  <h3 className="mt-1 text-base font-semibold text-slate-900">{copy("ecosystem.alerts.title")}</h3>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 font-medium text-red-700">
-                    Critical: {formatCount(alertOverview.critical)}
+                    {copy("ecosystem.severity.critical")}: {formatCount(language, alertOverview.critical)}
                   </span>
                   <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 font-medium text-amber-700">
-                    Warning: {formatCount(alertOverview.warning)}
+                    {copy("ecosystem.severity.warning")}: {formatCount(language, alertOverview.warning)}
                   </span>
                   <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 font-medium text-blue-700">
-                    Info: {formatCount(alertOverview.info)}
+                    {copy("ecosystem.severity.info")}: {formatCount(language, alertOverview.info)}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-1 font-medium text-slate-700">
-                    Chưa xác nhận: {formatCount(alertOverview.unacknowledged)}
+                    {copy("ecosystem.acknowledged.unacknowledged")}: {formatCount(language, alertOverview.unacknowledged)}
                   </span>
                 </div>
               </div>
@@ -544,24 +557,28 @@ export default function EcosystemCenterPage() {
                           <span
                             className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold uppercase ${severityClass(alert.severity)}`}
                           >
-                            {alert.severity}
+                            {labelFor(language, "ecosystem.severity", alert.severity)}
                           </span>
                           <p className="text-sm font-semibold text-slate-900">{alert.id}</p>
-                          <span className="text-xs text-slate-500">{formatDateTime(alert.createdAt)}</span>
+                          <span className="text-xs text-slate-500">{formatDateTime(language, alert.createdAt)}</span>
                         </div>
                         <span
                           className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold uppercase ${acknowledgedClass(alert.acknowledged)}`}
                         >
-                          {alert.acknowledged === null ? "unknown" : alert.acknowledged ? "acknowledged" : "unacknowledged"}
+                          {alert.acknowledged === null
+                            ? copy("ecosystem.acknowledged.unknown")
+                            : alert.acknowledged
+                              ? copy("ecosystem.acknowledged.acknowledged")
+                              : copy("ecosystem.acknowledged.unacknowledged")}
                         </span>
                       </div>
                       <p className="mt-2 text-sm leading-6 text-slate-700">{alert.message}</p>
-                      <p className="mt-1 text-xs text-slate-500">Nguồn cảnh báo: {alert.source}</p>
+                      <p className="mt-1 text-xs text-slate-500">{copy("ecosystem.alert.source", { source: alert.source })}</p>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm text-slate-600">Chưa có cảnh báo liên thông.</p>
+                <p className="mt-3 text-sm text-slate-600">{copy("ecosystem.alerts.empty")}</p>
               )}
             </section>
           </>
