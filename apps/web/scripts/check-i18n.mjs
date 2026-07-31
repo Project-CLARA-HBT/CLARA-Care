@@ -290,6 +290,30 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    // Static starter questions are catalog-owned. Runtime answers, API data,
+    // user-entered workspace content, and vi-VN/en-US date-format identifiers
+    // are deliberately outside this literal-copy contract.
+    path: "app/chat/_legacy/page-legacy.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "QUICK_PROMPT_KEYS",
+      "chat.legacyWorkspace.quickPrompt.metformin",
+      "chat.legacyWorkspace.quickPrompt.sideEffects",
+    ],
+    forbidden: [
+      "Tôi đang uống metformin, cần lưu ý gì?",
+      "Thuốc này có tương tác với thuốc nào?",
+      "Giải thích kết quả xét nghiệm này giúp tôi.",
+      "Khi nào tôi nên đi khám bác sĩ?",
+      "Tác dụng phụ thường gặp của thuốc này là gì?",
+      "I take metformin. What should I watch for?",
+      "Which medicines can this interact with?",
+      "Help me understand this lab result.",
+      "When should I see a doctor?",
+      "What common side effects can this medicine cause?",
+    ],
+  },
+  {
     path: "app/chat/_v2/ChatShell.tsx",
     required: [
       "@/lib/i18n/catalog",

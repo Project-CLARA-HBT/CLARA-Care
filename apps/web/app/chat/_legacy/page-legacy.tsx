@@ -89,22 +89,16 @@ import {
   updateWorkspaceNote,
 } from "@/lib/workspace";
 
-const QUICK_PROMPTS_BY_LANGUAGE: Record<UILanguage, string[]> = {
-  vi: [
-    "Tôi đang uống metformin, cần lưu ý gì?",
-    "Thuốc này có tương tác với thuốc nào?",
-    "Giải thích kết quả xét nghiệm này giúp tôi.",
-    "Khi nào tôi nên đi khám bác sĩ?",
-    "Tác dụng phụ thường gặp của thuốc này là gì?",
-  ],
-  en: [
-    "I take metformin. What should I watch for?",
-    "Which medicines can this interact with?",
-    "Help me understand this lab result.",
-    "When should I see a doctor?",
-    "What common side effects can this medicine cause?",
-  ],
-};
+// These are visible starter questions, not runtime medical content. Keeping
+// their identifiers here lets the typed catalog own Vietnamese/English wording
+// while preserving their existing order and submission behavior.
+const QUICK_PROMPT_KEYS: readonly UITranslationKey[] = [
+  "chat.legacyWorkspace.quickPrompt.metformin",
+  "chat.legacyWorkspace.quickPrompt.interactions",
+  "chat.legacyWorkspace.quickPrompt.labResult",
+  "chat.legacyWorkspace.quickPrompt.seeDoctor",
+  "chat.legacyWorkspace.quickPrompt.sideEffects",
+];
 
 const FOLLOW_UP_QUERY_KEYS: readonly UITranslationKey[] = [
   "chat.legacyWorkspace.followUp.checkInteractions",
@@ -2746,7 +2740,10 @@ export default function ChatWorkspacePage() {
   }, [latestTier2Result]);
 
   const isEnglishUI = uiLanguage === "en";
-  const quickPrompts = useMemo(() => QUICK_PROMPTS_BY_LANGUAGE[uiLanguage], [uiLanguage]);
+  const quickPrompts = useMemo(
+    () => QUICK_PROMPT_KEYS.map((key) => t(uiLanguage, key)),
+    [uiLanguage],
+  );
   const followUpSuggestions = useMemo(
     () => FOLLOW_UP_QUERY_KEYS.map((key) => t(uiLanguage, key)),
     [uiLanguage]
