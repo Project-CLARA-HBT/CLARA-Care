@@ -10,7 +10,7 @@ import api from "@/lib/http-client";
 import { t } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import { useUILanguage } from "@/lib/use-ui-language";
-import { sanitizeUpstreamError } from "@/lib/user-facing-text";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
   KnowledgeSource,
   KnowledgeSourceDocument,
@@ -66,7 +66,7 @@ function formatDate(value: string | undefined, language: UILanguage): string {
 // an admin enable/disable a source or adjust its authority tier
 // (`PATCH /admin/rag/sources/{id}`). The license_code/attribution columns make
 // the UMLS/SNOMED/RxNorm attribution obligations (Req 15.3) visible in the UI.
-// It reuses the shared axios client + sanitizeUpstreamError + AsyncSection +
+// It reuses the shared axios client + safeUserFacingError + AsyncSection +
 // design tokens used by the rag-ingestion page so both surfaces stay consistent.
 // ---------------------------------------------------------------------------
 
@@ -225,11 +225,7 @@ export default function AdminKnowledgeSourcesPage() {
       });
       if (!items.length) setDocuments([]);
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.loadSources")
-        )
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.loadSources")));
     } finally {
       setIsLoadingSources(false);
     }
@@ -242,11 +238,7 @@ export default function AdminKnowledgeSourcesPage() {
       const items = await listKnowledgeSourceDocuments(sourceId);
       setDocuments(items);
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.loadDocuments")
-        )
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.loadDocuments")));
     } finally {
       setIsLoadingDocs(false);
     }
@@ -282,9 +274,7 @@ export default function AdminKnowledgeSourcesPage() {
       setNewSourceName("");
       setMessage(t(language, "admin.knowledgeSources.notice.created"));
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.create"))
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.create")));
     } finally {
       setIsCreatingSource(false);
     }
@@ -301,11 +291,7 @@ export default function AdminKnowledgeSourcesPage() {
       await loadSources();
       setMessage(t(language, "admin.knowledgeSources.notice.uploaded"));
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.upload")
-        )
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.upload")));
     } finally {
       setIsUploading(false);
     }
@@ -317,11 +303,7 @@ export default function AdminKnowledgeSourcesPage() {
       const updated = await setKnowledgeDocumentStatus(document.id, !document.is_active);
       setDocuments((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.updateDocument")
-        )
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.updateDocument")));
     }
   };
 
@@ -333,11 +315,7 @@ export default function AdminKnowledgeSourcesPage() {
         setActiveHubSource((current) => (items.some((item) => item.key === current) ? current : items[0].key));
       }
     } catch (cause) {
-      setSourceHubError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.loadCatalog")
-        )
-      );
+      setSourceHubError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.loadCatalog")));
     }
   }, [language]);
 
@@ -352,11 +330,7 @@ export default function AdminKnowledgeSourcesPage() {
       });
       setSourceHubRecords(items);
     } catch (cause) {
-      setSourceHubError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.loadRecords")
-        )
-      );
+      setSourceHubError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.loadRecords")));
     } finally {
       setIsLoadingSourceHubRecords(false);
     }
@@ -400,11 +374,7 @@ export default function AdminKnowledgeSourcesPage() {
         setSourceHubMessage((prev) => `${prev} ${t(language, "admin.knowledgeSources.notice.warning")} ${result.warnings.join(" | ")}`);
       }
     } catch (cause) {
-      setSourceHubError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.knowledgeSources.error.sync")
-        )
-      );
+      setSourceHubError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.sync")));
     } finally {
       setIsSyncingSourceHub(false);
     }
@@ -424,9 +394,7 @@ export default function AdminKnowledgeSourcesPage() {
       setRagRegistryDegraded(isRagPayloadDegraded(result));
     } catch (cause) {
       setRagRegistry(null);
-      setRagRegistryError(
-        sanitizeUpstreamError(cause instanceof Error ? cause.message : String(cause))
-      );
+      setRagRegistryError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.loadRegistry")));
     } finally {
       setRagRegistryLoading(false);
     }
@@ -461,9 +429,7 @@ export default function AdminKnowledgeSourcesPage() {
           t(language, "admin.knowledgeSources.registry.updated", { source: updated.display_name || updated.source_key || source.source_key })
         );
       } catch (cause) {
-        setRagUpdateError(
-          sanitizeUpstreamError(cause instanceof Error ? cause.message : String(cause))
-        );
+        setRagUpdateError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.updateRegistry")));
       } finally {
         setRagUpdatingId(null);
       }

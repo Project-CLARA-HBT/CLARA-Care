@@ -6,7 +6,7 @@ import { KpiCard, PanelCard, TrendBars } from "@/components/admin/analytics-prim
 import api from "@/lib/http-client";
 import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
-import { sanitizeUpstreamError } from "@/lib/user-facing-text";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { aggregateEvalTrends, type EvalRunSummary } from "./eval-dashboard";
 
 /**
@@ -129,11 +129,7 @@ export default function AdminRagEvalPage() {
       }
     } catch (cause) {
       setResults(null);
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.ragEval.loadError")
-        )
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.ragEval.loadError")));
     } finally {
       setIsLoadingResults(false);
     }
@@ -155,11 +151,7 @@ export default function AdminRagEvalPage() {
       setRunId(data.run_id);
       await fetchResults(data.run_id);
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "admin.ragEval.startError")
-        )
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.ragEval.startError")));
     } finally {
       setIsRunning(false);
     }
