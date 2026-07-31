@@ -93,7 +93,11 @@ class Settings(BaseSettings):
         validation_alias="LLM_DEEPSEEK_ONLY",
     )
     deepseek_base_url: str = Field(
-        default="https://api.deepseek.com",
+        # V4 Pro/Flash are served through CLARA's governed OpenAI-compatible
+        # DeepSeek gateway.  Keep this code default aligned with the example
+        # environment and both deployment compose variants so an omitted env
+        # does not silently select a different, unsupported model catalog.
+        default="https://api.yescale.io/v1",
         validation_alias="DEEPSEEK_BASE_URL",
     )
     # Legacy/global DeepSeek model used when task routing is explicitly disabled.
