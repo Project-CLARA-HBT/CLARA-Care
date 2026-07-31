@@ -683,8 +683,13 @@ export default function CouncilPage() {
     const action = guardAction;
     const reason = guardReason.trim();
     const label =
-      action === "override" ? "ghi đè quyết định" : "tạm dừng quy trình";
-    const localNotice = `Đã ghi nhận yêu cầu ${label}. Lý do: ${reason}`;
+      action === "override"
+        ? t(language, "council.overview.guard.overrideAction")
+        : t(language, "council.overview.guard.pauseAction");
+    const localNotice = t(language, "council.overview.guard.requestRecorded", {
+      action: label,
+      reason,
+    });
     closeGuardDialog();
 
     // Flag OFF (or no active case): byte-identical legacy local-notice behavior;
@@ -703,9 +708,7 @@ export default function CouncilPage() {
       });
       if (action === "pause" || result.oversightState === "paused") {
         setOversightPaused(true);
-        setActionNotice(
-          "Đã tạm dừng quy trình. Khuyến nghị cuối cùng đang ở trạng thái chưa được xác nhận, chờ bác sĩ phụ trách xem lại.",
-        );
+        setActionNotice(t(language, "council.overview.guard.pauseRecorded"));
       } else {
         setActionNotice(localNotice);
       }
@@ -717,7 +720,10 @@ export default function CouncilPage() {
   };
 
   const confirmHandoff = async () => {
-    const localNotice = `Đã chuẩn bị yêu cầu mời ${selectedSpecialtyMeta.name}. ${selectedSpecialtyMeta.reason}`;
+    const localNotice = t(language, "council.overview.handoff.prepared", {
+      specialty: selectedSpecialtyMeta.name,
+      reason: selectedSpecialtyMeta.reason,
+    });
     setHandoffOpen(false);
 
     // Flag OFF (or no active case): byte-identical legacy local-notice behavior;
@@ -735,7 +741,10 @@ export default function CouncilPage() {
         reason: selectedSpecialtyMeta.reason,
       });
       setActionNotice(
-        `Đã gửi yêu cầu mời ${selectedSpecialtyMeta.name}. ${selectedSpecialtyMeta.reason}`,
+        t(language, "council.overview.handoff.sent", {
+          specialty: selectedSpecialtyMeta.name,
+          reason: selectedSpecialtyMeta.reason,
+        }),
       );
     } catch {
       // Endpoint absent/unavailable: fall back to the local-notice behavior.
@@ -749,10 +758,10 @@ export default function CouncilPage() {
         <div className="space-y-5">
           <CouncilWorkspaceNav />
           <CouncilEmptyState
-            title="Chưa có dữ liệu phân tích"
+            title={t(language, "council.overview.empty.title")}
             description={
               loadError ||
-              "Ca hiện tại chưa chạy phân tích. Hãy vào Nhập ca bệnh, hoàn tất thông tin và chạy hội chẩn."
+              t(language, "council.overview.empty.description")
             }
           />
           <div className="flex">
@@ -760,7 +769,7 @@ export default function CouncilPage() {
               href="/council/new"
               className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[color:var(--brand-700)]"
             >
-              Mở trang nhập ca bệnh
+              {t(language, "council.overview.empty.openCase")}
             </Link>
           </div>
         </div>
@@ -1164,10 +1173,10 @@ export default function CouncilPage() {
               >
                 <div className="text-left">
                   <p className="text-base font-black leading-tight">
-                    Mời bác sĩ phụ trách xem lại
+                    {t(language, "council.overview.handoff.action")}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-blue-100">
-                    Gửi tóm tắt ca và điểm bất đồng cho người trực.
+                    {t(language, "council.overview.handoff.actionHint")}
                   </p>
                 </div>
                 <span className="material-symbols-outlined text-3xl transition-transform group-hover:translate-x-1">
@@ -1189,7 +1198,7 @@ export default function CouncilPage() {
                       touch_app
                     </span>
                     <p className="text-xs font-bold text-[color:var(--text-brand)] dark:text-sky-100">
-                      Ghi đè quyết định
+                      {t(language, "council.overview.guard.overrideAction")}
                     </p>
                   </button>
                   <button
@@ -1204,7 +1213,7 @@ export default function CouncilPage() {
                       pause_circle
                     </span>
                     <p className="text-xs font-bold text-rose-800 dark:text-rose-100">
-                      Tạm dừng quy trình
+                      {t(language, "council.overview.guard.pauseAction")}
                     </p>
                   </button>
                 </div>
@@ -1219,19 +1228,17 @@ export default function CouncilPage() {
               <div className={`${SOFT_PANEL_CLASS} p-4`}>
                 <div className="flex items-center justify-between gap-2">
                   <p className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
-                    Tóm tắt hội chẩn
+                    {t(language, "council.overview.summary.title")}
                   </p>
                   {oversightPaused ? (
                     <span className="rounded-full border border-orange-300 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100">
-                      Chưa được xác nhận
+                      {t(language, "council.overview.summary.unconfirmed")}
                     </span>
                   ) : null}
                 </div>
                 {oversightPaused ? (
                   <p className="mt-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs font-semibold text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100">
-                    Quy trình đang tạm dừng. Khuyến nghị cuối cùng{" "}
-                    <strong>chưa được xác nhận</strong>, chờ bác sĩ phụ trách
-                    xem lại.
+                    {t(language, "council.overview.summary.pausedNotice")}
                   </p>
                 ) : null}
                 {finalDecisionBlocked ? (
@@ -1239,19 +1246,20 @@ export default function CouncilPage() {
                     className={`mt-3 space-y-3 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
                   >
                     <p>
-                      Hệ thống chưa ghi nhận đồng thuận chắc chắn giữa các
-                      chuyên khoa.
+                      {t(language, "council.overview.summary.noConsensus")}
                     </p>
                     {hasConflictSignals ? (
                       <p>
-                        Có tín hiệu cần xem lại liên quan đến {cardiologyNode}{" "}
-                        và {renalEndoNode}.
+                        {t(language, "council.overview.summary.conflictSignal", {
+                          first: cardiologyNode,
+                          second: renalEndoNode,
+                        })}
                       </p>
                     ) : null}
                     {missingDataLabels.length > 0 ? (
                       <div>
                         <p className={`font-bold ${BODY_TEXT_CLASS}`}>
-                          Dữ liệu còn thiếu:
+                          {t(language, "council.overview.summary.missingData")}
                         </p>
                         <ul className="mt-1 list-disc space-y-1 pl-5">
                           {missingDataLabels.map((label) => (
@@ -1262,20 +1270,17 @@ export default function CouncilPage() {
                     ) : null}
                     <div>
                       <p className={`font-bold ${BODY_TEXT_CLASS}`}>
-                        Đề xuất tiếp theo:
+                        {t(language, "council.overview.summary.nextStep")}
                       </p>
                       <ul className="mt-1 list-disc space-y-1 pl-5">
                         <li>
-                          Bổ sung xét nghiệm chức năng thận nếu có thuốc cần
-                          chỉnh liều theo eGFR.
+                          {t(language, "council.overview.summary.nextStep.renal")}
                         </li>
                         <li>
-                          Mời Dược lâm sàng hoặc Thận học khi có tín hiệu nguy
-                          cơ thuốc.
+                          {t(language, "council.overview.summary.nextStep.pharmacy")}
                         </li>
                         <li>
-                          Bác sĩ phụ trách cần xác nhận trước khi đưa ra khuyến
-                          nghị cuối cùng.
+                          {t(language, "council.overview.summary.nextStep.review")}
                         </li>
                       </ul>
                     </div>
@@ -1285,32 +1290,46 @@ export default function CouncilPage() {
                     className={`mt-3 space-y-2 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
                   >
                     <p>
-                      Không phát hiện bất đồng quan trọng giữa các chuyên khoa.
+                      {t(language, "council.overview.summary.noMaterialConflict")}
                     </p>
-                    <p>Mức xử trí: theo dõi thường quy.</p>
-                    {consensusText ? <p>Ghi nhận: {consensusText}</p> : null}
+                    <p>{t(language, "council.overview.summary.routine")}</p>
+                    {consensusText ? (
+                      <p>
+                        {t(language, "council.overview.summary.recorded", {
+                          consensus: consensusText,
+                        })}
+                      </p>
+                    ) : null}
                   </div>
                 )}
                 {escalationText && finalDecisionBlocked ? (
                   <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
-                    Ghi chú hệ thống:{" "}
+                    {t(language, "council.overview.summary.systemNote")}{" "}
                     {summarizeClinicalText(
                       escalationText,
-                      "Cần bác sĩ xem lại.",
+                      t(language, "council.overview.summary.professionalReview"),
                     )}
                   </p>
                 ) : null}
                 <div
                   className={`mt-4 flex items-center justify-between text-xs ${MUTED_TEXT_CLASS}`}
                 >
-                  <span>Đồng thuận chuyên khoa</span>
-                  <span>{hasConflictSignals ? "Cần rà soát" : "Chưa thấy bất đồng trọng yếu"}</span>
+                  <span>{t(language, "council.overview.summary.specialtyConsensus")}</span>
+                  <span>
+                    {hasConflictSignals
+                      ? t(language, "council.overview.summary.needsReview")
+                      : t(language, "council.overview.summary.noMaterialConflict")}
+                  </span>
                 </div>
                 <div
                   className={`mt-1 flex items-center justify-between text-xs ${MUTED_TEXT_CLASS}`}
                 >
-                  <span>Quyết định cuối</span>
-                  <span>{finalDecisionBlocked ? "Chờ người có chuyên môn" : "Cần kiểm tra trước khi dùng"}</span>
+                  <span>{t(language, "council.overview.summary.finalDecision")}</span>
+                  <span>
+                    {finalDecisionBlocked
+                      ? t(language, "council.overview.summary.waitForProfessional")
+                      : t(language, "council.overview.summary.checkBeforeUse")}
+                  </span>
                 </div>
                 {disclosure ? (
                   <div className="mt-4 border-t border-[color:var(--shell-border)] pt-3 dark:border-sky-700/60">
@@ -1363,17 +1382,17 @@ export default function CouncilPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
-                    Mời chuyên khoa hội chẩn
+                    {t(language, "council.overview.handoff.dialogTitle")}
                   </h3>
                   <p className={`mt-1 text-sm ${SECONDARY_TEXT_CLASS}`}>
-                    Chọn chuyên khoa phù hợp để gửi tóm tắt ca và điểm bất đồng.
+                    {t(language, "council.overview.handoff.dialogDescription")}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setHandoffOpen(false)}
                   className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:text-slate-100 dark:hover:bg-slate-800"
-                  aria-label="Đóng"
+                  aria-label={t(language, "council.overview.close")}
                 >
                   <span className="material-symbols-outlined text-[20px]">
                     close
@@ -1411,14 +1430,14 @@ export default function CouncilPage() {
                   onClick={() => setHandoffOpen(false)}
                   className="min-h-[44px] rounded-lg border border-[color:var(--shell-border)] bg-white px-4 text-sm font-bold text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
-                  Hủy
+                  {t(language, "council.guard.cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={confirmHandoff}
                   className="min-h-[44px] rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 text-sm font-bold text-white hover:bg-[color:var(--brand-700)]"
                 >
-                  Gửi yêu cầu hội chẩn
+                  {t(language, "council.overview.handoff.send")}
                 </button>
               </div>
             </div>
