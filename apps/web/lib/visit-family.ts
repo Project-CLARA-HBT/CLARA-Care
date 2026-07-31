@@ -381,6 +381,23 @@ export async function acceptFamilyInvitation(token: string): Promise<FamilyGrant
   ).data;
 }
 
+export type FamilyInvitationPreview = {
+  object_type: "episode" | "care_task" | "visit" | string;
+  allowed_actions: string[];
+  purpose: "care_coordination" | "visit_support" | string;
+  expires_at: string;
+};
+
+export async function previewFamilyInvitation(token: string): Promise<FamilyInvitationPreview> {
+  return (
+    await api.post<FamilyInvitationPreview>(
+      "/family/invitations/preview",
+      undefined,
+      { headers: { "X-Family-Invitation-Token": token } },
+    )
+  ).data;
+}
+
 export async function revokeFamilyGrant(grantId: string): Promise<void> {
   await api.delete(`/family/access-grants/${encodeURIComponent(grantId)}`);
 }

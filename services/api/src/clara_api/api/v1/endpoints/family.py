@@ -36,6 +36,7 @@ from clara_api.lifemap.visit_family_service import (
     create_family_grant_renewal,
     create_family_invitation,
     list_family_access_log,
+    preview_family_invitation,
     record_caregiver_observation,
     revoke_family_access_grant,
 )
@@ -80,6 +81,22 @@ class InvitationAcceptRequest(BaseModel):
     """Capability supplied out of the URL so it does not enter route logs."""
 
     token: str = Field(min_length=32, max_length=512)
+
+
+def _invitation_capability(
+    payload: InvitationAcceptRequest | None,
+    x_family_invitation_token: str | None,
+) -> str:
+    """Read a one-time invitation capability without accepting URL input."""
+
+    body_token = payload.token if payload is not None else None
+    header_token = x_family_invitation_token.strip() if x_family_invitation_token else None
+    if body_token and header_token and not hmac.compare_digest(body_token, header_token):
+        raise HTTPException(status_code=422, detail="Invitation capability inputs do not match")
+    raw_token = header_token or body_token
+    if not raw_token:
+        raise HTTPException(status_code=422, detail="Invitation capability is required")
+    return raw_token
 
 
 class NotificationAcknowledgementRequest(BaseModel):
@@ -255,13 +272,7 @@ def accept_invitation(
 ) -> dict[str, Any]:
     """Accept an invitation without putting its capability in an URL."""
 
-    body_token = payload.token if payload is not None else None
-    header_token = x_family_invitation_token.strip() if x_family_invitation_token else None
-    if body_token and header_token and not hmac.compare_digest(body_token, header_token):
-        raise HTTPException(status_code=422, detail="Invitation capability inputs do not match")
-    raw_token = header_token or body_token
-    if not raw_token:
-        raise HTTPException(status_code=422, detail="Invitation capability is required")
+    raw_token = _invitation_capability(payload, x_family_invitation_token)
     recipient = current_user(db, token)
     try:
         grant = accept_family_invitation(db, recipient=recipient, raw_token=raw_token)
@@ -278,6 +289,30 @@ def accept_invitation(
         }
     except (DomainNotFoundError, DomainValidationError) as error:
         db.rollback()
+        _raise(error)
+
+
+@router.post("/invitations/preview")
+def preview_invitation(
+    payload: InvitationAcceptRequest | None = None,
+    x_family_invitation_token: str | None = Header(
+        default=None, alias="X-Family-Invitation-Token"
+    ),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, Any]:
+    """Preview a recipient-bound invitation before the explicit accept write.
+
+    The capability is accepted only in a JSON body/header, never in a path or
+    query parameter. The service returns no health data, object identifier or
+    inviter identity and does not consume/audit the invitation.
+    """
+
+    raw_token = _invitation_capability(payload, x_family_invitation_token)
+    recipient = current_user(db, token)
+    try:
+        return preview_family_invitation(db, recipient=recipient, raw_token=raw_token)
+    except (DomainNotFoundError, DomainValidationError) as error:
         _raise(error)
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import {
   EmptyState,
@@ -9,12 +9,10 @@ import {
   SurfaceCard,
 } from "@/components/ui/surface";
 import Button from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
 import {
-  acceptFamilyInvitation,
   listFamilyAccessLog,
   listFamilyGrants,
   listFamilyRelationships,
@@ -116,7 +114,6 @@ export default function FamilyPage() {
   const [grants, setGrants] = useState<FamilyGrant[]>([]);
   const [relationships, setRelationships] = useState<FamilyGrant[]>([]);
   const [logs, setLogs] = useState<FamilyAccessLog[]>([]);
-  const [inviteToken, setInviteToken] = useState("");
   const [createdToken, setCreatedToken] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -141,21 +138,6 @@ export default function FamilyPage() {
     }
   }, [copy]);
   useEffect(() => void load(), [load]);
-
-  const accept = async (event: FormEvent) => {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
-    try {
-      await acceptFamilyInvitation(inviteToken.trim());
-      setInviteToken("");
-      await load();
-    } catch {
-      setError(copy("familyCircle.acceptError"));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const revoke = async (grantId: string) => {
     setSaving(true);
@@ -313,17 +295,12 @@ export default function FamilyPage() {
 
           <SurfaceCard className="p-5">
             <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.accept.title")}</h2>
-            <form className="mt-4 space-y-3" onSubmit={(event) => void accept(event)}>
-              <Field
-                label={copy("familyCircle.accept.token")}
-                required
-                value={inviteToken}
-                onChange={(event) => setInviteToken(event.target.value)}
-              />
-              <Button type="submit" variant="secondary" block disabled={saving}>
-                {copy("familyCircle.accept.submit")}
-              </Button>
-            </form>
+            <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
+              {copy("familyCircle.accept.description")}
+            </p>
+            <Button as="link" href="/family/accept" variant="secondary" className="mt-4" block icon="verified_user">
+              {copy("familyCircle.accept.start")}
+            </Button>
           </SurfaceCard>
         </aside>
       </div>
