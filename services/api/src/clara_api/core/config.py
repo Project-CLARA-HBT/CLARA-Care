@@ -872,6 +872,11 @@ class Settings(BaseSettings):
     lifemap_ai_review_findings_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_REVIEW_FINDINGS_ENABLED"
     )
+    # An independent kill switch for provider-backed duplicate/conflict
+    # proposals. Rule findings remain available when this is off or ML fails.
+    lifemap_review_model_proposals_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_REVIEW_MODEL_PROPOSALS_ENABLED"
+    )
     lifemap_ai_pattern_shadow_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_PATTERN_SHADOW_ENABLED"
     )

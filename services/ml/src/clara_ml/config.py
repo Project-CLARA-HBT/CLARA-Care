@@ -19,6 +19,13 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED",
     )
+    # Optional V4 Flash duplicate/conflict suggestions over a bounded set of
+    # API-authorized current revisions. It only returns revision-id pairs for
+    # human review and is independently dark by default.
+    lifemap_review_model_proposals_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_REVIEW_MODEL_PROPOSALS_ENABLED",
+    )
     # Optional V4 Flash source-span extraction for Vietnamese clinical language.
     # It is metadata/review-only and never replaces deterministic safeguards.
     clinical_language_llm_extraction_enabled: bool = Field(

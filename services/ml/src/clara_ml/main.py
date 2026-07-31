@@ -29,6 +29,7 @@ from clara_ml.clinical_answer import build_clinical_answer_package
 from clara_ml.config import settings
 from clara_ml.factcheck import run_fides_lite
 from clara_ml.lifemap.capture_extraction import extract_capture_text_validated
+from clara_ml.lifemap.review_proposals import propose_review_pairs
 from clara_ml.lifemap.visit_extraction import extract_visit_instructions
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.llm.model_registry import (
@@ -1835,6 +1836,24 @@ def lifemap_ask_route(payload: dict) -> dict:
             "degraded": True,
         }
     return {**result, "degraded": False}
+
+
+@app.post("/v1/lifemap/review-proposals")
+def lifemap_review_proposals(payload: dict) -> dict:
+    """Suggest only review-only duplicate/conflict revision-id pairs.
+
+    The caller is the API after consent/profile scope and current-revision
+    filtering. This service never receives a profile identifier or may mutate
+    any LifeMap record. Provider/output failures return no proposal so the API
+    continues with deterministic findings alone.
+    """
+
+    if not settings.lifemap_review_model_proposals_enabled:
+        raise HTTPException(status_code=404, detail="feature_disabled")
+    try:
+        return propose_review_pairs(payload, task_settings=settings)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @app.post("/v1/lifemap/visit/extract")

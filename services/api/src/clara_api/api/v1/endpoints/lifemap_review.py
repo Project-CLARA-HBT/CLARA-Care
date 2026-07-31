@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.core.config import get_settings
 from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
@@ -22,7 +24,12 @@ from clara_api.db.models import (
 )
 from clara_api.db.session import get_db
 from clara_api.lifemap.profile_scope import resolve_profile_scope
-from clara_api.lifemap.review_findings import ReviewFact, rule_first_findings
+from clara_api.lifemap.review_findings import (
+    ReviewFact,
+    ReviewFinding,
+    rule_first_findings,
+    validate_model_proposals,
+)
 from clara_api.phr.audit import write_audit
 
 router = APIRouter()
@@ -67,6 +74,79 @@ def _serialize(
     }
 
 
+def _model_packet(facts: tuple[ReviewFact, ...]) -> list[dict[str, Any]]:
+    """Build the only revision packet an ML review proposal may receive.
+
+    Facts are already the active *current* revisions for the consented,
+    profile-scoped request. Limit the packet to comparable event-type groups
+    and refuse oversized values rather than truncating a clinical source.
+    """
+
+    grouped: dict[str, list[ReviewFact]] = {}
+    for fact in facts:
+        if fact.truth_state in {"invalidated", "entered_in_error", "superseded"}:
+            continue
+        grouped.setdefault(fact.field_key, []).append(fact)
+    packet: list[dict[str, Any]] = []
+    for field_key in sorted(grouped):
+        group = grouped[field_key]
+        if len(group) < 2:
+            continue
+        for fact in sorted(group, key=lambda item: item.revision_id):
+            if len(packet) >= 24:
+                return packet
+            try:
+                serialized = json.dumps(
+                    fact.value,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            except (TypeError, ValueError):
+                continue
+            if not serialized or len(serialized) > 1_200:
+                continue
+            packet.append(
+                {
+                    "revision_id": fact.revision_id,
+                    "field_key": fact.field_key,
+                    "payload": fact.value,
+                }
+            )
+    # Filtering oversized source values may have broken a comparable group.
+    # Avoid an avoidable provider call in that case.
+    if not any(
+        sum(item["field_key"] == field_key for item in packet) >= 2
+        for field_key in {item["field_key"] for item in packet}
+    ):
+        return []
+    return packet
+
+
+def _model_review_findings(facts: tuple[ReviewFact, ...]) -> tuple[ReviewFinding, ...]:
+    """Request advisory pairs only; rule findings survive every failure path."""
+
+    if not get_settings().lifemap_review_model_proposals_enabled:
+        return ()
+    packet = _model_packet(facts)
+    if len(packet) < 2:
+        return ()
+    authorized_fields = {item["revision_id"]: item["field_key"] for item in packet}
+    # The ML service can fail, be dark, or reject malformed data. None of those
+    # conditions can erase deterministic findings or create a LifeMap action.
+    result = proxy_ml_post(
+        "/v1/lifemap/review-proposals",
+        {"facts": packet},
+        fail_soft_payload={"proposals": [], "degraded": True},
+    )
+    return validate_model_proposals(
+        result.get("proposals"),
+        authorized_revision_ids=frozenset(authorized_fields),
+        authorized_revision_fields=authorized_fields,
+        max_proposals=12,
+    )
+
+
 @router.post("/lifemap/v2/review-findings/scan")
 def scan_findings(
     x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
@@ -99,7 +179,9 @@ def scan_findings(
         )
         for event, revision in rows
     )
-    for finding in rule_first_findings(facts):
+    # Rules are always first and authoritative for their bounded finding set.
+    # Optional model output is a separately validated, human-review-only pair.
+    for finding in (*rule_first_findings(facts), *_model_review_findings(facts)):
         raw = json.dumps(
             {
                 "profile": scope.profile.id,
