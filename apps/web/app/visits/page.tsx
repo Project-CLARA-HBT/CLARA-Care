@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import PageShell from "@/components/ui/page-shell";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
-  addVisitConcern, answerVisitIntake, approveVisitPack, confirmVisitPlan, createVisit,
+  addVisitConcern, answerVisitIntake, approveVisitPack, confirmVisitPlan,
   createVisitDocument, createVisitPack, deleteVisitDocument, extractVisitPlan,
   getVisitPackOptions,
   grantVisitScribeConsent, listVisitDocuments, listVisits, revokeVisitScribeConsent,
@@ -56,8 +57,10 @@ function candidateSource(candidate: Record<string, unknown>): string {
   return "";
 }
 
-export default function VisitsPage() {
+function VisitsWorkspace() {
   const language = useUILanguage();
+  const searchParams = useSearchParams();
+  const requestedVisitId = searchParams.get("visit");
   const copy = useCallback(
     (key: UITranslationKey, values?: Record<string, string | number>) =>
       t(language, key, values ?? {}),
@@ -83,9 +86,6 @@ export default function VisitsPage() {
   const [packSelection, setPackSelection] = useState<Record<string, boolean>>({});
   const [share, setShare] = useState<VisitShare | null>(null);
   const [consented, setConsented] = useState(false);
-  const [title, setTitle] = useState("");
-  const [goal, setGoal] = useState("");
-  const [when, setWhen] = useState("");
   const [concern, setConcern] = useState("");
   const [priority, setPriority] = useState("routine");
   const [documentTitle, setDocumentTitle] = useState("");
@@ -102,11 +102,15 @@ export default function VisitsPage() {
     try {
       const next = await listVisits();
       setVisits(next);
-      setSelectedId((current) => current || next[0]?.id || "");
+      setSelectedId((current) =>
+        current || (requestedVisitId && next.some((visit) => visit.id === requestedVisitId)
+          ? requestedVisitId
+          : next[0]?.id || ""),
+      );
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("visits.loadError")));
     } finally { setLoading(false); }
-  }, [copy]);
+  }, [copy, requestedVisitId]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     if (!selectedId) { setDocuments([]); return; }
@@ -130,13 +134,6 @@ export default function VisitsPage() {
     setSaving(true); setError("");
     try { await work(); } catch (cause) { setError(safeUserFacingError(cause, fallback)); }
     finally { setSaving(false); }
-  };
-  const create = (event: FormEvent) => {
-    event.preventDefault();
-    void action(async () => {
-      const visit = await createVisit({ title: title.trim(), goal: goal.trim(), visit_type: "other", scheduled_at: when ? new Date(when).toISOString() : undefined });
-      setTitle(""); setGoal(""); setWhen(""); await load(); choose(visit.id);
-    }, copy("visits.createError"));
   };
   const submitIntake = (state: "answered" | "skipped" | "unknown") => {
     if (!selectedId || !question) return;
@@ -241,7 +238,7 @@ export default function VisitsPage() {
         <SurfaceCard className="p-4"><p className="text-sm font-semibold text-[var(--text-primary)]">{copy("visits.controlTitle")}</p><p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">{copy("visits.controlDescription")}</p></SurfaceCard>
       </aside>
       <main className="space-y-5">
-        {!selected && !loading ? <SurfaceCard><EmptyState icon="assignment" title={copy("visits.startTitle")} description={copy("visits.startDescription")} /></SurfaceCard> : null}
+        {!selected && !loading ? <SurfaceCard><EmptyState icon="assignment" title={copy("visits.startTitle")} description={copy("visits.startDescription")}><Button as="link" href="/visits/new" icon="add">{copy("visits.createVisit")}</Button></EmptyState></SurfaceCard> : null}
         {selected ? <><SurfaceCard className="p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("visits.stepOne")}</p><h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{selected.title}</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">{copy("visits.oneQuestionAtATime")}</p></div>{progress.total ? <Badge tone="neutral">{copy("visits.questionCount", { answered: progress.answered, total: progress.total })}</Badge> : null}</div>
           {!question && !complete ? <Button type="button" className="mt-4" onClick={() => setQuestion(initialQuestion(selected, language))}>{copy("visits.startShortQuestions")}</Button> : null}
           {question ? <div className="mt-4 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4"><p className="font-semibold text-[var(--text-primary)]">{question.text}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">{question.reason}</p><Textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder={copy("visits.answerPlaceholder")} className="min-h-24" wrapperClassName="mt-3" /><div className="mt-3 flex flex-wrap gap-2"><Button type="button" disabled={saving} onClick={() => submitIntake("answered")}>{copy("visits.saveAndContinue")}</Button><Button type="button" variant="secondary" disabled={saving} onClick={() => submitIntake("skipped")}>{copy("visits.skip")}</Button><Button type="button" variant="secondary" disabled={saving} onClick={() => submitIntake("unknown")}>{copy("visits.unknown")}</Button></div></div> : null}
@@ -260,10 +257,18 @@ export default function VisitsPage() {
           {pack ? <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-4"><p className="font-semibold text-[var(--status-ok-text)]">{copy("visits.approvedVersion", { version: pack.version_no })}</p><Button type="button" size="sm" className="mt-3" disabled={saving || Boolean(share)} onClick={makeShare}>{copy("visits.createShare")}</Button>{share ? <><code className="mt-3 block break-all rounded-[var(--radius-md)] bg-[var(--surface-panel)] p-3 text-xs text-[var(--status-ok-text)]">{window.location.origin + "/api/v1/visit-packs/shared/" + share.token}</code><Button type="button" size="sm" variant="secondary" className="mt-2" disabled={saving} onClick={removeShare}>{copy("visits.revokeShare")}</Button></> : null}</div> : null}
         </SurfaceCard></> : null}
       </main>
-      <aside className="space-y-5"><SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">{copy("visits.createVisit")}</h2><form className="mt-4 space-y-3" onSubmit={create}><Field label={copy("visits.visitName")} required minLength={2} value={title} onChange={(event) => setTitle(event.target.value)} placeholder={copy("visits.visitNameExample")} /><Textarea label={copy("visits.goalOptional")} value={goal} onChange={(event) => setGoal(event.target.value)} className="min-h-20" /><Field label={copy("visits.scheduledTime")} type="datetime-local" value={when} onChange={(event) => setWhen(event.target.value)} /><Button type="submit" variant="secondary" block disabled={saving}>{copy("visits.saveVisit")}</Button></form></SurfaceCard>
+      <aside className="space-y-5"><SurfaceCard className="border-[color:var(--brand-200)] bg-[var(--surface-brand-soft)] p-5"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-brand)]">{copy("visits.createVisit")}</p><h2 className="mt-2 font-semibold text-[var(--text-primary)]">{copy("visits.newVisitTitle")}</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{copy("visits.newVisitDescription")}</p><Button as="link" href="/visits/new" className="mt-4" block icon="add">{copy("visits.startNewVisit")}</Button></SurfaceCard>
         <SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">{copy("visits.concernTitle")}</h2><form className="mt-4 space-y-3" onSubmit={addConcern}><Textarea required minLength={2} disabled={!selectedId} value={concern} onChange={(event) => setConcern(event.target.value)} placeholder={copy("visits.concernPlaceholder")} className="min-h-24" /><Select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">{copy("visits.priorityRoutine")}</option><option value="soon">{copy("visits.prioritySoon")}</option><option value="urgent">{copy("visits.priorityUrgent")}</option></Select><Button type="submit" block disabled={saving || !selectedId}>{copy("visits.saveQuestion")}</Button></form></SurfaceCard>
         <SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">{copy("visits.scribeTitle")}</h2><p className="mt-1 text-sm text-[var(--text-secondary)]">{copy("visits.scribeDescription")}</p><Button type="button" variant="secondary" block className="mt-4" disabled={saving || !selectedId} onClick={toggleConsent}>{consented ? copy("visits.revokeScribeConsent") : copy("visits.grantScribeConsent")}</Button></SurfaceCard>
       </aside>
     </div>
   </PageShell>;
+}
+
+export default function VisitsPage() {
+  return (
+    <Suspense fallback={null}>
+      <VisitsWorkspace />
+    </Suspense>
+  );
 }
