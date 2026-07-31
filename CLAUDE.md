@@ -166,7 +166,7 @@ Flutter client with core screens (login, dashboard, research, careguard, council
 
 ## Models & Runtime (as-built)
 
-The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through a YEScale-compatible endpoint. The typed task registry routes governed V4 tasks to `DEEPSEEK_PRO_MODEL=deepseek-v4-pro` for safety/reasoning and `DEEPSEEK_FLASH_MODEL=deepseek-v4-flash` for bounded low-latency work; `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` restores the legacy single `DEEPSEEK_MODEL` path. Scribe audio has separately registry-governed ASR model and provider selections (`DEEPSEEK_AUDIO_MODEL=whisper-1` and allowlisted `SCRIBE_ASR_PRIMARY`/`SCRIBE_ASR_FALLBACK`), because audio must never be sent to a V4 text model or reported as Flash. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
+The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through the deployment-owned YEScale-compatible V4 gateway (`DEEPSEEK_BASE_URL=https://api.yescale.io/v1` unless a deployment overrides it). The typed task registry routes governed V4 tasks to `DEEPSEEK_PRO_MODEL=deepseek-v4-pro` for safety/reasoning and `DEEPSEEK_FLASH_MODEL=deepseek-v4-flash` for bounded low-latency work; `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` restores the legacy single `DEEPSEEK_MODEL` path. Scribe audio has separately registry-governed ASR model and provider selections (`DEEPSEEK_AUDIO_MODEL=whisper-1` and allowlisted `SCRIBE_ASR_PRIMARY`/`SCRIBE_ASR_FALLBACK`), because audio must never be sent to a V4 text model or reported as Flash. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
 
 All model-backed bounded tasks resolve through the versioned task-contract
 registry, which applies the declared temperature and output-token ceiling at
@@ -197,7 +197,7 @@ explicit review before creating the existing `text` event; model output cannot
 confirm, mutate truth state or provide a confidence score. Turn the extraction
 flag off and restart both services for an immediate rollback.
 
-> Note: when `LLM_DEEPSEEK_ONLY` is enabled and a supplied runtime matches the configured DeepSeek env, the pipeline must reuse the default DeepSeek client (preserving its longer timeout) rather than constructing a short-timeout runtime client — and the API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
+> Note: historical request-shaped `llm_runtime` data is compatibility-only and is discarded before RAG generation. Provider, endpoint, model, credential and timeout are deployment-owned registry configuration, never request-selected. The API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
 
 ## Safety-First Guardrails (invariants)
 
