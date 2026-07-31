@@ -10,13 +10,13 @@ import {
   Tier2Citation,
   UploadedResearchFile
 } from "@/lib/research";
-import DebugHintsPanel from "@/components/research/debug-hints-panel";
-import EvidencePanel from "@/components/research/evidence-panel";
-import ConsensusPanel from "@/components/research/consensus-panel";
-import FlowTimelinePanel from "@/components/research/flow-timeline-panel";
-import KnowledgeSourcesPanel from "@/components/research/knowledge-sources-panel";
-import TelemetryDetailsPanel from "@/components/research/telemetry-details-panel";
-import UploadedFilesPanel from "@/components/research/uploaded-files-panel";
+import DebugHintsPanel from "./debug-hints-panel";
+import EvidencePanel from "./evidence-panel";
+import ConsensusPanel from "./consensus-panel";
+import FlowTimelinePanel from "./flow-timeline-panel";
+import KnowledgeSourcesPanel from "./knowledge-sources-panel";
+import TelemetryDetailsPanel from "./telemetry-details-panel";
+import UploadedFilesPanel from "./uploaded-files-panel";
 import TelemetryPanel, { isTelemetryVisible } from "@/components/telemetry/telemetry-panel";
 import { getRole, type UserRole } from "@/lib/auth-store";
 

@@ -6,14 +6,16 @@ import { useCallback, useEffect, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
+import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { completeLifeMapTask, getLifeMapToday, type LifeMapTask } from "@/lib/lifemap";
+import { useUILanguage } from "@/lib/use-ui-language";
 
-function dueLabel(value: string | null): string {
-  if (!value) return "Không có hạn cụ thể";
+function dueLabel(language: "vi" | "en", value: string | null): string {
+  if (!value) return t(language, "today.taskDetail.noSpecificDueDate");
   const date = new Date(value);
   return Number.isNaN(date.getTime())
-    ? "Không có hạn cụ thể"
-    : date.toLocaleString("vi-VN", {
+    ? t(language, "today.taskDetail.noSpecificDueDate")
+    : formatLocaleDate(language, date, {
         day: "numeric",
         month: "long",
         hour: "2-digit",
@@ -22,6 +24,7 @@ function dueLabel(value: string | null): string {
 }
 
 export default function TodayTaskDetailPage() {
+  const language = useUILanguage();
   const params = useParams<{ taskId: string }>();
   const taskId = Array.isArray(params.taskId) ? params.taskId[0] : params.taskId;
   const [task, setTask] = useState<LifeMapTask | null>(null);
@@ -36,12 +39,12 @@ export default function TodayTaskDetailPage() {
     try {
       const today = await getLifeMapToday();
       setTask(today.tasks.find((item) => item.id === taskId) ?? null);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Kiểm tra kết nối rồi thử lại.");
+    } catch {
+      setError(t(language, "today.connectionError"));
     } finally {
       setLoading(false);
     }
-  }, [taskId]);
+  }, [language, taskId]);
 
   useEffect(() => {
     if (taskId) void load();
@@ -54,8 +57,8 @@ export default function TodayTaskDetailPage() {
     try {
       await completeLifeMapTask(task.id);
       setCompleted(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể hoàn tất việc này.");
+    } catch {
+      setError(t(language, "today.taskDetail.completeError"));
     } finally {
       setCompleting(false);
     }
@@ -64,11 +67,15 @@ export default function TodayTaskDetailPage() {
   return (
     <PageShell
       variant="plain"
-      title={completed ? "Đã hoàn tất" : "Chi tiết việc hôm nay"}
+      title={
+        completed
+          ? t(language, "today.taskDetail.completedPageTitle")
+          : t(language, "today.taskDetail.pageTitle")
+      }
       description={
         completed
-          ? "Việc này đã được ghi nhận. Bạn có thể quay lại xem ưu tiên tiếp theo."
-          : "Xem một việc, hiểu thời điểm cần làm, rồi mới xác nhận hoàn tất."
+          ? t(language, "today.taskDetail.completedPageDescription")
+          : t(language, "today.taskDetail.pageDescription")
       }
     >
       <div className="mx-auto max-w-2xl space-y-5">
@@ -81,12 +88,14 @@ export default function TodayTaskDetailPage() {
             <span className="material-symbols-outlined text-4xl text-[var(--text-success)]" aria-hidden="true">
               task_alt
             </span>
-            <h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">Đã ghi nhận hoàn tất</h2>
+            <h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
+              {t(language, "today.taskDetail.completedTitle")}
+            </h2>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              CLARA không tự suy diễn thêm hành động chăm sóc từ việc này.
+              {t(language, "today.taskDetail.completedDescription")}
             </p>
             <Button as="link" href="/today" className="mt-5">
-              Quay lại Hôm nay
+              {t(language, "today.taskDetail.backToToday")}
             </Button>
           </SurfaceCard>
         ) : task ? (
@@ -96,35 +105,43 @@ export default function TodayTaskDetailPage() {
                 task_alt
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--text-secondary)]">Việc đã được bạn chấp nhận</p>
+                <p className="text-sm font-medium text-[var(--text-secondary)]">
+                  {t(language, "today.taskDetail.acceptedTask")}
+                </p>
                 <h2 className="mt-1 text-xl font-semibold text-[var(--text-primary)]">{task.title}</h2>
               </div>
             </div>
             <dl className="mt-6 space-y-4 border-y border-[color:var(--shell-border)] py-4 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-[var(--text-secondary)]">Thời điểm</dt>
-                <dd className="text-right font-medium text-[var(--text-primary)]">{dueLabel(task.due_at)}</dd>
+                <dt className="text-[var(--text-secondary)]">
+                  {t(language, "today.taskDetail.dueDate")}
+                </dt>
+                <dd className="text-right font-medium text-[var(--text-primary)]">
+                  {dueLabel(language, task.due_at)}
+                </dd>
               </div>
             </dl>
             <p className="mt-5 text-sm leading-6 text-[var(--text-secondary)]">
-              Chỉ xác nhận khi bạn đã thực hiện việc này. Nếu kế hoạch không còn phù hợp, hãy quay lại LifeMap để xem và điều chỉnh bối cảnh.
+              {t(language, "today.taskDetail.completeGuidance")}
             </p>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
               <Link href="/today" className="focus-ring self-center text-sm font-semibold text-[var(--text-brand)] hover:underline">
-                Quay lại danh sách
+                {t(language, "today.taskDetail.backToList")}
               </Link>
               <Button loading={completing} onClick={() => void complete()}>
-                Xác nhận hoàn tất
+                {t(language, "today.taskDetail.completeAction")}
               </Button>
             </div>
           </SurfaceCard>
         ) : (
           <EmptyState
             icon="task_alt"
-            title="Việc này không còn trong danh sách hôm nay"
-            description="Có thể việc đã hoàn tất, được điều chỉnh, hoặc bạn đang mở một liên kết cũ."
+            title={t(language, "today.taskDetail.notFoundTitle")}
+            description={t(language, "today.taskDetail.notFoundDescription")}
           >
-            <Button as="link" href="/today">Quay lại Hôm nay</Button>
+            <Button as="link" href="/today">
+              {t(language, "today.taskDetail.backToToday")}
+            </Button>
           </EmptyState>
         )}
       </div>

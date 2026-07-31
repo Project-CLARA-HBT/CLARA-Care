@@ -88,6 +88,121 @@ A11yStatusLevel _statusLevel(String status) {
   }
 }
 
+/// Locale-aware fixed copy for transcript and SOAP actions. Transcript and SOAP
+/// content itself remains the already-sanitized, authoritative session data.
+class _ScribeTranscriptCopy {
+  const _ScribeTranscriptCopy._(this._english);
+
+  factory _ScribeTranscriptCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _ScribeTranscriptCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get consentRequired => _english
+      ? 'Patient consent must be captured before transcript processing.'
+      : 'Cần thu thập sự đồng ý của bệnh nhân trước khi xử lý lời thoại.';
+  String get offlineBlocked => _english
+      ? 'You are offline. This change is paused and your input is kept. Try again when connected.'
+      : 'Không có kết nối mạng. Thao tác đã được tạm dừng — dữ liệu bạn nhập vẫn được giữ lại. Vui lòng thử lại khi có mạng.';
+  String get transcriptRequired => _english
+      ? 'Enter transcript text to add.'
+      : 'Vui lòng nhập nội dung lời thoại để bổ sung.';
+  String get soapUnavailable => _english
+      ? 'There is no transcript yet to create a SOAP note.'
+      : 'Chưa có lời thoại để tạo ghi chú SOAP.';
+  String get regenerateFailed => _english
+      ? 'We could not regenerate the SOAP note. Try again.'
+      : 'Không thể tạo lại SOAP. Vui lòng thử lại.';
+  String get sessionStatusPrefix => _english ? 'Session status' : 'Trạng thái phiên';
+  String get errorPrefix => _english ? 'Error' : 'Lỗi';
+  String get transcriptTitle => _english ? 'Transcript' : 'Lời thoại';
+  String get transcriptSemantic => _english ? 'Session transcript' : 'Lời thoại của phiên';
+  String get noTranscript => _english ? '(No transcript yet)' : '(Chưa có lời thoại)';
+  String get appendLabel => _english ? 'Add transcript' : 'Bổ sung lời thoại';
+  String get appendHint => _english
+      ? 'Type or paste discussion text to add to this session'
+      : 'Nhập hoặc dán nội dung trao đổi để thêm vào phiên';
+  String get appendAndRegenerate => _english ? 'Add & create note' : 'Thêm & tạo ghi chú';
+  String get regenerate => _english ? 'Regenerate note (SOAP)' : 'Tạo lại ghi chú (SOAP)';
+  String get audioUnavailable => _english
+      ? 'Audio recording and file upload are not available in this build; enter the transcript as text.'
+      : 'Ghi âm/tải tệp âm thanh chưa khả dụng trên bản dựng này; hãy nhập lời thoại bằng văn bản.';
+  String get soapTitle => _english ? 'SOAP note' : 'Ghi chú SOAP';
+  String get soapSemantic => _english ? 'SOAP note' : 'Ghi chú SOAP';
+  String get noSoap => _english ? '(No SOAP note yet)' : '(Chưa có ghi chú SOAP)';
+}
+
+/// Locale-aware fixed chrome for the session list and its creation dialog.
+/// Session titles and server-provided clinical text are rendered unchanged.
+class _ScribeSessionCopy {
+  const _ScribeSessionCopy._(this._english);
+
+  factory _ScribeSessionCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _ScribeSessionCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get sessionExpired => _english
+      ? 'Your session has expired. Please sign in again.'
+      : 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  String get sessionsLoadFailed => _english
+      ? 'We could not load the sessions. Try again.'
+      : 'Không thể tải danh sách phiên. Vui lòng thử lại.';
+  String get sessionOpenFailed => _english
+      ? 'We could not open this session. Try again.'
+      : 'Không thể mở phiên. Vui lòng thử lại.';
+  String get offlineBlocked => _english
+      ? 'You are offline. This change is paused and your input is kept. Try again when connected.'
+      : 'Không có kết nối mạng. Thao tác đã được tạm dừng — dữ liệu bạn nhập vẫn được giữ lại. Vui lòng thử lại khi có mạng.';
+  String get appTitle => _english ? 'Clinical notes' : 'Ghi chú lâm sàng';
+  String get backToSessions => _english ? 'Session list' : 'Danh sách phiên';
+  String get createSession => _english ? 'Create session' : 'Tạo phiên mới';
+  String get unavailable => _english ? 'Unavailable' : 'Không khả dụng';
+  String get featureDisabled => _english
+      ? 'The clinical-notes feature is not enabled.'
+      : 'Tính năng ghi chú lâm sàng chưa được bật.';
+  String get doctorOnly => _english
+      ? 'This feature is available only to doctors.'
+      : 'Tính năng này chỉ dành cho bác sĩ.';
+  String get sessionsTitle => _english ? 'Note sessions' : 'Phiên ghi chú';
+  String get emptyTitle => _english ? 'No sessions yet' : 'Chưa có phiên nào';
+  String get emptyDescription => _english
+      ? 'Create a new session to start clinical notes for a visit.'
+      : 'Tạo phiên mới để bắt đầu ghi chú lâm sàng cho một lần khám.';
+  String sessionSemantic(String title, String status) => _english
+      ? 'Session: $title. Status: $status'
+      : 'Phiên: $title. Trạng thái: $status';
+  String get statusPrefix => _english ? 'Status' : 'Trạng thái';
+  String statusLabel(String status) {
+    if (!_english) return scribeStatusLabel(status);
+    switch (status.trim().toLowerCase()) {
+      case 'draft':
+      case '':
+        return 'Draft';
+      case 'ready':
+        return 'Ready';
+      case 'finalized':
+        return 'Finalized';
+      case 'error':
+        return 'Processing error';
+      default:
+        return status;
+    }
+  }
+  String get dialogTitle => _english ? 'Create session' : 'Tạo phiên mới';
+  String get sessionName => _english ? 'Session name' : 'Tên phiên';
+  String get sessionHint => _english
+      ? 'For example: This morning\'s visit'
+      : 'Ví dụ: Phiên khám sáng nay';
+  String get cancel => _english ? 'Cancel' : 'Hủy';
+  String get create => _english ? 'Create' : 'Tạo';
+  String get defaultSessionName => _english ? 'New visit session' : 'Phiên khám mới';
+}
+
 /// The redesigned Medical Scribe surface. See file header.
 class ScribeSurfaceV3 extends StatefulWidget {
   const ScribeSurfaceV3({
@@ -143,6 +258,9 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
   bool get _enabled => widget.resolver.scribeEnabled;
   bool get _authorized => _isScribeAuthorizedRoleV3(widget.sessionStore.role);
   bool get _isOnline => _connectivity.currentValue;
+  _ScribeTranscriptCopy get _transcriptCopy =>
+      _ScribeTranscriptCopy.forContext(context);
+  _ScribeSessionCopy get _sessionCopy => _ScribeSessionCopy.forContext(context);
 
   Analytics get _analytics => widget._analytics ?? getAnalyticsClient();
 
@@ -187,8 +305,8 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     final token = _token;
     if (token == null) {
       setState(() {
-        _detailError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
-        _listError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _detailError = _sessionCopy.sessionExpired;
+        _listError = _sessionCopy.sessionExpired;
       });
       return null;
     }
@@ -202,7 +320,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     if (token == null) {
       setState(() {
         _listLoading = false;
-        _listError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _listError = _sessionCopy.sessionExpired;
       });
       return;
     }
@@ -230,7 +348,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     } catch (_) {
       if (!mounted) return;
       setState(() =>
-          _listError = 'Không thể tải danh sách phiên. Vui lòng thử lại.');
+          _listError = _sessionCopy.sessionsLoadFailed);
     } finally {
       if (mounted) {
         setState(() => _listLoading = false);
@@ -240,7 +358,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
 
   Future<void> _createSession() async {
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_sessionCopy.offlineBlocked);
       return;
     }
     final title = await showDialog<String>(
@@ -295,7 +413,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
       setState(() => _detailError = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _detailError = 'Không thể mở phiên. Vui lòng thử lại.');
+      setState(() => _detailError = _sessionCopy.sessionOpenFailed);
     } finally {
       if (mounted) {
         setState(() => _detailBusy = false);
@@ -398,13 +516,11 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
   /// false WITHOUT performing any work or touching entered input.
   bool _canProcess() {
     if (!_consentCaptured) {
-      _showSnack(
-        'Cần thu thập sự đồng ý của bệnh nhân trước khi xử lý lời thoại.',
-      );
+      _showSnack(_transcriptCopy.consentRequired);
       return false;
     }
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_transcriptCopy.offlineBlocked);
       return false;
     }
     return true;
@@ -417,7 +533,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     if (active == null) return;
     final addition = _appendController.text.trim();
     if (addition.isEmpty) {
-      _showSnack('Vui lòng nhập nội dung lời thoại để bổ sung.');
+      _showSnack(_transcriptCopy.transcriptRequired);
       return;
     }
     if (!_canProcess()) return;
@@ -451,7 +567,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     } catch (_) {
       if (!mounted) return;
       setState(
-          () => _detailError = 'Không thể tạo lại SOAP. Vui lòng thử lại.');
+          () => _detailError = _transcriptCopy.regenerateFailed);
     } finally {
       if (mounted) {
         setState(() => _detailBusy = false);
@@ -464,7 +580,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     final active = _active;
     if (active == null) return;
     if (!active.hasTranscript) {
-      _showSnack('Chưa có lời thoại để tạo ghi chú SOAP.');
+      _showSnack(_transcriptCopy.soapUnavailable);
       return;
     }
     if (!_canProcess()) return;
@@ -487,7 +603,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     } catch (_) {
       if (!mounted) return;
       setState(
-          () => _detailError = 'Không thể tạo lại SOAP. Vui lòng thử lại.');
+          () => _detailError = _transcriptCopy.regenerateFailed);
     } finally {
       if (mounted) {
         setState(() => _detailBusy = false);
@@ -499,14 +615,15 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _ScribeSessionCopy.forContext(context);
     final showFab = _enabled && _authorized && _active == null;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ghi chú lâm sàng'),
+        title: Text(copy.appTitle),
         leading: _active != null
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                tooltip: 'Danh sách phiên',
+                tooltip: copy.backToSessions,
                 onPressed: _detailBusy ? null : _closeSession,
               )
             : null,
@@ -515,7 +632,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
           ? FloatingActionButton.extended(
               onPressed: _detailBusy ? null : _createSession,
               icon: const Icon(Icons.add),
-              label: const Text('Tạo phiên mới'),
+              label: Text(copy.createSession),
             )
           : null,
       body: SafeArea(child: _buildBody(context)),
@@ -525,16 +642,16 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
   Widget _buildBody(BuildContext context) {
     // Gate 1 — flag off ⇒ inert placeholder, zero calls (fail-closed).
     if (!_enabled) {
-      return const _ScribePlaceholder(
-        title: 'Không khả dụng',
-        message: 'Tính năng ghi chú lâm sàng chưa được bật.',
+      return _ScribePlaceholder(
+        title: _sessionCopy.unavailable,
+        message: _sessionCopy.featureDisabled,
       );
     }
     // Gate 2 — unauthorized role ⇒ placeholder, zero calls (fail-closed).
     if (!_authorized) {
-      return const _ScribePlaceholder(
-        title: 'Không khả dụng',
-        message: 'Tính năng này chỉ dành cho bác sĩ.',
+      return _ScribePlaceholder(
+        title: _sessionCopy.unavailable,
+        message: _sessionCopy.doctorOnly,
       );
     }
     final content = _active == null
@@ -549,6 +666,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
   }
 
   Widget _buildSessionList(BuildContext context) {
+    final copy = _ScribeSessionCopy.forContext(context);
     if (_listError != null) {
       return ErrorRetryView(message: _listError!, onRetry: _loadSessions);
     }
@@ -565,7 +683,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
           96,
         ),
         children: [
-          const SectionHeader(title: 'Phiên ghi chú'),
+          SectionHeader(title: copy.sessionsTitle),
           if (_listLoading)
             const Padding(
               padding: EdgeInsets.only(bottom: ClaraTokens.spaceSm),
@@ -574,11 +692,10 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
           if (_sessions.isEmpty)
             ClaraEmptyState(
               icon: Icons.note_alt_outlined,
-              title: 'Chưa có phiên nào',
-              message:
-                  'Tạo phiên mới để bắt đầu ghi chú lâm sàng cho một lần khám.',
+              title: copy.emptyTitle,
+              message: copy.emptyDescription,
               action: ClaraButton.primary(
-                label: 'Tạo phiên mới',
+                label: copy.createSession,
                 icon: Icons.add,
                 onPressed: _detailBusy ? null : _createSession,
               ),
@@ -597,7 +714,8 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
 
   Widget _buildSessionTile(BuildContext context, ScribeSessionView session) {
     final theme = Theme.of(context);
-    final statusText = scribeStatusLabel(session.status);
+    final copy = _ScribeSessionCopy.forContext(context);
+    final statusText = copy.statusLabel(session.status);
 
     // A session tile is a navigation affordance into the session detail (the
     // clinical transcript/SOAP live on opaque cards inside that detail). As
@@ -606,7 +724,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
     // surface is the tap target, announced as a button, and the semantic label
     // + status-by-text are unchanged.
     return A11yLabeled(
-      label: 'Phiên: ${session.title}. Trạng thái: $statusText',
+      label: copy.sessionSemantic(session.title, statusText),
       isButton: true,
       child: GlassSurface(
         blurSigma: GlassTokens.blurCard,
@@ -636,7 +754,7 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
                         StatusByText(
                           label: statusText,
                           level: _statusLevel(session.status),
-                          semanticsPrefix: 'Trạng thái',
+                          semanticsPrefix: copy.statusPrefix,
                         ),
                       ],
                     ),
@@ -657,6 +775,8 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
 
   Widget _buildSessionDetail(BuildContext context, ScribeSessionView session) {
     final theme = Theme.of(context);
+    final copy = _ScribeTranscriptCopy.forContext(context);
+    final sessionCopy = _ScribeSessionCopy.forContext(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         ClaraTokens.spaceMd,
@@ -669,9 +789,9 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
         Text(session.title, style: theme.textTheme.titleLarge),
         const SizedBox(height: ClaraTokens.spaceSm),
         StatusByText(
-          label: scribeStatusLabel(session.status),
+          label: sessionCopy.statusLabel(session.status),
           level: _statusLevel(session.status),
-          semanticsPrefix: 'Trạng thái phiên',
+          semanticsPrefix: copy.sessionStatusPrefix,
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
 
@@ -688,17 +808,17 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
           StatusByText(
             label: _detailError!,
             level: A11yStatusLevel.danger,
-            semanticsPrefix: 'Lỗi',
+            semanticsPrefix: copy.errorPrefix,
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
         ],
 
         // Transcript (sanitized via ScribeSessionView — Req 4.5).
-        const SectionHeader(title: 'Lời thoại'),
+        SectionHeader(title: copy.transcriptTitle),
         ClaraCard.static_(
-          semanticLabel: 'Lời thoại của phiên',
+          semanticLabel: copy.transcriptSemantic,
           child: Text(
-            session.hasTranscript ? session.transcript : '(Chưa có lời thoại)',
+            session.hasTranscript ? session.transcript : copy.noTranscript,
             key: const Key('scribe-v3-transcript'),
             style: session.hasTranscript
                 ? theme.textTheme.bodyMedium
@@ -713,8 +833,8 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
         // enforced inside the processing handlers).
         ClaraInput(
           controller: _appendController,
-          label: 'Bổ sung lời thoại',
-          hint: 'Nhập hoặc dán nội dung trao đổi để thêm vào phiên',
+          label: copy.appendLabel,
+          hint: copy.appendHint,
           enabled: !_detailBusy,
           keyboardType: TextInputType.multiline,
         ),
@@ -724,12 +844,12 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
           runSpacing: ClaraTokens.spaceSm,
           children: [
             ClaraButton.primary(
-              label: 'Thêm & tạo ghi chú',
+              label: copy.appendAndRegenerate,
               icon: Icons.note_add_outlined,
               onPressed: _detailBusy ? null : _appendTranscriptAndRegenerate,
             ),
             ClaraButton.secondary(
-              label: 'Tạo lại ghi chú (SOAP)',
+              label: copy.regenerate,
               icon: Icons.refresh,
               onPressed: _detailBusy ? null : _regenerateSoap,
             ),
@@ -737,20 +857,19 @@ class _ScribeSurfaceV3State extends State<ScribeSurfaceV3> {
         ),
         const SizedBox(height: ClaraTokens.spaceSm),
         Text(
-          'Ghi âm/tải tệp âm thanh chưa khả dụng trên bản dựng này; hãy nhập '
-          'lời thoại bằng văn bản.',
+          copy.audioUnavailable,
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: ClaraTokens.spaceLg),
 
         // SOAP note (sanitized via ScribeSessionView — Req 4.3, 4.5).
-        const SectionHeader(title: 'Ghi chú SOAP'),
+        SectionHeader(title: copy.soapTitle),
         if (!session.hasSoap)
           ClaraCard.static_(
-            semanticLabel: 'Ghi chú SOAP',
+            semanticLabel: copy.soapSemantic,
             child: Text(
-              '(Chưa có ghi chú SOAP)',
+              copy.noSoap,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -805,6 +924,29 @@ class _ScribePlaceholder extends StatelessWidget {
 /// While consent is absent it makes clear that processing is blocked; capturing
 /// unlocks processing and revoking re-blocks it. Status is conveyed by text +
 /// icon, not color alone (Req 10.5).
+class _ScribeConsentCopy {
+  const _ScribeConsentCopy._(this._english);
+
+  factory _ScribeConsentCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _ScribeConsentCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get semanticLabel =>
+      _english ? 'Patient consent' : 'Đồng ý của bệnh nhân';
+  String get captured => _english
+      ? 'Patient consent has been captured.'
+      : 'Đã thu thập sự đồng ý của bệnh nhân.';
+  String get missing => _english
+      ? 'Patient consent has not been captured — transcript processing is blocked.'
+      : 'Chưa có sự đồng ý — việc xử lý lời thoại đang bị chặn.';
+  String get prefix => _english ? 'Consent' : 'Đồng ý';
+  String get capture => _english ? 'Capture consent' : 'Thu thập sự đồng ý';
+  String get revoke => _english ? 'Revoke consent' : 'Thu hồi sự đồng ý';
+}
+
 class _ConsentGateCard extends StatelessWidget {
   const _ConsentGateCard({
     required this.captured,
@@ -820,30 +962,31 @@ class _ConsentGateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _ScribeConsentCopy.forContext(context);
     return ClaraCard.static_(
       key: const Key('scribe-v3-consent-gate'),
-      semanticLabel: 'Đồng ý của bệnh nhân',
+      semanticLabel: copy.semanticLabel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           StatusByText(
             label: captured
-                ? 'Đã thu thập sự đồng ý của bệnh nhân.'
-                : 'Chưa có sự đồng ý — việc xử lý lời thoại đang bị chặn.',
+                ? copy.captured
+                : copy.missing,
             level: captured ? A11yStatusLevel.success : A11yStatusLevel.warning,
             icon: captured ? Icons.verified_user : Icons.gpp_maybe,
-            semanticsPrefix: 'Đồng ý',
+            semanticsPrefix: copy.prefix,
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
           if (!captured)
             ClaraButton.primary(
-              label: 'Thu thập sự đồng ý',
+              label: copy.capture,
               icon: Icons.verified_user_outlined,
               onPressed: busy ? null : onCapture,
             )
           else
             ClaraButton.secondary(
-              label: 'Thu hồi sự đồng ý',
+              label: copy.revoke,
               icon: Icons.gpp_bad_outlined,
               onPressed: busy ? null : onRevoke,
             ),
@@ -863,7 +1006,18 @@ class _NewSessionDialog extends StatefulWidget {
 }
 
 class _NewSessionDialogState extends State<_NewSessionDialog> {
-  final _controller = TextEditingController(text: 'Phiên khám mới');
+  final TextEditingController _controller = TextEditingController();
+  bool _seededDefaultName = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_seededDefaultName) {
+      _controller.text =
+          _ScribeSessionCopy.forContext(context).defaultSessionName;
+      _seededDefaultName = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -873,24 +1027,27 @@ class _NewSessionDialogState extends State<_NewSessionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _ScribeSessionCopy.forContext(context);
     return AlertDialog(
-      title: const Text('Tạo phiên mới'),
+      title: Text(copy.dialogTitle),
       content: ClaraInput(
         controller: _controller,
-        label: 'Tên phiên',
-        hint: 'Ví dụ: Phiên khám sáng nay',
+        label: copy.sessionName,
+        hint: copy.sessionHint,
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Hủy'),
+          child: Text(copy.cancel),
         ),
         FilledButton(
           onPressed: () {
             final title = _controller.text.trim();
-            Navigator.of(context).pop(title.isEmpty ? 'Phiên khám mới' : title);
+            Navigator.of(context).pop(
+              title.isEmpty ? copy.defaultSessionName : title,
+            );
           },
-          child: const Text('Tạo'),
+          child: Text(copy.create),
         ),
       ],
     );

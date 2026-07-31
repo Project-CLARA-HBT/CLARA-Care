@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
+import '../language_controller.dart';
 
 /// Clear, ownership-first management for health sources already authorized on
 /// the user's device. Native permission discovery/import lives behind the
@@ -13,10 +15,15 @@ class ConnectedHealthScreen extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+
+  /// Optional app-level language state. Direct embedding remains
+  /// Vietnamese-first when it is not supplied.
+  final LanguageController? languageController;
 
   @override
   State<ConnectedHealthScreen> createState() => _ConnectedHealthScreenState();
@@ -28,6 +35,9 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
   List<Map<String, dynamic>> _sources = const [];
 
   String? get _token => widget.sessionStore.accessToken;
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
 
   @override
   void initState() {
@@ -84,9 +94,9 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
     if (token == null || token.isEmpty) return;
     final id = source['id']?.toString() ?? '';
     final confirmed = await _confirm(
-      title: 'Ngắt kết nối nguồn này?',
-      body: 'Dữ liệu đã nhập vẫn được giữ lại. Bạn có thể xóa riêng dữ liệu đó bên dưới.',
-      confirmLabel: 'Ngắt kết nối',
+      title: _copy[ConsumerTerm.connectedHealthDisconnectConfirmTitle],
+      body: _copy[ConsumerTerm.connectedHealthDisconnectConfirmDescription],
+      confirmLabel: _copy[ConsumerTerm.connectedHealthDisconnectConfirmAction],
     );
     if (!confirmed) return;
     try {
@@ -105,9 +115,9 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
     if (token == null || token.isEmpty) return;
     final id = source['id']?.toString() ?? '';
     final confirmed = await _confirm(
-      title: 'Xóa dữ liệu đã nhập?',
-      body: 'Việc này xóa các quan sát và tổng hợp từ nguồn này. Không thể hoàn tác.',
-      confirmLabel: 'Xóa dữ liệu',
+      title: _copy[ConsumerTerm.connectedHealthDeleteConfirmTitle],
+      body: _copy[ConsumerTerm.connectedHealthDeleteConfirmDescription],
+      confirmLabel: _copy[ConsumerTerm.connectedHealthDeleteConfirmAction],
       destructive: true,
     );
     if (!confirmed) return;
@@ -117,7 +127,9 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
         connectorId: id,
       );
       await _load();
-      if (mounted) _showMessage('Đã xóa dữ liệu đã nhập từ nguồn này.');
+      if (mounted) {
+        _showMessage(_copy[ConsumerTerm.connectedHealthDeleteSuccess]);
+      }
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     }
@@ -137,7 +149,7 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Hủy'),
+                child: Text(_copy[ConsumerTerm.connectedHealthCancel]),
               ),
               FilledButton(
                 style: destructive
@@ -160,8 +172,19 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController == null) {
+      return _buildLocalized(context, _copy);
+    }
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) => _buildLocalized(context, _copy),
+    );
+  }
+
+  Widget _buildLocalized(BuildContext context, ConsumerTerminology copy) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dữ liệu sức khỏe')),
+      appBar: AppBar(title: Text(copy[ConsumerTerm.connectedHealthTitle])),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -169,23 +192,33 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
             : ListView(
                 padding: const EdgeInsets.all(ClaraTokens.spaceMd),
                 children: [
-                  const Text(
-                    'Kết nối khi bạn muốn',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                  Text(
+                    copy[ConsumerTerm.connectedHealthIntroTitle],
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: ClaraTokens.spaceXs),
-                  const Text(
-                    'CLARA chỉ đọc các nhóm dữ liệu bạn cho phép. Bạn có thể tạm dừng, ngắt kết nối hoặc xóa dữ liệu bất cứ lúc nào.',
+                  Text(
+                    copy[ConsumerTerm.connectedHealthIntroDescription],
                   ),
                   const SizedBox(height: ClaraTokens.spaceLg),
                   if (_error != null)
-                    _RetryCard(message: _error!, onRetry: _load)
+                    _RetryCard(
+                      copy: copy,
+                      message: _error!,
+                      onRetry: _load,
+                    )
                   else if (_sources.isEmpty)
-                    const _EmptySources()
+                    _EmptySources(copy: copy)
                   else ...[
-                    const SectionHeader(title: 'Nguồn đã kết nối'),
+                    SectionHeader(
+                      title: copy[ConsumerTerm.connectedHealthSourcesTitle],
+                    ),
                     for (final source in _sources)
                       _SourceCard(
+                        copy: copy,
                         source: source,
                         onPauseResume: () => _changeState(source),
                         onDisconnect: () => _disconnect(source),
@@ -193,16 +226,21 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
                       ),
                   ],
                   const SizedBox(height: ClaraTokens.spaceLg),
-                  const SectionHeader(title: 'Trước khi kết nối'),
-                  const _InfoCard(
-                    icon: Icons.health_and_safety_outlined,
-                    title: 'Bạn chọn dữ liệu được dùng',
-                    body: 'Ví dụ: bước chân, giấc ngủ hoặc nhịp tim. CLARA không suy đoán khi dữ liệu thiếu.',
+                  SectionHeader(
+                    title:
+                        copy[ConsumerTerm.connectedHealthBeforeConnectingTitle],
                   ),
-                  const _InfoCard(
+                  _InfoCard(
+                    icon: Icons.health_and_safety_outlined,
+                    title: copy[ConsumerTerm.connectedHealthChooseDataTitle],
+                    body:
+                        copy[ConsumerTerm.connectedHealthChooseDataDescription],
+                  ),
+                  _InfoCard(
                     icon: Icons.privacy_tip_outlined,
-                    title: 'Dữ liệu cá nhân không tự động gửi vào chat',
-                    body: 'Bạn cần cho phép mục đích hỗ trợ sức khỏe trước khi dữ liệu được đưa vào gợi ý cá nhân.',
+                    title: copy[ConsumerTerm.connectedHealthPrivateDataTitle],
+                    body: copy[
+                        ConsumerTerm.connectedHealthPrivateDataDescription],
                   ),
                 ],
               ),
@@ -212,21 +250,23 @@ class _ConnectedHealthScreenState extends State<ConnectedHealthScreen> {
 }
 
 class _EmptySources extends StatelessWidget {
-  const _EmptySources();
+  const _EmptySources({required this.copy});
+
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) => Card(
         child: Padding(
           padding: const EdgeInsets.all(ClaraTokens.spaceLg),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.watch_outlined, size: 32),
-              SizedBox(height: ClaraTokens.spaceSm),
-              Text('Chưa có nguồn nào được kết nối',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-              SizedBox(height: ClaraTokens.spaceXs),
-              Text('Khi tính năng kết nối trên thiết bị sẵn sàng, CLARA sẽ luôn hỏi quyền trước khi đọc dữ liệu.'),
+              const Icon(Icons.watch_outlined, size: 32),
+              const SizedBox(height: ClaraTokens.spaceSm),
+              Text(copy[ConsumerTerm.connectedHealthEmptyTitle],
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: ClaraTokens.spaceXs),
+              Text(copy[ConsumerTerm.connectedHealthEmptyDescription]),
             ],
           ),
         ),
@@ -235,12 +275,14 @@ class _EmptySources extends StatelessWidget {
 
 class _SourceCard extends StatelessWidget {
   const _SourceCard({
+    required this.copy,
     required this.source,
     required this.onPauseResume,
     required this.onDisconnect,
     required this.onDeleteData,
   });
 
+  final ConsumerTerminology copy;
   final Map<String, dynamic> source;
   final VoidCallback onPauseResume;
   final VoidCallback onDisconnect;
@@ -252,7 +294,8 @@ class _SourceCard extends StatelessWidget {
     final isPaused = status == 'paused';
     final title = source['display_label']?.toString().trim().isNotEmpty == true
         ? source['display_label'].toString()
-        : source['provider']?.toString() ?? 'Nguồn sức khỏe';
+        : source['provider']?.toString() ??
+            copy[ConsumerTerm.connectedHealthFallbackSourceTitle];
     final types = (source['data_types'] as List? ?? const []).join(', ');
     return Card(
       margin: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
@@ -262,42 +305,64 @@ class _SourceCard extends StatelessWidget {
           Row(children: [
             const Icon(Icons.watch_outlined),
             const SizedBox(width: ClaraTokens.spaceSm),
-            Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700))),
+            Expanded(
+                child: Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w700))),
             Chip(label: Text(_statusLabel(status))),
           ]),
           if (types.isNotEmpty) ...[
             const SizedBox(height: ClaraTokens.spaceXs),
-            Text('Được phép: $types'),
+            Text(
+              copy.format(
+                ConsumerTerm.connectedHealthAllowedData,
+                <String, Object?>{'types': types},
+              ),
+            ),
           ],
           const SizedBox(height: ClaraTokens.spaceSm),
-          Wrap(spacing: ClaraTokens.spaceXs, runSpacing: ClaraTokens.spaceXs, children: [
-            OutlinedButton(
-              onPressed: onPauseResume,
-              child: Text(isPaused ? 'Tiếp tục' : 'Tạm dừng'),
-            ),
-            TextButton(onPressed: onDisconnect, child: const Text('Ngắt kết nối')),
-            TextButton(
-              onPressed: onDeleteData,
-              child: Text('Xóa dữ liệu', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ),
-          ]),
+          Wrap(
+              spacing: ClaraTokens.spaceXs,
+              runSpacing: ClaraTokens.spaceXs,
+              children: [
+                OutlinedButton(
+                  onPressed: onPauseResume,
+                  child: Text(
+                    isPaused
+                        ? copy[ConsumerTerm.connectedHealthResume]
+                        : copy[ConsumerTerm.connectedHealthPause],
+                  ),
+                ),
+                TextButton(
+                  onPressed: onDisconnect,
+                  child: Text(copy[ConsumerTerm.connectedHealthDisconnect]),
+                ),
+                TextButton(
+                  onPressed: onDeleteData,
+                  child: Text(
+                    copy[ConsumerTerm.connectedHealthDeleteImportedData],
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
+              ]),
         ]),
       ),
     );
   }
 
   String _statusLabel(String status) => switch (status) {
-        'healthy' => 'Đã cập nhật',
-        'connected' => 'Sẵn sàng',
-        'paused' => 'Đang tạm dừng',
-        'needs_reauth' => 'Cần cấp quyền lại',
-        'disconnected' => 'Đã ngắt kết nối',
-        _ => 'Chưa rõ',
+        'healthy' => copy[ConsumerTerm.connectedHealthStatusHealthy],
+        'connected' => copy[ConsumerTerm.connectedHealthStatusConnected],
+        'paused' => copy[ConsumerTerm.connectedHealthStatusPaused],
+        'needs_reauth' => copy[ConsumerTerm.connectedHealthStatusNeedsReauth],
+        'disconnected' => copy[ConsumerTerm.connectedHealthStatusDisconnected],
+        _ => copy[ConsumerTerm.connectedHealthStatusUnknown],
       };
 }
 
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.icon, required this.title, required this.body});
+  const _InfoCard(
+      {required this.icon, required this.title, required this.body});
   final IconData icon;
   final String title;
   final String body;
@@ -311,16 +376,24 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _RetryCard extends StatelessWidget {
-  const _RetryCard({required this.message, required this.onRetry});
+  const _RetryCard({
+    required this.copy,
+    required this.message,
+    required this.onRetry,
+  });
+  final ConsumerTerminology copy;
   final String message;
   final VoidCallback onRetry;
   @override
   Widget build(BuildContext context) => Card(
         child: ListTile(
           leading: const Icon(Icons.error_outline),
-          title: const Text('Chưa thể tải nguồn sức khỏe'),
+          title: Text(copy[ConsumerTerm.connectedHealthLoadFailedTitle]),
           subtitle: Text(message),
-          trailing: TextButton(onPressed: onRetry, child: const Text('Thử lại')),
+          trailing: TextButton(
+            onPressed: onRetry,
+            child: Text(copy[ConsumerTerm.actionRetry]),
+          ),
         ),
       );
 }

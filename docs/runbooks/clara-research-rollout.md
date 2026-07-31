@@ -4,7 +4,8 @@ Spec: `clara-research` · Task 22 (final checkpoint / staged enablement).
 
 This runbook covers the staged enablement of the CLARA Research enhancement:
 agentic query decomposition + bounded gap-fill, recency/trust-tier ranking,
-PICO framing, GRADE certainty labels, consensus + conflicting-evidence,
+PICO framing, provenance-based source signals (not a full GRADE assessment),
+consensus + conflicting-evidence,
 claim-level NLI verdicts, claim-to-study traceability + Citation Registry,
 clarifying questions, progressive disclosure, role-adaptive output,
 consent-gated personalization, export/share, the Vietnamese golden-set quality
@@ -22,6 +23,27 @@ Property 35 — flags-off legacy equivalence). Flags are read from config/env at
 service start, so flipping one means updating the environment config and
 restarting/redeploying the affected service — there is no in-request toggle.
 
+### Offline corpus backfill (separate high-impact operation)
+
+The existing administrative ingestion trigger is deliberately bounded to one
+source and retains its API RBAC boundary. A corpus-wide watermark backfill is
+not that trigger: it lazy-composes the source registry and ingestion
+orchestrator only when all of the following are explicitly true:
+
+- `RAG_PERSISTENT_STORE_ENABLED=true`
+- `RAG_INGESTION_ENABLED=true`
+- `RAG_BACKFILL_ENABLED=true`
+
+`RAG_BACKFILL_ENABLED` is a separate default-off kill switch because a run can
+contact every enabled upstream source. Before enabling it, verify source
+licenses/robots policy, registry enablement, storage capacity and approved
+network egress. The runtime guard rejects backfill without ingestion and the
+persistent store. Per-source failures are reported as sanitized reason codes;
+independent sources continue, so operators must inspect the report before any
+subsequent release decision. Roll back immediately by setting
+`RAG_BACKFILL_ENABLED=false` and restarting ML; no stored corpus data is
+deleted by that rollback.
+
 ML flags (`services/ml/src/clara_ml/config.py`):
 
 | Env var                                       | Default | Behavior when on                                  |
@@ -31,10 +53,12 @@ ML flags (`services/ml/src/clara_ml/config.py`):
 | `RESEARCH_GAP_FILL_MAX_PASSES`                | `2`     | ML-side gap-fill pass bound (0–8)                 |
 | `RESEARCH_RECENCY_TRUST_RANKING_ENABLED`      | `false` | Composite trust-tier/recency ranking + surfacing  |
 | `RESEARCH_PICO_ENABLED`                        | `false` | PICO framing with named-rejection semantics       |
-| `RESEARCH_GRADE_ENABLED`                       | `false` | GRADE certainty + recommendation-strength labels  |
+| `RESEARCH_EVIDENCE_SIGNALS_ENABLED`            | `false` | Provenance-only source metadata for verified claims |
+| `RESEARCH_GRADE_ENABLED`                       | `false` | Deprecated compatibility key; does not enable GRADE output |
 | `RESEARCH_CONSENSUS_ENABLED`                   | `false` | Support/contrast/neutral counts + conflict section|
 | `RESEARCH_CLAIM_TRACE_ENABLED`                 | `false` | Traced claims + Citation Registry appendix        |
 | `RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED`        | `false` | Exclusive normal/researcher/doctor output profiles|
+| `RESEARCH_OUTPUT_MODES_ENABLED`                | `false` | API/ML-gated deterministic plain/professional reader chrome |
 
 API flags (`services/api/src/clara_api/core/config.py`):
 
@@ -52,6 +76,22 @@ API flags (`services/api/src/clara_api/core/config.py`):
 
 The web mobile deep-mode surface is additionally gated by the
 `RESEARCH_MOBILE_DEEP_ENABLED` remote-config flag on the mobile client.
+
+### Evidence-release boundary
+
+The evidence-release boundary is not an optional presentation flag. Both the
+synchronous `POST /api/v1/research/tier2` route and the durable
+`POST /api/v1/research/tier2/jobs` worker run the same deterministic quality
+gate after ML verification and attribution. If an answer has no resolvable
+citations, no retrieved evidence, zero support, or any unsupported/
+contradicted claim, CLARA preserves its citation and verifier artifacts but
+replaces the clinical conclusion with an abstention. This applies regardless
+of whether optional Research presentation flags are enabled.
+
+End-user views show a plain-language verification state and evidence count,
+never an uncalibrated verifier confidence percentage, raw FIDES labels, or
+chain-of-thought. Detailed verifier diagnostics stay in the appropriate
+professional/admin rails.
 
 ## Prerequisites
 
@@ -81,21 +121,33 @@ The web mobile deep-mode surface is additionally gated by the
    - Wave A (retrieval quality): `RESEARCH_QUERY_DECOMPOSITION_ENABLED`,
      `RESEARCH_GAP_FILL_ENABLED`, `RESEARCH_RECENCY_TRUST_RANKING_ENABLED`.
    - Wave B (evidence presentation): `RESEARCH_PICO_ENABLED`,
-     `RESEARCH_GRADE_ENABLED`, `RESEARCH_CONSENSUS_ENABLED`,
-     `RESEARCH_CLAIM_TRACE_ENABLED`, `RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED`.
+     `RESEARCH_EVIDENCE_SIGNALS_ENABLED`, `RESEARCH_CONSENSUS_ENABLED`,
+     `RESEARCH_CLAIM_TRACE_ENABLED`, `RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED`,
+     `RESEARCH_OUTPUT_MODES_ENABLED` (also build web with
+     `NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED=true`).
    - Wave C (surface/IO): `RESEARCH_CLARIFYING_QUESTIONS_ENABLED`,
      `RESEARCH_ROLE_GATED_TELEMETRY_ENABLED`, `RESEARCH_PERSONALIZATION_ENABLED`,
      `RESEARCH_EXPORT_ENABLED`, `RESEARCH_SHARE_ENABLED`,
      `RESEARCH_DURABLE_UPLOADS_ENABLED` (+ `RESEARCH_UPLOAD_OBJECT_STORE_URL`).
+
+`RESEARCH_EVIDENCE_SIGNALS_ENABLED` is deliberately provenance-only: it emits
+the retrieved source id, source type, internal authority band, publication date,
+and whether the claim directly resolved to that source. It must not be described
+as GRADE, evidence certainty, recommendation strength, or a treatment decision.
+`RESEARCH_GRADE_ENABLED` remains accepted only to avoid breaking old environment
+files and has no runtime effect. Roll back the new output by setting
+`RESEARCH_EVIDENCE_SIGNALS_ENABLED=false`; no data migration is required.
 2. For durable uploads, provision and set `RESEARCH_UPLOAD_OBJECT_STORE_URL`
    before enabling `RESEARCH_DURABLE_UPLOADS_ENABLED`. If the backend is
    unreachable while the flag is on, uploads surface a 503 (no silent data loss);
    confirm the backend is healthy first.
 3. Restart/redeploy the API and ML services so the new config is read at start.
 4. Confirm activation via trace/telemetry on a `deep`/`deep_beta` request: the
-   enabled stages (decomposition, gap-fill pass count, ranking, PICO, GRADE,
-   consensus, traced claims) should appear in the result payload; with flags off
-   those keys are omitted.
+   enabled stages (decomposition, gap-fill pass count, ranking, PICO,
+   provenance-based source signals, consensus, traced claims) should appear in
+   the result payload; with flags off those keys are omitted. Source signals are
+   a heuristic/provenance aid, not a formal GRADE certainty or recommendation-
+   strength judgement.
 
 ## Stage 2 — Verify guardrail preservation + golden-set quality gate (staging)
 

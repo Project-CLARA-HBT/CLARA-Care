@@ -157,4 +157,43 @@ void main() {
       expect(result['deleted'], isTrue);
     });
   });
+
+  group('autoCheckCareguardCabinet', () {
+    test(
+        'POSTs only source-backed selected resolutions to the cabinet endpoint',
+        () async {
+      late http.Request captured;
+      final mock = MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode({'status': 'requires_medication_clarification'}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+      final api = ApiClient(baseUrl: base, httpClient: mock);
+
+      await api.autoCheckCareguardCabinet(
+        accessToken: token,
+        locale: 'en',
+        resolutions: const [
+          {
+            'cabinet_item_id': 7,
+            'input_alias': 'panadol xanh',
+            'drugbank_id': 'DB00316',
+            'drugbank_version': 'drugbank-2026-07',
+          },
+        ],
+      );
+
+      expect(captured.method, 'POST');
+      expect(captured.url.path, '/api/v1/careguard/cabinet/auto-ddi-check');
+      expect(captured.headers['Authorization'], 'Bearer $token');
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['locale'], 'en');
+      expect(body['resolutions'], hasLength(1));
+      expect((body['resolutions'] as List).single['drugbank_id'], 'DB00316');
+      expect(body.containsKey('medications'), isFalse);
+    });
+  });
 }

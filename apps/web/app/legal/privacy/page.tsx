@@ -35,7 +35,7 @@ const PRIVACY_SECTIONS = [
  */
 const THIRD_PARTY_PROCESSORS = [
   {
-    name: "YEScale — điểm cuối DeepSeek (LLM, mô hình deepseek-v3.2)",
+    name: "YEScale — điểm cuối DeepSeek (LLM, mô hình deepseek-v4-pro và deepseek-v4-flash)",
     purpose:
       "Suy luận mô hình ngôn ngữ lớn / large language model inference (sinh câu trả lời)",
     jurisdiction: "Ngoài lãnh thổ Việt Nam (offshore / non-VN)",

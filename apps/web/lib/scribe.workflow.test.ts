@@ -10,6 +10,7 @@ import {
   getScribeCoding,
   getScribeGrounding,
   listScribeAddenda,
+  saveScribeNoteDraft,
   signScribeNote,
 } from "@/lib/scribe";
 
@@ -73,6 +74,20 @@ describe("generate → sign → amend lifecycle (Req 8)", () => {
     });
     await generateScribeNote(7);
     expect(post).toHaveBeenCalledWith("/scribe/sessions/7/notes", {});
+  });
+
+  it("saveScribeNoteDraft uses the versioned clinician-edit endpoint", async () => {
+    post.mockResolvedValueOnce({
+      data: { id: 7, title: "t", status: "in_review", transcript: "x", created_at: "", updated_at: "" },
+    });
+    await saveScribeNoteDraft(7, {
+      template_id: "soap",
+      sections: { subjective: "clinician edit", objective: "", assessment: "", plan: "" },
+    });
+    expect(post).toHaveBeenCalledWith("/scribe/sessions/7/notes/draft", {
+      template_id: "soap",
+      sections: { subjective: "clinician edit", objective: "", assessment: "", plan: "" },
+    });
   });
 
   it("signScribeNote POSTs an empty body to the sign URL and returns signed", async () => {

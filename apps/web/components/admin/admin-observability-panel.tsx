@@ -13,7 +13,9 @@ import {
   SegmentRingGauge
 } from "@/components/dashboard/futuristic-charts";
 import { trackAdminSurfaceViewed } from "@/lib/analytics/events";
-import { sanitizeUpstreamError } from "@/lib/user-facing-text";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
   acknowledgeObservabilityAlert,
   getApiHealth,
@@ -200,6 +202,7 @@ function computeFlowHealth(flow: FlowFlags): number {
 }
 
 export default function AdminObservabilityPanel() {
+  const uiLanguage = useUILanguage();
   const [state, setState] = useState<ObservabilityState>(INITIAL_STATE);
   const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -219,14 +222,12 @@ export default function AdminObservabilityPanel() {
     } catch (cause) {
       setAckError((prev) => ({
         ...prev,
-        [alertId]: sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể xác nhận cảnh báo."
-        )
+        [alertId]: safeUserFacingError(cause, t(uiLanguage, "admin.observability.error.acknowledge"))
       }));
     } finally {
       setAckPending((prev) => ({ ...prev, [alertId]: false }));
     }
-  }, []);
+  }, [uiLanguage]);
 
   const load = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: "" }));
@@ -298,12 +299,10 @@ export default function AdminObservabilityPanel() {
       setState((prev) => ({
         ...prev,
         loading: false,
-        error: sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể tải ảnh chụp trạng thái hệ thống."
-        )
+        error: safeUserFacingError(cause, t(uiLanguage, "admin.observability.error.load"))
       }));
     }
-  }, []);
+  }, [uiLanguage]);
 
   useEffect(() => {
     void load();
@@ -533,7 +532,7 @@ export default function AdminObservabilityPanel() {
   // AsyncSection states. The loading slot is only shown on the first load so
   // 15s auto-refreshes don't blank an already-populated dashboard; the toolbar
   // already reflects in-flight syncs. Errors carry the pre-sanitized message
-  // (no stack traces / upstream codes) from `sanitizeUpstreamError` (Req 5.6).
+  // (no stack traces / upstream codes) from `safeUserFacingError` (Req 5.6).
   const dashboardState = useMemo<AsyncState<true>>(
     () =>
       selectAsyncState<true>({

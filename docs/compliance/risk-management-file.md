@@ -18,7 +18,7 @@
 | Device status | Decision-support software on self-declared data — **not** a medical device, **not** an EMR/EHR |
 | Risk classification | **High-risk AI system in the health domain** |
 | Governing law | AI Law No. 134/2025/QH15 (effective 1 March 2026); Decree 13/2023/NĐ-CP (PDPD) |
-| Primary model | DeepSeek `deepseek-v3.2` via the YEScale offshore endpoint |
+| Governed models | DeepSeek `deepseek-v4-pro` for safety/reasoning and `deepseek-v4-flash` for bounded lower-latency tasks, via the configured offshore endpoint |
 | Retrieval embeddings | OpenAI-compatible endpoint via YEScale (`https://api.yescale.io/v1`) |
 | Local fallback | Deterministic synthesiser `local-synth-*` (labeled degraded) |
 | Transparency notice version | `2026-03-v1` |

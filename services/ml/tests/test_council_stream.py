@@ -1,8 +1,9 @@
-"""SSE council-stream contract tests (per-stage progress + terminal result).
+"""SSE Council progress-stream contract tests (per-stage progress + terminal result).
 
 Covers the streaming endpoint added in task 2.1: ordered ``stage`` events (one
-per ``reasoning_timeline`` step) terminated by exactly one ``result`` (or
-``error``) event, and stream/blocking result equivalence (Req 1.1, 1.4).
+per processing step) terminated by exactly one ``result`` (or ``error``) event,
+with no reasoning trace or clinical metadata, and stream/blocking result
+equivalence (Req 1.1, 1.4).
 """
 
 from __future__ import annotations
@@ -95,6 +96,7 @@ def test_stream_stages_are_strictly_ordered_by_sequence() -> None:
         "safety_gate",
         "final_recommendation",
     ]
+    assert all(set(stage).issubset({"index", "sequence", "step"}) for stage in stage_frames)
 
 
 def test_stream_terminal_result_equals_blocking_run() -> None:

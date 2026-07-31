@@ -214,8 +214,36 @@ jobs:
           CLARA_DOCTOR_PASSWORD: ${{ secrets.CLARA_DOCTOR_PASSWORD }}
           CLARA_EVAL_API_BASE_URL: ${{ secrets.CLARA_API_BASE_URL }}
           CLARA_EVAL_ML_BASE_URL: ${{ secrets.CLARA_ML_BASE_URL }}
+          # Live execution is opt-in. The approved manifest is a de-identified
+          # secret and is materialized only under RUNNER_TEMP, never committed
+          # or uploaded. Keep this repository variable false until governance
+          # approves the external manifest and endpoint scope.
+          CLARA_EVAL_LIVE_EXECUTION_ENABLED: ${{ vars.CLARA_EVAL_LIVE_EXECUTION_ENABLED || 'false' }}
+          CLARA_EVAL_LIVE_MANIFEST_JSON: ${{ secrets.CLARA_EVAL_LIVE_MANIFEST_JSON }}
+          CLARA_EVAL_API_BEARER_TOKEN: ${{ secrets.CLARA_EVAL_API_BEARER_TOKEN }}
+          CLARA_EVAL_ML_BEARER_TOKEN: ${{ secrets.CLARA_EVAL_ML_BEARER_TOKEN }}
+          CLARA_EVAL_ML_INTERNAL_KEY: ${{ secrets.CLARA_EVAL_ML_INTERNAL_KEY }}
         run: |
           set -euo pipefail
+          eval_manifest=""
+          trap 'if [ -n "${eval_manifest:-}" ]; then rm -f "${eval_manifest}"; fi' EXIT
+          if [ "${CLARA_EVAL_LIVE_EXECUTION_ENABLED}" = "true" ]; then
+            if [ -z "${CLARA_EVAL_LIVE_MANIFEST_JSON}" ]; then
+              echo "::error::CLARA_EVAL_LIVE_MANIFEST_JSON is required when live CLARA-Eval VN is enabled"
+              exit 1
+            fi
+            eval_manifest="${RUNNER_TEMP}/clara-eval-vn-approved-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+            umask 077
+            EVAL_MANIFEST_PATH="${eval_manifest}" python - <<'PY'
+            import os
+            from pathlib import Path
+
+            Path(os.environ["EVAL_MANIFEST_PATH"]).write_text(
+                os.environ["CLARA_EVAL_LIVE_MANIFEST_JSON"], encoding="utf-8"
+            )
+            PY
+            export CLARA_EVAL_LIVE_MANIFEST="${eval_manifest}"
+          fi
           output="artifacts/clara-eval-vn/nightly-${{ steps.ctx.outputs.run_id }}"
           python -m evaluation.clara_eval.datasets.validate \
             --manifest evaluation/clara_eval/datasets/manifest.json \
@@ -343,6 +371,8 @@ jobs:
           path: |
             artifacts/round2/${{ steps.ctx.outputs.run_id }}*
             artifacts/clara-eval-vn/nightly-${{ steps.ctx.outputs.run_id }}
-            data/demo/hard-negative-mined-*.jsonl
-            data/demo/hard-negative-mined-*.summary.json
+          # Hard-negative JSONL can contain free-text queries derived from
+          # controlled evaluation inputs. Keep it in the governed data store;
+          # it is never a CI artifact, even when an individual run is known to
+          # use synthetic fixtures.
           if-no-files-found: ignore

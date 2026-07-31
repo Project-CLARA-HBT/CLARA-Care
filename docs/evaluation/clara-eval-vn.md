@@ -35,11 +35,22 @@ prohibited from containing PHI or secrets. A metric with unavailable data,
 model trace, retrieval snapshot, licensed DrugBank index, or clinician review
 must be `not_measured`, with a reason and exact follow-up command. An empty
 critical-error count is never reported as proof that there were zero errors.
+Conversely, a `0` in `critical-errors.csv` is emitted only after one or more
+approved binary safety cases for that exact error category ran successfully;
+the artifact never emits both an unavailable and measured row for the same
+category. Confidence intervals use the same observed/not-measured split as
+`metrics.json`.
 
 The release suite requires an approved locked dataset reference, immutable
 retrieval snapshot, runtime model/prompt resolution, and approved live
 execution evidence. Configure its values out of band; do not commit datasets,
 tokens, patient content, or provider keys.
+
+The checked-in task-contract manifest also records whether each task is
+assigned the governed `pro` or `flash` DeepSeek V4 profile. Judge artifacts
+capture that configuration but label it `configured_not_executed` until a
+credentialed live trace is supplied; they never turn a configured model into a
+measured quality or latency result.
 
 ## Data and model cards
 

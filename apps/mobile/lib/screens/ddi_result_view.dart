@@ -1,7 +1,107 @@
 import 'package:flutter/material.dart';
 
-import '../core/careguard_offline_cache.dart';
 import '../core/ddi_user_view.dart';
+
+/// Locale-aware presentation copy for the fixed CareGuard result chrome.
+/// Clinical alert content remains authoritative API-provided text and is never
+/// rewritten here. This component does not decide risk or alter DrugBank data.
+class _DdiResultCopy {
+  const _DdiResultCopy._(this._english);
+
+  factory _DdiResultCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _DdiResultCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get offlineLabel => _english
+      ? 'offline / not real-time'
+      : 'ngoại tuyến / không phải thời gian thực';
+  String cachedResult(String timestamp) => _english
+      ? 'Showing the most recently saved result ($timestamp). It may be out of date.'
+      : 'Đang hiển thị kết quả lưu gần nhất ($timestamp). Kết quả có thể đã cũ.';
+  String get overview => _english ? 'Overview' : 'Kết quả tổng quan';
+  String risk(String value) =>
+      _english ? 'Risk level: $value' : 'Mức rủi ro: $value';
+  String get noClearAlert => _english
+      ? 'No clear interaction alert was identified.'
+      : 'Chưa ghi nhận cảnh báo tương tác rõ ràng.';
+  String get recommendations => _english ? 'Recommendations' : 'Khuyến nghị';
+  String get sources => _english ? 'Reference sources' : 'Nguồn tham khảo';
+
+  String riskLabel(String risk) {
+    switch (risk) {
+      case 'critical':
+      case 'high':
+        return _english ? 'High' : 'Cao';
+      case 'medium':
+        return _english ? 'Medium' : 'Trung bình';
+      case 'low':
+        return _english ? 'Low' : 'Thấp';
+      default:
+        return _english ? 'Unknown' : 'Chưa xác định';
+    }
+  }
+
+  String severityLabel(String severity) {
+    switch (severity) {
+      case 'critical':
+        return _english ? 'Critical' : 'Nghiêm trọng';
+      case 'high':
+        return _english ? 'High' : 'Cao';
+      case 'medium':
+        return _english ? 'Medium' : 'Trung bình';
+      case 'low':
+        return _english ? 'Low' : 'Thấp';
+      default:
+        return _english ? 'Unknown' : 'Chưa xác định';
+    }
+  }
+}
+
+/// Static wording for the CareGuard identity-clarification boundary.
+///
+/// This uses the locale exposed by [Localizations], which is driven at the
+/// application root by the app-wide language controller. It remains outside
+/// the shared consumer-terminology contract because that contract excludes
+/// safety dispositions, while this copy makes the fail-closed DrugBank boundary
+/// explicit. It never translates a medicine name, candidate, source version,
+/// or any authoritative API-provided clinical content.
+class _DdiMedicationClarificationCopy {
+  const _DdiMedicationClarificationCopy._(this._english);
+
+  factory _DdiMedicationClarificationCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _DdiMedicationClarificationCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get title => _english
+      ? 'The interaction check is not complete yet'
+      : 'Chưa thể hoàn tất kiểm tra tương tác';
+  String get explanation => _english
+      ? 'Choose the exact medicine for each item below before DrugBank can compare your medicines. This is not a result or an all-clear.'
+      : 'Hãy chọn đúng thuốc cho từng mục bên dưới trước khi DrugBank có thể so sánh các thuốc. Đây chưa phải là kết quả và không có nghĩa là an toàn.';
+  String get noCandidate => _english
+      ? 'There is no safe source-backed choice for this medicine. Check the package or edit the medicine in your cabinet, then try again.'
+      : 'Chưa có lựa chọn an toàn có nguồn cho thuốc này. Hãy kiểm tra vỏ thuốc hoặc sửa thuốc trong tủ, rồi thử lại.';
+  String get sourceLabel => _english ? 'DrugBank source' : 'Nguồn DrugBank';
+  String get resubmit => _english
+      ? 'Check again with selected medicines'
+      : 'Kiểm tra lại với thuốc đã chọn';
+  String get manualUnavailable => _english
+      ? 'The interaction check cannot be completed until the medicine name is identified exactly. Check the package or use Medicine cabinet to select a DrugBank-backed medicine.'
+      : 'Chưa thể hoàn tất kiểm tra vì cần xác định chính xác tên thuốc. Hãy kiểm tra vỏ thuốc hoặc dùng Tủ thuốc để chọn thuốc có nguồn DrugBank.';
+}
+
+/// Vietnamese-first manual-entry wording for a terminal clarification state.
+///
+/// The manual CareGuard screen has no owner-scoped cabinet item ID, so it must
+/// direct the person to the cabinet rather than expose an unsafe local choice.
+String ddiMedicationClarificationUnavailableMessage(BuildContext context) =>
+    _DdiMedicationClarificationCopy.forContext(context).manualUnavailable;
 
 /// Renders the End_User DDI projection ([DdiUserView]) — risk level, alerts,
 /// recommendations, and reference sources only. Runtime mode, fallback flags,
@@ -39,6 +139,7 @@ class DdiResultView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _DdiResultCopy.forContext(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -57,7 +158,7 @@ class DdiResultView extends StatelessWidget {
                           size: 18, color: Colors.amber.shade900),
                       const SizedBox(width: 6),
                       Text(
-                        careguardOfflineLabel,
+                        copy.offlineLabel,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: Colors.amber.shade900,
@@ -67,8 +168,7 @@ class DdiResultView extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Đang hiển thị kết quả lưu gần nhất '
-                    '(${_formatCachedAt(offlineCachedAt!)}). Kết quả có thể đã cũ.',
+                    copy.cachedResult(_formatCachedAt(offlineCachedAt!)),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -83,11 +183,11 @@ class DdiResultView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text('Kết quả tổng quan',
+                    Text(copy.overview,
                         style: Theme.of(context).textTheme.titleSmall),
                     const Spacer(),
                     Chip(
-                      label: Text('Mức rủi ro: ${view.riskLabel}'),
+                      label: Text(copy.risk(copy.riskLabel(view.riskLevel))),
                       backgroundColor:
                           _riskColor(context).withValues(alpha: 0.15),
                       side: BorderSide(color: _riskColor(context)),
@@ -96,10 +196,10 @@ class DdiResultView extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 if (view.alerts.isEmpty)
-                  const Text('Chưa ghi nhận cảnh báo tương tác rõ ràng.')
+                  Text(copy.noClearAlert)
                 else
                   ...view.alerts.map(
-                    (alert) => _AlertTile(alert: alert),
+                    (alert) => _AlertTile(alert: alert, copy: copy),
                   ),
               ],
             ),
@@ -112,7 +212,7 @@ class DdiResultView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Khuyến nghị',
+                  Text(copy.recommendations,
                       style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 6),
                   ...view.recommendations.map(
@@ -132,7 +232,7 @@ class DdiResultView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Nguồn tham khảo',
+                  Text(copy.sources,
                       style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 6),
                   Text(view.sources.join(', ')),
@@ -145,13 +245,163 @@ class DdiResultView extends StatelessWidget {
   }
 }
 
+/// Terminal, fail-closed CareGuard state shown before a DDI result exists.
+///
+/// This deliberately does not reuse [DdiResultView]: there is no risk level,
+/// all-clear, recommendation, source cache, or conclusion while one or more
+/// cabinet labels have no verified DrugBank identity. When candidates are
+/// present, the choices are exactly those supplied by the API and can only be
+/// returned to the owner-scoped cabinet recheck endpoint by [onResubmit].
+class DdiMedicationClarificationView extends StatelessWidget {
+  const DdiMedicationClarificationView({
+    super.key,
+    required this.clarifications,
+    required this.selected,
+    required this.onSelected,
+    required this.onResubmit,
+    this.loading = false,
+  });
+
+  final List<CareguardMedicationClarification> clarifications;
+  final Map<int, CareguardClarificationCandidate> selected;
+  final void Function(
+    CareguardMedicationClarification clarification,
+    CareguardClarificationCandidate candidate,
+  ) onSelected;
+  final VoidCallback? onResubmit;
+  final bool loading;
+
+  bool get _isComplete =>
+      clarifications.isNotEmpty &&
+      clarifications.every(
+        (clarification) =>
+            clarification.candidates.isNotEmpty &&
+            selected.containsKey(clarification.cabinetItemId),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = _DdiMedicationClarificationCopy.forContext(context);
+
+    return Card(
+      color: Colors.amber.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.amber.shade900),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    copy.title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Colors.amber.shade900,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(copy.explanation),
+            const SizedBox(height: 12),
+            if (clarifications.isEmpty)
+              Text(copy.noCandidate)
+            else
+              ...clarifications.map((clarification) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ClarificationChoices(
+                      clarification: clarification,
+                      selected: selected[clarification.cabinetItemId],
+                      onSelected: onSelected,
+                      noCandidate: copy.noCandidate,
+                      sourceLabel: copy.sourceLabel,
+                    ),
+                  )),
+            if (clarifications.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              FilledButton.icon(
+                onPressed: loading || !_isComplete ? null : onResubmit,
+                icon: loading
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(copy.resubmit),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ClarificationChoices extends StatelessWidget {
+  const _ClarificationChoices({
+    required this.clarification,
+    required this.selected,
+    required this.onSelected,
+    required this.noCandidate,
+    required this.sourceLabel,
+  });
+
+  final CareguardMedicationClarification clarification;
+  final CareguardClarificationCandidate? selected;
+  final void Function(
+    CareguardMedicationClarification clarification,
+    CareguardClarificationCandidate candidate,
+  ) onSelected;
+  final String noCandidate;
+  final String sourceLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    if (clarification.candidates.isEmpty) {
+      return Text('${clarification.inputAlias}: $noCandidate');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          clarification.inputAlias,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        ...clarification.candidates.map(
+          (candidate) => RadioListTile<String>(
+            contentPadding: EdgeInsets.zero,
+            value: candidate.drugbankId,
+            groupValue: selected?.drugbankId,
+            onChanged: (_) => onSelected(clarification, candidate),
+            title: Text(candidate.normalizedName),
+            subtitle: Text(
+              [
+                if (candidate.activeIngredients.isNotEmpty)
+                  candidate.activeIngredients.join(', '),
+                '$sourceLabel: ${candidate.sourceVersion}',
+              ].join('\n'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// A single interaction alert rendered professionally: a leading severity badge
 /// (color + icon + Vietnamese text so meaning is never color-only), the two
 /// interacting medications as chips, and the message + optional detail line.
 class _AlertTile extends StatelessWidget {
-  const _AlertTile({required this.alert});
+  const _AlertTile({required this.alert, required this.copy});
 
   final DdiAlert alert;
+  final _DdiResultCopy copy;
 
   Color _severityColor(BuildContext context) {
     switch (alert.severity) {
@@ -209,7 +459,7 @@ class _AlertTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  alert.severityLabel,
+                  copy.severityLabel(alert.severity),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: color,
                     fontWeight: FontWeight.w800,

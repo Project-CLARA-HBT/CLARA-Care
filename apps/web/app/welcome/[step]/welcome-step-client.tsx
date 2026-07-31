@@ -31,17 +31,20 @@ import {
 import {
   type WelcomeStepId,
 } from "../welcome-steps";
+import { t } from "@/lib/i18n/catalog";
+import type { UILanguage } from "@/lib/ui-language";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type WelcomeDraftPatch = Omit<PhrOnboardingPatch, "action">;
 
-const FLOW_STEPS = guidedFlowSteps("welcome", "vi");
-
-const GENDERS = [
-  ["", "Không muốn nói"],
-  ["female", "Nữ"],
-  ["male", "Nam"],
-  ["other", "Khác"],
-] as const;
+function genderOptions(language: UILanguage) {
+  return [
+    ["", t(language, "welcome.gender.none")],
+    ["female", t(language, "welcome.gender.female")],
+    ["male", t(language, "welcome.gender.male")],
+    ["other", t(language, "welcome.gender.other")],
+  ] as const;
+}
 const BLOOD_TYPES = ["", "A", "B", "AB", "O"] as const;
 
 function path(step: WelcomeStepId) {
@@ -58,6 +61,7 @@ function measurementError(
   maximum: number,
   fieldId: string,
   fieldLabel: string,
+  language: UILanguage,
 ): GuidedFlowError | null {
   if (!value.trim()) return null;
   const parsed = numeric(value);
@@ -66,12 +70,15 @@ function measurementError(
     id: `${fieldId}-invalid`,
     fieldId,
     fieldLabel,
-    message: `Nhập một số từ 0 đến ${maximum}.`,
+    message: t(language, "welcome.measurementError", { maximum }),
   };
 }
 
 export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
   const router = useRouter();
+  const language = useUILanguage();
+  const flowSteps = guidedFlowSteps("welcome", language);
+  const genders = genderOptions(language);
   const stepIndex = WELCOME_STEP_IDS.indexOf(step);
   const previous = adjacentGuidedFlowStep("welcome", step, "previous");
   const next = adjacentGuidedFlowStep("welcome", step, "next");
@@ -123,7 +130,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
           setSaveState({
             kind: "error",
             message:
-              "Chưa thể tải bản thiết lập. Bạn có thể thử lại hoặc quay lại sau.",
+              t(language, "welcome.loadError"),
           });
         }
       })
@@ -133,7 +140,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     return () => {
       active = false;
     };
-  }, [hydrate, router]);
+  }, [hydrate, language, router]);
 
   const saveAndNavigate = async (
     patch: WelcomeDraftPatch,
@@ -150,7 +157,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     } catch {
       setSaveState({
         kind: "error",
-        message: "Không thể lưu thay đổi lúc này. Vui lòng thử lại.",
+        message: t(language, "welcome.saveError"),
       });
     }
   };
@@ -169,7 +176,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     } catch {
       setSaveState({
         kind: "error",
-        message: "Không thể hoàn tất lúc này. Vui lòng thử lại.",
+        message: t(language, "welcome.completeError"),
       });
     }
   };
@@ -178,18 +185,20 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
   const actions = (patch: WelcomeDraftPatch) => (
     <StepActions
       saving={saving}
+      nextLabel={t(language, "welcome.continue")}
+      savingLabel={t(language, "welcome.saving")}
       onNext={() => void saveAndNavigate(patch, next)}
       nextType="button"
       back={
         previous
           ? {
-              label: "Quay lại",
+              label: t(language, "welcome.back"),
               onClick: () => void saveAndNavigate(patch, previous),
             }
           : undefined
       }
       skip={
-        next ? { label: "Bỏ qua", href: path(next) } : undefined
+        next ? { label: t(language, "welcome.skip"), href: path(next) } : undefined
       }
     />
   );
@@ -210,7 +219,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     patch: WelcomeDraftPatch;
     target: WelcomeStepId | null;
   }) => {
-    const error = measurementError(value, maximum, fieldId, fieldLabel);
+    const error = measurementError(value, maximum, fieldId, fieldLabel, language);
     setValidationErrors(error ? [error] : []);
     if (error) {
       ref.current?.focus();
@@ -222,7 +231,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
   let content;
   if (loading) {
     content = (
-      <div className="space-y-3" aria-label="Đang tải thiết lập">
+      <div className="space-y-3" aria-label={t(language, "welcome.loading")}>
         <div className="h-5 w-1/2 animate-pulse rounded bg-[var(--surface-muted)]" />
         <div className="h-28 animate-pulse rounded-[var(--radius-lg)] bg-[var(--surface-muted)]" />
       </div>
@@ -231,27 +240,27 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     content = (
       <div className="space-y-6">
         <Badge tone="brand" icon="spa">
-          The Clara Care
+          {t(language, "auth.brand")}
         </Badge>
         <p className="leading-7 text-[var(--text-secondary)]">
-          Thiết lập gồm các bước ngắn và tất cả thông tin sức khoẻ đều không bắt
-          buộc. Mỗi lựa chọn được lưu an toàn để bạn có thể quay lại sau.
+          {t(language, "welcome.start.intro")}
         </p>
         <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
-          <li>• Một nhóm thông tin ở mỗi bước.</li>
-          <li>• Xem lại trước khi hoàn tất.</li>
-          <li>• Có thể chỉnh sửa hoặc xoá trong Hồ sơ.</li>
+          <li>• {t(language, "welcome.start.itemOne")}</li>
+          <li>• {t(language, "welcome.start.itemTwo")}</li>
+          <li>• {t(language, "welcome.start.itemThree")}</li>
         </ul>
         <StepActions
-          nextLabel="Bắt đầu"
+          nextLabel={t(language, "welcome.start.begin")}
           nextType="button"
           onNext={() => router.push(path("name"))}
           skip={{
-            label: "Bỏ qua, để sau",
+            label: t(language, "welcome.start.skip"),
             onClick: () => void finish("skip"),
             disabled: saving,
           }}
           saving={saving}
+          savingLabel={t(language, "welcome.saving")}
         />
       </div>
     );
@@ -259,11 +268,11 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     content = (
       <div className="space-y-5">
         <Field
-          label="Tên hiển thị"
+          label={t(language, "welcome.name.label")}
           optional
           value={fullName}
           onChange={(event) => setFullName(event.target.value)}
-          placeholder="Ví dụ: Nguyễn An"
+          placeholder={t(language, "welcome.name.placeholder")}
           autoComplete="name"
         />
         {actions({ full_name: fullName.trim() })}
@@ -273,7 +282,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     content = (
       <div className="space-y-5">
         <Field
-          label="Ngày sinh"
+          label={t(language, "welcome.birth.label")}
           optional
           type="date"
           value={dob}
@@ -286,12 +295,12 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     content = (
       <div className="space-y-5">
         <Select
-          label="Giới tính"
+          label={t(language, "welcome.gender.label")}
           optional
           value={gender}
           onChange={(event) => setGender(event.target.value)}
         >
-          {GENDERS.map(([value, label]) => (
+          {genders.map(([value, label]) => (
             <option key={value || "none"} value={value}>
               {label}
             </option>
@@ -304,14 +313,14 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     content = (
       <div className="space-y-5">
         <Select
-          label="Nhóm máu"
+          label={t(language, "welcome.bloodType.label")}
           optional
           value={bloodType}
           onChange={(event) => setBloodType(event.target.value)}
         >
           {BLOOD_TYPES.map((value) => (
             <option key={value || "none"} value={value}>
-              {value || "Chưa rõ"}
+              {value || t(language, "welcome.bloodType.unknown")}
             </option>
           ))}
         </Select>
@@ -325,7 +334,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
         <Field
           ref={heightRef}
           id="welcome-height"
-          label="Chiều cao"
+          label={t(language, "welcome.height.label")}
           optional
           hint="cm"
           inputMode="decimal"
@@ -341,13 +350,15 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
         />
         <StepActions
           saving={saving}
+          nextLabel={t(language, "welcome.continue")}
+          savingLabel={t(language, "welcome.saving")}
           nextType="button"
           onNext={() =>
             navigateWithMeasurement({
               value: heightCm,
               maximum: 300,
               fieldId: "welcome-height",
-              fieldLabel: "Chiều cao",
+              fieldLabel: t(language, "welcome.height.label"),
               ref: heightRef,
               patch: { height_cm: numeric(heightCm) },
               target: next,
@@ -356,13 +367,13 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
           back={
             previous
               ? {
-                  label: "Quay lại",
+                  label: t(language, "welcome.back"),
                   onClick: () =>
                     navigateWithMeasurement({
                       value: heightCm,
                       maximum: 300,
                       fieldId: "welcome-height",
-                      fieldLabel: "Chiều cao",
+                      fieldLabel: t(language, "welcome.height.label"),
                       ref: heightRef,
                       patch: { height_cm: numeric(heightCm) },
                       target: previous,
@@ -371,7 +382,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
               : undefined
           }
           skip={
-            next ? { label: "Bỏ qua", href: path(next) } : undefined
+            next ? { label: t(language, "welcome.skip"), href: path(next) } : undefined
           }
         />
       </div>
@@ -383,7 +394,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
         <Field
           ref={weightRef}
           id="welcome-weight"
-          label="Cân nặng"
+          label={t(language, "welcome.weight.label")}
           optional
           hint="kg"
           inputMode="decimal"
@@ -399,13 +410,15 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
         />
         <StepActions
           saving={saving}
+          nextLabel={t(language, "welcome.continue")}
+          savingLabel={t(language, "welcome.saving")}
           nextType="button"
           onNext={() =>
             navigateWithMeasurement({
               value: weightKg,
               maximum: 800,
               fieldId: "welcome-weight",
-              fieldLabel: "Cân nặng",
+              fieldLabel: t(language, "welcome.weight.label"),
               ref: weightRef,
               patch: { weight_kg: numeric(weightKg) },
               target: next,
@@ -414,13 +427,13 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
           back={
             previous
               ? {
-                  label: "Quay lại",
+                  label: t(language, "welcome.back"),
                   onClick: () =>
                     navigateWithMeasurement({
                       value: weightKg,
                       maximum: 800,
                       fieldId: "welcome-weight",
-                      fieldLabel: "Cân nặng",
+                      fieldLabel: t(language, "welcome.weight.label"),
                       ref: weightRef,
                       patch: { weight_kg: numeric(weightKg) },
                       target: previous,
@@ -429,7 +442,7 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
               : undefined
           }
           skip={
-            next ? { label: "Bỏ qua", href: path(next) } : undefined
+            next ? { label: t(language, "welcome.skip"), href: path(next) } : undefined
           }
         />
       </div>
@@ -440,11 +453,11 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
         <Toggle
           checked={consent}
           onChange={setConsent}
-          label="Cho phép cá nhân hoá"
-          description="Dùng hồ sơ sức khoẻ để gợi ý phù hợp hơn. Không bắt buộc và có thể thu hồi."
+          label={t(language, "welcome.personalization.label")}
+          description={t(language, "welcome.personalization.description")}
         />
         <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
-          CLARA là trợ lý tham khảo, không chẩn đoán hoặc thay thế bác sĩ.
+          {t(language, "welcome.medicalDisclaimer")}
         </p>
         {actions({ personalization_consent: consent })}
       </div>
@@ -453,49 +466,49 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
     content = (
       <div className="space-y-5">
         <ReviewSection
-          title="Thông tin tự khai báo"
-          description="Thông tin trống vẫn có thể bổ sung sau."
+          title={t(language, "welcome.review.title")}
+          description={t(language, "welcome.review.description")}
           edit={{ href: path("name") }}
           items={[
-            { label: "Tên", value: onboarding?.record.full_name || "Chưa cung cấp" },
+            { label: t(language, "welcome.review.name"), value: onboarding?.record.full_name || t(language, "welcome.review.notProvided") },
             {
-              label: "Ngày sinh",
-              value: onboarding?.record.date_of_birth || "Chưa cung cấp",
+              label: t(language, "welcome.review.dateOfBirth"),
+              value: onboarding?.record.date_of_birth || t(language, "welcome.review.notProvided"),
             },
             {
-              label: "Giới tính",
+              label: t(language, "welcome.review.gender"),
               value:
-                GENDERS.find(([value]) => value === onboarding?.record.gender)?.[1] ||
-                "Chưa cung cấp",
+                genders.find(([value]) => value === onboarding?.record.gender)?.[1] ||
+                t(language, "welcome.review.notProvided"),
             },
             {
-              label: "Nhóm máu",
-              value: onboarding?.record.blood_type || "Chưa rõ",
+              label: t(language, "welcome.review.bloodType"),
+              value: onboarding?.record.blood_type || t(language, "welcome.bloodType.unknown"),
             },
             {
-              label: "Chiều cao",
+              label: t(language, "welcome.review.height"),
               value:
                 onboarding?.record.height_cm == null
-                  ? "Chưa cung cấp"
+                  ? t(language, "welcome.review.notProvided")
                   : `${onboarding.record.height_cm} cm`,
             },
             {
-              label: "Cân nặng",
+              label: t(language, "welcome.review.weight"),
               value:
                 onboarding?.record.weight_kg == null
-                  ? "Chưa cung cấp"
+                  ? t(language, "welcome.review.notProvided")
                   : `${onboarding.record.weight_kg} kg`,
             },
             {
-              label: "Cá nhân hoá",
+              label: t(language, "welcome.review.personalization"),
               value: onboarding?.personalization_consent
-                ? "Đã cho phép"
-                : "Không cho phép",
+                ? t(language, "welcome.review.allowed")
+                : t(language, "welcome.review.notAllowed"),
             },
           ]}
         />
         <p className="text-sm leading-6 text-[var(--text-secondary)]">
-          Bạn vẫn có thể sửa hoặc xoá các thông tin này trong Hồ sơ.
+          {t(language, "welcome.review.editAfter")}
         </p>
         <label className="focus-within:shadow-[var(--shadow-focus)] flex min-h-[var(--touch-target-min)] cursor-pointer items-start gap-3 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <input
@@ -505,16 +518,17 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
             className="mt-0.5 h-5 w-5 shrink-0 rounded border-[color:var(--shell-border-strong)] accent-[var(--brand-600)]"
           />
           <span className="text-sm leading-6 text-[var(--text-primary)]">
-            Tôi xác nhận các thông tin trên là do chính tôi tự khai báo.
+            {t(language, "welcome.review.confirm")}
           </span>
         </label>
         <StepActions
-          nextLabel="Hoàn tất thiết lập"
+          nextLabel={t(language, "welcome.review.complete")}
+          savingLabel={t(language, "welcome.saving")}
           nextType="button"
           onNext={() => void finish("complete")}
           nextDisabled={!selfDeclaredConfirmed}
           saving={saving}
-          back={{ label: "Quay lại", href: path("personalization") }}
+          back={{ label: t(language, "welcome.back"), href: path("personalization") }}
         />
       </div>
     );
@@ -523,20 +537,19 @@ export default function WelcomeStepClient({ step }: { step: WelcomeStepId }) {
   return (
     <div className="min-h-[calc(100vh-1rem)] px-4 py-8 sm:py-12">
       <GuidedFlowShell
-        eyebrow="Thiết lập CLARA"
-        title={FLOW_STEPS[stepIndex].label}
+        eyebrow={t(language, "welcome.eyebrow")}
+        title={flowSteps[stepIndex].label}
         description={
           step === "start"
-            ? "Bắt đầu nhẹ nhàng, bạn luôn nắm quyền kiểm soát."
-            : "Bước này không bắt buộc. Bạn có thể bỏ qua và cập nhật sau."
+            ? t(language, "welcome.description.start")
+            : t(language, "welcome.description.step")
         }
-        steps={FLOW_STEPS}
+        steps={flowSteps}
         currentStep={stepIndex}
         saveState={saveState}
         aside={
           <p className="text-center">
-            Dữ liệu được lưu vào hồ sơ của bạn, không nằm trong URL hoặc phân
-            tích hành vi.
+            {t(language, "welcome.privacy")}
           </p>
         }
       >

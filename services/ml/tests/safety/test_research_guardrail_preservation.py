@@ -61,6 +61,7 @@ RESEARCH_ML_FLAGS: tuple[str, ...] = (
     "research_recency_trust_ranking_enabled",
     "research_pico_enabled",
     "research_grade_enabled",
+    "research_evidence_signals_enabled",
     "research_consensus_enabled",
     "research_claim_trace_enabled",
     "research_role_adaptive_output_enabled",

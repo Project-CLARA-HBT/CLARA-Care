@@ -12,6 +12,7 @@ import logging
 from collections.abc import Iterable, Iterator
 from typing import Any
 
+from clara_ml.llm.model_registry import AsrProviderRoute, resolve_asr_provider_selection
 from clara_ml.scribe.asr.base import AsrEvent, AsrProvider, AsrResult
 from clara_ml.scribe.asr.google_stt import GoogleSttV2Asr
 from clara_ml.scribe.asr.phowhisper import PhoWhisperAsr
@@ -81,31 +82,29 @@ class CompositeAsr:
             yield AsrEvent(type="segment", segment=seg, text=seg.text, detail=dict(meta))
 
 
-def _provider_by_name(name: str, settings: Any | None = None) -> AsrProvider:
-    key = (name or "").strip().lower()
-    if key in ("google", "google_stt", "google_stt_v2", "chirp", "chirp3"):
+def _provider_for_route(route: AsrProviderRoute, settings: Any | None = None) -> AsrProvider:
+    """Build an ASR provider from an already allowlisted registry route."""
+
+    if route.provider == "google_stt_v2_chirp3":
         return GoogleSttV2Asr(
             project_id=str(getattr(settings, "scribe_google_project_id", "") or ""),
             location=str(getattr(settings, "scribe_google_location", "us") or "us"),
             recognizer=str(getattr(settings, "scribe_google_recognizer", "_") or "_"),
         )
-    if key in ("phowhisper", "pho_whisper", "pho-whisper", "vi_whisper"):
-        return PhoWhisperAsr()
-    # Default / unknown -> Whisper (the only fully-wired backend today).
+    if route.provider == "phowhisper":
+        return PhoWhisperAsr(model=route.model)
+    # The registry normalizes unknown routes to Whisper before this point.
     return WhisperDeepSeekAsr()
 
 
 def build_asr_provider(settings: Any) -> CompositeAsr:
     """Build the configured composite ASR provider from settings (import-safe)."""
 
-    primary_name = str(getattr(settings, "scribe_asr_primary", "whisper") or "whisper")
-    fallback_name = str(getattr(settings, "scribe_asr_fallback", "whisper") or "whisper")
-    primary = _provider_by_name(primary_name, settings)
-    # Do not call the same remote/local decoder twice. A same-name "fallback"
-    # only doubles latency and CPU while providing no independent recovery path.
+    selection = resolve_asr_provider_selection(settings)
+    primary = _provider_for_route(selection.primary, settings)
     fallback = (
-        None
-        if primary_name.strip().lower() == fallback_name.strip().lower()
-        else _provider_by_name(fallback_name, settings)
+        _provider_for_route(selection.fallback, settings)
+        if selection.fallback is not None
+        else None
     )
     return CompositeAsr(primary, fallback)

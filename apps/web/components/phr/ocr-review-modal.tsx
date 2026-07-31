@@ -8,6 +8,7 @@ import {
   type PhrOcrCandidate,
 } from "@/lib/phr";
 import type { UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
  * OCR review modal (personal-health-record Requirement 9.1–9.5). The user
@@ -36,7 +37,6 @@ const COPY = {
     name: "Tên thuốc",
     dose: "Liều dùng",
     frequency: "Tần suất",
-    confidence: "Độ tin cậy",
     needsReview: "Cần xem lại",
     accept: "Chấp nhận",
     accepted: "Đã chấp nhận",
@@ -60,7 +60,6 @@ const COPY = {
     name: "Medication",
     dose: "Dose",
     frequency: "Frequency",
-    confidence: "Confidence",
     needsReview: "Needs review",
     accept: "Accept",
     accepted: "Accepted",
@@ -120,7 +119,7 @@ export default function OcrReviewModal({
       );
       if (result.candidates.length === 0) setMessage(text.noCandidates);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.scanError);
+      setError(safeUserFacingError(err, text.scanError));
     } finally {
       setScanning(false);
     }
@@ -155,7 +154,7 @@ export default function OcrReviewModal({
       onConfirmed?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.confirmError);
+      setError(safeUserFacingError(err, text.confirmError));
     } finally {
       setConfirming(false);
     }
@@ -181,6 +180,7 @@ export default function OcrReviewModal({
             ref={fileRef}
             type="file"
             accept="image/*,application/pdf"
+            aria-label={text.pick}
             onChange={(e) => onFile(e.target.files?.[0])}
             disabled={scanning || confirming}
             className="block w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-lg file:border file:border-[#93C5FD] file:bg-[#EFF6FF] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-[#1D4ED8]"
@@ -209,29 +209,27 @@ export default function OcrReviewModal({
                 <div className="grid gap-2 sm:grid-cols-3">
                   <input
                     className="input"
+                    aria-label={text.name}
                     placeholder={text.name}
                     value={row.name}
                     onChange={(e) => patchRow(idx, { name: e.target.value })}
                   />
                   <input
                     className="input"
+                    aria-label={text.dose}
                     placeholder={text.dose}
                     value={row.dose}
                     onChange={(e) => patchRow(idx, { dose: e.target.value })}
                   />
                   <input
                     className="input"
+                    aria-label={text.frequency}
                     placeholder={text.frequency}
                     value={row.frequency}
                     onChange={(e) => patchRow(idx, { frequency: e.target.value })}
                   />
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {typeof row.ocr_confidence === "number" ? (
-                    <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-600/70 dark:bg-slate-700/40 dark:text-slate-200">
-                      {text.confidence}: {Math.round(row.ocr_confidence * 100)}%
-                    </span>
-                  ) : null}
                   {row.requires_manual_confirm && !row._accepted ? (
                     <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-200">
                       {text.needsReview}

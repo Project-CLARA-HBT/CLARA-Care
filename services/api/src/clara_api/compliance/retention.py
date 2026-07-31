@@ -38,6 +38,8 @@ from clara_api.db.models import (
     PhrProfile,
     PhrReminder,
     PhrVersion,
+    ScribeAudit,
+    ScribeSession,
 )
 
 # Retention actions a category may declare.
@@ -285,6 +287,56 @@ def _sweep_phr_profiles(
     return swept
 
 
+def _sweep_scribe_recording_derived_data(
+    db: Session, settings: Settings, *, now: datetime
+) -> int:
+    """Purge expired Scribe transcripts/ASR metadata while preserving note/audit history.
+
+    Raw audio is not persisted by the API.  This intentionally clears only the
+    recording-derived transcript and diarization metadata, never a signed note
+    version or an append-only audit row.  It is separately opt-in because the
+    retention window must follow the deployed care policy.
+    """
+
+    days = int(settings.scribe_transcript_retention_days or 0)
+    if not settings.rag_scribe_recording_data_deletion_enabled or days <= 0:
+        return 0
+    cutoff = now - timedelta(days=days)
+    swept = 0
+    for session in db.execute(select(ScribeSession)).scalars():
+        if not session.transcript and session.asr_meta_json is None:
+            continue
+        if _as_aware(session.updated_at) >= cutoff:
+            continue
+        transcript_chars = len(session.transcript or "")
+        segments = (
+            session.asr_meta_json.get("segments", [])
+            if isinstance(session.asr_meta_json, dict)
+            else []
+        )
+        session.transcript = ""
+        session.asr_meta_json = None
+        session.last_processed_at = None
+        db.add(
+            ScribeAudit(
+                session_id=session.id,
+                actor=None,
+                action="recording_derived_data_retention_purged",
+                from_status=session.status,
+                to_status=session.status,
+                detail_json={
+                    "transcript_chars_deleted": transcript_chars,
+                    "segment_count_deleted": len(segments) if isinstance(segments, list) else 0,
+                    "retention_days": days,
+                },
+            )
+        )
+        swept += 1
+    if swept:
+        db.flush()
+    return swept
+
+
 def run_retention_sweep(
     db: Session,
     settings: Settings | None = None,
@@ -311,9 +363,11 @@ def run_retention_sweep(
     reference = now or datetime.now(UTC)
     policy = DEFAULT_POLICY
     phr_profiles = _sweep_phr_profiles(db, policy, now=reference)
+    scribe_recording_data = _sweep_scribe_recording_derived_data(db, settings, now=reference)
 
     return {
         "enabled": 1,
-        "swept": phr_profiles,
+        "swept": phr_profiles + scribe_recording_data,
         "phr_profile": phr_profiles,
+        "scribe_recording_derived_data": scribe_recording_data,
     }

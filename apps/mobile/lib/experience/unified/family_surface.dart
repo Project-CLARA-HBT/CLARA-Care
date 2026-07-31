@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
@@ -25,6 +26,8 @@ import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
+import '../language_controller.dart';
+import 'family_invitation_acceptance_flow.dart';
 
 String _str(Object? value) => value == null ? '' : value.toString();
 
@@ -35,6 +38,16 @@ String _firstNonEmpty(List<Object?> values) {
     if (s.isNotEmpty) return s;
   }
   return '';
+}
+
+String _localizedDateTime(BuildContext context, String value) {
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null) return value;
+  final local = parsed.toLocal();
+  final localizations = MaterialLocalizations.of(context);
+  final date = localizations.formatShortDate(local);
+  final time = localizations.formatTimeOfDay(TimeOfDay.fromDateTime(local));
+  return '$date, $time';
 }
 
 /// Extracts a list of maps from a response that may nest the list under a
@@ -81,7 +94,7 @@ class _Relationship {
       json['status'],
     ]);
     return _Relationship(
-      title: title.isEmpty ? 'Người hỗ trợ' : title,
+      title: title,
       subtitle: subtitle,
     );
   }
@@ -119,7 +132,7 @@ class _FamilyNotification {
     return _FamilyNotification(
       grantId: grantId,
       taskId: taskId,
-      title: title.isEmpty ? 'Thông báo mới' : title,
+      title: title,
       purpose: _str(json['purpose']),
     );
   }
@@ -159,7 +172,7 @@ class _AccessGrant {
     ]);
     return _AccessGrant(
       id: id,
-      title: title.isEmpty ? 'Quyền truy cập' : title,
+      title: title,
       subtitle: subtitle,
       expiresAt: _str(json['expires_at']),
     );
@@ -175,25 +188,109 @@ class _AccessLogEntry {
   const _AccessLogEntry({
     required this.id,
     required this.actor,
+    required this.actorCode,
     required this.action,
+    required this.actionCode,
     required this.outcome,
+    required this.outcomeCode,
     required this.createdAt,
   });
 
   factory _AccessLogEntry.fromJson(Map<String, dynamic> json) =>
       _AccessLogEntry(
         id: _str(json['id']),
-        actor: _firstNonEmpty(<Object?>[json['actor_label'], 'Người hỗ trợ']),
+        actor: _firstNonEmpty(<Object?>[json['actor_label']]),
+        actorCode: _str(json['actor_code']),
         action: _str(json['action']),
+        actionCode: _str(json['action_code']),
         outcome: _str(json['outcome']),
+        outcomeCode: _str(json['outcome_code']),
         createdAt: _str(json['created_at']),
       );
 
   final String id;
   final String actor;
+  final String actorCode;
   final String action;
+  final String actionCode;
   final String outcome;
+  final String outcomeCode;
   final String createdAt;
+}
+
+String _accessLogActorLabel(ConsumerTerminology copy, _AccessLogEntry entry) {
+  switch (entry.actorCode) {
+    case 'owner':
+      return copy[ConsumerTerm.familyAccessLogActorOwner];
+    case 'supporter':
+      return copy[ConsumerTerm.familyAccessLogActorSupporter];
+    case 'system':
+      return copy[ConsumerTerm.familyAccessLogActorSystem];
+    default:
+      return entry.actor.isEmpty
+          ? copy[ConsumerTerm.familyAccessLogActorOther]
+          : entry.actor;
+  }
+}
+
+String _accessLogActionLabel(ConsumerTerminology copy, _AccessLogEntry entry) {
+  switch (entry.actionCode.isEmpty ? entry.action : entry.actionCode) {
+    case 'view':
+      return copy[ConsumerTerm.familyAccessLogActionView];
+    case 'add_observation':
+      return copy[ConsumerTerm.familyAccessLogActionAddObservation];
+    case 'complete_task':
+      return copy[ConsumerTerm.familyAccessLogActionCompleteTask];
+    case 'invitation_accept':
+    case 'invitation.accept':
+      return copy[ConsumerTerm.familyAccessLogActionInvitationAccept];
+    case 'grant_revoke':
+    case 'grant.revoke':
+      return copy[ConsumerTerm.familyAccessLogActionGrantRevoke];
+    case 'grant_renewal_invited':
+    case 'grant.renewal_invited':
+      return copy[ConsumerTerm.familyAccessLogActionGrantRenewalInvited];
+    case 'notification_acknowledged':
+    case 'notification.acknowledged':
+      return copy[ConsumerTerm.familyAccessLogActionNotificationAcknowledged];
+    default:
+      return copy[ConsumerTerm.familyAccessLogActionOther];
+  }
+}
+
+String _accessLogOutcomeCode(_AccessLogEntry entry) {
+  switch (entry.outcomeCode) {
+    case 'allowed':
+    case 'denied':
+    case 'failed':
+    case 'unknown':
+      return entry.outcomeCode;
+  }
+  switch (entry.outcome) {
+    case 'success':
+    case 'allowed':
+      return 'allowed';
+    case 'denied':
+      return 'denied';
+    case 'failure':
+    case 'failed':
+      return 'failed';
+    default:
+      return 'unknown';
+  }
+}
+
+String _accessLogOutcomeLabel(ConsumerTerminology copy, _AccessLogEntry entry) {
+  switch (_accessLogOutcomeCode(entry)) {
+    case 'allowed':
+      return copy[ConsumerTerm.familyAccessLogOutcomeAllowed];
+    case 'denied':
+      return copy[ConsumerTerm.familyAccessLogOutcomeDenied];
+    case 'failed':
+      return copy[ConsumerTerm.familyAccessLogOutcomeFailed];
+    default:
+      return copy[ConsumerTerm.familyAccessLogOutcomeUnknown];
+  }
 }
 
 /// The Family surface: minimal, consent-based sharing with supporters.
@@ -202,10 +299,15 @@ class FamilySurface extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+
+  /// Optional app-level language state. Direct embedding remains
+  /// Vietnamese-first when it is not supplied.
+  final LanguageController? languageController;
 
   @override
   State<FamilySurface> createState() => _FamilySurfaceState();
@@ -259,12 +361,16 @@ class _FamilySurfaceState extends State<FamilySurface> {
     return token;
   }
 
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
+
   Future<void> _load() async {
     final token = _token;
     if (token == null) {
       setState(() {
         _loading = false;
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _error = _copy[ConsumerTerm.sessionExpired];
       });
       return;
     }
@@ -291,7 +397,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Không thể tải thông tin chia sẻ. Vui lòng thử lại.';
+        _error = _copy[ConsumerTerm.familyLoadFailed];
         _loading = false;
       });
       return;
@@ -363,13 +469,13 @@ class _FamilySurfaceState extends State<FamilySurface> {
     if (token == null || _inviting) return;
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      _showSnack('Vui lòng nhập email người thân.');
+      _showSnack(_copy[ConsumerTerm.familyEmailRequired]);
       return;
     }
     setState(() => _inviting = true);
     try {
       if (_objectId.isEmpty) {
-        _showSnack('Hãy chọn đúng hành trình hoặc buổi khám để chia sẻ.');
+        _showSnack(_copy[ConsumerTerm.familySharedItemRequired]);
         return;
       }
       final result = await widget.apiClient.createFamilyInvitation(
@@ -394,11 +500,11 @@ class _FamilySurfaceState extends State<FamilySurface> {
       if (mounted) {
         setState(() => _createdToken = _str(result['token']));
       }
-      _showSnack('Đã tạo mã mời. CLARA chưa tự gửi email.');
+      _showSnack(_copy[ConsumerTerm.familyInvitationCreated]);
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể gửi lời mời. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.familyInvitationFailed]);
     } finally {
       if (mounted) {
         setState(() => _inviting = false);
@@ -411,7 +517,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
     final key = '${notification.grantId}/${notification.taskId}';
     if (token == null || _acking.contains(key)) return;
     if (notification.grantId.isEmpty || notification.taskId.isEmpty) {
-      _showSnack('Thông báo này không thể xác nhận.');
+      _showSnack(_copy[ConsumerTerm.familyNotificationUnavailable]);
       return;
     }
     setState(() => _acking.add(key));
@@ -426,7 +532,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể xác nhận. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.familyAcknowledgeFailed]);
     } finally {
       if (mounted) {
         setState(() => _acking.remove(key));
@@ -438,7 +544,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
     final token = _token;
     if (token == null || _revoking.contains(grant.id)) return;
     if (grant.id.isEmpty) {
-      _showSnack('Quyền truy cập này không thể thu hồi.');
+      _showSnack(_copy[ConsumerTerm.familyGrantUnavailable]);
       return;
     }
     final confirmed = await _confirmRevoke(grant);
@@ -447,12 +553,12 @@ class _FamilySurfaceState extends State<FamilySurface> {
     try {
       await widget.apiClient
           .revokeFamilyAccessGrant(accessToken: token, grantId: grant.id);
-      _showSnack('Đã thu hồi quyền truy cập.');
+      _showSnack(_copy[ConsumerTerm.familyRevoked]);
       await _load();
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể thu hồi. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.familyRevokeFailed]);
     } finally {
       if (mounted) {
         setState(() => _revoking.remove(grant.id));
@@ -476,33 +582,52 @@ class _FamilySurfaceState extends State<FamilySurface> {
           _formOpen = true;
         });
       }
-      _showSnack('Đã tạo mã gia hạn; người nhận cần chấp nhận lại.');
+      _showSnack(_copy[ConsumerTerm.familyRenewed]);
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể tạo lời mời gia hạn.');
+      _showSnack(_copy[ConsumerTerm.familyRenewFailed]);
     } finally {
       if (mounted) setState(() => _renewing.remove(grant.id));
     }
+  }
+
+  Future<void> _openInvitationAcceptance() async {
+    final accepted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => FamilyInvitationAcceptanceFlow(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          languageController: widget.languageController,
+        ),
+      ),
+    );
+    if (!mounted || accepted != true) return;
+    _showSnack(_copy[ConsumerTerm.familyInvitationAccepted]);
+    await _load();
   }
 
   Future<bool?> _confirmRevoke(_AccessGrant grant) {
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Thu hồi quyền truy cập?'),
-        content: Text(
-          'Sau khi thu hồi, "${grant.title}" sẽ không còn xem được thông tin '
-          'bạn đã chia sẻ. Bạn có thể mời lại sau này.',
-        ),
+        title: Text(_copy[ConsumerTerm.familyRevokeConfirmTitle]),
+        content: Text(_copy.format(
+          ConsumerTerm.familyRevokeConfirmDescription,
+          <String, Object?>{
+            'name': grant.title.isEmpty
+                ? _copy[ConsumerTerm.familySupporter]
+                : grant.title,
+          },
+        )),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Hủy'),
+            child: Text(_copy[ConsumerTerm.familyCancel]),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Thu hồi'),
+            child: Text(_copy[ConsumerTerm.familyRevoke]),
           ),
         ],
       ),
@@ -517,6 +642,17 @@ class _FamilySurfaceState extends State<FamilySurface> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController != null) {
+      return AnimatedBuilder(
+        animation: languageController,
+        builder: (context, _) => _buildRefreshable(context),
+      );
+    }
+    return _buildRefreshable(context);
+  }
+
+  Widget _buildRefreshable(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _load,
       child: _buildBody(context),
@@ -545,16 +681,22 @@ class _FamilySurfaceState extends State<FamilySurface> {
   }
 
   Widget _buildLoaded(BuildContext context) {
+    final copy = _copy;
     final children = <Widget>[
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
         child: Row(
           children: [
-            const Expanded(
-              child: SectionHeader(title: 'Người thân', emphasize: true),
+            Expanded(
+              child: SectionHeader(
+                title: copy[ConsumerTerm.familyTitle],
+                emphasize: true,
+              ),
             ),
             ClaraButton.secondary(
-              label: _formOpen ? 'Đóng' : 'Mời người thân',
+              label: _formOpen
+                  ? copy[ConsumerTerm.familyClose]
+                  : copy[ConsumerTerm.familyInvite],
               icon: _formOpen ? Icons.close : Icons.person_add_alt,
               onPressed: () => setState(() => _formOpen = !_formOpen),
             ),
@@ -563,6 +705,11 @@ class _FamilySurfaceState extends State<FamilySurface> {
       ),
       const SizedBox(height: ClaraTokens.spaceSm),
       _buildStandingNote(context),
+      const SizedBox(height: ClaraTokens.spaceMd),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: _buildInvitationAcceptanceCard(context),
+      ),
       const SizedBox(height: ClaraTokens.spaceMd),
     ];
 
@@ -589,15 +736,13 @@ class _FamilySurfaceState extends State<FamilySurface> {
     }
 
     // --- Relationships -------------------------------------------------------
-    children.add(const SectionHeader(title: 'Người bạn đang chia sẻ'));
+    children.add(SectionHeader(title: copy[ConsumerTerm.familySharedWith]));
     if (_relationships.isEmpty) {
       children.add(
-        const ClaraEmptyState(
+        ClaraEmptyState(
           icon: Icons.diversity_3_outlined,
-          title: 'Chưa chia sẻ với ai',
-          message:
-              'Mời một người thân để họ có thể hỗ trợ bạn. Bạn kiểm soát những '
-              'gì được chia sẻ và có thể thu hồi bất cứ lúc nào.',
+          title: copy[ConsumerTerm.familyEmptyTitle],
+          message: copy[ConsumerTerm.familyEmptyDescription],
         ),
       );
     } else {
@@ -620,7 +765,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
     if (_notifications.isNotEmpty) {
       children
         ..add(const SizedBox(height: ClaraTokens.spaceSm))
-        ..add(const SectionHeader(title: 'Thông báo cần xem'))
+        ..add(SectionHeader(title: copy[ConsumerTerm.familyNotifications]))
         ..addAll(
           _notifications.map(
             (notification) => Padding(
@@ -640,7 +785,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
     if (_grants.isNotEmpty) {
       children
         ..add(const SizedBox(height: ClaraTokens.spaceSm))
-        ..add(const SectionHeader(title: 'Quyền truy cập đang mở'))
+        ..add(SectionHeader(title: copy[ConsumerTerm.familyActiveGrants]))
         ..addAll(
           _grants.map(
             (grant) => Padding(
@@ -659,7 +804,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
     if (_accessLog.isNotEmpty) {
       children
         ..add(const SizedBox(height: ClaraTokens.spaceSm))
-        ..add(const SectionHeader(title: 'Nhật ký truy cập gần đây'))
+        ..add(SectionHeader(title: copy[ConsumerTerm.familyAccessLog]))
         ..addAll(
           _accessLog.take(20).map(
                 (entry) => Padding(
@@ -671,8 +816,10 @@ class _FamilySurfaceState extends State<FamilySurface> {
                   ),
                   child: ClaraCard.static_(
                     child: Text(
-                      '${entry.actor} · ${entry.action} · ${entry.outcome}'
-                      '${entry.createdAt.isEmpty ? '' : '\n${entry.createdAt}'}',
+                      '${_accessLogActorLabel(copy, entry)}'
+                      ' · ${_accessLogActionLabel(copy, entry)}'
+                      ' · ${_accessLogOutcomeLabel(copy, entry)}'
+                      '${entry.createdAt.isEmpty ? '' : '\n${_localizedDateTime(context, entry.createdAt)}'}',
                     ),
                   ),
                 ),
@@ -691,10 +838,11 @@ class _FamilySurfaceState extends State<FamilySurface> {
 
   Widget _buildStandingNote(BuildContext context) {
     final theme = Theme.of(context);
+    final copy = _copy;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
       child: ClaraCard.static_(
-        semanticLabel: 'Lưu ý về chia sẻ với người hỗ trợ',
+        semanticLabel: copy[ConsumerTerm.familySharingNoteSemanticLabel],
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -706,8 +854,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
             const SizedBox(width: ClaraTokens.spaceSm),
             Expanded(
               child: Text(
-                'Chia sẻ tối thiểu với người hỗ trợ. Bạn chỉ chia sẻ khi đồng '
-                'ý và có thể thu hồi bất cứ lúc nào.',
+                copy[ConsumerTerm.familySharingNote],
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -719,7 +866,51 @@ class _FamilySurfaceState extends State<FamilySurface> {
     );
   }
 
+  Widget _buildInvitationAcceptanceCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final copy = _copy;
+    return ClaraCard.static_(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.mark_email_read_outlined,
+            size: 20,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: ClaraTokens.spaceSm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy[ConsumerTerm.familyUseInvitationCode],
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: ClaraTokens.spaceXs),
+                Text(
+                  copy[ConsumerTerm.familyInvitationAcceptDescription],
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: ClaraTokens.spaceSm),
+                ClaraButton.secondary(
+                  label: copy[ConsumerTerm.familyUseInvitationCode],
+                  icon: Icons.arrow_forward,
+                  onPressed: _openInvitationAcceptance,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInviteForm(BuildContext context) {
+    final copy = _copy;
     return ClaraCard.static_(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -728,23 +919,25 @@ class _FamilySurfaceState extends State<FamilySurface> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Email người thân',
-              hintText: 'vidu@email.com',
+            decoration: InputDecoration(
+              labelText: copy[ConsumerTerm.familyEmailLabel],
+              hintText: copy[ConsumerTerm.familyEmailHint],
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
           DropdownButtonFormField<String>(
             initialValue: _objectType,
-            decoration: const InputDecoration(labelText: 'Chỉ chia sẻ'),
-            items: const <DropdownMenuItem<String>>[
+            decoration: InputDecoration(
+              labelText: copy[ConsumerTerm.familyScopeLabel],
+            ),
+            items: <DropdownMenuItem<String>>[
               DropdownMenuItem(
                 value: 'episode',
-                child: Text('Một hành trình'),
+                child: Text(copy[ConsumerTerm.familyScopeJourney]),
               ),
               DropdownMenuItem(
                 value: 'visit',
-                child: Text('Một buổi khám'),
+                child: Text(copy[ConsumerTerm.familyScopeVisit]),
               ),
             ],
             onChanged: (value) {
@@ -759,7 +952,9 @@ class _FamilySurfaceState extends State<FamilySurface> {
           const SizedBox(height: ClaraTokens.spaceMd),
           DropdownButtonFormField<String>(
             initialValue: _objectId.isEmpty ? null : _objectId,
-            decoration: const InputDecoration(labelText: 'Mục được chia sẻ'),
+            decoration: InputDecoration(
+              labelText: copy[ConsumerTerm.familySharedItemLabel],
+            ),
             items: (_shareOptions[_objectType] ?? const [])
                 .map(
                   (item) => DropdownMenuItem<String>(
@@ -773,15 +968,17 @@ class _FamilySurfaceState extends State<FamilySurface> {
           const SizedBox(height: ClaraTokens.spaceMd),
           DropdownButtonFormField<String>(
             initialValue: _purpose,
-            decoration: const InputDecoration(labelText: 'Mục đích'),
-            items: const <DropdownMenuItem<String>>[
+            decoration: InputDecoration(
+              labelText: copy[ConsumerTerm.familyPurposeLabel],
+            ),
+            items: <DropdownMenuItem<String>>[
               DropdownMenuItem(
                 value: 'care_coordination',
-                child: Text('Phối hợp chăm sóc'),
+                child: Text(copy[ConsumerTerm.familyPurposeCareCoordination]),
               ),
               DropdownMenuItem(
                 value: 'visit_support',
-                child: Text('Hỗ trợ đi khám'),
+                child: Text(copy[ConsumerTerm.familyPurposeVisitSupport]),
               ),
             ],
             onChanged: (value) => setState(() => _purpose = value ?? _purpose),
@@ -790,7 +987,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.primary(
-              label: 'Gửi lời mời',
+              label: copy[ConsumerTerm.familySendInvitation],
               icon: Icons.send_outlined,
               loading: _inviting,
               onPressed: _invite,
@@ -798,9 +995,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
           ),
           if (_createdToken.isNotEmpty) ...<Widget>[
             const SizedBox(height: ClaraTokens.spaceMd),
-            const Text(
-              'Mã chỉ hiển thị lần này. Gửi mã qua kênh bạn tin cậy:',
-            ),
+            Text(copy[ConsumerTerm.familyInvitationTokenNotice]),
             const SizedBox(height: ClaraTokens.spaceXs),
             SelectableText(_createdToken),
           ],
@@ -812,6 +1007,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
   Widget _buildRelationshipCard(
       BuildContext context, _Relationship relationship) {
     final theme = Theme.of(context);
+    final copy = _copy;
     return ClaraCard.static_(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -827,7 +1023,9 @@ class _FamilySurfaceState extends State<FamilySurface> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  relationship.title,
+                  relationship.title.isEmpty
+                      ? copy[ConsumerTerm.familySupporter]
+                      : relationship.title,
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
@@ -851,6 +1049,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
   Widget _buildNotificationCard(
       BuildContext context, _FamilyNotification notification) {
     final theme = Theme.of(context);
+    final copy = _copy;
     final key = '${notification.grantId}/${notification.taskId}';
     final busy = _acking.contains(key);
     return ClaraCard.static_(
@@ -859,13 +1058,15 @@ class _FamilySurfaceState extends State<FamilySurface> {
         children: [
           Expanded(
             child: Text(
-              notification.title,
+              notification.title.isEmpty
+                  ? copy[ConsumerTerm.familyNewNotification]
+                  : notification.title,
               style: theme.textTheme.bodyLarge,
             ),
           ),
           const SizedBox(width: ClaraTokens.spaceSm),
           ClaraButton.secondary(
-            label: 'Đã xem',
+            label: copy[ConsumerTerm.familyAcknowledge],
             icon: Icons.check,
             loading: busy,
             onPressed: () => _acknowledge(notification),
@@ -877,6 +1078,7 @@ class _FamilySurfaceState extends State<FamilySurface> {
 
   Widget _buildGrantCard(BuildContext context, _AccessGrant grant) {
     final theme = Theme.of(context);
+    final copy = _copy;
     final busy = _revoking.contains(grant.id);
     final renewing = _renewing.contains(grant.id);
     return ClaraCard.static_(
@@ -888,7 +1090,9 @@ class _FamilySurfaceState extends State<FamilySurface> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  grant.title,
+                  grant.title.isEmpty
+                      ? copy[ConsumerTerm.familyAccessGrant]
+                      : grant.title,
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
@@ -903,7 +1107,12 @@ class _FamilySurfaceState extends State<FamilySurface> {
                 ],
                 if (grant.expiresAt.isNotEmpty)
                   Text(
-                    'Hết hạn: ${grant.expiresAt}',
+                    copy.format(
+                      ConsumerTerm.familyExpiresAt,
+                      <String, Object?>{
+                        'date': _localizedDateTime(context, grant.expiresAt),
+                      },
+                    ),
                     style: theme.textTheme.bodySmall,
                   ),
               ],
@@ -913,14 +1122,14 @@ class _FamilySurfaceState extends State<FamilySurface> {
           Column(
             children: <Widget>[
               ClaraButton.secondary(
-                label: 'Gia hạn',
+                label: copy[ConsumerTerm.familyRenew],
                 icon: Icons.update,
                 loading: renewing,
                 onPressed: () => _renew(grant),
               ),
               const SizedBox(height: ClaraTokens.spaceXs),
               ClaraButton.secondary(
-                label: 'Thu hồi',
+                label: copy[ConsumerTerm.familyRevoke],
                 icon: Icons.link_off,
                 loading: busy,
                 onPressed: () => _revoke(grant),

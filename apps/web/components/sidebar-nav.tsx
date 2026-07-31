@@ -51,7 +51,7 @@ export default function SidebarNav({
   activeProfile = null,
 }: SidebarNavProps) {
   const pathname = usePathname();
-  const groups = getGroupedNavItems(role);
+  const groups = getGroupedNavItems(role, uiLanguage);
   const homeHref = getRoleHomePath(role);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const roleLabel = t(uiLanguage, ROLE_LABEL_KEYS[role]);
@@ -93,7 +93,7 @@ export default function SidebarNav({
               CLARA
             </span>
             <span className="block truncate text-[11px] font-medium text-[var(--text-muted)]">
-              {uiLanguage === "en" ? "Your health assistant" : "Trợ lý y tế của bạn"}
+              {t(uiLanguage, "brand.healthAssistant")}
             </span>
           </Link>
         ) : null}

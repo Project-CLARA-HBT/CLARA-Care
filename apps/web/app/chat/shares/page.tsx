@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import Button from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InlineError } from "@/components/ui/surface";
+import { formatLocaleDate, t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   WorkspaceConversationShareListItem,
   listWorkspaceShares,
@@ -12,57 +14,58 @@ import {
 } from "@/lib/workspace";
 
 export default function ChatShareManagementPage() {
+  const language = useUILanguage();
   const [items, setItems] = useState<WorkspaceConversationShareListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const rows = await listWorkspaceShares({ limit: 120, activeOnly: false });
       setItems(rows);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải danh sách share.");
+    } catch {
+      setError(t(language, "chatShares.loadError"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [language]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const onRevoke = async (conversationId: number) => {
     try {
       await revokeWorkspaceConversationShare(conversationId);
-      setNotice(`Đã thu hồi share cho conversation #${conversationId}.`);
+      setNotice(t(language, "chatShares.revokeSuccess", { id: conversationId }));
       await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể thu hồi share.");
+    } catch {
+      setError(t(language, "chatShares.revokeError"));
     }
   };
 
   const onCopy = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      setNotice("Đã copy public URL.");
+      setNotice(t(language, "chatShares.copySuccess"));
     } catch {
-      window.prompt("Copy public URL", url);
+      window.prompt(t(language, "chatShares.copyPrompt"), url);
     }
   };
 
   return (
     <PageShell
       variant="plain"
-      title="Share Management"
-      description="Quản lý toàn bộ public links của Chat Workspace."
+      title={t(language, "chatShares.title")}
+      description={t(language, "chatShares.description")}
     >
       <div className="chrome-panel rounded-2xl p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <Button as="link" href="/chat" variant="secondary" size="sm" icon="arrow_back">
-            Back to Chat
+            {t(language, "chatShares.backToChat")}
           </Button>
           <Button
             type="button"
@@ -71,11 +74,15 @@ export default function ChatShareManagementPage() {
             icon="refresh"
             onClick={() => void load()}
           >
-            Reload
+            {t(language, "chatShares.reload")}
           </Button>
         </div>
 
-        {loading ? <p className="text-sm text-[var(--text-muted)]">Đang tải...</p> : null}
+        {loading ? (
+          <p className="text-sm text-[var(--text-muted)]">
+            {t(language, "chatShares.loading")}
+          </p>
+        ) : null}
         {error ? <InlineError message={error} /> : null}
         {!error && notice ? (
           <p className="text-sm text-[var(--status-ok-text)]">{notice}</p>
@@ -87,12 +94,12 @@ export default function ChatShareManagementPage() {
               <table className="min-w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-[color:var(--shell-border)] text-left text-xs uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                    <th className="px-2 py-2">Conversation</th>
-                    <th className="px-2 py-2">Messages</th>
-                    <th className="px-2 py-2">Status</th>
-                    <th className="px-2 py-2">Expires</th>
-                    <th className="px-2 py-2">Public URL</th>
-                    <th className="px-2 py-2">Actions</th>
+                    <th className="px-2 py-2">{t(language, "chatShares.table.conversation")}</th>
+                    <th className="px-2 py-2">{t(language, "chatShares.table.messages")}</th>
+                    <th className="px-2 py-2">{t(language, "chatShares.table.status")}</th>
+                    <th className="px-2 py-2">{t(language, "chatShares.table.expires")}</th>
+                    <th className="px-2 py-2">{t(language, "chatShares.table.publicUrl")}</th>
+                    <th className="px-2 py-2">{t(language, "chatShares.table.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -105,13 +112,18 @@ export default function ChatShareManagementPage() {
                       <td className="px-2 py-2 text-[var(--text-secondary)]">{item.message_count}</td>
                       <td className="px-2 py-2">
                         {item.is_active ? (
-                          <Badge tone="ok">Active</Badge>
+                          <Badge tone="ok">{t(language, "chatShares.status.active")}</Badge>
                         ) : (
-                          <Badge tone="neutral">Revoked</Badge>
+                          <Badge tone="neutral">{t(language, "chatShares.status.revoked")}</Badge>
                         )}
                       </td>
                       <td className="px-2 py-2 text-xs text-[var(--text-secondary)]">
-                        {item.expires_at ? new Date(item.expires_at).toLocaleString("vi-VN") : "—"}
+                        {item.expires_at
+                          ? formatLocaleDate(language, item.expires_at, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })
+                          : t(language, "chatShares.noExpiry")}
                       </td>
                       <td className="max-w-[28rem] px-2 py-2">
                         <div className="truncate text-xs text-[var(--text-secondary)]">{item.public_url}</div>
@@ -125,7 +137,7 @@ export default function ChatShareManagementPage() {
                             icon="content_copy"
                             onClick={() => void onCopy(item.public_url)}
                           >
-                            Copy
+                            {t(language, "chatShares.copy")}
                           </Button>
                           <a
                             href={item.public_url}
@@ -136,7 +148,7 @@ export default function ChatShareManagementPage() {
                             <span className="material-symbols-outlined text-[1.15em]" aria-hidden="true">
                               open_in_new
                             </span>
-                            Open
+                            {t(language, "chatShares.open")}
                           </a>
                           {item.is_active ? (
                             <Button
@@ -146,7 +158,7 @@ export default function ChatShareManagementPage() {
                               icon="link_off"
                               onClick={() => void onRevoke(item.conversation_id)}
                             >
-                              Revoke
+                              {t(language, "chatShares.revoke")}
                             </Button>
                           ) : null}
                         </div>
@@ -157,7 +169,9 @@ export default function ChatShareManagementPage() {
               </table>
             </div>
           ) : (
-            <p className="text-sm text-[var(--text-muted)]">Chưa có share link nào.</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              {t(language, "chatShares.empty")}
+            </p>
           )
         ) : null}
       </div>

@@ -240,6 +240,7 @@ describe("TelemetryPanel (admin-only detail, Property P7)", () => {
     expect(
       screen.getByRole("complementary", { name: /telemetry/i }),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/^confidence$/i)).not.toBeInTheDocument();
   });
 
   it("renders nothing for a non-admin role", () => {

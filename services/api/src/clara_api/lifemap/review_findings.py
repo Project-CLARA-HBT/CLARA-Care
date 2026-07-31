@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 FindingKind = Literal["duplicate", "contradiction", "missingness", "model_proposal"]
 
@@ -107,6 +107,7 @@ def validate_model_proposals(
     proposals: Any,
     *,
     authorized_revision_ids: frozenset[str],
+    authorized_revision_fields: Mapping[str, str] | None = None,
     max_proposals: int = 20,
 ) -> tuple[ReviewFinding, ...]:
     """Accept bounded NLI/LLM proposals as review-only, never truth actions."""
@@ -123,21 +124,31 @@ def validate_model_proposals(
             continue
         clean_refs = tuple(sorted({str(ref) for ref in refs if str(ref)}))
         if (
-            not clean_refs
-            or len(clean_refs) > 5
+            len(clean_refs) != 2
             or not set(clean_refs) <= authorized_revision_ids
         ):
             continue
         field = proposal.get("field_key")
         if not isinstance(field, str) or not field or len(field) > 64:
             continue
+        relation = proposal.get("relation")
+        if relation not in {"possible_duplicate", "possible_conflict"}:
+            continue
+        if authorized_revision_fields is not None and any(
+            authorized_revision_fields.get(ref) != field for ref in clean_refs
+        ):
+            continue
         accepted.append(
             ReviewFinding(
                 kind="model_proposal",
                 revision_ids=clean_refs,
                 field_key=field,
-                reason_code="bounded_model_review_proposal",
+                reason_code=str(relation),
                 proposal_source=source,
             )
         )
-    return tuple(accepted)
+    unique = {
+        (finding.revision_ids, finding.field_key): finding
+        for finding in accepted
+    }
+    return tuple(unique[key] for key in sorted(unique))

@@ -17,6 +17,7 @@ from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
+    FamilyAccessLog,
     FamilyAccessGrant,
     LifeMapCareTask,
     LifeMapEpisode,
@@ -35,6 +36,7 @@ from clara_api.lifemap.visit_family_service import (
     create_family_grant_renewal,
     create_family_invitation,
     list_family_access_log,
+    preview_family_invitation,
     record_caregiver_observation,
     revoke_family_access_grant,
 )
@@ -79,6 +81,22 @@ class InvitationAcceptRequest(BaseModel):
     """Capability supplied out of the URL so it does not enter route logs."""
 
     token: str = Field(min_length=32, max_length=512)
+
+
+def _invitation_capability(
+    payload: InvitationAcceptRequest | None,
+    x_family_invitation_token: str | None,
+) -> str:
+    """Read a one-time invitation capability without accepting URL input."""
+
+    body_token = payload.token if payload is not None else None
+    header_token = x_family_invitation_token.strip() if x_family_invitation_token else None
+    if body_token and header_token and not hmac.compare_digest(body_token, header_token):
+        raise HTTPException(status_code=422, detail="Invitation capability inputs do not match")
+    raw_token = header_token or body_token
+    if not raw_token:
+        raise HTTPException(status_code=422, detail="Invitation capability is required")
+    return raw_token
 
 
 class NotificationAcknowledgementRequest(BaseModel):
@@ -254,13 +272,7 @@ def accept_invitation(
 ) -> dict[str, Any]:
     """Accept an invitation without putting its capability in an URL."""
 
-    body_token = payload.token if payload is not None else None
-    header_token = x_family_invitation_token.strip() if x_family_invitation_token else None
-    if body_token and header_token and not hmac.compare_digest(body_token, header_token):
-        raise HTTPException(status_code=422, detail="Invitation capability inputs do not match")
-    raw_token = header_token or body_token
-    if not raw_token:
-        raise HTTPException(status_code=422, detail="Invitation capability is required")
+    raw_token = _invitation_capability(payload, x_family_invitation_token)
     recipient = current_user(db, token)
     try:
         grant = accept_family_invitation(db, recipient=recipient, raw_token=raw_token)
@@ -277,6 +289,30 @@ def accept_invitation(
         }
     except (DomainNotFoundError, DomainValidationError) as error:
         db.rollback()
+        _raise(error)
+
+
+@router.post("/invitations/preview")
+def preview_invitation(
+    payload: InvitationAcceptRequest | None = None,
+    x_family_invitation_token: str | None = Header(
+        default=None, alias="X-Family-Invitation-Token"
+    ),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, Any]:
+    """Preview a recipient-bound invitation before the explicit accept write.
+
+    The capability is accepted only in a JSON body/header, never in a path or
+    query parameter. The service returns no health data, object identifier or
+    inviter identity and does not consume/audit the invitation.
+    """
+
+    raw_token = _invitation_capability(payload, x_family_invitation_token)
+    recipient = current_user(db, token)
+    try:
+        return preview_family_invitation(db, recipient=recipient, raw_token=raw_token)
+    except (DomainNotFoundError, DomainValidationError) as error:
         _raise(error)
 
 
@@ -649,6 +685,12 @@ def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> lis
                     if row.actor_user_id is not None
                     else "Hệ thống"
                 ),
+                # Stable, locale-neutral presentation codes. Keep the legacy
+                # actor_label/action/outcome fields below for older clients,
+                # but let current web/mobile clients render these codes with
+                # their own catalogs instead of coupling API data to Vietnamese
+                # display text.
+                "actor_code": _access_log_actor_code(row, owner_id=owner.id),
                 "grant_id": (
                     grant_public_ids.get(row.grant_id)
                     if row.grant_id is not None
@@ -657,7 +699,9 @@ def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> lis
                 "object_type": row.object_type,
                 "object_id": row.object_id,
                 "action": row.action,
+                "action_code": _access_log_action_code(row.action),
                 "outcome": row.outcome,
+                "outcome_code": _access_log_outcome_code(row.outcome),
                 "purpose": row.purpose,
                 "created_at": row.created_at,
             }
@@ -665,6 +709,39 @@ def access_log(db: Session = Depends(get_db), token: TokenPayload = USER) -> lis
         ]
     except DomainNotFoundError as error:
         _raise(error)
+
+
+def _access_log_actor_code(row: FamilyAccessLog, *, owner_id: int) -> str:
+    if row.actor_user_id == owner_id:
+        return "owner"
+    if row.actor_user_id is not None:
+        return "supporter"
+    return "system"
+
+
+def _access_log_action_code(value: str | None) -> str:
+    # The ledger's raw action is preserved for audit compatibility. This
+    # bounded presentation projection avoids turning future/internal actions
+    # into untranslated client copy.
+    return {
+        "view": "view",
+        "add_observation": "add_observation",
+        "complete_task": "complete_task",
+        "invitation.accept": "invitation_accept",
+        "grant.revoke": "grant_revoke",
+        "grant.renewal_invited": "grant_renewal_invited",
+        "notification.acknowledged": "notification_acknowledged",
+    }.get(str(value or "").strip().lower(), "other")
+
+
+def _access_log_outcome_code(value: str | None) -> str:
+    return {
+        "success": "allowed",
+        "allowed": "allowed",
+        "denied": "denied",
+        "failure": "failed",
+        "failed": "failed",
+    }.get(str(value or "").strip().lower(), "unknown")
 
 
 @router.post("/profiles/{profile_id}/caregiver-observations", status_code=status.HTTP_201_CREATED)

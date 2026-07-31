@@ -36,6 +36,7 @@ import 'package:flutter/material.dart';
 import '../../core/a11y.dart';
 import '../../core/analytics.dart';
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
 import '../../screens/careguard_cabinet_screen.dart';
@@ -52,6 +53,7 @@ import '../../theme/glass/glass_surface.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
+import '../language_controller.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
 
@@ -74,6 +76,7 @@ class HomeScreenV3 extends StatefulWidget {
     required this.sessionStore,
     required this.resolver,
     required this.summary,
+    this.languageController,
   });
 
   final ApiClient apiClient;
@@ -86,6 +89,9 @@ class HomeScreenV3 extends StatefulWidget {
   /// The already-loaded role-scoped `mobile/summary` (may be null when the
   /// parent's load failed). Privileged tools are derived only when non-null.
   final Map<String, dynamic>? summary;
+
+  /// Optional app-wide language state; absent embeddings stay Vietnamese-first.
+  final LanguageController? languageController;
 
   @override
   State<HomeScreenV3> createState() => _HomeScreenV3State();
@@ -101,7 +107,6 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
   late MobileFeatureFlagResolver _resolver = widget.resolver;
 
   bool _refreshing = false;
-  String? _summaryError;
 
   @override
   void initState() {
@@ -115,6 +120,10 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
 
   /// The authenticated role, defaulting to the least-privileged `normal`.
   String get _role => widget.sessionStore.role ?? 'normal';
+
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
 
   /// Reads a boolean `feature_flags` entry from the current summary, mirroring
   /// `home_screen.dart`'s `_featureEnabled`: an unloadable summary, a non-map
@@ -159,7 +168,6 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
 
     setState(() {
       _refreshing = true;
-      _summaryError = null;
     });
 
     try {
@@ -171,20 +179,14 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
         _summary = data;
         _resolver = MobileFeatureFlagResolver(summary: data);
       });
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _summaryError = error.message;
-      });
     } catch (_) {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _summaryError = 'Không thể tải dữ liệu trang chính. Vui lòng thử lại.';
-      });
     } finally {
       if (mounted) {
         setState(() {
@@ -231,8 +233,8 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
         if (resolver.chatEnabled)
           _QuickActionCard(
             icon: Icons.chat_bubble_outline,
-            title: 'Trò chuyện',
-            subtitle: 'Hỏi đáp cùng CLARA',
+            title: _copy[ConsumerTerm.todayAskHealthTitle],
+            subtitle: _copy[ConsumerTerm.todayAskHealthDescription],
             accent: const Color(0xFF2563EB),
             onTap: () => _openScreen(
               ChatScreen(
@@ -246,8 +248,8 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
         if (canCareguard)
           _QuickActionCard(
             icon: Icons.medication,
-            title: 'Kiểm tra tương tác thuốc',
-            subtitle: 'Phân tích an toàn cho tủ thuốc',
+            title: _copy[ConsumerTerm.todayCheckMedicineTitle],
+            subtitle: _copy[ConsumerTerm.todayCheckMedicineDescription],
             accent: const Color(0xFF0EA5A4),
             onTap: () => _openScreen(
               CareguardScreen(
@@ -336,8 +338,8 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
       // summary, so its card is ALWAYS present (Req 3.2).
       _QuickActionCard(
         icon: Icons.folder_shared,
-        title: 'Hồ sơ sức khỏe',
-        subtitle: 'Xem và cập nhật hồ sơ tự khai',
+        title: _copy[ConsumerTerm.todaySaveHealthInfoTitle],
+        subtitle: _copy[ConsumerTerm.todaySaveHealthInfoDescription],
         accent: const Color(0xFF0284C7),
         onTap: () => _openScreen(
           PhrScreen(
@@ -377,6 +379,8 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
                     horizontal: ClaraTokens.spaceMd,
                   ),
                   child: _PrimaryChatCta(
+                    title: _copy[ConsumerTerm.todayAskHealthTitle],
+                    subtitle: _copy[ConsumerTerm.todayAskHealthDescription],
                     onTap: () => _openScreen(
                       ChatScreen(
                         apiClient: widget.apiClient,
@@ -413,7 +417,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
                 ),
               ],
               const SizedBox(height: ClaraTokens.spaceSm),
-              const SectionHeader(title: 'Công cụ'),
+              SectionHeader(title: _copy[ConsumerTerm.homeScreenToolsTitle]),
               // First load shows a polished skeleton instead of a blank region
               // (Req 3.3); once a summary exists the real tools grid is shown.
               if (showInitialSkeleton)
@@ -430,21 +434,20 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
               if (showSummaryRetry) ...[
                 const SizedBox(height: ClaraTokens.spaceMd),
                 ErrorRetryView(
-                  message: _summaryError ??
-                      'Không thể tải danh sách công cụ. Vui lòng thử lại.',
+                  message: _copy[ConsumerTerm.homeScreenToolsLoadFailed],
                   onRetry: _refreshSummary,
                 ),
               ],
               const SizedBox(height: ClaraTokens.spaceLg),
-              const SectionHeader(title: 'Gần đây'),
+              SectionHeader(title: _copy[ConsumerTerm.homeScreenRecentTitle]),
               // No recents endpoint yet, so a friendly Vietnamese-first empty
               // state stands in — no fabricated data (Req 3.1).
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
                 child: ClaraEmptyState(
                   icon: Icons.history,
-                  title: 'Chưa có hoạt động gần đây',
-                  message: 'Các hoạt động gần đây của bạn sẽ xuất hiện ở đây.',
+                  title: _copy[ConsumerTerm.homeScreenNoRecentTitle],
+                  message: _copy[ConsumerTerm.homeScreenNoRecentDescription],
                 ),
               ),
               const SizedBox(height: ClaraTokens.spaceXl),
@@ -914,8 +917,14 @@ class _StatValue extends StatelessWidget {
 /// navigation chrome (no clinical content); the whole surface is one large tap
 /// target announced as a button.
 class _PrimaryChatCta extends StatelessWidget {
-  const _PrimaryChatCta({required this.onTap});
+  const _PrimaryChatCta({
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
   @override
@@ -929,7 +938,7 @@ class _PrimaryChatCta extends StatelessWidget {
     );
 
     return A11yLabeled(
-      label: 'Trò chuyện cùng CLARA',
+      label: title,
       isButton: true,
       child: Material(
         type: MaterialType.transparency,
@@ -978,7 +987,7 @@ class _PrimaryChatCta extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Hỏi CLARA bất cứ điều gì',
+                          title,
                           style: textTheme.titleMedium?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -989,7 +998,7 @@ class _PrimaryChatCta extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Triệu chứng, thuốc men, hay chăm sóc sức khỏe',
+                          subtitle,
                           style: textTheme.bodySmall?.copyWith(
                             color: Colors.white.withValues(alpha: 0.88),
                           ),

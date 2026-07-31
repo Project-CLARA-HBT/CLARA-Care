@@ -316,11 +316,11 @@ def ingestion_status(job_id: str) -> dict[str, Any]:
 
 def _build_retriever(engine: Any) -> Any:
     from clara_ml.rag.embedder import HttpEmbeddingClient
-    from clara_ml.rag.retrieval.reranker import NeuralReranker
+    from clara_ml.rag.retrieval.reranker import EvidenceReranker
     from clara_ml.rag.store.hybrid_retriever import HybridRetriever
 
     return HybridRetriever.from_engine(
-        engine, embedder=HttpEmbeddingClient(), reranker=NeuralReranker()
+        engine, embedder=HttpEmbeddingClient(), reranker=EvidenceReranker()
     )
 
 

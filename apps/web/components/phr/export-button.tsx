@@ -7,6 +7,7 @@ import {
   type PhrExportResource,
 } from "@/lib/phr";
 import type { UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
  * FHIR export button (personal-health-record Requirement 11.1–11.4). Lets the
@@ -61,7 +62,7 @@ export default function PhrExportButton({
     try {
       await exportPhr(resource);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.error);
+      setError(safeUserFacingError(err, text.error));
     } finally {
       setBusy(false);
     }

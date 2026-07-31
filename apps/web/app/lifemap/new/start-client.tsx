@@ -9,8 +9,8 @@ import {
   listLifeMapEpisodeDrafts,
 } from "@/lib/guided-flows";
 import { guidedFlowSteps } from "@/lib/guided-flow-registry";
-
-const STEPS = guidedFlowSteps("lifemapEpisode", "vi");
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 function newIdempotencyKey(): string {
   return globalThis.crypto?.randomUUID?.() ?? `lifemap-${Date.now()}-create`;
@@ -18,6 +18,7 @@ function newIdempotencyKey(): string {
 
 export default function LifeMapDraftStart() {
   const router = useRouter();
+  const language = useUILanguage();
   const started = useRef(false);
   const [error, setError] = useState(false);
 
@@ -44,22 +45,22 @@ export default function LifeMapDraftStart() {
 
   return (
     <GuidedFlowShell
-      eyebrow="LifeMap"
-      title="Tạo hành trình sức khoẻ"
-      description="Đang mở bản nháp an toàn của bạn…"
-      steps={STEPS}
+      eyebrow={t(language, "lifemap.guided.eyebrow")}
+      title={t(language, "lifemap.guided.start.title")}
+      description={t(language, "lifemap.guided.start.description")}
+      steps={guidedFlowSteps("lifemapEpisode", language)}
       currentStep={0}
       saveState={
         error
           ? {
               kind: "error",
-              message: "Chưa thể mở bản nháp. Vui lòng tải lại trang để thử lại.",
+              message: t(language, "lifemap.guided.start.loadError"),
             }
-          : { kind: "saving", message: "Đang chuẩn bị…" }
+          : { kind: "saving", message: t(language, "lifemap.guided.start.preparing") }
       }
     >
       <div
-        aria-label="Đang chuẩn bị hành trình"
+        aria-label={t(language, "lifemap.guided.start.preparingAria")}
         className="h-28 animate-pulse rounded-[var(--radius-lg)] bg-[var(--surface-muted)]"
       />
     </GuidedFlowShell>

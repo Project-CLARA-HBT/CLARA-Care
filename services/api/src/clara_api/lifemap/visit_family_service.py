@@ -1703,6 +1703,49 @@ def create_family_invitation(
     return invitation, raw_token
 
 
+def preview_family_invitation(
+    db: Session,
+    *,
+    recipient: User,
+    raw_token: str,
+) -> dict[str, Any]:
+    """Return a bounded, non-mutating preview for the named recipient.
+
+    A family invitation is a bearer capability, so preview intentionally
+    returns only the minimum information needed to decide whether to accept:
+    the scope *category*, permitted actions, purpose and expiry.  It never
+    exposes the inviter, profile, object identifier, title or health content.
+    The caller must still invoke :func:`accept_family_invitation` to create a
+    grant; preview does not lock, consume or audit the invitation.
+    """
+
+    token = raw_token.strip()
+    if len(token) < 32 or len(token) > 512:
+        raise DomainNotFoundError("Invitation unavailable")
+    invitation = db.execute(
+        select(FamilyInvitation).where(FamilyInvitation.token_hash == _hash_capability(token))
+    ).scalar_one_or_none()
+    if (
+        invitation is None
+        or invitation.revoked_at is not None
+        or _as_utc(invitation.expires_at) <= _now()
+        or invitation.recipient_email != recipient.email.strip().lower()
+        or invitation.accepted_at is not None
+    ):
+        # Treat every failed capability state equivalently; in particular do
+        # not reveal whether an invitation exists for a different recipient.
+        raise DomainNotFoundError("Invitation unavailable")
+    scope = _validate_grant_scope(
+        db, profile_id=invitation.profile_id, scope=invitation.proposed_scope_json
+    )
+    return {
+        "object_type": scope["object_type"],
+        "allowed_actions": list(scope["allowed_actions"]),
+        "purpose": invitation.purpose,
+        "expires_at": invitation.expires_at,
+    }
+
+
 def accept_family_invitation(db: Session, *, recipient: User, raw_token: str) -> FamilyAccessGrant:
     """Materialize one recipient-bound grant from a one-time invitation.
 

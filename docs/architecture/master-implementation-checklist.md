@@ -1,24 +1,100 @@
 # Master implementation checklist (PR-01 to PR-15)
 
-This is a delivery ledger, not proof that a checkpoint is done.
+This is a delivery ledger, not proof that a checkpoint is done. The latest
+documentation reconciliation deliberately ran no test, build, evaluation or
+deployment under the current user direction; recent code checkpoints are
+recorded as implementation evidence, not release evidence.
 
 | PR | Scope | State | Evidence gate |
 | --- | --- | --- | --- |
 | 01 | Audit, ADRs, baseline | implemented | source inventory, ADRs and an explicit static NO-GO baseline |
-| 02 | i18n foundation | partial | typed vi/en catalog, parity and shell literal checks; domain migration remains |
-| 03 | Personal task-first UX | implemented primary journey | Today exposes the four plain-language consumer tasks; technical evidence pages are hidden from personal navigation but retain compatible deep links |
-| 04 | Model registry/contracts | implemented for bounded safety tasks | typed contracts, DeepSeek-only resolution and explicit rollback config |
-| 05 | Vietnamese clinical NLP | implemented v1 | deterministic language cues and regression tests; no bundled encoder SLM |
-| 06 | Hybrid task/risk router | partial/pre-existing | semantic closed-schema primary with deterministic safety fallback; no evaluated SLM shadow |
-| 07 | Structured renderer/verifier | implemented deterministic baseline | closed semantic input, independent fidelity verifier, Vietnamese fallback and `medical_answer_v2` integration; human usability metric remains unmeasured |
-| 08 | CareGuard VN normalization | partial/pre-existing | DrugBank readiness/fail-closed behavior exists; licensed full benchmark unavailable |
-| 09 | Scribe safety refactor | implemented UI correction | no automatic R69/code assignment or uncalibrated confidence display |
-| 10 | Council hybrid shadow | partial/pre-existing | structured intake and ablation path; heuristic remains correctly labeled |
-| 11 | Research verifier | partial/pre-existing | claim/citation tracing exists; reviewed RAG gold set unavailable |
-| 12 | LifeMap VN features | partial/pre-existing | revision/provenance/review exist; approved NL-query evaluation remains |
-| 13 | CLARA-Eval VN | implemented foundation | nine tracks, manifests, suite configs, artifacts and active-eval integration |
-| 14 | Security/ops hardening | partial | release gate fails closed on missing locked evidence; external operational proof remains |
-| 15 | Mobile parity | partial/pre-existing | unified mobile/locale/consent paths exist; shared catalog and device E2E remain |
+| 02 | i18n foundation | partial | Typed vi/en catalog now covers the authenticated shell, auth/onboarding, Today, consumer chat, consent (including the Medicines medical-consent gate), LifeMap review and focused multi-step LifeMap and Visit creation, guided and manual Cabinet entry, Living Evidence, Research/source hub, Community, Scribe Enterprise consent/transcript, note/sign/export, grounding, coding/addendum and process panels, Council setup/review/result and administrative RAG web flows. The Chat V2 welcome content for researcher/doctor roles, Workspace Drawer notes/shares/export copy, Command Palette chrome, Medical Answer Canvas labels/empty states, Answer Renderer research-integrity/citation chrome, Flow Timeline heading, Message Log ARIA chrome, Turn View error/research action chrome, the admin-only Telemetry Panel chrome, and all Chat Shell notices/commands/ARIA/navigation chrome are catalog-backed rather than in-component bilingual copy. Recent bounded work completes catalog-backed static copy in the legacy Chat rollback surface (history, workspace tools, active actions, clarify, bulk, telemetry, panels and welcome canvas); only locale date/time formatting remains direct. Chat V2 day buckets, the Council oversight dialog and Research Markdown export/code/chart/Mermaid/citation controls are also catalog-backed. The static gate now parses both the Vietnamese literal catalog and typed English catalog, while the mobile terminology check derives and validates every shared resolver mapping from the canonical JSON. Workspace share expiry uses the shared locale date formatter, and CI guards focused surfaces. The browser locale is mirrored to a SameSite language cookie and root layout reads it for server-rendered document language; Vietnamese remains the fallback. A generated consumer-terminology contract spans web/mobile. These presentation checkpoints have no fresh test/build/eval/deploy evidence; broader domain migration, scanner coverage and a fully shared generated catalog remain. |
+| 03 | Personal task-first UX | implemented primary journey | Web and Unified-mobile Today expose four plain-language tasks that route to existing Chat, Medicines, PHR and Visits surfaces; no task card writes or confirms health data. Visit creation is now a local four-step draft (name, purpose, time, review) and makes the sole `createVisit` call only after an explicit final review; the result reopens only if the created identifier appears in the owner-scoped list. Family invitations are likewise split into recipient, one owner-scoped item, purpose and review; no invitation is created until that final action, and the one-time code never enters a URL. On web and Unified mobile, a recipient now submits that code to a non-mutating, recipient-bound preview before an independent final accept action; the preview exposes only scope category/actions/purpose/expiry, never identity, object ID, title or health content. The mobile capability remains only in the in-memory field during this route, is discarded when the route closes, and does not return to its parent. The Medicines list no longer has its dense inline **create** form: new medicines go through the existing reviewed guided path, while an explicitly selected existing medicine retains its versioned correction form. Technical evidence pages are hidden from personal navigation but retain compatible deep links. New focused mobile widget coverage is present but not run in this checkpoint. |
+| 04 | Model registry/contracts | implemented for bounded safety tasks | typed contracts, DeepSeek-only V4 Pro/Flash resolution, governed default-off Encoder-SLM shadow configuration, deployment environment guard and explicit routing/model rollback configuration. `04aa0095` corrects the mobile static Settings disclosure to describe task-selected Pro/Flash rather than inaccurately claiming Pro for all tasks; per-response disclosure remains API-sourced. The ASR payload/provider route is now registry-owned (`whisper-1` default plus allowlist), so no audio workflow falsely claims V4 Flash or sends audio to a V4 text model. `136214df` makes the generic task-client builder text-only; audio transport must use the dedicated ASR builder. `32afb304` removes the obsolete RAG request-selected client construction path. The Research Tier2 planner, reasoning and deep-beta constructors now also discard historical runtime payloads and pass only deployment settings to the task registry, so requests and queued jobs cannot select a provider, endpoint, credential, model, retry policy or timeout. `6399e054` aligns the code default with the V4 gateway in the sample and both compose variants (`https://api.yescale.io/v1`); no deployed credential/provider call was checked. Client generation enforces each task contract's temperature and token ceiling; the intentional long Research ceiling is versioned at 12,288 tokens. Production runtime remains unverified |
+| 05 | Vietnamese clinical NLP | partial hybrid | deterministic Vietnamese language cues are now augmented by an optional registry-governed V4 Flash checksum/source-span packet with strict closed categories and fail-soft fallback. The packet is live as categorical chat metadata, Council review-only metadata and (under a second kill switch) exact original-substring input to deterministic CareGuard/DrugBank normalization. No evaluated/bundled encoder SLM or clinical benchmark is installed; new tests are added but unrun. |
+| 06 | Hybrid task/risk router | partial | semantic closed-schema primary with deterministic safety fallback; governed V4 paths serve safe chat intents and read-only LifeMap asks, while a default-off, redacted Encoder-SLM shadow adapter remains unevaluated and cannot alter deterministic safety/authorization decisions |
+| 07 | Structured renderer/verifier | implemented deterministic baseline | closed semantic input, independent fidelity verifier, Vietnamese fallback and `medical_answer_v2` integration; normal and emergency paths preserve requested UI locale; human usability metric remains unmeasured |
+| 08 | CareGuard VN normalization | partial/pre-existing | strict operation now requires a mounted signed release whose SQLite index, manifest/checksums and DDI plus dictionary inventories agree; no LLM substitutes for an unavailable release. A one-time web `medication_text` input is bounded at 2,000 characters and feeds deterministic Vietnamese extraction plus exact dictionary/DrugBank alias candidates only; it never writes a cabinet/PHR record or caches its output, and unrecognized/ambiguous text is terminal clarification with no DDI conclusion. A default-off second gate may pass only validated exact original medication substrings to the same deterministic Vietnamese/DrugBank resolver; the model cannot normalize a drug or decide DDI. A separate default-off clarification gate preserves every distinct licensed alias candidate, binds a user selection to the current DrugBank ID/version and owner-scoped cabinet item, and returns no DDI risk/recommendation/all-clear until identity is resolved. Licensed full benchmark/index material remains unavailable in this checkout; new ML/API/web contract tests are present but unrun. |
+| 09 | Scribe safety refactor | implemented safety correction in code | no automatic R69/code assignment or uncalibrated confidence display; clinician mutations require consent and a compatible version. ASR correction suggestions now require model-declared exact Unicode transcript offsets, preventing an ambiguous repeated token from silently binding to a first occurrence. Enterprise consumes correction candidates from batch and SSE only as read-only review text; it has no apply button or transcript-replacement callback, so a clinician must independently edit after source review. Google Chirp-3 is documented as an actual deployment-credentialed provider with closed vi/en locale handling and fallback-safe no-text behavior when unavailable. Latest Enterprise and redesigned-mobile Scribe localization is presentation-only; fresh tests are deferred/not run |
+| 10 | Council hybrid shadow | partial | Structured intake and ablation path; the fixed-weight shadow is explicitly `rule_shadow`, never a neural model or probability, and reasoning traces plus uncalibrated intake confidence are withheld from client/stream output. For non-emergency transcript consultations, the optional clinical source-span packet is attached as review-only intake metadata and never merged into Council facts. A doctor can now explicitly select only a completed, owner-scoped Research snapshot with compatible citation provenance; the API appends an immutable attachment containing only opaque IDs/categories, and the internal run payload revalidates and injects only that packet. No query, answer, citation title, URL, score or client-provided packet crosses the boundary. Both API and ML must have `COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED=true`; with it false the selector/attachment endpoints return 404, no write occurs, and the legacy run payload is retained. `COUNCIL_MODEL_DISCLOSURE_ENABLED` now carries only validated `{model_family, model_version, is_fallback}` provenance into the persisted run result; missing provenance is explicitly `unknown`, and prompts/confidence are dropped. The separately default-off `COUNCIL_MEDICATION_SAFETY_ENABLED` route invokes CareGuard with strict DrugBank required and external DDI disabled, returns only bounded state/version/opaque alert IDs and is excluded from every LLM packet; it may only raise urgency or require clinician review and rolls back by disabling the flag and restarting ML. New API/web contract coverage is added but unrun; provisioned LLM/specialist evaluation remains external. |
+| 11 | Research verifier | partial | claim/citation tracing exists and synchronous result release now requires a valid verifier state/version/summary/rows contract; cited prose with missing, malformed, unavailable or skipped verification safely abstains. Chat V2 renders only a localized allowlisted release-boundary explanation from an API-owned passed/reason projection, never raw verifier rows, model/provider error, prompt, PII, confidence or GRADE claim. Explicitly retracted external records are filtered before final evidence selection. The watermark backfill now uses the existing scheduler/orchestrator composition lazily behind the independent default-off `RAG_BACKFILL_ENABLED` kill switch, and records per-source sanitized failures without stopping siblings. The active candidate-only ranker is accurately named `EvidenceReranker`, with no change to the no-fabrication/reorder-only boundary. Reviewed RAG gold set and fresh regression evidence are unavailable |
+| 12 | LifeMap VN features | partial | Revision/provenance/review exist, read-only asks have a governed V4 route, and immutable revision comparison is read-only. Optional V4 Flash text capture now emits only exact source-span, closed-category review drafts and preserves a non-reviewable source row; the API alone keeps confirmation/truth-state authority. A second default-off `LIFEMAP_REVIEW_MODEL_PROPOSALS_ENABLED` route sends only bounded current revision packets after API consent/profile/current-revision filtering to a registry V4 Flash task; its JSON can nominate only two supplied same-field IDs plus duplicate/conflict relation, and the API revalidates then stores a human-resolution-only append-only finding. It cannot mutate an event, revision, provenance or truth-state and failure leaves deterministic rule findings intact. Capture UI now expresses source ambiguity as a non-quantified review instruction rather than an uncalibrated confidence claim. The independently default-off deterministic summary and Vietnamese visit-preparation flags are explicitly propagated to both API deployment compose variants, so their consent-gated, profile-scoped endpoints can be staged without image/config drift. Unified mobile now consumes the server capability for the same read-only/copy-only visit-preparation draft and otherwise preserves legacy Visits. The new API/ML/mobile contract tests are added but not run. Approved NL-query/visit-summary evaluation remains. |
+| 13 | CLARA-Eval VN | implemented foundation | nine tracks, manifests, suite configs, judge artifacts, active-eval integration and opt-in approved live execution; no reviewed clinical live manifest is installed. `cb2eb1e0` preserves observed evidence in confidence intervals and ensures critical-error/ablation observations replace, rather than contradict, their not-measured placeholders. |
+| 14 | Security/ops hardening | partial | The locked release gate fails closed on missing evidence and now materializes a release-only approved manifest under `RUNNER_TEMP`; before it can send a request, it requires an exact binding to the locked dataset reference, immutable release SHA and retrieval snapshot. Artifacts expose only the dataset-reference hash and release SHA. Compose variants explicitly receive governed Scribe, ASR, Encoder-SLM-shadow and CareGuard-wording controls; deployment validation rejects missing DeepSeek V4 Pro/Flash, DeepSeek-only, task-routing or strict-DrugBank prerequisites. `1b0a394f` propagates the API Scribe timeout budget to production compose so it remains longer than the default ML ASR budget. A separate default-off registry-bound aggregate records only governed task/profile/version/risk/rollback selection categories and never patient/model-request data; it is not a cost or clinical metric. Family Circle now uses localized generic mutation/load errors rather than raw errors. Docker/image build, provider availability and production operational proof remain unverified. |
+| 15 | Mobile parity | partial | Unified mobile/locale/consent paths exist; catalog-backed onboarding, chat, LifeMap capture/replay/review/questions/baselines and the dispute-queue chrome, Medicines/cabinet, fixed CareGuard DDI result chrome, visits, Family/visit detail and access-log rendering from compatible stable codes, profile/PHR, living evidence, connected health, community, Settings and More flows were added. Redesign shell navigation and its primary Chat action now resolve through the existing app-wide `LanguageController` and shared consumer terminology. Its first screen also localizes the existing Chat, medicine-safety and profile task cards plus Tools/Recent/error chrome; Login V3 now uses the same controller, localizes static/error/assistive copy and refuses raw API error display. The recipient-side Family route now implements the same preview-before-accept boundary as web: the invitation code is header-only and in-memory, preview is non-mutating and generic-error-only, then acceptance is a separate explicit mutation. The parent route receives only a success boolean and reloads grants. The dispute queue keeps its server-provided event type, revision, status and clinical-review boundary unchanged; only static UI labels are localized. Today also routes four task-first cards to existing consent-gated surfaces. When the server grants `lifemap_vietnamese_drafts`, the visit card opens a localized, read-only/copy-only draft UI; otherwise it keeps the existing Visit lifecycle. A focused Family API contract test and a Today callback/widget test are present but not run. A generated consumer-terminology contract exists; device E2E and broader parity remain. |
+
+## Recent additive checkpoints
+
+- PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
+  `plain_language` is the default and `professional` is role-limited. ML only
+  acknowledges a closed selector; API adds the deterministic projection only
+  after the existing quality gate passes. The released markdown and citations
+  remain unchanged, while abstentions get no presentation payload. Focused
+  API/ML/web contracts are present but unrun in this feature-first checkpoint.
+
+- `d53af25a` / `99a69fbe` add the source-version-bound, owner-scoped DrugBank
+  clarification path to web/mobile. It blocks all DDI conclusion and cache
+  projection while identity is ambiguous; the mobile state is locale-aware in
+  `00993943`.
+- `1f06dab6` closes the Scribe batch-ASR visit-consent bypass for any supplied
+  session id, without changing the legacy unscoped batch behavior while the
+  global rollout is off.
+- `8ca4f4c7` connects web LifeMap to the already capability-gated
+  visit-preparation draft endpoint. The UI is read-only and source-cited; it
+  has no confirmation/write action. It also removes the uncalibrated OCR
+  percentage from guided medicine capture.
+- `4bf1a47f`, `524b9b02`, and `ec306759` extend catalog-backed UI to Chat V2
+  shell, a bounded legacy workspace sidebar, and Research workspace. These
+  are incremental i18n improvements, not a claim that every domain page has
+  completed migration.
+- `14414393` makes the asynchronous mobile visit-preparation safety notice a
+  screen-reader live region; `8583b8e6` requires every Research citation trace
+  to bind to retrieved context; and `3f33a751` constrains the Council shadow
+  specialist contract to source-bound findings and non-prescriptive action
+  classes that cannot undercut its own triage. None changes a released
+  diagnostic, treatment, authorization or LifeMap decision.
+- `4fd15a63` localizes the legacy-chat composer and removes its raw job ID from
+  end-user status. `8bbc1689` localizes the transparency gate fallback and
+  replaces its raw acknowledgement error with safe catalog wording.
+- `4972eeca` localizes the legacy conversation-history rollback area; `a091c197`
+  localizes Research Markdown export, charts, Mermaid and citation controls.
+  These are bounded presentation migrations, not all-page i18n proof.
+- `136214df` prevents text task construction from acquiring an audio endpoint;
+  `cb2eb1e0` prevents judge artifacts from reporting observed evidence as
+  unavailable or emitting contradictory placeholder rows.
+- `58433d68` moves legacy Chat starter questions into the typed catalog;
+  `8de7f745` documents closed-locale Google Chirp-3 fallback behavior; and
+  `85659f9b` renames the active candidate-only ranking component to
+  `EvidenceReranker` without changing its evidence boundary.
+- `de590313`, `a7a274ca` and `7e57d3ba` extend a conservative End_User error
+  boundary: technical/upstream caught errors render the existing localized
+  generic fallback rather than raw transport detail. `5cb5cbf3` applies the
+  same pattern to legacy Chat and catalogizes its action/notice/confirmation
+  wording plus Council Workspace static presentation. These changes do not
+  alter requests, Council facts/triage/prompt/output or dynamic clinical
+  content; they are not a full-app i18n or runtime-security claim.
+- The guided Visit flow is a task-first, owner-scoped creation path: all draft
+  values stay in the browser until the final review action; the Workspace then
+  honours a returned visit identifier only after the existing owner-scoped
+  listing contains it. It is catalog-backed in Vietnamese and English. Its
+  focused verification is intentionally deferred under the active
+  feature-first direction.
+- Family sharing now uses the same reviewed-write pattern. The recipient,
+  object choice and purpose remain local until final confirmation; a failed
+  request states that no access was granted, while the successfully returned
+  one-time invitation code is rendered only in the flow and never in a URL.
+- Recipient acceptance has its own safety boundary: `/family/invitations/preview`
+  validates the capability against the signed-in recipient without consuming it,
+  writing a grant or emitting an audit record. It returns only non-clinical
+  scope category/actions/purpose/expiry; a distinct explicit accept mutation
+  remains the only way to grant access.
+- The old inline Medicine creation branch was removed rather than duplicated:
+  new entries use the existing guided route, while versioned corrections remain
+  an explicit edit of an already selected course. The unused source-ID input,
+  which the correction endpoint never persisted, was also removed.
+
+No format/lint/type/test/build/eval/deploy command was run for these additions.
+Only static whitespace checks were recorded before their commits.
 
 ## Required exit evidence
 
@@ -28,3 +104,5 @@ This is a delivery ledger, not proof that a checkpoint is done.
 - Web/service build where tooling is available.
 - i18n and no-secret/no-PII-log review.
 - Rollback and feature-flag state for risky behavior.
+- A current run of the above gates after each affected checkpoint; historical
+  pass results must not be used as proof for later commits.

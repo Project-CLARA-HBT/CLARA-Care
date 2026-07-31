@@ -13,7 +13,20 @@ from clara_api.db.models import (
     User,
 )
 from clara_api.db.session import SessionLocal
-from clara_api.lifemap.legacy_provenance import legacy_provenance_counts
+from clara_api.lifemap.legacy.provenance import (
+    REPORT_CATEGORIES,
+    legacy_provenance_counts,
+)
+from clara_api.lifemap.legacy_provenance import (
+    REPORT_CATEGORIES as REPORT_CATEGORIES_COMPAT,
+    legacy_provenance_counts as legacy_provenance_counts_compat,
+)
+
+
+def test_legacy_provenance_compatibility_import_reexports_isolated_helper() -> None:
+    """Old operator scripts keep resolving while new code uses the legacy boundary."""
+    assert legacy_provenance_counts_compat is legacy_provenance_counts
+    assert REPORT_CATEGORIES_COMPAT is REPORT_CATEGORIES
 
 
 def test_legacy_provenance_report_does_not_overstate_confirmation() -> None:

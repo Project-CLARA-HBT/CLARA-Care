@@ -1,5 +1,6 @@
-import ResearchWorkspace from "../research-workspace";
+import { redirect } from "next/navigation";
 
+/** Historical deep-dive bookmark; execution is unified in CLARA Chat. */
 export default function ResearchDeepDivePage() {
-  return <ResearchWorkspace initialTab="synthesize" />;
+  redirect("/chat");
 }

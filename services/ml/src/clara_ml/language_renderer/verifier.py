@@ -14,6 +14,11 @@ _DOSE_PATTERN = re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|viên|lần/ngà
 _PRESCRIBING = re.compile(
     r"\b(?:uống|dùng|ngừng|tăng liều|giảm liều|take|stop|increase dose)\b", re.IGNORECASE
 )
+_MODEL_DRAFT_FORBIDDEN = re.compile(
+    r"(?:\d|%|\b(?:mg|mcg|μg|ml|iu|g|tablet|capsule|viên)\b|"
+    r"\b(?:an toàn|safe|không có tương tác|no interaction|không cần hỏi|no need to ask)\b)",
+    re.IGNORECASE,
+)
 
 
 def verify_fidelity(source: RenderingInput, rendered: RenderedExplanation) -> list[str]:
@@ -49,4 +54,29 @@ def verify_fidelity(source: RenderingInput, rendered: RenderedExplanation) -> li
     # emergency/clinical contact instructions are explicitly supplied action codes.
     if _PRESCRIBING.search(combined) and "contact_clinician" not in source.action_codes:
         violations.append("prescribing_language_added")
+    return violations
+
+
+def verify_careguard_draft_fidelity(
+    source: RenderingInput,
+    rendered: RenderedExplanation,
+) -> list[str]:
+    """Reject model-only wording that can drift beyond CareGuard's facts.
+
+    The normal renderer verifier protects the final assembled projection.
+    This stricter check applies only to the three fields a model may draft.
+    Medication names are supplied to this function for local comparison only;
+    they are never included in the model request.
+    """
+
+    violations = verify_fidelity(source, rendered)
+    draft = "\n".join([rendered.headline, rendered.summary, *rendered.why_it_matters])
+    if _MODEL_DRAFT_FORBIDDEN.search(draft):
+        violations.append("careguard_draft_unsafe_detail")
+    folded_draft = draft.casefold()
+    for medication in source.medication_names:
+        normalized = " ".join(str(medication).split()).casefold()
+        if normalized and len(normalized) >= 3 and normalized in folded_draft:
+            violations.append("careguard_draft_medication_name_added")
+            break
     return violations

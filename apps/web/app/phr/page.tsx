@@ -29,6 +29,8 @@ import {
   onUILanguageChange,
   type UILanguage,
 } from "@/lib/ui-language";
+import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import type { PhrInformationSource, PhrVerificationStatus } from "@/lib/phr";
 import OcrReviewModal from "@/components/phr/ocr-review-modal";
 import PhrExportButton from "@/components/phr/export-button";
@@ -36,157 +38,61 @@ import ShareManager from "@/components/phr/share-manager";
 import EmergencyCardEditor from "@/components/phr/emergency-card-editor";
 import RemindersPanel from "@/components/phr/reminders-panel";
 
-const COMPLETENESS_CLASS_LABELS: Record<
-  PhrCompletenessClass,
-  Record<UILanguage, string>
-> = {
-  patient_demographics: { vi: "Thông tin nhân khẩu", en: "Demographics" },
-  allergies: { vi: "Dị ứng", en: "Allergies" },
-  medications: { vi: "Thuốc", en: "Medications" },
-  problems: { vi: "Bệnh nền", en: "Problems" },
-  immunizations: { vi: "Tiêm chủng", en: "Immunizations" },
-  procedures: { vi: "Thủ thuật", en: "Procedures" },
-  labs: { vi: "Xét nghiệm", en: "Labs" },
+const COMPLETENESS_CLASS_LABEL_KEYS: Record<PhrCompletenessClass, UITranslationKey> = {
+  patient_demographics: "phr.completeness.class.patientDemographics",
+  allergies: "phr.completeness.class.allergies",
+  medications: "phr.completeness.class.medications",
+  problems: "phr.completeness.class.problems",
+  immunizations: "phr.completeness.class.immunizations",
+  procedures: "phr.completeness.class.procedures",
+  labs: "phr.completeness.class.labs",
 };
 
-const SOURCE_LABELS: Record<
-  PhrInformationSource,
-  Record<UILanguage, string>
-> = {
-  "self-declared": { vi: "Tự khai báo", en: "Self-declared" },
-  ocr: { vi: "Quét OCR", en: "OCR import" },
-  imported: { vi: "Nhập có cấu trúc", en: "Imported" },
+const SOURCE_LABEL_KEYS: Record<PhrInformationSource, UITranslationKey> = {
+  "self-declared": "phr.source.selfDeclared",
+  ocr: "phr.source.ocr",
+  imported: "phr.source.imported",
 };
 
-const VERIFICATION_LABELS: Record<
-  PhrVerificationStatus,
-  Record<UILanguage, string>
-> = {
-  unconfirmed: { vi: "Chưa xác minh", en: "Unconfirmed" },
-  confirmed: { vi: "Đã xác minh", en: "Confirmed" },
-  provisional: { vi: "Tạm thời", en: "Provisional" },
-  refuted: { vi: "Đã bác bỏ", en: "Refuted" },
-  "entered-in-error": { vi: "Nhập sai", en: "Entered in error" },
+const VERIFICATION_LABEL_KEYS: Record<PhrVerificationStatus, UITranslationKey> = {
+  unconfirmed: "phr.verification.unconfirmed",
+  confirmed: "phr.verification.confirmed",
+  provisional: "phr.verification.provisional",
+  refuted: "phr.verification.refuted",
+  "entered-in-error": "phr.verification.enteredInError",
 };
 
-const COPY = {
-  vi: {
-    title: "Hồ sơ sức khỏe cá nhân",
-    description: "Không gian quản lý hồ sơ sức khỏe cá nhân.",
-    save: "Lưu hồ sơ",
-    saving: "Đang lưu...",
-    loading: "Đang tải hồ sơ...",
-    loadError: "Chưa thể tải hồ sơ sức khỏe. Vui lòng thử lại sau.",
-    saveOk: "Đã lưu hồ sơ PHR thành công.",
-    saveError: "Lưu hồ sơ thất bại.",
-    profile: "Thông tin hồ sơ",
-    allergies: "Dị ứng",
-    conditions: "Bệnh nền",
-    medications: "Thuốc đang dùng",
-    add: "Thêm",
-    remove: "Xóa",
-    fullName: "Họ và tên",
-    dob: "Ngày sinh",
-    gender: "Giới tính",
-    bloodType: "Nhóm máu",
-    height: "Chiều cao (cm)",
-    weight: "Cân nặng (kg)",
-    phone: "Số điện thoại",
-    address: "Địa chỉ",
-    emergencyName: "Người liên hệ khẩn cấp",
-    emergencyPhone: "SĐT khẩn cấp",
-    insurance: "Mã BHYT/Bảo hiểm",
-    notes: "Ghi chú tổng quan",
-    allergyName: "Tác nhân",
-    reaction: "Phản ứng",
-    severity: "Mức độ",
-    conditionName: "Tên bệnh",
-    status: "Trạng thái",
-    diagnosedOn: "Ngày chẩn đoán",
-    medicationName: "Tên thuốc",
-    dose: "Liều dùng",
-    frequency: "Tần suất",
-    startedOn: "Bắt đầu từ",
-    current: "Đang dùng",
-    itemNote: "Ghi chú",
-    updatedAt: "Cập nhật lần cuối",
-    unknown: "Chưa rõ",
-    disclaimer:
-      "Hồ sơ này do bạn tự khai báo, chỉ dùng để hỗ trợ ra quyết định — không phải hồ sơ bệnh án điện tử (EMR/EHR), không thay thế chẩn đoán của bác sĩ và không có giá trị pháp lý ràng buộc. Hãy luôn tham vấn nhân viên y tế trước khi hành động.",
-    source: "Nguồn",
-    verification: "Xác minh",
-    consentTitle: "Đồng thuận dữ liệu",
-    consentBody:
-      "Việc dùng PHR để cá nhân hóa và chia sẻ hồ sơ được quản lý tại Trung tâm đồng thuận.",
-    consentLink: "Mở Trung tâm đồng thuận",
-    completenessTitle: "Mức độ hoàn thiện hồ sơ",
-    completenessDescription:
-      "Điểm dựa trên các nhóm dữ liệu USCDI có trong hồ sơ. Bổ sung nhóm còn thiếu giúp kiểm tra an toàn thuốc và cá nhân hóa tốt hơn.",
-    completenessLoading: "Đang tính mức độ hoàn thiện...",
-    completenessError: "Chưa thể tải mức độ hoàn thiện hồ sơ.",
-    completenessComplete: "Hồ sơ đã đầy đủ các nhóm dữ liệu chính.",
-    completenessPresent: "Đã có",
-    completenessMissing: "Còn thiếu",
-  },
-  en: {
-    title: "Personal Health Record",
-    description: "Personal health record management workspace.",
-    save: "Save record",
-    saving: "Saving...",
-    loading: "Loading PHR record...",
-    loadError: "Unable to load your health record. Please try again later.",
-    saveOk: "PHR record saved.",
-    saveError: "Failed to save PHR record.",
-    profile: "Profile",
-    allergies: "Allergies",
-    conditions: "Conditions",
-    medications: "Medications",
-    add: "Add",
-    remove: "Remove",
-    fullName: "Full name",
-    dob: "Date of birth",
-    gender: "Gender",
-    bloodType: "Blood type",
-    height: "Height (cm)",
-    weight: "Weight (kg)",
-    phone: "Phone",
-    address: "Address",
-    emergencyName: "Emergency contact",
-    emergencyPhone: "Emergency phone",
-    insurance: "Insurance ID",
-    notes: "Clinical notes",
-    allergyName: "Allergen",
-    reaction: "Reaction",
-    severity: "Severity",
-    conditionName: "Condition",
-    status: "Status",
-    diagnosedOn: "Diagnosed on",
-    medicationName: "Medication",
-    dose: "Dose",
-    frequency: "Frequency",
-    startedOn: "Started on",
-    current: "Current",
-    itemNote: "Note",
-    updatedAt: "Last updated",
-    unknown: "Unknown",
-    disclaimer:
-      "This record is self-declared and for decision support only — it is not an EMR/EHR, does not replace a clinician's diagnosis, and is not legally binding. Always review with a healthcare professional before acting.",
-    source: "Source",
-    verification: "Verification",
-    consentTitle: "Data consent",
-    consentBody:
-      "Using your PHR for personalization and sharing is managed in the Consent Center.",
-    consentLink: "Open Consent Center",
-    completenessTitle: "Record completeness",
-    completenessDescription:
-      "Score based on the USCDI data classes present in your record. Filling in missing classes improves medication-safety checks and personalization.",
-    completenessLoading: "Calculating completeness...",
-    completenessError: "Unable to load record completeness.",
-    completenessComplete: "Your record covers all core data classes.",
-    completenessPresent: "Present",
-    completenessMissing: "Missing",
-  },
-} as const;
+const PHR_TEXT_KEYS = {
+  title: "phr.title", description: "phr.description", save: "phr.action.save",
+  saving: "phr.action.saving", loading: "phr.loading", loadError: "phr.error.load",
+  saveOk: "phr.notice.saved", saveError: "phr.error.save", profile: "phr.profile",
+  allergies: "phr.allergies", conditions: "phr.conditions", medications: "phr.medications",
+  add: "phr.action.add", remove: "phr.action.remove", fullName: "phr.field.fullName",
+  dob: "phr.field.dob", gender: "phr.field.gender", bloodType: "phr.field.bloodType",
+  height: "phr.field.height", weight: "phr.field.weight", phone: "phr.field.phone",
+  address: "phr.field.address", emergencyName: "phr.field.emergencyName",
+  emergencyPhone: "phr.field.emergencyPhone", insurance: "phr.field.insurance",
+  notes: "phr.field.notes", allergyName: "phr.field.allergyName", reaction: "phr.field.reaction",
+  severity: "phr.field.severity", conditionName: "phr.field.conditionName", status: "phr.field.status",
+  diagnosedOn: "phr.field.diagnosedOn", medicationName: "phr.field.medicationName",
+  dose: "phr.field.dose", frequency: "phr.field.frequency", startedOn: "phr.field.startedOn",
+  current: "phr.field.current", itemNote: "phr.field.itemNote", updatedAt: "phr.updatedAt",
+  unknown: "phr.unknown", disclaimer: "phr.disclaimer", source: "phr.source.label",
+  verification: "phr.verification.label", consentTitle: "phr.consent.title",
+  consentBody: "phr.consent.body", consentLink: "phr.consent.link",
+  completenessTitle: "phr.completeness.title", completenessDescription: "phr.completeness.description",
+  completenessLoading: "phr.completeness.loading", completenessError: "phr.completeness.error",
+  completenessComplete: "phr.completeness.complete", completenessPresent: "phr.completeness.present",
+  completenessMissing: "phr.completeness.missing",
+} as const satisfies Record<string, UITranslationKey>;
+
+type PhrText = { [Key in keyof typeof PHR_TEXT_KEYS]: string };
+
+function getPhrText(language: UILanguage): PhrText {
+  return Object.fromEntries(
+    Object.entries(PHR_TEXT_KEYS).map(([name, key]) => [name, t(language, key as UITranslationKey)]),
+  ) as PhrText;
+}
 
 const EMPTY_RECORD: PhrRecord = {
   full_name: "",
@@ -295,12 +201,12 @@ function ProvenanceBadges({
     <div className="flex flex-wrap gap-1.5">
       {source ? (
         <Badge tone="brand">
-          {sourceLabel}: {SOURCE_LABELS[source][uiLanguage]}
+          {sourceLabel}: {t(uiLanguage, SOURCE_LABEL_KEYS[source])}
         </Badge>
       ) : null}
       {verification ? (
         <Badge tone="neutral">
-          {verificationLabel}: {VERIFICATION_LABELS[verification][uiLanguage]}
+          {verificationLabel}: {t(uiLanguage, VERIFICATION_LABEL_KEYS[verification])}
         </Badge>
       ) : null}
     </div>
@@ -320,7 +226,7 @@ function CompletenessMeter({
   uiLanguage,
 }: {
   state: AsyncState<PhrCompleteness>;
-  text: (typeof COPY)[UILanguage];
+  text: PhrText;
   uiLanguage: UILanguage;
 }) {
   return (
@@ -365,7 +271,7 @@ function CompletenessMeter({
                     </span>
                     {data.present.map((cls) => (
                       <Badge key={cls} tone="ok">
-                        {COMPLETENESS_CLASS_LABELS[cls][uiLanguage]}
+                        {t(uiLanguage, COMPLETENESS_CLASS_LABEL_KEYS[cls])}
                       </Badge>
                     ))}
                   </div>
@@ -377,7 +283,7 @@ function CompletenessMeter({
                     </span>
                     {data.missing.map((cls) => (
                       <Badge key={cls} tone="warn">
-                        {COMPLETENESS_CLASS_LABELS[cls][uiLanguage]}
+                        {t(uiLanguage, COMPLETENESS_CLASS_LABEL_KEYS[cls])}
                       </Badge>
                     ))}
                   </div>
@@ -443,59 +349,50 @@ function PhrHub({
   uiLanguage,
   capabilities,
 }: {
-  text: (typeof COPY)[UILanguage];
+  text: PhrText;
   uiLanguage: UILanguage;
   capabilities: PhrCapabilityFlags;
 }) {
-  const detail = uiLanguage === "vi";
+  const copy = useCallback(
+    (key: UITranslationKey) => t(uiLanguage, key),
+    [uiLanguage],
+  );
   const sections = [
     {
       href: "/phr/identity",
       icon: "badge",
-      title: detail ? "Danh tính cơ bản" : "Identity",
-      description: detail
-        ? "Họ tên, ngày sinh, giới tính và nhóm máu."
-        : "Name, date of birth, gender, and blood type.",
+      title: copy("phr.hub.identity.title"),
+      description: copy("phr.hub.identity.description"),
     },
     {
       href: "/phr/body",
       icon: "accessibility_new",
-      title: detail ? "Chỉ số cơ thể" : "Body measurements",
-      description: detail
-        ? "Chiều cao và cân nặng, trong một bước ngắn."
-        : "Height and weight in one short step.",
+      title: copy("phr.hub.body.title"),
+      description: copy("phr.hub.body.description"),
     },
     {
       href: "/phr/contact",
       icon: "contact_phone",
-      title: detail ? "Liên hệ & bảo hiểm" : "Contact & insurance",
-      description: detail
-        ? "Thông tin liên lạc, người liên hệ khẩn cấp và bảo hiểm."
-        : "Contact details, emergency contact, and insurance.",
+      title: copy("phr.hub.contact.title"),
+      description: copy("phr.hub.contact.description"),
     },
     {
       href: "/phr/allergies",
       icon: "warning",
       title: text.allergies,
-      description: detail
-        ? "Khai báo từng dị ứng và phản ứng tương ứng."
-        : "Add each allergy and its reaction.",
+      description: copy("phr.hub.allergies.description"),
     },
     {
       href: "/phr/conditions",
       icon: "clinical_notes",
       title: text.conditions,
-      description: detail
-        ? "Theo dõi từng bệnh nền riêng biệt."
-        : "Track each health condition separately.",
+      description: copy("phr.hub.conditions.description"),
     },
     {
       href: "/phr/medications",
       icon: "medication",
       title: text.medications,
-      description: detail
-        ? "Ghi nhận từng thuốc bạn đang hoặc đã dùng."
-        : "Record each medicine you currently use or used.",
+      description: copy("phr.hub.medications.description"),
     },
   ];
 
@@ -505,59 +402,47 @@ function PhrHub({
           href: "/phr/status",
           icon: "donut_large",
           title: text.completenessTitle,
-          description: detail
-            ? "Xem nhóm thông tin còn thiếu trước khi bổ sung."
-            : "See what information is still missing.",
+          description: copy("phr.hub.status.description"),
         }
       : null,
     capabilities.ocr_import
       ? {
           href: "/phr/ocr",
           icon: "document_scanner",
-          title: detail ? "Quét tài liệu" : "Scan a document",
-          description: detail
-            ? "Xem lại dữ liệu trước khi đưa vào hồ sơ."
-            : "Review imported data before it reaches your record.",
+          title: copy("phr.hub.ocr.title"),
+          description: copy("phr.hub.ocr.description"),
         }
       : null,
     capabilities.export
       ? {
           href: "/phr/export",
           icon: "download",
-          title: detail ? "Xuất dữ liệu" : "Export data",
-          description: detail
-            ? "Tạo bản sao hồ sơ do bạn kiểm soát."
-            : "Create a copy of the record you control.",
+          title: copy("phr.hub.export.title"),
+          description: copy("phr.hub.export.description"),
         }
       : null,
     capabilities.sharing
       ? {
           href: "/phr/sharing",
           icon: "share",
-          title: detail ? "Chia sẻ có kiểm soát" : "Controlled sharing",
-          description: detail
-            ? "Tạo hoặc thu hồi từng liên kết chia sẻ."
-            : "Create or revoke individual share links.",
+          title: copy("phr.hub.sharing.title"),
+          description: copy("phr.hub.sharing.description"),
         }
       : null,
     capabilities.enhanced
       ? {
           href: "/phr/emergency-card",
           icon: "emergency",
-          title: detail ? "Thẻ khẩn cấp" : "Emergency card",
-          description: detail
-            ? "Chọn thông tin tối thiểu dùng khi cần khẩn cấp."
-            : "Choose the minimum information for an emergency.",
+          title: copy("phr.hub.emergencyCard.title"),
+          description: copy("phr.hub.emergencyCard.description"),
         }
       : null,
     capabilities.reminders
       ? {
           href: "/phr/reminders",
           icon: "notifications_active",
-          title: detail ? "Nhắc nhở" : "Reminders",
-          description: detail
-            ? "Quản lý từng nhắc nhở thuốc."
-            : "Manage one medication reminder at a time.",
+          title: copy("phr.hub.reminders.title"),
+          description: copy("phr.hub.reminders.description"),
         }
       : null,
   ].filter((tool): tool is NonNullable<typeof tool> => tool !== null);
@@ -580,7 +465,7 @@ function PhrHub({
             {text.consentLink}
           </Button>
         </section>
-        <section aria-label={detail ? "Thông tin hồ sơ" : "Profile information"} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <section aria-label={copy("phr.hub.sections.record")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {sections.map((item) => (
             <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-36 justify-start whitespace-normal p-4 text-left">
               <span className="flex items-start gap-3">
@@ -594,7 +479,7 @@ function PhrHub({
           ))}
         </section>
         {tools.length > 0 ? (
-          <section aria-label={detail ? "Công cụ hồ sơ" : "Record tools"} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <section aria-label={copy("phr.hub.sections.tools")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {tools.map((item) => (
               <Button key={item.href} as="link" href={item.href} variant="ghost" className="h-auto min-h-28 justify-start whitespace-normal p-4 text-left">
                 <span className="flex items-start gap-3">
@@ -628,7 +513,7 @@ export default function PhrPage() {
   const [completenessLoading, setCompletenessLoading] = useState(false);
   const [completenessError, setCompletenessError] = useState<string>("");
 
-  const text = useMemo(() => COPY[uiLanguage], [uiLanguage]);
+  const text = useMemo(() => getPhrText(uiLanguage), [uiLanguage]);
   const isHub = pathname === "/phr" || pathname === "/phr/";
   const section = isHub ? null : sectionFromPath(pathname);
   const isRecordEditor = [
@@ -821,7 +706,7 @@ export default function PhrPage() {
       // Recompute completeness so newly-added data classes reflect immediately.
       void refreshCompleteness();
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.saveError);
+      setError(safeUserFacingError(err, text.saveError));
     } finally {
       setSaving(false);
     }
@@ -835,11 +720,11 @@ export default function PhrPage() {
     return (
       <PageShell
         variant="plain"
-        title={uiLanguage === "vi" ? "Mục hồ sơ không tồn tại" : "Record section not found"}
-        description={uiLanguage === "vi" ? "Hãy trở về trung tâm hồ sơ để chọn một mục." : "Return to the record hub to choose a section."}
+        title={t(uiLanguage, "phr.error.sectionNotFound.title")}
+        description={t(uiLanguage, "phr.error.sectionNotFound.description")}
       >
         <Button as="link" href="/phr" variant="secondary">
-          {uiLanguage === "vi" ? "Về hồ sơ sức khỏe" : "Back to health record"}
+          {t(uiLanguage, "phr.action.backToRecord")}
         </Button>
       </PageShell>
     );
@@ -847,26 +732,26 @@ export default function PhrPage() {
 
   const sectionCopy: Record<PhrSection, { title: string; description: string }> = {
     identity: {
-      title: uiLanguage === "vi" ? "Danh tính cơ bản" : "Identity",
-      description: uiLanguage === "vi" ? "Chỉ thông tin nhận diện và nhóm máu." : "Only identity information and blood type.",
+      title: t(uiLanguage, "phr.hub.identity.title"),
+      description: t(uiLanguage, "phr.section.identity.description"),
     },
     body: {
-      title: uiLanguage === "vi" ? "Chỉ số cơ thể" : "Body measurements",
-      description: uiLanguage === "vi" ? "Cập nhật chiều cao và cân nặng." : "Update height and weight.",
+      title: t(uiLanguage, "phr.hub.body.title"),
+      description: t(uiLanguage, "phr.section.body.description"),
     },
     contact: {
-      title: uiLanguage === "vi" ? "Liên hệ & bảo hiểm" : "Contact & insurance",
-      description: uiLanguage === "vi" ? "Cập nhật liên hệ, liên hệ khẩn cấp và bảo hiểm." : "Update contact, emergency contact, and insurance.",
+      title: t(uiLanguage, "phr.hub.contact.title"),
+      description: t(uiLanguage, "phr.section.contact.description"),
     },
-    allergies: { title: text.allergies, description: uiLanguage === "vi" ? "Thêm và xem lại từng dị ứng." : "Add and review one allergy at a time." },
-    conditions: { title: text.conditions, description: uiLanguage === "vi" ? "Thêm và xem lại từng bệnh nền." : "Add and review one condition at a time." },
-    medications: { title: text.medications, description: uiLanguage === "vi" ? "Thêm và xem lại từng thuốc." : "Add and review one medication at a time." },
+    allergies: { title: text.allergies, description: t(uiLanguage, "phr.section.allergies.description") },
+    conditions: { title: text.conditions, description: t(uiLanguage, "phr.section.conditions.description") },
+    medications: { title: text.medications, description: t(uiLanguage, "phr.section.medications.description") },
     status: { title: text.completenessTitle, description: text.completenessDescription },
-    ocr: { title: uiLanguage === "vi" ? "Quét tài liệu" : "Scan a document", description: uiLanguage === "vi" ? "Xem lại trước khi xác nhận nhập hồ sơ." : "Review before confirming an import." },
-    export: { title: uiLanguage === "vi" ? "Xuất dữ liệu" : "Export data", description: uiLanguage === "vi" ? "Tạo bản sao hồ sơ do bạn kiểm soát." : "Create a copy of the record you control." },
-    sharing: { title: uiLanguage === "vi" ? "Chia sẻ có kiểm soát" : "Controlled sharing", description: uiLanguage === "vi" ? "Tạo hoặc thu hồi từng liên kết chia sẻ." : "Create or revoke each share link." },
-    "emergency-card": { title: uiLanguage === "vi" ? "Thẻ khẩn cấp" : "Emergency card", description: uiLanguage === "vi" ? "Chọn thông tin tối thiểu khi cần khẩn cấp." : "Choose the minimum information for an emergency." },
-    reminders: { title: uiLanguage === "vi" ? "Nhắc nhở" : "Reminders", description: uiLanguage === "vi" ? "Quản lý từng nhắc nhở thuốc." : "Manage one medication reminder at a time." },
+    ocr: { title: t(uiLanguage, "phr.hub.ocr.title"), description: t(uiLanguage, "phr.section.ocr.description") },
+    export: { title: t(uiLanguage, "phr.hub.export.title"), description: t(uiLanguage, "phr.hub.export.description") },
+    sharing: { title: t(uiLanguage, "phr.hub.sharing.title"), description: t(uiLanguage, "phr.section.sharing.description") },
+    "emergency-card": { title: t(uiLanguage, "phr.hub.emergencyCard.title"), description: t(uiLanguage, "phr.section.emergencyCard.description") },
+    reminders: { title: t(uiLanguage, "phr.hub.reminders.title"), description: t(uiLanguage, "phr.section.reminders.description") },
   };
   return (
     <PageShell
@@ -876,7 +761,7 @@ export default function PhrPage() {
     >
       <div className="space-y-5">
         <Button as="link" href="/phr" variant="ghost" size="sm" icon="arrow_back">
-          {uiLanguage === "vi" ? "Hồ sơ sức khỏe" : "Health record"}
+          {t(uiLanguage, "phr.action.recordHome")}
         </Button>
         {/* Persistent self-declared, decision-support-only disclaimer
             (personal-health-record Requirement 18.4; Req 13.5). */}
@@ -935,7 +820,10 @@ export default function PhrPage() {
             <div className="text-xs text-[var(--text-secondary)]">
               {text.updatedAt}:{" "}
               {record.updated_at
-                ? new Date(record.updated_at).toLocaleString()
+                ? formatLocaleDate(uiLanguage, record.updated_at, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
                 : text.unknown}
             </div>
             <Button
@@ -1067,6 +955,7 @@ export default function PhrPage() {
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <Field
+                      aria-label={text.allergyName}
                       placeholder={text.allergyName}
                       value={item.name}
                       onChange={(e) =>
@@ -1074,6 +963,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.reaction}
                       placeholder={text.reaction}
                       value={item.reaction}
                       onChange={(e) =>
@@ -1081,6 +971,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.severity}
                       placeholder={text.severity}
                       value={item.severity}
                       onChange={(e) =>
@@ -1091,6 +982,7 @@ export default function PhrPage() {
                       }
                     />
                     <Textarea
+                      aria-label={text.itemNote}
                       className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}
@@ -1148,6 +1040,7 @@ export default function PhrPage() {
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <Field
+                      aria-label={text.conditionName}
                       placeholder={text.conditionName}
                       value={item.name}
                       onChange={(e) =>
@@ -1155,6 +1048,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.status}
                       placeholder={text.status}
                       value={item.status}
                       onChange={(e) =>
@@ -1165,6 +1059,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.diagnosedOn}
                       type="date"
                       placeholder={text.diagnosedOn}
                       value={toInputDate(item.diagnosed_on)}
@@ -1175,6 +1070,7 @@ export default function PhrPage() {
                       }
                     />
                     <Textarea
+                      aria-label={text.itemNote}
                       className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}
@@ -1232,6 +1128,7 @@ export default function PhrPage() {
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <Field
+                      aria-label={text.medicationName}
                       placeholder={text.medicationName}
                       value={item.name}
                       onChange={(e) =>
@@ -1239,6 +1136,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.dose}
                       placeholder={text.dose}
                       value={item.dose}
                       onChange={(e) =>
@@ -1246,6 +1144,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.frequency}
                       placeholder={text.frequency}
                       value={item.frequency}
                       onChange={(e) =>
@@ -1253,6 +1152,7 @@ export default function PhrPage() {
                       }
                     />
                     <Field
+                      aria-label={text.startedOn}
                       type="date"
                       placeholder={text.startedOn}
                       value={toInputDate(item.started_on)}
@@ -1275,6 +1175,7 @@ export default function PhrPage() {
                       {text.current}
                     </label>
                     <Textarea
+                      aria-label={text.itemNote}
                       className="min-h-[56px]"
                       placeholder={text.itemNote}
                       value={item.note}

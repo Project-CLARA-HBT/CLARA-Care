@@ -16,6 +16,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
 import '../../screens/consent_center_screen.dart';
@@ -74,7 +75,7 @@ class MoreScreenV3 extends StatelessWidget {
   bool get _canScribe =>
       resolver.scribeEnabled && (role == 'doctor' || role == 'admin');
 
-  List<_MoreEntry> _entries() {
+  List<_MoreEntry> _entries(ConsumerTerminology copy) {
     final entries = <_MoreEntry>[];
 
     // Community (health social platform) — gated by the mobile social flag.
@@ -82,11 +83,12 @@ class MoreScreenV3 extends StatelessWidget {
       entries.add(
         _MoreEntry(
           icon: Icons.forum_outlined,
-          title: 'Cộng đồng',
-          subtitle: 'Chia sẻ và hỏi đáp cùng cộng đồng sức khỏe',
+          title: copy[ConsumerTerm.profileHubCommunityTitle],
+          subtitle: copy[ConsumerTerm.profileHubCommunityDescription],
           builder: (_) => SocialSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
+            languageController: languageController,
           ),
         ),
       );
@@ -96,11 +98,12 @@ class MoreScreenV3 extends StatelessWidget {
     entries.add(
       _MoreEntry(
         icon: Icons.monitor_heart_outlined,
-        title: 'Dữ liệu sức khỏe',
-        subtitle: 'Quản lý các nguồn bạn đã cho phép kết nối',
+        title: copy[ConsumerTerm.profileHubHealthDataTitle],
+        subtitle: copy[ConsumerTerm.profileHubHealthDataDescription],
         builder: (_) => ConnectedHealthScreen(
           apiClient: apiClient,
           sessionStore: sessionStore,
+          languageController: languageController,
         ),
       ),
     );
@@ -110,8 +113,8 @@ class MoreScreenV3 extends StatelessWidget {
       entries.add(
         _MoreEntry(
           icon: Icons.mic_none_outlined,
-          title: 'Ghi chú lâm sàng',
-          subtitle: 'Ghi âm và tạo ghi chú SOAP',
+          title: copy[ConsumerTerm.profileHubClinicalNotesTitle],
+          subtitle: copy[ConsumerTerm.profileHubClinicalNotesDescription],
           builder: (_) => ScribeSurfaceV3(
             apiClient: apiClient,
             sessionStore: sessionStore,
@@ -126,8 +129,8 @@ class MoreScreenV3 extends StatelessWidget {
       entries.add(
         _MoreEntry(
           icon: Icons.privacy_tip_outlined,
-          title: 'Quyền riêng tư & đồng ý',
-          subtitle: 'Quản lý đồng ý theo mục đích',
+          title: copy[ConsumerTerm.profileHubConsentTitle],
+          subtitle: copy[ConsumerTerm.profileHubConsentDescription],
           builder: (_) => ConsentCenterScreen(
             resolver: resolver,
             sessionStore: sessionStore,
@@ -140,8 +143,8 @@ class MoreScreenV3 extends StatelessWidget {
     entries.add(
       _MoreEntry(
         icon: Icons.settings_outlined,
-        title: 'Cài đặt',
-        subtitle: 'Giao diện, ngôn ngữ, tài khoản và quyền riêng tư',
+        title: copy[ConsumerTerm.profileHubSettingsTitle],
+        subtitle: copy[ConsumerTerm.profileHubSettingsDescription],
         builder: (_) => SettingsScreenV3(
           apiClient: apiClient,
           sessionStore: sessionStore,
@@ -160,14 +163,31 @@ class MoreScreenV3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = _entries();
+    final languageController = this.languageController;
+    if (languageController == null) {
+      return _buildLocalized(
+        context,
+        ConsumerTerminology.forLocale(null),
+      );
+    }
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) => _buildLocalized(
+        context,
+        ConsumerTerminology.forLocale(languageController.languageCode),
+      ),
+    );
+  }
+
+  Widget _buildLocalized(BuildContext context, ConsumerTerminology copy) {
+    final entries = _entries(copy);
     return Scaffold(
-      appBar: AppBar(title: const Text('Thêm')),
+      appBar: AppBar(title: Text(copy[ConsumerTerm.moreTitle])),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceSm),
           children: [
-            const SectionHeader(title: 'Công cụ khác'),
+            SectionHeader(title: copy[ConsumerTerm.moreOtherToolsTitle]),
             // The list container is pure navigation chrome (icon + title +
             // subtitle routers, no clinical content), so it sits on a liquid-
             // glass surface. When the ambient GlassScope is off the same

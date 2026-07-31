@@ -6,7 +6,8 @@ from typing import Any
 
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
-from clara_ml.llm.model_registry import ModelTask, build_task_client
+from clara_ml.llm.model_registry import ModelTask, build_asr_task_client, build_task_client
+from clara_ml.nlp_vi import enrich_clinical_utterance_with_llm
 
 #: Sentinel ``model_used`` value for the degraded heuristic extraction path.
 _HEURISTIC_FALLBACK_MODEL = "heuristic-fallback-v1"
@@ -24,7 +25,9 @@ _INTAKE_FALLBACK_NOTICE = (
 
 
 def _build_client() -> DeepSeekClient:
-    client, _selection = build_task_client(ModelTask.COUNCIL_SHADOW, settings)
+    # Intake extraction is a separately governed, reviewable generative-SLM
+    # task. It must not borrow the specialist-shadow contract/profile.
+    client, _selection = build_task_client(ModelTask.COUNCIL_INTAKE, settings)
     return client
 
 
@@ -207,6 +210,29 @@ def _compute_intake_data_quality(
     }
 
 
+def clinical_packet_metadata(transcript: str) -> dict[str, Any] | None:
+    """Return a PII-free, review-only projection of validated source spans.
+
+    This deliberately does not add model-extracted symptoms, medicines or labs
+    to ``council_payload``. The caller's structured fields and deterministic
+    Council red-flag floor remain authoritative until a human reviews them.
+    """
+
+    packet = enrich_clinical_utterance_with_llm(transcript, settings=settings)
+    if packet.implementation != "hybrid_source_spans_v1":
+        return None
+    counts: dict[str, int] = {}
+    for span in packet.source_spans:
+        counts[span.category] = counts.get(span.category, 0) + 1
+    return {
+        "status": "review_only",
+        "source_span_count": len(packet.source_spans),
+        "category_counts": counts,
+        "model_version": packet.extractor_model_version,
+        "prompt_version": packet.extractor_prompt_version,
+    }
+
+
 def _build_intake_followup_questions(
     symptoms: list[str],
     labs: list[dict[str, str]],
@@ -227,30 +253,6 @@ def _build_intake_followup_questions(
     if len(symptoms) <= 1:
         questions.append("Are there associated symptoms such as chest pain, dyspnea, neurologic changes, or bleeding?")
     return questions[:6]
-
-
-def _compute_intake_confidence(
-    *,
-    data_quality_score: float,
-    model_used: str,
-    warnings: list[str],
-    needs_more_info: bool,
-) -> dict[str, Any]:
-    model_score = 0.92 if model_used != "heuristic-fallback-v1" else 0.72
-    warning_penalty = min(0.2, 0.08 * len(warnings))
-    score = (0.75 * data_quality_score) + (0.25 * model_score) - warning_penalty
-    if needs_more_info:
-        score = min(score, 0.48)
-    score = max(0.0, min(1.0, score))
-    return {
-        "score": round(score, 3),
-        "level": _score_level(score),
-        "components": {
-            "data_quality": round(data_quality_score, 3),
-            "model_reliability": round(model_score, 3),
-            "warning_penalty": round(warning_penalty, 3),
-        },
-    }
 
 
 def _build_intake_citations(
@@ -443,17 +445,36 @@ def run_council_intake(
     transcript_text = transcript.strip()
     warnings: list[str] = []
 
-    client = _build_client()
+    # Text intake retains a deterministic, explicitly disclosed fallback when
+    # the governed model client cannot be constructed. Audio cannot safely use
+    # that fallback because there is no source text to review, so it fails
+    # closed instead of fabricating an extraction.
+    client: DeepSeekClient | None
+    try:
+        client = _build_client()
+    except (TypeError, ValueError, RuntimeError) as exc:
+        client = None
+        warnings.append(f"governed_intake_client_unavailable:{exc.__class__.__name__}")
 
     if not transcript_text:
         if not audio_bytes:
             raise ValueError("Missing transcript and audio input")
+        if client is None:
+            raise RuntimeError("Governed Council intake model is unavailable for audio transcription")
         try:
-            transcript_text = client.transcribe_audio(
+            audio_client, audio_selection = build_asr_task_client(
+                settings,
+                timeout_seconds=max(
+                    float(settings.deepseek_timeout_seconds),
+                    float(settings.scribe_asr_timeout_seconds),
+                ),
+                retries_per_base=0,
+            )
+            transcript_text = audio_client.transcribe_audio(
                 audio_bytes=audio_bytes,
                 filename=audio_filename,
                 content_type=audio_content_type,
-                model=settings.deepseek_audio_model,
+                model=audio_selection.model,
                 language=settings.deepseek_audio_language,
                 prompt="Medical interview in Vietnamese. Return complete transcript.",
             )
@@ -463,8 +484,10 @@ def run_council_intake(
             ) from exc
 
     extracted: dict[str, Any]
-    model_used = client.model
+    model_used = client.model if client is not None else _HEURISTIC_FALLBACK_MODEL
     try:
+        if client is None:
+            raise RuntimeError("governed_intake_client_unavailable")
         extracted = _extract_with_deepseek(client, transcript_text)
         model_used = _as_text(extracted.get("_model_used")) or client.model
     except Exception as exc:  # pragma: no cover - defensive fallback
@@ -489,12 +512,6 @@ def run_council_intake(
         or data_quality["non_empty_sections"] < 2
         or data_quality["total_observations"] < 3
     )
-    confidence = _compute_intake_confidence(
-        data_quality_score=float(data_quality["score"]),
-        model_used=model_used,
-        warnings=warnings,
-        needs_more_info=needs_more_info,
-    )
     citations = _build_intake_citations(symptoms, labs, medications, history)
     research_topics = [f"Complete missing intake section: {name}" for name in data_quality["missing_sections"]]
     if not research_topics:
@@ -504,10 +521,9 @@ def run_council_intake(
     # Fallback-only + additive: when intake degrades to the heuristic path we
     # append a clear, user-visible notice to ``warnings`` (which the web intake
     # surface already renders) so a degraded extraction is never silently shown
-    # as primary-model output. It is appended AFTER ``_compute_intake_confidence``
-    # above so the confidence/warning-penalty math stays byte-identical to today.
-    # The non-fallback (LLM) path is untouched, preserving "LLM intake is not
-    # flagged as fallback" and flags-off envelope equivalence.
+    # as primary-model output. No model or extraction confidence is emitted: the
+    # available-information state is represented by missing fields and required
+    # review rather than a misleading percentage.
     is_fallback = model_used == _HEURISTIC_FALLBACK_MODEL
     if is_fallback and _INTAKE_FALLBACK_NOTICE not in warnings:
         warnings.append(_INTAKE_FALLBACK_NOTICE)
@@ -527,12 +543,6 @@ def run_council_intake(
         "warnings": warnings,
         "model_used": model_used,
         "missing_fields": list(data_quality["missing_sections"]),
-        "field_confidence": {
-            "symptoms": round(1.0 if symptoms else 0.25, 3),
-            "labs": round(1.0 if labs else 0.3, 3),
-            "medications": round(1.0 if medications else 0.35, 3),
-            "history": round(1.0 if history else 0.35, 3),
-        },
         "council_payload": {
             "symptoms": symptoms,
             "labs": _labs_to_numeric_map(labs),
@@ -541,14 +551,11 @@ def run_council_intake(
         },
         "needs_more_info": needs_more_info,
         "followup_questions": followup_questions,
-        "confidence_score": confidence["score"],
-        "confidence_level": confidence["level"],
         "data_quality_score": data_quality["score"],
         "data_quality_level": data_quality["level"],
         "analyze": {
             "needs_more_info": needs_more_info,
             "followup_questions": followup_questions,
-            "confidence": confidence,
             "data_quality": data_quality,
         },
         "details": {

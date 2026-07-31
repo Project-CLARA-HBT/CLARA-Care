@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
+import { t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
   createCouncilCase,
@@ -65,6 +68,7 @@ function hydrateDraftFromCase(caseItem: CouncilCaseRecord): IntakeDraft {
 
 export default function CouncilNewIntakePage() {
   const router = useRouter();
+  const language = useUILanguage();
   const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
   const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
   const [draft, setDraft] = useState<IntakeDraft>({
@@ -100,7 +104,14 @@ export default function CouncilNewIntakePage() {
         if (queryCaseId) {
           resolvedCase = await getCouncilCase(queryCaseId);
         } else {
-          resolvedCase = await createCouncilCase({ title: `Case ${new Date().toLocaleString("vi-VN")}` });
+          resolvedCase = await createCouncilCase({
+            title: t(language, "council.new.caseFallback", {
+              id: new Intl.DateTimeFormat(language === "vi" ? "vi-VN" : "en-US", {
+                dateStyle: "short",
+                timeStyle: "short",
+              }).format(new Date()),
+            }),
+          });
           router.replace(`/council/new/intake?caseId=${resolvedCase.id}`);
         }
 
@@ -110,13 +121,13 @@ export default function CouncilNewIntakePage() {
         setDraft(hydrateDraftFromCase(resolvedCase));
         setTranscriptInput(resolvedCase.transcript ?? "");
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể tải case.");
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== null) {
       void bootstrap();
     }
-  }, [queryCaseId, router]);
+  }, [language, queryCaseId, router]);
 
   const onExtractIntake = async () => {
     if (!caseItem) return;
@@ -125,11 +136,11 @@ export default function CouncilNewIntakePage() {
     setExtractWarnings([]);
 
     if (intakeMode === "transcript" && !transcriptInput.trim()) {
-      setError("Vui lòng dán transcript trước khi chạy chuẩn hóa.");
+      setError(t(language, "council.intake.transcriptRequired"));
       return;
     }
     if (intakeMode === "audio" && !audioFile && !transcriptInput.trim()) {
-      setError("Vui lòng upload audio hoặc dán transcript hỗ trợ.");
+      setError(t(language, "council.intake.audioRequired"));
       return;
     }
 
@@ -146,9 +157,9 @@ export default function CouncilNewIntakePage() {
         ? updated.intake?.warnings.map((item) => String(item))
         : [];
       setExtractWarnings(warnings);
-      setExtractNotice("Đã chuẩn hóa intake vào case hiện tại. Bạn có thể chỉnh tay trước khi sang bước 2.");
+      setExtractNotice(t(language, "council.intake.normalized"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể chuẩn hóa dữ liệu intake lúc này.");
+      setError(safeUserFacingError(cause, t(language, "council.error.extractIntake")));
     } finally {
       setIsExtracting(false);
     }
@@ -190,7 +201,7 @@ export default function CouncilNewIntakePage() {
       setActiveCouncilCaseId(caseItem.id);
       router.push(`/council/new/specialists?caseId=${caseItem.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu intake.");
+      setError(safeUserFacingError(cause, t(language, "council.error.saveIntake")));
     } finally {
       setIsSaving(false);
     }
@@ -198,8 +209,8 @@ export default function CouncilNewIntakePage() {
 
   return (
     <PageShell
-      title="Council Wizard - Intake"
-      description="Bước 1/3: nhập dữ liệu ca bệnh thật vào case."
+      title={t(language, "council.intake.title")}
+      description={t(language, "council.intake.description")}
       variant="plain"
     >
       <div className="space-y-5">
@@ -207,9 +218,9 @@ export default function CouncilNewIntakePage() {
 
         <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-            Step 1/3 · Case #{caseItem?.id ?? "--"}
+            {t(language, "council.step", { step: 1, id: caseItem?.id ?? "--" })}
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">Intake ca bệnh</h2>
+          <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{t(language, "council.intake.heading")}</h2>
 
           <div className="mt-4 flex gap-2">
             <button
@@ -221,7 +232,7 @@ export default function CouncilNewIntakePage() {
                   : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
               }`}
             >
-              Transcript
+              {t(language, "council.intake.mode.transcript")}
             </button>
             <button
               type="button"
@@ -232,7 +243,7 @@ export default function CouncilNewIntakePage() {
                   : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
               }`}
             >
-              Audio
+              {t(language, "council.intake.mode.audio")}
             </button>
           </div>
 
@@ -244,14 +255,14 @@ export default function CouncilNewIntakePage() {
                 onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)}
                 className="block w-full text-sm"
               />
-              {audioFile ? <p className="mt-2 text-xs text-[var(--text-secondary)]">Đã chọn: {audioFile.name}</p> : null}
+              {audioFile ? <p className="mt-2 text-xs text-[var(--text-secondary)]">{t(language, "council.intake.fileSelected", { name: audioFile.name })}</p> : null}
             </div>
           ) : null}
 
           <textarea
             value={transcriptInput}
             onChange={(event) => setTranscriptInput(event.target.value)}
-            placeholder={intakeMode === "audio" ? "(Tùy chọn) Dán transcript hỗ trợ..." : "Dán transcript tại đây..."}
+            placeholder={intakeMode === "audio" ? t(language, "council.intake.audioTranscriptPlaceholder") : t(language, "council.intake.transcriptPlaceholder")}
             className="mt-3 min-h-[160px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm"
           />
 
@@ -261,7 +272,7 @@ export default function CouncilNewIntakePage() {
             disabled={isExtracting || !caseItem}
             className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {isExtracting ? "Đang xử lý..." : "Chuẩn hóa intake"}
+            {isExtracting ? t(language, "council.intake.processing") : t(language, "council.intake.normalize")}
           </button>
 
           {extractNotice ? <p className="mt-3 text-sm text-emerald-400">{extractNotice}</p> : null}
@@ -276,7 +287,7 @@ export default function CouncilNewIntakePage() {
 
         <section className="grid gap-3 md:grid-cols-2">
           <label className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-            <span className="text-sm font-semibold">Triệu chứng</span>
+            <span className="text-sm font-semibold">{t(language, "council.intake.symptoms")}</span>
             <textarea
               value={draft.symptomsInput}
               onChange={(event) => setDraft((current) => ({ ...current, symptomsInput: event.target.value }))}
@@ -284,7 +295,7 @@ export default function CouncilNewIntakePage() {
             />
           </label>
           <label className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-            <span className="text-sm font-semibold">Xét nghiệm</span>
+            <span className="text-sm font-semibold">{t(language, "council.intake.labs")}</span>
             <textarea
               value={draft.labsInput}
               onChange={(event) => setDraft((current) => ({ ...current, labsInput: event.target.value }))}
@@ -292,7 +303,7 @@ export default function CouncilNewIntakePage() {
             />
           </label>
           <label className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-            <span className="text-sm font-semibold">Thuốc</span>
+            <span className="text-sm font-semibold">{t(language, "council.intake.medicines")}</span>
             <textarea
               value={draft.medicationsInput}
               onChange={(event) => setDraft((current) => ({ ...current, medicationsInput: event.target.value }))}
@@ -300,7 +311,7 @@ export default function CouncilNewIntakePage() {
             />
           </label>
           <label className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
-            <span className="text-sm font-semibold">Bệnh sử</span>
+            <span className="text-sm font-semibold">{t(language, "council.intake.history")}</span>
             <textarea
               value={draft.historyInput}
               onChange={(event) => setDraft((current) => ({ ...current, historyInput: event.target.value }))}
@@ -313,7 +324,7 @@ export default function CouncilNewIntakePage() {
 
         <div className="flex flex-wrap justify-between gap-2">
           <Link href="/council/new" className="inline-flex min-h-[42px] items-center rounded-lg border border-[color:var(--shell-border)] px-4 text-sm font-semibold">
-            Quay lại
+            {t(language, "council.action.back")}
           </Link>
           <button
             type="button"
@@ -321,7 +332,7 @@ export default function CouncilNewIntakePage() {
             disabled={isSaving || !caseItem}
             className="inline-flex min-h-[44px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {isSaving ? "Đang lưu..." : "Sang bước 2"}
+            {isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 2 })}
           </button>
         </div>
       </div>

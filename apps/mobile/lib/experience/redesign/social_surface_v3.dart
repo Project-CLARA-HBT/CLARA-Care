@@ -21,7 +21,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/analytics.dart';
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
+import '../language_controller.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
 import '../../theme/components/clara_input.dart';
@@ -37,10 +39,12 @@ class SocialSurfaceV3 extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+  final LanguageController? languageController;
 
   @override
   State<SocialSurfaceV3> createState() => _SocialSurfaceV3State();
@@ -63,12 +67,16 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
 
   String? get _token => widget.sessionStore.accessToken;
 
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
+
   Future<void> _load() async {
     final token = _token;
     if (token == null || token.isEmpty) {
       setState(() {
         _loading = false;
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _error = _copy[ConsumerTerm.socialSessionExpired];
       });
       return;
     }
@@ -107,7 +115,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Không thể tải cộng đồng lúc này. Vui lòng thử lại.';
+        _error = _copy[ConsumerTerm.socialLoadFailed];
         _loading = false;
       });
     }
@@ -135,7 +143,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
     if (!mounted) return;
     if (_communities.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chưa có cộng đồng để đăng bài.')),
+        SnackBar(content: Text(_copy[ConsumerTerm.socialNoCommunities])),
       );
       return;
     }
@@ -146,6 +154,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
         apiClient: widget.apiClient,
         accessToken: _token!,
         communities: _communities,
+        copy: _copy,
       ),
     );
     if (created == true) {
@@ -168,21 +177,16 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tham gia cộng đồng CLARA',
+            Text(_copy[ConsumerTerm.socialConsentTitle],
                 style: Theme.of(sheetContext)
                     .textTheme
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: ClaraTokens.spaceSm),
-            const Text(
-              'Cộng đồng là nơi chia sẻ kinh nghiệm và hỗ trợ nhau. Đây KHÔNG '
-              'phải tư vấn y tế: không kê đơn, chẩn đoán hay chỉ định liều dùng. '
-              'Nội dung được kiểm duyệt để giữ an toàn. Bạn đồng ý quy tắc ứng '
-              'xử và quyền riêng tư của cộng đồng?',
-            ),
+            Text(_copy[ConsumerTerm.socialConsentDescription]),
             const SizedBox(height: ClaraTokens.spaceMd),
             ClaraButton.primary(
-              label: 'Tôi đồng ý tham gia',
+              label: _copy[ConsumerTerm.socialConsentAgree],
               icon: Icons.check,
               onPressed: () async {
                 Navigator.of(sheetContext).pop();
@@ -191,7 +195,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
             ClaraButton.secondary(
-              label: 'Để sau',
+              label: _copy[ConsumerTerm.socialLater],
               onPressed: () => Navigator.of(sheetContext).pop(),
             ),
           ],
@@ -202,15 +206,24 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController == null) return _buildLocalized(_copy);
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) => _buildLocalized(_copy),
+    );
+  }
+
+  Widget _buildLocalized(ConsumerTerminology copy) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cộng đồng'),
+        title: Text(copy[ConsumerTerm.socialTitle]),
         actions: [
           if (!_unavailable && !_loading)
             IconButton(
               onPressed: _openProfile,
               icon: const Icon(Icons.account_circle_outlined),
-              tooltip: 'Hồ sơ cộng đồng',
+              tooltip: copy[ConsumerTerm.socialProfileTooltip],
             ),
         ],
       ),
@@ -219,18 +232,18 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
           : FloatingActionButton.extended(
               onPressed: _openCompose,
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('Đăng bài'),
+              label: Text(copy[ConsumerTerm.socialPost]),
             ),
-      body: SafeArea(child: _buildBody()),
+      body: SafeArea(child: _buildBody(copy)),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(ConsumerTerminology copy) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (_unavailable) {
-      return const _DisabledState();
+      return _DisabledState(copy: copy);
     }
     if (_error != null) {
       return ErrorRetryView(message: _error!, onRetry: _load);
@@ -241,29 +254,27 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: ClaraTokens.spaceXl * 2),
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.all(ClaraTokens.spaceMd),
-            child: _CommunityDisclaimer(),
+            child: _CommunityDisclaimer(copy: copy),
           ),
           if (!_consentGranted)
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
               child: ClaraCard.static_(
-                semanticLabel: 'Tham gia cộng đồng',
+                semanticLabel:
+                    copy[ConsumerTerm.socialConsentCardSemanticLabel],
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Tham gia để đăng bài & bình luận',
+                    Text(copy[ConsumerTerm.socialConsentCardTitle],
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Bạn vẫn có thể đọc bài. Đồng ý quy tắc cộng đồng để '
-                      'tham gia chia sẻ.',
-                    ),
+                    Text(copy[ConsumerTerm.socialConsentCardDescription]),
                     const SizedBox(height: ClaraTokens.spaceSm),
                     ClaraButton.primary(
-                      label: 'Tham gia',
+                      label: copy[ConsumerTerm.socialJoin],
                       icon: Icons.group_add_outlined,
                       onPressed: _showConsentSheet,
                     ),
@@ -272,7 +283,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
               ),
             ),
           if (_communities.isNotEmpty) ...[
-            const SectionHeader(title: 'Cộng đồng'),
+            SectionHeader(title: copy[ConsumerTerm.socialCommunities]),
             SizedBox(
               height: 148,
               child: ListView.separated(
@@ -285,16 +296,16 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
                 itemBuilder: (_, i) => _CommunityChip(
                   community: _communities[i],
                   onJoin: () => _joinCommunity(_communities[i]),
+                  copy: copy,
                 ),
               ),
             ),
           ],
-          const SectionHeader(title: 'Bảng tin'),
+          SectionHeader(title: copy[ConsumerTerm.socialFeed]),
           if (_feed.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(ClaraTokens.spaceMd),
-              child:
-                  Text('Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ.'),
+              child: Text(copy[ConsumerTerm.socialEmptyFeed]),
             )
           else
             ..._feed.map((post) => Padding(
@@ -304,6 +315,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
                     post: post,
                     onReact: () => _react(post),
                     onOpen: () => _openPost(post),
+                    copy: copy,
                   ),
                 )),
         ],
@@ -345,6 +357,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
         accessToken: token,
         post: post,
         canParticipate: _consentGranted,
+        copy: _copy,
       ),
     );
     if (mutated == true) await _load();
@@ -360,6 +373,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
       builder: (_) => _ProfileSheet(
         apiClient: widget.apiClient,
         accessToken: token,
+        copy: _copy,
       ),
     );
   }
@@ -374,7 +388,7 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
           .addSocialReaction(accessToken: token, postId: id, kind: 'helpful');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã gửi phản hồi hữu ích.')),
+        SnackBar(content: Text(_copy[ConsumerTerm.socialReactionSent])),
       );
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -385,7 +399,9 @@ class _SocialSurfaceV3State extends State<SocialSurfaceV3> {
 }
 
 class _CommunityDisclaimer extends StatelessWidget {
-  const _CommunityDisclaimer();
+  const _CommunityDisclaimer({required this.copy});
+
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) {
@@ -404,8 +420,7 @@ class _CommunityDisclaimer extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Cộng đồng là nơi hỗ trợ ngang hàng, không thay thế tư vấn của '
-              'bác sĩ. Nội dung kê đơn/chẩn đoán/liều dùng cá nhân sẽ bị chặn.',
+              copy[ConsumerTerm.socialDisclaimer],
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -417,10 +432,15 @@ class _CommunityDisclaimer extends StatelessWidget {
 }
 
 class _CommunityChip extends StatelessWidget {
-  const _CommunityChip({required this.community, required this.onJoin});
+  const _CommunityChip({
+    required this.community,
+    required this.onJoin,
+    required this.copy,
+  });
 
   final Map<String, dynamic> community;
   final VoidCallback onJoin;
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) {
@@ -446,7 +466,7 @@ class _CommunityChip extends StatelessWidget {
               style: theme.textTheme.titleSmall
                   ?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('${members ?? 0} thành viên',
+          Text(copy.format(ConsumerTerm.socialMembers, {'count': members ?? 0}),
               style: theme.textTheme.labelSmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           const SizedBox(height: 6),
@@ -455,11 +475,11 @@ class _CommunityChip extends StatelessWidget {
             child: joined
                 ? OutlinedButton(
                     onPressed: null,
-                    child: const Text('Đã tham gia'),
+                    child: Text(copy[ConsumerTerm.socialJoined]),
                   )
                 : FilledButton.tonal(
                     onPressed: onJoin,
-                    child: const Text('Tham gia'),
+                    child: Text(copy[ConsumerTerm.socialJoin]),
                   ),
           ),
         ],
@@ -473,18 +493,21 @@ class _PostCard extends StatelessWidget {
     required this.post,
     required this.onReact,
     required this.onOpen,
+    required this.copy,
   });
 
   final Map<String, dynamic> post;
   final VoidCallback onReact;
   final VoidCallback onOpen;
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final title = (post['title'] ?? '').toString();
     final body = (post['body'] ?? '').toString();
-    final author = (post['author_handle'] ?? 'ẩn danh').toString();
+    final author = (post['author_handle'] ?? copy[ConsumerTerm.socialAnonymous])
+        .toString();
     final comments = post['comment_count'] ?? 0;
     return ClaraCard(
       semanticLabel: title,
@@ -523,7 +546,7 @@ class _PostCard extends StatelessWidget {
               TextButton.icon(
                 onPressed: onReact,
                 icon: const Icon(Icons.volunteer_activism_outlined, size: 18),
-                label: const Text('Hữu ích'),
+                label: Text(copy[ConsumerTerm.socialReactionHelpful]),
               ),
               const SizedBox(width: 8),
               Icon(Icons.mode_comment_outlined,
@@ -541,7 +564,9 @@ class _PostCard extends StatelessWidget {
 }
 
 class _DisabledState extends StatelessWidget {
-  const _DisabledState();
+  const _DisabledState({required this.copy});
+
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) {
@@ -555,10 +580,11 @@ class _DisabledState extends StatelessWidget {
             Icon(Icons.groups_outlined,
                 size: 48, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: ClaraTokens.spaceSm),
-            Text('Cộng đồng sắp ra mắt', style: theme.textTheme.titleMedium),
+            Text(copy[ConsumerTerm.socialUnavailableTitle],
+                style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              'Tính năng cộng đồng sức khỏe đang được chuẩn bị và sẽ sớm mở.',
+              copy[ConsumerTerm.socialUnavailableDescription],
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -575,11 +601,13 @@ class _ComposeSheet extends StatefulWidget {
     required this.apiClient,
     required this.accessToken,
     required this.communities,
+    required this.copy,
   });
 
   final ApiClient apiClient;
   final String accessToken;
   final List<Map<String, dynamic>> communities;
+  final ConsumerTerminology copy;
 
   @override
   State<_ComposeSheet> createState() => _ComposeSheetState();
@@ -610,8 +638,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
     final title = _title.text.trim();
     final body = _body.text.trim();
     if (title.isEmpty || body.isEmpty || _communityId == null) {
-      setState(
-          () => _error = 'Vui lòng nhập tiêu đề, nội dung và chọn cộng đồng.');
+      setState(() => _error = widget.copy[ConsumerTerm.socialComposeRequired]);
       return;
     }
     setState(() {
@@ -651,7 +678,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Chia sẻ với cộng đồng',
+            Text(widget.copy[ConsumerTerm.socialComposeTitle],
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -659,7 +686,8 @@ class _ComposeSheetState extends State<_ComposeSheet> {
             const SizedBox(height: ClaraTokens.spaceSm),
             DropdownButtonFormField<int>(
               initialValue: _communityId,
-              decoration: const InputDecoration(labelText: 'Cộng đồng'),
+              decoration: InputDecoration(
+                  labelText: widget.copy[ConsumerTerm.socialCommunityLabel]),
               items: [
                 for (final c in widget.communities)
                   if (c['id'] is int)
@@ -671,9 +699,14 @@ class _ComposeSheetState extends State<_ComposeSheet> {
               onChanged: (v) => setState(() => _communityId = v),
             ),
             const SizedBox(height: ClaraTokens.spaceSm),
-            ClaraInput(label: 'Tiêu đề', controller: _title),
+            ClaraInput(
+                label: widget.copy[ConsumerTerm.socialPostTitleLabel],
+                controller: _title),
             const SizedBox(height: ClaraTokens.spaceSm),
-            ClaraInput(label: 'Nội dung', controller: _body, maxLines: 5),
+            ClaraInput(
+                label: widget.copy[ConsumerTerm.socialPostBodyLabel],
+                controller: _body,
+                maxLines: 5),
             if (_error != null) ...[
               const SizedBox(height: ClaraTokens.spaceSm),
               Text(_error!,
@@ -681,7 +714,7 @@ class _ComposeSheetState extends State<_ComposeSheet> {
             ],
             const SizedBox(height: ClaraTokens.spaceMd),
             ClaraButton.primary(
-              label: 'Đăng bài',
+              label: widget.copy[ConsumerTerm.socialPost],
               icon: Icons.send,
               loading: _submitting,
               onPressed: _submitting ? null : _submit,
@@ -702,12 +735,14 @@ class _PostDetailSheet extends StatefulWidget {
     required this.accessToken,
     required this.post,
     required this.canParticipate,
+    required this.copy,
   });
 
   final ApiClient apiClient;
   final String accessToken;
   final Map<String, dynamic> post;
   final bool canParticipate;
+  final ConsumerTerminology copy;
 
   @override
   State<_PostDetailSheet> createState() => _PostDetailSheetState();
@@ -781,8 +816,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
       // 422 ⇒ moderation block (prescribing/diagnosis/dosage or emergency).
       setState(() {
         _commentError = error.statusCode == 422
-            ? 'Bình luận không phù hợp quy tắc cộng đồng (không kê đơn/chẩn '
-                'đoán/liều dùng) hoặc có dấu hiệu khẩn cấp.'
+            ? widget.copy[ConsumerTerm.socialModerationBlocked]
             : error.message;
       });
     } finally {
@@ -800,7 +834,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
       _mutated = true;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã gửi phản hồi hữu ích.')),
+        SnackBar(content: Text(widget.copy[ConsumerTerm.socialReactionSent])),
       );
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -813,19 +847,16 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Báo cáo bài viết'),
-        content: const Text(
-          'Báo cáo nội dung vi phạm quy tắc cộng đồng (kê đơn/chẩn đoán/liều '
-          'dùng cá nhân, spam, hoặc không phù hợp). Đội ngũ kiểm duyệt sẽ xem xét.',
-        ),
+        title: Text(widget.copy[ConsumerTerm.socialReportTitle]),
+        content: Text(widget.copy[ConsumerTerm.socialReportDescription]),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Hủy'),
+            child: Text(widget.copy[ConsumerTerm.socialCancel]),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Báo cáo'),
+            child: Text(widget.copy[ConsumerTerm.socialReport]),
           ),
         ],
       ),
@@ -840,7 +871,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã gửi báo cáo. Cảm ơn bạn.')),
+        SnackBar(content: Text(widget.copy[ConsumerTerm.socialReportSent])),
       );
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -854,7 +885,9 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
     final theme = Theme.of(context);
     final title = (widget.post['title'] ?? '').toString();
     final body = (widget.post['body'] ?? '').toString();
-    final author = (widget.post['author_handle'] ?? 'ẩn danh').toString();
+    final author = (widget.post['author_handle'] ??
+            widget.copy[ConsumerTerm.socialAnonymous])
+        .toString();
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     return PopScope(
       canPop: true,
@@ -880,12 +913,12 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                   IconButton(
                     onPressed: _report,
                     icon: const Icon(Icons.flag_outlined),
-                    tooltip: 'Báo cáo',
+                    tooltip: widget.copy[ConsumerTerm.socialReport],
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(_mutated),
                     icon: const Icon(Icons.close),
-                    tooltip: 'Đóng',
+                    tooltip: widget.copy[ConsumerTerm.socialClose],
                   ),
                 ],
               ),
@@ -905,11 +938,12 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                         onPressed: widget.canParticipate ? _react : null,
                         icon: const Icon(Icons.volunteer_activism_outlined,
                             size: 18),
-                        label: const Text('Hữu ích'),
+                        label: Text(
+                            widget.copy[ConsumerTerm.socialReactionHelpful]),
                       ),
                     ),
                     const Divider(),
-                    Text('Bình luận',
+                    Text(widget.copy[ConsumerTerm.socialComments],
                         style: theme.textTheme.titleSmall
                             ?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: ClaraTokens.spaceSm),
@@ -922,7 +956,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                       Text(_error!,
                           style: TextStyle(color: theme.colorScheme.error))
                     else if (_comments.isEmpty)
-                      Text('Chưa có bình luận. Hãy là người đầu tiên.',
+                      Text(widget.copy[ConsumerTerm.socialEmptyComments],
                           style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant))
                     else
@@ -957,7 +991,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                   children: [
                     Expanded(
                       child: ClaraInput(
-                        label: 'Viết bình luận…',
+                        label: widget.copy[ConsumerTerm.socialCommentLabel],
                         controller: _comment,
                         maxLines: 2,
                       ),
@@ -976,7 +1010,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                   ],
                 ),
               ] else
-                Text('Tham gia cộng đồng để bình luận.',
+                Text(widget.copy[ConsumerTerm.socialCommentJoinRequired],
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             ],
@@ -991,10 +1025,15 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
 /// (display name + bio). PHR-isolated: no medical-record data is ever shown or
 /// editable here (spec R2/R10).
 class _ProfileSheet extends StatefulWidget {
-  const _ProfileSheet({required this.apiClient, required this.accessToken});
+  const _ProfileSheet({
+    required this.apiClient,
+    required this.accessToken,
+    required this.copy,
+  });
 
   final ApiClient apiClient;
   final String accessToken;
+  final ConsumerTerminology copy;
 
   @override
   State<_ProfileSheet> createState() => _ProfileSheetState();
@@ -1061,7 +1100,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã lưu hồ sơ cộng đồng.')),
+        SnackBar(content: Text(widget.copy[ConsumerTerm.socialProfileSaved])),
       );
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -1088,7 +1127,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hồ sơ cộng đồng',
+                Text(widget.copy[ConsumerTerm.socialProfileTitle],
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.w700)),
                 if (_handle.isNotEmpty) ...[
@@ -1109,9 +1148,9 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                           ),
                           child: Text(
                             _roleBadge == 'doctor'
-                                ? 'Bác sĩ'
+                                ? widget.copy[ConsumerTerm.socialDoctor]
                                 : _roleBadge == 'researcher'
-                                    ? 'Nhà nghiên cứu'
+                                    ? widget.copy[ConsumerTerm.socialResearcher]
                                     : _roleBadge,
                             style: theme.textTheme.labelSmall,
                           ),
@@ -1121,10 +1160,12 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                   ),
                 ],
                 const SizedBox(height: ClaraTokens.spaceMd),
-                ClaraInput(label: 'Tên hiển thị', controller: _displayName),
+                ClaraInput(
+                    label: widget.copy[ConsumerTerm.socialDisplayNameLabel],
+                    controller: _displayName),
                 const SizedBox(height: ClaraTokens.spaceSm),
                 ClaraInput(
-                    label: 'Giới thiệu (không chia sẻ thông tin y tế cá nhân)',
+                    label: widget.copy[ConsumerTerm.socialBioLabel],
                     controller: _bio,
                     maxLines: 3),
                 if (_error != null) ...[
@@ -1134,7 +1175,7 @@ class _ProfileSheetState extends State<_ProfileSheet> {
                 ],
                 const SizedBox(height: ClaraTokens.spaceMd),
                 ClaraButton.primary(
-                  label: 'Lưu hồ sơ',
+                  label: widget.copy[ConsumerTerm.socialSaveProfile],
                   icon: Icons.save_outlined,
                   loading: _saving,
                   onPressed: _saving ? null : _save,

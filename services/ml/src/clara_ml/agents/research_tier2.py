@@ -126,13 +126,14 @@ class TracedClaim:
     ``citation_ids`` is always non-empty and every id resolves into the Citation
     Registry: a claim with no supporting retrieved source is suppressed before a
     ``TracedClaim`` is ever built, so a fabricated citation can never be attached
-    (R11.5, R11.6). ``certainty`` carries the GRADE label when R8 is enabled.
+    (R11.5, R11.6). It deliberately carries no certainty or recommendation
+    strength: those are formal clinical-evidence judgements and cannot be
+    inferred from retrieved-source metadata alone.
     """
 
     claim: str
     citation_ids: list[str]
     verdict: str
-    certainty: str | None = None
 
     def as_payload(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -140,8 +141,6 @@ class TracedClaim:
             "citation_ids": list(self.citation_ids),
             "verdict": self.verdict,
         }
-        if self.certainty is not None:
-            payload["certainty"] = self.certainty
         return payload
 
 
@@ -181,7 +180,7 @@ def _build_tier2_optional_payload(
     pico_frame: PicoFrame | None = None,
     citation_registry: list[dict[str, Any]] | None = None,
     traced_claims: list[dict[str, Any]] | None = None,
-    grade: list[dict[str, Any]] | None = None,
+    evidence_signals: list[dict[str, Any]] | None = None,
     consensus: list[dict[str, Any]] | None = None,
     conflicting_evidence: list[dict[str, Any]] | None = None,
     subquestions: list[str] | None = None,
@@ -201,7 +200,7 @@ def _build_tier2_optional_payload(
       * ``pico`` (R7.3)            * ``consensus`` (R9.1)
       * ``citation_registry`` (R11.4)   * ``conflicting_evidence`` (R9.4)
       * ``traced_claims`` (R11.1)       * ``subquestions`` (R4.4)
-      * ``grade`` (R8.1)                * ``gap_fill_passes`` (R5.4)
+      * ``evidence_signals`` (source metadata only) * ``gap_fill_passes`` (R5.4)
       * ``output_profile`` (R14)        * ``disclaimer_present`` (R14.5/R14.6)
     """
 
@@ -212,8 +211,8 @@ def _build_tier2_optional_payload(
         optional["citation_registry"] = citation_registry
     if traced_claims is not None:
         optional["traced_claims"] = traced_claims
-    if grade is not None:
-        optional["grade"] = grade
+    if evidence_signals is not None:
+        optional["evidence_signals"] = evidence_signals
     if consensus is not None:
         optional["consensus"] = consensus
     if conflicting_evidence is not None:
@@ -683,6 +682,26 @@ def _normalize_answer_language(payload: dict[str, Any]) -> str:
     if raw_value in {"en", "english"}:
         return "en"
     return "vi"
+
+
+def _normalize_research_output_mode(payload: dict[str, Any], *, role: str | None) -> str | None:
+    """Resolve the closed presentation selector without generating text.
+
+    This is a defence-in-depth ML gate only. The API remains the release
+    authority and does the deterministic presentation composition *after* its
+    evidence-release gate. Normal users remain on plain language; an upstream
+    caller cannot use this field to alter retrieval, model selection, claims,
+    citations, or policy.
+    """
+
+    if not settings.research_output_modes_enabled:
+        return None
+    requested = str(payload.get("output_mode") or "plain_language").strip().lower()
+    if requested != "professional":
+        return "plain_language"
+    if str(role or "").strip().lower() not in {"researcher", "doctor", "admin"}:
+        return "plain_language"
+    return "professional"
 
 
 def _normalize_personal_mode(payload: dict[str, Any]) -> bool:
@@ -1165,213 +1184,94 @@ def _maybe_build_pico_frame(query: str) -> PicoFrame | None:
     return _extract_pico_frame(query)
 
 
-# --- GRADE-style evidence-certainty + recommendation-strength labeling (R8) -----------------
-# When ``RESEARCH_GRADE_ENABLED`` is on, each key claim surfaced by the verification matrix is
-# assigned a GRADE evidence-certainty label ∈ {high, moderate, low, very_low}, derived from the
-# Evidence Hierarchy (``source_type``) and ``trust_tier`` of its supporting sources (R8.1, R8.2).
-# Recommendation items additionally carry a recommendation strength ∈ {strong, conditional}
-# (R8.3). When the flag is off the orchestrator produces no labels (R8.5) and the legacy payload
-# shape is preserved (R20.2). The certainty mapping is monotonic in evidence strength: a stronger
-# Evidence-Hierarchy rank or higher trust_tier never yields a lower certainty (design Property 13).
-
-# Certainty labels ordered weakest → strongest; the order is authoritative for monotonicity.
-_GRADE_CERTAINTY_ORDER: tuple[str, ...] = ("very_low", "low", "moderate", "high")
-_GRADE_STRENGTH_STRONG = "strong"
-_GRADE_STRENGTH_CONDITIONAL = "conditional"
-
-# Evidence-Hierarchy ranks (1 = strongest … 5 = weakest) keyed by ASCII-folded source-type
-# markers. Mirrors the design "Trust tier / evidence hierarchy mapping" table: systematic review /
-# meta-analysis / guideline (1) > RCT (2) > cohort / observational (3) > case study/series (4) >
-# expert opinion / unranked web (5).
-_EVIDENCE_HIERARCHY_RANK_MARKERS: tuple[tuple[tuple[str, ...], int], ...] = (
-    (("systematic", "meta_analysis", "meta analysis", "guideline"), 1),
-    (("rct", "randomi", "controlled_trial", "clinical_trial", "trial"), 2),
-    (("cohort", "observational", "case_control", "registry", "longitudinal"), 3),
-    (("case_study", "case_series", "case_report", "case study", "case series"), 4),
-)
-_EVIDENCE_HIERARCHY_RANK_DEFAULT = 5  # expert opinion / unranked web
-
-# trust_tier (1 best … 4 worst) → strength contribution; unknown tier contributes 0.
-_GRADE_TRUST_TIER_SCORE: dict[int, int] = {1: 3, 2: 2, 3: 1, 4: 0}
+# --- Provenance-only evidence signals ----------------------------------------------------------
+# `trust_tier` and `source_type` are retrieval metadata, not a formal GRADE
+# assessment and not a recommendation-strength calculation.  The replacement
+# output is intentionally an auditable source-metadata record: it says whether
+# a claim resolved to a retrieved source, never turns that metadata into a
+# clinical certainty label, and never recommends a treatment.
+_EVIDENCE_SIGNAL_SCHEMA_VERSION = "research-evidence-signal-v1"
+_EVIDENCE_SIGNAL_DISPLAY_MODE = "professional_metadata_only"
 
 
-def _evidence_hierarchy_rank(source_type: str | None) -> int:
-    """Map a source-type label to its Evidence-Hierarchy rank (1 strongest … 5 weakest)."""
-
-    folded = _ascii_fold(source_type or "").replace("-", "_")
-    if not folded.strip():
-        return _EVIDENCE_HIERARCHY_RANK_DEFAULT
-    for markers, rank in _EVIDENCE_HIERARCHY_RANK_MARKERS:
-        if any(marker.replace("-", "_") in folded for marker in markers):
-            return rank
-    return _EVIDENCE_HIERARCHY_RANK_DEFAULT
-
-
-def _grade_certainty_label(trust_tier: int | None, hierarchy_rank: int) -> str:
-    """Derive a GRADE certainty label from trust_tier + Evidence-Hierarchy rank (R8.2).
-
-    The strength score rises as evidence gets stronger (lower ``trust_tier`` band, lower
-    ``hierarchy_rank``). Because the score is non-decreasing in evidence strength and the
-    label thresholds are monotonic, a stronger source never yields a lower certainty
-    (design Property 13).
-    """
-
-    tier_score = _GRADE_TRUST_TIER_SCORE.get(trust_tier, 0)
-    bounded_rank = max(1, min(5, int(hierarchy_rank)))
-    hierarchy_score = 5 - bounded_rank  # rank 1 → 4 … rank 5 → 0
-    combined = tier_score + hierarchy_score  # range 0..7
-    if combined >= 6:
-        return "high"
-    if combined >= 4:
-        return "moderate"
-    if combined >= 2:
-        return "low"
-    return "very_low"
-
-
-def _is_recommendation_claim(claim: str, claim_type: Any = None) -> bool:
-    """Heuristically detect whether a key claim is a recommendation item (R8.3).
-
-    Detection is accent-aware for Vietnamese (``nên``/``khuyến nghị``/``khuyến cáo``) and
-    keyword-based for English (``should``/``recommend``/``advise``) so a recommendation is
-    recognized in either output language without fabricating intent.
-    """
-
-    if str(claim_type or "").strip().lower() == "recommendation":
-        return True
-    lowered = str(claim or "").lower()
-    if any(marker in lowered for marker in ("nên", "khuyến nghị", "khuyến cáo")):
-        return True
-    folded = _ascii_fold(claim or "")
-    return any(marker in folded for marker in ("should", "recommend", "advis"))
-
-
-def _grade_supporting_profile(
+def _matching_evidence_rows(
     evidence_ref: str | None,
     retrieved_context: list[dict[str, Any]],
-) -> tuple[int | None, int | None, bool]:
-    """Resolve the strongest supporting source for a claim from its ``evidence_ref``.
-
-    Returns ``(best_trust_tier, best_hierarchy_rank, matched)`` where the "best" values are the
-    strongest (lowest) seen across the matched supporting rows. ``matched`` is ``False`` when the
-    reference cannot be resolved to any retrieved source.
-    """
+) -> list[dict[str, Any]]:
+    """Return only retrieved rows explicitly resolved by a claim evidence reference."""
 
     ref = _ascii_fold(evidence_ref or "").strip()
     if not ref:
-        return None, None, False
-    best_tier: int | None = None
-    best_rank: int | None = None
-    matched = False
+        return []
+    matches: list[dict[str, Any]] = []
+    seen: set[str] = set()
     for row in retrieved_context:
         if not isinstance(row, dict):
             continue
         identity = _ascii_fold(
             " ".join(str(row.get(key) or "") for key in ("id", "source", "title", "url"))
         ).strip()
-        if not identity:
-            continue
         row_id = _ascii_fold(str(row.get("id") or "")).strip()
-        if ref in identity or (row_id and row_id in ref):
-            matched = True
-            tier = _row_trust_tier(row)
-            if tier is not None:
-                best_tier = tier if best_tier is None else min(best_tier, tier)
-            rank = _evidence_hierarchy_rank(_row_source_type(row))
-            best_rank = rank if best_rank is None else min(best_rank, rank)
-    return best_tier, best_rank, matched
-
-
-def _grade_corpus_profile(
-    retrieved_context: list[dict[str, Any]],
-) -> tuple[int | None, int, bool]:
-    """Strongest supporting source across the whole retrieved corpus (grounded fallback).
-
-    Returns ``(best_trust_tier, best_hierarchy_rank, has_rows)``. Used when a supported claim's
-    ``evidence_ref`` cannot be resolved to a specific row but the claim is still grounded in the
-    retrieved evidence.
-    """
-
-    best_tier: int | None = None
-    best_rank: int | None = None
-    has_rows = False
-    for row in retrieved_context:
-        if not isinstance(row, dict):
+        if not identity or not (ref in identity or (row_id and row_id in ref)):
             continue
-        has_rows = True
-        tier = _row_trust_tier(row)
-        if tier is not None:
-            best_tier = tier if best_tier is None else min(best_tier, tier)
-        rank = _evidence_hierarchy_rank(_row_source_type(row))
-        best_rank = rank if best_rank is None else min(best_rank, rank)
-    return (
-        best_tier,
-        (best_rank if best_rank is not None else _EVIDENCE_HIERARCHY_RANK_DEFAULT),
-        has_rows,
-    )
+        stable_id = row_id or identity
+        if stable_id not in seen:
+            seen.add(stable_id)
+            matches.append(row)
+    return matches
 
 
-def _assign_grade_labels(
+def _source_metadata(row: dict[str, Any]) -> dict[str, Any]:
+    """Serialize bounded provenance fields without turning them into quality scores."""
+
+    source_id = str(row.get("id") or "").strip()
+    return {
+        "source_id": source_id or None,
+        "source_type": _row_source_type(row) or "unknown",
+        "trust_tier": _row_trust_tier(row),
+        "published_at": _row_effective_date(row),
+    }
+
+
+def _build_evidence_signals(
     verification_rows: list[dict[str, Any]],
     retrieved_context: list[dict[str, Any]],
     *,
     enabled: bool,
 ) -> list[dict[str, Any]] | None:
-    """Assign GRADE certainty + recommendation-strength labels to key claims (R8.1–R8.3, R8.5).
+    """Emit auditable source metadata for verification rows when explicitly enabled.
 
-    Returns ``None`` when GRADE labeling is disabled so the optional ``grade`` payload field is
-    omitted entirely and the legacy result shape is preserved (R8.5, R20.2). When enabled, each
-    key claim (verification-matrix row) gets a certainty label derived from the strongest
-    supporting source's Evidence-Hierarchy rank + trust_tier; claims with no resolvable supporting
-    source are labeled ``very_low``. Recommendation items additionally carry a recommendation
-    strength of ``strong`` (when certainty is high/moderate) or ``conditional`` otherwise (R8.3).
+    This is not a GRADE implementation. It does not emit `certainty`,
+    `recommendation_strength`, numeric scores, or source-ranking labels. A
+    claim without a direct evidence reference is marked unresolved rather than
+    borrowing the strongest source from the complete retrieved corpus.
     """
 
     if not enabled:
         return None
 
     context = [row for row in (retrieved_context or []) if isinstance(row, dict)]
-    corpus_tier, corpus_rank, corpus_has_rows = _grade_corpus_profile(context)
-
-    labels: list[dict[str, Any]] = []
+    signals: list[dict[str, Any]] = []
     for row in verification_rows or []:
         if not isinstance(row, dict):
             continue
         claim = _first_nonempty_text(row.get("claim"))
         if not claim:
             continue
-
-        status = str(row.get("support_status") or "").strip().lower()
         evidence_ref = _first_nonempty_text(row.get("evidence_ref")) or None
-        best_tier, best_rank, matched = _grade_supporting_profile(evidence_ref, context)
-
-        if matched:
-            has_support = True
-        elif status in {"supported", "contradicted"} and corpus_has_rows:
-            # Claim is grounded in the retrieved corpus but the per-claim reference did not
-            # resolve to a single row; fall back to the corpus's strongest source.
-            best_tier, best_rank, has_support = corpus_tier, corpus_rank, True
-        else:
-            best_tier, best_rank, has_support = None, _EVIDENCE_HIERARCHY_RANK_DEFAULT, False
-
-        if has_support:
-            certainty = _grade_certainty_label(
-                best_tier,
-                best_rank if best_rank is not None else _EVIDENCE_HIERARCHY_RANK_DEFAULT,
-            )
-        else:
-            certainty = "very_low"
-
-        entry: dict[str, Any] = {"claim": claim, "certainty": certainty}
-        if _is_recommendation_claim(claim, row.get("claim_type")):
-            entry["recommendation_strength"] = (
-                _GRADE_STRENGTH_STRONG
-                if certainty in {"high", "moderate"}
-                else _GRADE_STRENGTH_CONDITIONAL
-            )
-        labels.append(entry)
-
-    return labels
+        matched_rows = _matching_evidence_rows(evidence_ref, context)
+        signals.append(
+            {
+                "schema_version": _EVIDENCE_SIGNAL_SCHEMA_VERSION,
+                "display_mode": _EVIDENCE_SIGNAL_DISPLAY_MODE,
+                "claim": claim,
+                "verification_status": _normalize_claim_verdict(row.get("support_status")),
+                "source_binding": "direct" if matched_rows else "unresolved",
+                "source_metadata": [_source_metadata(item) for item in matched_rows],
+                "notice": "Source metadata only; not a GRADE certainty or recommendation strength.",
+            }
+        )
+    return signals
 
 
 # --- Evidence-agreement (Consensus) view + conflicting-evidence section (R9) ------------------
@@ -1576,7 +1476,6 @@ def _build_claim_trace(
     verification_rows: list[dict[str, Any]],
     citations: list[Citation],
     retrieved_context: list[dict[str, Any]],
-    grade_labels: list[dict[str, Any]] | None,
     enabled: bool,
 ) -> tuple[list[dict[str, Any]] | None, list[dict[str, Any]] | None]:
     """Build traced claims + the Citation Registry appendix (R11).
@@ -1596,6 +1495,14 @@ def _build_claim_trace(
 
     # Index backing retrieved-source rows by id so each citation can inherit its provenance even
     # when the recency/trust ranking flag (R6) is off and the Citation object carries no metadata.
+    #
+    # This is also a release boundary: a Citation Registry row is allowed only
+    # when its citation id resolves to an actual retrieved row.  Citations are
+    # normally built from this same context, but keeping the check here means a
+    # malformed or stale upstream envelope cannot turn an arbitrary source label
+    # into a traceable reference.  In particular, the local
+    # ``system_fallback`` notice is not evidence and must never become a
+    # citation-registry entry or anchor a claim.
     context_by_id: dict[str, dict[str, Any]] = {}
     for row in retrieved_context or []:
         if not isinstance(row, dict):
@@ -1610,8 +1517,10 @@ def _build_claim_trace(
         citation_id = citation.source_id
         if not citation_id or citation_id in valid_ids:
             continue
-        valid_ids.add(citation_id)
         row = context_by_id.get(_ascii_fold(citation_id).strip())
+        if row is None:
+            continue
+        valid_ids.add(citation_id)
         source_type = (_row_source_type(row) if row else None) or citation.source_type or "unknown"
         trust_tier = _row_trust_tier(row) if row else None
         if trust_tier is None:
@@ -1628,15 +1537,6 @@ def _build_claim_trace(
                 published_at=published_at,
             ).as_payload()
         )
-
-    certainty_by_claim: dict[str, str] = {}
-    for entry in grade_labels or []:
-        if not isinstance(entry, dict):
-            continue
-        claim_text = _first_nonempty_text(entry.get("claim"))
-        certainty = _first_nonempty_text(entry.get("certainty"))
-        if claim_text and certainty:
-            certainty_by_claim[claim_text] = certainty
 
     traced_claims: list[dict[str, Any]] = []
     for row in verification_rows or []:
@@ -1661,7 +1561,6 @@ def _build_claim_trace(
                 claim=claim,
                 citation_ids=citation_ids,
                 verdict="supported",
-                certainty=certainty_by_claim.get(claim),
             ).as_payload()
         )
 
@@ -2516,115 +2415,35 @@ def _sanitize_llm_query_plan_payload(
 def _resolve_runtime_llm_config(
     llm_runtime: dict[str, Any] | None,
 ) -> tuple[str, str, str, str]:
-    runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
-    if settings.llm_deepseek_only:
-        api_key = (
-            str(settings.deepseek_api_key or "").strip()
-            or str(runtime.get("api_key") or "").strip()
-        )
-        base_url = (
-            str(settings.deepseek_base_url or "").strip()
-            or str(runtime.get("base_url") or "").strip()
-        )
-        model = (
-            str(settings.deepseek_model or "").strip() or str(runtime.get("model") or "").strip()
-        )
-        return "deepseek", api_key, base_url, model
-    raw_provider = str(runtime.get("provider") or "").strip().lower()
-    if raw_provider:
-        provider = raw_provider
-    else:
-        provider = (
-            "hitechcloud_gpt53_codex_high"
-            if str(settings.primary_llm_api_key or "").strip()
-            else "deepseek"
-        )
-    if provider == "hitechcloud_gpt53_codex_high":
-        api_key = (
-            str(runtime.get("api_key") or "").strip()
-            or str(settings.primary_llm_api_key or "").strip()
-        )
-        base_url = (
-            str(runtime.get("base_url") or "").strip()
-            or str(settings.primary_llm_base_url or "").strip()
-            or "https://platform.hitechcloud.one/v1"
-        )
-        model = (
-            str(runtime.get("model") or "").strip()
-            or str(settings.primary_llm_model or "").strip()
-            or "gpt-5.3-codex-high"
-        )
-        if not api_key:
-            deepseek_api_key = (
-                str(settings.deepseek_api_key or "").strip()
-                or str(runtime.get("api_key") or "").strip()
-            )
-            deepseek_base_url = (
-                str(settings.deepseek_base_url or "").strip()
-                or str(runtime.get("base_url") or "").strip()
-            )
-            deepseek_model = (
-                str(settings.deepseek_model or "").strip()
-                or str(runtime.get("model") or "").strip()
-            )
-            if deepseek_api_key and deepseek_base_url and deepseek_model:
-                return "deepseek", deepseek_api_key, deepseek_base_url, deepseek_model
-        return provider, api_key, base_url, model
+    """Resolve deployment-owned DeepSeek settings, never request runtime data.
 
-    api_key = (
-        str(runtime.get("api_key") or "").strip() or str(settings.deepseek_api_key or "").strip()
-    )
-    base_url = (
-        str(runtime.get("base_url") or "").strip() or str(settings.deepseek_base_url or "").strip()
-    )
-    model = str(runtime.get("model") or "").strip() or str(settings.deepseek_model or "").strip()
-    return "deepseek", api_key, base_url, model
-
-
-def _has_request_runtime_override(llm_runtime: dict[str, Any] | None) -> bool:
-    runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
-    return bool(
-        str(runtime.get("api_key") or "").strip()
-        and str(runtime.get("base_url") or "").strip()
-        and str(runtime.get("model") or "").strip()
-    )
-
-
-class _RegistrySettingsOverlay:
-    """Read-only settings view for the legacy internal runtime seam.
-
-    Registry selection remains the only client-construction path. The overlay
-    preserves the already-resolved DeepSeek connection values and timeout
-    compatibility without mutating global settings or accepting a provider
-    selected by an end user.
+    The argument is retained only while internal callers migrate.  It is
+    intentionally ignored: Research requests, Control Tower records and old
+    queued jobs must not select a provider, endpoint, model, or credential.
+    Per-task Pro/Flash routing is resolved by ``build_task_client``.
     """
 
-    def __init__(self, base: Any, **overrides: object) -> None:
-        self._base = base
-        self._overrides = overrides
-
-    def __getattr__(self, name: str) -> Any:
-        return self._overrides.get(name, getattr(self._base, name))
-
-
-def _registry_settings_for_runtime(llm_runtime: dict[str, Any] | None) -> _RegistrySettingsOverlay:
-    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
-    return _RegistrySettingsOverlay(
-        settings,
-        deepseek_api_key=api_key,
-        deepseek_base_url=base_url,
-        deepseek_model=model,
+    del llm_runtime
+    return (
+        "deepseek",
+        str(settings.deepseek_api_key or "").strip(),
+        str(settings.deepseek_base_url or "").strip(),
+        str(settings.deepseek_model or "").strip(),
     )
 
 
-def _resolve_runtime_retry_policy(
-    llm_runtime: dict[str, Any] | None,
-) -> tuple[int, float]:
-    if _has_request_runtime_override(llm_runtime):
-        return 0, min(max(float(settings.deepseek_retry_backoff_seconds), 0.0), 0.25)
-    return (
-        max(0, int(settings.deepseek_retries_per_base)),
-        max(0.0, float(settings.deepseek_retry_backoff_seconds)),
+def _deployment_model_configured() -> bool:
+    """Whether the registry has the deployment-owned DeepSeek prerequisites.
+
+    Do not accept a request, queued-job, or control-plane-shaped runtime object
+    here.  ``build_task_client`` is the only model/provider selection boundary;
+    in particular it owns V4 Pro/Flash routing, rollback and timeouts.
+    """
+
+    return bool(
+        str(settings.deepseek_api_key or "").strip()
+        and str(settings.deepseek_base_url or "").strip()
+        and str(settings.deepseek_model or "").strip()
     )
 
 
@@ -2643,26 +2462,19 @@ def _pause_between_pipeline_parts(multiplier: float = 1.0) -> None:
 def _build_query_planner_client(
     *, llm_runtime: dict[str, Any] | None = None
 ) -> DeepSeekClient | None:
-    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
-    if not api_key or not base_url or not model:
+    # Compatibility-only argument: it cannot select a provider, endpoint,
+    # model, credential, retry policy or timeout.
+    del llm_runtime
+    if not _deployment_model_configured():
         return None
-    # Query planning controls every downstream biomedical connector. The former
-    # 10-second runtime-override ceiling caused otherwise healthy LLM requests
-    # to fall back to the heuristic plan, losing provider-specific Boolean
-    # queries and exact trial anchors. Keep the call bounded, but allow the same
-    # latency envelope observed for successful production reranking.
+    # Query planning controls every downstream biomedical connector. Keep the
+    # call bounded while retaining the deployment-owned V4 model selection.
     timeout_seconds = max(5.0, min(float(settings.deepseek_timeout_seconds), 30.0))
-    if _has_request_runtime_override(llm_runtime):
-        timeout_seconds = min(timeout_seconds, 25.0)
-    retries_per_base, _ = _resolve_runtime_retry_policy(llm_runtime)
-    # Every path, including the legacy internal runtime seam, constructs the
-    # client through the registry so model rollback and prompt contracts cannot
-    # be bypassed. The overlay supplies only already-resolved DeepSeek values.
     client, _ = build_task_client(
         ModelTask.RESEARCH_QUERY_PLANNING,
-        _registry_settings_for_runtime(llm_runtime),
+        settings,
         timeout_seconds=timeout_seconds,
-        retries_per_base=retries_per_base,
+        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
     )
     return client
 
@@ -2672,19 +2484,18 @@ def _build_reasoning_client(
     timeout_seconds: float | None = None,
     llm_runtime: dict[str, Any] | None = None,
 ) -> DeepSeekClient | None:
-    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
-    if not api_key or not base_url or not model:
+    # Compatibility-only argument.  Research reasoning has no request-selected
+    # provider/model path, even for historical queued payloads.
+    del llm_runtime
+    if not _deployment_model_configured():
         return None
     resolved_timeout = float(timeout_seconds or settings.deep_beta_reasoning_llm_timeout_seconds)
     resolved_timeout = max(2.0, min(resolved_timeout, 120.0))
-    if _has_request_runtime_override(llm_runtime):
-        resolved_timeout = min(resolved_timeout, 18.0)
-    retries_per_base, _ = _resolve_runtime_retry_policy(llm_runtime)
     client, _ = build_task_client(
         ModelTask.RESEARCH_REASONING,
-        _registry_settings_for_runtime(llm_runtime),
+        settings,
         timeout_seconds=resolved_timeout,
-        retries_per_base=retries_per_base,
+        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
     )
     return client
 
@@ -6883,7 +6694,13 @@ def _final_context_passed_llm_relevance_floor(
         if not isinstance(index_phase, dict):
             continue
         rerank = index_phase.get("rerank")
-        rerank = rerank.get("neural") if isinstance(rerank, dict) else None
+        rerank = (
+            rerank.get("evidence")
+            if isinstance(rerank, dict) and isinstance(rerank.get("evidence"), dict)
+            else rerank.get("neural")
+            if isinstance(rerank, dict)
+            else None
+        )
         if not isinstance(rerank, dict):
             continue
         if not bool(rerank.get("rerank_llm_used")):
@@ -9115,13 +8932,14 @@ def _build_deep_beta_reasoning_client(
     timeout_cap_seconds: float = 25.0,
     llm_runtime: dict[str, Any] | None = None,
 ) -> DeepSeekClient | None:
-    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
-    if not api_key or not base_url or not model:
+    # Compatibility-only argument; registry owns model selection and rollback.
+    del llm_runtime
+    if not _deployment_model_configured():
         return None
     timeout_seconds = max(2.0, min(float(settings.deepseek_timeout_seconds), timeout_cap_seconds))
     client, _ = build_task_client(
         ModelTask.RESEARCH_REASONING,
-        _registry_settings_for_runtime(llm_runtime),
+        settings,
         timeout_seconds=timeout_seconds,
         retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
     )
@@ -9372,6 +9190,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     trace_id, run_id = _resolve_trace_identifiers(payload)
     source_mode = str(payload.get("source_mode") or "").strip().lower() or None
     role_hint = str(payload.get("role") or "").strip().lower() or None
+    output_mode = _normalize_research_output_mode(payload, role=role_hint)
     uploaded_documents_raw = payload.get("uploaded_documents")
     uploaded_documents: list[dict[str, Any]] = (
         uploaded_documents_raw if isinstance(uploaded_documents_raw, list) else []
@@ -9379,19 +9198,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     rag_sources = payload.get("rag_sources")
     rag_flow_payload = payload.get("rag_flow")
     rag_flow = rag_flow_payload if isinstance(rag_flow_payload, dict) else {}
-    top_level_llm_runtime = payload.get("llm_runtime")
-    top_level_llm_runtime_dict = (
-        top_level_llm_runtime if isinstance(top_level_llm_runtime, dict) else {}
-    )
-    requested_llm_runtime = {
-        "provider": top_level_llm_runtime_dict.get("provider") or rag_flow.get("llm_provider"),
-        "api_key": top_level_llm_runtime_dict.get("api_key") or rag_flow.get("llm_api_key"),
-        "base_url": top_level_llm_runtime_dict.get("base_url") or rag_flow.get("llm_base_url"),
-        "model": top_level_llm_runtime_dict.get("model") or rag_flow.get("llm_model"),
-    }
-    llm_provider, resolved_llm_api_key, llm_base_url, llm_model = _resolve_runtime_llm_config(
-        requested_llm_runtime
-    )
+    # Runtime selection is deployment-owned.  Ignore legacy queue/config
+    # fields instead of allowing them to alter a governed task client.
+    llm_provider, resolved_llm_api_key, llm_base_url, llm_model = _resolve_runtime_llm_config(None)
     llm_runtime = {
         "provider": llm_provider,
         "api_key": resolved_llm_api_key,
@@ -9565,12 +9374,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 source_count=0,
                 note="LLM query planner refinement started.",
                 component="planner",
-                payload={
-                    "base_canonical_query": base_query_plan.get("canonical_query"),
-                    "model": llm_model or settings.deepseek_model,
-                    "provider": llm_provider,
-                    "base_url": llm_base_url,
-                },
+                payload={"model_profile": "governed_deepseek_v4"},
             )
         )
 
@@ -9588,9 +9392,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 note="LLM query planner refinement completed.",
                 component="planner",
                 payload={
-                    "model_used": llm_plan_status.get("model_used"),
-                    "reason": llm_reason,
-                    "canonical_query": llm_plan.get("canonical_query"),
+                    "model_profile": "governed_deepseek_v4",
+                    "reason_code": llm_reason,
                 },
             )
         )
@@ -11286,18 +11089,20 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
     verification_matrix_payload = {
         "version": str(verification_matrix_summary.get("version") or "claim-v2-nli"),
+        # Stable release-gate state. The API must not infer verifier presence
+        # from a citation or an empty row list: disabled/skipped verification
+        # is an explicit safe-abstention condition for factual research prose.
+        "state": verification_state,
         "rows": verification_matrix_rows,
         "summary": verification_matrix_summary,
         "contradiction_summary": contradiction_summary,
     }
-    # GRADE evidence-certainty + recommendation-strength labeling (R8). Derived from the
-    # verification-matrix key claims and the strongest supporting source's Evidence-Hierarchy
-    # rank + trust_tier. Returns None when the flag is off so the optional `grade` field is
-    # omitted and the legacy payload shape is preserved (R8.5, R20.2).
-    grade_labels = _assign_grade_labels(
+    # Provenance-only source metadata. This never emits GRADE certainty,
+    # recommendation strength, or source-derived clinical quality labels.
+    evidence_signals = _build_evidence_signals(
         verification_matrix_rows,
         effective_context,
-        enabled=settings.research_grade_enabled,
+        enabled=settings.research_evidence_signals_enabled,
     )
     # Evidence-agreement (Consensus) view + conflicting-evidence section (R9). Per-claim
     # support/contrast/neutral counts are derived from the per-source NLI verdict (reusing
@@ -11316,7 +11121,6 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         verification_rows=verification_matrix_rows,
         citations=citations,
         retrieved_context=effective_context,
-        grade_labels=grade_labels,
         enabled=settings.research_claim_trace_enabled,
     )
     if rule_verification_enabled:
@@ -11360,6 +11164,9 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 },
             )
         )
+    # A safety override may downgrade the state after the matrix was built.
+    # Keep the release-gate contract aligned with the final deterministic policy.
+    verification_matrix_payload["state"] = verification_state
     verification_matrix_payload["safety_override"] = safety_override
     if research_mode == "deep_beta":
         quality_gate_started = perf_counter()
@@ -11442,6 +11249,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "evidence_count": factcheck_result.evidence_count,
         "note": factcheck_result.note,
         "verification_matrix": {
+            "state": verification_state,
+            "version": verification_matrix_payload["version"],
             "summary": verification_matrix_summary,
             "contradiction_summary": contradiction_summary,
             "safety_override": safety_override,
@@ -12240,6 +12049,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 "emergency": route.emergency,
             },
             "answer_format": "markdown",
+            # Presentation mode is a closed, non-generative acknowledgement
+            # for the API release boundary. Omit it entirely while the dark
+            # flag is off, preserving the legacy result shape.
+            **({"output_mode": output_mode} if output_mode is not None else {}),
             "render_hints": {
                 "markdown": True,
                 "tables": True,
@@ -12311,7 +12124,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         # is preserved (R20.2). Downstream tasks pass their artifacts here as they land.
         **_build_tier2_optional_payload(
             pico_frame=pico_frame,
-            grade=grade_labels,
+            evidence_signals=evidence_signals,
             consensus=consensus_view,
             conflicting_evidence=(conflicting_evidence or None),
             citation_registry=citation_registry,
@@ -12323,6 +12136,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "answer": answer_markdown,
         "answer_markdown": answer_markdown,
         "answer_format": "markdown",
+        **({"output_mode": output_mode} if output_mode is not None else {}),
         "render_hints": {
             "markdown": True,
             "tables": True,

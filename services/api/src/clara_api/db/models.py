@@ -302,6 +302,43 @@ class CouncilOversightAction(Base):
     run: Mapped["CouncilRun | None"] = relationship("CouncilRun")
 
 
+class CouncilEvidenceAttachment(Base):
+    """Append-only attachment of a completed Research snapshot to a Council case.
+
+    The row deliberately retains only the API-built opaque evidence packet, not
+    citation text, URLs, titles, research prompts, or result prose.  The packet
+    is available solely to the independently gated Council shadow path and must
+    never influence the released deterministic Council conclusion.
+    """
+
+    __tablename__ = "council_evidence_attachments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey("council_cases.id", ondelete="CASCADE"),
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    research_job_id: Mapped[int] = mapped_column(
+        ForeignKey("research_jobs.id", ondelete="RESTRICT"),
+        index=True,
+    )
+    # This is a stable, non-clinical reference for UI/audit correlation.  It is
+    # intentionally duplicated from ResearchJob.job_id so the Council endpoint
+    # never serializes the research job's query or full snapshot to the client.
+    research_job_public_id: Mapped[str] = mapped_column(String(64), index=True)
+    retrieval_snapshot_id: Mapped[str] = mapped_column(String(128), index=True)
+    evidence_packet_json: Mapped[dict | list] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    case: Mapped["CouncilCase"] = relationship("CouncilCase")
+    user: Mapped[User] = relationship("User")
+    research_job: Mapped["ResearchJob"] = relationship("ResearchJob")
+
+
 class ResearchJob(Base):
     __tablename__ = "research_jobs"
 

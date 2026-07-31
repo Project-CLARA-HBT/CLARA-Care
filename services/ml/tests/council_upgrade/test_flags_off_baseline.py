@@ -20,10 +20,10 @@ from .harness import (
 
 # Pre-existing flags this upgrade must never redefine or perturb.
 _PREEXISTING_FLAGS = (
-    "council_neural_enabled",
-    "council_neural_shadow_mode",
-    "council_neural_medium_threshold",
-    "council_neural_high_threshold",
+    "council_rule_shadow_enabled",
+    "council_rule_shadow_mode",
+    "council_rule_shadow_medium_threshold",
+    "council_rule_shadow_high_threshold",
 )
 
 

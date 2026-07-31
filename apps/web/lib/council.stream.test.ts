@@ -44,8 +44,8 @@ describe("isCouncilStreamingEnabled", () => {
 describe("streamCouncilRun", () => {
   it("dispatches ordered stage events then the terminal result", async () => {
     const frames = [
-      'event: stage\ndata: {"sequence":1,"step":"intake_normalized","detail":"ok","metadata":{}}\n\n',
-      'event: stage\ndata: {"sequence":2,"step":"specialist_assessment","metadata":{"count":3}}\n\n',
+      'event: stage\ndata: {"sequence":1,"step":"intake_normalized"}\n\n',
+      'event: stage\ndata: {"sequence":2,"step":"specialist_assessment"}\n\n',
       'event: result\ndata: {"final_recommendation":"done","is_emergency":false}\n\n',
     ];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseStream(frames)));
@@ -67,7 +67,7 @@ describe("streamCouncilRun", () => {
     expect(errorMsg).toBeNull();
     expect(stages.map((s) => s.sequence)).toEqual([1, 2]);
     expect(stages[0].step).toBe("intake_normalized");
-    expect(stages[1].metadata).toEqual({ count: 3 });
+    expect(stages[1]).toEqual({ sequence: 2, step: "specialist_assessment" });
     expect(result).not.toBeNull();
     expect(
       (result as unknown as Record<string, unknown>).final_recommendation,

@@ -31,7 +31,62 @@ import '../../theme/components/clara_button.dart';
 import '../../theme/glass/glass_surface.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
-import '../../widgets/offline_banner.dart';
+
+/// Locale-specific chrome for the OCR entry flow. Extracted text, medicine
+/// names, dosage, and server errors remain authoritative and are never altered.
+class _CabinetOcrCopy {
+  const _CabinetOcrCopy._(this._english);
+
+  factory _CabinetOcrCopy.forContext(BuildContext context) {
+    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    return _CabinetOcrCopy._(language == 'en');
+  }
+
+  final bool _english;
+
+  String get offlineMutationBlocked => _english
+      ? 'You are offline. This change is paused and your input is kept. Try again when connected.'
+      : 'Không có kết nối mạng. Thao tác đã được tạm dừng — dữ liệu bạn nhập vẫn được giữ lại. Vui lòng thử lại khi có mạng.';
+  String get scanFailed => _english
+      ? 'We could not scan the medicine label. Try again.'
+      : 'Không thể quét nhãn thuốc. Vui lòng thử lại.';
+  String get importFailed => _english
+      ? 'We could not add the medicine to your cabinet. Try again.'
+      : 'Không thể thêm thuốc vào tủ. Vui lòng thử lại.';
+  String imported(int count) => _english
+      ? 'Added $count medicine${count == 1 ? '' : 's'} to your cabinet.'
+      : 'Đã thêm $count thuốc vào tủ thuốc.';
+  String get errorPrefix => _english ? 'Error' : 'Lỗi';
+  String get title => _english ? 'Scan medicine label' : 'Quét nhãn thuốc';
+  String get close => _english ? 'Close' : 'Đóng';
+  String get captureDescription => _english
+      ? 'Take or choose a medicine-label photo so CLARA can identify the medicine name and dose. You confirm the information before it is added to your cabinet.'
+      : 'Chụp hoặc chọn ảnh nhãn thuốc để CLARA nhận dạng tên thuốc và liều lượng. Bạn sẽ xác nhận thông tin trước khi thêm vào tủ thuốc.';
+  String get takePhoto => _english ? 'Take medicine-label photo' : 'Chụp ảnh nhãn thuốc';
+  String get choosePhoto => _english ? 'Choose from library' : 'Chọn từ thư viện';
+  String get scanning => _english ? 'Reading medicine label…' : 'Đang nhận dạng nhãn thuốc…';
+  String get reviewDescription => _english
+      ? 'Check the identified information, select medicines to add, then choose “Add to cabinet”. Low-confidence items need your manual confirmation before they are added.'
+      : 'Kiểm tra thông tin nhận dạng, tick chọn các thuốc muốn thêm rồi nhấn “Thêm vào tủ thuốc”. Những mục chưa đọc rõ từ nguồn cần bạn xác nhận thủ công trước khi thêm.';
+  String get addToCabinet => _english ? 'Add to cabinet' : 'Thêm vào tủ thuốc';
+  String get retake => _english ? 'Take another photo' : 'Chụp lại';
+  String get noDetection => _english
+      ? 'No medicine information was found in the photo. Try a clearer photo.'
+      : 'Không nhận được thông tin thuốc từ ảnh. Thử chụp lại rõ hơn.';
+  String selectMedicine(String name) =>
+      _english ? 'Select $name' : 'Chọn $name';
+  String get unknownMedicine => _english ? 'Medicine name unavailable' : 'Không rõ tên thuốc';
+  String dosage(String value) => _english ? 'Dose: $value' : 'Liều lượng: $value';
+  String brand(String value) => _english ? 'Brand: $value' : 'Tên thương mại: $value';
+  String manufacturer(String value) =>
+      _english ? 'Manufacturer: $value' : 'Nhà sản xuất: $value';
+  String confidence(bool high, int percent) => _english
+      ? (high ? 'Higher-confidence detection ($percent%)' : 'Manual confirmation needed ($percent%)')
+      : (high ? 'Độ tin cậy cao ($percent%)' : 'Cần xác nhận ($percent%)');
+  String get confidencePrefix => _english ? 'Detection confidence' : 'Độ tin cậy';
+  String get statusPrefix => _english ? 'Status' : 'Trạng thái';
+  String get extractedText => _english ? 'Recognized text' : 'Văn bản nhận dạng';
+}
 
 /// The default confidence threshold used to classify a detection when the
 /// server envelope omits `confirm_gate.threshold`.
@@ -110,19 +165,20 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   bool _showExtractedText = false;
 
   bool get _isOnline => widget.connectivity.currentValue;
+  _CabinetOcrCopy get _copy => _CabinetOcrCopy.forContext(context);
 
   // --- Capture (R4.1) -------------------------------------------------------
 
   Future<void> _capture(ImageSource source) async {
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy.offlineMutationBlocked);
       return;
     }
     final XFile? file = await _picker.pickImage(source: source);
     if (file == null) return; // User cancelled — no state change.
     // Re-check connectivity after the (async) picker closes.
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy.offlineMutationBlocked);
       return;
     }
     if (!mounted) return;
@@ -144,7 +200,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Không thể quét nhãn thuốc. Vui lòng thử lại.');
+      setState(() => _error = _copy.scanFailed);
     } finally {
       if (mounted) {
         setState(() => _scanning = false);
@@ -202,7 +258,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
 
   Future<void> _import() async {
     if (!_isOnline) {
-      _showSnack(kOfflineMutationBlockedMessage);
+      _showSnack(_copy.offlineMutationBlocked);
       return;
     }
     final selected =
@@ -231,7 +287,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
       if (!mounted) return;
       final inserted =
           (_asDouble(result['inserted']) ?? selected.length).round();
-      _showSnack('Đã thêm $inserted thuốc vào tủ thuốc.');
+      _showSnack(_copy.imported(inserted));
       Navigator.of(context).pop(true);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -243,7 +299,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
       if (!mounted) return;
       setState(() {
         _importing = false;
-        _error = 'Không thể thêm thuốc vào tủ. Vui lòng thử lại.';
+        _error = _copy.importFailed;
       });
     }
   }
@@ -258,6 +314,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _CabinetOcrCopy.forContext(context);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: viewInsets),
@@ -279,7 +336,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
                   StatusByText(
                     label: _error!,
                     level: A11yStatusLevel.danger,
-                    semanticsPrefix: 'Lỗi',
+                    semanticsPrefix: copy.errorPrefix,
                   ),
                   const SizedBox(height: ClaraTokens.spaceMd),
                 ],
@@ -297,16 +354,17 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
 
   Widget _header(BuildContext context) {
     final theme = Theme.of(context);
+    final copy = _CabinetOcrCopy.forContext(context);
     return Row(
       children: [
         Expanded(
           child: Text(
-            'Quét nhãn thuốc',
+            copy.title,
             style: theme.textTheme.titleLarge,
           ),
         ),
         IconButton(
-          tooltip: 'Đóng',
+          tooltip: copy.close,
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.close),
         ),
@@ -317,31 +375,31 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   // --- Phase 1: capture -----------------------------------------------------
 
   Widget _buildCapture(BuildContext context) {
+    final copy = _CabinetOcrCopy.forContext(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Chụp hoặc chọn ảnh nhãn thuốc để CLARA nhận dạng tên thuốc và liều '
-          'lượng. Bạn sẽ xác nhận thông tin trước khi thêm vào tủ thuốc.',
+          copy.captureDescription,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: ClaraTokens.spaceLg),
         ClaraButton.primary(
-          label: 'Chụp ảnh nhãn thuốc',
+          label: copy.takePhoto,
           icon: Icons.photo_camera_outlined,
           loading: _scanning,
           onPressed: _scanning ? null : () => _capture(ImageSource.camera),
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
         ClaraButton.secondary(
-          label: 'Chọn từ thư viện',
+          label: copy.choosePhoto,
           icon: Icons.photo_library_outlined,
           onPressed: _scanning ? null : () => _capture(ImageSource.gallery),
         ),
         if (_scanning) ...[
           const SizedBox(height: ClaraTokens.spaceMd),
           Text(
-            'Đang nhận dạng nhãn thuốc…',
+            copy.scanning,
             style: Theme.of(context).textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),
@@ -353,6 +411,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   // --- Phase 2: review + Phase 3: import ------------------------------------
 
   Widget _buildReview(BuildContext context) {
+    final copy = _CabinetOcrCopy.forContext(context);
     if (_detections.isEmpty) {
       return _buildEmptyReview(context);
     }
@@ -360,9 +419,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Kiểm tra thông tin nhận dạng, tick chọn các thuốc muốn thêm rồi nhấn '
-          '"Thêm vào tủ thuốc". Các mục có độ tin cậy thấp cần bạn xác nhận thủ '
-          'công trước khi thêm.',
+          copy.reviewDescription,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
@@ -376,14 +433,14 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
         ],
         const SizedBox(height: ClaraTokens.spaceLg),
         ClaraButton.primary(
-          label: 'Thêm vào tủ thuốc',
+          label: copy.addToCabinet,
           icon: Icons.add,
           loading: _importing,
           onPressed: _canImport ? _import : null,
         ),
         const SizedBox(height: ClaraTokens.spaceSm),
         ClaraButton.secondary(
-          label: 'Chụp lại',
+          label: copy.retake,
           icon: Icons.refresh,
           onPressed: _importing
               ? null
@@ -399,17 +456,18 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   }
 
   Widget _buildEmptyReview(BuildContext context) {
+    final copy = _CabinetOcrCopy.forContext(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         StatusByText(
-          label: 'Không nhận được thông tin thuốc từ ảnh. Thử chụp lại rõ hơn.',
+          label: copy.noDetection,
           level: A11yStatusLevel.warning,
-          semanticsPrefix: 'Trạng thái',
+          semanticsPrefix: copy.statusPrefix,
         ),
         const SizedBox(height: ClaraTokens.spaceLg),
         ClaraButton.primary(
-          label: 'Chụp lại',
+          label: copy.retake,
           icon: Icons.photo_camera_outlined,
           onPressed: () => setState(() {
             _phase = _OcrPhase.capture;
@@ -425,13 +483,14 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
     _ReviewDetection detection,
   ) {
     final theme = Theme.of(context);
+    final copy = _CabinetOcrCopy.forContext(context);
     final highConfidence = detection.confidence >= _threshold;
     final details = <String>[
-      if (detection.dosage.isNotEmpty) 'Liều lượng: ${detection.dosage}',
+      if (detection.dosage.isNotEmpty) copy.dosage(detection.dosage),
       if (detection.brandName.isNotEmpty)
-        'Tên thương mại: ${detection.brandName}',
+        copy.brand(detection.brandName),
       if (detection.manufacturer.isNotEmpty)
-        'Nhà sản xuất: ${detection.manufacturer}',
+        copy.manufacturer(detection.manufacturer),
     ];
     final percent = (detection.confidence * 100).round();
 
@@ -452,7 +511,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
             children: [
               Semantics(
                 checked: detection.checked,
-                label: 'Chọn ${detection.drugName}',
+                label: copy.selectMedicine(detection.drugName),
                 child: Checkbox(
                   value: detection.checked,
                   onChanged: (value) =>
@@ -466,7 +525,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
                   children: [
                     Text(
                       detection.drugName.isEmpty
-                          ? 'Không rõ tên thuốc'
+                          ? copy.unknownMedicine
                           : detection.drugName,
                       style: theme.textTheme.titleMedium,
                     ),
@@ -476,13 +535,11 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
                     ],
                     const SizedBox(height: ClaraTokens.spaceSm),
                     StatusByText(
-                      label: highConfidence
-                          ? 'Độ tin cậy cao ($percent%)'
-                          : 'Cần xác nhận ($percent%)',
+                      label: copy.confidence(highConfidence, percent),
                       level: highConfidence
                           ? A11yStatusLevel.success
                           : A11yStatusLevel.warning,
-                      semanticsPrefix: 'Độ tin cậy',
+                      semanticsPrefix: copy.confidencePrefix,
                     ),
                   ],
                 ),
@@ -495,6 +552,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   }
 
   Widget _buildExtractedText(BuildContext context) {
+    final copy = _CabinetOcrCopy.forContext(context);
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
@@ -503,7 +561,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
         initiallyExpanded: _showExtractedText,
         onExpansionChanged: (value) =>
             setState(() => _showExtractedText = value),
-        title: const Text('Văn bản nhận dạng'),
+        title: Text(copy.extractedText),
         children: [
           SelectableText(
             _extractedText,

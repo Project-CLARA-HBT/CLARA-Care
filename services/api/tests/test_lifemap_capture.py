@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -201,6 +202,78 @@ def test_capture_review_is_resumable_profile_scoped_and_idempotent(monkeypatch) 
                 LifeMapCaptureReviewAction.candidate_id.is_not(None)
             )
         ).scalar_one() == 1
+
+
+def test_text_capture_uses_only_exact_llm_spans_as_review_drafts(monkeypatch) -> None:
+    headers, _profile_id = _account("text-drafts")
+    settings = get_settings()
+    monkeypatch.setattr(settings, "lifemap_capture_enabled", True)
+    monkeypatch.setattr(settings, "lifemap_text_draft_extraction_enabled", True)
+    source_text = "Tối qua tôi ngủ khoảng 7 giờ và sáng nay thấy chóng mặt."
+    checksum = hashlib.sha256(source_text.encode()).hexdigest()
+    start = source_text.index("Tối qua")
+    end = source_text.index("và") - 1
+
+    def extracted(path: str, payload: dict, **_kwargs: object) -> dict:
+        assert path == "/v1/lifemap/capture/extract-text-drafts"
+        assert payload["source_text_checksum"] == checksum
+        return {
+            "validated_boundary": "lifemap-text-draft-v1",
+            "source_text_checksum": checksum,
+            "draft_only": True,
+            "extractor_version": "deepseek-v4-flash.task-route.v1",
+            "candidates": [{"category": "sleep", "start": start, "end": end}],
+        }
+
+    monkeypatch.setattr(capture_endpoint, "proxy_ml_post", extracted)
+    created = client.post(
+        "/api/v1/lifemap/capture/sessions",
+        headers=headers,
+        json={"text": source_text, "locale": "vi"},
+    )
+    assert created.status_code == 201, created.text
+    draft = created.json()["candidates"]
+    assert len(draft) == 1
+    assert draft[0]["type"] == "text_draft"
+    assert draft[0]["value"] == {
+        "text": source_text[start:end],
+        "category": "sleep",
+    }
+    assert draft[0]["confidence"] is None
+    assert draft[0]["source_span"]["text_checksum"] == checksum
+
+    session = client.get(
+        f"/api/v1/lifemap/capture/sessions/{created.json()['id']}",
+        headers=headers,
+    )
+    assert session.status_code == 200
+    source = next(
+        candidate
+        for candidate in session.json()["candidates"]
+        if candidate["type"] == "text_source"
+    )
+    assert source["status"] == "source"
+    assert client.post(
+        f"/api/v1/lifemap/capture/candidates/{source['id']}/review",
+        headers={**headers, "Idempotency-Key": f"source-{uuid4().hex}"},
+        json={"action": "confirm"},
+    ).status_code == 409
+
+    confirmed = client.post(
+        f"/api/v1/lifemap/capture/candidates/{draft[0]['id']}/review",
+        headers={**headers, "Idempotency-Key": f"draft-{uuid4().hex}"},
+        json={"action": "confirm"},
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    with SessionLocal() as db:
+        event = db.execute(
+            select(LifeMapEvent).where(
+                LifeMapEvent.public_id == confirmed.json()["event_id"]
+            )
+        ).scalar_one()
+        assert event.event_type == "text"
+        assert event.payload_json["text"] == source_text[start:end]
+        assert event.provenance_json["confirmation"] == "explicit_candidate_review"
 
 
 def test_capture_artifact_access_is_short_lived_scoped_and_deleted_on_abandon(

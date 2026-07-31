@@ -14,8 +14,10 @@
 // Vietnamese-first and PII-free.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
@@ -24,6 +26,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
+import '../language_controller.dart';
 import 'visit_detail_surface.dart';
 
 String _str(Object? value) => value == null ? '' : value.toString();
@@ -85,10 +88,21 @@ class VisitsSurface extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.languageController,
+    this.useLifeMapDraft = false,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+
+  /// Optional app-level language state. Direct embedding remains
+  /// Vietnamese-first when it is not supplied.
+  final LanguageController? languageController;
+
+  /// When the server advertises `lifemap_vietnamese_drafts`, this surface is a
+  /// read-only/copy-only LifeMap draft flow.  When false it preserves the
+  /// established owner-controlled Visit lifecycle exactly.
+  final bool useLifeMapDraft;
 
   @override
   State<VisitsSurface> createState() => _VisitsSurfaceState();
@@ -109,16 +123,26 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
 
+  // --- Read-only LifeMap visit draft state ---------------------------------
+  final TextEditingController _draftGoalController = TextEditingController();
+  bool _creatingDraft = false;
+  LifeMapVisitPreparationDraft? _lifeMapDraft;
+
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.useLifeMapDraft) {
+      _loading = false;
+    } else {
+      _load();
+    }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _reasonController.dispose();
+    _draftGoalController.dispose();
     super.dispose();
   }
 
@@ -128,12 +152,16 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     return token;
   }
 
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
+
   Future<void> _load() async {
     final token = _token;
     if (token == null) {
       setState(() {
         _loading = false;
-        _error = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _error = _copy[ConsumerTerm.sessionExpired];
       });
       return;
     }
@@ -165,8 +193,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() =>
-          _error = 'Không thể tải danh sách buổi khám. Vui lòng thử lại.');
+      setState(() => _error = _copy[ConsumerTerm.visitsLoadFailed]);
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -179,7 +206,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     if (token == null || _creating) return;
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      _showSnack('Vui lòng nhập tên buổi khám.');
+      _showSnack(_copy[ConsumerTerm.visitsNameRequired]);
       return;
     }
     setState(() => _creating = true);
@@ -202,12 +229,81 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     } on ApiException catch (error) {
       _showSnack(error.message);
     } catch (_) {
-      _showSnack('Không thể tạo buổi khám. Vui lòng thử lại.');
+      _showSnack(_copy[ConsumerTerm.visitsCreateFailed]);
     } finally {
       if (mounted) {
         setState(() => _creating = false);
       }
     }
+  }
+
+  /// Calls only the server's read-only LifeMap draft endpoint.  The returned
+  /// object is retained in widget state for review/copy; it is never written
+  /// to a Visit, task, event, or confirmed health-record field.
+  Future<void> _createLifeMapDraft() async {
+    final token = _token;
+    if (token == null || _creatingDraft) return;
+    setState(() {
+      _creatingDraft = true;
+      _error = null;
+      _needsOnboarding = false;
+    });
+    try {
+      final draft = await widget.apiClient.createLifeMapVisitPreparationDraft(
+        accessToken: token,
+        request: LifeMapVisitPreparationDraftRequest(
+          query: _draftGoalController.text.trim(),
+          locale: _copy.locale,
+        ),
+      );
+      if (!mounted) return;
+      // This is a defence in depth check. A server response without the two
+      // safety declarations is not rendered as a draft even if a future API
+      // regression accidentally changes the endpoint response shape.
+      if (draft.status != 'emergency_escalation' &&
+          (!draft.draftOnly || !draft.requiresUserReview)) {
+        setState(() => _error = _copy[ConsumerTerm.visitDraftCreateFailed]);
+        return;
+      }
+      setState(() => _lifeMapDraft = draft);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      if (error.statusCode == 409) {
+        setState(() => _needsOnboarding = true);
+        return;
+      }
+      setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = _copy[ConsumerTerm.visitDraftCreateFailed]);
+      }
+    } finally {
+      if (mounted) setState(() => _creatingDraft = false);
+    }
+  }
+
+  String _draftForClipboard(LifeMapVisitPreparationDraft draft) {
+    final summary = draft.summary;
+    final lines = <String>[
+      draft.title,
+      if (summary?.importantNow.trim().isNotEmpty == true)
+        summary!.importantNow.trim(),
+      if (summary?.nextStep.trim().isNotEmpty == true) summary!.nextStep.trim(),
+      if (summary?.urgentHelp.trim().isNotEmpty == true)
+        summary!.urgentHelp.trim(),
+      ...draft.questionsToConsider
+          .map((question) => question.text.trim())
+          .where((text) => text.isNotEmpty)
+          .map((text) => '• $text'),
+    ];
+    return lines.where((line) => line.trim().isNotEmpty).join('\n\n');
+  }
+
+  Future<void> _copyLifeMapDraft() async {
+    final draft = _lifeMapDraft;
+    if (draft == null) return;
+    await Clipboard.setData(ClipboardData(text: _draftForClipboard(draft)));
+    if (mounted) _showSnack(_copy[ConsumerTerm.visitDraftCopied]);
   }
 
   void _showSnack(String message) {
@@ -216,26 +312,57 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Formats an ISO date as `dd/MM/yyyy`, or a friendly fallback.
+  /// Formats an ISO date with the active UI locale, or a friendly fallback.
   String _formatScheduled(String? scheduledAt) {
     final trimmed = scheduledAt?.trim() ?? '';
-    if (trimmed.isEmpty) return 'Chưa đặt lịch';
+    if (trimmed.isEmpty) return _copy[ConsumerTerm.visitsNoSchedule];
     final parsed = DateTime.tryParse(trimmed);
     if (parsed == null) return trimmed;
     final local = parsed.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
-    return 'Lịch: ${two(local.day)}/${two(local.month)}/${local.year}';
+    final date = _copy.locale == 'en'
+        ? '${_englishMonth(local.month)} ${local.day}, ${local.year}'
+        : '${two(local.day)}/${two(local.month)}/${local.year}';
+    return _copy.format(ConsumerTerm.visitsScheduledDate, {'date': date});
   }
+
+  String _englishMonth(int month) => const <String>[
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ][month - 1];
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController != null) {
+      return AnimatedBuilder(
+        animation: languageController,
+        builder: (context, _) => _buildRefreshableBody(context),
+      );
+    }
+    return _buildRefreshableBody(context);
+  }
+
+  Widget _buildRefreshableBody(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh:
+          widget.useLifeMapDraft ? _createLifeMapDraft : _load,
       child: _buildBody(context),
     );
   }
 
   Widget _buildBody(BuildContext context) {
+    if (widget.useLifeMapDraft) return _buildLifeMapDraftBody(context);
     if (_loading && _visits.isEmpty && !_needsOnboarding) {
       return ListView(
         children: const [
@@ -259,6 +386,295 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     return _buildLoaded(context);
   }
 
+  Widget _buildLifeMapDraftBody(BuildContext context) {
+    if (_needsOnboarding) return _buildOnboardingPrompt(context);
+    if (_error != null) {
+      return ListView(
+        children: [
+          const SizedBox(height: ClaraTokens.spaceXl),
+          ErrorRetryView(message: _error!, onRetry: _createLifeMapDraft),
+        ],
+      );
+    }
+
+    final theme = Theme.of(context);
+    final draft = _lifeMapDraft;
+    final summary = draft?.summary;
+    final children = <Widget>[
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: SectionHeader(
+          title: _copy[ConsumerTerm.visitDraftTitle],
+          emphasize: true,
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceSm),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: Text(
+          _copy[ConsumerTerm.visitDraftDescription],
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceMd),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: ClaraCard.static_(child: _buildLifeMapDraftForm()),
+      ),
+    ];
+
+    if (draft != null) {
+      children
+        ..add(const SizedBox(height: ClaraTokens.spaceMd))
+        ..add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: _buildDraftReviewNotice(theme),
+          ),
+        );
+      if (draft.status == 'emergency_escalation') {
+        children
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftUrgentHelp],
+                body: draft.emergencyAnswer ?? '',
+                icon: Icons.emergency_outlined,
+              ),
+            ),
+          );
+      } else if (summary != null) {
+        children
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftImportantNow],
+                body: summary.importantNow,
+                icon: Icons.priority_high_outlined,
+              ),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSources(context, summary),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftListSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftUncertainty],
+                values: summary.uncertainty,
+                empty: _copy[ConsumerTerm.visitDraftNoUncertainty],
+                icon: Icons.help_outline,
+              ),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftNextStep],
+                body: summary.nextStep,
+                icon: Icons.arrow_forward_outlined,
+              ),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftUrgentHelp],
+                body: summary.urgentHelp,
+                icon: Icons.emergency_outlined,
+              ),
+            ),
+          )
+          ..add(const SizedBox(height: ClaraTokens.spaceMd))
+          ..add(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+              child: _buildDraftListSection(
+                context,
+                title: _copy[ConsumerTerm.visitDraftQuestions],
+                values: draft.questionsToConsider
+                    .map((question) => question.text)
+                    .toList(growable: false),
+                empty: _copy[ConsumerTerm.visitDraftNoQuestions],
+                icon: Icons.question_answer_outlined,
+              ),
+            ),
+          );
+      }
+      children
+        ..add(const SizedBox(height: ClaraTokens.spaceMd))
+        ..add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: ClaraButton.secondary(
+                label: _copy[ConsumerTerm.visitDraftCopy],
+                icon: Icons.copy_outlined,
+                onPressed: _copyLifeMapDraft,
+              ),
+            ),
+          ),
+        );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(
+        top: ClaraTokens.spaceMd,
+        bottom: ClaraTokens.spaceXl,
+      ),
+      children: children,
+    );
+  }
+
+  Widget _buildLifeMapDraftForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _draftGoalController,
+          minLines: 2,
+          maxLines: 4,
+          decoration: InputDecoration(
+            labelText: _copy[ConsumerTerm.visitDraftGoalLabel],
+            hintText: _copy[ConsumerTerm.visitDraftGoalHint],
+          ),
+        ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ClaraButton.primary(
+            label: _copy[ConsumerTerm.visitDraftCreate],
+            icon: Icons.auto_awesome_outlined,
+            loading: _creatingDraft,
+            onPressed: _createLifeMapDraft,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDraftReviewNotice(ThemeData theme) {
+    // A draft arrives after an asynchronous request. Mark the first safety
+    // notice as a live region so a screen-reader user is told that there is
+    // new review-only content without turning the draft into a confirmation.
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: ClaraCard.static_(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, color: theme.colorScheme.primary),
+            const SizedBox(width: ClaraTokens.spaceSm),
+            Expanded(
+              child: Text(
+                _copy[ConsumerTerm.visitDraftReviewNotice],
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDraftSection(
+    BuildContext context, {
+    required String title,
+    required String body,
+    required IconData icon,
+  }) {
+    final theme = Theme.of(context);
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: ClaraTokens.spaceSm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          if (body.trim().isNotEmpty) ...[
+            const SizedBox(height: ClaraTokens.spaceSm),
+            Text(body, style: theme.textTheme.bodyMedium),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDraftSources(
+    BuildContext context,
+    LifeMapVisitPreparationSummary summary,
+  ) {
+    final sources = summary.basedOn;
+    if (sources.isEmpty) {
+      return _buildDraftListSection(
+        context,
+        title: _copy[ConsumerTerm.visitDraftSources],
+        values: const <String>[],
+        empty: _copy[ConsumerTerm.visitDraftNoSources],
+        icon: Icons.source_outlined,
+      );
+    }
+    return _buildDraftListSection(
+      context,
+      title: _copy[ConsumerTerm.visitDraftSources],
+      values: sources.map((source) => source.text).toList(growable: false),
+      empty: _copy[ConsumerTerm.visitDraftNoSources],
+      icon: Icons.source_outlined,
+    );
+  }
+
+  Widget _buildDraftListSection(
+    BuildContext context, {
+    required String title,
+    required List<String> values,
+    required String empty,
+    required IconData icon,
+  }) {
+    final filtered = values
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    final body = filtered.isEmpty
+        ? empty
+        : filtered.map((value) => '• $value').join('\n\n');
+    return _buildDraftSection(context, title: title, body: body, icon: icon);
+  }
+
   Widget _buildOnboardingPrompt(BuildContext context) {
     final theme = Theme.of(context);
     return ListView(
@@ -275,15 +691,13 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
               ),
               const SizedBox(height: ClaraTokens.spaceMd),
               Text(
-                'Hãy tạo hồ sơ sức khỏe trước',
+                _copy[ConsumerTerm.visitsProfileRequiredTitle],
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
               Text(
-                'Để chuẩn bị cho buổi khám, bạn cần tạo hồ sơ sức khỏe trước. '
-                'Đây là bước giúp bạn trao đổi với bác sĩ hiệu quả hơn, không '
-                'phải chẩn đoán.',
+                _copy[ConsumerTerm.visitsProfileRequiredDescription],
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -301,11 +715,16 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
         padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
         child: Row(
           children: [
-            const Expanded(
-              child: SectionHeader(title: 'Buổi khám', emphasize: true),
+            Expanded(
+              child: SectionHeader(
+                title: _copy[ConsumerTerm.visitsTitle],
+                emphasize: true,
+              ),
             ),
             ClaraButton.secondary(
-              label: _formOpen ? 'Đóng' : 'Tạo buổi khám',
+              label: _formOpen
+                  ? _copy[ConsumerTerm.visitsClose]
+                  : _copy[ConsumerTerm.visitsCreate],
               icon: _formOpen ? Icons.close : Icons.add,
               onPressed: () => setState(() => _formOpen = !_formOpen),
             ),
@@ -333,12 +752,10 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
       children.add(
         ClaraEmptyState(
           icon: Icons.event_note_outlined,
-          title: 'Chưa có buổi khám nào',
-          message:
-              'Tạo một buổi khám để chuẩn bị nội dung cần trao đổi với bác sĩ. '
-              'CLARA giúp bạn sắp xếp mối quan tâm, không phải chẩn đoán.',
+          title: _copy[ConsumerTerm.visitsEmptyTitle],
+          message: _copy[ConsumerTerm.visitsEmptyDescription],
           action: ClaraButton.primary(
-            label: 'Tạo buổi khám',
+            label: _copy[ConsumerTerm.visitsCreate],
             icon: Icons.add,
             onPressed: () => setState(() => _formOpen = true),
           ),
@@ -382,7 +799,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
       child: ClaraCard.static_(
-        semanticLabel: 'Lưu ý về buổi khám',
+        semanticLabel: _copy[ConsumerTerm.visitsSafetyLabel],
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -394,8 +811,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
             const SizedBox(width: ClaraTokens.spaceSm),
             Expanded(
               child: Text(
-                'Buổi khám giúp bạn chuẩn bị trước khi gặp bác sĩ. Đây không '
-                'phải là tư vấn hay chẩn đoán y tế.',
+                _copy[ConsumerTerm.visitsSafetyNotice],
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -415,9 +831,9 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
           TextField(
             controller: _titleController,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Tên buổi khám',
-              hintText: 'Ví dụ: Khám tim mạch định kỳ',
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.visitsNameLabel],
+              hintText: _copy[ConsumerTerm.visitsNameHint],
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
@@ -425,16 +841,16 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
             controller: _reasonController,
             minLines: 2,
             maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Lý do khám (không bắt buộc)',
-              hintText: 'Điều bạn muốn trao đổi với bác sĩ',
+            decoration: InputDecoration(
+              labelText: _copy[ConsumerTerm.visitsReasonLabel],
+              hintText: _copy[ConsumerTerm.visitsReasonHint],
             ),
           ),
           const SizedBox(height: ClaraTokens.spaceLg),
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.primary(
-              label: 'Tạo buổi khám',
+              label: _copy[ConsumerTerm.visitsCreate],
               icon: Icons.check,
               loading: _creating,
               onPressed: _createVisit,
@@ -475,7 +891,9 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
               const SizedBox(width: ClaraTokens.spaceSm),
               Expanded(
                 child: Text(
-                  visit.title.isEmpty ? 'Buổi khám chưa đặt tên' : visit.title,
+                  visit.title.isEmpty
+                      ? _copy[ConsumerTerm.visitsUnnamed]
+                      : visit.title,
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
@@ -494,7 +912,7 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
           Align(
             alignment: Alignment.centerRight,
             child: ClaraButton.secondary(
-              label: 'Mở chuẩn bị',
+              label: _copy[ConsumerTerm.visitsOpenPreparation],
               icon: Icons.arrow_forward,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -502,9 +920,8 @@ class _VisitsSurfaceState extends State<VisitsSurface> {
                     apiClient: widget.apiClient,
                     sessionStore: widget.sessionStore,
                     visitId: visit.id,
-                    title: visit.title.isEmpty
-                        ? 'Chuẩn bị buổi khám'
-                        : visit.title,
+                    title: visit.title,
+                    languageController: widget.languageController,
                   ),
                 ),
               ),

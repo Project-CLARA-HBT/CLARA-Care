@@ -143,6 +143,201 @@ class LoginResponseData {
   }
 }
 
+/// Request contract for the provenance-bound LifeMap visit-preparation draft.
+///
+/// This is deliberately a read-only request.  The server derives the draft
+/// only from revisions in the authorised profile; it has no confirmation,
+/// task-creation, or LifeMap mutation path.
+class LifeMapVisitPreparationDraftRequest {
+  const LifeMapVisitPreparationDraftRequest({
+    this.query = '',
+    this.locale = 'vi',
+    this.episodeId,
+    this.startAt,
+    this.endAt,
+    this.limit = 12,
+  });
+
+  final String query;
+  final String locale;
+  final String? episodeId;
+  final DateTime? startAt;
+  final DateTime? endAt;
+  final int limit;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'query': query,
+        'locale': locale,
+        if (episodeId != null && episodeId!.trim().isNotEmpty)
+          'episode_id': episodeId,
+        if (startAt != null) 'start_at': startAt!.toUtc().toIso8601String(),
+        if (endAt != null) 'end_at': endAt!.toUtc().toIso8601String(),
+        'limit': limit,
+      };
+}
+
+/// An exact source row the API used for a visit-preparation draft.
+///
+/// The text remains source text from LifeMap.  The client must not paraphrase
+/// it into a health fact or use it to create a task.
+class LifeMapVisitPreparationSource {
+  const LifeMapVisitPreparationSource({
+    required this.text,
+    required this.citationIds,
+    this.occurredAt,
+    this.truthState,
+  });
+
+  final String text;
+  final List<String> citationIds;
+  final String? occurredAt;
+  final String? truthState;
+
+  factory LifeMapVisitPreparationSource.fromJson(Map<String, dynamic> json) {
+    final citations = json['citation_ids'];
+    return LifeMapVisitPreparationSource(
+      text: (json['text'] ?? '').toString(),
+      citationIds: citations is List
+          ? citations.map((item) => item.toString()).toList(growable: false)
+          : const <String>[],
+      occurredAt: _optionalApiText(json['occurred_at']),
+      truthState: _optionalApiText(json['truth_state']),
+    );
+  }
+}
+
+/// A review question derived from an exact source row.
+class LifeMapVisitPreparationQuestion {
+  const LifeMapVisitPreparationQuestion({
+    required this.text,
+    required this.citationIds,
+  });
+
+  final String text;
+  final List<String> citationIds;
+
+  factory LifeMapVisitPreparationQuestion.fromJson(Map<String, dynamic> json) {
+    final citations = json['citation_ids'];
+    return LifeMapVisitPreparationQuestion(
+      text: (json['text'] ?? '').toString(),
+      citationIds: citations is List
+          ? citations.map((item) => item.toString()).toList(growable: false)
+          : const <String>[],
+    );
+  }
+}
+
+/// Plain-language, source-bound content in a visit-preparation draft.
+class LifeMapVisitPreparationSummary {
+  const LifeMapVisitPreparationSummary({
+    required this.importantNow,
+    required this.basedOn,
+    required this.uncertainty,
+    required this.nextStep,
+    required this.urgentHelp,
+  });
+
+  final String importantNow;
+  final List<LifeMapVisitPreparationSource> basedOn;
+  final List<String> uncertainty;
+  final String nextStep;
+  final String urgentHelp;
+
+  factory LifeMapVisitPreparationSummary.fromJson(Map<String, dynamic> json) {
+    List<T> rows<T>(Object? raw, T Function(Map<String, dynamic>) parse) {
+      if (raw is! List) return List<T>.empty(growable: false);
+      return raw
+          .whereType<Map>()
+          .map((item) => parse(item.cast<String, dynamic>()))
+          .toList(growable: false);
+    }
+
+    final rawUncertainty = json['uncertainty'];
+    return LifeMapVisitPreparationSummary(
+      importantNow: (json['important_now'] ?? '').toString(),
+      basedOn: rows(
+        json['based_on'],
+        LifeMapVisitPreparationSource.fromJson,
+      ),
+      uncertainty: rawUncertainty is List
+          ? rawUncertainty
+              .map((item) => item.toString().trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false)
+          : const <String>[],
+      nextStep: (json['next_step'] ?? '').toString(),
+      urgentHelp: (json['urgent_help'] ?? '').toString(),
+    );
+  }
+}
+
+/// Read-only response contract for `/lifemap/v2/visit-preparation-drafts`.
+///
+/// It intentionally exposes no write method.  Callers can show and copy this
+/// content for owner review, but cannot turn it into confirmed LifeMap state.
+class LifeMapVisitPreparationDraft {
+  const LifeMapVisitPreparationDraft({
+    required this.status,
+    required this.title,
+    this.emergencyAnswer,
+    required this.summary,
+    required this.questionsToConsider,
+    required this.sourceRevisionIds,
+    required this.draftOnly,
+    required this.requiresUserReview,
+  });
+
+  final String status;
+  final String title;
+
+  /// Present only on the server's emergency fast path. This remains a
+  /// server-authored escalation message, never a locally generated rewrite.
+  final String? emergencyAnswer;
+  final LifeMapVisitPreparationSummary? summary;
+  final List<LifeMapVisitPreparationQuestion> questionsToConsider;
+  final List<String> sourceRevisionIds;
+  final bool draftOnly;
+  final bool requiresUserReview;
+
+  factory LifeMapVisitPreparationDraft.fromJson(Map<String, dynamic> json) {
+    final rawSummary = json['plain_language_summary'];
+    final rawQuestions = json['questions_to_consider'];
+    final rawRevisionIds = json['source_revision_ids'];
+    return LifeMapVisitPreparationDraft(
+      status: (json['status'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      emergencyAnswer: _optionalApiText(json['answer']),
+      summary: rawSummary is Map
+          ? LifeMapVisitPreparationSummary.fromJson(
+              rawSummary.cast<String, dynamic>(),
+            )
+          : null,
+      questionsToConsider: rawQuestions is List
+          ? rawQuestions
+              .whereType<Map>()
+              .map(
+                (item) => LifeMapVisitPreparationQuestion.fromJson(
+                  item.cast<String, dynamic>(),
+                ),
+              )
+              .toList(growable: false)
+          : const <LifeMapVisitPreparationQuestion>[],
+      sourceRevisionIds: rawRevisionIds is List
+          ? rawRevisionIds
+              .map((item) => item.toString())
+              .toList(growable: false)
+          : const <String>[],
+      draftOnly: json['draft_only'] == true,
+      requiresUserReview: json['requires_user_review'] == true,
+    );
+  }
+}
+
+String? _optionalApiText(Object? value) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
+}
+
 class ApiClient {
   ApiClient({
     required String baseUrl,
@@ -495,6 +690,31 @@ class ApiClient {
     return _post(
       '/api/v1/careguard/analyze',
       body: payload,
+      accessToken: accessToken,
+    );
+  }
+
+  /// Runs the owner-scoped cabinet DDI contract. Unlike [analyzeCareguard],
+  /// this route can accept a previous *source-backed* clarification selection;
+  /// the API revalidates ownership, raw alias, DrugBank identifier and source
+  /// version. It never writes or confirms a cabinet medicine.
+  Future<Map<String, dynamic>> autoCheckCareguardCabinet({
+    required String accessToken,
+    List<String> symptoms = const <String>[],
+    Map<String, dynamic> labs = const <String, dynamic>{},
+    List<String> allergies = const <String>[],
+    String locale = 'vi',
+    List<Map<String, dynamic>> resolutions = const <Map<String, dynamic>>[],
+  }) {
+    return _post(
+      '/api/v1/careguard/cabinet/auto-ddi-check',
+      body: <String, dynamic>{
+        'symptoms': symptoms,
+        'labs': labs,
+        'allergies': allergies,
+        'locale': locale == 'en' ? 'en' : 'vi',
+        if (resolutions.isNotEmpty) 'resolutions': resolutions,
+      },
       accessToken: accessToken,
     );
   }
@@ -1431,6 +1651,21 @@ class ApiClient {
     );
   }
 
+  /// Creates a read-only, provenance-bound visit-preparation draft.  This
+  /// endpoint has no mutation or confirmation semantics; the returned content
+  /// is solely for the owner to review and optionally copy before a visit.
+  Future<LifeMapVisitPreparationDraft> createLifeMapVisitPreparationDraft({
+    required String accessToken,
+    required LifeMapVisitPreparationDraftRequest request,
+  }) async {
+    final response = await _post(
+      '/api/v1/lifemap/v2/visit-preparation-drafts',
+      body: request.toJson(),
+      accessToken: accessToken,
+    );
+    return LifeMapVisitPreparationDraft.fromJson(response);
+  }
+
   Future<Map<String, dynamic>> scanLifeMapReviewFindings({
     required String accessToken,
   }) {
@@ -2166,6 +2401,27 @@ class ApiClient {
       body: payload,
       accessToken: accessToken,
       extraHeaders: <String, String>{'Idempotency-Key': _idempotencyKey()},
+    );
+  }
+
+  /// Previews a recipient-bound family invitation before the explicit accept
+  /// write. The invitation capability travels only in the request header —
+  /// never in a URL, query parameter, client log, or persisted mobile state.
+  ///
+  /// This is deliberately a non-mutating POST. It returns only the bounded
+  /// scope category, permitted actions, purpose and expiry needed for the
+  /// recipient to decide whether to accept; it does not create a grant.
+  Future<Map<String, dynamic>> previewFamilyInvitation({
+    required String accessToken,
+    required String invitationToken,
+  }) {
+    return _post(
+      '/api/v1/family/invitations/preview',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{
+        'X-Family-Invitation-Token': invitationToken,
+      },
     );
   }
 

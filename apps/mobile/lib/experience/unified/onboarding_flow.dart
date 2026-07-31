@@ -21,9 +21,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/tokens.dart';
+import '../language_controller.dart';
 
 /// Loads the durable onboarding decision and either renders [child] or the
 /// first-run [OnboardingFlow]. Fail-open: a load error renders [child].
@@ -33,11 +35,13 @@ class UnifiedOnboardingGate extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     required this.child,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final Widget child;
+  final LanguageController? languageController;
 
   @override
   State<UnifiedOnboardingGate> createState() => _UnifiedOnboardingGateState();
@@ -91,6 +95,7 @@ class _UnifiedOnboardingGateState extends State<UnifiedOnboardingGate> {
       apiClient: widget.apiClient,
       sessionStore: widget.sessionStore,
       onDone: _onDone,
+      languageController: widget.languageController,
     );
   }
 }
@@ -103,11 +108,13 @@ class OnboardingFlow extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     required this.onDone,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final VoidCallback onDone;
+  final LanguageController? languageController;
 
   @override
   State<OnboardingFlow> createState() => _OnboardingFlowState();
@@ -116,7 +123,7 @@ class OnboardingFlow extends StatefulWidget {
 class _OnboardingFlowState extends State<OnboardingFlow> {
   int _step = 0;
   bool _saving = false;
-  String? _error;
+  bool _saveFailed = false;
   bool _consent = false;
 
   final _fullName = TextEditingController();
@@ -147,7 +154,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     }
     setState(() {
       _saving = true;
-      _error = null;
+      _saveFailed = false;
     });
     final payload = skip
         ? <String, dynamic>{'action': 'skip'}
@@ -170,13 +177,26 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = 'Không thể lưu. Vui lòng thử lại.';
+        _saveFailed = true;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController == null) {
+      return _buildLocalized(context, 'vi');
+    }
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) =>
+          _buildLocalized(context, languageController.languageCode),
+    );
+  }
+
+  Widget _buildLocalized(BuildContext context, String languageCode) {
+    final copy = ConsumerTerminology.forLocale(languageCode);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -187,19 +207,30 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Stepper(step: _step),
+                  _Stepper(
+                    step: _step,
+                    labels: [
+                      copy[ConsumerTerm.onboardingStepWelcome],
+                      copy[ConsumerTerm.onboardingStepBasics],
+                      copy[ConsumerTerm.onboardingStepPersonalization],
+                    ],
+                  ),
                   const SizedBox(height: ClaraTokens.spaceLg),
-                  if (_error != null) ...[
-                    _ErrorBanner(message: _error!),
+                  if (_saveFailed) ...[
+                    _ErrorBanner(
+                      message: copy[ConsumerTerm.onboardingSaveFailed],
+                    ),
                     const SizedBox(height: ClaraTokens.spaceMd),
                   ],
                   if (_step == 0)
                     _WelcomeStep(
+                      copy: copy,
                       onStart: () => setState(() => _step = 1),
                       onSkip: _saving ? null : () => _finish(skip: true),
                     )
                   else if (_step == 1)
                     _BasicsStep(
+                      copy: copy,
                       fullName: _fullName,
                       heightCm: _heightCm,
                       weightKg: _weightKg,
@@ -212,6 +243,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     )
                   else
                     _ConsentStep(
+                      copy: copy,
                       consent: _consent,
                       onConsent: (v) => setState(() => _consent = v),
                       saving: _saving,
@@ -229,21 +261,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 }
 
 class _Stepper extends StatelessWidget {
-  const _Stepper({required this.step});
+  const _Stepper({required this.step, required this.labels});
   final int step;
+  final List<String> labels;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    const labels = ['Chào mừng', 'Thông tin cơ bản', 'Cá nhân hoá'];
     return Row(
       children: [
         for (var i = 0; i < labels.length; i++) ...[
           CircleAvatar(
             radius: 14,
-            backgroundColor: i <= step
-                ? scheme.primary
-                : scheme.surfaceContainerHighest,
+            backgroundColor:
+                i <= step ? scheme.primary : scheme.surfaceContainerHighest,
             child: i < step
                 ? Icon(Icons.check, size: 16, color: scheme.onPrimary)
                 : Text(
@@ -251,7 +282,9 @@ class _Stepper extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: i <= step ? scheme.onPrimary : scheme.onSurfaceVariant,
+                      color: i <= step
+                          ? scheme.onPrimary
+                          : scheme.onSurfaceVariant,
                     ),
                   ),
           ),
@@ -260,7 +293,8 @@ class _Stepper extends StatelessWidget {
               child: Container(
                 height: 2,
                 margin: const EdgeInsets.symmetric(horizontal: 6),
-                color: i < step ? scheme.primary : scheme.surfaceContainerHighest,
+                color:
+                    i < step ? scheme.primary : scheme.surfaceContainerHighest,
               ),
             ),
         ],
@@ -270,7 +304,12 @@ class _Stepper extends StatelessWidget {
 }
 
 class _WelcomeStep extends StatelessWidget {
-  const _WelcomeStep({required this.onStart, required this.onSkip});
+  const _WelcomeStep({
+    required this.copy,
+    required this.onStart,
+    required this.onSkip,
+  });
+  final ConsumerTerminology copy;
   final VoidCallback onStart;
   final VoidCallback? onSkip;
 
@@ -280,19 +319,21 @@ class _WelcomeStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Chào mừng bạn đến với CLARA', style: text.headlineSmall),
+        Text(
+          copy[ConsumerTerm.onboardingWelcomeTitle],
+          style: text.headlineSmall,
+        ),
         const SizedBox(height: ClaraTokens.spaceMd),
         Text(
-          'CLARA là trợ lý sức khoẻ đồng hành cùng bạn theo thời gian — ghi nhớ, '
-          'nhắc nhở và giúp bạn chuẩn bị tốt hơn cho mỗi lần khám. CLARA không '
-          'thay thế bác sĩ và luôn để bạn nắm quyền kiểm soát dữ liệu của mình.',
+          copy[ConsumerTerm.onboardingWelcomeDescription],
           style: text.bodyMedium,
         ),
         const SizedBox(height: ClaraTokens.spaceLg),
-        ClaraButton(label: 'Bắt đầu', onPressed: onStart),
+        ClaraButton(
+            label: copy[ConsumerTerm.onboardingStart], onPressed: onStart),
         const SizedBox(height: ClaraTokens.spaceSm),
         ClaraButton(
-          label: 'Bỏ qua, để sau',
+          label: copy[ConsumerTerm.onboardingSkip],
           variant: ClaraButtonVariant.secondary,
           onPressed: onSkip,
         ),
@@ -303,6 +344,7 @@ class _WelcomeStep extends StatelessWidget {
 
 class _BasicsStep extends StatelessWidget {
   const _BasicsStep({
+    required this.copy,
     required this.fullName,
     required this.heightCm,
     required this.weightKg,
@@ -314,6 +356,7 @@ class _BasicsStep extends StatelessWidget {
     required this.onNext,
   });
 
+  final ConsumerTerminology copy;
   final TextEditingController fullName;
   final TextEditingController heightCm;
   final TextEditingController weightKg;
@@ -330,38 +373,59 @@ class _BasicsStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Một vài thông tin cơ bản', style: text.headlineSmall),
+        Text(
+          copy[ConsumerTerm.onboardingBasicsTitle],
+          style: text.headlineSmall,
+        ),
         const SizedBox(height: ClaraTokens.spaceXs),
         Text(
-          'Tất cả đều không bắt buộc. Bạn có thể bỏ trống và cập nhật bất cứ '
-          'lúc nào trong Hồ sơ.',
+          copy[ConsumerTerm.onboardingBasicsDescription],
           style: text.bodyMedium,
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
         TextField(
           controller: fullName,
-          decoration: const InputDecoration(
-            labelText: 'Tên hiển thị (không bắt buộc)',
+          decoration: InputDecoration(
+            labelText: copy[ConsumerTerm.onboardingDisplayName],
           ),
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
         DropdownButtonFormField<String>(
           initialValue: gender.isEmpty ? '' : gender,
-          decoration: const InputDecoration(labelText: 'Giới tính'),
-          items: const [
-            DropdownMenuItem(value: '', child: Text('Không muốn nói')),
-            DropdownMenuItem(value: 'female', child: Text('Nữ')),
-            DropdownMenuItem(value: 'male', child: Text('Nam')),
-            DropdownMenuItem(value: 'other', child: Text('Khác')),
+          decoration: InputDecoration(
+            labelText: copy[ConsumerTerm.onboardingGender],
+          ),
+          items: [
+            DropdownMenuItem(
+              value: '',
+              child: Text(copy[ConsumerTerm.onboardingPreferNotToSay]),
+            ),
+            DropdownMenuItem(
+              value: 'female',
+              child: Text(copy[ConsumerTerm.onboardingGenderFemale]),
+            ),
+            DropdownMenuItem(
+              value: 'male',
+              child: Text(copy[ConsumerTerm.onboardingGenderMale]),
+            ),
+            DropdownMenuItem(
+              value: 'other',
+              child: Text(copy[ConsumerTerm.onboardingGenderOther]),
+            ),
           ],
           onChanged: (v) => onGender(v ?? ''),
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
         DropdownButtonFormField<String>(
           initialValue: bloodType.isEmpty ? '' : bloodType,
-          decoration: const InputDecoration(labelText: 'Nhóm máu'),
-          items: const [
-            DropdownMenuItem(value: '', child: Text('Chưa rõ')),
+          decoration: InputDecoration(
+            labelText: copy[ConsumerTerm.onboardingBloodType],
+          ),
+          items: [
+            DropdownMenuItem(
+              value: '',
+              child: Text(copy[ConsumerTerm.onboardingBloodTypeUnknown]),
+            ),
             DropdownMenuItem(value: 'A', child: Text('A')),
             DropdownMenuItem(value: 'B', child: Text('B')),
             DropdownMenuItem(value: 'AB', child: Text('AB')),
@@ -376,7 +440,9 @@ class _BasicsStep extends StatelessWidget {
               child: TextField(
                 controller: heightCm,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Chiều cao (cm)'),
+                decoration: InputDecoration(
+                  labelText: copy[ConsumerTerm.onboardingHeight],
+                ),
               ),
             ),
             const SizedBox(width: ClaraTokens.spaceMd),
@@ -384,16 +450,19 @@ class _BasicsStep extends StatelessWidget {
               child: TextField(
                 controller: weightKg,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Cân nặng (kg)'),
+                decoration: InputDecoration(
+                  labelText: copy[ConsumerTerm.onboardingWeight],
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: ClaraTokens.spaceLg),
-        ClaraButton(label: 'Tiếp tục', onPressed: onNext),
+        ClaraButton(
+            label: copy[ConsumerTerm.onboardingContinue], onPressed: onNext),
         const SizedBox(height: ClaraTokens.spaceSm),
         ClaraButton(
-          label: 'Quay lại',
+          label: copy[ConsumerTerm.onboardingBack],
           variant: ClaraButtonVariant.secondary,
           onPressed: onBack,
         ),
@@ -404,6 +473,7 @@ class _BasicsStep extends StatelessWidget {
 
 class _ConsentStep extends StatelessWidget {
   const _ConsentStep({
+    required this.copy,
     required this.consent,
     required this.onConsent,
     required this.saving,
@@ -411,6 +481,7 @@ class _ConsentStep extends StatelessWidget {
     required this.onComplete,
   });
 
+  final ConsumerTerminology copy;
   final bool consent;
   final ValueChanged<bool> onConsent;
   final bool saving;
@@ -423,37 +494,38 @@ class _ConsentStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Cá nhân hoá gợi ý cho bạn', style: text.headlineSmall),
+        Text(
+          copy[ConsumerTerm.onboardingPersonalizationTitle],
+          style: text.headlineSmall,
+        ),
         const SizedBox(height: ClaraTokens.spaceXs),
         Text(
-          'Bạn có thể cho phép CLARA dùng hồ sơ của bạn để cá nhân hoá câu trả '
-          'lời và cảnh báo an toàn. Bạn có thể thay đổi lựa chọn này bất cứ lúc nào.',
+          copy[ConsumerTerm.onboardingPersonalizationDescription],
           style: text.bodyMedium,
         ),
         const SizedBox(height: ClaraTokens.spaceMd),
         SwitchListTile(
           value: consent,
           onChanged: saving ? null : onConsent,
-          title: const Text('Cho phép cá nhân hoá'),
-          subtitle: const Text(
-            'Dùng hồ sơ sức khoẻ để gợi ý phù hợp hơn. Không bắt buộc.',
+          title: Text(copy[ConsumerTerm.onboardingPersonalizationAllow]),
+          subtitle: Text(
+            copy[ConsumerTerm.onboardingPersonalizationAllowDescription],
           ),
         ),
         const SizedBox(height: ClaraTokens.spaceXs),
         Text(
-          'Thông tin bạn nhập là tự khai báo, không phải chẩn đoán y tế. CLARA '
-          'hỗ trợ tham khảo và không thay thế tư vấn của bác sĩ.',
+          copy[ConsumerTerm.onboardingSelfDeclaredNotice],
           style: text.bodySmall,
         ),
         const SizedBox(height: ClaraTokens.spaceLg),
         ClaraButton(
-          label: 'Hoàn tất',
+          label: copy[ConsumerTerm.actionComplete],
           loading: saving,
           onPressed: saving ? null : onComplete,
         ),
         const SizedBox(height: ClaraTokens.spaceSm),
         ClaraButton(
-          label: 'Quay lại',
+          label: copy[ConsumerTerm.onboardingBack],
           variant: ClaraButtonVariant.secondary,
           onPressed: saving ? null : onBack,
         ),

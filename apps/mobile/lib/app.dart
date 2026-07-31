@@ -198,6 +198,7 @@ class _ClaraAppState extends State<ClaraApp> {
               return LoginScreenV3(
                 apiClient: widget.apiClient,
                 sessionStore: widget.sessionStore,
+                languageController: widget.languageController,
               );
             }
             return LoginScreen(

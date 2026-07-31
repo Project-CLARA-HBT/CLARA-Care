@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract": "clara.consumer-terminology",
+  "version": "2026-07-30.v1",
+  "default_locale": "vi",
+  "locales": ["vi", "en"],
+  "scope": "Static, task-first consumer interface wording only. It excludes clinical free text, medication names, API errors, LifeMap truth/provenance, consent, RBAC, safety dispositions, and telemetry.",
+  "messages": {
+    "action.askClara": {"vi": "Hỏi CLARA", "en": "Ask CLARA"},
+    "action.complete": {"vi": "Hoàn tất", "en": "Complete"},
+    "action.open": {"vi": "Mở", "en": "Open"},
+    "action.retry": {"vi": "Thử lại", "en": "Try again"},
+    "navigation.today": {"vi": "Hôm nay", "en": "Today"},
+    "navigation.lifeMap": {"vi": "Hành trình sức khỏe", "en": "Health journey"},
+    "navigation.medicines": {"vi": "Thuốc", "en": "Medicines"},
+    "navigation.profile": {"vi": "Hồ sơ", "en": "Profile"},
+    "navigation.more": {"vi": "Thêm", "en": "More"},
+    "today.title": {"vi": "Hôm nay", "en": "Today"},
+    "today.openLifeMap": {"vi": "Mở hành trình sức khỏe", "en": "Open health journey"},
+    "today.pending": {"vi": "Việc đang chờ", "en": "Pending tasks"},
+    "today.accepted": {"vi": "Đã đồng ý thực hiện", "en": "Accepted by you"},
+    "today.episodes": {"vi": "Hành trình đang mở", "en": "Open journeys"},
+    "today.confirmation": {"vi": "Cần xác nhận", "en": "Needs confirmation"},
+    "today.noDueDate": {"vi": "Không có hạn cụ thể", "en": "No specific due date"},
+    "today.dueDate": {"vi": "Hạn: {date}", "en": "Due: {date}"},
+    "today.emptyTitle": {"vi": "Hôm nay chưa có việc nào", "en": "No tasks for today"},
+    "today.emptyDescription": {
+      "vi": "Khi bạn chấp nhận một việc trong hành trình sức khỏe, nó sẽ xuất hiện ở đây. CLARA không tự thêm việc thay bạn.",
+      "en": "A task appears here after you accept it in your health journey. CLARA never adds one for you."
+    }
+  }
+}

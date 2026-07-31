@@ -7,8 +7,12 @@ import Button from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface";
+import { t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 export default function ForgotPasswordPage() {
+  const language = useUILanguage();
   const [email, setEmail] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -27,14 +31,14 @@ export default function ForgotPasswordPage() {
       const deliveryStatus = (response.data?.email_delivery_status as string | undefined) ?? "";
       if (token) {
         setTokenPreview(token);
-        setNotice("Yêu cầu đặt lại mật khẩu đã được tạo (chế độ dev).");
+        setNotice(t(language, "auth.passwordRecovery.previewNotice"));
       } else if (deliveryStatus === "sent") {
-        setNotice("Hệ thống đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.");
+        setNotice(t(language, "auth.passwordRecovery.sentNotice"));
       } else {
-        setNotice("Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.");
+        setNotice(t(language, "auth.passwordRecovery.genericNotice"));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xử lý yêu cầu.");
+      setError(safeUserFacingError(cause, t(language, "auth.passwordRecovery.error")));
     } finally {
       setIsSubmitting(false);
     }
@@ -43,23 +47,23 @@ export default function ForgotPasswordPage() {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
       <SurfaceCard className="w-full p-7 sm:p-9">
-        <Badge tone="brand">The Clara Care</Badge>
+        <Badge tone="brand">{t(language, "auth.brand")}</Badge>
         <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
-          Quên mật khẩu
+          {t(language, "auth.passwordRecovery.title")}
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-          Nhập email tài khoản để nhận hướng dẫn đặt lại mật khẩu.
+          {t(language, "auth.passwordRecovery.description")}
         </p>
 
         <form className="mt-7 space-y-4" onSubmit={onSubmit}>
           <Field
             id="forgot-email"
-            label="Email"
+            label={t(language, "auth.email")}
             type="email"
             inputMode="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="name@example.com"
+            placeholder={t(language, "auth.emailPlaceholder")}
             required
           />
 
@@ -82,25 +86,25 @@ export default function ForgotPasswordPage() {
 
           {tokenPreview ? (
             <p className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-              Mã reset (dev): <code className="font-mono text-xs">{tokenPreview}</code>{" "}
+              {t(language, "auth.passwordRecovery.previewToken")} <code className="font-mono text-xs">{tokenPreview}</code>{" "}
               <Link
                 href={`/reset-password?token=${encodeURIComponent(tokenPreview)}`}
                 className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
               >
-                Mở trang đặt lại
+                {t(language, "auth.passwordRecovery.openReset")}
               </Link>
             </p>
           ) : null}
 
-          <Button type="submit" block loading={isSubmitting} loadingLabel="Đang gửi...">
-            Gửi yêu cầu
+          <Button type="submit" block loading={isSubmitting} loadingLabel={t(language, "auth.passwordRecovery.submitting")}>
+            {t(language, "auth.passwordRecovery.submit")}
           </Button>
 
           <Link
             href="/login"
             className="focus-ring inline-block rounded text-sm text-[var(--text-secondary)] hover:underline"
           >
-            Quay lại đăng nhập
+            {t(language, "auth.passwordRecovery.back")}
           </Link>
         </form>
       </SurfaceCard>

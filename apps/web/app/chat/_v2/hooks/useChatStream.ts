@@ -12,6 +12,7 @@ import {
 import { stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   ResearchExecutionMode,
+  ResearchOutputMode,
   ResearchRetrievalStackMode,
   normalizeResearchTier2,
   normalizeResearchTier2JobProgress,
@@ -42,6 +43,7 @@ export type ChatRunOptions = {
   retrievalStackMode: ResearchRetrievalStackMode;
   personalMode: boolean;
   uiLanguage: UILanguage;
+  outputMode?: ResearchOutputMode;
 };
 
 export type UseChatStream = {
@@ -141,6 +143,7 @@ export function useChatStream(): UseChatStream {
           retrievalStackMode: options.retrievalStackMode,
           personalMode: options.personalMode,
           uiLanguage: options.uiLanguage,
+          outputMode: options.outputMode,
           onJobCreated: (job) => setJobId(job.job_id),
           onSnapshot: (snapshot) => {
             const progress = normalizeResearchTier2JobProgress(snapshot.progress);

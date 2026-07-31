@@ -19,10 +19,16 @@ import io
 from typing import Any
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from clara_api.core.config import get_settings
-from clara_api.db.models import ScribeConsent
+from clara_api.db.models import PhrProfile, ScribeConsent, User
 from clara_api.db.session import SessionLocal
+from clara_api.lifemap.visit_family_service import (
+    create_visit,
+    grant_visit_consent,
+    revoke_visit_consent,
+)
 from clara_api.main import app
 
 client = TestClient(app)
@@ -72,6 +78,63 @@ def _create_session(token: str, transcript: str = "patient has cough") -> int:
     )
     assert r.status_code == 200, r.text
     return r.json()["id"]
+
+
+def _create_revoked_visit_bound_session(token: str, *, email: str) -> int:
+    """Create a session whose separate visit recording consent was withdrawn.
+
+    This deliberately exercises the visit-consent boundary rather than the
+    flag-gated enterprise ScribeConsent record.  A session id supplied to the
+    legacy batch endpoint must never bypass this revocation.
+    """
+
+    with SessionLocal() as db:
+        user = db.execute(select(User).where(User.email == email)).scalar_one()
+        profile = db.execute(
+            select(PhrProfile).where(PhrProfile.user_id == user.id)
+        ).scalar_one_or_none()
+        if profile is None:
+            profile = PhrProfile(user_id=user.id, full_name="Scribe consent test")
+            db.add(profile)
+            db.flush()
+        visit = create_visit(
+            db,
+            owner=user,
+            profile_id=profile.id,
+            title="Scribe consent test",
+        )
+        grant_visit_consent(
+            db,
+            owner=user,
+            visit_id=visit.id,
+            purpose="scribe_recording",
+            policy_version="2026-07-31",
+        )
+        db.commit()
+        visit_id = visit.id
+
+    created = client.post(
+        "/api/v1/scribe/sessions",
+        headers=_auth(token),
+        json={
+            "title": "visit-bound",
+            "auto_generate_soap": False,
+            "visit_id": visit_id,
+        },
+    )
+    assert created.status_code == 200, created.text
+    session_id = created.json()["id"]
+
+    with SessionLocal() as db:
+        user = db.execute(select(User).where(User.email == email)).scalar_one()
+        revoke_visit_consent(
+            db,
+            owner=user,
+            visit_id=visit_id,
+            purpose="scribe_recording",
+        )
+        db.commit()
+    return session_id
 
 
 def _audio_files() -> dict[str, Any]:
@@ -134,6 +197,72 @@ def test_flag_off_transcription_not_guarded(monkeypatch) -> None:
     assert r.json()["text"] == "transcribed text"
 
 
+def test_visit_consent_withdrawal_blocks_legacy_batch_transcription(monkeypatch) -> None:
+    """A supplied visit-bound session cannot bypass its separate consent gate.
+
+    The global Scribe-consent rollout is intentionally off here to prove the
+    backward-compatible unscoped batch path remains available.  Its opt-in
+    ``session_id`` context must nevertheless fail before the audio reaches ML
+    when visit-specific recording consent was revoked.
+    """
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_consent_required", False, raising=False)
+    calls = 0
+
+    async def fake_call(**_kw: Any) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {"text": "must not be produced"}
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.scribe._call_scribe_transcribe_ml", fake_call
+    )
+    email = "dr.visit-revoked-batch@doctor.clara"
+    token = _login(email)
+    session_id = _create_revoked_visit_bound_session(token, email=email)
+
+    blocked = client.post(
+        "/api/v1/scribe/transcribe",
+        headers=_auth(token),
+        files=_audio_files(),
+        data={"session_id": str(session_id)},
+    )
+
+    assert blocked.status_code == 403
+    assert calls == 0
+
+
+def test_legacy_batch_session_id_is_owner_scoped_before_asr(monkeypatch) -> None:
+    """An optional session id cannot be used as an unscoped ML context handle."""
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_consent_required", False, raising=False)
+    calls = 0
+
+    async def fake_call(**_kw: Any) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {"text": "must not be produced"}
+
+    monkeypatch.setattr(
+        "clara_api.api.v1.endpoints.scribe._call_scribe_transcribe_ml", fake_call
+    )
+    owner_token = _login("dr.batch-owner@doctor.clara")
+    session_id = _create_session(owner_token)
+    other_token = _login("dr.batch-other@doctor.clara")
+
+    blocked = client.post(
+        "/api/v1/scribe/transcribe",
+        headers=_auth(other_token),
+        files=_audio_files(),
+        data={"session_id": str(session_id)},
+    )
+
+    assert blocked.status_code == 404
+    assert calls == 0
+
+
 def test_flag_on_rejects_transcription_without_consent(monkeypatch) -> None:
     settings = get_settings()
     monkeypatch.setattr(settings, "rag_scribe_consent_required", True, raising=False)
@@ -147,6 +276,47 @@ def test_flag_on_rejects_transcription_without_consent(monkeypatch) -> None:
         data={"session_id": str(sid)},
     )
     assert r.status_code == 403
+
+
+def test_flag_on_never_auto_generates_or_regenerates_before_session_consent(monkeypatch) -> None:
+    """Consent must precede every session-bound model call, not only ASR."""
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_consent_required", True, raising=False)
+    _mock_soap(monkeypatch)
+    token = _login("dr.note-consent@doctor.clara")
+
+    created = client.post(
+        "/api/v1/scribe/sessions",
+        headers=_auth(token),
+        json={"title": "t", "transcript": "patient has cough", "auto_generate_soap": True},
+    )
+    assert created.status_code == 200, created.text
+    sid = created.json()["id"]
+    # The draft exists, but no pre-consent transcript was sent to ML and no SOAP
+    # draft was fabricated/persisted.
+    assert created.json()["status"] == "draft"
+    assert created.json()["soap"] is None
+
+    regenerate = client.post(
+        f"/api/v1/scribe/sessions/{sid}/regenerate",
+        headers=_auth(token),
+        json={"transcript": "patient has cough"},
+    )
+    assert regenerate.status_code == 403
+
+
+def test_flag_on_rejects_unscoped_soap_proxy(monkeypatch) -> None:
+    """The legacy endpoint lacks a session consent audit record and fails closed."""
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rag_scribe_consent_required", True, raising=False)
+    _mock_soap(monkeypatch)
+    token = _login("dr.raw-soap-consent@doctor.clara")
+    response = client.post(
+        "/api/v1/scribe/soap", headers=_auth(token), json={"transcript": "patient has cough"}
+    )
+    assert response.status_code == 403
 
 
 def test_capture_then_transcription_allowed(monkeypatch) -> None:

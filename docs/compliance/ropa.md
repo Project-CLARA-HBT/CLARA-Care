@@ -98,7 +98,7 @@ nhân nhạy cảm** under PDPD Art. 2(4).
 
 | Processor (id) | Role | Purpose | Jurisdiction | TIA reference |
 |---|---|---|---|---|
-| `yescale-deepseek` | Data processor (LLM inference, DeepSeek `deepseek-v3.2` via YEScale) | `llm_inference` | offshore (non-VN) | `transfer-impact-assessments.md#yescale-deepseek` |
+| `yescale-deepseek` | Data processor (LLM inference, governed DeepSeek V4 Pro/Flash via configured gateway) | `llm_inference` | offshore (non-VN) | `transfer-impact-assessments.md#yescale-deepseek` |
 | `yescale-embeddings` | Data processor (embedding generation, OpenAI-compatible endpoint `https://api.yescale.io/v1`) | `embedding_generation` | offshore (non-VN) | `transfer-impact-assessments.md#yescale-embeddings` |
 
 These mirror the seeded `TransferRegistry`

@@ -41,8 +41,8 @@ const ROLE_GREETINGS: Record<UserRole, string> = {
 const QUICK_ACCESS: QuickAccess[] = [
   { href: "/chat", title: "Hỏi CLARA", detail: "Nhận gợi ý chăm sóc có dẫn nguồn", icon: "chat" },
   { href: "/council", title: "Hội chẩn ca bệnh", detail: "Xin thêm góc nhìn cho ca cần cân nhắc", icon: "groups" },
-  { href: "/selfmed", title: "Rà soát tủ thuốc", detail: "Xem lại thuốc đang theo dõi và ngày hết hạn", icon: "medication" },
-  { href: "/careguard", title: "Kiểm tra tương tác", detail: "Đối chiếu thuốc khi cần kiểm tra thêm", icon: "health_and_safety" },
+  { href: "/medicines?tab=cabinet", title: "Rà soát tủ thuốc", detail: "Xem lại thuốc đang theo dõi và ngày hết hạn", icon: "medication" },
+  { href: "/medicines?tab=safety", title: "Kiểm tra tương tác", detail: "Đối chiếu thuốc khi cần kiểm tra thêm", icon: "health_and_safety" },
   { href: "/scribe", title: "Ghi nhận buổi khám", detail: "Lưu lại diễn tiến và ghi chú chăm sóc", icon: "edit_note" },
 ];
 
@@ -308,7 +308,7 @@ export default function DashboardPage() {
         ((expiredCount ?? 0) > 0 ? 1 : 0);
       return {
         kind: "link" as const,
-        href: "/careguard",
+        href: "/medicines?tab=safety",
         title: `Xem ${formatCount(Math.max(1, safetyCount))} lưu ý cần xử lý`,
         detail: "Rà soát cảnh báo trước khi tiếp tục",
         icon: "health_and_safety",
@@ -316,7 +316,7 @@ export default function DashboardPage() {
     }
     return {
       kind: "link" as const,
-      href: "/selfmed",
+      href: "/medicines?tab=cabinet",
       title: "Bắt đầu rà soát hôm nay",
       detail: "Mở tủ thuốc và kiểm tra các bước cần làm",
       icon: "checklist",
@@ -349,14 +349,14 @@ export default function DashboardPage() {
         title: "Rà soát thuốc",
         detail: "Kiểm tra danh mục thuốc hiện tại",
         tone: "normal",
-        href: "/selfmed",
+        href: "/medicines?tab=cabinet",
       },
       {
         id: "check-ddi",
         title: "Kiểm tra tương tác",
         detail: "Đối chiếu tương tác đa thuốc",
         tone: "warn",
-        href: "/careguard",
+        href: "/medicines?tab=safety",
       },
       {
         id: "conduct-council",
@@ -381,8 +381,8 @@ export default function DashboardPage() {
         ? todayTasks.slice(0, 4)
         : [
             ...todayTasks,
-            { id: "fallback-1", title: "Rà soát thuốc", detail: "", tone: "normal" as TodayTask["tone"], href: "/selfmed" },
-            { id: "fallback-2", title: "Kiểm tra tương tác", detail: "", tone: "warn" as TodayTask["tone"], href: "/careguard" },
+            { id: "fallback-1", title: "Rà soát thuốc", detail: "", tone: "normal" as TodayTask["tone"], href: "/medicines?tab=cabinet" },
+            { id: "fallback-2", title: "Kiểm tra tương tác", detail: "", tone: "warn" as TodayTask["tone"], href: "/medicines?tab=safety" },
             { id: "fallback-3", title: "Hội chẩn AI", detail: "", tone: "normal" as TodayTask["tone"], href: "/council" },
             { id: "fallback-4", title: "Ghi nhận kết quả", detail: "", tone: "normal" as TodayTask["tone"], href: "/scribe" },
           ]).slice(0, 4),
@@ -607,7 +607,7 @@ export default function DashboardPage() {
                 <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">Hãy thêm thuốc hoặc làm mới dữ liệu.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link
-                    href="/selfmed/add"
+                    href="/medicines/cabinet/add"
                     className="inline-flex min-h-[34px] items-center rounded-lg bg-[var(--text-brand)] px-3 text-xs font-semibold text-white"
                   >
                     Thêm thuốc
@@ -640,7 +640,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <Link
-                  href="/selfmed"
+                  href="/medicines?tab=cabinet"
                   className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-brand)] transition hover:opacity-80"
                 >
                   Mở tủ thuốc

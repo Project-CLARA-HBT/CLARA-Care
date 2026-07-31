@@ -1,5 +1,9 @@
+"use client";
+
 import { FormEvent } from "react";
 import { KnowledgeSource } from "@/lib/research";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type KnowledgeSourcesPanelProps = {
   sources: KnowledgeSource[];
@@ -24,10 +28,14 @@ export default function KnowledgeSourcesPanel({
   onToggleSource,
   onCreateSource
 }: KnowledgeSourcesPanelProps) {
+  const language = useUILanguage();
+
   return (
     <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Knowledge Sources</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          {t(language, "research.workspace.knowledgeSources.title")}
+        </p>
         <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {selectedSourceIds.length}/{sources.length}
         </span>
@@ -38,7 +46,7 @@ export default function KnowledgeSourcesPanel({
           value={newSourceName}
           onChange={(event) => onSourceNameChange(event.target.value)}
           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-          placeholder="Tạo source mới..."
+          placeholder={t(language, "research.workspace.knowledgeSources.createPlaceholder")}
         />
         <button
           type="submit"
@@ -57,7 +65,9 @@ export default function KnowledgeSourcesPanel({
 
       <div className="mt-3 space-y-2">
         {isLoading ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">Đang tải nguồn dữ liệu...</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {t(language, "research.workspace.knowledgeSources.loading")}
+          </p>
         ) : sources.length ? (
           sources.map((source) => {
             const selected = selectedSourceIds.includes(source.id);
@@ -79,13 +89,19 @@ export default function KnowledgeSourcesPanel({
                 />
                 <span className="min-w-0">
                   <span className="block truncate font-semibold text-slate-800 dark:text-slate-100">{source.name}</span>
-                  <span className="text-slate-500 dark:text-slate-400">{source.documents_count} tài liệu</span>
+                  <span className="text-slate-500 dark:text-slate-400">
+                    {t(language, "research.workspace.knowledgeSources.documents", {
+                      count: source.documents_count
+                    })}
+                  </span>
                 </span>
               </label>
             );
           })
         ) : (
-          <p className="text-sm text-slate-500 dark:text-slate-400">Chưa có knowledge source nào.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {t(language, "research.workspace.knowledgeSources.empty")}
+          </p>
         )}
       </div>
     </section>

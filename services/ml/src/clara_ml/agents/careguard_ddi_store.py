@@ -31,11 +31,31 @@ import json
 import logging
 import sqlite3
 import tempfile
+from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 _SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+_SHA256_HEX = set("0123456789abcdef")
+_INDEX_SCHEMA_VERSION = "2"
+_MAX_MEDICATION_CANDIDATES = 5
+
+
+@dataclass(frozen=True)
+class _Manifest:
+    """Verified, non-sensitive identity of a DrugBank artifact set."""
+
+    version: str
+    source_version: str
+    source_sha256: str
+    manifest_sha256: str
+    ddi_rule_count: int
+    dictionary_record_count: int
+    ddi_shards: tuple[dict[str, Any], ...]
+    dictionary_shards: tuple[dict[str, Any], ...]
 
 
 def _normalize_med(value: object) -> str:
@@ -47,13 +67,44 @@ def _normalize_severity(value: object) -> str:
     return severity if severity in _SEVERITY_RANK else "medium"
 
 
+def _sha256_bytes(value: bytes) -> str:
+    return sha256(value).hexdigest()
+
+
+def _is_sha256(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and set(value.lower()) <= _SHA256_HEX
+    )
+
+
+def _canonical_manifest_sha256(payload: dict[str, Any]) -> str:
+    """Digest manifest content excluding the self-referential digest field."""
+
+    unsigned = dict(payload)
+    unsigned.pop("manifest_sha256", None)
+    encoded = json.dumps(
+        unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return _sha256_bytes(encoded)
+
+
 class DrugBankDdiStore:
     """On-disk SQLite accessor for the DrugBank DDI pair layer."""
 
-    def __init__(self, *, drugbank_dir: Path, manifest_path: Path) -> None:
+    def __init__(
+        self,
+        *,
+        drugbank_dir: Path,
+        manifest_path: Path,
+        sqlite_path: Path | None = None,
+        integrity_required: bool = True,
+    ) -> None:
         self._dir = drugbank_dir
         self._manifest_path = manifest_path
-        self._db_path = drugbank_dir / "ddi_index.sqlite"
+        self._db_path = sqlite_path or drugbank_dir / "ddi_index.sqlite"
+        self._integrity_required = integrity_required
         self._version = ""
 
     @property
@@ -69,10 +120,14 @@ class DrugBankDdiStore:
         before the dataset may report ``ready``.
         """
 
-        manifest_version = self._read_manifest_version() or ""
-        database_version = self._existing_db_version() or ""
+        manifest = self._read_manifest()
+        manifest_version = manifest.version if manifest else ""
+        database_identity = self._existing_db_identity()
+        database_version = database_identity.get("version", "")
         pair_count = 0
+        dictionary_record_count = 0
         pair_table_readable = False
+        dictionary_table_readable = False
         if self._db_path.exists():
             try:
                 conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
@@ -81,23 +136,58 @@ class DrugBankDdiStore:
                         "SELECT value FROM meta WHERE key = 'pair_count'"
                     ).fetchone()
                     pair_count = int(row[0]) if row and str(row[0]).isdigit() else 0
+                    dictionary_row = conn.execute(
+                        "SELECT value FROM meta WHERE key = 'dictionary_record_count'"
+                    ).fetchone()
+                    dictionary_record_count = (
+                        int(dictionary_row[0])
+                        if dictionary_row and str(dictionary_row[0]).isdigit()
+                        else 0
+                    )
                     # Validate the interaction table itself, not only its
                     # self-reported metadata. ``LIMIT 1`` is constant-time on
                     # the indexed table and catches a corrupt/incomplete DB
                     # whose meta table still looks healthy.
                     conn.execute("SELECT 1 FROM ddi_pairs LIMIT 1").fetchone()
                     pair_table_readable = True
+                    # DrugBank-backed Vietnamese normalization is part of the
+                    # same licensed artifact boundary. A DDI index with a
+                    # missing/corrupt dictionary must not advertise complete
+                    # full-DrugBank readiness.
+                    conn.execute("SELECT 1 FROM drug_dictionary LIMIT 1").fetchone()
+                    dictionary_table_readable = True
                 finally:
                     conn.close()
             except (sqlite3.Error, OSError, ValueError):
                 pair_count = 0
+                dictionary_record_count = 0
                 pair_table_readable = False
+                dictionary_table_readable = False
 
-        ready = bool(
-            manifest_version
+        integrity_verified = bool(manifest is not None and self._integrity_required)
+        identity_matches = bool(
+            manifest is not None
             and database_version == manifest_version
+            and database_identity.get("manifest_sha256") == manifest.manifest_sha256
+            and database_identity.get("source_version") == manifest.source_version
+            and database_identity.get("source_sha256") == manifest.source_sha256
+        )
+
+        counts_match = bool(
+            not self._integrity_required
+            or (
+                manifest is not None
+                and pair_count == manifest.ddi_rule_count
+                and dictionary_record_count == manifest.dictionary_record_count
+            )
+        )
+        ready = bool(
+            identity_matches
+            and counts_match
             and pair_count > 0
+            and dictionary_record_count > 0
             and pair_table_readable
+            and dictionary_table_readable
         )
         if ready:
             state = "ready"
@@ -109,58 +199,99 @@ class DrugBankDdiStore:
             "state": state,
             "version": database_version or manifest_version,
             "pair_count": pair_count,
-            "manifest_matches_index": bool(
-                manifest_version and database_version == manifest_version
-            ),
+            "dictionary_record_count": dictionary_record_count,
+            "manifest_matches_index": identity_matches,
+            "integrity_verified": integrity_verified,
+            "source_version": manifest.source_version if manifest else "",
         }
 
     # -- manifest ---------------------------------------------------------
 
-    def _read_manifest_version(self) -> str | None:
+    def _read_manifest(self) -> _Manifest | None:
         try:
             payload = json.loads(self._manifest_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             return None
         if not isinstance(payload, dict):
             return None
         version = str(payload.get("version") or "").strip()
-        return version or None
+        if not version:
+            return None
+        ddi_shards = payload.get("ddi_shards")
+        dictionary_shards = payload.get("dictionary_shards", [])
+        if not isinstance(ddi_shards, list) or not isinstance(dictionary_shards, list):
+            return None
 
-    def _manifest_shard_files(self) -> list[str] | None:
-        try:
-            payload = json.loads(self._manifest_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        source = str(payload.get("source") or "").strip().lower()
+        source_version = str(payload.get("source_version") or "").strip()
+        source_sha256 = str(payload.get("source_sha256") or "").strip().lower()
+        manifest_sha256 = str(payload.get("manifest_sha256") or "").strip().lower()
+        ddi_rule_count = payload.get("ddi_rule_count")
+        dictionary_record_count = payload.get("dictionary_record_count")
+        if self._integrity_required:
+            if (
+                source != "drugbank"
+                or not source_version
+                or not _is_sha256(source_sha256)
+                or not _is_sha256(manifest_sha256)
+                or type(ddi_rule_count) is not int
+                or ddi_rule_count <= 0
+                or type(dictionary_record_count) is not int
+                or dictionary_record_count <= 0
+                or _canonical_manifest_sha256(payload) != manifest_sha256
+            ):
+                return None
+
+        normalized_ddi = self._validate_shards(ddi_shards)
+        normalized_dictionary = self._validate_shards(dictionary_shards)
+        if normalized_ddi is None or normalized_dictionary is None:
             return None
-        if not isinstance(payload, dict):
-            return None
-        shards = payload.get("ddi_shards")
-        if not isinstance(shards, list):
-            return None
-        files: list[str] = []
+        return _Manifest(
+            version=version,
+            source_version=source_version,
+            source_sha256=source_sha256,
+            manifest_sha256=manifest_sha256,
+            ddi_rule_count=int(ddi_rule_count or 0),
+            dictionary_record_count=int(dictionary_record_count or 0),
+            ddi_shards=tuple(normalized_ddi),
+            dictionary_shards=tuple(normalized_dictionary),
+        )
+
+    def _validate_shards(self, shards: list[object]) -> list[dict[str, Any]] | None:
+        normalized: list[dict[str, Any]] = []
+        base = self._dir.resolve()
         for shard in shards:
             if not isinstance(shard, dict):
                 return None
             shard_file = str(shard.get("file") or "").strip()
             if not shard_file:
                 return None
-            files.append(shard_file)
-        return files
+            path = (self._dir / shard_file).resolve()
+            if path.parent != base and base not in path.parents:
+                return None
+            digest = str(shard.get("sha256") or "").strip().lower()
+            if self._integrity_required and not _is_sha256(digest):
+                return None
+            normalized.append({"file": shard_file, "path": path, "sha256": digest})
+        return normalized
 
     # -- build ------------------------------------------------------------
 
-    def _existing_db_version(self) -> str | None:
+    def _existing_db_identity(self) -> dict[str, str]:
         if not self._db_path.exists():
-            return None
+            return {}
         try:
             conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
         except sqlite3.Error:
-            return None
+            return {}
         try:
-            cur = conn.execute("SELECT value FROM meta WHERE key = 'version'")
-            row = cur.fetchone()
-            return str(row[0]) if row else None
+            rows = conn.execute(
+                "SELECT key, value FROM meta WHERE key IN "
+                "('version', 'manifest_sha256', 'source_version', 'source_sha256', 'schema_version')"
+            ).fetchall()
+            return {str(key): str(value) for key, value in rows}
         except sqlite3.Error:
-            return None
+            return {}
         finally:
             conn.close()
 
@@ -173,27 +304,25 @@ class DrugBankDdiStore:
         on any failure.
         """
 
-        version = self._read_manifest_version()
-        if not version:
+        manifest = self._read_manifest()
+        if manifest is None:
             return None
-        if self._existing_db_version() == version:
-            self._version = version
-            return version
-
-        shard_files = self._manifest_shard_files()
-        if shard_files is None:
-            return None
+        existing = self._existing_db_identity()
+        if self._matches_manifest(existing, manifest) and self._index_is_complete(manifest):
+            self._version = manifest.version
+            return manifest.version
 
         # Build into a temp file, then atomically replace, so a partial build is
         # never observed and concurrent readers keep the old (valid) DB.
-        tmp_fd, tmp_name = tempfile.mkstemp(
-            prefix="ddi_index.", suffix=".sqlite.tmp", dir=str(self._dir)
-        )
-        tmp_path = Path(tmp_name)
+        tmp_path: Path | None = None
         conn: sqlite3.Connection | None = None
         try:
             import os
 
+            tmp_fd, tmp_name = tempfile.mkstemp(
+                prefix="ddi_index.", suffix=".sqlite.tmp", dir=str(self._db_path.parent)
+            )
+            tmp_path = Path(tmp_name)
             os.close(tmp_fd)
             conn = sqlite3.connect(str(tmp_path))
             conn.execute("PRAGMA journal_mode=OFF")
@@ -206,12 +335,14 @@ class DrugBankDdiStore:
             )
             conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
 
-            total = 0
-            for shard_file in shard_files:
-                shard_path = self._dir / shard_file
+            for shard in manifest.ddi_shards:
+                shard_path = Path(shard["path"])
                 try:
-                    shard_payload = json.loads(shard_path.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError):
+                    raw_bytes = shard_path.read_bytes()
+                    if shard["sha256"] and _sha256_bytes(raw_bytes) != shard["sha256"]:
+                        return None
+                    shard_payload = json.loads(raw_bytes.decode("utf-8"))
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                     return None
                 if not isinstance(shard_payload, dict):
                     return None
@@ -237,38 +368,143 @@ class DrugBankDdiStore:
                         "VALUES (?, ?, ?, ?)",
                         batch,
                     )
-                    total += len(batch)
+            # An alias can legitimately map to several licensed DrugBank
+            # records.  The legacy primary key silently retained the first
+            # record via INSERT OR IGNORE, which made the source traversal order
+            # a hidden clinical choice.  Retain every distinct, source-backed
+            # candidate so the CareGuard caller can require an explicit user
+            # choice; no model or local dictionary is allowed to choose here.
+            conn.execute(
+                "CREATE TABLE drug_dictionary ("
+                "alias TEXT NOT NULL, normalized_name TEXT NOT NULL, "
+                "active_ingredients_json TEXT NOT NULL, rxcui TEXT NOT NULL, "
+                "drugbank_id TEXT NOT NULL, "
+                "PRIMARY KEY (alias, drugbank_id, normalized_name))"
+            )
+            conn.execute(
+                "CREATE INDEX drug_dictionary_alias_idx ON drug_dictionary (alias)"
+            )
+            for shard in manifest.dictionary_shards:
+                shard_path = Path(shard["path"])
+                try:
+                    raw_bytes = shard_path.read_bytes()
+                    if shard["sha256"] and _sha256_bytes(raw_bytes) != shard["sha256"]:
+                        return None
+                    shard_payload = json.loads(raw_bytes.decode("utf-8"))
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                    return None
+                if not isinstance(shard_payload, dict):
+                    return None
+                records = shard_payload.get("records")
+                if not isinstance(records, list):
+                    return None
+                batch_dictionary: list[tuple[str, str, str, str, str]] = []
+                for record in records:
+                    if not isinstance(record, dict):
+                        continue
+                    alias = _normalize_med(record.get("brand_vn"))
+                    normalized_name = _normalize_med(record.get("normalized_name"))
+                    if not alias or not normalized_name:
+                        continue
+                    active_ingredients = record.get("active_ingredients")
+                    if not isinstance(active_ingredients, list):
+                        active_ingredients = [normalized_name]
+                    normalized_actives = [
+                        _normalize_med(value) for value in active_ingredients if _normalize_med(value)
+                    ] or [normalized_name]
+                    batch_dictionary.append(
+                        (
+                            alias,
+                            normalized_name,
+                            json.dumps(normalized_actives, ensure_ascii=False),
+                            str(record.get("rxcui") or "").strip(),
+                            str(record.get("drugbank_id") or "").strip(),
+                        )
+                    )
+                if batch_dictionary:
+                    conn.executemany(
+                        "INSERT OR IGNORE INTO drug_dictionary "
+                        "(alias, normalized_name, active_ingredients_json, rxcui, drugbank_id) "
+                        "VALUES (?, ?, ?, ?, ?)",
+                        batch_dictionary,
+                    )
+            actual_pair_count = int(conn.execute("SELECT COUNT(*) FROM ddi_pairs").fetchone()[0])
+            actual_dictionary_count = int(
+                conn.execute("SELECT COUNT(*) FROM drug_dictionary").fetchone()[0]
+            )
+            if self._integrity_required and (
+                actual_pair_count != manifest.ddi_rule_count
+                or actual_dictionary_count != manifest.dictionary_record_count
+            ):
+                return None
             conn.execute(
                 "INSERT OR REPLACE INTO meta (key, value) VALUES ('version', ?)",
-                (version,),
+                (manifest.version,),
             )
             conn.execute(
                 "INSERT OR REPLACE INTO meta (key, value) VALUES ('pair_count', ?)",
-                (str(total),),
+                (str(actual_pair_count),),
+            )
+            conn.executemany(
+                "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)",
+                [
+                    ("dictionary_record_count", str(actual_dictionary_count)),
+                    ("schema_version", _INDEX_SCHEMA_VERSION),
+                    ("manifest_sha256", manifest.manifest_sha256),
+                    ("source_version", manifest.source_version),
+                    ("source_sha256", manifest.source_sha256),
+                ],
             )
             conn.commit()
             conn.close()
             conn = None
+            assert tmp_path is not None
             tmp_path.replace(self._db_path)
-            self._version = version
+            self._version = manifest.version
             logger.info(
-                "drugbank ddi sqlite index built: version=%s pairs=%d path=%s",
-                version,
-                total,
-                self._db_path,
+                "drugbank ddi sqlite index built: version=%s pairs=%d",
+                manifest.version,
+                actual_pair_count,
             )
-            return version
+            return manifest.version
         except (sqlite3.Error, OSError):
             logger.exception("drugbank ddi sqlite build failed; degrading to curated-only")
             return None
         finally:
             if conn is not None:
                 conn.close()
-            if tmp_path.exists():
+            if tmp_path is not None and tmp_path.exists():
                 try:
                     tmp_path.unlink()
                 except OSError:
                     pass
+
+    @staticmethod
+    def _matches_manifest(existing: dict[str, str], manifest: _Manifest) -> bool:
+        return bool(
+            existing.get("version") == manifest.version
+            and existing.get("manifest_sha256") == manifest.manifest_sha256
+            and existing.get("source_version") == manifest.source_version
+            and existing.get("source_sha256") == manifest.source_sha256
+            and existing.get("schema_version") == _INDEX_SCHEMA_VERSION
+        )
+
+    def _index_is_complete(self, manifest: _Manifest) -> bool:
+        """Confirm a matching metadata row still represents a readable full index."""
+
+        readiness = self.readiness()
+        return bool(
+            readiness.get("state") == "ready"
+            and readiness.get("version") == manifest.version
+            and (
+                not self._integrity_required
+                or (
+                    readiness.get("pair_count") == manifest.ddi_rule_count
+                    and readiness.get("dictionary_record_count")
+                    == manifest.dictionary_record_count
+                )
+            )
+        )
 
     # -- lookup -----------------------------------------------------------
 
@@ -310,5 +546,150 @@ class DrugBankDdiStore:
             return out
         except sqlite3.Error:
             return []
+        finally:
+            conn.close()
+
+    @staticmethod
+    def _candidate_from_row(alias: str, row: tuple[object, object, object, object]) -> dict[str, object] | None:
+        try:
+            active_ingredients = json.loads(str(row[1]))
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(active_ingredients, list):
+            return None
+        normalized_name = _normalize_med(row[0])
+        drugbank_id = str(row[3] or "").strip()
+        if not normalized_name:
+            return None
+        normalized_actives = [
+            _normalize_med(value) for value in active_ingredients if _normalize_med(value)
+        ]
+        return {
+            "alias": alias,
+            "normalized_name": normalized_name,
+            "active_ingredients": normalized_actives or [normalized_name],
+            "rxcui": str(row[2] or "").strip(),
+            "drugbank_id": drugbank_id,
+        }
+
+    def medication_candidates(
+        self,
+        medication: str,
+        *,
+        limit: int = _MAX_MEDICATION_CANDIDATES,
+    ) -> list[dict[str, object]]:
+        """Return bounded exact DrugBank candidates for a normalized alias.
+
+        This is intentionally an exact licensed-dictionary lookup: it performs
+        no fuzzy matching, local-alias substitution, or model inference.  An
+        empty result means that the caller must ask the user to correct the
+        name; a result with several entries means it must ask the user to choose.
+        Returned records are source-backed identifiers only and are ordered
+        deterministically for a stable user choice.
+        """
+
+        alias = _normalize_med(medication)
+        try:
+            safe_limit = min(max(int(limit), 1), _MAX_MEDICATION_CANDIDATES)
+        except (TypeError, ValueError):
+            safe_limit = _MAX_MEDICATION_CANDIDATES
+        if not alias:
+            return []
+        try:
+            conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return []
+        try:
+            rows = conn.execute(
+                "SELECT normalized_name, active_ingredients_json, rxcui, drugbank_id "
+                "FROM drug_dictionary WHERE alias = ? "
+                "ORDER BY drugbank_id ASC, normalized_name ASC LIMIT ?",
+                (alias, safe_limit),
+            ).fetchall()
+            candidates: list[dict[str, object]] = []
+            for row in rows:
+                candidate = self._candidate_from_row(alias, row)
+                if candidate is not None:
+                    candidates.append(candidate)
+            return candidates
+        except sqlite3.Error:
+            return []
+        finally:
+            conn.close()
+
+    def resolve_medication(self, medication: str) -> dict[str, object] | None:
+        """Legacy exact resolution retaining flag-off first-record semantics.
+
+        Candidate-aware clarification callers must use
+        :meth:`medication_candidates` and :meth:`resolve_medication_choice`.
+        This legacy helper keeps existing flag-off execution compatible while a
+        default-off clarification rollout is staged.
+        """
+
+        alias = _normalize_med(medication)
+        if not alias:
+            return None
+        try:
+            conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return None
+        try:
+            # rowid preserves the prior build's first-record behavior for a
+            # colliding alias.  It is deliberately not used by the new strict
+            # clarification path.
+            row = conn.execute(
+                "SELECT normalized_name, active_ingredients_json, rxcui, drugbank_id "
+                "FROM drug_dictionary WHERE alias = ? ORDER BY rowid ASC LIMIT 1",
+                (alias,),
+            ).fetchone()
+            if row is None:
+                return None
+            candidate = self._candidate_from_row(alias, row)
+            if candidate is None:
+                return None
+            return {**candidate, "source_version": self._version}
+        except sqlite3.Error:
+            return None
+        finally:
+            conn.close()
+
+    def resolve_medication_choice(
+        self,
+        medication: str,
+        *,
+        drugbank_id: str,
+        source_version: str,
+    ) -> dict[str, object] | None:
+        """Validate one user selection against the current licensed index.
+
+        The submitted identifier is not trusted: it must bind to the same exact
+        normalized alias and the current artifact version, and it must resolve
+        to exactly one source-backed record.  This prevents a client from
+        swapping an arbitrary DrugBank identifier into another medication.
+        """
+
+        alias = _normalize_med(medication)
+        selected_id = str(drugbank_id or "").strip()
+        if not alias or not selected_id or source_version != self._version:
+            return None
+        try:
+            conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return None
+        try:
+            rows = conn.execute(
+                "SELECT normalized_name, active_ingredients_json, rxcui, drugbank_id "
+                "FROM drug_dictionary WHERE alias = ? AND drugbank_id = ? "
+                "ORDER BY normalized_name ASC LIMIT 2",
+                (alias, selected_id),
+            ).fetchall()
+            if len(rows) != 1:
+                return None
+            candidate = self._candidate_from_row(alias, rows[0])
+            if candidate is None:
+                return None
+            return {**candidate, "source_version": self._version}
+        except sqlite3.Error:
+            return None
         finally:
             conn.close()

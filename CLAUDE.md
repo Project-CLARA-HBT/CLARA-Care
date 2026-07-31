@@ -105,6 +105,12 @@ make eval-release       # fails closed until approved locked live evidence exist
 make eval-judge-report  # artifacts/judge-report/
 ```
 
+The checked-in evaluator is evidence-first: fixture integrity is measurable,
+but clinical/model metrics remain `not_measured` until an externally governed,
+de-identified live manifest is explicitly enabled. See
+`evaluation/clara_eval/LIVE_EXECUTION.md`; never commit its manifest, patient
+content or credentials.
+
 Web (`apps/web`) uses npm scripts directly:
 
 ```bash
@@ -138,15 +144,17 @@ Database migrations run via Alembic from `services/api` (`alembic upgrade head`)
 
 - **Endpoints** (`main.py`): `GET /health`, `/health/details`, `/metrics`, `/metrics/json`; `POST /v1/chat/routed`, `/v1/research/tier2`, `/v1/rag/poc`; agents `/v1/careguard/analyze`, `/v1/scribe/soap`, `/v1/scribe/transcribe` (audio upload), `/v1/council/run|consult|intake`; `GET /v1/prompts/{role}/{intent}`; `WS /ws/stream`. Protected prefixes require `X-ML-Internal-Key` when configured (503 in production if missing).
 - **Guardrails**: a legal hard-guard (vi/en regex) blocks prescribing / diagnosis / personal-dosage intents, and an **emergency fast-path** returns escalation immediately on acute-symptom detection without diagnostic reasoning.
-- **Router** (`routing.py`): heuristic role classification (`normal`/`researcher`/`doctor`) + intent + confidence, with a dedicated emergency keyword set.
-- **RAG pipeline** (`rag/pipeline.py`): retrieve → synthesize (LLM) → deterministic local fallback; supports `auto`/`full` retrieval stacks, planner hints, hybrid internal + external retrieval, optional reranker and GraphRAG sidecar, and detailed trace/telemetry. The local fallback always carries safety wording and minimum references.
+- **Router** (`routing.py`, `model_router/`): deterministic emergency/legal guards remain authoritative; safe requests can receive a governed DeepSeek V4 closed-schema semantic proposal, with Vietnamese clinical signals and the legacy heuristic as a fail-safe floor. The optional external Encoder-SLM is shadow-only and cannot decide access, consent, DrugBank/FIDES, or a confirmed LifeMap write.
+- **RAG pipeline** (`rag/pipeline.py`): retrieve → synthesize (LLM) → deterministic local fallback; supports `auto`/`full` retrieval stacks, planner hints, hybrid internal + external retrieval, optional reranker and GraphRAG sidecar, and detailed trace/telemetry. The local fallback always carries safety wording and minimum references. Offline watermark backfill is separately dark: it needs both `RAG_INGESTION_ENABLED=true` and `RAG_BACKFILL_ENABLED=true`, then lazy-composes the existing registry/orchestrator; do not enable it without a provisioned persistent corpus store and an approved source plan.
 - **Research Tier2** (`agents/research_tier2.py`): `fast` / `deep` / `deep_beta` modes; deep modes add multi-pass retrieval, verification matrices, and (deep_beta) parallel reasoning nodes, quality gates, and long-form report synthesis.
-- **Agents**: CareGuard DDI (`agents/careguard.py`) merges local rules with external sources, applies VN drug-dictionary normalization + active-ingredient expansion, and ranks severity. Its optional `CAREGUARD_WORDING_RENDERER_ENABLED` projection renders only already-final semantic facts and never replaces DrugBank authority or the legacy DDI result; Council (`agents/council.py`) runs multi-specialist assessment with consensus/divergence; Scribe (`agents/scribe_soap.py`) produces SOAP output.
+- **Agents**: CareGuard DDI (`agents/careguard.py`) merges local rules with external sources, applies VN drug-dictionary normalization + active-ingredient expansion, and ranks severity. Its optional `medication_text` input is capped at 2,000 characters and uses deterministic Vietnamese NLP plus exact dictionary/DrugBank alias candidates only; unresolved text is a terminal clarification with no DDI conclusion, is never saved to a cabinet/PHR or client cache, and no LLM chooses identity. Its optional `CAREGUARD_WORDING_RENDERER_ENABLED` projection renders only already-final semantic facts and never replaces DrugBank authority or the legacy DDI result. Council (`agents/council.py`) runs multi-specialist assessment with consensus/divergence. Its independently default-off `COUNCIL_MEDICATION_SAFETY_ENABLED` tool calls CareGuard with `drugbank_required=true` and external DDI disabled, emits only a bounded status/version/opaque-alert projection, never enters an LLM packet, and can only raise triage or require review. The separately default-off `COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED` path exposes a doctor-only, owner-scoped selector for completed Research snapshots and appends only API-built opaque evidence IDs/categories to a Council case. It rejects retrieval text and cannot support a finding, affect release triage, Council clinical facts, or a released decision. API and ML both gate the path: setting the flag to `false` and restarting both services hides selectors, prevents attachment writes/injection, and restores the legacy request path. Scribe (`agents/scribe_soap.py`) produces SOAP output.
+- **CareGuard wording draft**: `CAREGUARD_WORDING_MODEL_DRAFT_ENABLED` is a nested, default-off switch beneath `CAREGUARD_WORDING_RENDERER_ENABLED`. When both are enabled, only the registry-bound Flash `CAREGUARD_WORDING_DRAFT` task may draft wording from final closed presentation facts. A malformed response, timeout or independent fidelity-verifier failure returns deterministic wording; the task cannot change DrugBank readiness, medication normalization, DDI, severity or action. Disable the nested switch and restart ML for immediate rollback.
+- **Research release boundary**: a research answer with factual prose must carry a structurally valid verifier state/version/summary/rows contract. Citations never substitute for a verifier: a missing, malformed, unavailable, or skipped verifier state is converted to safe abstention by the API release gate.
 
 ### CLARA_Web (`apps/web`)
 
 - **Auth/session** (`middleware.ts`, `lib/http-client.ts`, `lib/auth-store.ts`): route guards, axios client with credentials + bearer + CSRF header for mutations, single-flight token refresh on 401, and memory + session/localStorage token recovery.
-- **Navigation** (`lib/navigation.config.ts`): roles `normal`/`researcher`/`doctor`/`admin`, all homing to `/chat` post-login. Nav routes: `/chat`, `/dashboard`, `/phr`, `/selfmed` (all roles), `/careguard` (`normal`/`doctor`/`admin`), `/council` and `/scribe` (`doctor`/`admin`), `/admin/overview`, `/admin/knowledge-sources`, `/admin/answer-flow`, `/admin/observability` (admin-only), and `/huong-dan` (help). Research is unified into Chat — the legacy `/research` route (and its sub-routes) is a server redirect to `/chat`.
+- **Navigation** (`lib/navigation.config.ts`): roles `normal`/`researcher`/`doctor`/`admin`; consumers land on `/today`, professional roles on `/dashboard`. The primary care routes are `/chat`, `/today`, `/lifemap`, `/visits`, `/family`, `/phr`, and the single `/medicines` hub (confirmed medicines, cabinet, and medication-safety tabs). New Visit and Family-sharing writes use guided final-review routes. On web and Unified mobile, a Family invitation recipient first receives a bounded, non-mutating preview before a separate accept mutation; its one-time capability is header-only and never placed in a URL. `/selfmed`, `/selfmed/ddi`, and `/careguard` are compatibility redirects only and must not be used for new links. `/council` and `/scribe` remain role-gated; `/admin/*` is admin-only. Research is unified into Chat — `/research` and sub-routes redirect to `/chat`. Its optional reader modes require API + ML `RESEARCH_OUTPUT_MODES_ENABLED` and build-time `NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED`; the ML acknowledgement is non-generative and the API only adds plain/professional reader chrome after a passed release gate, without changing claims/citations or exposing verifier/prompt/provider/PII/confidence data.
 - **Surfaces**: Chat (routed ML chat + flow/policy context; `fast` runs the tier1 chat proxy while `deep`/`deep_beta` run tier2 research jobs with a realtime flow timeline and knowledge sources), SelfMed/CareGuard (cabinet + DDI + VN dictionary admin), Council (intake/consult/result), Scribe (SOAP), PHR (personal health record), and Workspace (folders/channels/share/export/notes).
 
 ### CLARA_Social (health community platform, `SOCIAL_PLATFORM_ENABLED`, default OFF)
@@ -159,9 +167,38 @@ Flutter client with core screens (login, dashboard, research, careguard, council
 
 ## Models & Runtime (as-built)
 
-The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through a YEScale-compatible endpoint (`DEEPSEEK_BASE_URL`, model `deepseek-v4-pro` by default per `.env.example`) with a configurable timeout and retry policy. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
+The LLM runtime is **DeepSeek-only** by default (`LLM_DEEPSEEK_ONLY=true`), served through the deployment-owned YEScale-compatible V4 gateway (`DEEPSEEK_BASE_URL=https://api.yescale.io/v1` unless a deployment overrides it). The typed task registry routes governed V4 tasks to `DEEPSEEK_PRO_MODEL=deepseek-v4-pro` for safety/reasoning and `DEEPSEEK_FLASH_MODEL=deepseek-v4-flash` for bounded low-latency work; `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` restores the legacy single `DEEPSEEK_MODEL` path. Scribe audio has separately registry-governed ASR model and provider selections (`DEEPSEEK_AUDIO_MODEL=whisper-1` and allowlisted `SCRIBE_ASR_PRIMARY`/`SCRIBE_ASR_FALLBACK`), because audio must never be sent to a V4 text model or reported as Flash. Embeddings use `text-embedding-3-large` via an OpenAI-compatible base URL. Reranking is optional (embedding-cosine strategy by default), NLI verification defaults to a heuristic strategy, and GraphRAG / biomedical rerank are off by default. These are all configured through `.env` (see `.env.example`).
 
-> Note: when `LLM_DEEPSEEK_ONLY` is enabled and a supplied runtime matches the configured DeepSeek env, the pipeline must reuse the default DeepSeek client (preserving its longer timeout) rather than constructing a short-timeout runtime client — and the API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
+All model-backed bounded tasks resolve through the versioned task-contract
+registry, which applies the declared temperature and output-token ceiling at
+the client boundary. The optional Vietnamese Encoder-SLM adapter is strictly shadow-only
+(`ENCODER_SLM_SHADOW_ENABLED=false` by default): it receives a bounded,
+redacted copy only after emergency/legal guards and cannot alter an answer,
+route, authorization, DrugBank/FIDES verdict or LifeMap truth state. Disable
+the flag and restart ML to roll it back immediately.
+
+The separately governed `CLINICAL_LANGUAGE_EXTRACTION` task uses V4 Flash only
+for checksum-bound, closed-category Unicode source spans. It is off by default
+(`CLINICAL_LANGUAGE_LLM_EXTRACTION_ENABLED=false`), is invoked only after the
+deterministic chat/Council emergency path, and fails soft to the deterministic
+Vietnamese packet. It never decides urgency, access, consent, truth-state,
+DrugBank normalization or a DDI conclusion. Optional
+`CAREGUARD_CLINICAL_SPAN_AUGMENTATION_ENABLED=true` additionally supplies only
+validated original medication substrings to the existing deterministic
+Vietnamese/DrugBank resolver; it cannot introduce a canonical drug, dose,
+DrugBank ID, interaction or recommendation. Disable either flag and restart ML
+for an immediate rollback.
+
+LifeMap free-text capture is separately dark by default. When both
+`LIFEMAP_CAPTURE_ENABLED` and `LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED` are
+enabled in API and ML, the V4 Flash text-draft task may classify at most five
+exact Unicode source spans into closed review categories. API reconstructs the
+phrases, preserves the original non-reviewable provenance row and requires an
+explicit review before creating the existing `text` event; model output cannot
+confirm, mutate truth state or provide a confidence score. Turn the extraction
+flag off and restart both services for an immediate rollback.
+
+> Note: historical request-shaped `llm_runtime` data is compatibility-only and is discarded before RAG **or Research Tier2** client construction. Provider, endpoint, model, credential, retry policy and timeout are deployment-owned registry configuration, never request-selected. The API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
 
 ## Safety-First Guardrails (invariants)
 
@@ -179,6 +216,7 @@ These behaviors are regression-locked and must be preserved by every change:
 
 - **Compose stacks**: `deploy/docker/docker-compose.yml` (infra), `docker-compose.app.yml` (api/ml/web/searxng), `docker-compose.deploy.yml` (server deploy).
 - **CI/CD** (`.github/workflows/`): `ci.yml` (quality/test/build/security + CLARA-Eval VN smoke), `cd.yml` (preflight → staging → production), `release.yml` (semver tag, locked CLARA-Eval VN gate, build/push images), `active-eval.yml` (nightly evidence), `clara-eval-vn.yml` (manual smoke/judge report), `branch-protection-sync.yml`.
+- **Cross-client product wording**: `contracts/consumer-terminology/consumer-terminology.v1.json` is the canonical static VI/EN source for shared task-first labels. Its checked-in web/Dart projections are verified by `cd apps/web && npm run consumer-terminology:check`; never use it for medical free text or safety state.
 - **Scripts** (`scripts/`): deploy (`deploy/redeploy_app_stack.sh`), ops (`ops/validate_runtime_env.sh`, backup/cleanup/cron installers, source-hub auto-crawl), release (semver + image push), and demo/eval loops.
 
 ## Onboarding Path for New Contributors

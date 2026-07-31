@@ -42,7 +42,7 @@ import 'package:flutter/material.dart';
 import '../../core/a11y.dart';
 import '../../core/ai_transparency_notice.dart';
 import '../../core/api_client.dart';
-import '../../core/model_disclosure.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/section_header.dart';
@@ -77,24 +77,39 @@ class SettingsScreenV3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = languageController;
+    if (controller == null) {
+      return _buildLocalized(context, ConsumerTerminology.forLocale(null));
+    }
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) => _buildLocalized(
+        context,
+        ConsumerTerminology.forLocale(controller.languageCode),
+      ),
+    );
+  }
+
+  Widget _buildLocalized(BuildContext context, ConsumerTerminology copy) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cài đặt')),
+      appBar: AppBar(title: Text(copy[ConsumerTerm.settingsTitle])),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.only(bottom: ClaraTokens.spaceXl),
           children: [
             if (themeController != null)
-              _ThemeSection(controller: themeController!),
+              _ThemeSection(controller: themeController!, copy: copy),
             if (languageController != null)
               LanguageToggle(controller: languageController!),
             _AccountSection(
               apiClient: apiClient,
               sessionStore: sessionStore,
+              copy: copy,
             ),
-            const _PrivacySection(),
-            const _TransparencySection(),
-            const _AboutSection(),
-            const _HelpSection(),
+            _PrivacySection(copy: copy),
+            _TransparencySection(copy: copy, locale: copy.locale),
+            _AboutSection(copy: copy),
+            _HelpSection(copy: copy),
           ],
         ),
       ),
@@ -175,17 +190,10 @@ class _ThemeOption {
 /// (Requirement 4.2 / 1.3). Selection is conveyed by text/semantics, not color
 /// alone.
 class _ThemeSection extends StatelessWidget {
-  const _ThemeSection({required this.controller});
+  const _ThemeSection({required this.controller, required this.copy});
 
   final ThemeController controller;
-
-  static const String _sectionTitle = 'Giao diện';
-
-  static const List<_ThemeOption> _options = <_ThemeOption>[
-    _ThemeOption(ThemeMode.light, 'Sáng', Icons.light_mode_outlined),
-    _ThemeOption(ThemeMode.dark, 'Tối', Icons.dark_mode_outlined),
-    _ThemeOption(ThemeMode.system, 'Hệ thống', Icons.settings_suggest_outlined),
-  ];
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) {
@@ -194,8 +202,25 @@ class _ThemeSection extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final selected = controller.themeMode;
+        final options = <_ThemeOption>[
+          _ThemeOption(
+            ThemeMode.light,
+            copy[ConsumerTerm.settingsThemeLight],
+            Icons.light_mode_outlined,
+          ),
+          _ThemeOption(
+            ThemeMode.dark,
+            copy[ConsumerTerm.settingsThemeDark],
+            Icons.dark_mode_outlined,
+          ),
+          _ThemeOption(
+            ThemeMode.system,
+            copy[ConsumerTerm.settingsThemeSystem],
+            Icons.settings_suggest_outlined,
+          ),
+        ];
         return _SettingsGroup(
-          title: _sectionTitle,
+          title: copy[ConsumerTerm.settingsAppearanceTitle],
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceXs),
             child: RadioGroup<ThemeMode>(
@@ -208,11 +233,13 @@ class _ThemeSection extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  for (final option in _options)
+                  for (final option in options)
                     _ThemeRadioTile(
                       option: option,
                       groupValue: selected,
                       textScaler: textScaler,
+                      selectedSuffix: copy[ConsumerTerm.settingsSelected],
+                      notSelectedSuffix: copy[ConsumerTerm.settingsNotSelected],
                     ),
                 ],
               ),
@@ -231,17 +258,21 @@ class _ThemeRadioTile extends StatelessWidget {
     required this.option,
     required this.groupValue,
     required this.textScaler,
+    required this.selectedSuffix,
+    required this.notSelectedSuffix,
   });
 
   final _ThemeOption option;
   final ThemeMode groupValue;
   final TextScaler textScaler;
+  final String selectedSuffix;
+  final String notSelectedSuffix;
 
   @override
   Widget build(BuildContext context) {
     final isSelected = option.mode == groupValue;
     // Convey selection in the spoken value, not by color alone.
-    final selectedSuffix = isSelected ? 'đã chọn' : 'chưa chọn';
+    final selectedSuffix = isSelected ? this.selectedSuffix : notSelectedSuffix;
 
     return Semantics(
       inMutuallyExclusiveGroup: true,
@@ -273,12 +304,12 @@ class _AccountSection extends StatelessWidget {
   const _AccountSection({
     required this.apiClient,
     required this.sessionStore,
+    required this.copy,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
-
-  static const String _sectionTitle = 'Tài khoản';
+  final ConsumerTerminology copy;
 
   /// Best-effort server logout, then fully clear the session so the app root's
   /// session listener routes back to login (Requirement 4.4, 4.5).
@@ -297,19 +328,16 @@ class _AccountSection extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Đăng xuất'),
-        content: const Text(
-          'Bạn có chắc muốn đăng xuất khỏi CLARA? '
-          'Phiên đăng nhập trên thiết bị này sẽ bị xóa.',
-        ),
+        title: Text(copy[ConsumerTerm.settingsSignOutConfirmTitle]),
+        content: Text(copy[ConsumerTerm.settingsSignOutConfirmDescription]),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Hủy'),
+            child: Text(copy[ConsumerTerm.settingsCancel]),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Đăng xuất'),
+            child: Text(copy[ConsumerTerm.settingsSignOut]),
           ),
         ],
       ),
@@ -327,27 +355,27 @@ class _AccountSection extends StatelessWidget {
         final email = sessionStore.email;
         final role = sessionStore.role;
         return _SettingsGroup(
-          title: _sectionTitle,
+          title: copy[ConsumerTerm.settingsAccountTitle],
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
               _IdentityRow(
                 icon: Icons.email_outlined,
-                label: 'Email',
+                label: copy[ConsumerTerm.settingsEmailLabel],
                 value: (email == null || email.isEmpty)
-                    ? 'Chưa có thông tin'
+                    ? copy[ConsumerTerm.settingsNoInformation]
                     : email,
               ),
               const SizedBox(height: ClaraTokens.spaceSm),
               _IdentityRow(
                 icon: Icons.badge_outlined,
-                label: 'Vai trò',
-                value: _roleLabel(role),
+                label: copy[ConsumerTerm.settingsRoleLabel],
+                value: _roleLabel(role, copy),
               ),
               const SizedBox(height: ClaraTokens.spaceMd),
               ClaraButton.secondary(
-                label: 'Đăng xuất',
+                label: copy[ConsumerTerm.settingsSignOut],
                 icon: Icons.logout,
                 onPressed: () => _confirmSignOut(context),
               ),
@@ -360,19 +388,19 @@ class _AccountSection extends StatelessWidget {
 
   /// Maps a raw role code to a Vietnamese-first label, falling back to the raw
   /// value (or a neutral placeholder) so nothing is ever left blank.
-  static String _roleLabel(String? role) {
+  static String _roleLabel(String? role, ConsumerTerminology copy) {
     switch (role) {
       case 'normal':
-        return 'Người dùng';
+        return copy[ConsumerTerm.settingsRoleConsumer];
       case 'researcher':
-        return 'Nghiên cứu viên';
+        return copy[ConsumerTerm.settingsRoleResearcher];
       case 'doctor':
-        return 'Bác sĩ';
+        return copy[ConsumerTerm.settingsRoleDoctor];
       case 'admin':
-        return 'Quản trị viên';
+        return copy[ConsumerTerm.settingsRoleAdmin];
       case null:
       case '':
-        return 'Chưa có thông tin';
+        return copy[ConsumerTerm.settingsNoInformation];
       default:
         return role;
     }
@@ -437,16 +465,16 @@ class _IdentityRow extends StatelessWidget {
 /// management. Kept simple/static (no deep navigation) because this surface does
 /// not receive a consent resolver.
 class _PrivacySection extends StatelessWidget {
-  const _PrivacySection();
+  const _PrivacySection({required this.copy});
 
-  static const String _sectionTitle = 'Quyền riêng tư & đồng ý';
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textScaler = A11y.resolveTextScaler(context);
     return _SettingsGroup(
-      title: _sectionTitle,
+      title: copy[ConsumerTerm.settingsPrivacyTitle],
       // Consent copy is safety-sensitive: force the opaque path (R11).
       clinical: true,
       child: Row(
@@ -460,10 +488,7 @@ class _PrivacySection extends StatelessWidget {
           const SizedBox(width: ClaraTokens.spaceMd),
           Expanded(
             child: Text(
-              'CLARA chỉ xử lý dữ liệu sức khỏe bạn tự khai báo và yêu cầu '
-              'đồng ý theo phiên bản trước khi cung cấp nội dung y tế. Bạn có '
-              'thể xem lại và quản lý đồng ý trong mục "Quyền riêng tư & đồng ý" '
-              'ở phần Thêm.',
+              copy[ConsumerTerm.settingsPrivacyDescription],
               style: theme.textTheme.bodyMedium,
               textScaler: textScaler,
             ),
@@ -479,21 +504,24 @@ class _PrivacySection extends StatelessWidget {
 /// The AI transparency section: surfaces the versioned transparency notice text
 /// and the configured model family/version disclosure (Requirement 4.6).
 class _TransparencySection extends StatelessWidget {
-  const _TransparencySection();
+  const _TransparencySection({required this.copy, required this.locale});
 
-  static const String _sectionTitle = 'Minh bạch AI';
+  final ConsumerTerminology copy;
+  final String locale;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textScaler = A11y.resolveTextScaler(context);
-    const notice = kCurrentAiTransparencyNotice;
-    // Reuse the shared model-disclosure label for a consistent, no-secret model
-    // family/version string (e.g. "deepseek v3.2").
-    final modelLabel = ModelDisclosure.fromModelUsed('deepseek-v3.2').label;
+    final notice = currentAiTransparencyNoticeForLocale(locale);
+    // This screen has no response envelope, so it must not claim that a
+    // particular task used Pro. Per-response model chips retain the actual
+    // server disclosure; the static setting correctly describes the governed
+    // V4 Pro/Flash task router without exposing endpoint or credential data.
+    final modelLabel = copy[ConsumerTerm.settingsAiModelGovernedRoute];
 
     return _SettingsGroup(
-      title: _sectionTitle,
+      title: copy[ConsumerTerm.settingsTransparencyTitle],
       // AI transparency notice + model disclosure is safety copy: opaque (R11).
       clinical: true,
       child: Column(
@@ -517,7 +545,7 @@ class _TransparencySection extends StatelessWidget {
           const Divider(height: ClaraTokens.spaceLg),
           _IdentityRow(
             icon: Icons.smart_toy_outlined,
-            label: 'Mô hình AI',
+            label: copy[ConsumerTerm.settingsAiModelLabel],
             value: modelLabel,
           ),
         ],
@@ -530,9 +558,9 @@ class _TransparencySection extends StatelessWidget {
 
 /// The About section: app name/version and the not-a-doctor positioning.
 class _AboutSection extends StatelessWidget {
-  const _AboutSection();
+  const _AboutSection({required this.copy});
 
-  static const String _sectionTitle = 'Giới thiệu';
+  final ConsumerTerminology copy;
 
   /// App version string. Kept as a local constant (mirrors `pubspec.yaml`) so
   /// this surface has no runtime package-info dependency.
@@ -543,7 +571,7 @@ class _AboutSection extends StatelessWidget {
     final theme = Theme.of(context);
     final textScaler = A11y.resolveTextScaler(context);
     return _SettingsGroup(
-      title: _sectionTitle,
+      title: copy[ConsumerTerm.settingsAboutTitle],
       // The not-a-doctor / emergency positioning is safety copy: opaque (R11).
       clinical: true,
       child: Column(
@@ -553,14 +581,14 @@ class _AboutSection extends StatelessWidget {
           _IdentityRow(
             icon: Icons.info_outline,
             label: 'CLARA',
-            value: 'Phiên bản $_appVersion',
+            value: copy.format(
+              ConsumerTerm.settingsVersion,
+              <String, Object?>{'version': _appVersion},
+            ),
           ),
           const SizedBox(height: ClaraTokens.spaceMd),
           Text(
-            'CLARA là trợ lý y tế AI hỗ trợ ra quyết định. CLARA không phải bác '
-            'sĩ và không thay thế tư vấn, chẩn đoán hay điều trị y khoa chuyên '
-            'môn. Trong trường hợp khẩn cấp, hãy gọi ngay dịch vụ cấp cứu tại '
-            'địa phương.',
+            copy[ConsumerTerm.settingsAboutDescription],
             style: theme.textTheme.bodyMedium,
             textScaler: textScaler,
           ),
@@ -574,16 +602,16 @@ class _AboutSection extends StatelessWidget {
 
 /// The Help section: static informational tiles (placeholders for guides).
 class _HelpSection extends StatelessWidget {
-  const _HelpSection();
+  const _HelpSection({required this.copy});
 
-  static const String _sectionTitle = 'Trợ giúp';
+  final ConsumerTerminology copy;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textScaler = A11y.resolveTextScaler(context);
     return _SettingsGroup(
-      title: _sectionTitle,
+      title: copy[ConsumerTerm.settingsHelpTitle],
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -595,8 +623,7 @@ class _HelpSection extends StatelessWidget {
           const SizedBox(width: ClaraTokens.spaceMd),
           Expanded(
             child: Text(
-              'Cần hỗ trợ? Xem hướng dẫn sử dụng trong ứng dụng hoặc liên hệ '
-              'đội ngũ CLARA để được trợ giúp.',
+              copy[ConsumerTerm.settingsHelpDescription],
               style: theme.textTheme.bodyMedium,
               textScaler: textScaler,
             ),

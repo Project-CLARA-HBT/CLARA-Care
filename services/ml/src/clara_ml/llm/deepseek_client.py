@@ -39,6 +39,8 @@ class DeepSeekClient:
         request_jitter_seconds: float = 0.15,
         audio_base_url: str = "",
         fallback_model: str = "",
+        generation_temperature: float = 0.2,
+        generation_max_tokens: int | None = None,
     ) -> None:
         self._api_key = api_key
         self._base_urls = self._parse_base_urls(base_url)
@@ -63,37 +65,14 @@ class DeepSeekClient:
         self._max_concurrency = max(1, int(max_concurrency))
         self._min_interval_seconds = max(0.0, float(min_interval_seconds))
         self._request_jitter_seconds = max(0.0, float(request_jitter_seconds))
-
-    @classmethod
-    def from_runtime(
-        cls,
-        llm_runtime: dict[str, object],
-        *,
-        timeout_seconds: float,
-        retries_per_base: int = 0,
-        retry_backoff_seconds: float = 0.25,
-        max_concurrency: int = 2,
-        min_interval_seconds: float = 0.4,
-        request_jitter_seconds: float = 0.15,
-    ) -> "DeepSeekClient":
-        """Build an explicit runtime-override client from a ``llm_runtime`` dict.
-
-        The caller supplies ``timeout_seconds`` so the (short) runtime-override
-        ceiling stays a policy decision of the pipeline; this constructor never
-        touches the default client whose longer timeout must be preserved
-        (Requirement 2.3).
-        """
-        runtime = llm_runtime if isinstance(llm_runtime, dict) else {}
-        return cls(
-            api_key=str(runtime.get("api_key") or "").strip(),
-            base_url=str(runtime.get("base_url") or "").strip(),
-            model=str(runtime.get("model") or "").strip(),
-            timeout_seconds=timeout_seconds,
-            retries_per_base=retries_per_base,
-            retry_backoff_seconds=retry_backoff_seconds,
-            max_concurrency=max_concurrency,
-            min_interval_seconds=min_interval_seconds,
-            request_jitter_seconds=request_jitter_seconds,
+        # Task clients receive these values exclusively from the versioned
+        # registry contract. Direct legacy/test callers preserve the previous
+        # 0.2/default-unbounded behavior by omitting both arguments.
+        self._generation_temperature = min(max(float(generation_temperature), 0.0), 1.0)
+        self._generation_max_tokens = (
+            max(0, int(generation_max_tokens))
+            if generation_max_tokens is not None
+            else None
         )
 
     @property
@@ -385,11 +364,19 @@ class DeepSeekClient:
         payload = {
             "model": self._model,
             "stream": False,
-            "temperature": 0.2,
+            "temperature": self._generation_temperature,
             "messages": messages,
         }
-        if isinstance(max_tokens, int) and max_tokens > 0:
-            payload["max_tokens"] = int(max_tokens)
+        requested_tokens = (
+            int(max_tokens) if isinstance(max_tokens, int) and max_tokens > 0 else 0
+        )
+        if self._generation_max_tokens is not None and self._generation_max_tokens > 0:
+            requested_tokens = min(
+                requested_tokens or self._generation_max_tokens,
+                self._generation_max_tokens,
+            )
+        if requested_tokens > 0:
+            payload["max_tokens"] = requested_tokens
 
         return self._guard(lambda: self._generate_once(payload))
 

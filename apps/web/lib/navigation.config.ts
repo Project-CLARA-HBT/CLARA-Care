@@ -1,3 +1,6 @@
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import type { UILanguage } from "@/lib/ui-language";
+
 export type UserRole = "normal" | "researcher" | "doctor" | "admin";
 export type NavGroupKey =
   "care" | "medicines" | "explore" | "clinical" | "admin" | "support";
@@ -362,6 +365,76 @@ const NAV_ITEMS: NavigationItem[] = [
   },
 ];
 
+type LocalizedNavigationKeys = {
+  label: UITranslationKey;
+  desc: UITranslationKey;
+  title: UITranslationKey;
+  subtitle: UITranslationKey;
+};
+
+// Personal-mode destinations are intentionally kept in a typed catalog rather
+// than duplicated in the shell. Administrative and clinical routes retain
+// their Vietnamese source copy until their domain pages are migrated.
+const PERSONAL_NAVIGATION_KEYS: Partial<Record<string, LocalizedNavigationKeys>> = {
+  "/chat": {
+    label: "navigation.item.chat.label",
+    desc: "navigation.item.chat.desc",
+    title: "navigation.item.chat.title",
+    subtitle: "navigation.item.chat.subtitle",
+  },
+  "/today": {
+    label: "navigation.item.today.label",
+    desc: "navigation.item.today.desc",
+    title: "navigation.item.today.title",
+    subtitle: "navigation.item.today.subtitle",
+  },
+  "/lifemap": {
+    label: "navigation.item.lifemap.label",
+    desc: "navigation.item.lifemap.desc",
+    title: "navigation.item.lifemap.title",
+    subtitle: "navigation.item.lifemap.subtitle",
+  },
+  "/visits": {
+    label: "navigation.item.visits.label",
+    desc: "navigation.item.visits.desc",
+    title: "navigation.item.visits.title",
+    subtitle: "navigation.item.visits.subtitle",
+  },
+  "/family": {
+    label: "navigation.item.family.label",
+    desc: "navigation.item.family.desc",
+    title: "navigation.item.family.title",
+    subtitle: "navigation.item.family.subtitle",
+  },
+  "/phr": {
+    label: "navigation.item.phr.label",
+    desc: "navigation.item.phr.desc",
+    title: "navigation.item.phr.title",
+    subtitle: "navigation.item.phr.subtitle",
+  },
+  "/medicines": {
+    label: "navigation.item.medicines.label",
+    desc: "navigation.item.medicines.desc",
+    title: "navigation.item.medicines.title",
+    subtitle: "navigation.item.medicines.subtitle",
+  },
+};
+
+function localizeNavigationItem(item: NavigationItem, language: UILanguage): NavigationItem {
+  const keys = PERSONAL_NAVIGATION_KEYS[item.href];
+  if (!keys) return item;
+  return {
+    ...item,
+    label: t(language, keys.label),
+    shortLabel: t(language, keys.label),
+    desc: t(language, keys.desc),
+    page: {
+      title: t(language, keys.title),
+      subtitle: t(language, keys.subtitle),
+    },
+  };
+}
+
 /**
  * Compliance Consent Center + DSAR self-service nav entries.
  *
@@ -539,11 +612,14 @@ export function resolvePostLoginPath(options: {
   );
 }
 
-export function getNavItemsByRole(role: UserRole): NavigationItem[] {
+export function getNavItemsByRole(
+  role: UserRole,
+  language: UILanguage = "vi",
+): NavigationItem[] {
   return NAV_ITEMS.filter(
     (item) =>
       item.roles.includes(role) && !item.hiddenForRoles?.includes(role),
-  );
+  ).map((item) => localizeNavigationItem(item, language));
 }
 
 export function isRouteAllowedForRole(
@@ -557,8 +633,9 @@ export function isRouteAllowedForRole(
 
 export function getGroupedNavItems(
   role: UserRole,
+  language: UILanguage = "vi",
 ): Array<{ key: NavGroupKey; label: string; items: NavigationItem[] }> {
-  const items = getNavItemsByRole(role);
+  const items = getNavItemsByRole(role, language);
   return GROUP_ORDER.map((groupKey) => {
     const groupItems = items.filter((item) => item.group === groupKey);
     return {
@@ -569,8 +646,11 @@ export function getGroupedNavItems(
   }).filter((group) => group.items.length > 0);
 }
 
-export function getMobilePrimaryNav(role: UserRole): NavigationItem[] {
-  return getNavItemsByRole(role)
+export function getMobilePrimaryNav(
+  role: UserRole,
+  language: UILanguage = "vi",
+): NavigationItem[] {
+  return getNavItemsByRole(role, language)
     .filter((item) => item.mobilePrimary)
     .slice(0, 4);
 }
@@ -581,9 +661,9 @@ export function getGroupMeta(group: NavGroupKey): NavGroupMeta {
 
 
 
-export function getPageMeta(pathname: string): PageMeta {
+export function getPageMeta(pathname: string, language: UILanguage = "vi"): PageMeta {
   const exact = NAV_ITEMS.find((item) => item.href === pathname);
-  if (exact) return exact.page;
+  if (exact) return localizeNavigationItem(exact, language).page;
 
   if (pathname === "/research" || pathname.startsWith("/research/")) {
     return {
@@ -598,7 +678,7 @@ export function getPageMeta(pathname: string): PageMeta {
   const prefixMatch = prefixSorted.find((item) =>
     pathname.startsWith(`${item.href}/`),
   );
-  if (prefixMatch) return prefixMatch.page;
+  if (prefixMatch) return localizeNavigationItem(prefixMatch, language).page;
 
   if (pathname.startsWith("/dashboard/control-tower")) {
     return {

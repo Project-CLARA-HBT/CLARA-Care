@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import combinations
 from typing import Any
 
-from clara_ml.agents.council_neural import score_council_risk
+from clara_ml.agents.council_heuristic_risk import score_council_rule_shadow
+from clara_ml.agents.council_medication_safety import evaluate_council_medication_safety
 from clara_ml.config import settings
 
 SUPPORTED_SPECIALISTS = (
@@ -619,7 +620,12 @@ def _build_consensus_metadata(
     }
 
 
-def _consensus_summary(assessments: list[SpecialistAssessment], consensus_triage: str) -> str:
+def _consensus_summary(
+    assessments: list[SpecialistAssessment],
+    consensus_triage: str,
+    *,
+    medication_safety_floor: str | None = None,
+) -> str:
     finding_counts: dict[str, int] = {}
     for item in assessments:
         for finding in item.key_findings:
@@ -631,6 +637,11 @@ def _consensus_summary(assessments: list[SpecialistAssessment], consensus_triage
     else:
         shared_text = "no repeated cross-specialty finding"
 
+    if medication_safety_floor in _TRIAGE_SCORE:
+        return (
+            f"Rule-specialist consensus is {consensus_triage}; shared signals: {shared_text}. "
+            "A deterministic medication-safety floor remains prioritized over this consensus."
+        )
     return (
         f"Council consensus triage is {consensus_triage}; shared signals: {shared_text}. "
         "Highest-acuity specialist concern remains prioritized."
@@ -766,7 +777,7 @@ def _should_request_more_info(
     return score < 0.55 or non_empty_sections < 2 or total_observations < 3
 
 
-def _compute_confidence(
+def _compute_assessment_completeness(
     *,
     data_quality_score: float,
     assessments: list[SpecialistAssessment],
@@ -774,42 +785,47 @@ def _compute_confidence(
     red_flags: list[str],
     needs_more_info: bool,
 ) -> dict[str, Any]:
+    """Describe whether the Council has enough supported input to be useful.
+
+    This deliberately replaces the former uncalibrated confidence score.  The
+    deterministic Council is not a calibrated probabilistic model, so a number
+    or percentage would imply a clinical guarantee we cannot support.  Callers
+    get operational evidence and completeness states instead.
+    """
+
     triage_counts = {triage: 0 for triage in _TRIAGE_SCORE}
     for item in assessments:
         triage_counts[item.triage] += 1
 
-    consensus_support = max(triage_counts.values()) / max(1, len(assessments))
-    finding_density = min(
-        1.0,
-        sum(len(item.key_findings) for item in assessments) / max(1, len(assessments) * 4),
-    )
-
-    possible_conflicts = max(1, (len(assessments) * (len(assessments) - 1)) // 2)
-    conflict_ratio = len(conflicts) / possible_conflicts
-
-    score = (
-        0.40 * data_quality_score
-        + 0.30 * consensus_support
-        + 0.20 * finding_density
-        + 0.10 * (1.0 - min(1.0, conflict_ratio))
-    )
-
     if red_flags:
-        score = max(score, 0.82)
-    if needs_more_info:
-        score = min(score, 0.45)
+        status = "safety_escalated"
+        evidence_status = "deterministic_red_flag_match"
+    elif needs_more_info:
+        status = "insufficient"
+        evidence_status = "insufficient_case_information"
+    elif conflicts:
+        status = "requires_adjudication"
+        evidence_status = "case_facts_with_unresolved_specialist_divergence"
+    elif data_quality_score >= 0.75:
+        status = "sufficient_for_clinician_review"
+        evidence_status = "case_facts_and_deterministic_rules"
+    else:
+        status = "limited"
+        evidence_status = "case_facts_with_material_gaps"
 
-    score = max(0.0, min(1.0, score))
+    agreement_status = "unanimous"
+    if len([count for count in triage_counts.values() if count]) > 1:
+        agreement_status = "mixed"
 
     return {
-        "score": round(score, 3),
-        "level": _score_level(score),
-        "components": {
-            "data_quality": round(data_quality_score, 3),
-            "consensus_support": round(consensus_support, 3),
-            "finding_density": round(finding_density, 3),
-            "conflict_ratio": round(conflict_ratio, 3),
-        },
+        "status": status,
+        "evidence_status": evidence_status,
+        "agreement_status": agreement_status,
+        "triage_votes": triage_counts,
+        "conflict_detected": bool(conflicts),
+        "emergency_floor_triggered": bool(red_flags),
+        "followup_required": needs_more_info,
+        "calibration": "not_measured_no_probability_presented",
     }
 
 
@@ -1006,64 +1022,51 @@ def _build_reasoning_timeline(
     needs_more_info: bool,
     final_recommendation: str,
 ) -> list[dict[str, Any]]:
+    """Return progress states, never a reasoning trace.
+
+    The Council result used to carry free-text ``detail`` fields and rich
+    metadata under a "reasoning timeline" label.  They were deterministic,
+    but still exposed implementation-level deliberation and could be mistaken
+    for a model chain of thought.  Consumers only need to know that each
+    safety-relevant processing step occurred.  Keep the stable ``step`` and
+    ``sequence`` contract for existing stream consumers, while deliberately
+    omitting source text, vote ratios, rule matches, and final prose.
+    """
+
+    _ = (
+        data_quality,
+        assessments,
+        conflicts,
+        consensus_metadata,
+        red_flags,
+        followup_questions,
+        needs_more_info,
+        final_recommendation,
+    )
     return [
-        {
-            "sequence": 1,
-            "step": "intake_normalized",
-            "detail": "Input payload normalized into symptoms, labs, medications, and history.",
-            "metadata": {
-                "section_counts": data_quality.get("section_counts", {}),
-                "data_quality_score": data_quality.get("score"),
-            },
-        },
-        {
-            "sequence": 2,
-            "step": "specialist_assessment",
-            "detail": "Rule-based specialist assessments completed.",
-            "metadata": {
-                "specialists": [item.specialist for item in assessments],
-                "triage_votes": [item.triage for item in assessments],
-            },
-        },
-        {
-            "sequence": 3,
-            "step": "conflict_review",
-            "detail": "Cross-specialty triage conflicts evaluated.",
-            "metadata": {
-                "conflict_count": len(conflicts),
-                "conflict_detected": bool(conflicts),
-            },
-        },
-        {
-            "sequence": 4,
-            "step": "consensus_decision",
-            "detail": "Council consensus score and dissent profile computed.",
-            "metadata": {
-                "winning_triage": consensus_metadata.get("winning_triage"),
-                "support_ratio": consensus_metadata.get("support_ratio"),
-                "disagreement_index": consensus_metadata.get("disagreement_index"),
-            },
-        },
-        {
-            "sequence": 5,
-            "step": "safety_gate",
-            "detail": "Red-flag safety gate applied before final recommendation.",
-            "metadata": {
-                "red_flags": red_flags,
-                "triggered": bool(red_flags),
-                "needs_more_info": needs_more_info,
-                "followup_questions_count": len(followup_questions),
-            },
-        },
-        {
-            "sequence": 6,
-            "step": "final_recommendation",
-            "detail": final_recommendation,
-            "metadata": {
-                "needs_more_info": needs_more_info,
-            },
-        },
+        {"sequence": 1, "step": "intake_normalized", "status": "completed"},
+        {"sequence": 2, "step": "specialist_assessment", "status": "completed"},
+        {"sequence": 3, "step": "conflict_review", "status": "completed"},
+        {"sequence": 4, "step": "consensus_decision", "status": "completed"},
+        {"sequence": 5, "step": "safety_gate", "status": "completed"},
+        {"sequence": 6, "step": "final_recommendation", "status": "completed"},
     ]
+
+
+def _public_specialist_assessment(item: SpecialistAssessment) -> dict[str, Any]:
+    """Return the clinician-facing structured conclusion, not hidden reasoning.
+
+    ``reasoning_log`` remains an internal rule-engine implementation detail.
+    A Council response may show the attributable rule signals, triage category,
+    and recommendation, but must never expose a chain-of-thought-like trace.
+    """
+
+    return {
+        "specialist": item.specialist,
+        "key_findings": item.key_findings,
+        "triage": item.triage,
+        "recommendation": item.recommendation,
+    }
 
 
 def _build_escalation_metadata(
@@ -1071,13 +1074,18 @@ def _build_escalation_metadata(
     red_flags: list[str],
     red_flag_matches: list[dict[str, str]],
     assessments: list[SpecialistAssessment],
+    medication_safety_floor: str | None = None,
 ) -> dict[str, Any]:
-    if red_flags:
+    if red_flags or medication_safety_floor == "emergency_escalation":
         priority = "critical"
         recommended_sla_minutes = 5
         requires_human_handoff = True
     else:
-        highest_score = max(_TRIAGE_SCORE[item.triage] for item in assessments)
+        highest_score = max(
+            _TRIAGE_SCORE[item.triage] for item in assessments
+        )
+        if medication_safety_floor in _TRIAGE_SCORE:
+            highest_score = max(highest_score, _TRIAGE_SCORE[medication_safety_floor])
         if highest_score >= _TRIAGE_SCORE["emergency_escalation"]:
             priority = "urgent"
             recommended_sla_minutes = 30
@@ -1110,13 +1118,13 @@ def _build_escalation_metadata(
     }
 
 
-def _build_neural_feature_map(
+def _build_rule_shadow_feature_map(
     *,
     red_flags: list[str],
     conflicts: list[dict[str, object]],
     consensus_metadata: dict[str, Any],
     data_quality: dict[str, Any],
-    confidence: dict[str, Any],
+    assessment_completeness: dict[str, Any],
     followup_questions: list[str],
     assessments: list[SpecialistAssessment],
     medications: list[str],
@@ -1128,59 +1136,77 @@ def _build_neural_feature_map(
     support_ratio = float(consensus_metadata.get("support_ratio", 0.0) or 0.0)
     disagreement_index = float(consensus_metadata.get("disagreement_index", 0.0) or 0.0)
     data_quality_score = float(data_quality.get("score", 0.0) or 0.0)
-    confidence_score = float(confidence.get("score", 0.0) or 0.0)
+    completeness_penalty = {
+        "safety_escalated": 1.0,
+        "insufficient": 1.0,
+        "requires_adjudication": 0.7,
+        "limited": 0.45,
+        "sufficient_for_clinician_review": 0.0,
+    }.get(str(assessment_completeness.get("status") or ""), 0.5)
 
     return {
         "red_flag_rate": min(1.0, len(red_flags) / 3.0),
         "conflict_rate": min(1.0, len(conflicts) / specialist_count),
         "disagreement_index": max(disagreement_index, 1.0 - support_ratio),
         "inverse_data_quality": max(0.0, 1.0 - data_quality_score),
-        "inverse_confidence": max(0.0, 1.0 - confidence_score),
+        "incomplete_assessment": completeness_penalty,
         "followup_density": min(1.0, len(followup_questions) / 8.0),
         "high_triage_pressure": min(1.0, high_triage_votes / specialist_count),
         "medication_burden": min(1.0, len(medications) / 8.0),
     }
 
 
-def _build_neural_risk_payload(
+def _build_rule_shadow_payload(
     *,
     payload: dict,
     red_flags: list[str],
     conflicts: list[dict[str, object]],
     consensus_metadata: dict[str, Any],
     data_quality: dict[str, Any],
-    confidence: dict[str, Any],
+    assessment_completeness: dict[str, Any],
     followup_questions: list[str],
     assessments: list[SpecialistAssessment],
     medications: list[str],
 ) -> dict[str, Any]:
-    neural_enabled = bool(payload.get("council_neural_enabled", settings.council_neural_enabled))
-    shadow_mode = bool(payload.get("council_neural_shadow_mode", settings.council_neural_shadow_mode))
+    # The former council_neural_* request names remain input-only aliases for
+    # rollout compatibility. This deterministic fixed-weight heuristic is not
+    # a neural model and is never represented as one in response metadata.
+    shadow_enabled = bool(
+        payload.get(
+            "council_rule_shadow_enabled",
+            payload.get("council_neural_enabled", settings.council_rule_shadow_enabled),
+        )
+    )
+    shadow_mode = bool(
+        payload.get(
+            "council_rule_shadow_mode",
+            payload.get("council_neural_shadow_mode", settings.council_rule_shadow_mode),
+        )
+    )
 
-    if not neural_enabled:
+    if not shadow_enabled:
         return {
             "enabled": False,
             "shadow_mode": shadow_mode,
             "model_version": "council-fixed-weight-heuristic-shadow-v2",
-            "legacy_model_alias": "council-neural-shadow-v1",
             "model_class": "fixed_weight_heuristic",
             "trained": False,
         }
 
-    feature_map = _build_neural_feature_map(
+    feature_map = _build_rule_shadow_feature_map(
         red_flags=red_flags,
         conflicts=conflicts,
         consensus_metadata=consensus_metadata,
         data_quality=data_quality,
-        confidence=confidence,
+        assessment_completeness=assessment_completeness,
         followup_questions=followup_questions,
         assessments=assessments,
         medications=medications,
     )
-    score = score_council_risk(
+    score = score_council_rule_shadow(
         feature_map,
-        medium_threshold=settings.council_neural_medium_threshold,
-        high_threshold=settings.council_neural_high_threshold,
+        medium_threshold=settings.council_rule_shadow_medium_threshold,
+        high_threshold=settings.council_rule_shadow_high_threshold,
     )
 
     recommended_triage = "routine_follow_up"
@@ -1193,12 +1219,11 @@ def _build_neural_risk_payload(
         "enabled": True,
         "shadow_mode": shadow_mode,
         "model_version": score.model_version,
-        "legacy_model_alias": "council-neural-shadow-v1",
         "model_class": "fixed_weight_heuristic",
         "trained": False,
-        "risk_probability": score.probability,
         "risk_band": score.band,
         "recommended_triage": recommended_triage,
+        "score_visibility": "not_calibrated_not_user_facing",
         "feature_map": {key: round(value, 4) for key, value in feature_map.items()},
         "top_contributors": score.top_contributors,
     }
@@ -1245,11 +1270,27 @@ def _final_recommendation(
     red_flags: list[str],
     assessments: list[SpecialistAssessment],
     needs_more_info: bool,
+    medication_safety_floor: str | None = None,
 ) -> str:
     if red_flags:
         return (
             "Emergency escalation triggered by red-flag symptoms. Direct patient to emergency "
             "services immediately while preparing rapid specialist handoff."
+        )
+
+    # A DrugBank-backed safety floor is deterministic and cannot be lowered by
+    # an incomplete intake or the rule-specialist consensus.  The wording stays
+    # intentionally non-prescriptive and does not expose medication names or
+    # interaction source text.
+    if medication_safety_floor == "emergency_escalation":
+        return (
+            "Medication safety screening requires emergency in-person evaluation. "
+            "Do not change medication use based on this Council result alone."
+        )
+    if medication_safety_floor == "same_day_review":
+        return (
+            "Medication safety screening requires same-day review with a clinician or pharmacist. "
+            "Do not change medication use based on this Council result alone."
         )
 
     if needs_more_info:
@@ -1275,6 +1316,22 @@ def _final_recommendation(
     )
 
 
+def _apply_triage_floor(consensus_triage: str, floor: object) -> str:
+    """Return the highest valid deterministic Council triage.
+
+    The helper accepts untyped tool output defensively.  It never lowers a
+    Council recommendation and deliberately has no model dependency.
+    """
+
+    baseline_score = _TRIAGE_SCORE.get(consensus_triage, _TRIAGE_SCORE["routine_follow_up"])
+    if not isinstance(floor, str) or floor not in _TRIAGE_SCORE:
+        return consensus_triage
+    return max(
+        (consensus_triage, floor),
+        key=lambda value: _TRIAGE_SCORE.get(value, baseline_score),
+    )
+
+
 def run_council(payload: dict) -> dict:
     symptoms = _normalize_text_list(payload.get("symptoms"))
     labs = _normalize_labs(payload.get("labs"))
@@ -1286,20 +1343,53 @@ def run_council(payload: dict) -> dict:
         _SPECIALIST_EVALUATORS[specialist](symptoms, labs, medications, history)
         for specialist in specialists
     ]
-    assessments_payload = [asdict(item) for item in assessments]
+    # Do not serialize the internal rule trace.  The response carries only
+    # structured clinician-facing findings and recommendation fields.
+    assessments_payload = [_public_specialist_assessment(item) for item in assessments]
 
     red_flags, red_flag_matches, negated_red_flag_matches = _detect_red_flags(symptoms)
+    # The optional Council medication-safety tool is strictly deterministic.
+    # It calls CareGuard with a required DrugBank source and never contributes
+    # raw output to the LLM case packet below.  With the default-off flag the
+    # result shape and execution path remain byte-compatible with the legacy
+    # rule Council.
+    medication_safety: dict[str, Any] | None = None
+    if settings.council_medication_safety_enabled and medications:
+        medication_safety = evaluate_council_medication_safety(medications)
+    medication_safety_floor = (
+        medication_safety.get("triage_floor")
+        if isinstance(medication_safety, dict)
+        else None
+    )
     conflicts = _build_conflicts(assessments)
-    consensus_triage = _consensus_triage(assessments)
-    consensus_metadata = _build_consensus_metadata(assessments, consensus_triage, conflicts)
-    consensus_summary = _consensus_summary(assessments, consensus_triage)
+    baseline_consensus_triage = _consensus_triage(assessments)
+    consensus_triage = _apply_triage_floor(
+        baseline_consensus_triage,
+        medication_safety_floor,
+    )
+    consensus_metadata = _build_consensus_metadata(
+        assessments,
+        baseline_consensus_triage,
+        conflicts,
+    )
+    if consensus_triage != baseline_consensus_triage:
+        consensus_metadata["baseline_winning_triage"] = baseline_consensus_triage
+        consensus_metadata["winning_triage"] = consensus_triage
+        consensus_metadata["safety_floor_applied"] = True
+    consensus_summary = _consensus_summary(
+        assessments,
+        baseline_consensus_triage,
+        medication_safety_floor=(
+            medication_safety_floor if isinstance(medication_safety_floor, str) else None
+        ),
+    )
     divergence_notes = _divergence_notes(assessments, conflicts)
 
     data_quality = _compute_data_quality(symptoms, labs, medications, history)
     followup_questions = _build_followup_questions(symptoms, labs, medications, history)
     needs_more_info = _should_request_more_info(data_quality, red_flags)
 
-    confidence = _compute_confidence(
+    assessment_completeness = _compute_assessment_completeness(
         data_quality_score=float(data_quality["score"]),
         assessments=assessments,
         conflicts=conflicts,
@@ -1312,6 +1402,7 @@ def run_council(payload: dict) -> dict:
         red_flags,
         assessments,
         needs_more_info,
+        medication_safety_floor,
     )
 
     citations = _build_citations(
@@ -1329,6 +1420,7 @@ def run_council(payload: dict) -> dict:
         red_flags=red_flags,
         red_flag_matches=red_flag_matches,
         assessments=assessments,
+        medication_safety_floor=medication_safety_floor,
     )
 
     if red_flags:
@@ -1349,13 +1441,13 @@ def run_council(payload: dict) -> dict:
         needs_more_info=needs_more_info,
         final_recommendation=final_recommendation,
     )
-    neural_risk = _build_neural_risk_payload(
+    rule_shadow = _build_rule_shadow_payload(
         payload=payload,
         red_flags=red_flags,
         conflicts=conflicts,
         consensus_metadata=consensus_metadata,
         data_quality=data_quality,
-        confidence=confidence,
+        assessment_completeness=assessment_completeness,
         followup_questions=followup_questions,
         assessments=assessments,
         medications=medications,
@@ -1363,7 +1455,10 @@ def run_council(payload: dict) -> dict:
 
     result = {
         "requested_specialists": specialists,
+        # Retain the legacy key so existing API consumers do not break, but its
+        # entries are structured assessments rather than reasoning logs.
         "per_specialist_reasoning_logs": assessments_payload,
+        "per_specialist_assessments": assessments_payload,
         "conflict_list": conflicts,
         "council_consensus": consensus_metadata,
         "consensus_summary": consensus_summary,
@@ -1371,11 +1466,11 @@ def run_council(payload: dict) -> dict:
         "final_recommendation": final_recommendation,
         "estimated_duration_minutes": estimated_duration_minutes,
         "emergency_escalation": {
-            "triggered": bool(red_flags),
+            "triggered": bool(red_flags) or medication_safety_floor == "emergency_escalation",
             "red_flags": red_flags,
             "action": (
                 "immediate_emergency_referral"
-                if red_flags
+                if red_flags or medication_safety_floor == "emergency_escalation"
                 else "standard_multidisciplinary_pathway"
             ),
             "negated_red_flags": negated_red_flag_matches,
@@ -1383,17 +1478,20 @@ def run_council(payload: dict) -> dict:
         },
         "needs_more_info": needs_more_info,
         "followup_questions": followup_questions,
-        "confidence_score": confidence["score"],
-        "confidence_level": confidence["level"],
-        "data_quality_score": data_quality["score"],
-        "data_quality_level": data_quality["level"],
+        "assessment_completeness": assessment_completeness,
+        "evidence_status": assessment_completeness["evidence_status"],
+        "uncertainty_notes": followup_questions if needs_more_info else [],
         "analyze": {
             "consensus_triage": consensus_triage,
             "emergency_triggered": bool(red_flags),
             "needs_more_info": needs_more_info,
             "followup_questions": followup_questions,
-            "confidence": confidence,
-            "data_quality": data_quality,
+            "assessment_completeness": assessment_completeness,
+            "input_completeness": {
+                "level": data_quality["level"],
+                "missing_sections": data_quality["missing_sections"],
+                "section_counts": data_quality["section_counts"],
+            },
             "final_recommendation": final_recommendation,
         },
         "details": {
@@ -1409,12 +1507,12 @@ def run_council(payload: dict) -> dict:
         "citations": citations,
         "citation_quality": citation_quality,
         "reasoning_timeline": reasoning_timeline,
-        "neural_risk": neural_risk,
+        "rule_shadow": rule_shadow,
         "research": {
             "mode": "rule_based_council_v2",
             "topics": research_topics,
             "followup_questions": followup_questions,
-            "confidence_components": confidence["components"],
+            "assessment_completeness": assessment_completeness,
             "data_gaps": data_quality["missing_sections"],
         },
         "deepdive": {
@@ -1424,18 +1522,28 @@ def run_council(payload: dict) -> dict:
                 "red_flag_count": len(red_flags),
                 "highest_triage_score": max(_TRIAGE_SCORE[item.triage] for item in assessments),
             },
-            "specialist_sections": [
-                {
-                    "specialist": item.specialist,
-                    "triage": item.triage,
-                    "key_findings": item.key_findings,
-                    "reasoning_log": item.reasoning_log,
-                    "recommendation": item.recommendation,
-                }
-                for item in assessments
-            ],
+            "specialist_sections": assessments_payload,
         },
     }
+
+    if medication_safety is not None:
+        # This bounded projection includes only state, the deployment dataset
+        # version, opaque run-local alert identifiers, and a deterministic
+        # review/triage floor. It must never contain a raw medication, source
+        # error, interaction statement, or CareGuard result object.
+        result["medication_safety"] = medication_safety
+        result["analyze"]["medication_safety_review_required"] = bool(
+            medication_safety.get("review_required")
+        )
+        result["assessment_completeness"]["medication_safety_review_required"] = bool(
+            medication_safety.get("review_required")
+        )
+        result["analyze"]["emergency_triggered"] = bool(
+            result["emergency_escalation"]["triggered"]
+        )
+        result["deepdive"]["cross_specialty"]["highest_triage_score"] = _TRIAGE_SCORE[
+            consensus_triage
+        ]
 
     # --- Clinician-review safety directive (Requirement 3.5) ----------------
     # Attached unconditionally to EVERY run_council envelope — emergency
@@ -1457,20 +1565,26 @@ def run_council(payload: dict) -> dict:
     if settings.council_llm_shadow_enabled:
         from clara_ml.agents.council_model import run_model_council_shadow
 
-        result["model_council"] = run_model_council_shadow(
-            {
-                "symptoms": symptoms,
-                "labs": labs,
-                "medications": medications,
-                "history": history,
-            },
-            specialists,
-        )
+        shadow_payload: dict[str, Any] = {
+            "symptoms": symptoms,
+            "labs": labs,
+            "medications": medications,
+            "history": history,
+        }
+        # Only the separately default-off, shadow-only path may pass the
+        # server-created evidence availability packet onward. The validator in
+        # council_evidence_packet strips all raw retrieval content and rejects
+        # unknown tools. This cannot affect the deterministic result above.
+        if settings.council_evidence_packet_shadow_enabled:
+            shadow_payload["council_evidence_packet"] = payload.get(
+                "council_evidence_packet"
+            )
+        result["model_council"] = run_model_council_shadow(shadow_payload, specialists)
 
     # --- Model & fallback disclosure (Requirement 6.1, 6.3) -----------------
     # Additive, default OFF. When COUNCIL_MODEL_DISCLOSURE_ENABLED is on (read
     # from the payload override, falling back to the ML settings — mirroring the
-    # council_neural_enabled pattern), attach an ``ai_disclosure`` block naming
+    # council_rule_shadow_enabled pattern), attach an ``ai_disclosure`` block naming
     # the deterministic rule engine. A rule-engine run is never a degraded
     # fallback, so ``is_fallback`` is always False (design §E, Property P10).
     # When the flag is off, the block is omitted entirely so the envelope is

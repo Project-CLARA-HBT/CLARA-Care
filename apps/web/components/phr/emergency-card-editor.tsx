@@ -12,6 +12,7 @@ import {
   type PhrEmergencyCardField,
 } from "@/lib/phr";
 import type { UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
  * Emergency-card field-inclusion editor (personal-health-record Requirement
@@ -83,7 +84,7 @@ export default function EmergencyCardEditor({
     try {
       setCard(await getPhrEmergencyCard());
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.error);
+      setError(safeUserFacingError(err, text.error));
     } finally {
       setLoading(false);
     }

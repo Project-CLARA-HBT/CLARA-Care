@@ -3,43 +3,181 @@
 `services/ml/src/clara_ml/llm/model_registry.py` is the typed boundary for
 model-backed tasks that can affect safety or clinical workflow. It does not let
 requests choose a provider or model. Each task declares a prompt version,
-closed output contract, and deterministic/unavailable fallback.
+closed output contract, deterministic/unavailable fallback, risk level,
+permitted tiers, tool prerequisites, token ceiling and human-review floor.
 
-The current registry covers the medical safety router, LifeMap Capture triage
-and visit extraction, Scribe note/transcription, Council shadow assessment,
+The source of truth is the versioned, non-secret manifest at
+`services/ml/config/task_contracts/contracts.json`.  ML refuses to start its
+model registry when that manifest is absent, malformed, or omits a registered
+task; it deliberately does not silently fall back to a permissive in-code
+map. The container copies this manifest to `/app/config/task_contracts/`.
+The resolved selection carries the contract schema version, risk category and
+model profile for safe operational correlation, never user text or prompt
+content.
+
+The current registry covers the medical safety router, LifeMap Ask semantic
+routing, LifeMap Capture triage, free-text draft extraction and visit extraction,
+Vietnamese clinical-language source-span extraction, Scribe note/transcription, Council shadow assessment,
 LLM-assisted RAG reranking, evidence-bound NLI claim verification, Research
-query planning, and Research reasoning/deep-beta reasoning. Those
+query planning, Research reasoning/deep-beta reasoning, and the optional
+CareGuard consumer-wording draft. Those
 callers still retain their existing emergency, legal, provenance, template,
 FIDES, retrieval-order and shadow-only guards; the registry cannot bypass them.
 
-RAG's explicit internal runtime connection seam is also registry-bound: it
-passes its already-authorized DeepSeek connection values through a read-only
-settings overlay to the `RAG_SYNTHESIS` contract. It therefore keeps the
-legacy short override timeout while applying the same prompt version and
-rollback selection as the default RAG client. It does not construct a provider
-client directly.
+RAG always reuses its registry-built `RAG_SYNTHESIS` client. Request payloads,
+queued jobs and Control Tower configuration cannot provide a provider, endpoint,
+model or API key. Historical `llm_runtime` and Control Tower `llm_*` JSON keys
+are ignored on read and omitted on write; this is a backward-compatible JSON
+configuration cleanup with no database migration or credential transfer.
+`DeepSeekClient` intentionally has no public
+``from_runtime`` helper: every production construction must enter through
+`build_task_client`, so a future caller cannot select a model or provider
+outside a typed task contract.
 
 The registry selects only the provider/model boundary. It never converts a
 heuristic, embedding scorer or fixed-weight Council rule into a neural model,
 and it never permits LLM output to confirm a LifeMap record, prescribe, change
 a dose, authorize access or replace DrugBank authority.
 
-The shadow router may receive deterministic Vietnamese clinical-language cues,
-but publishes only bounded categories/counts (negation, experiencer,
-temporality, severity cue, unit count and medication-candidate count). It does
-not publish source text, a medication name, a dose, confidence or free-text
-rationale in telemetry.
+## Deliberate non-text-model exceptions
+
+The registry covers generative DeepSeek text tasks. It does not claim to
+govern deterministic code, embeddings, encoder-SLM shadow inference, or ASR
+provider selection. In particular, Scribe's `SCRIBE_TRANSCRIPTION` contract
+selects the text-client transport and request budget, while
+`DEEPSEEK_AUDIO_MODEL` remains a separately configured audio model sent only
+to the transcription endpoint. Local Whisper, PhoWhisper, and Google STT stay
+behind the typed ASR provider seam; none can be selected by end-user request
+data. `build_task_client` is text-only; audio transport construction must use
+`build_asr_task_client`. These exceptions must not be repurposed for text
+generation.
+
+The shadow router may receive a deterministic packet plus optional validated
+V4 Flash Vietnamese clinical-language source spans. The registry task accepts
+only a checksum-bound, closed category and Unicode offsets; application code
+reconstructs and validates every span. It publishes only bounded
+categories/counts (negation, experiencer, temporality, severity cue, unit count
+and medication-candidate count), never source text, a medication name, dose,
+confidence or free-text rationale in telemetry. `CLINICAL_LANGUAGE_LLM_EXTRACTION_ENABLED`
+is off by default and fails soft to the deterministic packet.
+
+For a separately approved CareGuard rollout,
+`CAREGUARD_CLINICAL_SPAN_AUGMENTATION_ENABLED` may feed only exact medication
+substrings from the original input to the existing deterministic Vietnamese and
+DrugBank resolver. The model cannot supply a canonical name, DrugBank ID, dose,
+DDI pair, risk or recommendation; disable either flag to restore the legacy
+input set immediately. Council exposes the packet only as review-only metadata
+after deterministic Council emergency handling, and Scribe corrections require
+their own exact transcript offsets before a clinician can review them.
+
+`CAREGUARD_WORDING_MODEL_DRAFT_ENABLED` is a second, independent default-off
+switch under the existing `CAREGUARD_WORDING_RENDERER_ENABLED` projection. Its
+`CAREGUARD_WORDING_DRAFT` task uses the Flash profile and receives only closed
+presentation categories after CareGuard has already completed authoritative
+DrugBank readiness, identity normalization, DDI, risk and action handling. It
+cannot choose a medication identity, DrugBank source, DDI pair, severity or
+action. A malformed response, timeout or deterministic fidelity-verifier
+violation returns the existing deterministic wording template; disabling the
+model-draft switch and restarting ML is an immediate rollback.
+
+Council's `COUNCIL_SHADOW` task can separately receive an optional
+`COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED` retrieval-availability packet only
+while the shadow task itself is enabled. Its narrow server-side handoff accepts
+one allowlisted `retrieval_snapshot` tool and only validated snapshot/evidence
+IDs plus controlled categories; text, URLs, titles, queries, scores and tool
+arguments are rejected before the model call. Those IDs/categories are not
+clinical evidence for an LLM claim: specialist findings remain bound only to
+immutable Council case-fact IDs and cannot alter the deterministic release
+result. See `docs/architecture/council-shadow-evidence-packet.md`.
+
+## Optional Encoder-SLM shadow
+
+The separate Encoder-SLM seam is deliberately **shadow-only**, off by default,
+and invoked only after deterministic emergency and legal hard guards return.
+Its sole adapter is `model_router/encoder_shadow.py`; it redacts the already
+redacted input again, bounds request/response size and time, rejects redirects,
+and accepts only `clara.encoder-slm-shadow.v1`. That contract contains closed
+categorical intent/risk/entity/negation/temporality/experiencer/language fields
+and explicitly rejects free text, spans, confidence and extra fields.
+
+The shadow signal cannot alter a route, response, retrieval, authorization,
+DrugBank lookup, FIDES verdict, consent decision, LifeMap truth state or audit
+event. Operations may enable it only with an internal endpoint and deployment
+secret. Set `ENCODER_SLM_SHADOW_ENABLED=false` and restart ML for an immediate
+rollback; an unavailable or malformed endpoint degrades to typed shadow
+metadata without changing chat behaviour.
 
 Configuration is intentionally operational rather than user-facing:
 
 ```text
 MODEL_REGISTRY_ENABLED=true
+MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=true
+MODEL_ROUTING_OBSERVABILITY_ENABLED=false
 MODEL_REGISTRY_FORCE_ROLLBACK=false
 MODEL_REGISTRY_ROLLBACK_MODEL=
+DEEPSEEK_PRO_MODEL=deepseek-v4-pro
+DEEPSEEK_FLASH_MODEL=deepseek-v4-flash
 ```
 
-The default is the configured `DEEPSEEK_MODEL`. To roll back, configure a known
-previous DeepSeek model in `MODEL_REGISTRY_ROLLBACK_MODEL`, then set
+The production env guard requires `DEEPSEEK_MODEL` to equal
+`DEEPSEEK_PRO_MODEL`, requires the exact governed identifiers
+`deepseek-v4-pro` and `deepseek-v4-flash`, and requires both registry switches
+to be explicitly `true`. This prevents a stale deploy secret from silently
+reverting to a legacy single-model path or an unsupported catalog. A recovery
+uses `MODEL_REGISTRY_ROLLBACK_MODEL` and `MODEL_REGISTRY_FORCE_ROLLBACK`; it
+does not replace the governed Pro/Flash deployment defaults.
+
+## Aggregate routing evidence
+
+`MODEL_ROUTING_OBSERVABILITY_ENABLED` is a default-off, in-memory operational
+collector at the registry boundary. When enabled it counts only the closed
+selection tuple `{task, profile, model_version, risk_level, rollback_applied}`.
+It never retains a model identifier, prompt text, request identifier,
+endpoint, credential, user input or model output, and it says only that the
+registry made a selection—not that a provider call succeeded. The protected
+ML `/metrics/json` endpoint includes this `model_routing` aggregate only while
+the flag is enabled; turning it off restores its former response shape
+immediately. This is evidence for routing governance, not a cost ledger or a
+clinical-quality metric.
+
+## Semantic intent routing
+
+Chat invokes `MEDICAL_SAFETY_ROUTER` before normal retrieval. Its closed task
+proposal can select only an existing non-emergency chat intent after the
+deterministic emergency and prohibited-action guards have allowed the request.
+`SEMANTIC_INTENT_ROUTING_ENABLED=false` immediately restores the legacy
+keyword intent selection; it cannot disable emergency escalation, legal
+refusal, FIDES, consent, RBAC, DrugBank or LifeMap invariants. The router
+receives a PII-redacted bounded message and records only model/task state, not
+the message or generated analysis.
+
+`POST /api/v1/lifemap/v2/ask` uses a distinct `LIFEMAP_ASK_ROUTER` task after
+its deterministic emergency and legal fast paths and after API consent/profile
+scope checks, but before LifeMap retrieval. The API sends only the bounded
+question and locale to `/v1/lifemap/ask/route`; profile ids, grants, events,
+revisions, retrieved text and source citations never cross that route. The
+router may return only five closed intents, a legal block, or emergency
+escalation. It cannot return an answer or mutate a record. API still retrieves
+only current authorized revisions and builds/verifies exact-revision claims
+deterministically. Provider errors, malformed output, or confidence below 0.7
+restore the existing deterministic route. The response intentionally reports
+only enabled/used/degraded state, never a model confidence. Set
+`LIFEMAP_ASK_SEMANTIC_ROUTING_ENABLED=false` and restart API for an immediate
+rollback; deterministic emergency/legal guards remain active either way.
+
+With task routing enabled, the manifest assigns `pro` to critical/safety and
+reasoning tasks (medical safety routing, LifeMap triage, FIDES/NLI, RAG
+synthesis, Council, Scribe note and research reasoning) and `flash` to bounded
+latency-sensitive tasks (LifeMap visit candidates, ASR correction/transcript
+handling, RAG reranking and research query planning). A Pro task may fail over
+to Flash and a Flash task may fail over to Pro, but never to the same model.
+Deterministic emergency/legal guards, FIDES, DrugBank, consent and truth-state
+rules remain authoritative regardless of a model response.
+
+Set `MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=false` and restart ML for an
+immediate restoration of the legacy single `DEEPSEEK_MODEL` selection. To
+force a named model rollback, configure a known previous DeepSeek model in
+`MODEL_REGISTRY_ROLLBACK_MODEL`, then set
 `MODEL_REGISTRY_FORCE_ROLLBACK=true` and restart the ML service. If no prior
 model is configured, a rollback request keeps the primary model and reports no
 rollback selection; it never labels the primary as a rollback.

@@ -23,7 +23,7 @@ class ControlTowerConfigService:
 
     @staticmethod
     def _enforce_mandatory_flow_flags(config: SystemControlTowerConfig) -> SystemControlTowerConfig:
-        # Product requirement: keep neural reranker and GraphRAG always enabled.
+        # Product requirement: keep the evidence reranker and GraphRAG enabled.
         config.rag_flow.rag_reranker_enabled = True
         config.rag_flow.rag_graphrag_enabled = True
         return config

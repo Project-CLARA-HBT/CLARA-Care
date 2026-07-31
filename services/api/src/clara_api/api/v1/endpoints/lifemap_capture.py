@@ -56,6 +56,7 @@ router = APIRouter()
 USER = Depends(require_roles("normal", "researcher", "doctor", "admin"))
 SESSION_LIFETIME = timedelta(days=7)
 ARTIFACT_ACCESS_SECONDS = 300
+_TEXT_DRAFT_MAX_SOURCE_CHARS = 6_000
 
 
 class TextCaptureRequest(BaseModel):
@@ -258,6 +259,93 @@ def _serialize_session(db: Session, session: LifeMapCaptureSession) -> dict:
     }
 
 
+def _extract_text_drafts(
+    *,
+    source_candidate: LifeMapCaptureCandidate,
+    source_text: str,
+    locale: str,
+    profile_id: int,
+) -> tuple[list[LifeMapCaptureCandidate], str]:
+    """Build unconfirmed, exact-span candidates through the ML boundary.
+
+    A provider failure, disabled peer flag or malformed response intentionally
+    returns no derived candidates. The direct user text remains a normal draft,
+    so extraction cannot erase a user's note or fabricate a replacement.
+    """
+
+    settings = get_settings()
+    if (
+        not settings.lifemap_text_draft_extraction_enabled
+        or len(source_text) > _TEXT_DRAFT_MAX_SOURCE_CHARS
+    ):
+        return [], ""
+    checksum = hashlib.sha256(source_text.encode()).hexdigest()
+    result = proxy_ml_post(
+        "/v1/lifemap/capture/extract-text-drafts",
+        {
+            "source_text": source_text,
+            "source_text_checksum": checksum,
+            "profile_partition": f"lifemap-profile:{profile_id}",
+            "locale": locale,
+        },
+        fail_soft_payload={"draft_only": False},
+        timeout_seconds=30.0,
+    )
+    if (
+        result.get("validated_boundary") != "lifemap-text-draft-v1"
+        or result.get("source_text_checksum") != checksum
+        or result.get("draft_only") is not True
+        or not isinstance(result.get("extractor_version"), str)
+        or not result["extractor_version"].strip()
+        or not isinstance(result.get("candidates"), list)
+    ):
+        return [], ""
+
+    candidates: list[LifeMapCaptureCandidate] = []
+    previous_end = 0
+    for raw in result["candidates"]:
+        if not isinstance(raw, dict) or set(raw) != {"category", "start", "end"}:
+            return [], ""
+        category, start, end = raw["category"], raw["start"], raw["end"]
+        if (
+            not isinstance(category, str)
+            or category not in {"symptom", "medication", "measurement", "sleep", "care_note"}
+            or isinstance(start, bool)
+            or not isinstance(start, int)
+            or isinstance(end, bool)
+            or not isinstance(end, int)
+            or start < previous_end
+            or end <= start
+            or end > len(source_text)
+            or not source_text[start:end].strip()
+        ):
+            return [], ""
+        candidates.append(
+            LifeMapCaptureCandidate(
+                session_id=source_candidate.session_id,
+                profile_id=source_candidate.profile_id,
+                candidate_type="text_draft",
+                field_path=category,
+                value_json={"text": source_text[start:end], "category": category},
+                confidence=None,
+                field_confidence_json={},
+                source_span_json={
+                    "kind": "source_text",
+                    "source_candidate_id": source_candidate.public_id,
+                    "text_checksum": checksum,
+                    "start": start,
+                    "end": end,
+                },
+                missing_critical_fields_json=[],
+                extraction_schema_version=CAPTURE_SCHEMA_VERSION,
+                extractor_version=result["extractor_version"].strip()[:96],
+                security_findings_json=[],
+            )
+        )
+        previous_end = end
+    return candidates, result["extractor_version"].strip()[:96]
+
+
 def _artifact_store() -> EncryptedCaptureArtifactStore:
     try:
         return build_capture_artifact_store()
@@ -337,6 +425,21 @@ def start_text_capture(
     )
     db.add(candidate)
     db.flush()
+    derived_candidates, _ = _extract_text_drafts(
+        source_candidate=candidate,
+        source_text=payload.text,
+        locale=payload.locale,
+        profile_id=scope.profile.id,
+    )
+    if derived_candidates:
+        # Preserve the original note as an immutable provenance row rather than
+        # a second confirmable event. Each derived candidate must still be
+        # independently edited/rejected/confirmed by the user.
+        candidate.candidate_type = "text_source"
+        candidate.status = "source"
+        for derived in derived_candidates:
+            db.add(derived)
+        db.flush()
     write_audit(
         db,
         profile_id=scope.profile.id,
@@ -351,7 +454,10 @@ def start_text_capture(
         "id": session.public_id,
         "status": session.status,
         "expires_at": session.expires_at,
-        "candidates": [_serialize_candidate(candidate)],
+        "candidates": [
+            _serialize_candidate(item)
+            for item in (derived_candidates or [candidate])
+        ],
         "emergency": False,
         "persisted": True,
     }
@@ -560,6 +666,8 @@ def candidate_duplicate_suggestions(
     _require_enabled()
     scope = _scope(db, token, x_profile, action="view")
     candidate = _candidate(db, scope, candidate_id)
+    if candidate.candidate_type == "text_source":
+        raise HTTPException(status_code=409, detail={"code": "source_not_reviewable"})
     canonical = json.dumps(
         candidate.value_json, sort_keys=True, separators=(",", ":")
     )
@@ -983,7 +1091,13 @@ def review_candidate(
         event = LifeMapEvent(
             profile_id=scope.profile.id,
             episode_id=episode.id if episode else None,
-            event_type=question.field_key if question else candidate.candidate_type,
+            event_type=(
+                question.field_key
+                if question
+                else "text"
+                if candidate.candidate_type == "text_draft"
+                else candidate.candidate_type
+            ),
             truth_state="confirmed",
             occurred_at=datetime.now(UTC),
             payload_json=value,

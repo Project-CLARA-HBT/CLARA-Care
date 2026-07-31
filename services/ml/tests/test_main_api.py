@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from clara_ml.main import (
     _classify_medical_request_with_llm,
     _detect_legal_guard_violation,
+    _semantic_intent_for_task,
     app,
 )
 from clara_ml.observability import InMemoryMetricsCollector, metrics_collector
@@ -150,6 +151,48 @@ def test_routed_chat_infer_returns_routing_and_answer():
     assert body["model_used"] in {"local-synth-v1", "deepseek-v3.2"}
     assert body["answer"]
     assert "factcheck" in body
+
+
+def test_routed_chat_passes_english_ui_language_to_structured_renderer(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The normal path must not silently render the v2 guidance in Vietnamese."""
+
+    from clara_ml.main import rag_pipeline
+    from clara_ml.rag.pipeline import RagResult
+    import clara_ml.main as main_module
+
+    original_build = main_module.build_medical_answer_v2
+
+    def _fake_run(*args, **kwargs):
+        return RagResult(
+            query="query",
+            retrieved_ids=["doc-1"],
+            answer="Monitor symptoms and seek clinical review if they worsen.",
+            model_used="local-synth-v1",
+            retrieved_context=[{"id": "doc-1", "text": "Clinical monitoring context."}],
+            context_debug={},
+            flow_events=[],
+        )
+
+    captured: list[dict[str, object]] = []
+
+    def _capture_build(**kwargs):
+        captured.append(dict(kwargs))
+        return original_build(**kwargs)
+
+    monkeypatch.setattr(rag_pipeline, "run", _fake_run)
+    monkeypatch.setattr(main_module, "build_medical_answer_v2", _capture_build)
+
+    response = client.post(
+        "/v1/chat/routed",
+        json={"query": "How should I monitor these symptoms?", "ui_language": "en"},
+    )
+
+    assert response.status_code == 200
+    assert captured[-1]["answer_language"] == "en"
+    rendered = response.json()["medical_answer_v2"]["rendered_explanation"]
+    assert rendered["summary"].startswith("CLARA is sharing")
 
 
 def test_routed_chat_infer_rule_verification_flag_overrides_legacy(monkeypatch: pytest.MonkeyPatch):
@@ -489,6 +532,7 @@ def test_routed_chat_existing_dose_context_does_not_bypass_triage():
                 "action": "allow",
                 "reason": "none",
                 "emergency": "false",
+                "task": "medication_normalization",
                 "confidence": 0.97,
             },
             "allow",
@@ -499,6 +543,7 @@ def test_routed_chat_existing_dose_context_does_not_bypass_triage():
                 "action": "block",
                 "reason": "dosage_request",
                 "emergency": False,
+                "task": "general_health_qa",
                 "confidence": 0.96,
             },
             "block",
@@ -534,6 +579,22 @@ def test_medical_semantic_router_uses_llm_context(
     assert result["action"] == expected_action
     assert result["reason"] == expected_reason
     assert result["model_used"] == "semantic-router-test"
+
+
+@pytest.mark.parametrize(
+    ("task", "role", "expected"),
+    [
+        ("symptom_triage", "normal", "symptom_triage"),
+        ("ddi_check", "normal", "medication_safety"),
+        ("ddi_check", "doctor", "doctor_ddi_check"),
+        ("research_review", "researcher", "evidence_review"),
+        ("document_extraction", "normal", None),
+    ],
+)
+def test_semantic_task_route_is_closed_to_existing_chat_intents(
+    task: str, role: str, expected: str | None
+) -> None:
+    assert _semantic_intent_for_task(task=task, role=role) == expected
 
 
 def test_routed_chat_emergency_triage_outranks_diagnosis_guard():
@@ -974,10 +1035,10 @@ def test_council_run_returns_expected_schema():
     assert isinstance(body["per_specialist_reasoning_logs"], list)
     assert len(body["per_specialist_reasoning_logs"]) == 3
     for item in body["per_specialist_reasoning_logs"]:
-        assert {"specialist", "reasoning_log", "key_findings", "triage", "recommendation"}.issubset(
+        assert {"specialist", "key_findings", "triage", "recommendation"}.issubset(
             item.keys()
         )
-        assert isinstance(item["reasoning_log"], list)
+        assert "reasoning_log" not in item
         assert isinstance(item["key_findings"], list)
         assert item["triage"] in {"routine_follow_up", "same_day_review", "emergency_escalation"}
         assert isinstance(item["recommendation"], str)
@@ -1004,12 +1065,13 @@ def test_council_run_returns_expected_schema():
     assert body["emergency_escalation"]["action"] == "standard_multidisciplinary_pathway"
     assert body["needs_more_info"] is False
     assert isinstance(body["followup_questions"], list)
-    assert isinstance(body["confidence_score"], float)
-    assert 0.0 <= body["confidence_score"] <= 1.0
-    assert body["confidence_level"] in {"low", "medium", "high"}
-    assert isinstance(body["data_quality_score"], float)
-    assert 0.0 <= body["data_quality_score"] <= 1.0
-    assert body["data_quality_level"] in {"low", "medium", "high"}
+    assert "confidence_score" not in body
+    assert "confidence_level" not in body
+    assert "data_quality_score" not in body
+    assert "data_quality_level" not in body
+    assert body["assessment_completeness"]["status"] == "limited"
+    assert body["assessment_completeness"]["evidence_status"] == "case_facts_with_material_gaps"
+    assert body["assessment_completeness"]["calibration"] == "not_measured_no_probability_presented"
     assert isinstance(body["analyze"], dict)
     assert isinstance(body["details"], dict)
     assert isinstance(body["citations"], list)
@@ -1026,14 +1088,15 @@ def test_council_run_returns_expected_schema():
         }
     assert isinstance(body["reasoning_timeline"], list)
     assert len(body["reasoning_timeline"]) >= 6
+    assert all(set(item).issubset({"sequence", "step", "status"}) for item in body["reasoning_timeline"])
     steps = [item["step"] for item in body["reasoning_timeline"]]
     assert "consensus_decision" in steps
     assert "safety_gate" in steps
-    assert isinstance(body["neural_risk"], dict)
-    assert body["neural_risk"]["enabled"] is False
-    assert body["neural_risk"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
-    assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
-    assert body["neural_risk"]["trained"] is False
+    assert isinstance(body["rule_shadow"], dict)
+    assert body["rule_shadow"]["enabled"] is False
+    assert body["rule_shadow"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
+    assert body["rule_shadow"]["model_class"] == "fixed_weight_heuristic"
+    assert body["rule_shadow"]["trained"] is False
     assert isinstance(body["research"], dict)
     assert isinstance(body["deepdive"], dict)
     assert body["analyze"]["consensus_triage"] in {
@@ -1077,10 +1140,11 @@ def test_council_run_emergency_escalation_on_red_flags():
     assert body["needs_more_info"] is False
     assert isinstance(body["emergency_escalation"]["negated_red_flags"], list)
     assert body["analyze"]["emergency_triggered"] is True
-    assert body["confidence_level"] in {"medium", "high"}
+    assert body["assessment_completeness"]["status"] == "safety_escalated"
+    assert body["assessment_completeness"]["emergency_floor_triggered"] is True
 
 
-def test_council_run_supports_neural_shadow_scoring():
+def test_council_run_supports_fixed_rule_shadow_scoring():
     response = client.post(
         "/v1/council/run",
         json={
@@ -1089,29 +1153,29 @@ def test_council_run_supports_neural_shadow_scoring():
             "medications": ["metformin", "ibuprofen", "aspirin"],
             "history": ["type 2 diabetes", "chronic kidney disease"],
             "specialists": ["cardiology", "endocrinology", "nephrology"],
-            "council_neural_enabled": True,
+            "council_rule_shadow_enabled": True,
         },
     )
     assert response.status_code == 200
     body = response.json()
 
-    assert isinstance(body["neural_risk"], dict)
-    assert body["neural_risk"]["enabled"] is True
-    assert body["neural_risk"]["shadow_mode"] is True
-    assert body["neural_risk"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
-    assert body["neural_risk"]["legacy_model_alias"] == "council-neural-shadow-v1"
-    assert body["neural_risk"]["model_class"] == "fixed_weight_heuristic"
-    assert body["neural_risk"]["trained"] is False
-    assert body["neural_risk"]["risk_band"] in {"low", "medium", "high"}
-    assert 0.0 <= body["neural_risk"]["risk_probability"] <= 1.0
-    assert body["neural_risk"]["recommended_triage"] in {
+    assert isinstance(body["rule_shadow"], dict)
+    assert body["rule_shadow"]["enabled"] is True
+    assert body["rule_shadow"]["shadow_mode"] is True
+    assert body["rule_shadow"]["model_version"] == "council-fixed-weight-heuristic-shadow-v2"
+    assert body["rule_shadow"]["model_class"] == "fixed_weight_heuristic"
+    assert body["rule_shadow"]["trained"] is False
+    assert body["rule_shadow"]["risk_band"] in {"low", "medium", "high"}
+    assert "risk_probability" not in body["rule_shadow"]
+    assert body["rule_shadow"]["score_visibility"] == "not_calibrated_not_user_facing"
+    assert body["rule_shadow"]["recommended_triage"] in {
         "routine_follow_up",
         "same_day_review",
         "emergency_escalation",
     }
-    assert isinstance(body["neural_risk"]["feature_map"], dict)
-    assert isinstance(body["neural_risk"]["top_contributors"], list)
-    assert len(body["neural_risk"]["top_contributors"]) >= 1
+    assert isinstance(body["rule_shadow"]["feature_map"], dict)
+    assert isinstance(body["rule_shadow"]["top_contributors"], list)
+    assert len(body["rule_shadow"]["top_contributors"]) >= 1
 
 
 def test_council_run_negation_aware_and_insufficient_data_gate():
@@ -1136,7 +1200,8 @@ def test_council_run_negation_aware_and_insufficient_data_gate():
     assert isinstance(body["followup_questions"], list)
     assert len(body["followup_questions"]) >= 1
     assert body["analyze"]["needs_more_info"] is True
-    assert body["confidence_level"] == "low"
+    assert body["assessment_completeness"]["status"] == "insufficient"
+    assert body["assessment_completeness"]["followup_required"] is True
     assert "insufficient" in body["final_recommendation"].lower()
     assert isinstance(body["citations"], list)
     assert any(item.get("evidence_type") == "negated_symptom" for item in body["citations"])
@@ -1179,6 +1244,50 @@ def test_council_consult_with_transcript_and_overrides(monkeypatch: pytest.Monke
     assert isinstance(body["final_recommendation"], str)
     assert body["intake"]["model_used"] == "deepseek-v3.2"
     assert isinstance(body["intake"]["warnings"], list)
+
+
+def test_council_packet_is_review_only_and_skipped_for_emergency(monkeypatch: pytest.MonkeyPatch):
+    def _fake_run_council_intake(**_kwargs):
+        return {
+            "council_payload": {
+                "symptoms": ["fatigue"],
+                "labs": {},
+                "medications": [],
+                "history": [],
+            },
+            "model_used": "heuristic-fallback-v1",
+            "warnings": [],
+            "missing_fields": [],
+        }
+
+    monkeypatch.setattr("clara_ml.main.run_council_intake", _fake_run_council_intake)
+    monkeypatch.setattr(
+        "clara_ml.main.clinical_packet_metadata",
+        lambda _text: {"status": "review_only", "source_span_count": 1, "category_counts": {"symptom": 1}},
+    )
+
+    safe = client.post("/v1/council/consult", json={"transcript": "mệt"})
+
+    assert safe.status_code == 200
+    assert safe.json()["intake"]["clinical_packet"]["status"] == "review_only"
+    assert "clinical_packet" not in safe.json()["intake"] or "mệt" not in str(safe.json()["intake"])
+
+    called = False
+
+    def _must_not_run(_text: str):
+        nonlocal called
+        called = True
+        return {"status": "review_only"}
+
+    monkeypatch.setattr("clara_ml.main.clinical_packet_metadata", _must_not_run)
+    emergency = client.post(
+        "/v1/council/consult",
+        json={"transcript": "đau ngực", "symptoms": ["chest pain"]},
+    )
+
+    assert emergency.status_code == 200
+    assert emergency.json()["emergency_escalation"]["triggered"] is True
+    assert called is False
 
 
 def test_council_consult_missing_input_returns_400():

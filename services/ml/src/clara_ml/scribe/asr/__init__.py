@@ -8,8 +8,11 @@ import-safe, total (never-raises) :class:`AsrProvider` protocol. Implementations
 * :class:`PhoWhisperAsr` — Vietnamese-capable HTTP provider for a self-hosted PhoWhisper
   (OpenAI-compatible) endpoint, with code-switching (keep English tokens verbatim) and
   optional per-segment diarization; degrades to empty when unconfigured.
-* :class:`GoogleSttV2Asr` — placeholder Vietnamese-capable provider (Chirp-3 +
-  diarization + code-switching); returns an empty/degraded result until wired.
+* :class:`GoogleSttV2Asr` — credentialed Google Cloud Speech-to-Text V2
+  Chirp-3 provider with Vietnamese/English code-switching.  It is usable only
+  when the deployment supplies a project plus ADC/workload credentials; absent
+  configuration or an upstream failure yields no text so ``CompositeAsr`` can
+  use its configured independent fallback.
 * :class:`CompositeAsr` — tries a primary provider then a fallback.
 
 Importing this package opens no socket and constructs no HTTP client.

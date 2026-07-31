@@ -8,6 +8,7 @@ import {
   WorkspacePublicConversation,
   getWorkspacePublicConversation,
 } from "@/lib/workspace";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 type SharedConversationClientProps = {
   token: string;
@@ -30,11 +31,7 @@ export default function SharedConversationClient({ token }: SharedConversationCl
       } catch (cause) {
         if (!active) return;
         setPayload(null);
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Không thể tải conversation được chia sẻ."
-        );
+        setError(safeUserFacingError(cause, "Không thể tải conversation được chia sẻ."));
       } finally {
         if (active) setIsLoading(false);
       }

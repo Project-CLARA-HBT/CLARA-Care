@@ -124,7 +124,12 @@ def dispatch_action_email(
         return "disabled"
 
     if mode == "preview":
-        logger.info("auth email preview action=%s recipient=%s link=%s", action, recipient, link)
+        # Preview delivery is still an operational log path.  A recipient is
+        # PII and an action link contains a bearer-style credential, so neither
+        # may enter logs even outside production.  Callers that explicitly
+        # enable a local token preview receive it through the authenticated API
+        # response, never through a log sink.
+        logger.info("auth email preview dispatched action=%s", action)
         return "preview"
 
     return _send_via_smtp(settings, recipient=recipient, subject=subject, body=body)

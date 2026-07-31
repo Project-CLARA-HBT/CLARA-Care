@@ -1,37 +1,13 @@
-"""No-PHI reconciliation counts for facts imported before LifeMap V2."""
+"""Compatibility import for a LifeMap V1 provenance reconciliation helper.
 
-from __future__ import annotations
+New code must import :mod:`clara_api.lifemap.legacy.provenance`.  This module
+stays deliberately tiny because a few external/operator scripts may still use
+the pre-isolation import path.
+"""
 
-from collections import Counter
+from clara_api.lifemap.legacy.provenance import (
+    REPORT_CATEGORIES,
+    legacy_provenance_counts,
+)
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from clara_api.db.models import LifeMapEventRevision
-
-REPORT_CATEGORIES = ("confirmed", "user_reported", "ambiguous", "invalid")
-
-
-def legacy_provenance_counts(db: Session) -> dict[str, int]:
-    counts: Counter[str] = Counter()
-    rows = db.execute(
-        select(
-            LifeMapEventRevision.truth_state,
-            LifeMapEventRevision.provenance_json,
-        ).where(LifeMapEventRevision.reason_code == "legacy_import")
-    )
-    for truth_state, raw_provenance in rows:
-        state = str(truth_state)
-        provenance = raw_provenance if isinstance(raw_provenance, dict) else {}
-        if state in {"invalidated", "entered_in_error"}:
-            counts["invalid"] += 1
-        elif state in {"user_reported", "reported"}:
-            counts["user_reported"] += 1
-        elif (
-            state == "confirmed"
-            and provenance.get("confirmation_certainty") == "verified"
-        ):
-            counts["confirmed"] += 1
-        else:
-            counts["ambiguous"] += 1
-    return {category: counts[category] for category in REPORT_CATEGORIES}
+__all__ = ["REPORT_CATEGORIES", "legacy_provenance_counts"]

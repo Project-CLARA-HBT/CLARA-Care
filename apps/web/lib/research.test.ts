@@ -244,13 +244,13 @@ describe("normalizeResearchTier2JobProgress ordered disclosure (Feature: clara-r
   });
 });
 
-describe("GRADE certainty display gating (Feature: clara-research, Requirement 8.4)", () => {
+describe("source metadata safety (Feature: clara-research)", () => {
   function matrixByClaim(data: Parameters<typeof normalizeResearchTier2>[0]) {
     const entries = normalizeResearchTier2(data).telemetry.verificationMatrix;
     return new Map(entries.map((entry) => [entry.claim, entry] as const));
   }
 
-  it("attaches a certainty label only to claims that have an assigned GRADE label", () => {
+  it("ignores legacy formal-certainty labels in verification rows and payloads", () => {
     const byClaim = matrixByClaim({
       verification_matrix: [
         { claim: "Claim A", verdict: "supported" },
@@ -259,40 +259,16 @@ describe("GRADE certainty display gating (Feature: clara-research, Requirement 8
       grade: [{ claim: "Claim A", certainty: "moderate" }]
     } as never);
 
-    // Claim A has an assigned label -> certainty is surfaced.
-    expect(byClaim.get("Claim A")?.certainty).toBe("moderate");
-    // Claim B has no assigned label -> no certainty is surfaced (R8.4).
-    expect(byClaim.get("Claim B")?.certainty).toBeUndefined();
+    // Retrieval metadata cannot become a formal GRADE certainty judgement.
+    expect(byClaim.get("Claim A")).not.toHaveProperty("certainty");
+    expect(byClaim.get("Claim B")).not.toHaveProperty("certainty");
   });
 
-  it("surfaces a certainty label carried inline on the matrix row", () => {
+  it("ignores a legacy inline certainty field", () => {
     const byClaim = matrixByClaim({
       verification_matrix: [{ claim: "Claim C", verdict: "supported", certainty: "High" }]
     } as never);
-    expect(byClaim.get("Claim C")?.certainty).toBe("high");
-  });
-
-  it("never surfaces an out-of-set certainty value", () => {
-    const byClaim = matrixByClaim({
-      verification_matrix: [{ claim: "Claim D", verdict: "supported" }],
-      grade: [{ claim: "Claim D", certainty: "definitely" }]
-    } as never);
-    expect(byClaim.get("Claim D")?.certainty).toBeUndefined();
-  });
-
-  it("produces no certainty labels when GRADE data is absent (flag-off shape)", () => {
-    const byClaim = matrixByClaim({
-      verification_matrix: [{ claim: "Claim E", verdict: "supported" }]
-    } as never);
-    expect(byClaim.get("Claim E")?.certainty).toBeUndefined();
-  });
-
-  it("reads certainty from traced_claims when grade array is absent", () => {
-    const byClaim = matrixByClaim({
-      verification_matrix: [{ claim: "Claim F", verdict: "supported" }],
-      traced_claims: [{ claim: "Claim F", certainty: "very_low" }]
-    } as never);
-    expect(byClaim.get("Claim F")?.certainty).toBe("very_low");
+    expect(byClaim.get("Claim C")).not.toHaveProperty("certainty");
   });
 });
 
@@ -324,7 +300,7 @@ describe("Claim-to-study traceability + Citation Registry (Feature: clara-resear
 
     expect(result.tracedClaims).toHaveLength(1);
     expect(result.tracedClaims[0].citationIds).toEqual(["c1", "c2"]);
-    expect(result.tracedClaims[0].certainty).toBe("moderate");
+    expect(result.tracedClaims[0]).not.toHaveProperty("certainty");
     expect(result.citationRegistry).toHaveLength(2);
     expect(result.citationRegistry[0].studyId).toBe("PMID:12345");
     expect(result.citationRegistry[0].trustTier).toBe(1);

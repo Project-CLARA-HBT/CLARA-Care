@@ -1,5 +1,6 @@
 import type { UserRole } from "@/lib/auth-store";
 import type { ClinicalAnswerPackage } from "@/lib/chat";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import type { ReactNode } from "react";
 
@@ -14,7 +15,10 @@ export default function MedicalAnswerCanvas({
   role,
   uiLanguage,
 }: MedicalAnswerCanvasProps) {
-  const isEn = uiLanguage === "en";
+  const copy = (
+    key: UITranslationKey,
+    values: Record<string, string | number> = {},
+  ) => t(uiLanguage, key, values);
   const isClinical = role === "doctor" || role === "admin";
   const urgent =
     answer.triage.emergency || answer.triage.level === "urgent_review";
@@ -27,23 +31,19 @@ export default function MedicalAnswerCanvas({
   return (
     <section
       className="mt-4 overflow-hidden rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)]"
-      aria-label={isEn ? "Medical answer canvas" : "Bảng câu trả lời y khoa"}
+      aria-label={copy("chat.answerCanvas.aria")}
     >
       <header className="flex flex-wrap items-start justify-between gap-2 border-b border-[color:var(--shell-border)] px-3.5 py-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-brand)]">
-            {isClinical
-              ? isEn
-                ? "Clinical decision canvas"
-                : "Bảng hỗ trợ quyết định lâm sàng"
-              : isEn
-                ? "Your health action plan"
-                : "Kế hoạch sức khỏe của bạn"}
+            {copy(
+              isClinical
+                ? "chat.answerCanvas.eyebrow.clinical"
+                : "chat.answerCanvas.eyebrow.personal",
+            )}
           </p>
           <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-            {isEn
-              ? "Urgency, actions, evidence and uncertainty—kept separate."
-              : "Tách rõ mức khẩn cấp, hành động, bằng chứng và độ bất định."}
+            {copy("chat.answerCanvas.description")}
           </p>
         </div>
         <span
@@ -56,20 +56,18 @@ export default function MedicalAnswerCanvas({
       <div className="grid gap-2.5 p-2.5 md:grid-cols-2">
         <CanvasSection
           icon="emergency_home"
-          title={isEn ? "Urgency" : "Mức khẩn cấp"}
+          title={copy("chat.answerCanvas.urgency.title")}
           className={urgencyTone}
         >
           <p>
             {answer.triage.policy_action ||
-              (isEn
-                ? "No escalation instruction returned."
-                : "Chưa có hướng dẫn chuyển tuyến.")}
+              copy("chat.answerCanvas.urgency.empty")}
           </p>
         </CanvasSection>
 
         <CanvasSection
           icon="checklist"
-          title={isEn ? "What to do next" : "Việc nên làm tiếp theo"}
+          title={copy("chat.answerCanvas.nextActions.title")}
         >
           {answer.next_actions.length ? (
             <ol className="space-y-1.5">
@@ -84,31 +82,29 @@ export default function MedicalAnswerCanvas({
             </ol>
           ) : (
             <p>
-              {isEn
-                ? "No specific action was returned."
-                : "Chưa có hành động cụ thể."}
+              {copy("chat.answerCanvas.nextActions.empty")}
             </p>
           )}
         </CanvasSection>
 
         <CanvasSection
           icon="verified"
-          title={isEn ? "Evidence behind this" : "Bằng chứng hỗ trợ"}
+          title={copy("chat.answerCanvas.evidence.title")}
         >
           <div className="mb-2 flex flex-wrap gap-1.5">
             <Metric
-              label={isEn ? "sources" : "nguồn"}
+              label={copy("chat.answerCanvas.evidence.sources")}
               value={String(answer.provenance.evidence_count)}
             />
             <Metric
-              label={isEn ? "support" : "hỗ trợ"}
+              label={copy("chat.answerCanvas.evidence.support")}
               value={answer.claim_support.status.replaceAll("_", " ")}
             />
           </div>
           {answer.evidence_ledger.length ? (
             <details>
               <summary className="cursor-pointer font-semibold text-[var(--text-brand)]">
-                {isEn ? "Inspect evidence ledger" : "Xem sổ bằng chứng"}
+                {copy("chat.answerCanvas.evidence.inspectLedger")}
               </summary>
               <ol className="mt-2 space-y-2">
                 {answer.evidence_ledger.map((item) => (
@@ -129,7 +125,9 @@ export default function MedicalAnswerCanvas({
                     {typeof item.trust_tier === "number" ? (
                       <span className="text-[var(--text-muted)]">
                         {" "}
-                        · Tier {item.trust_tier}
+                        · {copy("chat.answerCanvas.evidence.trustTier", {
+                          tier: item.trust_tier,
+                        })}
                       </span>
                     ) : null}
                   </li>
@@ -138,23 +136,17 @@ export default function MedicalAnswerCanvas({
             </details>
           ) : (
             <p className="text-[var(--status-warn-text)]">
-              {isEn
-                ? "No retrievable evidence; do not treat this as decision-ready."
-                : "Không có bằng chứng truy xuất được; chưa thể dùng để ra quyết định."}
+              {copy("chat.answerCanvas.evidence.empty")}
             </p>
           )}
         </CanvasSection>
 
         <CanvasSection
           icon="uncertainty"
-          title={
-            isEn
-              ? "Uncertainty & missing context"
-              : "Độ bất định & dữ kiện còn thiếu"
-          }
+          title={copy("chat.answerCanvas.uncertainty.title")}
         >
           <Metric
-            label={isEn ? "uncertainty" : "bất định"}
+            label={copy("chat.answerCanvas.uncertainty.label")}
             value={answer.uncertainty.level.replaceAll("_", " ")}
           />
           {answer.uncertainty.reasons.length ? (
@@ -167,9 +159,9 @@ export default function MedicalAnswerCanvas({
           {answer.missing_information.length ? (
             <details className="mt-2">
               <summary className="cursor-pointer font-semibold text-[var(--text-brand)]">
-                {isEn
-                  ? `${answer.missing_information.length} details to add`
-                  : `${answer.missing_information.length} dữ kiện cần bổ sung`}
+                {copy("chat.answerCanvas.uncertainty.missingCount", {
+                  count: answer.missing_information.length,
+                })}
               </summary>
               <ul className="mt-2 list-disc space-y-1 pl-4">
                 {answer.missing_information.map((item) => (
@@ -184,13 +176,11 @@ export default function MedicalAnswerCanvas({
 
         <CanvasSection
           icon="medication"
-          title={isEn ? "Medicine safety" : "An toàn thuốc"}
+          title={copy("chat.answerCanvas.medicineSafety.title")}
           className="md:col-span-2"
         >
           <p>
-            {isEn
-              ? "This answer is not a medication reconciliation or interaction screen. Include every medicine, supplement, dose and allergy before acting; do not start or stop prescriptions without a clinician or pharmacist."
-              : "Câu trả lời này không thay thế đối chiếu thuốc hoặc kiểm tra tương tác. Hãy cung cấp đủ thuốc, thực phẩm bổ sung, liều và dị ứng; không tự bắt đầu hoặc ngừng thuốc kê đơn."}
+            {copy("chat.answerCanvas.medicineSafety.description")}
           </p>
         </CanvasSection>
       </div>

@@ -12,6 +12,7 @@ import {
   type PhrReminder,
 } from "@/lib/phr";
 import type { UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
  * Reminders panel (personal-health-record Requirement 14.1–14.5). Configures
@@ -106,7 +107,7 @@ export default function RemindersPanel({
     try {
       setReminders(await listPhrReminders());
     } catch (err) {
-      setListError(err instanceof Error ? err.message : text.listError);
+      setListError(safeUserFacingError(err, text.listError));
     } finally {
       setLoading(false);
     }
@@ -142,7 +143,7 @@ export default function RemindersPanel({
       setNudge(false);
       await load();
     } catch (err) {
-      setAddError(err instanceof Error ? err.message : text.addError);
+      setAddError(safeUserFacingError(err, text.addError));
     } finally {
       setAdding(false);
     }

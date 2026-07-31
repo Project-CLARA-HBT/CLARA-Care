@@ -1,23 +1,23 @@
-"""Watermark-driven backfill harness skeleton (Epic P0, task 1.12).
+"""Watermark-driven, fail-closed corpus backfill (Epic P0, task 1.12).
 
-This module exposes a single scheduler/admin-callable entrypoint,
-:func:`run_backfill`, that will eventually drive a full corpus backfill by
-delegating to the :class:`Ingestion_Orchestrator` (task 3.16). For P0 it is a
-thin, import-safe skeleton:
+This scheduler/admin-callable entrypoint uses the existing offline ingestion
+plane when callers do not inject test collaborators:
 
-- It is a strict no-op when ``RAG_INGESTION_ENABLED`` is false — the default —
-  so the legacy in-memory pipeline keeps serving traffic untouched.
-- When enabled, it resolves the source list and delegates per source to an
-  injected orchestrator. Because the orchestrator does not exist yet, the
-  orchestrator is provided via dependency injection (the ``orchestrator``
-  parameter) instead of importing a not-yet-created module. When no
-  orchestrator is wired, it returns a clear "not yet wired" report rather than
-  raising.
-
-Importing this module performs no side effects and opens no database
-connection. The orchestrator seam (:class:`IngestionOrchestratorLike`) is a
-structural ``Protocol`` so the future ``ingestion/orchestrator.py`` satisfies it
-without this skeleton importing it.
+- The default path lazily reuses ``scheduler._resolve_session_factory`` and
+  ``scheduler._build_default_orchestrator``. It therefore gets the real
+  ``DocumentStore`` + ``EmbeddingBuilder`` + ``IngestionOrchestrator`` chain,
+  including source provenance, atomic writes, idempotency and watermark
+  checkpoints.
+- ``RegistryScheduleReader`` supplies enabled source keys from
+  ``kb_source_registry`` only after the feature gates have passed. Importing
+  this module still opens no network or database connection.
+- A whole-corpus run requires *both* ``RAG_INGESTION_ENABLED`` and
+  ``RAG_BACKFILL_ENABLED``. The latter is an independent kill switch because a
+  backfill can contact every enabled upstream source; enabling ordinary
+  incremental ingestion must not accidentally start a corpus-wide operation.
+- Per-source failures are recorded as typed, non-sensitive failure reports and
+  execution proceeds to independent sources. No raw provider or database error
+  detail escapes the admin/scheduler boundary.
 
 Requirements: 4.6 — a scheduled/triggered backfill starts each source from the
 per-source watermark recorded in the Source_Registry (the ``since`` override
@@ -41,13 +41,13 @@ __all__ = [
 
 @runtime_checkable
 class IngestionOrchestratorLike(Protocol):
-    """Structural seam for the future ``Ingestion_Orchestrator`` (task 3.16).
+    """Structural seam for the concrete ``IngestionOrchestrator`` (task 3.16).
 
     Any object exposing a ``run`` that accepts a source key and an optional
     ``since`` watermark override satisfies this protocol, so the orchestrator
-    can be injected without this skeleton importing the (not-yet-created)
-    ``ingestion/orchestrator.py`` module. The return value is intentionally
-    untyped (``Any``) here; the orchestrator will return its own
+    can be injected without a module-level import of
+    ``ingestion/orchestrator.py``. The return value is intentionally untyped
+    (``Any``) here; the concrete orchestrator returns its own
     ``IngestionReport``.
     """
 
@@ -62,10 +62,11 @@ class SourceRegistryLike(Protocol):
 
     Any object exposing ``list_enabled_source_keys() -> list[str]`` satisfies
     this protocol, so the registry reader (backed by ``kb_source_registry``) can
-    be injected for the "all enabled sources" resolution without this skeleton
+    be injected for the "all enabled sources" resolution without this module
     importing the persistent-store module or opening a DB connection at import
     time. Returning the enabled source keys is the only thing the backfill needs
-    to fan out per source (Requirement 4.6).
+    to fan out per source (Requirement 4.6). The default production adapter is
+    built lazily after the backfill gates pass.
     """
 
     def list_enabled_source_keys(self) -> list[str]:
@@ -81,9 +82,9 @@ class BackfillReport:
         sources: The resolved source keys the backfill targeted (empty when
             disabled or when no sources were resolved).
         started: ``True`` only when work was actually delegated to an
-            orchestrator; ``False`` for the disabled and not-yet-wired paths.
-        reason: Human-readable explanation of the outcome (e.g. the "disabled"
-            or "not yet wired" reason).
+            orchestrator; ``False`` for disabled/unavailable paths.
+        reason: Human-readable explanation of the outcome (for example a
+            disabled gate or unavailable production dependency).
         per_source: Maps each source key to the orchestrator's per-source result
             (empty until an orchestrator is wired in).
     """
@@ -118,20 +119,65 @@ def _resolve_sources(
     When ``source_keys`` is provided, it is normalized (blanks dropped,
     duplicates removed while preserving first-seen order). When ``None``, the
     full enabled set is resolved from the injected ``source_registry`` reader
-    (the Source_Registry, tasks 3.1/3.21). When no registry is wired, this
-    returns an empty list (the "all sources" placeholder) so the skeleton stays
-    import-safe and never opens a DB connection on its own.
+    (the Source_Registry, tasks 3.1/3.21). The production path supplies its
+    adapter lazily after gates pass. An injected orchestrator without a reader
+    still resolves to an empty list, preserving fully DB-free test/custom use.
     """
 
     if source_keys is None:
         if source_registry is None:
-            # No registry reader wired: "all enabled sources" cannot be resolved
-            # without a Source_Registry read, and this skeleton must not open a
-            # DB connection itself (tasks 3.1 / 3.21 inject the reader).
+            # The production path supplies `_DefaultSourceRegistry` before
+            # reaching this branch. Keep injected custom/test execution DB-free.
             return []
         return _normalize_source_keys(list(source_registry.list_enabled_source_keys()))
 
     return _normalize_source_keys(source_keys)
+
+
+class _DefaultSourceRegistry:
+    """Lazy adapter from ``RegistryScheduleReader`` to the backfill protocol.
+
+    Keeping this adapter here avoids a module-level scheduler/database import
+    (``scheduler`` already imports :class:`IngestionOrchestratorLike` from this
+    module). It is instantiated only after both backfill feature flags pass.
+    """
+
+    def __init__(self, session_factory: Any) -> None:
+        self._session_factory = session_factory
+
+    def list_enabled_source_keys(self) -> list[str]:
+        from clara_ml.ingestion.scheduler import RegistryScheduleReader
+
+        schedules = RegistryScheduleReader(self._session_factory).read_schedules()
+        return [schedule.source_key for schedule in schedules if schedule.enabled]
+
+
+def _build_default_dependencies() -> tuple[
+    IngestionOrchestratorLike | None, SourceRegistryLike | None, str
+]:
+    """Build production collaborators lazily, without hiding a failed setup.
+
+    The scheduler owns the existing session/engine and orchestrator composition
+    seams. Any unavailable database, embedding configuration, or import error
+    becomes a non-sensitive reason code; this must not trigger a partial
+    backfill or an import-time connection attempt.
+    """
+
+    try:
+        from clara_ml.ingestion.scheduler import (
+            _build_default_orchestrator,
+            _resolve_session_factory,
+        )
+
+        session_factory = _resolve_session_factory()
+        if session_factory is None:
+            return None, None, "default_wiring_unavailable:session_factory"
+        orchestrator = _build_default_orchestrator(session_factory)
+        if orchestrator is None:
+            return None, None, "default_wiring_unavailable:orchestrator"
+        return orchestrator, _DefaultSourceRegistry(session_factory), ""
+    except Exception as exc:  # noqa: BLE001 - retain fail-closed external boundary
+        return None, None, f"default_wiring_unavailable:{exc.__class__.__name__}"
 
 
 def run_backfill(
@@ -150,17 +196,17 @@ def run_backfill(
             ``None``, each source resumes from its per-source watermark in the
             Source_Registry (Requirement 4.6).
         orchestrator: Dependency-injected ingestion orchestrator. When ``None``
-            (the current default, since task 3.16 is not implemented yet), the
-            function returns a "not yet wired" report instead of importing a
-            nonexistent module.
+            after the feature gates pass, the existing scheduler composition
+            builds the real orchestrator lazily.
         source_registry: Dependency-injected Source_Registry reader used to
-            resolve "all enabled sources" when ``source_keys`` is ``None`` (tasks
-            3.1 / 3.21). When ``None`` and ``source_keys`` is ``None``, the
-            resolved source list is empty (no DB read happens here).
+            resolve "all enabled sources" when ``source_keys`` is ``None``
+            (tasks 3.1 / 3.21). When omitted on the production path, a
+            scheduler-backed registry adapter is built lazily; when callers
+            inject an orchestrator without a reader, no implicit DB read occurs.
 
     Returns:
         A :class:`BackfillReport` describing the outcome. Disabled and
-        not-yet-wired outcomes have ``started=False``.
+        unavailable outcomes have ``started=False``.
     """
 
     if not settings.rag_ingestion_enabled:
@@ -170,26 +216,46 @@ def run_backfill(
             reason="disabled: RAG_INGESTION_ENABLED is false",
             per_source={},
         )
-
-    sources = _resolve_sources(source_keys, source_registry=source_registry)
-
-    if orchestrator is None:
+    if not bool(getattr(settings, "rag_backfill_enabled", False)):
         return BackfillReport(
-            sources=sources,
+            sources=[],
             started=False,
-            reason=("not yet wired: no IngestionOrchestrator provided (pending task 3.16)"),
+            reason="disabled: RAG_BACKFILL_ENABLED is false",
             per_source={},
         )
 
+    if orchestrator is None:
+        default_orchestrator, default_registry, unavailable_reason = _build_default_dependencies()
+        if default_orchestrator is None:
+            return BackfillReport(
+                sources=[],
+                started=False,
+                reason=unavailable_reason,
+                per_source={},
+            )
+        orchestrator = default_orchestrator
+        if source_registry is None:
+            source_registry = default_registry
+
+    sources = _resolve_sources(source_keys, source_registry=source_registry)
+
     per_source: dict[str, Any] = {}
+    failed = False
     for source_key in sources:
         # ``since`` overrides the per-source watermark; when None the
         # orchestrator resumes from the Source_Registry watermark (Req 4.6).
-        per_source[source_key] = orchestrator.run(source_key, since=since)
+        try:
+            per_source[source_key] = orchestrator.run(source_key, since=since)
+        except Exception as exc:  # noqa: BLE001 - sibling sources remain independent
+            failed = True
+            per_source[source_key] = {
+                "status": "failed",
+                "reason": f"orchestrator_run_failed:{exc.__class__.__name__}",
+            }
 
     return BackfillReport(
         sources=sources,
         started=True,
-        reason="completed",
+        reason="completed_with_failures" if failed else "completed",
         per_source=per_source,
     )

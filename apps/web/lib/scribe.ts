@@ -101,6 +101,28 @@ export type ScribeTranscribeResponse = {
   received_bytes?: number;
   session_transcript_chars?: number;
   session_updated_at?: string | null;
+  /** Additive, review-only ASR terminology candidates. Never applied by the API. */
+  medical_correction?: ScribeMedicalCorrectionResult;
+};
+
+export type ScribeMedicalCorrectionSuggestion = {
+  source_text: string;
+  replacement_text: string;
+  kind: "medication_term" | "clinical_term" | "procedure_term";
+  rationale: string;
+  start: number;
+  end: number;
+  status: "suggested_requires_clinician_review";
+};
+
+/**
+ * The API keeps this additive metadata separate from the verbatim transcript.
+ * Any client that uses it must require an explicit clinician action per row.
+ */
+export type ScribeMedicalCorrectionResult = {
+  status?: string;
+  suggestions?: ScribeMedicalCorrectionSuggestion[];
+  applied?: false;
 };
 
 function asText(value: unknown): string {
@@ -234,6 +256,18 @@ export async function generateScribeNote(
   payload: { template_id?: string; transcript?: string } = {}
 ): Promise<ScribeSession> {
   const response = await api.post<ScribeSession>(`/scribe/sessions/${sessionId}/notes`, payload);
+  return response.data;
+}
+
+/**
+ * Persist an explicit clinician edit as a new versioned draft. This route never
+ * accepts an AI confidence value, code selection, or status transition.
+ */
+export async function saveScribeNoteDraft(
+  sessionId: number,
+  payload: { template_id?: string; sections: Record<string, string> }
+): Promise<ScribeSession> {
+  const response = await api.post<ScribeSession>(`/scribe/sessions/${sessionId}/notes/draft`, payload);
   return response.data;
 }
 
@@ -559,6 +593,8 @@ export type ScribeStreamDone = {
   transcript?: string;
   segments?: ScribeStreamSegment[];
   note?: ScribeStreamNote;
+  /** Review-only terminology candidates; the client must never auto-apply them. */
+  medical_correction?: ScribeMedicalCorrectionResult;
   asr_meta?: ScribeStreamAsrMeta;
   [key: string]: unknown;
 };

@@ -35,6 +35,13 @@ from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.ocr_correction import OcrCorrectionResult, correct_ocr_text
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
+from clara_api.core.upload_safety import (
+    UploadMalwareScannerUnavailable,
+    UploadSafetyError,
+    VerifiedUpload,
+    read_upload_bytes_with_limit,
+    verify_upload,
+)
 from clara_api.db.models import (
     LifeMapCaptureCandidate,
     LifeMapCaptureReviewAction,
@@ -56,6 +63,7 @@ from clara_api.phr.provenance import hedge_text_bilingual
 from clara_api.phr.reconciler import find_allergy_conflicts, reconcile
 from clara_api.schemas import (
     CabinetAutoDdiRequest,
+    CabinetDrugBankResolution,
     CabinetExpirySummary,
     CabinetImportRequest,
     CabinetImportResponse,
@@ -68,6 +76,7 @@ from clara_api.schemas import (
     MedicineCabinetItemUpdate,
     MedicineCabinetResponse,
     OcrConfirmGate,
+    OcrSourceCoordinate,
     VnDrugMappingAuditListResponse,
     VnDrugMappingAuditResponse,
     VnDrugMappingCreateRequest,
@@ -80,6 +89,31 @@ from clara_api.schemas import (
 )
 
 router = APIRouter()
+
+_MAX_CAREGUARD_MEDICATION_TEXT_CHARS = 2_000
+
+
+def _bounded_medication_text_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate the optional free-text medicine field before ML proxying.
+
+    The ML service repeats this bound because it also has internal callers.
+    Keeping an API boundary prevents an authenticated public request from using
+    the generic CareGuard payload as an unbounded text transport.  The field is
+    deliberately not transformed or split here: deterministic clinical NLP and
+    exact DrugBank identity resolution remain inside the ML safety pipeline.
+    """
+
+    if "medication_text" not in payload:
+        return dict(payload)
+    value = payload.get("medication_text")
+    if not isinstance(value, str) or len(value.strip()) > _MAX_CAREGUARD_MEDICATION_TEXT_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="medication_text_invalid",
+        )
+    prepared = dict(payload)
+    prepared["medication_text"] = value.strip()
+    return prepared
 
 
 @router.get("/drugbank/status")
@@ -96,7 +130,11 @@ def drugbank_status(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="DrugBank readiness is not reported by the ML service",
         )
-    if readiness.get("required") is True and readiness.get("state") != "ready":
+    if readiness.get("required") is True and (
+        readiness.get("state") != "ready"
+        or readiness.get("manifest_matches_index") is not True
+        or readiness.get("integrity_verified") is not True
+    ):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
@@ -350,6 +388,38 @@ def _build_alias_lookup() -> dict[str, str]:
 
 def _normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
+
+
+_DRUGBANK_ALIAS_DOSAGE = re.compile(
+    r"\b\d+(?:[.,]\d+)?\s*(mg|g|mcg|μg|ml|iu|%)\b",
+    flags=re.IGNORECASE,
+)
+_DRUGBANK_ALIAS_COUNT = re.compile(
+    r"\bx\s*\d+\b",
+    flags=re.IGNORECASE,
+)
+_DRUGBANK_ALIAS_FORMS = {
+    "tablet", "tablets", "tab", "tabs", "capsule", "capsules", "cap", "caps",
+    "syrup", "suspension", "solution", "cream", "ointment", "gel", "patch",
+    "injection", "injectable", "sl", "iv", "im", "po", "bid", "tid", "qid",
+    "od", "hs", "vien", "ống", "ong",
+}
+
+
+def _canonicalize_drugbank_alias(value: str) -> str:
+    """Bound a returned choice to its owner-scoped cabinet input.
+
+    This mirrors the internal ML alias cleanup only for request binding. It
+    never chooses a DrugBank record or produces a DDI conclusion; ML validates
+    the chosen source identifier against the current licensed index.
+    """
+
+    cleaned = _DRUGBANK_ALIAS_DOSAGE.sub(" ", _normalize_text(value))
+    cleaned = _DRUGBANK_ALIAS_COUNT.sub(" ", cleaned)
+    cleaned = re.sub(r"[/(),;+]", " ", cleaned)
+    return " ".join(
+        part for part in cleaned.split() if part and part not in _DRUGBANK_ALIAS_FORMS
+    )
 
 
 DRUG_ALIAS_LOOKUP = _build_alias_lookup()
@@ -1597,6 +1667,42 @@ def _scan_with_tgc_ocr(
     raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=last_error)
 
 
+def _verify_careguard_ocr_upload(
+    *, file_name: str, content_type: str, file_bytes: bytes
+) -> VerifiedUpload:
+    """Fail closed before a medication image leaves the API boundary.
+
+    Cabinet OCR historically called its providers immediately after a byte-size
+    check. That accepted a client-claimed MIME type and bypassed the shared
+    malware policy used by PHR and Research uploads. The OCR provider must only
+    receive a file whose bytes, filename and declared media type agree; when a
+    configured malware scanner cannot return a clean verdict, no provider call
+    is made.
+    """
+
+    settings = get_settings()
+    try:
+        return verify_upload(
+            filename=file_name,
+            content_type=content_type,
+            data=file_bytes,
+            fallback_filename="medication-label",
+            malware_scan_required=settings.upload_malware_scan_required,
+            clamav_host=settings.upload_malware_clamav_host,
+            clamav_port=settings.upload_malware_clamav_port,
+        )
+    except UploadMalwareScannerUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Không thể kiểm tra an toàn tệp lúc này. Vui lòng thử lại sau.",
+        ) from exc
+    except UploadSafetyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Tệp tải lên không khớp định dạng được phép.",
+        ) from exc
+
+
 @router.get("/cabinet", response_model=MedicineCabinetResponse)
 def get_cabinet(
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
@@ -1881,8 +1987,9 @@ def delete_cabinet_item(
 
 
 _CAPTURE_INJECTION = re.compile(
-    r"(ignore (all|previous) instructions|system prompt|developer message|"
-    r"b[oỏ] qua (mọi|tất cả) (chỉ dẫn|hướng dẫn))",
+    r"(ignore (all|previous|prior) instructions|system prompt|developer message|"
+    r"jailbreak|do anything now|b[oỏ] qua (mọi|tất cả) (chỉ dẫn|hướng dẫn)|"
+    r"bo qua (moi|tat ca) (chi dan|huong dan))",
     re.IGNORECASE,
 )
 
@@ -1894,6 +2001,50 @@ def _capture_span(text: str, value: str) -> dict[str, int] | None:
     if start < 0:
         return None
     return {"start": start, "end": start + len(value)}
+
+
+def _attach_ocr_source_coordinates(
+    detections: list[CabinetScanDetection], *, corrected_text: str
+) -> list[CabinetScanDetection]:
+    """Attach exact, reviewable OCR text offsets without inventing image boxes."""
+
+    annotated: list[CabinetScanDetection] = []
+    for detection in detections:
+        evidence = (detection.evidence or "").strip()
+        # Fuzzy evidence is a diagnostic label (``fuzzy:x->y``), not an OCR
+        # span. Prefer the observed token; otherwise do not claim a location.
+        if evidence.startswith("fuzzy:"):
+            observed = evidence[6:].split("->", 1)[0].strip()
+            probe = observed
+        else:
+            probe = evidence
+        span = _capture_span(corrected_text, probe)
+        coordinates: list[OcrSourceCoordinate] = (
+            [
+                OcrSourceCoordinate(
+                    coordinate_system="corrected_text_codepoint_offset",
+                    start=span["start"],
+                    end=span["end"],
+                )
+            ]
+            if span is not None
+            else []
+        )
+        annotated.append(detection.model_copy(update={"source_coordinates": coordinates}))
+    return annotated
+
+
+def _reject_ocr_prompt_injection(source_text: str) -> None:
+    """Fail closed before OCR text becomes an extraction/model instruction."""
+
+    if _CAPTURE_INJECTION.search(source_text or ""):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "ocr_prompt_injection_suspected",
+                "message": "Nội dung OCR có chỉ dẫn không an toàn; không thể trích xuất thuốc.",
+            },
+        )
 
 
 def _persist_cabinet_capture_drafts(
@@ -2000,12 +2151,16 @@ def scan_cabinet_text(
 ) -> CabinetScanTextResponse:
     user = _require_user(token, db)
     correction = _apply_ocr_correction(payload.text)
+    _reject_ocr_prompt_injection(correction.corrected_text)
     detections = _enforce_low_confidence_manual_confirm(
         _detect_drugs_from_text(
             correction.corrected_text,
             db=db,
             skip_ocr_correction=True,
         )
+    )
+    detections = _attach_ocr_source_coordinates(
+        detections, corrected_text=correction.corrected_text
     )
     capture_session_id: str | None = None
     if get_settings().lifemap_capture_enabled:
@@ -2038,14 +2193,16 @@ async def scan_cabinet_file(
     user = _require_user(token, db)
     file_name = file.filename or "uploaded-receipt"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await file.read()
+    file_bytes = await read_upload_bytes_with_limit(file, max_bytes=20 * 1024 * 1024)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
-    if len(file_bytes) > 20 * 1024 * 1024:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="File vượt quá 20MB",
-        )
+    verified_upload = _verify_careguard_ocr_upload(
+        file_name=file_name,
+        content_type=content_type,
+        file_bytes=file_bytes,
+    )
+    file_name = verified_upload.filename
+    content_type = verified_upload.media_type
 
     extracted_text, used_endpoint, ocr_provider = _scan_with_tgc_ocr(
         file_bytes=file_bytes,
@@ -2053,12 +2210,16 @@ async def scan_cabinet_file(
         content_type=content_type,
     )
     correction = _apply_ocr_correction(extracted_text)
+    _reject_ocr_prompt_injection(correction.corrected_text)
     detections = _enforce_low_confidence_manual_confirm(
         _detect_drugs_from_text(
             correction.corrected_text,
             db=db,
             skip_ocr_correction=True,
         )
+    )
+    detections = _attach_ocr_source_coordinates(
+        detections, corrected_text=correction.corrected_text
     )
     capture_session_id: str | None = None
     if get_settings().lifemap_capture_enabled:
@@ -2298,7 +2459,36 @@ def run_auto_ddi_check(
         .scalars()
         .all()
     )
-    medication_names = [item.normalized_name for item in medication_items if item.normalized_name]
+    clarification_enabled = get_settings().careguard_medication_clarification_enabled
+    resolutions_by_item: dict[int, CabinetDrugBankResolution] = {}
+    if clarification_enabled:
+        items_by_id = {item.id: item for item in medication_items}
+        for resolution in payload.resolutions:
+            item = items_by_id.get(resolution.cabinet_item_id)
+            # Do not disclose another person's item existence. The selection
+            # must bind to a current item in this user's cabinet and to its
+            # unmodified raw alias before ML can revalidate DrugBank identity.
+            if item is None or resolution.cabinet_item_id in resolutions_by_item:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"code": "invalid_cabinet_medication_resolution"},
+                )
+            if _canonicalize_drugbank_alias(resolution.input_alias) != _canonicalize_drugbank_alias(item.drug_name):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"code": "invalid_cabinet_medication_resolution"},
+                )
+            resolutions_by_item[item.id] = resolution
+
+    # The default-off rollout preserves the prior canonical cabinet payload.
+    # In strict clarification mode only, retain the user's raw cabinet label so
+    # ML can bind it to an exact licensed DrugBank alias rather than a local
+    # fuzzy/legacy normalization.
+    medication_names = [
+        (item.drug_name if clarification_enabled else item.normalized_name)
+        for item in medication_items
+        if (item.drug_name if clarification_enabled else item.normalized_name)
+    ]
     medications_with_meta = []
     for item in medication_items:
         display_name, normalized_name, rx_cui, mapping_source, mapping_confidence = (
@@ -2314,6 +2504,13 @@ def run_auto_ddi_check(
                 "mapping_confidence": mapping_confidence,
             }
         )
+        if clarification_enabled:
+            medications_with_meta[-1]["cabinet_item_id"] = item.id
+            # Keep this exact raw alias aligned and ordered with ``medications``.
+            # ML uses it only to bind a returned clarification to this owner-
+            # scoped item; the licensed DrugBank index remains the identity
+            # authority and does not trust this metadata as a selection.
+            medications_with_meta[-1]["input_alias"] = item.drug_name
 
     request_payload: dict[str, Any] = {
         "symptoms": payload.symptoms,
@@ -2321,8 +2518,21 @@ def run_auto_ddi_check(
         "medications": sorted(set(medication_names)),
         "medications_with_meta": medications_with_meta,
         "allergies": payload.allergies,
+        # The ML renderer uses this only after deterministic DrugBank/risk
+        # policy has produced its final facts. It cannot change the conclusion.
+        "locale": payload.locale,
         "external_ddi_enabled": control_tower.careguard_runtime.external_ddi_enabled,
     }
+    if clarification_enabled:
+        request_payload["medication_resolutions"] = [
+            {
+                "cabinet_item_id": resolution.cabinet_item_id,
+                "input_alias": resolution.input_alias,
+                "drugbank_id": resolution.drugbank_id,
+                "drugbank_version": resolution.drugbank_version,
+            }
+            for resolution in payload.resolutions
+        ]
 
     # --- PHR reconciliation + allergy-aware DDI (flag-gated, Req 7) ----------
     # Flag OFF ⇒ cabinet-only payload above, byte-for-byte legacy (Req 7.5,
@@ -2785,7 +2995,7 @@ def careguard_analyze(
 ) -> dict[str, Any]:
     _require_user(token, db)
     control_tower = get_control_tower_config_service().load(db)
-    request_payload = dict(payload)
+    request_payload = _bounded_medication_text_payload(payload)
     request_payload["external_ddi_enabled"] = control_tower.careguard_runtime.external_ddi_enabled
     observability_enabled = get_settings().careguard_observability_enabled
     started_at = perf_counter() if observability_enabled else 0.0

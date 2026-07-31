@@ -26,6 +26,7 @@ import {
   getScribeGrounding,
   listScribeAddenda,
   regenerateScribeSession,
+  saveScribeNoteDraft,
   signScribeNote,
   streamScribe,
   transcribeScribeAudio,
@@ -34,6 +35,7 @@ import {
   type ScribeExportFormat,
   type ScribeEmCptSuggestion,
   type ScribeGroundingReport,
+  type ScribeMedicalCorrectionSuggestion,
 } from "@/lib/scribe";
 import {
   DEFAULT_SCRIBE_TEMPLATE_ID,
@@ -41,12 +43,10 @@ import {
   SCRIBE_REVIEW_TEMPLATES,
   ScribeFlowState,
   addendaHaveData,
-  addendumAuthorLabel,
   computePipelineStages,
   concatSegmentsText,
   countConfirmedEmCpt,
   emCptCodeKey,
-  formatAddendumTimestamp,
   formatGroundedClaimRate,
   groundingChip,
   groundingHasData,
@@ -62,8 +62,13 @@ import {
   speakerChip,
   toggleEmCptSelection,
   type GroundingStatus,
+  type ScribeStageId,
   type ScribeStageStatus,
 } from "@/lib/scribe-review";
+import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+import type { UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 type NoticeTone = "success" | "error";
 
@@ -110,14 +115,6 @@ const STAGE_DOT_CLASSES: Record<ScribeStageStatus, string> = {
   completed: "bg-emerald-500",
   failed: "bg-rose-500",
   warning: "bg-amber-500",
-};
-
-const STAGE_STATUS_LABELS: Record<ScribeStageStatus, string> = {
-  pending: "đang chờ",
-  in_progress: "đang xử lý",
-  completed: "hoàn tất",
-  failed: "lỗi",
-  warning: "cảnh báo",
 };
 
 // Grounding chip tones (Req 12.7): grounded statements are evidenced, unverified
@@ -176,7 +173,32 @@ function sectionsToRecord(sections: NoteSectionEntry[]): Record<string, string> 
   return record;
 }
 
+function normalizeMedicalCorrections(value: unknown): ScribeMedicalCorrectionSuggestion[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is ScribeMedicalCorrectionSuggestion => {
+      if (!item || typeof item !== "object") return false;
+      const row = item as Record<string, unknown>;
+      return (
+        typeof row.source_text === "string" &&
+        typeof row.replacement_text === "string" &&
+        typeof row.rationale === "string" &&
+        ["medication_term", "clinical_term", "procedure_term"].includes(String(row.kind)) &&
+        Number.isInteger(row.start) &&
+        Number.isInteger(row.end) &&
+        row.status === "suggested_requires_clinician_review" &&
+        row.source_text.length > 0 &&
+        row.source_text.length <= 160 &&
+        row.replacement_text.length > 0 &&
+        row.replacement_text.length <= 160 &&
+        !/\d/.test(row.replacement_text)
+      );
+    })
+    .slice(0, 12);
+}
+
 export default function EnterpriseReview({ session, onSessionChange, pushNotice }: EnterpriseReviewProps) {
+  const language = useUILanguage();
   const sessionId = session?.id ?? null;
   const sessionStatus = (session?.status ?? "").trim().toLowerCase();
   const alreadySigned = SIGNED_STATUSES.has(sessionStatus);
@@ -194,6 +216,9 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
   const [usedBatchFallback, setUsedBatchFallback] = useState(false);
   const [degradedCount, setDegradedCount] = useState(0);
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
+  const [medicalCorrections, setMedicalCorrections] = useState<
+    ScribeMedicalCorrectionSuggestion[]
+  >([]);
 
   const [templateId, setTemplateId] = useState<string>(DEFAULT_SCRIBE_TEMPLATE_ID);
   const [generating, setGenerating] = useState(false);
@@ -250,6 +275,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     setUsedBatchFallback(false);
     setDegradedCount(0);
     setTranscriptionError(null);
+    setMedicalCorrections([]);
     setSigned(SIGNED_STATUSES.has((session?.status ?? "").trim().toLowerCase()));
     setExported((session?.status ?? "").trim().toLowerCase() === "exported");
 
@@ -336,7 +362,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         setConsentRequired(false);
         pushNotice("success", "Đồng thuận không bắt buộc ở chế độ hiện tại.");
       } else {
-        pushNotice("error", error instanceof Error ? error.message : "Không thể ghi nhận đồng thuận.");
+        pushNotice("error", safeUserFacingError(error, "Không thể ghi nhận đồng thuận."));
       }
     } finally {
       setCapturingConsent(false);
@@ -360,9 +386,15 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         if (text) {
           setTranscriptDraft((prev) => (prev.trim() ? `${prev.trimEnd()}\n${text}` : text));
         }
+        const correction = response.medical_correction;
+        if (correction?.status === "review_required") {
+          setMedicalCorrections(normalizeMedicalCorrections(correction.suggestions));
+        } else {
+          setMedicalCorrections([]);
+        }
         pushNotice("success", "Đã phiên âm theo lô (chế độ dự phòng).");
       } catch (error) {
-        pushNotice("error", error instanceof Error ? error.message : "Phiên âm dự phòng thất bại.");
+        pushNotice("error", safeUserFacingError(error, "Phiên âm dự phòng thất bại."));
       }
     },
     [pushNotice, sessionId]
@@ -409,16 +441,24 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
                 setNoteTemplateId(result.note.template_id ?? templateId);
               }
             }
+            const correction = result.medical_correction;
+            if (correction?.status === "review_required") {
+              setMedicalCorrections(normalizeMedicalCorrections(correction.suggestions));
+            } else {
+              setMedicalCorrections([]);
+            }
           },
           onError: (message) => {
             sawError = true;
-            setTranscriptionError(message);
+            setTranscriptionError(
+              safeUserFacingError(new Error(message), "Streaming không khả dụng."),
+            );
           },
         });
         if (sawError) await runBatchFallback(blob);
       } catch (error) {
         // Transport-level failure (flag off, network) ⇒ batch fallback.
-        const message = error instanceof Error ? error.message : "Streaming không khả dụng.";
+        const message = safeUserFacingError(error, "Streaming không khả dụng.");
         setTranscriptionError(message);
         await runBatchFallback(blob);
       } finally {
@@ -478,7 +518,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       setRecording(true);
       pushNotice("success", "Đang ghi âm cuộc khám.");
     } catch (error) {
-      pushNotice("error", error instanceof Error ? error.message : "Không thể bắt đầu ghi âm.");
+      pushNotice("error", safeUserFacingError(error, "Không thể bắt đầu ghi âm."));
     }
   }, [canRecord, processAudioBlob, pushNotice]);
 
@@ -598,7 +638,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         setAddendumAvailable(false);
         pushNotice("error", "Tính năng phụ lục chưa được bật cho phiên này.");
       } else {
-        pushNotice("error", error instanceof Error ? error.message : "Không thể thêm phụ lục.");
+        pushNotice("error", safeUserFacingError(error, "Không thể thêm phụ lục."));
       }
     } finally {
       setAddendumSubmitting(false);
@@ -608,7 +648,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
   const onGenerateNote = useCallback(async () => {
     if (!sessionId) return;
     if (!transcriptReady) {
-      pushNotice("error", "Bản ghi đang trống.");
+      pushNotice("error", t(language, "scribe.enterprise.note.error.emptyTranscript"));
       return;
     }
     setGenerating(true);
@@ -628,7 +668,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       setNoteVersionNo(nextVersion);
       void loadGrounding(nextVersion);
       void loadCoding(nextVersion);
-      pushNotice("success", "Đã soạn ghi chú theo mẫu.");
+      pushNotice("success", t(language, "scribe.enterprise.note.notice.generated"));
     } catch (error) {
       if (isMissingCapability(error)) {
         // Sign-workflow/templates flag off ⇒ fall back to the legacy SOAP path.
@@ -647,34 +687,47 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
           // Legacy path also produces no coding suggestions; clear them too.
           setEmCptSuggestions([]);
           setEmCptSelections(initialEmCptSelections());
-          pushNotice("success", "Đã tạo ghi chú SOAP (chế độ tiêu chuẩn).");
+          pushNotice("success", t(language, "scribe.enterprise.note.notice.generatedFallback"));
         } catch (fallbackError) {
-          pushNotice("error", fallbackError instanceof Error ? fallbackError.message : "Không thể soạn ghi chú.");
+          pushNotice(
+            "error",
+            safeUserFacingError(
+              fallbackError,
+              t(language, "scribe.enterprise.note.error.generate"),
+            ),
+          );
         }
       } else {
-        pushNotice("error", error instanceof Error ? error.message : "Không thể soạn ghi chú.");
+        pushNotice(
+          "error",
+          safeUserFacingError(error, t(language, "scribe.enterprise.note.error.generate")),
+        );
       }
     } finally {
       setGenerating(false);
     }
-  }, [onSessionChange, pushNotice, sessionId, templateId, transcriptDraft, transcriptReady, loadGrounding, loadCoding, noteVersionNo]);
+  }, [onSessionChange, pushNotice, sessionId, templateId, transcriptDraft, transcriptReady, loadGrounding, loadCoding, noteVersionNo, language]);
 
   const onSaveNoteEdits = useCallback(async () => {
     if (!sessionId) return;
     setSavingNote(true);
     try {
-      const updated = await updateScribeSession(sessionId, {
-        soap: sectionsToRecord(noteSections),
-        status: "in_review",
+      const updated = await saveScribeNoteDraft(sessionId, {
+        template_id: noteTemplateId,
+        sections: sectionsToRecord(noteSections),
       });
       onSessionChange(updated);
-      pushNotice("success", "Đã lưu chỉnh sửa ghi chú.");
+      setNoteVersionNo((current) => (current ?? 0) + 1);
+      pushNotice("success", t(language, "scribe.enterprise.note.notice.saved"));
     } catch (error) {
-      pushNotice("error", error instanceof Error ? error.message : "Không thể lưu ghi chú.");
+      pushNotice(
+        "error",
+        safeUserFacingError(error, t(language, "scribe.enterprise.note.error.save")),
+      );
     } finally {
       setSavingNote(false);
     }
-  }, [noteSections, onSessionChange, pushNotice, sessionId]);
+  }, [noteSections, noteTemplateId, onSessionChange, pushNotice, sessionId, language]);
 
   // --- sign ----------------------------------------------------------------
   const onSign = useCallback(async () => {
@@ -684,24 +737,33 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       const updated = await signScribeNote(sessionId);
       onSessionChange(updated);
       setSigned(true);
-      pushNotice("success", "Đã ký ghi chú lâm sàng.");
+      pushNotice("success", t(language, "scribe.enterprise.note.notice.signed"));
     } catch (error) {
       if (isMissingCapability(error)) {
         try {
           const updated = await updateScribeSession(sessionId, { status: "finalized" });
           onSessionChange(updated);
           setSigned(true);
-          pushNotice("success", "Đã hoàn tất ghi chú (chế độ tiêu chuẩn).");
+          pushNotice("success", t(language, "scribe.enterprise.note.notice.signedFallback"));
         } catch (fallbackError) {
-          pushNotice("error", fallbackError instanceof Error ? fallbackError.message : "Không thể ký ghi chú.");
+          pushNotice(
+            "error",
+            safeUserFacingError(
+              fallbackError,
+              t(language, "scribe.enterprise.note.error.sign"),
+            ),
+          );
         }
       } else {
-        pushNotice("error", error instanceof Error ? error.message : "Không thể ký ghi chú.");
+        pushNotice(
+          "error",
+          safeUserFacingError(error, t(language, "scribe.enterprise.note.error.sign")),
+        );
       }
     } finally {
       setSigning(false);
     }
-  }, [onSessionChange, pushNotice, sessionId]);
+  }, [onSessionChange, pushNotice, sessionId, language]);
 
   const onAmend = useCallback(async () => {
     if (!sessionId) return;
@@ -715,11 +777,14 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       setNoteVersionNo(nextVersion);
       void loadGrounding(nextVersion);
       void loadCoding(nextVersion);
-      pushNotice("success", "Đã tạo bản sửa đổi mới (amended).");
+      pushNotice("success", t(language, "scribe.enterprise.note.notice.amended"));
     } catch (error) {
-      pushNotice("error", error instanceof Error ? error.message : "Không thể tạo bản sửa đổi.");
+      pushNotice(
+        "error",
+        safeUserFacingError(error, t(language, "scribe.enterprise.note.error.amend")),
+      );
     }
-  }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft, loadGrounding, loadCoding, noteVersionNo]);
+  }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft, loadGrounding, loadCoding, noteVersionNo, language]);
 
   // --- export --------------------------------------------------------------
   const onExport = useCallback(
@@ -737,18 +802,24 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
           downloadBlob(result.filename, result.blob);
         }
         setExported(true);
-        pushNotice("success", `Đã xuất bản ghi chú (${format.toUpperCase()}).`);
+        pushNotice(
+          "success",
+          t(language, "scribe.enterprise.note.notice.exported", { format: format.toUpperCase() }),
+        );
       } catch (error) {
         if (isMissingCapability(error)) {
-          pushNotice("error", "Tính năng xuất bản chưa được bật cho phiên này.");
+          pushNotice("error", t(language, "scribe.enterprise.note.error.exportUnavailable"));
         } else {
-          pushNotice("error", error instanceof Error ? error.message : "Không thể xuất bản ghi chú.");
+          pushNotice(
+            "error",
+            safeUserFacingError(error, t(language, "scribe.enterprise.note.error.export")),
+          );
         }
       } finally {
         setExportingFormat(null);
       }
     },
-    [pushNotice, sessionId]
+    [pushNotice, sessionId, language]
   );
 
   // --- cleanup -------------------------------------------------------------
@@ -790,8 +861,9 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
 
   return (
     <div className="col-span-12 grid grid-cols-12 gap-5">
-      {renderProcessPanel({ stages, sessionStatus })}
+      {renderProcessPanel({ language, stages, sessionStatus })}
       {renderTranscriptColumn({
+        language,
         consentCaptured,
         consentRequired,
         capturingConsent,
@@ -804,6 +876,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         usedBatchFallback,
         degradedCount,
         transcriptionError,
+        medicalCorrections,
         alreadySigned,
         onCaptureConsent,
         onStartRecording,
@@ -812,6 +885,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         onUploadClick: () => fileInputRef.current?.click(),
       })}
       {renderNoteColumn({
+        language,
         templateId,
         onTemplateChange: setTemplateId,
         generating,
@@ -864,9 +938,11 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
 // ---------------------------------------------------------------------------
 
 function renderProcessPanel({
+  language,
   stages,
   sessionStatus,
 }: {
+  language: UILanguage;
   stages: ReturnType<typeof computePipelineStages>;
   sessionStatus: string;
 }) {
@@ -874,12 +950,12 @@ function renderProcessPanel({
     <aside className="col-span-12 xl:col-span-3 space-y-3">
       <div className={panelPaddedClass} data-testid="scribe-process-panel">
         <div className="flex items-center justify-between">
-          <h2 className={sectionTitleClass}>Luồng xử lý</h2>
+          <h2 className={sectionTitleClass}>{t(language, "scribe.enterprise.process.title")}</h2>
           <span className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-bold text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
-            {sessionStatus || "draft"}
+            {sessionStatus || t(language, "scribe.enterprise.process.sessionDraft")}
           </span>
         </div>
-        <ol className="mt-3 space-y-3">
+        <ol className="mt-3 space-y-3" aria-label={t(language, "scribe.enterprise.process.stagesLabel")}>
           {stages.map((stage, index) => (
             <li key={stage.id} className="flex gap-3">
               <div className="flex flex-col items-center">
@@ -889,9 +965,11 @@ function renderProcessPanel({
                 ) : null}
               </div>
               <div>
-                <p className={`text-sm font-bold ${bodyTextClass}`}>{stage.label}</p>
+                <p className={`text-sm font-bold ${bodyTextClass}`}>
+                  {processStageLabel(language, stage.id, stage.label)}
+                </p>
                 <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${mutedTextClass}`}>
-                  {STAGE_STATUS_LABELS[stage.status]}
+                  {processStatusLabel(language, stage.status)}
                 </p>
                 {stage.detail ? (
                   <p className={`mt-0.5 text-[11px] leading-4 ${secondaryTextClass}`}>{stage.detail}</p>
@@ -905,7 +983,40 @@ function renderProcessPanel({
   );
 }
 
+function processStageLabel(language: UILanguage, stage: ScribeStageId, fallback: string): string {
+  switch (stage) {
+    case "consent":
+      return t(language, "scribe.enterprise.process.stage.consent");
+    case "transcribe":
+      return t(language, "scribe.enterprise.process.stage.transcribe");
+    case "generate":
+      return t(language, "scribe.enterprise.process.stage.generate");
+    case "sign":
+      return t(language, "scribe.enterprise.process.stage.sign");
+    case "export":
+      return t(language, "scribe.enterprise.process.stage.export");
+    default:
+      return fallback;
+  }
+}
+
+function processStatusLabel(language: UILanguage, status: ScribeStageStatus): string {
+  switch (status) {
+    case "pending":
+      return t(language, "scribe.enterprise.process.status.pending");
+    case "in_progress":
+      return t(language, "scribe.enterprise.process.status.inProgress");
+    case "completed":
+      return t(language, "scribe.enterprise.process.status.completed");
+    case "failed":
+      return t(language, "scribe.enterprise.process.status.failed");
+    case "warning":
+      return t(language, "scribe.enterprise.process.status.warning");
+  }
+}
+
 function renderTranscriptColumn(props: {
+  language: UILanguage;
   consentCaptured: boolean;
   consentRequired: boolean;
   capturingConsent: boolean;
@@ -918,6 +1029,7 @@ function renderTranscriptColumn(props: {
   usedBatchFallback: boolean;
   degradedCount: number;
   transcriptionError: string | null;
+  medicalCorrections: ScribeMedicalCorrectionSuggestion[];
   alreadySigned: boolean;
   onCaptureConsent: () => void;
   onStartRecording: () => void;
@@ -931,10 +1043,10 @@ function renderTranscriptColumn(props: {
       {consentGateOpen ? (
         <div className={`${panelPaddedClass} border-amber-300`} data-testid="scribe-consent-gate">
           <h3 className="text-xs font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
-            Cổng đồng thuận
+            {t(props.language, "scribe.enterprise.consent.title")}
           </h3>
           <p className={`mt-2 text-sm leading-6 ${secondaryTextClass}`}>
-            Cần ghi nhận đồng thuận của người bệnh trước khi ghi âm hoặc phiên âm cuộc khám.
+            {t(props.language, "scribe.enterprise.consent.description")}
           </p>
           <button
             type="button"
@@ -943,24 +1055,30 @@ function renderTranscriptColumn(props: {
             className={`mt-3 ${primaryButtonClass}`}
             data-testid="scribe-capture-consent"
           >
-            {props.capturingConsent ? "Đang ghi nhận..." : "Ghi nhận đồng thuận"}
+            {props.capturingConsent
+              ? t(props.language, "scribe.enterprise.consent.capturing")
+              : t(props.language, "scribe.enterprise.consent.capture")}
           </button>
         </div>
       ) : null}
 
       <div className={panelClass}>
         <div className="flex items-center justify-between border-b border-[#B6D4FE] px-5 py-3 dark:border-sky-800">
-          <h3 className={sectionTitleClass}>Bản ghi trực tiếp</h3>
+          <h3 className={sectionTitleClass}>{t(props.language, "scribe.transcript.liveTitle")}</h3>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#1D4ED8] dark:text-sky-100">
             <span className={`h-2 w-2 rounded-full ${props.recording ? "bg-rose-500 animate-pulse" : props.transcribing ? "bg-[#2563EB] animate-pulse" : "bg-slate-500"}`} />
-            {props.recording ? "Đang ghi" : props.transcribing ? "Đang phiên âm" : "Sẵn sàng"}
+            {props.recording
+              ? t(props.language, "scribe.status.recording")
+              : props.transcribing
+                ? t(props.language, "scribe.status.transcribing")
+                : t(props.language, "scribe.status.ready")}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-b border-[#B6D4FE] px-5 py-3 dark:border-sky-800">
           {props.recording ? (
             <button type="button" onClick={props.onStopRecording} className={dangerButtonClass}>
-              Dừng ghi âm
+              {t(props.language, "scribe.action.stopRecording")}
             </button>
           ) : (
             <button
@@ -970,7 +1088,7 @@ function renderTranscriptColumn(props: {
               className={primaryButtonClass}
               data-testid="scribe-start-recording"
             >
-              Bắt đầu ghi âm
+              {t(props.language, "scribe.action.startRecording")}
             </button>
           )}
           <button
@@ -979,16 +1097,20 @@ function renderTranscriptColumn(props: {
             disabled={!props.canRecord || props.transcribing || props.recording}
             className={secondaryButtonClass}
           >
-            Tải tệp âm thanh
+            {t(props.language, "scribe.enterprise.transcript.uploadAudio")}
           </button>
           {props.alreadySigned ? (
-            <span className={`text-[11px] font-semibold ${mutedTextClass}`}>Ghi chú đã ký — chỉ đọc.</span>
+            <span className={`text-[11px] font-semibold ${mutedTextClass}`}>
+              {t(props.language, "scribe.enterprise.transcript.signedReadOnly")}
+            </span>
           ) : null}
         </div>
 
         <div className="max-h-[320px] space-y-3 overflow-y-auto p-5 clara-scrollbar" data-testid="scribe-transcript">
           {props.transcriptRows.length === 0 ? (
-            <p className={`text-sm font-medium ${secondaryTextClass}`}>Chưa có nội dung phiên âm.</p>
+            <p className={`text-sm font-medium ${secondaryTextClass}`}>
+              {t(props.language, "scribe.enterprise.transcript.empty")}
+            </p>
           ) : (
             props.transcriptRows.map((segment) => {
               const chip = speakerChip(segment.speaker);
@@ -997,11 +1119,11 @@ function renderTranscriptColumn(props: {
                   <span
                     className={`h-fit shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] ${SPEAKER_CHIP_CLASSES[chip.tone]}`}
                   >
-                    {chip.label}
+                    {speakerLabel(props.language, chip.tone)}
                   </span>
                   <p className={`text-sm leading-6 ${segment.degraded ? "italic " + mutedTextClass : secondaryTextClass}`}>
                     {segment.text}
-                    {segment.degraded ? " (tín hiệu yếu)" : ""}
+                    {segment.degraded ? ` (${t(props.language, "scribe.enterprise.transcript.weakSignal")})` : ""}
                   </p>
                 </div>
               );
@@ -1019,21 +1141,51 @@ function renderTranscriptColumn(props: {
 
         {props.transcriptionError ? (
           <p className="mx-5 mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
-            Streaming gặp sự cố ({props.transcriptionError}). Đã chuyển sang phiên âm theo lô.
+            {t(props.language, "scribe.enterprise.transcript.streamingFallback")}
           </p>
+        ) : null}
+
+        {props.medicalCorrections.length ? (
+          <section className="mx-5 mb-3 rounded-lg border border-sky-300 bg-sky-50 px-3 py-3 text-sm dark:border-sky-700 dark:bg-sky-950/30">
+            <h4 className="font-semibold text-sky-950 dark:text-sky-100">
+              {t(props.language, "scribe.enterprise.corrections.title")}
+            </h4>
+            <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>
+              {t(props.language, "scribe.enterprise.corrections.description")}
+            </p>
+            <ul className="mt-3 space-y-2">
+              {props.medicalCorrections.map((suggestion) => (
+                <li
+                  key={`${suggestion.start}-${suggestion.end}-${suggestion.source_text}`}
+                  className="rounded-md border border-sky-200 bg-white p-2 dark:border-sky-800 dark:bg-slate-950/50"
+                >
+                  <p className={`text-xs ${bodyTextClass}`}>
+                    <span className="font-semibold">“{suggestion.source_text}”</span>
+                    {" → "}
+                    <span className="font-semibold">“{suggestion.replacement_text}”</span>
+                  </p>
+                  <p className={`mt-1 text-[11px] ${mutedTextClass}`}>{suggestion.rationale}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
 
         <div className="border-t border-[#B6D4FE] p-4 dark:border-sky-800">
           <textarea
             value={props.transcriptDraft}
             onChange={(event) => props.onTranscriptChange(event.target.value)}
-            placeholder="Bản ghi sẽ hiển thị ở đây; bạn có thể chỉnh sửa trước khi soạn ghi chú."
+            placeholder={t(props.language, "scribe.enterprise.transcript.placeholder")}
             disabled={props.alreadySigned}
             className={sectionTextareaClass}
           />
           <p className={`mt-2 text-[10px] font-bold uppercase tracking-[0.12em] ${mutedTextClass}`}>
-            {props.usedBatchFallback ? "Nguồn: phiên âm theo lô" : "Nguồn: phiên âm trực tiếp"}
-            {props.degradedCount > 0 ? ` · ${props.degradedCount} đoạn tín hiệu yếu` : ""}
+            {props.usedBatchFallback
+              ? t(props.language, "scribe.enterprise.transcript.sourceBatch")
+              : t(props.language, "scribe.enterprise.transcript.sourceLive")}
+            {props.degradedCount > 0
+              ? ` · ${t(props.language, "scribe.enterprise.transcript.degradedCount", { count: props.degradedCount })}`
+              : ""}
           </p>
         </div>
       </div>
@@ -1041,7 +1193,21 @@ function renderTranscriptColumn(props: {
   );
 }
 
+function speakerLabel(language: UILanguage, speaker: "clinician" | "patient" | "other" | "unknown"): string {
+  switch (speaker) {
+    case "clinician":
+      return t(language, "scribe.speaker.clinician");
+    case "patient":
+      return t(language, "scribe.speaker.patient");
+    case "other":
+      return t(language, "scribe.enterprise.speaker.other");
+    default:
+      return t(language, "scribe.enterprise.speaker.unknown");
+  }
+}
+
 function renderNoteColumn(props: {
+  language: UILanguage;
   templateId: string;
   onTemplateChange: (value: string) => void;
   generating: boolean;
@@ -1079,7 +1245,7 @@ function renderNoteColumn(props: {
   return (
     <aside className="col-span-12 xl:col-span-4 space-y-4">
       <div className={panelPaddedClass}>
-        <h3 className={sectionTitleClass}>Mẫu ghi chú</h3>
+        <h3 className={sectionTitleClass}>{t(props.language, "scribe.enterprise.note.templateTitle")}</h3>
         <div className="mt-3 flex gap-2">
           <select
             value={props.templateId}
@@ -1090,7 +1256,7 @@ function renderNoteColumn(props: {
           >
             {SCRIBE_REVIEW_TEMPLATES.map((template) => (
               <option key={template.id} value={template.id}>
-                {template.label}
+                {templateLabel(props.language, template.id, template.label)}
               </option>
             ))}
           </select>
@@ -1101,17 +1267,21 @@ function renderNoteColumn(props: {
             className={primaryButtonClass}
             data-testid="scribe-generate-note"
           >
-            {props.generating ? "Đang soạn..." : "Soạn ghi chú"}
+            {props.generating
+              ? t(props.language, "scribe.enterprise.note.generating")
+              : t(props.language, "scribe.enterprise.note.generate")}
           </button>
         </div>
       </div>
 
       <div className={panelPaddedClass}>
         <div className="flex items-center justify-between">
-          <h3 className={sectionTitleClass}>Ghi chú lâm sàng</h3>
+          <h3 className={sectionTitleClass}>{t(props.language, "scribe.enterprise.note.title")}</h3>
           {editorLocked ? (
             <span className="rounded-full border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100">
-              {props.exported ? "Đã xuất bản" : "Đã ký"}
+              {props.exported
+                ? t(props.language, "scribe.enterprise.note.exported")
+                : t(props.language, "scribe.enterprise.note.signed")}
             </span>
           ) : null}
         </div>
@@ -1119,7 +1289,7 @@ function renderNoteColumn(props: {
         <div className="mt-3 space-y-3">
           {props.noteSections.length === 0 ? (
             <p className={`text-sm font-medium ${secondaryTextClass}`}>
-              Chưa có ghi chú. Chọn mẫu và bấm “Soạn ghi chú”.
+              {t(props.language, "scribe.enterprise.note.empty")}
             </p>
           ) : (
             props.noteSections.map((section) => (
@@ -1142,7 +1312,9 @@ function renderNoteColumn(props: {
         {props.noteReady && !editorLocked ? (
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={props.onSaveNoteEdits} disabled={props.savingNote} className={secondaryButtonClass}>
-              {props.savingNote ? "Đang lưu..." : "Lưu chỉnh sửa"}
+              {props.savingNote
+                ? t(props.language, "scribe.action.saving")
+                : t(props.language, "scribe.enterprise.note.saveEdits")}
             </button>
             <button
               type="button"
@@ -1151,12 +1323,15 @@ function renderNoteColumn(props: {
               className={primaryButtonClass}
               data-testid="scribe-sign"
             >
-              {props.signing ? "Đang ký..." : "Ký ghi chú"}
+              {props.signing
+                ? t(props.language, "scribe.enterprise.note.signing")
+                : t(props.language, "scribe.enterprise.note.sign")}
             </button>
           </div>
         ) : null}
 
         {renderGroundingPanel({
+          language: props.language,
           grounding: props.grounding,
           segments: props.transcriptSegments,
           expandedStatement: props.expandedStatement,
@@ -1164,6 +1339,7 @@ function renderNoteColumn(props: {
         })}
 
         {renderCodingPanel({
+          language: props.language,
           suggestions: props.emCptSuggestions,
           selections: props.emCptSelections,
           segments: props.transcriptSegments,
@@ -1182,14 +1358,17 @@ function renderNoteColumn(props: {
                   className={secondaryButtonClass}
                   data-testid={`scribe-export-${format}`}
                 >
-                  {props.exportingFormat === format ? "Đang xuất..." : `Xuất ${format.toUpperCase()}`}
+                  {props.exportingFormat === format
+                    ? t(props.language, "scribe.enterprise.note.exporting")
+                    : t(props.language, "scribe.enterprise.note.export", { format: format.toUpperCase() })}
                 </button>
               ))}
             </div>
             <button type="button" onClick={props.onAmend} className={`w-full ${secondaryButtonClass}`}>
-              Tạo bản sửa đổi (amend)
+              {t(props.language, "scribe.enterprise.note.amend")}
             </button>
             {renderAddendumPanel({
+              language: props.language,
               available: props.addendumAvailable,
               versionKnown: props.addendumVersionKnown,
               addenda: props.addenda,
@@ -1205,6 +1384,29 @@ function renderNoteColumn(props: {
   );
 }
 
+function templateLabel(language: UILanguage, templateId: string, fallback: string): string {
+  switch (templateId) {
+    case "soap":
+      return t(language, "scribe.enterprise.note.template.soap");
+    case "h_and_p":
+      return t(language, "scribe.enterprise.note.template.historyPhysical");
+    case "progress_note":
+      return t(language, "scribe.enterprise.note.template.progressNote");
+    case "referral_letter":
+      return t(language, "scribe.enterprise.note.template.referralLetter");
+    case "vn_benh_an":
+      return t(language, "scribe.enterprise.note.template.vnMedicalRecord");
+    default:
+      return fallback;
+  }
+}
+
+function groundingStatusLabel(language: UILanguage, status: GroundingStatus): string {
+  return status === "grounded"
+    ? t(language, "scribe.enterprise.grounding.status.grounded")
+    : t(language, "scribe.enterprise.grounding.status.unverified");
+}
+
 // ---------------------------------------------------------------------------
 // Grounding panel (Requirement 12.7) — per-statement grounded/unverified chips
 // with transcript-span drill-down + an unverified-candidate review panel. The
@@ -1213,11 +1415,13 @@ function renderNoteColumn(props: {
 // ---------------------------------------------------------------------------
 
 function renderGroundingPanel({
+  language,
   grounding,
   segments,
   expandedStatement,
   onToggleStatement,
 }: {
+  language: UILanguage;
   grounding: ScribeGroundingReport | null;
   segments: ScribeStreamSegment[];
   expandedStatement: string | null;
@@ -1232,16 +1436,21 @@ function renderGroundingPanel({
   return (
     <div className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800" data-testid="scribe-grounding">
       <div className="flex items-center justify-between gap-2">
-        <h4 className={sectionTitleClass}>Đối chiếu bản ghi</h4>
+        <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.grounding.title")}</h4>
         <span
           className="rounded-full border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100"
           data-testid="scribe-grounding-rate"
         >
-          {formatGroundedClaimRate(grounding.grounded_claim_rate)} có dẫn chứng
+          {t(language, "scribe.enterprise.grounding.rate", {
+            rate: formatGroundedClaimRate(grounding.grounded_claim_rate),
+          })}
         </span>
       </div>
       <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
-        {grounded.length} câu có dẫn chứng · {unverified.length} câu chưa xác minh
+        {t(language, "scribe.enterprise.grounding.summary", {
+          grounded: formatLocaleNumber(language, grounded.length),
+          unverified: formatLocaleNumber(language, unverified.length),
+        })}
       </p>
 
       {significant.length > 0 ? (
@@ -1264,21 +1473,30 @@ function renderGroundingPanel({
                   onClick={() => onToggleStatement(key)}
                   className="flex w-full items-start gap-2 text-left"
                   aria-expanded={open}
+                  aria-label={t(
+                    language,
+                    open
+                      ? "scribe.enterprise.grounding.collapseStatement"
+                      : "scribe.enterprise.grounding.expandStatement",
+                    { statement: statement.statement },
+                  )}
                 >
                   <span className="mt-0.5 shrink-0 rounded-full border border-current px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em]">
-                    {chip.label}
+                    {groundingStatusLabel(language, chip.status)}
                   </span>
                   <span className={`flex-1 text-sm leading-5 ${bodyTextClass}`}>
                     {statement.statement}
                     {chip.critical ? (
                       <span className="ml-1 text-[10px] font-black uppercase text-rose-600 dark:text-rose-300">
-                        · an toàn
+                        · {t(language, "scribe.enterprise.grounding.critical")}
                       </span>
                     ) : null}
                   </span>
                   <span className={`mt-0.5 text-[10px] font-bold ${mutedTextClass}`}>
                     {statement.supporting_span_ids.length > 0
-                      ? `${statement.supporting_span_ids.length} đoạn`
+                      ? t(language, "scribe.enterprise.grounding.spanCount", {
+                          count: formatLocaleNumber(language, statement.supporting_span_ids.length),
+                        })
                       : open
                         ? "▲"
                         : "▾"}
@@ -1288,7 +1506,7 @@ function renderGroundingPanel({
                   <div className="mt-2 space-y-1" data-testid="scribe-grounding-spans">
                     {spans.length === 0 ? (
                       <p className={`text-[11px] italic ${mutedTextClass}`}>
-                        Không có đoạn bản ghi nào hỗ trợ câu này.
+                        {t(language, "scribe.enterprise.grounding.noSupportingSpans")}
                       </p>
                     ) : (
                       spans.map((span, spanIndex) => (
@@ -1298,10 +1516,12 @@ function renderGroundingPanel({
                         >
                           <p className={`text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
                             {span.spanId}
-                            {span.resolved ? ` · ${speakerChip(span.speaker).label}` : " · chưa khớp"}
+                            {span.resolved
+                              ? ` · ${speakerLabel(language, span.speaker)}`
+                              : ` · ${t(language, "scribe.enterprise.grounding.unresolved")}`}
                           </p>
                           <p className={`text-sm leading-5 ${secondaryTextClass}`}>
-                            {span.text || "(không tìm thấy nội dung)"}
+                            {span.text || t(language, "scribe.enterprise.grounding.noContent")}
                           </p>
                         </div>
                       ))
@@ -1320,11 +1540,12 @@ function renderGroundingPanel({
           data-testid="scribe-unverified-candidates"
         >
           <h5 className="text-[11px] font-black uppercase tracking-[0.14em] text-rose-700 dark:text-rose-200">
-            Cần bác sĩ xác nhận ({candidates.length})
+            {t(language, "scribe.enterprise.grounding.candidatesTitle", {
+              count: formatLocaleNumber(language, candidates.length),
+            })}
           </h5>
           <p className={`mt-1 text-[11px] leading-4 ${secondaryTextClass}`}>
-            Các phát biểu an toàn quan trọng dưới đây không có dẫn chứng trong bản ghi nên không được
-            khẳng định trong ghi chú.
+            {t(language, "scribe.enterprise.grounding.candidatesDescription")}
           </p>
           <ul className="mt-2 space-y-1">
             {candidates.map((candidate, index) => (
@@ -1357,6 +1578,7 @@ function renderGroundingPanel({
 // ---------------------------------------------------------------------------
 
 function renderEmCptRow(
+  language: UILanguage,
   suggestion: ScribeEmCptSuggestion,
   selections: Record<string, boolean>,
   segments: ScribeStreamSegment[],
@@ -1385,7 +1607,7 @@ function renderEmCptRow(
           onChange={() => onToggleEmCpt(suggestion)}
           className="mt-1 h-4 w-4 shrink-0 accent-[#2563EB]"
           data-testid={`scribe-coding-confirm-${key}`}
-          aria-label={`Xác nhận mã ${suggestion.code}`}
+          aria-label={t(language, "scribe.enterprise.coding.confirmCode", { code: suggestion.code })}
         />
         <span className="flex-1">
           <span className="flex flex-wrap items-center gap-2">
@@ -1394,14 +1616,20 @@ function renderEmCptRow(
             </span>
             <span className={`text-sm font-bold ${bodyTextClass}`}>{suggestion.code}</span>
             {suggestion.kind === "E/M" && suggestion.level != null ? (
-              <span className={`text-[11px] font-bold ${mutedTextClass}`}>· mức {suggestion.level}</span>
+              <span className={`text-[11px] font-bold ${mutedTextClass}`}>
+                · {t(language, "scribe.enterprise.coding.level", {
+                  level: formatLocaleNumber(language, suggestion.level),
+                })}
+              </span>
             ) : null}
             <span
               className={`text-[10px] font-black uppercase tracking-[0.1em] ${
                 selected ? "text-emerald-700 dark:text-emerald-200" : mutedTextClass
               }`}
             >
-              {selected ? "đã xác nhận" : "đề xuất"}
+              {selected
+                ? t(language, "scribe.enterprise.coding.confirmed")
+                : t(language, "scribe.enterprise.coding.suggested")}
             </span>
           </span>
           <span className={`mt-0.5 block text-sm leading-5 ${secondaryTextClass}`}>{displayVi}</span>
@@ -1419,7 +1647,7 @@ function renderEmCptRow(
               data-testid="scribe-coding-spans"
             >
               <span className={`block text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
-                Dẫn chứng
+                {t(language, "scribe.enterprise.coding.evidence")}
               </span>
               {spans.join(" · ")}
             </span>
@@ -1431,11 +1659,13 @@ function renderEmCptRow(
 }
 
 function renderCodingPanel({
+  language,
   suggestions,
   selections,
   segments,
   onToggleEmCpt,
 }: {
+  language: UILanguage;
   suggestions: ScribeEmCptSuggestion[];
   selections: Record<string, boolean>;
   segments: ScribeStreamSegment[];
@@ -1449,26 +1679,30 @@ function renderCodingPanel({
   return (
     <div className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800" data-testid="scribe-coding">
       <div className="flex items-center justify-between gap-2">
-        <h4 className={sectionTitleClass}>Gợi ý mã E/M · CPT</h4>
+        <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.coding.title")}</h4>
         <span
           className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100"
           data-testid="scribe-coding-confirmed-count"
         >
-          {confirmed}/{suggestions.length} đã xác nhận
+          {t(language, "scribe.enterprise.coding.confirmedCount", {
+            confirmed: formatLocaleNumber(language, confirmed),
+            total: formatLocaleNumber(language, suggestions.length),
+          })}
         </span>
       </div>
       <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
-        Các mã dưới đây chỉ mang tính tư vấn. Không mã nào được chọn sẵn — bác sĩ cần tự xác nhận
-        từng mã trước khi sử dụng.
+        {t(language, "scribe.enterprise.coding.description")}
       </p>
 
       {em.length > 0 ? (
         <div className="space-y-2" data-testid="scribe-coding-em">
           <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${mutedTextClass}`}>
-            Mức khám (E/M)
+            {t(language, "scribe.enterprise.coding.emTitle")}
           </p>
           <ul className="space-y-2">
-            {em.map((suggestion) => renderEmCptRow(suggestion, selections, segments, onToggleEmCpt))}
+            {em.map((suggestion) =>
+              renderEmCptRow(language, suggestion, selections, segments, onToggleEmCpt),
+            )}
           </ul>
         </div>
       ) : null}
@@ -1476,10 +1710,12 @@ function renderCodingPanel({
       {cpt.length > 0 ? (
         <div className="space-y-2" data-testid="scribe-coding-cpt">
           <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${mutedTextClass}`}>
-            Thủ thuật (CPT)
+            {t(language, "scribe.enterprise.coding.cptTitle")}
           </p>
           <ul className="space-y-2">
-            {cpt.map((suggestion) => renderEmCptRow(suggestion, selections, segments, onToggleEmCpt))}
+            {cpt.map((suggestion) =>
+              renderEmCptRow(language, suggestion, selections, segments, onToggleEmCpt),
+            )}
           </ul>
         </div>
       ) : null}
@@ -1498,6 +1734,7 @@ function renderCodingPanel({
 // ---------------------------------------------------------------------------
 
 function renderAddendumPanel({
+  language,
   available,
   versionKnown,
   addenda,
@@ -1506,6 +1743,7 @@ function renderAddendumPanel({
   onDraftChange,
   onSubmit,
 }: {
+  language: UILanguage;
   available: boolean;
   versionKnown: boolean;
   addenda: ScribeAddendum[];
@@ -1523,17 +1761,18 @@ function renderAddendumPanel({
       data-testid="scribe-addendum"
     >
       <div className="flex items-center justify-between gap-2">
-        <h4 className={sectionTitleClass}>Phụ lục (addendum)</h4>
+        <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.addendum.title")}</h4>
         <span
           className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100"
           data-testid="scribe-addendum-count"
         >
-          {addenda.length} phụ lục
+          {t(language, "scribe.enterprise.addendum.count", {
+            count: formatLocaleNumber(language, addenda.length),
+          })}
         </span>
       </div>
       <p className={`text-[11px] leading-4 ${mutedTextClass}`}>
-        Phụ lục được gắn thời gian, KHÔNG thay đổi nội dung đã ký và không tạo bản sửa đổi mới
-        (khác với “bản sửa đổi / amend”).
+        {t(language, "scribe.enterprise.addendum.description")}
       </p>
 
       {hasAddenda ? (
@@ -1545,21 +1784,27 @@ function renderAddendumPanel({
               data-testid="scribe-addendum-item"
             >
               <p className={`text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
-                {formatAddendumTimestamp(entry.created_at)} · {addendumAuthorLabel(entry.author)}
+                {t(language, "scribe.enterprise.addendum.timestamp", {
+                  date: formatAddendumTimestampForLocale(language, entry.created_at),
+                  author: addendumAuthorLabelForLocale(language, entry.author),
+                })}
               </p>
               <p className={`mt-0.5 whitespace-pre-wrap text-sm leading-5 ${bodyTextClass}`}>{entry.text}</p>
             </li>
           ))}
         </ul>
       ) : (
-        <p className={`text-sm font-medium ${secondaryTextClass}`}>Chưa có phụ lục nào.</p>
+        <p className={`text-sm font-medium ${secondaryTextClass}`}>
+          {t(language, "scribe.enterprise.addendum.empty")}
+        </p>
       )}
 
       <div className="space-y-2">
         <textarea
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
-          placeholder="Thêm thông tin bổ sung sau khi ký (không thay đổi nội dung đã ký)..."
+          placeholder={t(language, "scribe.enterprise.addendum.placeholder")}
+          aria-label={t(language, "scribe.enterprise.addendum.inputLabel")}
           className={sectionTextareaClass}
           data-testid="scribe-addendum-input"
         />
@@ -1570,9 +1815,32 @@ function renderAddendumPanel({
           className={`w-full ${primaryButtonClass}`}
           data-testid="scribe-addendum-submit"
         >
-          {submitting ? "Đang lưu..." : "Thêm phụ lục"}
+          {submitting
+            ? t(language, "scribe.enterprise.addendum.saving")
+            : t(language, "scribe.enterprise.addendum.submit")}
         </button>
       </div>
     </div>
   );
+}
+
+function formatAddendumTimestampForLocale(
+  language: UILanguage,
+  value: string | null | undefined,
+): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return formatLocaleDate(language, date, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  });
+}
+
+function addendumAuthorLabelForLocale(language: UILanguage, author: number | null | undefined): string {
+  return typeof author === "number" && Number.isFinite(author)
+    ? t(language, "scribe.enterprise.addendum.author", { id: author })
+    : t(language, "scribe.enterprise.addendum.authorFallback");
 }

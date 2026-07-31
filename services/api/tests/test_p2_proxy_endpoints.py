@@ -252,6 +252,67 @@ def test_research_attribution_respects_canonical_fallback_used(monkeypatch) -> N
     assert body["attributions"][0] == body["attribution"]
 
 
+def test_sync_research_tier2_fails_closed_when_claim_verifier_is_insufficient(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The direct endpoint must share the async worker's evidence-release gate."""
+
+    token = _login("alice@research.clara")
+
+    class _MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {
+                "tier": "tier2",
+                "answer": "This unsupported treatment conclusion should not be released.",
+                "answer_markdown": "This unsupported treatment conclusion should not be released.",
+                "citations": [
+                    {
+                        "source_id": "pmid:12345",
+                        "source": "pubmed",
+                        "title": "Retrieved study",
+                        "url": "https://pubmed.ncbi.nlm.nih.gov/12345/",
+                    }
+                ],
+                "verification_matrix": {
+                    "version": "claim-v2-nli",
+                    "state": "warning",
+                    "summary": {"total_claims": 2, "supported_claims": 1, "support_ratio": 0.5},
+                    "rows": [
+                        {"claim": "Supported context.", "support_status": "supported"},
+                        {
+                            "claim": "Unsupported treatment conclusion.",
+                            "support_status": "insufficient",
+                        },
+                    ],
+                },
+                "source_target_achieved": {"achieved_document_count": 1},
+            }
+
+    def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> _MockResponse:
+        _ = (json, timeout)
+        return _MockResponse()
+
+    monkeypatch.setattr("clara_api.api.v1.endpoints.ml_proxy.httpx.post", _fake_post)
+
+    response = client.post(
+        "/api/v1/research/tier2",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query": "Please release a treatment conclusion", "ui_language": "en"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["quality_gate"]["passed"] is False
+    assert payload["quality_gate"]["reasons"] == ["unsupported_claims"]
+    assert "unsupported treatment conclusion" not in payload["answer"].lower()
+    assert "No clinical conclusion is released" in payload["answer"]
+    assert payload["citations"][0]["source_id"] == "pmid:12345"
+    assert payload["verification_matrix"]["rows"][1]["support_status"] == "insufficient"
+
+
 def test_research_upload_file_json_is_parsed_as_text() -> None:
     token = _login("alice@research.clara")
 
@@ -370,6 +431,19 @@ def test_research_upload_file_rejects_payload_over_size_limit(
 
     assert response.status_code == 413
     assert "File vượt quá giới hạn" in response.json()["detail"]
+
+
+def test_research_upload_rejects_disguised_binary_or_mime() -> None:
+    token = _login("alice@research.clara")
+
+    response = client.post(
+        "/api/v1/research/upload-file",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("scan.pdf", b"not actually a pdf", "application/pdf")},
+    )
+
+    assert response.status_code == 415
+    assert "khớp định dạng" in response.json()["detail"]
 
 
 def test_research_tier2_forwards_uploaded_documents(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -964,7 +1038,9 @@ def test_research_harness_rejects_system_fallback_as_real_evidence() -> None:
                 }
             ],
             "verification_matrix": {
-                "summary": {"support_ratio": 0.0},
+                "version": "claim-v2-nli",
+                "state": "warning",
+                "summary": {"total_claims": 1, "supported_claims": 0, "support_ratio": 0.0},
                 "rows": [{"support_status": "insufficient"}],
             },
             "source_target_achieved": {"achieved_document_count": 0},
@@ -992,7 +1068,9 @@ def test_research_harness_rejects_unresolvable_or_mixed_unsupported_evidence() -
             "answer": "Confident but incompletely supported conclusion.",
             "citations": [{"source": "made_up"}],
             "verification_matrix": {
-                "summary": {"support_ratio": 0.5},
+                "version": "claim-v2-nli",
+                "state": "warning",
+                "summary": {"total_claims": 2, "supported_claims": 1, "support_ratio": 0.5},
                 "rows": [
                     {"support_status": "supported"},
                     {"support_status": "insufficient"},
@@ -1021,6 +1099,8 @@ def test_deep_research_abstains_with_citations_when_unsupported_claims_survive()
         for index in range(10)
     ]
     verification_matrix = {
+        "version": "claim-v2-nli",
+        "state": "warning",
         "summary": {
             "total_claims": 10,
             "supported_claims": 1,
@@ -1079,8 +1159,122 @@ def test_research_harness_abstains_when_documents_have_no_citations() -> None:
         request_payload={"research_mode": "deep", "ui_language": "en"},
     )
 
-    assert result["quality_gate"]["reasons"] == ["no_citations"]
+    assert set(result["quality_gate"]["reasons"]) >= {
+        "no_citations",
+        "verification_unavailable",
+    }
     assert "No clinical conclusion is released" in result["answer"]
+
+
+def test_research_harness_abstains_when_cited_answer_has_no_verifier_contract() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": "A cited but unverified factual conclusion.",
+            "citations": [
+                {
+                    "source": "pubmed",
+                    "pmid": "12345",
+                    "url": "https://pubmed.ncbi.nlm.nih.gov/12345/",
+                }
+            ],
+            "source_target_achieved": {"achieved_document_count": 1},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is False
+    assert "verification_unavailable" in result["quality_gate"]["reasons"]
+    assert result["quality_gate"]["verifier"]["state"] == "unavailable"
+    assert "No clinical conclusion is released" in result["answer"]
+
+
+def test_research_harness_abstains_when_verifier_contract_is_malformed() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": "A factual conclusion with malformed verification.",
+            "citations": [{"source": "pubmed", "pmid": "12345"}],
+            "verification_matrix": {"state": "verified", "version": "claim-v2-nli"},
+            "source_target_achieved": {"achieved_document_count": 1},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is False
+    assert "verification_invalid" in result["quality_gate"]["reasons"]
+    assert "No clinical conclusion is released" in result["answer"]
+
+
+def test_research_harness_abstains_when_verifier_was_explicitly_skipped() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": "A factual conclusion after skipped verification.",
+            "citations": [{"source": "pubmed", "pmid": "12345"}],
+            "verification_matrix": {
+                "state": "skipped",
+                "version": "claim-v2-nli",
+                "summary": {"total_claims": 0, "supported_claims": 0, "support_ratio": 0.0},
+                "rows": [],
+            },
+            "source_target_achieved": {"achieved_document_count": 1},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is False
+    assert "verification_skipped" in result["quality_gate"]["reasons"]
+    assert "No clinical conclusion is released" in result["answer"]
+
+
+def test_research_harness_accepts_a_valid_zero_claim_verification_contract() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    answer = "The retrieved source metadata is available; no factual claim was extracted."
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": answer,
+            "citations": [{"source": "pubmed", "pmid": "12345"}],
+            "verification_matrix": {
+                "state": "verified",
+                "version": "claim-v2-nli",
+                "summary": {"total_claims": 0, "supported_claims": 0, "support_ratio": 0.0},
+                "rows": [],
+            },
+            "source_target_achieved": {"achieved_document_count": 1},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is True
+    assert result["answer"] == answer
+
+
+def test_research_harness_accepts_supported_verifier_contract() -> None:
+    from clara_api.api.v1.endpoints import research as research_endpoint
+
+    answer = "The cited study reports the stated outcome."
+    result = research_endpoint._apply_research_quality_gates(
+        {
+            "answer": answer,
+            "citations": [{"source": "pubmed", "pmid": "12345"}],
+            "verification_matrix": {
+                "state": "verified",
+                "version": "claim-v2-nli",
+                "summary": {"total_claims": 1, "supported_claims": 1, "support_ratio": 1.0},
+                "rows": [{"support_status": "supported"}],
+            },
+            "source_target_achieved": {"achieved_document_count": 1},
+        },
+        request_payload={"research_mode": "deep", "ui_language": "en"},
+    )
+
+    assert result["quality_gate"]["passed"] is True
+    assert result["answer"] == answer
 
 
 def test_fast_research_abstains_when_retrieval_and_verification_are_empty() -> None:
@@ -1091,7 +1285,9 @@ def test_fast_research_abstains_when_retrieval_and_verification_are_empty() -> N
             "answer": "Generic confident medical answer.",
             "citations": [],
             "verification_matrix": {
-                "summary": {"support_ratio": 0.0},
+                "version": "claim-v2-nli",
+                "state": "warning",
+                "summary": {"total_claims": 1, "supported_claims": 0, "support_ratio": 0.0},
                 "rows": [{"support_status": "insufficient"}],
             },
             "source_target_achieved": {"achieved_document_count": 0},

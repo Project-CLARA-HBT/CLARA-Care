@@ -22,6 +22,7 @@ def build_shadow_task_route(
     *,
     legacy_route: RouteResult,
     semantic_route: Mapping[str, Any] | None,
+    settings: object | None = None,
 ) -> TaskRoute:
     """Produce a typed route proposal without changing the active request path.
 
@@ -66,7 +67,9 @@ def build_shadow_task_route(
         confidence=max(0.0, min(1.0, confidence)),
         reasons=reasons,
         abstain_reason=abstain_reason,
-        clinical_language=ClinicalLanguageSignals.model_validate(clinical_language_signals(query)),
+        clinical_language=ClinicalLanguageSignals.model_validate(
+            clinical_language_signals(query, settings=settings)
+        ),
     )
 
 

@@ -1,10 +1,9 @@
-"""Tests for the ``CouncilOrchestrationService`` skeleton (task 1.4).
+"""Tests for the ``CouncilOrchestrationService`` (tasks 5--7).
 
 The service is a flag-aware wrapper around the single-attempt ML proxy the
-Council ``/run`` path uses today. In this skeleton every flag-gated seam is a
-NO-OP that delegates to the existing proxy and returns the result untouched, so
-that with the ``COUNCIL_*`` flags off the behavior is byte-for-byte identical to
-calling ``proxy_ml_post("/v1/council/run", payload)`` directly
+Council ``/run`` path uses today. Every flag-gated seam is a NO-OP while its
+flag is off, so the flags-off behavior is byte-for-byte identical to calling
+``proxy_ml_post("/v1/council/run", payload)`` directly
 (Requirements 5.5, 6.5, 7.5; design Property P8 at the service layer).
 
 These tests inject a stub proxy so no live ML service or HTTP mocking is needed.
@@ -95,8 +94,8 @@ def test_with_disclosure_is_noop_when_flag_off(flags_off_settings: Settings) -> 
     assert "ai_disclosure" not in decorated
 
 
-def test_with_disclosure_skeleton_noop_when_flag_on(set_flags) -> None:
-    """Skeleton: enabling disclosure must not yet attach ai_disclosure."""
+def test_with_disclosure_adds_safe_operational_metadata_when_flag_on(set_flags) -> None:
+    """Enabled disclosure names the governed model, not prompt/confidence data."""
     set_flags(council_model_disclosure_enabled=True)
     settings = get_settings()
     assert settings.council_model_disclosure_enabled is True
@@ -104,11 +103,60 @@ def test_with_disclosure_skeleton_noop_when_flag_on(set_flags) -> None:
     proxy = _RecordingProxy()
     result = {"final_recommendation": "review with a clinician"}
 
-    decorated = _service(settings, proxy).with_disclosure(result)
+    decorated = _service(settings, proxy).with_disclosure(
+        result,
+        model_used="deepseek-v4-pro",
+    )
 
-    # Skeleton no-op: no decoration yet (body lands in task 6.x).
-    assert decorated == result
-    assert "ai_disclosure" not in decorated
+    assert decorated is not result
+    assert decorated["final_recommendation"] == result["final_recommendation"]
+    assert decorated["ai_disclosure"] == {
+        "model_family": "deepseek",
+        "model_version": "v4-pro",
+        "is_fallback": False,
+    }
+
+
+def test_with_disclosure_marks_intake_heuristic_fallback_and_drops_extra_fields(
+    set_flags,
+) -> None:
+    """A known degraded intake remains visible; unsafe upstream fields do not leak."""
+    set_flags(council_model_disclosure_enabled=True)
+    settings = get_settings()
+    result = {
+        "ai_disclosure": {
+            "model_family": "heuristic",
+            "model_version": "fallback-v1",
+            "is_fallback": True,
+            "prompt": "must never be exposed",
+            "confidence": 99,
+        }
+    }
+
+    decorated = _service(settings, _RecordingProxy()).with_disclosure(result)
+
+    assert decorated["ai_disclosure"] == {
+        "model_family": "heuristic",
+        "model_version": "fallback-v1",
+        "is_fallback": True,
+    }
+    assert "prompt" not in decorated["ai_disclosure"]
+    assert "confidence" not in decorated["ai_disclosure"]
+
+
+def test_with_disclosure_reports_unknown_for_malformed_model_metadata(set_flags) -> None:
+    """Model provenance cannot reflect arbitrary upstream text into a response."""
+    set_flags(council_model_disclosure_enabled=True)
+    decorated = _service(get_settings(), _RecordingProxy()).with_disclosure(
+        {},
+        model_used="patient-name@example.invalid",
+    )
+
+    assert decorated["ai_disclosure"] == {
+        "model_family": "unknown",
+        "model_version": "unknown",
+        "is_fallback": False,
+    }
 
 
 def test_observability_hooks_are_noops_when_flag_off(flags_off_settings: Settings) -> None:

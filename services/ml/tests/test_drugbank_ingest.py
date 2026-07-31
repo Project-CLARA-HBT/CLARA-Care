@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -78,6 +79,15 @@ def test_cli_limit_emits_valid_shards(tmp_path: Path) -> None:
     manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["source"] == "drugbank"
     assert manifest["license"] == "commercial"
+    assert manifest["source_version"]
+    assert len(manifest["source_sha256"]) == 64
+    unsigned_manifest = dict(manifest)
+    recorded_manifest_sha = unsigned_manifest.pop("manifest_sha256")
+    assert recorded_manifest_sha == sha256(
+        json.dumps(
+            unsigned_manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
     assert manifest["drugs_parsed"] == 50
     assert "generated_at" in manifest
     assert manifest["ddi_rule_count"] > 0
@@ -90,6 +100,7 @@ def test_cli_limit_emits_valid_shards(tmp_path: Path) -> None:
     total_rules = 0
     severities: set[str] = set()
     for shard_info in manifest["ddi_shards"]:
+        assert shard_info["sha256"] == sha256((out_dir / shard_info["file"]).read_bytes()).hexdigest()
         shard = json.loads((out_dir / shard_info["file"]).read_text(encoding="utf-8"))
         assert shard["version"] == manifest["version"]
         for rule in shard["rules"]:
@@ -113,6 +124,7 @@ def test_cli_limit_emits_valid_shards(tmp_path: Path) -> None:
     # --- Dictionary shards: vn_drug_dictionary record shape. ---
     dict_total = 0
     for shard_info in manifest["dictionary_shards"]:
+        assert shard_info["sha256"] == sha256((out_dir / shard_info["file"]).read_bytes()).hexdigest()
         shard = json.loads((out_dir / shard_info["file"]).read_text(encoding="utf-8"))
         assert shard["version"] == manifest["version"]
         assert shard["record_count"] == len(shard["records"])
@@ -122,6 +134,7 @@ def test_cli_limit_emits_valid_shards(tmp_path: Path) -> None:
                 "normalized_name",
                 "active_ingredients",
                 "rxcui",
+                "drugbank_id",
             }
             assert record["brand_vn"] == record["brand_vn"].lower()
             assert record["normalized_name"]

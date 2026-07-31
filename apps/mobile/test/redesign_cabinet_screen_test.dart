@@ -9,8 +9,9 @@
 //   * Consent gate (INV-1): with consent not accepted, the cabinet contents/CRUD
 //     are not shown; only the consent step renders (this is the real safety gate
 //     ahead of any medicine data).
-//   * Two-medicine guard (INV-5): the in-cabinet DDI check never calls
-//     `analyzeCareguard` for fewer than two distinct medicines.
+//   * Two-medicine guard (INV-5): the in-cabinet DDI check never calls the
+//     owner-scoped `autoCheckCareguardCabinet` contract for fewer than two
+//     distinct medicines.
 //
 // All fakes avoid platform channels and live network I/O.
 
@@ -140,9 +141,9 @@ void main() {
       await tester.tap(ddiButton);
       await tester.pumpAndSettle();
 
-      // Fewer than two distinct medicines ⇒ analyzeCareguard was NOT called
+      // Fewer than two distinct medicines ⇒ auto-DDI was NOT called
       // (never fabricate an all-clear — INV-5).
-      expect(api.wasCalled('analyzeCareguard'), isFalse);
+      expect(api.wasCalled('autoCheckCareguardCabinet'), isFalse);
     });
   });
 }

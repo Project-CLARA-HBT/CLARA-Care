@@ -10,6 +10,8 @@ RUN npm ci --no-audit --no-fund
 FROM base AS builder
 ARG NEXT_PUBLIC_API_URL=http://localhost:8100/api/v1
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED=false
+ENV NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED=${NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED}
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/web .
 RUN npm run build

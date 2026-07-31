@@ -327,6 +327,25 @@ class CabinetScanTextRequest(BaseModel):
     text: str = Field(min_length=1, max_length=12000)
 
 
+class OcrSourceCoordinate(BaseModel):
+    """A reviewable source offset in the corrected OCR text.
+
+    Providers that expose image polygons can be added later without changing the
+    cabinet contract.  The current adapters reliably expose text only, so this
+    coordinate system intentionally never pretends to be a bounding box.
+    """
+
+    coordinate_system: Literal["corrected_text_codepoint_offset"]
+    start: int = Field(ge=0)
+    end: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def _ordered_offsets(self) -> "OcrSourceCoordinate":
+        if self.end < self.start:
+            raise ValueError("OCR source coordinate end must not precede start")
+        return self
+
+
 class CabinetScanDetection(BaseModel):
     drug_name: str
     normalized_name: str
@@ -346,6 +365,7 @@ class CabinetScanDetection(BaseModel):
     requires_manual_confirm: bool = False
     confirmed: bool = False
     capture_candidate_id: str | None = None
+    source_coordinates: list[OcrSourceCoordinate] = Field(default_factory=list)
 
 
 class CabinetPrioritizedField(BaseModel):
@@ -390,11 +410,31 @@ class CabinetImportResponse(BaseModel):
     prioritized_fields: list[CabinetPrioritizedField] = Field(default_factory=list)
 
 
+class CabinetDrugBankResolution(BaseModel):
+    """An explicit, revalidated DrugBank identity for one owner-scoped item.
+
+    This is only a request to re-run the check.  The API verifies cabinet
+    ownership and raw-alias binding, and ML re-verifies the identifier against
+    the current licensed DrugBank index; it never confirms or persists a drug.
+    """
+
+    cabinet_item_id: int = Field(gt=0)
+    input_alias: str = Field(min_length=1, max_length=255)
+    drugbank_id: str = Field(min_length=1, max_length=128)
+    drugbank_version: str = Field(min_length=1, max_length=128)
+
+
 class CabinetAutoDdiRequest(BaseModel):
     # Bounded list inputs (Req 4.5): caps keep auto-DDI payloads from growing unbounded.
     symptoms: list[str] = Field(default_factory=list, max_length=100)
     labs: dict[str, float | str] = Field(default_factory=dict)
     allergies: list[str] = Field(default_factory=list, max_length=100)
+    # Presentation-only locale for the independently verified wording layer.
+    # It is not used by DrugBank lookup, severity, or safety policy.
+    locale: Literal["vi", "en"] = "vi"
+    # Additive/default-empty: source-backed choices returned by the preceding
+    # clarification terminal state.  Absent values preserve legacy behavior.
+    resolutions: list[CabinetDrugBankResolution] = Field(default_factory=list, max_length=100)
 
 
 class VnDrugMappingCreateRequest(BaseModel):
@@ -509,14 +549,6 @@ class RagFlowConfig(BaseModel):
     scientific_retrieval_enabled: bool = True
     web_retrieval_enabled: bool = True
     file_retrieval_enabled: bool = True
-    llm_provider: Literal[
-        "deepseek",
-        "hitechcloud_gpt53_codex_high",
-    ] = "hitechcloud_gpt53_codex_high"
-    llm_base_url: str = Field(default="https://platform.hitechcloud.one/v1", max_length=512)
-    llm_model: str = Field(default="gpt-5.3-codex-high", max_length=255)
-    llm_api_key: str = Field(default="", max_length=2048)
-
     @model_validator(mode="before")
     @classmethod
     def _normalize_legacy_verification_enabled(cls, value: Any) -> Any:
@@ -694,6 +726,7 @@ class SourceHubSyncResponse(BaseModel):
 
 ResearchConversationTier = Literal["tier1", "tier2"]
 ResearchJobStatus = Literal["queued", "running", "completed", "failed"]
+ResearchOutputMode = Literal["plain_language", "professional"]
 
 
 class ResearchConversationCreateRequest(BaseModel):
@@ -740,6 +773,10 @@ class ResearchTier2JobCreateRequest(BaseModel):
         default="vi",
         validation_alias=AliasChoices("ui_language", "answer_language"),
     )
+    # The API resolves this closed, presentation-only selector after RBAC and
+    # again after the evidence-release gate. It never changes retrieval,
+    # claims, citations, policy, or model routing.
+    output_mode: ResearchOutputMode = "plain_language"
     # deep_pass_count declared EXACTLY ONCE with one bound set 1..6 (clara-research R1.2/R1.3).
     deep_pass_count: int | None = Field(default=None, ge=1, le=6)
     answer_format: str = "markdown"
@@ -752,8 +789,6 @@ class ResearchTier2JobCreateRequest(BaseModel):
     uploaded_file_ids: list[str] = Field(default_factory=list, max_length=200)
     source_ids: list[int] = Field(default_factory=list, max_length=200)
     source_hub_sources: list[SourceHubSourceKey] = Field(default_factory=list, max_length=50)
-    # llm_runtime declared EXACTLY ONCE with a single type (clara-research R1.5).
-    llm_runtime: dict[str, Any] = Field(default_factory=dict)
     # Additive clarifying-answer carrier (clara-research R12.2); defaults empty for back-compat.
     clarifying_answers: dict[str, str] = Field(default_factory=dict)
 

@@ -124,15 +124,15 @@ Mục này trả lời trực tiếp câu hỏi: **CLARA hiện tại đang dùn
 - Evidence runtime payload:
   - Response có `reasoning_steps`, `parallel_reasoning_nodes`, `evidence_verification`, `chain_status`, `reasoning_digest`.
 
-### 6.2 Neural retrieval/reranking (hybrid + timeout fallback)
+### 6.2 Evidence retrieval/reranking (hybrid + timeout fallback)
 - Kiến thức áp dụng:
-  - Neural reranker để cải thiện precision@k trên evidence retrieval.
+  - Evidence reranker để cải thiện precision@k trên evidence retrieval.
   - Cơ chế timeout/error fallback để giữ ổn định production.
 - Nghiên cứu liên quan:
   - MedBioRAG 2025 hybrid retrieval: https://arxiv.org/abs/2512.10996
   - RAG immunogenicity 2026 (PMID: 41566090): https://pubmed.ncbi.nlm.nih.gov/41566090/
 - Evidence trong code:
-  - `services/ml/src/clara_ml/rag/retrieval/reranker.py:26` (`class NeuralReranker`).
+  - `services/ml/src/clara_ml/rag/retrieval/reranker.py` (`class EvidenceReranker`).
   - `services/ml/src/clara_ml/rag/retrieval/reranker.py:97` (`def rerank`).
   - `services/ml/src/clara_ml/rag/retrieval/reranker.py:115-118`, `216-218`, `259-266` (`rerank_latency_ms`, `rerank_topn`, timeout/error fallback metadata).
   - `services/ml/src/clara_ml/rag/pipeline.py:1675` (log stage index/rerank).

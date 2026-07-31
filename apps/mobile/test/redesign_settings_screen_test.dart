@@ -133,6 +133,33 @@ void main() {
       expect(find.text('Ngôn ngữ'), findsOneWidget);
     });
 
+    testWidgets('updates Settings safety copy when the app language changes',
+        (tester) async {
+      final store = await _session();
+      final lang = LanguageController(
+        store: LanguageStore(storage: _MemLangStorage()),
+      );
+
+      await tester.pumpWidget(_host(SettingsScreenV3(
+        apiClient: FakeApiClient(),
+        sessionStore: store,
+        languageController: lang,
+      )));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Quyền riêng tư & đồng ý'), findsOneWidget);
+      expect(find.text('Thông báo minh bạch về AI'), findsOneWidget);
+
+      await lang.setLanguage('en');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Privacy & consent'), findsOneWidget);
+      expect(find.text('AI transparency notice'), findsOneWidget);
+      // The governed model identity remains a stable disclosure, not a
+      // translated or fabricated model claim.
+      expect(find.text('deepseek v4-pro'), findsOneWidget);
+    });
+
     testWidgets('sign-out clears the session (routes app root to login)',
         (tester) async {
       final store = await _session();

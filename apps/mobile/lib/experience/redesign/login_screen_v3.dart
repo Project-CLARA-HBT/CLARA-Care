@@ -24,7 +24,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/analytics.dart';
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/session_store.dart';
+import '../language_controller.dart';
 import '../../screens/auth_flows_screen.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_input.dart';
@@ -38,10 +40,15 @@ class LoginScreenV3 extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+
+  /// Optional app-level locale state. The direct/legacy embedding remains
+  /// Vietnamese-first through [ConsumerTerminology]'s fallback.
+  final LanguageController? languageController;
 
   @override
   State<LoginScreenV3> createState() => _LoginScreenV3State();
@@ -56,6 +63,10 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
   String? _error;
   String? _emailError;
   String? _passwordError;
+
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
 
   @override
   void initState() {
@@ -75,8 +86,10 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
     final password = _passwordController.text;
 
     // Inline, per-field validation (Vietnamese-first).
-    final emailError = email.isEmpty ? 'Vui lòng nhập email.' : null;
-    final passwordError = password.isEmpty ? 'Vui lòng nhập mật khẩu.' : null;
+    final emailError =
+        email.isEmpty ? _copy[ConsumerTerm.loginEmailRequired] : null;
+    final passwordError =
+        password.isEmpty ? _copy[ConsumerTerm.loginPasswordRequired] : null;
     if (emailError != null || passwordError != null) {
       setState(() {
         _emailError = emailError;
@@ -114,13 +127,16 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
       if (!mounted) return;
       setState(() {
         _error = error.statusCode == 401
-            ? 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.'
-            : error.message;
+            ? _copy[ConsumerTerm.loginUnauthorized]
+            // API errors may contain an upstream/configuration detail and can
+            // be in a different locale. Authentication is deliberately a
+            // generic, non-account-enumerating error surface.
+            : _copy[ConsumerTerm.loginFailed];
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Đăng nhập thất bại. Vui lòng thử lại.';
+        _error = _copy[ConsumerTerm.loginFailed];
       });
     } finally {
       if (mounted) {
@@ -147,9 +163,19 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController != null) {
+      return AnimatedBuilder(
+        animation: languageController,
+        builder: (context, _) => _buildScaffold(context),
+      );
+    }
+    return _buildScaffold(context);
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -206,8 +232,7 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
                   ),
                   const SizedBox(height: ClaraTokens.spaceMd),
                   Text(
-                    'Trợ lý y tế an toàn — hỗ trợ quyết định, không thay thế '
-                    'bác sĩ.',
+                    _copy[ConsumerTerm.loginSafetyTagline],
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: scheme.onSurfaceVariant,
@@ -217,7 +242,7 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
 
                   // --- Fields ----------------------------------------------
                   ClaraInput(
-                    label: 'Email',
+                    label: _copy[ConsumerTerm.loginEmail],
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
@@ -244,6 +269,9 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
                       }
                     },
                     onSubmitted: () => _isLoading ? null : _login(),
+                    label: _copy[ConsumerTerm.loginPassword],
+                    showPasswordLabel: _copy[ConsumerTerm.loginShowPassword],
+                    hidePasswordLabel: _copy[ConsumerTerm.loginHidePassword],
                   ),
 
                   if (_error != null) ...[
@@ -253,7 +281,7 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
 
                   const SizedBox(height: ClaraTokens.spaceLg),
                   ClaraButton.primary(
-                    label: 'Đăng nhập',
+                    label: _copy[ConsumerTerm.loginSubmit],
                     loading: _isLoading,
                     onPressed: _isLoading ? null : _login,
                   ),
@@ -268,11 +296,11 @@ class _LoginScreenV3State extends State<LoginScreenV3> {
                     children: [
                       TextButton(
                         onPressed: _isLoading ? null : _openRegister,
-                        child: const Text('Tạo tài khoản'),
+                        child: Text(_copy[ConsumerTerm.loginCreateAccount]),
                       ),
                       TextButton(
                         onPressed: _isLoading ? null : _openForgotPassword,
-                        child: const Text('Quên mật khẩu?'),
+                        child: Text(_copy[ConsumerTerm.loginForgotPassword]),
                       ),
                     ],
                   ),
@@ -299,6 +327,9 @@ class _PasswordField extends StatelessWidget {
     required this.onToggle,
     required this.onChanged,
     required this.onSubmitted,
+    required this.label,
+    required this.showPasswordLabel,
+    required this.hidePasswordLabel,
   });
 
   final TextEditingController controller;
@@ -308,6 +339,9 @@ class _PasswordField extends StatelessWidget {
   final VoidCallback onToggle;
   final ValueChanged<String> onChanged;
   final VoidCallback onSubmitted;
+  final String label;
+  final String showPasswordLabel;
+  final String hidePasswordLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -319,11 +353,11 @@ class _PasswordField extends StatelessWidget {
       onChanged: onChanged,
       onSubmitted: (_) => onSubmitted(),
       decoration: InputDecoration(
-        labelText: 'Mật khẩu',
+        labelText: label,
         errorText: errorText,
         suffixIcon: Semantics(
           button: true,
-          label: obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+          label: obscure ? showPasswordLabel : hidePasswordLabel,
           child: IconButton(
             onPressed: enabled ? onToggle : null,
             icon: Icon(

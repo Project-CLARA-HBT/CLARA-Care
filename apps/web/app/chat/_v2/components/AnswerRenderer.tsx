@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import type { UILanguage } from "@/lib/ui-language";
 import type { ResearchResult } from "@/components/research/lib/research-page-types";
+import type { ResearchEvidenceReleaseReason } from "@/lib/research";
 import { isDegradedAnswer } from "@/app/chat/_v2/lib/chat-format";
 import { Badge } from "@/app/chat/_v2/components/primitives";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@/lib/research";
 import type { UserRole } from "@/lib/auth-store";
 import MedicalAnswerCanvas from "@/app/chat/_v2/components/MedicalAnswerCanvas";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 
 /**
  * Typographic answer renderer for the rebuilt CLARA Chat (CHAT_V2).
@@ -25,7 +27,7 @@ import MedicalAnswerCanvas from "@/app/chat/_v2/components/MedicalAnswerCanvas";
  *
  * When the tier2 result carries claim-to-study traceability (`tracedClaims`)
  * and a `citationRegistry`, inline sentence-level anchors are injected after
- * each matched claim and resolve into the Citation Registry appendix
+ * each matched claim and resolve into the citation appendix
  * (clara-research Requirement 11.3, 11.4). Absent/empty preserves legacy
  * rendering.
  */
@@ -36,11 +38,34 @@ export type AnswerRendererProps = {
   role?: UserRole;
 };
 
+const RELEASE_REASON_KEYS: Record<
+  ResearchEvidenceReleaseReason,
+  UITranslationKey
+> = {
+  no_citations: "chat.answerRenderer.releaseBoundary.reason.noCitations",
+  no_retrieved_evidence:
+    "chat.answerRenderer.releaseBoundary.reason.noRetrievedEvidence",
+  verification_unavailable:
+    "chat.answerRenderer.releaseBoundary.reason.verificationUnavailable",
+  verification_skipped:
+    "chat.answerRenderer.releaseBoundary.reason.verificationSkipped",
+  verification_invalid:
+    "chat.answerRenderer.releaseBoundary.reason.verificationInvalid",
+  unsupported_claims:
+    "chat.answerRenderer.releaseBoundary.reason.unsupportedClaims",
+  zero_claim_support:
+    "chat.answerRenderer.releaseBoundary.reason.zeroClaimSupport",
+};
+
 function AnswerRenderer({
   result,
   uiLanguage,
   role = "normal",
 }: AnswerRendererProps) {
+  const copy = (
+    key: UITranslationKey,
+    values: Record<string, string | number> = {},
+  ) => t(uiLanguage, key, values);
   const degraded = isDegradedAnswer(result);
   const baseAnswer = result.answer?.trim() || "";
   const citations = result.tier === "tier2" ? result.citations : [];
@@ -48,11 +73,13 @@ function AnswerRenderer({
     result.tier === "tier2" ? (result.tracedClaims ?? []) : [];
   const citationRegistry =
     result.tier === "tier2" ? (result.citationRegistry ?? []) : [];
+  const evidenceRelease =
+    result.tier === "tier2" ? result.evidenceRelease : undefined;
+  const presentation = result.tier === "tier2" ? result.presentation : undefined;
   const answer =
     tracedClaims.length && citationRegistry.length
       ? injectTracedClaimAnchors(baseAnswer, tracedClaims, citationRegistry)
       : baseAnswer;
-  const isEn = uiLanguage === "en";
   const clinicalAnswer =
     result.tier === "tier1" ? result.clinicalAnswer : undefined;
 
@@ -60,8 +87,44 @@ function AnswerRenderer({
     <div className="space-y-2">
       {degraded ? (
         <Badge tone="warn">
-          {isEn ? "Degraded · local fallback" : "Suy giảm · dự phòng nội bộ"}
+          {copy("chat.answerRenderer.degraded")}
         </Badge>
+      ) : null}
+
+      {evidenceRelease && !evidenceRelease.passed ? (
+        <section
+          className="rounded-2xl border border-amber-300/60 bg-amber-50/85 p-3 text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/35 dark:text-amber-100"
+          role="status"
+          aria-label={copy("chat.answerRenderer.releaseBoundary.aria")}
+        >
+          <p className="text-sm font-semibold">
+            {copy("chat.answerRenderer.releaseBoundary.title")}
+          </p>
+          <p className="mt-1 text-xs leading-5">
+            {copy("chat.answerRenderer.releaseBoundary.description")}
+          </p>
+          {evidenceRelease.reasons.length ? (
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5">
+              {evidenceRelease.reasons.map((reason) => (
+                <li key={reason}>{copy(RELEASE_REASON_KEYS[reason])}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+
+      {presentation?.mode === "professional" ? (
+        <section
+          className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5"
+          aria-label={copy("chat.answerRenderer.presentation.professionalAria")}
+        >
+          <p className="text-xs font-semibold text-[var(--text-primary)]">
+            {copy("chat.answerRenderer.presentation.professionalTitle")}
+          </p>
+          <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">
+            {copy("chat.answerRenderer.presentation.professionalDescription")}
+          </p>
+        </section>
       ) : null}
 
       <div className="medical-markdown prose prose-sm max-w-none text-[var(--text-primary)] prose-headings:text-[var(--text-primary)] prose-a:text-[var(--text-brand)] prose-strong:text-[var(--text-primary)]">
@@ -69,7 +132,7 @@ function AnswerRenderer({
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
         ) : (
           <p className="text-sm text-[var(--text-muted)]">
-            {isEn ? "(No answer text)" : "(Chưa có nội dung trả lời)"}
+            {copy("chat.answerRenderer.emptyAnswer")}
           </p>
         )}
       </div>
@@ -85,17 +148,15 @@ function AnswerRenderer({
       {result.tier === "tier2" ? (
         <section
           className="mt-4 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] p-3"
-          aria-label={isEn ? "Research integrity" : "Độ tin cậy nghiên cứu"}
+          aria-label={copy("chat.answerRenderer.integrity.aria")}
         >
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--text-brand)]">
-                {isEn ? "Research integrity" : "Độ tin cậy nghiên cứu"}
+                {copy("chat.answerRenderer.integrity.title")}
               </p>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                {isEn
-                  ? "Inspect what supports the answer—not only the prose."
-                  : "Kiểm tra nền tảng của câu trả lời, không chỉ nội dung diễn giải."}
+                {copy("chat.answerRenderer.integrity.description")}
               </p>
             </div>
             {result.policyAction ? (
@@ -108,22 +169,22 @@ function AnswerRenderer({
           </div>
           <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <ResearchMetric
-              label={isEn ? "Sources" : "Nguồn"}
+              label={copy("chat.answerRenderer.integrity.sources")}
               value={result.citations.length}
             />
             <ResearchMetric
-              label={isEn ? "Traced claims" : "Luận điểm truy vết"}
+              label={copy("chat.answerRenderer.integrity.tracedClaims")}
               value={result.tracedClaims.length}
             />
             <ResearchMetric
-              label={isEn ? "Deep passes" : "Lượt phân tích"}
+              label={copy("chat.answerRenderer.integrity.deepPasses")}
               value={result.deepPassCount ?? 0}
             />
             <ResearchMetric
-              label={isEn ? "Verification" : "Kiểm chứng"}
+              label={copy("chat.answerRenderer.integrity.verification")}
               value={
                 result.verificationStatus?.verdict ??
-                (isEn ? "Not reported" : "Chưa báo cáo")
+                copy("chat.answerRenderer.integrity.notReported")
               }
             />
           </div>
@@ -138,7 +199,7 @@ function AnswerRenderer({
       {citationRegistry.length ? (
         <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {isEn ? "Citation Registry" : "Danh mục trích dẫn"}
+            {copy("chat.answerRenderer.citationRegistry")}
           </h3>
           <ol className="mt-2 space-y-1.5">
             {citationRegistry.map((entry, index) => {
@@ -146,7 +207,9 @@ function AnswerRenderer({
                 entry.sourceType,
                 typeof entry.trustTier === "number" &&
                 Number.isFinite(entry.trustTier)
-                  ? `Tier ${entry.trustTier}`
+                  ? copy("chat.answerRenderer.trustTier", {
+                      tier: entry.trustTier,
+                    })
                   : null,
                 entry.publishedAt,
               ].filter(Boolean);
@@ -190,12 +253,32 @@ function AnswerRenderer({
         </section>
       ) : null}
 
+      {presentation?.citationVisibility === "expanded" && citations.length ? (
+        <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            {copy("chat.answerRenderer.presentation.sources")}
+          </h3>
+          <ol className="mt-2 space-y-1.5">
+            {citations.map((citation, index) => (
+              <li key={`${citation.sourceId ?? citation.url ?? citation.title}-${index}`} className="text-[12px] leading-5 text-[var(--text-secondary)]">
+                <span className="font-semibold text-[var(--text-primary)]">[{index + 1}]</span>{" "}
+                {citation.url ? (
+                  <a href={citation.url} target="_blank" rel="noreferrer" className="underline decoration-[color:var(--text-brand)] underline-offset-2">
+                    {citation.title}
+                  </a>
+                ) : citation.title}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
       {citations.length ? (
         <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {isEn
-              ? `References (${citations.length})`
-              : `Nguồn tham khảo (${citations.length})`}
+            {copy("chat.answerRenderer.references", {
+              count: citations.length,
+            })}
           </summary>
           <ol className="mt-2 space-y-1.5">
             {citations.map((citation, index) => (

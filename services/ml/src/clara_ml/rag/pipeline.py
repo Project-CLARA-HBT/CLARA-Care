@@ -304,24 +304,6 @@ class LlmGenerator(Protocol):
     def generate(self, prompt: str, system_prompt: str | None = None) -> DeepSeekResponse: ...
 
 
-class _RegistrySettingsOverlay:
-    """Read-only settings view for an already-authorized runtime override.
-
-    ``llm_runtime`` is an internal, pre-resolved seam.  It must not become a
-    second construction path that skips task contracts, model rollback or the
-    configured provider policy.  This overlay supplies only its existing
-    connection values to :func:`build_task_client`, without changing global
-    process settings.
-    """
-
-    def __init__(self, base: Any, **overrides: object) -> None:
-        self._base = base
-        self._overrides = overrides
-
-    def __getattr__(self, name: str) -> Any:
-        return self._overrides.get(name, getattr(self._base, name))
-
-
 class RagPipelineP1:
     """P1 pipeline: retrieve -> LLM answer (if available) -> deterministic fallback."""
 
@@ -368,34 +350,16 @@ class RagPipelineP1:
             seed_by_id[item.id] = item
 
         self.retriever = retriever or InMemoryRetriever(documents=list(seed_by_id.values()))
-        self._deepseek_api_key = (
-            settings.deepseek_api_key if deepseek_api_key is None else deepseek_api_key
-        )
+        # Connection/model constructor arguments once supported an internal
+        # runtime-override seam.  Production has one deployment-owned DeepSeek
+        # configuration and the registry selects V4 Pro/Flash per task, so
+        # ignore those legacy arguments rather than creating a second model
+        # selection boundary.  ``llm_client`` remains injectable for tests.
+        del deepseek_api_key, deepseek_base_url, deepseek_model, deepseek_timeout_seconds
+        self._deepseek_api_key = settings.deepseek_api_key
         self._llm_client = llm_client
         if self._llm_client is None and self._deepseek_api_key:
-            if (
-                deepseek_api_key is None
-                and deepseek_base_url is None
-                and deepseek_model is None
-                and deepseek_timeout_seconds is None
-            ):
-                self._llm_client, _ = build_task_client(ModelTask.RAG_SYNTHESIS, settings)
-            else:
-                self._llm_client, _ = build_task_client(
-                    ModelTask.RAG_SYNTHESIS,
-                    self._registry_settings_for_values(
-                        settings,
-                        api_key=self._deepseek_api_key,
-                        base_url=deepseek_base_url or settings.deepseek_base_url,
-                        model=deepseek_model or settings.deepseek_model,
-                    ),
-                    timeout_seconds=(
-                        settings.deepseek_timeout_seconds
-                        if deepseek_timeout_seconds is None
-                        else deepseek_timeout_seconds
-                    ),
-                    retries_per_base=settings.deepseek_retries_per_base,
-                )
+            self._llm_client, _ = build_task_client(ModelTask.RAG_SYNTHESIS, settings)
         self._graphrag = GraphRagSidecar()
         # --- Persistent (P2) retrieval seam (task 5.11) ----------------------
         # When ``RAG_PERSISTENT_RETRIEVAL_ENABLED`` is effectively on, the
@@ -742,23 +706,27 @@ class RagPipelineP1:
             parsed_duration = None
 
         rerank_payload = dict(rerank) if isinstance(rerank, dict) else {}
-        neural_payload = (
-            rerank_payload.get("neural") if isinstance(rerank_payload.get("neural"), dict) else {}
+        evidence_payload = (
+            rerank_payload.get("evidence")
+            if isinstance(rerank_payload.get("evidence"), dict)
+            else rerank_payload.get("neural")
+            if isinstance(rerank_payload.get("neural"), dict)
+            else {}
         )
         if "rerank_latency_ms" not in rerank_payload:
-            rerank_payload["rerank_latency_ms"] = neural_payload.get("rerank_latency_ms")
+            rerank_payload["rerank_latency_ms"] = evidence_payload.get("rerank_latency_ms")
         if "rerank_topn" not in rerank_payload:
-            rerank_payload["rerank_topn"] = neural_payload.get("rerank_topn")
+            rerank_payload["rerank_topn"] = evidence_payload.get("rerank_topn")
         if "rerank_model" not in rerank_payload:
-            rerank_payload["rerank_model"] = neural_payload.get("rerank_model")
+            rerank_payload["rerank_model"] = evidence_payload.get("rerank_model")
         if "rerank_timed_out" not in rerank_payload:
-            rerank_payload["rerank_timed_out"] = bool(neural_payload.get("rerank_timed_out"))
+            rerank_payload["rerank_timed_out"] = bool(evidence_payload.get("rerank_timed_out"))
         if "rerank_reason" not in rerank_payload:
-            rerank_payload["rerank_reason"] = neural_payload.get("rerank_reason")
+            rerank_payload["rerank_reason"] = evidence_payload.get("rerank_reason")
         if "rerank_cache_hit" not in rerank_payload:
-            rerank_payload["rerank_cache_hit"] = bool(neural_payload.get("rerank_cache_hit"))
+            rerank_payload["rerank_cache_hit"] = bool(evidence_payload.get("rerank_cache_hit"))
         if "rerank_cache_age_ms" not in rerank_payload:
-            rerank_payload["rerank_cache_age_ms"] = neural_payload.get("rerank_cache_age_ms")
+            rerank_payload["rerank_cache_age_ms"] = evidence_payload.get("rerank_cache_age_ms")
         return {
             "retrieved_count": len(docs),
             "source_counts": self._source_counts(docs),
@@ -1617,116 +1585,17 @@ class RagPipelineP1:
         )
         return any(signal in message for signal in retryable_signals)
 
-    def _matches_configured_deepseek_env(self, llm_runtime: Any, settings: Any) -> bool:
-        """True when ``llm_runtime`` exactly matches the configured DeepSeek env.
-
-        Used by :meth:`resolve_llm_client` to decide whether the default client
-        (with its longer timeout) can be reused instead of building a capped
-        runtime-override client (Requirement 2.3, design Property 2). Reuse is
-        only safe when DeepSeek-only mode is active, a default client exists,
-        and the supplied runtime points at the same provider/key/base/model.
-        """
-        if not settings.llm_deepseek_only:
-            return False
-        if self._llm_client is None:
-            return False
-        if not isinstance(llm_runtime, dict):
-            return False
-        provider = str(llm_runtime.get("provider") or "").strip().lower()
-        api_key = str(llm_runtime.get("api_key") or "").strip()
-        base_url = str(llm_runtime.get("base_url") or "").strip()
-        model = str(llm_runtime.get("model") or "").strip()
-        return (
-            provider == "deepseek"
-            and api_key == str(self._deepseek_api_key or "").strip()
-            and base_url == str(settings.deepseek_base_url or "").strip()
-            and model == str(settings.deepseek_model or "").strip()
-        )
-
-    @staticmethod
-    def _runtime_client_timeout_seconds(settings: Any) -> float:
-        """Timeout (seconds) applied to an *explicit* runtime override client.
-
-        A runtime override client is intentionally capped to a short ceiling so
-        a stuck runtime endpoint cannot block the pipeline. This cap must never
-        be applied to the default DeepSeek client, whose longer timeout is
-        preserved by :meth:`resolve_llm_client` (Requirement 2.3).
-        """
-        runtime_timeout_seconds = float(settings.deepseek_timeout_seconds)
-        return max(2.0, min(runtime_timeout_seconds, 18.0))
-
-    @staticmethod
-    def _registry_settings_for_values(
-        settings: Any,
-        *,
-        api_key: str,
-        base_url: str,
-        model: str,
-    ) -> _RegistrySettingsOverlay:
-        """Adapt internal runtime values without bypassing the model registry."""
-
-        return _RegistrySettingsOverlay(
-            settings,
-            deepseek_api_key=api_key,
-            deepseek_base_url=base_url,
-            deepseek_model=model,
-        )
-
     def resolve_llm_client(self, llm_runtime: Any, settings: Any = None) -> LlmGenerator | None:
-        """Resolve the LLM client a request should use (Requirement 2.3, Property 2).
+        """Return the registry-built default client, never a runtime override.
 
-        - When ``LLM_DEEPSEEK_ONLY`` is enabled and ``llm_runtime`` matches the
-          configured DeepSeek env, the default client is reused as-is so its
-          longer timeout is never silently capped to ``min(deepseek_timeout, 18s)``.
-        - For a non-matching, fully-specified runtime override (api_key +
-          base_url + model), a short-timeout client is built through the
-          registered ``RAG_SYNTHESIS`` task contract.
-        - When only an api key is supplied (no base_url/model), no client can be
-          built and ``None`` is returned.
-        - Otherwise (no override) the default client is returned unchanged.
+        ``llm_runtime`` is retained in the method signature for old internal
+        callers only.  A request/config supplied provider, endpoint, model, or
+        credential must never create a synthesis client; provider and model
+        selection is deployment-owned and task-contract governed.
         """
-        if settings is None:
-            settings = _module_settings
 
-        if self._matches_configured_deepseek_env(llm_runtime, settings):
-            # Reuse the default client (preserve its longer timeout).
-            return self._llm_client
-
-        if isinstance(llm_runtime, dict):
-            api_key = str(llm_runtime.get("api_key") or "").strip()
-            base_url = str(llm_runtime.get("base_url") or "").strip()
-            model = str(llm_runtime.get("model") or "").strip()
-            if api_key and base_url and model:
-                client, _ = build_task_client(
-                    ModelTask.RAG_SYNTHESIS,
-                    self._registry_settings_for_values(
-                        settings,
-                        api_key=api_key,
-                        base_url=base_url,
-                        model=model,
-                    ),
-                    timeout_seconds=self._runtime_client_timeout_seconds(settings),
-                    retries_per_base=0,
-                )
-                return client
-            if api_key:
-                # api key supplied without base_url/model: cannot build a client.
-                return None
+        del llm_runtime, settings
         return self._llm_client
-
-    def _resolve_runtime_llm_client(self, llm_runtime: Any) -> tuple[LlmGenerator | None, str]:
-        """Resolve the LLM client + api key that ``run`` should use.
-
-        Thin integration seam over :meth:`resolve_llm_client` that also resolves
-        the api key ``run`` uses for its presence/strict-mode checks.
-        """
-        runtime_llm_api_key = (self._deepseek_api_key or "").strip()
-        if isinstance(llm_runtime, dict):
-            override_api_key = str(llm_runtime.get("api_key") or "").strip()
-            if override_api_key:
-                runtime_llm_api_key = override_api_key
-        runtime_llm_client = self.resolve_llm_client(llm_runtime, settings)
-        return runtime_llm_client, runtime_llm_api_key
 
     @staticmethod
     def _build_no_rag_prompt(query: str, *, answer_language: str = "vi") -> str:
@@ -1983,6 +1852,55 @@ class RagPipelineP1:
         return merged
 
     @staticmethod
+    def _is_explicitly_retracted_document(document: Document) -> bool:
+        """Recognize only structured retraction metadata on a retrieved document.
+
+        Providers and the persistent corpus can carry their own retraction
+        status.  A result marked retracted must not be offered to generation,
+        verification, or citation selection.  Free text is intentionally not
+        inspected: a valid guideline may discuss a retracted study, and that
+        must remain retrievable.  This is a fail-safe evidence exclusion, not
+        a claim about the status of records with unknown metadata.
+        """
+
+        metadata = document.metadata if isinstance(document.metadata, dict) else {}
+        for key in ("is_retracted", "retracted"):
+            if metadata.get(key) is True:
+                return True
+
+        markers = {
+            "retracted",
+            "retracted publication",
+            "retraction of publication",
+            "withdrawn publication",
+            "withdrawn",
+        }
+        for key in ("retraction_status", "publication_status", "evidence_status"):
+            if str(metadata.get(key) or "").strip().casefold() in markers:
+                return True
+
+        raw_types = metadata.get("publication_types")
+        if not isinstance(raw_types, (list, tuple, set)):
+            raw_types = [raw_types] if raw_types else []
+        return any(str(item or "").strip().casefold() in markers for item in raw_types)
+
+    @classmethod
+    def _exclude_explicitly_retracted_documents(
+        cls,
+        docs: List[Document],
+    ) -> tuple[List[Document], int]:
+        """Return eligible evidence documents and an auditable rejected count."""
+
+        retained: List[Document] = []
+        rejected = 0
+        for document in docs:
+            if cls._is_explicitly_retracted_document(document):
+                rejected += 1
+                continue
+            retained.append(document)
+        return retained, rejected
+
+    @staticmethod
     def _bounded_fast_rescue_sources(rag_sources: object) -> list[dict[str, Any]]:
         """Limit a zero-result Fast rescue to two scientific sources plus web."""
 
@@ -2071,13 +1989,13 @@ class RagPipelineP1:
                 return None
 
             from clara_ml.rag.embedder import HttpEmbeddingClient
-            from clara_ml.rag.retrieval.reranker import NeuralReranker
+            from clara_ml.rag.retrieval.reranker import EvidenceReranker
             from clara_ml.rag.store.hybrid_retriever import HybridRetriever
 
             retriever = HybridRetriever.from_engine(
                 engine,
                 embedder=HttpEmbeddingClient(),
-                reranker=NeuralReranker(),
+                reranker=EvidenceReranker(),
                 query_expander=self._build_query_expander(),
             )
             self._hybrid_retriever = retriever
@@ -3299,6 +3217,27 @@ class RagPipelineP1:
         retrieval_trace["graphrag_node_count"] = int(graphrag_summary.get("node_count") or 0)
         retrieval_trace["graphrag_edge_count"] = int(graphrag_summary.get("edge_count") or 0)
 
+        # A final status gate covers every ingress (live provider, persistent
+        # corpus, upload fixture, cache, and GraphRAG expansion).  Connector
+        # parsers already drop known retracted PubMed/Europe PMC records, but
+        # this boundary is required for records ingested before that behavior
+        # and for other structured providers.  The count is safe telemetry; it
+        # carries no document title, query, or patient data.
+        docs, retracted_document_count = self._exclude_explicitly_retracted_documents(docs)
+        retrieval_trace["retracted_document_count"] = retracted_document_count
+        if retracted_document_count:
+            used_stages.append("retracted_evidence_filter")
+            flow_events.append(
+                self._flow_event(
+                    stage="retracted_evidence_filter",
+                    status="completed",
+                    docs=[],
+                    note="Excluded retracted evidence records before synthesis.",
+                    component="verifier",
+                    payload={"retracted_document_count": retracted_document_count},
+                )
+            )
+
         relevance_score = self._context_relevance(query, docs)
         retrieval_trace["relevance"] = round(float(relevance_score), 4)
         has_relevant_context = relevance_score >= threshold
@@ -3504,7 +3443,12 @@ class RagPipelineP1:
                 trace=trace,
             )
 
-        runtime_llm_client, runtime_llm_api_key = self._resolve_runtime_llm_client(llm_runtime)
+        # A historical runtime payload is accepted above for response-shape
+        # compatibility only. Provider/model/credential selection is owned by
+        # the deployment registry and cannot be changed per request.
+        del llm_runtime
+        runtime_llm_client = self._llm_client
+        runtime_llm_api_key = (self._deepseek_api_key or "").strip()
 
         if not generation_enabled:
             used_stages.append("retrieval_only")

@@ -25,6 +25,11 @@ class ExtractionSchema(TypedDict):
 
 EXTRACTION_SCHEMAS: dict[str, ExtractionSchema] = {
     "text": {"required": ("text",), "critical": ()},
+    # `text_source` is an internal provenance row, never reviewable or
+    # confirmable. `text_draft` carries only an exact source phrase plus a
+    # closed category and remains subject to explicit review.
+    "text_source": {"required": ("text",), "critical": ()},
+    "text_draft": {"required": ("text",), "critical": ()},
     "medication_label": {
         "required": ("medication_name",),
         "critical": ("medication_name", "strength", "route"),

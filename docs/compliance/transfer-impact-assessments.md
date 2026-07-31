@@ -23,7 +23,10 @@
 ## yescale-deepseek
 
 **Processor:** YEScale-hosted DeepSeek LLM endpoint
-**Model:** `deepseek-v3.2` (`DEEPSEEK_BASE_URL` default `https://api.deepseek.com`, accessed via the YEScale gateway / `YESCALE_API_KEY`)
+**Models:** DeepSeek `deepseek-v4-pro` (safety/reasoning contracts) and
+`deepseek-v4-flash` (bounded extraction/reranking/planning), selected only by
+the versioned task registry (`DEEPSEEK_BASE_URL`, accessed through the configured
+gateway)
 **Registry id:** `yescale-deepseek`
 **Purpose:** `llm_inference` — generate the synthesized answer for a user query
 **Jurisdiction:** offshore (non-VN)

@@ -4,7 +4,9 @@ import { useCallback, useMemo, useState } from "react";
 import AsyncSection, { type AsyncState } from "@/components/ui/async-section";
 import { KpiCard, PanelCard, TrendBars } from "@/components/admin/analytics-primitives";
 import api from "@/lib/http-client";
-import { sanitizeUpstreamError } from "@/lib/user-facing-text";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { aggregateEvalTrends, type EvalRunSummary } from "./eval-dashboard";
 
 /**
@@ -75,9 +77,9 @@ function formatRatio(value: number | null | undefined): string {
 }
 
 /** Định dạng độ trễ (mili-giây) để hiển thị. */
-function formatLatency(value: number | null | undefined): string {
+function formatLatency(value: number | null | undefined, language: "vi" | "en"): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "--";
-  return `${Math.max(0, Math.round(value)).toLocaleString("vi-VN")} ms`;
+  return `${Math.max(0, Math.round(value)).toLocaleString(language === "vi" ? "vi-VN" : "en-US")} ms`;
 }
 
 /** Chuẩn hoá [0,1] về thang 0–100 cho chiều cao cột xu hướng. */
@@ -91,6 +93,7 @@ function toPercentPoint(value: number | null | undefined): number {
 // ---------------------------------------------------------------------------
 
 export default function AdminRagEvalPage() {
+  const language = useUILanguage();
   const [k, setK] = useState(10);
   const [runId, setRunId] = useState("");
   const [results, setResults] = useState<EvalResultsResponse | null>(null);
@@ -109,7 +112,7 @@ export default function AdminRagEvalPage() {
       );
       if (data.ml_available === false || data.fallback) {
         setNotice(
-          "Dịch vụ đánh giá tạm thời không khả dụng. Kết quả có thể chưa sẵn sàng, vui lòng thử lại sau ít phút."
+          t(language, "admin.ragEval.unavailable")
         );
       }
       setResults(data);
@@ -126,15 +129,11 @@ export default function AdminRagEvalPage() {
       }
     } catch (cause) {
       setResults(null);
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể tải kết quả đánh giá."
-        )
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.ragEval.loadError")));
     } finally {
       setIsLoadingResults(false);
     }
-  }, []);
+  }, [language]);
 
   const onRunEval = useCallback(async () => {
     if (isRunning) return;
@@ -145,22 +144,18 @@ export default function AdminRagEvalPage() {
       const { data } = await api.post<EvalRunResponse>("/admin/rag/eval/run", { k });
       if (data.ml_available === false || !data.accepted || !data.run_id) {
         setNotice(
-          "Chưa thể khởi chạy đánh giá lúc này. Bộ đánh giá có thể đang bận hoặc dịch vụ tạm gián đoạn — vui lòng thử lại sau."
+          t(language, "admin.ragEval.startUnavailable")
         );
         return;
       }
       setRunId(data.run_id);
       await fetchResults(data.run_id);
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Không thể khởi chạy đánh giá."
-        )
-      );
+      setError(safeUserFacingError(cause, t(language, "admin.ragEval.startError")));
     } finally {
       setIsRunning(false);
     }
-  }, [isRunning, k, fetchResults]);
+  }, [isRunning, k, fetchResults, language]);
 
   const onReloadResults = useCallback(() => {
     if (!runId) return;
@@ -181,18 +176,16 @@ export default function AdminRagEvalPage() {
       <header className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-lg font-semibold text-[var(--text-primary)]">Đánh giá RAG</h1>
+            <h1 className="text-lg font-semibold text-[var(--text-primary)]">{t(language, "admin.ragEval.title")}</h1>
             <p className="mt-1 max-w-2xl text-sm text-[var(--text-secondary)]">
-              Chạy bộ đánh giá hỏi đáp tiếng Việt (golden VN Q&amp;A) và theo dõi chất lượng truy
-              xuất: recall@k, nDCG@k, độ trung thực và độ chính xác trích dẫn. Trang dành riêng cho
-              quản trị viên.
+              {t(language, "admin.ragEval.description")}
             </p>
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                Ngưỡng k
+                {t(language, "admin.ragEval.k")}
               </span>
               <input
                 type="number"
@@ -216,7 +209,7 @@ export default function AdminRagEvalPage() {
               disabled={isRunning}
               className="rounded-[var(--radius-md)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-600)] focus-visible:ring-offset-2 disabled:opacity-60"
             >
-              {isRunning ? "Đang chạy đánh giá..." : "Chạy đánh giá"}
+              {isRunning ? t(language, "admin.ragEval.running") : t(language, "admin.ragEval.run")}
             </button>
 
             <button
@@ -225,14 +218,14 @@ export default function AdminRagEvalPage() {
               disabled={!runId || isLoadingResults || isRunning}
               className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-600)] disabled:opacity-50"
             >
-              Tải lại kết quả
+              {t(language, "admin.ragEval.reload")}
             </button>
           </div>
         </div>
 
         {runId ? (
           <p className="mt-3 text-xs text-[var(--text-muted)]">
-            Mã lần chạy gần nhất: <span className="font-mono">{runId}</span>
+            {t(language, "admin.ragEval.latestRun", { runId })}
           </p>
         ) : null}
       </header>
@@ -248,12 +241,12 @@ export default function AdminRagEvalPage() {
 
       <AsyncSection<EvalResultsResponse>
         state={state}
-        loadingLabel="Đang tải kết quả đánh giá..."
-        emptyTitle="Chưa có kết quả đánh giá"
-        emptyDescription="Nhấn “Chạy đánh giá” để khởi chạy bộ golden VN Q&A và xem các chỉ số chất lượng."
+        loadingLabel={t(language, "admin.ragEval.loading")}
+        emptyTitle={t(language, "admin.ragEval.emptyTitle")}
+        emptyDescription={t(language, "admin.ragEval.emptyDescription")}
       >
         {(data) => (
-          <RagEvalResults data={data} k={k} runs={runs} showTrend={showTrend} />
+          <RagEvalResults data={data} k={k} runs={runs} showTrend={showTrend} language={language} />
         )}
       </AsyncSection>
     </div>
@@ -268,14 +261,16 @@ function RagEvalResults({
   data,
   k,
   runs,
-  showTrend
+  showTrend,
+  language
 }: {
   data: EvalResultsResponse;
   k: number;
   runs: EvalRunSummary[];
   showTrend: boolean;
+  language: "vi" | "en";
 }) {
-  const runLabels = runs.map((_, index) => `Lần ${index + 1}`);
+  const runLabels = runs.map((_, index) => t(language, "admin.ragEval.runLabel", { index: index + 1 }));
 
   return (
     <div className="space-y-5">
@@ -283,29 +278,29 @@ function RagEvalResults({
         <KpiCard
           label={`Recall@${k}`}
           value={formatRatio(data.recall_at_k)}
-          hint="Tỉ lệ tài liệu liên quan được truy xuất trong top k"
+          hint={t(language, "admin.ragEval.recallHint")}
         />
         <KpiCard
           label={`nDCG@${k}`}
           value={formatRatio(data.ndcg_at_k)}
-          hint="Chất lượng xếp hạng có tính đến vị trí"
+          hint={t(language, "admin.ragEval.ndcgHint")}
         />
         <KpiCard
-          label="Độ trung thực"
+          label={t(language, "admin.ragEval.faithfulness")}
           value={formatRatio(data.faithfulness)}
-          hint="Tỉ lệ luận điểm trong câu trả lời được ngữ cảnh hỗ trợ"
+          hint={t(language, "admin.ragEval.faithfulnessHint")}
         />
         <KpiCard
-          label="Độ chính xác trích dẫn"
+          label={t(language, "admin.ragEval.citationAccuracy")}
           value={formatRatio(data.citation_acc)}
-          hint="Tỉ lệ trích dẫn khớp với nguồn yêu cầu"
+          hint={t(language, "admin.ragEval.citationHint")}
         />
       </div>
 
       {showTrend ? (
         <PanelCard
-          title="Xu hướng qua các lần chạy"
-          description={`So sánh chỉ số chất lượng giữa ${runs.length} lần chạy gần nhất (thang %).`}
+          title={t(language, "admin.ragEval.trends")}
+          description={t(language, "admin.ragEval.trendsDescription", { count: runs.length })}
         >
           <div className="grid gap-5 lg:grid-cols-2">
             <TrendMetric
@@ -319,12 +314,12 @@ function RagEvalResults({
               values={runs.map((row) => row.ndcg_at_k)}
             />
             <TrendMetric
-              title="Độ trung thực"
+              title={t(language, "admin.ragEval.faithfulness")}
               labels={runLabels}
               values={runs.map((row) => row.faithfulness)}
             />
             <TrendMetric
-              title="Độ chính xác trích dẫn"
+              title={t(language, "admin.ragEval.citationAccuracy")}
               labels={runLabels}
               values={runs.map((row) => row.citation_acc)}
             />
@@ -333,20 +328,20 @@ function RagEvalResults({
       ) : null}
 
       <PanelCard
-        title="Kết quả theo từng câu hỏi"
-        description="Chỉ số chi tiết cho mỗi câu hỏi trong bộ đánh giá."
+        title={t(language, "admin.ragEval.questionResults")}
+        description={t(language, "admin.ragEval.questionResultsDescription")}
       >
         {data.results.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[color:var(--shell-border)] text-[var(--text-muted)]">
-                  <th className="py-2 pr-4 font-semibold">Mã câu hỏi</th>
+                  <th className="py-2 pr-4 font-semibold">{t(language, "admin.ragEval.questionId")}</th>
                   <th className="py-2 pr-4 font-semibold">Recall@{k}</th>
                   <th className="py-2 pr-4 font-semibold">nDCG@{k}</th>
-                  <th className="py-2 pr-4 font-semibold">Độ trung thực</th>
-                  <th className="py-2 pr-4 font-semibold">Độ chính xác trích dẫn</th>
-                  <th className="py-2 font-semibold">Độ trễ</th>
+                  <th className="py-2 pr-4 font-semibold">{t(language, "admin.ragEval.faithfulness")}</th>
+                  <th className="py-2 pr-4 font-semibold">{t(language, "admin.ragEval.citationAccuracy")}</th>
+                  <th className="py-2 font-semibold">{t(language, "admin.ragEval.latency")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -369,7 +364,7 @@ function RagEvalResults({
                       {formatRatio(row.citation_acc)}
                     </td>
                     <td className="py-2 text-[var(--text-secondary)]">
-                      {formatLatency(row.latency_ms)}
+                      {formatLatency(row.latency_ms, language)}
                     </td>
                   </tr>
                 ))}
@@ -377,7 +372,7 @@ function RagEvalResults({
             </table>
           </div>
         ) : (
-          <p className="text-sm text-[var(--text-muted)]">Chưa có dòng kết quả theo câu hỏi.</p>
+          <p className="text-sm text-[var(--text-muted)]">{t(language, "admin.ragEval.noRows")}</p>
         )}
       </PanelCard>
     </div>

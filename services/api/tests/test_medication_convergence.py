@@ -166,6 +166,7 @@ def test_hypothetical_ddi_is_separate_and_explicit(monkeypatch) -> None:
                 "state": "ready",
                 "version": "test-drugbank",
                 "manifest_matches_index": True,
+                "integrity_verified": True,
             }
         },
     )

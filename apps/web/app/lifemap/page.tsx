@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Field, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
+import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   acceptLifeMapTask,
   abandonLifeMapCaptureSession,
   actOnLifeMapReviewFinding,
   askLifeMap,
+  createLifeMapVisitPreparationDraft,
   correctLifeMapEvent,
   disputeLifeMapEvent,
   createLifeMapTask,
@@ -24,6 +27,7 @@ import {
   getLifeMapDisputes,
   getLifeMapNextQuestion,
   getLifeMapReplay,
+  getLifeMapRevisionComparison,
   getLifeMapSummary,
   getLifeMapToday,
   getLifeMapV2Capabilities,
@@ -42,19 +46,16 @@ import {
   type LifeMapAskAnswer,
   type LifeMapDisputeCase,
   type LifeMapQuestion,
+  type LifeMapRevisionComparison,
   type LifeMapReviewFinding,
   type LifeMapSummary,
+  type LifeMapVisitPreparationDraft,
   type MedicationNormalizationProposal,
   type LifeMapToday,
   type LifeMapReplay,
 } from "@/lib/lifemap";
 import { getProfileContext } from "@/lib/profile-context-api";
-
-const priorities = [
-  ["routine", "Khi thuận tiện"],
-  ["soon", "Sớm"],
-  ["urgent", "Cần ưu tiên"],
-] as const;
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 function priorityTone(priority: string): "danger" | "warn" | "brand" {
   if (priority === "urgent") return "danger";
@@ -62,11 +63,136 @@ function priorityTone(priority: string): "danger" | "warn" | "brand" {
   return "brand";
 }
 
-function priorityLabel(priority: string): string {
-  return priorities.find(([key]) => key === priority)?.[1] ?? priority;
+function priorityLabel(
+  priority: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  if (priority === "urgent") return copy("lifemap.priority.urgent");
+  if (priority === "soon") return copy("lifemap.priority.soon");
+  if (priority === "routine") return copy("lifemap.priority.routine");
+  return priority;
+}
+
+function truthStateLabel(
+  state: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  switch (state) {
+    case "draft":
+    case "extracted_draft":
+      return copy("lifemap.truth.draft");
+    case "user_reported":
+    case "reported":
+      return copy("lifemap.truth.userReported");
+    case "confirmed":
+      return copy("lifemap.truth.confirmed");
+    case "disputed":
+      return copy("lifemap.truth.disputed");
+    case "superseded":
+      return copy("lifemap.truth.superseded");
+    case "invalidated":
+      return copy("lifemap.truth.invalidated");
+    case "entered_in_error":
+      return copy("lifemap.truth.enteredInError");
+    default:
+      return copy("lifemap.truth.unknown");
+  }
+}
+
+function askIntentLabel(
+  intent: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  const keys: Record<string, UITranslationKey> = {
+    timeline_lookup: "lifemap.ask.intent.timeline",
+    comparison: "lifemap.ask.intent.comparison",
+    visit_preparation: "lifemap.ask.intent.visitPreparation",
+    missingness: "lifemap.ask.intent.missingness",
+    explanation: "lifemap.ask.intent.explanation",
+  };
+  return keys[intent] ? copy(keys[intent]) : copy("lifemap.ask.intent.timeline");
+}
+
+function askSuggestions(
+  copy: (key: UITranslationKey) => string,
+): Array<{ key: string; prompt: string }> {
+  return [
+    { key: "timeline", prompt: copy("lifemap.ask.suggestion.timeline") },
+    { key: "change", prompt: copy("lifemap.ask.suggestion.change") },
+    { key: "missing", prompt: copy("lifemap.ask.suggestion.missing") },
+    { key: "visit", prompt: copy("lifemap.ask.suggestion.visit") },
+  ];
+}
+
+function comparisonValue(value: unknown, language: "vi" | "en"): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "object") {
+    const record = value as { kind?: unknown; item_count?: unknown; field_count?: unknown };
+    if (record.kind === "list") {
+      return t(language, "lifemap.replay.compareList", {
+        count: String(record.item_count ?? 0),
+      });
+    }
+    if (record.kind === "structured") {
+      return t(language, "lifemap.replay.compareStructured", {
+        count: String(record.field_count ?? 0),
+      });
+    }
+  }
+  return t(language, "lifemap.replay.compareStructuredUnknown");
+}
+
+function sourceSpanLabel(sourceSpan: unknown): string {
+  if (!sourceSpan || typeof sourceSpan !== "object") return "";
+  const record = sourceSpan as {
+    start?: unknown;
+    end?: unknown;
+    fields?: Record<string, { start?: unknown; end?: unknown }>;
+  };
+  if (typeof record.start === "number" && typeof record.end === "number") {
+    return `${record.start}–${record.end}`;
+  }
+  if (record.fields && typeof record.fields === "object") {
+    const labels = Object.entries(record.fields)
+      .filter(([, item]) => typeof item?.start === "number" && typeof item?.end === "number")
+      .map(([field, item]) => `${field}: ${item.start}–${item.end}`);
+    return labels.join(" · ");
+  }
+  return "";
+}
+
+function captureDraftFieldLabel(
+  field: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  if (field === "text") return copy("lifemap.capture.field.text");
+  if (field === "category") return copy("lifemap.capture.field.category");
+  return field.replaceAll("_", " ");
+}
+
+function captureDraftCategoryLabel(
+  category: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  const keys: Record<string, UITranslationKey> = {
+    symptom: "lifemap.capture.category.symptom",
+    medication: "lifemap.capture.category.medication",
+    measurement: "lifemap.capture.category.measurement",
+    sleep: "lifemap.capture.category.sleep",
+    care_note: "lifemap.capture.category.careNote",
+  };
+  return keys[category] ? copy(keys[category]) : category;
 }
 
 export default function LifeMapPage() {
+  const language = useUILanguage();
+  const copy = useCallback(
+    (key: UITranslationKey, values?: Record<string, string | number>) =>
+      t(language, key, values ?? {}),
+    [language],
+  );
   const [data, setData] = useState<LifeMapToday | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -76,6 +202,7 @@ export default function LifeMapPage() {
   const [captureEnabled, setCaptureEnabled] = useState(false);
   const [questionEnabled, setQuestionEnabled] = useState(false);
   const [askEnabled, setAskEnabled] = useState(false);
+  const [visitPreparationEnabled, setVisitPreparationEnabled] = useState(false);
   const [reviewEnabled, setReviewEnabled] = useState(false);
   const [summaryEnabled, setSummaryEnabled] = useState(false);
   const [summaryLevel, setSummaryLevel] = useState<"day" | "week" | "episode">(
@@ -106,10 +233,15 @@ export default function LifeMapPage() {
   >({});
   const [replay, setReplay] = useState<LifeMapReplay | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
+  const [revisionComparison, setRevisionComparison] =
+    useState<LifeMapRevisionComparison | null>(null);
+  const [comparisonEventId, setComparisonEventId] = useState("");
   const [editingEvent, setEditingEvent] = useState("");
   const [correctionText, setCorrectionText] = useState("");
   const [askQuery, setAskQuery] = useState("");
   const [askAnswer, setAskAnswer] = useState<LifeMapAskAnswer | null>(null);
+  const [visitPreparationDraft, setVisitPreparationDraft] =
+    useState<LifeMapVisitPreparationDraft | null>(null);
   const [reviewFindings, setReviewFindings] = useState<
     LifeMapReviewFinding[]
   >([]);
@@ -126,11 +258,11 @@ export default function LifeMapPage() {
       setEpisodeId((current) => current || next.episodes[0]?.id || "");
       setDisputes(await getLifeMapDisputes());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Kiểm tra kết nối rồi thử lại.");
+      setError(safeUserFacingError(cause, copy("today.connectionError")));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [copy]);
 
   useEffect(() => {
     void load();
@@ -143,6 +275,9 @@ export default function LifeMapPage() {
         setCaptureEnabled(Boolean(capabilities.lifemap_capture));
         setQuestionEnabled(Boolean(capabilities.lifemap_next_question_v2));
         setAskEnabled(Boolean(capabilities.lifemap_ask_ai));
+        setVisitPreparationEnabled(
+          Boolean(capabilities.lifemap_vietnamese_drafts),
+        );
         setReviewEnabled(Boolean(capabilities.lifemap_ai_review_findings));
         setSummaryEnabled(Boolean(capabilities.lifemap_ai_summaries));
         if (capabilities.lifemap_baselines_v2) {
@@ -153,6 +288,7 @@ export default function LifeMapPage() {
         setCaptureEnabled(false);
         setQuestionEnabled(false);
         setAskEnabled(false);
+        setVisitPreparationEnabled(false);
         setReviewEnabled(false);
         setSummaryEnabled(false);
       });
@@ -188,7 +324,7 @@ export default function LifeMapPage() {
       rememberCapture(session);
       if (session.persisted) setCaptureText("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể bắt đầu ghi nhận.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.startCapture")));
     } finally {
       setSaving(false);
     }
@@ -199,13 +335,13 @@ export default function LifeMapPage() {
     if (!captureFile) return;
     setSaving(true);
     setError("");
-    setCaptureJobStatus("Đang tải tệp an toàn…");
+    setCaptureJobStatus(copy("lifemap.capture.uploading"));
     try {
       const session = await startLifeMapArtifactCapture(captureKind);
-      if (!session.id) throw new Error("Phiên ghi nhận không hợp lệ.");
+      if (!session.id) throw new Error(copy("lifemap.error.invalidCaptureSession"));
       rememberCapture(session);
       const uploaded = await uploadLifeMapCaptureArtifact(session.id, captureFile);
-      setCaptureJobStatus("Đang đọc nội dung. Chưa có dữ liệu nào được xác nhận.");
+      setCaptureJobStatus(copy("lifemap.capture.reading"));
       for (let attempt = 0; attempt < 45; attempt += 1) {
         const job = await getLifeMapCaptureJob(uploaded.job.id);
         if (job.status === "completed") {
@@ -225,15 +361,15 @@ export default function LifeMapPage() {
           return;
         }
         if (job.status === "failed") {
-          throw new Error("Không thể đọc tệp an toàn. Bản gốc vẫn chưa được xác nhận.");
+          throw new Error(copy("lifemap.error.readCapture"));
         }
         await new Promise((resolve) => window.setTimeout(resolve, 1000));
       }
       setCaptureJobStatus(
-        "Tác vụ vẫn đang xử lý. Bạn có thể quay lại để tiếp tục xem xét.",
+        copy("lifemap.capture.processing"),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xử lý tệp.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.processCapture")));
     } finally {
       setSaving(false);
     }
@@ -276,10 +412,10 @@ export default function LifeMapPage() {
             : false,
         reason:
           action === "edit"
-            ? "Người dùng chỉnh sửa trường trích xuất"
+            ? copy("lifemap.audit.captureEdited")
             : action === "reject"
-              ? "Người dùng từ chối bản nháp"
-              : "Người dùng đã kiểm tra bản ghi",
+              ? copy("lifemap.audit.captureRejected")
+              : copy("lifemap.audit.captureConfirmed"),
       });
       setCaptureSession((current) =>
         current
@@ -298,7 +434,7 @@ export default function LifeMapPage() {
         await load();
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu xem xét.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.review")));
     } finally {
       setSaving(false);
     }
@@ -347,7 +483,7 @@ export default function LifeMapPage() {
       setCaptureSession(null);
       setCaptureJobStatus("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể hủy bản nháp.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.abandonCapture")));
     } finally {
       setSaving(false);
     }
@@ -360,7 +496,7 @@ export default function LifeMapPage() {
       if (capturePreview) URL.revokeObjectURL(capturePreview.url);
       setCapturePreview({ artifact, url: URL.createObjectURL(blob) });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể mở nguồn.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.openSource")));
     } finally {
       setSaving(false);
     }
@@ -377,7 +513,7 @@ export default function LifeMapPage() {
       setTaskTitle("");
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể thêm việc này.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.addTask")));
     } finally {
       setSaving(false);
     }
@@ -389,7 +525,7 @@ export default function LifeMapPage() {
     try {
       setReplay(await getLifeMapReplay(selectedEpisodeId));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải lịch sử.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.loadReplay")));
     } finally {
       setReplayLoading(false);
     }
@@ -410,7 +546,7 @@ export default function LifeMapPage() {
         );
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải câu hỏi.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.loadQuestion")));
     } finally {
       setSaving(false);
     }
@@ -434,7 +570,7 @@ export default function LifeMapPage() {
       setNextQuestion(null);
       setQuestionAnswer("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu câu trả lời.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.saveAnswer")));
     } finally {
       setSaving(false);
     }
@@ -448,11 +584,13 @@ export default function LifeMapPage() {
         nextQuestion.episode_id,
         nextQuestion.question_id,
         permanent ? "do_not_ask" : "dismissed",
-        permanent ? "Người dùng không muốn được hỏi lại" : "Để sau",
+        permanent
+          ? copy("lifemap.audit.questionDoNotAsk")
+          : copy("lifemap.audit.questionLater"),
       );
       setNextQuestion(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể cập nhật lựa chọn.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.updateQuestion")));
     } finally {
       setSaving(false);
     }
@@ -469,15 +607,36 @@ export default function LifeMapPage() {
         item.id,
         item.revision,
         { text: correctionText.trim() },
-        "Người dùng sửa thông tin trong Replay",
+        copy("lifemap.audit.replayCorrection"),
       );
       setEditingEvent("");
       setCorrectionText("");
       await openReplay(replay?.episode.id ?? episodeId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu chỉnh sửa.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.saveCorrection")));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const compareRevision = async (item: LifeMapReplay["events"][number]) => {
+    setReplayLoading(true);
+    setError("");
+    try {
+      setComparisonEventId(item.id);
+      setRevisionComparison(
+        await getLifeMapRevisionComparison(
+          item.id,
+          item.revision,
+          language,
+        ),
+      );
+    } catch (cause) {
+      setComparisonEventId("");
+      setRevisionComparison(null);
+      setError(safeUserFacingError(cause, copy("lifemap.error.loadReplay")));
+    } finally {
+      setReplayLoading(false);
     }
   };
 
@@ -492,7 +651,7 @@ export default function LifeMapPage() {
       setDisputes(await getLifeMapDisputes());
       await openReplay(replay?.episode.id ?? episodeId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể gửi tranh chấp.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.submitDispute")));
     } finally {
       setSaving(false);
     }
@@ -505,12 +664,12 @@ export default function LifeMapPage() {
       await resolveLifeMapEvent(
         item.event_id,
         item.revision,
-        "Đã kiểm tra lại nguồn và xác nhận phiên bản này",
+        copy("lifemap.audit.disputeResolved"),
       );
       setDisputes(await getLifeMapDisputes());
       if (replay) await openReplay(replay.episode.id);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xử lý tranh chấp.");
+      setError(safeUserFacingError(cause, copy("lifemap.error.resolveDispute")));
     } finally {
       setSaving(false);
     }
@@ -524,9 +683,27 @@ export default function LifeMapPage() {
     try {
       setAskAnswer(await askLifeMap(askQuery.trim(), episodeId || undefined));
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không thể tra cứu LifeMap.",
+      setError(safeUserFacingError(cause, copy("lifemap.error.ask")));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createVisitPreparationDraft = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      // This endpoint is deliberately read-only: it receives only the selected
+      // scope, returns exact revision citations, and cannot write LifeMap.
+      setVisitPreparationDraft(
+        await createLifeMapVisitPreparationDraft(
+          "",
+          language,
+          episodeId || undefined,
+        ),
       );
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("lifemap.visitPrep.error")));
     } finally {
       setSaving(false);
     }
@@ -538,9 +715,7 @@ export default function LifeMapPage() {
     try {
       setReviewFindings(await scanLifeMapReviewFindings());
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không thể kiểm tra thông tin.",
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.error.scanReview")));
     } finally {
       setSaving(false);
     }
@@ -557,16 +732,14 @@ export default function LifeMapPage() {
         finding.id,
         action,
         action === "resolved"
-          ? "Người dùng đã kiểm tra các bản ghi nguồn"
-          : "Người dùng xác nhận không cần xử lý",
+          ? copy("lifemap.audit.reviewResolved")
+          : copy("lifemap.audit.reviewDismissed"),
       );
       setReviewFindings((current) =>
         current.map((item) => (item.id === finding.id ? updated : item)),
       );
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không thể lưu lựa chọn.",
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.error.reviewChoice")));
     } finally {
       setSaving(false);
     }
@@ -583,11 +756,7 @@ export default function LifeMapPage() {
         ),
       );
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không thể tạo bản tóm tắt.",
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.error.createSummary")));
     } finally {
       setSaving(false);
     }
@@ -596,8 +765,8 @@ export default function LifeMapPage() {
   return (
     <PageShell
       variant="plain"
-      title="LifeMap"
-      description="Tổ chức các điều bạn muốn theo dõi thành hành trình nhỏ, có thể xem lại và thay đổi bất cứ lúc nào."
+      title={copy("lifemap.title")}
+      description={copy("lifemap.description")}
     >
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-5">
@@ -610,13 +779,12 @@ export default function LifeMapPage() {
               {askEnabled ? (
                 <SurfaceCard className="overflow-hidden">
                   <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
-                    <Badge tone="brand">AI có dẫn nguồn</Badge>
+                    <Badge tone="brand">{copy("lifemap.ask.badge")}</Badge>
                     <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
-                      Hỏi LifeMap của tôi
+                      {copy("lifemap.ask.title")}
                     </h2>
                     <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                      Chỉ tra cứu dữ liệu bạn được phép xem. CLARA không chẩn đoán,
-                      kê đơn hay tự thay đổi LifeMap.
+                      {copy("lifemap.ask.description")}
                     </p>
                   </div>
                   <form
@@ -624,19 +792,42 @@ export default function LifeMapPage() {
                     onSubmit={(event) => void submitAsk(event)}
                   >
                     <Textarea
-                      label="Bạn muốn tìm điều gì?"
+                      id="lifemap-ask-query"
+                      label={copy("lifemap.ask.label")}
                       value={askQuery}
                       onChange={(event) => setAskQuery(event.target.value)}
-                      placeholder="Ví dụ: Các ghi nhận đau đầu gần đây của tôi là gì?"
-                      hint="Câu trả lời sẽ chỉ ra đúng bản ghi và phiên bản đã dùng."
+                      placeholder={copy("lifemap.ask.placeholder")}
+                      hint={copy("lifemap.ask.hint")}
                     />
+                    <div>
+                      <p className="text-xs font-medium text-[var(--text-secondary)]">
+                        {copy("lifemap.ask.suggestions")}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {askSuggestions(copy).map((suggestion) => (
+                          <Button
+                            key={suggestion.key}
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setAskQuery(suggestion.prompt);
+                              setAskAnswer(null);
+                              document.getElementById("lifemap-ask-query")?.focus();
+                            }}
+                          >
+                            {suggestion.prompt}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                     <Button
                       type="submit"
                       icon="search"
                       loading={saving}
-                      loadingLabel="Đang tra cứu…"
+                      loadingLabel={copy("lifemap.ask.loading")}
                     >
-                      Tra cứu
+                      {copy("lifemap.ask.submit")}
                     </Button>
                   </form>
                   {askAnswer ? (
@@ -646,6 +837,11 @@ export default function LifeMapPage() {
                     >
                       <p className="font-medium text-[var(--text-primary)]">
                         {askAnswer.answer}
+                      </p>
+                      <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                        {copy("lifemap.ask.interpretedAs", {
+                          intent: askIntentLabel(askAnswer.intent, copy),
+                        })}
                       </p>
                       {askAnswer.claims.length ? (
                         <ol className="mt-4 space-y-3">
@@ -663,9 +859,14 @@ export default function LifeMapPage() {
                                 </p>
                                 {source ? (
                                   <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                                    Nguồn: {source.attribution} ·{" "}
-                                    {new Date(source.occurred_at).toLocaleString("vi-VN")} ·
-                                    phiên bản {source.revision_id.slice(0, 8)}
+                                    {copy("lifemap.ask.source", {
+                                      attribution: source.attribution,
+                                      date: formatLocaleDate(language, source.occurred_at, {
+                                        dateStyle: "medium",
+                                        timeStyle: "short",
+                                      }),
+                                      revision: source.revision_id.slice(0, 8),
+                                    })}
                                   </p>
                                 ) : null}
                               </li>
@@ -677,12 +878,175 @@ export default function LifeMapPage() {
                       askAnswer.conflicting.length ||
                       askAnswer.stale.length ? (
                         <p className="mt-3 text-sm text-[var(--status-warn-text)]">
-                          Có thông tin đang tranh chấp, mâu thuẫn hoặc đã cũ; CLARA
-                          không tự giải quyết thay bạn.
+                          {copy("lifemap.ask.caution")}
+                        </p>
+                      ) : null}
+                      {askAnswer.unknown.length ? (
+                        <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                          {copy("lifemap.ask.uncertain")}
                         </p>
                       ) : null}
                       <p className="mt-4 text-xs text-[var(--text-muted)]">
-                        Chế độ: {askAnswer.disclosure.mode}. Không phải tư vấn y tế.
+                        {copy("lifemap.ask.disclosure", {
+                          mode: askAnswer.disclosure.mode,
+                        })}
+                      </p>
+                    </div>
+                  ) : null}
+                </SurfaceCard>
+              ) : null}
+
+              {visitPreparationEnabled ? (
+                <SurfaceCard className="overflow-hidden">
+                  <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
+                    <Badge tone="brand">{copy("lifemap.visitPrep.badge")}</Badge>
+                    <h2 className="mt-2 text-lg font-semibold text-[var(--text-primary)]">
+                      {copy("lifemap.visitPrep.title")}
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                      {copy("lifemap.visitPrep.description")}
+                    </p>
+                  </div>
+                  <div className="space-y-3 p-5">
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      {episodeId
+                        ? copy("lifemap.visitPrep.selectedEpisode")
+                        : copy("lifemap.visitPrep.allRecords")}
+                    </p>
+                    <Button
+                      icon="clinical_notes"
+                      loading={saving}
+                      loadingLabel={copy("lifemap.visitPrep.loading")}
+                      onClick={() => void createVisitPreparationDraft()}
+                    >
+                      {copy("lifemap.visitPrep.create")}
+                    </Button>
+                  </div>
+                  {visitPreparationDraft ? (
+                    <div
+                      className="space-y-4 border-t border-[color:var(--shell-border)] p-5"
+                      aria-live="polite"
+                    >
+                      <div>
+                        <h3 className="font-semibold text-[var(--text-primary)]">
+                          {visitPreparationDraft.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                          {copy("lifemap.visitPrep.reviewOnly")}
+                        </p>
+                      </div>
+                      {visitPreparationDraft.status === "emergency_escalation" ? (
+                        <p
+                          className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-sm text-[var(--status-danger-text)]"
+                          role="alert"
+                        >
+                          {visitPreparationDraft.answer}
+                        </p>
+                      ) : visitPreparationDraft.plain_language_summary ? (
+                        <div className="space-y-4">
+                          <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                              {copy("lifemap.visitPrep.importantNow")}
+                            </p>
+                            <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
+                              {visitPreparationDraft.plain_language_summary.important_now}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">
+                              {copy("lifemap.visitPrep.basedOn")}
+                            </p>
+                            {visitPreparationDraft.plain_language_summary.based_on.length ? (
+                              <ul className="mt-2 space-y-2">
+                                {visitPreparationDraft.plain_language_summary.based_on.map(
+                                  (source) => (
+                                    <li
+                                      key={source.citation_ids.join("-")}
+                                      className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-primary)]"
+                                    >
+                                      <p>{source.text}</p>
+                                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                        {copy("lifemap.visitPrep.source", {
+                                          date: formatLocaleDate(
+                                            language,
+                                            source.occurred_at,
+                                          ),
+                                          revision: source.citation_ids.join(", "),
+                                        })}
+                                      </p>
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            ) : (
+                              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                {copy("lifemap.visitPrep.noSources")}
+                              </p>
+                            )}
+                          </div>
+                          {visitPreparationDraft.questions_to_consider.length ? (
+                            <div>
+                              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                {copy("lifemap.visitPrep.questions")}
+                              </p>
+                              <ul className="mt-2 space-y-2 text-sm leading-6 text-[var(--text-primary)]">
+                                {visitPreparationDraft.questions_to_consider.map(
+                                  (question) => (
+                                    <li
+                                      key={`${question.text}-${question.citation_ids.join("-")}`}
+                                      className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3"
+                                    >
+                                      <p>{question.text}</p>
+                                      {question.citation_ids.length ? (
+                                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                          {copy("lifemap.visitPrep.revisionSource", {
+                                            revision: question.citation_ids.join(", "),
+                                          })}
+                                        </p>
+                                      ) : null}
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          ) : null}
+                          {visitPreparationDraft.plain_language_summary.uncertainty
+                            .length ? (
+                            <div className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]">
+                              <span>{copy("lifemap.visitPrep.uncertainty")}</span>
+                              <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {visitPreparationDraft.plain_language_summary.uncertainty.map(
+                                  (item, index) => (
+                                    <li key={`${item}-${index}`}>{item}</li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          ) : null}
+                          <div className="space-y-2 text-sm text-[var(--text-secondary)]">
+                            <p>
+                              <span className="font-medium text-[var(--text-primary)]">
+                                {copy("lifemap.visitPrep.nextStep")}
+                              </span>{" "}
+                              {visitPreparationDraft.plain_language_summary.next_step}
+                            </p>
+                            <p>
+                              <span className="font-medium text-[var(--text-primary)]">
+                                {copy("lifemap.visitPrep.urgentHelp")}
+                              </span>{" "}
+                              {visitPreparationDraft.plain_language_summary.urgent_help}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          {copy("lifemap.visitPrep.noSources")}
+                        </p>
+                      )}
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {copy("lifemap.visitPrep.provenance", {
+                          count: visitPreparationDraft.source_revision_ids.length,
+                        })}
                       </p>
                     </div>
                   ) : null}
@@ -693,18 +1057,17 @@ export default function LifeMapPage() {
                 <SurfaceCard className="p-5">
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <Badge tone="brand">Tóm tắt có dẫn nguồn</Badge>
+                      <Badge tone="brand">{copy("lifemap.summary.badge")}</Badge>
                       <h2 className="mt-2 font-semibold text-[var(--text-primary)]">
-                        Nhìn lại LifeMap
+                        {copy("lifemap.summary.title")}
                       </h2>
                       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                        Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang
-                        tranh chấp hay mâu thuẫn.
+                        {copy("lifemap.summary.description")}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-end gap-2">
                       <Select
-                        label="Phạm vi"
+                        label={copy("lifemap.summary.scope")}
                         value={summaryLevel}
                         onChange={(event) => {
                           setSummaryLevel(
@@ -713,10 +1076,10 @@ export default function LifeMapPage() {
                           setLifeMapSummary(null);
                         }}
                       >
-                        <option value="day">Theo ngày</option>
-                        <option value="week">Theo tuần</option>
+                        <option value="day">{copy("lifemap.summary.day")}</option>
+                        <option value="week">{copy("lifemap.summary.week")}</option>
                         <option value="episode" disabled={!episodeId}>
-                          Hành trình đang chọn
+                          {copy("lifemap.summary.episode")}
                         </option>
                       </Select>
                       <Button
@@ -726,7 +1089,7 @@ export default function LifeMapPage() {
                         loading={saving}
                         onClick={() => void loadSummary()}
                       >
-                        Tạo tóm tắt
+                        {copy("lifemap.summary.create")}
                       </Button>
                     </div>
                   </div>
@@ -753,15 +1116,18 @@ export default function LifeMapPage() {
                                   >
                                     <p>{claim.text}</p>
                                     <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                                      {claim.attribution} ·{" "}
-                                      {new Date(claim.occurred_at).toLocaleString(
-                                        "vi-VN",
-                                      )}{" "}
-                                      · nguồn {claim.citation_ids.join(", ")}
+                                      {copy("lifemap.summary.citation", {
+                                        attribution: claim.attribution,
+                                        date: formatLocaleDate(language, claim.occurred_at, {
+                                          dateStyle: "medium",
+                                          timeStyle: "short",
+                                        }),
+                                        sources: claim.citation_ids.join(", "),
+                                      })}
                                     </p>
                                     {claim.truth_state !== "confirmed" ? (
                                       <Badge tone="warn">
-                                        {claim.truth_state}
+                                        {truthStateLabel(claim.truth_state, copy)}
                                       </Badge>
                                     ) : null}
                                   </li>
@@ -772,12 +1138,11 @@ export default function LifeMapPage() {
                         </ol>
                       ) : (
                         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                          Chưa đủ bản ghi để tạo tóm tắt.
+                          {copy("lifemap.summary.empty")}
                         </p>
                       )}
                       <p className="mt-3 text-xs text-[var(--text-muted)]">
-                        Bản tóm tắt xác định theo quy tắc, không phải tư vấn y tế.
-                        Mọi nội dung đều giữ liên kết đến bản ghi nguồn.
+                        {copy("lifemap.summary.notice")}
                       </p>
                     </div>
                   ) : null}
@@ -789,11 +1154,10 @@ export default function LifeMapPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h2 className="font-semibold text-[var(--text-primary)]">
-                        Thông tin cần bạn kiểm tra
+                        {copy("lifemap.review.title")}
                       </h2>
                       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                        Quy tắc chỉ phát hiện khả năng trùng hoặc mâu thuẫn; CLARA
-                        không tự chọn bản nào đúng.
+                        {copy("lifemap.review.description")}
                       </p>
                     </div>
                     <Button
@@ -803,7 +1167,7 @@ export default function LifeMapPage() {
                       loading={saving}
                       onClick={() => void scanReviewFindings()}
                     >
-                      Kiểm tra
+                      {copy("lifemap.review.scan")}
                     </Button>
                   </div>
                   {reviewFindings.length ? (
@@ -820,10 +1184,10 @@ export default function LifeMapPage() {
                               }
                             >
                               {finding.kind === "contradiction"
-                                ? "Có thể mâu thuẫn"
+                                ? copy("lifemap.review.kind.contradiction")
                                 : finding.kind === "duplicate"
-                                  ? "Có thể trùng"
-                                  : "Cần bổ sung"}
+                                  ? copy("lifemap.review.kind.duplicate")
+                                  : copy("lifemap.review.kind.missing")}
                             </Badge>
                             <span className="text-xs text-[var(--text-muted)]">
                               {finding.field_key} · {finding.rule_version}
@@ -831,8 +1195,10 @@ export default function LifeMapPage() {
                           </div>
                           <p className="mt-2 text-xs text-[var(--text-secondary)]">
                             {finding.revision_ids.length
-                              ? `${finding.revision_ids.length} phiên bản nguồn`
-                              : "Chưa có bản ghi cho trường bắt buộc"}
+                              ? copy("lifemap.review.sourceVersions", {
+                                  count: finding.revision_ids.length,
+                                })
+                              : copy("lifemap.review.noRequiredRecord")}
                           </p>
                           {finding.status === "pending" ? (
                             <div className="mt-3 flex flex-wrap gap-2">
@@ -842,7 +1208,7 @@ export default function LifeMapPage() {
                                   void reviewFinding(finding, "resolved")
                                 }
                               >
-                                Tôi đã kiểm tra
+                                {copy("lifemap.review.checked")}
                               </Button>
                               <Button
                                 size="sm"
@@ -851,12 +1217,12 @@ export default function LifeMapPage() {
                                   void reviewFinding(finding, "dismissed")
                                 }
                               >
-                                Không cần xử lý
+                                {copy("lifemap.review.dismiss")}
                               </Button>
                             </div>
                           ) : (
                             <p className="mt-2 text-xs text-[var(--text-muted)]">
-                              Đã ghi nhận lựa chọn của bạn.
+                              {copy("lifemap.review.recorded")}
                             </p>
                           )}
                         </li>
@@ -869,10 +1235,10 @@ export default function LifeMapPage() {
               <SurfaceCard className="overflow-hidden">
                 <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    Hành trình đang mở
+                    {copy("lifemap.episodes.eyebrow")}
                   </p>
                   <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                    Bạn đang theo dõi điều gì?
+                    {copy("lifemap.episodes.title")}
                   </h2>
                 </div>
                 {data?.episodes.length ? (
@@ -888,7 +1254,7 @@ export default function LifeMapPage() {
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-[var(--text-primary)]">{episode.title}</p>
                           <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
-                            Một hành trình do bạn tạo
+                            {copy("lifemap.episodes.createdByYou")}
                           </p>
                         </div>
                         <Button
@@ -898,7 +1264,7 @@ export default function LifeMapPage() {
                           loading={replayLoading}
                           onClick={() => void openReplay(episode.id)}
                         >
-                          Xem lại
+                          {copy("lifemap.episodes.replay")}
                         </Button>
                         {questionEnabled ? (
                           <Button
@@ -908,11 +1274,11 @@ export default function LifeMapPage() {
                             loading={saving}
                             onClick={() => void loadQuestion(episode.id)}
                           >
-                            Một câu hỏi
+                            {copy("lifemap.episodes.question")}
                           </Button>
                         ) : null}
                         <Badge tone={priorityTone(episode.priority)}>
-                          {priorityLabel(episode.priority)}
+                          {priorityLabel(episode.priority, copy)}
                         </Badge>
                       </li>
                     ))}
@@ -921,8 +1287,8 @@ export default function LifeMapPage() {
                   <div className="p-5">
                     <EmptyState
                       icon="route"
-                      title="Chưa có hành trình"
-                      description="Bắt đầu bằng một mục tiêu đơn giản, ví dụ theo dõi triệu chứng hoặc chuẩn bị câu hỏi cho buổi khám."
+                      title={copy("lifemap.episodes.emptyTitle")}
+                      description={copy("lifemap.episodes.emptyDescription")}
                     />
                   </div>
                 )}
@@ -930,19 +1296,19 @@ export default function LifeMapPage() {
 
               {nextQuestion?.ask ? (
                 <SurfaceCard className="p-5">
-                  <Badge tone="brand">Một câu hỏi hữu ích</Badge>
+                  <Badge tone="brand">{copy("lifemap.question.badge")}</Badge>
                   <h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
                     {nextQuestion.question}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    Vì sao CLARA hỏi: {nextQuestion.why}
+                    {copy("lifemap.question.why", { reason: nextQuestion.why })}
                   </p>
                   <div className="mt-4 space-y-3">
                     <Textarea
-                      label="Câu trả lời của bạn"
+                      label={copy("lifemap.question.answerLabel")}
                       value={questionAnswer}
                       onChange={(event) => setQuestionAnswer(event.target.value)}
-                      hint="Câu trả lời sẽ thành bản nháp để bạn kiểm tra trước khi xác nhận."
+                      hint={copy("lifemap.question.answerHint")}
                     />
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -950,21 +1316,21 @@ export default function LifeMapPage() {
                         loading={saving}
                         onClick={() => void answerQuestion()}
                       >
-                        Tạo bản nháp
+                        {copy("lifemap.question.createDraft")}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => void dismissQuestion(false)}
                       >
-                        Để sau
+                        {copy("lifemap.question.later")}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => void dismissQuestion(true)}
                       >
-                        Không hỏi lại
+                        {copy("lifemap.question.never")}
                       </Button>
                     </div>
                   </div>
@@ -974,10 +1340,10 @@ export default function LifeMapPage() {
               {baselines.length ? (
                 <SurfaceCard className="p-5">
                   <h2 className="font-semibold text-[var(--text-primary)]">
-                    Thay đổi so với chính bạn
+                    {copy("lifemap.baseline.title")}
                   </h2>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Đây không phải mức bình thường lâm sàng hay chẩn đoán.
+                    {copy("lifemap.baseline.description")}
                   </p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     {baselines.map((item) => (
@@ -991,10 +1357,13 @@ export default function LifeMapPage() {
                         <p className="mt-1 text-xl font-semibold text-[var(--text-primary)]">
                           {item.status === "ready"
                             ? `${item.personal_median ?? "—"} ${item.unit}`
-                            : "Chưa đủ dữ liệu"}
+                            : copy("lifemap.baseline.insufficient")}
                         </p>
                         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {item.sample_days} ngày dữ liệu · {item.rule_version}
+                          {copy("lifemap.baseline.sampleDays", {
+                            count: item.sample_days,
+                            version: item.rule_version,
+                          })}
                         </p>
                       </div>
                     ))}
@@ -1006,13 +1375,13 @@ export default function LifeMapPage() {
                 <SurfaceCard className="overflow-hidden" aria-live="polite">
                   <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                      Health Replay
+                      {copy("lifemap.replay.eyebrow")}
                     </p>
                     <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                       {replay.episode.title}
                     </h2>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Mỗi mục hiển thị đúng phiên bản, nguồn và quy tắc đã dùng.
+                      {copy("lifemap.replay.description")}
                     </p>
                   </div>
                   <div className="space-y-3 p-5">
@@ -1023,25 +1392,28 @@ export default function LifeMapPage() {
                       >
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge tone={item.truth_state === "confirmed" ? "ok" : "neutral"}>
-                            {item.truth_state === "confirmed" ? "Đã xác nhận" : "Bạn đã ghi nhận"}
+                            {truthStateLabel(item.truth_state, copy)}
                           </Badge>
                           <span className="text-xs text-[var(--text-muted)]">
-                            Phiên bản {item.revision} · {item.policy_version || "quy tắc cũ"}
+                            {copy("lifemap.replay.version", {
+                              revision: item.revision,
+                              policy: item.policy_version || copy("lifemap.replay.legacyPolicy"),
+                            })}
                           </span>
                         </div>
                         <p className="mt-2 text-sm text-[var(--text-primary)]">
                           {String(item.provenance.assertion ?? item.type)}
                         </p>
                         <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-                          Vì sao có mục này: {item.why.text}
+                          {copy("lifemap.replay.why", { reason: item.why.text })}
                         </p>
                         {editingEvent === item.id ? (
                           <div className="mt-3 space-y-3">
                             <Textarea
-                              label="Thông tin đúng"
+                              label={copy("lifemap.replay.correctionLabel")}
                               value={correctionText}
                               onChange={(event) => setCorrectionText(event.target.value)}
-                              hint="Chỉnh sửa tạo một phiên bản mới; lịch sử cũ vẫn được giữ để bạn kiểm tra."
+                              hint={copy("lifemap.replay.correctionHint")}
                             />
                             <div className="flex gap-2">
                               <Button
@@ -1049,24 +1421,24 @@ export default function LifeMapPage() {
                                 loading={saving}
                                 onClick={() => void correctEvent(item)}
                               >
-                                Lưu phiên bản mới
+                                {copy("lifemap.replay.saveCorrection")}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => setEditingEvent("")}
                               >
-                                Hủy
+                                {copy("lifemap.replay.cancel")}
                               </Button>
                             </div>
                           </div>
                         ) : disputingEvent === item.id ? (
                           <div className="mt-3 space-y-3">
                             <Textarea
-                              label="Vì sao bạn chưa tin thông tin này?"
+                              label={copy("lifemap.replay.disputeLabel")}
                               value={disputeReason}
                               onChange={(event) => setDisputeReason(event.target.value)}
-                              hint="Tranh chấp không xóa dữ liệu. CLARA giữ nguyên nguồn và tạo một hàng đợi xem xét."
+                              hint={copy("lifemap.replay.disputeHint")}
                             />
                             <div className="flex gap-2">
                               <Button
@@ -1074,19 +1446,31 @@ export default function LifeMapPage() {
                                 loading={saving}
                                 onClick={() => void disputeEvent(item)}
                               >
-                                Gửi để xem xét
+                                {copy("lifemap.replay.submitDispute")}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => setDisputingEvent("")}
                               >
-                                Hủy
+                                {copy("lifemap.replay.cancel")}
                               </Button>
                             </div>
                           </div>
                         ) : (
                           <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon="compare_arrows"
+                              loading={
+                                replayLoading && comparisonEventId === item.id
+                              }
+                              loadingLabel={copy("lifemap.replay.compareLoading")}
+                              onClick={() => void compareRevision(item)}
+                            >
+                              {copy("lifemap.replay.compare")}
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1096,7 +1480,7 @@ export default function LifeMapPage() {
                                 setCorrectionText("");
                               }}
                             >
-                              Sửa thông tin
+                              {copy("lifemap.replay.edit")}
                             </Button>
                             {item.truth_state !== "disputed" ? (
                               <Button
@@ -1108,15 +1492,79 @@ export default function LifeMapPage() {
                                   setDisputeReason("");
                                 }}
                               >
-                                Chưa đúng / cần xem xét
+                                {copy("lifemap.replay.dispute")}
                               </Button>
                             ) : null}
                           </div>
                         )}
+                        {revisionComparison?.event_id === item.id ? (
+                          <div className="mt-4 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4">
+                            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                              {copy("lifemap.replay.compareTitle")}
+                            </h3>
+                            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                              {revisionComparison.summary}
+                            </p>
+                            {revisionComparison.changes.length ? (
+                              <dl className="mt-3 space-y-3">
+                                {revisionComparison.changes.map((change) => (
+                                  <div
+                                    key={change.field}
+                                    className="rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-raised)] p-3"
+                                  >
+                                    <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                                      {change.field === "truth_state"
+                                        ? copy("lifemap.replay.compareTruthState")
+                                        : change.field === "reason_code"
+                                          ? copy("lifemap.replay.compareReason")
+                                          : change.field.replaceAll("_", " ")}
+                                    </dt>
+                                    <dd className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+                                      <span className="text-[var(--text-secondary)]">
+                                        {copy("lifemap.replay.compareBefore")}: {comparisonValue(change.before, language)}
+                                      </span>
+                                      <span className="text-[var(--text-primary)]">
+                                        {copy("lifemap.replay.compareAfter")}: {comparisonValue(change.after, language)}
+                                      </span>
+                                    </dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            ) : (
+                              <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                                {copy("lifemap.replay.compareEmpty")}
+                              </p>
+                            )}
+                            <div className="mt-3 grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
+                              {(["before", "after"] as const).map((position) => {
+                                const source = revisionComparison.source_spans[position];
+                                const span = sourceSpanLabel(source?.source_span);
+                                return (
+                                  <p key={position}>
+                                    <span className="font-semibold text-[var(--text-primary)]">
+                                      {copy(
+                                        position === "before"
+                                          ? "lifemap.replay.compareBefore"
+                                          : "lifemap.replay.compareAfter",
+                                      )}
+                                      :
+                                    </span>{" "}
+                                    {span
+                                      ? `${copy("lifemap.replay.compareSource")}: ${span}`
+                                      : copy("lifemap.replay.compareNoSource")}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                            <p className="mt-3 text-xs text-[var(--text-muted)]">
+                              {copy("lifemap.replay.compareNotice")}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                     )) : (
                       <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
-                        Hành trình này chưa có bản ghi nào.
+                        {copy("lifemap.replay.empty")}
                       </p>
                     )}
                     {replay.decisions.some((item) => item.stale) ? (
@@ -1124,7 +1572,7 @@ export default function LifeMapPage() {
                         role="status"
                         className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]"
                       >
-                        Một số kết quả cũ đang được tính lại vì thông tin nguồn đã thay đổi.
+                        {copy("lifemap.replay.stale")}
                       </div>
                     ) : null}
                   </div>
@@ -1135,14 +1583,13 @@ export default function LifeMapPage() {
                 <SurfaceCard className="p-5" aria-live="polite">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                      Hàng đợi tranh chấp
+                      {copy("lifemap.disputes.eyebrow")}
                     </p>
                     <h2 className="mt-1 font-semibold text-[var(--text-primary)]">
-                      Thông tin đang được xem xét
+                      {copy("lifemap.disputes.title")}
                     </h2>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      CLARA không tự chọn bên nào đúng. Mỗi quyết định tạo một
-                      phiên bản mới và giữ lại lịch sử nguồn.
+                      {copy("lifemap.disputes.description")}
                     </p>
                   </div>
                   <div className="mt-4 space-y-3">
@@ -1153,16 +1600,20 @@ export default function LifeMapPage() {
                       >
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge tone={item.status === "resolved" ? "ok" : "warn"}>
-                            {item.status === "resolved" ? "Đã xử lý" : "Đang mở"}
+                            {item.status === "resolved"
+                              ? copy("lifemap.disputes.resolved")
+                              : copy("lifemap.disputes.open")}
                           </Badge>
                           <span className="text-xs text-[var(--text-muted)]">
-                            {item.event_type} · phiên bản {item.revision}
+                            {copy("lifemap.disputes.version", {
+                              eventType: item.event_type,
+                              revision: item.revision,
+                            })}
                           </span>
                         </div>
                         {item.requires_clinical_review && item.status === "open" ? (
                           <p className="mt-2 text-sm text-[var(--status-warn-text)]">
-                            Loại thông tin này cần người có quyền lâm sàng xem
-                            nguồn trước khi xác nhận lại.
+                            {copy("lifemap.disputes.clinicalReview")}
                           </p>
                         ) : null}
                         {!item.requires_clinical_review && item.status === "open" ? (
@@ -1173,7 +1624,7 @@ export default function LifeMapPage() {
                             loading={saving}
                             onClick={() => void resolveDispute(item)}
                           >
-                            Xác nhận sau khi kiểm tra nguồn
+                            {copy("lifemap.disputes.resolve")}
                           </Button>
                         ) : null}
                       </div>
@@ -1185,16 +1636,18 @@ export default function LifeMapPage() {
               <SurfaceCard className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="font-semibold text-[var(--text-primary)]">Việc đã được chấp nhận</h2>
+                    <h2 className="font-semibold text-[var(--text-primary)]">
+                      {copy("lifemap.tasks.title")}
+                    </h2>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Chỉ các việc bạn đồng ý mới được đưa vào Today.
+                      {copy("lifemap.tasks.description")}
                     </p>
                   </div>
                   <Link
                     href="/today"
                     className="focus-ring shrink-0 rounded-lg text-sm font-semibold text-[var(--text-brand)] hover:underline"
                   >
-                    Xem Today
+                    {copy("lifemap.tasks.openToday")}
                   </Link>
                 </div>
                 <div className="mt-4 space-y-2">
@@ -1215,7 +1668,7 @@ export default function LifeMapPage() {
                     ))
                   ) : (
                     <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
-                      Chưa có việc nào được chấp nhận.
+                      {copy("lifemap.tasks.empty")}
                     </p>
                   )}
                 </div>
@@ -1236,11 +1689,10 @@ export default function LifeMapPage() {
                 </span>
                 <div>
                   <h2 className="font-semibold text-[var(--text-primary)]">
-                    Ghi nhận nhanh
+                    {copy("lifemap.capture.title")}
                   </h2>
                   <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-                    CLARA tạo bản nháp để bạn xem lại. Không có thông tin nào được
-                    xác nhận tự động.
+                    {copy("lifemap.capture.description")}
                   </p>
                 </div>
               </div>
@@ -1258,7 +1710,7 @@ export default function LifeMapPage() {
                       icon="delete"
                       onClick={() => void abandonCapture()}
                     >
-                      Xóa tệp đã tải lên
+                      {copy("lifemap.capture.deleteUpload")}
                     </Button>
                   ) : null}
                 </div>
@@ -1267,7 +1719,7 @@ export default function LifeMapPage() {
                   {captureSession.artifacts?.length ? (
                     <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                        Nguồn gốc
+                        {copy("lifemap.capture.provenance")}
                       </p>
                       {captureSession.artifacts.map((artifact) => (
                         <Button
@@ -1278,7 +1730,9 @@ export default function LifeMapPage() {
                           icon="visibility"
                           onClick={() => void previewCaptureArtifact(artifact)}
                         >
-                          Xem {artifact.filename}
+                          {copy("lifemap.capture.viewFile", {
+                            filename: artifact.filename,
+                          })}
                         </Button>
                       ))}
                       {capturePreview ? (
@@ -1289,7 +1743,9 @@ export default function LifeMapPage() {
                           <img
                             className="mt-3 max-h-64 w-full rounded-lg object-contain"
                             src={capturePreview.url}
-                            alt={`Nguồn ${capturePreview.artifact.filename}`}
+                            alt={copy("lifemap.capture.sourceAlt", {
+                              filename: capturePreview.artifact.filename,
+                            })}
                           />
                         ) : (
                           <a
@@ -1298,61 +1754,79 @@ export default function LifeMapPage() {
                             target="_blank"
                             rel="noreferrer"
                           >
-                            Mở bản nguồn trong thẻ mới
+                            {copy("lifemap.capture.openSource")}
                           </a>
                         )
                       ) : null}
                     </div>
                   ) : null}
-                  {captureSession.candidates.map((candidate) => (
+                  {captureSession.candidates
+                    // Source rows preserve the exact original note for
+                    // provenance. They are never reviewable/confirmable; show
+                    // only the separately reviewable text drafts to consumers.
+                    .filter((candidate) => candidate.type !== "text_source")
+                    .map((candidate) => (
                     <div
                       key={candidate.id}
                       className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-[var(--text-primary)]">
-                          Bản nháp cần xem lại
+                          {copy("lifemap.capture.draft")}
                         </p>
                         <Badge tone={candidate.status === "confirmed" ? "ok" : "neutral"}>
                           {candidate.status === "confirmed"
-                            ? "Đã xác nhận"
+                            ? copy("lifemap.replay.confirmed")
                             : candidate.status === "rejected"
-                              ? "Đã từ chối"
-                              : "Chưa xác nhận"}
+                              ? copy("lifemap.capture.rejected")
+                              : copy("lifemap.capture.unconfirmed")}
                         </Badge>
                       </div>
                       {candidate.status === "draft" ? (
                         <div className="mt-3 space-y-3">
-                          {Object.entries(candidate.value).map(([field, rawValue]) => (
-                            <Field
-                              key={field}
-                              label={field.replaceAll("_", " ")}
-                              value={
-                                typeof rawValue === "object"
-                                  ? JSON.stringify(rawValue)
-                                  : String(rawValue ?? "")
-                              }
-                              onChange={(event) =>
-                                updateCaptureValue(
-                                  candidate.id,
-                                  field,
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          ))}
+                          {Object.entries(candidate.value).map(([field, rawValue]) =>
+                            field === "category" ? (
+                              <div key={field} className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] px-3 py-2">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                                  {captureDraftFieldLabel(field, copy)}
+                                </p>
+                                <p className="mt-1 text-sm text-[var(--text-primary)]">
+                                  {captureDraftCategoryLabel(String(rawValue ?? ""), copy)}
+                                </p>
+                              </div>
+                            ) : (
+                              <Field
+                                key={field}
+                                label={captureDraftFieldLabel(field, copy)}
+                                value={
+                                  typeof rawValue === "object"
+                                    ? JSON.stringify(rawValue)
+                                    : String(rawValue ?? "")
+                                }
+                                onChange={(event) =>
+                                  updateCaptureValue(
+                                    candidate.id,
+                                    field,
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            ),
+                          )}
                         </div>
                       ) : (
                         <dl className="mt-3 space-y-1 text-sm">
                           {Object.entries(candidate.value).map(([field, rawValue]) => (
                             <div key={field} className="flex gap-2">
                               <dt className="font-medium text-[var(--text-secondary)]">
-                                {field.replaceAll("_", " ")}:
+                                {captureDraftFieldLabel(field, copy)}:
                               </dt>
                               <dd className="text-[var(--text-primary)]">
-                                {typeof rawValue === "object"
-                                  ? JSON.stringify(rawValue)
-                                  : String(rawValue ?? "")}
+                                {field === "category"
+                                  ? captureDraftCategoryLabel(String(rawValue ?? ""), copy)
+                                  : typeof rawValue === "object"
+                                    ? JSON.stringify(rawValue)
+                                    : String(rawValue ?? "")}
                               </dd>
                             </div>
                           ))}
@@ -1362,7 +1836,7 @@ export default function LifeMapPage() {
                         (score) => score < 0.8,
                       ) ? (
                         <p className="mt-2 text-xs text-[var(--status-warn-text)]">
-                          Một số trường có độ tin cậy thấp. Hãy đối chiếu với nguồn.
+                          {copy("lifemap.capture.lowConfidence")}
                         </p>
                       ) : null}
                       {candidate.missing_critical_fields.length ? (
@@ -1370,35 +1844,33 @@ export default function LifeMapPage() {
                           className="mt-2 text-xs font-medium text-[var(--status-warn-text)]"
                           role="alert"
                         >
-                          Cần bổ sung: {candidate.missing_critical_fields.join(", ")}
+                          {copy("lifemap.capture.required", {
+                            fields: candidate.missing_critical_fields.join(", "),
+                          })}
                         </p>
                       ) : null}
                       {candidate.security_findings.length ? (
                         <p className="mt-2 text-xs font-medium text-[var(--status-danger-text)]" role="alert">
-                          Nguồn có nội dung không an toàn; chỉ có thể từ chối bản nháp này.
+                          {copy("lifemap.capture.unsafe")}
                         </p>
                       ) : null}
                       {candidate.type === "medication_label" &&
                       candidate.status === "draft" ? (
                         <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-3">
                           <p className="text-sm font-semibold text-[var(--text-primary)]">
-                            Chuẩn hóa tên thuốc
+                            {copy("lifemap.capture.normalizeTitle")}
                           </p>
                           {captureNormalizations[candidate.id]?.proposal ? (
                             <>
                               <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                                CLARA đề xuất{" "}
-                                <span className="font-medium text-[var(--text-primary)]">
-                                  {
+                                {copy("lifemap.capture.normalizeProposal", {
+                                  name:
                                     captureNormalizations[candidate.id]?.proposal
-                                      ?.display_name
-                                  }
-                                </span>{" "}
-                                · RxNorm{" "}
-                                {
-                                  captureNormalizations[candidate.id]?.proposal
-                                    ?.code
-                                }
+                                      ?.display_name ?? "",
+                                  code:
+                                    captureNormalizations[candidate.id]?.proposal
+                                      ?.code ?? "",
+                                })}
                               </p>
                               <label className="mt-2 flex cursor-pointer items-start gap-2 text-sm text-[var(--text-secondary)]">
                                 <input
@@ -1414,20 +1886,16 @@ export default function LifeMapPage() {
                                     }))
                                   }
                                 />
-                                <span>
-                                  Dùng mã chuẩn này cho hồ sơ thuốc. Bản ghi chỉ
-                                  được tạo sau khi bạn xác nhận bên dưới.
-                                </span>
+                                <span>{copy("lifemap.capture.normalizeAccept")}</span>
                               </label>
                             </>
                           ) : captureNormalizations[candidate.id] === undefined ? (
                             <p className="mt-1 text-sm text-[var(--text-secondary)]" role="status">
-                              Đang kiểm tra từ điển thuốc…
+                              {copy("lifemap.capture.normalizeLoading")}
                             </p>
                           ) : (
                             <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                              Chưa tìm thấy mã chuẩn phù hợp. Tên gốc vẫn được giữ
-                              nguyên và chưa được chuẩn hóa.
+                              {copy("lifemap.capture.normalizeEmpty")}
                             </p>
                           )}
                         </div>
@@ -1441,7 +1909,7 @@ export default function LifeMapPage() {
                             loading={saving}
                             onClick={() => void reviewCapture(candidate, "edit")}
                           >
-                            Lưu chỉnh sửa
+                            {copy("lifemap.capture.saveEdit")}
                           </Button>
                           <Button
                             size="sm"
@@ -1450,7 +1918,7 @@ export default function LifeMapPage() {
                             loading={saving}
                             onClick={() => void reviewCapture(candidate, "reject")}
                           >
-                            Từ chối
+                            {copy("lifemap.capture.reject")}
                           </Button>
                           <Button
                             size="sm"
@@ -1462,7 +1930,7 @@ export default function LifeMapPage() {
                             }
                             onClick={() => void reviewCapture(candidate, "confirm")}
                           >
-                            Xác nhận sau khi đối chiếu
+                            {copy("lifemap.capture.confirm")}
                           </Button>
                         </div>
                       ) : null}
@@ -1475,14 +1943,14 @@ export default function LifeMapPage() {
                       icon="close"
                       onClick={() => void abandonCapture()}
                     >
-                      Hủy và xóa bản nháp
+                      {copy("lifemap.capture.cancelDelete")}
                     </Button>
                   ) : null}
                 </div>
               ) : captureSession?.id ? (
                 <div className="mt-4 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4" role="status">
                   <p className="text-sm text-[var(--text-secondary)]">
-                    {captureJobStatus || "Bản nháp đã lưu. Đang chờ kết quả đọc tệp."}
+                    {captureJobStatus || copy("lifemap.capture.pending")}
                   </p>
                   <Button
                     className="mt-3"
@@ -1491,26 +1959,26 @@ export default function LifeMapPage() {
                     icon="close"
                     onClick={() => void abandonCapture()}
                   >
-                    Hủy bản nháp
+                    {copy("lifemap.capture.cancel")}
                   </Button>
                 </div>
               ) : (
                 <div className="mt-4 space-y-5">
                   <form className="space-y-3" onSubmit={(event) => void startCapture(event)}>
                     <Textarea
-                      label="Điều bạn muốn ghi lại"
+                      label={copy("lifemap.capture.textLabel")}
                       value={captureText}
                       onChange={(event) => setCaptureText(event.target.value)}
-                      placeholder="Ví dụ: Tối qua tôi ngủ khoảng 7 giờ"
+                      placeholder={copy("lifemap.capture.textPlaceholder")}
                     />
                     <Button
                       type="submit"
                       block
                       loading={saving}
-                      loadingLabel="Đang tạo bản nháp…"
+                      loadingLabel={copy("lifemap.capture.processing")}
                       icon="add_notes"
                     >
-                      Tạo bản nháp văn bản
+                      {copy("lifemap.capture.createText")}
                     </Button>
                   </form>
                   <form
@@ -1518,7 +1986,7 @@ export default function LifeMapPage() {
                     onSubmit={(event) => void startArtifactCapture(event)}
                   >
                     <Select
-                      label="Loại tài liệu"
+                      label={copy("lifemap.capture.documentKind")}
                       value={captureKind}
                       onChange={(event) =>
                         setCaptureKind(
@@ -1528,11 +1996,15 @@ export default function LifeMapPage() {
                         )
                       }
                     >
-                      <option value="medication_label">Nhãn thuốc</option>
-                      <option value="visit_document">Tài liệu sau khám</option>
+                      <option value="medication_label">
+                        {copy("lifemap.capture.medicationLabel")}
+                      </option>
+                      <option value="visit_document">
+                        {copy("lifemap.capture.visitDocument")}
+                      </option>
                     </Select>
                     <label className="block text-sm font-medium text-[var(--text-primary)]">
-                      Tệp nguồn
+                      {copy("lifemap.capture.sourceFile")}
                       <input
                         className="focus-ring mt-1 block w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-raised)] p-2 text-sm"
                         type="file"
@@ -1547,8 +2019,7 @@ export default function LifeMapPage() {
                       />
                     </label>
                     <p className="text-xs text-[var(--text-muted)]">
-                      Cần kết nối mạng. CLARA chỉ tạo bản nháp và giữ nguồn để bạn
-                      đối chiếu.
+                      {copy("lifemap.capture.networkHint")}
                     </p>
                     <Button
                       type="submit"
@@ -1558,7 +2029,7 @@ export default function LifeMapPage() {
                       disabled={!captureFile}
                       icon="upload_file"
                     >
-                      Tải lên và tạo bản nháp
+                      {copy("lifemap.capture.upload")}
                     </Button>
                   </form>
                 </div>
@@ -1567,9 +2038,11 @@ export default function LifeMapPage() {
           ) : null}
 
           <SurfaceCard className="p-5">
-            <h2 className="font-semibold text-[var(--text-primary)]">Tạo hành trình</h2>
+            <h2 className="font-semibold text-[var(--text-primary)]">
+              {copy("lifemap.create.title")}
+            </h2>
             <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-              Hoàn thành từng thông tin trên một trang riêng, sau đó kiểm tra trước khi tạo.
+              {copy("lifemap.create.description")}
             </p>
             <Button
               as="link"
@@ -1579,20 +2052,22 @@ export default function LifeMapPage() {
               iconTrailing
               className="mt-4"
             >
-              Bắt đầu từng bước
+              {copy("lifemap.create.start")}
             </Button>
           </SurfaceCard>
 
           <SurfaceCard className="p-5">
-            <h2 className="font-semibold text-[var(--text-primary)]">Thêm việc cho hôm nay</h2>
+            <h2 className="font-semibold text-[var(--text-primary)]">
+              {copy("lifemap.taskCreate.title")}
+            </h2>
             <form className="mt-4 space-y-3.5" onSubmit={(event) => void makeTask(event)}>
               <Select
-                label="Thuộc hành trình"
+                label={copy("lifemap.taskCreate.episode")}
                 required
                 value={episodeId}
                 onChange={(event) => setEpisodeId(event.target.value)}
               >
-                <option value="">Chọn hành trình</option>
+                <option value="">{copy("lifemap.taskCreate.chooseEpisode")}</option>
                 {data?.episodes.map((episode) => (
                   <option key={episode.id} value={episode.id}>
                     {episode.title}
@@ -1600,12 +2075,12 @@ export default function LifeMapPage() {
                 ))}
               </Select>
               <Field
-                label="Việc bạn muốn làm"
+                label={copy("lifemap.taskCreate.label")}
                 required
                 value={taskTitle}
                 onChange={(event) => setTaskTitle(event.target.value)}
                 disabled={!episodeId}
-                placeholder="Ví dụ: Ghi lại thời điểm xuất hiện"
+                placeholder={copy("lifemap.taskCreate.placeholder")}
               />
               <Button
                 type="submit"
@@ -1614,7 +2089,7 @@ export default function LifeMapPage() {
                 disabled={saving || !episodeId}
                 icon="playlist_add"
               >
-                Thêm vào Today
+                {copy("lifemap.taskCreate.submit")}
               </Button>
             </form>
           </SurfaceCard>

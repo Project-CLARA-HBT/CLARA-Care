@@ -7,7 +7,8 @@
 ## Thành phần mới
 - `scripts/ops/validate_runtime_env.sh`
   - Validate `DATABASE_URL`, `POSTGRES_HOST`.
-  - Khi `REQUIRE_DEEPSEEK=true`, bắt buộc có `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`.
+  - Khi `REQUIRE_DEEPSEEK=true`, bắt buộc có `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, `DEEPSEEK_PRO_MODEL` và `DEEPSEEK_FLASH_MODEL`; default model phải bằng Pro, hai model phải khác nhau, và registry phải bật. `ML_SERVICE_TIMEOUT_SECONDS` phải không nhỏ hơn `DEEPSEEK_TIMEOUT_SECONDS` (default V4 của compose là 60 giây).
+  - Khi `CAREGUARD_DRUGBANK_REQUIRED=true`, bắt buộc phải bật SQLite và manifest integrity, khai báo đủ ba đường dẫn artifact, và host artifact directory phải tồn tại trước khi Docker bind-mount nó. Guard không đọc hay in licensed DrugBank content.
 - `scripts/ops/backup_env.sh`
   - Backup `.env` theo timestamp và lưu file `.sha256`.
   - Có retention (`RETENTION_DAYS`, mặc định 14).
@@ -33,6 +34,8 @@ scripts/ops/install_env_backup_cron.sh "0 */6 * * *" /opt/clara-care/scripts/ops
 - [ ] `.env` không dùng `localhost` cho `DATABASE_URL` trong containerized runtime.
 - [ ] `POSTGRES_HOST` trỏ đúng service `clara-postgres`.
 - [ ] `DEEPSEEK_API_KEY` tồn tại khi chạy gate `REQUIRE_DEEPSEEK=true`.
+- [ ] Nếu bật `CAREGUARD_DRUGBANK_REQUIRED=true`, artifact directory đã provisioned trước deploy; SQLite và integrity manifest đều bật.
+- [ ] Nếu rollout Scribe, `.env` stage flags đã được compose truyền vào cả API và ML; đặc biệt `RAG_SCRIBE_CONSENT_REQUIRED=true` phải có trước khi bật transcript có dữ liệu nhạy cảm.
 - [ ] Cron backup env đã cài và log file hoạt động.
 - [ ] Có ít nhất 1 backup `.env` mới trong thư mục `.env.backups`.
 

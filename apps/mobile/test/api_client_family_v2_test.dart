@@ -108,4 +108,35 @@ void main() {
       <String, dynamic>{'expires_at': '2026-08-20T00:00:00.000Z'},
     );
   });
+
+  test('previews an invitation through a header without accepting it',
+      () async {
+    late http.Request captured;
+    final api = ApiClient(
+      baseUrl: base,
+      httpClient: MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'object_type': 'visit',
+            'allowed_actions': <String>['view'],
+            'purpose': 'visit_support',
+            'expires_at': '2026-08-01T00:00:00Z',
+          }),
+          200,
+        );
+      }),
+    );
+
+    await api.previewFamilyInvitation(
+      accessToken: token,
+      invitationToken: 'preview-only-secret',
+    );
+
+    expect(captured.url.path, '/api/v1/family/invitations/preview');
+    expect(captured.url.query, isEmpty);
+    expect(
+        captured.headers['x-family-invitation-token'], 'preview-only-secret');
+    expect(jsonDecode(captured.body), <String, dynamic>{});
+  });
 }

@@ -10,8 +10,17 @@ from typing import Any
 from clara_ml.agents.careguard_ddi_store import DrugBankDdiStore
 from clara_ml.clients.drug_sources import DrugSourceClient
 from clara_ml.config import settings
-from clara_ml.language_renderer import RenderingInput, render_explanation
+from clara_ml.language_renderer import (
+    RenderingInput,
+    render_careguard_wording_draft,
+    render_explanation,
+)
 from clara_ml.language_renderer.schemas import ActionCode, Audience, Severity
+from clara_ml.nlp.vietnamese_clinical import (
+    analyze_vietnamese_clinical_text,
+    fold_vietnamese_for_matching,
+)
+from clara_ml.nlp_vi import enrich_clinical_utterance_with_llm
 
 
 @dataclass(frozen=True)
@@ -51,6 +60,22 @@ _VN_DICTIONARY_RECORD_COUNT: int = 0
 _VN_DICTIONARY_ALIAS_LOOKUP: dict[str, str] = {}
 _VN_DICTIONARY_ACTIVE_INGREDIENTS: dict[str, list[str]] = {}
 _VN_DICTIONARY_RXCUI_MAP: dict[str, str] = {}
+
+
+def _configured_drugbank_paths() -> tuple[Path, Path, Path]:
+    """Resolve the deployment-owned DrugBank bundle without exposing paths.
+
+    Empty settings preserve the package-local development fixture. Production
+    may mount a licensed bundle outside the image and point the manifest and
+    SQLite index at independent, container-visible locations. The manifest's
+    directory remains the only permitted root for its relative shard paths.
+    """
+
+    configured_manifest = settings.careguard_drugbank_manifest_path.strip()
+    manifest_path = Path(configured_manifest) if configured_manifest else _DRUGBANK_MANIFEST_PATH
+    configured_sqlite = settings.careguard_drugbank_sqlite_path.strip()
+    sqlite_path = Path(configured_sqlite) if configured_sqlite else manifest_path.parent / "ddi_index.sqlite"
+    return manifest_path.parent, manifest_path, sqlite_path
 
 _CRITICAL_SYMPTOMS = {
     "chest pain",
@@ -106,6 +131,66 @@ _ROUTE_FORM_TOKENS = {
     "ống",
     "ong",
 }
+
+# ``medication_text`` is a deliberately bounded, opt-in input for a person who
+# writes a medicine list as a Vietnamese sentence rather than one array item per
+# medicine.  It is not a clinical note parser: exact aliases are merely
+# candidates for the existing DrugBank identity resolver below.  Keeping this
+# limit here (rather than trusting the API proxy) protects every internal caller
+# of ``run_careguard_analyze`` as well.
+_MAX_MEDICATION_TEXT_CHARS = 2_000
+_MAX_FREE_TEXT_MEDICATION_CANDIDATES = 24
+_FREE_TEXT_MEDICATION_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "bao",
+        "bi",
+        "cung",
+        "co",
+        "cua",
+        "dang",
+        "de",
+        "duoc",
+        "hay",
+        "hoac",
+        "la",
+        "minh",
+        "mot",
+        "nhung",
+        "sau",
+        "toi",
+        "tren",
+        "va",
+        "voi",
+        "uống",
+        "uong",
+        "dung",
+        "xai",
+        "su",
+        "dung",
+        "taking",
+        "take",
+        "on",
+        "medication",
+        "medicine",
+        "drug",
+        "thuoc",
+        "thuốc",
+        "vien",
+        "viên",
+        "sang",
+        "trua",
+        "toi",
+        "ngay",
+        "lan",
+    }
+)
+_FREE_TEXT_MEDICATION_CONTEXT = re.compile(
+    r"(?:thuốc|thuoc|medicine|medication|drug)\s+([\w-]{2,64})",
+    re.IGNORECASE,
+)
 
 
 def _normalize_text_list(value: object) -> list[str]:
@@ -437,6 +522,10 @@ def _normalize_medications_with_vn_dictionary(
     normalized_inputs: list[dict[str, str]] = []
     normalized_medications: list[str] = []
     seen: set[str] = set()
+    drugbank_store = (
+        _get_drugbank_store() if settings.careguard_drugbank_sqlite_enabled else None
+    )
+    drugbank_dictionary_version = drugbank_store.version if drugbank_store else ""
 
     for medication in medications:
         input_token = _normalize_text_token(medication)
@@ -448,11 +537,39 @@ def _normalize_medications_with_vn_dictionary(
             _VN_DICTIONARY_ALIAS_LOOKUP.get(input_token, canonical_input),
         )
         active_ingredients = _VN_DICTIONARY_ACTIVE_INGREDIENTS.get(canonical, [canonical])
+        rxcui = _VN_DICTIONARY_RXCUI_MAP.get(canonical, "")
+        drugbank_id = ""
+        resolution_source = "vn_dictionary" if canonical != canonical_input else "input"
+
+        # The verified DrugBank dictionary is a deterministic alias lookup. It
+        # does not guess or use an LLM; a miss intentionally leaves the local
+        # normalized token unchanged. This preserves the Vietnamese dictionary
+        # as an additive layer while exposing licensed-source traceability.
+        if drugbank_store is not None:
+            resolution = None
+            for candidate in (input_token, canonical_input, canonical):
+                resolution = drugbank_store.resolve_medication(candidate)
+                if resolution is not None:
+                    break
+            if resolution is not None:
+                canonical = str(resolution["normalized_name"])
+                resolved_actives = resolution.get("active_ingredients")
+                if isinstance(resolved_actives, list):
+                    active_ingredients = [
+                        str(item)
+                        for item in resolved_actives
+                        if isinstance(item, str) and item
+                    ] or [canonical]
+                rxcui = str(resolution.get("rxcui") or "")
+                drugbank_id = str(resolution.get("drugbank_id") or "")
+                resolution_source = "drugbank_dictionary"
         normalized_inputs.append(
             {
                 "input": input_token,
                 "canonical_input": canonical_input,
                 "normalized_name": canonical,
+                "resolution_source": resolution_source,
+                "drugbank_id": drugbank_id,
             }
         )
 
@@ -462,7 +579,9 @@ def _normalize_medications_with_vn_dictionary(
                     "input": input_token,
                     "canonical_input": canonical_input,
                     "normalized_name": canonical,
-                    "rxcui": _VN_DICTIONARY_RXCUI_MAP.get(canonical, ""),
+                    "rxcui": rxcui,
+                    "drugbank_id": drugbank_id,
+                    "resolution_source": resolution_source,
                 }
             )
 
@@ -489,6 +608,511 @@ def _normalize_medications_with_vn_dictionary(
         "normalization_confidence": round(min(max(normalization_confidence, 0.0), 1.0), 3),
         "pair_coverage_ratio": round(min(max(pair_coverage_ratio, 0.0), 1.0), 3),
         "normalized_inputs": normalized_inputs[:20],
+        "drugbank_dictionary_version": drugbank_dictionary_version,
+    }
+
+
+def _valid_cabinet_item_id(value: object) -> int | None:
+    """Accept only a bounded positive integer supplied by the trusted API."""
+
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1 or value > 2_147_483_647:
+        return None
+    return value
+
+
+def _strict_drugbank_input_rows(
+    medications: list[str],
+    medications_with_meta: object,
+) -> list[tuple[str, int | None]]:
+    """Bind trusted cabinet IDs only when every duplicate alias is unambiguous.
+
+    `medications_with_meta` is an API-internal transport envelope, never an
+    authorization source.  An entry can bind only through a positive
+    ``cabinet_item_id`` and an exact ``input_alias`` that appears in the request
+    medication list.  Duplicate aliases receive IDs only when the number of
+    unique trusted entries exactly matches the number of raw occurrences; any
+    mismatch leaves every duplicate unbound rather than risking a selection for
+    the wrong cabinet item.
+    """
+
+    aliases = [
+        _canonicalize_medication_token(_normalize_text_token(medication))
+        for medication in medications
+    ]
+    rows = [(alias, None) for alias in aliases if alias]
+    if not isinstance(medications_with_meta, list):
+        return rows
+
+    positions_by_alias: dict[str, list[int]] = {}
+    for position, (alias, _item_id) in enumerate(rows):
+        positions_by_alias.setdefault(alias, []).append(position)
+    ids_by_alias: dict[str, list[int]] = {}
+    for entry in medications_with_meta[:100]:
+        if not isinstance(entry, dict):
+            continue
+        item_id = _valid_cabinet_item_id(entry.get("cabinet_item_id"))
+        alias = _canonicalize_medication_token(_normalize_text_token(entry.get("input_alias")))
+        if item_id is None or not alias or alias not in positions_by_alias:
+            continue
+        ids_by_alias.setdefault(alias, []).append(item_id)
+
+    for alias, positions in positions_by_alias.items():
+        item_ids = ids_by_alias.get(alias, [])
+        if len(item_ids) != len(positions) or len(set(item_ids)) != len(item_ids):
+            continue
+        for position, item_id in zip(positions, item_ids, strict=True):
+            rows[position] = (alias, item_id)
+    return rows
+
+
+def _requested_drugbank_resolutions(
+    value: object,
+) -> tuple[dict[int, tuple[str, str, str] | None], dict[str, tuple[str, str] | None]]:
+    """Parse a bounded selection packet without trusting its identifiers.
+
+    The API will bind a selection to an owner-scoped cabinet item.  ML repeats
+    the source binding here: this helper only associates the request with a
+    normalized user alias; :meth:`DrugBankDdiStore.resolve_medication_choice`
+    later checks the identifier and artifact version against the licensed index.
+    Conflicting duplicate selections deliberately become invalid rather than
+    allowing request order to choose a medication identity.
+    """
+
+    if not isinstance(value, list):
+        return {}, {}
+    requested_by_item: dict[int, tuple[str, str, str] | None] = {}
+    requested_by_alias: dict[str, tuple[str, str] | None] = {}
+    for entry in value[:100]:
+        if not isinstance(entry, dict):
+            continue
+        alias = _canonicalize_medication_token(_normalize_text_token(entry.get("input_alias")))
+        drugbank_id = str(entry.get("drugbank_id") or "").strip()[:128]
+        source_version = str(entry.get("drugbank_version") or "").strip()[:128]
+        if not alias:
+            continue
+        candidate = (drugbank_id, source_version) if drugbank_id and source_version else None
+        item_id = _valid_cabinet_item_id(entry.get("cabinet_item_id"))
+        if item_id is not None:
+            item_candidate = (alias, drugbank_id, source_version) if candidate else None
+            if item_id in requested_by_item and requested_by_item[item_id] != item_candidate:
+                requested_by_item[item_id] = None
+            else:
+                requested_by_item[item_id] = item_candidate
+        elif alias in requested_by_alias and requested_by_alias[alias] != candidate:
+            requested_by_alias[alias] = None
+        else:
+            requested_by_alias[alias] = candidate
+    return requested_by_item, requested_by_alias
+
+
+def _strict_drugbank_candidate_view(
+    candidate: dict[str, object],
+    *,
+    source_version: str,
+) -> dict[str, object] | None:
+    """Return only a bounded, source-backed candidate safe for user selection."""
+
+    drugbank_id = str(candidate.get("drugbank_id") or "").strip()
+    normalized_name = _normalize_text_token(candidate.get("normalized_name"))
+    active_ingredients = candidate.get("active_ingredients")
+    if not drugbank_id or not normalized_name or not isinstance(active_ingredients, list):
+        return None
+    return {
+        "drugbank_id": drugbank_id,
+        "normalized_name": normalized_name,
+        "active_ingredients": [
+            _normalize_text_token(item) for item in active_ingredients if _normalize_text_token(item)
+        ][:12]
+        or [normalized_name],
+        "rxcui": str(candidate.get("rxcui") or "").strip()[:64],
+        "source_version": source_version,
+    }
+
+
+def _normalize_medications_with_strict_drugbank_choices(
+    medications: list[str],
+    *,
+    requested_resolutions: object,
+    medications_with_meta: object,
+) -> tuple[list[str], dict[str, Any]]:
+    """Resolve medication identity only from a current licensed DrugBank choice.
+
+    This function is intentionally isolated from the legacy Vietnamese
+    dictionary/alias-map path.  When the rollout flag is enabled, an unknown or
+    many-to-one alias becomes a terminal clarification requirement—not a local
+    mapping, fuzzy guess, model prediction, or partial DDI check.
+    """
+
+    version, record_count = _load_vn_drug_dictionary()
+    resolution_requests_by_item, resolution_requests_by_alias = _requested_drugbank_resolutions(
+        requested_resolutions
+    )
+    store = _get_drugbank_store()
+    source_version = store.version if store is not None else ""
+    normalized_medications: list[str] = []
+    normalized_inputs: list[dict[str, str]] = []
+    mapped_items: list[dict[str, str]] = []
+    clarifications: list[dict[str, object]] = []
+    seen: set[str] = set()
+
+    for input_token, cabinet_item_id in _strict_drugbank_input_rows(
+        medications,
+        medications_with_meta,
+    ):
+        candidates = store.medication_candidates(input_token) if store is not None else []
+        requested = (
+            resolution_requests_by_item.get(cabinet_item_id)
+            if cabinet_item_id is not None
+            else resolution_requests_by_alias.get(input_token)
+        )
+        selection_alias_matches_item = bool(
+            cabinet_item_id is None
+            or requested is None
+            or requested[0] == input_token
+        )
+        selected: dict[str, object] | None = None
+        clarification_reason = ""
+        if requested is not None and selection_alias_matches_item:
+            selected_id, selected_version = (
+                (requested[1], requested[2])
+                if cabinet_item_id is not None
+                else requested
+            )
+            selected = store.resolve_medication_choice(
+                input_token,
+                drugbank_id=selected_id,
+                source_version=selected_version,
+            ) if store is not None else None
+            if selected is None:
+                clarification_reason = "invalid_or_stale_selection"
+        elif (
+            (cabinet_item_id is not None and cabinet_item_id in resolution_requests_by_item)
+            or (cabinet_item_id is None and input_token in resolution_requests_by_alias)
+        ):
+            clarification_reason = "invalid_or_conflicting_selection"
+        elif len(candidates) == 1:
+            selected = candidates[0]
+            if _strict_drugbank_candidate_view(selected, source_version=source_version) is None:
+                selected = None
+                clarification_reason = "candidate_missing_stable_identifier"
+        elif len(candidates) > 1:
+            clarification_reason = "ambiguous_alias"
+        else:
+            clarification_reason = "unrecognized_alias"
+
+        if selected is None:
+            clarification_candidates = [
+                view
+                for item in candidates
+                if (view := _strict_drugbank_candidate_view(item, source_version=source_version))
+                is not None
+            ]
+            clarification: dict[str, object] = {
+                "input_alias": input_token,
+                "reason": clarification_reason or "unrecognized_alias",
+                "candidates": clarification_candidates,
+            }
+            if cabinet_item_id is not None:
+                clarification["cabinet_item_id"] = cabinet_item_id
+            clarifications.append(clarification)
+            continue
+
+        selected_view = _strict_drugbank_candidate_view(selected, source_version=source_version)
+        if selected_view is None:
+            clarification = {
+                "input_alias": input_token,
+                "reason": "candidate_missing_stable_identifier",
+                "candidates": [],
+            }
+            if cabinet_item_id is not None:
+                clarification["cabinet_item_id"] = cabinet_item_id
+            clarifications.append(clarification)
+            continue
+        canonical = str(selected_view["normalized_name"])
+        active_ingredients = list(selected_view["active_ingredients"])
+        normalized_inputs.append(
+            {
+                "input": input_token,
+                "canonical_input": input_token,
+                "normalized_name": canonical,
+                "resolution_source": "drugbank_user_choice"
+                if requested is not None and selection_alias_matches_item
+                else "drugbank_dictionary",
+                "drugbank_id": str(selected_view["drugbank_id"]),
+            }
+        )
+        if canonical != input_token:
+            mapped_items.append(
+                {
+                    "input": input_token,
+                    "canonical_input": input_token,
+                    "normalized_name": canonical,
+                    "rxcui": str(selected_view["rxcui"]),
+                    "drugbank_id": str(selected_view["drugbank_id"]),
+                    "resolution_source": "drugbank_user_choice"
+                    if requested is not None and selection_alias_matches_item
+                    else "drugbank_dictionary",
+                }
+            )
+        for candidate in [canonical, *active_ingredients]:
+            normalized_candidate = _canonicalize_medication_token(
+                _normalize_text_token(candidate)
+            ) or _normalize_text_token(candidate)
+            if not normalized_candidate or normalized_candidate in seen:
+                continue
+            seen.add(normalized_candidate)
+            normalized_medications.append(normalized_candidate)
+
+    input_count = len([m for m in medications if _normalize_text_token(m)])
+    mapped_count = len(mapped_items)
+    return normalized_medications, {
+        "version": version,
+        "record_count": record_count,
+        "mapped_count": mapped_count,
+        "mapped_items": mapped_items[:20],
+        "input_count": input_count,
+        "normalization_confidence": round(
+            min(max((len(normalized_inputs) / input_count) if input_count else 1.0, 0.0), 1.0),
+            3,
+        ),
+        "pair_coverage_ratio": round(
+            min(max((len(normalized_medications) / input_count) if input_count else 1.0, 0.0),
+            3,
+        ),
+        "normalized_inputs": normalized_inputs[:20],
+        "drugbank_dictionary_version": source_version,
+        "clarifications": clarifications[:20],
+    }
+
+
+def _bounded_medication_text(value: object) -> tuple[str, str]:
+    """Return a bounded, explicit free-text medication field.
+
+    The caller must use the dedicated ``medication_text`` field.  In
+    particular, we never reinterpret an arbitrary symptom, chat, or note field
+    as a medicine list.  A malformed or oversized value is a clarification
+    condition rather than a best-effort truncation that could silently omit a
+    medicine from an interaction check.
+    """
+
+    if value is None:
+        return "", "absent"
+    if not isinstance(value, str):
+        return "", "invalid"
+    text = value.strip()
+    if not text:
+        return "", "empty"
+    if len(text) > _MAX_MEDICATION_TEXT_CHARS:
+        return "", "too_long"
+    return text, "valid"
+
+
+def _append_unique_medication_candidate(
+    values: list[str],
+    candidate: str,
+) -> None:
+    normalized = _canonicalize_medication_token(_normalize_text_token(candidate))
+    if not normalized or any(_normalize_text_token(item) == normalized for item in values):
+        return
+    values.append(normalized)
+
+
+def _free_text_medication_candidates(
+    medication_text: str,
+    *,
+    field_state: str,
+) -> tuple[list[str], dict[str, object]]:
+    """Extract only exact, reviewable aliases from Vietnamese list-like text.
+
+    Vietnamese clinical NLP contributes surface candidates and ambiguity cues;
+    the local Vietnamese dictionary contributes known exact phrases; and a
+    ready DrugBank index may contribute *only* exact alias matches.  None of
+    these paths chooses a DrugBank identity.  The strict resolver below remains
+    responsible for one-vs-many selection and source-version validation.
+    """
+
+    empty_metadata: dict[str, object] = {
+        "state": "not_used"
+        if field_state in {"absent", "empty"}
+        else "requires_clarification",
+        "field_state": field_state,
+        "extracted_candidate_count": 0,
+        "ambiguous_candidate_count": 0,
+        "unresolved_text_present": field_state not in {"absent", "empty"},
+        "extractor": "deterministic_vietnamese_clinical_v1",
+    }
+    if field_state in {"absent", "empty"}:
+        return [], empty_metadata
+    if field_state != "valid":
+        return [], empty_metadata
+
+    analysis = analyze_vietnamese_clinical_text(medication_text)
+    normalized_text = analysis.normalized_text
+    folded_text = fold_vietnamese_for_matching(normalized_text)
+    candidates: list[str] = []
+    matched_aliases: set[str] = set()
+    matched_spans: list[tuple[int, int]] = []
+
+    # The small local dictionary is an exact phrase inventory.  Scan longest
+    # first so an input such as "panadol extra" is preserved as that full alias,
+    # not as a shorter overlapping product name.
+    _load_vn_drug_dictionary()
+    for alias in sorted(_VN_DICTIONARY_ALIAS_LOOKUP, key=lambda item: (-len(item), item)):
+        folded_alias = fold_vietnamese_for_matching(alias)
+        if len(folded_alias) < 3:
+            continue
+        for match in re.finditer(rf"(?<!\w){re.escape(folded_alias)}(?!\w)", folded_text):
+            if any(match.start() < end and start < match.end() for start, end in matched_spans):
+                continue
+            _append_unique_medication_candidate(candidates, alias)
+            matched_aliases.add(folded_alias)
+            matched_spans.append((match.start(), match.end()))
+            if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
+                break
+        if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
+            break
+
+    # NLP mentions include known Vietnamese shorthand and spelling variants.
+    # We preserve their exact source surface, never their suggested canonical
+    # name, so the next stage still has to prove the alias against DrugBank.
+    ambiguous_candidate_count = 0
+    for mention in analysis.medication_mentions:
+        if mention.ambiguous:
+            ambiguous_candidate_count += 1
+        folded_surface = fold_vietnamese_for_matching(mention.surface)
+        if any(
+            re.search(rf"(?<!\w){re.escape(folded_surface)}(?!\w)", alias)
+            for alias in matched_aliases
+        ):
+            continue
+        _append_unique_medication_candidate(candidates, mention.surface)
+
+    # A complete licensed index may contain aliases outside the small public
+    # dictionary.  Probe bounded token n-grams and retain only exact index
+    # aliases.  This is deterministic source lookup, not fuzzy matching or an
+    # LLM-mediated canonicalization.  Querying a not-ready index contributes no
+    # candidates; the unresolved gate below then fails closed.
+    store = _get_drugbank_store() if settings.careguard_drugbank_sqlite_enabled else None
+    tokens = re.findall(r"[\w-]+", normalized_text, flags=re.UNICODE)
+    for width in range(min(4, len(tokens)), 0, -1):
+        if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
+            break
+        for start in range(0, len(tokens) - width + 1):
+            phrase_tokens = tokens[start : start + width]
+            folded_phrase_tokens = [fold_vietnamese_for_matching(token) for token in phrase_tokens]
+            if not phrase_tokens or all(token in _FREE_TEXT_MEDICATION_STOPWORDS for token in folded_phrase_tokens):
+                continue
+            if any(token.isdigit() for token in phrase_tokens):
+                continue
+            alias = _canonicalize_medication_token(" ".join(phrase_tokens))
+            folded_alias = fold_vietnamese_for_matching(alias)
+            if not alias or any(
+                re.search(rf"(?<!\w){re.escape(folded_alias)}(?!\w)", item)
+                for item in matched_aliases
+            ):
+                continue
+            if store is not None and store.medication_candidates(alias):
+                _append_unique_medication_candidate(candidates, alias)
+                matched_aliases.add(folded_alias)
+                if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
+                    break
+
+    # Do not call a partial extraction a complete medication list.  If the
+    # field supplied no exact source-backed candidate, or a user explicitly
+    # names an unrecognised "thuốc ..." item, require clarification.  The
+    # response intentionally exposes only categorical/count metadata, never
+    # free-text content through telemetry or operational output.
+    unresolved_context = False
+    for context_match in _FREE_TEXT_MEDICATION_CONTEXT.finditer(normalized_text):
+        named_token = fold_vietnamese_for_matching(context_match.group(1))
+        if not any(
+            re.search(rf"(?<!\w){re.escape(named_token)}(?!\w)", alias)
+            for alias in matched_aliases
+        ):
+            unresolved_context = True
+            break
+    unresolved_text = not candidates or unresolved_context
+    metadata = {
+        "state": "requires_clarification"
+        if unresolved_text or ambiguous_candidate_count
+        else "used",
+        "field_state": field_state,
+        "extracted_candidate_count": len(candidates),
+        "ambiguous_candidate_count": ambiguous_candidate_count,
+        "unresolved_text_present": unresolved_text,
+        "extractor": "deterministic_vietnamese_clinical_v1",
+    }
+    return candidates, metadata
+
+
+def _free_text_medication_clarification_result(
+    *,
+    raw_medications: list[str],
+    symptoms: list[str],
+    extraction: dict[str, object],
+) -> dict[str, Any]:
+    """Fail closed before DDI when a free-text medicine list is incomplete."""
+
+    return {
+        "status": "requires_medication_clarification",
+        "clarifications": [
+            {
+                "reason": "free_text_medication_identity_unresolved",
+                "candidates": [],
+            }
+        ],
+        "urgent_support_required": bool(_critical_symptom_hits(symptoms)),
+        "metadata": {
+            "pipeline": "p2-careguard-ddi-standard-v2",
+            "clarification_required": True,
+            "clarification_source": "deterministic_vietnamese_medication_extraction",
+            "raw_medication_count": len(raw_medications),
+            "normalized_medication_count": 0,
+            "free_text_medication_extraction": extraction,
+        },
+    }
+
+
+def _augment_raw_medications_with_validated_spans(
+    raw_medications: list[str],
+) -> tuple[list[str], dict[str, object]]:
+    """Optionally add exact original medication spans to deterministic lookup.
+
+    The model cannot provide a normalized drug, DrugBank ID, dose, interaction,
+    severity, or recommendation. It may only nominate an exact substring of
+    the user's original input; deterministic Vietnamese/DrugBank resolution is
+    still the sole authority for what is actually checked.
+    """
+
+    baseline = list(raw_medications)
+    if not (
+        settings.clinical_language_llm_extraction_enabled
+        and settings.careguard_clinical_span_augmentation_enabled
+        and baseline
+    ):
+        return baseline, {"state": "disabled", "added_candidate_count": 0}
+    source_text = "\n".join(baseline)
+    packet = enrich_clinical_utterance_with_llm(source_text, settings=settings)
+    if packet.implementation != "hybrid_source_spans_v1":
+        return baseline, {"state": "fallback", "added_candidate_count": 0}
+
+    candidates = list(baseline)
+    seen = {item.casefold().strip() for item in candidates}
+    for span in packet.source_spans:
+        if span.category != "medication":
+            continue
+        candidate = source_text[span.start : span.end].strip()
+        # A candidate spanning separate input rows is ambiguous. Preserve the
+        # raw rows and do not manufacture a joined medication name.
+        if not candidate or "\n" in candidate or candidate.casefold() in seen:
+            continue
+        seen.add(candidate.casefold())
+        candidates.append(candidate)
+    return candidates, {
+        "state": "used",
+        "added_candidate_count": len(candidates) - len(baseline),
+        "model_version": packet.extractor_model_version,
+        "prompt_version": packet.extractor_prompt_version,
     }
 
 
@@ -646,11 +1270,26 @@ def _get_drugbank_store() -> DrugBankDdiStore | None:
     """
     global _DRUGBANK_STORE, _DRUGBANK_STORE_READY
     if _DRUGBANK_STORE_READY:
-        return _DRUGBANK_STORE
+        try:
+            if (
+                _DRUGBANK_STORE is not None
+                and _DRUGBANK_STORE.readiness().get("state") == "ready"
+            ):
+                return _DRUGBANK_STORE
+        except Exception:  # noqa: BLE001 - a readiness failure must fail closed
+            pass
+        # A mounted bundle can arrive or be atomically refreshed after this
+        # process started. Re-evaluate a degraded/missing store instead of
+        # retaining an unsafe stale cache until a manual restart.
+        _DRUGBANK_STORE_READY = False
+        _DRUGBANK_STORE = None
     try:
+        drugbank_dir, manifest_path, sqlite_path = _configured_drugbank_paths()
         store = DrugBankDdiStore(
-            drugbank_dir=_DRUGBANK_DIR,
-            manifest_path=_DRUGBANK_MANIFEST_PATH,
+            drugbank_dir=drugbank_dir,
+            manifest_path=manifest_path,
+            sqlite_path=sqlite_path,
+            integrity_required=settings.careguard_drugbank_manifest_integrity_required,
         )
         built_version = store.ensure_built()
         _DRUGBANK_STORE = store if built_version else None
@@ -722,7 +1361,9 @@ def get_drugbank_readiness() -> dict[str, object]:
             "state": "disabled",
             "version": "",
             "pair_count": 0,
+            "dictionary_record_count": 0,
             "manifest_matches_index": False,
+            "integrity_verified": False,
             "required": bool(settings.careguard_drugbank_required),
         }
     store = _get_drugbank_store()
@@ -731,7 +1372,9 @@ def get_drugbank_readiness() -> dict[str, object]:
             "state": "unavailable",
             "version": "",
             "pair_count": 0,
+            "dictionary_record_count": 0,
             "manifest_matches_index": False,
+            "integrity_verified": False,
             "required": bool(settings.careguard_drugbank_required),
         }
     readiness = store.readiness()
@@ -1155,6 +1798,8 @@ def _consumer_wording_from_final_result(
         "routine": ["monitor"],
     }
 
+    audience: Audience = "en" if locale.lower().startswith("en") else "lay_vi"
+    english = audience == "en"
     warnings: list[str] = []
     ddi_status = result.get("ddi_status")
     conclusion_available = not (
@@ -1162,11 +1807,18 @@ def _consumer_wording_from_final_result(
     )
     if metadata.get("rules_unavailable") or not conclusion_available:
         warnings.append(
-            "Chưa thể xác nhận đầy đủ tương tác thuốc từ nguồn bắt buộc; "
+            "The required source could not fully verify the medication interaction; "
+            "no alert does not mean it is safe."
+            if english
+            else "Chưa thể xác nhận đầy đủ tương tác thuốc từ nguồn bắt buộc; "
             "không có cảnh báo không đồng nghĩa là an toàn."
         )
     if metadata.get("normalization_pair_coverage_low"):
-        warnings.append("Có thể chưa nhận diện đủ thuốc để kiểm tra toàn bộ các cặp thuốc.")
+        warnings.append(
+            "One or more medicines may not have been identified well enough to check every pair."
+            if english
+            else "Có thể chưa nhận diện đủ thuốc để kiểm tra toàn bộ các cặp thuốc."
+        )
 
     evidence_labels: list[str] = []
     drugbank = metadata.get("drugbank")
@@ -1174,22 +1826,52 @@ def _consumer_wording_from_final_result(
         version = str(drugbank.get("version") or "").strip()
         evidence_labels.append(f"DrugBank{f' ({version})' if version else ''}")
     elif "local_rules" in metadata.get("source_used", []):
-        evidence_labels.append("Quy tắc kiểm tra thuốc nội bộ")
-    elif isinstance(ddi_status, dict) and ddi_status.get("required_source") == "drugbank":
-        evidence_labels.append("DrugBank chưa sẵn sàng")
-
-    audience: Audience = "en" if locale.lower().startswith("en") else "lay_vi"
-    rendered = render_explanation(
-        RenderingInput(
-            audience=audience,
-            severity=severity,
-            action_codes=action_by_severity[severity],
-            mandatory_warnings=warnings,
-            uncertainty_level=(
-                "high" if warnings or bool(metadata.get("fallback_used")) else "low"
-            ),
-            evidence_labels=evidence_labels,
+        evidence_labels.append(
+            "Internal medication-check rules" if english else "Quy tắc kiểm tra thuốc nội bộ"
         )
+    elif isinstance(ddi_status, dict) and ddi_status.get("required_source") == "drugbank":
+        evidence_labels.append("DrugBank unavailable" if english else "DrugBank chưa sẵn sàng")
+
+    medication_names: set[str] = set()
+    # These values are used only by the local fidelity verifier below.  They
+    # are never placed in the model prompt, telemetry, or consumer projection.
+    alerts = result.get("ddi_alerts")
+    for alert in alerts if isinstance(alerts, list) else []:
+        if not isinstance(alert, dict):
+            continue
+        for medication in alert.get("medications", []):
+            if isinstance(medication, str) and medication.strip():
+                medication_names.add(medication.strip())
+    normalized_inputs = metadata.get("normalized_inputs")
+    for row in normalized_inputs if isinstance(normalized_inputs, list) else []:
+        if not isinstance(row, dict):
+            continue
+        for key in ("input", "canonical_input", "normalized_name"):
+            value = row.get(key)
+            if isinstance(value, str) and value.strip():
+                medication_names.add(value.strip())
+    # The dictionary aliases are already loaded during deterministic
+    # normalization. Including them locally prevents a model draft from
+    # inventing a common known medication that was not part of this result.
+    medication_names.update(_VN_DICTIONARY_ALIAS_LOOKUP)
+    medication_names.update(_VN_DICTIONARY_ACTIVE_INGREDIENTS)
+
+    source = RenderingInput(
+        audience=audience,
+        severity=severity,
+        action_codes=action_by_severity[severity],
+        mandatory_warnings=warnings,
+        uncertainty_level=(
+            "high" if warnings or bool(metadata.get("fallback_used")) else "low"
+        ),
+        evidence_labels=evidence_labels,
+        medication_names=sorted(medication_names)[:500],
+    )
+    deterministic = render_explanation(source)
+    rendered = render_careguard_wording_draft(
+        source,
+        deterministic=deterministic,
+        settings=settings,
     )
     return rendered.model_dump(mode="json")
 
@@ -1303,11 +1985,17 @@ def _drugbank_required_unavailable_result(
             "vn_dictionary_mapped_count": vn_dictionary_metadata.get("mapped_count", 0),
             "vn_dictionary_mapped_items": vn_dictionary_metadata.get("mapped_items", []),
             "vn_dictionary_input_count": vn_dictionary_metadata.get("input_count", 0),
+            "drugbank_dictionary_version": vn_dictionary_metadata.get(
+                "drugbank_dictionary_version", ""
+            ),
             "normalization_confidence": vn_dictionary_metadata.get("normalization_confidence", 0.0),
             "normalization_pair_coverage_low": False,
             "normalized_medication_count": len(medications),
             "raw_medication_count": len(raw_medications),
             "normalized_inputs": vn_dictionary_metadata.get("normalized_inputs", []),
+            "clinical_span_augmentation": vn_dictionary_metadata.get(
+                "clinical_span_augmentation", {"state": "disabled", "added_candidate_count": 0}
+            ),
             "source_used": [],
             "source_errors": {
                 "drugbank": [f"required_source_{readiness_state}"],
@@ -1367,11 +2055,17 @@ def _rules_unavailable_result(
             "vn_dictionary_mapped_count": vn_dictionary_metadata.get("mapped_count", 0),
             "vn_dictionary_mapped_items": vn_dictionary_metadata.get("mapped_items", []),
             "vn_dictionary_input_count": vn_dictionary_metadata.get("input_count", 0),
+            "drugbank_dictionary_version": vn_dictionary_metadata.get(
+                "drugbank_dictionary_version", ""
+            ),
             "normalization_confidence": vn_dictionary_metadata.get("normalization_confidence", 0.0),
             "normalization_pair_coverage_low": False,
             "normalized_medication_count": len(medications),
             "raw_medication_count": len(raw_medications),
             "normalized_inputs": vn_dictionary_metadata.get("normalized_inputs", []),
+            "clinical_span_augmentation": vn_dictionary_metadata.get(
+                "clinical_span_augmentation", {"state": "disabled", "added_candidate_count": 0}
+            ),
             "source_used": [],
             "source_errors": {"local_rules": ["rules_unavailable"]},
             "openfda_pairs_checked": 0,
@@ -1381,11 +2075,61 @@ def _rules_unavailable_result(
     }
 
 
+def _medication_clarification_required_result(
+    *,
+    raw_medications: list[str],
+    vn_dictionary_metadata: dict[str, Any],
+    readiness: dict[str, object],
+    symptoms: list[str],
+) -> dict[str, Any]:
+    """Terminal no-DDI state while a DrugBank medication identity is unresolved.
+
+    Deliberately omit ``risk``, ``ddi_alerts`` and ``recommendation``: a partial
+    comparison must never look like an all-clear or a complete interaction
+    assessment.  Urgent symptom state stays explicit so a clarification prompt
+    cannot obscure the emergency fast-path in a consuming surface.
+    """
+
+    critical_symptoms = _critical_symptom_hits(symptoms)
+    return {
+        "status": "requires_medication_clarification",
+        "clarifications": vn_dictionary_metadata.get("clarifications", []),
+        "urgent_support_required": bool(critical_symptoms),
+        "metadata": {
+            "pipeline": "p2-careguard-ddi-standard-v2",
+            "clarification_required": True,
+            "clarification_source": "drugbank_exact_dictionary",
+            "raw_medication_count": len(raw_medications),
+            "normalized_medication_count": 0,
+            "vn_dictionary_version": vn_dictionary_metadata.get("version", "unknown"),
+            "vn_dictionary_record_count": vn_dictionary_metadata.get("record_count", 0),
+            "drugbank_dictionary_version": vn_dictionary_metadata.get(
+                "drugbank_dictionary_version", ""
+            ),
+            "drugbank": {
+                "state": str(readiness.get("state") or "unavailable"),
+                "version": str(readiness.get("version") or ""),
+                "manifest_matches_index": bool(readiness.get("manifest_matches_index")),
+                "integrity_verified": bool(readiness.get("integrity_verified")),
+            },
+        },
+    }
+
+
 def run_careguard_analyze(payload: dict) -> dict:
     locale = str(payload.get("locale") or "vi").strip() or "vi"
     symptoms = _normalize_text_list(payload.get("symptoms"))
     raw_medications = _normalize_text_list(payload.get("medications"))
-    medications, vn_dictionary_metadata = _normalize_medications_with_vn_dictionary(raw_medications)
+    medication_text, medication_text_state = _bounded_medication_text(
+        payload.get("medication_text")
+    )
+    free_text_medications, free_text_extraction = _free_text_medication_candidates(
+        medication_text,
+        field_state=medication_text_state,
+    )
+    for candidate in free_text_medications:
+        if candidate not in raw_medications:
+            raw_medications.append(candidate)
     allergies = _normalize_text_list(payload.get("allergies"))
     labs = payload.get("labs")
 
@@ -1394,6 +2138,84 @@ def run_careguard_analyze(payload: dict) -> dict:
         payload.get("external_ddi_enabled"),
         default=settings.external_ddi_enabled,
     )
+    # A caller may tighten this guarantee (the medication-course route does),
+    # but an untrusted request can never relax a deployment-level requirement.
+    # This keeps the strict DrugBank path fail-closed even when the ML service is
+    # shared with the backward-compatible CareGuard endpoint.
+    drugbank_required = settings.careguard_drugbank_required or _as_bool(
+        payload.get("drugbank_required"),
+        default=False,
+    )
+
+    clarification_enabled = settings.careguard_medication_clarification_enabled
+    if free_text_extraction.get("state") == "requires_clarification":
+        return _with_consumer_wording(
+            _free_text_medication_clarification_result(
+                raw_medications=raw_medications,
+                symptoms=symptoms,
+                extraction=free_text_extraction,
+            ),
+            locale=locale,
+        )
+    if clarification_enabled:
+        # The optional clinical-language span augmenter may nominate only exact
+        # source spans, but this strict identity path intentionally does not let
+        # it change which medication aliases require a licensed DrugBank choice.
+        # No model, Vietnamese alias map, or local rule can select a candidate.
+        medications, vn_dictionary_metadata = _normalize_medications_with_strict_drugbank_choices(
+            raw_medications,
+            requested_resolutions=payload.get("medication_resolutions"),
+            medications_with_meta=payload.get("medications_with_meta"),
+        )
+        vn_dictionary_metadata["clinical_span_augmentation"] = {
+            "state": "bypassed_for_drugbank_clarification",
+            "added_candidate_count": 0,
+        }
+        vn_dictionary_metadata["free_text_medication_extraction"] = free_text_extraction
+        clarification_readiness = get_drugbank_readiness()
+        if drugbank_required and clarification_readiness.get("state") != "ready":
+            clarification_readiness["required"] = True
+            return _with_consumer_wording(
+                _drugbank_required_unavailable_result(
+                    raw_medications=raw_medications,
+                    medications=medications,
+                    allergies=allergies,
+                    symptoms=symptoms,
+                    labs=labs,
+                    vn_dictionary_metadata=vn_dictionary_metadata,
+                    external_ddi_enabled=external_ddi_enabled,
+                    external_ddi_flag_source=external_ddi_flag_source,
+                    local_ddi_rules_version=_load_local_ddi_rules()[1],
+                    readiness=clarification_readiness,
+                ),
+                locale=locale,
+            )
+        # A clarification response without a current exact licensed dictionary
+        # would invite a local/LLM fallback.  Block instead; no partial DDI or
+        # all-clear conclusion may be produced on this rollout path.
+        if clarification_readiness.get("state") != "ready":
+            return _medication_clarification_required_result(
+                raw_medications=raw_medications,
+                vn_dictionary_metadata=vn_dictionary_metadata,
+                readiness=clarification_readiness,
+                symptoms=symptoms,
+            )
+        if vn_dictionary_metadata.get("clarifications"):
+            return _medication_clarification_required_result(
+                raw_medications=raw_medications,
+                vn_dictionary_metadata=vn_dictionary_metadata,
+                readiness=clarification_readiness,
+                symptoms=symptoms,
+            )
+    else:
+        normalizer_inputs, clinical_span_augmentation = _augment_raw_medications_with_validated_spans(
+            raw_medications
+        )
+        medications, vn_dictionary_metadata = _normalize_medications_with_vn_dictionary(
+            normalizer_inputs
+        )
+        vn_dictionary_metadata["clinical_span_augmentation"] = clinical_span_augmentation
+        vn_dictionary_metadata["free_text_medication_extraction"] = free_text_extraction
 
     local_rules, local_ddi_rules_version = _resolve_ddi_rules()
 
@@ -1428,7 +2250,9 @@ def run_careguard_analyze(payload: dict) -> dict:
             # hits (including an empty set) are authoritative; do not manufacture
             # or override licensed results with local rules.
             local_ddi_alerts = drugbank_alerts
-    if settings.careguard_drugbank_required and not drugbank_layer_version:
+    if drugbank_required and not drugbank_layer_version:
+        readiness = get_drugbank_readiness()
+        readiness["required"] = True
         return _with_consumer_wording(
             _drugbank_required_unavailable_result(
                 raw_medications=raw_medications,
@@ -1440,7 +2264,7 @@ def run_careguard_analyze(payload: dict) -> dict:
                 external_ddi_enabled=external_ddi_enabled,
                 external_ddi_flag_source=external_ddi_flag_source,
                 local_ddi_rules_version=local_ddi_rules_version,
-                readiness=get_drugbank_readiness(),
+                readiness=readiness,
             ),
             locale=locale,
         )
@@ -1551,6 +2375,7 @@ def run_careguard_analyze(payload: dict) -> dict:
             "metadata": {
                 "pipeline": "p2-careguard-ddi-standard-v2",
                 "fallback_used": fallback_used,
+                "drugbank_required": drugbank_required,
                 "external_ddi_enabled": external_ddi_enabled,
                 "external_ddi_flag_source": external_ddi_flag_source,
                 "local_ddi_rules_version": local_ddi_rules_version,
@@ -1559,11 +2384,21 @@ def run_careguard_analyze(payload: dict) -> dict:
                 "vn_dictionary_mapped_count": vn_dictionary_metadata["mapped_count"],
                 "vn_dictionary_mapped_items": vn_dictionary_metadata["mapped_items"],
                 "vn_dictionary_input_count": vn_dictionary_metadata["input_count"],
+                "drugbank_dictionary_version": vn_dictionary_metadata.get(
+                    "drugbank_dictionary_version", ""
+                ),
                 "normalization_confidence": vn_dictionary_metadata["normalization_confidence"],
                 "normalization_pair_coverage_low": normalization_pair_coverage_low,
                 "normalized_medication_count": len(medications),
                 "raw_medication_count": len(raw_medications),
                 "normalized_inputs": vn_dictionary_metadata["normalized_inputs"],
+                "clinical_span_augmentation": vn_dictionary_metadata.get(
+                    "clinical_span_augmentation", {"state": "disabled", "added_candidate_count": 0}
+                ),
+                "free_text_medication_extraction": vn_dictionary_metadata.get(
+                    "free_text_medication_extraction",
+                    {"state": "not_used", "extractor": "deterministic_vietnamese_clinical_v1"},
+                ),
                 "source_used": source_used,
                 "source_errors": source_errors,
                 "drugbank": {

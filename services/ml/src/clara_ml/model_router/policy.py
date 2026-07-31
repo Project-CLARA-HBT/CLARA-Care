@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from clara_ml.nlp.vietnamese_clinical import analyze_vietnamese_clinical_text
+from clara_ml.nlp_vi import analyze_clinical_utterance, enrich_clinical_utterance_with_llm
 from clara_ml.routing import RouteResult
 
 from .contracts import Language, Persona, RiskLevel, TaskName
@@ -62,17 +63,48 @@ def language_for_text(text: str) -> Language:
     return "vi" if tokens.intersection(vietnamese_cues) else "unknown"
 
 
-def clinical_language_signals(text: str) -> dict[str, object]:
+def clinical_language_signals(text: str, *, settings: object | None = None) -> dict[str, object]:
     """Return only no-PII clinical-language categories for route metadata."""
 
-    analysis = analyze_vietnamese_clinical_text(text)
+    analysis = (
+        enrich_clinical_utterance_with_llm(text, settings=settings)
+        if settings is not None
+        else analyze_clinical_utterance(text)
+    )
+    severity_order = {"moderate": 1, "high": 2, "critical": 3}
+    severity = analysis.severity[0].level if analysis.severity else None
+    for span in analysis.source_spans:
+        if span.severity and severity_order[span.severity] > severity_order.get(severity or "", 0):
+            severity = span.severity
+    model_other = any(
+        span.experiencer in {"family", "patient"} for span in analysis.source_spans
+    )
+    model_temporality = next(
+        (span.temporality for span in analysis.source_spans if span.temporality != "unspecified"),
+        "unspecified",
+    )
     return {
-        "negated": analysis.negated,
-        "experiencer": analysis.experiencer,
-        "temporality": analysis.temporality,
-        "severity_cue": analysis.severity,
-        "unit_count": len(analysis.units),
-        "medication_candidate_count": len(analysis.medication_mentions),
+        "negated": bool(analysis.negated_entities) or any(
+            span.negated for span in analysis.source_spans
+        ),
+        "experiencer": (
+            "other"
+            if analysis.experiencer in {"family", "patient"} or model_other
+            else "self_or_unspecified"
+        ),
+        "temporality": (
+            analysis.temporality[0].value
+            if analysis.temporality and analysis.temporality[0].value != "unspecified"
+            else model_temporality
+        ),
+        "severity_cue": severity,
+        # Units can occur in medication text without a named lab.  Count the
+        # bounded normalized unit tokens, never their values or source text.
+        "unit_count": len(analyze_vietnamese_clinical_text(text).units),
+        "medication_candidate_count": max(
+            len(analysis.medications),
+            sum(1 for span in analysis.source_spans if span.category == "medication"),
+        ),
     }
 
 

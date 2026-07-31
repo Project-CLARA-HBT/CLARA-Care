@@ -7,6 +7,8 @@ import { Textarea, Select, Field } from "@/components/ui/field";
 import { SurfaceCard, EmptyState, InlineError } from "@/components/ui/surface";
 import { Modal } from "@/components/ui/modal";
 import PostDetailDialog from "@/components/community/post-detail-dialog";
+import { formatLocaleDate, formatLocaleNumber, t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   SocialCommunity,
   SocialPost,
@@ -20,12 +22,13 @@ import {
   isSocialModerationBlock
 } from "@/lib/social";
 
-const DISCLAIMER =
-  "Cộng đồng CLARA là nơi chia sẻ kinh nghiệm và hỗ trợ lẫn nhau. Đây KHÔNG phải tư vấn y tế: " +
-  "không kê đơn, chẩn đoán hay chỉ định liều dùng. Nội dung được kiểm duyệt để giữ an toàn. " +
-  "Trường hợp khẩn cấp, hãy gọi 115.";
-
 export default function CommunityPage() {
+  const language = useUILanguage();
+  const copy = useCallback(
+    (key: UITranslationKey, values?: Record<string, string | number>) =>
+      t(language, key, values ?? {}),
+    [language],
+  );
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,12 +61,12 @@ export default function CommunityPage() {
       if (err instanceof SocialUnavailableError) {
         setUnavailable(true);
       } else {
-        setError("Không thể tải cộng đồng lúc này. Vui lòng thử lại.");
+        setError(copy("community.loadError"));
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [copy]);
 
   useEffect(() => {
     void load();
@@ -74,9 +77,9 @@ export default function CommunityPage() {
       await grantSocialConsent();
       setConsentGranted(true);
     } catch {
-      setError("Không thể ghi nhận đồng ý. Vui lòng thử lại.");
+      setError(copy("community.consentError"));
     }
-  }, []);
+  }, [copy]);
 
   const onJoin = useCallback(async (id: number) => {
     try {
@@ -85,9 +88,9 @@ export default function CommunityPage() {
         prev.map((c) => (c.id === id ? { ...c, joined: true, member_count: c.member_count + 1 } : c))
       );
     } catch {
-      setError("Không thể tham gia cộng đồng. Vui lòng thử lại.");
+      setError(copy("community.joinError"));
     }
-  }, []);
+  }, [copy]);
 
   const openCompose = useCallback(() => {
     setComposeError(null);
@@ -99,7 +102,7 @@ export default function CommunityPage() {
 
   const submitPost = useCallback(async () => {
     if (composeCommunity == null) {
-      setComposeError("Vui lòng chọn cộng đồng.");
+      setComposeError(copy("community.compose.chooseCommunity"));
       return;
     }
     setSubmitting(true);
@@ -110,17 +113,14 @@ export default function CommunityPage() {
       await load();
     } catch (err) {
       if (isSocialModerationBlock(err)) {
-        setComposeError(
-          "Nội dung không phù hợp quy tắc cộng đồng (không kê đơn/chẩn đoán/liều dùng cá nhân) " +
-            "hoặc có dấu hiệu khẩn cấp. Vui lòng chỉnh sửa."
-        );
+        setComposeError(copy("community.compose.moderationBlocked"));
       } else {
-        setComposeError("Không thể đăng bài. Vui lòng thử lại.");
+        setComposeError(copy("community.compose.createError"));
       }
     } finally {
       setSubmitting(false);
     }
-  }, [composeCommunity, composeTitle, composeBody, load]);
+  }, [composeCommunity, composeTitle, composeBody, copy, load]);
 
   const canCompose = useMemo(
     () => consentGranted && communities.length > 0,
@@ -129,38 +129,38 @@ export default function CommunityPage() {
 
   if (unavailable) {
     return (
-      <PageShell title="Cộng đồng" description="Kết nối và chia sẻ cùng cộng đồng sức khỏe CLARA.">
+      <PageShell title={copy("community.title")} description={copy("community.description")}>
         <EmptyState
           icon="groups"
-          title="Cộng đồng sắp ra mắt"
-          description="Tính năng cộng đồng sức khỏe đang được chuẩn bị và sẽ sớm mở."
+          title={copy("community.unavailable.title")}
+          description={copy("community.unavailable.description")}
         />
       </PageShell>
     );
   }
 
   return (
-    <PageShell title="Cộng đồng" description="Kết nối và chia sẻ cùng cộng đồng sức khỏe CLARA.">
+    <PageShell title={copy("community.title")} description={copy("community.description")}>
       <div className="space-y-5">
         <div className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]">
-          {DISCLAIMER}
+          {copy("community.disclaimer")}
         </div>
 
         {error ? <InlineError message={error} /> : null}
 
         {loading ? (
-          <p className="text-sm text-[var(--text-secondary)]">Đang tải…</p>
+          <p className="text-sm text-[var(--text-secondary)]">{copy("community.loading")}</p>
         ) : (
           <>
             {!consentGranted ? (
               <SurfaceCard className="p-5">
-                <p className="font-semibold text-[var(--text-primary)]">Tham gia để đăng bài & bình luận</p>
+                <p className="font-semibold text-[var(--text-primary)]">{copy("community.consent.title")}</p>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  Bạn vẫn có thể đọc bài. Đồng ý quy tắc cộng đồng để tham gia chia sẻ.
+                  {copy("community.consent.description")}
                 </p>
                 <div className="mt-3">
                   <Button variant="primary" size="sm" onClick={onGrantConsent}>
-                    Tôi đồng ý tham gia
+                    {copy("community.consent.action")}
                   </Button>
                 </div>
               </SurfaceCard>
@@ -172,20 +172,22 @@ export default function CommunityPage() {
                   onClick={openCompose}
                   disabled={!canCompose}
                 >
-                  Đăng bài
+                  {copy("community.compose.action")}
                 </Button>
               </div>
             )}
 
             {communities.length > 0 ? (
               <section>
-                <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">Cộng đồng</h2>
+                <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">{copy("community.communities.heading")}</h2>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {communities.map((c) => (
                     <SurfaceCard key={c.id} className="p-4">
                       <p className="font-semibold text-[var(--text-primary)]">{c.name}</p>
                       <p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{c.description}</p>
-                      <p className="mt-2 text-xs text-[var(--text-secondary)]">{c.member_count} thành viên</p>
+                      <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                        {copy("community.members", { count: formatLocaleNumber(language, c.member_count) })}
+                      </p>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -194,7 +196,7 @@ export default function CommunityPage() {
                         disabled={c.joined}
                         className="mt-3"
                       >
-                        {c.joined ? "Đã tham gia" : "Tham gia"}
+                        {c.joined ? copy("community.joined") : copy("community.join")}
                       </Button>
                     </SurfaceCard>
                   ))}
@@ -203,10 +205,10 @@ export default function CommunityPage() {
             ) : null}
 
             <section>
-              <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">Bảng tin</h2>
+              <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">{copy("community.feed.heading")}</h2>
               {feed.length === 0 ? (
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Chưa có bài viết. Hãy là người đầu tiên chia sẻ.
+                  {copy("community.feed.empty")}
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -231,13 +233,13 @@ export default function CommunityPage() {
                         <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                           <span className="font-medium text-[var(--text-primary)]">@{post.author_handle}</span>
                           <span>·</span>
-                          <span>{new Date(post.created_at).toLocaleDateString("vi-VN")}</span>
+                          <span>{formatLocaleDate(language, post.created_at)}</span>
                         </div>
                         <h3 className="mt-2 font-semibold text-[var(--text-primary)]">{post.title}</h3>
                         <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-[var(--text-secondary)]">{post.body}</p>
                         <div className="mt-3 flex gap-4 text-xs text-[var(--text-secondary)]">
-                          <span>{post.comment_count} bình luận</span>
-                          <span>{post.reaction_count} phản hồi tích cực</span>
+                          <span>{copy("community.comments.count", { count: formatLocaleNumber(language, post.comment_count) })}</span>
+                          <span>{copy("community.reactions.count", { count: formatLocaleNumber(language, post.reaction_count) })}</span>
                         </div>
                       </article>
                     </SurfaceCard>
@@ -252,12 +254,12 @@ export default function CommunityPage() {
       <Modal
         open={composeOpen}
         onClose={() => setComposeOpen(false)}
-        title="Chia sẻ với cộng đồng"
+        title={copy("community.compose.title")}
         size="md"
         footer={
           <>
             <Button variant="ghost" size="sm" onClick={() => setComposeOpen(false)}>
-              Hủy
+              {copy("community.compose.cancel")}
             </Button>
             <Button
               variant="primary"
@@ -265,16 +267,16 @@ export default function CommunityPage() {
               onClick={submitPost}
               disabled={submitting || !composeTitle.trim() || !composeBody.trim()}
               loading={submitting}
-              loadingLabel="Đang đăng…"
+              loadingLabel={copy("community.compose.submitting")}
             >
-              Đăng bài
+              {copy("community.compose.action")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
           <Select
-            label="Cộng đồng"
+            label={copy("community.compose.communityLabel")}
             value={composeCommunity ?? ""}
             onChange={(e) => setComposeCommunity(Number(e.target.value))}
           >
@@ -285,13 +287,13 @@ export default function CommunityPage() {
             ))}
           </Select>
           <Field
-            label="Tiêu đề"
+            label={copy("community.compose.titleLabel")}
             value={composeTitle}
             onChange={(e) => setComposeTitle(e.target.value)}
             maxLength={200}
           />
           <Textarea
-            label="Nội dung"
+            label={copy("community.compose.bodyLabel")}
             value={composeBody}
             onChange={(e) => setComposeBody(e.target.value)}
             rows={5}

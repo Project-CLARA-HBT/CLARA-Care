@@ -3,6 +3,7 @@
 import { memo, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
+import { t } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import type { WorkspaceConversationItem } from "@/lib/workspace";
 import {
@@ -56,8 +57,6 @@ function ConversationSidebar(props: ConversationSidebarProps) {
     onOpenFolders,
     uiLanguage,
   } = props;
-  const isEn = uiLanguage === "en";
-
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const rows = useMemo<SidebarRow[]>(() => {
@@ -90,7 +89,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
 
   return (
     <nav
-      aria-label={isEn ? "Conversations" : "Danh sách hội thoại"}
+      aria-label={t(uiLanguage, "chat.sidebar.aria")}
       className="flex h-full min-h-0 flex-col gap-2.5 bg-[var(--surface-sidebar)] p-3"
     >
       <div className="flex items-center justify-between gap-2">
@@ -108,20 +107,20 @@ function ConversationSidebar(props: ConversationSidebarProps) {
           </p>
         </div>
         <Button size="sm" variant="primary" onClick={onNewChat}>
-          + {isEn ? "New" : "Mới"}
+          + {t(uiLanguage, "chat.sidebar.new")}
         </Button>
       </div>
 
       <div className="relative">
         <label className="sr-only" htmlFor="chat-v2-search">
-          {isEn ? "Search conversations" : "Tìm hội thoại"}
+          {t(uiLanguage, "chat.sidebar.searchLabel")}
         </label>
         <input
           id="chat-v2-search"
           type="search"
           value={searchText}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={isEn ? "Search chats..." : "Tìm cuộc trò chuyện..."}
+          placeholder={t(uiLanguage, "chat.sidebar.searchPlaceholder")}
           className="min-h-[38px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus-visible:border-[color:var(--brand-500)] focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]/20"
         />
         <span
@@ -145,7 +144,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
           >
             folder
           </span>
-          {isEn ? "Saved items" : "Nội dung đã lưu"}
+          {t(uiLanguage, "chat.sidebar.saved")}
         </button>
       ) : null}
 
@@ -155,7 +154,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
       >
         {isLoading ? (
           <p className="px-1 py-2 text-xs text-[var(--text-muted)]">
-            {isEn ? "Loading..." : "Đang tải..."}
+            {t(uiLanguage, "chat.sidebar.loading")}
           </p>
         ) : rows.length ? (
           <ul
@@ -203,7 +202,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
                       </p>
                       <p className="mt-0.5 truncate text-[10px] text-[var(--text-muted)]">
                         #{row.item.conversation_id} · {row.item.message_count}{" "}
-                        {isEn ? "msg" : "tin"}
+                        {t(uiLanguage, "chat.sidebar.messageCount")}
                         {row.item.is_favorite ? " · ★" : ""}
                       </p>
                     </button>
@@ -215,10 +214,10 @@ function ConversationSidebar(props: ConversationSidebarProps) {
         ) : (
           <div className="flex flex-col items-center gap-2 px-2 py-8 text-center">
             <p className="text-xs text-[var(--text-secondary)]">
-              {isEn ? "No conversations yet." : "Chưa có hội thoại nào."}
+              {t(uiLanguage, "chat.sidebar.empty")}
             </p>
             <IconButton
-              label={isEn ? "New chat" : "Chat mới"}
+              label={t(uiLanguage, "chat.sidebar.newChat")}
               icon="add"
               onClick={onNewChat}
             />

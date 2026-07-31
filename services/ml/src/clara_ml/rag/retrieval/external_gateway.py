@@ -216,6 +216,42 @@ class ExternalSourceGateway:
         )
 
     @staticmethod
+    def _is_retracted_publication(
+        publication_types: list[str],
+        record: dict[str, Any] | None = None,
+    ) -> bool:
+        """Return ``True`` only for an explicit upstream retraction signal.
+
+        A search result can be highly relevant while no longer being valid
+        evidence.  Do not infer retraction from a title or abstract: only the
+        provider's structured publication type/status is authoritative here.
+        This keeps ordinary mentions of a retraction from suppressing a valid
+        study while preventing records marked ``Retracted Publication`` (and
+        their retraction notices) from entering the evidence set.
+        """
+
+        markers = {
+            "retracted publication",
+            "retraction of publication",
+            "withdrawn publication",
+            "withdrawn",
+            "retracted",
+        }
+        values = [str(item or "").strip().casefold() for item in publication_types]
+        if any(value in markers for value in values):
+            return True
+        if not isinstance(record, dict):
+            return False
+        for key in ("isRetracted", "is_retracted", "retracted"):
+            if record.get(key) is True:
+                return True
+        for key in ("retractionStatus", "retraction_status", "publicationStatus"):
+            value = str(record.get(key) or "").strip().casefold()
+            if value in markers:
+                return True
+        return False
+
+    @staticmethod
     def _study_provenance(publication_types: list[str]) -> tuple[str, str]:
         normalized = {item.casefold() for item in publication_types}
         if "randomized controlled trial" in normalized:
@@ -475,6 +511,8 @@ class ExternalSourceGateway:
                 hydrated.get("publication_types")
                 or record.get("pubtype")
             )
+            if self._is_retracted_publication(publication_types, record):
+                continue
             source_type, study_design = self._study_provenance(publication_types)
             docs.append(
                 Document(
@@ -546,6 +584,8 @@ class ExternalSourceGateway:
             abstract = str(item.get("abstractText") or "").strip()
             text = ". ".join(part for part in [title, abstract, journal, pub_year] if part)
             publication_types = self._normalized_publication_types(item.get("pubTypeList"))
+            if self._is_retracted_publication(publication_types, item):
+                continue
             source_type, study_design = self._study_provenance(publication_types)
             pmid = str(item.get("pmid") or (source_id if source == "med" else "")).strip()
             url = (

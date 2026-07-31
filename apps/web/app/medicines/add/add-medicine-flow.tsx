@@ -12,16 +12,11 @@ import {
   type GuidedFlowSaveState,
 } from "@/components/guided-flow";
 import { Field } from "@/components/ui/field";
+import { t } from "@/lib/i18n/catalog";
 import { createMedicationCourse } from "@/lib/medication-courses";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type Step = "identity" | "details" | "schedule" | "review";
-
-const STEPS: Array<{ id: Step; label: string }> = [
-  { id: "identity", label: "Tên thuốc" },
-  { id: "details", label: "Chi tiết" },
-  { id: "schedule", label: "Lịch dùng" },
-  { id: "review", label: "Kiểm tra" },
-];
 
 type MedicineDraft = {
   medicationName: string;
@@ -41,30 +36,6 @@ const EMPTY_DRAFT: MedicineDraft = {
   drugbankId: "",
 };
 
-const TITLES: Record<Step, string> = {
-  identity: "Thuốc nào bạn muốn theo dõi?",
-  details: "Ghi lại thông tin trên nhãn",
-  schedule: "Thuốc được dùng khi nào?",
-  review: "Kiểm tra trước khi lưu",
-};
-
-function descriptionFor(step: Step): string {
-  if (step === "identity") return "Nhập đúng tên trên nhãn hoặc đơn của bạn.";
-  if (step === "details") return "Liều, đường dùng và dạng bào chế đều có thể bỏ qua nếu bạn chưa rõ.";
-  if (step === "schedule") return "Ghi lại lịch dùng từ nhãn hoặc đơn; CLARA không đề xuất liều hay lịch dùng.";
-  return "Xác nhận thông tin bạn đã nhập. Bạn luôn có thể chỉnh sửa bản ghi sau đó.";
-}
-
-function nextStep(step: Step): Step | null {
-  const index = STEPS.findIndex((candidate) => candidate.id === step);
-  return STEPS[index + 1]?.id ?? null;
-}
-
-function previousStep(step: Step): Step | null {
-  const index = STEPS.findIndex((candidate) => candidate.id === step);
-  return STEPS[index - 1]?.id ?? null;
-}
-
 function clean(value: string): string | undefined {
   const next = value.trim();
   return next || undefined;
@@ -72,6 +43,25 @@ function clean(value: string): string | undefined {
 
 export default function AddMedicineFlow() {
   const router = useRouter();
+  const language = useUILanguage();
+  const steps: Array<{ id: Step; label: string }> = [
+    { id: "identity", label: t(language, "medicineAdd.step.identity") },
+    { id: "details", label: t(language, "medicineAdd.step.details") },
+    { id: "schedule", label: t(language, "medicineAdd.step.schedule") },
+    { id: "review", label: t(language, "medicineAdd.step.review") },
+  ];
+  const titleByStep: Record<Step, string> = {
+    identity: t(language, "medicineAdd.title.identity"),
+    details: t(language, "medicineAdd.title.details"),
+    schedule: t(language, "medicineAdd.title.schedule"),
+    review: t(language, "medicineAdd.title.review"),
+  };
+  const descriptionByStep: Record<Step, string> = {
+    identity: t(language, "medicineAdd.description.identity"),
+    details: t(language, "medicineAdd.description.details"),
+    schedule: t(language, "medicineAdd.description.schedule"),
+    review: t(language, "medicineAdd.description.review"),
+  };
   const nameRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("identity");
   const [draft, setDraft] = useState<MedicineDraft>(EMPTY_DRAFT);
@@ -88,8 +78,8 @@ export default function AddMedicineFlow() {
         {
           id: "medicine-name-required",
           fieldId: "medicine-name",
-          fieldLabel: "Tên thuốc",
-          message: "Nhập ít nhất 2 ký tự từ nhãn hoặc đơn của bạn.",
+          fieldLabel: t(language, "medicineAdd.step.identity"),
+          message: t(language, "medicineAdd.validation.name"),
         },
       ]);
       nameRef.current?.focus();
@@ -97,13 +87,14 @@ export default function AddMedicineFlow() {
     }
     setValidationErrors([]);
     setSaveState({ kind: "idle" });
-    const next = nextStep(step);
+    const stepIndex = steps.findIndex((candidate) => candidate.id === step);
+    const next = steps[stepIndex + 1]?.id ?? null;
     if (next) setStep(next);
   };
 
   const commit = async () => {
     setValidationErrors([]);
-    setSaveState({ kind: "saving", message: "Đang lưu thuốc đã xác nhận…" });
+    setSaveState({ kind: "saving", message: t(language, "medicineAdd.saving") });
     try {
       await createMedicationCourse({
         medication_name: draft.medicationName.trim(),
@@ -118,12 +109,13 @@ export default function AddMedicineFlow() {
     } catch {
       setSaveState({
         kind: "error",
-        message: "Chưa thể lưu thuốc lúc này. Thông tin trên trang vẫn giữ nguyên để bạn thử lại.",
+        message: t(language, "medicineAdd.saveFailed"),
       });
     }
   };
 
-  const back = previousStep(step);
+  const stepIndex = steps.findIndex((candidate) => candidate.id === step);
+  const back = steps[stepIndex - 1]?.id ?? null;
   const saving = saveState.kind === "saving";
   let content;
 
@@ -134,13 +126,13 @@ export default function AddMedicineFlow() {
         <Field
           ref={nameRef}
           id="medicine-name"
-          label="Tên thuốc trên nhãn hoặc đơn"
+          label={t(language, "medicineAdd.field.name")}
           value={draft.medicationName}
           onChange={(event) => update("medicationName", event.target.value)}
           autoFocus
           autoComplete="off"
           maxLength={255}
-          placeholder="Ví dụ: Metformin"
+          placeholder={t(language, "medicineAdd.placeholder.name")}
           aria-invalid={validationErrors.length > 0 || undefined}
           aria-describedby={validationErrors.length ? "medicine-name-error" : undefined}
         />
@@ -152,7 +144,7 @@ export default function AddMedicineFlow() {
         <StepActions
           nextType="button"
           onNext={advance}
-          back={{ label: "Quay lại thuốc của tôi", href: "/medicines?tab=list" }}
+          back={{ label: t(language, "medicineAdd.backToList"), href: "/medicines?tab=list" }}
         />
       </div>
     );
@@ -161,35 +153,35 @@ export default function AddMedicineFlow() {
       <div className="space-y-5">
         <Field
           id="medicine-dose"
-          label="Liều ghi trên nhãn"
+          label={t(language, "medicineAdd.field.dose")}
           optional
           value={draft.dose}
           onChange={(event) => update("dose", event.target.value)}
           maxLength={255}
-          placeholder="Ví dụ: 500 mg"
+          placeholder={t(language, "medicineAdd.placeholder.dose")}
         />
         <Field
           id="medicine-route"
-          label="Đường dùng"
+          label={t(language, "medicineAdd.field.route")}
           optional
           value={draft.route}
           onChange={(event) => update("route", event.target.value)}
           maxLength={255}
-          placeholder="Ví dụ: uống"
+          placeholder={t(language, "medicineAdd.placeholder.route")}
         />
         <Field
           id="medicine-form"
-          label="Dạng bào chế"
+          label={t(language, "medicineAdd.field.form")}
           optional
           value={draft.form}
           onChange={(event) => update("form", event.target.value)}
           maxLength={255}
-          placeholder="Ví dụ: viên nén"
+          placeholder={t(language, "medicineAdd.placeholder.form")}
         />
         <StepActions
           nextType="button"
           onNext={advance}
-          back={{ label: "Quay lại", onClick: () => setStep(back ?? "identity") }}
+          back={{ label: t(language, "medicineAdd.back"), onClick: () => setStep(back ?? "identity") }}
         />
       </div>
     );
@@ -198,26 +190,26 @@ export default function AddMedicineFlow() {
       <div className="space-y-5">
         <Field
           id="medicine-schedule"
-          label="Lịch dùng ghi trên nhãn hoặc đơn"
+          label={t(language, "medicineAdd.field.schedule")}
           optional
           value={draft.schedule}
           onChange={(event) => update("schedule", event.target.value)}
           maxLength={255}
-          placeholder="Ví dụ: buổi tối"
+          placeholder={t(language, "medicineAdd.placeholder.schedule")}
         />
         <Field
           id="medicine-drugbank-id"
-          label="DrugBank ID"
+          label={t(language, "medicineAdd.field.drugbankId")}
           optional
           value={draft.drugbankId}
           onChange={(event) => update("drugbankId", event.target.value)}
           maxLength={255}
-          placeholder="Nếu bạn đã có"
+          placeholder={t(language, "medicineAdd.placeholder.drugbankId")}
         />
         <StepActions
           nextType="button"
           onNext={advance}
-          back={{ label: "Quay lại", onClick: () => setStep(back ?? "details") }}
+          back={{ label: t(language, "medicineAdd.back"), onClick: () => setStep(back ?? "details") }}
         />
       </div>
     );
@@ -225,25 +217,25 @@ export default function AddMedicineFlow() {
     content = (
       <div className="space-y-5">
         <ReviewSection
-          title="Thuốc đã xác nhận"
-          description="CLARA lưu đúng nội dung bạn xác nhận, không tự suy đoán thuốc hoặc hướng dẫn dùng thuốc."
-          edit={{ label: "Sửa tên", onClick: () => setStep("identity") }}
+          title={t(language, "medicineAdd.review.title")}
+          description={t(language, "medicineAdd.review.description")}
+          edit={{ label: t(language, "medicineAdd.review.editName"), onClick: () => setStep("identity") }}
           items={[
-            { label: "Tên thuốc", value: draft.medicationName.trim() },
-            { label: "Liều", value: clean(draft.dose) ?? "Chưa nhập" },
-            { label: "Đường dùng", value: clean(draft.route) ?? "Chưa nhập" },
-            { label: "Dạng bào chế", value: clean(draft.form) ?? "Chưa nhập" },
-            { label: "Lịch dùng", value: clean(draft.schedule) ?? "Chưa nhập" },
-            { label: "DrugBank ID", value: clean(draft.drugbankId) ?? "Chưa nhập" },
+            { label: t(language, "medicineAdd.field.name"), value: draft.medicationName.trim() },
+            { label: t(language, "medicineAdd.field.dose"), value: clean(draft.dose) ?? t(language, "medicineAdd.review.empty") },
+            { label: t(language, "medicineAdd.field.route"), value: clean(draft.route) ?? t(language, "medicineAdd.review.empty") },
+            { label: t(language, "medicineAdd.field.form"), value: clean(draft.form) ?? t(language, "medicineAdd.review.empty") },
+            { label: t(language, "medicineAdd.field.schedule"), value: clean(draft.schedule) ?? t(language, "medicineAdd.review.empty") },
+            { label: t(language, "medicineAdd.field.drugbankId"), value: clean(draft.drugbankId) ?? t(language, "medicineAdd.review.empty") },
           ]}
         />
         <StepActions
-          nextLabel="Lưu thuốc đã xác nhận"
+          nextLabel={t(language, "medicineAdd.save")}
           nextType="button"
           onNext={() => void commit()}
           saving={saving}
-          savingLabel="Đang lưu…"
-          back={{ label: "Quay lại", onClick: () => setStep("schedule") }}
+          savingLabel={t(language, "flow.saving")}
+          back={{ label: t(language, "medicineAdd.back"), onClick: () => setStep("schedule") }}
         />
       </div>
     );
@@ -251,13 +243,13 @@ export default function AddMedicineFlow() {
 
   return (
     <GuidedFlowShell
-      eyebrow="Thuốc của tôi"
-      title={TITLES[step]}
-      description={descriptionFor(step)}
-      steps={STEPS}
-      currentStep={STEPS.findIndex((candidate) => candidate.id === step)}
+      eyebrow={t(language, "medicineAdd.eyebrow")}
+      title={titleByStep[step]}
+      description={descriptionByStep[step]}
+      steps={steps}
+      currentStep={steps.findIndex((candidate) => candidate.id === step)}
       saveState={saveState}
-      aside="Đây là bản ghi cá nhân, không thay thế đơn thuốc, tư vấn dược sĩ, bác sĩ hoặc chăm sóc khẩn cấp. Nội dung chỉ ở trong phiên này cho đến khi bạn xác nhận lưu."
+      aside={t(language, "medicineAdd.safetyNote")}
     >
       {content}
     </GuidedFlowShell>

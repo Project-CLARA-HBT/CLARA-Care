@@ -4,6 +4,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from clara_api.core.config import get_settings
+from clara_api.api.v1.endpoints import lifemap_review
 from clara_api.lifemap.review_findings import (
     ReviewFact,
     rule_first_findings,
@@ -59,18 +60,26 @@ def test_model_proposals_cannot_escape_authorized_revisions_or_resolve_truth() -
                 "source": "nli",
                 "revision_ids": ["r1", "r2"],
                 "field_key": "symptom",
+                "relation": "possible_conflict",
             },
             {
                 "source": "llm",
-                "revision_ids": ["other-profile"],
+                "revision_ids": ["other-profile", "r1"],
                 "field_key": "symptom",
+                "relation": "possible_duplicate",
             },
-            {"source": "unknown", "revision_ids": ["r1"], "field_key": "symptom"},
+            {
+                "source": "unknown",
+                "revision_ids": ["r1", "r2"],
+                "field_key": "symptom",
+                "relation": "possible_duplicate",
+            },
         ],
         authorized_revision_ids=frozenset({"r1", "r2"}),
     )
     assert len(accepted) == 1
     assert accepted[0].proposal_source == "nli"
+    assert accepted[0].reason_code == "possible_conflict"
     assert accepted[0].requires_human_resolution is True
 
 
@@ -140,3 +149,60 @@ def test_persisted_findings_require_human_action_and_are_idempotent(
     assert resolved.status_code == 200
     assert replay.json()["idempotent_replay"] is True
     assert replay.json()["status"] == "resolved"
+
+
+def test_model_review_pairs_are_profile_scoped_and_human_resolution_only(
+    monkeypatch,
+) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "lifemap_ai_review_findings_enabled", True)
+    monkeypatch.setattr(settings, "lifemap_review_model_proposals_enabled", True)
+    calls: list[dict] = []
+
+    def _model_pairs(_path: str, payload: dict, **_kwargs: object) -> dict:
+        calls.append(payload)
+        facts = payload["facts"]
+        return {
+            "proposals": [
+                {
+                    "source": "llm",
+                    "relation": "possible_conflict",
+                    "revision_ids": [facts[0]["revision_id"], facts[1]["revision_id"]],
+                    "field_key": facts[0]["field_key"],
+                },
+                {
+                    "source": "llm",
+                    "relation": "possible_duplicate",
+                    "revision_ids": ["another-profile", facts[0]["revision_id"]],
+                    "field_key": facts[0]["field_key"],
+                },
+            ]
+        }
+
+    monkeypatch.setattr(lifemap_review, "proxy_ml_post", _model_pairs)
+    headers = _account()
+    for suffix, symptom in (("first", "đau đầu"), ("second", "chóng mặt")):
+        response = client.post(
+            "/api/v1/lifemap/events",
+            headers={**headers, "Idempotency-Key": f"{suffix}-{uuid4().hex}"},
+            json={
+                "event_type": "symptom_report",
+                "occurred_at": "2026-07-29T08:00:00Z",
+                "payload": {"symptom": symptom},
+                "truth_state": "confirmed",
+            },
+        )
+        assert response.status_code == 201
+
+    findings = client.post("/api/v1/lifemap/v2/review-findings/scan", headers=headers)
+
+    assert findings.status_code == 200
+    assert len(calls) == 1
+    assert set(calls[0]) == {"facts"}
+    assert all(set(fact) == {"revision_id", "field_key", "payload"} for fact in calls[0]["facts"])
+    model_findings = [item for item in findings.json() if item["kind"] == "model_proposal"]
+    assert len(model_findings) == 1
+    assert model_findings[0]["proposal_source"] == "llm"
+    assert model_findings[0]["reason_code"] == "possible_conflict"
+    assert model_findings[0]["requires_human_resolution"] is True
+    assert model_findings[0]["status"] == "pending"

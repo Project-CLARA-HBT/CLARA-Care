@@ -14,6 +14,7 @@ import {
 import { getLifeMapToday, type LifeMapToday } from "@/lib/lifemap";
 import { t } from "@/lib/i18n/catalog";
 import { getStoredUILanguage, onUILanguageChange, type UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 function dueLabel(value: string | null, language: UILanguage): string {
   if (!value) return t(language, "today.noDueDate");
@@ -48,7 +49,7 @@ const QUICK_ACTIONS = [
     description: "today.recordDescription",
   },
   {
-    href: "/visits",
+    href: "/lifemap/visit-prep",
     icon: "event_available",
     title: "today.visitTitle",
     description: "today.visitDescription",
@@ -72,7 +73,7 @@ export default function TodayPage() {
     try {
       setToday(await getLifeMapToday());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "today.connectionError"));
+      setError(safeUserFacingError(cause, t(language, "today.connectionError")));
     } finally {
       setLoading(false);
     }

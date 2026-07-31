@@ -49,6 +49,7 @@ def _ready() -> dict:
         "version": "drugbank-full-2026-07",
         "pair_count": 1_000_000,
         "manifest_matches_index": True,
+        "integrity_verified": True,
     }
 
 

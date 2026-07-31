@@ -11,33 +11,45 @@ import {
 } from "@/lib/research";
 import { getRole, type UserRole } from "@/lib/auth-store";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
-import { sanitizeUpstreamError, stripTelemetryLabels } from "@/lib/user-facing-text";
+import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
 import { trackResearchSourcesSynced, trackResearchViewed } from "@/lib/analytics/events";
+import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+import type { UILanguage } from "@/lib/ui-language";
 
-const SOURCE_LABELS: Record<SourceHubSourceKey, string> = {
-  pubmed: "PubMed",
-  rxnorm: "RxNorm",
-  openfda: "openFDA",
-  dailymed: "DailyMed",
-  clinicaltrials: "ClinicalTrials.gov",
-  europepmc: "Europe PMC",
-  semantic_scholar: "Semantic Scholar",
-  vn_moh: "Bộ Y tế Việt Nam",
-  vn_kcb: "Cục Quản lý Khám chữa bệnh",
-  vn_canhgiacduoc: "Cảnh giác Dược Quốc gia",
-  vn_vbpl_byt: "VBPL Bộ Y tế",
-  vn_dav: "Cục Quản lý Dược Việt Nam",
-  davidrug: "DAVIDrug",
+const SOURCE_LABEL_KEYS: Record<SourceHubSourceKey, UITranslationKey> = {
+  pubmed: "research.sourceHub.source.pubmed",
+  rxnorm: "research.sourceHub.source.rxnorm",
+  openfda: "research.sourceHub.source.openfda",
+  dailymed: "research.sourceHub.source.dailymed",
+  clinicaltrials: "research.sourceHub.source.clinicaltrials",
+  europepmc: "research.sourceHub.source.europepmc",
+  semantic_scholar: "research.sourceHub.source.semanticScholar",
+  vn_moh: "research.sourceHub.source.vnMoh",
+  vn_kcb: "research.sourceHub.source.vnKcb",
+  vn_canhgiacduoc: "research.sourceHub.source.vnCanhGiacDuoc",
+  vn_vbpl_byt: "research.sourceHub.source.vnVbplByt",
+  vn_dav: "research.sourceHub.source.vnDav",
+  davidrug: "research.sourceHub.source.davidrug",
 };
 
-function formatDate(value?: string): string {
+function sourceLabel(language: UILanguage, source: SourceHubSourceKey): string {
+  return t(language, SOURCE_LABEL_KEYS[source]);
+}
+
+function formatDate(language: UILanguage, value?: string): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("vi-VN", { hour12: false });
+  return formatLocaleDate(language, date, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    hour12: false,
+  });
 }
 
 export default function ResearchSourceHubPage() {
+  const language = useUILanguage();
   const [catalog, setCatalog] = useState<SourceHubCatalogEntry[]>([]);
   const [records, setRecords] = useState<SourceHubRecord[]>([]);
   const [activeSource, setActiveSource] = useState<SourceHubSourceKey>("pubmed");
@@ -81,11 +93,11 @@ export default function ResearchSourceHubPage() {
       });
       setRecords(items);
     } catch (cause) {
-      setError(sanitizeUpstreamError(cause instanceof Error ? cause.message : "Không thể tải dữ liệu nguồn nghiên cứu."));
+      setError(safeUserFacingError(cause, t(language, "research.sourceHub.error.loadRecords")));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -95,7 +107,7 @@ export default function ResearchSourceHubPage() {
         await loadCatalog();
         await loadRecords();
       } catch (cause) {
-        setError(sanitizeUpstreamError(cause instanceof Error ? cause.message : "Không thể tải Source Hub."));
+        setError(safeUserFacingError(cause, t(language, "research.sourceHub.error.loadHub")));
         setIsLoading(false);
       }
     };
@@ -129,7 +141,7 @@ export default function ResearchSourceHubPage() {
     event.preventDefault();
     const query = syncQuery.trim();
     if (!query) {
-      setError("Vui lòng nhập chủ đề cần đồng bộ.");
+      setError(t(language, "research.sourceHub.sync.queryRequired"));
       return;
     }
     const parsedLimit = Number(syncLimit);
@@ -145,7 +157,11 @@ export default function ResearchSourceHubPage() {
       // Clean, End_User-safe success summary only — no raw connector strings.
       setMessage(
         stripTelemetryLabels(
-          `Đã đồng bộ ${SOURCE_LABELS[result.source]}: lấy ${result.fetched}, lưu ${result.stored} bản ghi.`
+          t(language, "research.sourceHub.sync.success", {
+            source: sourceLabel(language, result.source),
+            fetched: result.fetched,
+            stored: result.stored,
+          }),
         )
       );
       if (result.warnings.length) {
@@ -160,7 +176,7 @@ export default function ResearchSourceHubPage() {
         stored: result.stored,
       });
     } catch (cause) {
-      setError(sanitizeUpstreamError(cause instanceof Error ? cause.message : "Không thể đồng bộ nguồn nghiên cứu."));
+      setError(safeUserFacingError(cause, t(language, "research.sourceHub.error.sync")));
     } finally {
       setIsSyncing(false);
     }
@@ -172,16 +188,16 @@ export default function ResearchSourceHubPage() {
         <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-brand)]">Research Source Hub</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-brand)]">{t(language, "research.sourceHub.eyebrow")}</p>
               <h1 className="mt-2 text-3xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-[2.35rem]">
-                Nguồn nghiên cứu
+                {t(language, "research.sourceHub.title")}
               </h1>
               <p className="mt-3 text-base leading-7 text-[var(--text-secondary)]">
-                Đồng bộ PubMed, dữ liệu thuốc và nguồn y khoa để hỗ trợ phân tích có bằng chứng. Mục này chỉ hiện với nhà nghiên cứu, bác sĩ và admin.
+                {t(language, "research.sourceHub.description")}
               </p>
             </div>
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-950/35 dark:text-blue-200">
-              {catalog.length} nguồn khả dụng · {records.length} bản ghi đã lưu
+              {t(language, "research.sourceHub.availableSummary", { sources: catalog.length, records: records.length })}
             </div>
           </div>
         </section>
@@ -190,8 +206,8 @@ export default function ResearchSourceHubPage() {
           <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Đồng bộ nguồn</p>
-                <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Lấy bản ghi nghiên cứu mới</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.sync.eyebrow")}</p>
+                <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">{t(language, "research.sourceHub.sync.title")}</h2>
               </div>
               {activeCatalogEntry?.docs_url ? (
                 <a
@@ -200,14 +216,14 @@ export default function ResearchSourceHubPage() {
                   rel="noreferrer"
                   className="inline-flex min-h-10 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm font-semibold text-[var(--text-brand)]"
                 >
-                  Xem tài liệu nguồn
+                  {t(language, "research.sourceHub.sync.docs")}
                 </a>
               ) : null}
             </div>
 
             <form onSubmit={onSync} className="grid gap-3 md:grid-cols-[14rem_minmax(0,1fr)_7rem_auto]">
               <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Nguồn</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">{t(language, "research.sourceHub.sync.source")}</span>
                 <select
                   value={activeSource}
                   onChange={(event) => setActiveSource(event.target.value as SourceHubSourceKey)}
@@ -215,22 +231,22 @@ export default function ResearchSourceHubPage() {
                 >
                   {catalog.map((item) => (
                     <option key={item.key} value={item.key}>
-                      {item.label}
+                      {sourceLabel(language, item.key)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Chủ đề tìm kiếm</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">{t(language, "research.sourceHub.sync.query")}</span>
                 <input
                   value={syncQuery}
                   onChange={(event) => setSyncQuery(event.target.value)}
-                  placeholder={activeCatalogEntry?.default_query || "Ví dụ: metformin interaction"}
+                  placeholder={activeCatalogEntry?.default_query || t(language, "research.sourceHub.sync.queryPlaceholder")}
                   className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
                 />
               </label>
               <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Số lượng</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">{t(language, "research.sourceHub.sync.limit")}</span>
                 <input
                   value={syncLimit}
                   onChange={(event) => setSyncLimit(event.target.value)}
@@ -244,7 +260,7 @@ export default function ResearchSourceHubPage() {
                   disabled={isSyncing || !catalog.length}
                   className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--brand-600)] px-4 text-sm font-bold text-white transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:bg-blue-200 disabled:text-slate-700"
                 >
-                  {isSyncing ? "Đang đồng bộ..." : "Đồng bộ"}
+                  {isSyncing ? t(language, "research.sourceHub.sync.running") : t(language, "research.sourceHub.sync.submit")}
                 </button>
               </div>
             </form>
@@ -255,14 +271,14 @@ export default function ResearchSourceHubPage() {
           </article>
 
           <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Phân bố dữ liệu</p>
-            <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Bản ghi theo nguồn</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.distribution.eyebrow")}</p>
+            <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">{t(language, "research.sourceHub.distribution.title")}</h2>
             <div className="mt-4 space-y-3">
               {recordDistribution.length ? (
                 recordDistribution.map(([source, count]) => (
                   <div key={source}>
                     <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate font-semibold text-[var(--text-primary)]">{SOURCE_LABELS[source]}</span>
+                      <span className="truncate font-semibold text-[var(--text-primary)]">{sourceLabel(language, source)}</span>
                       <span className="font-mono text-[var(--text-secondary)]">{count}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]">
@@ -275,7 +291,7 @@ export default function ResearchSourceHubPage() {
                 ))
               ) : (
                 <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
-                  Chưa có bản ghi. Hãy đồng bộ một nguồn để bắt đầu.
+                  {t(language, "research.sourceHub.distribution.empty")}
                 </p>
               )}
             </div>
@@ -285,21 +301,21 @@ export default function ResearchSourceHubPage() {
         <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Bản ghi đã lưu</p>
-              <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">Kết quả nguồn nghiên cứu</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.records.eyebrow")}</p>
+              <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">{t(language, "research.sourceHub.records.title")}</h2>
             </div>
             <form onSubmit={onFilter} className="flex flex-wrap items-center gap-2">
               <input
                 value={filterText}
                 onChange={(event) => setFilterText(event.target.value)}
-                placeholder="Lọc theo tiêu đề hoặc query..."
+                placeholder={t(language, "research.sourceHub.records.filterPlaceholder")}
                 className="min-h-10 w-72 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
               />
               <button
                 type="submit"
                 className="min-h-10 rounded-lg border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-brand)]"
               >
-                Lọc
+                {t(language, "research.sourceHub.records.filter")}
               </button>
             </form>
           </div>
@@ -319,10 +335,10 @@ export default function ResearchSourceHubPage() {
               role={role}
               payload={syncWarnings}
               className="mb-3"
-              summaryText="Một số nguồn phản hồi chậm, dữ liệu hiển thị có thể chưa đầy đủ."
+              summaryText={t(language, "research.sourceHub.warning.summary")}
             >
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                <p className="text-xs font-bold uppercase tracking-[0.12em]">Cảnh báo đồng bộ (chỉ admin)</p>
+                <p className="text-xs font-bold uppercase tracking-[0.12em]">{t(language, "research.sourceHub.warning.admin")}</p>
                 <ul className="mt-1 list-disc space-y-1 pl-5 font-mono text-xs">
                   {syncWarnings.map((warning, index) => (
                     <li key={`${warning}-${index}`}>{warning}</li>
@@ -336,18 +352,18 @@ export default function ResearchSourceHubPage() {
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">
-                  <th className="px-3 py-3">Nguồn</th>
-                  <th className="px-3 py-3">Tiêu đề</th>
-                  <th className="px-3 py-3">Query</th>
-                  <th className="px-3 py-3">Công bố</th>
-                  <th className="px-3 py-3">Đồng bộ</th>
+                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.source")}</th>
+                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.title")}</th>
+                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.query")}</th>
+                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.published")}</th>
+                  <th className="px-3 py-3">{t(language, "research.sourceHub.table.synced")}</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
                     <td className="px-3 py-4 text-[var(--text-secondary)]" colSpan={5}>
-                      Đang tải bản ghi...
+                      {t(language, "research.sourceHub.table.loading")}
                     </td>
                   </tr>
                 ) : records.length ? (
@@ -355,7 +371,7 @@ export default function ResearchSourceHubPage() {
                     <tr key={record.id} className="border-b border-[color:var(--shell-border)] align-top last:border-0">
                       <td className="px-3 py-3">
                         <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-bold text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
-                          {SOURCE_LABELS[record.source]}
+                          {sourceLabel(language, record.source)}
                         </span>
                       </td>
                       <td className="max-w-xl px-3 py-3">
@@ -371,14 +387,14 @@ export default function ResearchSourceHubPage() {
                         ) : null}
                       </td>
                       <td className="px-3 py-3 text-[var(--text-secondary)]">{record.query || "-"}</td>
-                      <td className="px-3 py-3 text-[var(--text-secondary)]">{formatDate(record.published_at)}</td>
-                      <td className="px-3 py-3 text-[var(--text-secondary)]">{formatDate(record.synced_at)}</td>
+                      <td className="px-3 py-3 text-[var(--text-secondary)]">{formatDate(language, record.published_at)}</td>
+                      <td className="px-3 py-3 text-[var(--text-secondary)]">{formatDate(language, record.synced_at)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td className="px-3 py-4 text-[var(--text-secondary)]" colSpan={5}>
-                      Chưa có dữ liệu. Hãy đồng bộ một nguồn hoặc đổi bộ lọc.
+                      {t(language, "research.sourceHub.table.empty")}
                     </td>
                   </tr>
                 )}

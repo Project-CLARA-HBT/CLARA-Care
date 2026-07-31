@@ -50,6 +50,13 @@ from clara_api.core.research_upload_store import (
 )
 from clara_api.core.security import TokenPayload
 from clara_api.core.timeouts import resolve_sync_research_timeout
+from clara_api.core.upload_safety import (
+    UploadMalwareScannerUnavailable,
+    UploadSafetyError,
+    VerifiedUpload,
+    read_upload_bytes_with_limit,
+    verify_upload,
+)
 from clara_api.db.models import (
     FederatedSourceRecord,
     KnowledgeDocument,
@@ -232,41 +239,32 @@ _PROVIDER_SECRET_KEYS = frozenset(
 )
 
 
-async def _read_upload_bytes_with_limit(file: UploadFile, *, max_bytes: int) -> bytes:
-    chunks: list[bytes] = []
-    total = 0
-    while True:
-        chunk = await file.read(1024 * 1024)
-        if not chunk:
-            break
-        total += len(chunk)
-        if total > max_bytes:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File vượt quá giới hạn {max_bytes // (1024 * 1024)}MB",
-            )
-        chunks.append(chunk)
-    return b"".join(chunks)
+def _validate_upload_safety(
+    *, file_name: str, content_type: str, file_bytes: bytes
+) -> VerifiedUpload:
+    """Apply the shared deterministic content and optional ClamAV boundary."""
 
-
-def _validate_upload_safety(*, file_name: str, content_type: str, file_bytes: bytes) -> None:
-    size = len(file_bytes)
-    if size > _MAX_RESEARCH_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File vượt quá giới hạn {_MAX_RESEARCH_UPLOAD_BYTES // (1024 * 1024)}MB",
+    settings = get_settings()
+    try:
+        return verify_upload(
+            filename=file_name,
+            content_type=content_type,
+            data=file_bytes,
+            fallback_filename="uploaded-file",
+            malware_scan_required=settings.upload_malware_scan_required,
+            clamav_host=settings.upload_malware_clamav_host,
+            clamav_port=settings.upload_malware_clamav_port,
         )
-
-    allowed = (
-        _is_text_file(file_name, content_type)
-        or _is_pdf_file(file_name, content_type)
-        or _is_image_file(file_name, content_type)
-    )
-    if not allowed:
+    except UploadMalwareScannerUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Không thể kiểm tra an toàn tệp lúc này. Vui lòng thử lại sau.",
+        ) from exc
+    except UploadSafetyError as exc:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Định dạng file không được hỗ trợ cho research upload",
-        )
+            detail="Tệp tải lên không khớp định dạng được phép.",
+        ) from exc
 
 
 def _load_research_rag_runtime(db: Session) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -1023,6 +1021,27 @@ def _coerce_research_mode(payload: dict[str, Any]) -> str:
         payload.get("research_mode") or payload.get("mode"),
         default="fast",
     )
+
+
+def _resolve_research_output_mode(
+    value: Any,
+    *,
+    role: str | None,
+) -> str:
+    """Return a role-safe closed presentation mode.
+
+    This selector is deliberately not a research, retrieval, verifier, or
+    model-routing input. Consumers always receive plain language. Professional
+    presentation is limited to the existing professional roles and remains
+    subject to the same evidence-release boundary as the base answer.
+    """
+
+    requested = str(value or "plain_language").strip().lower()
+    if requested != "professional":
+        return "plain_language"
+    if str(role or "").strip().lower() not in {"researcher", "doctor", "admin"}:
+        return "plain_language"
+    return "professional"
 
 
 def _coerce_retrieval_stack_mode(payload: dict[str, Any]) -> str:
@@ -2030,9 +2049,8 @@ def _build_personal_context_payload(
 # Gap-fill pass-count keys an upstream caller may supply to request additional bounded
 # gap-fill retrieval passes. The Research_API independently clamps any such request to
 # ``RESEARCH_API_GAP_FILL_HARD_MAX`` before forwarding to ML (clara-research R5.5,
-# defense in depth). Both the top-level payload and the opaque ``llm_runtime`` override
-# block are inspected. Absent any request, the payload is left untouched so legacy
-# (flag-off) requests keep their exact shape (clara-research R20.2).
+# defense in depth). Runtime LLM overrides are deliberately not supported; only
+# bounded top-level request keys are inspected.
 _GAP_FILL_PASS_REQUEST_KEYS: tuple[str, ...] = (
     "gap_fill_max_passes",
     "research_gap_fill_max_passes",
@@ -2066,9 +2084,6 @@ def _enforce_api_gap_fill_ceiling(
 
     ceiling = max(0, int(hard_max))
     _clamp_gap_fill_request_keys(payload, ceiling=ceiling)
-    runtime = payload.get("llm_runtime")
-    if isinstance(runtime, dict):
-        _clamp_gap_fill_request_keys(runtime, ceiling=ceiling)
     return payload
 
 
@@ -2081,6 +2096,12 @@ def _build_tier2_upstream_payload(
 ) -> dict[str, Any]:
     settings = get_settings()
     upstream_payload = dict(payload)
+    # Provider, endpoint, model and credentials are deployment-only settings.
+    # Never relay a request-supplied runtime block to ML: even an admin-facing
+    # web control can be compromised, and this boundary must not become an
+    # SSRF, credential-forwarding, or model-governance bypass.  Registered
+    # DeepSeek V4 task contracts resolve the actual model server-side.
+    upstream_payload.pop("llm_runtime", None)
     requested_language = (
         str(upstream_payload.get("ui_language") or upstream_payload.get("answer_language") or "vi")
         .strip()
@@ -2105,6 +2126,16 @@ def _build_tier2_upstream_payload(
     upstream_payload["answer_language"] = answer_language
     upstream_payload["answer_format"] = str(upstream_payload.get("answer_format") or "markdown")
     upstream_payload["response_format"] = str(upstream_payload.get("response_format") or "markdown")
+    # Output modes are a separately dark presentation feature. The selected
+    # closed value is persisted with the durable job only when the API gate is
+    # enabled, and is echoed through ML solely for a second gate. It is never
+    # passed to the LLM prompt or allowed to alter retrieval/model policy.
+    if settings.research_output_modes_enabled:
+        upstream_payload["output_mode"] = _resolve_research_output_mode(
+            upstream_payload.get("output_mode"), role=token.role
+        )
+    else:
+        upstream_payload.pop("output_mode", None)
     incoming_render_hints = upstream_payload.get("render_hints")
     if isinstance(incoming_render_hints, dict):
         merged_render_hints = {
@@ -2221,6 +2252,25 @@ def _enforce_request_execution_contract(
     metadata_obj["retrieval_stack_mode"] = retrieval_stack_mode
     response["ui_language"] = answer_language
     metadata_obj["answer_language"] = answer_language
+
+    # API and ML must both acknowledge a closed output mode before any
+    # presentation payload can be composed. A missing/mismatched ML
+    # acknowledgement fails closed to the established answer-only response.
+    settings = get_settings()
+    if settings.research_output_modes_enabled:
+        expected_output_mode = _resolve_research_output_mode(
+            request_payload.get("output_mode"),
+            role=str(request_payload.get("role") or ""),
+        )
+        candidate_output_mode = str(
+            response.get("output_mode") or metadata_obj.get("output_mode") or ""
+        ).strip().lower()
+        if candidate_output_mode == expected_output_mode:
+            response["output_mode"] = expected_output_mode
+            metadata_obj["output_mode"] = expected_output_mode
+        else:
+            response.pop("output_mode", None)
+            metadata_obj.pop("output_mode", None)
 
     # R5.5 (defense in depth): the API forcibly caps the reported gap-fill pass count at
     # the configured hard ceiling so a misbehaving orchestrator cannot surface or persist
@@ -2410,26 +2460,24 @@ def _append_job_event(
     db.commit()
 
     try:
+        # The global observability stream is explicitly no-PII.  Job query,
+        # notes, raw upstream errors, retrieval traces and verification rows
+        # can contain patient/research text, so they stay in the owner-scoped
+        # result only and are never mirrored here.
         store_event: dict[str, Any] = {
             "job_id": str(job.job_id),
-            "query": str(job.query_text or ""),
             "stage": stage,
             "status": status_text,
-            "note": note,
             "timestamp": event_item["timestamp"],
         }
         if isinstance(payload, dict):
-            for key in (
-                "source_errors",
-                "fallback_reason",
-                "fallback_used",
-                "unsupported_claims",
-                "verification_matrix",
-                "retrieval_trace",
-                "metadata",
-            ):
-                if key in payload:
-                    store_event[key] = payload.get(key)
+            store_event["fallback_used"] = bool(payload.get("fallback_used"))
+            unsupported_claims = payload.get("unsupported_claims")
+            if isinstance(unsupported_claims, list):
+                store_event["unsupported_claim_count"] = len(unsupported_claims)
+            verification_matrix = payload.get("verification_matrix")
+            if isinstance(verification_matrix, list):
+                store_event["verification_claim_count"] = len(verification_matrix)
         get_flow_event_store().append(
             source="research",
             user_id=str(job.user_id),
@@ -2547,6 +2595,24 @@ def _apply_research_quality_gates(
             return 0
         return int(numeric)
 
+    def is_nonnegative_integral_number(value: Any) -> bool:
+        if isinstance(value, bool):
+            return False
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return False
+        return math.isfinite(numeric) and numeric >= 0 and numeric.is_integer()
+
+    def is_unit_interval_number(value: Any) -> bool:
+        if isinstance(value, bool):
+            return False
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return False
+        return math.isfinite(numeric) and 0.0 <= numeric <= 1.0
+
     real_citations = [item for item in citations if is_resolvable_citation(item)]
     unsupported = gated.get("unsupported_claims")
     unsupported_count = len(unsupported) if isinstance(unsupported, list) else 0
@@ -2555,10 +2621,9 @@ def _apply_research_quality_gates(
         str(gated.get("answer_markdown") or gated.get("answer") or "").strip()
     )
     mode = _coerce_research_mode(request_payload)
+    raw_verification_matrix = gated.get("verification_matrix")
     verification_matrix = (
-        gated.get("verification_matrix")
-        if isinstance(gated.get("verification_matrix"), dict)
-        else {}
+        raw_verification_matrix if isinstance(raw_verification_matrix, dict) else {}
     )
     verification_summary = (
         verification_matrix.get("summary")
@@ -2570,6 +2635,49 @@ def _apply_research_quality_gates(
         if isinstance(verification_matrix.get("rows"), list)
         else []
     )
+    verification_state = str(verification_matrix.get("state") or "").strip().lower()
+    verification_version = str(verification_matrix.get("version") or "").strip()
+    verifier_counts_well_formed = (
+        is_nonnegative_integral_number(verification_summary.get("total_claims"))
+        and is_nonnegative_integral_number(verification_summary.get("supported_claims"))
+    )
+    verifier_total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
+    verifier_supported_claims = safe_nonnegative_int(
+        verification_summary.get("supported_claims")
+    )
+    verifier_support_ratio = verification_summary.get("support_ratio")
+    verifier_ratio_matches_counts = False
+    if is_unit_interval_number(verifier_support_ratio) and verifier_counts_well_formed:
+        if verifier_total_claims == 0:
+            verifier_ratio_matches_counts = float(verifier_support_ratio) == 0.0
+        elif verifier_supported_claims <= verifier_total_claims:
+            verifier_ratio_matches_counts = (
+                abs(
+                    float(verifier_support_ratio)
+                    - (verifier_supported_claims / verifier_total_claims)
+                )
+                <= 0.0001
+            )
+    verifier_summary_complete = (
+        verifier_counts_well_formed
+        and verifier_supported_claims <= verifier_total_claims
+        and verifier_ratio_matches_counts
+    )
+    verifier_contract_reason: str | None = None
+    if answer_present:
+        if not isinstance(raw_verification_matrix, dict):
+            verifier_contract_reason = "verification_unavailable"
+        elif verification_state in {"skipped", "disabled"}:
+            verifier_contract_reason = "verification_skipped"
+        elif verification_state in {"unavailable", "error"}:
+            verifier_contract_reason = "verification_unavailable"
+        elif (
+            verification_state not in {"verified", "warning"}
+            or not verification_version
+            or not verifier_summary_complete
+            or not isinstance(verification_matrix.get("rows"), list)
+        ):
+            verifier_contract_reason = "verification_invalid"
     unsupported_from_verifier = sum(
         1
         for row in verification_rows
@@ -2603,17 +2711,21 @@ def _apply_research_quality_gates(
         if isinstance(support_ratio_raw, (int, float))
         else None
     )
+    total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
     gate_reasons: list[str] = []
     if answer_present and citation_count == 0:
         gate_reasons.append("no_citations")
     if answer_present and not has_retrieved_evidence:
         gate_reasons.append("no_retrieved_evidence")
+    if verifier_contract_reason:
+        gate_reasons.append(verifier_contract_reason)
     if unsupported_count:
         gate_reasons.append("unsupported_claims")
     if (
         answer_present
         and support_ratio is not None
         and support_ratio <= 0.0
+        and total_claims > 0
     ):
         gate_reasons.append("zero_claim_support")
     quality_gate = {
@@ -2621,6 +2733,12 @@ def _apply_research_quality_gates(
         "passed": not gate_reasons,
         "citation_count": citation_count,
         "unsupported_claim_count": unsupported_count,
+        "verifier": {
+            "state": verification_state or "unavailable",
+            "version": verification_version or None,
+            "row_count": len(verification_rows),
+            "total_claims": total_claims,
+        },
         "answer_present": answer_present,
         "reasons": gate_reasons,
         "mode": mode,
@@ -2660,6 +2778,66 @@ def _apply_research_quality_gates(
         gated["citations"] = real_citations
         gated["sources"] = real_citations
         gated["policy_action"] = "warn"
+    return gated
+
+
+def _attach_verified_research_presentation(
+    result: dict[str, Any], *, request_payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach a deterministic read-only presentation after evidence release.
+
+    The original ``answer_markdown`` and ``citations`` are deliberately left
+    untouched. This function adds no medical prose, makes no model call, and
+    only exposes citation *identifiers* already present in the released
+    envelope. Any failed, malformed, skipped, or unavailable verification path
+    keeps the existing safe abstention byte-for-byte from the quality gate.
+    """
+
+    settings = get_settings()
+    if not settings.research_output_modes_enabled:
+        return result
+
+    gated = dict(result)
+    quality_gate = gated.get("quality_gate")
+    if not isinstance(quality_gate, dict) or quality_gate.get("passed") is not True:
+        return gated
+
+    metadata = gated.get("metadata") if isinstance(gated.get("metadata"), dict) else {}
+    expected_mode = _resolve_research_output_mode(
+        request_payload.get("output_mode"),
+        role=str(request_payload.get("role") or ""),
+    )
+    ml_mode = str(gated.get("output_mode") or metadata.get("output_mode") or "").strip().lower()
+    if ml_mode != expected_mode:
+        # ML did not pass its independent closed-mode gate. Do not synthesize a
+        # presentation from a one-sided configuration rollout.
+        return gated
+
+    answer = str(gated.get("answer_markdown") or gated.get("answer") or "").strip()
+    citations = gated.get("citations")
+    if not answer or not isinstance(citations, list):
+        return gated
+    citation_ids = [
+        str(item.get("source_id") or "").strip()
+        for item in citations
+        if isinstance(item, dict) and str(item.get("source_id") or "").strip()
+    ]
+    if len(citation_ids) != len(citations):
+        # The quality gate should already reject unresolvable evidence. Keep
+        # the old released shape rather than presenting a partial citation map.
+        return gated
+
+    # The mode only controls reader chrome: the answer is a reference to the
+    # same released markdown and professional mode may reveal the already
+    # released citation list. No verifier rows, prompts, confidence values,
+    # telemetry, PII, or provider data are copied into this projection.
+    gated["presentation"] = {
+        "schema_version": "research-presentation-v1",
+        "mode": expected_mode,
+        "answer_markdown": answer,
+        "citation_ids": citation_ids,
+        "citation_visibility": "expanded" if expected_mode == "professional" else "compact",
+    }
     return gated
 
 
@@ -2912,6 +3090,10 @@ def _run_research_job(job_id: str) -> None:
             enriched,
             request_payload=request_payload,
         )
+        enriched = _attach_verified_research_presentation(
+            enriched,
+            request_payload=request_payload,
+        )
         quality_gate = enriched.get("quality_gate")
         _append_job_event(
             db,
@@ -2980,7 +3162,9 @@ def _run_research_job(job_id: str) -> None:
             ).scalar_one_or_none()
             if job is not None:
                 job.status = "failed"
-                job.error_text = str(exc)
+                # Do not persist a provider exception verbatim: SDKs and
+                # upstream gateways may echo prompt content or request details.
+                job.error_text = f"research_job_failed:{exc.__class__.__name__}"
                 job.completed_at = datetime.now(tz=UTC)
                 job.worker_id = None
                 job.lease_heartbeat_at = None
@@ -2991,7 +3175,7 @@ def _run_research_job(job_id: str) -> None:
                     job=job,
                     stage="final_response",
                     status_text="failed",
-                    note=f"Lỗi khi chạy research job: {exc}",
+                    note="Research job không thể hoàn tất do lỗi upstream.",
                 )
         except Exception:
             pass
@@ -4601,14 +4785,16 @@ async def upload_file_to_knowledge_source(
 
         file_name = file.filename or "uploaded-file"
         content_type = file.content_type or "application/octet-stream"
-        file_bytes = await _read_upload_bytes_with_limit(
+        file_bytes = await read_upload_bytes_with_limit(
             file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES
         )
         if not file_bytes:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
-        _validate_upload_safety(
+        verified = _validate_upload_safety(
             file_name=file_name, content_type=content_type, file_bytes=file_bytes
         )
+        file_name = verified.filename
+        content_type = verified.media_type
 
         extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
         preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
@@ -4704,10 +4890,14 @@ async def upload_research_file(
 
     file_name = file.filename or "uploaded-file"
     content_type = file.content_type or "application/octet-stream"
-    file_bytes = await _read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
+    file_bytes = await read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
     if not file_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
-    _validate_upload_safety(file_name=file_name, content_type=content_type, file_bytes=file_bytes)
+    verified = _validate_upload_safety(
+        file_name=file_name, content_type=content_type, file_bytes=file_bytes
+    )
+    file_name = verified.filename
+    content_type = verified.media_type
 
     extracted_text, file_kind = _extract_basic_text(file_bytes, file_name, content_type)
     preview = extracted_text[:_PREVIEW_CHAR_LIMIT]
@@ -4819,7 +5009,22 @@ def research_tier2(
         request_payload=upstream_payload,
     )
     attributed = _attach_research_attribution(normalized)
-    return _apply_role_gated_telemetry(attributed, role=token.role) or attributed
+    # Keep the synchronous endpoint on the same evidence-release boundary as
+    # the durable job worker.  Without this step, a caller could receive
+    # factual-looking prose from ``POST /tier2`` even when the ML verifier had
+    # marked one or more claims unsupported or contradicted.  The gate retains
+    # provenance and verifier diagnostics, but replaces the conclusion with an
+    # explicit abstention; it never manufactures a citation or downgrades the
+    # FIDES/safety override result.
+    gated = _apply_research_quality_gates(
+        attributed,
+        request_payload=upstream_payload,
+    )
+    gated = _attach_verified_research_presentation(
+        gated,
+        request_payload=upstream_payload,
+    )
+    return _apply_role_gated_telemetry(gated, role=token.role) or gated
 
 
 @router.post("/clarify")

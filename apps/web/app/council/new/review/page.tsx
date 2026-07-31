@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
 import { trackCouncilRun } from "@/lib/analytics/events";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
   getActiveCouncilCaseId,
@@ -13,6 +16,14 @@ import {
   runCouncilCaseById,
   setActiveCouncilCaseId,
 } from "@/lib/council";
+
+const SPECIALIST_LABEL_KEYS: Record<string, UITranslationKey> = {
+  cardiology: "council.specialist.cardiology",
+  neurology: "council.specialist.neurology",
+  endocrinology: "council.specialist.endocrinology",
+  pharmacology: "council.specialist.pharmacology",
+  nephrology: "council.specialist.nephrology",
+};
 
 function parseRequest(caseItem: CouncilCaseRecord | null) {
   const request = (caseItem?.request ?? {}) as Record<string, unknown>;
@@ -42,6 +53,7 @@ function parseRequest(caseItem: CouncilCaseRecord | null) {
 
 export default function CouncilNewReviewPage() {
   const router = useRouter();
+  const language = useUILanguage();
   const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
   const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
   const [error, setError] = useState("");
@@ -70,15 +82,18 @@ export default function CouncilNewReviewPage() {
         setActiveCouncilCaseId(loaded.id);
         setCaseItem(loaded);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể tải case review.");
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== null) {
       void bootstrap();
     }
-  }, [queryCaseId, router]);
+  }, [language, queryCaseId, router]);
 
   const parsedCase = useMemo(() => parseRequest(caseItem), [caseItem]);
+  const specialistNames = parsedCase.specialists
+    .map((specialist) => t(language, SPECIALIST_LABEL_KEYS[specialist] ?? "council.review.noneSelected"))
+    .join(", ");
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -90,12 +105,12 @@ export default function CouncilNewReviewPage() {
       parsedCase.medications.length === 0 &&
       !parsedCase.history
     ) {
-      setError("Vui lòng nhập dữ liệu ca bệnh trước khi chạy hội chẩn.");
+      setError(t(language, "council.review.dataRequired"));
       return;
     }
 
     if (parsedCase.specialists.length < 2) {
-      setError("Vui lòng chọn tối thiểu 2 chuyên khoa.");
+      setError(t(language, "council.specialists.minimum"));
       return;
     }
 
@@ -115,7 +130,7 @@ export default function CouncilNewReviewPage() {
       setActiveCouncilCaseId(updated.id);
       router.push(`/council/result?caseId=${updated.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể chạy hội chẩn lúc này.");
+      setError(safeUserFacingError(cause, t(language, "council.error.run")));
     } finally {
       setIsSubmitting(false);
     }
@@ -123,8 +138,8 @@ export default function CouncilNewReviewPage() {
 
   return (
     <PageShell
-      title="Council Wizard - Review"
-      description="Bước 3/3: kiểm tra cấu hình case rồi chạy hội chẩn."
+      title={t(language, "council.review.title")}
+      description={t(language, "council.review.description")}
       variant="plain"
     >
       <div className="space-y-5">
@@ -133,17 +148,21 @@ export default function CouncilNewReviewPage() {
         <form onSubmit={onSubmit} className="space-y-5">
           <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-              Step 3/3 · Case #{caseItem?.id ?? "--"}
+              {t(language, "council.step", { step: 3, id: caseItem?.id ?? "--" })}
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">Review trước khi chạy</h2>
+            <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{t(language, "council.review.heading")}</h2>
 
             <ul className="mt-4 grid gap-2 text-sm text-[var(--text-secondary)] sm:grid-cols-2">
-              <li>Triệu chứng: {parsedCase.symptoms.length}</li>
-              <li>Xét nghiệm: {Object.keys(parsedCase.labs).length}</li>
-              <li>Thuốc: {parsedCase.medications.length}</li>
-              <li>Bệnh sử: {parsedCase.history ? "Đã có" : "Chưa có"}</li>
+              <li>{t(language, "council.review.symptoms", { count: parsedCase.symptoms.length })}</li>
+              <li>{t(language, "council.review.labs", { count: Object.keys(parsedCase.labs).length })}</li>
+              <li>{t(language, "council.review.medicines", { count: parsedCase.medications.length })}</li>
+              <li>{parsedCase.history ? t(language, "council.review.historyPresent") : t(language, "council.review.historyMissing")}</li>
               <li className="sm:col-span-2">
-                Chuyên khoa: {parsedCase.specialists.length}/{parsedCase.specialistCount} ({parsedCase.specialists.join(", ") || "chưa chọn"})
+                {t(language, "council.review.specialists", {
+                  selected: parsedCase.specialists.length,
+                  total: parsedCase.specialistCount,
+                  names: specialistNames || t(language, "council.review.noneSelected"),
+                })}
               </li>
             </ul>
           </section>
@@ -155,7 +174,7 @@ export default function CouncilNewReviewPage() {
               href={caseItem ? `/council/new/specialists?caseId=${caseItem.id}` : "/council/new/specialists"}
               className="inline-flex min-h-[42px] items-center rounded-lg border border-[color:var(--shell-border)] px-4 text-sm font-semibold"
             >
-              Quay lại bước 2
+              {t(language, "council.action.backStep", { step: 2 })}
             </Link>
 
             <button
@@ -163,7 +182,7 @@ export default function CouncilNewReviewPage() {
               disabled={isSubmitting || !caseItem}
               className="inline-flex min-h-[44px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {isSubmitting ? "Đang chạy hội chẩn..." : "Chạy hội chẩn AI"}
+              {isSubmitting ? t(language, "council.review.running") : t(language, "council.review.run")}
             </button>
           </div>
         </form>

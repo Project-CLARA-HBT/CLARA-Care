@@ -10,10 +10,11 @@ import {
 } from "react";
 
 import { getRole, type UserRole } from "@/lib/auth-store";
+import { t } from "@/lib/i18n/catalog";
 import { beginLogout } from "@/lib/logout";
 import { getNavItemsByRole } from "@/lib/navigation.config";
 import { trackChatMessageSent } from "@/lib/analytics/events";
-import { sanitizeUpstreamError, toModeLabel } from "@/lib/user-facing-text";
+import { sanitizeUpstreamError } from "@/lib/user-facing-text";
 import {
   getStoredUILanguage,
   onUILanguageChange,
@@ -26,9 +27,11 @@ import {
 } from "@/lib/theme";
 import {
   ResearchExecutionMode,
+  ResearchOutputMode,
   ResearchRetrievalStackMode,
   appendResearchConversationMessage,
   createResearchConversation,
+  isResearchOutputModesEnabled,
   resolveChatTransport,
 } from "@/lib/research";
 import {
@@ -92,6 +95,8 @@ export default function ChatShell() {
   const [retrievalStackMode, setRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
   const [personalMode, setPersonalMode] = useState(false);
+  const [outputMode, setOutputMode] = useState<ResearchOutputMode>("plain_language");
+  const outputModesEnabled = isResearchOutputModesEnabled();
 
   const [activeConversationId, setActiveConversationId] = useState<
     number | null
@@ -140,11 +145,7 @@ export default function ChatShell() {
     (sourceQuery: string) => {
       setMode("deep_beta");
       setQuery(sourceQuery);
-      setNotice(
-        uiLanguage === "en"
-          ? "Research mode is ready. Refine the question or run it now."
-          : "Đã sẵn sàng chế độ Nghiên cứu. Bạn có thể chỉnh câu hỏi hoặc chạy ngay.",
-      );
+      setNotice(t(uiLanguage, "chat.shell.notice.researchReady"));
       window.setTimeout(focusComposer, 0);
     },
     [focusComposer, uiLanguage],
@@ -161,11 +162,23 @@ export default function ChatShell() {
     }, 10);
   }, []);
 
-  const isEn = uiLanguage === "en";
-  const appNavItems = useMemo(() => getNavItemsByRole(role), [role]);
-  // User-facing mode label (Req 4.4): never expose the internal mode string,
-  // always present the Vietnamese End_User label via the shared mapping.
-  const activeModeLabel = useMemo(() => toModeLabel(mode), [mode]);
+  const appNavItems = useMemo(
+    () => getNavItemsByRole(role, uiLanguage),
+    [role, uiLanguage],
+  );
+  // User-facing mode label (Req 4.4): never expose an internal mode string.
+  const activeModeLabel = useMemo(
+    () =>
+      t(
+        uiLanguage,
+        mode === "fast"
+          ? "chat.shell.mode.fast"
+          : mode === "deep"
+            ? "chat.shell.mode.deep"
+            : "chat.shell.mode.deepBeta",
+      ),
+    [mode, uiLanguage],
+  );
   const latestAnswer = useMemo(
     () => latestAnswerFromTurn(turns.turns[turns.turns.length - 1] ?? null),
     [turns.turns],
@@ -315,6 +328,7 @@ export default function ChatShell() {
           retrievalStackMode,
           personalMode,
           uiLanguage,
+          outputMode: outputModesEnabled ? outputMode : undefined,
         });
 
         const localTurn = createConversationItem(message, result, {
@@ -359,9 +373,7 @@ export default function ChatShell() {
           });
           turns.appendTurn(fallbackId, localTurn);
           setNotice(
-            isEn
-              ? "Answer saved locally; backend sync will recover later."
-              : "Đã lưu local; backend sync sẽ khôi phục sau.",
+            t(uiLanguage, "chat.shell.notice.localFallback"),
           );
         }
 
@@ -380,15 +392,13 @@ export default function ChatShell() {
         await Promise.all([conversations.load(), workspace.loadShares()]);
       } catch (cause) {
         if (cause instanceof DOMException && cause.name === "AbortError") {
-          setNotice(isEn ? "Run cancelled." : "Đã hủy phiên.");
+          setNotice(t(uiLanguage, "chat.shell.notice.cancelled"));
           return;
         }
         setError(
           cause instanceof Error
             ? sanitizeUpstreamError(cause.message)
-            : isEn
-              ? "Could not process the question."
-              : "Không thể xử lý câu hỏi.",
+            : t(uiLanguage, "chat.shell.notice.processFailed"),
         );
       }
     },
@@ -396,7 +406,6 @@ export default function ChatShell() {
       activeConversationId,
       activeMeta,
       conversations,
-      isEn,
       mode,
       personalMode,
       query,
@@ -412,12 +421,12 @@ export default function ChatShell() {
     async (url: string) => {
       try {
         await navigator.clipboard.writeText(url);
-        setNotice(isEn ? "Copied." : "Đã sao chép.");
+        setNotice(t(uiLanguage, "chat.shell.notice.copied"));
       } catch {
-        window.prompt("Copy", url);
+        window.prompt(t(uiLanguage, "chat.shell.copyPrompt"), url);
       }
     },
-    [isEn],
+    [uiLanguage],
   );
 
   // --- Command palette -------------------------------------------------------
@@ -426,63 +435,62 @@ export default function ChatShell() {
     return [
       {
         id: "new-chat",
-        label: isEn ? "New chat" : "Chat mới",
+        label: t(uiLanguage, "chat.shell.command.newChat"),
         hint: "Ctrl/⌘+Shift+N",
         keywords: ["new", "chat", "conversation", "moi"],
         run: newChat,
       },
       {
         id: "focus-composer",
-        label: isEn ? "Focus composer" : "Nhập câu hỏi",
+        label: t(uiLanguage, "chat.shell.command.focusComposer"),
         hint: "/",
         keywords: ["focus", "composer", "prompt", "input"],
         run: () => focusComposer(),
       },
       {
         id: "search-conversations",
-        label: isEn ? "Search conversations" : "Tìm hội thoại",
+        label: t(uiLanguage, "chat.shell.command.searchConversations"),
         keywords: ["search", "find", "conversation", "tim", "workspace"],
         run: () => focusSearch(),
       },
       {
         id: "open-workspace",
-        label: isEn ? "Open workspace" : "Mở workspace",
+        label: t(uiLanguage, "chat.shell.command.openWorkspace"),
         keywords: ["workspace", "notes", "shares", "drawer", "folders"],
         run: () => setIsWorkspaceOpen(true),
       },
       {
         id: "mode-fast",
-        label: isEn ? "Mode: Quick" : "Chế độ: Nhanh",
+        label: t(uiLanguage, "chat.shell.command.modeQuick"),
         keywords: ["mode", "fast", "quick", "nhanh"],
         run: () => applyMode("fast"),
       },
       {
         id: "mode-deep",
-        label: isEn ? "Mode: Reason" : "Chế độ: Tư duy",
+        label: t(uiLanguage, "chat.shell.command.modeReason"),
         keywords: ["mode", "deep", "reason", "tu duy"],
         run: () => applyMode("deep"),
       },
       {
         id: "mode-deep-beta",
-        label: isEn ? "Mode: Pro" : "Chế độ: Pro",
+        label: t(uiLanguage, "chat.shell.command.modePro"),
         keywords: ["mode", "deep_beta", "pro"],
         run: () => applyMode("deep_beta"),
       },
       {
         id: "toggle-personal",
-        label: personalMode
-          ? isEn
-            ? "Personal mode: turn off"
-            : "Chế độ cá nhân: tắt"
-          : isEn
-            ? "Personal mode: turn on"
-            : "Chế độ cá nhân: bật",
+        label: t(
+          uiLanguage,
+          personalMode
+            ? "chat.shell.command.personalModeOff"
+            : "chat.shell.command.personalModeOn",
+        ),
         keywords: ["personal", "phr", "ca nhan", "private", "toggle"],
         run: () => togglePersonalMode(),
       },
       {
         id: "export-docx",
-        label: isEn ? "Export report (DOCX)" : "Xuất báo cáo (DOCX)",
+        label: t(uiLanguage, "chat.shell.command.exportDocx"),
         keywords: ["export", "docx", "word", "report"],
         disabled: !canExport,
         run: () => {
@@ -492,14 +500,15 @@ export default function ChatShell() {
               id,
               "docx",
               turns.turns,
-              activeMeta?.title || `Conversation ${id}`,
+              activeMeta?.title ||
+                t(uiLanguage, "chat.shell.defaultConversationTitle", { id }),
             );
           }
         },
       },
       {
         id: "export-md",
-        label: isEn ? "Export Markdown" : "Xuất Markdown",
+        label: t(uiLanguage, "chat.shell.command.exportMarkdown"),
         keywords: ["export", "markdown", "md"],
         disabled: !canExport,
         run: () => {
@@ -509,14 +518,15 @@ export default function ChatShell() {
               id,
               "markdown",
               turns.turns,
-              activeMeta?.title || `Conversation ${id}`,
+              activeMeta?.title ||
+                t(uiLanguage, "chat.shell.defaultConversationTitle", { id }),
             );
           }
         },
       },
       {
         id: "share",
-        label: isEn ? "Create share link" : "Tạo liên kết chia sẻ",
+        label: t(uiLanguage, "chat.shell.command.createShare"),
         keywords: ["share", "public", "link"],
         disabled: !canExport || conversations.apiUnavailable,
         run: () => {
@@ -531,22 +541,21 @@ export default function ChatShell() {
       },
       {
         id: "save-note",
-        label: isEn
-          ? "Save latest answer as note"
-          : "Lưu câu trả lời thành ghi chú",
+        label: t(uiLanguage, "chat.shell.command.saveLatestAnswer"),
         keywords: ["note", "save", "answer"],
         disabled: !latestAnswer.trim(),
         run: () => {
           void workspace
             .saveNote({
               title: (
-                turns.turns[turns.turns.length - 1]?.query ?? "Note"
+                turns.turns[turns.turns.length - 1]?.query ??
+                  t(uiLanguage, "chat.shell.defaultNoteTitle")
               ).slice(0, 90),
               contentMarkdown: latestAnswer,
               tags: ["answer", "auto"],
               conversationId: asConversationId(activeConversationId),
             })
-            .then(() => setNotice(isEn ? "Note saved." : "Đã lưu ghi chú."));
+            .then(() => setNotice(t(uiLanguage, "chat.shell.notice.noteSaved")));
         },
       },
     ];
@@ -558,12 +567,12 @@ export default function ChatShell() {
     copyShareUrl,
     focusComposer,
     focusSearch,
-    isEn,
     latestAnswer,
     newChat,
     personalMode,
     togglePersonalMode,
     turns.turns,
+    uiLanguage,
     workspace,
   ]);
 
@@ -618,7 +627,7 @@ export default function ChatShell() {
         href="#chat-v2-main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[80] focus:rounded-lg focus:bg-[var(--brand-600)] focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
       >
-        {isEn ? "Skip to conversation" : "Tới khung trò chuyện"}
+        {t(uiLanguage, "chat.shell.skipToConversation")}
       </a>
 
       <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[18rem_minmax(0,1fr)]">
@@ -626,7 +635,7 @@ export default function ChatShell() {
         {isMobileSidebarOpen ? (
           <button
             type="button"
-            aria-label={isEn ? "Close sidebar" : "Đóng sidebar"}
+            aria-label={t(uiLanguage, "chat.shell.closeSidebar")}
             onClick={() => setIsMobileSidebarOpen(false)}
             className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] xl:hidden"
           />
@@ -656,12 +665,12 @@ export default function ChatShell() {
         <main
           id="chat-v2-main"
           className="flex h-full min-h-0 flex-col overflow-hidden"
-          aria-label={isEn ? "Conversation canvas" : "Khung trò chuyện"}
+          aria-label={t(uiLanguage, "chat.shell.conversationCanvas")}
         >
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-[color:var(--shell-border)] bg-[var(--surface-panel)]/95 px-3 py-2 backdrop-blur-lg">
             <div className="flex min-w-0 items-center gap-2">
               <IconButton
-                label={isEn ? "Open sidebar" : "Mở sidebar"}
+                label={t(uiLanguage, "chat.shell.openSidebar")}
                 icon="menu"
                 className="xl:hidden"
                 onClick={openMobileSidebar}
@@ -673,40 +682,39 @@ export default function ChatShell() {
             </div>
             <div className="flex items-center gap-1.5">
               <nav
-                aria-label={isEn ? "Primary navigation" : "Điều hướng chính"}
+                aria-label={t(uiLanguage, "navigation.primary")}
                 className="hidden items-center gap-1 md:flex"
               >
                 <Link
                   href="/dashboard"
                   className="rounded-lg px-2.5 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
                 >
-                  {isEn ? "Dashboard" : "Tổng quan"}
+                  {t(uiLanguage, "chat.shell.dashboard")}
                 </Link>
                 <Link
                   href="/research"
                   className="rounded-lg px-2.5 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
                 >
-                  {isEn ? "Research" : "Nghiên cứu"}
+                  {t(uiLanguage, "chat.shell.research")}
                 </Link>
               </nav>
               <IconButton
                 label={
-                  resolvedTheme === "dark"
-                    ? isEn
-                      ? "Switch to light mode"
-                      : "Chuyển sang giao diện sáng"
-                    : isEn
-                      ? "Switch to dark mode"
-                      : "Chuyển sang giao diện tối"
+                  t(
+                    uiLanguage,
+                    resolvedTheme === "dark"
+                      ? "theme.switchToLight"
+                      : "theme.switchToDark",
+                  )
                 }
                 icon={resolvedTheme === "dark" ? "light_mode" : "dark_mode"}
                 onClick={toggleTheme}
               />
               <button
                 type="button"
-                aria-label={isEn ? "Open all tools" : "Mở các công cụ"}
+                aria-label={t(uiLanguage, "chat.shell.openAllTools")}
                 aria-expanded={isAppMenuOpen}
-                title={isEn ? "All tools" : "Các công cụ"}
+                title={t(uiLanguage, "chat.shell.allTools")}
                 onClick={() => setIsAppMenuOpen((open) => !open)}
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] px-2.5 text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
               >
@@ -717,16 +725,16 @@ export default function ChatShell() {
                   apps
                 </span>
                 <span className="hidden text-xs font-semibold sm:inline">
-                  {isEn ? "Tools" : "Công cụ"}
+                  {t(uiLanguage, "chat.shell.tools")}
                 </span>
               </button>
               <IconButton
-                label={isEn ? "Command palette" : "Bảng lệnh"}
+                label={t(uiLanguage, "chat.shell.commandPalette")}
                 icon="bolt"
                 onClick={palette.open}
               />
               <IconButton
-                label={isEn ? "Open workspace" : "Mở workspace"}
+                label={t(uiLanguage, "chat.shell.command.openWorkspace")}
                 icon="dock_to_left"
                 onClick={openWorkspace}
               />
@@ -737,18 +745,18 @@ export default function ChatShell() {
             <div
               className="absolute right-3 top-[3.35rem] z-30 w-[min(92vw,22rem)] rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl shadow-slate-950/10"
               role="dialog"
-              aria-label={isEn ? "CLARA tools" : "Công cụ CLARA"}
+              aria-label={t(uiLanguage, "chat.shell.claraTools")}
             >
               <div className="flex items-center justify-between px-2 py-1.5">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  {isEn ? "CLARA tools" : "Công cụ CLARA"}
+                  {t(uiLanguage, "chat.shell.claraTools")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setIsAppMenuOpen(false)}
                   className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 >
-                  {isEn ? "Close" : "Đóng"}
+                  {t(uiLanguage, "chat.shell.close")}
                 </button>
               </div>
               <div className="grid gap-1 sm:grid-cols-2">
@@ -782,14 +790,14 @@ export default function ChatShell() {
                   onClick={() => setIsAppMenuOpen(false)}
                   className="text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 >
-                  {isEn ? "Account" : "Tài khoản"}
+                  {t(uiLanguage, "profile.account")}
                 </Link>
                 <button
                   type="button"
                   onClick={() => beginLogout()}
                   className="text-xs font-semibold text-[var(--status-danger-text)]"
                 >
-                  {isEn ? "Sign out" : "Đăng xuất"}
+                  {t(uiLanguage, "action.signOut")}
                 </button>
               </div>
             </div>
@@ -806,9 +814,7 @@ export default function ChatShell() {
             >
               info
             </span>
-            {isEn
-              ? "CLARA is an AI health information assistant, not a replacement for a clinician."
-              : "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế."}
+            {t(uiLanguage, "chat.shell.disclaimer")}
           </p>
 
           {error ? (
@@ -866,6 +872,9 @@ export default function ChatShell() {
             onChangeRetrievalStackMode={setRetrievalStackMode}
             personalMode={personalMode}
             onTogglePersonalMode={togglePersonalMode}
+            outputModesEnabled={outputModesEnabled}
+            outputMode={outputMode}
+            onChangeOutputMode={setOutputMode}
             liveStatusNote={stream.statusNote}
             uiLanguage={uiLanguage}
             userRole={role}

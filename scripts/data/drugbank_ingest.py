@@ -45,6 +45,7 @@ The DrugBank ``<description>`` free-text is mapped to CLARA's
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -191,6 +192,14 @@ def _collect_aliases(drug: ET.Element) -> list[str]:
     return aliases
 
 
+def _primary_drugbank_id(drug: ET.Element) -> str:
+    for identifier in drug.findall(_q("drugbank-id")):
+        value = _text(identifier)
+        if value and identifier.get("primary", "false").lower() == "true":
+            return value
+    return ""
+
+
 def parse_drugbank(
     input_path: Path,
     limit: int | None,
@@ -211,6 +220,7 @@ def parse_drugbank(
         if not name:
             continue
         canonical = name.lower()
+        drugbank_id = _primary_drugbank_id(drug)
 
         # --- Dictionary: canonical self-record + alias records. ---
         def _add_dictionary_record(brand_value: str) -> None:
@@ -222,6 +232,7 @@ def parse_drugbank(
                 "normalized_name": canonical,
                 "active_ingredients": [canonical],
                 "rxcui": "",
+                "drugbank_id": drugbank_id,
             }
 
         _add_dictionary_record(canonical)
@@ -275,12 +286,28 @@ def _bucket_by_letter(
     return buckets
 
 
+def _sha256_path(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _manifest_digest(payload: dict[str, Any]) -> str:
+    unsigned = dict(payload)
+    unsigned.pop("manifest_sha256", None)
+    return hashlib.sha256(
+        json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+    ).hexdigest()
+
+
 def write_shards(
     out_dir: Path,
     ddi_by_pair: dict[tuple[str, str], dict[str, Any]],
     dictionary_by_brand: dict[str, dict[str, Any]],
     drugs_seen: int,
     version: str,
+    source_version: str,
+    source_sha256: str,
     max_records_per_shard: int = _MAX_RECORDS_PER_SHARD,
 ) -> dict[str, Any]:
     ddi_dir = out_dir / "ddi"
@@ -311,7 +338,13 @@ def write_shards(
                 json.dumps(payload, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            ddi_shards.append({"file": f"ddi/{filename}", "rule_count": len(chunk)})
+            ddi_shards.append(
+                {
+                    "file": f"ddi/{filename}",
+                    "rule_count": len(chunk),
+                    "sha256": _sha256_path(ddi_dir / filename),
+                }
+            )
 
     # --- Dictionary shards (key on brand_vn). ---
     dict_records = sorted(dictionary_by_brand.values(), key=lambda rec: rec["brand_vn"])
@@ -329,12 +362,18 @@ def write_shards(
                 encoding="utf-8",
             )
             dict_shards.append(
-                {"file": f"dictionary/{filename}", "record_count": len(chunk)}
+                {
+                    "file": f"dictionary/{filename}",
+                    "record_count": len(chunk),
+                    "sha256": _sha256_path(dict_dir / filename),
+                }
             )
 
     manifest = {
         "version": version,
         "source": "drugbank",
+        "source_version": source_version,
+        "source_sha256": source_sha256,
         "license": "commercial",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "drugs_parsed": drugs_seen,
@@ -343,6 +382,7 @@ def write_shards(
         "ddi_shards": ddi_shards,
         "dictionary_shards": dict_shards,
     }
+    manifest["manifest_sha256"] = _manifest_digest(manifest)
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -394,6 +434,11 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Override the shard version label (default: drugbank-<UTC-date>).",
     )
+    parser.add_argument(
+        "--source-version",
+        default=None,
+        help="DrugBank database release identifier; defaults to the generated artifact version.",
+    )
     args = parser.parse_args(argv)
 
     input_path: Path = args.input
@@ -413,6 +458,8 @@ def main(argv: list[str] | None = None) -> int:
         dictionary_by_brand=dictionary_by_brand,
         drugs_seen=drugs_seen,
         version=version,
+        source_version=str(args.source_version or version).strip(),
+        source_sha256=_sha256_path(input_path),
     )
 
     print(f"DrugBank ingest complete -> {args.out_dir}")

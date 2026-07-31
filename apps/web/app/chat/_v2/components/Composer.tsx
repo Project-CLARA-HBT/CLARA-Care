@@ -3,9 +3,11 @@
 import { memo, type FormEvent } from "react";
 
 import type { UserRole } from "@/lib/auth-store";
+import { t } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import type {
   ResearchExecutionMode,
+  ResearchOutputMode,
   ResearchRetrievalStackMode,
 } from "@/lib/research";
 import { IconButton } from "@/app/chat/_v2/components/primitives";
@@ -21,11 +23,14 @@ import { IconButton } from "@/app/chat/_v2/components/primitives";
 
 const MODE_OPTIONS: Array<{
   id: ResearchExecutionMode;
-  label: Record<UILanguage, string>;
+  labelKey:
+    | "chat.composer.mode.fast"
+    | "chat.composer.mode.deep"
+    | "chat.composer.mode.research";
 }> = [
-  { id: "fast", label: { vi: "Nhanh", en: "Quick" } },
-  { id: "deep", label: { vi: "Phân tích", en: "Analyze" } },
-  { id: "deep_beta", label: { vi: "Nghiên cứu", en: "Research" } },
+  { id: "fast", labelKey: "chat.composer.mode.fast" },
+  { id: "deep", labelKey: "chat.composer.mode.deep" },
+  { id: "deep_beta", labelKey: "chat.composer.mode.research" },
 ];
 
 export type ComposerProps = {
@@ -40,6 +45,9 @@ export type ComposerProps = {
   onChangeRetrievalStackMode: (mode: ResearchRetrievalStackMode) => void;
   personalMode: boolean;
   onTogglePersonalMode: () => void;
+  outputModesEnabled: boolean;
+  outputMode: ResearchOutputMode;
+  onChangeOutputMode: (mode: ResearchOutputMode) => void;
   liveStatusNote: string;
   uiLanguage: UILanguage;
   userRole?: UserRole;
@@ -58,29 +66,29 @@ function Composer(props: ComposerProps) {
     onChangeRetrievalStackMode,
     personalMode,
     onTogglePersonalMode,
+    outputModesEnabled,
+    outputMode,
+    onChangeOutputMode,
     liveStatusNote,
     uiLanguage,
     userRole = "normal",
   } = props;
-  const isEn = uiLanguage === "en";
   const isFast = mode === "fast";
-  const contextLabel = isEn
-    ? userRole === "researcher"
-      ? "Use my sources"
+  const canUseProfessionalOutput = userRole === "researcher" || userRole === "doctor" || userRole === "admin";
+  const contextLabel = t(
+    uiLanguage,
+    userRole === "researcher"
+      ? "chat.composer.context.sources"
       : userRole === "doctor" || userRole === "admin"
-        ? "Use case context"
-        : "Use my health profile"
-    : userRole === "researcher"
-      ? "Dùng nguồn của tôi"
-      : userRole === "doctor" || userRole === "admin"
-        ? "Dùng bối cảnh ca bệnh"
-        : "Dùng hồ sơ của tôi";
+        ? "chat.composer.context.case"
+        : "chat.composer.context.profile",
+  );
 
   return (
     <form
       onSubmit={onSubmit}
       className="border-t border-[color:var(--shell-border)] bg-[var(--bg-canvas)] px-3 pb-3 pt-2 sm:px-5 sm:pb-4"
-      aria-label={isEn ? "Message composer" : "Khung soạn câu hỏi"}
+      aria-label={t(uiLanguage, "chat.composer.aria")}
     >
       <div className="mx-auto w-full max-w-3xl">
         {/* Live region: streaming status updates (Req 5.2). The status text
@@ -101,7 +109,7 @@ function Composer(props: ComposerProps) {
 
         <div className="rounded-[1.4rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-[0_18px_50px_-34px_rgba(15,23,42,.55)] transition focus-within:border-[color:var(--shell-border-strong)] focus-within:shadow-[0_20px_55px_-32px_rgba(37,99,235,.4)]">
           <label className="sr-only" htmlFor="chat-composer-input">
-            {isEn ? "Your medical question" : "Câu hỏi y tế của bạn"}
+            {t(uiLanguage, "chat.composer.questionLabel")}
           </label>
           <textarea
             id="chat-composer-input"
@@ -115,7 +123,7 @@ function Composer(props: ComposerProps) {
             }}
             rows={2}
             placeholder={
-              isEn ? "Ask a health question..." : "Đặt câu hỏi về sức khỏe..."
+              t(uiLanguage, "chat.composer.placeholder")
             }
             className="min-h-[58px] max-h-40 w-full resize-none bg-transparent px-2.5 py-2 text-[15px] leading-6 text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
           />
@@ -124,7 +132,7 @@ function Composer(props: ComposerProps) {
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <div
                 role="group"
-                aria-label={isEn ? "Response mode" : "Chế độ trả lời"}
+                aria-label={t(uiLanguage, "chat.composer.mode")}
                 className="inline-flex rounded-xl bg-[var(--surface-muted)] p-0.5"
               >
                 {MODE_OPTIONS.map((option) => {
@@ -142,7 +150,7 @@ function Composer(props: ComposerProps) {
                           : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                     >
-                      {option.label[uiLanguage]}
+                      {t(uiLanguage, option.labelKey)}
                     </button>
                   );
                 })}
@@ -180,14 +188,14 @@ function Composer(props: ComposerProps) {
                       tune
                     </span>
                     <span className="hidden sm:inline">
-                      {isEn ? "Sources" : "Nguồn"}
+                      {t(uiLanguage, "chat.composer.sources")}
                     </span>
                   </summary>
                   <div className="absolute bottom-10 left-0 z-20 min-w-48 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl">
                     <button
                       type="button"
                       aria-pressed={personalMode}
-                      aria-label={`${contextLabel}${isEn ? " (mobile)" : " (di động)"}`}
+                      aria-label={`${contextLabel}${t(uiLanguage, "chat.composer.mobileSuffix")}`}
                       onClick={onTogglePersonalMode}
                       className={[
                         "mb-2 flex min-h-[36px] w-full items-center gap-2 rounded-lg border px-2 text-left text-[11px] font-semibold sm:hidden",
@@ -208,7 +216,7 @@ function Composer(props: ComposerProps) {
                       className="block px-1 pb-1.5 text-[10px] font-semibold text-[var(--text-muted)]"
                       htmlFor="chat-source-depth"
                     >
-                      {isEn ? "Evidence sources" : "Nguồn bằng chứng"}
+                      {t(uiLanguage, "chat.composer.evidenceSources")}
                     </label>
                     <select
                       id="chat-source-depth"
@@ -221,12 +229,31 @@ function Composer(props: ComposerProps) {
                       className="min-h-[36px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-xs text-[var(--text-primary)]"
                     >
                       <option value="auto">
-                        {isEn ? "Best available" : "Tự chọn phù hợp"}
+                        {t(uiLanguage, "chat.composer.bestAvailable")}
                       </option>
                       <option value="full">
-                        {isEn ? "Search all sources" : "Tìm tất cả nguồn"}
+                        {t(uiLanguage, "chat.composer.allSources")}
                       </option>
                     </select>
+                    {outputModesEnabled && canUseProfessionalOutput ? (
+                      <label className="mt-2 block px-1 text-[10px] font-semibold text-[var(--text-muted)]">
+                        {t(uiLanguage, "chat.composer.outputMode")}
+                        <select
+                          value={outputMode}
+                          onChange={(event) =>
+                            onChangeOutputMode(event.target.value as ResearchOutputMode)
+                          }
+                          className="mt-1 min-h-[36px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-xs text-[var(--text-primary)]"
+                        >
+                          <option value="plain_language">
+                            {t(uiLanguage, "chat.composer.outputMode.plainLanguage")}
+                          </option>
+                          <option value="professional">
+                            {t(uiLanguage, "chat.composer.outputMode.professional")}
+                          </option>
+                        </select>
+                      </label>
+                    ) : null}
                   </div>
                 </details>
               ) : null}
@@ -234,7 +261,7 @@ function Composer(props: ComposerProps) {
 
             {isRunning ? (
               <IconButton
-                label={isEn ? "Cancel run" : "Hủy phiên"}
+                label={t(uiLanguage, "chat.composer.cancel")}
                 icon="stop"
                 variant="danger"
                 onClick={onCancel}
@@ -242,7 +269,7 @@ function Composer(props: ComposerProps) {
               />
             ) : (
               <IconButton
-                label={isEn ? "Send" : "Gửi"}
+                label={t(uiLanguage, "chat.composer.send")}
                 icon="arrow_upward"
                 variant="primary"
                 type="submit"
@@ -253,9 +280,7 @@ function Composer(props: ComposerProps) {
           </div>
         </div>
         <p className="mt-1.5 text-center text-[10px] text-[var(--text-muted)]">
-          {isEn
-            ? "Check important medical decisions with a qualified clinician."
-            : "Hãy xác nhận quyết định y tế quan trọng với nhân viên y tế."}
+          {t(uiLanguage, "chat.composer.safetyNote")}
         </p>
       </div>
     </form>

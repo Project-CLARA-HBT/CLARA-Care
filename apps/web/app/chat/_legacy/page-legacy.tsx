@@ -28,12 +28,13 @@ import { getRole, type UserRole } from "@/lib/auth-store";
 import { getChatIntentDebug, getChatReply, sendChatMessage, streamChatMessage } from "@/lib/chat";
 import { trackChatMessageSent } from "@/lib/analytics/events";
 import {
-  sanitizeUpstreamError,
+  safeUserFacingError,
   stripTelemetryLabels,
   toModeLabel,
 } from "@/lib/user-facing-text";
 import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import {
   getStoredUILanguage,
   onUILanguageChange,
@@ -88,22 +89,23 @@ import {
   updateWorkspaceNote,
 } from "@/lib/workspace";
 
-const QUICK_PROMPTS_BY_LANGUAGE: Record<UILanguage, string[]> = {
-  vi: [
-    "Tôi đang uống metformin, cần lưu ý gì?",
-    "Thuốc này có tương tác với thuốc nào?",
-    "Giải thích kết quả xét nghiệm này giúp tôi.",
-    "Khi nào tôi nên đi khám bác sĩ?",
-    "Tác dụng phụ thường gặp của thuốc này là gì?",
-  ],
-  en: [
-    "I take metformin. What should I watch for?",
-    "Which medicines can this interact with?",
-    "Help me understand this lab result.",
-    "When should I see a doctor?",
-    "What common side effects can this medicine cause?",
-  ],
-};
+// These are visible starter questions, not runtime medical content. Keeping
+// their identifiers here lets the typed catalog own Vietnamese/English wording
+// while preserving their existing order and submission behavior.
+const QUICK_PROMPT_KEYS: readonly UITranslationKey[] = [
+  "chat.legacyWorkspace.quickPrompt.metformin",
+  "chat.legacyWorkspace.quickPrompt.interactions",
+  "chat.legacyWorkspace.quickPrompt.labResult",
+  "chat.legacyWorkspace.quickPrompt.seeDoctor",
+  "chat.legacyWorkspace.quickPrompt.sideEffects",
+];
+
+const FOLLOW_UP_QUERY_KEYS: readonly UITranslationKey[] = [
+  "chat.legacyWorkspace.followUp.checkInteractions",
+  "chat.legacyWorkspace.followUp.askSideEffects",
+  "chat.legacyWorkspace.followUp.enterMedicationList",
+  "chat.legacyWorkspace.followUp.createConsultReport",
+];
 
 const LOCAL_WORKSPACE_MAX_ITEMS = 80;
 
@@ -123,16 +125,24 @@ type ConversationVirtualItem = {
   dayLabel: ConversationDayBucket | null;
 };
 
+const CONVERSATION_DAY_LABEL_KEYS: Record<ConversationDayBucket, UITranslationKey> = {
+  today: "chat.legacyWorkspace.conversation.day.today",
+  yesterday: "chat.legacyWorkspace.conversation.day.yesterday",
+  week: "chat.legacyWorkspace.conversation.day.week",
+  older: "chat.legacyWorkspace.conversation.day.older",
+  unknown: "chat.legacyWorkspace.conversation.day.unknown",
+};
+
 const WORKSPACE_LEFT_VIEW_OPTIONS: Array<{
   id: WorkspaceLeftView;
   label: string;
-  title: Record<UILanguage, string>;
+  titleKey: UITranslationKey;
 }> = [
-  { id: "all", label: "AL", title: { vi: "Tất cả", en: "All" } },
-  { id: "chat", label: "CH", title: { vi: "Chat", en: "Chat" } },
-  { id: "notes", label: "NT", title: { vi: "Ghi chú", en: "Notes" } },
-  { id: "discover", label: "DS", title: { vi: "Khám phá", en: "Discover" } },
-  { id: "shares", label: "SH", title: { vi: "Chia sẻ", en: "Shares" } },
+  { id: "all", label: "AL", titleKey: "chat.legacyWorkspace.view.all" },
+  { id: "chat", label: "CH", titleKey: "chat.legacyWorkspace.view.chat" },
+  { id: "notes", label: "NT", titleKey: "chat.workspace.notes" },
+  { id: "discover", label: "DS", titleKey: "chat.legacyWorkspace.view.discover" },
+  { id: "shares", label: "SH", titleKey: "chat.workspace.shares" },
 ];
 const WORKSPACE_ADVANCED_VIEW_OPTIONS = WORKSPACE_LEFT_VIEW_OPTIONS.filter(
   (option) => option.id !== "chat"
@@ -167,8 +177,8 @@ function parseTagsInput(value: string): string[] {
     .slice(0, 20);
 }
 
-function buildConversationPreview(item: WorkspaceConversationItem): string {
-  const candidate = item.title || item.preview || "Conversation";
+function buildConversationPreview(item: WorkspaceConversationItem, language: UILanguage): string {
+  const candidate = item.title || item.preview || t(language, "chat.legacyWorkspace.conversation.untitled");
   return candidate.length > 80 ? `${candidate.slice(0, 80)}...` : candidate;
 }
 
@@ -194,11 +204,7 @@ function toDayKey(ts: number): ConversationDayBucket {
 }
 
 function formatConversationDayLabel(bucket: ConversationDayBucket, language: UILanguage): string {
-  if (bucket === "today") return language === "en" ? "Today" : "Hôm nay";
-  if (bucket === "yesterday") return language === "en" ? "Yesterday" : "Hôm qua";
-  if (bucket === "week") return language === "en" ? "Last 7 days" : "7 ngày qua";
-  if (bucket === "older") return language === "en" ? "Older" : "Cũ hơn";
-  return language === "en" ? "Unknown" : "Không rõ";
+  return t(language, CONVERSATION_DAY_LABEL_KEYS[bucket]);
 }
 
 function latestAnswerFromTurn(turn: ConversationItem | null): string {
@@ -220,6 +226,21 @@ function isNotFoundLikeError(cause: unknown): boolean {
     message.includes("404") ||
     message.includes("không tồn tại")
   );
+}
+
+/**
+ * Never surface a raw API/transport error in the consumer workspace. The
+ * catalog fallback describes the failed action in the selected UI language;
+ * `safeUserFacingError` only preserves a short, already human-readable
+ * message and rejects stack traces, transport detail, timeouts, and other
+ * operational content.
+ */
+function safeWorkspaceError(
+  cause: unknown,
+  language: UILanguage,
+  fallbackKey: UITranslationKey
+): string {
+  return safeUserFacingError(cause, t(language, fallbackKey));
 }
 
 function buildConversationMarkdownExport(
@@ -404,11 +425,7 @@ const LOGIC_FLOW_BLUEPRINT: Array<{
 
 type TelemetryCopy = {
   systemTelemetry: string;
-  confidence: string;
-  confidenceSignalPending: string;
-  confidenceHighReliability: string;
-  confidenceNeedsReview: string;
-  neuralLoad: string;
+  noSignals: string;
   logicFlow: string;
   sourceIntel: string;
   globalMedicalDatabases: string;
@@ -425,11 +442,7 @@ type TelemetryCopy = {
 const TELEMETRY_COPY_BY_LANGUAGE: Record<UILanguage, TelemetryCopy> = {
   vi: {
     systemTelemetry: "Theo dõi",
-    confidence: "Độ tin cậy",
-    confidenceSignalPending: "Chờ tín hiệu",
-    confidenceHighReliability: "Tin cậy cao",
-    confidenceNeedsReview: "Cần rà soát",
-    neuralLoad: "Tải suy luận",
+    noSignals: "Chưa có tín hiệu kỹ thuật từ phiên này.",
     logicFlow: "Luồng xử lý",
     sourceIntel: "Nguồn",
     globalMedicalDatabases: "Nguồn y khoa toàn cầu",
@@ -444,11 +457,7 @@ const TELEMETRY_COPY_BY_LANGUAGE: Record<UILanguage, TelemetryCopy> = {
   },
   en: {
     systemTelemetry: "Telemetry",
-    confidence: "Confidence",
-    confidenceSignalPending: "Signal Pending",
-    confidenceHighReliability: "High Reliability",
-    confidenceNeedsReview: "Needs Review",
-    neuralLoad: "Neural Load",
+    noSignals: "No technical signal is available for this session yet.",
     logicFlow: "Logic Flow",
     sourceIntel: "Source Intel",
     globalMedicalDatabases: "Global Medical Databases",
@@ -750,90 +759,6 @@ function buildLogicFlowNodes(result: ResearchTier2Result | null): LogicFlowNode[
       detail,
     };
   });
-}
-
-function normalizeConfidenceRatio(value: number | undefined): number | undefined {
-  if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
-  if (value <= 1) return value;
-  if (value <= 100) return value / 100;
-  return undefined;
-}
-
-function extractConfidenceFromScores(
-  scores: ResearchTier2Result["telemetry"]["scores"],
-  preferredKeywords: string[]
-): number | undefined {
-  for (const score of scores) {
-    if (typeof score.value !== "number") continue;
-    const label = score.label.trim().toLowerCase();
-    if (!preferredKeywords.some((keyword) => label.includes(keyword))) continue;
-    const normalized = normalizeConfidenceRatio(score.value);
-    if (normalized !== undefined) return normalized;
-  }
-  return undefined;
-}
-
-function resolveTelemetryConfidence(result: ResearchTier2Result | null): number | undefined {
-  if (!result) return undefined;
-
-  const explicit = normalizeConfidenceRatio(result.verificationStatus?.confidence);
-  if (explicit !== undefined) return explicit;
-
-  const matrixConfidences = result.telemetry.verificationMatrix
-    .map((item) => normalizeConfidenceRatio(item.confidence))
-    .filter((value): value is number => value !== undefined);
-  if (matrixConfidences.length) {
-    const avg = matrixConfidences.reduce((sum, value) => sum + value, 0) / matrixConfidences.length;
-    return Math.max(0, Math.min(1, avg));
-  }
-
-  const scoreConfidence = extractConfidenceFromScores(result.telemetry.scores, [
-    "verification confidence",
-    "confidence",
-  ]);
-  if (scoreConfidence !== undefined) return scoreConfidence;
-
-  const relevanceConfidenceRaw = extractConfidenceFromScores(result.telemetry.scores, [
-    "relevance",
-    "retrieval score",
-    "score",
-  ]);
-  if (relevanceConfidenceRaw !== undefined && relevanceConfidenceRaw > 0) return relevanceConfidenceRaw;
-
-  const routing = normalizeConfidenceRatio(result.debug.routing?.confidence);
-  if (routing !== undefined) return routing;
-
-  const hasAnswer = Boolean(result.answer?.trim());
-  const citationCount = result.citations.length;
-  const docCount = result.telemetry.docs.length;
-  const sourceAttemptCount = result.telemetry.sourceAttempts.length;
-  const flowStageCount = result.flowStages.length;
-  const verificationCount = result.telemetry.verificationMatrix.length;
-  const errorCount = result.telemetry.errors.length;
-
-  const hasSignal =
-    hasAnswer ||
-    citationCount > 0 ||
-    docCount > 0 ||
-    sourceAttemptCount > 0 ||
-    flowStageCount > 0 ||
-    verificationCount > 0;
-
-  if (!hasSignal) return undefined;
-
-  let heuristic = 0.5;
-  heuristic += Math.min(6, citationCount) * 0.03;
-  heuristic += Math.min(10, docCount) * 0.015;
-  heuristic += Math.min(6, sourceAttemptCount) * 0.01;
-  heuristic += Math.min(4, flowStageCount) * 0.02;
-  heuristic += Math.min(3, verificationCount) * 0.025;
-  if (hasAnswer) heuristic += 0.08;
-  if (errorCount > 0) heuristic -= Math.min(0.18, errorCount * 0.06);
-  if (relevanceConfidenceRaw === 0 && (citationCount > 0 || docCount > 0)) {
-    heuristic = Math.max(heuristic, 0.58);
-  }
-
-  return Math.max(0.18, Math.min(0.92, heuristic));
 }
 
 function logicFlowStatusMeta(status: LogicFlowNodeStatus): {
@@ -1323,18 +1248,14 @@ export default function ChatWorkspacePage() {
             };
           });
           setConversations(fallbackItems);
-          setNotice(
-            "Workspace API chưa sẵn sàng, đang dùng lịch sử research làm nguồn conversation."
-          );
+          setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.researchHistoryFallback"));
           return fallbackItems;
         } catch {
           // continue to generic error handler below.
         }
       }
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không thể tải danh sách hội thoại workspace."
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.loadConversations")
       );
       return [];
     } finally {
@@ -1343,6 +1264,7 @@ export default function ChatWorkspacePage() {
   }, [
     activeConversationId,
     selectedFolderFilterId,
+    uiLanguage,
     workspaceApiUnavailable,
   ]);
 
@@ -1410,14 +1332,20 @@ export default function ChatWorkspacePage() {
         setWorkspaceApiUnavailable(true);
       }
       if (bootstrapErrors.length) {
-        setNotice(`Workspace loaded with partial data (${bootstrapErrors.join(", ")}).`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.partialData", {
+            sources: bootstrapErrors.join(", "),
+          })
+        );
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải workspace chat.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.loadWorkspace")
+      );
     } finally {
       setIsLoadingWorkspace(false);
     }
-  }, [loadConversations, loadNotes, loadShares, loadSuggestions]);
+  }, [loadConversations, loadNotes, loadShares, loadSuggestions, uiLanguage]);
 
   const loadConversationTurns = useCallback(async (conversationId: number, fallbackItem?: WorkspaceConversationItem) => {
     setIsLoadingTurns(true);
@@ -1431,7 +1359,11 @@ export default function ChatWorkspacePage() {
         }
         setConversationTurns([]);
         if (fallbackItem) {
-          setNotice(`Conversation #${fallbackItem.conversation_id} chưa có message chi tiết.`);
+          setNotice(
+            t(uiLanguage, "chat.legacyWorkspace.notice.noDetailedMessages", {
+              id: fallbackItem.conversation_id,
+            })
+          );
         }
         return;
       }
@@ -1455,19 +1387,19 @@ export default function ChatWorkspacePage() {
       const localTurns = localTurnsByConversationId[conversationId];
       if (Array.isArray(localTurns) && localTurns.length) {
         setConversationTurns(localTurns);
-        setNotice(`Đang hiển thị bản local cache cho conversation #${conversationId}.`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.localCache", { id: conversationId })
+        );
       } else {
         setConversationTurns([]);
       }
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không thể tải tin nhắn của conversation."
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.loadMessages")
       );
     } finally {
       setIsLoadingTurns(false);
     }
-  }, [localTurnsByConversationId]);
+  }, [localTurnsByConversationId, uiLanguage]);
 
   useEffect(() => {
     void loadStaticWorkspaceData();
@@ -1501,15 +1433,15 @@ export default function ChatWorkspacePage() {
     };
   }, [activeConversationId]);
 
-  const copyText = useCallback(async (value: string, successNotice = "Đã copy.") => {
+  const copyText = useCallback(async (value: string, successNotice?: string) => {
     if (!value.trim()) return;
     try {
       await navigator.clipboard.writeText(value);
-      setNotice(successNotice);
+      setNotice(successNotice ?? t(uiLanguage, "chat.legacyWorkspace.notice.copySuccess"));
     } catch {
-      window.prompt("Copy", value);
+      window.prompt(t(uiLanguage, "chat.legacyWorkspace.action.copyPrompt"), value);
     }
-  }, []);
+  }, [uiLanguage]);
 
   useEffect(() => {
     const keyword = searchText.trim();
@@ -1528,7 +1460,7 @@ export default function ChatWorkspacePage() {
       } catch (cause) {
         if (!active) return;
         setSearchResult(null);
-        setError(cause instanceof Error ? cause.message : "Không thể tìm kiếm trong workspace.");
+        setError(safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.search"));
       } finally {
         if (active) setIsSearching(false);
       }
@@ -1538,7 +1470,7 @@ export default function ChatWorkspacePage() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [searchText]);
+  }, [searchText, uiLanguage]);
 
   const displayedConversations = useMemo(() => {
     if (searchResult) return searchResult.conversations;
@@ -1655,11 +1587,11 @@ export default function ChatWorkspacePage() {
   const applyBulkMetaUpdate = useCallback(
     async (payload: { folderId?: number | null; isFavorite?: boolean }) => {
       if (workspaceApiUnavailable) {
-        setNotice("Workspace API chưa sẵn sàng nên bulk metadata đang tạm khóa.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.bulkMetadataUnavailable"));
         return;
       }
       if (!selectedConversationIds.length) {
-        setNotice("Hãy chọn conversation trước khi chạy bulk action.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.selectForBulkAction"));
         return;
       }
       try {
@@ -1713,20 +1645,30 @@ export default function ChatWorkspacePage() {
           });
         }
         await refreshSummary();
-        setNotice(`Đã cập nhật ${result.updated_count} conversation.`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.bulkUpdated", {
+            count: result.updated_count,
+          })
+        );
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể cập nhật bulk metadata.");
+        setError(
+          safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.bulkUpdate")
+        );
       }
     },
-    [activeConversationId, refreshSummary, selectedConversationIds, workspaceApiUnavailable]
+    [activeConversationId, refreshSummary, selectedConversationIds, uiLanguage, workspaceApiUnavailable]
   );
 
   const bulkDeleteSelectedConversations = useCallback(async () => {
     if (!selectedConversationIds.length) {
-      setNotice("Hãy chọn conversation trước khi xóa.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.selectForDelete"));
       return;
     }
-    const confirmed = window.confirm(`Xóa ${selectedConversationIds.length} conversation đã chọn?`);
+    const confirmed = window.confirm(
+      t(uiLanguage, "chat.legacyWorkspace.confirm.bulkDelete", {
+        count: selectedConversationIds.length,
+      })
+    );
     if (!confirmed) return;
     let deletedCount = 0;
     for (const conversationId of selectedConversationIds) {
@@ -1758,20 +1700,26 @@ export default function ChatWorkspacePage() {
       setConversationTurns([]);
     }
     await Promise.all([loadConversations(), refreshSummary()]);
-    setNotice(`Đã xóa ${deletedCount}/${selectedConversationIds.length} conversation.`);
+    setNotice(
+      t(uiLanguage, "chat.legacyWorkspace.notice.bulkDeleted", {
+        deleted: deletedCount,
+        total: selectedConversationIds.length,
+      })
+    );
   }, [
     activeConversationId,
     loadConversations,
     localConversationIdSet,
     refreshSummary,
     selectedConversationIds,
+    uiLanguage,
     workspaceApiUnavailable,
   ]);
 
   const bulkExportSelectedConversations = useCallback(
     async (format: "markdown" | "docx") => {
       if (!selectedConversationIds.length) {
-        setNotice("Hãy chọn conversation trước khi export.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.selectForExport"));
         return;
       }
       let successCount = 0;
@@ -1820,13 +1768,20 @@ export default function ChatWorkspacePage() {
           // Keep exporting remaining conversations.
         }
       }
-      setNotice(`Đã export ${successCount}/${selectedConversationIds.length} conversation (${format}).`);
+      setNotice(
+        t(uiLanguage, "chat.legacyWorkspace.notice.bulkExported", {
+          success: successCount,
+          total: selectedConversationIds.length,
+          format,
+        })
+      );
     },
     [
       displayedConversations,
       localConversationIdSet,
       localTurnsByConversationId,
       selectedConversationIds,
+      uiLanguage,
       workspaceApiUnavailable,
     ]
   );
@@ -2067,7 +2022,7 @@ export default function ChatWorkspacePage() {
               donePayload = result;
             },
             onError: (msg) => {
-              throw new Error(msg || "chat stream error");
+              throw new Error(msg || t(uiLanguage, "chat.legacyWorkspace.error.chatStream"));
             },
           }, uiLanguage);
         } catch {
@@ -2077,7 +2032,7 @@ export default function ChatWorkspacePage() {
         const chatPayload = donePayload ?? (await sendChatMessage(message, uiLanguage));
         const reply = getChatReply(chatPayload) ?? (streamedAnswer.trim() || null);
         if (!reply) {
-          throw new Error("Chưa có phản hồi chat hợp lệ.");
+          throw new Error(t(uiLanguage, "chat.legacyWorkspace.error.noValidChatResponse"));
         }
         nextResult = {
           tier: "tier1",
@@ -2107,7 +2062,7 @@ export default function ChatWorkspacePage() {
 
         const normalized = normalizeResearchTier2(finalPayload);
         if (!normalized.answer && !normalized.citations.length) {
-          throw new Error("Chưa có phản hồi research hợp lệ.");
+          throw new Error(t(uiLanguage, "chat.legacyWorkspace.error.noValidResearchResponse"));
         }
 
         nextResult = {
@@ -2188,15 +2143,13 @@ export default function ChatWorkspacePage() {
         setActiveConversationMeta(localConversationItem);
         didPersistLocally = true;
         setError(
-          persistError instanceof Error
-            ? `Đã trả lời nhưng lưu hội thoại thất bại: ${sanitizeUpstreamError(
-                persistError.message
-              )}`
-            : "Đã trả lời nhưng lưu hội thoại thất bại."
+          safeWorkspaceError(
+            persistError,
+            uiLanguage,
+            "chat.legacyWorkspace.error.answerPersist"
+          )
         );
-        setNotice(
-          "Đã lưu local cache cho conversation hiện tại. Backend sync sẽ tự khôi phục sau."
-        );
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.currentConversationSavedLocally"));
       }
 
       if (targetConversationId) {
@@ -2224,11 +2177,7 @@ export default function ChatWorkspacePage() {
         if (found) setActiveConversationMeta(found);
       }
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? sanitizeUpstreamError(cause.message)
-          : "Không thể xử lý câu hỏi."
-      );
+      setError(safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.submit"));
     } finally {
       setIsSubmitting(false);
     }
@@ -2268,7 +2217,7 @@ export default function ChatWorkspacePage() {
     isFavorite?: boolean;
   }) => {
     if (workspaceApiUnavailable) {
-      setNotice("Workspace API chưa sẵn sàng nên metadata conversation đang tạm khóa.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.metadataUnavailable"));
       return;
     }
     const conversationId = asConversationId(activeConversationId);
@@ -2282,7 +2231,9 @@ export default function ChatWorkspacePage() {
       });
       await refreshSummary();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể cập nhật metadata conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.updateMetadata")
+      );
     }
   };
 
@@ -2294,60 +2245,72 @@ export default function ChatWorkspacePage() {
       setFolders((prev) => [created, ...prev]);
       setScopeFolderDraft("");
       await refreshSummary();
-      setNotice(`Đã tạo folder \"${created.name}\".`);
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.folderCreated", { name: created.name }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo folder.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.createFolder")
+      );
     }
   };
 
   const onRenameFolder = async (folder: WorkspaceFolder) => {
-    const name = parsePromptText(window.prompt("Đổi tên folder", folder.name));
+    const name = parsePromptText(
+      window.prompt(t(uiLanguage, "chat.legacyWorkspace.folder.renamePrompt"), folder.name)
+    );
     if (!name) return;
     try {
       const updated = await updateWorkspaceFolder(folder.id, { name });
       setFolders((prev) => prev.map((item) => (item.id === folder.id ? updated : item)));
-      setNotice(`Đã cập nhật folder \"${updated.name}\".`);
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.folderRenamed", { name: updated.name }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đổi tên folder.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.renameFolder")
+      );
     }
   };
 
   const onDeleteFolder = async (folder: WorkspaceFolder) => {
-    const confirmed = window.confirm(`Xóa folder "${folder.name}"?`);
+    const confirmed = window.confirm(
+      t(uiLanguage, "chat.legacyWorkspace.folder.deleteConfirm", { name: folder.name })
+    );
     if (!confirmed) return;
     try {
       await deleteWorkspaceFolder(folder.id);
       setFolders((prev) => prev.filter((item) => item.id !== folder.id));
       if (selectedFolderFilterId === folder.id) setSelectedFolderFilterId(null);
       await refreshSummary();
-      setNotice("Đã xóa folder.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.folderDeleted"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xóa folder.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.deleteFolder")
+      );
     }
   };
 
   const onCreateInlineNote = useCallback(async (fromLatestAnswer: boolean) => {
     if (fromLatestAnswer) {
       if (!latestAnswer.trim()) {
-        setNotice("Chưa có câu trả lời để lưu note.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.noAnswerForNote"));
         return;
       }
       setEditingNoteId(null);
-      setNoteTitleDraft(latestTurn?.query.slice(0, 90) || "Ghi chú từ câu trả lời mới");
+      setNoteTitleDraft(
+        latestTurn?.query.slice(0, 90) || t(uiLanguage, "chat.legacyWorkspace.notes.answerTitle")
+      );
       setNoteMarkdownDraft(latestAnswer);
       setNoteTagsDraft("answer,auto");
       return;
     }
     setEditingNoteId(null);
-    setNoteTitleDraft("Ghi chú mới");
+    setNoteTitleDraft(t(uiLanguage, "chat.legacyWorkspace.notes.newTitle"));
     setNoteMarkdownDraft("");
     setNoteTagsDraft("");
-  }, [latestAnswer, latestTurn?.query]);
+  }, [latestAnswer, latestTurn?.query, uiLanguage]);
 
   const onSaveNoteDraft = async () => {
     const title = parsePromptText(noteTitleDraft);
     if (!title) {
-      setError("Tiêu đề note không được để trống.");
+      setError(t(uiLanguage, "chat.legacyWorkspace.error.noteTitleRequired"));
       return;
     }
     const content = noteMarkdownDraft.trim();
@@ -2362,7 +2325,7 @@ export default function ChatWorkspacePage() {
           conversationId: activeId,
         });
         setNotes((prev) => prev.map((item) => (item.id === editingNoteId ? updated : item)));
-        setNotice("Đã cập nhật note.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.noteUpdated"));
       } else {
         const created = await createWorkspaceNote({
           title,
@@ -2371,7 +2334,7 @@ export default function ChatWorkspacePage() {
           conversationId: activeId,
         });
         setNotes((prev) => [created, ...prev]);
-        setNotice("Đã lưu note thành công.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.noteSaved"));
       }
       setEditingNoteId(null);
       setNoteTitleDraft("");
@@ -2379,7 +2342,7 @@ export default function ChatWorkspacePage() {
       setNoteTagsDraft("");
       await refreshSummary();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu note.");
+      setError(safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.saveNote"));
     }
   };
 
@@ -2391,7 +2354,9 @@ export default function ChatWorkspacePage() {
   };
 
   const onDeleteNote = async (note: WorkspaceNote) => {
-    const confirmed = window.confirm(`Xóa note "${note.title}"?`);
+    const confirmed = window.confirm(
+      t(uiLanguage, "chat.legacyWorkspace.confirm.deleteNote", { name: note.title })
+    );
     if (!confirmed) return;
     try {
       await deleteWorkspaceNote(note.id);
@@ -2403,9 +2368,9 @@ export default function ChatWorkspacePage() {
         setNoteTagsDraft("");
       }
       await refreshSummary();
-      setNotice("Đã xóa note.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.noteDeleted"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xóa note.");
+      setError(safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.deleteNote"));
     }
   };
 
@@ -2413,7 +2378,7 @@ export default function ChatWorkspacePage() {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
     if (workspaceApiUnavailable) {
-      setNotice("Workspace API chưa sẵn sàng nên chưa thể tạo public share lúc này.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.shareUnavailable"));
       return;
     }
 
@@ -2424,28 +2389,32 @@ export default function ChatWorkspacePage() {
       });
       setShareInfo(share);
       await loadShares();
-      await copyText(share.public_url, "Đã copy link share public.");
+      await copyText(share.public_url, t(uiLanguage, "chat.legacyWorkspace.notice.shareCopied"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể chia sẻ conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.createShare")
+      );
     }
-  }, [activeConversationId, copyText, loadShares, workspaceApiUnavailable]);
+  }, [activeConversationId, copyText, loadShares, uiLanguage, workspaceApiUnavailable]);
 
   const onRevokeShareActiveConversation = useCallback(async () => {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
     if (workspaceApiUnavailable) {
-      setNotice("Workspace API chưa sẵn sàng nên chưa thể revoke share lúc này.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.revokeShareUnavailable"));
       return;
     }
     try {
       await revokeWorkspaceConversationShare(conversationId);
       setShareInfo(null);
       await loadShares();
-      setNotice("Đã thu hồi liên kết public.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.shareRevoked"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể thu hồi liên kết.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.revokeShare")
+      );
     }
-  }, [activeConversationId, loadShares, workspaceApiUnavailable]);
+  }, [activeConversationId, loadShares, uiLanguage, workspaceApiUnavailable]);
 
   const onOpenConversationFromShare = useCallback(
     async (shareItem: WorkspaceConversationShareListItem) => {
@@ -2463,9 +2432,13 @@ export default function ChatWorkspacePage() {
         await onSelectConversation(resolved);
         return;
       }
-      setNotice(`Không tìm thấy conversation #${shareItem.conversation_id} trong workspace hiện tại.`);
+      setNotice(
+        t(uiLanguage, "chat.legacyWorkspace.notice.sharedConversationMissing", {
+          id: shareItem.conversation_id,
+        })
+      );
     },
-    [displayedConversations, loadConversations, mergedConversations, onSelectConversation]
+    [displayedConversations, loadConversations, mergedConversations, onSelectConversation, uiLanguage]
   );
 
   const onExportActiveConversation = useCallback(async (format: "markdown" | "docx") => {
@@ -2480,12 +2453,21 @@ export default function ChatWorkspacePage() {
       if (!workspaceApiUnavailable) {
         const blob = await exportWorkspaceConversation(conversationId, format);
         triggerBlobDownload(blob, `conversation-${conversationId}.${format === "markdown" ? "md" : "docx"}`);
-        setNotice(`Đã export conversation #${conversationId} (${format}).`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.conversationExported", {
+            id: conversationId,
+            format,
+          })
+        );
         return;
       }
       if (format === "markdown") {
         triggerBlobDownload(new Blob([localMarkdown], { type: "text/markdown;charset=utf-8" }), `conversation-${conversationId}.md`);
-        setNotice(`Đã export conversation #${conversationId} (markdown local).`);
+        setNotice(
+          t(uiLanguage, "chat.legacyWorkspace.notice.conversationExportedLocal", {
+            id: conversationId,
+          })
+        );
         return;
       }
       if (format === "docx" && localMarkdown.trim()) {
@@ -2494,7 +2476,7 @@ export default function ChatWorkspacePage() {
           title: "clara-chat-export",
         });
         triggerBlobDownload(fallbackBlob, "clara-chat-export.docx");
-        setNotice("Đã export DOCX từ nội dung hiện tại.");
+        setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.docxExportedFromCurrent"));
       }
     } catch (cause) {
       if (format === "docx" && localMarkdown.trim()) {
@@ -2504,25 +2486,26 @@ export default function ChatWorkspacePage() {
             title: "clara-chat-export",
           });
           triggerBlobDownload(fallbackBlob, "clara-chat-export.docx");
-          setNotice("Đã export DOCX từ nội dung hiện tại.");
+          setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.docxExportedFromCurrent"));
           return;
         } catch {
           triggerBlobDownload(
             new Blob([localMarkdown], { type: "text/markdown;charset=utf-8" }),
             `conversation-${conversationId}.md`
           );
-          setNotice(
-            "DOCX chưa sẵn ở backend hiện tại, đã fallback export Markdown để không mất dữ liệu."
-          );
+          setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.docxFallbackToMarkdown"));
           return;
         }
       }
-      setError(cause instanceof Error ? cause.message : "Không thể export conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.exportConversation")
+      );
     }
   }, [
     activeConversationId,
     activeConversationMeta?.title,
     localTurnsByConversationId,
+    uiLanguage,
     workspaceApiUnavailable,
   ]);
 
@@ -2538,23 +2521,27 @@ export default function ChatWorkspacePage() {
           item.conversation_id === conversationId ? { ...item, title } : item
         )
       );
-      setNotice("Đã đổi tên conversation (local cache).");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.conversationRenamedLocal"));
       return;
     }
     try {
       const updated = await updateWorkspaceConversation(conversationId, { title });
       setConversationMetaPatch(conversationId, { title: updated.title });
-      setNotice("Đã đổi tên conversation.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.conversationRenamed"));
       await loadConversations(conversationId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể đổi tên conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.renameConversation")
+      );
     }
   };
 
   const onDeleteActiveConversation = async () => {
     const conversationId = asConversationId(activeConversationId);
     if (!conversationId) return;
-    const confirmed = window.confirm("Xóa conversation hiện tại?");
+    const confirmed = window.confirm(
+      t(uiLanguage, "chat.legacyWorkspace.confirm.deleteActiveConversation")
+    );
     if (!confirmed) return;
     const localExists = localFallbackConversations.some(
       (item) => item.conversation_id === conversationId
@@ -2579,9 +2566,11 @@ export default function ChatWorkspacePage() {
       setConversationTurns([]);
       setShareInfo(null);
       await refreshSummary();
-      setNotice("Đã xóa conversation.");
+      setNotice(t(uiLanguage, "chat.legacyWorkspace.notice.conversationDeleted"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể xóa conversation.");
+      setError(
+        safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.deleteConversation")
+      );
     }
   };
 
@@ -2593,28 +2582,28 @@ export default function ChatWorkspacePage() {
     return [
       {
         id: "new-chat",
-        label: "Chat mới",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.newChat"),
         hint: "Ctrl/⌘+Shift+N",
         keywords: ["new", "chat", "conversation"],
         run: () => createNewConversation(),
       },
       {
         id: "focus-search",
-        label: "Tìm trong workspace",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.focusSearch"),
         hint: "Ctrl/⌘+K",
         keywords: ["focus", "search", "workspace"],
         run: () => focusById("workspace-search"),
       },
       {
         id: "focus-composer",
-        label: "Nhập câu hỏi",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.focusComposer"),
         hint: "/",
         keywords: ["focus", "composer", "input", "prompt"],
         run: () => focusById("chat-composer-input"),
       },
       {
         id: "mode-fast",
-        label: "Đổi chế độ: Nhanh",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.modeFast"),
         keywords: ["mode", "fast", "research"],
         run: () => {
           applyResearchMode("fast");
@@ -2623,32 +2612,32 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "mode-deep",
-        label: "Đổi chế độ: Tư duy",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.modeDeep"),
         keywords: ["mode", "deep", "research"],
         run: () => applyResearchMode("deep"),
       },
       {
         id: "mode-deep-beta",
-        label: "Đổi chế độ: Pro",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.modePro"),
         keywords: ["mode", "deep", "beta", "research"],
         run: () => applyResearchMode("deep_beta"),
       },
       {
         id: "stack-auto",
-        label: "Nguồn: Tự chọn",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.sourcesAuto"),
         keywords: ["retrieval", "stack", "auto"],
         run: () => setSelectedRetrievalStackMode("auto"),
       },
       {
         id: "stack-full",
-        label: "Nguồn: Đầy đủ",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.sourcesFull"),
         disabled: isFastResearchMode,
         keywords: ["retrieval", "stack", "full"],
         run: () => setSelectedRetrievalStackMode("full"),
       },
       {
         id: "export-docx",
-        label: "Xuất báo cáo (DOCX)",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.exportDocx"),
         disabled: !canExport,
         keywords: ["export", "docx", "word"],
         run: () => {
@@ -2657,7 +2646,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "export-markdown",
-        label: "Xuất hội thoại ra Markdown",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.exportMarkdown"),
         disabled: !canExport,
         keywords: ["export", "markdown", "md"],
         run: () => {
@@ -2666,7 +2655,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "share-active",
-        label: "Create public share link",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.share"),
         disabled: !canShare,
         keywords: ["share", "public", "link"],
         run: () => {
@@ -2675,7 +2664,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "revoke-share",
-        label: "Revoke active share link",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.revokeShare"),
         disabled: !canShare || !shareInfo,
         keywords: ["share", "revoke", "public"],
         run: () => {
@@ -2684,7 +2673,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "save-note",
-        label: "Save latest answer as note draft",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.saveNote"),
         disabled: !hasLatestAnswer,
         keywords: ["note", "save", "latest", "answer"],
         run: () => {
@@ -2693,7 +2682,7 @@ export default function ChatWorkspacePage() {
       },
       {
         id: "open-shares-page",
-        label: "Open shares manager",
+        label: t(uiLanguage, "chat.legacyWorkspace.command.openShares"),
         keywords: ["shares", "manager", "public"],
         run: () => {
           window.location.href = "/chat/shares";
@@ -2712,6 +2701,7 @@ export default function ChatWorkspacePage() {
     onRevokeShareActiveConversation,
     onShareActiveConversation,
     shareInfo,
+    uiLanguage,
     workspaceApiUnavailable,
   ]);
   const filteredCommandActions = useMemo(() => {
@@ -2765,18 +2755,6 @@ export default function ChatWorkspacePage() {
     () => buildLogicFlowNodes(latestTier2Result),
     [latestTier2Result]
   );
-  const confidenceRatio = resolveTelemetryConfidence(latestTier2Result);
-  const confidencePercent = Math.max(
-    0,
-    Math.min(100, Math.round((confidenceRatio ?? 0) * 100))
-  );
-  const confidenceDisplay = confidenceRatio === undefined ? "--" : confidenceRatio.toFixed(2);
-  const confidenceLabel =
-    confidenceRatio === undefined
-      ? telemetryCopy.confidenceSignalPending
-      : confidencePercent >= 70
-        ? telemetryCopy.confidenceHighReliability
-        : telemetryCopy.confidenceNeedsReview;
   const sourceIntel = useMemo(() => {
     const merged = new Map<
       string,
@@ -2837,24 +2815,27 @@ export default function ChatWorkspacePage() {
   }, [latestTier2Result]);
 
   const isEnglishUI = uiLanguage === "en";
-  const quickPrompts = useMemo(() => QUICK_PROMPTS_BY_LANGUAGE[uiLanguage], [uiLanguage]);
+  const quickPrompts = useMemo(
+    () => QUICK_PROMPT_KEYS.map((key) => t(uiLanguage, key)),
+    [uiLanguage],
+  );
+  const followUpSuggestions = useMemo(
+    () => FOLLOW_UP_QUERY_KEYS.map((key) => t(uiLanguage, key)),
+    [uiLanguage]
+  );
   const visibleLogicFlowNodes = logicFlowNodes.filter(
     (node) => node.status !== "pending" || Boolean(node.detail)
   );
   const telemetryFlowPreviewNodes = visibleLogicFlowNodes.slice(0, 3);
   const compactSourceIntel = sourceIntel.all.slice(0, 2);
   const telemetryHasSignal =
-    confidenceRatio !== undefined ||
-    visibleLogicFlowNodes.length > 0 ||
-    compactSourceIntel.length > 0;
+    visibleLogicFlowNodes.length > 0 || compactSourceIntel.length > 0;
   const activeConversationTimestamp = activeConversationMeta
     ? toConversationTimestamp(activeConversationMeta)
     : 0;
   const activeConversationStatusLabel = activeConversationTimestamp > 0
     ? formatHistoryTime(activeConversationTimestamp)
-    : isEnglishUI
-      ? "Ready for a new chat"
-      : "Sẵn sàng cho phiên mới";
+    : t(uiLanguage, "chat.legacyWorkspace.active.ready");
   const handleWorkspacePanelResizeStart = useCallback(
     (event: ReactMouseEvent<HTMLButtonElement>) => {
       if (typeof window === "undefined") return;
@@ -2914,7 +2895,7 @@ export default function ChatWorkspacePage() {
         {isMobileSidebarOpen ? (
           <button
             type="button"
-            aria-label="Đóng sidebar"
+            aria-label={t(uiLanguage, "chat.shell.closeSidebar")}
             onClick={() => setIsMobileSidebarOpen(false)}
             className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] lg:hidden"
           />
@@ -2938,8 +2919,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={() => setIsWorkspacePanelCollapsed(false)}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-                aria-label={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
-                title={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
+                aria-label={t(uiLanguage, "chat.legacyWorkspace.openPanel")}
+                title={t(uiLanguage, "chat.legacyWorkspace.openPanel")}
               >
                 <span className="material-symbols-outlined text-[18px]">left_panel_open</span>
               </button>
@@ -2948,8 +2929,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={createNewConversation}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-500/10 text-cyan-700 transition hover:bg-cyan-500/15 dark:text-cyan-300"
-                aria-label={isEnglishUI ? "New chat" : "Chat mới"}
-                title={isEnglishUI ? "New chat" : "Chat mới"}
+                aria-label={t(uiLanguage, "chat.sidebar.newChat")}
+                title={t(uiLanguage, "chat.sidebar.newChat")}
               >
                 <span className="material-symbols-outlined text-[18px]">add</span>
               </button>
@@ -2964,9 +2945,9 @@ export default function ChatWorkspacePage() {
                     : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300",
                 ].join(" ")}
                 aria-label={isTelemetryPanelOpen
-                  ? isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"
-                  : isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
-                title={isEnglishUI ? "Telemetry" : "Telemetry"}
+                  ? t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")
+                  : t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
+                title={t(uiLanguage, "chat.legacyWorkspace.telemetry.title")}
               >
                 <span className="material-symbols-outlined text-[18px]">monitoring</span>
               </button>
@@ -2990,7 +2971,7 @@ export default function ChatWorkspacePage() {
                 CLARA CHAT
               </p>
               <h2 className="mt-0.5 text-[1.4rem] leading-none font-semibold text-[var(--text-primary)]">
-                {isEnglishUI ? "Workspace" : "Không gian chat"}
+                {t(uiLanguage, "chat.workspace.title")}
               </h2>
             </div>
             <div className="flex items-center gap-1.5">
@@ -2998,8 +2979,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={() => setIsWorkspacePanelCollapsed(true)}
                 className="hidden h-8 min-w-[32px] items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300 lg:inline-flex"
-                aria-label={isEnglishUI ? "Collapse workspace panel" : "Thu gọn panel hội thoại"}
-                title={isEnglishUI ? "Collapse workspace panel" : "Thu gọn panel hội thoại"}
+                aria-label={t(uiLanguage, "chat.legacyWorkspace.collapsePanel")}
+                title={t(uiLanguage, "chat.legacyWorkspace.collapsePanel")}
               >
                 <span className="material-symbols-outlined text-[16px]">left_panel_close</span>
               </button>
@@ -3007,8 +2988,8 @@ export default function ChatWorkspacePage() {
                 type="button"
                 onClick={() => setIsMobileSidebarOpen(false)}
                 className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-semibold text-[var(--text-secondary)] lg:hidden"
-                aria-label={isEnglishUI ? "Close panel" : "Đóng panel"}
-                title={isEnglishUI ? "Close panel" : "Đóng panel"}
+                aria-label={t(uiLanguage, "chat.workspace.close")}
+                title={t(uiLanguage, "chat.workspace.close")}
               >
                 <span className="material-symbols-outlined text-[15px]">close</span>
               </button>
@@ -3022,14 +3003,20 @@ export default function ChatWorkspacePage() {
                 onClick={createNewConversation}
                 className="inline-flex min-h-[34px] flex-1 items-center justify-center px-3 text-[12px] font-semibold text-white transition hover:brightness-105"
               >
-                + {isEnglishUI ? "New chat" : "Chat mới"}
+                + {t(uiLanguage, "chat.sidebar.newChat")}
               </button>
               <button
                 type="button"
                 onClick={() => setIsSelectionMode((prev) => !prev)}
                 className="inline-flex min-h-[34px] w-9 items-center justify-center border-l border-blue-200/50 bg-blue-700/25 text-white transition hover:bg-blue-700/35"
-                aria-label={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
-                title={isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+                aria-label={t(
+                  uiLanguage,
+                  isSelectionMode ? "chat.legacyWorkspace.done" : "chat.legacyWorkspace.select"
+                )}
+                title={t(
+                  uiLanguage,
+                  isSelectionMode ? "chat.legacyWorkspace.done" : "chat.legacyWorkspace.select"
+                )}
               >
                 <span className="material-symbols-outlined text-[15px]">edit_square</span>
               </button>
@@ -3046,7 +3033,7 @@ export default function ChatWorkspacePage() {
                     {effectiveSummary.conversations}
                   </p>
                   <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Chats" : "Chat"}
+                    {t(uiLanguage, "chat.legacyWorkspace.summary.chats")}
                   </p>
                 </div>
               </div>
@@ -3057,7 +3044,7 @@ export default function ChatWorkspacePage() {
                     {effectiveSummary.messages}
                   </p>
                   <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Messages" : "Tin nhắn"}
+                    {t(uiLanguage, "chat.legacyWorkspace.summary.messages")}
                   </p>
                 </div>
               </div>
@@ -3069,7 +3056,7 @@ export default function ChatWorkspacePage() {
             <details className="group">
               <summary className="inline-flex min-h-[28px] cursor-pointer list-none items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[10px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
                 <span className="material-symbols-outlined text-[14px]">more_horiz</span>
-                {isEnglishUI ? "Advanced" : "Nâng cao"}
+                {t(uiLanguage, "chat.legacyWorkspace.advanced")}
               </summary>
               <div className="mt-1.5 flex flex-wrap gap-1">
                 <button
@@ -3097,10 +3084,10 @@ export default function ChatWorkspacePage() {
                           ? "border-cyan-300/75 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
-                      title={option.title[uiLanguage]}
-                      aria-label={option.title[uiLanguage]}
+                      title={t(uiLanguage, option.titleKey)}
+                      aria-label={t(uiLanguage, option.titleKey)}
                     >
-                      {option.title[uiLanguage]}
+                      {t(uiLanguage, option.titleKey)}
                     </button>
                   );
                 })}
@@ -3114,7 +3101,7 @@ export default function ChatWorkspacePage() {
                 id="workspace-search"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
-                placeholder={isEnglishUI ? "Search chats..." : "Tìm cuộc trò chuyện..."}
+                placeholder={t(uiLanguage, "chat.sidebar.searchPlaceholder")}
                 className="min-h-[35px] w-full rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
               <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]">
@@ -3130,14 +3117,14 @@ export default function ChatWorkspacePage() {
               onClick={() => setIsScopeManagerOpen(true)}
               className="text-[0.95rem] font-semibold text-[var(--text-primary)]"
             >
-              {isEnglishUI ? "Folder: All" : "Folder: Tất cả"}
+              {t(uiLanguage, "chat.legacyWorkspace.folder.all")}
             </button>
             <button
               type="button"
               onClick={() => setIsScopeManagerOpen(true)}
               className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)]"
-              aria-label={isEnglishUI ? "Open folder manager" : "Mở quản lý thư mục"}
-              title={isEnglishUI ? "Open folder manager" : "Mở quản lý thư mục"}
+              aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.openManager")}
+              title={t(uiLanguage, "chat.legacyWorkspace.folder.openManager")}
             >
               <span className="material-symbols-outlined text-[16px]">expand_more</span>
             </button>
@@ -3150,10 +3137,13 @@ export default function ChatWorkspacePage() {
               <div className="mb-1.5 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Conversations" : "Cuộc trò chuyện"}{" "}
+                    {t(uiLanguage, "chat.sidebar.aria")}{" "}
                     <span className="font-medium normal-case tracking-normal">
-                      {visibleConversations.length}/{displayedConversations.length} {isEnglishUI ? "chats" : "chat"} ·{" "}
-                      {displayedConversationMessageCount} {isEnglishUI ? "msg" : "tin"}
+                      {t(uiLanguage, "chat.legacyWorkspace.conversationCount", {
+                        visible: visibleConversations.length,
+                        total: displayedConversations.length,
+                        messages: displayedConversationMessageCount,
+                      })}
                     </span>
                   </p>
                   <button
@@ -3161,37 +3151,43 @@ export default function ChatWorkspacePage() {
                     onClick={() => setIsSelectionMode((prev) => !prev)}
                     className="inline-flex min-h-[24px] shrink-0 items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[10px] font-semibold text-[var(--text-secondary)]"
                   >
-                    {isSelectionMode ? (isEnglishUI ? "Done" : "Xong") : (isEnglishUI ? "Select" : "Chọn")}
+                    {t(
+                      uiLanguage,
+                      isSelectionMode ? "chat.legacyWorkspace.done" : "chat.legacyWorkspace.select"
+                    )}
                   </button>
                 </div>
                 {workspaceLeftView !== "chat" ? (
                 <details className="group">
                   <summary 
                     className="flex cursor-pointer list-none items-center justify-between rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--text-secondary)]"
-                    aria-label={isEnglishUI ? "Filter folders" : "Lọc thư mục"}
-                    title={isEnglishUI ? "Filter folders" : "Lọc thư mục"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.filter.summaryAria")}
+                    title={t(uiLanguage, "chat.legacyWorkspace.filter.summaryAria")}
                   >
                     <span>
                       {selectedFolderFilterId !== null
-                        ? `${isEnglishUI ? "Folder" : "Thư mục"}: ${
-                            folderFilterList.find((folder) => folder.id === selectedFolderFilterId)?.name || "#"
-                          }`
-                        : isEnglishUI
-                          ? "Filter by folder"
-                          : "Lọc theo thư mục"}
+                        ? t(uiLanguage, "chat.legacyWorkspace.filter.selected", {
+                            name:
+                              folderFilterList.find((folder) => folder.id === selectedFolderFilterId)
+                                ?.name || "#",
+                          })
+                        : t(uiLanguage, "chat.legacyWorkspace.filter.placeholder")}
                     </span>
                     <span className="material-symbols-outlined text-[16px] transition group-open:rotate-180">expand_more</span>
                   </summary>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
                     <select
                       value={String(selectedFolderFilterId ?? "none")}
+                      aria-label={t(uiLanguage, "chat.legacyWorkspace.filter.selectAria")}
                       onChange={(event) => {
                         const raw = event.target.value;
                         setSelectedFolderFilterId(raw === "none" ? null : Number(raw));
                       }}
                       className="min-h-[30px] min-w-0 flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-primary)]"
                     >
-                      <option value="none">{isEnglishUI ? "All folders" : "Tất cả thư mục"}</option>
+                      <option value="none">
+                        {t(uiLanguage, "chat.legacyWorkspace.filter.allFolders")}
+                      </option>
                       {folderFilterList.map((folder) => (
                         <option key={`filter-folder-${folder.id}`} value={String(folder.id)}>
                           {folder.name}
@@ -3204,7 +3200,7 @@ export default function ChatWorkspacePage() {
                         onClick={() => setSelectedFolderFilterId(null)}
                         className="rounded-lg border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
                       >
-                        {isEnglishUI ? "Clear" : "Xóa"}
+                        {t(uiLanguage, "chat.legacyWorkspace.filter.clear")}
                       </button>
                     ) : null}
                   </div>
@@ -3214,20 +3210,27 @@ export default function ChatWorkspacePage() {
               {isSelectionMode && selectedConversationIds.length ? (
                 <div className="mb-2 space-y-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "Bulk actions" : "Thao tác hàng loạt"}
+                    {t(uiLanguage, "chat.legacyWorkspace.bulk.title")}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     <select
                       value={bulkFolderTarget}
                       disabled={workspaceApiUnavailable}
+                      aria-label={t(uiLanguage, "chat.legacyWorkspace.bulk.folderSelectAria")}
                       onChange={(event) => setBulkFolderTarget(event.target.value)}
                       className="min-h-[28px] rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 text-[10px] text-[var(--text-secondary)]"
                     >
-                      <option value="skip">Folder: Skip</option>
-                      <option value="none">Folder: None</option>
+                      <option value="skip">
+                        {t(uiLanguage, "chat.legacyWorkspace.bulk.folderSkip")}
+                      </option>
+                      <option value="none">
+                        {t(uiLanguage, "chat.legacyWorkspace.bulk.folderNone")}
+                      </option>
                       {folders.map((folder) => (
                         <option key={`bulk-folder-${folder.id}`} value={String(folder.id)}>
-                          Folder: {folder.name}
+                          {t(uiLanguage, "chat.legacyWorkspace.bulk.folderNamed", {
+                            name: folder.name,
+                          })}
                         </option>
                       ))}
                     </select>
@@ -3242,7 +3245,7 @@ export default function ChatWorkspacePage() {
                       }}
                       className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Apply folder
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.applyFolder")}
                     </button>
                     <button
                       type="button"
@@ -3250,7 +3253,7 @@ export default function ChatWorkspacePage() {
                       onClick={() => void applyBulkMetaUpdate({ isFavorite: true })}
                       className="rounded border border-amber-300/70 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Favorite
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.favorite")}
                     </button>
                     <button
                       type="button"
@@ -3258,7 +3261,7 @@ export default function ChatWorkspacePage() {
                       onClick={() => void applyBulkMetaUpdate({ isFavorite: false })}
                       className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Unfavorite
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.unfavorite")}
                     </button>
                     <button
                       type="button"
@@ -3266,7 +3269,7 @@ export default function ChatWorkspacePage() {
                       onClick={() => void applyBulkMetaUpdate({ folderId: null })}
                       className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Clear folder
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.clearFolder")}
                     </button>
                     <button
                       type="button"
@@ -3274,27 +3277,29 @@ export default function ChatWorkspacePage() {
                       onClick={() => void bulkExportSelectedConversations("markdown")}
                       className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-700"
                     >
-                      Export .md
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.exportMarkdown")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void bulkExportSelectedConversations("docx")}
                       className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-700"
                     >
-                      Export .docx
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.exportDocx")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void bulkDeleteSelectedConversations()}
                       className="rounded border border-rose-300/70 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-700"
                     >
-                      Delete selected
+                      {t(uiLanguage, "chat.legacyWorkspace.bulk.deleteSelected")}
                     </button>
                   </div>
                 </div>
               ) : null}
               {isLoadingWorkspace || isLoadingConversations ? (
-                <p className="text-xs text-[var(--text-muted)]">Đang tải...</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t(uiLanguage, "chat.sidebar.loading")}
+                </p>
               ) : displayedConversations.length ? (
                 <div
                   ref={conversationListViewportRef}
@@ -3362,6 +3367,9 @@ export default function ChatWorkspacePage() {
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
+                                  aria-label={t(uiLanguage, "chat.legacyWorkspace.conversation.selectAria", {
+                                    id: item.conversation_id,
+                                  })}
                                   onChange={(event) =>
                                     toggleConversationSelection(
                                       item.conversation_id,
@@ -3375,14 +3383,25 @@ export default function ChatWorkspacePage() {
                                 type="button"
                                 onClick={() => void onSelectConversation(item)}
                                 className="flex-1 text-left"
+                                aria-label={t(uiLanguage, "chat.legacyWorkspace.conversation.openAria", {
+                                  title: buildConversationPreview(item, uiLanguage),
+                                })}
                               >
                                 <p className="truncate whitespace-nowrap text-[12px] font-semibold leading-tight text-[var(--text-primary)]">
-                                  {buildConversationPreview(item)}
+                                  {buildConversationPreview(item, uiLanguage)}
                                 </p>
                                 <p className="mt-0.5 truncate whitespace-nowrap text-[10px] text-[var(--text-muted)]">
-                                  #{item.conversation_id} · {item.message_count} msg · {timeLabel}
-                                  {item.is_favorite ? " · fav" : ""}
-                                  {isLocalOnly ? " · local" : ""}
+                                  {t(uiLanguage, "chat.legacyWorkspace.conversation.metadata", {
+                                    id: item.conversation_id,
+                                    messages: item.message_count,
+                                    time: timeLabel,
+                                    favorite: item.is_favorite
+                                      ? t(uiLanguage, "chat.legacyWorkspace.conversation.favoriteSuffix")
+                                      : "",
+                                    local: isLocalOnly
+                                      ? t(uiLanguage, "chat.legacyWorkspace.conversation.localSuffix")
+                                      : "",
+                                  })}
                                 </p>
                               </button>
                             </div>
@@ -3393,7 +3412,7 @@ export default function ChatWorkspacePage() {
                   </div>
                   {visibleConversations.length < displayedConversations.length ? (
                     <p className="px-1 py-1 text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                      {isEnglishUI ? "Loading more conversations..." : "Đang tải thêm cuộc trò chuyện..."}
+                      {t(uiLanguage, "chat.legacyWorkspace.conversation.loadingMore")}
                     </p>
                   ) : null}
                 </div>
@@ -3401,14 +3420,14 @@ export default function ChatWorkspacePage() {
                 <div className="flex flex-col items-center justify-center py-6 text-center">
                   <span className="material-symbols-outlined mb-2 text-[24px] text-[var(--text-muted)]">chat_bubble_outline</span>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    {isEnglishUI ? "No conversations match the current filters." : "Không có cuộc trò chuyện nào khớp bộ lọc hiện tại."}
+                    {t(uiLanguage, "chat.legacyWorkspace.conversation.emptyFiltered")}
                   </p>
                   <button
                     type="button"
                     onClick={createNewConversation}
                     className="mt-3 inline-flex min-h-[28px] items-center rounded-lg border border-blue-200/50 bg-blue-50 px-3 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300"
                   >
-                    + {isEnglishUI ? "Start a new chat" : "Bắt đầu chat mới"}
+                    + {t(uiLanguage, "chat.legacyWorkspace.conversation.startNew")}
                   </button>
                 </div>
               )}
@@ -3419,14 +3438,14 @@ export default function ChatWorkspacePage() {
             <section className="min-h-0 overflow-x-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                  {isEnglishUI ? "Notes" : "Ghi chú"}
+                  {t(uiLanguage, "chat.legacyWorkspace.notes.title")}
                 </p>
                 <button
                   type="button"
                   onClick={() => void onCreateInlineNote(false)}
                   className="text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
                 >
-                  {isEnglishUI ? "+ Draft" : "+ Nháp"}
+                  + {t(uiLanguage, "chat.legacyWorkspace.notes.draft")}
                 </button>
               </div>
               {(noteTitleDraft || noteMarkdownDraft || editingNoteId !== null) ? (
@@ -3434,19 +3453,22 @@ export default function ChatWorkspacePage() {
                   <input
                     value={noteTitleDraft}
                     onChange={(event) => setNoteTitleDraft(event.target.value)}
-                    placeholder="Tiêu đề note"
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.notes.titlePlaceholder")}
+                    placeholder={t(uiLanguage, "chat.legacyWorkspace.notes.titlePlaceholder")}
                     className="min-h-[32px] w-full rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-primary)]"
                   />
                   <textarea
                     value={noteMarkdownDraft}
                     onChange={(event) => setNoteMarkdownDraft(event.target.value)}
-                    placeholder="Nội dung markdown"
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.notes.contentPlaceholder")}
+                    placeholder={t(uiLanguage, "chat.legacyWorkspace.notes.contentPlaceholder")}
                     className="min-h-[74px] w-full rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5 text-[11px] text-[var(--text-primary)]"
                   />
                   <input
                     value={noteTagsDraft}
                     onChange={(event) => setNoteTagsDraft(event.target.value)}
-                    placeholder="tags: warfarin, ddi,..."
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.notes.tagsPlaceholder")}
+                    placeholder={t(uiLanguage, "chat.legacyWorkspace.notes.tagsPlaceholder")}
                     className="min-h-[32px] w-full rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[11px] text-[var(--text-primary)]"
                   />
                   <div className="flex items-center justify-end gap-1.5">
@@ -3460,14 +3482,14 @@ export default function ChatWorkspacePage() {
                       }}
                       className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                     >
-                      Clear
+                      {t(uiLanguage, "chat.legacyWorkspace.notes.clear")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void onSaveNoteDraft()}
                       className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
                     >
-                      Save
+                      {t(uiLanguage, "chat.legacyWorkspace.notes.save")}
                     </button>
                   </div>
                 </div>
@@ -3482,28 +3504,32 @@ export default function ChatWorkspacePage() {
                   {displayedNotes.slice(0, 10).map((note) => (
                     <li key={note.id} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-2">
                       <p className="line-clamp-1 break-words text-xs font-semibold text-[var(--text-primary)]">{note.title}</p>
-                      <p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">{note.summary || note.content_markdown || "(Trống)"}</p>
+                      <p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">
+                        {note.summary || note.content_markdown || t(uiLanguage, "chat.legacyWorkspace.notes.emptyContent")}
+                      </p>
                       <div className="mt-1.5 flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => onEditNote(note)}
                           className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
                         >
-                          Edit
+                          {t(uiLanguage, "chat.legacyWorkspace.notes.edit")}
                         </button>
                         <button
                           type="button"
                           onClick={() => void onDeleteNote(note)}
                           className="rounded border border-rose-300/70 px-1.5 py-0.5 text-[10px] text-rose-600"
                         >
-                          Del
+                          {t(uiLanguage, "chat.legacyWorkspace.notes.delete")}
                         </button>
                       </div>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-[var(--text-muted)]">Chưa có note.</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t(uiLanguage, "chat.legacyWorkspace.notes.empty")}
+                </p>
               )}
             </section>
             ) : null}
@@ -3511,7 +3537,7 @@ export default function ChatWorkspacePage() {
             {(workspaceLeftView === "all" || workspaceLeftView === "discover") ? (
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                {isEnglishUI ? "Suggestions" : "Gợi ý"}
+                {t(uiLanguage, "chat.legacyWorkspace.suggestions.title")}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {displayedSuggestions.length ? (
@@ -3526,7 +3552,9 @@ export default function ChatWorkspacePage() {
                     </button>
                   ))
                 ) : (
-                  <p className="text-xs text-[var(--text-muted)]">Chưa có suggestion.</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {t(uiLanguage, "chat.legacyWorkspace.suggestions.empty")}
+                  </p>
                 )}
               </div>
             </section>
@@ -3536,18 +3564,18 @@ export default function ChatWorkspacePage() {
             <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                  {isEnglishUI ? "Shares" : "Chia sẻ"}
+                  {t(uiLanguage, "chat.legacyWorkspace.shares.title")}
                 </p>
                 <Link
                   href="/chat/shares"
                   className="text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
                 >
-                  {isEnglishUI ? "Manage" : "Quản lý"}
+                  {t(uiLanguage, "chat.legacyWorkspace.shares.manage")}
                 </Link>
               </div>
               {workspaceApiUnavailable ? (
                 <p className="text-xs text-[var(--text-muted)]">
-                  Workspace API chưa sẵn sàng, share/public link đang tạm khóa.
+                  {t(uiLanguage, "chat.legacyWorkspace.shares.unavailable")}
                 </p>
               ) : null}
               {!workspaceApiUnavailable && shares.length ? (
@@ -3561,7 +3589,12 @@ export default function ChatWorkspacePage() {
                         #{item.conversation_id} · {item.conversation_title}
                       </p>
                       <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                        {item.is_active ? "Active" : "Revoked"} · {item.message_count} messages
+                        {t(uiLanguage, "chat.legacyWorkspace.shares.metadata", {
+                          status: item.is_active
+                            ? t(uiLanguage, "chat.legacyWorkspace.shares.active")
+                            : t(uiLanguage, "chat.legacyWorkspace.shares.revoked"),
+                          count: item.message_count,
+                        })}
                       </p>
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         <button
@@ -3569,14 +3602,19 @@ export default function ChatWorkspacePage() {
                           onClick={() => void onOpenConversationFromShare(item)}
                           className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
                         >
-                          Open
+                          {t(uiLanguage, "chat.legacyWorkspace.shares.open")}
                         </button>
                         <button
                           type="button"
-                          onClick={() => void copyText(item.public_url, "Đã copy public URL.")}
+                          onClick={() =>
+                            void copyText(
+                              item.public_url,
+                              t(uiLanguage, "chat.legacyWorkspace.shares.copySuccess")
+                            )
+                          }
                           className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
                         >
-                          Copy
+                          {t(uiLanguage, "chat.legacyWorkspace.shares.copy")}
                         </button>
                         <a
                           href={item.public_url}
@@ -3584,14 +3622,16 @@ export default function ChatWorkspacePage() {
                           rel="noreferrer"
                           className="rounded border border-cyan-300/70 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700 dark:border-cyan-700/70 dark:text-cyan-300"
                         >
-                          Visit
+                          {t(uiLanguage, "chat.legacyWorkspace.shares.visit")}
                         </a>
                       </div>
                     </li>
                   ))}
                 </ul>
               ) : !workspaceApiUnavailable ? (
-                <p className="text-xs text-[var(--text-muted)]">Chưa có public share.</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {t(uiLanguage, "chat.legacyWorkspace.shares.empty")}
+                </p>
               ) : null}
             </section>
             ) : null}
@@ -3603,17 +3643,13 @@ export default function ChatWorkspacePage() {
             onDoubleClick={() => setWorkspacePanelWidth(CHAT_WORKSPACE_PANEL_DEFAULT_WIDTH)}
             onKeyDown={handleWorkspacePanelResizeKeyDown}
             className="absolute inset-y-0 -right-2 hidden w-4 cursor-col-resize items-center justify-center border-0 bg-transparent p-0 lg:flex"
-            aria-label={isEnglishUI ? "Resize workspace panel" : "Điều chỉnh độ rộng panel hội thoại"}
+            aria-label={t(uiLanguage, "chat.legacyWorkspace.resize.aria")}
             aria-orientation="vertical"
             aria-valuemin={CHAT_WORKSPACE_PANEL_MIN_WIDTH}
             aria-valuemax={CHAT_WORKSPACE_PANEL_MAX_WIDTH}
             aria-valuenow={workspacePanelWidth}
             role="separator"
-            title={
-              isEnglishUI
-                ? "Drag to resize. Double-click to reset."
-                : "Kéo để đổi độ rộng. Double-click để về mặc định."
-            }
+            title={t(uiLanguage, "chat.legacyWorkspace.resize.title")}
           >
             <span
               className={[
@@ -3636,20 +3672,20 @@ export default function ChatWorkspacePage() {
                     type="button"
                     onClick={() => setIsMobileSidebarOpen(true)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-sm font-semibold text-[var(--text-secondary)] lg:hidden"
-                    aria-label={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
-                    title={isEnglishUI ? "Open workspace panel" : "Mở panel hội thoại"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.active.openPanel")}
+                    title={t(uiLanguage, "chat.legacyWorkspace.active.openPanel")}
                   >
                     <span className="material-symbols-outlined text-[16px]">menu</span>
                   </button>
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    {isEnglishUI ? "ACTIVE CONVERSATION" : "ACTIVE CONVERSATION"}
+                    {t(uiLanguage, "chat.legacyWorkspace.active.eyebrow")}
                   </p>
                   <span className="inline-flex items-center rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-semibold text-cyan-700 dark:text-cyan-300">
                     {activeModeLabel}
                   </span>
                 </div>
                 <h2 className="mt-0.5 truncate text-[1.3rem] leading-none font-semibold text-[var(--text-primary)]">
-                  {activeConversationMeta?.title?.trim() || (isEnglishUI ? "New conversation" : "Cuộc trò chuyện mới")}
+                  {activeConversationMeta?.title?.trim() || t(uiLanguage, "chat.legacyWorkspace.active.newConversation")}
                 </h2>
                 <span className="mt-0.5 block truncate text-[10px] font-medium text-[var(--text-muted)]">
                   {activeConversationStatusLabel}
@@ -3662,23 +3698,23 @@ export default function ChatWorkspacePage() {
                   onClick={createNewConversation}
                   className="inline-flex min-h-[34px] items-center gap-1 rounded-full bg-blue-600 px-3.5 text-[11px] font-semibold text-white shadow-[0_10px_22px_-14px_rgba(37,99,235,0.8)] transition hover:bg-blue-700"
                 >
-                  + {isEnglishUI ? "New chat" : "Chat mới"}
+                  + {t(uiLanguage, "chat.legacyWorkspace.active.newChat")}
                 </button>
                 <button
                   type="button"
                   onClick={() => void onExportActiveConversation("docx")}
                   disabled={!activeConversationId}
                   className="inline-flex min-h-[34px] items-center rounded-full border border-medical/35 bg-medical/10 px-3 text-[11px] font-semibold text-medical transition hover:bg-medical/15 disabled:cursor-not-allowed disabled:opacity-60"
-                  title={isEnglishUI ? "Export report (.docx)" : "Xuất báo cáo (định dạng .docx)"}
+                  title={t(uiLanguage, "chat.legacyWorkspace.active.exportReportTitle")}
                 >
-                  {isEnglishUI ? "Export report" : "Xuất báo cáo"}
+                  {t(uiLanguage, "chat.legacyWorkspace.active.exportReport")}
                 </button>
 
                 <details className="group relative">
                   <summary
                     className="inline-flex h-[34px] w-[34px] cursor-pointer list-none items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-blue-400 hover:text-[var(--text-brand)]"
-                    aria-label={isEnglishUI ? "More actions" : "Thao tác khác"}
-                    title={isEnglishUI ? "More actions" : "Thao tác khác"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.active.moreActions")}
+                    title={t(uiLanguage, "chat.legacyWorkspace.active.moreActions")}
                   >
                     <span className="material-symbols-outlined text-[18px]">more_horiz</span>
                   </summary>
@@ -3695,8 +3731,8 @@ export default function ChatWorkspacePage() {
                       ].join(" ")}
                     >
                       {isTelemetryPanelOpen
-                        ? isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"
-                        : isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
+                        ? t(uiLanguage, "chat.legacyWorkspace.active.hideTelemetry")
+                        : t(uiLanguage, "chat.legacyWorkspace.active.showTelemetry")}
                     </button>
                     ) : null}
                     <div className="space-y-1.5">
@@ -3705,7 +3741,8 @@ export default function ChatWorkspacePage() {
                         value={conversationTitleDraft}
                         onChange={(event) => setConversationTitleDraft(event.target.value)}
                         disabled={!activeConversationId}
-                        placeholder={isEnglishUI ? "Rename conversation" : "Đặt tiêu đề hội thoại"}
+                        aria-label={t(uiLanguage, "chat.legacyWorkspace.active.renamePlaceholder")}
+                        placeholder={t(uiLanguage, "chat.legacyWorkspace.active.renamePlaceholder")}
                         className="min-h-[32px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                       />
                       <button
@@ -3714,7 +3751,7 @@ export default function ChatWorkspacePage() {
                         onClick={() => void onRenameActiveConversation()}
                         className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {isEnglishUI ? "Rename" : "Đổi tên"}
+                        {t(uiLanguage, "chat.legacyWorkspace.active.rename")}
                       </button>
                     </div>
                     <button
@@ -3729,17 +3766,17 @@ export default function ChatWorkspacePage() {
                       ].join(" ")}
                     >
                       {activeConversationMeta?.is_favorite
-                        ? isEnglishUI ? "Unpin conversation" : "Bỏ ghim hội thoại"
-                        : isEnglishUI ? "Pin conversation" : "Ghim hội thoại"}
+                        ? t(uiLanguage, "chat.legacyWorkspace.active.unpin")
+                        : t(uiLanguage, "chat.legacyWorkspace.active.pin")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void onExportActiveConversation("docx")}
                       disabled={!activeConversationId}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-emerald-300/75 bg-emerald-500/15 px-3 text-[11px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
-                      title={isEnglishUI ? "Export report (.docx)" : "Xuất báo cáo (định dạng .docx)"}
+                      title={t(uiLanguage, "chat.legacyWorkspace.active.exportReportTitle")}
                     >
-                      {isEnglishUI ? "Export report" : "Xuất báo cáo"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.exportReport")}
                     </button>
                     <button
                       type="button"
@@ -3747,7 +3784,7 @@ export default function ChatWorkspacePage() {
                       disabled={!activeConversationId}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isEnglishUI ? "Export .md" : "Xuất .md"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.exportMarkdown")}
                     </button>
                     <button
                       type="button"
@@ -3755,7 +3792,7 @@ export default function ChatWorkspacePage() {
                       disabled={!activeConversationId || workspaceApiUnavailable}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-[11px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
                     >
-                      {isEnglishUI ? "Share" : "Chia sẻ"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.share")}
                     </button>
                     <button
                       type="button"
@@ -3763,7 +3800,7 @@ export default function ChatWorkspacePage() {
                       disabled={!latestAnswer.trim()}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isEnglishUI ? "Save latest answer" : "Lưu câu trả lời gần nhất"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.saveLatest")}
                     </button>
                     <button
                       type="button"
@@ -3771,13 +3808,13 @@ export default function ChatWorkspacePage() {
                       disabled={!activeConversationId || !shareInfo || workspaceApiUnavailable}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-rose-300/70 bg-rose-500/10 px-3 text-[11px] font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-700/70 dark:text-rose-300"
                     >
-                      {isEnglishUI ? "Revoke share" : "Thu hồi chia sẻ"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.revokeShare")}
                     </button>
                     <Link
                       href="/chat/shares"
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-[11px] font-semibold text-cyan-700 dark:border-cyan-700/70 dark:text-cyan-300"
                     >
-                      {isEnglishUI ? "Manage shares" : "Quản lý chia sẻ"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.manageShares")}
                     </Link>
                     <button
                       type="button"
@@ -3785,7 +3822,7 @@ export default function ChatWorkspacePage() {
                       disabled={!activeConversationId}
                       className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-rose-300/70 bg-rose-500/10 px-3 text-[11px] font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-700/70 dark:text-rose-300"
                     >
-                      {isEnglishUI ? "Delete chat" : "Xóa hội thoại"}
+                      {t(uiLanguage, "chat.legacyWorkspace.active.delete")}
                     </button>
                   </div>
                 </details>
@@ -3797,7 +3834,7 @@ export default function ChatWorkspacePage() {
             <div className="mx-auto w-full max-w-none space-y-3 px-2 sm:px-2.5 lg:px-3 xl:px-4 2xl:px-5">
               {isLoadingTurns && !conversationTurns.length ? (
                 <article className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-                  {isEnglishUI ? "Loading conversation..." : "Đang tải nội dung cuộc trò chuyện..."}
+                  {t(uiLanguage, "chat.legacyWorkspace.canvas.loading")}
                 </article>
               ) : null}
 
@@ -3806,7 +3843,7 @@ export default function ChatWorkspacePage() {
                   <div className="flex items-start gap-2">
                     <span className="material-symbols-outlined mt-0.5 text-[18px]">error</span>
                     <div>
-                      <p>{isEnglishUI ? "CLARA could not complete the answer." : "CLARA chưa thể hoàn tất câu trả lời."}</p>
+                      <p>{t(uiLanguage, "chat.legacyWorkspace.canvas.error")}</p>
                       <p className="mt-1 text-xs font-medium text-rose-700 dark:text-rose-200">{error}</p>
                     </div>
                   </div>
@@ -3821,36 +3858,33 @@ export default function ChatWorkspacePage() {
                     </span>
                   </div>
                   <h2 className="mt-5 text-xl font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-2xl">
-                    {isEnglishUI ? "How can CLARA help you today?" : "CLARA có thể giúp gì cho bạn?"}
+                    {t(uiLanguage, "chat.legacyWorkspace.welcome.title")}
                   </h2>
                   <div className="mt-3 max-w-md space-y-1.5 text-sm text-[var(--text-secondary)]">
                     <p>
-                      {isEnglishUI ? (
-                        <>Ask about <strong>medicine, symptoms, lab results</strong> or <strong>check drug interactions</strong>.</>
-                      ) : (
-                        <>Bạn có thể hỏi về <strong>thuốc, triệu chứng, kết quả xét nghiệm</strong> hoặc <strong>kiểm tra tương tác</strong>.</>
-                      )}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.askLead")} {" "}
+                      <strong>{t(uiLanguage, "chat.legacyWorkspace.welcome.askTopics")}</strong>{" "}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.askConnector")} {" "}
+                      <strong>{t(uiLanguage, "chat.legacyWorkspace.welcome.askInteractions")}</strong>.
                     </p>
                     <p>
-                      {isEnglishUI ? (
-                        <>CLARA answers with <strong>warnings</strong> and <strong>references</strong> when available.</>
-                      ) : (
-                        <>CLARA trả lời kèm <strong>cảnh báo</strong> và <strong>nguồn tham khảo</strong> khi có.</>
-                      )}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.answerLead")} {" "}
+                      <strong>{t(uiLanguage, "chat.legacyWorkspace.welcome.answerWarnings")}</strong>{" "}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.answerConnector")} {" "}
+                      <strong>{t(uiLanguage, "chat.legacyWorkspace.welcome.answerSources")}</strong>{" "}
+                      {t(uiLanguage, "chat.legacyWorkspace.welcome.answerSuffix")}
                     </p>
                   </div>
                   <p className="mt-4 max-w-lg rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium leading-5 text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
-                    {isEnglishUI
-                      ? "CLARA is an AI health information assistant, not a replacement for a clinician."
-                      : "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế."}
+                    {t(uiLanguage, "chat.legacyWorkspace.welcome.disclaimer")}
                   </p>
                   <div className="mt-8 w-full">
                     <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">medication</span> {isEnglishUI ? "Medication" : "Thuốc"}</span>
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">medication</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.medication")}</span>
                       <span>·</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">coronavirus</span> {isEnglishUI ? "Symptoms" : "Triệu chứng"}</span>
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">coronavirus</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.symptoms")}</span>
                       <span>·</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">science</span> {isEnglishUI ? "Lab tests" : "Xét nghiệm"}</span>
+                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">science</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.labTests")}</span>
                     </div>
                     <div className="grid w-full gap-3 sm:grid-cols-2">
                       {quickPrompts.map((prompt) => (
@@ -3880,13 +3914,10 @@ export default function ChatWorkspacePage() {
               {conversationTurns.length >= 1 && conversationTurns.length <= 2 && !isSubmitting && !isLoadingTurns ? (
                 <div className="mx-auto mt-3 flex w-full max-w-3xl flex-col items-start gap-2 px-1">
                   <p className="text-xs font-semibold text-[var(--text-muted)]">
-                    {isEnglishUI ? "Continue with?" : "Bạn muốn tiếp tục với?"}
+                    {t(uiLanguage, "chat.legacyWorkspace.canvas.continue")}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {(isEnglishUI
-                      ? ["Check drug interactions", "Ask about side effects", "Enter my medication list", "Create a consult report"]
-                      : ["Kiểm tra tương tác thuốc", "Hỏi về tác dụng phụ", "Nhập danh sách thuốc của tôi", "Tạo báo cáo tư vấn"]
-                    ).map((suggestion) => (
+                    {followUpSuggestions.map((suggestion) => (
                       <button
                         key={suggestion}
                         type="button"
@@ -3904,7 +3935,7 @@ export default function ChatWorkspacePage() {
                 <article className="rounded-[0.8rem] border border-cyan-300/70 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900 shadow-[0_10px_24px_-28px_rgba(14,116,144,0.42)] dark:border-cyan-600/55 dark:bg-cyan-950/35 dark:text-cyan-100">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-600 dark:bg-cyan-300" />
-                    <span>{isEnglishUI ? "CLARA is analyzing your question..." : "CLARA đang phân tích câu hỏi..."}</span>
+                    <span>{t(uiLanguage, "chat.legacyWorkspace.canvas.analyzing")}</span>
                   </div>
                 </article>
               ) : null}
@@ -3915,21 +3946,24 @@ export default function ChatWorkspacePage() {
             <div className="mx-auto mb-2 w-full max-w-3xl px-3">
               <article
                 role="group"
-                aria-label={isEnglishUI ? "Clarifying questions" : "Câu hỏi làm rõ"}
+                aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.aria")}
                 className="rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_-28px_rgba(180,83,9,0.4)] dark:border-amber-600/55 dark:bg-amber-950/35 dark:text-amber-100"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <p className="font-semibold leading-6">
-                    {isEnglishUI
-                      ? "Your query is a bit broad. Answer a few questions so the deep run targets your intent, or skip to run as-is."
-                      : "Câu hỏi còn khá rộng. Trả lời vài câu để phiên nghiên cứu sâu bám đúng ý bạn, hoặc bỏ qua để chạy nguyên văn."}
-                  </p>
+                  <div>
+                    <h3 className="font-semibold leading-6">
+                      {t(uiLanguage, "chat.legacyWorkspace.clarify.title")}
+                    </h3>
+                    <p className="mt-1 text-[13px] leading-5">
+                      {t(uiLanguage, "chat.legacyWorkspace.clarify.description")}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={onDismissClarify}
                     disabled={isSubmitting}
                     className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-200 dark:hover:bg-amber-900/40"
-                    aria-label={isEnglishUI ? "Dismiss" : "Đóng"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.dismiss")}
                   >
                     ✕
                   </button>
@@ -3947,7 +3981,8 @@ export default function ChatWorkspacePage() {
                         value={clarifyGate.answers[question.id] ?? ""}
                         onChange={(event) => onChangeClarifyAnswer(question.id, event.target.value)}
                         disabled={isSubmitting}
-                        placeholder={isEnglishUI ? "Your answer (optional)" : "Câu trả lời của bạn (không bắt buộc)"}
+                        aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.answerPlaceholder")}
+                        placeholder={t(uiLanguage, "chat.legacyWorkspace.clarify.answerPlaceholder")}
                         className="min-h-[34px] w-full rounded-lg border border-amber-300/80 bg-white/80 px-2.5 text-[13px] text-amber-950 outline-none focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-600/60 dark:bg-amber-950/40 dark:text-amber-50"
                       />
                     </label>
@@ -3961,7 +3996,7 @@ export default function ChatWorkspacePage() {
                     disabled={isSubmitting}
                     className="inline-flex items-center rounded-full bg-amber-600 px-3.5 py-1.5 text-[13px] font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isEnglishUI ? "Answer & start research" : "Trả lời & bắt đầu nghiên cứu"}
+                    {t(uiLanguage, "chat.legacyWorkspace.clarify.submit")}
                   </button>
                   <button
                     type="button"
@@ -3969,7 +4004,7 @@ export default function ChatWorkspacePage() {
                     disabled={isSubmitting}
                     className="inline-flex items-center rounded-full border border-amber-400/80 px-3.5 py-1.5 text-[13px] font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-100 dark:hover:bg-amber-900/40"
                   >
-                    {isEnglishUI ? "Skip & run original query" : "Bỏ qua & chạy câu hỏi gốc"}
+                    {t(uiLanguage, "chat.legacyWorkspace.clarify.skip")}
                   </button>
                 </div>
               </article>
@@ -4011,16 +4046,18 @@ export default function ChatWorkspacePage() {
               type="button"
               onClick={() => setIsTelemetryPanelOpen(true)}
               className="pointer-events-auto inline-flex h-6 items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/96 px-2 text-left shadow-[0_12px_24px_-24px_rgba(15,23,42,0.36)] backdrop-blur-lg transition hover:border-cyan-300/70"
-              aria-label={isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
-              title={isEnglishUI ? "Show telemetry" : "Hiện telemetry"}
+              aria-label={t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
+              title={t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
             >
               <span className="material-symbols-outlined text-[14px] text-[var(--text-secondary)]">monitoring</span>
               <span className="text-[9px] font-semibold text-[var(--text-primary)]">
-                {telemetryHasSignal ? confidenceDisplay : "--"}
+                {telemetryCopy.systemTelemetry}
               </span>
               {telemetryHasSignal ? (
                 <span className="text-[8px] text-[var(--text-muted)]">
-                  {sourceIntel.activeCount} {isEnglishUI ? "src" : "nguồn"}
+                  {t(uiLanguage, "chat.legacyWorkspace.telemetry.sourceCount", {
+                    count: sourceIntel.activeCount,
+                  })}
                 </span>
               ) : null}
             </button>
@@ -4035,15 +4072,15 @@ export default function ChatWorkspacePage() {
                       {telemetryCopy.systemTelemetry}
                     </p>
                     <h3 className="mt-0.5 text-[10px] font-semibold text-[var(--text-primary)]">
-                      {telemetryHasSignal ? confidenceLabel : telemetryCopy.confidenceSignalPending}
+                      {telemetryHasSignal ? telemetryCopy.sourceIntel : telemetryCopy.noSignals}
                     </h3>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsTelemetryPanelOpen(false)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
-                    aria-label={isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"}
-                    title={isEnglishUI ? "Hide telemetry" : "Ẩn telemetry"}
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")}
+                    title={t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")}
                   >
                     <span className="material-symbols-outlined text-[14px]">right_panel_close</span>
                   </button>
@@ -4051,20 +4088,6 @@ export default function ChatWorkspacePage() {
 
                 {telemetryHasSignal ? (
                   <>
-                    <div className="mt-1.5 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5">
-                      <div className="flex items-end justify-between gap-2">
-                        <div>
-                          <p className="text-[7px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                            {telemetryCopy.confidence}
-                          </p>
-                          <p className="mt-0.5 text-[0.98rem] font-semibold text-[var(--text-primary)]">{confidenceDisplay}</p>
-                        </div>
-                        <span className="text-[8px] font-medium text-[var(--text-muted)]">
-                          {sourceIntel.activeCount} {isEnglishUI ? "src" : "nguồn"}
-                        </span>
-                      </div>
-                    </div>
-
                     <div className="mt-2 space-y-1">
                       <p className="text-[7px] font-black uppercase tracking-[0.12em] text-[var(--text-muted)]">
                         {telemetryCopy.logicFlow}
@@ -4100,7 +4123,7 @@ export default function ChatWorkspacePage() {
                           })
                         ) : (
                           <p className="rounded-lg border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2 text-[10px] text-[var(--text-muted)]">
-                            {telemetryCopy.confidenceSignalPending}
+                            {telemetryCopy.noSignals}
                           </p>
                         )}
                       </div>
@@ -4124,9 +4147,7 @@ export default function ChatWorkspacePage() {
                   </>
                 ) : (
                   <p className="mt-2 rounded-lg border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-2 text-[10px] leading-4 text-[var(--text-muted)]">
-                    {isEnglishUI
-                      ? "Signal will appear after the next research answer."
-                      : "Tín hiệu sẽ hiện sau câu trả lời research tiếp theo."}
+                    {t(uiLanguage, "chat.legacyWorkspace.telemetry.emptySignal")}
                   </p>
                 )}
               </div>
@@ -4138,19 +4159,20 @@ export default function ChatWorkspacePage() {
           <div className="fixed inset-0 z-[68] flex items-start justify-center bg-slate-950/40 px-4 pt-[8vh] backdrop-blur-sm">
             <button
               type="button"
-              aria-label="Đóng scope manager"
+              aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.closeManager")}
               onClick={() => setIsScopeManagerOpen(false)}
               className="absolute inset-0"
             />
             <div className="relative w-full max-w-3xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-2xl">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  Scope Manager
+                  {t(uiLanguage, "chat.legacyWorkspace.folder.managerTitle")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setIsScopeManagerOpen(false)}
                   className="inline-flex min-h-[30px] min-w-[30px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)]"
+                  aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.closeManager")}
                 >
                   ✕
                 </button>
@@ -4158,19 +4180,25 @@ export default function ChatWorkspacePage() {
 
               <div className="mb-3 grid gap-2 sm:grid-cols-3">
                 <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Folders</p>
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t(uiLanguage, "chat.legacyWorkspace.folder.count")}
+                  </p>
                   <p className="text-sm font-semibold text-[var(--text-primary)]">{folders.length}</p>
                 </div>
                 <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Filter</p>
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t(uiLanguage, "chat.legacyWorkspace.folder.filter")}
+                  </p>
                   <p className="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">
                     {selectedFolderFilterId
-                      ? folders.find((folder) => folder.id === selectedFolderFilterId)?.name || "Custom"
-                      : "All folders"}
+                      ? folders.find((folder) => folder.id === selectedFolderFilterId)?.name || t(uiLanguage, "chat.legacyWorkspace.folder.custom")
+                      : t(uiLanguage, "chat.legacyWorkspace.folder.allOption")}
                   </p>
                 </div>
                 <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Selected chats</p>
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {t(uiLanguage, "chat.legacyWorkspace.folder.selectedChats")}
+                  </p>
                   <p className="text-sm font-semibold text-[var(--text-primary)]">{selectedConversationIds.length}</p>
                 </div>
               </div>
@@ -4180,7 +4208,8 @@ export default function ChatWorkspacePage() {
                   <input
                     value={scopeFolderDraft}
                     onChange={(event) => setScopeFolderDraft(event.target.value)}
-                    placeholder="Tên folder mới..."
+                    aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.newPlaceholder")}
+                    placeholder={t(uiLanguage, "chat.legacyWorkspace.folder.newPlaceholder")}
                     className="min-h-[38px] flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)]"
                   />
                   <button
@@ -4188,21 +4217,22 @@ export default function ChatWorkspacePage() {
                     onClick={() => void onCreateFolder()}
                     className="inline-flex min-h-[38px] items-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-700 dark:text-cyan-300"
                   >
-                    + Create folder
+                    + {t(uiLanguage, "chat.legacyWorkspace.folder.create")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedFolderFilterId(null)}
                     className="inline-flex min-h-[38px] items-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
                   >
-                    Clear filter
+                    {t(uiLanguage, "chat.legacyWorkspace.folder.clearFilter")}
                   </button>
                 </div>
 
                 <input
                   value={folderManagerSearch}
                   onChange={(event) => setFolderManagerSearch(event.target.value)}
-                  placeholder="Tìm folder..."
+                  aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.searchPlaceholder")}
+                  placeholder={t(uiLanguage, "chat.legacyWorkspace.folder.searchPlaceholder")}
                   className="min-h-[36px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)]"
                 />
 
@@ -4213,10 +4243,10 @@ export default function ChatWorkspacePage() {
                       onClick={() => setSelectedFolderFilterId(null)}
                       className="line-clamp-1 text-left text-sm font-semibold text-[var(--text-primary)] hover:text-cyan-700"
                     >
-                      All folders
+                      {t(uiLanguage, "chat.legacyWorkspace.folder.allOption")}
                     </button>
                     <span className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[10px] text-[var(--text-muted)]">
-                      Filter reset
+                      {t(uiLanguage, "chat.legacyWorkspace.folder.reset")}
                     </span>
                   </div>
 
@@ -4243,7 +4273,7 @@ export default function ChatWorkspacePage() {
                           onClick={() => setSelectedFolderFilterId(folder.id)}
                           className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                         >
-                          Filter
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.filter")}
                         </button>
                         <button
                           type="button"
@@ -4251,7 +4281,7 @@ export default function ChatWorkspacePage() {
                           onClick={() => void onUpdateActiveConversationMeta({ folderId: folder.id })}
                           className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Assign active
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.assignActive")}
                         </button>
                         <button
                           type="button"
@@ -4259,28 +4289,28 @@ export default function ChatWorkspacePage() {
                           onClick={() => void applyBulkMetaUpdate({ folderId: folder.id })}
                           className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Assign selected
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.assignSelected")}
                         </button>
                         <button
                           type="button"
                           onClick={() => void onRenameFolder(folder)}
                           className="rounded border border-[color:var(--shell-border)] px-2 py-1 text-[11px] text-[var(--text-secondary)]"
                         >
-                          Edit
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.edit")}
                         </button>
                         <button
                           type="button"
                           onClick={() => void onDeleteFolder(folder)}
                           className="rounded border border-rose-300/70 px-2 py-1 text-[11px] text-rose-600"
                         >
-                          Delete
+                          {t(uiLanguage, "chat.legacyWorkspace.folder.delete")}
                         </button>
                       </div>
                     </div>
                   ))}
                   {!folderManagerItems.length ? (
                     <p className="rounded-lg border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-xs text-[var(--text-muted)]">
-                      Không tìm thấy folder phù hợp.
+                      {t(uiLanguage, "chat.legacyWorkspace.folder.empty")}
                     </p>
                   ) : null}
                 </div>
@@ -4292,7 +4322,7 @@ export default function ChatWorkspacePage() {
           <div className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-950/45 px-4 pt-[10vh] backdrop-blur-sm">
             <button
               type="button"
-              aria-label="Đóng command palette"
+              aria-label={t(uiLanguage, "chat.commandPalette.closeAria")}
               onClick={() => {
                 setIsCommandPaletteOpen(false);
                 setCommandPaletteQuery("");
@@ -4302,7 +4332,7 @@ export default function ChatWorkspacePage() {
             <div className="relative w-full max-w-2xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-2xl">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  Command Palette
+                  {t(uiLanguage, "chat.commandPalette.title")}
                 </p>
                 <button
                   type="button"
@@ -4311,6 +4341,7 @@ export default function ChatWorkspacePage() {
                     setCommandPaletteQuery("");
                   }}
                   className="inline-flex min-h-[30px] min-w-[30px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)]"
+                  aria-label={t(uiLanguage, "chat.commandPalette.closeAria")}
                 >
                   ✕
                 </button>
@@ -4333,7 +4364,8 @@ export default function ChatWorkspacePage() {
                     executeCommandAction(first);
                   }
                 }}
-                placeholder="Tìm hành động... (new chat, export docx, share...)"
+                aria-label={t(uiLanguage, "chat.commandPalette.searchLabel")}
+                placeholder={t(uiLanguage, "chat.commandPalette.searchPlaceholder")}
                 className="min-h-[42px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
               <div className="mt-2 max-h-[58vh] space-y-1 overflow-y-auto pr-1">
@@ -4356,7 +4388,7 @@ export default function ChatWorkspacePage() {
                   ))
                 ) : (
                   <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-4 text-sm text-[var(--text-muted)]">
-                    Không có action phù hợp.
+                    {t(uiLanguage, "chat.commandPalette.noMatches")}
                   </p>
                 )}
               </div>

@@ -265,6 +265,19 @@ class Settings(BaseSettings):
     rag_scribe_export_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_EXPORT_ENABLED"
     )
+    # Raw audio is deliberately transient in the API: uploaded bytes are relayed
+    # to the configured ASR provider and are never persisted by CLARA.  The two
+    # controls below make the remaining recording-derived data lifecycle
+    # explicit.  They default off so legacy workflows remain unchanged.
+    rag_scribe_recording_data_deletion_enabled: bool = Field(
+        default=False, validation_alias="RAG_SCRIBE_RECORDING_DATA_DELETION_ENABLED"
+    )
+    scribe_transcript_retention_days: int = Field(
+        default=0, validation_alias="SCRIBE_TRANSCRIPT_RETENTION_DAYS", ge=0, le=3650
+    )
+    scribe_audio_magic_validation_enabled: bool = Field(
+        default=False, validation_alias="SCRIBE_AUDIO_MAGIC_VALIDATION_ENABLED"
+    )
     rag_scribe_fhir_export_enabled: bool = Field(
         default=False, validation_alias="RAG_SCRIBE_FHIR_EXPORT_ENABLED"
     )
@@ -516,6 +529,10 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RESEARCH_CLARIFYING_QUESTIONS_ENABLED",
     )
+    research_output_modes_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_OUTPUT_MODES_ENABLED",
+    )
     research_role_gated_telemetry_enabled: bool = Field(
         default=False,
         validation_alias="RESEARCH_ROLE_GATED_TELEMETRY_ENABLED",
@@ -543,6 +560,20 @@ class Settings(BaseSettings):
     research_upload_object_store_url: str = Field(
         default="",
         validation_alias="RESEARCH_UPLOAD_OBJECT_STORE_URL",
+    )
+    upload_malware_scan_required: bool = Field(
+        default=False,
+        validation_alias="UPLOAD_MALWARE_SCAN_REQUIRED",
+    )
+    upload_malware_clamav_host: str = Field(
+        default="",
+        validation_alias="UPLOAD_MALWARE_CLAMAV_HOST",
+    )
+    upload_malware_clamav_port: int = Field(
+        default=3310,
+        validation_alias="UPLOAD_MALWARE_CLAMAV_PORT",
+        ge=1,
+        le=65535,
     )
 
     # --- Platform hardening feature flags (additive; default off/behavior-preserving) ---
@@ -625,6 +656,14 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="CAREGUARD_OBSERVABILITY_ENABLED",
     )
+    # Keep the API and ML side of the explicit DrugBank-identity flow aligned.
+    # Default off preserves the existing cabinet payload exactly; when enabled,
+    # raw owner-scoped names and validated selection bindings are forwarded to
+    # ML, whose licensed index remains the final authority.
+    careguard_medication_clarification_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_MEDICATION_CLARIFICATION_ENABLED",
+    )
 
     # --- Admin & Observability upgrade feature flags ----------------------------
     # All additive + default OFF/empty ⇒ byte-for-byte current behavior. With
@@ -682,6 +721,13 @@ class Settings(BaseSettings):
     council_model_disclosure_enabled: bool = Field(
         default=False,
         validation_alias="COUNCIL_MODEL_DISCLOSURE_ENABLED",
+    )
+    # API peer of the ML shadow gate.  With this false, no Council endpoint
+    # lists or writes Research snapshot attachments and no packet is added to
+    # the internal run payload, preserving the legacy path before ML is called.
+    council_evidence_packet_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED",
     )
     council_observability_enabled: bool = Field(
         default=False,
@@ -772,6 +818,10 @@ class Settings(BaseSettings):
     lifemap_capture_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_CAPTURE_ENABLED"
     )
+    lifemap_text_draft_extraction_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED",
+    )
     lifemap_capture_object_store_url: str = Field(
         default="", validation_alias="LIFEMAP_CAPTURE_OBJECT_STORE_URL"
     )
@@ -817,14 +867,26 @@ class Settings(BaseSettings):
     lifemap_ask_ai_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_ASK_AI_ENABLED"
     )
+    lifemap_ask_semantic_routing_enabled: bool = Field(
+        default=True,
+        validation_alias="LIFEMAP_ASK_SEMANTIC_ROUTING_ENABLED",
+    )
     lifemap_ai_summaries_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_SUMMARIES_ENABLED"
+    )
+    lifemap_vietnamese_drafts_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_VIETNAMESE_DRAFTS_ENABLED"
     )
     lifemap_ai_entity_resolution_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_ENTITY_RESOLUTION_ENABLED"
     )
     lifemap_ai_review_findings_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_REVIEW_FINDINGS_ENABLED"
+    )
+    # An independent kill switch for provider-backed duplicate/conflict
+    # proposals. Rule findings remain available when this is off or ML fails.
+    lifemap_review_model_proposals_enabled: bool = Field(
+        default=False, validation_alias="LIFEMAP_REVIEW_MODEL_PROPOSALS_ENABLED"
     )
     lifemap_ai_pattern_shadow_enabled: bool = Field(
         default=False, validation_alias="LIFEMAP_AI_PATTERN_SHADOW_ENABLED"

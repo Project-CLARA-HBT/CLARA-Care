@@ -34,6 +34,7 @@ import '../../core/a11y.dart';
 import '../../core/api_client.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
+import '../language_controller.dart';
 import '../../screens/chat_screen.dart';
 import '../../screens/research_screen.dart';
 import '../../theme/tokens.dart';
@@ -59,11 +60,16 @@ class ChatSurfaceV3 extends StatefulWidget {
     required this.apiClient,
     required this.sessionStore,
     required this.resolver,
+    this.languageController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
   final MobileFeatureFlagResolver resolver;
+
+  /// App-wide consumer-language state. When absent (older embedded callers),
+  /// this surface remains Vietnamese-first for backwards compatibility.
+  final LanguageController? languageController;
 
   @override
   State<ChatSurfaceV3> createState() => _ChatSurfaceV3State();
@@ -80,6 +86,22 @@ class _ChatSurfaceV3State extends State<ChatSurfaceV3> {
 
   @override
   Widget build(BuildContext context) {
+    final languageController = widget.languageController;
+    if (languageController == null) {
+      return _buildLocalized(isEnglish: false);
+    }
+    return AnimatedBuilder(
+      animation: languageController,
+      builder: (context, _) => _buildLocalized(
+        isEnglish: languageController.languageCode == 'en',
+      ),
+    );
+  }
+
+  /// Rebuilds presentation copy when the app-wide language changes without
+  /// recreating either child. The [IndexedStack] keeps the chat thread and a
+  /// permitted research job alive across a language switch.
+  Widget _buildLocalized({required bool isEnglish}) {
     final showModeHeader = _researchDeepEnabled;
 
     // IndexedStack keeps BOTH children alive so switching modes never tears down
@@ -93,8 +115,9 @@ class _ChatSurfaceV3State extends State<ChatSurfaceV3> {
           resolver: widget.resolver,
           // Streaming-first (SSE) with ChatScreen's built-in blocking fallback.
           streamingEnabled: true,
-          // Vietnamese-first surface (Experience_V3 default).
-          isEnglish: false,
+          // The shell owns the live locale; ChatScreen keeps its state while
+          // the static UI copy changes between Vietnamese and English.
+          isEnglish: isEnglish,
           // The Experience_V3 redesign always renders the polished
           // ChatGPT-class body; it is the design target here.
           polished: true,
@@ -121,6 +144,7 @@ class _ChatSurfaceV3State extends State<ChatSurfaceV3> {
       children: [
         _ChatModeHeader(
           mode: _mode,
+          isEnglish: isEnglish,
           onModeChanged: (next) {
             if (next == _mode) return;
             setState(() => _mode = next);
@@ -136,9 +160,14 @@ class _ChatSurfaceV3State extends State<ChatSurfaceV3> {
 /// "Trò chuyện" and "Nghiên cứu" — with ≥48dp targets and single-announcement
 /// semantics conveying the selected state by text, not color alone.
 class _ChatModeHeader extends StatelessWidget {
-  const _ChatModeHeader({required this.mode, required this.onModeChanged});
+  const _ChatModeHeader({
+    required this.mode,
+    required this.isEnglish,
+    required this.onModeChanged,
+  });
 
   final _ChatSurfaceMode mode;
+  final bool isEnglish;
   final ValueChanged<_ChatSurfaceMode> onModeChanged;
 
   @override
@@ -154,19 +183,19 @@ class _ChatModeHeader extends StatelessWidget {
         ),
         child: Semantics(
           container: true,
-          label: 'Chế độ',
+          label: isEnglish ? 'Mode' : 'Chế độ',
           child: SegmentedButton<_ChatSurfaceMode>(
             showSelectedIcon: false,
-            segments: const [
+            segments: [
               ButtonSegment<_ChatSurfaceMode>(
                 value: _ChatSurfaceMode.chat,
                 icon: Icon(Icons.forum_outlined),
-                label: Text('Trò chuyện'),
+                label: Text(isEnglish ? 'Chat' : 'Trò chuyện'),
               ),
               ButtonSegment<_ChatSurfaceMode>(
                 value: _ChatSurfaceMode.research,
                 icon: Icon(Icons.science_outlined),
-                label: Text('Nghiên cứu'),
+                label: Text(isEnglish ? 'Research' : 'Nghiên cứu'),
               ),
             ],
             selected: {mode},

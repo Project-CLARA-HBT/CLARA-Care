@@ -83,6 +83,50 @@ export type LifeMapReplay = {
   }>;
 };
 
+export type LifeMapRevisionComparison = {
+  status: "ready" | "no_prior_revision";
+  event_id: string;
+  summary: string;
+  before?: {
+    revision_id: string;
+    revision: number;
+    truth_state: string;
+    reason_code: string;
+    recorded_at?: string;
+  };
+  after: {
+    revision_id: string;
+    revision: number;
+    truth_state: string;
+    reason_code: string;
+    recorded_at?: string;
+  };
+  changes: Array<{
+    field: string;
+    before: unknown;
+    after: unknown;
+  }>;
+  source_spans: {
+    before: LifeMapRevisionSource | null;
+    after: LifeMapRevisionSource | null;
+  };
+  disclosure: {
+    deterministic: true;
+    read_only: true;
+    mutates_lifemap: false;
+    preserves_truth_state: true;
+    requires_user_review: true;
+  };
+};
+
+export type LifeMapRevisionSource = {
+  source_id: string;
+  source_kind: string;
+  original_language: string;
+  source_span: unknown;
+  observed_at: string | null;
+};
+
 export type LifeMapDisputeCase = {
   id: string;
   event_id: string;
@@ -165,6 +209,37 @@ export type LifeMapAskAnswer = {
   };
 };
 
+export type LifeMapVisitPreparationDraft = {
+  status: "ready" | "abstained" | "emergency_escalation";
+  title: string;
+  answer?: string;
+  plain_language_summary?: {
+    status: "ready" | "abstained";
+    important_now: string;
+    based_on: Array<{
+      text: string;
+      citation_ids: string[];
+      occurred_at: string;
+      truth_state: string;
+    }>;
+    uncertainty: string[];
+    next_step: string;
+    urgent_help: string;
+    input_revision_ids: string[];
+  };
+  questions_to_consider: Array<{ text: string; citation_ids: string[] }>;
+  source_revision_ids: string[];
+  evidence: LifeMapAskEvidence[];
+  disclosure: {
+    mode?: string;
+    medical_advice?: false;
+    mutates_lifemap: false;
+    draft_only: true;
+    requires_user_review?: true;
+    preserves_truth_state?: true;
+  };
+};
+
 export type LifeMapReviewFinding = {
   id: string;
   kind: "duplicate" | "contradiction" | "missingness" | "model_proposal";
@@ -218,6 +293,13 @@ export type CaptureCandidate = {
         kind: "text_fields";
         fields: Record<string, { start: number; end: number }>;
         text_checksum?: string;
+      }
+    | {
+        kind: "source_text";
+        source_candidate_id: string;
+        text_checksum: string;
+        start: number;
+        end: number;
       }
     | null;
   missing_critical_fields: string[];
@@ -332,6 +414,19 @@ export async function getLifeMapReplay(
   ).data;
 }
 
+export async function getLifeMapRevisionComparison(
+  eventId: string,
+  afterRevision: number,
+  locale: "vi" | "en" = "vi",
+): Promise<LifeMapRevisionComparison> {
+  return (
+    await api.get<LifeMapRevisionComparison>(
+      `/lifemap/events/${encodeURIComponent(eventId)}/revision-comparison`,
+      { params: { after_revision: afterRevision, locale } },
+    )
+  ).data;
+}
+
 export async function correctLifeMapEvent(
   eventId: string,
   revision: number,
@@ -425,6 +520,23 @@ export async function askLifeMap(
       episode_id: episodeId || null,
       locale,
     })
+  ).data;
+}
+
+export async function createLifeMapVisitPreparationDraft(
+  query: string,
+  locale: "vi" | "en" = "vi",
+  episodeId?: string,
+): Promise<LifeMapVisitPreparationDraft> {
+  return (
+    await api.post<LifeMapVisitPreparationDraft>(
+      "/lifemap/v2/visit-preparation-drafts",
+      {
+        query,
+        locale,
+        episode_id: episodeId || null,
+      },
+    )
   ).data;
 }
 

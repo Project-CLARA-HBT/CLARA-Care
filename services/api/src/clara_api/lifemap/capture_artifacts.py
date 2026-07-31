@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import socket
-import struct
 from dataclasses import dataclass
 from secrets import token_bytes
-from typing import Protocol
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -16,6 +13,11 @@ from clara_api.core.config import get_settings
 from clara_api.core.research_upload_store import (
     ObjectStoreClient,
     build_object_store_client,
+)
+from clara_api.core.upload_safety import (
+    ClamAvScanner,
+    MalwareScanner,
+    UploadMalwareScannerUnavailable,
 )
 
 ALLOWED_MEDIA_TYPES = {
@@ -30,43 +32,9 @@ class ArtifactSecurityError(ValueError):
     pass
 
 
-class MalwareScannerUnavailable(RuntimeError):
-    pass
-
-
-class MalwareScanner(Protocol):
-    def scan(self, data: bytes) -> str: ...
-
-
-class ClamAvScanner:
-    """Minimal ClamAV INSTREAM client; any ambiguity fails closed."""
-
-    def __init__(self, host: str, port: int = 3310, timeout_seconds: float = 10.0):
-        self._host = host.strip()
-        self._port = port
-        self._timeout = timeout_seconds
-
-    def scan(self, data: bytes) -> str:
-        if not self._host:
-            raise MalwareScannerUnavailable("Malware scanner is not configured")
-        try:
-            with socket.create_connection(
-                (self._host, self._port), timeout=self._timeout
-            ) as connection:
-                connection.sendall(b"zINSTREAM\0")
-                for offset in range(0, len(data), 64 * 1024):
-                    chunk = data[offset : offset + 64 * 1024]
-                    connection.sendall(struct.pack(">I", len(chunk)))
-                    connection.sendall(chunk)
-                connection.sendall(struct.pack(">I", 0))
-                response = connection.recv(4096).decode("utf-8", errors="replace")
-        except OSError as error:
-            raise MalwareScannerUnavailable("Malware scanner is unavailable") from error
-        if "FOUND" in response:
-            return "infected"
-        if "OK" in response:
-            return "clean"
-        raise MalwareScannerUnavailable("Malware scanner returned an invalid verdict")
+# Keep this public import stable for existing capture callers/tests while using
+# the same scanner implementation as PHR and Research uploads.
+MalwareScannerUnavailable = UploadMalwareScannerUnavailable
 
 
 def sniff_media_type(data: bytes) -> str:

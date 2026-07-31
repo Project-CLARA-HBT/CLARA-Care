@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
+import { formatLocaleDate, t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
   createCouncilCase,
@@ -12,10 +15,10 @@ import {
   setActiveCouncilCaseId,
 } from "@/lib/council";
 
-function formatTime(value: string): string {
+function formatTime(language: "vi" | "en", value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "--";
-  return date.toLocaleString("vi-VN", {
+  return formatLocaleDate(language, date, {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -25,6 +28,7 @@ function formatTime(value: string): string {
 
 export default function CouncilNewPage() {
   const router = useRouter();
+  const language = useUILanguage();
   const [cases, setCases] = useState<CouncilCaseRecord[]>([]);
   const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -38,23 +42,27 @@ export default function CouncilNewPage() {
         const response = await listCouncilCases(10, 0);
         setCases(response.items);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể tải danh sách case.");
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCases")));
       } finally {
         setIsLoading(false);
       }
     };
     void load();
-  }, []);
+  }, [language]);
 
   const onCreateCase = async () => {
     setIsCreating(true);
     setError("");
     try {
-      const created = await createCouncilCase({ title: `Case ${new Date().toLocaleString("vi-VN")}` });
+      const created = await createCouncilCase({
+        title: t(language, "council.new.caseFallback", {
+          id: formatLocaleDate(language, new Date(), { dateStyle: "short", timeStyle: "short" }),
+        }),
+      });
       setActiveCouncilCaseId(created.id);
       router.push(`/council/new/intake?caseId=${created.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tạo case mới.");
+      setError(safeUserFacingError(cause, t(language, "council.error.createCase")));
     } finally {
       setIsCreating(false);
     }
@@ -62,18 +70,18 @@ export default function CouncilNewPage() {
 
   return (
     <PageShell
-      title="New Council Case"
-      description="Flow chuẩn: tạo case mới, intake dữ liệu thật, rồi mới chạy phân tích/synthesis."
+      title={t(language, "council.new.title")}
+      description={t(language, "council.new.description")}
       variant="plain"
     >
       <div className="space-y-5">
         <CouncilWorkspaceNav />
 
         <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Wizard Flow</p>
-          <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">Tạo case trước khi phân tích</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{t(language, "council.new.flow")}</p>
+          <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{t(language, "council.new.heading")}</h2>
           <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
-            Council sẽ không hiển thị phân tích giả. Bạn cần tạo case mới, hoàn thành intake, chọn specialist rồi chạy hội chẩn.
+            {t(language, "council.new.intro")}
           </p>
 
           <button
@@ -82,21 +90,21 @@ export default function CouncilNewPage() {
             disabled={isCreating}
             className="mt-5 inline-flex min-h-[46px] items-center rounded-xl border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-5 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {isCreating ? "Đang tạo case..." : "Tạo case mới"}
+            {isCreating ? t(language, "council.new.creating") : t(language, "council.new.create")}
           </button>
         </section>
 
         <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Recent Cases</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "council.new.recent")}</h3>
             <Link href="/council" className="text-xs font-semibold text-cyan-300">
-              Mở Council Landing
+              {t(language, "council.new.openLanding")}
             </Link>
           </div>
 
-          {isLoading ? <p className="text-sm text-[var(--text-secondary)]">Đang tải dữ liệu...</p> : null}
+          {isLoading ? <p className="text-sm text-[var(--text-secondary)]">{t(language, "council.new.loading")}</p> : null}
           {!isLoading && cases.length === 0 ? (
-            <p className="text-sm text-[var(--text-secondary)]">Chưa có case nào.</p>
+            <p className="text-sm text-[var(--text-secondary)]">{t(language, "council.new.empty")}</p>
           ) : null}
 
           <div className="space-y-2">
@@ -111,9 +119,9 @@ export default function CouncilNewPage() {
                 className="flex w-full items-center justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-left transition hover:border-cyan-400/40"
               >
                 <span>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title || `Case #${item.id}`}</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title || t(language, "council.new.caseFallback", { id: item.id })}</p>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    #{item.id} · {item.status} · {formatTime(item.updated_at)}
+                    #{item.id} · {item.status} · {formatTime(language, item.updated_at)}
                   </p>
                 </span>
                 <span className="material-symbols-outlined text-[var(--text-secondary)]">chevron_right</span>

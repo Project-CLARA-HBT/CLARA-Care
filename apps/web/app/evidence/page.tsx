@@ -34,43 +34,49 @@ import {
   type EvidenceSubscription,
 } from "@/lib/living-evidence";
 import { getLifeMapToday, type LifeMapEpisode } from "@/lib/lifemap";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
+import type { UILanguage } from "@/lib/ui-language";
+import { useUILanguage } from "@/lib/use-ui-language";
 
-const sourceClassLabel: Record<string, string> = {
-  guideline: "Hướng dẫn / đồng thuận",
-  primary_randomized_trial: "Thử nghiệm ngẫu nhiên",
-  primary_observational: "Nghiên cứu quan sát",
-  primary_diagnostic: "Nghiên cứu chẩn đoán",
-  primary_prognostic: "Nghiên cứu tiên lượng",
-  systematic_review: "Tổng quan hệ thống / phân tích gộp",
-  review: "Bài tổng quan",
-  editorial_commentary: "Bình luận biên tập",
+const sourceClassLabel: Record<string, UITranslationKey> = {
+  guideline: "evidence.source.guideline",
+  primary_randomized_trial: "evidence.source.primaryRandomizedTrial",
+  primary_observational: "evidence.source.primaryObservational",
+  primary_diagnostic: "evidence.source.primaryDiagnostic",
+  primary_prognostic: "evidence.source.primaryPrognostic",
+  systematic_review: "evidence.source.systematicReview",
+  review: "evidence.source.review",
+  editorial_commentary: "evidence.source.editorialCommentary",
 };
 
-const missingContextLabel: Record<string, string> = {
-  population_context: "bối cảnh hoặc nhóm người liên quan",
-  outcomes: "điều bạn muốn biết kết quả",
-  time_horizon: "khoảng thời gian bạn quan tâm",
-  validated_study_eligibility_rules_unavailable: "quy tắc áp dụng nghiên cứu đã được kiểm định",
+const missingContextLabel: Record<string, UITranslationKey> = {
+  population_context: "evidence.missing.population",
+  outcomes: "evidence.missing.outcomes",
+  time_horizon: "evidence.missing.timeHorizon",
+  validated_study_eligibility_rules_unavailable: "evidence.missing.eligibility",
 };
 
-function labelForSourceClass(value: string) {
-  return sourceClassLabel[value] ?? value;
+function labelForSourceClass(language: UILanguage, value: string) {
+  const key = sourceClassLabel[value];
+  return key ? t(language, key) : value;
 }
 
-function labelForUnknown(value: string) {
-  return missingContextLabel[value] ?? value;
+function labelForUnknown(language: UILanguage, value: string) {
+  const key = missingContextLabel[value];
+  return key ? t(language, key) : value;
 }
 
 function toMessage(cause: unknown, fallback: string) {
-  return cause instanceof Error && cause.message ? cause.message : fallback;
+  return safeUserFacingError(cause, fallback);
 }
 
-function EvidenceMatrixView({ matrix }: { matrix: EvidenceMatrix }) {
+function EvidenceMatrixView({ matrix, language }: { matrix: EvidenceMatrix; language: UILanguage }) {
   const groups = Object.entries(matrix.source_classes);
   if (groups.length === 0) {
     return (
       <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
-        {matrix.unavailable_reason ?? "Chưa có bản ghi bằng chứng đã xác minh cho lần chạy này."}
+        {matrix.unavailable_reason ?? t(language, "evidence.matrix.empty")}
       </div>
     );
   }
@@ -79,8 +85,8 @@ function EvidenceMatrixView({ matrix }: { matrix: EvidenceMatrix }) {
       {groups.map(([sourceClass, records]) => (
         <section key={sourceClass} className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)]">
           <div className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)]/65 px-4 py-3">
-            <h3 className="font-semibold text-[var(--text-primary)]">{labelForSourceClass(sourceClass)}</h3>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">{records.length} nguồn được lưu với provenance</p>
+            <h3 className="font-semibold text-[var(--text-primary)]">{labelForSourceClass(language, sourceClass)}</h3>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">{t(language, "evidence.matrix.provenance", { count: records.length })}</p>
           </div>
           <ul className="divide-y divide-[color:var(--shell-border)]">
             {records.map((record) => (
@@ -99,7 +105,7 @@ function EvidenceMatrixView({ matrix }: { matrix: EvidenceMatrix }) {
                       rel="noreferrer"
                       className="focus-ring inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-brand-soft)]"
                     >
-                      Mở nguồn <span className="material-symbols-outlined text-sm" aria-hidden="true">open_in_new</span>
+                      {t(language, "evidence.matrix.openSource")} <span className="material-symbols-outlined text-sm" aria-hidden="true">open_in_new</span>
                     </a>
                   ) : null}
                 </div>
@@ -121,9 +127,11 @@ function EvidenceMatrixView({ matrix }: { matrix: EvidenceMatrix }) {
 function InterpretationView({
   applicability,
   contradictions,
+  language,
 }: {
   applicability: EvidenceApplicability;
   contradictions: EvidenceContradictions;
+  language: UILanguage;
 }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -131,13 +139,13 @@ function InterpretationView({
         <div className="flex items-start gap-3">
           <span className="material-symbols-outlined mt-0.5 text-[var(--text-brand)]" aria-hidden="true">person_search</span>
           <div>
-            <h3 className="font-semibold text-[var(--text-primary)]">Có áp dụng cho bạn không?</h3>
+            <h3 className="font-semibold text-[var(--text-primary)]">{t(language, "evidence.interpretation.applicability")}</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{applicability.safe_message}</p>
           </div>
         </div>
         {applicability.unknowns.length ? (
           <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
-            {applicability.unknowns.map((item) => <li key={item} className="flex gap-2"><span className="material-symbols-outlined text-base text-[var(--status-warn-text)]" aria-hidden="true">help</span><span>Còn thiếu: {labelForUnknown(item)}.</span></li>)}
+            {applicability.unknowns.map((item) => <li key={item} className="flex gap-2"><span className="material-symbols-outlined text-base text-[var(--status-warn-text)]" aria-hidden="true">help</span><span>{t(language, "evidence.interpretation.missing", { item: labelForUnknown(language, item) })}</span></li>)}
           </ul>
         ) : null}
       </section>
@@ -145,13 +153,13 @@ function InterpretationView({
         <div className="flex items-start gap-3">
           <span className="material-symbols-outlined mt-0.5 text-[var(--text-brand)]" aria-hidden="true">compare_arrows</span>
           <div>
-            <h3 className="font-semibold text-[var(--text-primary)]">Điểm chưa thống nhất</h3>
+            <h3 className="font-semibold text-[var(--text-primary)]">{t(language, "evidence.interpretation.contradictions")}</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{contradictions.safe_message}</p>
           </div>
         </div>
         {contradictions.items.length ? (
           <ul className="mt-3 space-y-2">
-            {contradictions.items.map((item, index) => <li key={`${item.claim}-${index}`} className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]"><p className="font-medium">{item.claim || "Các nguồn có kết quả cần đối chiếu thêm."}</p><p className="mt-1 text-xs opacity-80">Nguồn liên quan: {item.citation_ids.join(", ")}</p></li>)}
+            {contradictions.items.map((item, index) => <li key={`${item.claim}-${index}`} className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]"><p className="font-medium">{item.claim || t(language, "evidence.interpretation.defaultContradiction")}</p><p className="mt-1 text-xs opacity-80">{t(language, "evidence.interpretation.relatedSources", { sources: item.citation_ids.join(", ") })}</p></li>)}
           </ul>
         ) : null}
       </section>
@@ -160,6 +168,7 @@ function InterpretationView({
 }
 
 export default function LivingEvidencePage() {
+  const language = useUILanguage();
   const [episodes, setEpisodes] = useState<LifeMapEpisode[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(true);
   const [selectedEpisodeId, setSelectedEpisodeId] = useState("");
@@ -190,11 +199,11 @@ export default function LivingEvidencePage() {
       setEpisodes(today.episodes);
       setSelectedEpisodeId((current) => current || today.episodes[0]?.id || "");
     } catch (cause) {
-      setError(toMessage(cause, "Không thể tải hành trình LifeMap."));
+      setError(toMessage(cause, t(language, "evidence.error.loadEpisodes")));
     } finally {
       setLoadingEpisodes(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => { void loadEpisodes(); }, [loadEpisodes]);
   useEffect(() => {
@@ -238,7 +247,7 @@ export default function LivingEvidencePage() {
       setContradictions(null);
       setSubscription(null);
     } catch (cause) {
-      setError(toMessage(cause, "Không thể lưu câu hỏi bằng chứng."));
+      setError(toMessage(cause, t(language, "evidence.error.saveQuestion")));
     } finally {
       setSaving(false);
     }
@@ -251,7 +260,7 @@ export default function LivingEvidencePage() {
     try {
       setQuestion(await confirmEvidenceQuestion(question.id));
     } catch (cause) {
-      setError(toMessage(cause, "Không thể xác nhận câu hỏi."));
+      setError(toMessage(cause, t(language, "evidence.error.confirmQuestion")));
     } finally {
       setSaving(false);
     }
@@ -282,7 +291,7 @@ export default function LivingEvidencePage() {
         });
       setRun(completedRun);
       if (completedRun.status.toLowerCase() !== "completed") {
-        throw new Error("Quá trình truy xuất bằng chứng không hoàn tất. Không có kết luận y khoa nào được phát hành.");
+        throw new Error(t(language, "evidence.error.runIncomplete"));
       }
       const details = await getEvidenceDetails(completedRun.id);
       setMatrix(details.matrix);
@@ -291,7 +300,7 @@ export default function LivingEvidencePage() {
     } catch (cause) {
       if (!(cause instanceof Error && cause.name === "AbortError")) {
         setRun((current) => current && isEvidenceRunTerminal(current) ? current : null);
-        setError(toMessage(cause, "Chưa thể truy xuất bằng chứng đã kiểm chứng."));
+        setError(toMessage(cause, t(language, "evidence.error.run")));
       }
     } finally {
       if (pollControllerRef.current === controller) {
@@ -321,7 +330,7 @@ export default function LivingEvidencePage() {
         ]);
       }
     } catch (cause) {
-      setError(toMessage(cause, "Không thể cập nhật đăng ký theo dõi."));
+      setError(toMessage(cause, t(language, "evidence.error.subscription")));
     } finally {
       setSaving(false);
     }
@@ -342,7 +351,7 @@ export default function LivingEvidencePage() {
         item.id === updated.id ? updated : item
       )));
     } catch (cause) {
-      setError(toMessage(cause, "Không thể cập nhật tần suất theo dõi."));
+      setError(toMessage(cause, t(language, "evidence.error.interval")));
     } finally {
       setSaving(false);
     }
@@ -356,7 +365,7 @@ export default function LivingEvidencePage() {
         current.id === item.id ? { ...current, status: "read" } : current
       )));
     } catch (cause) {
-      setError(toMessage(cause, "Không thể đánh dấu thông báo đã đọc."));
+      setError(toMessage(cause, t(language, "evidence.error.notification")));
     }
   };
 
@@ -366,8 +375,8 @@ export default function LivingEvidencePage() {
   return (
     <PageShell
       variant="plain"
-      title="Bằng chứng đang cập nhật"
-      description="Đặt một câu hỏi gắn với hành trình của bạn. CLARA chỉ hiển thị nguồn đã kiểm chứng và nói rõ khi chưa đủ bằng chứng."
+      title={t(language, "evidence.page.title")}
+      description={t(language, "evidence.page.description")}
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <main className="space-y-5">
@@ -379,16 +388,16 @@ export default function LivingEvidencePage() {
                   <div className="flex items-start gap-3">
                     <span className="material-symbols-outlined mt-0.5 animate-spin text-[var(--text-brand)]" aria-hidden="true">progress_activity</span>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Đang xử lý chuyên sâu</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(language, "evidence.run.processing")}</p>
                       <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{question?.question}</h2>
                       <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                         {pollAttempt === 0
-                          ? "Đang khởi tạo run và gửi câu hỏi đến hệ thống truy xuất."
+                          ? t(language, "evidence.run.starting")
                           : pollAttempt < 15
-                            ? "Đang tìm và phân loại guideline, nghiên cứu gốc, tổng quan và bình luận."
+                            ? t(language, "evidence.run.retrieving")
                             : pollAttempt < 60
-                              ? "Đang kiểm tra provenance, chất lượng nguồn và các điểm mâu thuẫn."
-                              : "Đang hoàn tất ma trận bằng chứng và hiệu chỉnh độ không chắc chắn."}
+                              ? t(language, "evidence.run.verifying")
+                              : t(language, "evidence.run.finishing")}
                       </p>
                     </div>
                   </div>
@@ -398,8 +407,8 @@ export default function LivingEvidencePage() {
                     <div className="h-full w-2/5 animate-pulse rounded-full bg-[var(--brand-500)]" />
                   </div>
                   <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
-                    {pollAttempt > 0 ? `Đã cập nhật tiến trình ${pollAttempt} lần. ` : ""}
-                    Tác vụ có thể mất vài phút. Bạn không cần gửi lại câu hỏi.
+                    {pollAttempt > 0 ? t(language, "evidence.run.updated", { count: pollAttempt }) : ""}
+                    {t(language, "evidence.run.wait")}
                   </p>
                 </div>
               </div>
@@ -409,22 +418,22 @@ export default function LivingEvidencePage() {
               <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Kết quả bằng chứng</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(language, "evidence.result.title")}</p>
                     <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{question?.question}</h2>
                   </div>
                   {evidenceAvailable ? (
-                    <Badge tone="ok">{run.evidence_count} nguồn đã xác minh</Badge>
+                    <Badge tone="ok">{t(language, "evidence.result.verifiedSources", { count: run.evidence_count })}</Badge>
                   ) : (
-                    <Badge tone="warn">Không phát hành kết luận</Badge>
+                    <Badge tone="warn">{t(language, "evidence.result.notReleased")}</Badge>
                   )}
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{run.safe_message}</p>
               </div>
               <div className="space-y-5 p-5">
-                {evidenceAvailable && matrix ? <EvidenceMatrixView matrix={matrix} /> : <div className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-sm leading-6 text-[var(--status-warn-text)]"><p className="font-semibold">CLARA dừng ở đây để an toàn.</p><p className="mt-1">Không có câu trả lời y khoa được tạo khi provenance không đầy đủ. Bạn có thể bổ sung bối cảnh hoặc thảo luận câu hỏi này với chuyên gia y tế.</p></div>}
-                {applicability && contradictions ? <InterpretationView applicability={applicability} contradictions={contradictions} /> : null}
+                {evidenceAvailable && matrix ? <EvidenceMatrixView matrix={matrix} language={language} /> : <div className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-sm leading-6 text-[var(--status-warn-text)]"><p className="font-semibold">{t(language, "evidence.result.safeStopTitle")}</p><p className="mt-1">{t(language, "evidence.result.safeStopBody")}</p></div>}
+                {applicability && contradictions ? <InterpretationView applicability={applicability} contradictions={contradictions} language={language} /> : null}
                 <details className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
-                  <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">Độ không chắc chắn của lần chạy này</summary>
+                  <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">{t(language, "evidence.result.uncertainty")}</summary>
                   <ul className="mt-3 space-y-2 leading-6">{run.uncertainty.map((item, index) => <li key={`${item.dimension}-${index}`}><span className="font-medium text-[var(--text-primary)]">{item.dimension}:</span> {item.reason}</li>)}</ul>
                 </details>
               </div>
@@ -434,8 +443,8 @@ export default function LivingEvidencePage() {
               <div className="flex items-start gap-3">
                 <span className="material-symbols-outlined inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]" aria-hidden="true">fact_check</span>
                 <div>
-                  <h2 className="font-semibold text-[var(--text-primary)]">Không phải một câu trả lời đoán trước</h2>
-                  <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">Câu hỏi được gắn với LifeMap, sau đó mới truy xuất hướng dẫn, nghiên cứu chính, tổng quan và bình luận theo từng nhóm nguồn. Thiếu nguồn đáng tin cậy thì CLARA sẽ nói là chưa có kết luận.</p>
+                  <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "evidence.intro.title")}</h2>
+                  <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">{t(language, "evidence.intro.body")}</p>
                 </div>
               </div>
             </SurfaceCard>
@@ -446,7 +455,7 @@ export default function LivingEvidencePage() {
           {notifications.length ? (
             <SurfaceCard className="p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                Thay đổi đã được rà soát
+                {t(language, "evidence.notifications.title")}
               </p>
               <ul className="mt-3 space-y-3">
                 {notifications.map((item) => (
@@ -471,10 +480,10 @@ export default function LivingEvidencePage() {
                             className="focus-ring mt-2 rounded-[var(--radius-md)] text-xs font-semibold text-[var(--text-brand)] hover:underline"
                             onClick={() => void markNotificationRead(item)}
                           >
-                            Đánh dấu đã đọc
+                            {t(language, "evidence.notifications.markRead")}
                           </button>
                         ) : (
-                          <p className="mt-2 text-xs text-[var(--text-muted)]">Đã đọc</p>
+                          <p className="mt-2 text-xs text-[var(--text-muted)]">{t(language, "evidence.notifications.read")}</p>
                         )}
                       </div>
                     </div>
@@ -484,22 +493,22 @@ export default function LivingEvidencePage() {
             </SurfaceCard>
           ) : null}
           <SurfaceCard className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 1 · Câu hỏi của bạn</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Đặt câu hỏi theo hành trình</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Bạn luôn xem và xác nhận câu hỏi trước khi truy xuất chuyên sâu.</p>
-            {loadingEpisodes ? <div className="mt-4"><LoadingCards count={1} /></div> : episodes.length === 0 ? <EmptyState icon="route" title="Cần một hành trình" description="Tạo một hành trình LifeMap trước, rồi quay lại để đặt câu hỏi có ngữ cảnh." ><Link href="/lifemap" className="focus-ring text-sm font-semibold text-[var(--text-brand)] hover:underline">Mở LifeMap</Link></EmptyState> : <form className="mt-4 space-y-3" onSubmit={(event) => void createQuestion(event)}>
-              <Select label="Thuộc hành trình" value={selectedEpisodeId} onChange={(event) => setSelectedEpisodeId(event.target.value)}>{episodes.map((episode) => <option key={episode.id} value={episode.id}>{episode.title}</option>)}</Select>
-              <Textarea label="Điều bạn muốn biết" required value={questionText} onChange={(event) => setQuestionText(event.target.value)} placeholder="Ví dụ: Có bằng chứng nào giúp tôi chuẩn bị cuộc hẹn về huyết áp?" className="min-h-28 leading-6" />
-              <Textarea label="Bối cảnh bạn đã xác nhận" optional value={population} onChange={(event) => setPopulation(event.target.value)} placeholder="Ví dụ: người lớn, đã được bác sĩ nói có tăng huyết áp" />
-              <Textarea label="Điều bạn muốn theo dõi" hint="(mỗi dòng một ý)" value={outcomes} onChange={(event) => setOutcomes(event.target.value)} placeholder={"Ví dụ:\nGiảm huyết áp\nTác dụng không mong muốn"} />
-              <Field label="Khoảng thời gian" optional value={timeHorizon} onChange={(event) => setTimeHorizon(event.target.value)} placeholder="Ví dụ: 3 tháng tới" />
-              <Button type="submit" block loading={saving} loadingLabel="Đang lưu…" disabled={!selectedEpisodeId}>Lưu để xem lại</Button>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(language, "evidence.step.question")}</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{t(language, "evidence.question.title")}</h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{t(language, "evidence.question.description")}</p>
+            {loadingEpisodes ? <div className="mt-4"><LoadingCards count={1} /></div> : episodes.length === 0 ? <EmptyState icon="route" title={t(language, "evidence.question.emptyTitle")} description={t(language, "evidence.question.emptyDescription")} ><Link href="/lifemap" className="focus-ring text-sm font-semibold text-[var(--text-brand)] hover:underline">{t(language, "evidence.question.openLifeMap")}</Link></EmptyState> : <form className="mt-4 space-y-3" onSubmit={(event) => void createQuestion(event)}>
+              <Select label={t(language, "evidence.question.episode")} value={selectedEpisodeId} onChange={(event) => setSelectedEpisodeId(event.target.value)}>{episodes.map((episode) => <option key={episode.id} value={episode.id}>{episode.title}</option>)}</Select>
+              <Textarea label={t(language, "evidence.question.text")} required value={questionText} onChange={(event) => setQuestionText(event.target.value)} placeholder={t(language, "evidence.question.textPlaceholder")} className="min-h-28 leading-6" />
+              <Textarea label={t(language, "evidence.question.population")} optional value={population} onChange={(event) => setPopulation(event.target.value)} placeholder={t(language, "evidence.question.populationPlaceholder")} />
+              <Textarea label={t(language, "evidence.question.outcomes")} hint={t(language, "evidence.question.outcomesHint")} value={outcomes} onChange={(event) => setOutcomes(event.target.value)} placeholder={t(language, "evidence.question.outcomesPlaceholder")} />
+              <Field label={t(language, "evidence.question.horizon")} optional value={timeHorizon} onChange={(event) => setTimeHorizon(event.target.value)} placeholder={t(language, "evidence.question.horizonPlaceholder")} />
+              <Button type="submit" block loading={saving} loadingLabel={t(language, "evidence.question.saving")} disabled={!selectedEpisodeId}>{t(language, "evidence.question.save")}</Button>
             </form>}
           </SurfaceCard>
 
-          {question ? <SurfaceCard className="p-5"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Bước 2 · Xác nhận</p><h2 className="mt-1 font-semibold text-[var(--text-primary)]">{question.question}</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{question.confirmed ? "Bạn đã xác nhận câu hỏi này." : "Hãy kiểm tra câu hỏi và bối cảnh trước khi CLARA tìm nguồn."}</p>{question.compiled.missing_dimensions?.length ? <p className="mt-3 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]">Có thể sẽ cần thêm: {question.compiled.missing_dimensions.map(labelForUnknown).join(", ")}.</p> : null}{!question.confirmed ? <Button type="button" variant="secondary" block className="mt-4" disabled={saving} onClick={() => void confirmQuestion()}>Tôi đã kiểm tra câu hỏi</Button> : <Button type="button" block className="mt-4" loading={running} loadingLabel="Đang tìm nguồn đã xác minh…" onClick={() => void runResearch()}>Tìm bằng chứng</Button>}</SurfaceCard> : null}
+          {question ? <SurfaceCard className="p-5"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(language, "evidence.step.confirm")}</p><h2 className="mt-1 font-semibold text-[var(--text-primary)]">{question.question}</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{question.confirmed ? t(language, "evidence.confirm.confirmed") : t(language, "evidence.confirm.pending")}</p>{question.compiled.missing_dimensions?.length ? <p className="mt-3 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]">{t(language, "evidence.confirm.missing", { items: question.compiled.missing_dimensions.map((item) => labelForUnknown(language, item)).join(", ") })}</p> : null}{!question.confirmed ? <Button type="button" variant="secondary" block className="mt-4" disabled={saving} onClick={() => void confirmQuestion()}>{t(language, "evidence.confirm.action")}</Button> : <Button type="button" block className="mt-4" loading={running} loadingLabel={t(language, "evidence.confirm.searching")} onClick={() => void runResearch()}>{t(language, "evidence.confirm.search")}</Button>}</SurfaceCard> : null}
 
-          {run ? <SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">Theo dõi thay đổi quan trọng</h2><p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">Kết quả tìm kiếm mới không tự tạo thông báo. Chỉ thay đổi quan trọng đã được chuyên gia chấp nhận mới xuất hiện ở đây.</p><div className="mt-4"><Select label="Tần suất kiểm tra" value={intervalHours} disabled={saving} onChange={(event) => void changeInterval(event.target.value)}><option value="24">Mỗi ngày</option><option value="168">Mỗi tuần</option><option value="720">Mỗi 30 ngày</option></Select></div><Button type="button" variant="secondary" block className="mt-4" disabled={saving} onClick={() => void toggleSubscription()}>{subscription ? "Dừng theo dõi cập nhật" : "Theo dõi cập nhật quan trọng"}</Button>{subscription && !subscription.monitor_enabled ? <p className="mt-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-xs leading-5 text-[var(--text-secondary)]">Bạn đã lưu lựa chọn theo dõi. Tác vụ kiểm tra định kỳ hiện chưa được quản trị viên bật.</p> : null}{selectedEpisode ? <p className="mt-3 text-xs text-[var(--text-muted)]">Gắn với: {selectedEpisode.title}</p> : null}</SurfaceCard> : null}
+          {run ? <SurfaceCard className="p-5"><h2 className="font-semibold text-[var(--text-primary)]">{t(language, "evidence.subscription.title")}</h2><p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{t(language, "evidence.subscription.description")}</p><div className="mt-4"><Select label={t(language, "evidence.subscription.interval")} value={intervalHours} disabled={saving} onChange={(event) => void changeInterval(event.target.value)}><option value="24">{t(language, "evidence.subscription.daily")}</option><option value="168">{t(language, "evidence.subscription.weekly")}</option><option value="720">{t(language, "evidence.subscription.monthly")}</option></Select></div><Button type="button" variant="secondary" block className="mt-4" disabled={saving} onClick={() => void toggleSubscription()}>{subscription ? t(language, "evidence.subscription.stop") : t(language, "evidence.subscription.start")}</Button>{subscription && !subscription.monitor_enabled ? <p className="mt-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3 text-xs leading-5 text-[var(--text-secondary)]">{t(language, "evidence.subscription.disabled")}</p> : null}{selectedEpisode ? <p className="mt-3 text-xs text-[var(--text-muted)]">{t(language, "evidence.subscription.attached", { title: selectedEpisode.title })}</p> : null}</SurfaceCard> : null}
         </aside>
       </div>
     </PageShell>

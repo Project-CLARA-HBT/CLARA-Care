@@ -14,6 +14,7 @@ def test_drugbank_status_returns_ready_required_projection(
         "version": "drugbank-test",
         "pair_count": 12,
         "manifest_matches_index": True,
+        "integrity_verified": True,
         "required": True,
     }
     monkeypatch.setattr(

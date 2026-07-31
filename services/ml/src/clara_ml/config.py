@@ -15,6 +15,31 @@ DEEP_BETA_REPORT_HARD_MAX_WORDS = 15000
 class Settings(BaseSettings):
     app_name: str = "clara-ml"
     environment: str = "development"
+    lifemap_text_draft_extraction_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_TEXT_DRAFT_EXTRACTION_ENABLED",
+    )
+    # Optional V4 Flash duplicate/conflict suggestions over a bounded set of
+    # API-authorized current revisions. It only returns revision-id pairs for
+    # human review and is independently dark by default.
+    lifemap_review_model_proposals_enabled: bool = Field(
+        default=False,
+        validation_alias="LIFEMAP_REVIEW_MODEL_PROPOSALS_ENABLED",
+    )
+    # Optional V4 Flash source-span extraction for Vietnamese clinical language.
+    # It is metadata/review-only and never replaces deterministic safeguards.
+    clinical_language_llm_extraction_enabled: bool = Field(
+        default=False,
+        validation_alias="CLINICAL_LANGUAGE_LLM_EXTRACTION_ENABLED",
+    )
+    # Permit source-span candidates to be supplied to the deterministic
+    # CareGuard normalizer. This requires the parent extraction flag and is
+    # separately default-off because it can affect which original text tokens
+    # are checked by DrugBank; it never supplies a canonical drug or DDI fact.
+    careguard_clinical_span_augmentation_enabled: bool = Field(
+        default=False,
+        validation_alias="CAREGUARD_CLINICAL_SPAN_AUGMENTATION_ENABLED",
+    )
     default_embedder: str = "bge-m3"
     embedding_api_key: str = Field(
         default="",
@@ -70,39 +95,30 @@ class Settings(BaseSettings):
             "EMBEDDING_API_KEY",
         ),
     )
-    primary_llm_api_key: str = Field(
-        default="",
-        validation_alias=AliasChoices(
-            "PRIMARY_LLM_API_KEY",
-            "HITECHCLOUD_API_KEY",
-        ),
-    )
-    primary_llm_base_url: str = Field(
-        default="https://platform.hitechcloud.one/v1",
-        validation_alias=AliasChoices(
-            "PRIMARY_LLM_BASE_URL",
-            "HITECHCLOUD_BASE_URL",
-        ),
-    )
-    primary_llm_model: str = Field(
-        default="gpt-5.3-codex-high",
-        validation_alias=AliasChoices(
-            "PRIMARY_LLM_MODEL",
-            "HITECHCLOUD_MODEL",
-        ),
-    )
     llm_deepseek_only: bool = Field(
-        default=False,
-        validation_alias=AliasChoices(
-            "LLM_DEEPSEEK_ONLY",
-            "DISABLE_PRIMARY_LLM",
-        ),
+        default=True,
+        validation_alias="LLM_DEEPSEEK_ONLY",
     )
     deepseek_base_url: str = Field(
-        default="https://api.deepseek.com",
+        # V4 Pro/Flash are served through CLARA's governed OpenAI-compatible
+        # DeepSeek gateway.  Keep this code default aligned with the example
+        # environment and both deployment compose variants so an omitted env
+        # does not silently select a different, unsupported model catalog.
+        default="https://api.yescale.io/v1",
         validation_alias="DEEPSEEK_BASE_URL",
     )
-    deepseek_model: str = Field(default="deepseek-v3.2", validation_alias="DEEPSEEK_MODEL")
+    # Legacy/global DeepSeek model used when task routing is explicitly disabled.
+    # New deployments route registered tasks between the two governed V4 models
+    # below; neither value is ever sourced from an end-user request.
+    deepseek_model: str = Field(default="deepseek-v4-pro", validation_alias="DEEPSEEK_MODEL")
+    deepseek_pro_model: str = Field(
+        default="deepseek-v4-pro",
+        validation_alias="DEEPSEEK_PRO_MODEL",
+    )
+    deepseek_flash_model: str = Field(
+        default="deepseek-v4-flash",
+        validation_alias="DEEPSEEK_FLASH_MODEL",
+    )
     deepseek_fallback_model: str = Field(
         # Secondary model tried when the primary model fails across all bases
         # (e.g. upstream 5xx / "temporarily unavailable"). Empty disables the
@@ -122,6 +138,26 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="MODEL_REGISTRY_ENABLED",
     )
+    model_registry_task_model_routing_enabled: bool = Field(
+        default=True,
+        validation_alias="MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED",
+    )
+    # Aggregates only versioned registry decisions (task/profile/version/risk/
+    # rollback). It never records model prompts, input/output, endpoint,
+    # credentials, user identifiers, or request identifiers. Keep default-off
+    # until internal observability storage/export is approved.
+    model_routing_observability_enabled: bool = Field(
+        default=False,
+        validation_alias="MODEL_ROUTING_OBSERVABILITY_ENABLED",
+    )
+    # The semantic intent proposal is generated through the governed
+    # MEDICAL_SAFETY_ROUTER contract. Emergency/legal deterministic guards stay
+    # authoritative; this switch restores the legacy keyword intent path
+    # immediately if a semantic routing incident is observed.
+    semantic_intent_routing_enabled: bool = Field(
+        default=True,
+        validation_alias="SEMANTIC_INTENT_ROUTING_ENABLED",
+    )
     model_registry_force_rollback: bool = Field(
         default=False,
         validation_alias="MODEL_REGISTRY_FORCE_ROLLBACK",
@@ -129,6 +165,37 @@ class Settings(BaseSettings):
     model_registry_rollback_model: str = Field(
         default="",
         validation_alias="MODEL_REGISTRY_ROLLBACK_MODEL",
+    )
+    # Optional external Encoder-SLM router.  This is strictly a shadow signal:
+    # it is disabled by default and must never replace deterministic emergency,
+    # legal, authorization, DrugBank, or state-transition decisions.
+    encoder_slm_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="ENCODER_SLM_SHADOW_ENABLED",
+    )
+    encoder_slm_shadow_url: str = Field(
+        default="",
+        validation_alias="ENCODER_SLM_SHADOW_URL",
+    )
+    encoder_slm_shadow_api_key: str = Field(
+        default="",
+        validation_alias="ENCODER_SLM_SHADOW_API_KEY",
+    )
+    encoder_slm_shadow_model_id: str = Field(
+        default="",
+        validation_alias="ENCODER_SLM_SHADOW_MODEL_ID",
+    )
+    encoder_slm_shadow_timeout_ms: int = Field(
+        default=750,
+        validation_alias="ENCODER_SLM_SHADOW_TIMEOUT_MS",
+        ge=100,
+        le=5000,
+    )
+    encoder_slm_shadow_max_input_chars: int = Field(
+        default=1200,
+        validation_alias="ENCODER_SLM_SHADOW_MAX_INPUT_CHARS",
+        ge=64,
+        le=4000,
     )
     chat_llm_query_planner_enabled: bool = Field(
         # When true, plain chat (routed_chat_infer) runs the same LLM query
@@ -436,12 +503,53 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("CAREGUARD_DRUGBANK_REQUIRED"),
     )
+    # Integrity is deliberately independent from ``careguard_drugbank_required``:
+    # a deployment may use curated rules while staging a licensed DrugBank
+    # artifact, but it must never silently trust a changed/incomplete artifact.
+    # Set this to false only as a short-lived, audited rollback for a verified
+    # legacy artifact; strict clinical deployments should pair it with
+    # ``CAREGUARD_DRUGBANK_REQUIRED=true``.
+    careguard_drugbank_manifest_integrity_required: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED"),
+    )
+    # Container-visible paths for a licensed DrugBank artifact bundle. Empty
+    # values retain the small development bundle location in the ML package.
+    # Production mounts the licensed manifest/shards and its prebuilt SQLite
+    # index outside the image; the CareGuard store resolves these paths once at
+    # startup and never exposes them in health responses or telemetry.
+    careguard_drugbank_manifest_path: str = Field(
+        default="",
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_MANIFEST_PATH"),
+    )
+    careguard_drugbank_sqlite_path: str = Field(
+        default="",
+        validation_alias=AliasChoices("CAREGUARD_DRUGBANK_SQLITE_PATH"),
+    )
+    # Default-off rollout for a stricter medication-identity boundary.  When
+    # enabled, an ambiguous or unknown user medication name must be resolved by
+    # an explicit selection from the current licensed DrugBank index before a
+    # DDI conclusion is computed.  No LLM, Vietnamese alias map, or local DDI
+    # rule may choose the identity.  Turning it off restores the legacy
+    # normalization path immediately.
+    careguard_medication_clarification_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CAREGUARD_MEDICATION_CLARIFICATION_ENABLED"),
+    )
     # Additive consumer wording projection of an already-final CareGuard result.
     # It is intentionally OFF by default: the renderer never queries, changes,
     # or substitutes for the authoritative DrugBank decision path.
     careguard_wording_renderer_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices("CAREGUARD_WORDING_RENDERER_ENABLED"),
+    )
+    # Optional registry-governed draft for the CareGuard wording projection.
+    # This is an independent kill switch: a failure, malformed output, or a
+    # fidelity violation falls back to the deterministic renderer and can never
+    # affect DrugBank lookup, normalization, risk, or recommended action.
+    careguard_wording_model_draft_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CAREGUARD_WORDING_MODEL_DRAFT_ENABLED"),
     )
     external_ddi_timeout_seconds: float = Field(
         default=1.5,
@@ -769,23 +877,38 @@ class Settings(BaseSettings):
         ge=0,
         le=64,
     )
-    council_neural_enabled: bool = Field(
+    # Canonical name explicitly identifies this as a deterministic fixed-weight
+    # heuristic shadow. COUNCIL_NEURAL_* remains environment-only compatibility
+    # for old deployments; it is never emitted as a model name or API field.
+    council_rule_shadow_enabled: bool = Field(
         default=False,
-        validation_alias="COUNCIL_NEURAL_ENABLED",
+        validation_alias=AliasChoices(
+            "COUNCIL_RULE_SHADOW_ENABLED",
+            "COUNCIL_NEURAL_ENABLED",
+        ),
     )
-    council_neural_shadow_mode: bool = Field(
+    council_rule_shadow_mode: bool = Field(
         default=True,
-        validation_alias="COUNCIL_NEURAL_SHADOW_MODE",
+        validation_alias=AliasChoices(
+            "COUNCIL_RULE_SHADOW_MODE",
+            "COUNCIL_NEURAL_SHADOW_MODE",
+        ),
     )
-    council_neural_medium_threshold: float = Field(
+    council_rule_shadow_medium_threshold: float = Field(
         default=0.45,
-        validation_alias="COUNCIL_NEURAL_MEDIUM_THRESHOLD",
+        validation_alias=AliasChoices(
+            "COUNCIL_RULE_SHADOW_MEDIUM_THRESHOLD",
+            "COUNCIL_NEURAL_MEDIUM_THRESHOLD",
+        ),
         ge=0.0,
         le=1.0,
     )
-    council_neural_high_threshold: float = Field(
+    council_rule_shadow_high_threshold: float = Field(
         default=0.72,
-        validation_alias="COUNCIL_NEURAL_HIGH_THRESHOLD",
+        validation_alias=AliasChoices(
+            "COUNCIL_RULE_SHADOW_HIGH_THRESHOLD",
+            "COUNCIL_NEURAL_HIGH_THRESHOLD",
+        ),
         ge=0.0,
         le=1.0,
     )
@@ -799,9 +922,24 @@ class Settings(BaseSettings):
         ge=400,
         le=4000,
     )
+    # Optional deterministic Council → CareGuard/DrugBank safety floor. This
+    # is intentionally independent of the LLM shadow path: it never supplies
+    # an LLM prompt and can only raise review/triage urgency.
+    council_medication_safety_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_MEDICATION_SAFETY_ENABLED",
+    )
+    # Optional retrieval evidence availability for the independent Council
+    # specialist shadow.  The accepted packet is constrained to an allowlisted
+    # tool plus opaque retrieval IDs/categories; it never feeds the released
+    # Council decision and cannot carry retrieval text or prompts.
+    council_evidence_packet_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED",
+    )
 
     # --- Council upgrade feature flags (additive; default OFF) ---------------
-    # ML-side gates for the Council upgrade, mirroring the COUNCIL_NEURAL_*
+    # ML-side gates for the Council upgrade, mirroring the COUNCIL_RULE_SHADOW_*
     # pattern above. All additive + default OFF ⇒ byte-for-byte current
     # behavior: with these off, run_council / run_council_intake emit their
     # existing shapes, no SSE stage stream is produced, no ai_disclosure block
@@ -838,6 +976,14 @@ class Settings(BaseSettings):
     rag_ingestion_enabled: bool = Field(
         default=False,
         validation_alias="RAG_INGESTION_ENABLED",
+    )
+    # A corpus-wide watermark backfill can issue network requests to every
+    # enabled source. Keep it independently dark even when incremental
+    # ingestion is enabled; operators must explicitly opt in to this broader
+    # admin/scheduler operation.
+    rag_backfill_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_BACKFILL_ENABLED",
     )
     rag_entity_normalization_enabled: bool = Field(
         default=False,
@@ -883,7 +1029,9 @@ class Settings(BaseSettings):
         default=False, validation_alias="RAG_SCRIBE_FHIR_EXPORT_ENABLED"
     )
     # ASR provider selection seam. "whisper" = existing DeepSeek/Whisper audio
-    # client (the only fully-wired provider today); other names degrade to it.
+    # client. ``google_stt_v2`` is a real Chirp-3 path when project + ADC or
+    # workload credentials are supplied; an unavailable provider produces no
+    # transcript and lets the independently configured fallback run.
     scribe_asr_primary: str = Field(default="whisper", validation_alias="SCRIBE_ASR_PRIMARY")
     scribe_asr_fallback: str = Field(default="whisper", validation_alias="SCRIBE_ASR_FALLBACK")
     scribe_asr_language: str = Field(default="vi", validation_alias="SCRIBE_ASR_LANGUAGE")
@@ -898,6 +1046,11 @@ class Settings(BaseSettings):
     # (Requirement 2.2).
     scribe_asr_code_switching: bool = Field(
         default=True, validation_alias="SCRIBE_ASR_CODE_SWITCHING"
+    )
+    # Medical-ASR correction only proposes source-spanned edits. It never
+    # rewrites a transcript automatically and stays off until explicit rollout.
+    scribe_medical_correction_enabled: bool = Field(
+        default=False, validation_alias="SCRIBE_MEDICAL_CORRECTION_ENABLED"
     )
     # PhoWhisper (self-hosted, Vietnamese-capable) HTTP provider config. Defaults keep it
     # DISABLED/degrading: with no base URL set the provider returns an empty result so the
@@ -1016,6 +1169,15 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RESEARCH_GRADE_ENABLED",
     )
+    # Deprecated compatibility switch.  This value is intentionally no longer
+    # used to emit GRADE labels or recommendation strength: source type and an
+    # internal authority tier alone cannot perform a formal GRADE assessment.
+    # Retain it only so existing deployments do not fail configuration parsing.
+    # Use RESEARCH_EVIDENCE_SIGNALS_ENABLED for the provenance-only replacement.
+    research_evidence_signals_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_EVIDENCE_SIGNALS_ENABLED",
+    )
     research_consensus_enabled: bool = Field(
         default=False,
         validation_alias="RESEARCH_CONSENSUS_ENABLED",
@@ -1027,6 +1189,13 @@ class Settings(BaseSettings):
     research_role_adaptive_output_enabled: bool = Field(
         default=False,
         validation_alias="RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED",
+    )
+    # Closed, deterministic renderer selection. The ML service only echoes an
+    # allowlisted mode for API-side presentation after the release gate; it
+    # never sends this selector to a model or rewrites claims/citations.
+    research_output_modes_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_OUTPUT_MODES_ENABLED",
     )
 
     # --- Platform hardening: circuit breaker (additive; default OFF) ---------
@@ -1102,6 +1271,24 @@ class Settings(BaseSettings):
                 hard_max,
             )
             self.deep_beta_report_min_words = self.deep_beta_report_max_words_cap
+
+        # A clinical DrugBank-only deployment may not silently turn off either
+        # the on-disk index or artifact-integrity verification. Refuse this
+        # contradiction during configuration parsing so the service cannot make
+        # a DDI conclusion from a legacy/curated fallback while claiming the
+        # licensed source is mandatory.
+        if self.careguard_drugbank_required and not self.careguard_drugbank_sqlite_enabled:
+            raise ValueError(
+                "CAREGUARD_DRUGBANK_REQUIRED requires CAREGUARD_DRUGBANK_SQLITE_ENABLED=true"
+            )
+        if (
+            self.careguard_drugbank_required
+            and not self.careguard_drugbank_manifest_integrity_required
+        ):
+            raise ValueError(
+                "CAREGUARD_DRUGBANK_REQUIRED requires "
+                "CAREGUARD_DRUGBANK_MANIFEST_INTEGRITY_REQUIRED=true"
+            )
 
         return self
 

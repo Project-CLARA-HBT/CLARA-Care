@@ -3,6 +3,8 @@ import AppShell from "@/components/app-shell";
 import AnalyticsConsentBootstrap from "@/components/analytics/analytics-consent-bootstrap";
 import { getThemeInitScript } from "@/lib/theme";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { UI_LANGUAGE_COOKIE_NAME } from "@/lib/ui-language";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://theclaracare.com").replace(/\/+$/, "");
 
@@ -26,9 +28,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const language = cookieStore.get(UI_LANGUAGE_COOKIE_NAME)?.value === "en" ? "en" : "vi";
+
   return (
-    <html lang="vi" suppressHydrationWarning>
+    <html lang={language} suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

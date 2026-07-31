@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SystemFlowEvent, getSystemFlowEvents } from "@/lib/system";
 import { getRole, type UserRole } from "@/lib/auth-store";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 const DEFAULT_LIMIT = 120;
 const MAX_KEEP_ITEMS = 180;
@@ -45,6 +48,7 @@ function normalizeStatus(value: string): "ok" | "warn" | "error" | "pending" {
 }
 
 export default function AdminFlowRuntimePanel() {
+  const uiLanguage = useUILanguage();
   const [items, setItems] = useState<SystemFlowEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
@@ -92,12 +96,12 @@ export default function AdminFlowRuntimePanel() {
       setLatestSequence(snapshot.latestSequence);
       setItems(snapshot.items.slice().sort((a, b) => b.sequence - a.sequence));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể tải runtime flow events.");
+      setError(safeUserFacingError(cause, t(uiLanguage, "admin.flowRuntime.error.load")));
       setItems([]);
     } finally {
       setIsLoading(false);
     }
-  }, [sourceFilter]);
+  }, [sourceFilter, uiLanguage]);
 
   const pollNewEvents = useCallback(async () => {
     try {
@@ -113,9 +117,9 @@ export default function AdminFlowRuntimePanel() {
       mergeEvents(snapshot.items);
       if (error) setError("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể cập nhật realtime flow events.");
+      setError(safeUserFacingError(cause, t(uiLanguage, "admin.flowRuntime.error.refresh")));
     }
-  }, [error, mergeEvents, sourceFilter]);
+  }, [error, mergeEvents, sourceFilter, uiLanguage]);
 
   useEffect(() => {
     void loadInitial();

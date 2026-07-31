@@ -4,6 +4,7 @@ import { getCsrfToken } from "@/lib/auth-store";
 export type ResearchTier = "tier1" | "tier2";
 export type ResearchExecutionMode = "fast" | "deep" | "deep_beta";
 export type ResearchRetrievalStackMode = "auto" | "full";
+export type ResearchOutputMode = "plain_language" | "professional";
 
 /**
  * Transport used to fulfil a chat/research submission.
@@ -17,8 +18,19 @@ export const RESEARCH_TIER2_TIMEOUT_MS = 10 * 60 * 1000;
 export const RESEARCH_TIER2_JOB_POLL_MS = 1800;
 export const RESEARCH_TIER2_STREAM_MAX_WAIT_MS = 30 * 60 * 1000;
 
+/** Client mirror of the default-off presentation rollout. The API and ML
+ * independently enforce the same server-side gate; this only keeps the dark
+ * control out of the UI until all three deployments are enabled. */
+export function isResearchOutputModesEnabled(): boolean {
+  const value = (process.env.NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED ?? "")
+    .trim()
+    .toLowerCase();
+  return value === "true" || value === "1" || value === "yes" || value === "on";
+}
+
 export type Tier2Citation = {
   title: string;
+  sourceId?: string;
   source?: string;
   url?: string;
   snippet?: string;
@@ -135,13 +147,6 @@ export type ResearchTier2VerificationMatrixEntry = {
   note?: string;
   source?: string;
   evidence: string[];
-  /**
-   * GRADE evidence-certainty label for the claim (high | moderate | low |
-   * very_low) when `RESEARCH_GRADE_ENABLED` assigned one (Requirement 8.4).
-   * Absent when no label has been assigned, so the UI never renders a
-   * certainty label before assignment.
-   */
-  certainty?: string;
 };
 
 export type ResearchTier2ContradictionSummary = {
@@ -352,7 +357,39 @@ export type ResearchTier2TracedClaim = {
   claim: string;
   citationIds: string[];
   verdict?: string;
-  certainty?: string;
+};
+
+/**
+ * A deliberately small, consumer-safe projection of the API research release
+ * gate. It is not a clinical score or a model-confidence signal: it tells the
+ * renderer whether the API released factual prose after checking evidence and
+ * which bounded gate conditions prevented release when it did not.
+ */
+export type ResearchEvidenceRelease = {
+  passed: boolean;
+  reasons: ResearchEvidenceReleaseReason[];
+};
+
+export type ResearchEvidenceReleaseReason =
+  | "no_citations"
+  | "no_retrieved_evidence"
+  | "verification_unavailable"
+  | "verification_skipped"
+  | "verification_invalid"
+  | "unsupported_claims"
+  | "zero_claim_support";
+
+/**
+ * API-owned, deterministic reader chrome for a research answer that already
+ * passed evidence release. It is not a model output and contains no verifier
+ * rows, provider data, prompt, confidence, or clinical claim beyond the
+ * released markdown/citation identifiers.
+ */
+export type ResearchVerifiedPresentation = {
+  mode: ResearchOutputMode;
+  answer: string;
+  citationIds: string[];
+  citationVisibility: "compact" | "expanded";
 };
 
 export type ResearchTier2Result = {
@@ -377,6 +414,12 @@ export type ResearchTier2Result = {
    * payloads, preserving the existing result shape.
    */
   citationRegistry: ResearchTier2CitationRegistryEntry[];
+  /**
+   * API-owned evidence-release decision. It is present when the research
+   * quality gate returned a valid projection; absent for legacy records.
+   */
+  evidenceRelease?: ResearchEvidenceRelease;
+  presentation?: ResearchVerifiedPresentation;
   debug: ResearchTier2DebugMeta;
   verificationStatus?: {
     verdict?: string;
@@ -431,6 +474,7 @@ export type ResearchTier2JobCreateOptions = {
   personalMode?: boolean;
   uiLanguage?: "vi" | "en";
   deepPassCount?: number;
+  outputMode?: ResearchOutputMode;
   /**
    * Answers to the clarifying questions returned by `POST /research/clarify`
    * (Requirement 12.2). Keyed by question `id`. Carried verbatim to the job
@@ -438,12 +482,6 @@ export type ResearchTier2JobCreateOptions = {
    * starts keep their existing shape.
    */
   clarifyingAnswers?: Record<string, string>;
-  llmRuntime?: {
-    provider?: string;
-    apiKey?: string;
-    baseUrl?: string;
-    model?: string;
-  };
 };
 
 /**
@@ -629,6 +667,53 @@ function asBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
+const EVIDENCE_RELEASE_REASONS = new Set<ResearchEvidenceReleaseReason>([
+  "no_citations",
+  "no_retrieved_evidence",
+  "verification_unavailable",
+  "verification_skipped",
+  "verification_invalid",
+  "unsupported_claims",
+  "zero_claim_support",
+]);
+
+function parseEvidenceRelease(value: unknown): ResearchEvidenceRelease | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  const passed = asBoolean(record.passed);
+  if (passed === undefined) return undefined;
+
+  const rawReasons = Array.isArray(record.reasons) ? record.reasons : [];
+  const reasons = rawReasons.reduce<ResearchEvidenceReleaseReason[]>((items, item) => {
+    const reason = asText(item) as ResearchEvidenceReleaseReason | undefined;
+    if (reason && EVIDENCE_RELEASE_REASONS.has(reason) && !items.includes(reason)) {
+      items.push(reason);
+    }
+    return items;
+  }, []);
+
+  return { passed, reasons };
+}
+
+function parseVerifiedPresentation(value: unknown): ResearchVerifiedPresentation | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  const mode = asText(record.mode);
+  const answer = asText(record.answer_markdown);
+  const visibility = asText(record.citation_visibility);
+  if (
+    (mode !== "plain_language" && mode !== "professional") ||
+    !answer ||
+    (visibility !== "compact" && visibility !== "expanded") ||
+    !Array.isArray(record.citation_ids)
+  ) {
+    return undefined;
+  }
+  const citationIds = uniqueText(record.citation_ids.map((item) => asText(item) ?? ""));
+  if (citationIds.length !== record.citation_ids.length) return undefined;
+  return { mode, answer, citationIds, citationVisibility: visibility };
+}
+
 function asId(value: unknown): string | undefined {
   const text = asText(value);
   if (text) return text;
@@ -804,6 +889,7 @@ function parseCitation(value: unknown): Tier2Citation | null {
 
   return {
     title,
+    sourceId: asText(item.source_id) ?? asText(item.sourceId),
     source: asText(item.source) ?? asText(item.publisher) ?? asText(item.source_id),
     url: asSafeHttpUrl(item.url),
     snippet: asText(item.snippet) ?? asText(item.summary) ?? asText(item.relevance),
@@ -1720,67 +1806,6 @@ function parseEvidenceList(value: unknown): string[] {
   );
 }
 
-const _CERTAINTY_LABELS = new Set(["high", "moderate", "low", "very_low"]);
-
-/**
- * Normalizes a raw GRADE certainty value to one of the canonical labels
- * {high, moderate, low, very_low}. Returns `undefined` for any absent or
- * out-of-set value so a certainty label is only ever surfaced once a real
- * label has been assigned (Requirement 8.4, design §8). Tolerates spacing and
- * casing variants such as "Very Low" / "very-low".
- */
-function normalizeCertaintyLabel(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
-  return _CERTAINTY_LABELS.has(normalized) ? normalized : undefined;
-}
-
-/**
- * Builds a claim-text → certainty-label lookup from the optional `grade` and
- * `traced_claims` payload arrays (design §8). Only entries that carry a valid
- * assigned label are recorded, so claims without an assigned label never gain
- * a certainty value (Requirement 8.4). Keys are normalized claim text for a
- * tolerant match against the verification matrix.
- */
-function buildCertaintyByClaim(...payloads: unknown[]): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const payload of payloads) {
-    if (!Array.isArray(payload)) continue;
-    for (const item of payload) {
-      const row = asRecord(item);
-      if (!row) continue;
-      const claim =
-        asText(row.claim) ??
-        asText(row.statement) ??
-        asText(row.text) ??
-        asText(row.title);
-      if (!claim) continue;
-      const certainty = normalizeCertaintyLabel(
-        asText(row.certainty) ??
-        asText(row.grade_certainty) ??
-        asText(row.gradeCertainty) ??
-        asText(row.grade)
-      );
-      if (!certainty) continue;
-      const key = claim.trim().toLowerCase();
-      if (!map.has(key)) map.set(key, certainty);
-    }
-  }
-  return map;
-}
-
-function applyCertaintyToMatrix(
-  matrix: ResearchTier2VerificationMatrixEntry[],
-  certaintyByClaim: Map<string, string>
-): ResearchTier2VerificationMatrixEntry[] {
-  if (!certaintyByClaim.size) return matrix;
-  return matrix.map((entry) => {
-    if (entry.certainty) return entry;
-    const certainty = certaintyByClaim.get(entry.claim.trim().toLowerCase());
-    return certainty ? { ...entry, certainty } : entry;
-  });
-}
-
 /**
  * Coerces a raw consensus count to a non-negative integer, tolerating numeric
  * strings. Out-of-range / missing values collapse to 0 so the rendered counts
@@ -1915,8 +1940,8 @@ function parseCitationIdList(value: unknown): string[] {
 
 /**
  * Parses a single traced claim `{claim, citation_ids[]}` (Requirement 11.1).
- * Returns null for rows without claim text. The certainty value is normalized
- * to the canonical GRADE set so it can be reused for display gating (R8.4).
+ * Legacy certainty fields are intentionally ignored: no source metadata is a
+ * formal GRADE assessment or recommendation-strength judgement.
  */
 function parseTracedClaim(value: unknown): ResearchTier2TracedClaim | null {
   const row = asRecord(value);
@@ -1941,10 +1966,7 @@ function parseTracedClaim(value: unknown): ResearchTier2TracedClaim | null {
   return {
     claim,
     citationIds,
-    verdict: asText(row.verdict) ?? asText(row.support_status) ?? asText(row.supportStatus),
-    certainty: normalizeCertaintyLabel(
-      asText(row.certainty) ?? asText(row.grade_certainty) ?? asText(row.gradeCertainty)
-    )
+    verdict: asText(row.verdict) ?? asText(row.support_status) ?? asText(row.supportStatus)
   };
 }
 
@@ -2083,12 +2105,6 @@ function parseVerificationMatrixEntry(value: unknown): ResearchTier2Verification
     asText(row.claim_type) ??
     asText(row.claimType);
   const severity = asText(row.severity);
-  const certainty = normalizeCertaintyLabel(
-    asText(row.certainty) ??
-    asText(row.grade_certainty) ??
-    asText(row.gradeCertainty) ??
-    asText(row.grade)
-  );
   const confidence =
     asNumber(row.confidence) ??
     asNumber(row.score) ??
@@ -2135,8 +2151,7 @@ function parseVerificationMatrixEntry(value: unknown): ResearchTier2Verification
     evidenceRef,
     note,
     source,
-    evidence,
-    ...(certainty ? { certainty } : {})
+    evidence
   };
 }
 
@@ -3113,25 +3128,9 @@ export async function createResearchTier2Job(
   if (typeof options?.deepPassCount === "number" && Number.isFinite(options.deepPassCount)) {
     payload.deep_pass_count = Math.max(1, Math.trunc(options.deepPassCount));
   }
-  if (options?.llmRuntime) {
-    const runtimePayload: Record<string, string> = {};
-    if (typeof options.llmRuntime.provider === "string" && options.llmRuntime.provider.trim()) {
-      runtimePayload.provider = options.llmRuntime.provider.trim();
-    }
-    if (typeof options.llmRuntime.apiKey === "string" && options.llmRuntime.apiKey.trim()) {
-      runtimePayload.api_key = options.llmRuntime.apiKey.trim();
-    }
-    if (typeof options.llmRuntime.baseUrl === "string" && options.llmRuntime.baseUrl.trim()) {
-      runtimePayload.base_url = options.llmRuntime.baseUrl.trim();
-    }
-    if (typeof options.llmRuntime.model === "string" && options.llmRuntime.model.trim()) {
-      runtimePayload.model = options.llmRuntime.model.trim();
-    }
-    if (Object.keys(runtimePayload).length) {
-      payload.llm_runtime = runtimePayload;
-    }
+  if (options?.outputMode === "plain_language" || options?.outputMode === "professional") {
+    payload.output_mode = options.outputMode;
   }
-
   if (uploadedFileIds.length) payload.uploaded_file_ids = uploadedFileIds;
   if (sourceIds.length) payload.source_ids = sourceIds;
   if (sourceHubSources.length) payload.source_hub_sources = sourceHubSources;
@@ -3375,7 +3374,13 @@ export function normalizeResearchTier2JobProgress(value: unknown): ResearchTier2
 
 export function normalizeResearchTier2(data: ResearchTier2RawResponse): ResearchTier2Result {
   const metadata = asRecord(data.metadata) ?? {};
-  const answer =
+  const evidenceRelease = parseEvidenceRelease(
+    (data as Record<string, unknown>).quality_gate ?? metadata.quality_gate
+  );
+  const presentationCandidate = parseVerifiedPresentation(
+    (data as Record<string, unknown>).presentation
+  );
+  const legacyAnswer =
     asText(data.answer_markdown) ??
     asText(data.answer_md) ??
     asText(metadata.answer_markdown) ??
@@ -3384,6 +3389,16 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     asText(data.message) ??
     "";
   const citations = parseList(data.citations ?? data.sources, parseCitation);
+  const presentation =
+    evidenceRelease?.passed === true &&
+    presentationCandidate &&
+    presentationCandidate.citationIds.length === citations.length &&
+    presentationCandidate.citationIds.every((id) => citations.some((citation) => citation.sourceId === id))
+      ? presentationCandidate
+      : undefined;
+  // Never trust a presentation body until its independent API release proof
+  // and its complete citation-ID binding have both parsed successfully.
+  const answer = presentation?.answer ?? legacyAnswer;
   const contextDebug = asRecord(data.context_debug) ?? asRecord(metadata.context_debug);
   const telemetryRecord =
     asRecord(data.telemetry) ??
@@ -3526,13 +3541,6 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
   const verificationMatrix = dedupeVerificationMatrix(
     parseVerificationMatrix(verificationPayload)
   );
-  const verificationMatrixWithCertainty = applyCertaintyToMatrix(
-    verificationMatrix,
-    buildCertaintyByClaim(
-      pickFromRecords(telemetryRecords, ["grade", "grade_labels", "gradeLabels"]),
-      pickFromRecords(telemetryRecords, ["traced_claims", "tracedClaims"])
-    )
-  );
   const consensus = parseConsensusEntries(
     pickFromRecords(telemetryRecords, [
       "consensus",
@@ -3619,7 +3627,7 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     docs,
     scores,
     sourceReasoning,
-    verificationMatrix: verificationMatrixWithCertainty,
+    verificationMatrix,
     consensus,
     safetyOverride,
     contradictionSummary,
@@ -3682,6 +3690,9 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
       : typeof data.fallback_used === "boolean"
         ? data.fallback_used
         : undefined;
+  // The API quality gate is the sole authority for releasing research prose.
+  // Parse only its bounded, non-PII release decision; do not surface raw
+  // verifier rows, model confidence, provider errors, or prompt telemetry.
   const rawVerificationState = asText(metadata.verification_status);
   const retrievalStackMode = normalizeResearchRetrievalStackMode(
     asText(metadata.retrieval_stack_mode) ??
@@ -3710,6 +3721,8 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     flowEvents,
     tracedClaims,
     citationRegistry,
+    evidenceRelease,
+    presentation,
     debug: {
       pipeline: asText(metadata.pipeline),
       responseStyle: asText(metadata.response_style),

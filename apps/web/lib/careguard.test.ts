@@ -6,6 +6,7 @@ import {
   MINIMUM_DDI_MEDICINES,
   classifyDdiRiskGroup,
   localizeDdiMessage,
+  medicationClarifications,
   requiresTwoMedicines,
   toDdiUserView,
   type CareguardAnalyzeRawResponse,
@@ -114,6 +115,55 @@ describe("toDdiUserView (Feature: product-polish-analytics, Property 5)", () => 
       ),
       { numRuns: 200 }
     );
+  });
+});
+
+describe("DrugBank clarification terminal state", () => {
+  it("is parsed as a source-backed pre-check, never as a DDI projection", () => {
+    const raw: CareguardAnalyzeRawResponse = {
+      status: "requires_medication_clarification",
+      clarifications: [
+        {
+          cabinet_item_id: 42,
+          input_alias: "panadol",
+          candidates: [
+            {
+              drugbank_id: "DB00316",
+              normalized_name: "paracetamol",
+              active_ingredients: ["paracetamol"],
+              source_version: "licensed-2026-07",
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(medicationClarifications(raw)).toEqual([
+      {
+        cabinet_item_id: 42,
+        input_alias: "panadol",
+        candidates: [
+          {
+            drugbank_id: "DB00316",
+            normalized_name: "paracetamol",
+            active_ingredients: ["paracetamol"],
+            source_version: "licensed-2026-07",
+          },
+        ],
+      },
+    ]);
+    expect("risk" in raw).toBe(false);
+    expect("ddi_alerts" in raw).toBe(false);
+  });
+
+  it("does not accept a malformed or non-terminal clarification as a choice", () => {
+    expect(medicationClarifications({ clarifications: [] })).toBeNull();
+    expect(
+      medicationClarifications({
+        status: "requires_medication_clarification",
+        clarifications: [{ cabinet_item_id: "42", input_alias: "panadol", candidates: [] }],
+      }),
+    ).toEqual([]);
   });
 });
 

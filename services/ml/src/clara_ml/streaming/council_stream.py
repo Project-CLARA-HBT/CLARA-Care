@@ -1,11 +1,11 @@
-"""Server-Sent Events (SSE) streaming for the Council deliberation path.
+"""Server-Sent Events (SSE) streaming for the Council progress path.
 
 This module wraps the existing deterministic ``run_council`` computation so the
 web frontend can render the deliberation **stage-by-stage** instead of waiting
 for a single blocking response:
 
-* the **deliberation process** — each step of the already-present
-  ``reasoning_timeline`` (``intake_normalized`` → ``specialist_assessment`` →
+* the **processing progress** — each non-clinical stage label of the existing
+  processing timeline (``intake_normalized`` → ``specialist_assessment`` →
   ``conflict_review`` → ``consensus_decision`` → ``safety_gate`` →
   ``final_recommendation``) is forwarded, in order, as a ``stage`` SSE event so
   the UI can light up a live progress panel; then
@@ -26,10 +26,9 @@ Design constraints (mirroring ``streaming.chat_stream``):
   (Requirement 1.4).
 * **Import-safe.** Importing this module opens no socket; ``run_council`` is
   injected by the caller (``main.py``) to keep the seam testable.
-* **No new PII surface.** Stage events carry only the ``sequence``/``step``/
-  ``detail`` and the non-identifying ``metadata`` already present in the
-  reasoning timeline — nothing beyond what the blocking result already returns
-  (Requirement 1.5).
+* **No reasoning trace or PII surface.** Stage events carry only the stable
+  ``sequence`` and ``step`` progress labels.  Clinical text, metadata, model
+  rationale, and chain-of-thought-like content stay out of the stream.
 """
 
 from __future__ import annotations
@@ -60,9 +59,8 @@ def stream_council_sse(
     Event sequence:
 
     1. ``start``  — ``{}`` (lets the client open the live panel immediately).
-    2. ``stage``  — one per ``reasoning_timeline`` step, in timeline order, each
-       carrying ``{"index": <i>, **step}`` (``sequence``, ``step``, ``detail``,
-       non-PII ``metadata``).
+    2. ``stage``  — one per processing step, in timeline order, carrying only
+       ``{"index": <i>, "sequence": <n>, "step": <label>}``.
     3. ``result`` — the full ``run_council`` envelope so the client can
        finalize/persist the run.
 
@@ -82,14 +80,18 @@ def stream_council_sse(
         )
         return
 
-    # (2) Deliberation process — replay the real reasoning-timeline steps in
-    # their existing order as ``stage`` events.
+    # (2) Progress states only — never relay a reasoning trace, metadata, or
+    # clinical text to the browser while the Council is running.
     timeline = result.get("reasoning_timeline")
     if isinstance(timeline, list):
         for index, step in enumerate(timeline):
             if not isinstance(step, dict):
                 continue
-            yield sse_event("stage", {"index": index, **step})
+            sequence = step.get("sequence")
+            label = step.get("step")
+            if not isinstance(sequence, int) or not isinstance(label, str) or not label:
+                continue
+            yield sse_event("stage", {"index": index, "sequence": sequence, "step": label})
             if stage_delay > 0:
                 sleep(stage_delay)
 

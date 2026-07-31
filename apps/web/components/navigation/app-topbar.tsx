@@ -41,7 +41,7 @@ export default function AppTopbar({
   familyNotificationCount = 0,
 }: AppTopbarProps) {
   const pathname = usePathname();
-  const page = getPageMeta(pathname);
+  const page = getPageMeta(pathname, uiLanguage);
   const roleLabel = t(uiLanguage, ROLE_LABEL_KEYS[role]);
   const nextTheme: ThemePreference =
     themePreference === "dark" ? "light" : "dark";

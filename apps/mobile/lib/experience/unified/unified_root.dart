@@ -27,6 +27,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/analytics.dart';
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
 import '../../core/lifemap_read_cache.dart';
 import '../../core/session_store.dart';
@@ -41,6 +42,7 @@ import 'medicines_hub.dart';
 import 'onboarding_flow.dart';
 import 'profile_hub.dart';
 import 'today_surface.dart';
+import 'visits_surface.dart';
 
 /// Coarse, no-PII screen-view event for the unified shell.
 const String kUnifiedShellViewedEvent = 'mobile_unified_shell_viewed';
@@ -129,6 +131,7 @@ class _UnifiedRootState extends State<UnifiedRoot> {
         apiClient: widget.apiClient,
         sessionStore: widget.sessionStore,
         onDone: _onOnboardingDone,
+        languageController: widget.languageController,
       );
     }
 
@@ -139,63 +142,75 @@ class _UnifiedRootState extends State<UnifiedRoot> {
   Widget _buildShell(MobileFeatureFlagResolver resolver) {
     final languageController = widget.languageController;
     if (languageController == null) {
-      return _buildLocalizedShell(resolver, 'vi');
+      return _buildLocalizedShell(context, resolver, 'vi');
     }
     return AnimatedBuilder(
       animation: languageController,
-      builder: (context, _) =>
-          _buildLocalizedShell(resolver, languageController.languageCode),
+      builder: (context, _) => _buildLocalizedShell(
+        context,
+        resolver,
+        languageController.languageCode,
+      ),
     );
   }
 
   Widget _buildLocalizedShell(
+    BuildContext context,
     MobileFeatureFlagResolver resolver,
     String languageCode,
   ) {
-    final english = languageCode == 'en';
+    final copy = ConsumerTerminology.forLocale(languageCode);
     return RedesignShell(
-      chatLabel: english ? 'Ask CLARA' : 'Hỏi CLARA',
+      chatLabel: copy[ConsumerTerm.actionAskClara],
       chatIcon: Icons.forum_rounded,
       chatBody: ChatSurfaceV3(
         apiClient: widget.apiClient,
         sessionStore: widget.sessionStore,
         resolver: resolver,
+        languageController: widget.languageController,
       ),
       destinations: [
         RedesignDestination(
           icon: Icons.today_outlined,
           selectedIcon: Icons.today,
-          label: english ? 'Today' : 'Hôm nay',
+          label: copy[ConsumerTerm.navigationToday],
           body: TodaySurface(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             onNeedsOnboarding: () => setState(() => _needsOnboarding = true),
+            onAskHealth: () => _openChat(context, resolver),
+            onCheckMedicines: () => _openMedicines(context, resolver),
+            onSaveHealthInfo: () => _openHealthProfile(context, resolver),
+            onPrepareVisit: () => _openVisitPreparation(context, resolver),
             readCache: _lifeMapReadCache,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(
           icon: Icons.route_outlined,
           selectedIcon: Icons.route,
-          label: english ? 'Health journey' : 'Hành trình sức khỏe',
+          label: copy[ConsumerTerm.navigationLifeMap],
           body: LifeMapSurface(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(
           icon: Icons.medication_outlined,
           selectedIcon: Icons.medication,
-          label: english ? 'Medicines' : 'Thuốc',
+          label: copy[ConsumerTerm.navigationMedicines],
           body: MedicinesHub(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             resolver: resolver,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(
           icon: Icons.folder_shared_outlined,
           selectedIcon: Icons.folder_shared,
-          label: english ? 'Profile' : 'Hồ sơ',
+          label: copy[ConsumerTerm.navigationProfile],
           body: ProfileHub(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
@@ -207,10 +222,72 @@ class _UnifiedRootState extends State<UnifiedRoot> {
               apiClient: widget.apiClient,
               sessionStore: widget.sessionStore,
               resolver: resolver,
+              languageController: widget.languageController,
             ),
           ),
         ),
       ],
+    );
+  }
+
+  /// These routes are intentionally explicit rather than synthetic shortcuts:
+  /// every card opens the same existing consent-gated surface available from
+  /// the unified navigation. None writes health data or bypasses onboarding.
+  void _openChat(BuildContext context, MobileFeatureFlagResolver resolver) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatSurfaceV3(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          resolver: resolver,
+          languageController: widget.languageController,
+        ),
+      ),
+    );
+  }
+
+  void _openMedicines(BuildContext context, MobileFeatureFlagResolver resolver) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MedicinesHub(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          resolver: resolver,
+          languageController: widget.languageController,
+        ),
+      ),
+    );
+  }
+
+  void _openHealthProfile(
+    BuildContext context,
+    MobileFeatureFlagResolver resolver,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PhrSurfaceV3(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          resolver: resolver,
+          languageController: widget.languageController,
+        ),
+      ),
+    );
+  }
+
+  void _openVisitPreparation(
+    BuildContext context,
+    MobileFeatureFlagResolver resolver,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VisitsSurface(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          languageController: widget.languageController,
+          useLifeMapDraft: resolver.lifeMapVietnameseDraftsEnabled,
+        ),
+      ),
     );
   }
 }

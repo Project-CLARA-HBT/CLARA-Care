@@ -44,6 +44,13 @@ class PhrStrings {
   String get save => _t('Lưu', 'Save');
   String get saved => _t('Đã lưu hồ sơ.', 'Record saved.');
   String get saving => _t('Đang lưu...', 'Saving...');
+  String get completenessTitle =>
+      _t('Mức độ hoàn thiện hồ sơ', 'Profile completeness');
+  String get completenessComplete => _t(
+        'Hồ sơ của bạn đã đầy đủ thông tin quan trọng.',
+        'Your profile includes the important details.',
+      );
+  String get completenessNextUp => _t('Nên bổ sung', 'Consider adding');
 
   // Disclaimer (Requirement 17.4 / 18.4).
   String get disclaimer => _t(

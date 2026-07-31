@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/analytics.dart';
 import '../../core/api_client.dart';
+import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
 import '../../theme/glass/glass_scope.dart';
@@ -75,6 +76,10 @@ class _RedesignRootState extends State<RedesignRoot> {
 
   String get _role => widget.sessionStore.role ?? 'normal';
 
+  ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
+        widget.languageController?.languageCode,
+      );
+
   Future<void> _loadSummary() async {
     final token = widget.sessionStore.accessToken;
     if (token == null || token.isEmpty) {
@@ -119,49 +124,53 @@ class _RedesignRootState extends State<RedesignRoot> {
 
   Widget _buildShell(MobileFeatureFlagResolver resolver) {
     return RedesignShell(
-      chatLabel: 'Trò chuyện',
+      chatLabel: _copy[ConsumerTerm.actionAskClara],
       chatIcon: Icons.forum_rounded,
       chatBody: ChatSurfaceV3(
         apiClient: widget.apiClient,
         sessionStore: widget.sessionStore,
         resolver: resolver,
+        languageController: widget.languageController,
       ),
       destinations: [
         RedesignDestination(
           icon: Icons.home_outlined,
           selectedIcon: Icons.home,
-          label: 'Trang chủ',
+          label: _copy[ConsumerTerm.navigationToday],
           body: HomeScreenV3(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             resolver: resolver,
             summary: _summary,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(
           icon: Icons.medication_outlined,
           selectedIcon: Icons.medication,
-          label: 'Tủ thuốc',
+          label: _copy[ConsumerTerm.navigationMedicines],
           body: CabinetScreenV3(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             resolver: resolver,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(
           icon: Icons.folder_shared_outlined,
           selectedIcon: Icons.folder_shared,
-          label: 'Hồ sơ',
+          label: _copy[ConsumerTerm.navigationProfile],
           body: PhrSurfaceV3(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,
             resolver: resolver,
+            languageController: widget.languageController,
           ),
         ),
         RedesignDestination(
           icon: Icons.apps_outlined,
           selectedIcon: Icons.apps,
-          label: 'Thêm',
+          label: _copy[ConsumerTerm.navigationMore],
           body: MoreScreenV3(
             apiClient: widget.apiClient,
             sessionStore: widget.sessionStore,

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -51,12 +52,42 @@ def _write_shards(root: Path, *, version: str = "drugbank-test-1") -> Path:
             },
         ]
     }
-    (drugbank_dir / "ddi_0.json").write_text(json.dumps(shard), encoding="utf-8")
+    shard_path = drugbank_dir / "ddi_0.json"
+    shard_path.write_text(json.dumps(shard), encoding="utf-8")
+    dictionary = {
+        "records": [
+            {
+                "brand_vn": "drugbankonly_a",
+                "normalized_name": "drugbankonly_a",
+                "active_ingredients": ["drugbankonly_a"],
+                "rxcui": "",
+                "drugbank_id": "DBTESTA",
+            }
+        ]
+    }
+    dictionary_path = drugbank_dir / "dictionary_0.json"
+    dictionary_path.write_text(json.dumps(dictionary), encoding="utf-8")
     manifest = {
         "version": version,
         "source": "drugbank",
-        "ddi_shards": [{"file": "ddi_0.json"}],
+        "source_version": "test-source-1",
+        "source_sha256": "a" * 64,
+        "ddi_shards": [
+            {"file": "ddi_0.json", "sha256": sha256(shard_path.read_bytes()).hexdigest()}
+        ],
+        "ddi_rule_count": 2,
+        "dictionary_record_count": 1,
+        "dictionary_shards": [
+            {
+                "file": "dictionary_0.json",
+                "sha256": sha256(dictionary_path.read_bytes()).hexdigest(),
+            }
+        ],
     }
+    unsigned = json.dumps(
+        manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    manifest["manifest_sha256"] = sha256(unsigned).hexdigest()
     (drugbank_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     return drugbank_dir
 
@@ -78,6 +109,16 @@ def test_drugbank_required_config_defaults_off_and_accepts_env(
     assert Settings(_env_file=None).careguard_drugbank_required is True
 
 
+def test_medication_clarification_config_defaults_off_and_accepts_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CAREGUARD_MEDICATION_CLARIFICATION_ENABLED", raising=False)
+    assert Settings(_env_file=None).careguard_medication_clarification_enabled is False
+
+    monkeypatch.setenv("CAREGUARD_MEDICATION_CLARIFICATION_ENABLED", "true")
+    assert Settings(_env_file=None).careguard_medication_clarification_enabled is True
+
+
 def test_store_builds_and_looks_up_pairs(tmp_path: Path) -> None:
     drugbank_dir = _write_shards(tmp_path)
     store = _store_for(drugbank_dir)
@@ -97,7 +138,10 @@ def test_store_builds_and_looks_up_pairs(tmp_path: Path) -> None:
         "state": "ready",
         "version": "drugbank-test-1",
         "pair_count": 2,
+        "dictionary_record_count": 1,
         "manifest_matches_index": True,
+        "integrity_verified": True,
+        "source_version": "test-source-1",
     }
 
 
@@ -133,6 +177,254 @@ def test_store_degrades_on_malformed_shard(tmp_path: Path) -> None:
     assert store.ensure_built() is None
 
 
+def test_store_fails_closed_when_a_verified_shard_changes(tmp_path: Path) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    shard_path = drugbank_dir / "ddi_0.json"
+    shard_path.write_text('{"rules": []}', encoding="utf-8")
+
+    # The manifest is still syntactically valid but its recorded artifact digest
+    # no longer matches. Strict integrity must reject it before SQLite build.
+    assert _store_for(drugbank_dir).ensure_built() is None
+
+
+def test_store_resolves_dictionary_alias_with_traceable_identifiers(tmp_path: Path) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    dictionary = {
+        "records": [
+            {
+                "brand_vn": "panadol extra",
+                "normalized_name": "paracetamol",
+                "active_ingredients": ["paracetamol", "caffeine"],
+                "rxcui": "161",
+                "drugbank_id": "DB00316",
+            }
+        ]
+    }
+    dictionary_path = drugbank_dir / "dictionary_0.json"
+    dictionary_path.write_text(json.dumps(dictionary), encoding="utf-8")
+    manifest_path = drugbank_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["dictionary_shards"] = [
+        {
+            "file": "dictionary_0.json",
+            "sha256": sha256(dictionary_path.read_bytes()).hexdigest(),
+        }
+    ]
+    manifest["dictionary_record_count"] = 1
+    unsigned = dict(manifest)
+    unsigned.pop("manifest_sha256", None)
+    manifest["manifest_sha256"] = sha256(
+        json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    store = _store_for(drugbank_dir)
+    assert store.ensure_built() == "drugbank-test-1"
+    assert store.resolve_medication("Panadol Extra") == {
+        "alias": "panadol extra",
+        "normalized_name": "paracetamol",
+        "active_ingredients": ["paracetamol", "caffeine"],
+        "rxcui": "161",
+        "drugbank_id": "DB00316",
+        "source_version": "drugbank-test-1",
+    }
+
+
+def test_store_retains_ambiguous_alias_candidates_and_validates_version_bound_choice(
+    tmp_path: Path,
+) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    dictionary = {
+        "records": [
+            {
+                "brand_vn": "ambiguous brand",
+                "normalized_name": "ingredient one",
+                "active_ingredients": ["ingredient one"],
+                "rxcui": "1",
+                "drugbank_id": "DBONE",
+            },
+            {
+                "brand_vn": "ambiguous brand",
+                "normalized_name": "ingredient two",
+                "active_ingredients": ["ingredient two"],
+                "rxcui": "2",
+                "drugbank_id": "DBTWO",
+            },
+        ]
+    }
+    dictionary_path = drugbank_dir / "dictionary_0.json"
+    dictionary_path.write_text(json.dumps(dictionary), encoding="utf-8")
+    manifest_path = drugbank_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["dictionary_shards"] = [
+        {
+            "file": "dictionary_0.json",
+            "sha256": sha256(dictionary_path.read_bytes()).hexdigest(),
+        }
+    ]
+    manifest["dictionary_record_count"] = 2
+    unsigned = dict(manifest)
+    unsigned.pop("manifest_sha256", None)
+    manifest["manifest_sha256"] = sha256(
+        json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    store = _store_for(drugbank_dir)
+    assert store.ensure_built() == "drugbank-test-1"
+    candidates = store.medication_candidates("ambiguous brand")
+    assert [item["drugbank_id"] for item in candidates] == ["DBONE", "DBTWO"]
+    assert store.resolve_medication_choice(
+        "ambiguous brand",
+        drugbank_id="DBTWO",
+        source_version="drugbank-test-1",
+    ) == {
+        "alias": "ambiguous brand",
+        "normalized_name": "ingredient two",
+        "active_ingredients": ["ingredient two"],
+        "rxcui": "2",
+        "drugbank_id": "DBTWO",
+        "source_version": "drugbank-test-1",
+    }
+    assert store.resolve_medication_choice(
+        "ambiguous brand",
+        drugbank_id="DBTWO",
+        source_version="stale-version",
+    ) is None
+    # The legacy helper is retained only for flags-off rollback and must never be
+    # used by the explicit clarification path.
+    assert store.resolve_medication("ambiguous brand")["drugbank_id"] == "DBONE"
+
+
+def test_clarification_rollout_blocks_ddi_until_a_current_drugbank_choice(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    drugbank_dir = _write_shards(tmp_path)
+    dictionary = {
+        "records": [
+            {
+                "brand_vn": "drugbankonly_a",
+                "normalized_name": "drugbankonly_a",
+                "active_ingredients": ["drugbankonly_a"],
+                "rxcui": "",
+                "drugbank_id": "DBTESTA",
+            },
+            {
+                "brand_vn": "ambiguous brand",
+                "normalized_name": "ingredient one",
+                "active_ingredients": ["ingredient one"],
+                "rxcui": "1",
+                "drugbank_id": "DBONE",
+            },
+            {
+                "brand_vn": "ambiguous brand",
+                "normalized_name": "ingredient two",
+                "active_ingredients": ["ingredient two"],
+                "rxcui": "2",
+                "drugbank_id": "DBTWO",
+            },
+        ]
+    }
+    dictionary_path = drugbank_dir / "dictionary_0.json"
+    dictionary_path.write_text(json.dumps(dictionary), encoding="utf-8")
+    manifest_path = drugbank_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["dictionary_shards"] = [
+        {"file": "dictionary_0.json", "sha256": sha256(dictionary_path.read_bytes()).hexdigest()}
+    ]
+    manifest["dictionary_record_count"] = 3
+    unsigned = dict(manifest)
+    unsigned.pop("manifest_sha256", None)
+    manifest["manifest_sha256"] = sha256(
+        json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    monkeypatch.setattr(careguard, "_DRUGBANK_DIR", drugbank_dir)
+    monkeypatch.setattr(careguard, "_DRUGBANK_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(careguard, "_DRUGBANK_STORE", None)
+    monkeypatch.setattr(careguard, "_DRUGBANK_STORE_READY", False)
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_sqlite_enabled", True)
+    monkeypatch.setattr(careguard.settings, "careguard_drugbank_required", False)
+    monkeypatch.setattr(careguard.settings, "careguard_medication_clarification_enabled", True)
+
+    medication_meta = [
+        {"cabinet_item_id": 701, "input_alias": "ambiguous brand"},
+        {"cabinet_item_id": 702, "input_alias": "drugbankonly_a"},
+    ]
+    blocked = careguard.run_careguard_analyze(
+        {
+            "medications": ["ambiguous brand", "drugbankonly_a"],
+            "medications_with_meta": medication_meta,
+            "external_ddi_enabled": False,
+        }
+    )
+    assert blocked["status"] == "requires_medication_clarification"
+    assert "risk" not in blocked
+    assert "ddi_alerts" not in blocked
+    clarification = blocked["clarifications"][0]
+    assert clarification["reason"] == "ambiguous_alias"
+    assert clarification["cabinet_item_id"] == 701
+    assert [item["drugbank_id"] for item in clarification["candidates"]] == ["DBONE", "DBTWO"]
+
+    resolved = careguard.run_careguard_analyze(
+        {
+            "medications": ["ambiguous brand", "drugbankonly_a"],
+            "medications_with_meta": medication_meta,
+            "medication_resolutions": [
+                {
+                    "cabinet_item_id": 701,
+                    "input_alias": "ambiguous brand",
+                    "drugbank_id": "DBTWO",
+                    "drugbank_version": "drugbank-test-1",
+                }
+            ],
+            "external_ddi_enabled": False,
+        }
+    )
+    assert "status" not in resolved
+    assert resolved["risk"]["level"] == "low"
+
+    stale = careguard.run_careguard_analyze(
+        {
+            "medications": ["ambiguous brand", "drugbankonly_a"],
+            "medications_with_meta": medication_meta,
+            "medication_resolutions": [
+                {
+                    "cabinet_item_id": 701,
+                    "input_alias": "ambiguous brand",
+                    "drugbank_id": "DBTWO",
+                    "drugbank_version": "stale-release",
+                }
+            ],
+            "external_ddi_enabled": False,
+        }
+    )
+    assert stale["status"] == "requires_medication_clarification"
+    assert stale["clarifications"][0]["reason"] == "invalid_or_stale_selection"
+
+
+def test_clarification_cabinet_binding_never_assigns_duplicate_alias_by_order() -> None:
+    # Two matching metadata rows bind deterministically to two raw duplicate
+    # aliases. A missing/duplicated metadata row leaves every duplicate unbound;
+    # a choice can therefore never be applied to the wrong cabinet item.
+    assert careguard._strict_drugbank_input_rows(
+        ["same brand", "same brand"],
+        [
+            {"cabinet_item_id": 10, "input_alias": "same brand"},
+            {"cabinet_item_id": 11, "input_alias": "same brand"},
+        ],
+    ) == [("same brand", 10), ("same brand", 11)]
+    assert careguard._strict_drugbank_input_rows(
+        ["same brand", "same brand"],
+        [{"cabinet_item_id": 10, "input_alias": "same brand"}],
+    ) == [("same brand", None), ("same brand", None)]
+    assert careguard._strict_drugbank_input_rows(["direct input"], None) == [
+        ("direct input", None)
+    ]
+
+
 def test_readiness_rejects_missing_pair_table_even_when_meta_looks_ready(
     tmp_path: Path,
 ) -> None:
@@ -148,7 +440,10 @@ def test_readiness_rejects_missing_pair_table_even_when_meta_looks_ready(
         "state": "degraded",
         "version": "drugbank-test-1",
         "pair_count": 0,
+        "dictionary_record_count": 0,
         "manifest_matches_index": True,
+        "integrity_verified": True,
+        "source_version": "test-source-1",
     }
 
 

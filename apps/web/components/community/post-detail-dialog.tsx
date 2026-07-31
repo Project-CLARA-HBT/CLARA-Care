@@ -11,6 +11,8 @@ import {
   isSocialModerationBlock,
   reportContent
 } from "@/lib/social";
+import { formatLocaleDate, formatLocaleNumber, t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 // Interactive post-detail dialog for the CLARA community surface.
 //
@@ -19,10 +21,10 @@ import {
 // path surfaces the moderation-block message verbatim so the not-a-doctor /
 // no-prescribing guardrail is visible, never silently swallowed.
 
-const REACTIONS: { kind: ReactionKind; label: string; icon: string }[] = [
-  { kind: "helpful", label: "Hữu ích", icon: "👍" },
-  { kind: "relate", label: "Đồng cảm", icon: "🤝" },
-  { kind: "thanks", label: "Cảm ơn", icon: "🙏" }
+const REACTIONS: { kind: ReactionKind; icon: string }[] = [
+  { kind: "helpful", icon: "👍" },
+  { kind: "relate", icon: "🤝" },
+  { kind: "thanks", icon: "🙏" }
 ];
 
 export default function PostDetailDialog({
@@ -34,6 +36,14 @@ export default function PostDetailDialog({
   canParticipate: boolean;
   onClose: () => void;
 }) {
+  const language = useUILanguage();
+  const copy = useCallback(
+    (key: UITranslationKey, values?: Record<string, string | number>) =>
+      t(language, key, values ?? {}),
+    [language],
+  );
+  const reactionLabel = (kind: ReactionKind) =>
+    copy(`community.reaction.${kind}` as UITranslationKey);
   const [comments, setComments] = useState<SocialComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,11 +61,11 @@ export default function PostDetailDialog({
     try {
       setComments(await getComments(post.id));
     } catch {
-      setError("Không thể tải bình luận. Vui lòng thử lại.");
+      setError(copy("community.comment.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [post.id]);
+  }, [copy, post.id]);
 
   useEffect(() => {
     void load();
@@ -80,40 +90,38 @@ export default function PostDetailDialog({
       await load();
     } catch (err) {
       if (isSocialModerationBlock(err)) {
-        setCommentError(
-          "Bình luận không phù hợp quy tắc cộng đồng (không kê đơn/chẩn đoán/liều dùng) hoặc có dấu hiệu khẩn cấp."
-        );
+        setCommentError(copy("community.comment.moderationBlocked"));
       } else {
-        setCommentError("Không thể gửi bình luận. Vui lòng thử lại.");
+        setCommentError(copy("community.comment.submitError"));
       }
     } finally {
       setSubmitting(false);
     }
-  }, [commentBody, post.id, load]);
+  }, [commentBody, copy, post.id, load]);
 
   const sendReaction = useCallback(
     async (kind: ReactionKind) => {
       try {
         await addReaction(post.id, kind);
         setReacted(kind);
-        setNotice("Đã gửi phản hồi tích cực.");
+        setNotice(copy("community.reaction.sent"));
       } catch {
-        setNotice("Không thể gửi phản hồi. Vui lòng thử lại.");
+        setNotice(copy("community.reaction.error"));
       }
     },
-    [post.id]
+    [copy, post.id]
   );
 
   const report = useCallback(
     async (targetType: "post" | "comment", targetId: number) => {
       try {
         await reportContent({ targetType, targetId, reason: "user_report" });
-        setNotice("Đã gửi báo cáo. Đội ngũ kiểm duyệt sẽ xem xét.");
+        setNotice(copy("community.report.sent"));
       } catch {
-        setNotice("Không thể gửi báo cáo. Vui lòng thử lại.");
+        setNotice(copy("community.report.error"));
       }
     },
-    []
+    [copy]
   );
 
   return (
@@ -133,14 +141,14 @@ export default function PostDetailDialog({
             <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
               <span className="font-medium text-[var(--text-primary)]">@{post.author_handle}</span>
               <span>·</span>
-              <span>{new Date(post.created_at).toLocaleDateString("vi-VN")}</span>
+              <span>{formatLocaleDate(language, post.created_at)}</span>
             </div>
             <h3 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{post.title}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Đóng"
+            aria-label={copy("community.dialog.close")}
             className="rounded-lg px-2 py-1 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
           >
             ✕
@@ -158,9 +166,9 @@ export default function PostDetailDialog({
                 disabled={!canParticipate || reacted === r.kind}
                 onClick={() => sendReaction(r.kind)}
                 className="rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm disabled:opacity-50"
-                title={canParticipate ? r.label : "Tham gia cộng đồng để phản hồi"}
+                title={canParticipate ? reactionLabel(r.kind) : copy("community.reaction.joinToReact")}
               >
-                <span aria-hidden="true">{r.icon}</span> {r.label}
+                <span aria-hidden="true">{r.icon}</span> {reactionLabel(r.kind)}
               </button>
             ))}
             <button
@@ -168,7 +176,7 @@ export default function PostDetailDialog({
               onClick={() => report("post", post.id)}
               className="ml-auto rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-red-600"
             >
-              Báo cáo bài viết
+              {copy("community.report.post")}
             </button>
           </div>
 
@@ -181,15 +189,17 @@ export default function PostDetailDialog({
           <hr className="my-5 border-[var(--border-subtle)]" />
 
           <h4 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-            Bình luận {comments.length > 0 ? `(${comments.length})` : ""}
+            {comments.length > 0
+              ? copy("community.comments.count", { count: formatLocaleNumber(language, comments.length) })
+              : copy("community.comments.heading")}
           </h4>
 
           {loading ? (
-            <p className="text-sm text-[var(--text-secondary)]">Đang tải bình luận…</p>
+            <p className="text-sm text-[var(--text-secondary)]">{copy("community.comment.loading")}</p>
           ) : error ? (
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           ) : comments.length === 0 ? (
-            <p className="text-sm text-[var(--text-secondary)]">Chưa có bình luận. Hãy là người đầu tiên.</p>
+            <p className="text-sm text-[var(--text-secondary)]">{copy("community.comment.empty")}</p>
           ) : (
             <ul className="space-y-3">
               {comments.map((c) => (
@@ -197,13 +207,13 @@ export default function PostDetailDialog({
                   <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                     <span className="font-medium text-[var(--text-primary)]">@{c.author_handle}</span>
                     <span>·</span>
-                    <span>{new Date(c.created_at).toLocaleDateString("vi-VN")}</span>
+                    <span>{formatLocaleDate(language, c.created_at)}</span>
                     <button
                       type="button"
                       onClick={() => report("comment", c.id)}
                       className="ml-auto text-[var(--text-secondary)] hover:text-red-600"
                     >
-                      Báo cáo
+                      {copy("community.report.comment")}
                     </button>
                   </div>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--text-primary)]">{c.body}</p>
@@ -220,7 +230,7 @@ export default function PostDetailDialog({
               onChange={(e) => setCommentBody(e.target.value)}
               rows={2}
               maxLength={5000}
-              placeholder="Chia sẻ suy nghĩ của bạn (không kê đơn/chẩn đoán/liều dùng)…"
+              placeholder={copy("community.comment.placeholder")}
               className="w-full rounded-lg border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm"
             />
             {commentError ? (
@@ -233,13 +243,13 @@ export default function PostDetailDialog({
                 disabled={submitting || !commentBody.trim()}
                 className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {submitting ? "Đang gửi…" : "Gửi bình luận"}
+                {submitting ? copy("community.comment.submitting") : copy("community.comment.submit")}
               </button>
             </div>
           </div>
         ) : (
           <div className="border-t border-[var(--border-subtle)] p-4 text-center text-sm text-[var(--text-secondary)]">
-            Tham gia cộng đồng để bình luận.
+            {copy("community.comment.joinToComment")}
           </div>
         )}
       </div>

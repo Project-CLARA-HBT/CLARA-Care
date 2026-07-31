@@ -10,9 +10,12 @@ import { Field } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface";
 import { resolvePostLoginPath } from "@/lib/navigation.config";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 export default function LoginPage() {
   const router = useRouter();
+  const language = useUILanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -24,7 +27,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isOtpStep = Boolean(otpEmail);
-  const shouldShowVerifyLink = error.toLowerCase().includes("xác thực");
+  const shouldShowVerifyLink = /xác thực|verify/i.test(error);
 
   const resetOtpStep = () => {
     setOtpCode("");
@@ -44,7 +47,7 @@ export default function LoginPage() {
     const serverRole = payload.role;
 
     if (!accessToken) {
-      throw new Error("Phản hồi đăng nhập thiếu access token.");
+      throw new Error(t(language, "auth.login.missingToken"));
     }
 
     const nextRole = serverRole ?? "normal";
@@ -112,7 +115,7 @@ export default function LoginPage() {
         finishLogin(response.data ?? {});
       }
     } catch (submitError) {
-      const fallbackMessage = "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.";
+      const fallbackMessage = t(language, "auth.login.failure");
       if (submitError instanceof Error && submitError.message) {
         setError(submitError.message);
       } else {
@@ -126,14 +129,14 @@ export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
       <SurfaceCard className="w-full p-7 sm:p-9">
-        <Badge tone="brand">The Clara Care</Badge>
+        <Badge tone="brand">{t(language, "auth.brand")}</Badge>
         <h1 className="mt-4 text-2xl font-bold tracking-[-0.02em] text-[var(--text-primary)] sm:text-3xl">
-          {isOtpStep ? "Xác thực OTP" : "Đăng nhập"}
+          {isOtpStep ? t(language, "auth.otp.title") : t(language, "auth.login.title")}
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
           {isOtpStep
-            ? "Nhập mã OTP vừa gửi để hoàn tất đăng nhập."
-            : "Đăng nhập để truy cập CLARA Chat, Self-Med và các công cụ chuyên môn."}
+            ? t(language, "auth.otp.description")
+            : t(language, "auth.login.description")}
         </p>
 
         <form className="mt-7 space-y-4" onSubmit={onSubmit}>
@@ -141,21 +144,21 @@ export default function LoginPage() {
             <>
               <Field
                 id="login-email"
-                label="Email"
+                label={t(language, "auth.email")}
                 type="email"
                 inputMode="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="name@example.com"
+                placeholder={t(language, "auth.emailPlaceholder")}
                 required
               />
               <Field
                 id="login-password"
-                label="Mật khẩu"
+                label={t(language, "auth.login.password")}
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Nhập mật khẩu"
+                placeholder={t(language, "auth.login.passwordPlaceholder")}
                 required
               />
             </>
@@ -163,33 +166,35 @@ export default function LoginPage() {
             <>
               <Field
                 id="login-otp"
-                label="Mã OTP"
+                label={t(language, "auth.otp.code")}
                 type="text"
                 value={otpCode}
                 onChange={(event) => setOtpCode(event.target.value)}
-                placeholder="Nhập mã OTP 6 số"
+                placeholder={t(language, "auth.otp.placeholder")}
                 required
                 minLength={6}
                 maxLength={6}
                 autoComplete="one-time-code"
               />
               <p className="text-xs text-[var(--text-muted)]">
-                OTP đã gửi tới:{" "}
+                {t(language, "auth.otp.sentTo")} {" "}
                 <span className="font-semibold text-[var(--text-primary)]">{otpEmail}</span>
               </p>
               {otpDeliveryStatus ? (
                 <p className="text-xs text-[var(--text-muted)]">
-                  Trạng thái gửi OTP: {otpDeliveryStatus}
+                  {t(language, "auth.otp.deliveryStatus", { status: otpDeliveryStatus })}
                 </p>
               ) : null}
               {otpExpiresInSeconds ? (
                 <p className="text-xs text-[var(--text-muted)]">
-                  Mã có hiệu lực khoảng {Math.max(1, Math.round(otpExpiresInSeconds / 60))} phút.
+                  {t(language, "auth.otp.expiresIn", {
+                    minutes: Math.max(1, Math.round(otpExpiresInSeconds / 60)),
+                  })}
                 </p>
               ) : null}
               {otpPreviewCode ? (
                 <p className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-xs text-[var(--status-warn-text)]">
-                  OTP preview (dev): <span className="font-bold">{otpPreviewCode}</span>
+                  {t(language, "auth.otp.preview")} <span className="font-bold">{otpPreviewCode}</span>
                 </p>
               ) : null}
             </>
@@ -209,7 +214,7 @@ export default function LoginPage() {
               href={`/verify-email?email=${encodeURIComponent(email)}`}
               className="focus-ring inline-block rounded text-sm font-medium text-[var(--text-brand)] hover:underline"
             >
-              Tài khoản chưa xác thực? Đi đến trang xác thực email
+              {t(language, "auth.login.unverified")}
             </Link>
           ) : null}
 
@@ -217,9 +222,9 @@ export default function LoginPage() {
             type="submit"
             block
             loading={isSubmitting}
-            loadingLabel={isOtpStep ? "Đang xác thực..." : "Đang đăng nhập..."}
+            loadingLabel={isOtpStep ? t(language, "auth.otp.verifying") : t(language, "auth.login.submitting")}
           >
-            {isOtpStep ? "Xác thực OTP" : "Đăng nhập"}
+            {isOtpStep ? t(language, "auth.otp.verify") : t(language, "auth.login.submit")}
           </Button>
 
           {!isOtpStep ? (
@@ -228,42 +233,42 @@ export default function LoginPage() {
                 href="/register"
                 className="focus-ring rounded text-[var(--text-brand)] hover:underline"
               >
-                Tạo tài khoản
+                {t(language, "auth.login.createAccount")}
               </Link>
               <Link
                 href="/forgot-password"
                 className="focus-ring rounded text-[var(--text-secondary)] hover:underline"
               >
-                Quên mật khẩu?
+                {t(language, "auth.login.forgotPassword")}
               </Link>
             </div>
           ) : (
             <Button type="button" variant="secondary" block onClick={resetOtpStep}>
-              Quay lại đăng nhập bằng mật khẩu
+              {t(language, "auth.login.backToPassword")}
             </Button>
           )}
 
           <p className="text-xs leading-6 text-[var(--text-muted)]">
-            Bằng việc tiếp tục, bạn xác nhận đã đọc{" "}
+            {t(language, "auth.legal.acknowledgement")} {" "}
             <Link
               href="/legal/terms"
               className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
             >
-              Điều khoản
+              {t(language, "auth.legal.terms")}
             </Link>
             ,{" "}
             <Link
               href="/legal/privacy"
               className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
             >
-              Quyền riêng tư
+              {t(language, "auth.legal.privacy")}
             </Link>{" "}
             và{" "}
             <Link
               href="/legal/consent"
               className="focus-ring rounded font-medium text-[var(--text-brand)] hover:underline"
             >
-              Đồng thuận y tế
+              {t(language, "auth.legal.medicalConsent")}
             </Link>
             .
           </p>

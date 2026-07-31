@@ -7,15 +7,20 @@ import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
 import { getRole } from "@/lib/auth-store";
 import { trackCouncilViewed } from "@/lib/analytics/events";
-import { stripTelemetryLabels } from "@/lib/user-facing-text";
+import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   CouncilAiDisclosure,
   CouncilCaseRecord,
+  CouncilEvidenceAttachment,
+  CouncilEvidenceSnapshotOption,
   CouncilRunRecord,
   CouncilStreamStage,
+  attachCouncilEvidenceSnapshot,
   buildSnapshotFromCouncilCase,
   getActiveCouncilCaseId,
   getCouncilCase,
+  listCouncilEvidenceAttachments,
+  listCouncilEvidenceSnapshotOptions,
   getCouncilRuns,
   getLatestCouncilCase,
   isCouncilModelDisclosureEnabled,
@@ -28,7 +33,10 @@ import {
   submitCouncilOversight,
 } from "@/lib/council";
 import { buildCouncilView } from "@/lib/council-view";
+import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import type { UserRole } from "@/lib/navigation.config";
+import type { UILanguage } from "@/lib/ui-language";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type SeverityLevel = "stable" | "warning" | "critical";
 type CouncilBannerState =
@@ -68,11 +76,13 @@ function formatElapsed(fromIso?: string): string {
   return `${h}:${m}:${s}`;
 }
 
-function formatRunTimestamp(iso: string): string {
+function formatRunTimestamp(language: UILanguage, iso: string): string {
   const parsed = Date.parse(iso);
-  if (!Number.isFinite(parsed)) return "Không rõ thời điểm";
+  if (!Number.isFinite(parsed)) {
+    return t(language, "council.history.timestampUnknown");
+  }
   try {
-    return new Date(parsed).toLocaleString("vi-VN", {
+    return formatLocaleDate(language, parsed, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -80,41 +90,52 @@ function formatRunTimestamp(iso: string): string {
       minute: "2-digit",
     });
   } catch {
-    return new Date(parsed).toISOString();
+    return t(language, "council.history.timestampUnknown");
   }
 }
 
 // Derive a short, non-PII outcome label for a historical run from its snapshot.
-function summarizeRunOutcome(run: CouncilRunRecord): string {
-  if (run.emergencyTriggered) return "Cần xử trí khẩn";
-  if (!run.result) return "Đã chạy hội chẩn";
+function summarizeRunOutcome(language: UILanguage, run: CouncilRunRecord): string {
+  if (run.emergencyTriggered) {
+    return t(language, "council.history.outcome.emergency");
+  }
+  if (!run.result) return t(language, "council.history.outcome.completed");
   try {
     const normalized = normalizeCouncilRunResult(run.result);
-    if (normalized.isEmergency) return "Cần xử trí khẩn";
-    if ((normalized.conflicts?.length ?? 0) > 0) return "Có điểm bất đồng";
-    if (normalized.consensus?.trim()) return "Đã đạt đồng thuận";
-    return "Đã chạy hội chẩn";
+    if (normalized.isEmergency) {
+      return t(language, "council.history.outcome.emergency");
+    }
+    if ((normalized.conflicts?.length ?? 0) > 0) {
+      return t(language, "council.history.outcome.conflict");
+    }
+    if (normalized.consensus?.trim()) {
+      return t(language, "council.history.outcome.consensus");
+    }
+    return t(language, "council.history.outcome.completed");
   } catch {
-    return "Đã chạy hội chẩn";
+    return t(language, "council.history.outcome.completed");
   }
 }
 
 // Derive a concise, user-facing label for the model basis behind a Council
 // result (Req 6.3, 6.4). Coarse and non-identifying — safe for every role; the
 // raw model identifiers stay admin-only at the call site.
-function describeModelBasis(disclosure: CouncilAiDisclosure): string {
+function describeModelBasis(
+  language: UILanguage,
+  disclosure: CouncilAiDisclosure,
+): string {
   const family = disclosure.modelFamily.toLowerCase();
   const version = disclosure.modelVersion.toLowerCase();
   if (/rule/.test(family) || /rule/.test(version)) {
-    return "Bộ quy tắc hội chẩn xác định (rule-based)";
+    return t(language, "council.model.ruleBased");
   }
   if (/heuristic|fallback/.test(family) || /heuristic|fallback/.test(version)) {
-    return "Trích xuất dự phòng theo heuristic";
+    return t(language, "council.model.fallback");
   }
   if (/deepseek/.test(family)) {
-    return "Mô hình ngôn ngữ DeepSeek";
+    return t(language, "council.model.deepseek");
   }
-  return disclosure.modelFamily || "Mô hình AI";
+  return disclosure.modelFamily || t(language, "council.model.generic");
 }
 
 function getSeverity(
@@ -197,66 +218,73 @@ function translateSpecialistLabel(value: string): string {
   return value || "Chuyên khoa";
 }
 
-function getTimelineTitle(step: string): string {
+function getTimelineTitle(language: UILanguage, step: string): string {
   const normalized = step.toLowerCase();
-  if (/intake|normal/.test(normalized)) return "Đã chuẩn hóa thông tin ca bệnh";
+  if (/intake|normal/.test(normalized))
+    return t(language, "council.overview.timeline.intake");
   if (/specialist|assessment/.test(normalized))
-    return "Đã phân tích theo từng chuyên khoa";
-  if (/conflict|review/.test(normalized)) return "Đã kiểm tra điểm bất đồng";
+    return t(language, "council.overview.timeline.specialists");
+  if (/conflict|review/.test(normalized))
+    return t(language, "council.overview.timeline.conflicts");
   if (/consensus|decision/.test(normalized))
-    return "Đã tổng hợp mức đồng thuận";
-  if (/safety|gate|guard/.test(normalized)) return "Đã kiểm tra cổng an toàn";
-  if (/final|recommend/.test(normalized)) return "Đề xuất cuối cùng";
+    return t(language, "council.overview.timeline.consensus");
+  if (/safety|gate|guard/.test(normalized))
+    return t(language, "council.overview.timeline.safety");
+  if (/final|recommend/.test(normalized))
+    return t(language, "council.overview.timeline.final");
   return step;
 }
 
 function getTimelineStatus(
-  title: string,
+  step: string,
   hasMissingData: boolean,
   isProblemStep: boolean,
 ): "done" | "review" | "missing" | "pending" {
+  const normalized = normalizeSearch(step);
   if (
     hasMissingData &&
-    /(cổng an toàn|Đề xuất cuối cùng|đồng thuận)/i.test(title)
+    /(safety|gate|guard|final|recommend|consensus|decision)/.test(normalized)
   )
     return "missing";
-  if (isProblemStep || /bất đồng/i.test(title)) return "review";
+  if (isProblemStep || /conflict|review/.test(normalized)) return "review";
   return "done";
 }
 
-function timelineStatusMeta(status: "done" | "review" | "missing" | "pending") {
+function timelineStatusMeta(
+  language: UILanguage,
+  status: "done" | "review" | "missing" | "pending",
+) {
   if (status === "missing")
     return {
-      label: "Thiếu dữ liệu",
+      label: t(language, "council.overview.timeline.status.missing"),
       className:
         "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100",
     };
   if (status === "review")
     return {
-      label: "Cần xem lại",
+      label: t(language, "council.overview.timeline.status.review"),
       className:
         "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100",
     };
   if (status === "pending")
     return {
-      label: "Chờ bác sĩ xác nhận",
+      label: t(language, "council.overview.timeline.status.pending"),
       className:
         "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100",
     };
   return {
-    label: "Hoàn tất",
+    label: t(language, "council.overview.timeline.status.done"),
     className:
       "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/70 dark:bg-emerald-500/20 dark:text-emerald-100",
   };
 }
 
-function bannerMeta(state: CouncilBannerState) {
+function bannerMeta(language: UILanguage, state: CouncilBannerState) {
   if (state === "safety") {
     return {
       icon: "emergency_home",
-      title: "Cần xử trí khẩn / cần xác nhận",
-      detail:
-        "Có tín hiệu an toàn hoặc yêu cầu bàn giao cho bác sĩ phụ trách trước khi đưa ra khuyến nghị cuối cùng.",
+      title: t(language, "council.overview.banner.safety.title"),
+      detail: t(language, "council.overview.banner.safety.detail"),
       className:
         "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100",
       iconClassName: "bg-rose-600 text-white",
@@ -265,9 +293,8 @@ function bannerMeta(state: CouncilBannerState) {
   if (state === "conflict") {
     return {
       icon: "warning",
-      title: "Có bất đồng chuyên khoa",
-      detail:
-        "Phát hiện tín hiệu khác nhau giữa các chuyên khoa. Cần bác sĩ phụ trách xác nhận trước khi kết luận.",
+      title: t(language, "council.overview.banner.conflict.title"),
+      detail: t(language, "council.overview.banner.conflict.detail"),
       className:
         "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100",
       iconClassName: "bg-orange-500 text-white",
@@ -276,8 +303,8 @@ function bannerMeta(state: CouncilBannerState) {
   if (state === "review") {
     return {
       icon: "error",
-      title: "Cần bác sĩ xem lại",
-      detail: "Có điểm cần kiểm tra thêm trước khi chốt khuyến nghị.",
+      title: t(language, "council.overview.banner.review.title"),
+      detail: t(language, "council.overview.banner.review.detail"),
       className:
         "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100",
       iconClassName: "bg-amber-500 text-white",
@@ -286,9 +313,8 @@ function bannerMeta(state: CouncilBannerState) {
   if (state === "incomplete") {
     return {
       icon: "info",
-      title: "Chưa đủ dữ liệu kết luận",
-      detail:
-        "Thiếu dữ liệu quan trọng nên hệ thống chưa thể đánh giá mức đồng thuận đáng tin cậy.",
+      title: t(language, "council.overview.banner.incomplete.title"),
+      detail: t(language, "council.overview.banner.incomplete.detail"),
       className:
         "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100",
       iconClassName: "bg-sky-500 text-white",
@@ -296,9 +322,8 @@ function bannerMeta(state: CouncilBannerState) {
   }
   return {
     icon: "check_circle",
-    title: "Hội chẩn ổn định",
-    detail:
-      "Không phát hiện bất đồng quan trọng giữa các chuyên khoa trong dữ liệu hiện tại.",
+    title: t(language, "council.overview.banner.stable.title"),
+    detail: t(language, "council.overview.banner.stable.detail"),
     className:
       "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/70 dark:bg-emerald-500/20 dark:text-emerald-100",
     iconClassName: "bg-emerald-600 text-white",
@@ -306,6 +331,7 @@ function bannerMeta(state: CouncilBannerState) {
 }
 
 export default function CouncilPage() {
+  const language = useUILanguage();
   const [queryCaseId, setQueryCaseId] = useState<number | null | undefined>(
     undefined,
   );
@@ -322,6 +348,16 @@ export default function CouncilPage() {
   const [streamStages, setStreamStages] = useState<CouncilStreamStage[]>([]);
   const [runNotice, setRunNotice] = useState("");
   const [runHistory, setRunHistory] = useState<CouncilRunRecord[]>([]);
+  const [evidenceOptions, setEvidenceOptions] = useState<
+    CouncilEvidenceSnapshotOption[]
+  >([]);
+  const [evidenceAttachments, setEvidenceAttachments] = useState<
+    CouncilEvidenceAttachment[]
+  >([]);
+  const [evidenceShadowAvailable, setEvidenceShadowAvailable] = useState(false);
+  const [selectedEvidenceJobId, setSelectedEvidenceJobId] = useState("");
+  const [isAttachingEvidence, setIsAttachingEvidence] = useState(false);
+  const [evidenceNotice, setEvidenceNotice] = useState("");
   const [oversightPaused, setOversightPaused] = useState(false);
   const streamingEnabled = isCouncilStreamingEnabled();
   const oversightEnabled = isCouncilOversightEnabled();
@@ -356,9 +392,7 @@ export default function CouncilPage() {
         setActiveCouncilCaseId(loaded.id);
         setCaseItem(loaded);
       } catch (cause) {
-        setLoadError(
-          cause instanceof Error ? cause.message : "Chưa có case để hiển thị.",
-        );
+        setLoadError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== undefined) {
@@ -377,6 +411,7 @@ export default function CouncilPage() {
       setRunHistory([]);
       return;
     }
+    setEvidenceShadowAvailable(false);
     let active = true;
     const loadRuns = async () => {
       try {
@@ -388,6 +423,43 @@ export default function CouncilPage() {
       }
     };
     void loadRuns();
+    return () => {
+      active = false;
+    };
+  }, [activeCaseId]);
+
+  // This selector receives only completed owner-scoped Research job IDs and
+  // opaque provenance counts/categories. It intentionally never loads query
+  // text, report prose, citation titles, URLs, or a client-built packet.
+  useEffect(() => {
+    if (!activeCaseId) {
+      setEvidenceOptions([]);
+      setEvidenceAttachments([]);
+      setSelectedEvidenceJobId("");
+      setEvidenceShadowAvailable(false);
+      return;
+    }
+    let active = true;
+    const loadEvidence = async () => {
+      try {
+        const [options, attachments] = await Promise.all([
+          listCouncilEvidenceSnapshotOptions(activeCaseId),
+          listCouncilEvidenceAttachments(activeCaseId),
+        ]);
+        if (!active) return;
+        setEvidenceOptions(options);
+        setEvidenceAttachments(attachments);
+        setEvidenceShadowAvailable(true);
+      } catch {
+        // This optional shadow-review aid must never block the Council case.
+        if (active) {
+          setEvidenceOptions([]);
+          setEvidenceAttachments([]);
+          setEvidenceShadowAvailable(false);
+        }
+      }
+    };
+    void loadEvidence();
     return () => {
       active = false;
     };
@@ -475,11 +547,30 @@ export default function CouncilPage() {
         await runBlocking();
       }
     } catch (cause) {
-      setRunNotice(
-        cause instanceof Error ? cause.message : "Không thể chạy lại hội chẩn.",
-      );
+      setRunNotice(safeUserFacingError(cause, t(language, "council.error.run")));
     } finally {
       setIsRunning(false);
+    }
+  };
+
+  const handleAttachEvidence = async () => {
+    if (!caseItem || !selectedEvidenceJobId || isAttachingEvidence) return;
+    setIsAttachingEvidence(true);
+    setEvidenceNotice("");
+    try {
+      const attached = await attachCouncilEvidenceSnapshot(
+        caseItem.id,
+        selectedEvidenceJobId,
+      );
+      setEvidenceAttachments((current) => [attached, ...current]);
+      setSelectedEvidenceJobId("");
+      setEvidenceNotice(t(language, "council.evidence.attached"));
+    } catch (cause) {
+      setEvidenceNotice(
+        safeUserFacingError(cause, t(language, "council.evidence.attachError")),
+      );
+    } finally {
+      setIsAttachingEvidence(false);
     }
   };
 
@@ -518,29 +609,6 @@ export default function CouncilPage() {
     ? (snapshot?.result.aiDisclosure ?? null)
     : null;
   const isAdmin = role === "admin";
-
-  const supportRatioPct =
-    view?.quality.supportRatio != null
-      ? Math.round((view.quality.supportRatio * 100 + Number.EPSILON) * 10) / 10
-      : null;
-  const disagreementPct =
-    view?.quality.disagreementIndex != null
-      ? Math.round(
-          (view.quality.disagreementIndex * 100 + Number.EPSILON) * 10,
-        ) / 10
-      : null;
-  const confidencePct =
-    view?.quality.neuralProbability != null
-      ? Math.max(
-          1,
-          Math.min(100, Math.round(view.quality.neuralProbability * 100)),
-        )
-      : view?.quality.supportRatio != null
-        ? Math.max(
-            1,
-            Math.min(100, Math.round(view.quality.supportRatio * 100)),
-          )
-        : null;
 
   const mapLab = useMemo(() => {
     const found = view?.requestSummary.labs.find((lab) => {
@@ -607,7 +675,7 @@ export default function CouncilPage() {
         : severity === "warning"
           ? "review"
           : "stable";
-  const banner = bannerMeta(bannerState);
+  const banner = bannerMeta(language, bannerState);
   const finalDecisionBlocked =
     hasConflictSignals || requiresSafetyConfirm || missingCriticalData;
   const renalDataLabel =
@@ -615,18 +683,19 @@ export default function CouncilPage() {
       ? `eGFR ${egfrLab}`
       : creatinineLab != null
         ? `${creatinineLab.toFixed(1)} mg/dL`
-        : "Chưa có dữ liệu";
-  const confidenceLabel = missingCriticalData
-    ? "Chưa đủ dữ liệu"
-    : confidencePct != null
-      ? `${confidencePct}%`
-      : "--";
-  const confidenceStateLabel = missingCriticalData
-    ? "Thấp"
+        : t(language, "council.overview.dataUnavailable");
+  const assessmentLabel = missingCriticalData
+    ? t(language, "council.overview.assessment.insufficientData")
+    : requiresSafetyConfirm
+      ? t(language, "council.overview.assessment.clinicianReview")
+      : hasConflictSignals
+        ? t(language, "council.overview.assessment.reviewDifferences")
+        : t(language, "council.overview.assessment.continueDiscussion");
+  const assessmentStateLabel = missingCriticalData
+    ? t(language, "council.overview.assessment.missingInformation")
     : bannerState === "stable"
-      ? "Ổn định"
-      : "Cần xác nhận";
-  const confidenceBarWidth = missingCriticalData ? 28 : (confidencePct ?? 0);
+      ? t(language, "council.overview.assessment.draft")
+      : t(language, "council.overview.assessment.requiresConfirmation");
 
   const specialistLogs = view?.details.specialistLogs ?? [];
   const cardiologyIndex = specialistLogs.findIndex((log) =>
@@ -649,11 +718,11 @@ export default function CouncilPage() {
     renalEndoLog?.specialist ?? "Nội tiết/Thận",
   );
   const cardiologyDetail = summarizeClinicalText(
-    cardiologyLog?.recommendation ?? cardiologyLog?.reasoning,
+    cardiologyLog?.recommendation ?? cardiologyLog?.findings.join(", "),
     "Cân nhắc hỗ trợ huyết động hoặc tăng vận mạch nếu có dấu hiệu tụt huyết áp.",
   );
   const renalEndoDetail = summarizeClinicalText(
-    renalEndoLog?.recommendation ?? renalEndoLog?.reasoning,
+    renalEndoLog?.recommendation ?? renalEndoLog?.findings.join(", "),
     "Cảnh báo nguy cơ độc thận hoặc cần chỉnh liều theo creatinine/eGFR.",
   );
   const conflictDetail = missingRenal
@@ -666,17 +735,18 @@ export default function CouncilPage() {
     const base = view?.timeline.steps ?? [];
     return base.slice(0, 6).map((step) => ({
       id: `${step.sequence}-${step.step}`,
-      time: `Bước ${step.sequence}`,
-      title: getTimelineTitle(step.step),
-      detail: stripTelemetryLabels(step.detail),
+      time: t(language, "council.overview.timeline.step", {
+        sequence: step.sequence,
+      }),
+      title: getTimelineTitle(language, step.step),
       status: getTimelineStatus(
-        getTimelineTitle(step.step),
+        step.step,
         missingCriticalData,
         hasConflictSignals &&
           /conflict|review|consensus|safety|final/i.test(step.step),
       ),
     }));
-  }, [view, missingCriticalData, hasConflictSignals]);
+  }, [language, view, missingCriticalData, hasConflictSignals]);
 
   const selectedSpecialtyMeta =
     HANDOFF_SPECIALTIES.find((item) => item.name === selectedSpecialty) ??
@@ -693,8 +763,13 @@ export default function CouncilPage() {
     const action = guardAction;
     const reason = guardReason.trim();
     const label =
-      action === "override" ? "ghi đè quyết định" : "tạm dừng quy trình";
-    const localNotice = `Đã ghi nhận yêu cầu ${label}. Lý do: ${reason}`;
+      action === "override"
+        ? t(language, "council.overview.guard.overrideAction")
+        : t(language, "council.overview.guard.pauseAction");
+    const localNotice = t(language, "council.overview.guard.requestRecorded", {
+      action: label,
+      reason,
+    });
     closeGuardDialog();
 
     // Flag OFF (or no active case): byte-identical legacy local-notice behavior;
@@ -713,9 +788,7 @@ export default function CouncilPage() {
       });
       if (action === "pause" || result.oversightState === "paused") {
         setOversightPaused(true);
-        setActionNotice(
-          "Đã tạm dừng quy trình. Khuyến nghị cuối cùng đang ở trạng thái chưa được xác nhận, chờ bác sĩ phụ trách xem lại.",
-        );
+        setActionNotice(t(language, "council.overview.guard.pauseRecorded"));
       } else {
         setActionNotice(localNotice);
       }
@@ -727,7 +800,10 @@ export default function CouncilPage() {
   };
 
   const confirmHandoff = async () => {
-    const localNotice = `Đã chuẩn bị yêu cầu mời ${selectedSpecialtyMeta.name}. ${selectedSpecialtyMeta.reason}`;
+    const localNotice = t(language, "council.overview.handoff.prepared", {
+      specialty: selectedSpecialtyMeta.name,
+      reason: selectedSpecialtyMeta.reason,
+    });
     setHandoffOpen(false);
 
     // Flag OFF (or no active case): byte-identical legacy local-notice behavior;
@@ -745,7 +821,10 @@ export default function CouncilPage() {
         reason: selectedSpecialtyMeta.reason,
       });
       setActionNotice(
-        `Đã gửi yêu cầu mời ${selectedSpecialtyMeta.name}. ${selectedSpecialtyMeta.reason}`,
+        t(language, "council.overview.handoff.sent", {
+          specialty: selectedSpecialtyMeta.name,
+          reason: selectedSpecialtyMeta.reason,
+        }),
       );
     } catch {
       // Endpoint absent/unavailable: fall back to the local-notice behavior.
@@ -759,10 +838,10 @@ export default function CouncilPage() {
         <div className="space-y-5">
           <CouncilWorkspaceNav />
           <CouncilEmptyState
-            title="Chưa có dữ liệu phân tích"
+            title={t(language, "council.overview.empty.title")}
             description={
               loadError ||
-              "Ca hiện tại chưa chạy phân tích. Hãy vào Nhập ca bệnh, hoàn tất thông tin và chạy hội chẩn."
+              t(language, "council.overview.empty.description")
             }
           />
           <div className="flex">
@@ -770,7 +849,7 @@ export default function CouncilPage() {
               href="/council/new"
               className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[color:var(--brand-700)]"
             >
-              Mở trang nhập ca bệnh
+              {t(language, "council.overview.empty.openCase")}
             </Link>
           </div>
         </div>
@@ -804,14 +883,14 @@ export default function CouncilPage() {
                 </p>
                 {missingDataLabels.length > 0 ? (
                   <p className="mt-2 text-xs font-bold">
-                    Dữ liệu còn thiếu: {missingDataLabels.join(", ")}
+                    {t(language, "council.overview.summary.missingData")} {missingDataLabels.join(", ")}
                   </p>
                 ) : null}
               </div>
             </div>
             <div className="rounded-lg border border-current/20 bg-white/60 px-3 py-2 text-left sm:text-right dark:bg-slate-950/20">
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] opacity-80">
-                Thời gian từ lúc chạy
+                {t(language, "council.overview.elapsed")}
               </p>
               <p className="font-mono text-xl font-bold">{elapsed}</p>
             </div>
@@ -826,10 +905,10 @@ export default function CouncilPage() {
                   className={`flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
                 >
                   <span className="h-4 w-1 rounded-full bg-[color:var(--brand-600)]" />
-                  Sơ đồ bất đồng chuyên khoa
+                  {t(language, "council.overview.conflictMap.title")}
                 </h3>
                 <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
-                  Hệ thống chưa đạt đồng thuận tự động
+                  {t(language, "council.overview.conflictMap.noAutomaticConsensus")}
                 </span>
               </div>
 
@@ -849,7 +928,7 @@ export default function CouncilPage() {
                         <p
                           className={`mt-1 text-sm font-semibold ${BODY_TEXT_CLASS}`}
                         >
-                          Tim mạch đề xuất gì?
+                          {t(language, "council.overview.conflictMap.cardiologyPrompt")}
                         </p>
                       </div>
                     </div>
@@ -866,7 +945,7 @@ export default function CouncilPage() {
                         sync_problem
                       </span>
                       <p className="mt-2 text-xs font-black uppercase tracking-[0.12em]">
-                        Xung đột quan trọng
+                        {t(language, "council.overview.conflictMap.criticalConflict")}
                       </p>
                     </div>
                   </div>
@@ -885,7 +964,7 @@ export default function CouncilPage() {
                         <p
                           className={`mt-1 text-sm font-semibold ${BODY_TEXT_CLASS}`}
                         >
-                          Nội tiết/Thận cảnh báo gì?
+                          {t(language, "council.overview.conflictMap.renalPrompt")}
                         </p>
                       </div>
                     </div>
@@ -899,7 +978,7 @@ export default function CouncilPage() {
 
                 <div className="mt-4 rounded-lg border border-orange-200 bg-white p-4 dark:border-orange-500/60 dark:bg-slate-950/40">
                   <p className="text-sm font-bold text-orange-800 dark:text-orange-100">
-                    Điểm xung đột là gì?
+                    {t(language, "council.overview.conflictMap.question")}
                   </p>
                   <p
                     className={`mt-1 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
@@ -924,11 +1003,13 @@ export default function CouncilPage() {
                   <span
                     className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}
                   >
-                    {mapLab != null ? `${mapLab} mmHg` : "Chưa có dữ liệu"}
+                    {mapLab != null
+                      ? `${mapLab} mmHg`
+                      : t(language, "council.overview.dataUnavailable")}
                   </span>
                 </div>
                 <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
-                  Dùng để đánh giá huyết động trước khi kết luận.
+                  {t(language, "council.overview.assessment.mapHint")}
                 </p>
               </article>
 
@@ -949,14 +1030,14 @@ export default function CouncilPage() {
                   </span>
                 </div>
                 <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
-                  Cần cho các thuốc phải chỉnh liều theo chức năng thận.
+                  {t(language, "council.overview.assessment.renalHint")}
                 </p>
               </article>
 
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">
-                    Độ tin cậy AI
+                    {t(language, "council.overview.assessment.title")}
                   </p>
                   <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">
                     bolt
@@ -966,23 +1047,24 @@ export default function CouncilPage() {
                   <span
                     className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}
                   >
-                    {confidenceLabel}
+                    {assessmentLabel}
                   </span>
                   <span
                     className={`mb-1 text-xs font-bold ${MUTED_TEXT_CLASS}`}
                   >
-                    {confidenceStateLabel}
+                    {assessmentStateLabel}
                   </span>
                 </div>
-                <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-[color:var(--surface-brand-soft)] dark:bg-slate-700">
-                  <div
-                    className="h-full bg-[color:var(--brand-600)]"
-                    style={{ width: `${confidenceBarWidth}%` }}
-                  />
-                </div>
+                <p className={`mt-4 text-xs ${MUTED_TEXT_CLASS}`}>
+                  {t(language, "council.overview.assessment.disclaimer")}
+                </p>
                 {missingCriticalData ? (
                   <p className="mt-3 text-xs font-semibold text-amber-800 dark:text-amber-200">
-                    Lý do: Thiếu {missingDataLabels.join(" và ")}.
+                    {t(language, "council.overview.assessment.missingReason", {
+                      items: missingDataLabels.join(
+                        t(language, "council.overview.listJoin"),
+                      ),
+                    })}
                   </p>
                 ) : null}
               </article>
@@ -997,14 +1079,14 @@ export default function CouncilPage() {
                 <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">
                   history
                 </span>
-                Timeline hội chẩn
+                {t(language, "council.overview.timeline.title")}
               </h3>
 
               {timeline.length ? (
                 <div className="relative space-y-6">
                   <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[color:var(--shell-border)] dark:bg-sky-800" />
                   {timeline.map((step) => {
-                    const meta = timelineStatusMeta(step.status);
+                    const meta = timelineStatusMeta(language, step.status);
                     const dotClass =
                       step.status === "missing"
                         ? "border-sky-400 bg-sky-100"
@@ -1048,25 +1130,20 @@ export default function CouncilPage() {
                         <p className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
                           {step.title}
                         </p>
-                        <p
-                          className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                        >
-                          {step.detail}
-                        </p>
                       </div>
                     );
                   })}
                 </div>
               ) : (
                 <p className={`text-xs ${SECONDARY_TEXT_CLASS}`}>
-                  Chưa có timeline hội chẩn từ lần chạy gần nhất.
+                  {t(language, "council.overview.timeline.empty")}
                 </p>
               )}
 
               {streamingEnabled && streamStages.length > 0 ? (
                 <div className="mt-6 rounded-lg border border-sky-200 bg-sky-50 p-4 dark:border-sky-500/60 dark:bg-sky-500/10">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-200">
-                    Tiến trình trực tiếp
+                    {t(language, "council.overview.timeline.liveProgress")}
                   </p>
                   <ul className="mt-2 space-y-2">
                     {streamStages.map((stage) => (
@@ -1081,15 +1158,8 @@ export default function CouncilPage() {
                           <p
                             className={`text-sm font-semibold ${BODY_TEXT_CLASS}`}
                           >
-                            {getTimelineTitle(stage.step)}
+                            {getTimelineTitle(language, stage.step)}
                           </p>
-                          {stage.detail ? (
-                            <p
-                              className={`text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-                            >
-                              {stripTelemetryLabels(stage.detail)}
-                            </p>
-                          ) : null}
                         </div>
                       </li>
                     ))}
@@ -1111,9 +1181,9 @@ export default function CouncilPage() {
                   </span>
                   {isRunning
                     ? streamingEnabled
-                      ? "Đang hội chẩn trực tiếp..."
-                      : "Đang chạy lại..."
-                    : "Chạy lại hội chẩn"}
+                      ? t(language, "council.overview.rerun.live")
+                      : t(language, "council.overview.rerun.running")
+                    : t(language, "council.overview.rerun.action")}
                 </button>
                 {runNotice ? (
                   <p
@@ -1123,6 +1193,85 @@ export default function CouncilPage() {
                   </p>
                 ) : null}
               </div>
+
+              {evidenceShadowAvailable ? (
+              <div className="mt-6 border-t border-[color:var(--shell-border)] pt-5 dark:border-sky-700/60">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined mt-0.5 text-lg text-[color:var(--brand-600)] dark:text-sky-200">
+                    verified
+                  </span>
+                  <div>
+                    <h4 className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
+                      {t(language, "council.evidence.title")}
+                    </h4>
+                    <p className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}>
+                      {t(language, "council.evidence.description")}
+                    </p>
+                  </div>
+                </div>
+
+                {evidenceAttachments.length > 0 ? (
+                  <p className={`mt-3 text-xs font-semibold ${SECONDARY_TEXT_CLASS}`}>
+                    {t(language, "council.evidence.current", {
+                      count: evidenceAttachments[0].evidence_count,
+                      date: formatRunTimestamp(language, evidenceAttachments[0].created_at),
+                    })}
+                  </p>
+                ) : (
+                  <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
+                    {t(language, "council.evidence.noneAttached")}
+                  </p>
+                )}
+
+                {evidenceOptions.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    <label className={`block text-xs font-bold ${BODY_TEXT_CLASS}`} htmlFor="council-evidence-snapshot">
+                      {t(language, "council.evidence.selectorLabel")}
+                    </label>
+                    <select
+                      id="council-evidence-snapshot"
+                      value={selectedEvidenceJobId}
+                      onChange={(event) => setSelectedEvidenceJobId(event.target.value)}
+                      className="min-h-[44px] w-full rounded-lg border border-[color:var(--shell-border)] bg-white px-3 text-sm text-[color:var(--text-primary)] dark:border-sky-700 dark:bg-slate-950 dark:text-slate-100"
+                    >
+                      <option value="">{t(language, "council.evidence.selectorPlaceholder")}</option>
+                      {evidenceOptions.map((option) => (
+                        <option key={option.job_id} value={option.job_id}>
+                          {t(language, "council.evidence.option", {
+                            count: option.evidence_count,
+                            date: option.captured_at
+                              ? formatRunTimestamp(language, option.captured_at)
+                              : t(language, "council.history.timestampUnknown"),
+                          })}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleAttachEvidence()}
+                      disabled={!selectedEvidenceJobId || isAttachingEvidence}
+                      className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 text-sm font-bold text-[color:var(--text-primary)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                    >
+                      <span className={`material-symbols-outlined text-[18px] ${isAttachingEvidence ? "animate-spin" : ""}`}>
+                        {isAttachingEvidence ? "progress_activity" : "attach_file"}
+                      </span>
+                      {isAttachingEvidence
+                        ? t(language, "council.evidence.attaching")
+                        : t(language, "council.evidence.attach")}
+                    </button>
+                  </div>
+                ) : (
+                  <p className={`mt-4 text-xs ${MUTED_TEXT_CLASS}`}>
+                    {t(language, "council.evidence.noEligible")}
+                  </p>
+                )}
+                {evidenceNotice ? (
+                  <p aria-live="polite" className={`mt-3 text-xs font-semibold ${SECONDARY_TEXT_CLASS}`}>
+                    {evidenceNotice}
+                  </p>
+                ) : null}
+              </div>
+              ) : null}
             </article>
 
             {runHistory.length > 0 ? (
@@ -1133,7 +1282,7 @@ export default function CouncilPage() {
                   <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">
                     manage_history
                   </span>
-                  Lịch sử hội chẩn
+                  {t(language, "council.history.title")}
                 </h3>
                 <ol className="space-y-3">
                   {runHistory.map((run, index) => (
@@ -1147,17 +1296,19 @@ export default function CouncilPage() {
                             className={`text-sm font-bold ${BODY_TEXT_CLASS}`}
                           >
                             {index === 0
-                              ? "Lần chạy mới nhất"
-                              : `Lần chạy #${runHistory.length - index}`}
+                              ? t(language, "council.history.latestRun")
+                              : t(language, "council.history.runNumber", {
+                                  count: runHistory.length - index,
+                                })}
                           </span>
                           {run.emergencyTriggered ? (
                             <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100">
-                              Cảnh báo khẩn
+                              {t(language, "council.history.emergencyBadge")}
                             </span>
                           ) : null}
                         </div>
                         <p className={`mt-1 text-xs ${SECONDARY_TEXT_CLASS}`}>
-                          {summarizeRunOutcome(run)}
+                          {summarizeRunOutcome(language, run)}
                         </p>
                         {run.modelVersion ? (
                           <p
@@ -1170,7 +1321,7 @@ export default function CouncilPage() {
                       <span
                         className={`shrink-0 text-right text-[11px] font-mono ${MUTED_TEXT_CLASS}`}
                       >
-                        {formatRunTimestamp(run.createdAt)}
+                        {formatRunTimestamp(language, run.createdAt)}
                       </span>
                     </li>
                   ))}
@@ -1186,10 +1337,10 @@ export default function CouncilPage() {
               >
                 <div className="text-left">
                   <p className="text-base font-black leading-tight">
-                    Mời bác sĩ phụ trách xem lại
+                    {t(language, "council.overview.handoff.action")}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-blue-100">
-                    Gửi tóm tắt ca và điểm bất đồng cho người trực.
+                    {t(language, "council.overview.handoff.actionHint")}
                   </p>
                 </div>
                 <span className="material-symbols-outlined text-3xl transition-transform group-hover:translate-x-1">
@@ -1211,7 +1362,7 @@ export default function CouncilPage() {
                       touch_app
                     </span>
                     <p className="text-xs font-bold text-[color:var(--text-brand)] dark:text-sky-100">
-                      Ghi đè quyết định
+                      {t(language, "council.overview.guard.overrideAction")}
                     </p>
                   </button>
                   <button
@@ -1226,7 +1377,7 @@ export default function CouncilPage() {
                       pause_circle
                     </span>
                     <p className="text-xs font-bold text-rose-800 dark:text-rose-100">
-                      Tạm dừng quy trình
+                      {t(language, "council.overview.guard.pauseAction")}
                     </p>
                   </button>
                 </div>
@@ -1241,19 +1392,17 @@ export default function CouncilPage() {
               <div className={`${SOFT_PANEL_CLASS} p-4`}>
                 <div className="flex items-center justify-between gap-2">
                   <p className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
-                    Tóm tắt hội chẩn
+                    {t(language, "council.overview.summary.title")}
                   </p>
                   {oversightPaused ? (
                     <span className="rounded-full border border-orange-300 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100">
-                      Chưa được xác nhận
+                      {t(language, "council.overview.summary.unconfirmed")}
                     </span>
                   ) : null}
                 </div>
                 {oversightPaused ? (
                   <p className="mt-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs font-semibold text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100">
-                    Quy trình đang tạm dừng. Khuyến nghị cuối cùng{" "}
-                    <strong>chưa được xác nhận</strong>, chờ bác sĩ phụ trách
-                    xem lại.
+                    {t(language, "council.overview.summary.pausedNotice")}
                   </p>
                 ) : null}
                 {finalDecisionBlocked ? (
@@ -1261,19 +1410,20 @@ export default function CouncilPage() {
                     className={`mt-3 space-y-3 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
                   >
                     <p>
-                      Hệ thống chưa ghi nhận đồng thuận chắc chắn giữa các
-                      chuyên khoa.
+                      {t(language, "council.overview.summary.noConsensus")}
                     </p>
                     {hasConflictSignals ? (
                       <p>
-                        Có tín hiệu cần xem lại liên quan đến {cardiologyNode}{" "}
-                        và {renalEndoNode}.
+                        {t(language, "council.overview.summary.conflictSignal", {
+                          first: cardiologyNode,
+                          second: renalEndoNode,
+                        })}
                       </p>
                     ) : null}
                     {missingDataLabels.length > 0 ? (
                       <div>
                         <p className={`font-bold ${BODY_TEXT_CLASS}`}>
-                          Dữ liệu còn thiếu:
+                          {t(language, "council.overview.summary.missingData")}
                         </p>
                         <ul className="mt-1 list-disc space-y-1 pl-5">
                           {missingDataLabels.map((label) => (
@@ -1284,20 +1434,17 @@ export default function CouncilPage() {
                     ) : null}
                     <div>
                       <p className={`font-bold ${BODY_TEXT_CLASS}`}>
-                        Đề xuất tiếp theo:
+                        {t(language, "council.overview.summary.nextStep")}
                       </p>
                       <ul className="mt-1 list-disc space-y-1 pl-5">
                         <li>
-                          Bổ sung xét nghiệm chức năng thận nếu có thuốc cần
-                          chỉnh liều theo eGFR.
+                          {t(language, "council.overview.summary.nextStep.renal")}
                         </li>
                         <li>
-                          Mời Dược lâm sàng hoặc Thận học khi có tín hiệu nguy
-                          cơ thuốc.
+                          {t(language, "council.overview.summary.nextStep.pharmacy")}
                         </li>
                         <li>
-                          Bác sĩ phụ trách cần xác nhận trước khi đưa ra khuyến
-                          nghị cuối cùng.
+                          {t(language, "council.overview.summary.nextStep.review")}
                         </li>
                       </ul>
                     </div>
@@ -1307,35 +1454,45 @@ export default function CouncilPage() {
                     className={`mt-3 space-y-2 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
                   >
                     <p>
-                      Không phát hiện bất đồng quan trọng giữa các chuyên khoa.
+                      {t(language, "council.overview.summary.noMaterialConflict")}
                     </p>
-                    <p>Mức xử trí: theo dõi thường quy.</p>
-                    {consensusText ? <p>Ghi nhận: {consensusText}</p> : null}
+                    <p>{t(language, "council.overview.summary.routine")}</p>
+                    {consensusText ? (
+                      <p>
+                        {t(language, "council.overview.summary.recorded", {
+                          consensus: consensusText,
+                        })}
+                      </p>
+                    ) : null}
                   </div>
                 )}
                 {escalationText && finalDecisionBlocked ? (
                   <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
-                    Ghi chú hệ thống:{" "}
+                    {t(language, "council.overview.summary.systemNote")}{" "}
                     {summarizeClinicalText(
                       escalationText,
-                      "Cần bác sĩ xem lại.",
+                      t(language, "council.overview.summary.professionalReview"),
                     )}
                   </p>
                 ) : null}
                 <div
                   className={`mt-4 flex items-center justify-between text-xs ${MUTED_TEXT_CLASS}`}
                 >
-                  <span>Tỷ lệ đồng thuận</span>
+                  <span>{t(language, "council.overview.summary.specialtyConsensus")}</span>
                   <span>
-                    {supportRatioPct != null ? `${supportRatioPct}%` : "--"}
+                    {hasConflictSignals
+                      ? t(language, "council.overview.summary.needsReview")
+                      : t(language, "council.overview.summary.noMaterialConflict")}
                   </span>
                 </div>
                 <div
                   className={`mt-1 flex items-center justify-between text-xs ${MUTED_TEXT_CLASS}`}
                 >
-                  <span>Mức bất đồng</span>
+                  <span>{t(language, "council.overview.summary.finalDecision")}</span>
                   <span>
-                    {disagreementPct != null ? `${disagreementPct}%` : "--"}
+                    {finalDecisionBlocked
+                      ? t(language, "council.overview.summary.waitForProfessional")
+                      : t(language, "council.overview.summary.checkBeforeUse")}
                   </span>
                 </div>
                 {disclosure ? (
@@ -1344,20 +1501,22 @@ export default function CouncilPage() {
                       <span
                         className={`text-[10px] font-bold uppercase tracking-[0.14em] ${MUTED_TEXT_CLASS}`}
                       >
-                        Cơ sở mô hình
+                        {t(language, "council.model.basisLabel")}
                       </span>
                       {disclosure.isFallback ? (
                         <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
-                          Chế độ dự phòng / degraded
+                          {t(language, "council.model.degradedBadge")}
                         </span>
                       ) : null}
                     </div>
                     <p
                       className={`mt-1 text-xs leading-relaxed ${SECONDARY_TEXT_CLASS}`}
                     >
-                      Kết quả được tạo bởi: {describeModelBasis(disclosure)}.
+                      {t(language, "council.model.generatedBy", {
+                        basis: describeModelBasis(language, disclosure),
+                      })}
                       {disclosure.isFallback
-                        ? " Đây là kết quả ở chế độ dự phòng (degraded) — hãy cân nhắc thận trọng hơn."
+                        ? t(language, "council.model.fallbackNotice")
                         : ""}
                     </p>
                     {isAdmin &&
@@ -1387,17 +1546,17 @@ export default function CouncilPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
-                    Mời chuyên khoa hội chẩn
+                    {t(language, "council.overview.handoff.dialogTitle")}
                   </h3>
                   <p className={`mt-1 text-sm ${SECONDARY_TEXT_CLASS}`}>
-                    Chọn chuyên khoa phù hợp để gửi tóm tắt ca và điểm bất đồng.
+                    {t(language, "council.overview.handoff.dialogDescription")}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setHandoffOpen(false)}
                   className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:text-slate-100 dark:hover:bg-slate-800"
-                  aria-label="Đóng"
+                  aria-label={t(language, "council.overview.close")}
                 >
                   <span className="material-symbols-outlined text-[20px]">
                     close
@@ -1435,14 +1594,14 @@ export default function CouncilPage() {
                   onClick={() => setHandoffOpen(false)}
                   className="min-h-[44px] rounded-lg border border-[color:var(--shell-border)] bg-white px-4 text-sm font-bold text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
-                  Hủy
+                  {t(language, "council.guard.cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={confirmHandoff}
                   className="min-h-[44px] rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 text-sm font-bold text-white hover:bg-[color:var(--brand-700)]"
                 >
-                  Gửi yêu cầu hội chẩn
+                  {t(language, "council.overview.handoff.send")}
                 </button>
               </div>
             </div>
@@ -1458,28 +1617,28 @@ export default function CouncilPage() {
             <div className="w-full max-w-xl rounded-xl border border-[color:var(--shell-border)] bg-white p-5 shadow-xl dark:border-sky-700 dark:bg-slate-900">
               <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
                 {guardAction === "override"
-                  ? "Ghi đè quyết định"
-                  : "Tạm dừng quy trình"}
+                  ? t(language, "council.guard.overrideTitle")
+                  : t(language, "council.guard.pauseTitle")}
               </h3>
               <p
                 className={`mt-2 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
               >
                 {guardAction === "override"
-                  ? "Bạn đang ghi đè đề xuất của hệ thống. Vui lòng nhập lý do lâm sàng."
-                  : "Bạn đang tạm dừng quy trình hội chẩn. Vui lòng nhập lý do lâm sàng."}
+                  ? t(language, "council.guard.overrideDescription")
+                  : t(language, "council.guard.pauseDescription")}
               </p>
               <label
                 className={`mt-4 block text-sm font-bold ${BODY_TEXT_CLASS}`}
                 htmlFor="guard-reason"
               >
-                Lý do lâm sàng *
+                {t(language, "council.guard.reasonLabel")}
               </label>
               <textarea
                 id="guard-reason"
                 value={guardReason}
                 onChange={(event) => setGuardReason(event.target.value)}
                 className="mt-2 min-h-[120px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-3 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--brand-600)] focus:ring-4 focus:ring-blue-200/70 dark:border-sky-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-500/20"
-                placeholder="Ví dụ: Dữ liệu lâm sàng mới cho thấy cần ưu tiên xử trí khác..."
+                placeholder={t(language, "council.guard.reasonPlaceholder")}
               />
               <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
@@ -1487,7 +1646,7 @@ export default function CouncilPage() {
                   onClick={closeGuardDialog}
                   className="min-h-[44px] rounded-lg border border-[color:var(--shell-border)] bg-white px-4 text-sm font-bold text-[color:var(--text-primary)] hover:bg-[color:var(--surface-muted)] dark:border-sky-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                 >
-                  Hủy
+                  {t(language, "council.guard.cancel")}
                 </button>
                 <button
                   type="button"
@@ -1495,7 +1654,7 @@ export default function CouncilPage() {
                   disabled={!guardReason.trim()}
                   className="min-h-[44px] rounded-lg border border-rose-600 bg-rose-600 px-4 text-sm font-bold text-white transition hover:bg-rose-700 disabled:border-rose-300 disabled:bg-rose-100 disabled:text-rose-800 disabled:hover:bg-rose-100 dark:disabled:border-rose-500/60 dark:disabled:bg-rose-500/20 dark:disabled:text-rose-100"
                 >
-                  Xác nhận
+                  {t(language, "council.guard.confirm")}
                 </button>
               </div>
             </div>

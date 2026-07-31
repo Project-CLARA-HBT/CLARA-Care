@@ -27,6 +27,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/a11y.dart';
+import '../../core/consumer_terminology.dart';
 import '../../theme/components/clara_card.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
@@ -56,9 +57,6 @@ class LanguageToggle extends StatelessWidget {
   /// selection and calls [LanguageController.setLanguage] on a user pick.
   final LanguageController controller;
 
-  /// Vietnamese-first section title.
-  static const String _sectionTitle = 'Ngôn ngữ';
-
   /// Supported options, in the controller's `vi`-first order, labeled with each
   /// language's endonym so it is recognizable in its own script.
   static const List<_LanguageOption> _options = <_LanguageOption>[
@@ -74,17 +72,19 @@ class LanguageToggle extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final selected = controller.languageCode;
+        final copy = ConsumerTerminology.forLocale(selected);
+        final sectionTitle = copy[ConsumerTerm.settingsLanguageTitle];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SectionHeader(title: _sectionTitle),
+            SectionHeader(title: sectionTitle),
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: ClaraTokens.spaceMd,
               ),
               child: ClaraCard.static_(
-                semanticLabel: _sectionTitle,
+                semanticLabel: sectionTitle,
                 padding: const EdgeInsets.symmetric(
                   vertical: ClaraTokens.spaceXs,
                 ),
@@ -103,6 +103,9 @@ class LanguageToggle extends StatelessWidget {
                           option: option,
                           groupValue: selected,
                           textScaler: textScaler,
+                          selectedSuffix: copy[ConsumerTerm.settingsSelected],
+                          notSelectedSuffix:
+                              copy[ConsumerTerm.settingsNotSelected],
                         ),
                     ],
                   ),
@@ -123,17 +126,21 @@ class _LanguageRadioTile extends StatelessWidget {
     required this.option,
     required this.groupValue,
     required this.textScaler,
+    required this.selectedSuffix,
+    required this.notSelectedSuffix,
   });
 
   final _LanguageOption option;
   final String groupValue;
   final TextScaler textScaler;
+  final String selectedSuffix;
+  final String notSelectedSuffix;
 
   @override
   Widget build(BuildContext context) {
     final isSelected = option.code == groupValue;
     // Convey selection in the spoken value, not by color alone (Req 9.5).
-    final selectedSuffix = isSelected ? 'đã chọn' : 'chưa chọn';
+    final selectedSuffix = isSelected ? this.selectedSuffix : notSelectedSuffix;
 
     return Semantics(
       inMutuallyExclusiveGroup: true,

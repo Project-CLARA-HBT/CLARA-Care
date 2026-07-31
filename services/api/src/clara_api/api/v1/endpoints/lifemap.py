@@ -141,6 +141,45 @@ class SourceRevocationRequest(BaseModel):
     reason: str = Field(min_length=2, max_length=255)
 
 
+def _plain_revision_value(value: object) -> object:
+    """Keep revision comparison useful without turning it into a raw JSON dump.
+
+    The canonical payload remains available through the existing audited history
+    endpoint.  The comparison view is a consumer-facing, read-only aid, so it
+    exposes scalar changes verbatim and summarizes nested values.  This avoids
+    accidentally rendering a large nested document as if it were a new clinical
+    interpretation while preserving an exact route back to the source revision.
+    """
+
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        return value[:500]
+    if isinstance(value, list):
+        return {"kind": "list", "item_count": len(value)}
+    if isinstance(value, dict):
+        return {"kind": "structured", "field_count": len(value)}
+    return {"kind": "other"}
+
+
+def _source_span_view(
+    source: HealthSourceReference | None,
+) -> dict[str, object] | None:
+    """Expose immutable source-span pointers only to the scoped profile reader."""
+
+    if source is None:
+        return None
+    return {
+        "source_id": source.public_id,
+        "source_kind": source.source_kind,
+        "original_language": source.original_language,
+        "source_span": source.source_span_json,
+        "observed_at": source.observed_at.isoformat()
+        if source.observed_at is not None
+        else None,
+    }
+
+
 FHIR_IMPORT_SESSION_LIFETIME = timedelta(days=7)
 FHIR_DEFAULT_INCLUDE = (
     "observations,allergies,conditions,medications,care_plan,answers,"
@@ -1268,6 +1307,239 @@ def event_history(
     ]
     _audit_read(db, scope, entity="event_history", entity_id=event.public_id)
     return result
+
+
+@router.get("/events/{event_id}/revision-comparison")
+def event_revision_comparison(
+    event_id: str,
+    after_revision: int | None = None,
+    before_revision: int | None = None,
+    locale: str = "vi",
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+) -> dict:
+    """Compare two append-only revisions without interpreting their health facts.
+
+    This is deliberately a deterministic projection, not an AI judgement.  It
+    can only read revisions attached to one authorised event/profile and it
+    never changes a truth state, source, or confirmation.  If callers omit the
+    pair, the latest revision is compared to its direct predecessor.
+    """
+
+    if locale not in {"vi", "en"}:
+        raise HTTPException(status_code=422, detail={"code": "locale_invalid"})
+    scope = _scope(db, token, x_profile, action="view")
+    ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    event = _event(db, scope, event_id)
+    revisions = list(
+        db.execute(
+            select(LifeMapEventRevision)
+            .where(
+                LifeMapEventRevision.event_id == event.id,
+                LifeMapEventRevision.profile_id == scope.profile.id,
+            )
+            .order_by(LifeMapEventRevision.revision_no)
+        ).scalars()
+    )
+    if not revisions:
+        raise HTTPException(status_code=409, detail={"code": "revision_missing"})
+    latest = revisions[-1]
+    requested_after = (
+        after_revision if after_revision is not None else latest.revision_no
+    )
+    selected_after = next(
+        (item for item in revisions if item.revision_no == requested_after),
+        None,
+    )
+    if selected_after is None:
+        raise HTTPException(
+            status_code=404, detail={"code": "after_revision_not_found"}
+        )
+    selected_before = next(
+        (
+            item
+            for item in revisions
+            if item.revision_no
+            == (
+                before_revision
+                if before_revision is not None
+                else selected_after.revision_no - 1
+            )
+        ),
+        None,
+    )
+    if selected_before is None:
+        first_source = None
+        if selected_after.source_reference_id is not None:
+            first_source = db.execute(
+                select(HealthSourceReference).where(
+                    HealthSourceReference.id == selected_after.source_reference_id,
+                    HealthSourceReference.profile_id == scope.profile.id,
+                )
+            ).scalar_one_or_none()
+        _audit_read(
+            db,
+            scope,
+            entity="event_revision_comparison",
+            entity_id=event.public_id,
+        )
+        return {
+            "status": "no_prior_revision",
+            "event_id": event.public_id,
+            "after": {
+                "revision_id": selected_after.public_id,
+                "revision": selected_after.revision_no,
+                "truth_state": selected_after.truth_state,
+                "reason_code": selected_after.reason_code,
+            },
+            "summary": (
+                "Đây là phiên bản đầu tiên nên chưa có phiên bản cũ để so sánh."
+                if locale == "vi"
+                else "This is the first version, so there is no earlier version to compare."
+            ),
+            "changes": [],
+            "source_spans": {
+                "before": None,
+                "after": _source_span_view(first_source),
+            },
+            "disclosure": {
+                "deterministic": True,
+                "read_only": True,
+                "mutates_lifemap": False,
+                "preserves_truth_state": True,
+                "requires_user_review": True,
+            },
+        }
+    if selected_before.revision_no >= selected_after.revision_no:
+        raise HTTPException(
+            status_code=422, detail={"code": "revision_order_invalid"}
+        )
+
+    before_payload = (
+        selected_before.payload_json
+        if isinstance(selected_before.payload_json, dict)
+        else {}
+    )
+    after_payload = (
+        selected_after.payload_json
+        if isinstance(selected_after.payload_json, dict)
+        else {}
+    )
+    changes: list[dict[str, object]] = []
+    if selected_before.truth_state != selected_after.truth_state:
+        changes.append(
+            {
+                "field": "truth_state",
+                "before": selected_before.truth_state,
+                "after": selected_after.truth_state,
+            }
+        )
+    if selected_before.reason_code != selected_after.reason_code:
+        changes.append(
+            {
+                "field": "reason_code",
+                "before": selected_before.reason_code,
+                "after": selected_after.reason_code,
+            }
+        )
+    changes.extend(
+        [
+            {
+                "field": field,
+                "before": _plain_revision_value(before_payload.get(field)),
+                "after": _plain_revision_value(after_payload.get(field)),
+            }
+            for field in sorted(set(before_payload) | set(after_payload))[:48]
+            if before_payload.get(field) != after_payload.get(field)
+        ]
+    )
+    source_ids = {
+        source_id
+        for source_id in (
+            selected_before.source_reference_id,
+            selected_after.source_reference_id,
+        )
+        if source_id is not None
+    }
+    sources: dict[int, HealthSourceReference] = {}
+    if source_ids:
+        sources = {
+            source.id: source
+            for source in db.execute(
+                select(HealthSourceReference).where(
+                    HealthSourceReference.profile_id == scope.profile.id,
+                    HealthSourceReference.id.in_(source_ids),
+                )
+            ).scalars()
+        }
+    before_source = (
+        sources.get(selected_before.source_reference_id)
+        if selected_before.source_reference_id is not None
+        else None
+    )
+    after_source = (
+        sources.get(selected_after.source_reference_id)
+        if selected_after.source_reference_id is not None
+        else None
+    )
+    changed_count = len(changes)
+    summary = (
+        f"So sánh phiên bản {selected_before.revision_no} và {selected_after.revision_no}: "
+        + (
+            f"có {changed_count} mục được thay đổi."
+            if changed_count
+            else "không có thay đổi ở các trường cấp cao nhất."
+        )
+        if locale == "vi"
+        else (
+            f"Comparison of versions {selected_before.revision_no} and "
+            f"{selected_after.revision_no}: "
+            + (
+                f"{changed_count} top-level fields changed."
+                if changed_count
+                else "no top-level fields changed."
+            )
+        )
+    )
+    _audit_read(
+        db,
+        scope,
+        entity="event_revision_comparison",
+        entity_id=event.public_id,
+    )
+    return {
+        "status": "ready",
+        "event_id": event.public_id,
+        "summary": summary,
+        "before": {
+            "revision_id": selected_before.public_id,
+            "revision": selected_before.revision_no,
+            "truth_state": selected_before.truth_state,
+            "reason_code": selected_before.reason_code,
+            "recorded_at": selected_before.recorded_at,
+        },
+        "after": {
+            "revision_id": selected_after.public_id,
+            "revision": selected_after.revision_no,
+            "truth_state": selected_after.truth_state,
+            "reason_code": selected_after.reason_code,
+            "recorded_at": selected_after.recorded_at,
+        },
+        "changes": changes,
+        "source_spans": {
+            "before": _source_span_view(before_source),
+            "after": _source_span_view(after_source),
+        },
+        "disclosure": {
+            "deterministic": True,
+            "read_only": True,
+            "mutates_lifemap": False,
+            "preserves_truth_state": True,
+            "requires_user_review": True,
+        },
+        "policy": "lifemap-revision-comparison-safe-read-v1",
+    }
 
 
 @router.get("/today", response_model=TodayResponse)

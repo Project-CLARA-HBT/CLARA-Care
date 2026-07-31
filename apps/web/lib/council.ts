@@ -33,7 +33,6 @@ export type CouncilIntakeResult = {
   historyInput: string;
   modelUsed: string;
   warnings: string[];
-  fieldConfidence?: Record<string, number>;
   missingFields?: string[];
   councilPayload?: {
     symptoms: string[];
@@ -43,11 +42,11 @@ export type CouncilIntakeResult = {
   };
 };
 
-export type CouncilReasoningLog = {
+/** Clinician-facing specialist conclusion; never a model reasoning trace. */
+export type CouncilSpecialistSummary = {
   specialist: string;
-  reasoning: string;
+  findings: string[];
   recommendation?: string;
-  confidence?: string;
 };
 
 export type CouncilCitation = {
@@ -87,15 +86,12 @@ export type CouncilCitationQuality = {
 export type CouncilReasoningTimelineStep = {
   sequence: number;
   step: string;
-  detail: string;
-  metadata: Record<string, unknown>;
 };
 
-export type CouncilNeuralRisk = {
+export type CouncilRuleShadow = {
   enabled: boolean;
   shadowMode: boolean;
   modelVersion: string;
-  riskProbability: number | null;
   riskBand: string;
   recommendedTriage: string;
   topContributors: Array<{
@@ -111,20 +107,28 @@ export type CouncilAiDisclosure = {
   isFallback: boolean;
 };
 
+/** Sanitized deterministic Council → CareGuard safety projection only. */
+export type CouncilMedicationSafety = {
+  state: "checked" | "unavailable" | "requires_clarification";
+  drugbankState: "ready" | "unavailable" | "disabled" | "unknown";
+  drugbankVersion: string;
+  alertIds: string[];
+  triageFloor: "routine_follow_up" | "same_day_review" | "emergency_escalation" | null;
+  reviewRequired: boolean;
+};
+
 export type CouncilRunRawResponse = {
   [key: string]: unknown;
 };
 
 export type CouncilRunResult = {
-  specialistReasoningLogs: CouncilReasoningLog[];
+  specialistReasoningLogs: CouncilSpecialistSummary[];
   conflicts: string[];
   consensus: string;
   divergence: string[];
   finalRecommendation: string;
   isEmergency: boolean;
   escalationReason: string;
-  confidenceScore: number | null;
-  dataQualityScore: number | null;
   missingInfoQuestions: string[];
   uncertaintyNotes: string[];
   citations: CouncilCitation[];
@@ -132,8 +136,9 @@ export type CouncilRunResult = {
   escalationMetadata: CouncilEscalationMetadata | null;
   citationQuality: CouncilCitationQuality | null;
   reasoningTimeline: CouncilReasoningTimelineStep[];
-  neuralRisk: CouncilNeuralRisk | null;
+  ruleShadow: CouncilRuleShadow | null;
   aiDisclosure: CouncilAiDisclosure | null;
+  medicationSafety: CouncilMedicationSafety | null;
   analysisSections: {
     analyze: string[];
     details: string[];
@@ -228,16 +233,7 @@ function parseTextList(value: unknown): string[] {
   return single ? [single] : [];
 }
 
-function parseReasoningLog(value: unknown, fallbackSpecialist?: string): CouncilReasoningLog | null {
-  if (typeof value === "string") {
-    const reasoning = value.trim();
-    if (!reasoning) return null;
-    return {
-      specialist: fallbackSpecialist ?? "Specialist",
-      reasoning
-    };
-  }
-
+function parseSpecialistSummary(value: unknown, fallbackSpecialist?: string): CouncilSpecialistSummary | null {
   const record = asRecord(value);
   if (!record) return null;
 
@@ -250,22 +246,11 @@ function parseReasoningLog(value: unknown, fallbackSpecialist?: string): Council
     fallbackSpecialist ??
     "Specialist";
 
-  const reasoningLogList = Array.isArray(record.reasoning_log)
-    ? record.reasoning_log
-        .map((item) => asText(item))
-        .filter((item): item is string => Boolean(item))
-    : [];
-
-  const reasoning =
-    (reasoningLogList.length ? reasoningLogList.join("\n") : undefined) ??
-    asText(record.reasoning) ??
-    asText(record.analysis) ??
-    asText(record.rationale) ??
-    asText(record.log) ??
-    asText(record.notes) ??
-    asText(record.summary) ??
-    asText(record.opinion) ??
-    objectToText(record);
+  // Do not accept free-text fields such as `reasoning`, `rationale`, `log`,
+  // or legacy `reasoning_log`. Those fields can contain implementation traces
+  // or a model's private reasoning. Only render stable, structured findings.
+  const findings = parseTextList(record.key_findings ?? record.supported_findings)
+    .slice(0, 10);
 
   const recommendation =
     asText(record.recommendation) ??
@@ -273,34 +258,28 @@ function parseReasoningLog(value: unknown, fallbackSpecialist?: string): Council
     asText(record.plan) ??
     asText(record.next_step);
 
-  const confidence = asText(record.confidence) ?? asText(record.score);
-
-  if (!reasoning && !recommendation) return null;
+  if (!findings.length && !recommendation) return null;
 
   return {
     specialist,
-    reasoning: reasoning || recommendation || "No reasoning details provided.",
+    findings,
     recommendation,
-    confidence
   };
 }
 
-function parseReasoningLogs(value: unknown): CouncilReasoningLog[] {
+function parseSpecialistSummaries(value: unknown): CouncilSpecialistSummary[] {
   if (Array.isArray(value)) {
     return value
-      .map((item) => parseReasoningLog(item))
-      .filter((item): item is CouncilReasoningLog => Boolean(item));
+      .map((item) => parseSpecialistSummary(item))
+      .filter((item): item is CouncilSpecialistSummary => Boolean(item));
   }
 
   const record = asRecord(value);
-  if (!record) {
-    const single = parseReasoningLog(value);
-    return single ? [single] : [];
-  }
+  if (!record) return [];
 
   return Object.entries(record)
-    .map(([key, item]) => parseReasoningLog(item, key))
-    .filter((item): item is CouncilReasoningLog => Boolean(item));
+    .map(([key, item]) => parseSpecialistSummary(item, key))
+    .filter((item): item is CouncilSpecialistSummary => Boolean(item));
 }
 
 function pickUnknown(
@@ -427,21 +406,17 @@ function parseReasoningTimeline(value: unknown): CouncilReasoningTimelineStep[] 
       if (!record) return null;
       const sequence = parseNumber(record.sequence) ?? 0;
       const step = asText(record.step) ?? "";
-      const detail = asText(record.detail) ?? "";
-      const metadata = asRecord(record.metadata) ?? {};
-      if (!step && !detail) return null;
+      if (!step) return null;
       return {
         sequence,
         step,
-        detail,
-        metadata
       } satisfies CouncilReasoningTimelineStep;
     })
     .filter((item): item is CouncilReasoningTimelineStep => Boolean(item))
     .sort((a, b) => a.sequence - b.sequence);
 }
 
-function parseNeuralRisk(value: unknown): CouncilNeuralRisk | null {
+function parseRuleShadow(value: unknown): CouncilRuleShadow | null {
   const record = asRecord(value);
   if (!record) return null;
   const contributorsRaw = Array.isArray(record.top_contributors) ? record.top_contributors : [];
@@ -461,7 +436,6 @@ function parseNeuralRisk(value: unknown): CouncilNeuralRisk | null {
     enabled: parseBoolean(record.enabled),
     shadowMode: parseBoolean(record.shadow_mode ?? record.shadowMode),
     modelVersion: asText(record.model_version) ?? asText(record.modelVersion) ?? "",
-    riskProbability: parseNumber(record.risk_probability ?? record.riskProbability),
     riskBand: asText(record.risk_band) ?? asText(record.riskBand) ?? "",
     recommendedTriage:
       asText(record.recommended_triage) ?? asText(record.recommendedTriage) ?? "",
@@ -478,7 +452,7 @@ function parseNeuralRisk(value: unknown): CouncilNeuralRisk | null {
 // §E). With the flag off the block is absent, so this returns `null` and the
 // surfaces render byte-identically to today. `is_fallback` is true IFF a
 // degraded/heuristic path produced the output (Property P10). Mirrors the
-// `parseNeuralRisk` style above.
+// `parseRuleShadow` style above.
 // ---------------------------------------------------------------------------
 function parseCouncilDisclosure(value: unknown): CouncilAiDisclosure | null {
   const record = asRecord(value);
@@ -490,6 +464,47 @@ function parseCouncilDisclosure(value: unknown): CouncilAiDisclosure | null {
     modelFamily,
     modelVersion,
     isFallback: parseBoolean(record.is_fallback ?? record.isFallback),
+  };
+}
+
+function parseCouncilMedicationSafety(value: unknown): CouncilMedicationSafety | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const state = asText(record.state);
+  if (state !== "checked" && state !== "unavailable" && state !== "requires_clarification") {
+    return null;
+  }
+  const rawDrugbankState = asText(record.drugbank_state ?? record.drugbankState);
+  const drugbankState =
+    rawDrugbankState === "ready" ||
+    rawDrugbankState === "unavailable" ||
+    rawDrugbankState === "disabled"
+      ? rawDrugbankState
+      : "unknown";
+  const version = asText(record.drugbank_version ?? record.drugbankVersion) ?? "";
+  const drugbankVersion =
+    version.includes("/") || version.includes("\\") || /[\r\n]/.test(version)
+      ? ""
+      : version.slice(0, 160);
+  const alertIds = parseStringArray(record.alert_ids ?? record.alertIds)
+    .filter((item) => /^council-ddi-alert-\d+$/.test(item))
+    .slice(0, 12);
+  const triageFloorRaw = asText(record.triage_floor ?? record.triageFloor);
+  const triageFloor =
+    triageFloorRaw === "routine_follow_up" ||
+    triageFloorRaw === "same_day_review" ||
+    triageFloorRaw === "emergency_escalation"
+      ? triageFloorRaw
+      : null;
+
+  return {
+    state,
+    drugbankState,
+    drugbankVersion,
+    alertIds,
+    triageFloor,
+    reviewRequired: parseBoolean(record.review_required ?? record.reviewRequired),
   };
 }
 
@@ -575,9 +590,8 @@ export async function extractCouncilIntake(payload: CouncilIntakeRequest): Promi
     labsInput,
     medicationsInput,
     historyInput,
-    modelUsed: asText(root.model_used) ?? "deepseek-v3.2",
+    modelUsed: asText(root.model_used) ?? "deepseek-v4-pro",
     warnings: parseStringArray(root.warnings),
-    fieldConfidence: asRecord(root.field_confidence) as Record<string, number> | undefined,
     missingFields: parseStringArray(root.missing_fields),
     councilPayload: asRecord(root.council_payload) as CouncilIntakeResult["councilPayload"] | undefined
   };
@@ -596,8 +610,9 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     asRecord(root.policy)
   ];
 
-  const specialistReasoningLogs = parseReasoningLogs(
+  const specialistReasoningLogs = parseSpecialistSummaries(
     pickUnknown(candidates, [
+      "per_specialist_assessments",
       "per_specialist_reasoning_logs",
       "specialist_reasoning_logs",
       "specialist_logs",
@@ -643,8 +658,11 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
   );
   const citationQuality = parseCitationQuality(pickUnknown(candidates, ["citation_quality"]));
   const reasoningTimeline = parseReasoningTimeline(pickUnknown(candidates, ["reasoning_timeline"]));
-  const neuralRisk = parseNeuralRisk(pickUnknown(candidates, ["neural_risk"]));
+  const ruleShadow = parseRuleShadow(pickUnknown(candidates, ["rule_shadow"]));
   const aiDisclosure = parseCouncilDisclosure(pickUnknown(candidates, ["ai_disclosure", "aiDisclosure"]));
+  const medicationSafety = parseCouncilMedicationSafety(
+    pickUnknown(candidates, ["medication_safety", "medicationSafety"])
+  );
 
   const policyAction = parseText(pickUnknown(candidates, ["policy_action", "action"])).toLowerCase();
   const explicitEmergencyFlag = parseBoolean(
@@ -668,15 +686,6 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     ) ||
     parseTextList(emergencyRecord?.red_flags).join(", ") ||
     "";
-
-  const confidenceScore = parseNumber(
-    pickUnknown(candidates, ["confidence", "overall_confidence", "confidence_score"])
-  );
-
-  const dataQualityRecord = asRecord(pickUnknown(candidates, ["data_quality", "quality", "input_quality"]));
-  const dataQualityScore = parseNumber(
-    dataQualityRecord?.score ?? dataQualityRecord?.quality_score ?? pickUnknown(candidates, ["data_quality_score"])
-  );
 
   const uncertaintyNotes = parseTextList(
     pickUnknown(candidates, ["uncertainty_notes", "uncertainties", "uncertain_points"])
@@ -714,8 +723,6 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     finalRecommendation,
     isEmergency,
     escalationReason,
-    confidenceScore,
-    dataQualityScore,
     missingInfoQuestions,
     uncertaintyNotes,
     citations,
@@ -723,8 +730,9 @@ export function normalizeCouncilRunResult(data: CouncilRunRawResponse): CouncilR
     escalationMetadata,
     citationQuality,
     reasoningTimeline,
-    neuralRisk,
+    ruleShadow,
     aiDisclosure,
+    medicationSafety,
     analysisSections
   };
 }
@@ -803,6 +811,25 @@ export type CouncilCaseListResponse = {
   total: number;
 };
 
+/** A completed Research snapshot that is eligible for Council shadow review. */
+export type CouncilEvidenceSnapshotOption = {
+  job_id: string;
+  captured_at?: string | null;
+  evidence_count: number;
+  categories: string[];
+};
+
+/** Append-only, non-clinical projection of an attached shadow packet. */
+export type CouncilEvidenceAttachment = {
+  id: number;
+  case_id: number;
+  research_job_id: string;
+  retrieval_snapshot_id: string;
+  evidence_count: number;
+  categories: string[];
+  created_at: string;
+};
+
 export type CouncilCaseCreatePayload = {
   title?: string;
   intake_mode?: string;
@@ -835,6 +862,39 @@ export async function getLatestCouncilCase(): Promise<CouncilCaseRecord> {
 
 export async function getCouncilCase(caseId: number): Promise<CouncilCaseRecord> {
   const response = await api.get<CouncilCaseRecord>(`/council/cases/${caseId}`);
+  return response.data;
+}
+
+export async function listCouncilEvidenceSnapshotOptions(
+  caseId: number
+): Promise<CouncilEvidenceSnapshotOption[]> {
+  const response = await api.get<{ items?: CouncilEvidenceSnapshotOption[] }>(
+    `/council/cases/${caseId}/evidence-snapshots`
+  );
+  return Array.isArray(response.data.items) ? response.data.items : [];
+}
+
+export async function listCouncilEvidenceAttachments(
+  caseId: number
+): Promise<CouncilEvidenceAttachment[]> {
+  const response = await api.get<{ items?: CouncilEvidenceAttachment[] }>(
+    `/council/cases/${caseId}/evidence-attachments`
+  );
+  return Array.isArray(response.data.items) ? response.data.items : [];
+}
+
+/**
+ * The API accepts only an owner-scoped job ID and constructs the opaque packet
+ * itself. No research prose, citation text, URL, score, or packet object is
+ * ever accepted from the browser.
+ */
+export async function attachCouncilEvidenceSnapshot(
+  caseId: number,
+  jobId: string
+): Promise<CouncilEvidenceAttachment> {
+  const response = await api.post<CouncilEvidenceAttachment>(
+    `/council/cases/${caseId}/evidence-snapshots/${encodeURIComponent(jobId)}/attach`
+  );
   return response.data;
 }
 
@@ -970,12 +1030,10 @@ export async function getCouncilRuns(
 // `isCouncilStreamingEnabled()` and fall back to the blocking run when off.
 // ---------------------------------------------------------------------------
 
-/** One streamed deliberation stage event (stage label + non-PII metadata). */
+/** One streamed Council processing state (no clinical text or reasoning trace). */
 export type CouncilStreamStage = {
   sequence: number;
   step: string;
-  detail: string;
-  metadata: Record<string, unknown>;
 };
 
 export type CouncilStreamRunPayload = {
@@ -1039,12 +1097,9 @@ function parseCouncilSseFrame(block: string): { event: string; data: string } | 
 
 function parseCouncilStreamStage(value: unknown): CouncilStreamStage {
   const record = asRecord(value) ?? {};
-  const metadata = asRecord(record.metadata) ?? {};
   return {
     sequence: parseNumber(record.sequence) ?? 0,
     step: asText(record.step) ?? asText(record.stage) ?? "",
-    detail: asText(record.detail) ?? "",
-    metadata,
   };
 }
 

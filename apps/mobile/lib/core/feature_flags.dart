@@ -70,6 +70,12 @@ class MobileFeatureFlags {
   /// (clara-mobile-ux-polish, Requirement 6, 10).
   static const String uxPolishEnabled = 'mobile_ux_polish_enabled';
 
+  /// Server-authoritative LifeMap visit-draft capability. Unlike the staged
+  /// mobile UI flags above, this mirrors an API feature gate and deliberately
+  /// has no client-side build override: an older or misconfigured client must
+  /// not expose a route whose safe server contract is unavailable.
+  static const String lifeMapVietnameseDrafts = 'lifemap_vietnamese_drafts';
+
   /// All new mobile flag keys, in staged-enablement order.
   static const List<String> all = <String>[
     chatMobileEnabled,
@@ -81,6 +87,7 @@ class MobileFeatureFlags {
     consentCenterMobileEnabled,
     sharingMobileEnabled,
     uxPolishEnabled,
+    lifeMapVietnameseDrafts,
   ];
 }
 
@@ -314,6 +321,12 @@ class MobileFeatureFlagResolver {
 
   /// Modernized chat + web-palette theme gate (clara-mobile-ux-polish).
   bool get uxPolishEnabled => isEnabled(MobileFeatureFlags.uxPolishEnabled);
+
+  /// Read-only Vietnamese LifeMap visit-preparation drafts. This uses the
+  /// server capability directly and therefore remains closed if the mobile
+  /// summary could not be read or the server disables the endpoint.
+  bool get lifeMapVietnameseDraftsEnabled =>
+      serverGranted(MobileFeatureFlags.lifeMapVietnameseDrafts);
 
   /// A snapshot of every known new gate's resolved value. Useful for tiles and
   /// for asserting flags-off equivalence in tests (Property 1).

@@ -49,6 +49,9 @@ jobs:
               - 'services/ml/**'
             web:
               - 'apps/web/**'
+              - 'apps/mobile/lib/core/consumer_terminology*.dart'
+              - 'apps/mobile/lib/experience/unified/unified_root.dart'
+              - 'contracts/consumer-terminology/**'
             docs:
               - 'docs/**'
             scripts:
@@ -216,6 +219,23 @@ jobs:
             echo "bash -n ${script_file}"
             bash -n "${script_file}"
           done < <(find scripts -type f -name '*.sh' | sort)
+
+  artifact-safety-policy:
+    name: artifact safety policy
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 5
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.ci == 'true' ||
+      needs.changes.outputs.docker == 'true' ||
+      needs.changes.outputs.scripts == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Reject unsafe diagnostic artifact paths
+        run: python3 scripts/security/check_ci_artifact_policy.py
 
   hackathon-artifacts-smoke:
     name: hackathon artifacts smoke
@@ -435,6 +455,8 @@ jobs:
           CI: "true"
         run: |
           cd apps/web
+          npm run consumer-terminology:check
+          npm run i18n:check
           npm run lint
 
       - name: Run web build
@@ -645,17 +667,21 @@ jobs:
         run: |
           docker compose --env-file .env -f deploy/docker/docker-compose.app.yml config >/dev/null
 
-      - name: Collect docker smoke logs on failure
+      - name: Collect safe docker smoke diagnostics on failure
         if: failure()
         run: |
-          docker compose --env-file .env -f deploy/docker/docker-compose.app.yml logs --no-color > /tmp/docker-smoke.log || true
+          # Do not export raw logs: they may contain a request body, transcript,
+          # provider response, or an accidentally logged credential. Service
+          # status is sufficient to triage the failed compose build in CI.
+          docker compose --env-file .env -f deploy/docker/docker-compose.app.yml ps > /tmp/docker-smoke-status.txt || true
+          python3 scripts/security/check_ci_artifact_safety.py /tmp/docker-smoke-status.txt
 
-      - name: Upload docker smoke logs
+      - name: Upload safe docker smoke diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: docker-smoke-${{ github.run_id }}
-          path: /tmp/docker-smoke.log
+          path: /tmp/docker-smoke-status.txt
           if-no-files-found: ignore
 
   container-scan:
@@ -801,6 +827,7 @@ jobs:
     needs:
       - quality
       - scripts-syntax
+      - artifact-safety-policy
       - hackathon-artifacts-smoke
       - clara-eval-vn-smoke
       - api-tests
@@ -820,6 +847,7 @@ jobs:
           STRICT_PR_HARDENING: ${{ vars.CI_STRICT_PR_HARDENING || 'false' }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           SCRIPTS_SYNTAX_RESULT: ${{ needs.scripts-syntax.result }}
+          ARTIFACT_SAFETY_POLICY_RESULT: ${{ needs.artifact-safety-policy.result }}
           HACKATHON_ARTIFACTS_RESULT: ${{ needs.hackathon-artifacts-smoke.result }}
           CLARA_EVAL_SMOKE_RESULT: ${{ needs.clara-eval-vn-smoke.result }}
           API_TESTS_RESULT: ${{ needs.api-tests.result }}
@@ -873,6 +901,7 @@ jobs:
 
           check_required_job "quality" "$QUALITY_RESULT" || status=1
           check_required_job "scripts-syntax" "$SCRIPTS_SYNTAX_RESULT" || status=1
+          check_required_job "artifact-safety-policy" "$ARTIFACT_SAFETY_POLICY_RESULT" || status=1
           check_required_job "hackathon-artifacts-smoke" "$HACKATHON_ARTIFACTS_RESULT" || status=1
           check_required_job "clara-eval-vn-smoke" "$CLARA_EVAL_SMOKE_RESULT" || status=1
           check_required_job "api-tests" "$API_TESTS_RESULT" || status=1
@@ -921,6 +950,7 @@ jobs:
             echo "- Strict PR hardening: \`${strict_pr_hardening}\`"
             echo "- quality: \`${QUALITY_RESULT}\`"
             echo "- scripts-syntax: \`${SCRIPTS_SYNTAX_RESULT}\`"
+            echo "- artifact-safety-policy: \`${ARTIFACT_SAFETY_POLICY_RESULT}\`"
             echo "- hackathon-artifacts-smoke: \`${HACKATHON_ARTIFACTS_RESULT}\`"
             echo "- clara-eval-vn-smoke: \`${CLARA_EVAL_SMOKE_RESULT}\`"
             echo "- api-tests: \`${API_TESTS_RESULT}\`"

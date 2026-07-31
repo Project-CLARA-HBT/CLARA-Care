@@ -142,9 +142,34 @@ def test_opaque_grant_renewal_and_next_request_revocation() -> None:
 
     audit = client.get("/api/v1/family/access-log", headers=owner)
     assert audit.status_code == 200
-    assert audit.json()
-    assert all("actor_user_id" not in item for item in audit.json())
-    assert all(len(item["id"]) == 36 for item in audit.json())
+    rows = audit.json()
+    assert rows
+    assert all("actor_user_id" not in item for item in rows)
+    assert all(len(item["id"]) == 36 for item in rows)
+    # New locale-neutral codes are additive. The old display/action/outcome
+    # fields remain so released clients keep their existing access-log view.
+    assert all(
+        {"actor_label", "actor_code", "action", "action_code", "outcome", "outcome_code"}
+        <= set(item)
+        for item in rows
+    )
+    assert {item["actor_code"] for item in rows} <= {"owner", "supporter", "system"}
+    assert {item["action_code"] for item in rows} <= {
+        "view",
+        "add_observation",
+        "complete_task",
+        "invitation_accept",
+        "grant_revoke",
+        "grant_renewal_invited",
+        "notification_acknowledged",
+        "other",
+    }
+    assert {item["outcome_code"] for item in rows} <= {
+        "allowed",
+        "denied",
+        "failed",
+        "unknown",
+    }
 
 
 def test_invitation_capability_is_never_processed_from_a_url() -> None:

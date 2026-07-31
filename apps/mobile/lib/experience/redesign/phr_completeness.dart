@@ -10,7 +10,8 @@
 // that matter most for decision support and emergencies (identity, vitals,
 // emergency contact, allergies, conditions, medications). It is intentionally
 // non-clinical: it measures how much the user has filled in, never judges the
-// content. Vietnamese-first copy.
+// content. Vietnamese-first copy, with English available when the app language
+// preference explicitly selects it.
 
 import 'package:flutter/material.dart';
 
@@ -54,8 +55,10 @@ class PhrCompleteness {
   /// Builds the completeness summary from the live PHR field values + entry
   /// counts. Pure: a field counts as filled when it has non-whitespace content
   /// (or, for a category, at least one entry). Labels are Vietnamese-first and
-  /// name the next best action the user can take.
+  /// name the next best action the user can take. [english] keeps the summary
+  /// in sync with the app-wide language setting.
   static PhrCompleteness compute({
+    bool english = false,
     required String fullName,
     required String dateOfBirth,
     required String gender,
@@ -72,23 +75,46 @@ class PhrCompleteness {
     bool has(String v) => v.trim().isNotEmpty;
     return PhrCompleteness(
       items: [
-        PhrCompletenessItem(label: 'Họ tên', filled: has(fullName)),
-        PhrCompletenessItem(label: 'Ngày sinh', filled: has(dateOfBirth)),
-        PhrCompletenessItem(label: 'Giới tính', filled: has(gender)),
-        PhrCompletenessItem(label: 'Nhóm máu', filled: has(bloodType)),
         PhrCompletenessItem(
-          label: 'Chiều cao & cân nặng',
+          label: english ? 'Full name' : 'Họ tên',
+          filled: has(fullName),
+        ),
+        PhrCompletenessItem(
+          label: english ? 'Date of birth' : 'Ngày sinh',
+          filled: has(dateOfBirth),
+        ),
+        PhrCompletenessItem(
+          label: english ? 'Gender' : 'Giới tính',
+          filled: has(gender),
+        ),
+        PhrCompletenessItem(
+          label: english ? 'Blood type' : 'Nhóm máu',
+          filled: has(bloodType),
+        ),
+        PhrCompletenessItem(
+          label: english ? 'Height & weight' : 'Chiều cao & cân nặng',
           filled: has(heightCm) && has(weightKg),
         ),
-        PhrCompletenessItem(label: 'Số điện thoại', filled: has(phone)),
         PhrCompletenessItem(
-          label: 'Liên hệ khẩn cấp',
+          label: english ? 'Phone' : 'Số điện thoại',
+          filled: has(phone),
+        ),
+        PhrCompletenessItem(
+          label: english ? 'Emergency contact' : 'Liên hệ khẩn cấp',
           filled: has(emergencyContactName) && has(emergencyContactPhone),
         ),
-        PhrCompletenessItem(label: 'Dị ứng', filled: allergyCount > 0),
-        PhrCompletenessItem(label: 'Bệnh nền', filled: conditionCount > 0),
         PhrCompletenessItem(
-            label: 'Thuốc đang dùng', filled: medicationCount > 0),
+          label: english ? 'Allergies' : 'Dị ứng',
+          filled: allergyCount > 0,
+        ),
+        PhrCompletenessItem(
+          label: english ? 'Health conditions' : 'Bệnh nền',
+          filled: conditionCount > 0,
+        ),
+        PhrCompletenessItem(
+          label: english ? 'Current medicines' : 'Thuốc đang dùng',
+          filled: medicationCount > 0,
+        ),
       ],
     );
   }
@@ -104,6 +130,7 @@ class PhrCompletenessCard extends StatelessWidget {
     required this.title,
     required this.completeMessage,
     required this.nextUpLabel,
+    this.english = false,
   });
 
   final PhrCompleteness completeness;
@@ -116,6 +143,7 @@ class PhrCompletenessCard extends StatelessWidget {
 
   /// Prefix for the missing-items hint, e.g. "Nên bổ sung".
   final String nextUpLabel;
+  final bool english;
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +162,9 @@ class PhrCompletenessCard extends StatelessWidget {
             : status.warning;
 
     return ClaraCard.static_(
-      semanticLabel: '$title: hoàn thiện $pct phần trăm',
+      semanticLabel: english
+          ? '$title: $pct% complete'
+          : '$title: hoàn thiện $pct phần trăm',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
