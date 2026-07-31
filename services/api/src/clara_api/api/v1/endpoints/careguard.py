@@ -90,6 +90,31 @@ from clara_api.schemas import (
 
 router = APIRouter()
 
+_MAX_CAREGUARD_MEDICATION_TEXT_CHARS = 2_000
+
+
+def _bounded_medication_text_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate the optional free-text medicine field before ML proxying.
+
+    The ML service repeats this bound because it also has internal callers.
+    Keeping an API boundary prevents an authenticated public request from using
+    the generic CareGuard payload as an unbounded text transport.  The field is
+    deliberately not transformed or split here: deterministic clinical NLP and
+    exact DrugBank identity resolution remain inside the ML safety pipeline.
+    """
+
+    if "medication_text" not in payload:
+        return dict(payload)
+    value = payload.get("medication_text")
+    if not isinstance(value, str) or len(value.strip()) > _MAX_CAREGUARD_MEDICATION_TEXT_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="medication_text_invalid",
+        )
+    prepared = dict(payload)
+    prepared["medication_text"] = value.strip()
+    return prepared
+
 
 @router.get("/drugbank/status")
 def drugbank_status(
@@ -2970,7 +2995,7 @@ def careguard_analyze(
 ) -> dict[str, Any]:
     _require_user(token, db)
     control_tower = get_control_tower_config_service().load(db)
-    request_payload = dict(payload)
+    request_payload = _bounded_medication_text_payload(payload)
     request_payload["external_ddi_enabled"] = control_tower.careguard_runtime.external_ddi_enabled
     observability_enabled = get_settings().careguard_observability_enabled
     started_at = perf_counter() if observability_enabled else 0.0

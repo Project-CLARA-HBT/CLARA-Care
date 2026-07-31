@@ -4,6 +4,13 @@ export type CareguardAnalyzeRequest = {
   symptoms: string[];
   labs: Record<string, number | string>;
   medications: string[];
+  locale?: "vi" | "en";
+  /**
+   * Optional bounded Vietnamese list/sentence. The server extracts exact
+   * candidates only and returns a terminal clarification state if any named
+   * medicine cannot be safely identified; it is never an LLM normalization.
+   */
+  medication_text?: string;
   allergies: string[];
 };
 

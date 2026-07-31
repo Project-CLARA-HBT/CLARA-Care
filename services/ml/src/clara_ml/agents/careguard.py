@@ -12,6 +12,10 @@ from clara_ml.clients.drug_sources import DrugSourceClient
 from clara_ml.config import settings
 from clara_ml.language_renderer import RenderingInput, render_explanation
 from clara_ml.language_renderer.schemas import ActionCode, Audience, Severity
+from clara_ml.nlp.vietnamese_clinical import (
+    analyze_vietnamese_clinical_text,
+    fold_vietnamese_for_matching,
+)
 from clara_ml.nlp_vi import enrich_clinical_utterance_with_llm
 
 
@@ -123,6 +127,66 @@ _ROUTE_FORM_TOKENS = {
     "ống",
     "ong",
 }
+
+# ``medication_text`` is a deliberately bounded, opt-in input for a person who
+# writes a medicine list as a Vietnamese sentence rather than one array item per
+# medicine.  It is not a clinical note parser: exact aliases are merely
+# candidates for the existing DrugBank identity resolver below.  Keeping this
+# limit here (rather than trusting the API proxy) protects every internal caller
+# of ``run_careguard_analyze`` as well.
+_MAX_MEDICATION_TEXT_CHARS = 2_000
+_MAX_FREE_TEXT_MEDICATION_CANDIDATES = 24
+_FREE_TEXT_MEDICATION_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "bao",
+        "bi",
+        "cung",
+        "co",
+        "cua",
+        "dang",
+        "de",
+        "duoc",
+        "hay",
+        "hoac",
+        "la",
+        "minh",
+        "mot",
+        "nhung",
+        "sau",
+        "toi",
+        "tren",
+        "va",
+        "voi",
+        "uống",
+        "uong",
+        "dung",
+        "xai",
+        "su",
+        "dung",
+        "taking",
+        "take",
+        "on",
+        "medication",
+        "medicine",
+        "drug",
+        "thuoc",
+        "thuốc",
+        "vien",
+        "viên",
+        "sang",
+        "trua",
+        "toi",
+        "ngay",
+        "lan",
+    }
+)
+_FREE_TEXT_MEDICATION_CONTEXT = re.compile(
+    r"(?:thuốc|thuoc|medicine|medication|drug)\s+([\w-]{2,64})",
+    re.IGNORECASE,
+)
 
 
 def _normalize_text_list(value: object) -> list[str]:
@@ -814,6 +878,194 @@ def _normalize_medications_with_strict_drugbank_choices(
         "normalized_inputs": normalized_inputs[:20],
         "drugbank_dictionary_version": source_version,
         "clarifications": clarifications[:20],
+    }
+
+
+def _bounded_medication_text(value: object) -> tuple[str, str]:
+    """Return a bounded, explicit free-text medication field.
+
+    The caller must use the dedicated ``medication_text`` field.  In
+    particular, we never reinterpret an arbitrary symptom, chat, or note field
+    as a medicine list.  A malformed or oversized value is a clarification
+    condition rather than a best-effort truncation that could silently omit a
+    medicine from an interaction check.
+    """
+
+    if value is None:
+        return "", "absent"
+    if not isinstance(value, str):
+        return "", "invalid"
+    text = value.strip()
+    if not text:
+        return "", "empty"
+    if len(text) > _MAX_MEDICATION_TEXT_CHARS:
+        return "", "too_long"
+    return text, "valid"
+
+
+def _append_unique_medication_candidate(
+    values: list[str],
+    candidate: str,
+) -> None:
+    normalized = _canonicalize_medication_token(_normalize_text_token(candidate))
+    if not normalized or any(_normalize_text_token(item) == normalized for item in values):
+        return
+    values.append(normalized)
+
+
+def _free_text_medication_candidates(
+    medication_text: str,
+    *,
+    field_state: str,
+) -> tuple[list[str], dict[str, object]]:
+    """Extract only exact, reviewable aliases from Vietnamese list-like text.
+
+    Vietnamese clinical NLP contributes surface candidates and ambiguity cues;
+    the local Vietnamese dictionary contributes known exact phrases; and a
+    ready DrugBank index may contribute *only* exact alias matches.  None of
+    these paths chooses a DrugBank identity.  The strict resolver below remains
+    responsible for one-vs-many selection and source-version validation.
+    """
+
+    empty_metadata: dict[str, object] = {
+        "state": "not_used"
+        if field_state in {"absent", "empty"}
+        else "requires_clarification",
+        "field_state": field_state,
+        "extracted_candidate_count": 0,
+        "ambiguous_candidate_count": 0,
+        "unresolved_text_present": field_state not in {"absent", "empty"},
+        "extractor": "deterministic_vietnamese_clinical_v1",
+    }
+    if field_state in {"absent", "empty"}:
+        return [], empty_metadata
+    if field_state != "valid":
+        return [], empty_metadata
+
+    analysis = analyze_vietnamese_clinical_text(medication_text)
+    normalized_text = analysis.normalized_text
+    folded_text = fold_vietnamese_for_matching(normalized_text)
+    candidates: list[str] = []
+    matched_aliases: set[str] = set()
+    matched_spans: list[tuple[int, int]] = []
+
+    # The small local dictionary is an exact phrase inventory.  Scan longest
+    # first so an input such as "panadol extra" is preserved as that full alias,
+    # not as a shorter overlapping product name.
+    _load_vn_drug_dictionary()
+    for alias in sorted(_VN_DICTIONARY_ALIAS_LOOKUP, key=lambda item: (-len(item), item)):
+        folded_alias = fold_vietnamese_for_matching(alias)
+        if len(folded_alias) < 3:
+            continue
+        for match in re.finditer(rf"(?<!\w){re.escape(folded_alias)}(?!\w)", folded_text):
+            if any(match.start() < end and start < match.end() for start, end in matched_spans):
+                continue
+            _append_unique_medication_candidate(candidates, alias)
+            matched_aliases.add(folded_alias)
+            matched_spans.append((match.start(), match.end()))
+            if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
+                break
+        if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
+            break
+
+    # NLP mentions include known Vietnamese shorthand and spelling variants.
+    # We preserve their exact source surface, never their suggested canonical
+    # name, so the next stage still has to prove the alias against DrugBank.
+    ambiguous_candidate_count = 0
+    for mention in analysis.medication_mentions:
+        if mention.ambiguous:
+            ambiguous_candidate_count += 1
+        folded_surface = fold_vietnamese_for_matching(mention.surface)
+        if any(
+            re.search(rf"(?<!\w){re.escape(folded_surface)}(?!\w)", alias)
+            for alias in matched_aliases
+        ):
+            continue
+        _append_unique_medication_candidate(candidates, mention.surface)
+
+    # A complete licensed index may contain aliases outside the small public
+    # dictionary.  Probe bounded token n-grams and retain only exact index
+    # aliases.  This is deterministic source lookup, not fuzzy matching or an
+    # LLM-mediated canonicalization.  Querying a not-ready index contributes no
+    # candidates; the unresolved gate below then fails closed.
+    store = _get_drugbank_store() if settings.careguard_drugbank_sqlite_enabled else None
+    tokens = re.findall(r"[\w-]+", normalized_text, flags=re.UNICODE)
+    for width in range(min(4, len(tokens)), 0, -1):
+        if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
+            break
+        for start in range(0, len(tokens) - width + 1):
+            phrase_tokens = tokens[start : start + width]
+            folded_phrase_tokens = [fold_vietnamese_for_matching(token) for token in phrase_tokens]
+            if not phrase_tokens or all(token in _FREE_TEXT_MEDICATION_STOPWORDS for token in folded_phrase_tokens):
+                continue
+            if any(token.isdigit() for token in phrase_tokens):
+                continue
+            alias = _canonicalize_medication_token(" ".join(phrase_tokens))
+            folded_alias = fold_vietnamese_for_matching(alias)
+            if not alias or any(
+                re.search(rf"(?<!\w){re.escape(folded_alias)}(?!\w)", item)
+                for item in matched_aliases
+            ):
+                continue
+            if store is not None and store.medication_candidates(alias):
+                _append_unique_medication_candidate(candidates, alias)
+                matched_aliases.add(folded_alias)
+                if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
+                    break
+
+    # Do not call a partial extraction a complete medication list.  If the
+    # field supplied no exact source-backed candidate, or a user explicitly
+    # names an unrecognised "thuốc ..." item, require clarification.  The
+    # response intentionally exposes only categorical/count metadata, never
+    # free-text content through telemetry or operational output.
+    unresolved_context = False
+    for context_match in _FREE_TEXT_MEDICATION_CONTEXT.finditer(normalized_text):
+        named_token = fold_vietnamese_for_matching(context_match.group(1))
+        if not any(
+            re.search(rf"(?<!\w){re.escape(named_token)}(?!\w)", alias)
+            for alias in matched_aliases
+        ):
+            unresolved_context = True
+            break
+    unresolved_text = not candidates or unresolved_context
+    metadata = {
+        "state": "requires_clarification"
+        if unresolved_text or ambiguous_candidate_count
+        else "used",
+        "field_state": field_state,
+        "extracted_candidate_count": len(candidates),
+        "ambiguous_candidate_count": ambiguous_candidate_count,
+        "unresolved_text_present": unresolved_text,
+        "extractor": "deterministic_vietnamese_clinical_v1",
+    }
+    return candidates, metadata
+
+
+def _free_text_medication_clarification_result(
+    *,
+    raw_medications: list[str],
+    symptoms: list[str],
+    extraction: dict[str, object],
+) -> dict[str, Any]:
+    """Fail closed before DDI when a free-text medicine list is incomplete."""
+
+    return {
+        "status": "requires_medication_clarification",
+        "clarifications": [
+            {
+                "reason": "free_text_medication_identity_unresolved",
+                "candidates": [],
+            }
+        ],
+        "urgent_support_required": bool(_critical_symptom_hits(symptoms)),
+        "metadata": {
+            "pipeline": "p2-careguard-ddi-standard-v2",
+            "clarification_required": True,
+            "clarification_source": "deterministic_vietnamese_medication_extraction",
+            "raw_medication_count": len(raw_medications),
+            "normalized_medication_count": 0,
+            "free_text_medication_extraction": extraction,
+        },
     }
 
 
@@ -1835,6 +2087,16 @@ def run_careguard_analyze(payload: dict) -> dict:
     locale = str(payload.get("locale") or "vi").strip() or "vi"
     symptoms = _normalize_text_list(payload.get("symptoms"))
     raw_medications = _normalize_text_list(payload.get("medications"))
+    medication_text, medication_text_state = _bounded_medication_text(
+        payload.get("medication_text")
+    )
+    free_text_medications, free_text_extraction = _free_text_medication_candidates(
+        medication_text,
+        field_state=medication_text_state,
+    )
+    for candidate in free_text_medications:
+        if candidate not in raw_medications:
+            raw_medications.append(candidate)
     allergies = _normalize_text_list(payload.get("allergies"))
     labs = payload.get("labs")
 
@@ -1853,6 +2115,15 @@ def run_careguard_analyze(payload: dict) -> dict:
     )
 
     clarification_enabled = settings.careguard_medication_clarification_enabled
+    if free_text_extraction.get("state") == "requires_clarification":
+        return _with_consumer_wording(
+            _free_text_medication_clarification_result(
+                raw_medications=raw_medications,
+                symptoms=symptoms,
+                extraction=free_text_extraction,
+            ),
+            locale=locale,
+        )
     if clarification_enabled:
         # The optional clinical-language span augmenter may nominate only exact
         # source spans, but this strict identity path intentionally does not let
@@ -1867,6 +2138,7 @@ def run_careguard_analyze(payload: dict) -> dict:
             "state": "bypassed_for_drugbank_clarification",
             "added_candidate_count": 0,
         }
+        vn_dictionary_metadata["free_text_medication_extraction"] = free_text_extraction
         clarification_readiness = get_drugbank_readiness()
         if drugbank_required and clarification_readiness.get("state") != "ready":
             clarification_readiness["required"] = True
@@ -1910,6 +2182,7 @@ def run_careguard_analyze(payload: dict) -> dict:
             normalizer_inputs
         )
         vn_dictionary_metadata["clinical_span_augmentation"] = clinical_span_augmentation
+        vn_dictionary_metadata["free_text_medication_extraction"] = free_text_extraction
 
     local_rules, local_ddi_rules_version = _resolve_ddi_rules()
 
@@ -2088,6 +2361,10 @@ def run_careguard_analyze(payload: dict) -> dict:
                 "normalized_inputs": vn_dictionary_metadata["normalized_inputs"],
                 "clinical_span_augmentation": vn_dictionary_metadata.get(
                     "clinical_span_augmentation", {"state": "disabled", "added_candidate_count": 0}
+                ),
+                "free_text_medication_extraction": vn_dictionary_metadata.get(
+                    "free_text_medication_extraction",
+                    {"state": "not_used", "extractor": "deterministic_vietnamese_clinical_v1"},
                 ),
                 "source_used": source_used,
                 "source_errors": source_errors,

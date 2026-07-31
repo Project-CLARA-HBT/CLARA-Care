@@ -103,6 +103,51 @@ def test_decorated_medication_names_still_match_local_ddi_rules() -> None:
     assert result["metadata"]["normalized_medication_count"] >= 2
 
 
+def test_vietnamese_free_text_medication_list_uses_exact_candidates_only() -> None:
+    result = run_careguard_analyze(
+        {
+            "medication_text": "Tôi đang uống warfarin 5mg và ibuprofen 400mg.",
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert result["risk"]["level"] in {"high", "critical"}
+    extraction = result["metadata"]["free_text_medication_extraction"]
+    assert extraction["state"] == "used"
+    assert extraction["extracted_candidate_count"] >= 2
+    # Request prose is never projected as CareGuard metadata or telemetry.
+    assert "Tôi đang uống" not in repr(result)
+
+
+def test_vietnamese_free_text_does_not_all_clear_an_unresolved_medicine() -> None:
+    result = run_careguard_analyze(
+        {
+            "medication_text": "Tôi đang uống warfarin và thuốc đỏ.",
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert result["status"] == "requires_medication_clarification"
+    assert "risk" not in result
+    assert "ddi_alerts" not in result
+    extraction = result["metadata"]["free_text_medication_extraction"]
+    assert extraction["unresolved_text_present"] is True
+    assert "thuốc đỏ" not in repr(result)
+
+
+def test_vietnamese_free_text_over_limit_requires_clarification_without_truncation() -> None:
+    result = run_careguard_analyze(
+        {
+            "medication_text": "x" * 2001,
+            "external_ddi_enabled": False,
+        }
+    )
+
+    assert result["status"] == "requires_medication_clarification"
+    assert "risk" not in result
+    assert result["metadata"]["free_text_medication_extraction"]["field_state"] == "too_long"
+
+
 def test_openfda_only_evidence_does_not_create_synthetic_alert(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

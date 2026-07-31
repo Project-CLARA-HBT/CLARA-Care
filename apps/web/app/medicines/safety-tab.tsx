@@ -10,6 +10,7 @@ import {
   CareguardMedicationClarification,
   CareguardConsumerView,
   MINIMUM_DDI_MEDICINES,
+  analyzeCareguard,
   medicationClarifications,
   requiresTwoMedicines,
   toCareguardUserMessage,
@@ -39,6 +40,18 @@ function formatOfflineCachedAt(language: "vi" | "en", cachedAt: string): string 
 function parseLineList(value: string): string[] {
   return value
     .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseFreeTextMedicineEntries(value: string): string[] {
+  const lineEntries = parseLineList(value);
+  if (lineEntries.length > 1) return lineEntries;
+  // This is only a client-side minimum-count guard. The server remains the
+  // authority for extracting and resolving identities from a Vietnamese
+  // sentence; a conjunction is enough to let that guarded path run.
+  return value
+    .split(/\s+(?:và|va|and)\s+|\s*&\s*/i)
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -82,11 +95,13 @@ export default function MedicinesSafetyTab() {
   const [cabinetError, setCabinetError] = useState("");
 
   const [allergiesInput, setAllergiesInput] = useState("");
+  const [medicationText, setMedicationText] = useState("");
   const [result, setResult] = useState<CareguardConsumerView | null>(null);
   const [clarifications, setClarifications] = useState<CareguardMedicationClarification[] | null>(null);
   const [selectedDrugBankIds, setSelectedDrugBankIds] = useState<Record<number, string>>({});
   const [error, setError] = useState("");
   const [isChecking, setIsChecking] = useState(false);
+  const [freeTextClarificationRequired, setFreeTextClarificationRequired] = useState(false);
   // Offline / last-known fallback state (Req 6.3). When the result on screen was
   // served from the client cache because the API was unreachable, we flag it as
   // stale and show when it was captured.
@@ -97,6 +112,9 @@ export default function MedicinesSafetyTab() {
   // requiresTwoMedicines helper collapses case-insensitive duplicates.
   const medicineNames = useMemo(() => items.map((item) => item.drug_name), [items]);
   const needsMoreMedicines = useMemo(() => requiresTwoMedicines(medicineNames), [medicineNames]);
+  const freeTextEntries = useMemo(() => parseFreeTextMedicineEntries(medicationText), [medicationText]);
+  const checkingFreeText = Boolean(medicationText.trim());
+  const freeTextNeedsMoreMedicines = checkingFreeText && freeTextEntries.length < MINIMUM_DDI_MEDICINES;
   const unresolvedClarification = clarifications !== null && (
     clarifications.length === 0 || clarifications.some((clarification) => {
       return clarification.candidates.length === 0 || !selectedDrugBankIds[clarification.cabinet_item_id];
@@ -126,40 +144,59 @@ export default function MedicinesSafetyTab() {
     setError("");
     setResult(null);
     setOfflineCachedAt(null);
+    setFreeTextClarificationRequired(false);
     // Guard the analysis call: with fewer than two distinct medicines, prompt
     // the End_User to add at least two and do NOT call the DDI analysis
     // (Requirement 3.5).
-    if (needsMoreMedicines) {
+    if (!checkingFreeText && needsMoreMedicines) {
       setError(t(language, "medicines.safety.needsTwo", { count: MINIMUM_DDI_MEDICINES }));
       return;
     }
-    if (unresolvedClarification) {
+    if (freeTextNeedsMoreMedicines) {
+      setError(t(language, "medicines.safety.freeTextNeedsTwo", { count: MINIMUM_DDI_MEDICINES }));
+      return;
+    }
+    if (!checkingFreeText && unresolvedClarification) {
       setError(t(language, "medicines.safety.clarification.selectRequired"));
       return;
     }
     setIsChecking(true);
     try {
-      const next = await runCabinetAutoDdi({
-        allergies: parseLineList(allergiesInput),
-        locale: language,
-        resolutions: clarifications?.flatMap((clarification) => {
-          const selectedId = selectedDrugBankIds[clarification.cabinet_item_id];
-          const selected = clarification.candidates.find((candidate) => candidate.drugbank_id === selectedId);
-          return selected
-            ? [{
-                cabinet_item_id: clarification.cabinet_item_id,
-                input_alias: clarification.input_alias,
-                drugbank_id: selected.drugbank_id,
-                drugbank_version: selected.source_version,
-              }]
-            : [];
-        }),
-      });
+      const next = checkingFreeText
+        ? await analyzeCareguard({
+            symptoms: [],
+            labs: {},
+            medications: [],
+            locale: language,
+            medication_text: medicationText.trim(),
+            allergies: parseLineList(allergiesInput),
+          })
+        : await runCabinetAutoDdi({
+            allergies: parseLineList(allergiesInput),
+            locale: language,
+            resolutions: clarifications?.flatMap((clarification) => {
+              const selectedId = selectedDrugBankIds[clarification.cabinet_item_id];
+              const selected = clarification.candidates.find((candidate) => candidate.drugbank_id === selectedId);
+              return selected
+                ? [{
+                    cabinet_item_id: clarification.cabinet_item_id,
+                    input_alias: clarification.input_alias,
+                    drugbank_id: selected.drugbank_id,
+                    drugbank_version: selected.source_version,
+                  }]
+                : [];
+            }),
+          });
       const requiredClarifications = medicationClarifications(next);
       if (requiredClarifications !== null) {
         // This is a terminal pre-check state, not a DDI result. Do not render,
         // track or cache it as if DrugBank had compared the medicines.
-        setClarifications(requiredClarifications);
+        if (checkingFreeText) {
+          setFreeTextClarificationRequired(true);
+          setClarifications(null);
+        } else {
+          setClarifications(requiredClarifications);
+        }
         setSelectedDrugBankIds({});
         return;
       }
@@ -172,19 +209,23 @@ export default function MedicinesSafetyTab() {
       setResult(view);
       // Cache the last-known *projection* for offline fallback (Req 6.3). No-op
       // when CAREGUARD_OFFLINE_FALLBACK_ENABLED is off.
-      cacheDdiUserView(view.ddi);
+      if (!checkingFreeText) {
+        // A pasted list is intentionally never retained in the browser cache.
+        // Cached output would be unsafe if a later list differed from it.
+        cacheDdiUserView(view.ddi);
+      }
       // Coarse, non-PII aggregate signals only — no drug names (Req 9.1, 9.4).
       trackCareguardDdiChecked({
         riskLevel: view.ddi.riskLevel,
         alertCount: view.ddi.alerts.length,
-        medicineCount: items.length,
+        medicineCount: checkingFreeText ? freeTextEntries.length : items.length,
         source: "selfmed"
       });
     } catch (cause) {
       // Offline / degraded fallback (Req 6.3): when the flag is on and the API
       // is unreachable, show the last-known cached projection labeled stale.
       // We never fabricate an all-clear — only a genuine cached result is shown.
-      if (isCareguardOfflineFallbackEnabled() && isLikelyOfflineError(cause)) {
+      if (!checkingFreeText && isCareguardOfflineFallbackEnabled() && isLikelyOfflineError(cause)) {
         const cached = readCachedDdiView();
         if (cached) {
           setResult({
@@ -267,6 +308,21 @@ export default function MedicinesSafetyTab() {
             <p className="mt-1 text-sm text-[var(--text-secondary)]">{t(language, "medicines.safety.setupDescription")}</p>
 
             <Textarea
+              label={t(language, "medicines.safety.freeText")}
+              optional
+              wrapperClassName="mt-3"
+              value={medicationText}
+              onChange={(event) => {
+                setMedicationText(event.target.value);
+                setFreeTextClarificationRequired(false);
+                setClarifications(null);
+              }}
+              placeholder={t(language, "medicines.safety.freeTextPlaceholder")}
+              hint={t(language, "medicines.safety.freeTextHint")}
+              className="min-h-[112px]"
+            />
+
+            <Textarea
               label={t(language, "medicines.safety.allergies")}
               optional
               wrapperClassName="mt-3"
@@ -279,18 +335,26 @@ export default function MedicinesSafetyTab() {
             <Button
               className="mt-3"
               onClick={() => void onRunDdi()}
-              disabled={isChecking || needsMoreMedicines || unresolvedClarification}
+              disabled={isChecking || (!checkingFreeText && (needsMoreMedicines || unresolvedClarification)) || freeTextNeedsMoreMedicines}
               loading={isChecking}
               loadingLabel={t(language, "medicines.safety.checking")}
             >
               {t(language, "medicines.cabinet.checkInteractions")}
             </Button>
 
-            {needsMoreMedicines ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">{t(language, "medicines.safety.needsTwo", { count: MINIMUM_DDI_MEDICINES })}</p> : null}
-            {unresolvedClarification ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">{t(language, "medicines.safety.clarification.selectRequired")}</p> : null}
+            {!checkingFreeText && needsMoreMedicines ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">{t(language, "medicines.safety.needsTwo", { count: MINIMUM_DDI_MEDICINES })}</p> : null}
+            {freeTextNeedsMoreMedicines ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">{t(language, "medicines.safety.freeTextNeedsTwo", { count: MINIMUM_DDI_MEDICINES })}</p> : null}
+            {!checkingFreeText && unresolvedClarification ? <p className="mt-2 text-xs text-[var(--status-warn-text)]">{t(language, "medicines.safety.clarification.selectRequired")}</p> : null}
             {error ? <div className="mt-2"><InlineError message={error} onRetry={() => void onRunDdi()} /></div> : null}
           </section>
         </div>
+
+        {freeTextClarificationRequired ? (
+          <section className="chrome-panel rounded-[1.35rem] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-5 sm:p-6">
+            <h3 className="text-xl font-semibold text-[var(--text-primary)]">{t(language, "medicines.safety.freeTextClarificationTitle")}</h3>
+            <p className="mt-1 text-sm text-[var(--status-warn-text)]">{t(language, "medicines.safety.freeTextClarificationDescription")}</p>
+          </section>
+        ) : null}
 
         {clarifications !== null ? (
           <section className="chrome-panel rounded-[1.35rem] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-5 sm:p-6">
