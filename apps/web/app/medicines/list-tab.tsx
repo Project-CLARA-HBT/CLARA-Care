@@ -12,7 +12,6 @@ import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
   checkDrugBankDdi,
   correctMedicationCourse,
-  createMedicationCourse,
   endMedicationCourse,
   getMedicationCourses,
   type DrugBankDdiResult,
@@ -30,7 +29,6 @@ export default function MedicinesListTab() {
   const [name, setName] = useState("");
   const [dose, setDose] = useState("");
   const [schedule, setSchedule] = useState("");
-  const [drugbankId, setDrugbankId] = useState("");
   const [route, setRoute] = useState("");
   const [form, setForm] = useState("");
   const [editing, setEditing] = useState<MedicationCourse | null>(null);
@@ -51,38 +49,30 @@ export default function MedicinesListTab() {
     void load();
   }, [load]);
 
-  const add = async (event: FormEvent) => {
+  const clearEditing = () => {
+    setEditing(null);
+    setName("");
+    setDose("");
+    setSchedule("");
+    setRoute("");
+    setForm("");
+  };
+
+  const saveCorrection = async (event: FormEvent) => {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (!editing || !name.trim()) return;
     setSaving(true);
     setError("");
     try {
-      if (editing) {
-        await correctMedicationCourse(editing.id, editing.version, {
-          medication_name: name.trim(),
-          dose_text: dose.trim(),
-          schedule_text: schedule.trim(),
-          route_text: route.trim(),
-          form_text: form.trim(),
-          reason: t(language, "medicines.list.correctionReason"),
-        });
-      } else {
-        await createMedicationCourse({
-          medication_name: name.trim(),
-          dose_text: dose.trim(),
-          schedule_text: schedule.trim(),
-          route_text: route.trim(),
-          form_text: form.trim(),
-          drugbank_id: drugbankId.trim() || undefined,
-        });
-      }
-      setName("");
-      setDose("");
-      setSchedule("");
-      setDrugbankId("");
-      setRoute("");
-      setForm("");
-      setEditing(null);
+      await correctMedicationCourse(editing.id, editing.version, {
+        medication_name: name.trim(),
+        dose_text: dose.trim(),
+        schedule_text: schedule.trim(),
+        route_text: route.trim(),
+        form_text: form.trim(),
+        reason: t(language, "medicines.list.correctionReason"),
+      });
+      clearEditing();
       setResult(null);
       await load();
     } catch (cause) {
@@ -118,7 +108,6 @@ export default function MedicinesListTab() {
     setSchedule(course.schedule_text);
     setRoute(course.route_text);
     setForm(course.form_text);
-    setDrugbankId(course.drugbank_id ?? "");
   };
 
   const end = async (course: MedicationCourse) => {
@@ -310,85 +299,77 @@ export default function MedicinesListTab() {
       </div>
 
       <aside className="space-y-5">
-        <SurfaceCard className="p-5">
-          <h2 className="font-semibold text-[var(--text-primary)]">
-            {editing ? t(language, "medicines.list.editTitle") : t(language, "medicines.list.addTitle")}
-          </h2>
-          <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-            {t(language, "medicines.list.formDescription")}
-          </p>
-          <form className="mt-4 space-y-3.5" onSubmit={(event) => void add(event)}>
-            <Field
-              label={t(language, "medicines.list.medicationName")}
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <Field
-              label={t(language, "medicines.list.dose")}
-              optional
-              value={dose}
-              onChange={(event) => setDose(event.target.value)}
-              placeholder={t(language, "medicines.list.doseExample")}
-            />
-            <Field
-              label={t(language, "medicines.list.schedule")}
-              optional
-              value={schedule}
-              onChange={(event) => setSchedule(event.target.value)}
-              placeholder={t(language, "medicines.list.scheduleExample")}
-            />
-            <Field
-              label={t(language, "medicines.list.route")}
-              optional
-              value={route}
-              onChange={(event) => setRoute(event.target.value)}
-              placeholder={t(language, "medicines.list.routeExample")}
-            />
-            <Field
-              label={t(language, "medicines.list.form")}
-              optional
-              value={form}
-              onChange={(event) => setForm(event.target.value)}
-              placeholder={t(language, "medicines.list.formExample")}
-            />
-            <Field
-              label={t(language, "medicines.list.drugbankId")}
-              optional
-              value={drugbankId}
-              onChange={(event) => setDrugbankId(event.target.value)}
-              placeholder="DB…"
-            />
-            <Button
-              type="submit"
-              variant="secondary"
-              block
-              loading={saving}
-              loadingLabel={t(language, "medicines.list.saving")}
-              icon="save"
-            >
-              {editing ? t(language, "medicines.list.saveNew") : t(language, "medicines.list.saveConfirmed")}
-            </Button>
-            {editing ? (
+        {editing ? (
+          <SurfaceCard className="p-5">
+            <h2 className="font-semibold text-[var(--text-primary)]">
+              {t(language, "medicines.list.editTitle")}
+            </h2>
+            <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
+              {t(language, "medicines.list.formDescription")}
+            </p>
+            <form className="mt-4 space-y-3.5" onSubmit={(event) => void saveCorrection(event)}>
+              <Field
+                label={t(language, "medicines.list.medicationName")}
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+              <Field
+                label={t(language, "medicines.list.dose")}
+                optional
+                value={dose}
+                onChange={(event) => setDose(event.target.value)}
+                placeholder={t(language, "medicines.list.doseExample")}
+              />
+              <Field
+                label={t(language, "medicines.list.schedule")}
+                optional
+                value={schedule}
+                onChange={(event) => setSchedule(event.target.value)}
+                placeholder={t(language, "medicines.list.scheduleExample")}
+              />
+              <Field
+                label={t(language, "medicines.list.route")}
+                optional
+                value={route}
+                onChange={(event) => setRoute(event.target.value)}
+                placeholder={t(language, "medicines.list.routeExample")}
+              />
+              <Field
+                label={t(language, "medicines.list.form")}
+                optional
+                value={form}
+                onChange={(event) => setForm(event.target.value)}
+                placeholder={t(language, "medicines.list.formExample")}
+              />
               <Button
-                type="button"
-                variant="ghost"
+                type="submit"
+                variant="secondary"
                 block
-                onClick={() => {
-                  setEditing(null);
-                  setName("");
-                  setDose("");
-                  setSchedule("");
-                  setRoute("");
-                  setForm("");
-                  setDrugbankId("");
-                }}
+                loading={saving}
+                loadingLabel={t(language, "medicines.list.saving")}
+                icon="save"
               >
+                {t(language, "medicines.list.saveNew")}
+              </Button>
+              <Button type="button" variant="ghost" block onClick={clearEditing}>
                 {t(language, "medicines.list.cancelEdit")}
               </Button>
-            ) : null}
-          </form>
-        </SurfaceCard>
+            </form>
+          </SurfaceCard>
+        ) : (
+          <SurfaceCard className="border-[color:var(--brand-200)] bg-[var(--surface-brand-soft)] p-5">
+            <h2 className="font-semibold text-[var(--text-primary)]">
+              {t(language, "medicines.list.addStepByStep")}
+            </h2>
+            <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
+              {t(language, "medicines.list.formDescription")}
+            </p>
+            <Button as="link" href="/medicines/add" className="mt-4" block icon="add">
+              {t(language, "medicines.list.addStepByStep")}
+            </Button>
+          </SurfaceCard>
+        )}
 
         <SurfaceCard className="p-5">
           <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.list.cabinetTitle")}</h2>
