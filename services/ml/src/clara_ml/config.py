@@ -543,6 +543,14 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("CAREGUARD_WORDING_RENDERER_ENABLED"),
     )
+    # Optional registry-governed draft for the CareGuard wording projection.
+    # This is an independent kill switch: a failure, malformed output, or a
+    # fidelity violation falls back to the deterministic renderer and can never
+    # affect DrugBank lookup, normalization, risk, or recommended action.
+    careguard_wording_model_draft_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CAREGUARD_WORDING_MODEL_DRAFT_ENABLED"),
+    )
     external_ddi_timeout_seconds: float = Field(
         default=1.5,
         validation_alias=AliasChoices(

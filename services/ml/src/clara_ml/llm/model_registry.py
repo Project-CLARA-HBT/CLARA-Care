@@ -34,6 +34,7 @@ class ModelTask(StrEnum):
     LIFEMAP_REVIEW_PROPOSALS = "lifemap_review_proposals"
     CLINICAL_LANGUAGE_EXTRACTION = "clinical_language_extraction"
     LIFEMAP_VISIT_EXTRACTION = "lifemap_visit_extraction"
+    CAREGUARD_WORDING_DRAFT = "careguard_wording_draft"
     SCRIBE_NOTE = "scribe_note"
     SCRIBE_TRANSCRIPTION = "scribe_transcription"
     SCRIBE_ASR_CORRECTION = "scribe_asr_correction"

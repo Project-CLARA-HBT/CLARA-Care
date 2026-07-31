@@ -19,7 +19,8 @@ The current registry covers the medical safety router, LifeMap Ask semantic
 routing, LifeMap Capture triage, free-text draft extraction and visit extraction,
 Vietnamese clinical-language source-span extraction, Scribe note/transcription, Council shadow assessment,
 LLM-assisted RAG reranking, evidence-bound NLI claim verification, Research
-query planning, and Research reasoning/deep-beta reasoning. Those
+query planning, Research reasoning/deep-beta reasoning, and the optional
+CareGuard consumer-wording draft. Those
 callers still retain their existing emergency, legal, provenance, template,
 FIDES, retrieval-order and shadow-only guards; the registry cannot bypass them.
 
@@ -68,6 +69,16 @@ DDI pair, risk or recommendation; disable either flag to restore the legacy
 input set immediately. Council exposes the packet only as review-only metadata
 after deterministic Council emergency handling, and Scribe corrections require
 their own exact transcript offsets before a clinician can review them.
+
+`CAREGUARD_WORDING_MODEL_DRAFT_ENABLED` is a second, independent default-off
+switch under the existing `CAREGUARD_WORDING_RENDERER_ENABLED` projection. Its
+`CAREGUARD_WORDING_DRAFT` task uses the Flash profile and receives only closed
+presentation categories after CareGuard has already completed authoritative
+DrugBank readiness, identity normalization, DDI, risk and action handling. It
+cannot choose a medication identity, DrugBank source, DDI pair, severity or
+action. A malformed response, timeout or deterministic fidelity-verifier
+violation returns the existing deterministic wording template; disabling the
+model-draft switch and restarting ML is an immediate rollback.
 
 Council's `COUNCIL_SHADOW` task can separately receive an optional
 `COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED` retrieval-availability packet only

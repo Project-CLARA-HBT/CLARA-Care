@@ -10,7 +10,11 @@ from typing import Any
 from clara_ml.agents.careguard_ddi_store import DrugBankDdiStore
 from clara_ml.clients.drug_sources import DrugSourceClient
 from clara_ml.config import settings
-from clara_ml.language_renderer import RenderingInput, render_explanation
+from clara_ml.language_renderer import (
+    RenderingInput,
+    render_careguard_wording_draft,
+    render_explanation,
+)
 from clara_ml.language_renderer.schemas import ActionCode, Audience, Severity
 from clara_ml.nlp.vietnamese_clinical import (
     analyze_vietnamese_clinical_text,
@@ -1828,17 +1832,46 @@ def _consumer_wording_from_final_result(
     elif isinstance(ddi_status, dict) and ddi_status.get("required_source") == "drugbank":
         evidence_labels.append("DrugBank unavailable" if english else "DrugBank chưa sẵn sàng")
 
-    rendered = render_explanation(
-        RenderingInput(
-            audience=audience,
-            severity=severity,
-            action_codes=action_by_severity[severity],
-            mandatory_warnings=warnings,
-            uncertainty_level=(
-                "high" if warnings or bool(metadata.get("fallback_used")) else "low"
-            ),
-            evidence_labels=evidence_labels,
-        )
+    medication_names: set[str] = set()
+    # These values are used only by the local fidelity verifier below.  They
+    # are never placed in the model prompt, telemetry, or consumer projection.
+    alerts = result.get("ddi_alerts")
+    for alert in alerts if isinstance(alerts, list) else []:
+        if not isinstance(alert, dict):
+            continue
+        for medication in alert.get("medications", []):
+            if isinstance(medication, str) and medication.strip():
+                medication_names.add(medication.strip())
+    normalized_inputs = metadata.get("normalized_inputs")
+    for row in normalized_inputs if isinstance(normalized_inputs, list) else []:
+        if not isinstance(row, dict):
+            continue
+        for key in ("input", "canonical_input", "normalized_name"):
+            value = row.get(key)
+            if isinstance(value, str) and value.strip():
+                medication_names.add(value.strip())
+    # The dictionary aliases are already loaded during deterministic
+    # normalization. Including them locally prevents a model draft from
+    # inventing a common known medication that was not part of this result.
+    medication_names.update(_VN_DICTIONARY_ALIAS_LOOKUP)
+    medication_names.update(_VN_DICTIONARY_ACTIVE_INGREDIENTS)
+
+    source = RenderingInput(
+        audience=audience,
+        severity=severity,
+        action_codes=action_by_severity[severity],
+        mandatory_warnings=warnings,
+        uncertainty_level=(
+            "high" if warnings or bool(metadata.get("fallback_used")) else "low"
+        ),
+        evidence_labels=evidence_labels,
+        medication_names=sorted(medication_names)[:500],
+    )
+    deterministic = render_explanation(source)
+    rendered = render_careguard_wording_draft(
+        source,
+        deterministic=deterministic,
+        settings=settings,
     )
     return rendered.model_dump(mode="json")
 
