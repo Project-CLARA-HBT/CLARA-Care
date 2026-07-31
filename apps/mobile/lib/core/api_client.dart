@@ -2404,6 +2404,27 @@ class ApiClient {
     );
   }
 
+  /// Previews a recipient-bound family invitation before the explicit accept
+  /// write. The invitation capability travels only in the request header —
+  /// never in a URL, query parameter, client log, or persisted mobile state.
+  ///
+  /// This is deliberately a non-mutating POST. It returns only the bounded
+  /// scope category, permitted actions, purpose and expiry needed for the
+  /// recipient to decide whether to accept; it does not create a grant.
+  Future<Map<String, dynamic>> previewFamilyInvitation({
+    required String accessToken,
+    required String invitationToken,
+  }) {
+    return _post(
+      '/api/v1/family/invitations/preview',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+      extraHeaders: <String, String>{
+        'X-Family-Invitation-Token': invitationToken,
+      },
+    );
+  }
+
   /// Accepts a family invitation. The invitation token travels in the
   /// `X-Family-Invitation-Token` header rather than the URL.
   Future<Map<String, dynamic>> acceptFamilyInvitation({

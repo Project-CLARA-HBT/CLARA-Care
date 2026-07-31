@@ -472,6 +472,29 @@ enum ConsumerTerm {
   familyRenewed,
   familyRenewFailed,
   familyLoadFailed,
+  familyUseInvitationCode,
+  familyInvitationAcceptTitle,
+  familyInvitationAcceptDescription,
+  familyInvitationCodeLabel,
+  familyInvitationCodeHint,
+  familyInvitationCodeRequired,
+  familyPreviewInvitation,
+  familyPreviewingInvitation,
+  familyInvitationPreviewTitle,
+  familyInvitationPreviewNotice,
+  familyInvitationScopeLabel,
+  familyInvitationActionsLabel,
+  familyInvitationExpiryUnavailable,
+  familyInvitationScopeCareTask,
+  familyInvitationActionView,
+  familyInvitationActionAddObservation,
+  familyInvitationActionCompleteTask,
+  familyInvitationActionOther,
+  familyInvitationPreviewFailed,
+  familyInvitationAccept,
+  familyAcceptingInvitation,
+  familyInvitationAccepted,
+  familyInvitationAcceptFailed,
   connectedHealthTitle,
   connectedHealthIntroTitle,
   connectedHealthIntroDescription,
@@ -883,8 +906,7 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapDisputeNotice:
         'Tranh chấp không xóa thông tin. CLARA giữ nguồn và tạo một hàng đợi '
             'xem xét. Thao tác này cần mạng.',
-    ConsumerTerm.lifeMapDisputeLabel:
-        'Vì sao thông tin này cần xem lại?',
+    ConsumerTerm.lifeMapDisputeLabel: 'Vì sao thông tin này cần xem lại?',
     ConsumerTerm.lifeMapDisputeSubmit: 'Gửi',
     ConsumerTerm.lifeMapDisputeSubmitted:
         'Đã đưa thông tin vào hàng đợi xem xét.',
@@ -898,8 +920,7 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapDisputeQueueResolved: 'Đã xử lý',
     ConsumerTerm.lifeMapDisputeQueueClinicalReview:
         'Loại thông tin này cần người có quyền lâm sàng kiểm tra nguồn.',
-    ConsumerTerm.lifeMapDisputeQueueResolve:
-        'Xác nhận sau khi kiểm tra nguồn',
+    ConsumerTerm.lifeMapDisputeQueueResolve: 'Xác nhận sau khi kiểm tra nguồn',
     ConsumerTerm.lifeMapSummarySectionTitle: 'Nhìn lại LifeMap',
     ConsumerTerm.lifeMapSummaryDescription:
         'Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang tranh chấp hay mâu thuẫn.',
@@ -978,8 +999,10 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapCaptureNormalizeLoading: 'Đang kiểm tra từ điển thuốc…',
     ConsumerTerm.lifeMapCaptureNormalizeUnavailable:
         'Chưa tìm thấy mã chuẩn phù hợp. Tên gốc vẫn được giữ nguyên và chưa được chuẩn hóa.',
-    ConsumerTerm.lifeMapCaptureNormalizeProposal: 'Đề xuất: {name} · RxNorm {code}',
-    ConsumerTerm.lifeMapCaptureNormalizeUseCode: 'Dùng mã chuẩn này cho hồ sơ thuốc',
+    ConsumerTerm.lifeMapCaptureNormalizeProposal:
+        'Đề xuất: {name} · RxNorm {code}',
+    ConsumerTerm.lifeMapCaptureNormalizeUseCode:
+        'Dùng mã chuẩn này cho hồ sơ thuốc',
     ConsumerTerm.lifeMapCaptureNormalizeUseCodeNotice:
         'Bản ghi chỉ được tạo sau khi bạn xác nhận.',
     ConsumerTerm.lifeMapCaptureEdit: 'Chỉnh sửa',
@@ -1025,8 +1048,7 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapBaselineSectionTitle: 'Thay đổi so với chính bạn',
     ConsumerTerm.lifeMapBaselineNotice:
         'Không phải mức bình thường lâm sàng hay chẩn đoán.',
-    ConsumerTerm.lifeMapBaselineSamples:
-        '{days} ngày dữ liệu · {version}',
+    ConsumerTerm.lifeMapBaselineSamples: '{days} ngày dữ liệu · {version}',
     ConsumerTerm.lifeMapBaselineInsufficientData: 'Chưa đủ dữ liệu',
     ConsumerTerm.medicinesMyMedicines: 'Thuốc của tôi',
     ConsumerTerm.medicinesCabinet: 'Tủ thuốc',
@@ -1281,6 +1303,36 @@ class ConsumerTerminology {
     ConsumerTerm.familyRenewFailed: 'Không thể tạo lời mời gia hạn.',
     ConsumerTerm.familyLoadFailed:
         'Không thể tải thông tin chia sẻ. Vui lòng thử lại.',
+    ConsumerTerm.familyUseInvitationCode: 'Dùng mã lời mời',
+    ConsumerTerm.familyInvitationAcceptTitle: 'Xem lời mời chia sẻ',
+    ConsumerTerm.familyInvitationAcceptDescription:
+        'Nhập mã được gửi riêng cho bạn. CLARA sẽ cho bạn xem phạm vi trước khi '
+            'bạn đồng ý.',
+    ConsumerTerm.familyInvitationCodeLabel: 'Mã lời mời',
+    ConsumerTerm.familyInvitationCodeHint: 'Dán mã lời mời vào đây',
+    ConsumerTerm.familyInvitationCodeRequired: 'Hãy nhập mã lời mời.',
+    ConsumerTerm.familyPreviewInvitation: 'Xem trước lời mời',
+    ConsumerTerm.familyPreviewingInvitation: 'Đang xem trước lời mời…',
+    ConsumerTerm.familyInvitationPreviewTitle: 'Bạn sẽ chia sẻ như sau',
+    ConsumerTerm.familyInvitationPreviewNotice:
+        'Bước này chưa cấp quyền truy cập và không mở dữ liệu sức khỏe. Chỉ khi '
+            'bạn chọn chấp nhận thì quyền mới được tạo.',
+    ConsumerTerm.familyInvitationScopeLabel: 'Phạm vi chia sẻ',
+    ConsumerTerm.familyInvitationActionsLabel: 'Người này có thể',
+    ConsumerTerm.familyInvitationExpiryUnavailable: 'Hạn dùng chưa rõ',
+    ConsumerTerm.familyInvitationScopeCareTask: 'Một việc chăm sóc',
+    ConsumerTerm.familyInvitationActionView: 'Xem thông tin đã được chia sẻ',
+    ConsumerTerm.familyInvitationActionAddObservation: 'Thêm ghi nhận',
+    ConsumerTerm.familyInvitationActionCompleteTask: 'Hoàn thành việc chăm sóc',
+    ConsumerTerm.familyInvitationActionOther: 'Thực hiện một thao tác giới hạn',
+    ConsumerTerm.familyInvitationPreviewFailed:
+        'Không thể xem lời mời. Kiểm tra mã và thử lại.',
+    ConsumerTerm.familyInvitationAccept: 'Chấp nhận chia sẻ này',
+    ConsumerTerm.familyAcceptingInvitation: 'Đang chấp nhận…',
+    ConsumerTerm.familyInvitationAccepted:
+        'Bạn đã chấp nhận quyền chia sẻ này.',
+    ConsumerTerm.familyInvitationAcceptFailed:
+        'Không thể chấp nhận lời mời. Hãy xem lại mã và thử lại.',
     ConsumerTerm.connectedHealthTitle: 'Dữ liệu sức khỏe',
     ConsumerTerm.connectedHealthIntroTitle: 'Kết nối khi bạn muốn',
     ConsumerTerm.connectedHealthIntroDescription:
@@ -1675,8 +1727,7 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapDisputeQueueNotice:
         'CLARA does not choose which side is correct. Each decision creates a '
             'new version and keeps the source history.',
-    ConsumerTerm.lifeMapDisputeQueueVersion:
-        '{eventType} · version {revision}',
+    ConsumerTerm.lifeMapDisputeQueueVersion: '{eventType} · version {revision}',
     ConsumerTerm.lifeMapDisputeQueueOpen: 'Open',
     ConsumerTerm.lifeMapDisputeQueueResolved: 'Resolved',
     ConsumerTerm.lifeMapDisputeQueueClinicalReview:
@@ -1692,7 +1743,8 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapSummaryWeek: 'By week',
     ConsumerTerm.lifeMapSummarySelectedJourney: 'Selected journey',
     ConsumerTerm.lifeMapSummaryCreate: 'Create summary',
-    ConsumerTerm.lifeMapSummaryEmpty: 'There are not enough records to create a summary.',
+    ConsumerTerm.lifeMapSummaryEmpty:
+        'There are not enough records to create a summary.',
     ConsumerTerm.lifeMapSummaryCitation: 'source {citations}',
     ConsumerTerm.lifeMapSummarySafetyNotice:
         'This rule-based summary links to its sources and is not medical advice.',
@@ -1716,7 +1768,8 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapCaptureCreateDescription:
         'Create a draft to review before it goes into LifeMap.',
     ConsumerTerm.lifeMapCaptureInputLabel: 'What would you like to record?',
-    ConsumerTerm.lifeMapCaptureInputHint: 'For example: I slept about 7 hours last night',
+    ConsumerTerm.lifeMapCaptureInputHint:
+        'For example: I slept about 7 hours last night',
     ConsumerTerm.lifeMapCaptureCreate: 'Create draft',
     ConsumerTerm.lifeMapCaptureArtifactTitle: 'Capture from a photo',
     ConsumerTerm.lifeMapCaptureArtifactDescription:
@@ -1759,11 +1812,14 @@ class ConsumerTerminology {
     ConsumerTerm.lifeMapCaptureUnsafe:
         'The source contains unsafe content and cannot be confirmed.',
     ConsumerTerm.lifeMapCaptureNormalizeTitle: 'Normalize medicine name',
-    ConsumerTerm.lifeMapCaptureNormalizeLoading: 'Checking the medicine dictionary…',
+    ConsumerTerm.lifeMapCaptureNormalizeLoading:
+        'Checking the medicine dictionary…',
     ConsumerTerm.lifeMapCaptureNormalizeUnavailable:
         'No matching standard code was found. The original name is retained and has not been normalized.',
-    ConsumerTerm.lifeMapCaptureNormalizeProposal: 'Suggestion: {name} · RxNorm {code}',
-    ConsumerTerm.lifeMapCaptureNormalizeUseCode: 'Use this standard code for my medicine record',
+    ConsumerTerm.lifeMapCaptureNormalizeProposal:
+        'Suggestion: {name} · RxNorm {code}',
+    ConsumerTerm.lifeMapCaptureNormalizeUseCode:
+        'Use this standard code for my medicine record',
     ConsumerTerm.lifeMapCaptureNormalizeUseCodeNotice:
         'The record is created only after you confirm it.',
     ConsumerTerm.lifeMapCaptureEdit: 'Edit',
@@ -2015,7 +2071,8 @@ class ConsumerTerminology {
     ConsumerTerm.familyAccessLogActionView: 'viewed shared data',
     ConsumerTerm.familyAccessLogActionAddObservation: 'added an observation',
     ConsumerTerm.familyAccessLogActionCompleteTask: 'completed a care task',
-    ConsumerTerm.familyAccessLogActionInvitationAccept: 'accepted an invitation',
+    ConsumerTerm.familyAccessLogActionInvitationAccept:
+        'accepted an invitation',
     ConsumerTerm.familyAccessLogActionGrantRevoke: 'revoked access',
     ConsumerTerm.familyAccessLogActionGrantRenewalInvited:
         'created a renewal invitation',
@@ -2066,6 +2123,35 @@ class ConsumerTerminology {
     ConsumerTerm.familyRenewFailed: 'We could not create a renewal invitation.',
     ConsumerTerm.familyLoadFailed:
         'We could not load sharing details. Try again.',
+    ConsumerTerm.familyUseInvitationCode: 'Use an invitation code',
+    ConsumerTerm.familyInvitationAcceptTitle: 'Review a sharing invitation',
+    ConsumerTerm.familyInvitationAcceptDescription:
+        'Enter the code sent privately to you. CLARA shows the scope before you '
+            'agree.',
+    ConsumerTerm.familyInvitationCodeLabel: 'Invitation code',
+    ConsumerTerm.familyInvitationCodeHint: 'Paste the invitation code here',
+    ConsumerTerm.familyInvitationCodeRequired: 'Enter the invitation code.',
+    ConsumerTerm.familyPreviewInvitation: 'Preview invitation',
+    ConsumerTerm.familyPreviewingInvitation: 'Previewing invitation…',
+    ConsumerTerm.familyInvitationPreviewTitle: 'You would share the following',
+    ConsumerTerm.familyInvitationPreviewNotice:
+        'This step does not grant access or open health data. Access is created '
+            'only if you choose to accept.',
+    ConsumerTerm.familyInvitationScopeLabel: 'Sharing scope',
+    ConsumerTerm.familyInvitationActionsLabel: 'This person can',
+    ConsumerTerm.familyInvitationExpiryUnavailable: 'Expiry unavailable',
+    ConsumerTerm.familyInvitationScopeCareTask: 'One care task',
+    ConsumerTerm.familyInvitationActionView: 'View the information shared',
+    ConsumerTerm.familyInvitationActionAddObservation: 'Add an observation',
+    ConsumerTerm.familyInvitationActionCompleteTask: 'Complete a care task',
+    ConsumerTerm.familyInvitationActionOther: 'Perform a limited action',
+    ConsumerTerm.familyInvitationPreviewFailed:
+        'We could not preview this invitation. Check the code and try again.',
+    ConsumerTerm.familyInvitationAccept: 'Accept this sharing',
+    ConsumerTerm.familyAcceptingInvitation: 'Accepting…',
+    ConsumerTerm.familyInvitationAccepted: 'You accepted this sharing access.',
+    ConsumerTerm.familyInvitationAcceptFailed:
+        'We could not accept this invitation. Check the code and try again.',
     ConsumerTerm.connectedHealthTitle: 'Health data',
     ConsumerTerm.connectedHealthIntroTitle: 'Connect when you want',
     ConsumerTerm.connectedHealthIntroDescription:

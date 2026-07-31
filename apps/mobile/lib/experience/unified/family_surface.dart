@@ -27,6 +27,7 @@ import '../../widgets/error_retry_view.dart';
 import '../states/empty_state.dart';
 import '../states/skeleton.dart';
 import '../language_controller.dart';
+import 'family_invitation_acceptance_flow.dart';
 
 String _str(Object? value) => value == null ? '' : value.toString();
 
@@ -591,6 +592,21 @@ class _FamilySurfaceState extends State<FamilySurface> {
     }
   }
 
+  Future<void> _openInvitationAcceptance() async {
+    final accepted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => FamilyInvitationAcceptanceFlow(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          languageController: widget.languageController,
+        ),
+      ),
+    );
+    if (!mounted || accepted != true) return;
+    _showSnack(_copy[ConsumerTerm.familyInvitationAccepted]);
+    await _load();
+  }
+
   Future<bool?> _confirmRevoke(_AccessGrant grant) {
     return showDialog<bool>(
       context: context,
@@ -689,6 +705,11 @@ class _FamilySurfaceState extends State<FamilySurface> {
       ),
       const SizedBox(height: ClaraTokens.spaceSm),
       _buildStandingNote(context),
+      const SizedBox(height: ClaraTokens.spaceMd),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: _buildInvitationAcceptanceCard(context),
+      ),
       const SizedBox(height: ClaraTokens.spaceMd),
     ];
 
@@ -841,6 +862,49 @@ class _FamilySurfaceState extends State<FamilySurface> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInvitationAcceptanceCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final copy = _copy;
+    return ClaraCard.static_(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.mark_email_read_outlined,
+            size: 20,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: ClaraTokens.spaceSm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy[ConsumerTerm.familyUseInvitationCode],
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: ClaraTokens.spaceXs),
+                Text(
+                  copy[ConsumerTerm.familyInvitationAcceptDescription],
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: ClaraTokens.spaceSm),
+                ClaraButton.secondary(
+                  label: copy[ConsumerTerm.familyUseInvitationCode],
+                  icon: Icons.arrow_forward,
+                  onPressed: _openInvitationAcceptance,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
