@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
@@ -80,7 +81,7 @@ export default function CouncilNewSpecialistsPage() {
         setCaseItem(loaded);
         setDraft(hydrateFromCase(loaded));
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : t(language, "council.error.loadCase"));
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== null) {
@@ -138,7 +139,7 @@ export default function CouncilNewSpecialistsPage() {
       setActiveCouncilCaseId(caseItem.id);
       router.push(`/council/new/review?caseId=${caseItem.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "council.error.saveSpecialists"));
+      setError(safeUserFacingError(cause, t(language, "council.error.saveSpecialists")));
     } finally {
       setIsSaving(false);
     }

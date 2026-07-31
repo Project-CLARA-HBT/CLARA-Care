@@ -5,6 +5,7 @@ import Link from "next/link";
 import { acceptConsent, getConsentStatus } from "@/lib/consent";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 type MedicalConsentGateProps = {
   children: ReactNode;
@@ -41,7 +42,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
       return status.accepted;
     } catch (cause) {
       setAccepted(false);
-      setError(cause instanceof Error ? cause.message : t(language, "medicines.consent.checkError"));
+      setError(safeUserFacingError(cause, t(language, "medicines.consent.checkError")));
       return false;
     }
   };
@@ -71,7 +72,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
         setError(t(language, "medicines.consent.saveIncomplete"));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "medicines.consent.saveError"));
+      setError(safeUserFacingError(cause, t(language, "medicines.consent.saveError")));
     } finally {
       setIsSaving(false);
     }

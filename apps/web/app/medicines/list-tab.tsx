@@ -8,6 +8,7 @@ import { Field } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
   checkDrugBankDdi,
   correctMedicationCourse,
@@ -40,7 +41,7 @@ export default function MedicinesListTab() {
     try {
       setCourses(await getMedicationCourses());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "medicines.list.loadError"));
+      setError(safeUserFacingError(cause, t(language, "medicines.list.loadError")));
     } finally {
       setLoading(false);
     }
@@ -85,7 +86,7 @@ export default function MedicinesListTab() {
       setResult(null);
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "medicines.list.saveError"));
+      setError(safeUserFacingError(cause, t(language, "medicines.list.saveError")));
     } finally {
       setSaving(false);
     }
@@ -104,7 +105,7 @@ export default function MedicinesListTab() {
         ),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "medicines.list.checkError"));
+      setError(safeUserFacingError(cause, t(language, "medicines.list.checkError")));
     } finally {
       setChecking(false);
     }
@@ -138,7 +139,7 @@ export default function MedicinesListTab() {
       );
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "medicines.list.endError"));
+      setError(safeUserFacingError(cause, t(language, "medicines.list.endError")));
     } finally {
       setSaving(false);
     }

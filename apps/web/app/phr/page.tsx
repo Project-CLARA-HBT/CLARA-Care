@@ -30,6 +30,7 @@ import {
   type UILanguage,
 } from "@/lib/ui-language";
 import { formatLocaleDate } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import type { PhrInformationSource, PhrVerificationStatus } from "@/lib/phr";
 import OcrReviewModal from "@/components/phr/ocr-review-modal";
 import PhrExportButton from "@/components/phr/export-button";
@@ -822,7 +823,7 @@ export default function PhrPage() {
       // Recompute completeness so newly-added data classes reflect immediately.
       void refreshCompleteness();
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.saveError);
+      setError(safeUserFacingError(err, text.saveError));
     } finally {
       setSaving(false);
     }

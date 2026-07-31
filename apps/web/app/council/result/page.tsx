@@ -10,7 +10,7 @@ import PageShell from "@/components/ui/page-shell";
 import { trackCouncilViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
-import { stripTelemetryLabels } from "@/lib/user-facing-text";
+import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   CouncilCaseRecord,
   buildSnapshotFromCouncilCase,
@@ -55,7 +55,7 @@ export default function CouncilResultPage() {
         setActiveCouncilCaseId(loaded.id);
         setCaseItem(loaded);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : t(language, "council.error.loadCase"));
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== null) {

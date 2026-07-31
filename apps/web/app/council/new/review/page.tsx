@@ -7,6 +7,7 @@ import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
 import { trackCouncilRun } from "@/lib/analytics/events";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
@@ -81,7 +82,7 @@ export default function CouncilNewReviewPage() {
         setActiveCouncilCaseId(loaded.id);
         setCaseItem(loaded);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : t(language, "council.error.loadCase"));
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== null) {
@@ -129,7 +130,7 @@ export default function CouncilNewReviewPage() {
       setActiveCouncilCaseId(updated.id);
       router.push(`/council/result?caseId=${updated.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "council.error.run"));
+      setError(safeUserFacingError(cause, t(language, "council.error.run")));
     } finally {
       setIsSubmitting(false);
     }

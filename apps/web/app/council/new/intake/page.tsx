@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
 import { t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
@@ -120,7 +121,7 @@ export default function CouncilNewIntakePage() {
         setDraft(hydrateDraftFromCase(resolvedCase));
         setTranscriptInput(resolvedCase.transcript ?? "");
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : t(language, "council.error.loadCase"));
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== null) {
@@ -158,7 +159,7 @@ export default function CouncilNewIntakePage() {
       setExtractWarnings(warnings);
       setExtractNotice(t(language, "council.intake.normalized"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "council.error.extractIntake"));
+      setError(safeUserFacingError(cause, t(language, "council.error.extractIntake")));
     } finally {
       setIsExtracting(false);
     }
@@ -200,7 +201,7 @@ export default function CouncilNewIntakePage() {
       setActiveCouncilCaseId(caseItem.id);
       router.push(`/council/new/specialists?caseId=${caseItem.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "council.error.saveIntake"));
+      setError(safeUserFacingError(cause, t(language, "council.error.saveIntake")));
     } finally {
       setIsSaving(false);
     }

@@ -23,6 +23,7 @@ import {
   t,
   type UITranslationKey,
 } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
  * Consent Center (regulatory-compliance Requirement 2.6, Property P10; PHR
@@ -158,7 +159,7 @@ export default function ConsentCenterPage() {
         }
         await refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : text.loadError);
+        setError(safeUserFacingError(err, text.loadError));
         await refresh();
       } finally {
         setPending(null);

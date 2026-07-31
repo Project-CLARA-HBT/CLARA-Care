@@ -9,6 +9,7 @@ import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
 import { trackCareguardViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 type TimelineEntry = {
   id: number;
@@ -150,7 +151,7 @@ export default function MedicinesCabinetTab() {
       setCabinetLabel(response.label || "");
       setItems(response.items ?? []);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.loadError"));
+      setError(safeUserFacingError(cause, t(language, "medicines.cabinet.loadError")));
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +173,7 @@ export default function MedicinesCabinetTab() {
       setNotice(t(language, "medicines.cabinet.deleted"));
       await refreshCabinet();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.deleteError"));
+      setError(safeUserFacingError(cause, t(language, "medicines.cabinet.deleteError")));
     }
   };
 

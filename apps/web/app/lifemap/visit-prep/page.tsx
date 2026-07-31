@@ -13,6 +13,7 @@ import {
 } from "@/lib/lifemap";
 import { getProfileContext } from "@/lib/profile-context-api";
 import { t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
   getStoredUILanguage,
   onUILanguageChange,
@@ -65,7 +66,7 @@ export default function LifeMapVisitPreparationPage() {
     try {
       setDraft(await createLifeMapVisitPreparationDraft(goal.trim(), language));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "visitPrep.error"));
+      setError(safeUserFacingError(cause, t(language, "visitPrep.error")));
     } finally {
       setLoading(false);
     }

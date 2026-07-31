@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
@@ -41,7 +42,7 @@ export default function CouncilNewPage() {
         const response = await listCouncilCases(10, 0);
         setCases(response.items);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : t(language, "council.error.loadCases"));
+        setError(safeUserFacingError(cause, t(language, "council.error.loadCases")));
       } finally {
         setIsLoading(false);
       }
@@ -61,7 +62,7 @@ export default function CouncilNewPage() {
       setActiveCouncilCaseId(created.id);
       router.push(`/council/new/intake?caseId=${created.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "council.error.createCase"));
+      setError(safeUserFacingError(cause, t(language, "council.error.createCase")));
     } finally {
       setIsCreating(false);
     }

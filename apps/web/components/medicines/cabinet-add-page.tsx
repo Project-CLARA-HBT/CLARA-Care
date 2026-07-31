@@ -17,6 +17,7 @@ import {
   scanReceiptText
 } from "@/lib/selfmed";
 import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 function confidenceTone(value: number): BadgeTone {
   if (value >= 0.85) return "ok";
@@ -164,7 +165,7 @@ export default function CabinetAddPage() {
         ? t(language, "medicines.cabinet.guided.notice.fileDetected", { count: found.length })
         : t(language, "medicines.cabinet.guided.notice.fileNotDetected"));
     } catch (cause) {
-      setScanNotice(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.guided.notice.fileScanError"));
+      setScanNotice(safeUserFacingError(cause, t(language, "medicines.cabinet.guided.notice.fileScanError")));
     } finally {
       setIsScanningFile(false);
     }
@@ -195,7 +196,7 @@ export default function CabinetAddPage() {
         ? t(language, "medicines.cabinet.guided.notice.textDetected", { count: found.length })
         : t(language, "medicines.cabinet.guided.notice.textNotDetected"));
     } catch (cause) {
-      setScanNotice(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.guided.notice.textScanError"));
+      setScanNotice(safeUserFacingError(cause, t(language, "medicines.cabinet.guided.notice.textScanError")));
     } finally {
       setIsScanningText(false);
     }
@@ -213,7 +214,7 @@ export default function CabinetAddPage() {
       const inserted = await importDetections(selectedDetections);
       setScanNotice(t(language, "medicines.cabinet.guided.notice.imported", { count: inserted }));
     } catch (cause) {
-      setScanNotice(cause instanceof Error ? cause.message : t(language, "medicines.cabinet.guided.notice.importError"));
+      setScanNotice(safeUserFacingError(cause, t(language, "medicines.cabinet.guided.notice.importError")));
     } finally {
       setIsImporting(false);
     }
@@ -277,7 +278,7 @@ export default function CabinetAddPage() {
       setManualQuantity("1");
       setManualNotice("Đã thêm thuốc thủ công vào tủ thuốc.");
     } catch (cause) {
-      setManualNotice(cause instanceof Error ? cause.message : "Không thể thêm thuốc thủ công.");
+      setManualNotice(safeUserFacingError(cause, "Không thể thêm thuốc thủ công."));
     } finally {
       setIsAddingManual(false);
     }

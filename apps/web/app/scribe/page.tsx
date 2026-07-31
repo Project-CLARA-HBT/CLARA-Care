@@ -7,7 +7,7 @@ import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import { getRole, type UserRole } from "@/lib/auth-store";
 import { trackScribeGenerated, trackScribeViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, formatLocaleNumber, t, type UITranslationKey } from "@/lib/i18n/catalog";
-import { stripTelemetryLabels } from "@/lib/user-facing-text";
+import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
 import {
@@ -346,7 +346,7 @@ export default function ScribePage() {
         setTranscriptDraft("");
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("scribe.error.load"));
+      setError(safeUserFacingError(cause, copy("scribe.error.load")));
     } finally {
       setIsLoading(false);
     }
@@ -386,7 +386,7 @@ export default function ScribePage() {
         setSelectedSession(updated);
         upsertSession(updated);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : copy("scribe.error.saveTranscript"));
+        setError(safeUserFacingError(cause, copy("scribe.error.saveTranscript")));
       }
     },
     [copy, selectedSession, upsertSession]
@@ -420,7 +420,7 @@ export default function ScribePage() {
         const summary = await getScribeAnalyticsSummary();
         setAnalytics(summary);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : copy("scribe.error.liveAnalysis"));
+        setError(safeUserFacingError(cause, copy("scribe.error.liveAnalysis")));
       } finally {
         analyzingInFlightRef.current = false;
         setIsLiveAnalyzing(false);
@@ -477,7 +477,7 @@ export default function ScribePage() {
         });
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("scribe.error.transcribe"));
+      setError(safeUserFacingError(cause, copy("scribe.error.transcribe")));
       pushNotice("error", copy("scribe.error.transcribeNotice"));
     } finally {
       processingChunksRef.current = false;
@@ -597,7 +597,7 @@ export default function ScribePage() {
     } catch (cause) {
       teardownAudioPipeline();
       setIsRecording(false);
-      setError(cause instanceof Error ? cause.message : copy("scribe.error.startRecording"));
+      setError(safeUserFacingError(cause, copy("scribe.error.startRecording")));
     }
   }, [copy, ensureSessionReady, processChunkQueue, pushNotice, startWaveformLoop, teardownAudioPipeline]);
 
@@ -624,7 +624,7 @@ export default function ScribePage() {
       setSelectedSession(detail);
       setTranscriptDraft(detail.transcript ?? "");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("scribe.error.openSession"));
+      setError(safeUserFacingError(cause, copy("scribe.error.openSession")));
     }
   }, [copy]);
 
@@ -646,7 +646,7 @@ export default function ScribePage() {
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("scribe.error.create"));
+      setError(safeUserFacingError(cause, copy("scribe.error.create")));
     } finally {
       setIsCreating(false);
     }
@@ -667,7 +667,7 @@ export default function ScribePage() {
       upsertSession(updated);
       pushNotice("success", copy("scribe.notice.saved"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("scribe.error.saveTranscript"));
+      setError(safeUserFacingError(cause, copy("scribe.error.saveTranscript")));
     } finally {
       setIsSaving(false);
     }
@@ -695,7 +695,7 @@ export default function ScribePage() {
       // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
       trackScribeGenerated({ action: "regenerate" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("scribe.error.regenerate"));
+      setError(safeUserFacingError(cause, copy("scribe.error.regenerate")));
     } finally {
       setIsRegenerating(false);
     }
@@ -715,7 +715,7 @@ export default function ScribePage() {
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("scribe.error.finalize"));
+      setError(safeUserFacingError(cause, copy("scribe.error.finalize")));
     } finally {
       setIsSaving(false);
     }

@@ -6,7 +6,9 @@ import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { CouncilList, CouncilSection } from "@/components/council/council-primitives";
 import PageShell from "@/components/ui/page-shell";
 import { trackCouncilViewed } from "@/lib/analytics/events";
-import { stripTelemetryLabels } from "@/lib/user-facing-text";
+import { t } from "@/lib/i18n/catalog";
+import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   CouncilCaseRecord,
   buildSnapshotFromCouncilCase,
@@ -48,6 +50,7 @@ const TAB_META: Record<WorkspaceTab, { title: string; description: string; eyebr
 };
 
 export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
+  const language = useUILanguage();
   const [queryCaseId, setQueryCaseId] = useState<number | null>(null);
   const [caseItem, setCaseItem] = useState<CouncilCaseRecord | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -78,13 +81,13 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
         setActiveCouncilCaseId(loaded.id);
         setCaseItem(loaded);
       } catch (cause) {
-        setLoadError(cause instanceof Error ? cause.message : "Không thể tải dữ liệu council.");
+        setLoadError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== null) {
       void load();
     }
-  }, [queryCaseId]);
+  }, [language, queryCaseId]);
 
   const snapshot = useMemo(() => (caseItem ? buildSnapshotFromCouncilCase(caseItem) : null), [caseItem]);
   const view = useMemo(() => (snapshot ? buildCouncilView(snapshot) : null), [snapshot]);

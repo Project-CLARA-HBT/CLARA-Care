@@ -7,7 +7,7 @@ import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import PageShell from "@/components/ui/page-shell";
 import { getRole } from "@/lib/auth-store";
 import { trackCouncilViewed } from "@/lib/analytics/events";
-import { stripTelemetryLabels } from "@/lib/user-facing-text";
+import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
 import {
   CouncilAiDisclosure,
   CouncilCaseRecord,
@@ -373,9 +373,7 @@ export default function CouncilPage() {
         setActiveCouncilCaseId(loaded.id);
         setCaseItem(loaded);
       } catch (cause) {
-        setLoadError(
-          cause instanceof Error ? cause.message : "Chưa có case để hiển thị.",
-        );
+        setLoadError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
     };
     if (queryCaseId !== undefined) {
@@ -492,9 +490,7 @@ export default function CouncilPage() {
         await runBlocking();
       }
     } catch (cause) {
-      setRunNotice(
-        cause instanceof Error ? cause.message : "Không thể chạy lại hội chẩn.",
-      );
+      setRunNotice(safeUserFacingError(cause, t(language, "council.error.run")));
     } finally {
       setIsRunning(false);
     }
