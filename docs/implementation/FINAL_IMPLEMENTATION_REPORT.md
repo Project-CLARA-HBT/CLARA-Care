@@ -7,7 +7,7 @@ result that was not actually run.
 
 Reconciliation checkpoint: this document was updated after the recent V4,
 LifeMap, Research, Scribe, Council, CareGuard, deployment and i18n commits,
-including `8bd27232` through `85659f9b`. Per the current user direction, this
+including `8bd27232` through `5cb5cbf3`. Per the current user direction, this
 documentation-only checkpoint did **not** run format, lint, type checks,
 tests, builds, evaluation or deployment. Earlier execution records below are
 historical evidence only; they do not validate commits made after those runs.
@@ -79,7 +79,13 @@ This implementation pass strengthened CLARA's safety and evidence boundaries:
   web with revision citations, uncertainty and a no-write disclosure. The
   guided prescription/OCR flow, Research workspace, Chat shell and a bounded
   legacy Chat workspace region are now catalog-backed in both supported UI
-  languages.
+  languages; and
+- added a conservative End_User error boundary that renders a caller's
+  localized fallback instead of technical/upstream caught-error detail across
+  recently migrated consumer flows; and
+- extended typed-catalog wording to legacy Chat action/notice/confirmation
+  copy and Council Workspace navigation and static empty-state chrome. This
+  does not translate dynamic clinical content or establish all-surface i18n.
 
 The repository already contained significant LifeMap, CareGuard, Council,
 Research and mobile work. The work above integrates with those safety
@@ -130,6 +136,20 @@ safety policy.
 derives the mobile resolver mapping from every canonical terminology key. These
 are CI contract improvements only; no device rendering or all-surface scanner
 claim is made.
+
+The subsequent `5cb5cbf3` checkpoint further catalogizes static legacy Chat
+action, notice and confirmation wording, plus Council Workspace navigation,
+headings, citation fallback and empty-state copy. It changes no dynamic user,
+API or clinical content, and no Council facts, triage, prompts, specialist or
+adjudication outputs, or access controls. PR-02 and PR-10 therefore remain
+**partial**, not evidence of whole-app i18n or clinical Council validation.
+
+`de590313`, `a7a274ca` and `7e57d3ba` add and extend a conservative
+`safeUserFacingError` boundary in consumer flows. Technical, malformed,
+timeout-like or oversized caught-error detail is replaced with the existing
+localized generic fallback; request semantics, logging, authorization and
+clinical results are unchanged. This is source-level End_User error hardening
+under PR-14, not a fresh security, PII or runtime-validation result.
 
 ## Latest implementation checkpoints
 
@@ -188,6 +208,15 @@ claim is made.
   locale inputs. `85659f9b` renames the active RAG component to
   `EvidenceReranker`, retaining only compatibility aliases; its ranking and
   candidate-only evidence boundary do not change.
+- `de590313`, `a7a274ca` and `7e57d3ba` introduce and extend a conservative
+  End_User error boundary: technical/upstream caught errors render the
+  already-localized generic fallback rather than raw transport detail. The
+  helper does not alter requests, telemetry or safety policy.
+- `5cb5cbf3` applies the same boundary to legacy Chat and catalogizes its
+  remaining static action/notice/confirmation wording. It also catalogizes
+  Council Workspace static navigation, headings, citation fallback and
+  empty-state copy. Dynamic user/API/clinical content and Council facts,
+  triage, prompts and outputs remain unchanged.
 
 All of these checkpoints have static whitespace evidence only in this pass;
 their tests, builds, evaluation and deployment remain deferred by instruction.

@@ -59,6 +59,13 @@ recorded as implementation evidence, not release evidence.
   `8de7f745` documents closed-locale Google Chirp-3 fallback behavior; and
   `85659f9b` renames the active candidate-only ranking component to
   `EvidenceReranker` without changing its evidence boundary.
+- `de590313`, `a7a274ca` and `7e57d3ba` extend a conservative End_User error
+  boundary: technical/upstream caught errors render the existing localized
+  generic fallback rather than raw transport detail. `5cb5cbf3` applies the
+  same pattern to legacy Chat and catalogizes its action/notice/confirmation
+  wording plus Council Workspace static presentation. These changes do not
+  alter requests, Council facts/triage/prompt/output or dynamic clinical
+  content; they are not a full-app i18n or runtime-security claim.
 
 No format/lint/type/test/build/eval/deploy command was run for these additions.
 Only static whitespace checks were recorded before their commits.
