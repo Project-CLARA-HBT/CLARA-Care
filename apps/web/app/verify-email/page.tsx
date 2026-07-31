@@ -8,6 +8,7 @@ import { Field, Textarea } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface";
 import { t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 
 export default function VerifyEmailPage() {
@@ -37,7 +38,7 @@ export default function VerifyEmailPage() {
       await api.post("/auth/verify-email", { token });
       setNotice(t(language, "auth.verify.success"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "auth.verify.error"));
+      setError(safeUserFacingError(cause, t(language, "auth.verify.error")));
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +62,7 @@ export default function VerifyEmailPage() {
         setNotice(t(language, "auth.verify.resendGeneric"));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "auth.verify.resendError"));
+      setError(safeUserFacingError(cause, t(language, "auth.verify.resendError")));
     } finally {
       setIsResending(false);
     }

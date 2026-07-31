@@ -8,6 +8,7 @@ import {
   type PhrOcrCandidate,
 } from "@/lib/phr";
 import type { UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
  * OCR review modal (personal-health-record Requirement 9.1–9.5). The user
@@ -118,7 +119,7 @@ export default function OcrReviewModal({
       );
       if (result.candidates.length === 0) setMessage(text.noCandidates);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.scanError);
+      setError(safeUserFacingError(err, text.scanError));
     } finally {
       setScanning(false);
     }
@@ -153,7 +154,7 @@ export default function OcrReviewModal({
       onConfirmed?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.confirmError);
+      setError(safeUserFacingError(err, text.confirmError));
     } finally {
       setConfirming(false);
     }

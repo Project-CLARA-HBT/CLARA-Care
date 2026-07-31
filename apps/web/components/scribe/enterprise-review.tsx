@@ -68,6 +68,7 @@ import {
 import { formatLocaleDate, formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 type NoticeTone = "success" | "error";
 
@@ -361,7 +362,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         setConsentRequired(false);
         pushNotice("success", "Đồng thuận không bắt buộc ở chế độ hiện tại.");
       } else {
-        pushNotice("error", error instanceof Error ? error.message : "Không thể ghi nhận đồng thuận.");
+        pushNotice("error", safeUserFacingError(error, "Không thể ghi nhận đồng thuận."));
       }
     } finally {
       setCapturingConsent(false);
@@ -393,7 +394,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         }
         pushNotice("success", "Đã phiên âm theo lô (chế độ dự phòng).");
       } catch (error) {
-        pushNotice("error", error instanceof Error ? error.message : "Phiên âm dự phòng thất bại.");
+        pushNotice("error", safeUserFacingError(error, "Phiên âm dự phòng thất bại."));
       }
     },
     [pushNotice, sessionId]
@@ -443,13 +444,15 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
           },
           onError: (message) => {
             sawError = true;
-            setTranscriptionError(message);
+            setTranscriptionError(
+              safeUserFacingError(new Error(message), "Streaming không khả dụng."),
+            );
           },
         });
         if (sawError) await runBatchFallback(blob);
       } catch (error) {
         // Transport-level failure (flag off, network) ⇒ batch fallback.
-        const message = error instanceof Error ? error.message : "Streaming không khả dụng.";
+        const message = safeUserFacingError(error, "Streaming không khả dụng.");
         setTranscriptionError(message);
         await runBatchFallback(blob);
       } finally {
@@ -509,7 +512,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
       setRecording(true);
       pushNotice("success", "Đang ghi âm cuộc khám.");
     } catch (error) {
-      pushNotice("error", error instanceof Error ? error.message : "Không thể bắt đầu ghi âm.");
+      pushNotice("error", safeUserFacingError(error, "Không thể bắt đầu ghi âm."));
     }
   }, [canRecord, processAudioBlob, pushNotice]);
 
@@ -629,7 +632,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         setAddendumAvailable(false);
         pushNotice("error", "Tính năng phụ lục chưa được bật cho phiên này.");
       } else {
-        pushNotice("error", error instanceof Error ? error.message : "Không thể thêm phụ lục.");
+        pushNotice("error", safeUserFacingError(error, "Không thể thêm phụ lục."));
       }
     } finally {
       setAddendumSubmitting(false);
@@ -682,15 +685,16 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         } catch (fallbackError) {
           pushNotice(
             "error",
-            fallbackError instanceof Error
-              ? fallbackError.message
-              : t(language, "scribe.enterprise.note.error.generate"),
+            safeUserFacingError(
+              fallbackError,
+              t(language, "scribe.enterprise.note.error.generate"),
+            ),
           );
         }
       } else {
         pushNotice(
           "error",
-          error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.generate"),
+          safeUserFacingError(error, t(language, "scribe.enterprise.note.error.generate")),
         );
       }
     } finally {
@@ -712,7 +716,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     } catch (error) {
       pushNotice(
         "error",
-        error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.save"),
+        safeUserFacingError(error, t(language, "scribe.enterprise.note.error.save")),
       );
     } finally {
       setSavingNote(false);
@@ -738,15 +742,16 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         } catch (fallbackError) {
           pushNotice(
             "error",
-            fallbackError instanceof Error
-              ? fallbackError.message
-              : t(language, "scribe.enterprise.note.error.sign"),
+            safeUserFacingError(
+              fallbackError,
+              t(language, "scribe.enterprise.note.error.sign"),
+            ),
           );
         }
       } else {
         pushNotice(
           "error",
-          error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.sign"),
+          safeUserFacingError(error, t(language, "scribe.enterprise.note.error.sign")),
         );
       }
     } finally {
@@ -770,7 +775,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
     } catch (error) {
       pushNotice(
         "error",
-        error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.amend"),
+        safeUserFacingError(error, t(language, "scribe.enterprise.note.error.amend")),
       );
     }
   }, [noteTemplateId, onSessionChange, pushNotice, sessionId, transcriptDraft, loadGrounding, loadCoding, noteVersionNo, language]);
@@ -801,7 +806,7 @@ export default function EnterpriseReview({ session, onSessionChange, pushNotice 
         } else {
           pushNotice(
             "error",
-            error instanceof Error ? error.message : t(language, "scribe.enterprise.note.error.export"),
+            safeUserFacingError(error, t(language, "scribe.enterprise.note.error.export")),
           );
         }
       } finally {

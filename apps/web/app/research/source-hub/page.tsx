@@ -11,7 +11,7 @@ import {
 } from "@/lib/research";
 import { getRole, type UserRole } from "@/lib/auth-store";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
-import { sanitizeUpstreamError, stripTelemetryLabels } from "@/lib/user-facing-text";
+import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-text";
 import { trackResearchSourcesSynced, trackResearchViewed } from "@/lib/analytics/events";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
@@ -93,11 +93,7 @@ export default function ResearchSourceHubPage() {
       });
       setRecords(items);
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "research.sourceHub.error.loadRecords"),
-        ),
-      );
+      setError(safeUserFacingError(cause, t(language, "research.sourceHub.error.loadRecords")));
     } finally {
       setIsLoading(false);
     }
@@ -111,11 +107,7 @@ export default function ResearchSourceHubPage() {
         await loadCatalog();
         await loadRecords();
       } catch (cause) {
-        setError(
-          sanitizeUpstreamError(
-            cause instanceof Error ? cause.message : t(language, "research.sourceHub.error.loadHub"),
-          ),
-        );
+        setError(safeUserFacingError(cause, t(language, "research.sourceHub.error.loadHub")));
         setIsLoading(false);
       }
     };
@@ -184,11 +176,7 @@ export default function ResearchSourceHubPage() {
         stored: result.stored,
       });
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : t(language, "research.sourceHub.error.sync"),
-        ),
-      );
+      setError(safeUserFacingError(cause, t(language, "research.sourceHub.error.sync")));
     } finally {
       setIsSyncing(false);
     }

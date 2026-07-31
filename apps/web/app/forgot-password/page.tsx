@@ -8,6 +8,7 @@ import { Field } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface";
 import { t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 
 export default function ForgotPasswordPage() {
@@ -37,7 +38,7 @@ export default function ForgotPasswordPage() {
         setNotice(t(language, "auth.passwordRecovery.genericNotice"));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "auth.passwordRecovery.error"));
+      setError(safeUserFacingError(cause, t(language, "auth.passwordRecovery.error")));
     } finally {
       setIsSubmitting(false);
     }

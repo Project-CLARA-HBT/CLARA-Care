@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { toPng } from "html-to-image";
 import type { UILanguage } from "@/lib/ui-language";
 import { formatLocaleNumber, t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { exportWorkspaceDocxFromMarkdown } from "@/lib/workspace";
 import {
   citationRegistryAnchorId,
@@ -487,7 +488,7 @@ function MermaidBlock({ code, uiLanguage }: MermaidBlockProps) {
       } catch (cause) {
         if (!cancelled) {
           setSvg("");
-          setError(cause instanceof Error ? cause.message : "Không thể render Mermaid.");
+          setError(safeUserFacingError(cause, t(uiLanguage, "markdownAnswer.export.unknownError")));
         }
       }
     }
@@ -496,7 +497,7 @@ function MermaidBlock({ code, uiLanguage }: MermaidBlockProps) {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, uiLanguage]);
 
   if (error) {
     return (
@@ -1083,10 +1084,10 @@ export default function MarkdownAnswer({
       downloadBlob(blob, `${exportBaseName}.docx`);
       setExportNotice(t(uiLanguage, "markdownAnswer.export.docxSuccess"));
     } catch (cause) {
-      const reason =
-        cause instanceof Error && cause.message
-          ? cause.message
-          : t(uiLanguage, "markdownAnswer.export.unknownError");
+      const reason = safeUserFacingError(
+        cause,
+        t(uiLanguage, "markdownAnswer.export.unknownError"),
+      );
       setExportNotice(
         t(uiLanguage, "markdownAnswer.export.docxFailed", { reason })
       );

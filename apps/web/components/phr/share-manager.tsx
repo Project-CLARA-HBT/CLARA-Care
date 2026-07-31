@@ -9,6 +9,7 @@ import {
 } from "@/lib/phr";
 import { formatLocaleDate } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 /**
  * Read-only share manager (personal-health-record Requirement 12.1, 12.3).
@@ -96,7 +97,7 @@ export default function ShareManager({
       );
       setLinks((prev) => [share, ...prev]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.createError);
+      setError(safeUserFacingError(err, text.createError));
     } finally {
       setCreating(false);
     }
@@ -109,7 +110,7 @@ export default function ShareManager({
       await revokePhrShare(token);
       setLinks((prev) => prev.filter((l) => l.share_token !== token));
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.revokeError);
+      setError(safeUserFacingError(err, text.revokeError));
     } finally {
       setRevokingToken("");
     }

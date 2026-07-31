@@ -35,6 +35,7 @@ import {
 } from "@/lib/living-evidence";
 import { getLifeMapToday, type LifeMapEpisode } from "@/lib/lifemap";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import type { UILanguage } from "@/lib/ui-language";
 import { useUILanguage } from "@/lib/use-ui-language";
 
@@ -67,7 +68,7 @@ function labelForUnknown(language: UILanguage, value: string) {
 }
 
 function toMessage(cause: unknown, fallback: string) {
-  return cause instanceof Error && cause.message ? cause.message : fallback;
+  return safeUserFacingError(cause, fallback);
 }
 
 function EvidenceMatrixView({ matrix, language }: { matrix: EvidenceMatrix; language: UILanguage }) {

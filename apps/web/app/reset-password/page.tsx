@@ -8,6 +8,7 @@ import { Field, Textarea } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface";
 import { t } from "@/lib/i18n/catalog";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import { useUILanguage } from "@/lib/use-ui-language";
 
 export default function ResetPasswordPage() {
@@ -34,7 +35,7 @@ export default function ResetPasswordPage() {
       await api.post("/auth/reset-password", { token, new_password: newPassword });
       setNotice(t(language, "auth.passwordReset.success"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t(language, "auth.passwordReset.error"));
+      setError(safeUserFacingError(cause, t(language, "auth.passwordReset.error")));
     } finally {
       setIsSubmitting(false);
     }
