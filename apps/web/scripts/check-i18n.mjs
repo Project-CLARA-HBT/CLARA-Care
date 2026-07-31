@@ -362,6 +362,26 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    // Council overview presents safety-oriented chrome around structured,
+    // dynamic specialist and clinical content. This gate covers only the
+    // static chrome; it intentionally does not constrain clinical outputs.
+    path: "app/council/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "council.overview.banner.safety.title",
+      "council.overview.timeline.status.missing",
+      "council.overview.rerun.action",
+      "council.overview.summary.title",
+    ],
+    forbidden: [
+      "Sơ đồ bất đồng chuyên khoa",
+      "Hệ thống chưa đạt đồng thuận tự động",
+      "Timeline hội chẩn",
+      "Tiến trình trực tiếp",
+      "Chạy lại hội chẩn",
+    ],
+  },
+  {
     // The workflow diagram is End_User-visible chrome. Its labels must stay
     // catalog-backed, including the SVG accessibility name, while its actual
     // safety/routing state remains deterministic component data.

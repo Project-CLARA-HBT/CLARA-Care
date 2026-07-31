@@ -213,66 +213,73 @@ function translateSpecialistLabel(value: string): string {
   return value || "Chuyên khoa";
 }
 
-function getTimelineTitle(step: string): string {
+function getTimelineTitle(language: UILanguage, step: string): string {
   const normalized = step.toLowerCase();
-  if (/intake|normal/.test(normalized)) return "Đã chuẩn hóa thông tin ca bệnh";
+  if (/intake|normal/.test(normalized))
+    return t(language, "council.overview.timeline.intake");
   if (/specialist|assessment/.test(normalized))
-    return "Đã phân tích theo từng chuyên khoa";
-  if (/conflict|review/.test(normalized)) return "Đã kiểm tra điểm bất đồng";
+    return t(language, "council.overview.timeline.specialists");
+  if (/conflict|review/.test(normalized))
+    return t(language, "council.overview.timeline.conflicts");
   if (/consensus|decision/.test(normalized))
-    return "Đã tổng hợp mức đồng thuận";
-  if (/safety|gate|guard/.test(normalized)) return "Đã kiểm tra cổng an toàn";
-  if (/final|recommend/.test(normalized)) return "Đề xuất cuối cùng";
+    return t(language, "council.overview.timeline.consensus");
+  if (/safety|gate|guard/.test(normalized))
+    return t(language, "council.overview.timeline.safety");
+  if (/final|recommend/.test(normalized))
+    return t(language, "council.overview.timeline.final");
   return step;
 }
 
 function getTimelineStatus(
-  title: string,
+  step: string,
   hasMissingData: boolean,
   isProblemStep: boolean,
 ): "done" | "review" | "missing" | "pending" {
+  const normalized = normalizeSearch(step);
   if (
     hasMissingData &&
-    /(cổng an toàn|Đề xuất cuối cùng|đồng thuận)/i.test(title)
+    /(safety|gate|guard|final|recommend|consensus|decision)/.test(normalized)
   )
     return "missing";
-  if (isProblemStep || /bất đồng/i.test(title)) return "review";
+  if (isProblemStep || /conflict|review/.test(normalized)) return "review";
   return "done";
 }
 
-function timelineStatusMeta(status: "done" | "review" | "missing" | "pending") {
+function timelineStatusMeta(
+  language: UILanguage,
+  status: "done" | "review" | "missing" | "pending",
+) {
   if (status === "missing")
     return {
-      label: "Thiếu dữ liệu",
+      label: t(language, "council.overview.timeline.status.missing"),
       className:
         "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100",
     };
   if (status === "review")
     return {
-      label: "Cần xem lại",
+      label: t(language, "council.overview.timeline.status.review"),
       className:
         "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100",
     };
   if (status === "pending")
     return {
-      label: "Chờ bác sĩ xác nhận",
+      label: t(language, "council.overview.timeline.status.pending"),
       className:
         "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100",
     };
   return {
-    label: "Hoàn tất",
+    label: t(language, "council.overview.timeline.status.done"),
     className:
       "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/70 dark:bg-emerald-500/20 dark:text-emerald-100",
   };
 }
 
-function bannerMeta(state: CouncilBannerState) {
+function bannerMeta(language: UILanguage, state: CouncilBannerState) {
   if (state === "safety") {
     return {
       icon: "emergency_home",
-      title: "Cần xử trí khẩn / cần xác nhận",
-      detail:
-        "Có tín hiệu an toàn hoặc yêu cầu bàn giao cho bác sĩ phụ trách trước khi đưa ra khuyến nghị cuối cùng.",
+      title: t(language, "council.overview.banner.safety.title"),
+      detail: t(language, "council.overview.banner.safety.detail"),
       className:
         "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100",
       iconClassName: "bg-rose-600 text-white",
@@ -281,9 +288,8 @@ function bannerMeta(state: CouncilBannerState) {
   if (state === "conflict") {
     return {
       icon: "warning",
-      title: "Có bất đồng chuyên khoa",
-      detail:
-        "Phát hiện tín hiệu khác nhau giữa các chuyên khoa. Cần bác sĩ phụ trách xác nhận trước khi kết luận.",
+      title: t(language, "council.overview.banner.conflict.title"),
+      detail: t(language, "council.overview.banner.conflict.detail"),
       className:
         "border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100",
       iconClassName: "bg-orange-500 text-white",
@@ -292,8 +298,8 @@ function bannerMeta(state: CouncilBannerState) {
   if (state === "review") {
     return {
       icon: "error",
-      title: "Cần bác sĩ xem lại",
-      detail: "Có điểm cần kiểm tra thêm trước khi chốt khuyến nghị.",
+      title: t(language, "council.overview.banner.review.title"),
+      detail: t(language, "council.overview.banner.review.detail"),
       className:
         "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100",
       iconClassName: "bg-amber-500 text-white",
@@ -302,9 +308,8 @@ function bannerMeta(state: CouncilBannerState) {
   if (state === "incomplete") {
     return {
       icon: "info",
-      title: "Chưa đủ dữ liệu kết luận",
-      detail:
-        "Thiếu dữ liệu quan trọng nên hệ thống chưa thể đánh giá mức đồng thuận đáng tin cậy.",
+      title: t(language, "council.overview.banner.incomplete.title"),
+      detail: t(language, "council.overview.banner.incomplete.detail"),
       className:
         "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100",
       iconClassName: "bg-sky-500 text-white",
@@ -312,9 +317,8 @@ function bannerMeta(state: CouncilBannerState) {
   }
   return {
     icon: "check_circle",
-    title: "Hội chẩn ổn định",
-    detail:
-      "Không phát hiện bất đồng quan trọng giữa các chuyên khoa trong dữ liệu hiện tại.",
+    title: t(language, "council.overview.banner.stable.title"),
+    detail: t(language, "council.overview.banner.stable.detail"),
     className:
       "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/70 dark:bg-emerald-500/20 dark:text-emerald-100",
     iconClassName: "bg-emerald-600 text-white",
@@ -597,7 +601,7 @@ export default function CouncilPage() {
         : severity === "warning"
           ? "review"
           : "stable";
-  const banner = bannerMeta(bannerState);
+  const banner = bannerMeta(language, bannerState);
   const finalDecisionBlocked =
     hasConflictSignals || requiresSafetyConfirm || missingCriticalData;
   const renalDataLabel =
@@ -605,19 +609,19 @@ export default function CouncilPage() {
       ? `eGFR ${egfrLab}`
       : creatinineLab != null
         ? `${creatinineLab.toFixed(1)} mg/dL`
-        : "Chưa có dữ liệu";
+        : t(language, "council.overview.dataUnavailable");
   const assessmentLabel = missingCriticalData
-    ? "Chưa đủ dữ liệu"
+    ? t(language, "council.overview.assessment.insufficientData")
     : requiresSafetyConfirm
-      ? "Cần bác sĩ kiểm tra"
+      ? t(language, "council.overview.assessment.clinicianReview")
       : hasConflictSignals
-        ? "Cần rà soát khác biệt"
-        : "Có thể trao đổi tiếp";
+        ? t(language, "council.overview.assessment.reviewDifferences")
+        : t(language, "council.overview.assessment.continueDiscussion");
   const assessmentStateLabel = missingCriticalData
-    ? "Thiếu thông tin"
+    ? t(language, "council.overview.assessment.missingInformation")
     : bannerState === "stable"
-      ? "Bản nháp, chưa là kết luận"
-      : "Cần xác nhận";
+      ? t(language, "council.overview.assessment.draft")
+      : t(language, "council.overview.assessment.requiresConfirmation");
 
   const specialistLogs = view?.details.specialistLogs ?? [];
   const cardiologyIndex = specialistLogs.findIndex((log) =>
@@ -657,16 +661,18 @@ export default function CouncilPage() {
     const base = view?.timeline.steps ?? [];
     return base.slice(0, 6).map((step) => ({
       id: `${step.sequence}-${step.step}`,
-      time: `Bước ${step.sequence}`,
-      title: getTimelineTitle(step.step),
+      time: t(language, "council.overview.timeline.step", {
+        sequence: step.sequence,
+      }),
+      title: getTimelineTitle(language, step.step),
       status: getTimelineStatus(
-        getTimelineTitle(step.step),
+        step.step,
         missingCriticalData,
         hasConflictSignals &&
           /conflict|review|consensus|safety|final/i.test(step.step),
       ),
     }));
-  }, [view, missingCriticalData, hasConflictSignals]);
+  }, [language, view, missingCriticalData, hasConflictSignals]);
 
   const selectedSpecialtyMeta =
     HANDOFF_SPECIALTIES.find((item) => item.name === selectedSpecialty) ??
@@ -803,14 +809,14 @@ export default function CouncilPage() {
                 </p>
                 {missingDataLabels.length > 0 ? (
                   <p className="mt-2 text-xs font-bold">
-                    Dữ liệu còn thiếu: {missingDataLabels.join(", ")}
+                    {t(language, "council.overview.summary.missingData")} {missingDataLabels.join(", ")}
                   </p>
                 ) : null}
               </div>
             </div>
             <div className="rounded-lg border border-current/20 bg-white/60 px-3 py-2 text-left sm:text-right dark:bg-slate-950/20">
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] opacity-80">
-                Thời gian từ lúc chạy
+                {t(language, "council.overview.elapsed")}
               </p>
               <p className="font-mono text-xl font-bold">{elapsed}</p>
             </div>
@@ -825,10 +831,10 @@ export default function CouncilPage() {
                   className={`flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
                 >
                   <span className="h-4 w-1 rounded-full bg-[color:var(--brand-600)]" />
-                  Sơ đồ bất đồng chuyên khoa
+                  {t(language, "council.overview.conflictMap.title")}
                 </h3>
                 <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
-                  Hệ thống chưa đạt đồng thuận tự động
+                  {t(language, "council.overview.conflictMap.noAutomaticConsensus")}
                 </span>
               </div>
 
@@ -848,7 +854,7 @@ export default function CouncilPage() {
                         <p
                           className={`mt-1 text-sm font-semibold ${BODY_TEXT_CLASS}`}
                         >
-                          Tim mạch đề xuất gì?
+                          {t(language, "council.overview.conflictMap.cardiologyPrompt")}
                         </p>
                       </div>
                     </div>
@@ -865,7 +871,7 @@ export default function CouncilPage() {
                         sync_problem
                       </span>
                       <p className="mt-2 text-xs font-black uppercase tracking-[0.12em]">
-                        Xung đột quan trọng
+                        {t(language, "council.overview.conflictMap.criticalConflict")}
                       </p>
                     </div>
                   </div>
@@ -884,7 +890,7 @@ export default function CouncilPage() {
                         <p
                           className={`mt-1 text-sm font-semibold ${BODY_TEXT_CLASS}`}
                         >
-                          Nội tiết/Thận cảnh báo gì?
+                          {t(language, "council.overview.conflictMap.renalPrompt")}
                         </p>
                       </div>
                     </div>
@@ -898,7 +904,7 @@ export default function CouncilPage() {
 
                 <div className="mt-4 rounded-lg border border-orange-200 bg-white p-4 dark:border-orange-500/60 dark:bg-slate-950/40">
                   <p className="text-sm font-bold text-orange-800 dark:text-orange-100">
-                    Điểm xung đột là gì?
+                    {t(language, "council.overview.conflictMap.question")}
                   </p>
                   <p
                     className={`mt-1 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
@@ -923,11 +929,13 @@ export default function CouncilPage() {
                   <span
                     className={`text-2xl font-bold tracking-tight ${BODY_TEXT_CLASS}`}
                   >
-                    {mapLab != null ? `${mapLab} mmHg` : "Chưa có dữ liệu"}
+                    {mapLab != null
+                      ? `${mapLab} mmHg`
+                      : t(language, "council.overview.dataUnavailable")}
                   </span>
                 </div>
                 <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
-                  Dùng để đánh giá huyết động trước khi kết luận.
+                  {t(language, "council.overview.assessment.mapHint")}
                 </p>
               </article>
 
@@ -948,14 +956,14 @@ export default function CouncilPage() {
                   </span>
                 </div>
                 <p className={`mt-3 text-xs ${MUTED_TEXT_CLASS}`}>
-                  Cần cho các thuốc phải chỉnh liều theo chức năng thận.
+                  {t(language, "council.overview.assessment.renalHint")}
                 </p>
               </article>
 
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">
-                    Trạng thái đánh giá
+                    {t(language, "council.overview.assessment.title")}
                   </p>
                   <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">
                     bolt
@@ -974,12 +982,15 @@ export default function CouncilPage() {
                   </span>
                 </div>
                 <p className={`mt-4 text-xs ${MUTED_TEXT_CLASS}`}>
-                  Đây là trạng thái kiểm tra thông tin, không phải xác suất hay
-                  độ tin cậy lâm sàng.
+                  {t(language, "council.overview.assessment.disclaimer")}
                 </p>
                 {missingCriticalData ? (
                   <p className="mt-3 text-xs font-semibold text-amber-800 dark:text-amber-200">
-                    Lý do: Thiếu {missingDataLabels.join(" và ")}.
+                    {t(language, "council.overview.assessment.missingReason", {
+                      items: missingDataLabels.join(
+                        t(language, "council.overview.listJoin"),
+                      ),
+                    })}
                   </p>
                 ) : null}
               </article>
@@ -994,14 +1005,14 @@ export default function CouncilPage() {
                 <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">
                   history
                 </span>
-                Timeline hội chẩn
+                {t(language, "council.overview.timeline.title")}
               </h3>
 
               {timeline.length ? (
                 <div className="relative space-y-6">
                   <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[color:var(--shell-border)] dark:bg-sky-800" />
                   {timeline.map((step) => {
-                    const meta = timelineStatusMeta(step.status);
+                    const meta = timelineStatusMeta(language, step.status);
                     const dotClass =
                       step.status === "missing"
                         ? "border-sky-400 bg-sky-100"
@@ -1051,14 +1062,14 @@ export default function CouncilPage() {
                 </div>
               ) : (
                 <p className={`text-xs ${SECONDARY_TEXT_CLASS}`}>
-                  Chưa có timeline hội chẩn từ lần chạy gần nhất.
+                  {t(language, "council.overview.timeline.empty")}
                 </p>
               )}
 
               {streamingEnabled && streamStages.length > 0 ? (
                 <div className="mt-6 rounded-lg border border-sky-200 bg-sky-50 p-4 dark:border-sky-500/60 dark:bg-sky-500/10">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-200">
-                    Tiến trình trực tiếp
+                    {t(language, "council.overview.timeline.liveProgress")}
                   </p>
                   <ul className="mt-2 space-y-2">
                     {streamStages.map((stage) => (
@@ -1073,7 +1084,7 @@ export default function CouncilPage() {
                           <p
                             className={`text-sm font-semibold ${BODY_TEXT_CLASS}`}
                           >
-                            {getTimelineTitle(stage.step)}
+                            {getTimelineTitle(language, stage.step)}
                           </p>
                         </div>
                       </li>
@@ -1096,9 +1107,9 @@ export default function CouncilPage() {
                   </span>
                   {isRunning
                     ? streamingEnabled
-                      ? "Đang hội chẩn trực tiếp..."
-                      : "Đang chạy lại..."
-                    : "Chạy lại hội chẩn"}
+                      ? t(language, "council.overview.rerun.live")
+                      : t(language, "council.overview.rerun.running")
+                    : t(language, "council.overview.rerun.action")}
                 </button>
                 {runNotice ? (
                   <p
