@@ -921,6 +921,14 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="COUNCIL_MEDICATION_SAFETY_ENABLED",
     )
+    # Optional retrieval evidence availability for the independent Council
+    # specialist shadow.  The accepted packet is constrained to an allowlisted
+    # tool plus opaque retrieval IDs/categories; it never feeds the released
+    # Council decision and cannot carry retrieval text or prompts.
+    council_evidence_packet_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED",
+    )
 
     # --- Council upgrade feature flags (additive; default OFF) ---------------
     # ML-side gates for the Council upgrade, mirroring the COUNCIL_RULE_SHADOW_*

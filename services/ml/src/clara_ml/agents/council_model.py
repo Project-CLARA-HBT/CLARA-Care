@@ -15,6 +15,10 @@ from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, StrictBool, StrictStr, ValidationError
 
+from clara_ml.agents.council_evidence_packet import (
+    public_evidence_packet_summary,
+    validated_council_evidence_packet,
+)
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.llm.model_registry import ModelTask, build_task_client
@@ -433,6 +437,19 @@ def run_model_council_shadow(
             "failures": [{"stage": "client", "code": exc.__class__.__name__}],
         }
 
+    # An evidence snapshot is deliberately optional and may only be supplied by
+    # the explicitly enabled Council boundary.  The validator strips/rejects
+    # all content-bearing fields before the registry-bound specialist request;
+    # specialists can see opaque IDs/categories only and must not use them as
+    # factual support for a finding.
+    has_evidence_packet = "council_evidence_packet" in payload
+    evidence_packet = validated_council_evidence_packet(
+        payload.get("council_evidence_packet")
+    )
+    evidence_summary = public_evidence_packet_summary(evidence_packet)
+    if has_evidence_packet and evidence_packet is None:
+        evidence_summary = {"status": "rejected", "evidence_count": 0, "categories": []}
+
     assessments: list[dict[str, Any]] = []
     failures: list[dict[str, str]] = []
     valid_fact_ids = {str(item["id"]) for item in packet["facts"]}
@@ -450,9 +467,17 @@ def run_model_council_shadow(
             "safe_next_action_class (one of collect_more_information, clinician_review, "
             "same_day_in_person_review, emergency_evaluation). Do not return confidence, "
             "probability, a diagnosis, treatment instruction, or medication-dose change. "
-            "Never invent a fact or citation.\n\n"
+            "Never invent a fact or citation. A separate evidence-availability packet, when "
+            "present, contains only opaque retrieval IDs and categories. It is not evidence "
+            "content: do not use it to support a finding, diagnose, prescribe, or alter triage. "
+            "Only supplied CASE_PACKET fact IDs can support a finding.\n\n"
             f"CASE_PACKET={json.dumps(packet, ensure_ascii=False, sort_keys=True)}"
         )
+        if evidence_packet is not None:
+            prompt += (
+                "\n\nVALIDATED_EVIDENCE_AVAILABILITY="
+                f"{json.dumps(evidence_packet, ensure_ascii=False, sort_keys=True)}"
+            )
         try:
             response = client.generate(
                 prompt,
@@ -488,7 +513,7 @@ def run_model_council_shadow(
         status = "partial"
     else:
         status = "unavailable"
-    return {
+    result = {
         "status": status,
         "mode": "shadow",
         "independent_reviews": True,
@@ -497,3 +522,6 @@ def run_model_council_shadow(
         "case_fact_count": len(packet["facts"]),
         "adjudication": _shadow_adjudication(assessments),
     }
+    if has_evidence_packet:
+        result["evidence_packet"] = evidence_summary
+    return result

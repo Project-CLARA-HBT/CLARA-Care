@@ -1565,15 +1565,21 @@ def run_council(payload: dict) -> dict:
     if settings.council_llm_shadow_enabled:
         from clara_ml.agents.council_model import run_model_council_shadow
 
-        result["model_council"] = run_model_council_shadow(
-            {
-                "symptoms": symptoms,
-                "labs": labs,
-                "medications": medications,
-                "history": history,
-            },
-            specialists,
-        )
+        shadow_payload: dict[str, Any] = {
+            "symptoms": symptoms,
+            "labs": labs,
+            "medications": medications,
+            "history": history,
+        }
+        # Only the separately default-off, shadow-only path may pass the
+        # server-created evidence availability packet onward. The validator in
+        # council_evidence_packet strips all raw retrieval content and rejects
+        # unknown tools. This cannot affect the deterministic result above.
+        if settings.council_evidence_packet_shadow_enabled:
+            shadow_payload["council_evidence_packet"] = payload.get(
+                "council_evidence_packet"
+            )
+        result["model_council"] = run_model_council_shadow(shadow_payload, specialists)
 
     # --- Model & fallback disclosure (Requirement 6.1, 6.3) -----------------
     # Additive, default OFF. When COUNCIL_MODEL_DISCLOSURE_ENABLED is on (read

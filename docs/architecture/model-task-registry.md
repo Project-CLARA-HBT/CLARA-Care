@@ -69,6 +69,16 @@ input set immediately. Council exposes the packet only as review-only metadata
 after deterministic Council emergency handling, and Scribe corrections require
 their own exact transcript offsets before a clinician can review them.
 
+Council's `COUNCIL_SHADOW` task can separately receive an optional
+`COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED` retrieval-availability packet only
+while the shadow task itself is enabled. Its narrow server-side handoff accepts
+one allowlisted `retrieval_snapshot` tool and only validated snapshot/evidence
+IDs plus controlled categories; text, URLs, titles, queries, scores and tool
+arguments are rejected before the model call. Those IDs/categories are not
+clinical evidence for an LLM claim: specialist findings remain bound only to
+immutable Council case-fact IDs and cannot alter the deterministic release
+result. See `docs/architecture/council-shadow-evidence-packet.md`.
+
 ## Optional Encoder-SLM shadow
 
 The separate Encoder-SLM seam is deliberately **shadow-only**, off by default,
