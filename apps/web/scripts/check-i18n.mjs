@@ -109,6 +109,28 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    // The health-record hub and its focused editor routes share this page.
+    // All static labels, safety clarification, empty/error state, and ARIA
+    // labels must come from the typed catalog; record values remain user data.
+    path: "app/phr/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "phr.title",
+      "phr.disclaimer",
+      "phr.hub.identity.title",
+      "phr.completeness.class.patientDemographics",
+      "phr.error.sectionNotFound.title",
+    ],
+    forbidden: [
+      'title: "Hồ sơ sức khỏe cá nhân"',
+      'title: "Personal Health Record"',
+      '"Hồ sơ này do bạn tự khai báo, chỉ dùng để hỗ trợ ra quyết định',
+      '"This record is self-declared and for decision support only',
+      '"Danh tính cơ bản"',
+      '"Identity"',
+    ],
+  },
+  {
     path: "app/lifemap/new/start-client.tsx",
     required: [
       "@/lib/i18n/catalog",
