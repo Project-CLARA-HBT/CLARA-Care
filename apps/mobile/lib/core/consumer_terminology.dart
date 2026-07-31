@@ -87,6 +87,20 @@ enum ConsumerTerm {
   todayCompleteFailed,
   todayLoadFailed,
   sessionExpired,
+  // Authentication is mobile-local chrome. It must not translate server error
+  // payloads, account identity, or consent/RBAC decisions.
+  loginSafetyTagline,
+  loginEmail,
+  loginPassword,
+  loginShowPassword,
+  loginHidePassword,
+  loginSubmit,
+  loginCreateAccount,
+  loginForgotPassword,
+  loginEmailRequired,
+  loginPasswordRequired,
+  loginUnauthorized,
+  loginFailed,
   onboardingStepWelcome,
   onboardingStepBasics,
   onboardingStepPersonalization,
@@ -745,6 +759,20 @@ class ConsumerTerminology {
         'Không thể tải lịch hôm nay. Vui lòng thử lại.',
     ConsumerTerm.sessionExpired:
         'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+    ConsumerTerm.loginSafetyTagline:
+        'Trợ lý y tế an toàn — hỗ trợ quyết định, không thay thế bác sĩ.',
+    ConsumerTerm.loginEmail: 'Email',
+    ConsumerTerm.loginPassword: 'Mật khẩu',
+    ConsumerTerm.loginShowPassword: 'Hiện mật khẩu',
+    ConsumerTerm.loginHidePassword: 'Ẩn mật khẩu',
+    ConsumerTerm.loginSubmit: 'Đăng nhập',
+    ConsumerTerm.loginCreateAccount: 'Tạo tài khoản',
+    ConsumerTerm.loginForgotPassword: 'Quên mật khẩu?',
+    ConsumerTerm.loginEmailRequired: 'Vui lòng nhập email.',
+    ConsumerTerm.loginPasswordRequired: 'Vui lòng nhập mật khẩu.',
+    ConsumerTerm.loginUnauthorized:
+        'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.',
+    ConsumerTerm.loginFailed: 'Không thể đăng nhập lúc này. Vui lòng thử lại.',
     // Onboarding copy is deliberately mobile-local rather than shared through
     // the cross-client navigation contract: it describes optional profile
     // fields and consent, not a reusable product-navigation term.
@@ -1515,6 +1543,20 @@ class ConsumerTerminology {
         'We could not load today\'s agenda. Try again.',
     ConsumerTerm.sessionExpired:
         'Your session has expired. Please sign in again.',
+    ConsumerTerm.loginSafetyTagline:
+        'A safer health assistant — supporting decisions, not replacing a clinician.',
+    ConsumerTerm.loginEmail: 'Email',
+    ConsumerTerm.loginPassword: 'Password',
+    ConsumerTerm.loginShowPassword: 'Show password',
+    ConsumerTerm.loginHidePassword: 'Hide password',
+    ConsumerTerm.loginSubmit: 'Sign in',
+    ConsumerTerm.loginCreateAccount: 'Create an account',
+    ConsumerTerm.loginForgotPassword: 'Forgot password?',
+    ConsumerTerm.loginEmailRequired: 'Enter your email.',
+    ConsumerTerm.loginPasswordRequired: 'Enter your password.',
+    ConsumerTerm.loginUnauthorized:
+        'Sign-in failed. Check your email and password.',
+    ConsumerTerm.loginFailed: 'We could not sign you in right now. Try again.',
     ConsumerTerm.onboardingStepWelcome: 'Welcome',
     ConsumerTerm.onboardingStepBasics: 'Basic details',
     ConsumerTerm.onboardingStepPersonalization: 'Personalization',
