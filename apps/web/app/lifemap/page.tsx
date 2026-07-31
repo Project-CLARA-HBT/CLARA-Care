@@ -99,6 +99,31 @@ function truthStateLabel(
   }
 }
 
+function askIntentLabel(
+  intent: string,
+  copy: (key: UITranslationKey) => string,
+): string {
+  const keys: Record<string, UITranslationKey> = {
+    timeline_lookup: "lifemap.ask.intent.timeline",
+    comparison: "lifemap.ask.intent.comparison",
+    visit_preparation: "lifemap.ask.intent.visitPreparation",
+    missingness: "lifemap.ask.intent.missingness",
+    explanation: "lifemap.ask.intent.explanation",
+  };
+  return keys[intent] ? copy(keys[intent]) : copy("lifemap.ask.intent.timeline");
+}
+
+function askSuggestions(
+  copy: (key: UITranslationKey) => string,
+): Array<{ key: string; prompt: string }> {
+  return [
+    { key: "timeline", prompt: copy("lifemap.ask.suggestion.timeline") },
+    { key: "change", prompt: copy("lifemap.ask.suggestion.change") },
+    { key: "missing", prompt: copy("lifemap.ask.suggestion.missing") },
+    { key: "visit", prompt: copy("lifemap.ask.suggestion.visit") },
+  ];
+}
+
 function comparisonValue(value: unknown, language: "vi" | "en"): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "string") return value;
@@ -767,12 +792,35 @@ export default function LifeMapPage() {
                     onSubmit={(event) => void submitAsk(event)}
                   >
                     <Textarea
+                      id="lifemap-ask-query"
                       label={copy("lifemap.ask.label")}
                       value={askQuery}
                       onChange={(event) => setAskQuery(event.target.value)}
                       placeholder={copy("lifemap.ask.placeholder")}
                       hint={copy("lifemap.ask.hint")}
                     />
+                    <div>
+                      <p className="text-xs font-medium text-[var(--text-secondary)]">
+                        {copy("lifemap.ask.suggestions")}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {askSuggestions(copy).map((suggestion) => (
+                          <Button
+                            key={suggestion.key}
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setAskQuery(suggestion.prompt);
+                              setAskAnswer(null);
+                              document.getElementById("lifemap-ask-query")?.focus();
+                            }}
+                          >
+                            {suggestion.prompt}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                     <Button
                       type="submit"
                       icon="search"
@@ -789,6 +837,11 @@ export default function LifeMapPage() {
                     >
                       <p className="font-medium text-[var(--text-primary)]">
                         {askAnswer.answer}
+                      </p>
+                      <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                        {copy("lifemap.ask.interpretedAs", {
+                          intent: askIntentLabel(askAnswer.intent, copy),
+                        })}
                       </p>
                       {askAnswer.claims.length ? (
                         <ol className="mt-4 space-y-3">
@@ -826,6 +879,11 @@ export default function LifeMapPage() {
                       askAnswer.stale.length ? (
                         <p className="mt-3 text-sm text-[var(--status-warn-text)]">
                           {copy("lifemap.ask.caution")}
+                        </p>
+                      ) : null}
+                      {askAnswer.unknown.length ? (
+                        <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                          {copy("lifemap.ask.uncertain")}
                         </p>
                       ) : null}
                       <p className="mt-4 text-xs text-[var(--text-muted)]">
