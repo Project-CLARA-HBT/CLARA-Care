@@ -52,7 +52,10 @@ Already real:
 
 Gaps:
 
-- Google Chirp provider is a placeholder and always yields no segments;
+- Google Chirp-3 is now a real credentialed adapter, but production readiness
+  still requires a deployment project, ADC/workload identity, an allowed
+  recognizer and a smoke result.  Without those, it deliberately returns no
+  transcript and the independent configured fallback must handle the request;
 - “streaming” buffers the full upload and adapts a batch result;
 - the template note endpoint constructs `NoteGenerator()` without an LLM, so it always uses an extractive deterministic fallback;
 - the legacy SOAP generator invents generic assessments and plan language not directly supported by the transcript;

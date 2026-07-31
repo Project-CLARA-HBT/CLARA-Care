@@ -19,6 +19,27 @@ logger = logging.getLogger(__name__)
 __all__ = ["GoogleSttV2Asr"]
 
 
+def _language_codes(language: str) -> list[str]:
+    """Return the closed Vietnamese/code-switching locale list for Chirp.
+
+    Browser and API callers historically send ``vi``/``en`` rather than full
+    BCP-47 locale tags.  Speech-to-Text V2 documents the regional tags, so
+    normalize only those two deployment-supported shorthands.  Do not pass
+    arbitrary caller locale data through as a provider configuration surface.
+    """
+
+    normalized = language.strip().replace("_", "-").lower()
+    if normalized in {"en", "en-us"}:
+        return ["en-US"]
+    # This clinical route is Vietnamese-first.  An unknown caller value must
+    # not widen the provider's language configuration or change its medical
+    # transcription policy; retain the deployed Vietnamese/code-switching mode.
+    primary = "vi-VN"
+    # Chirp needs English alongside Vietnamese for medication/procedure
+    # code-switching.  Avoid duplicate codes when English is requested.
+    return [primary, "en-US"]
+
+
 def _duration_ms(value: Any) -> int:
     if value is None:
         return 0
@@ -85,7 +106,7 @@ class GoogleSttV2Asr:
                 "recognizer": self.recognizer_path,
                 "config": {
                     "auto_decoding_config": {},
-                    "language_codes": [language or "vi-VN", "en-US"],
+                    "language_codes": _language_codes(language),
                     "model": "chirp_3",
                     "features": {
                         "enable_automatic_punctuation": True,

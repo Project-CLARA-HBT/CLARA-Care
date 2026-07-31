@@ -995,7 +995,9 @@ class Settings(BaseSettings):
         default=False, validation_alias="RAG_SCRIBE_FHIR_EXPORT_ENABLED"
     )
     # ASR provider selection seam. "whisper" = existing DeepSeek/Whisper audio
-    # client (the only fully-wired provider today); other names degrade to it.
+    # client. ``google_stt_v2`` is a real Chirp-3 path when project + ADC or
+    # workload credentials are supplied; an unavailable provider produces no
+    # transcript and lets the independently configured fallback run.
     scribe_asr_primary: str = Field(default="whisper", validation_alias="SCRIBE_ASR_PRIMARY")
     scribe_asr_fallback: str = Field(default="whisper", validation_alias="SCRIBE_ASR_FALLBACK")
     scribe_asr_language: str = Field(default="vi", validation_alias="SCRIBE_ASR_LANGUAGE")
