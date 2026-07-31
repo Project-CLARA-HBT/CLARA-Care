@@ -2412,46 +2412,18 @@ def _resolve_runtime_llm_config(
     )
 
 
-def _has_request_runtime_override(llm_runtime: dict[str, Any] | None) -> bool:
-    # Kept as a compatibility seam for internal callers. Runtime overrides are
-    # no longer accepted anywhere in production.
-    del llm_runtime
-    return False
+def _deployment_model_configured() -> bool:
+    """Whether the registry has the deployment-owned DeepSeek prerequisites.
 
-
-class _RegistrySettingsOverlay:
-    """Read-only settings view retained for legacy internal call signatures.
-
-    Its callers now receive the deployment-resolved DeepSeek values only. It
-    must not be populated from request, control-plane, or queued-job payloads.
+    Do not accept a request, queued-job, or control-plane-shaped runtime object
+    here.  ``build_task_client`` is the only model/provider selection boundary;
+    in particular it owns V4 Pro/Flash routing, rollback and timeouts.
     """
 
-    def __init__(self, base: Any, **overrides: object) -> None:
-        self._base = base
-        self._overrides = overrides
-
-    def __getattr__(self, name: str) -> Any:
-        return self._overrides.get(name, getattr(self._base, name))
-
-
-def _registry_settings_for_runtime(llm_runtime: dict[str, Any] | None) -> _RegistrySettingsOverlay:
-    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
-    return _RegistrySettingsOverlay(
-        settings,
-        deepseek_api_key=api_key,
-        deepseek_base_url=base_url,
-        deepseek_model=model,
-    )
-
-
-def _resolve_runtime_retry_policy(
-    llm_runtime: dict[str, Any] | None,
-) -> tuple[int, float]:
-    if _has_request_runtime_override(llm_runtime):
-        return 0, min(max(float(settings.deepseek_retry_backoff_seconds), 0.0), 0.25)
-    return (
-        max(0, int(settings.deepseek_retries_per_base)),
-        max(0.0, float(settings.deepseek_retry_backoff_seconds)),
+    return bool(
+        str(settings.deepseek_api_key or "").strip()
+        and str(settings.deepseek_base_url or "").strip()
+        and str(settings.deepseek_model or "").strip()
     )
 
 
@@ -2470,26 +2442,19 @@ def _pause_between_pipeline_parts(multiplier: float = 1.0) -> None:
 def _build_query_planner_client(
     *, llm_runtime: dict[str, Any] | None = None
 ) -> DeepSeekClient | None:
-    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
-    if not api_key or not base_url or not model:
+    # Compatibility-only argument: it cannot select a provider, endpoint,
+    # model, credential, retry policy or timeout.
+    del llm_runtime
+    if not _deployment_model_configured():
         return None
-    # Query planning controls every downstream biomedical connector. The former
-    # 10-second runtime-override ceiling caused otherwise healthy LLM requests
-    # to fall back to the heuristic plan, losing provider-specific Boolean
-    # queries and exact trial anchors. Keep the call bounded, but allow the same
-    # latency envelope observed for successful production reranking.
+    # Query planning controls every downstream biomedical connector. Keep the
+    # call bounded while retaining the deployment-owned V4 model selection.
     timeout_seconds = max(5.0, min(float(settings.deepseek_timeout_seconds), 30.0))
-    if _has_request_runtime_override(llm_runtime):
-        timeout_seconds = min(timeout_seconds, 25.0)
-    retries_per_base, _ = _resolve_runtime_retry_policy(llm_runtime)
-    # Every path, including the legacy internal runtime seam, constructs the
-    # client through the registry so model rollback and prompt contracts cannot
-    # be bypassed. The overlay supplies only already-resolved DeepSeek values.
     client, _ = build_task_client(
         ModelTask.RESEARCH_QUERY_PLANNING,
-        _registry_settings_for_runtime(llm_runtime),
+        settings,
         timeout_seconds=timeout_seconds,
-        retries_per_base=retries_per_base,
+        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
     )
     return client
 
@@ -2499,19 +2464,18 @@ def _build_reasoning_client(
     timeout_seconds: float | None = None,
     llm_runtime: dict[str, Any] | None = None,
 ) -> DeepSeekClient | None:
-    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
-    if not api_key or not base_url or not model:
+    # Compatibility-only argument.  Research reasoning has no request-selected
+    # provider/model path, even for historical queued payloads.
+    del llm_runtime
+    if not _deployment_model_configured():
         return None
     resolved_timeout = float(timeout_seconds or settings.deep_beta_reasoning_llm_timeout_seconds)
     resolved_timeout = max(2.0, min(resolved_timeout, 120.0))
-    if _has_request_runtime_override(llm_runtime):
-        resolved_timeout = min(resolved_timeout, 18.0)
-    retries_per_base, _ = _resolve_runtime_retry_policy(llm_runtime)
     client, _ = build_task_client(
         ModelTask.RESEARCH_REASONING,
-        _registry_settings_for_runtime(llm_runtime),
+        settings,
         timeout_seconds=resolved_timeout,
-        retries_per_base=retries_per_base,
+        retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
     )
     return client
 
@@ -8948,13 +8912,14 @@ def _build_deep_beta_reasoning_client(
     timeout_cap_seconds: float = 25.0,
     llm_runtime: dict[str, Any] | None = None,
 ) -> DeepSeekClient | None:
-    _, api_key, base_url, model = _resolve_runtime_llm_config(llm_runtime)
-    if not api_key or not base_url or not model:
+    # Compatibility-only argument; registry owns model selection and rollback.
+    del llm_runtime
+    if not _deployment_model_configured():
         return None
     timeout_seconds = max(2.0, min(float(settings.deepseek_timeout_seconds), timeout_cap_seconds))
     client, _ = build_task_client(
         ModelTask.RESEARCH_REASONING,
-        _registry_settings_for_runtime(llm_runtime),
+        settings,
         timeout_seconds=timeout_seconds,
         retries_per_base=max(0, int(settings.deepseek_retries_per_base)),
     )

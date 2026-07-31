@@ -197,7 +197,7 @@ explicit review before creating the existing `text` event; model output cannot
 confirm, mutate truth state or provide a confidence score. Turn the extraction
 flag off and restart both services for an immediate rollback.
 
-> Note: historical request-shaped `llm_runtime` data is compatibility-only and is discarded before RAG generation. Provider, endpoint, model, credential and timeout are deployment-owned registry configuration, never request-selected. The API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
+> Note: historical request-shaped `llm_runtime` data is compatibility-only and is discarded before RAG **or Research Tier2** client construction. Provider, endpoint, model, credential, retry policy and timeout are deployment-owned registry configuration, never request-selected. The API ML request timeout must stay `>=` the ML synthesis timeout for the same request class.
 
 ## Safety-First Guardrails (invariants)
 

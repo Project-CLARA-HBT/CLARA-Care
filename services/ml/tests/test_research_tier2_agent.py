@@ -57,13 +57,12 @@ def test_filter_context_for_ddi_keeps_authoritative_label_rows():
     assert all(item.get("id") != "pubmed-unrelated" for item in filtered)
 
 
-def test_resolve_runtime_llm_config_prefers_env_in_deepseek_only(
+def test_resolve_runtime_llm_config_ignores_request_payload(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    monkeypatch.setattr(tier2.settings, "llm_deepseek_only", True)
     monkeypatch.setattr(tier2.settings, "deepseek_api_key", "env-deepseek-key")
-    monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://api.yescale.vip/v1")
-    monkeypatch.setattr(tier2.settings, "deepseek_model", "deepseek-v3.2")
+    monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://deployment.example/v1")
+    monkeypatch.setattr(tier2.settings, "deepseek_model", "deepseek-v4-pro")
 
     provider, api_key, base_url, model = tier2._resolve_runtime_llm_config(
         {
@@ -76,8 +75,8 @@ def test_resolve_runtime_llm_config_prefers_env_in_deepseek_only(
 
     assert provider == "deepseek"
     assert api_key == "env-deepseek-key"
-    assert base_url == "https://api.yescale.vip/v1"
-    assert model == "deepseek-v3.2"
+    assert base_url == "https://deployment.example/v1"
+    assert model == "deepseek-v4-pro"
 
 
 def test_run_research_tier2_falls_back_to_merged_context_when_ddi_filter_empty(
@@ -3017,14 +3016,17 @@ def test_deep_aggregate_retains_pass_context_when_final_gate_is_not_verified(
     assert policy["reason"] == "final_context_below_minimum"
 
 
-def test_query_planner_runtime_override_has_clinically_usable_timeout(
+def test_query_planner_ignores_runtime_payload_and_uses_deployment_registry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(tier2.settings, "deepseek_timeout_seconds", 30.0)
-    monkeypatch.setattr(tier2.settings, "llm_deepseek_only", True)
     monkeypatch.setattr(tier2.settings, "deepseek_api_key", "configured-key")
-    monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://llm.example/v1")
-    monkeypatch.setattr(tier2.settings, "deepseek_model", "medical-planner")
+    monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://deployment.example/v1")
+    monkeypatch.setattr(tier2.settings, "deepseek_model", "deepseek-v4-pro")
+    monkeypatch.setattr(tier2.settings, "deepseek_pro_model", "deployment-v4-pro")
+    monkeypatch.setattr(tier2.settings, "deepseek_flash_model", "deployment-v4-flash")
+    monkeypatch.setattr(tier2.settings, "model_registry_enabled", True)
+    monkeypatch.setattr(tier2.settings, "model_registry_task_model_routing_enabled", True)
 
     client = tier2._build_query_planner_client(
         llm_runtime={
@@ -3035,7 +3037,10 @@ def test_query_planner_runtime_override_has_clinically_usable_timeout(
     )
 
     assert client is not None
-    assert client._timeout_seconds == 25.0
+    assert client.model == "deployment-v4-flash"
+    assert client._api_key == "configured-key"
+    assert client._base_urls == ["https://deployment.example/v1"]
+    assert client._timeout_seconds == 30.0
 
 
 def test_default_research_clients_use_typed_model_registry(
@@ -3063,24 +3068,48 @@ def test_default_research_clients_use_typed_model_registry(
     ]
 
 
-def test_runtime_override_still_constructs_through_registry(
+def test_legacy_runtime_payloads_pass_deployment_settings_to_every_research_task(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(tier2.settings, "deepseek_api_key", "configured-key")
     monkeypatch.setattr(tier2.settings, "deepseek_base_url", "https://llm.example/v1")
     monkeypatch.setattr(tier2.settings, "deepseek_model", "medical-planner")
+    captured: list[tuple[object, object, float | None, int | None]] = []
+    sentinel = object()
 
-    def direct_constructor_must_not_run(*_args, **_kwargs):
-        raise AssertionError("research must not instantiate DeepSeekClient directly")
+    def fake_build(
+        task,
+        supplied_settings,
+        *,
+        timeout_seconds=None,
+        retries_per_base=None,
+        **_kwargs,
+    ):
+        captured.append((task, supplied_settings, timeout_seconds, retries_per_base))
+        return sentinel, object()
 
-    monkeypatch.setattr(tier2, "DeepSeekClient", direct_constructor_must_not_run)
-    client = tier2._build_query_planner_client(
-        llm_runtime={
-            "api_key": "request-key",
-            "base_url": "https://runtime-llm.example/v1",
-            "model": "runtime-medical-planner",
-        }
+    monkeypatch.setattr(tier2, "build_task_client", fake_build)
+    runtime_payload = {
+        "provider": "untrusted-provider",
+        "api_key": "request-key",
+        "base_url": "https://runtime-llm.example/v1",
+        "model": "runtime-medical-planner",
+    }
+
+    assert tier2._build_query_planner_client(llm_runtime=runtime_payload) is sentinel
+    assert tier2._build_reasoning_client(llm_runtime=runtime_payload) is sentinel
+    assert tier2._build_deep_beta_reasoning_client(llm_runtime=runtime_payload) is sentinel
+
+    assert [task.value for task, _settings, _timeout, _retries in captured] == [
+        "research_query_planning",
+        "research_reasoning",
+        "research_reasoning",
+    ]
+    assert all(
+        supplied_settings is tier2.settings
+        for _task, supplied_settings, _timeout, _retries in captured
     )
-
-    assert client is not None
-    assert client._timeout_seconds == 25.0
+    assert all(
+        retries == tier2.settings.deepseek_retries_per_base
+        for _task, _settings, _timeout, retries in captured
+    )
