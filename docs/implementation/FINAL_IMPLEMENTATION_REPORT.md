@@ -7,7 +7,7 @@ result that was not actually run.
 
 Reconciliation checkpoint: this document was updated after the recent V4,
 LifeMap, Research, Scribe, Council, CareGuard, deployment and i18n commits,
-including `8bd27232` through `8bbc1689`. Per the current user direction, this
+including `8bd27232` through `85659f9b`. Per the current user direction, this
 documentation-only checkpoint did **not** run format, lint, type checks,
 tests, builds, evaluation or deployment. Earlier execution records below are
 historical evidence only; they do not validate commits made after those runs.
@@ -182,6 +182,12 @@ claim is made.
   default-off, dual-gated lazy composition of the existing source registry and
   ingestion orchestrator. The same checkpoint adds deployment/runtime guards;
   it has no new execution or external-ingestion evidence.
+- `58433d68` moves legacy Chat starter questions into the typed catalog and
+  adds a scoped literal-copy gate for that static surface. `8de7f745` records
+  the credentialed Google Chirp-3 adapter accurately and narrows its provider
+  locale inputs. `85659f9b` renames the active RAG component to
+  `EvidenceReranker`, retaining only compatibility aliases; its ranking and
+  candidate-only evidence boundary do not change.
 
 All of these checkpoints have static whitespace evidence only in this pass;
 their tests, builds, evaluation and deployment remain deferred by instruction.
