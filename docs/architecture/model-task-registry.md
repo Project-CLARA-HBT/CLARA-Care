@@ -99,9 +99,12 @@ DEEPSEEK_FLASH_MODEL=deepseek-v4-flash
 ```
 
 The production env guard requires `DEEPSEEK_MODEL` to equal
-`DEEPSEEK_PRO_MODEL`, requires the Pro and Flash identifiers to be distinct,
-and requires both registry switches to be explicitly `true`. This prevents a
-stale deploy secret from silently reverting to a legacy single-model path.
+`DEEPSEEK_PRO_MODEL`, requires the exact governed identifiers
+`deepseek-v4-pro` and `deepseek-v4-flash`, and requires both registry switches
+to be explicitly `true`. This prevents a stale deploy secret from silently
+reverting to a legacy single-model path or an unsupported catalog. A recovery
+uses `MODEL_REGISTRY_ROLLBACK_MODEL` and `MODEL_REGISTRY_FORCE_ROLLBACK`; it
+does not replace the governed Pro/Flash deployment defaults.
 
 ## Aggregate routing evidence
 

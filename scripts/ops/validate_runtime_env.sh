@@ -91,6 +91,14 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
     echo "[env-guard] DEEPSEEK_PRO_MODEL and DEEPSEEK_FLASH_MODEL must be distinct" >&2
     errors=$((errors + 1))
   fi
+  if [[ "${ENV_VALUES[DEEPSEEK_PRO_MODEL]:-}" != "deepseek-v4-pro" ]]; then
+    echo "[env-guard] DEEPSEEK_PRO_MODEL must be deepseek-v4-pro for the governed V4 route" >&2
+    errors=$((errors + 1))
+  fi
+  if [[ "${ENV_VALUES[DEEPSEEK_FLASH_MODEL]:-}" != "deepseek-v4-flash" ]]; then
+    echo "[env-guard] DEEPSEEK_FLASH_MODEL must be deepseek-v4-flash for the governed V4 route" >&2
+    errors=$((errors + 1))
+  fi
   if [[ "${ENV_VALUES[LLM_DEEPSEEK_ONLY]:-}" != "true" ]]; then
     echo "[env-guard] LLM_DEEPSEEK_ONLY=true is required for the governed runtime" >&2
     errors=$((errors + 1))
