@@ -9,14 +9,12 @@ import {
   SurfaceCard,
 } from "@/components/ui/surface";
 import Button from "@/components/ui/button";
-import { Field, Select } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
 import {
   acceptFamilyInvitation,
-  createFamilyInvitation,
-  getFamilyShareOptions,
   listFamilyAccessLog,
   listFamilyGrants,
   listFamilyRelationships,
@@ -118,16 +116,6 @@ export default function FamilyPage() {
   const [grants, setGrants] = useState<FamilyGrant[]>([]);
   const [relationships, setRelationships] = useState<FamilyGrant[]>([]);
   const [logs, setLogs] = useState<FamilyAccessLog[]>([]);
-  const [email, setEmail] = useState("");
-  const [objectType, setObjectType] = useState<"episode" | "visit">("episode");
-  const [objectId, setObjectId] = useState("");
-  const [shareable, setShareable] = useState<{
-    episode: Array<{ id: string; label: string }>;
-    visit: Array<{ id: string; label: string }>;
-  }>({ episode: [], visit: [] });
-  const [purpose, setPurpose] = useState<"care_coordination" | "visit_support">(
-    "care_coordination",
-  );
   const [inviteToken, setInviteToken] = useState("");
   const [createdToken, setCreatedToken] = useState("");
   const [loading, setLoading] = useState(true);
@@ -138,21 +126,14 @@ export default function FamilyPage() {
     setLoading(true);
     setError("");
     try {
-      const [owned, received, history, options] = await Promise.all([
+      const [owned, received, history] = await Promise.all([
         listFamilyGrants(),
         listFamilyRelationships(),
         listFamilyAccessLog(),
-        getFamilyShareOptions(),
       ]);
       setGrants(owned);
       setRelationships(received);
       setLogs(history);
-      const nextShareable = {
-        episode: options.episodes,
-        visit: options.visits,
-      };
-      setShareable(nextShareable);
-      setObjectId((current) => current || nextShareable.episode[0]?.id || "");
     } catch {
       setError(copy("familyCircle.loadError"));
     } finally {
@@ -160,29 +141,6 @@ export default function FamilyPage() {
     }
   }, [copy]);
   useEffect(() => void load(), [load]);
-
-  const invite = async (event: FormEvent) => {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
-    setCreatedToken("");
-    try {
-      const actions = objectType === "episode" ? ["view", "add_observation"] : ["view"];
-      const result = await createFamilyInvitation({
-        recipient_email: email.trim(),
-        scope: { object_type: objectType, object_id: objectId, allowed_actions: actions },
-        purpose,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-      setCreatedToken(result.token);
-      setEmail("");
-      setObjectId("");
-    } catch {
-      setError(copy("familyCircle.createError"));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const accept = async (event: FormEvent) => {
     event.preventDefault();
@@ -333,56 +291,14 @@ export default function FamilyPage() {
         </div>
 
         <aside className="space-y-5">
-          <SurfaceCard className="p-5">
+          <SurfaceCard className="border-[color:var(--brand-200)] bg-[var(--surface-brand-soft)] p-5">
             <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.invite.title")}</h2>
             <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
               {copy("familyCircle.invite.description")}
             </p>
-            <form className="mt-4 space-y-3" onSubmit={(event) => void invite(event)}>
-              <Field
-                label={copy("familyCircle.invite.email")}
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-              <Select
-                label={copy("familyCircle.invite.scope")}
-                value={objectType}
-                onChange={(event) => {
-                  const nextType = event.target.value as "episode" | "visit";
-                  setObjectType(nextType);
-                  setObjectId(shareable[nextType][0]?.id || "");
-                }}
-              >
-                <option value="episode">{copy("familyCircle.object.episode")}</option>
-                <option value="visit">{copy("familyCircle.object.visit")}</option>
-              </Select>
-              <Select
-                label={copy("familyCircle.invite.sharedItem")}
-                required
-                value={objectId}
-                onChange={(event) => setObjectId(event.target.value)}
-              >
-                <option value="">{copy("familyCircle.invite.chooseItem", { item: objectLabel(objectType) })}</option>
-                {shareable[objectType].map((item) => (
-                  <option key={item.id} value={item.id}>{item.label}</option>
-                ))}
-              </Select>
-              <Select
-                label={copy("familyCircle.invite.purpose")}
-                value={purpose}
-                onChange={(event) =>
-                  setPurpose(event.target.value as "care_coordination" | "visit_support")
-                }
-              >
-                <option value="care_coordination">{copy("familyCircle.purpose.careCoordination")}</option>
-                <option value="visit_support">{copy("familyCircle.purpose.visitSupport")}</option>
-              </Select>
-              <Button type="submit" block disabled={saving}>
-                {copy("familyCircle.invite.create")}
-              </Button>
-            </form>
+            <Button as="link" href="/family/invite" className="mt-4" block icon="person_add">
+              {copy("familyCircle.invite.start")}
+            </Button>
             {createdToken ? (
               <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3">
                 <p className="text-xs text-[var(--status-warn-text)]">
