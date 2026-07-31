@@ -529,6 +529,10 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RESEARCH_CLARIFYING_QUESTIONS_ENABLED",
     )
+    research_output_modes_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_OUTPUT_MODES_ENABLED",
+    )
     research_role_gated_telemetry_enabled: bool = Field(
         default=False,
         validation_alias="RESEARCH_ROLE_GATED_TELEMETRY_ENABLED",

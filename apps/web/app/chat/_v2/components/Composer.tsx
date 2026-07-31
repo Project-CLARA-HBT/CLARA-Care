@@ -7,6 +7,7 @@ import { t } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import type {
   ResearchExecutionMode,
+  ResearchOutputMode,
   ResearchRetrievalStackMode,
 } from "@/lib/research";
 import { IconButton } from "@/app/chat/_v2/components/primitives";
@@ -44,6 +45,9 @@ export type ComposerProps = {
   onChangeRetrievalStackMode: (mode: ResearchRetrievalStackMode) => void;
   personalMode: boolean;
   onTogglePersonalMode: () => void;
+  outputModesEnabled: boolean;
+  outputMode: ResearchOutputMode;
+  onChangeOutputMode: (mode: ResearchOutputMode) => void;
   liveStatusNote: string;
   uiLanguage: UILanguage;
   userRole?: UserRole;
@@ -62,11 +66,15 @@ function Composer(props: ComposerProps) {
     onChangeRetrievalStackMode,
     personalMode,
     onTogglePersonalMode,
+    outputModesEnabled,
+    outputMode,
+    onChangeOutputMode,
     liveStatusNote,
     uiLanguage,
     userRole = "normal",
   } = props;
   const isFast = mode === "fast";
+  const canUseProfessionalOutput = userRole === "researcher" || userRole === "doctor" || userRole === "admin";
   const contextLabel = t(
     uiLanguage,
     userRole === "researcher"
@@ -227,6 +235,25 @@ function Composer(props: ComposerProps) {
                         {t(uiLanguage, "chat.composer.allSources")}
                       </option>
                     </select>
+                    {outputModesEnabled && canUseProfessionalOutput ? (
+                      <label className="mt-2 block px-1 text-[10px] font-semibold text-[var(--text-muted)]">
+                        {t(uiLanguage, "chat.composer.outputMode")}
+                        <select
+                          value={outputMode}
+                          onChange={(event) =>
+                            onChangeOutputMode(event.target.value as ResearchOutputMode)
+                          }
+                          className="mt-1 min-h-[36px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-xs text-[var(--text-primary)]"
+                        >
+                          <option value="plain_language">
+                            {t(uiLanguage, "chat.composer.outputMode.plainLanguage")}
+                          </option>
+                          <option value="professional">
+                            {t(uiLanguage, "chat.composer.outputMode.professional")}
+                          </option>
+                        </select>
+                      </label>
+                    ) : null}
                   </div>
                 </details>
               ) : null}

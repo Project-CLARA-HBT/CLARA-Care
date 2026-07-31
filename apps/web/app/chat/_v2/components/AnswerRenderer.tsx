@@ -75,6 +75,7 @@ function AnswerRenderer({
     result.tier === "tier2" ? (result.citationRegistry ?? []) : [];
   const evidenceRelease =
     result.tier === "tier2" ? result.evidenceRelease : undefined;
+  const presentation = result.tier === "tier2" ? result.presentation : undefined;
   const answer =
     tracedClaims.length && citationRegistry.length
       ? injectTracedClaimAnchors(baseAnswer, tracedClaims, citationRegistry)
@@ -109,6 +110,20 @@ function AnswerRenderer({
               ))}
             </ul>
           ) : null}
+        </section>
+      ) : null}
+
+      {presentation?.mode === "professional" ? (
+        <section
+          className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2.5"
+          aria-label={copy("chat.answerRenderer.presentation.professionalAria")}
+        >
+          <p className="text-xs font-semibold text-[var(--text-primary)]">
+            {copy("chat.answerRenderer.presentation.professionalTitle")}
+          </p>
+          <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">
+            {copy("chat.answerRenderer.presentation.professionalDescription")}
+          </p>
         </section>
       ) : null}
 
@@ -234,6 +249,26 @@ function AnswerRenderer({
                 </li>
               );
             })}
+          </ol>
+        </section>
+      ) : null}
+
+      {presentation?.citationVisibility === "expanded" && citations.length ? (
+        <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            {copy("chat.answerRenderer.presentation.sources")}
+          </h3>
+          <ol className="mt-2 space-y-1.5">
+            {citations.map((citation, index) => (
+              <li key={`${citation.sourceId ?? citation.url ?? citation.title}-${index}`} className="text-[12px] leading-5 text-[var(--text-secondary)]">
+                <span className="font-semibold text-[var(--text-primary)]">[{index + 1}]</span>{" "}
+                {citation.url ? (
+                  <a href={citation.url} target="_blank" rel="noreferrer" className="underline decoration-[color:var(--text-brand)] underline-offset-2">
+                    {citation.title}
+                  </a>
+                ) : citation.title}
+              </li>
+            ))}
           </ol>
         </section>
       ) : null}

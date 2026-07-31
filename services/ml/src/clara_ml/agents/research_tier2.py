@@ -684,6 +684,26 @@ def _normalize_answer_language(payload: dict[str, Any]) -> str:
     return "vi"
 
 
+def _normalize_research_output_mode(payload: dict[str, Any], *, role: str | None) -> str | None:
+    """Resolve the closed presentation selector without generating text.
+
+    This is a defence-in-depth ML gate only. The API remains the release
+    authority and does the deterministic presentation composition *after* its
+    evidence-release gate. Normal users remain on plain language; an upstream
+    caller cannot use this field to alter retrieval, model selection, claims,
+    citations, or policy.
+    """
+
+    if not settings.research_output_modes_enabled:
+        return None
+    requested = str(payload.get("output_mode") or "plain_language").strip().lower()
+    if requested != "professional":
+        return "plain_language"
+    if str(role or "").strip().lower() not in {"researcher", "doctor", "admin"}:
+        return "plain_language"
+    return "professional"
+
+
 def _normalize_personal_mode(payload: dict[str, Any]) -> bool:
     value = payload.get("personal_mode")
     if isinstance(value, bool):
@@ -9170,6 +9190,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     trace_id, run_id = _resolve_trace_identifiers(payload)
     source_mode = str(payload.get("source_mode") or "").strip().lower() or None
     role_hint = str(payload.get("role") or "").strip().lower() or None
+    output_mode = _normalize_research_output_mode(payload, role=role_hint)
     uploaded_documents_raw = payload.get("uploaded_documents")
     uploaded_documents: list[dict[str, Any]] = (
         uploaded_documents_raw if isinstance(uploaded_documents_raw, list) else []
@@ -12028,6 +12049,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 "emergency": route.emergency,
             },
             "answer_format": "markdown",
+            # Presentation mode is a closed, non-generative acknowledgement
+            # for the API release boundary. Omit it entirely while the dark
+            # flag is off, preserving the legacy result shape.
+            **({"output_mode": output_mode} if output_mode is not None else {}),
             "render_hints": {
                 "markdown": True,
                 "tables": True,
@@ -12111,6 +12136,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "answer": answer_markdown,
         "answer_markdown": answer_markdown,
         "answer_format": "markdown",
+        **({"output_mode": output_mode} if output_mode is not None else {}),
         "render_hints": {
             "markdown": True,
             "tables": True,

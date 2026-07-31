@@ -1190,6 +1190,13 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED",
     )
+    # Closed, deterministic renderer selection. The ML service only echoes an
+    # allowlisted mode for API-side presentation after the release gate; it
+    # never sends this selector to a model or rewrites claims/citations.
+    research_output_modes_enabled: bool = Field(
+        default=False,
+        validation_alias="RESEARCH_OUTPUT_MODES_ENABLED",
+    )
 
     # --- Platform hardening: circuit breaker (additive; default OFF) ---------
     # Mirrors the API-side HARDENING_CIRCUIT_BREAKER_ENABLED flag so the ML

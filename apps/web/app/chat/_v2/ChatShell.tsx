@@ -27,9 +27,11 @@ import {
 } from "@/lib/theme";
 import {
   ResearchExecutionMode,
+  ResearchOutputMode,
   ResearchRetrievalStackMode,
   appendResearchConversationMessage,
   createResearchConversation,
+  isResearchOutputModesEnabled,
   resolveChatTransport,
 } from "@/lib/research";
 import {
@@ -93,6 +95,8 @@ export default function ChatShell() {
   const [retrievalStackMode, setRetrievalStackMode] =
     useState<ResearchRetrievalStackMode>("auto");
   const [personalMode, setPersonalMode] = useState(false);
+  const [outputMode, setOutputMode] = useState<ResearchOutputMode>("plain_language");
+  const outputModesEnabled = isResearchOutputModesEnabled();
 
   const [activeConversationId, setActiveConversationId] = useState<
     number | null
@@ -324,6 +328,7 @@ export default function ChatShell() {
           retrievalStackMode,
           personalMode,
           uiLanguage,
+          outputMode: outputModesEnabled ? outputMode : undefined,
         });
 
         const localTurn = createConversationItem(message, result, {
@@ -867,6 +872,9 @@ export default function ChatShell() {
             onChangeRetrievalStackMode={setRetrievalStackMode}
             personalMode={personalMode}
             onTogglePersonalMode={togglePersonalMode}
+            outputModesEnabled={outputModesEnabled}
+            outputMode={outputMode}
+            onChangeOutputMode={setOutputMode}
             liveStatusNote={stream.statusNote}
             uiLanguage={uiLanguage}
             userRole={role}

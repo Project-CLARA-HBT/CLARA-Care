@@ -58,6 +58,7 @@ ML flags (`services/ml/src/clara_ml/config.py`):
 | `RESEARCH_CONSENSUS_ENABLED`                   | `false` | Support/contrast/neutral counts + conflict section|
 | `RESEARCH_CLAIM_TRACE_ENABLED`                 | `false` | Traced claims + Citation Registry appendix        |
 | `RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED`        | `false` | Exclusive normal/researcher/doctor output profiles|
+| `RESEARCH_OUTPUT_MODES_ENABLED`                | `false` | API/ML-gated deterministic plain/professional reader chrome |
 
 API flags (`services/api/src/clara_api/core/config.py`):
 
@@ -121,7 +122,9 @@ professional/admin rails.
      `RESEARCH_GAP_FILL_ENABLED`, `RESEARCH_RECENCY_TRUST_RANKING_ENABLED`.
    - Wave B (evidence presentation): `RESEARCH_PICO_ENABLED`,
      `RESEARCH_EVIDENCE_SIGNALS_ENABLED`, `RESEARCH_CONSENSUS_ENABLED`,
-     `RESEARCH_CLAIM_TRACE_ENABLED`, `RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED`.
+     `RESEARCH_CLAIM_TRACE_ENABLED`, `RESEARCH_ROLE_ADAPTIVE_OUTPUT_ENABLED`,
+     `RESEARCH_OUTPUT_MODES_ENABLED` (also build web with
+     `NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED=true`).
    - Wave C (surface/IO): `RESEARCH_CLARIFYING_QUESTIONS_ENABLED`,
      `RESEARCH_ROLE_GATED_TELEMETRY_ENABLED`, `RESEARCH_PERSONALIZATION_ENABLED`,
      `RESEARCH_EXPORT_ENABLED`, `RESEARCH_SHARE_ENABLED`,

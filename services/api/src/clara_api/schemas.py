@@ -726,6 +726,7 @@ class SourceHubSyncResponse(BaseModel):
 
 ResearchConversationTier = Literal["tier1", "tier2"]
 ResearchJobStatus = Literal["queued", "running", "completed", "failed"]
+ResearchOutputMode = Literal["plain_language", "professional"]
 
 
 class ResearchConversationCreateRequest(BaseModel):
@@ -772,6 +773,10 @@ class ResearchTier2JobCreateRequest(BaseModel):
         default="vi",
         validation_alias=AliasChoices("ui_language", "answer_language"),
     )
+    # The API resolves this closed, presentation-only selector after RBAC and
+    # again after the evidence-release gate. It never changes retrieval,
+    # claims, citations, policy, or model routing.
+    output_mode: ResearchOutputMode = "plain_language"
     # deep_pass_count declared EXACTLY ONCE with one bound set 1..6 (clara-research R1.2/R1.3).
     deep_pass_count: int | None = Field(default=None, ge=1, le=6)
     answer_format: str = "markdown"

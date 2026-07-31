@@ -109,6 +109,7 @@ for i in "${!services[@]}"; do
   build_args=()
   if [[ "$service" == "web" ]]; then
     build_args+=(--build-arg "NEXT_PUBLIC_API_URL=/api/v1")
+    build_args+=(--build-arg "NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED=${NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED:-false}")
   fi
 
   cache_args=()

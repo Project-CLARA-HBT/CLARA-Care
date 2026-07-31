@@ -4,6 +4,7 @@ import { getCsrfToken } from "@/lib/auth-store";
 export type ResearchTier = "tier1" | "tier2";
 export type ResearchExecutionMode = "fast" | "deep" | "deep_beta";
 export type ResearchRetrievalStackMode = "auto" | "full";
+export type ResearchOutputMode = "plain_language" | "professional";
 
 /**
  * Transport used to fulfil a chat/research submission.
@@ -17,8 +18,19 @@ export const RESEARCH_TIER2_TIMEOUT_MS = 10 * 60 * 1000;
 export const RESEARCH_TIER2_JOB_POLL_MS = 1800;
 export const RESEARCH_TIER2_STREAM_MAX_WAIT_MS = 30 * 60 * 1000;
 
+/** Client mirror of the default-off presentation rollout. The API and ML
+ * independently enforce the same server-side gate; this only keeps the dark
+ * control out of the UI until all three deployments are enabled. */
+export function isResearchOutputModesEnabled(): boolean {
+  const value = (process.env.NEXT_PUBLIC_RESEARCH_OUTPUT_MODES_ENABLED ?? "")
+    .trim()
+    .toLowerCase();
+  return value === "true" || value === "1" || value === "yes" || value === "on";
+}
+
 export type Tier2Citation = {
   title: string;
+  sourceId?: string;
   source?: string;
   url?: string;
   snippet?: string;
@@ -367,6 +379,19 @@ export type ResearchEvidenceReleaseReason =
   | "unsupported_claims"
   | "zero_claim_support";
 
+/**
+ * API-owned, deterministic reader chrome for a research answer that already
+ * passed evidence release. It is not a model output and contains no verifier
+ * rows, provider data, prompt, confidence, or clinical claim beyond the
+ * released markdown/citation identifiers.
+ */
+export type ResearchVerifiedPresentation = {
+  mode: ResearchOutputMode;
+  answer: string;
+  citationIds: string[];
+  citationVisibility: "compact" | "expanded";
+};
+
 export type ResearchTier2Result = {
   answer: string;
   citations: Tier2Citation[];
@@ -394,6 +419,7 @@ export type ResearchTier2Result = {
    * quality gate returned a valid projection; absent for legacy records.
    */
   evidenceRelease?: ResearchEvidenceRelease;
+  presentation?: ResearchVerifiedPresentation;
   debug: ResearchTier2DebugMeta;
   verificationStatus?: {
     verdict?: string;
@@ -448,6 +474,7 @@ export type ResearchTier2JobCreateOptions = {
   personalMode?: boolean;
   uiLanguage?: "vi" | "en";
   deepPassCount?: number;
+  outputMode?: ResearchOutputMode;
   /**
    * Answers to the clarifying questions returned by `POST /research/clarify`
    * (Requirement 12.2). Keyed by question `id`. Carried verbatim to the job
@@ -668,6 +695,25 @@ function parseEvidenceRelease(value: unknown): ResearchEvidenceRelease | undefin
   return { passed, reasons };
 }
 
+function parseVerifiedPresentation(value: unknown): ResearchVerifiedPresentation | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  const mode = asText(record.mode);
+  const answer = asText(record.answer_markdown);
+  const visibility = asText(record.citation_visibility);
+  if (
+    (mode !== "plain_language" && mode !== "professional") ||
+    !answer ||
+    (visibility !== "compact" && visibility !== "expanded") ||
+    !Array.isArray(record.citation_ids)
+  ) {
+    return undefined;
+  }
+  const citationIds = uniqueText(record.citation_ids.map((item) => asText(item) ?? ""));
+  if (citationIds.length !== record.citation_ids.length) return undefined;
+  return { mode, answer, citationIds, citationVisibility: visibility };
+}
+
 function asId(value: unknown): string | undefined {
   const text = asText(value);
   if (text) return text;
@@ -843,6 +889,7 @@ function parseCitation(value: unknown): Tier2Citation | null {
 
   return {
     title,
+    sourceId: asText(item.source_id) ?? asText(item.sourceId),
     source: asText(item.source) ?? asText(item.publisher) ?? asText(item.source_id),
     url: asSafeHttpUrl(item.url),
     snippet: asText(item.snippet) ?? asText(item.summary) ?? asText(item.relevance),
@@ -3081,6 +3128,9 @@ export async function createResearchTier2Job(
   if (typeof options?.deepPassCount === "number" && Number.isFinite(options.deepPassCount)) {
     payload.deep_pass_count = Math.max(1, Math.trunc(options.deepPassCount));
   }
+  if (options?.outputMode === "plain_language" || options?.outputMode === "professional") {
+    payload.output_mode = options.outputMode;
+  }
   if (uploadedFileIds.length) payload.uploaded_file_ids = uploadedFileIds;
   if (sourceIds.length) payload.source_ids = sourceIds;
   if (sourceHubSources.length) payload.source_hub_sources = sourceHubSources;
@@ -3324,7 +3374,13 @@ export function normalizeResearchTier2JobProgress(value: unknown): ResearchTier2
 
 export function normalizeResearchTier2(data: ResearchTier2RawResponse): ResearchTier2Result {
   const metadata = asRecord(data.metadata) ?? {};
-  const answer =
+  const evidenceRelease = parseEvidenceRelease(
+    (data as Record<string, unknown>).quality_gate ?? metadata.quality_gate
+  );
+  const presentationCandidate = parseVerifiedPresentation(
+    (data as Record<string, unknown>).presentation
+  );
+  const legacyAnswer =
     asText(data.answer_markdown) ??
     asText(data.answer_md) ??
     asText(metadata.answer_markdown) ??
@@ -3333,6 +3389,16 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     asText(data.message) ??
     "";
   const citations = parseList(data.citations ?? data.sources, parseCitation);
+  const presentation =
+    evidenceRelease?.passed === true &&
+    presentationCandidate &&
+    presentationCandidate.citationIds.length === citations.length &&
+    presentationCandidate.citationIds.every((id) => citations.some((citation) => citation.sourceId === id))
+      ? presentationCandidate
+      : undefined;
+  // Never trust a presentation body until its independent API release proof
+  // and its complete citation-ID binding have both parsed successfully.
+  const answer = presentation?.answer ?? legacyAnswer;
   const contextDebug = asRecord(data.context_debug) ?? asRecord(metadata.context_debug);
   const telemetryRecord =
     asRecord(data.telemetry) ??
@@ -3627,9 +3693,6 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
   // The API quality gate is the sole authority for releasing research prose.
   // Parse only its bounded, non-PII release decision; do not surface raw
   // verifier rows, model confidence, provider errors, or prompt telemetry.
-  const evidenceRelease = parseEvidenceRelease(
-    (data as Record<string, unknown>).quality_gate ?? metadata.quality_gate
-  );
   const rawVerificationState = asText(metadata.verification_status);
   const retrievalStackMode = normalizeResearchRetrievalStackMode(
     asText(metadata.retrieval_stack_mode) ??
@@ -3659,6 +3722,7 @@ export function normalizeResearchTier2(data: ResearchTier2RawResponse): Research
     tracedClaims,
     citationRegistry,
     evidenceRelease,
+    presentation,
     debug: {
       pipeline: asText(metadata.pipeline),
       responseStyle: asText(metadata.response_style),

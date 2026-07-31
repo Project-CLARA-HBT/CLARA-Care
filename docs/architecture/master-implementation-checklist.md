@@ -25,6 +25,13 @@ recorded as implementation evidence, not release evidence.
 
 ## Recent additive checkpoints
 
+- PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
+  `plain_language` is the default and `professional` is role-limited. ML only
+  acknowledges a closed selector; API adds the deterministic projection only
+  after the existing quality gate passes. The released markdown and citations
+  remain unchanged, while abstentions get no presentation payload. Focused
+  API/ML/web contracts are present but unrun in this feature-first checkpoint.
+
 - `d53af25a` / `99a69fbe` add the source-version-bound, owner-scoped DrugBank
   clarification path to web/mobile. It blocks all DDI conclusion and cache
   projection while identity is ambiguous; the mobile state is locale-aware in

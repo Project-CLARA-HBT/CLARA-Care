@@ -1023,6 +1023,27 @@ def _coerce_research_mode(payload: dict[str, Any]) -> str:
     )
 
 
+def _resolve_research_output_mode(
+    value: Any,
+    *,
+    role: str | None,
+) -> str:
+    """Return a role-safe closed presentation mode.
+
+    This selector is deliberately not a research, retrieval, verifier, or
+    model-routing input. Consumers always receive plain language. Professional
+    presentation is limited to the existing professional roles and remains
+    subject to the same evidence-release boundary as the base answer.
+    """
+
+    requested = str(value or "plain_language").strip().lower()
+    if requested != "professional":
+        return "plain_language"
+    if str(role or "").strip().lower() not in {"researcher", "doctor", "admin"}:
+        return "plain_language"
+    return "professional"
+
+
 def _coerce_retrieval_stack_mode(payload: dict[str, Any]) -> str:
     return _normalize_retrieval_stack_mode_value(
         payload.get("retrieval_stack_mode") or payload.get("stack_mode"),
@@ -2105,6 +2126,16 @@ def _build_tier2_upstream_payload(
     upstream_payload["answer_language"] = answer_language
     upstream_payload["answer_format"] = str(upstream_payload.get("answer_format") or "markdown")
     upstream_payload["response_format"] = str(upstream_payload.get("response_format") or "markdown")
+    # Output modes are a separately dark presentation feature. The selected
+    # closed value is persisted with the durable job only when the API gate is
+    # enabled, and is echoed through ML solely for a second gate. It is never
+    # passed to the LLM prompt or allowed to alter retrieval/model policy.
+    if settings.research_output_modes_enabled:
+        upstream_payload["output_mode"] = _resolve_research_output_mode(
+            upstream_payload.get("output_mode"), role=token.role
+        )
+    else:
+        upstream_payload.pop("output_mode", None)
     incoming_render_hints = upstream_payload.get("render_hints")
     if isinstance(incoming_render_hints, dict):
         merged_render_hints = {
@@ -2221,6 +2252,25 @@ def _enforce_request_execution_contract(
     metadata_obj["retrieval_stack_mode"] = retrieval_stack_mode
     response["ui_language"] = answer_language
     metadata_obj["answer_language"] = answer_language
+
+    # API and ML must both acknowledge a closed output mode before any
+    # presentation payload can be composed. A missing/mismatched ML
+    # acknowledgement fails closed to the established answer-only response.
+    settings = get_settings()
+    if settings.research_output_modes_enabled:
+        expected_output_mode = _resolve_research_output_mode(
+            request_payload.get("output_mode"),
+            role=str(request_payload.get("role") or ""),
+        )
+        candidate_output_mode = str(
+            response.get("output_mode") or metadata_obj.get("output_mode") or ""
+        ).strip().lower()
+        if candidate_output_mode == expected_output_mode:
+            response["output_mode"] = expected_output_mode
+            metadata_obj["output_mode"] = expected_output_mode
+        else:
+            response.pop("output_mode", None)
+            metadata_obj.pop("output_mode", None)
 
     # R5.5 (defense in depth): the API forcibly caps the reported gap-fill pass count at
     # the configured hard ceiling so a misbehaving orchestrator cannot surface or persist
@@ -2731,6 +2781,66 @@ def _apply_research_quality_gates(
     return gated
 
 
+def _attach_verified_research_presentation(
+    result: dict[str, Any], *, request_payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach a deterministic read-only presentation after evidence release.
+
+    The original ``answer_markdown`` and ``citations`` are deliberately left
+    untouched. This function adds no medical prose, makes no model call, and
+    only exposes citation *identifiers* already present in the released
+    envelope. Any failed, malformed, skipped, or unavailable verification path
+    keeps the existing safe abstention byte-for-byte from the quality gate.
+    """
+
+    settings = get_settings()
+    if not settings.research_output_modes_enabled:
+        return result
+
+    gated = dict(result)
+    quality_gate = gated.get("quality_gate")
+    if not isinstance(quality_gate, dict) or quality_gate.get("passed") is not True:
+        return gated
+
+    metadata = gated.get("metadata") if isinstance(gated.get("metadata"), dict) else {}
+    expected_mode = _resolve_research_output_mode(
+        request_payload.get("output_mode"),
+        role=str(request_payload.get("role") or ""),
+    )
+    ml_mode = str(gated.get("output_mode") or metadata.get("output_mode") or "").strip().lower()
+    if ml_mode != expected_mode:
+        # ML did not pass its independent closed-mode gate. Do not synthesize a
+        # presentation from a one-sided configuration rollout.
+        return gated
+
+    answer = str(gated.get("answer_markdown") or gated.get("answer") or "").strip()
+    citations = gated.get("citations")
+    if not answer or not isinstance(citations, list):
+        return gated
+    citation_ids = [
+        str(item.get("source_id") or "").strip()
+        for item in citations
+        if isinstance(item, dict) and str(item.get("source_id") or "").strip()
+    ]
+    if len(citation_ids) != len(citations):
+        # The quality gate should already reject unresolvable evidence. Keep
+        # the old released shape rather than presenting a partial citation map.
+        return gated
+
+    # The mode only controls reader chrome: the answer is a reference to the
+    # same released markdown and professional mode may reveal the already
+    # released citation list. No verifier rows, prompts, confidence values,
+    # telemetry, PII, or provider data are copied into this projection.
+    gated["presentation"] = {
+        "schema_version": "research-presentation-v1",
+        "mode": expected_mode,
+        "answer_markdown": answer,
+        "citation_ids": citation_ids,
+        "citation_visibility": "expanded" if expected_mode == "professional" else "compact",
+    }
+    return gated
+
+
 def _build_research_run_manifest(
     *, job_id: str, request_payload: dict[str, Any], created_at: datetime
 ) -> dict[str, Any]:
@@ -2977,6 +3087,10 @@ def _run_research_job(job_id: str) -> None:
         )
         enriched = _attach_research_attribution(normalized)
         enriched = _apply_research_quality_gates(
+            enriched,
+            request_payload=request_payload,
+        )
+        enriched = _attach_verified_research_presentation(
             enriched,
             request_payload=request_payload,
         )
@@ -4904,6 +5018,10 @@ def research_tier2(
     # FIDES/safety override result.
     gated = _apply_research_quality_gates(
         attributed,
+        request_payload=upstream_payload,
+    )
+    gated = _attach_verified_research_presentation(
+        gated,
         request_payload=upstream_payload,
     )
     return _apply_role_gated_telemetry(gated, role=token.role) or gated
