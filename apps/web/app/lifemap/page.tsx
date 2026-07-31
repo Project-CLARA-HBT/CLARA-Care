@@ -55,6 +55,7 @@ import {
   type LifeMapReplay,
 } from "@/lib/lifemap";
 import { getProfileContext } from "@/lib/profile-context-api";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 function priorityTone(priority: string): "danger" | "warn" | "brand" {
   if (priority === "urgent") return "danger";
@@ -232,7 +233,7 @@ export default function LifeMapPage() {
       setEpisodeId((current) => current || next.episodes[0]?.id || "");
       setDisputes(await getLifeMapDisputes());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("today.connectionError"));
+      setError(safeUserFacingError(cause, copy("today.connectionError")));
     } finally {
       setLoading(false);
     }
@@ -298,7 +299,7 @@ export default function LifeMapPage() {
       rememberCapture(session);
       if (session.persisted) setCaptureText("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.startCapture"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.startCapture")));
     } finally {
       setSaving(false);
     }
@@ -343,7 +344,7 @@ export default function LifeMapPage() {
         copy("lifemap.capture.processing"),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.processCapture"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.processCapture")));
     } finally {
       setSaving(false);
     }
@@ -408,7 +409,7 @@ export default function LifeMapPage() {
         await load();
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.review"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.review")));
     } finally {
       setSaving(false);
     }
@@ -457,7 +458,7 @@ export default function LifeMapPage() {
       setCaptureSession(null);
       setCaptureJobStatus("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.abandonCapture"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.abandonCapture")));
     } finally {
       setSaving(false);
     }
@@ -470,7 +471,7 @@ export default function LifeMapPage() {
       if (capturePreview) URL.revokeObjectURL(capturePreview.url);
       setCapturePreview({ artifact, url: URL.createObjectURL(blob) });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.openSource"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.openSource")));
     } finally {
       setSaving(false);
     }
@@ -487,7 +488,7 @@ export default function LifeMapPage() {
       setTaskTitle("");
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.addTask"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.addTask")));
     } finally {
       setSaving(false);
     }
@@ -499,7 +500,7 @@ export default function LifeMapPage() {
     try {
       setReplay(await getLifeMapReplay(selectedEpisodeId));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.loadReplay"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.loadReplay")));
     } finally {
       setReplayLoading(false);
     }
@@ -520,7 +521,7 @@ export default function LifeMapPage() {
         );
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.loadQuestion"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.loadQuestion")));
     } finally {
       setSaving(false);
     }
@@ -544,7 +545,7 @@ export default function LifeMapPage() {
       setNextQuestion(null);
       setQuestionAnswer("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.saveAnswer"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.saveAnswer")));
     } finally {
       setSaving(false);
     }
@@ -564,7 +565,7 @@ export default function LifeMapPage() {
       );
       setNextQuestion(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.updateQuestion"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.updateQuestion")));
     } finally {
       setSaving(false);
     }
@@ -587,7 +588,7 @@ export default function LifeMapPage() {
       setCorrectionText("");
       await openReplay(replay?.episode.id ?? episodeId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.saveCorrection"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.saveCorrection")));
     } finally {
       setSaving(false);
     }
@@ -608,11 +609,7 @@ export default function LifeMapPage() {
     } catch (cause) {
       setComparisonEventId("");
       setRevisionComparison(null);
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : copy("lifemap.error.loadReplay"),
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.error.loadReplay")));
     } finally {
       setReplayLoading(false);
     }
@@ -629,7 +626,7 @@ export default function LifeMapPage() {
       setDisputes(await getLifeMapDisputes());
       await openReplay(replay?.episode.id ?? episodeId);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.submitDispute"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.submitDispute")));
     } finally {
       setSaving(false);
     }
@@ -647,7 +644,7 @@ export default function LifeMapPage() {
       setDisputes(await getLifeMapDisputes());
       if (replay) await openReplay(replay.episode.id);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("lifemap.error.resolveDispute"));
+      setError(safeUserFacingError(cause, copy("lifemap.error.resolveDispute")));
     } finally {
       setSaving(false);
     }
@@ -661,9 +658,7 @@ export default function LifeMapPage() {
     try {
       setAskAnswer(await askLifeMap(askQuery.trim(), episodeId || undefined));
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : copy("lifemap.error.ask"),
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.error.ask")));
     } finally {
       setSaving(false);
     }
@@ -683,11 +678,7 @@ export default function LifeMapPage() {
         ),
       );
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : copy("lifemap.visitPrep.error"),
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.visitPrep.error")));
     } finally {
       setSaving(false);
     }
@@ -699,9 +690,7 @@ export default function LifeMapPage() {
     try {
       setReviewFindings(await scanLifeMapReviewFindings());
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : copy("lifemap.error.scanReview"),
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.error.scanReview")));
     } finally {
       setSaving(false);
     }
@@ -725,9 +714,7 @@ export default function LifeMapPage() {
         current.map((item) => (item.id === finding.id ? updated : item)),
       );
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : copy("lifemap.error.reviewChoice"),
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.error.reviewChoice")));
     } finally {
       setSaving(false);
     }
@@ -744,11 +731,7 @@ export default function LifeMapPage() {
         ),
       );
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : copy("lifemap.error.createSummary"),
-      );
+      setError(safeUserFacingError(cause, copy("lifemap.error.createSummary")));
     } finally {
       setSaving(false);
     }

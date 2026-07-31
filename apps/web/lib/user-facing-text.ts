@@ -78,6 +78,8 @@ const TECHNICAL_CONTENT_PATTERNS: RegExp[] = [
   /\b\w*(?:Error|Exception)\b/, // exception class names (TypeError, AxiosError, ...)
   /\b(?:http|status)[\s:_-]*[1-5]\d{2}\b/i, // HTTP status detail tokens
   /\bhttp_\d{3}\b/i, // connector status ids such as openfda http_400
+  /\bfailed to (?:fetch|construct)\b/i, // browser transport/parser errors
+  /\bnetwork(?:error| error)\b/i, // browser transport errors
   /\bat\s+\S+\s+\(/, // JS stack frame: "at fn (file:line)"
   /\bFile\s+".*",\s*line\s+\d+/i, // Python stack frame
   /[{[]\s*"[^"]+"\s*:/ // raw JSON payloads
@@ -158,6 +160,37 @@ export function sanitizeUpstreamError(raw: string): string {
   }
 
   return normalized;
+}
+
+/**
+ * Keep raw error data on the internal side of an End_User boundary.
+ *
+ * A caller supplies a catalog-backed, task-specific fallback. We return a
+ * caught message only when it is already a short, unchanged, human-readable
+ * sentence. Empty values, timeouts, whitespace-normalised payloads, stack
+ * traces, transport details, and other technical content always use that
+ * caller-provided fallback instead. In particular, this function deliberately
+ * does not substitute a generic Vietnamese timeout message: an English view
+ * must retain its selected English fallback.
+ */
+export function safeUserFacingError(cause: unknown, fallback: string): string {
+  if (!(cause instanceof Error) || typeof cause.message !== "string") {
+    return fallback;
+  }
+
+  const raw = cause.message;
+  const normalized = normalizeWhitespace(raw);
+  if (
+    !normalized ||
+    raw !== normalized ||
+    normalized.length > MAX_SAFE_MESSAGE_LENGTH ||
+    looksLikeTimeout(normalized) ||
+    containsTechnicalContent(normalized)
+  ) {
+    return fallback;
+  }
+
+  return raw;
 }
 
 /**

@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import { Field, Select, Textarea } from "@/components/ui/field";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
   addVisitConcern, answerVisitIntake, approveVisitPack, confirmVisitPlan, createVisit,
   createVisitDocument, createVisitPack, deleteVisitDocument, extractVisitPlan,
@@ -103,7 +104,7 @@ export default function VisitsPage() {
       setVisits(next);
       setSelectedId((current) => current || next[0]?.id || "");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy("visits.loadError"));
+      setError(safeUserFacingError(cause, copy("visits.loadError")));
     } finally { setLoading(false); }
   }, [copy]);
   useEffect(() => { void load(); }, [load]);
@@ -117,7 +118,7 @@ export default function VisitsPage() {
       setPackOptions(nextOptions);
       setPackSelection({});
     }).catch((cause: unknown) =>
-      setError(cause instanceof Error ? cause.message : copy("visits.loadVisitDataError")),
+      setError(safeUserFacingError(cause, copy("visits.loadVisitDataError"))),
     );
   }, [copy, selectedId]);
 
@@ -127,7 +128,7 @@ export default function VisitsPage() {
   };
   const action = async (work: () => Promise<void>, fallback: string) => {
     setSaving(true); setError("");
-    try { await work(); } catch (cause) { setError(cause instanceof Error ? cause.message : fallback); }
+    try { await work(); } catch (cause) { setError(safeUserFacingError(cause, fallback)); }
     finally { setSaving(false); }
   };
   const create = (event: FormEvent) => {
