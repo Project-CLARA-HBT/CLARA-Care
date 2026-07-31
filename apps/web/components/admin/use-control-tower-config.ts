@@ -8,7 +8,9 @@ import {
   getControlTowerConfig,
   updateControlTowerConfig
 } from "@/lib/system";
-import { sanitizeUpstreamError } from "@/lib/user-facing-text";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 export type RetrievalMetricKey = "precision_at_k" | "recall_at_k" | "ndcg_at_k";
 const FLOW_TOGGLES = [
@@ -160,6 +162,7 @@ export type UseControlTowerConfigResult = {
 };
 
 export default function useControlTowerConfig(): UseControlTowerConfigResult {
+  const uiLanguage = useUILanguage();
   const [config, setConfig] = useState<ControlTowerConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -179,15 +182,11 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
       setConfig(next);
       setSnapshot(JSON.stringify(next));
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Unable to load control tower config."
-        )
-      );
+      setError(safeUserFacingError(cause, t(uiLanguage, "admin.controlTower.error.load")));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [uiLanguage]);
 
   useEffect(() => {
     void reload();
@@ -207,16 +206,12 @@ export default function useControlTowerConfig(): UseControlTowerConfigResult {
       setMessage("Saved control tower configuration.");
       return true;
     } catch (cause) {
-      setError(
-        sanitizeUpstreamError(
-          cause instanceof Error ? cause.message : "Unable to save control tower config."
-        )
-      );
+      setError(safeUserFacingError(cause, t(uiLanguage, "admin.controlTower.error.save")));
       return false;
     } finally {
       setIsSaving(false);
     }
-  }, [config]);
+  }, [config, uiLanguage]);
 
   const setSourceEnabled = useCallback((sourceId: string, enabled: boolean) => {
     setConfig((prev) => {

@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 import {
   ControlTowerConfig,
   ControlTowerRagSource,
   getControlTowerConfig,
   updateControlTowerConfig
 } from "@/lib/system";
+import { safeUserFacingError } from "@/lib/user-facing-text";
 
 type FlowFlagKey = Exclude<
   keyof ControlTowerConfig["rag_flow"],
@@ -156,6 +159,7 @@ function normalizeFlow(flow?: Partial<ControlTowerConfig["rag_flow"]> | null): C
 }
 
 export default function ControlTowerPage() {
+  const uiLanguage = useUILanguage();
   const [config, setConfig] = useState<ControlTowerConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -176,13 +180,13 @@ export default function ControlTowerPage() {
           }
         });
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Không thể tải cấu hình control tower.");
+        setError(safeUserFacingError(cause, t(uiLanguage, "admin.controlTower.error.load")));
       } finally {
         setIsLoading(false);
       }
     };
     void load();
-  }, []);
+  }, [uiLanguage]);
 
   const onToggleSource = (sourceId: string) => {
     if (!config) return;
@@ -278,7 +282,7 @@ export default function ControlTowerPage() {
       });
       setMessage("Đã lưu cấu hình nguồn RAG và flow trả lời.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu cấu hình.");
+      setError(safeUserFacingError(cause, t(uiLanguage, "admin.controlTower.error.save")));
     } finally {
       setIsSaving(false);
     }
