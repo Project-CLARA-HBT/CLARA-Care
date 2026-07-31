@@ -90,7 +90,7 @@ jobs:
           ls -lh dist
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: clara-mobile-apk
           path: apps/mobile/dist/*.apk
