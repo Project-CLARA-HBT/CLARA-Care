@@ -1,13 +1,13 @@
 # CLARA master implementation report
 
-Status date: 2026-07-31. This report is evidence-first: it distinguishes
+Status date: 2026-08-02. This report is evidence-first: it distinguishes
 implemented code from planned, blocked and unmeasured work. It does not claim
 clinical validation, a human evaluation, production deployment, or a benchmark
 result that was not actually run.
 
 Reconciliation checkpoint: this document was updated after the recent V4,
 LifeMap, Research, Scribe, Council, CareGuard, deployment and i18n commits,
-including `8bd27232` through `33a0c309`. Per the current user direction, this
+including `8bd27232` through `6bbefed4`. Per the current user direction, this
 documentation-only checkpoint did **not** run format, lint, type checks,
 tests, builds, evaluation or deployment. Earlier execution records below are
 historical evidence only; they do not validate commits made after those runs.
@@ -583,12 +583,13 @@ testing resumes. Disable the force flag after recovery.
    dependency advisories on the default branch after this dependency refresh
    (latest observed: 1 critical, 28 high, 22 moderate, 8 low). Targeted web
    lock upgrades reduced the local
-   production-dependency audit from 11 to 3, but this does not establish that
+   production-dependency audit from 11 to 2, but this does not establish that
    GitHub's cross-ecosystem advisory total is resolved. The three remaining
-   web findings are in the Next/PostCSS/Sharp chain; the audit metadata offers
-   no compatible Next 15 fix. Assess a Next 16/React migration separately with
-   service and web regression evidence rather than forcing a misleading
-   downgrade.
+   historical web findings were in the Next/PostCSS/Sharp chain; the Sharp
+   finding is now remediated, leaving one high PostCSS finding and one moderate
+   Next aggregation. The audit metadata offers no compatible Next 15 fix.
+   Assess a Next 16/React migration separately with service and web regression
+   evidence rather than forcing a misleading downgrade.
 
 ## Exact local, CI and evaluation commands
 
