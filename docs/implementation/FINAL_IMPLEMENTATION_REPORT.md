@@ -655,6 +655,13 @@ sharing, retention and release-hardening checkpoints:
 | Python repository type-check | fail (baseline) | `mypy` reports 337 errors in 45 files across existing API/ML source. This is a separate remediation backlog; it is not hidden by the release configuration. |
 | Full API suite | interrupted (environment) | The direct `services/api/.venv/bin/python -m pytest -q` run remained CPU-active for over 10 minutes and wrote about 8 GB of SQLite test I/O before controlled SIGINT. It produced no terminal result, so it is neither pass nor fail evidence. Focused CSRF/health contracts remain the confirmed API result. |
 
+After that interrupted run, `370ef516` made the API test bootstrap select a
+private temporary SQLite database before importing the application engine. A
+fresh focused run again passed `31` tests in `15.27s`, and the checksum of
+`services/api/clara.db` remained unchanged. This fixes the unsafe workspace
+database coupling; it does not turn the previously interrupted full suite into
+a passing result.
+
 `make` is unavailable in this workspace (`make: command not found`), so the
 eval targets were executed through the exact Python commands in the Makefile.
 The target definitions remain present; a standard CI image can invoke
