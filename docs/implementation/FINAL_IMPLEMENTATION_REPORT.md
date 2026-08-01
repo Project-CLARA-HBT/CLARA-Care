@@ -234,6 +234,13 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   `noindex`/`no-referrer` metadata, preventing a share URL from becoming an
   analytics-consent request referrer or a searchable page. The API's existing
   global no-store security header remains the response-cache control.
+- The parallel public conversation route (`/share/{token}`) now uses the same
+  `noindex`/`no-referrer` metadata, no longer displays an owner label, and
+  collapses invalid, expired, revoked and transport failures into one localized
+  public unavailable state. Static content, expiry formatting and its empty
+  state now use typed vi/en copy. No authorized message content, share
+  capability semantics, audit behavior or backend policy was changed. This
+  source checkpoint has not run tests, build or deployment.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be

@@ -292,6 +292,15 @@ const VI_MESSAGES = {
   "phr.shared.value.male": "nam",
   "phr.shared.value.female": "nữ",
   "phr.shared.value.other": "khác",
+  "workspace.shared.eyebrow": "Liên kết hội thoại chỉ đọc",
+  "workspace.shared.title": "Hội thoại được chia sẻ",
+  "workspace.shared.loading": "Đang mở hội thoại được chia sẻ...",
+  "workspace.shared.unavailable":
+    "Liên kết chia sẻ không hợp lệ, đã hết hạn hoặc đã bị thu hồi.",
+  "workspace.shared.readOnly": "Chỉ xem",
+  "workspace.shared.expires": "Liên kết hết hạn",
+  "workspace.shared.question": "Câu hỏi",
+  "workspace.shared.empty": "Liên kết này không có nội dung có thể hiển thị.",
   "phr.export.title": "Xuất hồ sơ (FHIR)",
   "phr.export.description":
     "Tải hồ sơ dưới định dạng FHIR R4 (application/fhir+json) để chia sẻ với cơ sở y tế.",
@@ -4111,6 +4120,15 @@ const EN_MESSAGES: MessageCatalog = {
   "phr.shared.value.male": "male",
   "phr.shared.value.female": "female",
   "phr.shared.value.other": "other",
+  "workspace.shared.eyebrow": "Read-only conversation link",
+  "workspace.shared.title": "Shared conversation",
+  "workspace.shared.loading": "Opening shared conversation...",
+  "workspace.shared.unavailable":
+    "This shared link is invalid, expired, or has been revoked.",
+  "workspace.shared.readOnly": "Read only",
+  "workspace.shared.expires": "Link expires",
+  "workspace.shared.question": "Question",
+  "workspace.shared.empty": "This link has no content that can be displayed.",
   "phr.export.title": "Export record (FHIR)",
   "phr.export.description":
     "Download your record as a FHIR R4 bundle (application/fhir+json) to share with a clinic.",

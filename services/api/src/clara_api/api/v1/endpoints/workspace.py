@@ -318,15 +318,6 @@ def _serialize_share(
     )
 
 
-def _mask_owner_label(email: str) -> str:
-    raw = email.strip()
-    if "@" not in raw:
-        return "anonymous"
-    name, domain = raw.split("@", 1)
-    safe_name = name[:3] if len(name) >= 3 else name
-    return f"{safe_name}***@{domain}"
-
-
 def _extract_answer_text(raw_text: str) -> str:
     stripped = (raw_text or "").strip()
     if not stripped:
@@ -1316,8 +1307,7 @@ def get_public_conversation_by_share_token(
             SessionModel.user_id == share.user_id,
         )
     ).scalar_one_or_none()
-    owner = db.execute(select(User).where(User.id == share.user_id)).scalar_one_or_none()
-    if session_obj is None or owner is None:
+    if session_obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation không tồn tại.",
@@ -1347,7 +1337,6 @@ def get_public_conversation_by_share_token(
     return WorkspacePublicConversationResponse(
         conversation_id=session_obj.id,
         title=(session_obj.title or "").strip() or f"Conversation #{session_obj.id}",
-        owner_label=_mask_owner_label(owner.email),
         expires_at=expires_at,
         messages=messages,
     )

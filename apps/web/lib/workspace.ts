@@ -113,7 +113,6 @@ export type WorkspacePublicConversationMessage = {
 export type WorkspacePublicConversation = {
   conversation_id: number;
   title: string;
-  owner_label: string;
   expires_at?: string | null;
   messages: WorkspacePublicConversationMessage[];
 };

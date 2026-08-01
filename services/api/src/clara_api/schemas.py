@@ -1040,7 +1040,6 @@ class WorkspacePublicConversationMessageResponse(BaseModel):
 class WorkspacePublicConversationResponse(BaseModel):
     conversation_id: int
     title: str
-    owner_label: str
     expires_at: datetime | None = None
     messages: list[WorkspacePublicConversationMessageResponse] = Field(default_factory=list)
 

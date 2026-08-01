@@ -511,7 +511,7 @@ def test_workspace_conversation_share_public_access_and_revoke() -> None:
     assert public_payload["conversation_id"] == conversation_id
     assert isinstance(public_payload["messages"], list)
     assert len(public_payload["messages"]) >= 1
-    assert "owner_label" in public_payload
+    assert "owner_label" not in public_payload
 
     revoke_response = client.delete(
         f"/api/v1/workspace/conversations/{conversation_id}/share",
