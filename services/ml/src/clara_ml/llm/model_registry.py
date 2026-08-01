@@ -40,6 +40,8 @@ class ModelTask(StrEnum):
     SCRIBE_ASR_CORRECTION = "scribe_asr_correction"
     COUNCIL_INTAKE = "council_intake"
     COUNCIL_SHADOW = "council_shadow"
+    COUNCIL_CLAIM_VERIFICATION = "council_claim_verification"
+    COUNCIL_ADJUDICATION = "council_adjudication"
     RAG_RERANKING = "rag_reranking"
     FACTCHECK_NLI = "factcheck_nli"
     RAG_SYNTHESIS = "rag_synthesis"

@@ -916,6 +916,14 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="COUNCIL_LLM_SHADOW_ENABLED",
     )
+    # Adds specialist-profile, independent claim-verification and adjudication
+    # audit records to the existing Council LLM shadow. Both this and the
+    # parent shadow flag must be enabled; the result never changes the released
+    # rule-engine triage, recommendation, facts or clinician-review directive.
+    council_specialist_workflow_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_SPECIALIST_WORKFLOW_SHADOW_ENABLED",
+    )
     council_llm_max_tokens: int = Field(
         default=1200,
         validation_alias="COUNCIL_LLM_MAX_TOKENS",
