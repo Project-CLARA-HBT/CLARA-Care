@@ -633,3 +633,37 @@ python -m evaluation.clara_eval.run \
 bash scripts/demo/run_active_eval_loop.sh \
   --run-id local-static-baseline --mode static --strict false
 ```
+
+## Revalidation checkpoint — 2026-08-02
+
+This is a source-and-local-validation checkpoint, not a production deployment.
+The following commands were actually executed after the CSRF/cookie, header,
+sharing, retention and release-hardening checkpoints:
+
+| Gate | Result | Evidence / limitation |
+| --- | --- | --- |
+| Focused API CSRF and health contracts | pass | `31 passed` (`test_health.py` and `test_rbac_owner_scope_csrf.py`); verifies malformed lower-case bearer does not bypass cookie CSRF and metrics accepts the header token only. |
+| Web lint | pass with warnings | Exit 0; eight existing React hook-dependency warnings remain. |
+| Web type-check | pass | `npx tsc --noEmit` exited 0. |
+| Web i18n and terminology | pass | `npm run i18n:check` (3,241 vi/en keys; 38 migrated surfaces) and `npm run consumer-terminology:check` passed. |
+| Web unit suite | pass | `677/677` tests in `295/295` files. The i18n test changes preserve the same safety assertions by asserting both the typed key usage and catalog text. |
+| Web production build | pass with warnings | `npm run build` completed. The same eight hook-dependency warnings remain; TypeScript and ESLint errors are no longer ignored. |
+| Documentation links | pass | `bash scripts/docs/check-docs-links.sh`. |
+| Eval smoke | pass | Direct target implementation: `python3 -m evaluation.clara_eval.run --config evaluation/configs/smoke.yaml --output artifacts/clara-eval-vn/smoke`. |
+| Judge report | pass | Direct target implementation emitted all required judge-report files, including HTML, Markdown, JSON/CSV manifests, critical-errors, ablations and examples. It measures fixture-manifest integrity only and marks 28 product metrics `not_measured` with reasons and commands. |
+| Python repository lint | fail (baseline) | `ruff check` reports 652 pre-existing findings across scripts and API/ML tests. No broad automatic rewrite was applied. |
+| Python repository type-check | fail (baseline) | `mypy` reports 337 errors in 45 files across existing API/ML source. This is a separate remediation backlog; it is not hidden by the release configuration. |
+
+`make` is unavailable in this workspace (`make: command not found`), so the
+eval targets were executed through the exact Python commands in the Makefile.
+The target definitions remain present; a standard CI image can invoke
+`make eval-smoke` and `make eval-judge-report` directly.
+
+External live verification on 2026-08-02 showed that
+`https://theclaracare.com/`, `/login`, and `/share/not-a-real-token` still
+return an old artifact/proxy response: no CSP, HSTS, `nosniff`, frame policy,
+referrer policy or permissions policy, and `X-Powered-By: Next.js` is present.
+The committed Nginx config therefore has **not** reached that host. Do not
+describe the browser-header remediation as deployed until a controlled
+release installs the config, validates `nginx -t`, reloads Nginx, and repeats
+the external header smoke check.
