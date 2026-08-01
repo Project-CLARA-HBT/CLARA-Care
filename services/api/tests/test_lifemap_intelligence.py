@@ -248,9 +248,11 @@ def test_ask_endpoint_is_revision_cited_and_persists_private_lineage(monkeypatch
             "citation_count",
             "abstained",
             "ood",
-            "fallback_used",
-            "locale",
-        }
+                "fallback_used",
+                "locale",
+                "semantic_route_used",
+                "semantic_route_degraded",
+            }
 
 
 def test_visit_preparation_endpoint_is_consent_scoped_and_does_not_write_lifemap(
