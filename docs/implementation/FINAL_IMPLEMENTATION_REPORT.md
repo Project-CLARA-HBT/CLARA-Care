@@ -55,6 +55,12 @@ cookie-auth streaming paths. Per the feature-first instruction, this checkpoint
 has not run formatting, lint, type checks, tests, builds, evaluation or
 deployment; it is implementation evidence, not runtime validation.
 
+`64e7eea5` adds the matching defense-in-depth policy to the maintained Nginx
+virtual host: it removes upstream framework disclosure and emits the complete
+browser header set even for proxy-generated responses. The controlled-deploy
+runbook now requires an approved Nginx install/reload and external HTTPS header
+smoke before this is considered active in production.
+
 ## Executive summary
 
 This implementation pass strengthened CLARA's safety and evidence boundaries:
