@@ -14,7 +14,9 @@ import {
   ScribeAnalyticsSummary,
   ScribeSession,
   createScribeSession,
+  deleteScribeRecordingData,
   getScribeAnalyticsSummary,
+  getScribeRecordingDataCapability,
   getScribeSession,
   listScribeSessions,
   normalizeSoapSections,
@@ -211,6 +213,8 @@ export default function ScribePage() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isLiveAnalyzing, setIsLiveAnalyzing] = useState(false);
+  const [isDeletingRecordingData, setIsDeletingRecordingData] = useState(false);
+  const [showRecordingDataDeleteConfirmation, setShowRecordingDataDeleteConfirmation] = useState(false);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [lastTranscribeMs, setLastTranscribeMs] = useState<number | null>(null);
@@ -222,6 +226,7 @@ export default function ScribePage() {
   const selectedSessionIdRef = useRef<number | null>(null);
   const transcriptDraftRef = useRef("");
   const persistTimerRef = useRef<number | null>(null);
+  const pendingTranscriptSavesRef = useRef<Set<Promise<void>>>(new Set());
   const liveAnalyzeTimerRef = useRef<number | null>(null);
   const recordingTickTimerRef = useRef<number | null>(null);
 
@@ -252,6 +257,8 @@ export default function ScribePage() {
     () => buildLiveInsights(selectedSession, transcriptDraft, copy),
     [copy, selectedSession, transcriptDraft]
   );
+  const [recordingDataDeletionAvailable, setRecordingDataDeletionAvailable] = useState(false);
+  const canDeleteSelectedRecordingData = selectedSession !== null && recordingDataDeletionAvailable;
 
   const pushNotice = useCallback((tone: NoticeTone, message: string) => {
     setNotice({ tone, message });
@@ -276,6 +283,19 @@ export default function ScribePage() {
     if (persistTimerRef.current !== null) {
       window.clearTimeout(persistTimerRef.current);
       persistTimerRef.current = null;
+    }
+  }, []);
+
+  const refreshRecordingDataDeletionCapability = useCallback(async (sessionId: number) => {
+    try {
+      const capability = await getScribeRecordingDataCapability(sessionId);
+      if (selectedSessionIdRef.current === sessionId) {
+        setRecordingDataDeletionAvailable(capability.recording_data_deletion_available);
+      }
+    } catch {
+      // The server keeps this deployment capability fail-closed (404 when off).
+      // Do not surface a raw error or show a destructive control by inference.
+      if (selectedSessionIdRef.current === sessionId) setRecordingDataDeletionAvailable(false);
     }
   }, []);
 
@@ -339,18 +359,20 @@ export default function ScribePage() {
         selectedSessionIdRef.current = detail.id;
         setSelectedSession(detail);
         setTranscriptDraft(detail.transcript ?? "");
+        await refreshRecordingDataDeletionCapability(detail.id);
       } else {
         setSelectedSessionId(null);
         selectedSessionIdRef.current = null;
         setSelectedSession(null);
         setTranscriptDraft("");
+        setRecordingDataDeletionAvailable(false);
       }
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("scribe.error.load")));
     } finally {
       setIsLoading(false);
     }
-  }, [copy]);
+  }, [copy, refreshRecordingDataDeletionCapability]);
 
   useEffect(() => {
     void refreshData();
@@ -397,7 +419,9 @@ export default function ScribePage() {
       clearPersistTimer();
       const delayMs = immediate ? 80 : 1200;
       persistTimerRef.current = window.setTimeout(() => {
-        void saveTranscript(nextTranscript);
+        const pendingSave = saveTranscript(nextTranscript);
+        pendingTranscriptSavesRef.current.add(pendingSave);
+        void pendingSave.finally(() => pendingTranscriptSavesRef.current.delete(pendingSave));
       }, delayMs);
     },
     [clearPersistTimer, saveTranscript]
@@ -497,8 +521,9 @@ export default function ScribePage() {
     selectedSessionIdRef.current = created.id;
     setSelectedSession(created);
     upsertSession(created);
+    await refreshRecordingDataDeletionCapability(created.id);
     return created.id;
-  }, [copy, language, upsertSession]);
+  }, [copy, language, refreshRecordingDataDeletionCapability, upsertSession]);
 
   const startWaveformLoop = useCallback(() => {
     const analyser = analyserRef.current;
@@ -623,10 +648,11 @@ export default function ScribePage() {
       selectedSessionIdRef.current = detail.id;
       setSelectedSession(detail);
       setTranscriptDraft(detail.transcript ?? "");
+      await refreshRecordingDataDeletionCapability(detail.id);
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("scribe.error.openSession")));
     }
-  }, [copy]);
+  }, [copy, refreshRecordingDataDeletionCapability]);
 
   const onCreateSession = useCallback(async () => {
     setIsCreating(true);
@@ -642,6 +668,7 @@ export default function ScribePage() {
       setSelectedSession(created);
       setTranscriptDraft(created.transcript ?? "");
       upsertSession(created);
+      await refreshRecordingDataDeletionCapability(created.id);
       pushNotice("success", copy("scribe.notice.created"));
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
@@ -650,7 +677,7 @@ export default function ScribePage() {
     } finally {
       setIsCreating(false);
     }
-  }, [copy, language, pushNotice, upsertSession]);
+  }, [copy, language, pushNotice, refreshRecordingDataDeletionCapability, upsertSession]);
 
   const onSaveTranscript = useCallback(async () => {
     if (!selectedSession) return;
@@ -720,6 +747,68 @@ export default function ScribePage() {
       setIsSaving(false);
     }
   }, [copy, pushNotice, selectedSession, upsertSession]);
+
+  const onDeleteRecordingData = useCallback(async () => {
+    if (!selectedSession || !canDeleteSelectedRecordingData) return;
+
+    const sessionId = selectedSession.id;
+    setIsDeletingRecordingData(true);
+    setError("");
+    // A pending local autosave must never repopulate the transcript immediately
+    // after the explicit deletion succeeds. The action is unavailable while
+    // recording/transcribing/other mutations are in progress.
+    clearPersistTimer();
+    clearLiveAnalyzeTimer();
+    try {
+      // Wait for an already-started debounced save before deleting. This keeps
+      // the explicit destructive action ordered after every local transcript
+      // write the browser initiated, so the deletion remains the final write.
+      await Promise.all([...pendingTranscriptSavesRef.current]);
+      await deleteScribeRecordingData(sessionId);
+      const clearedSession = {
+        ...selectedSession,
+        transcript: "",
+        last_processed_at: null,
+      };
+      transcriptDraftRef.current = "";
+      setTranscriptDraft("");
+      setSelectedSession(clearedSession);
+      upsertSession(clearedSession);
+      setShowRecordingDataDeleteConfirmation(false);
+
+      // Re-read the owner-scoped server truth after clearing the local draft.
+      // If a successful delete is followed by a transient read failure, retain
+      // the safer cleared local state instead of showing stale transcript text.
+      try {
+        const refreshed = await getScribeSession(sessionId);
+        setSelectedSession(refreshed);
+        setTranscriptDraft(refreshed.transcript ?? "");
+        transcriptDraftRef.current = refreshed.transcript ?? "";
+        upsertSession(refreshed);
+      } catch {
+        // The deletion already succeeded. Do not replace safe local state with
+        // a raw transport error or stale sensitive text.
+      }
+      try {
+        setAnalytics(await getScribeAnalyticsSummary());
+      } catch {
+        // Analytics is secondary to the completed data-rights action.
+      }
+      pushNotice("success", copy("scribe.recordingData.notice.deleted"));
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("scribe.recordingData.error.delete")));
+    } finally {
+      setIsDeletingRecordingData(false);
+    }
+  }, [
+    canDeleteSelectedRecordingData,
+    clearLiveAnalyzeTimer,
+    clearPersistTimer,
+    copy,
+    pushNotice,
+    selectedSession,
+    upsertSession,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1121,6 +1210,37 @@ export default function ScribePage() {
           )}
         </section>
 
+        {canDeleteSelectedRecordingData ? (
+          <section className={`${panelPaddedLgClass} border-rose-300 dark:border-rose-500/70`} data-testid="scribe-recording-data-controls">
+            <h2 className={sectionTitleClass}>{copy("scribe.recordingData.title")}</h2>
+            <p className={`mt-2 text-sm leading-6 ${secondaryTextClass}`}>
+              {copy("scribe.recordingData.description")}
+            </p>
+            <ul className={`mt-3 list-disc space-y-1 pl-5 text-sm ${secondaryTextClass}`}>
+              <li>{copy("scribe.recordingData.deletes")}</li>
+              <li>{copy("scribe.recordingData.audioNotStored")}</li>
+              <li>{copy("scribe.recordingData.retained")}</li>
+            </ul>
+            <button
+              type="button"
+              onClick={() => setShowRecordingDataDeleteConfirmation(true)}
+              disabled={
+                isDeletingRecordingData ||
+                isRecording ||
+                isTranscribing ||
+                isSaving ||
+                isRegenerating ||
+                isLiveAnalyzing
+              }
+              className={`mt-4 ${dangerButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {isDeletingRecordingData
+                ? copy("scribe.recordingData.deleting")
+                : copy("scribe.recordingData.deleteAction")}
+            </button>
+          </section>
+        ) : null}
+
         <section className={`grid grid-cols-2 gap-3 md:grid-cols-4 ${panelPaddedClass}`}>
           <div className={`${softPanelClass} p-3`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.totalSessions")}</p>
@@ -1156,6 +1276,47 @@ export default function ScribePage() {
         >
           {notice.message}
         </p>
+      ) : null}
+      {showRecordingDataDeleteConfirmation && canDeleteSelectedRecordingData ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="scribe-recording-data-confirm-title"
+          aria-describedby="scribe-recording-data-confirm-description"
+        >
+          <div className="w-full max-w-lg rounded-xl border border-rose-300 bg-white p-6 shadow-xl dark:border-rose-500/70 dark:bg-slate-900">
+            <h2 id="scribe-recording-data-confirm-title" className={`text-lg font-bold ${bodyTextClass}`}>
+              {copy("scribe.recordingData.confirmTitle")}
+            </h2>
+            <p id="scribe-recording-data-confirm-description" className={`mt-3 text-sm leading-6 ${secondaryTextClass}`}>
+              {copy("scribe.recordingData.confirmDescription")}
+            </p>
+            <p className={`mt-3 text-sm leading-6 ${secondaryTextClass}`}>
+              {copy("scribe.recordingData.confirmRetained")}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRecordingDataDeleteConfirmation(false)}
+                disabled={isDeletingRecordingData}
+                className={secondaryButtonClass}
+              >
+                {copy("scribe.recordingData.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onDeleteRecordingData()}
+                disabled={isDeletingRecordingData}
+                className={`${dangerButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {isDeletingRecordingData
+                  ? copy("scribe.recordingData.deleting")
+                  : copy("scribe.recordingData.confirmAction")}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </PageShell>
   );

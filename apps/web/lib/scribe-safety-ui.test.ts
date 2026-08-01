@@ -23,4 +23,16 @@ describe("Scribe end-user safety presentation", () => {
     expect(source).toContain("result.medical_correction");
     expect(catalog).toContain("Hãy đối chiếu với âm thanh hoặc nguồn gốc");
   });
+
+  it("makes recording-derived deletion explicit and preserves signed/audit records", () => {
+    const source = readFileSync(resolve(__dirname, "../app/scribe/page.tsx"), "utf8");
+    const client = readFileSync(resolve(__dirname, "scribe.ts"), "utf8");
+
+    expect(source).toContain("canDeleteSelectedRecordingData");
+    expect(source).toContain("scribe.recordingData.confirmTitle");
+    expect(source).toContain("setTranscriptDraft(\"\")");
+    expect(source).toContain("raw transport error");
+    expect(client).toContain("raw_audio_persisted: false");
+    expect(client).toContain("signed_note_preserved");
+  });
 });

@@ -170,6 +170,16 @@ class ScribeSessionResponse(BaseModel):
     updated_at: datetime
 
 
+class ScribeRecordingDataCapabilityResponse(BaseModel):
+    """Read-only, owner-scoped availability for the data-rights control."""
+
+    session_id: int
+    recording_data_deletion_available: Literal[True]
+    # The API never persists raw audio bytes; this makes the UI explanation a
+    # server contract rather than an inferred implementation detail.
+    raw_audio_persisted: Literal[False]
+
+
 class ScribeSessionListResponse(BaseModel):
     items: list[ScribeSessionResponse]
     total: int
@@ -1356,6 +1366,35 @@ def revoke_consent(
     )
     db.commit()
     return {"session_id": item.id, "consent_id": consent.id, "revoked": True}
+
+
+@router.get(
+    "/sessions/{session_id}/recording-data/capability",
+    response_model=ScribeRecordingDataCapabilityResponse,
+)
+def get_recording_derived_data_capability(
+    session_id: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeRecordingDataCapabilityResponse:
+    """Return the kill-switch-backed deletion capability for one owned session.
+
+    The endpoint intentionally returns the same 404 while the deletion feature
+    is off as the mutation route, so a browser cannot infer rollout state from
+    another user's session. It exposes no transcript, ASR metadata, audit entry
+    or note content.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_recording_data_deletion_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scribe data deletion is disabled.")
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    return ScribeRecordingDataCapabilityResponse(
+        session_id=item.id,
+        recording_data_deletion_available=True,
+        raw_audio_persisted=False,
+    )
 
 
 @router.delete("/sessions/{session_id}/recording-data")
