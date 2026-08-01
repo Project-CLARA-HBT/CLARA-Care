@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.core.config import get_settings
 from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
