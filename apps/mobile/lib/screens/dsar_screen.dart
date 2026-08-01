@@ -446,18 +446,22 @@ class _DsarAcknowledgementView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ack = acknowledgement;
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    final dueAt = _formatDate(context, ack.dueAt);
     return ListView(
       key: const Key('dsar-acknowledgement'),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
-        const StatusByText(
-          label: 'Đã tiếp nhận yêu cầu',
+        StatusByText(
+          label: english ? 'Request received' : 'Đã tiếp nhận yêu cầu',
           level: A11yStatusLevel.success,
-          semanticsPrefix: 'Trạng thái',
+          semanticsPrefix: english ? 'Status' : 'Trạng thái',
         ),
         const SizedBox(height: 12),
         Text(
-          'Yêu cầu của bạn đã được ghi nhận và sẽ được xử lý theo quy định.',
+          english
+              ? 'Your request was recorded and will be handled under the applicable process.'
+              : 'Yêu cầu của bạn đã được ghi nhận và sẽ được xử lý theo quy định.',
           style: theme.textTheme.bodyMedium,
         ),
         const SizedBox(height: 16),
@@ -468,15 +472,29 @@ class _DsarAcknowledgementView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (ack.requestId != null)
-                  _AckRow(label: 'Mã yêu cầu', value: '#${ack.requestId}'),
-                _AckRow(label: 'Loại yêu cầu', value: ack.kind),
-                _AckRow(label: 'Trạng thái', value: ack.status),
-                if (ack.dueAt != null && ack.dueAt!.isNotEmpty)
-                  _AckRow(label: 'Hạn xử lý', value: ack.dueAt!),
+                  _AckRow(
+                    label: english ? 'Request reference' : 'Mã yêu cầu',
+                    value: '#${ack.requestId}',
+                  ),
+                _AckRow(
+                  label: english ? 'Request type' : 'Loại yêu cầu',
+                  value: _kindLabel(ack.kind, english),
+                ),
+                _AckRow(
+                  label: english ? 'Status' : 'Trạng thái',
+                  value: _statusLabel(ack.status, english),
+                ),
+                if (dueAt != null)
+                  _AckRow(
+                    label: english ? 'Due date' : 'Hạn xử lý',
+                    value: dueAt,
+                  ),
                 if (ack.statutoryWindowDays != null)
                   _AckRow(
-                    label: 'Thời hạn quy định',
-                    value: '${ack.statutoryWindowDays} ngày',
+                    label: english ? 'Statutory period' : 'Thời hạn quy định',
+                    value: english
+                        ? '${ack.statutoryWindowDays} days'
+                        : '${ack.statutoryWindowDays} ngày',
                   ),
               ],
             ),
@@ -489,10 +507,40 @@ class _DsarAcknowledgementView extends StatelessWidget {
           style: FilledButton.styleFrom(
             minimumSize: const Size(kMinTouchTarget, kMinTouchTarget),
           ),
-          child: const Text('Xong'),
+          child: Text(english ? 'Done' : 'Xong'),
         ),
       ],
     );
+  }
+
+  String _kindLabel(String raw, bool english) {
+    for (final kind in DsarRequestKind.values) {
+      if (kind.wireValue == raw) return kind.title(english);
+    }
+    return english ? 'Data-rights request' : 'Yêu cầu quyền dữ liệu';
+  }
+
+  String _statusLabel(String raw, bool english) {
+    switch (raw) {
+      case 'received':
+        return english ? 'Received' : 'Đã tiếp nhận';
+      case 'in_progress':
+        return english ? 'In progress' : 'Đang xử lý';
+      case 'fulfilled':
+        return english ? 'Fulfilled' : 'Đã xử lý';
+      case 'rejected':
+        return english ? 'Needs review' : 'Cần xem xét';
+      default:
+        return english ? 'Needs review' : 'Cần xem xét';
+    }
+  }
+
+  String? _formatDate(BuildContext context, String? value) {
+    if (value == null || value.isEmpty) return null;
+    final parsed = DateTime.tryParse(value)?.toLocal();
+    if (parsed == null) return null;
+    final localizations = MaterialLocalizations.of(context);
+    return '${localizations.formatMediumDate(parsed)} ${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(parsed))}';
   }
 }
 
