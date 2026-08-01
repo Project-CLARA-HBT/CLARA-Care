@@ -7,6 +7,7 @@ import {
   scanPhrOcr,
   type PhrOcrCandidate,
 } from "@/lib/phr";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 
@@ -24,59 +25,6 @@ import { safeUserFacingError } from "@/lib/user-facing-text";
 
 type ReviewRow = PhrOcrCandidate & { _accepted: boolean };
 
-const COPY = {
-  vi: {
-    open: "Quét đơn thuốc (OCR)",
-    title: "Xem lại kết quả OCR",
-    intro:
-      "Tải lên ảnh hoặc tệp đơn thuốc. Không có mục nào được lưu cho đến khi bạn xác nhận.",
-    disclosure:
-      "Tôi đồng ý gửi tệp này để trích xuất các thuốc cần xem lại. CLARA không tự lưu thuốc từ kết quả OCR.",
-    pick: "Chọn tệp",
-    scanning: "Đang quét...",
-    scanError: "Quét tài liệu thất bại.",
-    noCandidates: "Không tìm thấy mục nào. Hãy thử tệp rõ hơn.",
-    name: "Tên thuốc",
-    dose: "Liều dùng",
-    frequency: "Tần suất",
-    needsReview: "Cần xem lại",
-    accept: "Chấp nhận",
-    accepted: "Đã chấp nhận",
-    discard: "Bỏ qua",
-    confirm: "Xác nhận & lưu",
-    confirming: "Đang lưu...",
-    confirmError: "Lưu các mục OCR thất bại.",
-    confirmed: "Đã lưu các mục đã chọn.",
-    nothingAccepted: "Hãy chấp nhận ít nhất một mục để lưu.",
-    close: "Đóng",
-  },
-  en: {
-    open: "Scan prescription (OCR)",
-    title: "Review OCR results",
-    intro:
-      "Upload a prescription image or file. Nothing is saved until you confirm.",
-    disclosure:
-      "I agree to send this file for reviewable medication extraction. CLARA does not save medicines automatically from OCR.",
-    pick: "Choose file",
-    scanning: "Scanning...",
-    scanError: "Failed to scan the document.",
-    noCandidates: "No candidates found. Try a clearer file.",
-    name: "Medication",
-    dose: "Dose",
-    frequency: "Frequency",
-    needsReview: "Needs review",
-    accept: "Accept",
-    accepted: "Accepted",
-    discard: "Discard",
-    confirm: "Confirm & save",
-    confirming: "Saving...",
-    confirmError: "Failed to save OCR entries.",
-    confirmed: "Saved the accepted entries.",
-    nothingAccepted: "Accept at least one entry to save.",
-    close: "Close",
-  },
-} as const;
-
 export default function OcrReviewModal({
   uiLanguage,
   onConfirmed,
@@ -84,7 +32,7 @@ export default function OcrReviewModal({
   uiLanguage: UILanguage;
   onConfirmed?: () => void;
 }) {
-  const text = COPY[uiLanguage];
+  const copy = (key: UITranslationKey) => t(uiLanguage, key);
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -130,15 +78,11 @@ export default function OcrReviewModal({
       setReviewToken(result.reviewToken);
       setReviewCandidateIds(result.candidates.map((candidate) => candidate.candidate_id));
       if (result.processingDisclosure?.humanConfirmationRequired) {
-        setProcessingNotice(
-          uiLanguage === "vi"
-            ? "CLARA không lưu tệp tải lên; hãy kiểm tra từng mục trước khi lưu vào hồ sơ."
-            : "CLARA does not persist the uploaded file; review every item before saving it to your record.",
-        );
+        setProcessingNotice(copy("phr.ocr.processingNotice"));
       }
-      if (result.candidates.length === 0) setMessage(text.noCandidates);
+      if (result.candidates.length === 0) setMessage(copy("phr.ocr.noCandidates"));
     } catch (err) {
-      setError(safeUserFacingError(err, text.scanError));
+      setError(safeUserFacingError(err, copy("phr.ocr.scanError")));
     } finally {
       setScanning(false);
     }
@@ -153,7 +97,7 @@ export default function OcrReviewModal({
   const onConfirm = async () => {
     const accepted = rows.filter((r) => r._accepted);
     if (accepted.length === 0 || !reviewToken || reviewCandidateIds.length === 0) {
-      setError(text.nothingAccepted);
+      setError(copy("phr.ocr.nothingAccepted"));
       return;
     }
     setConfirming(true);
@@ -169,12 +113,12 @@ export default function OcrReviewModal({
         reviewToken,
         reviewCandidateIds,
       );
-      setMessage(text.confirmed);
+      setMessage(copy("phr.ocr.confirmed"));
       setRows([]);
       onConfirmed?.();
       onClose();
     } catch (err) {
-      setError(safeUserFacingError(err, text.confirmError));
+      setError(safeUserFacingError(err, copy("phr.ocr.confirmError")));
     } finally {
       setConfirming(false);
     }
@@ -187,17 +131,20 @@ export default function OcrReviewModal({
         onClick={onOpen}
         className="inline-flex min-h-[38px] items-center rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-3 text-sm font-semibold text-[#1D4ED8] transition hover:bg-[#DBEAFE] dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100"
       >
-        {text.open}
+        {copy("phr.ocr.open")}
       </button>
 
-      <PhrModal open={open} title={text.title} onClose={onClose} closeLabel={text.close}>
+      <PhrModal
+        open={open}
+        title={copy("phr.ocr.title")}
+        onClose={onClose}
+        closeLabel={copy("phr.ocr.close")}
+      >
         <p className="text-[13px] leading-6 text-[var(--text-secondary)]">
-          {text.intro}
+          {copy("phr.ocr.intro")}
         </p>
         <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
-          {uiLanguage === "vi"
-            ? "Bạn cần có đồng ý y tế phù hợp trước khi CLARA gửi tệp đến dịch vụ OCR đã cấu hình."
-            : "Appropriate medical consent is required before CLARA sends a file to the configured OCR service."}
+          {copy("phr.ocr.consentNotice")}
         </p>
 
         <div className="mt-3">
@@ -208,13 +155,13 @@ export default function OcrReviewModal({
               onChange={(event) => setProcessingAcknowledged(event.target.checked)}
               disabled={scanning || confirming}
             />
-            <span>{text.disclosure}</span>
+            <span>{copy("phr.ocr.disclosure")}</span>
           </label>
           <input
             ref={fileRef}
             type="file"
             accept="image/*,application/pdf"
-            aria-label={text.pick}
+            aria-label={copy("phr.ocr.pick")}
             onChange={(e) => onFile(e.target.files?.[0])}
             disabled={scanning || confirming || !processingAcknowledged}
             className="block w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-lg file:border file:border-[#93C5FD] file:bg-[#EFF6FF] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-[#1D4ED8]"
@@ -222,7 +169,7 @@ export default function OcrReviewModal({
         </div>
 
         {scanning ? (
-          <p className="mt-3 text-sm text-[var(--text-secondary)]">{text.scanning}</p>
+          <p className="mt-3 text-sm text-[var(--text-secondary)]">{copy("phr.ocr.scanning")}</p>
         ) : null}
         {error ? <p className="mt-3 text-sm text-rose-500">{error}</p> : null}
         {message ? (
@@ -246,22 +193,22 @@ export default function OcrReviewModal({
                 <div className="grid gap-2 sm:grid-cols-3">
                   <input
                     className="input"
-                    aria-label={text.name}
-                    placeholder={text.name}
+                    aria-label={copy("phr.ocr.name")}
+                    placeholder={copy("phr.ocr.name")}
                     value={row.name}
                     onChange={(e) => patchRow(idx, { name: e.target.value })}
                   />
                   <input
                     className="input"
-                    aria-label={text.dose}
-                    placeholder={text.dose}
+                    aria-label={copy("phr.ocr.dose")}
+                    placeholder={copy("phr.ocr.dose")}
                     value={row.dose}
                     onChange={(e) => patchRow(idx, { dose: e.target.value })}
                   />
                   <input
                     className="input"
-                    aria-label={text.frequency}
-                    placeholder={text.frequency}
+                    aria-label={copy("phr.ocr.frequency")}
+                    placeholder={copy("phr.ocr.frequency")}
                     value={row.frequency}
                     onChange={(e) => patchRow(idx, { frequency: e.target.value })}
                   />
@@ -269,7 +216,7 @@ export default function OcrReviewModal({
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {row.requires_manual_confirm && !row._accepted ? (
                     <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-200">
-                      {text.needsReview}
+                      {copy("phr.ocr.needsReview")}
                     </span>
                   ) : null}
                   <div className="ml-auto flex gap-2">
@@ -278,7 +225,7 @@ export default function OcrReviewModal({
                       onClick={() => patchRow(idx, { _accepted: !row._accepted })}
                       className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/60 dark:bg-emerald-500/15 dark:text-emerald-100"
                     >
-                      {row._accepted ? text.accepted : text.accept}
+                      {row._accepted ? copy("phr.ocr.accepted") : copy("phr.ocr.accept")}
                     </button>
                     <button
                       type="button"
@@ -287,7 +234,7 @@ export default function OcrReviewModal({
                       }
                       className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/70 dark:bg-rose-500/15 dark:text-rose-100"
                     >
-                      {text.discard}
+                      {copy("phr.ocr.discard")}
                     </button>
                   </div>
                 </div>
@@ -301,7 +248,7 @@ export default function OcrReviewModal({
                 disabled={confirming}
                 className="inline-flex min-h-[38px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {confirming ? text.confirming : text.confirm}
+                {confirming ? copy("phr.ocr.confirming") : copy("phr.ocr.confirm")}
               </button>
             </div>
           </div>
