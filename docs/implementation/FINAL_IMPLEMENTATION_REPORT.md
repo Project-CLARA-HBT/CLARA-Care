@@ -180,6 +180,11 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   and safe errors through the same typed vi/en catalog. This does not change
   the server-enforced sharing-consent, capability, expiry, revocation,
   owner-scoped export, emergency-card data or medication-reminder boundary.
+- The guided personal-data deletion route now resolves its three steps,
+  consequences, irreversible-action acknowledgement, receipt/status and safe
+  errors from the typed vi/en catalog. Receipt timestamps now use the selected
+  application locale rather than an uncontrolled browser default; the final
+  DSAR mutation remains separately explicit and CSRF-protected.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be
