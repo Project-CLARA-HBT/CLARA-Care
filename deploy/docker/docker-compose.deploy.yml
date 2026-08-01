@@ -214,7 +214,11 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-}
-      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.yescale.io/v1}
+      # Required deployment-owned ordered failover list.  DeepSeekClient accepts
+      # comma/semicolon-separated OpenAI-compatible bases and sweeps them on
+      # retryable upstream failures; do not silently pin production to a single
+      # vendor default in compose.
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:?DEEPSEEK_BASE_URL is required}
       DEEPSEEK_AUDIO_BASE_URL: ${DEEPSEEK_AUDIO_BASE_URL_DOCKER:-http://asr:8090/v1}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-pro}
       DEEPSEEK_PRO_MODEL: ${DEEPSEEK_PRO_MODEL:-deepseek-v4-pro}
@@ -239,7 +243,7 @@ services:
       LLM_DEEPSEEK_ONLY: ${LLM_DEEPSEEK_ONLY:-true}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       YESCALE_API_KEY: ${YESCALE_API_KEY:-}
-      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://api.yescale.io/v1}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:?EMBEDDING_BASE_URL is required}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-large}
       EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-6}
       EXTERNAL_DDI_ENABLED: ${EXTERNAL_DDI_ENABLED:-false}
