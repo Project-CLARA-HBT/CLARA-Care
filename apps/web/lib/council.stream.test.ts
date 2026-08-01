@@ -8,7 +8,6 @@ import {
 
 vi.mock("@/lib/http-client", () => ({ default: { post: vi.fn(), get: vi.fn(), patch: vi.fn() } }));
 vi.mock("@/lib/auth-store", () => ({
-  getAccessToken: () => "test-token",
   getCsrfToken: () => "csrf",
 }));
 
@@ -74,7 +73,7 @@ describe("streamCouncilRun", () => {
     ).toBe("done");
   });
 
-  it("posts to the case stream URL with bearer + CSRF headers", async () => {
+  it("posts to the case stream URL with cookie auth and a CSRF header", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       sseStream(['event: result\ndata: {"ok":true}\n\n'])
     );
@@ -88,7 +87,7 @@ describe("streamCouncilRun", () => {
     expect(init.method).toBe("POST");
     const headers = init.headers as Record<string, string>;
     expect(headers.Accept).toBe("text/event-stream");
-    expect(headers.Authorization).toBe("Bearer test-token");
+    expect(headers.Authorization).toBeUndefined();
     expect(headers["X-CSRF-Token"]).toBe("csrf");
   });
 

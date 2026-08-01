@@ -1,12 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import {
-  clearTokens,
-  getAccessToken,
-  getCsrfToken,
-  getRefreshToken,
-  setAccessToken,
-  setRefreshToken
-} from "@/lib/auth-store";
+import { clearTokens, getCsrfToken } from "@/lib/auth-store";
 import { getActiveProfileId } from "@/lib/profile-context";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
@@ -60,7 +53,7 @@ const api = axios.create({
   withCredentials: true
 });
 
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 let authFailureRedirectInProgress = false;
 
 function isRetryableRefreshError(error: unknown): boolean {
@@ -153,63 +146,41 @@ async function resolveErrorMessage(error: AxiosError<{ detail?: string }>): Prom
   return error.message || "Đã xảy ra lỗi không xác định.";
 }
 
-async function runTokenRefresh(): Promise<string | null> {
+async function runTokenRefresh(): Promise<boolean> {
   const csrfToken = getCsrfToken();
   const headers: Record<string, string> = {};
   if (csrfToken) {
     headers["X-CSRF-Token"] = csrfToken;
   }
 
-  const refreshAttempts: Array<() => Promise<unknown>> = [
-    () =>
-      axios.post(`${apiBaseUrl}/auth/refresh`, {}, { timeout: REFRESH_TIMEOUT_MS, withCredentials: true, headers }),
-    () => {
-      const refreshToken = getRefreshToken();
-      if (!refreshToken) {
-        throw new Error("missing_refresh_token");
-      }
-      return axios.post(
+  let refreshResponse: unknown = null;
+  let lastError: unknown = null;
+  for (let idx = 0; idx < 2; idx += 1) {
+    try {
+      // Browser refresh is deliberately cookie-only. The API rotates HttpOnly
+      // cookies; response tokens are for non-browser clients and must never be
+      // persisted or attached by the web app.
+      refreshResponse = await axios.post(
         `${apiBaseUrl}/auth/refresh`,
-        { refresh_token: refreshToken },
+        {},
         { timeout: REFRESH_TIMEOUT_MS, withCredentials: true, headers }
       );
-    }
-  ];
-
-  let refreshResponse: { data?: { access_token?: string; refresh_token?: string } } | null = null;
-  let lastError: unknown = null;
-  for (const attempt of refreshAttempts) {
-    for (let idx = 0; idx < 2; idx += 1) {
-      try {
-        refreshResponse = (await attempt()) as { data?: { access_token?: string; refresh_token?: string } };
+      break;
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableRefreshError(error) || idx === 1) {
         break;
-      } catch (error) {
-        lastError = error;
-        if (!isRetryableRefreshError(error) || idx === 1) {
-          break;
-        }
-        await sleep(300 * (idx + 1));
       }
     }
-    if (refreshResponse) break;
+    await sleep(300 * (idx + 1));
   }
 
   if (!refreshResponse) {
     throw lastError ?? new Error("token_refresh_failed");
   }
 
-  const nextAccessToken = refreshResponse.data?.access_token as string | undefined;
-  const nextRefreshToken = refreshResponse.data?.refresh_token as string | undefined;
-  if (!nextAccessToken) {
-    throw new Error("Không nhận được access token mới.");
-  }
-
-  setAccessToken(nextAccessToken);
-  if (nextRefreshToken) {
-    setRefreshToken(nextRefreshToken);
-  }
   authFailureRedirectInProgress = false;
-  return nextAccessToken;
+  return true;
 }
 
 async function bestEffortServerLogout(): Promise<void> {
@@ -258,11 +229,11 @@ function redirectToLoginAfterAuthFailure(): void {
   window.location.replace(`/login?next=${encodeURIComponent(next)}`);
 }
 
-async function ensureSingleFlightRefresh(): Promise<string | null> {
+async function ensureSingleFlightRefresh(): Promise<boolean> {
   if (!refreshPromise) {
     refreshPromise = runTokenRefresh()
       .catch(() => {
-        return null;
+        return false;
       })
       .finally(() => {
         refreshPromise = null;
@@ -280,16 +251,6 @@ api.interceptors.request.use(async (config) => {
 
   const method = String(config.method ?? "get").toUpperCase();
   const isUnsafe = method !== "GET" && method !== "HEAD" && method !== "OPTIONS";
-
-  let token = getAccessToken();
-  if (!token && isUnsafe) {
-    // Recover from long-lived cookie-only sessions: refresh once to regain Bearer
-    // token, so unsafe requests won't fail on CSRF-only path.
-    token = await ensureSingleFlightRefresh();
-  }
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
 
   // This is a presentation/cache partition hint, never an authorization
   // credential. The API resolves it only against owned profiles or live grants.
@@ -325,12 +286,10 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const nextAccessToken = await ensureSingleFlightRefresh();
-        if (!nextAccessToken) {
-          throw new Error("Không nhận được access token mới.");
+        const refreshed = await ensureSingleFlightRefresh();
+        if (!refreshed) {
+          throw new Error("Không thể làm mới phiên đăng nhập.");
         }
-        originalRequest.headers = originalRequest.headers ?? {};
-        originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
         return api(originalRequest);
       } catch {
         await bestEffortServerLogout();

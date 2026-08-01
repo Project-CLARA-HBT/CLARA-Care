@@ -3,6 +3,13 @@
 Use this operational checklist before a release; it is not a certification.
 
 - [ ] RBAC/profile isolation and consent/CSRF contract tests passed.
+- [ ] Cookie-session CSRF tests cover malformed, mixed-case and revoked Bearer
+      headers; exemption is allowed only for an actually valid explicit token.
+- [ ] Browser access and refresh credentials are HttpOnly-cookie-only. Verify
+      no `clara_access_token_session` or `clara_refresh_token_session` value
+      remains in sessionStorage after login, refresh or logout.
+- [ ] Metrics credentials are passed exclusively in `X-Metrics-Token`; no
+      dashboard, smoke script, documentation or monitor uses `?token=`.
 - [ ] Emergency and legal hard-guard invariant tests passed.
 - [ ] FIDES/claim verification and DrugBank required-source tests passed.
 - [ ] Eval manifests/fixtures contain no PHI, secrets, prompts or provider keys.

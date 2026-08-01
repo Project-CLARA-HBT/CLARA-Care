@@ -1,5 +1,5 @@
 import api from "@/lib/http-client";
-import { getAccessToken, getCsrfToken } from "@/lib/auth-store";
+import { getCsrfToken } from "@/lib/auth-store";
 import type { UILanguage } from "@/lib/ui-language";
 
 export type ChatResponse = {
@@ -141,8 +141,6 @@ export async function streamChatMessage(
     Accept: "text/event-stream",
     "Cache-Control": "no-cache",
   };
-  const accessToken = getAccessToken();
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const csrfToken = getCsrfToken();
   if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 

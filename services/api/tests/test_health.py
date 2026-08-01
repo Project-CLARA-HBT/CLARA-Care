@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from clara_api import main
 from clara_api.main import app
 
 client = TestClient(app)
@@ -44,3 +45,15 @@ def test_metrics_unknown_routes_are_bucketed() -> None:
     body = metrics.text
     assert 'by_route{route="__unknown__"}' in body
     assert unique_path not in body
+
+
+def test_metrics_token_is_accepted_only_in_a_header(monkeypatch) -> None:
+    """Do not allow a metrics secret to leak through a request URL."""
+
+    monkeypatch.setattr(main.settings, "metrics_access_token", "metrics-test-token")
+
+    query_token = client.get("/metrics?token=metrics-test-token")
+    assert query_token.status_code == 403
+
+    header_token = client.get("/metrics", headers={"X-Metrics-Token": "metrics-test-token"})
+    assert header_token.status_code == 200

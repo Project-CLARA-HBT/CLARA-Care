@@ -37,6 +37,24 @@ Next 16.2.12 still declares the same PostCSS pin. It remains a release blocker
 until a compatible framework/vendor remediation or reviewed replacement exists;
 it is not suppressed or reported as fixed.
 
+The current source checkpoint closes a reproduced CSRF transport-confusion
+case: a cookie session plus lowercase `authorization: bearer junk` formerly
+skipped CSRF before RBAC treated the header differently and fell back to the
+cookie. API now uses one case-insensitive Bearer parser at both boundaries;
+only a valid, non-revoked explicit credential can receive the CSRF exemption,
+and an explicit malformed Bearer credential never downgrades into cookie auth.
+It also removes the root metrics `?token=` credential path.
+
+The browser client no longer stores access or refresh tokens in memory or
+sessionStorage, and no longer places them in streaming/API Authorization
+headers. Login and refresh use the existing HttpOnly cookie pair; legacy
+storage keys are purged at browser login/logout. API response token fields
+remain for non-browser clients. Regression test sources cover the CSRF bypass,
+lowercase valid Bearer handling, header-only metrics, legacy-token purge and
+cookie-auth streaming paths. Per the feature-first instruction, this checkpoint
+has not run formatting, lint, type checks, tests, builds, evaluation or
+deployment; it is implementation evidence, not runtime validation.
+
 ## Executive summary
 
 This implementation pass strengthened CLARA's safety and evidence boundaries:

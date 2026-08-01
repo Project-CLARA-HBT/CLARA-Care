@@ -1,5 +1,5 @@
 import api from "@/lib/http-client";
-import { getAccessToken, getCsrfToken } from "@/lib/auth-store";
+import { getCsrfToken } from "@/lib/auth-store";
 
 export type CouncilRunRequest = {
   symptoms: string[];
@@ -1118,8 +1118,6 @@ export async function streamCouncilRun(
     Accept: "text/event-stream",
     "Content-Type": "application/json",
   };
-  const accessToken = getAccessToken();
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const csrfToken = getCsrfToken();
   if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 

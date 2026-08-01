@@ -19,7 +19,7 @@ from clara_api.core.metrics import (
     get_api_metrics_store,
 )
 from clara_api.core.rate_limit import RateLimiterMiddleware
-from clara_api.core.rbac import AuthContextMiddleware
+from clara_api.core.rbac import AuthContextMiddleware, has_valid_explicit_bearer_token
 from clara_api.core.readiness import evaluate_readiness
 from clara_api.core.request_limits import RequestBodyLimitMiddleware
 from clara_api.core.timeouts import TimeoutFloorError, assert_settings_timeout_floors
@@ -306,16 +306,16 @@ async def enforce_csrf_for_cookie_session(request: Request, call_next):
     if request.url.path.startswith(_CSRF_EXEMPT_PREFIXES):
         return await call_next(request)
 
-    auth_header = request.headers.get("authorization", "").strip().lower()
-    bearer_header_present = auth_header.startswith("bearer ")
-
     auth_cookie_present = bool(
         request.cookies.get(settings.auth_cookie_access_name)
         or request.cookies.get(settings.auth_cookie_refresh_name)
     )
     # CSRF is required only when session cookies are actually used for auth.
-    # If client sends explicit Bearer token, browser CSRF vector does not apply.
-    if not auth_cookie_present or bearer_header_present:
+    # An Authorization header is not itself proof of Bearer authentication: it
+    # must parse, verify and pass the revocation check through the same RBAC
+    # helper used by route dependencies.  Otherwise a junk/mixed-case header
+    # could bypass CSRF and then fall back to the caller's cookie session.
+    if not auth_cookie_present or has_valid_explicit_bearer_token(request):
         return await call_next(request)
 
     csrf_cookie = request.cookies.get(settings.auth_csrf_cookie_name, "").strip()
@@ -350,10 +350,9 @@ def root_metrics(request: Request) -> PlainTextResponse:
     if settings.environment.lower() == "production" and not expected:
         raise HTTPException(status_code=404, detail="Not Found")
     if expected:
-        provided = (
-            request.headers.get("x-metrics-token", "").strip()
-            or request.query_params.get("token", "").strip()
-        )
+        # Query-string secrets leak into browser history, reverse-proxy access
+        # logs and referrers. Metrics authentication is header-only.
+        provided = request.headers.get("x-metrics-token", "").strip()
         if not provided or not secrets.compare_digest(provided, expected):
             raise HTTPException(status_code=403, detail="Forbidden")
     payload = format_metrics_prometheus(get_api_metrics_store().snapshot())

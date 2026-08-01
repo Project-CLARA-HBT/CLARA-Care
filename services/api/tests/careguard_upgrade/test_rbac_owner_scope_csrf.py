@@ -345,6 +345,26 @@ def test_csrf_rejects_cookie_auth_mutation_without_token() -> None:
     assert response.json()["detail"] == "CSRF validation failed"
 
 
+def test_csrf_rejects_cookie_auth_with_invalid_lowercase_bearer_header() -> None:
+    """A junk Bearer header cannot disable cookie-session CSRF protection."""
+
+    settings = get_settings()
+    if not settings.auth_csrf_enabled:
+        return
+    client.cookies.clear()
+    client.cookies.set(settings.auth_cookie_access_name, "placeholder-session-cookie")
+    try:
+        response = client.post(
+            "/api/v1/careguard/cabinet/items",
+            headers={"Authorization": "bearer junk"},
+            json={"source": "manual", "drug_name": "Paracetamol"},
+        )
+    finally:
+        client.cookies.clear()
+    assert response.status_code == 403
+    assert response.json()["detail"] == "CSRF validation failed"
+
+
 def test_csrf_rejects_cookie_auth_mutation_with_mismatched_token() -> None:
     settings = get_settings()
     if not settings.auth_csrf_enabled:
@@ -377,6 +397,20 @@ def test_csrf_allows_bearer_auth_mutation() -> None:
     assert response.status_code == 200, response.text
     # The created item is returned (proving the request was not CSRF-rejected).
     assert response.json()["normalized_name"] == "ibuprofen"
+
+
+def test_csrf_allows_valid_lowercase_bearer_auth_mutation() -> None:
+    """A valid lowercase Bearer scheme authenticates without cookie fallback."""
+
+    token = _login_with_consent(_unique_email("csrf-lowercase-bearer"))
+    client.cookies.clear()
+    response = client.post(
+        "/api/v1/careguard/cabinet/items",
+        headers={"Authorization": f"bearer {token}"},
+        json={"source": "manual", "drug_name": "Cetirizine"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["normalized_name"] == "cetirizine"
 
 
 def test_csrf_allows_cookie_auth_mutation_with_matching_token() -> None:

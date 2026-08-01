@@ -10,9 +10,6 @@ const CSRF_COOKIE_NAME =
 const ACTIVE_PROFILE_STORAGE_KEY = "clara_active_profile_id";
 const PROFILE_CACHE_PREFIX = "clara_profile_cache:";
 
-let accessTokenMemory: string | null = null;
-let refreshTokenMemory: string | null = null;
-
 function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
@@ -51,54 +48,24 @@ function setClientSessionCookie(enabled: boolean): void {
   document.cookie = `${CLIENT_SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
 }
 
-export function getAccessToken(): string | null {
-  if (!accessTokenMemory && isBrowser()) {
-    const sessionCached = tryGetStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY);
-    accessTokenMemory = sessionCached?.trim() || null;
-  }
-  return accessTokenMemory;
-}
-
-export function setAccessToken(token: string): void {
-  const next = token.trim() || null;
-  accessTokenMemory = next;
+function purgeLegacySessionTokens(): void {
   if (!isBrowser()) return;
-  if (next) {
-    trySetStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY, next);
-    setClientSessionCookie(true);
-  } else {
-    tryRemoveStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY);
-  }
+  // Earlier builds wrote bearer credentials to sessionStorage. Remove them on
+  // every auth-store entry point so an upgraded browser cannot retain a
+  // refresh token that an injected script could read.
+  tryRemoveStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY);
+  tryRemoveStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY);
 }
 
-export function getRefreshToken(): string | null {
-  if (!refreshTokenMemory && isBrowser()) {
-    const sessionCached = tryGetStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY);
-    refreshTokenMemory = sessionCached?.trim() || null;
-  }
-  return refreshTokenMemory;
-}
-
-export function setRefreshToken(token: string): void {
-  // SessionStorage fallback only to recover from environments where HttpOnly
-  // cookie is temporarily unavailable (mobile/webview cross-origin quirks).
-  const next = token.trim() || null;
-  refreshTokenMemory = next;
-  if (!isBrowser()) return;
-  if (next) {
-    trySetStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY, next);
-    setClientSessionCookie(true);
-  } else {
-    tryRemoveStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY);
-  }
+/** Mark the browser UI as signed in; credentials themselves stay HttpOnly. */
+export function markAuthenticatedBrowserSession(): void {
+  purgeLegacySessionTokens();
+  setClientSessionCookie(true);
 }
 
 export function clearTokens(): void {
-  accessTokenMemory = null;
-  refreshTokenMemory = null;
   if (!isBrowser()) return;
-  tryRemoveStorageItem(window.sessionStorage, ACCESS_TOKEN_SESSION_KEY);
-  tryRemoveStorageItem(window.sessionStorage, REFRESH_TOKEN_SESSION_KEY);
+  purgeLegacySessionTokens();
   tryRemoveStorageItem(window.localStorage, ROLE_KEY);
   tryRemoveStorageItem(window.localStorage, ACTIVE_PROFILE_STORAGE_KEY);
   for (const storage of [window.sessionStorage, window.localStorage]) {

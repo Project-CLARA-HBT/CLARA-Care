@@ -1,5 +1,5 @@
 import api from "@/lib/http-client";
-import { getAccessToken, getCsrfToken } from "@/lib/auth-store";
+import { getCsrfToken } from "@/lib/auth-store";
 import { parseContentDispositionFilename } from "@/lib/scribe-review";
 
 export type ScribeSoapRequest = {
@@ -703,8 +703,6 @@ export async function streamScribe(
   if (options.templateId) form.append("template_id", options.templateId);
 
   const headers: Record<string, string> = { Accept: "text/event-stream" };
-  const accessToken = getAccessToken();
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const csrfToken = getCsrfToken();
   if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 
