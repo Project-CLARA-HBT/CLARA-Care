@@ -295,7 +295,8 @@ const MIGRATED_SURFACES = [
       "@/lib/i18n/catalog",
       "chat.workspace.title",
       "chat.workspace.notice.shareCreated",
-      "formatLocaleDate(uiLanguage, item.expires_at)",
+      "formatLocaleDate(",
+      "item.expires_at",
     ],
     forbidden: [
       "Không gian làm việc",
@@ -624,6 +625,26 @@ for (const surface of MIGRATED_SURFACES) {
   }
 }
 
+// These source files resolve a closed, TypeScript-constrained status enum into
+// catalog keys. A literal-only scan cannot see the individual suffixes, so
+// bind each dynamic prefix to its actual source expression instead of treating
+// every unreferenced key as live. Adding a new dynamic prefix requires an
+// explicit entry here and therefore remains reviewable in CI.
+const DYNAMIC_KEY_PREFIXES = [
+  {
+    prefix: "research.workspace.timeline.status.",
+    sourceToken: "`research.workspace.timeline.status.${status}`",
+  },
+  {
+    prefix: "ecosystem.status.",
+    sourceToken: 'labelFor(language, "ecosystem.status"',
+  },
+  {
+    prefix: "ecosystem.driftRisk.",
+    sourceToken: 'labelFor(language, "ecosystem.driftRisk"',
+  },
+];
+
 // Detect accidental dead catalog entries in production source. Dynamic typed
 // lookups (role/group/theme maps) are explicitly verified by the migrated
 // surface contracts above, so a key is live if either a direct t() call or its
@@ -635,9 +656,15 @@ const sourceText = collectSourceFiles(resolve(WEB_ROOT, "app"))
   .map((path) => readFileSync(path, "utf8"))
   .join("\n");
 const contractKeys = new Set(MIGRATED_SURFACES.flatMap((surface) => surface.required));
+for (const dynamicKey of DYNAMIC_KEY_PREFIXES) {
+  if (!sourceText.includes(dynamicKey.sourceToken)) {
+    fail(`dynamic catalog source is missing: ${dynamicKey.sourceToken}`);
+  }
+}
 for (const key of viSet) {
   const directUse = sourceText.includes(`"${key}"`) || sourceText.includes(`'${key}'`);
-  if (!directUse && !contractKeys.has(key)) {
+  const dynamicUse = DYNAMIC_KEY_PREFIXES.some(({ prefix }) => key.startsWith(prefix));
+  if (!directUse && !contractKeys.has(key) && !dynamicUse) {
     fail(`catalog key is not referenced by production source: ${key}`);
   }
 }

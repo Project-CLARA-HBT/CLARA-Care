@@ -1301,7 +1301,7 @@ export default function LifeMapPage() {
                     {nextQuestion.question}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    {copy("lifemap.question.why", { reason: nextQuestion.why })}
+                    {copy("lifemap.question.why", { reason: nextQuestion.why ?? "" })}
                   </p>
                   <div className="mt-4 space-y-3">
                     <Textarea

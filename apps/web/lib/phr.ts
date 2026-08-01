@@ -344,6 +344,8 @@ function coerceOcrSourceCoordinate(
   const end = value.end;
   if (
     value.coordinate_system !== "corrected_text_codepoint_offset" ||
+    typeof start !== "number" ||
+    typeof end !== "number" ||
     !Number.isSafeInteger(start) ||
     !Number.isSafeInteger(end) ||
     start < 0 ||
@@ -351,7 +353,11 @@ function coerceOcrSourceCoordinate(
   ) {
     return null;
   }
-  return { coordinate_system: value.coordinate_system, start, end };
+  return {
+    coordinate_system: "corrected_text_codepoint_offset",
+    start,
+    end,
+  };
 }
 
 function coerceOcrCandidate(raw: unknown): PhrOcrCandidate {

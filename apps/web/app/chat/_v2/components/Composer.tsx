@@ -45,9 +45,9 @@ export type ComposerProps = {
   onChangeRetrievalStackMode: (mode: ResearchRetrievalStackMode) => void;
   personalMode: boolean;
   onTogglePersonalMode: () => void;
-  outputModesEnabled: boolean;
-  outputMode: ResearchOutputMode;
-  onChangeOutputMode: (mode: ResearchOutputMode) => void;
+  outputModesEnabled?: boolean;
+  outputMode?: ResearchOutputMode;
+  onChangeOutputMode?: (mode: ResearchOutputMode) => void;
   liveStatusNote: string;
   uiLanguage: UILanguage;
   userRole?: UserRole;
@@ -66,9 +66,9 @@ function Composer(props: ComposerProps) {
     onChangeRetrievalStackMode,
     personalMode,
     onTogglePersonalMode,
-    outputModesEnabled,
-    outputMode,
-    onChangeOutputMode,
+    outputModesEnabled = false,
+    outputMode = "plain",
+    onChangeOutputMode = () => undefined,
     liveStatusNote,
     uiLanguage,
     userRole = "normal",

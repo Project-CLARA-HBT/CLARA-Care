@@ -88,10 +88,6 @@ function makeConfig(): ControlTowerConfig {
       scientific_retrieval_enabled: true,
       web_retrieval_enabled: false,
       file_retrieval_enabled: false,
-      llm_provider: "deepseek",
-      llm_base_url: "",
-      llm_model: "",
-      llm_api_key: ""
     },
     careguard_runtime: { external_ddi_enabled: false }
   };

@@ -532,8 +532,7 @@ export default function ChatShell() {
         run: () => {
           const id = asConversationId(activeConversationId);
           if (id) {
-            void workspace.share(id).then((rows) => {
-              const created = rows?.find((row) => row.conversation_id === id);
+            void workspace.share(id).then((created) => {
               if (created?.public_url) void copyShareUrl(created.public_url);
             });
           }

@@ -175,11 +175,10 @@ export default function WorkspaceDrawer({
     if (apiUnavailable || busyShareId !== null) return;
     setBusyShareId(id);
     try {
-      const rows = await workspace.share(id, {
+      const updated = await workspace.share(id, {
         expiresInHours: expiryHours ?? undefined,
         rotate: true,
       });
-      const updated = rows?.find((row) => row.conversation_id === id);
       if (updated?.public_url) onCopyShareUrl(updated.public_url);
       notify(copy("chat.workspace.notice.shareRotated"));
     } catch {

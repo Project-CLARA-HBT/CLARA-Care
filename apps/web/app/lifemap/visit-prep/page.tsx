@@ -113,7 +113,11 @@ export default function LifeMapVisitPreparationPage() {
         </Link>
         {enabled === null ? <LoadingCards count={2} /> : null}
         {enabled === false ? (
-          <EmptyState title={t(language, "visitPrep.unavailable")} />
+          <EmptyState
+            icon="lock"
+            title={t(language, "visitPrep.unavailable")}
+            description={t(language, "visitPrep.description")}
+          />
         ) : null}
         {enabled ? (
           <>
@@ -149,7 +153,13 @@ export default function LifeMapVisitPreparationPage() {
                 </SurfaceCard>
 
                 {error ? <InlineError message={error} onRetry={() => void buildDraft()} /> : null}
-                {!loading ? <EmptyState title={t(language, "visitPrep.noDraft")} /> : null}
+                {!loading ? (
+                  <EmptyState
+                    icon="description"
+                    title={t(language, "visitPrep.noDraft")}
+                    description={t(language, "visitPrep.description")}
+                  />
+                ) : null}
               </>
             )}
           </>
