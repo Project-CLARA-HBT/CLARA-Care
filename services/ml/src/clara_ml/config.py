@@ -985,6 +985,16 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RAG_INGESTION_ENABLED",
     )
+    # Live scientific gap-fill is intentionally a separate opt-in from the
+    # offline corpus scheduler.  When enabled, only documents from a curated
+    # registry source with complete provenance are handed to the same atomic
+    # ingestion boundary used by offline connectors.  This is a kill switch:
+    # a bad connector, unavailable embeddings, or an unavailable store must
+    # never slow or change the answer request that discovered the document.
+    rag_gap_fill_persistence_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_GAP_FILL_PERSISTENCE_ENABLED",
+    )
     # A corpus-wide watermark backfill can issue network requests to every
     # enabled source. Keep it independently dark even when incremental
     # ingestion is enabled; operators must explicitly opt in to this broader

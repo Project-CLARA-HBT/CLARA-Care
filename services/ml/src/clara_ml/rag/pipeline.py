@@ -2109,29 +2109,21 @@ class RagPipelineP1:
             )
             return []
 
-    def _schedule_async_persist(self, query: str, docs: List[Document]) -> None:
-        """Best-effort, non-blocking seam to persist gap-fill content (Req 3.5).
+    def _schedule_async_persist(self, docs: List[Document]) -> None:
+        """Best-effort, bounded persistence of provenance-checked gap-fill docs.
 
-        Requirement 3.5 calls for asynchronously persisting content discovered
-        via live-connector gap-fill so the persistent index converges over
-        time. Full async ingestion infrastructure is out of scope for P2; this
-        is the integration seam. It is intentionally a logged no-op for now and
-        MUST NOT block or fail the request path.
-
-        TODO(P1/P5): hand ``docs`` to the offline ingestion orchestrator
-        (``clara_ml.ingestion.orchestrator``) via a background task / queue so
-        the gap-fill content is cleaned, chunked, embedded once and UPSERTed
-        into the persistent corpus.
+        The user query is intentionally absent from this API: it is neither
+        logged nor persisted.  The worker only accepts registry-backed live
+        documents and runs them through the existing atomic ingestion pipeline.
+        Any unavailable dependency simply leaves the request's live result
+        untouched.
         """
 
         try:
-            if not docs:
-                return
-            logger.info(
-                "RAG gap-fill: %d live-connector doc(s) queued for async "
-                "persistence (seam: offline ingestion not yet wired)",
-                len(docs),
-            )
+            if docs:
+                from clara_ml.ingestion.live_gap_fill import schedule_gap_fill_persistence
+
+                schedule_gap_fill_persistence(docs)
         except Exception:  # pragma: no cover - a hook must never break a request
             pass
 
@@ -2195,7 +2187,7 @@ class RagPipelineP1:
             )
             if gap_docs:
                 docs = self._merge_documents_by_id([*docs, *gap_docs])
-                self._schedule_async_persist(scientific_query, gap_docs)
+                self._schedule_async_persist(gap_docs)
         if self._persistent_needs_gap_fill(docs):
             return None
 

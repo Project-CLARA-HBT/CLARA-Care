@@ -59,9 +59,11 @@ from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.retrieval.text_utils import query_terms
 from clara_ml.rag.store.health import run_startup_self_check
 from clara_ml.routing import P1RoleIntentRouter
-from clara_ml.streaming.chat_stream import stream_chat_sse as chat_stream_sse
+from clara_ml.streaming.chat_stream import (
+    iter_answer_chunks,
+    stream_chat_sse as chat_stream_sse,
+)
 from clara_ml.streaming.council_stream import stream_council_sse
-from clara_ml.streaming.ws import token_stream
 
 app = FastAPI(title="CLARA ML Service", version="0.1.0")
 logger = logging.getLogger(__name__)
@@ -2470,6 +2472,16 @@ def chat_stream(payload: dict) -> StreamingResponse:
 
 @app.websocket("/ws/stream")
 async def ws_stream(websocket: WebSocket) -> None:
+    """WebSocket transport for the real routed-chat inference contract.
+
+    This legacy/internal endpoint formerly split and echoed the incoming text,
+    which looked like inference while bypassing every chat guardrail.  It now
+    reuses ``routed_chat_infer`` exactly once, then streams its actual process
+    events and answer chunks.  The transport is intentionally a replay stream
+    (as is the established SSE chat endpoint), not a claim of token-level model
+    streaming.  No raw exception/provider detail is sent to the client.
+    """
+
     expected_key = settings.ml_internal_api_key.strip()
     if expected_key:
         provided_key = websocket.headers.get("x-ml-internal-key", "").strip()
@@ -2481,11 +2493,45 @@ async def ws_stream(websocket: WebSocket) -> None:
         return
 
     await websocket.accept()
-    incoming = await websocket.receive_text()
-    async for token in token_stream(incoming):
-        await websocket.send_json({"token": token})
-    await websocket.send_json({"event": "done"})
-    await websocket.close()
+    try:
+        incoming = await websocket.receive_text()
+        if len(incoming) > 32_000:
+            await websocket.send_json({"event": "error", "code": "request_too_large"})
+            return
+        try:
+            payload = json.loads(incoming)
+        except json.JSONDecodeError:
+            payload = {"query": incoming}
+        if not isinstance(payload, dict):
+            await websocket.send_json({"event": "error", "code": "invalid_request"})
+            return
+        query = payload.get("query")
+        if not isinstance(query, str) or not query.strip():
+            await websocket.send_json({"event": "error", "code": "query_required"})
+            return
+
+        await websocket.send_json({"event": "start"})
+        result = await run_in_threadpool(routed_chat_infer, payload)
+        if not isinstance(result, dict):  # pragma: no cover - defensive contract guard
+            raise TypeError("routed chat returned non-object")
+        flow_events = result.get("flow_events")
+        if isinstance(flow_events, list):
+            for index, event in enumerate(flow_events):
+                if isinstance(event, dict):
+                    await websocket.send_json({"event": "step", "index": index, **event})
+        answer = result.get("answer")
+        if isinstance(answer, str):
+            for token in iter_answer_chunks(answer):
+                await websocket.send_json({"event": "token", "text": token})
+        await websocket.send_json({"event": "done", "result": result})
+    except Exception as exc:  # noqa: BLE001 - public transport is sanitized
+        logger.warning("ws_chat_stream_failed", extra={"error": exc.__class__.__name__})
+        try:
+            await websocket.send_json({"event": "error", "code": "inference_unavailable"})
+        except Exception:
+            pass
+    finally:
+        await websocket.close()
 
 
 @app.post("/v1/council/intake")
