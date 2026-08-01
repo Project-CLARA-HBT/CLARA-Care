@@ -94,6 +94,26 @@ wait_json() {
   return 1
 }
 
+curl_with_ml_internal_key() {
+  # Do not pass an internal credential via curl's argv: same-host users can
+  # inspect that command line while a smoke request is in flight. Curl reads a
+  # mode-0600 transient config instead; it is removed before this helper exits.
+  if [[ -z "${ML_INTERNAL_API_KEY_VALUE}" ]]; then
+    curl "$@"
+    return
+  fi
+
+  local curl_config
+  local curl_status
+  curl_config="$(mktemp "${TMPDIR:-/tmp}/clara-ml-smoke.XXXXXX")"
+  chmod 600 "${curl_config}"
+  printf '%s\n' "header = X-ML-Internal-Key: ${ML_INTERNAL_API_KEY_VALUE}" > "${curl_config}"
+  curl --config "${curl_config}" "$@"
+  curl_status="$?"
+  rm -f "${curl_config}"
+  return "${curl_status}"
+}
+
 SMOKE_RESEARCH_FAIL_REASON=""
 
 smoke_research_mode() {
@@ -104,14 +124,8 @@ smoke_research_mode() {
   local last_reason="no successful attempt"
 
   for attempt in 1 2 3; do
-    local curl_args=()
-    if [[ -n "${ML_INTERNAL_API_KEY_VALUE}" ]]; then
-      curl_args+=(-H "X-ML-Internal-Key: ${ML_INTERNAL_API_KEY_VALUE}")
-    fi
-
-    if curl -fsS -m 120 -X POST "${ml_url}/v1/research/tier2" \
+    if curl_with_ml_internal_key -fsS -m 120 -X POST "${ml_url}/v1/research/tier2" \
       -H 'Content-Type: application/json' \
-      "${curl_args[@]}" \
       -d "{\"query\":\"aspirin and ibuprofen interaction risk\",\"research_mode\":\"${research_mode}\",\"source_mode\":\"hybrid\"}" > "${output_file}"; then
       :
     else
@@ -181,14 +195,8 @@ smoke_ml() {
   deep_research_json="${tmp_dir}/research.deep.json"
   deep_beta_research_json="${tmp_dir}/research.deep_beta.json"
 
-  local curl_args=()
-  if [[ -n "${ML_INTERNAL_API_KEY_VALUE}" ]]; then
-    curl_args+=(-H "X-ML-Internal-Key: ${ML_INTERNAL_API_KEY_VALUE}")
-  fi
-
-  curl -fsS -m 30 -X POST "${ml_url}/v1/chat/routed" \
+  curl_with_ml_internal_key -fsS -m 30 -X POST "${ml_url}/v1/chat/routed" \
     -H 'Content-Type: application/json' \
-    "${curl_args[@]}" \
     -d '{"query":"hi","role":"admin"}' > "${tmp_dir}/chat.json"
 
   if ! smoke_research_mode "${ml_url}" "deep" "${deep_research_json}" "${require_deepseek}"; then
@@ -203,9 +211,8 @@ smoke_ml() {
     return 1
   fi
 
-  curl -fsS -m 20 -X POST "${ml_url}/v1/careguard/analyze" \
+  curl_with_ml_internal_key -fsS -m 20 -X POST "${ml_url}/v1/careguard/analyze" \
     -H 'Content-Type: application/json' \
-    "${curl_args[@]}" \
     -d '{"medications":["Aspirin","Ibuprofen"],"symptoms":[],"allergies":[]}' > "${tmp_dir}/careguard.json"
 
   REQUIRE_DEEPSEEK="${REQUIRE_DEEPSEEK}" \
@@ -459,7 +466,7 @@ wait_json "http://127.0.0.1:3100/research/details" "<html" 25 2
 if [[ "${REQUIRE_DEEPSEEK}" == "true" ]]; then
   if [[ -n "${ML_INTERNAL_API_KEY_VALUE}" ]]; then
     for ((i=1; i<=20; i++)); do
-      if output="$(curl -fsSL -H "X-ML-Internal-Key: ${ML_INTERNAL_API_KEY_VALUE}" "http://127.0.0.1:8110/health/details" 2>/dev/null)"; then
+      if output="$(curl_with_ml_internal_key -fsSL "http://127.0.0.1:8110/health/details" 2>/dev/null)"; then
         if [[ "${output}" == *'"deepseek_configured":true'* ]]; then
           echo "[health] ok http://127.0.0.1:8110/health/details"
           break
