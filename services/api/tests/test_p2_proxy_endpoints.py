@@ -694,7 +694,6 @@ def test_research_tier2_job_create_preserves_language_and_runtime_overrides(
         # Provider credentials and caller-selected runtimes must not be
         # persisted with research jobs. Model selection is registry-governed.
         assert "llm_runtime" not in row.request_payload
-        assert row.request_payload["llm_runtime"]["base_url"] == "https://runtime.example/v1"
 
 
 def test_research_tier2_job_create_persists_ui_language(
@@ -1891,10 +1890,12 @@ def test_research_tier2_ignores_caller_llm_runtime_overrides(
     forwarded = captured["json"]
     assert isinstance(forwarded, dict)
     rag_flow = forwarded["rag_flow"]
-    assert rag_flow["llm_provider"] == "hitechcloud_gpt53_codex_high"
-    assert rag_flow["llm_base_url"] == "https://platform.hitechcloud.one/v1"
-    assert rag_flow["llm_model"] == "gpt-5.3-codex-high"
-    assert rag_flow["llm_api_key"] == ""
+    # Runtime/provider selection is owned by the server-side model registry.
+    # It must neither forward caller-controlled values nor serialize a
+    # provider credential into the API→ML payload.
+    assert not {"llm_provider", "llm_base_url", "llm_model", "llm_api_key"}.intersection(
+        rag_flow
+    )
 
 
 @pytest.mark.parametrize(

@@ -2777,7 +2777,18 @@ def _apply_research_quality_gates(
         gated["answer_markdown"] = safe_answer
         gated["citations"] = real_citations
         gated["sources"] = real_citations
-        gated["policy_action"] = "warn"
+        # A degraded evidence response is normally an explicit warning.  It
+        # must never downgrade an independent safety verdict that already
+        # blocked or escalated the request (for example, a contradicted dosage
+        # claim from the ML verifier).  The policy action is consumed by the
+        # clinical-answer renderer, so preserving the stricter action here is
+        # part of the API safety boundary rather than presentation metadata.
+        existing_policy_action = str(gated.get("policy_action") or "").strip().lower()
+        gated["policy_action"] = (
+            existing_policy_action
+            if existing_policy_action in {"block", "escalate"}
+            else "warn"
+        )
     return gated
 
 
