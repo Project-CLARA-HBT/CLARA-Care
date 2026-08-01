@@ -1,4 +1,9 @@
-# CLARA Security Remediation Report (2026-04-03)
+# CLARA Security Remediation Report (historical 2026-04-03; amended 2026-08-02)
+
+> Historical verification claims below apply only to the 2026-04-03 checkpoint.
+> They do not validate later commits. Current audit/dependency status belongs in
+> `docs/implementation/FINAL_IMPLEMENTATION_REPORT.md` and release remains
+> blocked until its listed checks are freshly executed.
 
 ## Scope
 
@@ -13,15 +18,21 @@ Changes:
 - ML now enforces internal key on `/v1/*`, `/metrics`, `/metrics/json`, `/health/details`, and `/ws/stream`.
 
 2. Missing CSRF protection for cookie-authenticated mutating requests  
-Status: Closed (with one controlled exception)  
+Status: Closed (amended)
 Changes:
 - API middleware enforces CSRF token (cookie + header comparison) for mutating methods.
 - Web client now sends CSRF header for mutating requests.
+- Since 2026-08-02, the Bearer exemption is granted only after the same
+  case-insensitive parser validates a non-revoked explicit Bearer token. A
+  malformed or lowercase `bearer` header cannot skip CSRF then fall back to a
+  cookie session.
 
 3. Root metrics exposure risk  
-Status: Closed  
+Status: Closed (amended)
 Changes:
 - `/metrics` now requires `METRICS_ACCESS_TOKEN` in production (or returns 404 when not configured).
+- Credentials are accepted only in `X-Metrics-Token`; `?token=` is rejected so
+  monitors do not leak secrets into URLs, logs, history or referrers.
 
 4. Research upload DoS risk (size/type)  
 Status: Closed  
@@ -34,9 +45,12 @@ Changes:
 - Empty crawl allowlist is now deny-by-default in ML retrieval gateway.
 
 6. Web token theft risk from localStorage  
-Status: Closed  
+Status: Closed (amended)
 Changes:
-- Web moved auth token handling to memory/cookie-based session flow.
+- Browser auth is cookie-only: access/refresh tokens are never retained in
+  memory, sessionStorage or localStorage, and streaming/API calls do not add
+  them to Authorization headers. Legacy sessionStorage keys are purged on
+  login/logout. API response tokens remain solely for non-browser clients.
 
 7. Refresh-token ambiguity / token source confusion  
 Status: Closed  
@@ -59,11 +73,15 @@ Changes:
   - `REDIS_URL` presence when distributed security limiters are enabled
 
 10. Frontend dependency CVEs (`next`, `mermaid`)  
-Status: Closed (prod dependencies)  
+Status: Superseded by current audit; not closed
 Changes:
 - Upgraded `next` to `15.5.14`
 - Pinned `mermaid` to `10.9.5`
-- `npm audit --omit=dev` reports `0` vulnerabilities.
+- The old `0`-vulnerability statement is historical. The 2026-08-02 local
+  production audit recorded one high PostCSS dependency nested under Next and
+  one moderate aggregate Next finding after the Sharp remediation. Do not
+  treat this item as closed until a compatible vendor/framework remediation is
+  validated.
 
 ## Remaining Risks / Follow-ups
 
