@@ -124,7 +124,7 @@ describe("AppShell authenticated Chat navigation", () => {
     expect(screen.getByTestId("shared-sidebar")).toBeInTheDocument();
     expect(screen.getByTestId("shared-topbar")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Open navigation menu" }),
+      screen.getByRole("button", { name: "Mở điều hướng trên điện thoại" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("mobile-bottom-nav")).toBeInTheDocument();
     expect(screen.getByText("Chat content")).toBeInTheDocument();

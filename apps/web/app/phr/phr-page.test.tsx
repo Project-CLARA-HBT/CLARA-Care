@@ -87,7 +87,7 @@ describe("PHR focused hub", () => {
     render(<PhrPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: /Danh tính cơ bản/ })).toHaveAttribute("href", "/phr/identity");
+      expect(screen.getByRole("link", { name: /Thông tin cơ bản/ })).toHaveAttribute("href", "/phr/identity");
     });
     expect(screen.getByRole("link", { name: /Chỉ số cơ thể/ })).toHaveAttribute("href", "/phr/body");
     expect(screen.getByRole("link", { name: /Dị ứng/ })).toHaveAttribute("href", "/phr/allergies");

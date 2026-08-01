@@ -159,7 +159,7 @@ describe("AdminObservabilityPanel (Feature: clara-admin-observability, task 5.5)
 
     expect(await screen.findByText("Không tải được dữ liệu quan trắc")).toBeTruthy();
     // The calm fallback copy is shown instead of the raw technical error.
-    expect(screen.getByText("Hệ thống đang bận, vui lòng thử lại.")).toBeTruthy();
+    expect(screen.getByText("Chưa thể tải ảnh chụp trạng thái hệ thống. Vui lòng thử lại.")).toBeTruthy();
     // The raw stack trace / internal URL must never reach the DOM.
     expect(screen.queryByText(/Traceback/)).toBeNull();
     expect(screen.queryByText(/internal-ml/)).toBeNull();

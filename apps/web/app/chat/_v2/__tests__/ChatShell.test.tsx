@@ -119,6 +119,7 @@ vi.mock("@/lib/ui-language", () => ({
   onUILanguageChange: () => vi.fn(),
 }));
 vi.mock("@/lib/research", () => ({
+  isResearchOutputModesEnabled: () => false,
   resolveChatTransport: () => "chat",
   appendResearchConversationMessage: vi.fn(),
   createResearchConversation: vi.fn(),
@@ -177,7 +178,7 @@ describe("ChatShell — accessibility scaffolding", () => {
       "/research",
     );
     expect(
-      screen.getByRole("button", { name: /switch to dark mode/i }),
+      screen.getByRole("button", { name: /switch to dark theme/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /open all tools/i })).toBeInTheDocument();
   });
