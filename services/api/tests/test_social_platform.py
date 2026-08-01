@@ -163,6 +163,54 @@ def test_full_participation_flow(social_on) -> None:
     assert post_id in ids
 
 
+def test_post_and_comment_writes_use_the_configured_durable_rate_budget(social_on, monkeypatch) -> None:
+    """SOCIAL_WRITE_RATE_PER_MINUTE applies across post/comment surfaces."""
+
+    community_id = _seed_community()
+    headers = _auth("rate-budget@normal.clara")
+    client.post("/api/v1/social/consent", headers=headers)
+    monkeypatch.setattr(get_settings(), "social_write_rate_per_minute", 1)
+
+    first = client.post(
+        "/api/v1/social/posts",
+        headers=headers,
+        json={"community_id": community_id, "title": "Một", "body": "Nội dung đầu tiên."},
+    )
+    assert first.status_code == 201, first.text
+    second = client.post(
+        f"/api/v1/social/posts/{first.json()['id']}/comments",
+        headers=headers,
+        json={"body": "Nội dung thứ hai phải bị giới hạn."},
+    )
+    assert second.status_code == 429
+
+
+def test_comment_list_is_bounded_and_paginated(social_on) -> None:
+    community_id = _seed_community()
+    headers = _auth("comment-pages@normal.clara")
+    client.post("/api/v1/social/consent", headers=headers)
+    post = client.post(
+        "/api/v1/social/posts",
+        headers=headers,
+        json={"community_id": community_id, "title": "Trang", "body": "Bài viết có bình luận."},
+    )
+    assert post.status_code == 201, post.text
+    for body in ("Bình luận một.", "Bình luận hai."):
+        response = client.post(
+            f"/api/v1/social/posts/{post.json()['id']}/comments",
+            headers=headers,
+            json={"body": body},
+        )
+        assert response.status_code == 201, response.text
+
+    page = client.get(
+        f"/api/v1/social/posts/{post.json()['id']}/comments?limit=1&offset=1",
+        headers=headers,
+    )
+    assert page.status_code == 200
+    assert len(page.json()) == 1
+
+
 # --------------------------------------------------------------------------
 # Moderation gate: a blocked body is never persisted
 # --------------------------------------------------------------------------
