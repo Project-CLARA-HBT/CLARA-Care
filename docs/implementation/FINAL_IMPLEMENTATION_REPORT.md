@@ -185,6 +185,10 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   errors from the typed vi/en catalog. Receipt timestamps now use the selected
   application locale rather than an uncontrolled browser default; the final
   DSAR mutation remains separately explicit and CSRF-protected.
+- The RBAC-protected admin DSAR queue now uses typed vi/en labels and selected
+  locale timestamps. Mutation failures no longer project caught transport text
+  into its UI; only the localized safe error is shown, while authorized audit
+  facts remain server-provided queue data.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be
