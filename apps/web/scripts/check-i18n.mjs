@@ -150,6 +150,65 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    path: "components/phr/share-manager.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "phr.share.createError",
+      "phr.share.scopeEmergency",
+      "formatLocaleDate(uiLanguage",
+    ],
+    forbidden: ["Chia sẻ hồ sơ (chỉ đọc)", "Share record (read-only)"],
+  },
+  {
+    path: "components/phr/export-button.tsx",
+    required: ["@/lib/i18n/catalog", "phr.export.title", "phr.export.resource.all"],
+    forbidden: ["Xuất hồ sơ (FHIR)", "Export record (FHIR)"],
+  },
+  {
+    path: "components/phr/emergency-card-editor.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "phr.emergencyCard.title",
+      "phr.emergencyCard.field.allergies",
+    ],
+    forbidden: ["Thẻ khẩn cấp", "Emergency card"],
+  },
+  {
+    path: "components/phr/reminders-panel.tsx",
+    required: ["@/lib/i18n/catalog", "phr.reminders.title", "phr.reminders.addError"],
+    forbidden: ["Nhắc uống thuốc", "Medication reminders"],
+  },
+  {
+    path: "app/account/data/delete/[step]/delete-data-flow-client.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "account.dataDelete.confirmation",
+      "formatLocaleDate(uiLanguage",
+    ],
+    forbidden: [
+      "Xóa dữ liệu cá nhân",
+      "Delete personal data",
+      "toLocaleString()",
+      "toLocaleDateString()",
+    ],
+  },
+  {
+    path: "app/admin/dsar/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "admin.dsar.loadError",
+      "admin.dsar.status.received",
+      "formatLocaleDate(uiLanguage",
+    ],
+    forbidden: [
+      "Hàng đợi DSAR (Quản trị)",
+      "DSAR queue (Admin)",
+      "err instanceof Error ? err.message",
+      "toLocaleString()",
+      "toLocaleDateString()",
+    ],
+  },
+  {
     path: "app/lifemap/new/start-client.tsx",
     required: [
       "@/lib/i18n/catalog",

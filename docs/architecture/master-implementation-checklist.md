@@ -35,6 +35,12 @@ recorded as implementation evidence, not release evidence.
   labels are now catalog-backed and included in the static i18n gate. This
   remains an unrun source checkpoint, not runtime or OCR-quality evidence.
 
+- The same static i18n gate now covers the PHR sharing, FHIR export,
+  emergency-card and reminder controls, plus guided data deletion and the
+  admin DSAR queue. These surfaces also use the shared locale date formatter;
+  the DSAR queue suppresses caught transport text. The gate source is added but
+  intentionally not executed in the feature-first checkpoint.
+
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only
   acknowledges a closed selector; API adds the deterministic projection only
