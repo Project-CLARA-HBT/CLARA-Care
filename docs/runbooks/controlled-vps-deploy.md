@@ -36,6 +36,15 @@ The runner finally checks public HTTPS security headers and that the PHR viewer
 does not redirect an anonymous request to login. Only sanitized Compose status
 is uploaded as a CI artifact.
 
+Before moving an existing legacy Nginx virtual host to this workflow, install
+`deploy/nginx/clara.thiennn.icu.conf` (or copy its header stanza into the
+domain's active virtual host), then use `nginx -t` and reload Nginx under the
+host's approved change procedure. The stanza hides upstream framework headers
+and emits the same browser policy on proxy-generated responses, so security
+headers cannot disappear merely because a stale Next image or proxy error is
+served. Do not claim this was applied until the workflow's external HTTPS
+header smoke succeeds.
+
 Each release stores protected `pre-migration-backup.path` and, when applicable,
 `previous-release.path` receipts. The legacy source-tree deploy script remains
 for an explicitly authorized operator only; CI uses the immutable bundle path.

@@ -10,6 +10,9 @@ Use this operational checklist before a release; it is not a certification.
       remains in sessionStorage after login, refresh or logout.
 - [ ] Metrics credentials are passed exclusively in `X-Metrics-Token`; no
       dashboard, smoke script, documentation or monitor uses `?token=`.
+- [ ] Both the active web image and the active reverse proxy emit CSP, HSTS,
+      `nosniff`, frame, referrer and permissions policies with no
+      `X-Powered-By`; retain the external HTTPS header-smoke evidence.
 - [ ] Emergency and legal hard-guard invariant tests passed.
 - [ ] FIDES/claim verification and DrugBank required-source tests passed.
 - [ ] Eval manifests/fixtures contain no PHI, secrets, prompts or provider keys.
