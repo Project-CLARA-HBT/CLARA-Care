@@ -28,7 +28,8 @@ const PUBLIC_PATHS = new Set([
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
-  if (pathname.startsWith("/share/")) return true;
+  if (pathname.startsWith("/share/") || pathname.startsWith("/phr/shared/"))
+    return true;
   return (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||

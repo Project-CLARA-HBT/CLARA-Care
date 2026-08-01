@@ -257,7 +257,8 @@ export const DEFAULT_PHR_CAPABILITIES: PhrCapabilityFlags = {
  * surface the backend would reject (Requirement 18.1).
  */
 export function parsePhrCapabilities(raw: unknown): PhrCapabilityFlags {
-  const root = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const root =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   // The endpoint wraps flags under `{ "flags": {...} }`; tolerate a bare object too.
   const flagsSource =
     root.flags && typeof root.flags === "object"
@@ -326,13 +327,19 @@ export type PhrOcrScanResult = {
   candidates: PhrOcrCandidate[];
   reviewToken: string;
   processingDisclosure: {
-    providerCategory: "configured_ocr_service" | "google_cloud_vision" | "local_tesseract";
+    providerCategory:
+      | "configured_ocr_service"
+      | "google_cloud_vision"
+      | "local_tesseract";
     humanConfirmationRequired: boolean;
   } | null;
 };
 
-function coerceOcrSourceCoordinate(raw: unknown): PhrOcrSourceCoordinate | null {
-  const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+function coerceOcrSourceCoordinate(
+  raw: unknown,
+): PhrOcrSourceCoordinate | null {
+  const value =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const start = value.start;
   const end = value.end;
   if (
@@ -351,17 +358,22 @@ function coerceOcrCandidate(raw: unknown): PhrOcrCandidate {
   const root =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const confidence =
-    typeof root.ocr_confidence === "number" && Number.isFinite(root.ocr_confidence)
+    typeof root.ocr_confidence === "number" &&
+    Number.isFinite(root.ocr_confidence)
       ? Math.min(1, Math.max(0, root.ocr_confidence))
       : null;
   const sourceCoordinates = Array.isArray(root.source_coordinates)
     ? root.source_coordinates
         .map(coerceOcrSourceCoordinate)
-        .filter((coordinate): coordinate is PhrOcrSourceCoordinate => coordinate !== null)
+        .filter(
+          (coordinate): coordinate is PhrOcrSourceCoordinate =>
+            coordinate !== null,
+        )
         .slice(0, 24)
     : [];
   return {
-    candidate_id: typeof root.candidate_id === "string" ? root.candidate_id : "",
+    candidate_id:
+      typeof root.candidate_id === "string" ? root.candidate_id : "",
     name: typeof root.name === "string" ? root.name : "",
     dose: typeof root.dose === "string" ? root.dose : "",
     frequency: typeof root.frequency === "string" ? root.frequency : "",
@@ -385,7 +397,8 @@ export async function scanPhrOcr(file: File): Promise<PhrOcrScanResult> {
   const candidates = Array.isArray(root.candidates)
     ? root.candidates.map(coerceOcrCandidate)
     : [];
-  const reviewToken = typeof root.review_token === "string" ? root.review_token : "";
+  const reviewToken =
+    typeof root.review_token === "string" ? root.review_token : "";
   if (!reviewToken || candidates.some((candidate) => !candidate.candidate_id)) {
     throw new Error("OCR review session is unavailable");
   }
@@ -404,7 +417,8 @@ export async function scanPhrOcr(file: File): Promise<PhrOcrScanResult> {
       providerCategory === "local_tesseract"
         ? {
             providerCategory,
-            humanConfirmationRequired: disclosure?.human_confirmation_required === true,
+            humanConfirmationRequired:
+              disclosure?.human_confirmation_required === true,
           }
         : null,
   };
@@ -422,14 +436,11 @@ export async function confirmPhrOcr(
   reviewToken: string,
   reviewCandidateIds: string[],
 ): Promise<PhrRecord> {
-  const { data } = await api.post<PhrRecord>(
-    "/api/v1/phr/import/ocr/confirm",
-    {
-      medications,
-      review_token: reviewToken,
-      review_candidate_ids: reviewCandidateIds,
-    },
-  );
+  const { data } = await api.post<PhrRecord>("/api/v1/phr/import/ocr/confirm", {
+    medications,
+    review_token: reviewToken,
+    review_candidate_ids: reviewCandidateIds,
+  });
   return data;
 }
 
@@ -517,6 +528,20 @@ export async function revokePhrShare(token: string): Promise<void> {
   await api.delete(`/api/v1/phr/share/${encodeURIComponent(token)}`);
 }
 
+/**
+ * Reads a public, read-only PHR share by opaque capability token.
+ *
+ * This endpoint intentionally needs no authenticated session. Callers must
+ * never log, persist, or render the token; the public viewer applies a strict
+ * field whitelist before displaying the untyped server envelope.
+ */
+export async function getPublicPhrShare(token: string): Promise<unknown> {
+  const { data } = await api.get<unknown>(
+    `/api/v1/phr/shared/${encodeURIComponent(token)}`,
+  );
+  return data;
+}
+
 // ---------------------------------------------------------------------------
 // Emergency card (personal-health-record Requirement 13)
 // ---------------------------------------------------------------------------
@@ -554,7 +579,9 @@ export type PhrEmergencyCard = {
  * master flag is off (Requirement 18.1).
  */
 export async function getPhrEmergencyCard(): Promise<PhrEmergencyCard> {
-  const { data } = await api.get<PhrEmergencyCard>("/api/v1/phr/emergency-card");
+  const { data } = await api.get<PhrEmergencyCard>(
+    "/api/v1/phr/emergency-card",
+  );
   return data && typeof data === "object" ? data : {};
 }
 

@@ -7,6 +7,7 @@ import {
   getPageMeta,
   getRoleHomePath,
   isAuthenticatedUtilityRoute,
+  isPublicRoute,
   isRouteAllowedForRole,
   resolvePostLoginPath,
 } from "@/lib/navigation.config";
@@ -66,6 +67,10 @@ describe("authenticated navigation defaults", () => {
     expect(
       getNavItemsByRole("normal").some((item) => item.href === "/welcome"),
     ).toBe(false);
+  });
+
+  it("keeps opaque public PHR share routes outside the authenticated shell", () => {
+    expect(isPublicRoute("/phr/shared/opaque-token")).toBe(true);
   });
 
   it("consolidates medication surfaces into one Medicines hub entry", () => {

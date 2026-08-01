@@ -3,7 +3,12 @@ import type { UILanguage } from "@/lib/ui-language";
 
 export type UserRole = "normal" | "researcher" | "doctor" | "admin";
 export type NavGroupKey =
-  "care" | "medicines" | "explore" | "clinical" | "admin" | "support";
+  | "care"
+  | "medicines"
+  | "explore"
+  | "clinical"
+  | "admin"
+  | "support";
 
 export type PageMeta = {
   title: string;
@@ -701,7 +706,11 @@ const GROUP_KEYS: Record<
 };
 
 export function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.has(pathname);
+  return (
+    PUBLIC_ROUTES.has(pathname) ||
+    pathname.startsWith("/share/") ||
+    pathname.startsWith("/phr/shared/")
+  );
 }
 
 /**

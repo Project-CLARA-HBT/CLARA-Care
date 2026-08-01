@@ -156,8 +156,7 @@ const VI_MESSAGES = {
     "Dùng khi bạn cần câu trả lời nhanh, dễ đọc, có nhắc an toàn.",
   "guide.tasks.chat.step1": "Nhập câu hỏi bằng ngôn ngữ bình thường.",
   "guide.tasks.chat.step2": "Chọn Nhanh nếu chỉ cần trả lời ngắn.",
-  "guide.tasks.chat.step3":
-    "Đọc phần lưu ý an toàn trước khi làm theo.",
+  "guide.tasks.chat.step3": "Đọc phần lưu ý an toàn trước khi làm theo.",
   "guide.tasks.chat.action": "Mở hỏi CLARA",
   "guide.tasks.thinking.title": "Tôi muốn câu trả lời kỹ hơn",
   "guide.tasks.thinking.detail":
@@ -180,8 +179,7 @@ const VI_MESSAGES = {
     "Tôi muốn kiểm tra hai thuốc có kỵ nhau không",
   "guide.tasks.interactions.detail":
     "Dùng mục kiểm tra tương tác thuốc trước khi phối hợp nhiều thuốc.",
-  "guide.tasks.interactions.step1":
-    "Đảm bảo tủ thuốc đã có ít nhất 2 thuốc.",
+  "guide.tasks.interactions.step1": "Đảm bảo tủ thuốc đã có ít nhất 2 thuốc.",
   "guide.tasks.interactions.step2": "Bấm Kiểm tra tương tác thuốc.",
   "guide.tasks.interactions.step3":
     "Đọc cặp thuốc bị cảnh báo và phần Bạn nên làm gì.",
@@ -190,8 +188,7 @@ const VI_MESSAGES = {
   "guide.tasks.council.detail":
     "Tham khảo nhiều chuyên khoa phù hợp khi ca có nhiều hướng xử trí hoặc nhiều chuyên khoa.",
   "guide.tasks.council.step1": "Nhập bối cảnh ca bệnh rõ ràng.",
-  "guide.tasks.council.step2":
-    "Thêm kết quả xét nghiệm hoặc ghi chú nếu có.",
+  "guide.tasks.council.step2": "Thêm kết quả xét nghiệm hoặc ghi chú nếu có.",
   "guide.tasks.council.step3":
     "Dùng kết quả như tài liệu tham khảo, không thay thế quyết định lâm sàng.",
   "guide.tasks.council.action": "Mở tham khảo nhiều chuyên khoa",
@@ -248,7 +245,8 @@ const VI_MESSAGES = {
   "phr.ocr.nothingAccepted": "Hãy chấp nhận ít nhất một mục để lưu.",
   "phr.ocr.close": "Đóng",
   "phr.ocr.sourceDetails": "Chi tiết đối chiếu OCR",
-  "phr.ocr.sourceOffset": "Vị trí trong văn bản OCR đã chuẩn hóa: {start}–{end}",
+  "phr.ocr.sourceOffset":
+    "Vị trí trong văn bản OCR đã chuẩn hóa: {start}–{end}",
   "phr.share.title": "Chia sẻ hồ sơ (chỉ đọc)",
   "phr.share.description":
     "Tạo liên kết chỉ đọc để chia sẻ hồ sơ. Bạn có thể thu hồi bất cứ lúc nào.",
@@ -269,6 +267,31 @@ const VI_MESSAGES = {
   "phr.share.revokeError": "Thu hồi liên kết thất bại.",
   "phr.share.expiresAt": "Hết hạn",
   "phr.share.never": "không giới hạn",
+  "phr.shared.eyebrow": "Liên kết chia sẻ chỉ đọc",
+  "phr.shared.fullTitle": "Hồ sơ sức khỏe được chia sẻ",
+  "phr.shared.emergencyTitle": "Thẻ khẩn cấp được chia sẻ",
+  "phr.shared.loading": "Đang mở nội dung được chia sẻ...",
+  "phr.shared.unavailable":
+    "Liên kết chia sẻ không hợp lệ, đã hết hạn hoặc đã bị thu hồi.",
+  "phr.shared.readOnly": "Chỉ xem",
+  "phr.shared.empty": "Liên kết này không có thông tin có thể hiển thị.",
+  "phr.shared.profile": "Thông tin cơ bản",
+  "phr.shared.allergies": "Dị ứng",
+  "phr.shared.conditions": "Tình trạng sức khỏe",
+  "phr.shared.medications": "Thuốc đang dùng",
+  "phr.shared.emergencyContact": "Liên hệ khẩn cấp",
+  "phr.shared.safety":
+    "Nếu có dấu hiệu nguy hiểm hoặc cần trợ giúp khẩn cấp, hãy liên hệ cơ sở y tế gần nhất.",
+  "phr.shared.value.mild": "nhẹ",
+  "phr.shared.value.moderate": "trung bình",
+  "phr.shared.value.severe": "nặng",
+  "phr.shared.value.unknown": "chưa rõ",
+  "phr.shared.value.active": "đang theo dõi",
+  "phr.shared.value.resolved": "đã ổn định",
+  "phr.shared.value.monitoring": "đang theo dõi",
+  "phr.shared.value.male": "nam",
+  "phr.shared.value.female": "nữ",
+  "phr.shared.value.other": "khác",
   "phr.export.title": "Xuất hồ sơ (FHIR)",
   "phr.export.description":
     "Tải hồ sơ dưới định dạng FHIR R4 (application/fhir+json) để chia sẻ với cơ sở y tế.",
@@ -325,7 +348,8 @@ const VI_MESSAGES = {
   "account.dataDelete.confirmDescription":
     "Chỉ gửi khi bạn hiểu đây là yêu cầu không thể hoàn tác.",
   "account.dataDelete.statusTitle": "Biên nhận yêu cầu xóa",
-  "account.dataDelete.statusDescription": "Bạn có thể theo dõi tiến độ tại Dữ liệu của tôi.",
+  "account.dataDelete.statusDescription":
+    "Bạn có thể theo dõi tiến độ tại Dữ liệu của tôi.",
   "account.dataDelete.consequenceTitle": "Điều gì sẽ xảy ra",
   "account.dataDelete.consequence":
     "CLARA sẽ xử lý yêu cầu xóa hoặc ẩn danh hóa dữ liệu cá nhân của bạn theo thời hạn luật định.",
@@ -345,8 +369,10 @@ const VI_MESSAGES = {
   "account.dataDelete.unavailable":
     "Yêu cầu quyền dữ liệu hiện chưa được bật cho môi trường này.",
   "account.dataDelete.loading": "Đang tải biên nhận…",
-  "account.dataDelete.loadError": "Không thể tải biên nhận lúc này. Vui lòng thử lại.",
-  "account.dataDelete.submitError": "Không thể gửi yêu cầu lúc này. Vui lòng thử lại.",
+  "account.dataDelete.loadError":
+    "Không thể tải biên nhận lúc này. Vui lòng thử lại.",
+  "account.dataDelete.submitError":
+    "Không thể gửi yêu cầu lúc này. Vui lòng thử lại.",
   "account.dataDelete.requestId": "Mã yêu cầu",
   "account.dataDelete.submittedAt": "Gửi lúc",
   "account.dataDelete.dueAt": "Hạn xử lý",
@@ -362,7 +388,8 @@ const VI_MESSAGES = {
     "Tính năng yêu cầu quyền dữ liệu (DSAR) hiện chưa được bật cho môi trường này.",
   "admin.dsar.forbidden": "Bạn không có quyền truy cập trang quản trị này.",
   "admin.dsar.loading": "Đang tải hàng đợi...",
-  "admin.dsar.loadError": "Không thể tải hoặc cập nhật hàng đợi DSAR. Vui lòng thử lại.",
+  "admin.dsar.loadError":
+    "Không thể tải hoặc cập nhật hàng đợi DSAR. Vui lòng thử lại.",
   "admin.dsar.empty": "Chưa có yêu cầu nào trong hàng đợi.",
   "admin.dsar.overdueBadge": "Quá hạn",
   "admin.dsar.overdueSummary": "{count} yêu cầu quá hạn",
@@ -3961,7 +3988,8 @@ const EN_MESSAGES: MessageCatalog = {
   "guide.tasks.cabinet.title": "I want to save the medicines I take",
   "guide.tasks.cabinet.detail":
     "The medicine cabinet keeps your list ready for interaction checks.",
-  "guide.tasks.cabinet.step1": "Add each medicine or scan a prescription image.",
+  "guide.tasks.cabinet.step1":
+    "Add each medicine or scan a prescription image.",
   "guide.tasks.cabinet.step2": "Add the dose if you know it.",
   "guide.tasks.cabinet.step3":
     "When at least two medicines are present, run an interaction check.",
@@ -3989,8 +4017,7 @@ const EN_MESSAGES: MessageCatalog = {
   "guide.tasks.scribe.detail":
     "Consultation notes can be turned into a structured summary for review.",
   "guide.tasks.scribe.step1": "Enter or paste the consultation notes.",
-  "guide.tasks.scribe.step2":
-    "Review the structured note before using it.",
+  "guide.tasks.scribe.step2": "Review the structured note before using it.",
   "guide.tasks.scribe.step3":
     "Do not include sensitive information without the appropriate consent.",
   "guide.tasks.scribe.action": "Open consultation notes",
@@ -4059,6 +4086,31 @@ const EN_MESSAGES: MessageCatalog = {
   "phr.share.revokeError": "Failed to revoke link.",
   "phr.share.expiresAt": "Expires",
   "phr.share.never": "no expiry",
+  "phr.shared.eyebrow": "Read-only shared link",
+  "phr.shared.fullTitle": "Shared health record",
+  "phr.shared.emergencyTitle": "Shared emergency card",
+  "phr.shared.loading": "Opening shared content...",
+  "phr.shared.unavailable":
+    "This shared link is invalid, expired, or has been revoked.",
+  "phr.shared.readOnly": "Read only",
+  "phr.shared.empty": "This link has no information that can be displayed.",
+  "phr.shared.profile": "Basic information",
+  "phr.shared.allergies": "Allergies",
+  "phr.shared.conditions": "Health conditions",
+  "phr.shared.medications": "Current medicines",
+  "phr.shared.emergencyContact": "Emergency contact",
+  "phr.shared.safety":
+    "If there are danger signs or you need urgent help, contact the nearest medical facility.",
+  "phr.shared.value.mild": "mild",
+  "phr.shared.value.moderate": "moderate",
+  "phr.shared.value.severe": "severe",
+  "phr.shared.value.unknown": "unknown",
+  "phr.shared.value.active": "active",
+  "phr.shared.value.resolved": "resolved",
+  "phr.shared.value.monitoring": "monitoring",
+  "phr.shared.value.male": "male",
+  "phr.shared.value.female": "female",
+  "phr.shared.value.other": "other",
   "phr.export.title": "Export record (FHIR)",
   "phr.export.description":
     "Download your record as a FHIR R4 bundle (application/fhir+json) to share with a clinic.",
@@ -4115,7 +4167,8 @@ const EN_MESSAGES: MessageCatalog = {
   "account.dataDelete.confirmDescription":
     "Only submit when you understand this request cannot be undone.",
   "account.dataDelete.statusTitle": "Deletion request receipt",
-  "account.dataDelete.statusDescription": "You can follow progress from My data.",
+  "account.dataDelete.statusDescription":
+    "You can follow progress from My data.",
   "account.dataDelete.consequenceTitle": "What will happen",
   "account.dataDelete.consequence":
     "CLARA will process a request to delete or anonymize your personal data within the statutory window.",
@@ -4135,8 +4188,10 @@ const EN_MESSAGES: MessageCatalog = {
   "account.dataDelete.unavailable":
     "Data-subject requests are not enabled for this environment yet.",
   "account.dataDelete.loading": "Loading receipt…",
-  "account.dataDelete.loadError": "Could not load the receipt. Please try again.",
-  "account.dataDelete.submitError": "Could not submit your request. Please try again.",
+  "account.dataDelete.loadError":
+    "Could not load the receipt. Please try again.",
+  "account.dataDelete.submitError":
+    "Could not submit your request. Please try again.",
   "account.dataDelete.requestId": "Request ID",
   "account.dataDelete.submittedAt": "Submitted",
   "account.dataDelete.dueAt": "Due",
@@ -4148,10 +4203,13 @@ const EN_MESSAGES: MessageCatalog = {
   "admin.dsar.title": "DSAR queue (Admin)",
   "admin.dsar.description":
     "Monitor and resolve data-subject requests under Decree 13/2023/NĐ-CP, tracked against the statutory response window.",
-  "admin.dsar.disabled": "Data-subject requests (DSAR) are not enabled for this environment yet.",
-  "admin.dsar.forbidden": "You do not have permission to access this admin page.",
+  "admin.dsar.disabled":
+    "Data-subject requests (DSAR) are not enabled for this environment yet.",
+  "admin.dsar.forbidden":
+    "You do not have permission to access this admin page.",
   "admin.dsar.loading": "Loading queue...",
-  "admin.dsar.loadError": "Could not load or update the DSAR queue. Please try again.",
+  "admin.dsar.loadError":
+    "Could not load or update the DSAR queue. Please try again.",
   "admin.dsar.empty": "No requests in the queue yet.",
   "admin.dsar.overdueBadge": "Overdue",
   "admin.dsar.overdueSummary": "Overdue requests: {count}",
