@@ -1060,8 +1060,7 @@ def create_or_rotate_conversation_share(
         if should_rotate:
             share.share_token = _generate_share_token(db)
 
-    if payload.expires_in_hours is not None:
-        share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(payload.expires_in_hours))
+    share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(payload.expires_in_hours))
 
     db.add(share)
     db.commit()

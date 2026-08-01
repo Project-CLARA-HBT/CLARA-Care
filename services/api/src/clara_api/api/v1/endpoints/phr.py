@@ -1006,9 +1006,7 @@ def create_phr_share(
             ),
         )
 
-    expires_at = None
-    if payload.expires_in_days is not None:
-        expires_at = datetime.now(UTC) + timedelta(days=payload.expires_in_days)
+    expires_at = datetime.now(UTC) + timedelta(days=payload.expires_in_days)
     share = PhrShare(
         user_id=user.id,
         share_token=secrets.token_urlsafe(24),

@@ -986,7 +986,7 @@ class WorkspaceConversationListResponse(BaseModel):
 
 
 class WorkspaceConversationShareCreateRequest(BaseModel):
-    expires_in_hours: int | None = Field(default=None, ge=1, le=720)
+    expires_in_hours: int = Field(default=168, ge=1, le=720)
     rotate: bool = False
 
 
@@ -1380,7 +1380,7 @@ class PhrObservationCreateRequest(BaseModel):
 
 class PhrShareCreateRequest(BaseModel):
     scope: Literal["full", "emergency_card"] = "full"
-    expires_in_days: int | None = Field(default=None, ge=1, le=365)
+    expires_in_days: int = Field(default=30, ge=1, le=365)
 
 
 class PhrOcrCandidate(BaseModel):

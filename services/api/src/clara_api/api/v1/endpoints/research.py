@@ -5651,8 +5651,7 @@ def share_research_tier2_job(
         if should_rotate:
             share.share_token = _generate_research_share_token(db)
 
-    if request.expires_in_hours is not None:
-        share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(request.expires_in_hours))
+    share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(request.expires_in_hours))
 
     db.add(share)
     db.commit()
