@@ -86,6 +86,13 @@ def test_share_creates_token_and_public_url(monkeypatch) -> None:
     assert body["share_token"]
     assert body["public_url"].endswith(f"/share/{body['share_token']}")
 
+    public = client.get(f"/api/v1/workspace/public/conversations/{body['share_token']}")
+    assert public.status_code == 200, public.text
+    projection = public.json()
+    assert projection["messages"][0]["role"] == "research_report"
+    assert projection["messages"][0]["answer"] == "## Kết luận"
+    assert "metformin" not in str(projection)
+
 
 def test_share_is_idempotent_without_rotate(monkeypatch) -> None:
     _enable_share(monkeypatch)

@@ -17,6 +17,7 @@ from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import Query as QueryModel
 from clara_api.db.models import (
+    ResearchJob,
     SessionModel,
     User,
     WorkspaceChannel,
@@ -345,6 +346,18 @@ def _extract_answer_text(raw_text: str) -> str:
         if isinstance(value, str) and value.strip():
             return value
     return stripped
+
+
+def _public_research_report_body(result: object) -> str:
+    """Return only the already-releaseable textual report projection."""
+
+    if not isinstance(result, dict):
+        return ""
+    for key in ("answer_markdown", "answer", "summary", "message"):
+        value = result.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
 
 
 def _slug_file_name(value: str) -> str:
@@ -1303,6 +1316,32 @@ def get_public_conversation_by_share_token(
     expires_at = _as_utc_aware(share.expires_at)
     if expires_at is not None and expires_at < now:
         raise _public_share_unavailable()
+
+    if share.research_job_id is not None:
+        job = db.execute(
+            select(ResearchJob).where(
+                ResearchJob.id == share.research_job_id,
+                ResearchJob.user_id == share.user_id,
+                ResearchJob.status == "completed",
+            )
+        ).scalar_one_or_none()
+        report_body = _public_research_report_body(job.result_json if job else None)
+        if job is None or not report_body:
+            raise _public_share_unavailable()
+        return WorkspacePublicConversationResponse(
+            conversation_id=share.id,
+            title="Báo cáo nghiên cứu được chia sẻ",
+            expires_at=expires_at,
+            messages=[
+                WorkspacePublicConversationMessageResponse(
+                    query_id=share.id,
+                    role="research_report",
+                    query="Báo cáo nghiên cứu",
+                    answer=report_body,
+                    created_at=job.completed_at or job.updated_at or now,
+                )
+            ],
+        )
 
     session_obj = db.execute(
         select(SessionModel).where(
