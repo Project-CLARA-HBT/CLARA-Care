@@ -33,11 +33,15 @@ from sqlalchemy.orm import Session
 
 from clara_api.core.config import Settings, get_settings
 from clara_api.db.models import (
+    AuthToken,
+    MedicineCabinet,
+    MedicineItem,
     PhrAudit,
     PhrObservation,
     PhrProfile,
     PhrReminder,
     PhrVersion,
+    Query as QueryModel,
     ScribeAudit,
     ScribeSession,
 )
@@ -287,6 +291,92 @@ def _sweep_phr_profiles(
     return swept
 
 
+def _is_anonymized_medicine_cabinet(db: Session, cabinet: MedicineCabinet) -> bool:
+    """Return whether an expired cabinet was already stripped of health data."""
+
+    if cabinet.label:
+        return False
+    return (
+        db.execute(
+            select(MedicineItem.id).where(MedicineItem.cabinet_id == cabinet.id).limit(1)
+        ).scalar_one_or_none()
+        is None
+    )
+
+
+def _sweep_medicine_cabinets(
+    db: Session, policy: RetentionPolicy, *, now: datetime
+) -> int:
+    """Anonymize inactive cabinets and delete their sensitive medicine entries.
+
+    A cabinet label and medication inventory can reveal health information.
+    Therefore the anonymous shell is retained for referential integrity while
+    its label is cleared and every medicine item is removed.  This implements
+    the declared ``medicine_cabinet`` policy without exposing row content in
+    the sweep result.
+    """
+
+    cutoff = policy.cutoff("medicine_cabinet", now=now)
+    if cutoff is None:
+        return 0
+    swept = 0
+    for cabinet in db.execute(select(MedicineCabinet)).scalars():
+        if _as_aware(cabinet.updated_at) >= cutoff:
+            continue
+        if _is_anonymized_medicine_cabinet(db, cabinet):
+            continue
+        cabinet.label = ""
+        for item in db.execute(
+            select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id)
+        ).scalars():
+            db.delete(item)
+        swept += 1
+    if swept:
+        db.flush()
+    return swept
+
+
+def _delete_expired_query_logs(
+    db: Session, policy: RetentionPolicy, *, now: datetime
+) -> int:
+    """Delete query/response records older than the declared minimization window."""
+
+    cutoff = policy.cutoff("query_log", now=now)
+    if cutoff is None:
+        return 0
+    rows = db.execute(select(QueryModel).where(QueryModel.created_at < cutoff)).scalars()
+    deleted = 0
+    for row in rows:
+        db.delete(row)
+        deleted += 1
+    if deleted:
+        db.flush()
+    return deleted
+
+
+def _delete_expired_session_tokens(
+    db: Session, policy: RetentionPolicy, *, now: datetime
+) -> int:
+    """Delete opaque auth-token hashes after the policy's 90-day window.
+
+    Refresh/action tokens are short-lived by design; the age cutoff is still
+    authoritative so a misconfigured unusually long expiry cannot bypass the
+    declared retention schedule.
+    """
+
+    cutoff = policy.cutoff("session_token", now=now)
+    if cutoff is None:
+        return 0
+    rows = db.execute(select(AuthToken).where(AuthToken.created_at < cutoff)).scalars()
+    deleted = 0
+    for row in rows:
+        db.delete(row)
+        deleted += 1
+    if deleted:
+        db.flush()
+    return deleted
+
+
 def _sweep_scribe_recording_derived_data(
     db: Session, settings: Settings, *, now: datetime
 ) -> int:
@@ -363,11 +453,23 @@ def run_retention_sweep(
     reference = now or datetime.now(UTC)
     policy = DEFAULT_POLICY
     phr_profiles = _sweep_phr_profiles(db, policy, now=reference)
+    medicine_cabinets = _sweep_medicine_cabinets(db, policy, now=reference)
+    query_logs = _delete_expired_query_logs(db, policy, now=reference)
+    session_tokens = _delete_expired_session_tokens(db, policy, now=reference)
     scribe_recording_data = _sweep_scribe_recording_derived_data(db, settings, now=reference)
 
     return {
         "enabled": 1,
-        "swept": phr_profiles + scribe_recording_data,
+        "swept": (
+            phr_profiles
+            + medicine_cabinets
+            + query_logs
+            + session_tokens
+            + scribe_recording_data
+        ),
         "phr_profile": phr_profiles,
+        "medicine_cabinet": medicine_cabinets,
+        "query_log": query_logs,
+        "session_token": session_tokens,
         "scribe_recording_derived_data": scribe_recording_data,
     }

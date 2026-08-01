@@ -118,7 +118,11 @@ privacy policy (Req 4.5).
 
 Expired rows are anonymized or deleted by the scheduled retention sweep, gated
 by `COMPLIANCE_RETENTION_JOB_ENABLED` (Req 7.2). With the flag off the sweep is
-an inert no-op, preserving current behavior.
+an inert no-op, preserving current behavior. With the flag enabled, `queries`
+are deleted after 365 days, `auth_tokens` after 90 days, and inactive medicine
+cabinet shells are anonymized while their medication items are removed. Sweep
+output contains counts only, never query text, token values, medicine names or
+identity data.
 
 ## 6. Data-subject rights pointers
 

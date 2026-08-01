@@ -457,6 +457,16 @@ không còn trả URL cũ; thao tác cấp lại xoay capability và sao chép U
 lúc cấp. Downgrade chỉ tương thích schema vì hash không thể đảo ngược; xem
 `docs/runbooks/public-capability-share-rotation.md` trước khi rollback.
 
+### Retention-policy enforcement (`20260801_0048`)
+
+Khi `COMPLIANCE_RETENTION_JOB_ENABLED=true`, retention sweep giờ thực thi đúng
+các category đã công bố: xóa `queries` quá 365 ngày, `auth_tokens` quá 90 ngày,
+và ẩn danh cabinet không hoạt động quá 1.095 ngày bằng cách xóa inventory và
+nhãn. Kết quả chỉ gồm count. Revision thêm index cho các timestamp cutoff;
+`alembic downgrade 20260801_0047` chỉ bỏ index, không khôi phục dữ liệu đã bị
+xóa/ẩn danh. Kiểm thử mới được thêm nhưng chưa chạy trong checkpoint này theo
+thứ tự triển khai được yêu cầu.
+
 Alembic revision `20260731_0046` adds the append-only
 `council_evidence_attachments` table, scoped by Council case, owner and
 completed Research job. It stores only server-built opaque snapshot/evidence

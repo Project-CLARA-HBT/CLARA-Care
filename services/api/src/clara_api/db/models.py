@@ -68,7 +68,9 @@ class Query(Base):
     role: Mapped[str] = mapped_column(String(32), index=True)
     user_input: Mapped[str] = mapped_column(Text)
     response_text: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
 
 class ScribeSession(Base):
@@ -406,7 +408,9 @@ class AuthToken(Base):
     token_hash: Mapped[str] = mapped_column(String(128), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
     user: Mapped[User] = relationship("User")
 
@@ -444,6 +448,7 @@ class MedicineCabinet(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
+        index=True,
     )
 
     user: Mapped[User] = relationship("User")
