@@ -7,7 +7,7 @@ import {
   type PhrShare,
   type PhrShareScope,
 } from "@/lib/phr";
-import { formatLocaleDate } from "@/lib/i18n/catalog";
+import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 
@@ -20,53 +20,6 @@ import { safeUserFacingError } from "@/lib/user-facing-text";
  * (Requirement 18.1).
  */
 
-const COPY = {
-  vi: {
-    title: "Chia sẻ hồ sơ (chỉ đọc)",
-    description:
-      "Tạo liên kết chỉ đọc để chia sẻ hồ sơ. Bạn có thể thu hồi bất cứ lúc nào.",
-    scope: "Phạm vi",
-    scopeFull: "Toàn bộ hồ sơ",
-    scopeEmergency: "Chỉ thẻ khẩn cấp",
-    expiry: "Hết hạn sau (ngày)",
-    noExpiry: "Không giới hạn",
-    create: "Tạo liên kết",
-    creating: "Đang tạo...",
-    createError: "Tạo liên kết chia sẻ thất bại.",
-    activeLinks: "Liên kết đã tạo",
-    noLinks: "Chưa có liên kết nào trong phiên này.",
-    copy: "Sao chép",
-    copied: "Đã sao chép",
-    revoke: "Thu hồi",
-    revoking: "Đang thu hồi...",
-    revokeError: "Thu hồi liên kết thất bại.",
-    expiresAt: "Hết hạn",
-    never: "không giới hạn",
-  },
-  en: {
-    title: "Share record (read-only)",
-    description:
-      "Create read-only links to share your record. You can revoke them anytime.",
-    scope: "Scope",
-    scopeFull: "Full record",
-    scopeEmergency: "Emergency card only",
-    expiry: "Expires in (days)",
-    noExpiry: "No expiry",
-    create: "Create link",
-    creating: "Creating...",
-    createError: "Failed to create share link.",
-    activeLinks: "Created links",
-    noLinks: "No links created in this session yet.",
-    copy: "Copy",
-    copied: "Copied",
-    revoke: "Revoke",
-    revoking: "Revoking...",
-    revokeError: "Failed to revoke link.",
-    expiresAt: "Expires",
-    never: "no expiry",
-  },
-} as const;
-
 function shareUrl(token: string): string {
   if (typeof window === "undefined") return token;
   return `${window.location.origin}/phr/shared/${token}`;
@@ -77,7 +30,7 @@ export default function ShareManager({
 }: {
   uiLanguage: UILanguage;
 }) {
-  const text = COPY[uiLanguage];
+  const copy = (key: UITranslationKey) => t(uiLanguage, key);
   const [scope, setScope] = useState<PhrShareScope>("full");
   const [expiry, setExpiry] = useState<string>("");
   const [links, setLinks] = useState<PhrShare[]>([]);
@@ -97,7 +50,7 @@ export default function ShareManager({
       );
       setLinks((prev) => [share, ...prev]);
     } catch (err) {
-      setError(safeUserFacingError(err, text.createError));
+      setError(safeUserFacingError(err, copy("phr.share.createError")));
     } finally {
       setCreating(false);
     }
@@ -110,7 +63,7 @@ export default function ShareManager({
       await revokePhrShare(token);
       setLinks((prev) => prev.filter((l) => l.share_token !== token));
     } catch (err) {
-      setError(safeUserFacingError(err, text.revokeError));
+      setError(safeUserFacingError(err, copy("phr.share.revokeError")));
     } finally {
       setRevokingToken("");
     }
@@ -129,34 +82,34 @@ export default function ShareManager({
   return (
     <section className="rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
       <p className="text-sm font-semibold text-[var(--text-primary)]">
-        {text.title}
+        {copy("phr.share.title")}
       </p>
       <p className="mt-1 text-[13px] leading-6 text-[var(--text-secondary)]">
-        {text.description}
+        {copy("phr.share.description")}
       </p>
 
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
-            {text.scope}
+            {copy("phr.share.scope")}
           </span>
           <select
             className="input"
             value={scope}
             onChange={(e) => setScope(e.target.value as PhrShareScope)}
           >
-            <option value="full">{text.scopeFull}</option>
-            <option value="emergency_card">{text.scopeEmergency}</option>
+            <option value="full">{copy("phr.share.scopeFull")}</option>
+            <option value="emergency_card">{copy("phr.share.scopeEmergency")}</option>
           </select>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
-            {text.expiry}
+            {copy("phr.share.expiry")}
           </span>
           <input
             inputMode="numeric"
             className="input w-36"
-            placeholder={text.noExpiry}
+            placeholder={copy("phr.share.noExpiry")}
             value={expiry}
             onChange={(e) => setExpiry(e.target.value.replace(/[^0-9]/g, ""))}
           />
@@ -167,7 +120,7 @@ export default function ShareManager({
           disabled={creating}
           className="inline-flex min-h-[38px] items-center rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-4 text-sm font-semibold text-[#1D4ED8] transition hover:bg-[#DBEAFE] disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100"
         >
-          {creating ? text.creating : text.create}
+          {creating ? copy("phr.share.creating") : copy("phr.share.create")}
         </button>
       </div>
 
@@ -175,11 +128,11 @@ export default function ShareManager({
 
       <div className="mt-4">
         <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
-          {text.activeLinks}
+          {copy("phr.share.activeLinks")}
         </p>
         {links.length === 0 ? (
           <p className="mt-2 text-[13px] text-[var(--text-secondary)]">
-            {text.noLinks}
+            {copy("phr.share.noLinks")}
           </p>
         ) : (
           <ul className="mt-2 space-y-2">
@@ -193,19 +146,21 @@ export default function ShareManager({
                 </code>
                 <span className="text-[11px] text-[var(--text-secondary)]">
                   {link.scope === "emergency_card"
-                    ? text.scopeEmergency
-                    : text.scopeFull}{" "}
-                  · {text.expiresAt}:{" "}
+                    ? copy("phr.share.scopeEmergency")
+                    : copy("phr.share.scopeFull")}{" "}
+                  · {copy("phr.share.expiresAt")}: {" "}
                   {link.expires_at
                     ? formatLocaleDate(uiLanguage, link.expires_at)
-                    : text.never}
+                    : copy("phr.share.never")}
                 </span>
                 <button
                   type="button"
                   onClick={() => onCopy(link.share_token)}
                   className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600/70 dark:bg-slate-700/40 dark:text-slate-200"
                 >
-                  {copiedToken === link.share_token ? text.copied : text.copy}
+                  {copiedToken === link.share_token
+                    ? copy("phr.share.copied")
+                    : copy("phr.share.copy")}
                 </button>
                 <button
                   type="button"
@@ -214,8 +169,8 @@ export default function ShareManager({
                   className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60 dark:border-rose-500/70 dark:bg-rose-500/15 dark:text-rose-100"
                 >
                   {revokingToken === link.share_token
-                    ? text.revoking
-                    : text.revoke}
+                    ? copy("phr.share.revoking")
+                    : copy("phr.share.revoke")}
                 </button>
               </li>
             ))}
