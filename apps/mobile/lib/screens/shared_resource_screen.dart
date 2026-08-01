@@ -271,6 +271,7 @@ class SharedResourceScreen extends StatefulWidget {
     required this.apiClient,
     required this.token,
     required this.flags,
+    this.onClose,
   });
 
   final ApiClient apiClient;
@@ -280,6 +281,10 @@ class SharedResourceScreen extends StatefulWidget {
 
   /// Resolved mobile feature gates; sharing must be enabled to render content.
   final MobileFeatureFlagResolver flags;
+
+  /// Clears an in-memory public capability instead of retaining it in history.
+  /// Supplied only by the app-level deep-link host.
+  final VoidCallback? onClose;
 
   @override
   State<SharedResourceScreen> createState() => _SharedResourceScreenState();
@@ -329,9 +334,26 @@ class _SharedResourceScreenState extends State<SharedResourceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nội dung được chia sẻ')),
-      body: _buildBody(context),
+    return WillPopScope(
+      onWillPop: () async {
+        final onClose = widget.onClose;
+        if (onClose == null) return true;
+        onClose();
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Nội dung được chia sẻ'),
+          leading: widget.onClose == null
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Đóng',
+                  onPressed: widget.onClose,
+                ),
+        ),
+        body: _buildBody(context),
+      ),
     );
   }
 

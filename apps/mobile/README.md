@@ -206,6 +206,14 @@ capability token is passed only to `GET /api/v1/phr/shared/{token}` without an
 access token, is never persisted or logged by the viewer, and every public-link
 failure collapses to the same non-PII unavailable message.
 
+Android accepts only canonical `https://theclaracare.com/phr/shared/{token}`
+(or `www`) links and handles both cold-start and already-running intents through
+an in-memory native bridge. The viewer stays behind
+`SHARING_MOBILE_ENABLED=true` and the API's independent `PHR_SHARING_ENABLED`
+gate. Before a production Android release, publish a matching verified
+`/.well-known/assetlinks.json` for the release signing certificate on both
+domains; no certificate fingerprint is committed in this repository.
+
 Existing build-time flags (also default OFF):
 
 | `--dart-define` flag                  | Surface |

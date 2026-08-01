@@ -216,6 +216,13 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   the capability in the viewer, preserves the strict safe-field projection,
   and collapses all public-link errors to one non-PII unavailable message.
   Its focused fake-client widget contracts are added but unrun.
+- Android intent handling now accepts only canonical HTTPS
+  `theclaracare.com/phr/shared/{token}` links (including warm intents), retains
+  the capability only in memory, and presents its public read-only viewer
+  without an authenticated or medical-consent detour. Viewer availability still
+  requires the separate mobile build and server sharing gates. Android App Link
+  verification needs the release certificate fingerprint in a deployed Digital
+  Asset Links file; this repository deliberately does not invent one.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be

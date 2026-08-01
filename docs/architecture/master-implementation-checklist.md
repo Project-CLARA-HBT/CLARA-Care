@@ -50,6 +50,12 @@ recorded as implementation evidence, not release evidence.
   deliberately attaches no access token, does not persist the capability, and
   retains the strict whitelist projection plus non-PII failure collapse. Its
   focused fake-client widget source is present but unrun in this checkpoint.
+  Android now accepts only canonical `theclaracare.com/phr/shared/{token}`
+  intents through an in-memory bridge at cold start and while already open;
+  public shares intentionally bypass login/medical-consent routing but remain
+  behind the mobile build gate and API sharing gate. The required release
+  certificate Digital Asset Links file is an operational deployment input,
+  not invented source data.
 
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only

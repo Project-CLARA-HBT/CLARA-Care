@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/api_client.dart';
 import 'core/feature_flags.dart';
+import 'core/public_share_link.dart';
 import 'core/session_store.dart';
 import 'experience/app_shell.dart';
 import 'experience/home_screen.dart';
@@ -16,6 +17,7 @@ import 'experience/theme_controller.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/phr_screen.dart';
+import 'screens/shared_resource_screen.dart';
 import 'screens/scribe_screen.dart';
 import 'theme/clara_theme.dart';
 import 'widgets/consent_gate.dart';
@@ -25,12 +27,18 @@ class ClaraApp extends StatefulWidget {
     super.key,
     required this.apiClient,
     required this.sessionStore,
+    this.publicShareLinks,
     this.languageController,
     this.themeController,
   });
 
   final ApiClient apiClient;
   final SessionStore sessionStore;
+
+  /// Android-only, in-memory public PHR share capability intake. A supplied
+  /// token intentionally bypasses authentication and medical-consent routing:
+  /// the target endpoint is a separate public, read-only capability contract.
+  final PublicShareLinkController? publicShareLinks;
 
   /// App-wide language state for Experience_V2 (Req 9.1, 9.2). Constructed and
   /// hydrated in `main` only when the flag is ON; `null` on the legacy path so
@@ -54,6 +62,10 @@ class _ClaraAppState extends State<ClaraApp> {
   /// store when the stored token is expired/invalid (Requirement 10.3).
   late final Future<void> _hydration;
 
+  void _onPublicShareLinkChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +75,13 @@ class _ClaraAppState extends State<ClaraApp> {
     _hydration = widget.sessionStore.hydrate().catchError(
           (_) => widget.sessionStore.clear(),
         );
+    widget.publicShareLinks?.addListener(_onPublicShareLinkChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.publicShareLinks?.removeListener(_onPublicShareLinkChanged);
+    super.dispose();
   }
 
   @override
@@ -164,6 +183,19 @@ class _ClaraAppState extends State<ClaraApp> {
   /// constructions (legacy and locale-aware). Unchanged from the original
   /// inline `home:` builder.
   Widget _buildHome() {
+    final publicToken = widget.publicShareLinks?.token;
+    if (publicToken != null) {
+      // A valid public capability is deliberately not routed through the
+      // authenticated/consent-gated root. The viewer itself remains subject to
+      // the local rollout gate and the API's public, read-only share checks.
+      return SharedResourceScreen(
+        apiClient: widget.apiClient,
+        token: publicToken,
+        flags: MobileFeatureFlagResolver(),
+        onClose: widget.publicShareLinks?.clear,
+      );
+    }
+
     return FutureBuilder<void>(
       future: _hydration,
       builder: (context, snapshot) {

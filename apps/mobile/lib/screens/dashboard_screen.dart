@@ -14,7 +14,6 @@ import 'phr_screen.dart';
 import 'research_screen.dart';
 import 'scribe_screen.dart';
 import 'selfmed_cabinet_screen.dart';
-import 'shared_resource_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -387,24 +386,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       apiClient: widget.apiClient,
                       resolver: resolver,
                       sessionStore: widget.sessionStore,
-                    ),
-                  ),
-                ),
-              if (resolver.sharingEnabled)
-                _FeatureTile(
-                  icon: Icons.share_outlined,
-                  title: 'Nội dung chia sẻ',
-                  subtitle: 'Xem tài nguyên được chia sẻ',
-                  enabled: true,
-                  onTap: () => _openScreen(
-                    SharedResourceScreen(
-                      // The dashboard entry point carries no deep-link token;
-                      // the read-only viewer surfaces an error state until a
-                      // token arrives via a share link. The tile exists so the
-                      // surface is reachable when the gate is on (Req 12, 13.1).
-                      apiClient: widget.apiClient,
-                      token: '',
-                      flags: resolver,
                     ),
                   ),
                 ),

@@ -162,7 +162,6 @@ void main() {
       expect(find.text('Nghiên cứu y khoa'), findsNothing);
       expect(find.text('Trò chuyện'), findsNothing);
       expect(find.text('Hội chẩn AI'), findsNothing);
-      expect(find.text('Nội dung chia sẻ'), findsNothing);
 
       // A retry affordance is presented via the shared ErrorRetryView.
       expect(find.byType(ErrorRetryView), findsOneWidget);

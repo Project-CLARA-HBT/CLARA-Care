@@ -88,8 +88,7 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Thử lại'), findsNothing);
   });
 
-  testWidgets(
-      'system monitor is hidden from non-admin even if the flag is set',
+  testWidgets('system monitor is hidden from non-admin even if the flag is set',
       (tester) async {
     // Defense-in-depth: a mis-scoped server flag must still not leak the
     // admin-only surface to a non-admin role (Req 13.5).
@@ -142,10 +141,10 @@ void main() {
     expect(find.text('Tủ thuốc tự kê'), findsNothing);
     expect(find.text('Ghi chú lâm sàng'), findsNothing);
     expect(find.text('Trung tâm đồng ý'), findsNothing);
-    expect(find.text('Nội dung chia sẻ'), findsNothing);
   });
 
-  testWidgets('parity tiles appear when their feature flags are enabled',
+  testWidgets(
+      'authenticated parity tiles appear when their feature flags are enabled',
       (tester) async {
     final api = FakeApiClient();
     api.stub('getMobileSummary', response: const {
@@ -153,7 +152,6 @@ void main() {
         'chat_mobile_enabled': true,
         'selfmed_cabinet_mobile_enabled': true,
         'consent_center_mobile_enabled': true,
-        'sharing_mobile_enabled': true,
       },
     });
 
@@ -163,7 +161,6 @@ void main() {
     expect(find.text('Tủ thuốc tự kê'), findsOneWidget);
     await _reveal(tester, find.text('Trung tâm đồng ý'));
     expect(find.text('Trung tâm đồng ý'), findsOneWidget);
-    expect(find.text('Nội dung chia sẻ'), findsOneWidget);
   });
 
   testWidgets('scribe tile requires both its flag and the doctor role',

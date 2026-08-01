@@ -45,7 +45,6 @@ import '../screens/phr_screen.dart';
 import '../screens/research_screen.dart';
 import '../screens/scribe_screen.dart';
 import '../screens/selfmed_cabinet_screen.dart';
-import '../screens/shared_resource_screen.dart';
 import '../theme/components/clara_card.dart';
 import '../theme/components/section_header.dart';
 import '../theme/tokens.dart';
@@ -314,23 +313,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 apiClient: widget.apiClient,
                 resolver: resolver,
                 sessionStore: widget.sessionStore,
-              ),
-            ),
-          ),
-        if (resolver.sharingEnabled)
-          _QuickActionCard(
-            icon: Icons.share_outlined,
-            title: 'Nội dung chia sẻ',
-            subtitle: 'Xem tài nguyên được chia sẻ',
-            onTap: () => _openScreen(
-              SharedResourceScreen(
-                // No deep-link token from the Home entry point; the read-only
-                // viewer surfaces an error state until a token arrives via a
-                // share link. The card exists so the surface is reachable when
-                // the gate is on.
-                apiClient: widget.apiClient,
-                token: '',
-                flags: resolver,
               ),
             ),
           ),
