@@ -85,8 +85,9 @@ SharedResourceFetcher createHttpSharedResourceFetcher({
   Duration requestTimeout = const Duration(seconds: 30),
 }) {
   final httpClient = client ?? http.Client();
-  final base =
-      baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+  final base = baseUrl.endsWith('/')
+      ? baseUrl.substring(0, baseUrl.length - 1)
+      : baseUrl;
   return (String token) async {
     final uri =
         Uri.parse('$base/api/v1/phr/shared/${Uri.encodeComponent(token)}');
@@ -189,14 +190,15 @@ class SharedResourceView {
     final scope = _str(payload['scope']);
 
     if (scope == 'emergency_card' || payload['emergency_card'] is Map) {
-      final card = (payload['emergency_card'] as Map?)?.cast<String, dynamic>() ??
-          const <String, dynamic>{};
+      final card =
+          (payload['emergency_card'] as Map?)?.cast<String, dynamic>() ??
+              const <String, dynamic>{};
       return SharedResourceView(
         scope: 'emergency_card',
         heading: 'Thẻ khẩn cấp được chia sẻ',
         sections: _emergencyCardSections(card),
-        disclaimer: _disclaimerFrom(card['disclaimer']) ??
-            _selfDeclaredDisclaimer,
+        disclaimer:
+            _disclaimerFrom(card['disclaimer']) ?? _selfDeclaredDisclaimer,
       );
     }
 
@@ -338,9 +340,8 @@ class SharedResourceView {
     return _objectList(value)
         .map((m) {
           final name = _str(m['name']);
-          final dose = _str(m['dose']).isNotEmpty
-              ? _str(m['dose'])
-              : _str(m['dosage']);
+          final dose =
+              _str(m['dose']).isNotEmpty ? _str(m['dose']) : _str(m['dosage']);
           if (name.isEmpty) return '';
           return dose.isEmpty ? name : '$name — $dose';
         })
@@ -394,10 +395,11 @@ class _SharedResourceScreenState extends State<SharedResourceScreen> {
       final payload = await widget.fetcher(widget.token);
       if (!mounted) return;
       setState(() => _view = SharedResourceView.fromPayload(payload));
-    } on ApiException catch (error) {
-      // ApiException messages are Vietnamese-first and PII-free by contract.
+    } on ApiException {
+      // A public-link error must not expose gateway, provider, or token-state
+      // detail. All failure modes collapse to the same safe message.
       if (!mounted) return;
-      setState(() => _error = error.message);
+      setState(() => _error = kSharedResourceUnavailableMessage);
     } catch (_) {
       // Contain any unexpected error within the screen; never leak a stack
       // trace to the user (Req 11.4).
