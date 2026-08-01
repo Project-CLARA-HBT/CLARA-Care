@@ -31,8 +31,9 @@ recorded as implementation evidence, not release evidence.
   upload/confirmation boundary, scans through the existing safe upload and
   prompt-injection path, binds opaque candidate IDs to a short-lived
   owner-scoped review token, and requires explicit confirmation for every
-  persisted candidate. This remains an unrun source checkpoint, not runtime
-  or OCR-quality evidence.
+  persisted candidate. Its consent, disclosure, errors, controls and ARIA
+  labels are now catalog-backed and included in the static i18n gate. This
+  remains an unrun source checkpoint, not runtime or OCR-quality evidence.
 
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only

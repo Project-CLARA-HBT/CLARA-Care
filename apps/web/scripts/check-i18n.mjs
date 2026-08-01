@@ -131,6 +131,25 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    // OCR is a medical-data processing surface: localized acknowledgement,
+    // disclosure, errors and accessible labels must move as one catalog-backed
+    // boundary rather than leaving a component-local bilingual map behind.
+    path: "components/phr/ocr-review-modal.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "phr.ocr.disclosure",
+      "phr.ocr.consentNotice",
+      "phr.ocr.processingNotice",
+      "phr.ocr.confirmError",
+    ],
+    forbidden: [
+      "Quét đơn thuốc (OCR)",
+      "Scan prescription (OCR)",
+      "Tải lên ảnh hoặc tệp đơn thuốc.",
+      "Upload a prescription image or file.",
+    ],
+  },
+  {
     path: "app/lifemap/new/start-client.tsx",
     required: [
       "@/lib/i18n/catalog",

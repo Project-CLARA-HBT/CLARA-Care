@@ -85,4 +85,28 @@ describe("primary shell i18n hard-coded copy scanner", () => {
     expect(source).not.toContain('>Chưa thể tải dữ liệu<');
     expect(source).not.toContain('>Thử lại<');
   });
+
+  it("keeps PHR OCR consent and review copy in the shared typed catalog", () => {
+    const source = readFileSync(
+      resolve(ROOT, "components/phr/ocr-review-modal.tsx"),
+      "utf8",
+    );
+    expect(source).toContain('from "@/lib/i18n/catalog"');
+    for (const key of [
+      "phr.ocr.disclosure",
+      "phr.ocr.consentNotice",
+      "phr.ocr.processingNotice",
+      "phr.ocr.confirmError",
+    ]) {
+      expect(source).toContain(key);
+    }
+    for (const literal of [
+      "Quét đơn thuốc (OCR)",
+      "Scan prescription (OCR)",
+      "Tải lên ảnh hoặc tệp đơn thuốc.",
+      "Upload a prescription image or file.",
+    ]) {
+      expect(source).not.toContain(literal);
+    }
+  });
 });
