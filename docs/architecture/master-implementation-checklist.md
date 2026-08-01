@@ -39,7 +39,9 @@ recorded as implementation evidence, not release evidence.
 
 - The same static i18n gate now covers the PHR sharing, FHIR export,
   emergency-card and reminder controls, plus guided data deletion and the
-  admin DSAR queue. These surfaces also use the shared locale date formatter;
+  admin DSAR queue. The consent centre now also exposes every server-supported
+  purpose, including the append-only AI-transparency acknowledgement, rather
+  than silently hiding it. These surfaces use the shared locale date formatter;
   the DSAR queue suppresses caught transport text. The gate source is added but
   intentionally not executed in the feature-first checkpoint.
 

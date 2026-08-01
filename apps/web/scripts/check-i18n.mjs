@@ -179,6 +179,19 @@ const MIGRATED_SURFACES = [
     forbidden: ["Nhắc uống thuốc", "Medication reminders"],
   },
   {
+    // The ledger exposes all six backend consent purposes. Keeping AI
+    // transparency in the same catalog-backed card flow makes an active or
+    // withdrawn acknowledgement visible rather than silently hiding it.
+    path: "app/account/consent/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      '"ai_transparency"',
+      "consent.purpose.aiTransparency.label",
+      "safeUserFacingError",
+    ],
+    forbidden: ["AI transparency", "Minh bạch AI"],
+  },
+  {
     path: "app/account/data/delete/[step]/delete-data-flow-client.tsx",
     required: [
       "@/lib/i18n/catalog",

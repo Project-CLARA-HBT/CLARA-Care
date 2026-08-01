@@ -51,6 +51,7 @@ type PurposeCopy = {
 
 const PURPOSE_ORDER: ConsentPurpose[] = [
   "core_service",
+  "ai_transparency",
   "personalization",
   "research",
   "cross_border_processing",

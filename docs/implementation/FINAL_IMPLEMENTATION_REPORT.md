@@ -191,6 +191,11 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   locale timestamps. Mutation failures no longer project caught transport text
   into its UI; only the localized safe error is shown, while authorized audit
   facts remain server-provided queue data.
+- The consent centre now renders all six backend ledger purposes, including
+  AI-transparency acknowledgement. It uses the existing append-only grant and
+  withdrawal route and catalog keys; no new consent policy, access grant or
+  mutation path was introduced. A static catalog contract guards this visible
+  ledger coverage. This source checkpoint has not run tests, build or deployment.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be
