@@ -66,6 +66,7 @@ _DEFAULT_SUGGESTIONS: tuple[str, ...] = (
     "Tóm tắt ADR nghiêm trọng cần đi viện",
 )
 _PUBLIC_SHARE_MESSAGE_LIMIT = 200
+_PUBLIC_SHARE_UNAVAILABLE_DETAIL = {"code": "public_share_unavailable"}
 settings = get_settings()
 
 
@@ -315,6 +316,15 @@ def _serialize_share(
         expires_at=share.expires_at,
         created_at=share.created_at,
         updated_at=share.updated_at,
+    )
+
+
+def _public_share_unavailable() -> HTTPException:
+    """Keep an opaque public capability from disclosing its lifecycle state."""
+
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=_PUBLIC_SHARE_UNAVAILABLE_DETAIL,
     )
 
 
@@ -1288,18 +1298,12 @@ def get_public_conversation_by_share_token(
         )
     ).scalar_one_or_none()
     if share is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Liên kết chia sẻ không tồn tại.",
-        )
+        raise _public_share_unavailable()
 
     now = datetime.now(tz=UTC)
     expires_at = _as_utc_aware(share.expires_at)
     if expires_at is not None and expires_at < now:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="Liên kết chia sẻ đã hết hạn.",
-        )
+        raise _public_share_unavailable()
 
     session_obj = db.execute(
         select(SessionModel).where(
@@ -1308,10 +1312,7 @@ def get_public_conversation_by_share_token(
         )
     ).scalar_one_or_none()
     if session_obj is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation không tồn tại.",
-        )
+        raise _public_share_unavailable()
 
     rows = (
         db.execute(

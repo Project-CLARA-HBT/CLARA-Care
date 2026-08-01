@@ -71,8 +71,9 @@ recorded as implementation evidence, not release evidence.
   capability posture: `noindex`/`no-referrer`, localized static copy and one
   generic public unavailable state for invalid, expired, revoked and transport
   failures. It omits the nonessential owner label and does not expose token or
-  token-state detail. This preserves the existing authorized content and
-  backend sharing semantics; focused source verification remains unrun.
+  token-state detail. Its public API also normalizes those lifecycle failures
+  to the same opaque 404 code. This preserves the existing authorized content
+  and backend sharing semantics; focused source verification remains unrun.
 
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 import io
 import json
 import zipfile
@@ -5,7 +6,7 @@ import zipfile
 from fastapi.testclient import TestClient
 
 from clara_api.db.models import Query as QueryModel
-from clara_api.db.models import SessionModel, User
+from clara_api.db.models import SessionModel, User, WorkspaceConversationShare
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
@@ -524,6 +525,35 @@ def test_workspace_conversation_share_public_access_and_revoke() -> None:
         f"/api/v1/workspace/public/conversations/{share_token}"
     )
     assert public_after_revoke_response.status_code == 404
+    assert public_after_revoke_response.json() == {
+        "detail": {"code": "public_share_unavailable"}
+    }
+
+
+def test_workspace_public_share_expiry_does_not_disclose_capability_state() -> None:
+    email = "workspace-share-expiry@example.com"
+    owner_headers = _auth_headers(_login(email))
+    conversation_id = _create_conversation(email, "Private shared conversation")
+    create_response = client.post(
+        f"/api/v1/workspace/conversations/{conversation_id}/share",
+        headers=owner_headers,
+        json={"expires_in_hours": 24},
+    )
+    assert create_response.status_code == 200
+    token = create_response.json()["share_token"]
+
+    with SessionLocal() as db:
+        share = (
+            db.query(WorkspaceConversationShare)
+            .filter(WorkspaceConversationShare.share_token == token)
+            .one()
+        )
+        share.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        db.commit()
+
+    expired_response = client.get(f"/api/v1/workspace/public/conversations/{token}")
+    assert expired_response.status_code == 404
+    assert expired_response.json() == {"detail": {"code": "public_share_unavailable"}}
 
 
 def test_workspace_public_share_caps_message_count() -> None:
