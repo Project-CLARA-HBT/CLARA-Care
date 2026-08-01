@@ -25,6 +25,15 @@ recorded as implementation evidence, not release evidence.
 
 ## Recent additive checkpoints
 
+- The Vietnamese-first `/huong-dan` consumer guide now moves its complete
+  static task, step, action and label copy to the typed vi/en catalog and
+  observes persisted locale changes. PHR OCR now requires consent before the
+  upload/confirmation boundary, scans through the existing safe upload and
+  prompt-injection path, binds opaque candidate IDs to a short-lived
+  owner-scoped review token, and requires explicit confirmation for every
+  persisted candidate. This remains an unrun source checkpoint, not runtime
+  or OCR-quality evidence.
+
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only
   acknowledges a closed selector; API adds the deterministic projection only

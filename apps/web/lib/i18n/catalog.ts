@@ -147,6 +147,79 @@ const VI_MESSAGES = {
   "navigation.item.help.desc": "Bắt đầu trong 5 phút",
   "navigation.item.help.title": "Trung tâm hướng dẫn",
   "navigation.item.help.subtitle": "Các bước sử dụng nhanh cho người mới.",
+  "guide.eyebrow": "Bắt đầu tại đây",
+  "guide.title": "Hướng dẫn sử dụng CLARA",
+  "guide.description":
+    "Chọn việc bạn muốn làm, làm theo 3 bước ngắn, rồi mở thẳng đúng màn hình. CLARA chỉ hỗ trợ tham khảo; khi có dấu hiệu nguy hiểm, hãy liên hệ cơ sở y tế.",
+  "guide.tasks.chat.title": "Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc",
+  "guide.tasks.chat.detail":
+    "Dùng khi bạn cần câu trả lời nhanh, dễ đọc, có nhắc an toàn.",
+  "guide.tasks.chat.step1": "Nhập câu hỏi bằng ngôn ngữ bình thường.",
+  "guide.tasks.chat.step2": "Chọn Nhanh nếu chỉ cần trả lời ngắn.",
+  "guide.tasks.chat.step3":
+    "Đọc phần lưu ý an toàn trước khi làm theo.",
+  "guide.tasks.chat.action": "Mở hỏi CLARA",
+  "guide.tasks.thinking.title": "Tôi muốn câu trả lời kỹ hơn",
+  "guide.tasks.thinking.detail":
+    "Dùng Tư duy hoặc Pro khi cần phân tích dài, nhiều nguồn hơn.",
+  "guide.tasks.thinking.step1": "Bấm nút chỉnh chế độ cạnh ô nhập.",
+  "guide.tasks.thinking.step2":
+    "Chọn Tư duy cho phân tích kỹ hơn, Pro cho báo cáo dài.",
+  "guide.tasks.thinking.step3":
+    "Chọn Đầy đủ nguồn nếu muốn CLARA kiểm tra nhiều nguồn hơn.",
+  "guide.tasks.thinking.action": "Mở chế độ Tư duy",
+  "guide.tasks.cabinet.title": "Tôi muốn lưu thuốc đang dùng",
+  "guide.tasks.cabinet.detail":
+    "Tủ thuốc giúp CLARA nhớ danh sách thuốc để kiểm tra tương tác.",
+  "guide.tasks.cabinet.step1": "Thêm từng thuốc hoặc quét ảnh đơn thuốc.",
+  "guide.tasks.cabinet.step2": "Bổ sung liều dùng nếu biết.",
+  "guide.tasks.cabinet.step3":
+    "Khi có ít nhất 2 thuốc, chạy kiểm tra tương tác.",
+  "guide.tasks.cabinet.action": "Mở tủ thuốc",
+  "guide.tasks.interactions.title":
+    "Tôi muốn kiểm tra hai thuốc có kỵ nhau không",
+  "guide.tasks.interactions.detail":
+    "Dùng mục kiểm tra tương tác thuốc trước khi phối hợp nhiều thuốc.",
+  "guide.tasks.interactions.step1":
+    "Đảm bảo tủ thuốc đã có ít nhất 2 thuốc.",
+  "guide.tasks.interactions.step2": "Bấm Kiểm tra tương tác thuốc.",
+  "guide.tasks.interactions.step3":
+    "Đọc cặp thuốc bị cảnh báo và phần Bạn nên làm gì.",
+  "guide.tasks.interactions.action": "Kiểm tra tương tác",
+  "guide.tasks.council.title": "Tôi là bác sĩ và cần hội chẩn ca khó",
+  "guide.tasks.council.detail":
+    "Tham khảo nhiều chuyên khoa phù hợp khi ca có nhiều hướng xử trí hoặc nhiều chuyên khoa.",
+  "guide.tasks.council.step1": "Nhập bối cảnh ca bệnh rõ ràng.",
+  "guide.tasks.council.step2":
+    "Thêm kết quả xét nghiệm hoặc ghi chú nếu có.",
+  "guide.tasks.council.step3":
+    "Dùng kết quả như tài liệu tham khảo, không thay thế quyết định lâm sàng.",
+  "guide.tasks.council.action": "Mở tham khảo nhiều chuyên khoa",
+  "guide.tasks.scribe.title": "Tôi muốn ghi lại buổi khám",
+  "guide.tasks.scribe.detail":
+    "Ghi chép buổi khám giúp chuyển ghi chú thành bản tóm tắt có cấu trúc.",
+  "guide.tasks.scribe.step1": "Nhập hoặc dán nội dung buổi khám.",
+  "guide.tasks.scribe.step2":
+    "Kiểm tra lại bản ghi có cấu trúc trước khi dùng.",
+  "guide.tasks.scribe.step3":
+    "Không đưa thông tin nhạy cảm nếu chưa có đồng ý phù hợp.",
+  "guide.tasks.scribe.action": "Mở ghi chép buổi khám",
+  "guide.labels.title": "Các nhãn trong ô chat nghĩa là gì?",
+  "guide.labels.quick.term": "Nhanh",
+  "guide.labels.quick.meaning":
+    "Trả lời ngắn, ít chờ, hợp với câu hỏi đơn giản.",
+  "guide.labels.thinking.term": "Tư duy",
+  "guide.labels.thinking.meaning":
+    "Phân tích kỹ hơn, hợp với câu hỏi cần lý giải.",
+  "guide.labels.pro.term": "Pro",
+  "guide.labels.pro.meaning":
+    "Báo cáo dài và đầy đủ hơn, dùng khi cần nghiên cứu sâu.",
+  "guide.labels.autoSources.term": "Tự chọn nguồn",
+  "guide.labels.autoSources.meaning":
+    "CLARA tự chọn phạm vi nguồn phù hợp để tiết kiệm thời gian.",
+  "guide.labels.fullSources.term": "Đầy đủ nguồn",
+  "guide.labels.fullSources.meaning":
+    "CLARA kiểm tra nhiều nguồn hơn, có thể chờ lâu hơn.",
   "navigation.item.consent.label": "Trung tâm đồng thuận",
   "navigation.item.consent.desc": "Quản lý đồng thuận theo mục đích",
   "navigation.item.consent.title": "Trung tâm đồng thuận",
@@ -3702,6 +3775,79 @@ const EN_MESSAGES: MessageCatalog = {
   "navigation.item.help.desc": "Get started in five minutes",
   "navigation.item.help.title": "Help centre",
   "navigation.item.help.subtitle": "Quick start steps for new users.",
+  "guide.eyebrow": "Start here",
+  "guide.title": "How to use CLARA",
+  "guide.description":
+    "Choose what you want to do, follow three short steps, then open the right screen. CLARA provides decision support only; seek medical care when warning signs are present.",
+  "guide.tasks.chat.title": "I want to ask CLARA about a symptom or medicine",
+  "guide.tasks.chat.detail":
+    "Use this when you need a quick, readable answer with safety guidance.",
+  "guide.tasks.chat.step1": "Ask your question in everyday language.",
+  "guide.tasks.chat.step2": "Choose Quick when you only need a short answer.",
+  "guide.tasks.chat.step3":
+    "Read the safety guidance before acting on the answer.",
+  "guide.tasks.chat.action": "Ask CLARA",
+  "guide.tasks.thinking.title": "I want a more detailed answer",
+  "guide.tasks.thinking.detail":
+    "Use Thinking or Pro for longer analysis and broader sourcing.",
+  "guide.tasks.thinking.step1": "Open the mode control beside the message box.",
+  "guide.tasks.thinking.step2":
+    "Choose Thinking for deeper analysis or Pro for a longer report.",
+  "guide.tasks.thinking.step3":
+    "Choose Full sources when you want CLARA to check a broader source set.",
+  "guide.tasks.thinking.action": "Open Thinking mode",
+  "guide.tasks.cabinet.title": "I want to save the medicines I take",
+  "guide.tasks.cabinet.detail":
+    "The medicine cabinet keeps your list ready for interaction checks.",
+  "guide.tasks.cabinet.step1": "Add each medicine or scan a prescription image.",
+  "guide.tasks.cabinet.step2": "Add the dose if you know it.",
+  "guide.tasks.cabinet.step3":
+    "When at least two medicines are present, run an interaction check.",
+  "guide.tasks.cabinet.action": "Open medicine cabinet",
+  "guide.tasks.interactions.title":
+    "I want to know whether two medicines interact",
+  "guide.tasks.interactions.detail":
+    "Use the interaction check before combining multiple medicines.",
+  "guide.tasks.interactions.step1":
+    "Make sure the cabinet contains at least two medicines.",
+  "guide.tasks.interactions.step2": "Select Check medicine interactions.",
+  "guide.tasks.interactions.step3":
+    "Review each flagged pair and the What to do next section.",
+  "guide.tasks.interactions.action": "Check interactions",
+  "guide.tasks.council.title":
+    "I am a clinician and need input on a complex case",
+  "guide.tasks.council.detail":
+    "Multi-specialty input can help when a case has several management paths or specialties.",
+  "guide.tasks.council.step1": "Enter the clinical context clearly.",
+  "guide.tasks.council.step2": "Add relevant test results or notes.",
+  "guide.tasks.council.step3":
+    "Use the result as supporting information, not as a replacement for clinical judgment.",
+  "guide.tasks.council.action": "Open multi-specialty review",
+  "guide.tasks.scribe.title": "I want to document a consultation",
+  "guide.tasks.scribe.detail":
+    "Consultation notes can be turned into a structured summary for review.",
+  "guide.tasks.scribe.step1": "Enter or paste the consultation notes.",
+  "guide.tasks.scribe.step2":
+    "Review the structured note before using it.",
+  "guide.tasks.scribe.step3":
+    "Do not include sensitive information without the appropriate consent.",
+  "guide.tasks.scribe.action": "Open consultation notes",
+  "guide.labels.title": "What do the labels in chat mean?",
+  "guide.labels.quick.term": "Quick",
+  "guide.labels.quick.meaning":
+    "A shorter answer with less waiting, suitable for simple questions.",
+  "guide.labels.thinking.term": "Thinking",
+  "guide.labels.thinking.meaning":
+    "Deeper analysis for questions that need an explanation.",
+  "guide.labels.pro.term": "Pro",
+  "guide.labels.pro.meaning":
+    "A longer, more complete report for in-depth research.",
+  "guide.labels.autoSources.term": "Automatic sources",
+  "guide.labels.autoSources.meaning":
+    "CLARA chooses an appropriate source scope to save time.",
+  "guide.labels.fullSources.term": "Full sources",
+  "guide.labels.fullSources.meaning":
+    "CLARA checks a broader source set, which may take longer.",
   "navigation.item.consent.label": "Consent centre",
   "navigation.item.consent.desc": "Manage consent by purpose",
   "navigation.item.consent.title": "Consent centre",

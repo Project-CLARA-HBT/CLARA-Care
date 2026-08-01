@@ -13,9 +13,15 @@ This applies to:
 - `POST /api/v1/research/upload-file`
 - `POST /api/v1/research/knowledge-sources/{source_id}/upload-file`
 
-The guard does not change RBAC, owner isolation, medical-consent gates, CSRF,
-or PHR's mandatory human confirmation. It does not inspect medical content and
-never transmits the upload to an LLM.
+The PHR scan additionally requires the owner's current medical-disclaimer
+consent before the file crosses the OCR boundary. A scan returns proposals only:
+the API attaches reviewable corrected-text offsets and a short-lived,
+owner-bound signed capability containing opaque candidate IDs (never OCR text).
+`POST /api/v1/phr/import/ocr/confirm` accepts only explicitly confirmed rows
+from that signed scan set; discarded rows remain unpersisted. Expired, malformed
+or cross-user capabilities fail closed. This boundary does not change RBAC,
+owner isolation or CSRF, does not inspect medical content, and never transmits
+the upload to an LLM.
 
 ## Malware scanning rollout
 

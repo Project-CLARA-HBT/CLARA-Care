@@ -15,9 +15,9 @@ import { safeUserFacingError } from "@/lib/user-facing-text";
  * uploads a document, the backend returns candidate medications WITHOUT
  * committing anything (Req 9.1), and the user edits / accepts / discards each
  * candidate before an explicit confirm commits them as `ocr`-sourced entries
- * (Req 9.2, 9.3). Accepting a low-confidence candidate clears its
- * `requires_manual_confirm` flag — that human review is exactly what the confirm
- * endpoint requires (Req 9.5).
+ * (Req 9.2, 9.3). The server binds all displayed opaque IDs to a short-lived,
+ * owner-bound review token; the user can discard rows without allowing a new
+ * candidate to be injected after the scan.
  *
  * Rendered only when the `ocr_import` capability is effective (Requirement 18.1).
  */
@@ -30,6 +30,8 @@ const COPY = {
     title: "Xem lại kết quả OCR",
     intro:
       "Tải lên ảnh hoặc tệp đơn thuốc. Không có mục nào được lưu cho đến khi bạn xác nhận.",
+    disclosure:
+      "Tôi đồng ý gửi tệp này để trích xuất các thuốc cần xem lại. CLARA không tự lưu thuốc từ kết quả OCR.",
     pick: "Chọn tệp",
     scanning: "Đang quét...",
     scanError: "Quét tài liệu thất bại.",
@@ -53,6 +55,8 @@ const COPY = {
     title: "Review OCR results",
     intro:
       "Upload a prescription image or file. Nothing is saved until you confirm.",
+    disclosure:
+      "I agree to send this file for reviewable medication extraction. CLARA does not save medicines automatically from OCR.",
     pick: "Choose file",
     scanning: "Scanning...",
     scanError: "Failed to scan the document.",
@@ -85,12 +89,20 @@ export default function OcrReviewModal({
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [scanning, setScanning] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [reviewToken, setReviewToken] = useState("");
+  const [reviewCandidateIds, setReviewCandidateIds] = useState<string[]>([]);
+  const [processingNotice, setProcessingNotice] = useState("");
+  const [processingAcknowledged, setProcessingAcknowledged] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const reset = () => {
     setRows([]);
+    setReviewToken("");
+    setReviewCandidateIds([]);
+    setProcessingNotice("");
+    setProcessingAcknowledged(false);
     setError("");
     setMessage("");
   };
@@ -112,11 +124,18 @@ export default function OcrReviewModal({
     setMessage("");
     try {
       const result = await scanPhrOcr(file);
-      // Pre-accept high-confidence rows; low-confidence rows stay un-accepted
-      // until the user reviews them (Req 9.5).
-      setRows(
-        result.candidates.map((c) => ({ ...c, _accepted: !c.requires_manual_confirm })),
-      );
+      // Every OCR row is proposal-only. A person must explicitly accept each
+      // one before it can be written, regardless of a provider confidence.
+      setRows(result.candidates.map((c) => ({ ...c, _accepted: false })));
+      setReviewToken(result.reviewToken);
+      setReviewCandidateIds(result.candidates.map((candidate) => candidate.candidate_id));
+      if (result.processingDisclosure?.humanConfirmationRequired) {
+        setProcessingNotice(
+          uiLanguage === "vi"
+            ? "CLARA không lưu tệp tải lên; hãy kiểm tra từng mục trước khi lưu vào hồ sơ."
+            : "CLARA does not persist the uploaded file; review every item before saving it to your record.",
+        );
+      }
       if (result.candidates.length === 0) setMessage(text.noCandidates);
     } catch (err) {
       setError(safeUserFacingError(err, text.scanError));
@@ -133,7 +152,7 @@ export default function OcrReviewModal({
 
   const onConfirm = async () => {
     const accepted = rows.filter((r) => r._accepted);
-    if (accepted.length === 0) {
+    if (accepted.length === 0 || !reviewToken || reviewCandidateIds.length === 0) {
       setError(text.nothingAccepted);
       return;
     }
@@ -141,13 +160,14 @@ export default function OcrReviewModal({
     setError("");
     setMessage("");
     try {
-      // Accepting a candidate clears the manual-confirm flag — the human review
-      // the confirm endpoint demands (Req 9.5).
       await confirmPhrOcr(
         accepted.map(({ _accepted, ...c }) => ({
           ...c,
           requires_manual_confirm: false,
+          confirmed: true,
         })),
+        reviewToken,
+        reviewCandidateIds,
       );
       setMessage(text.confirmed);
       setRows([]);
@@ -174,15 +194,29 @@ export default function OcrReviewModal({
         <p className="text-[13px] leading-6 text-[var(--text-secondary)]">
           {text.intro}
         </p>
+        <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+          {uiLanguage === "vi"
+            ? "Bạn cần có đồng ý y tế phù hợp trước khi CLARA gửi tệp đến dịch vụ OCR đã cấu hình."
+            : "Appropriate medical consent is required before CLARA sends a file to the configured OCR service."}
+        </p>
 
         <div className="mt-3">
+          <label className="mb-3 flex items-start gap-2 text-[13px] leading-5 text-[var(--text-secondary)]">
+            <input
+              type="checkbox"
+              checked={processingAcknowledged}
+              onChange={(event) => setProcessingAcknowledged(event.target.checked)}
+              disabled={scanning || confirming}
+            />
+            <span>{text.disclosure}</span>
+          </label>
           <input
             ref={fileRef}
             type="file"
             accept="image/*,application/pdf"
             aria-label={text.pick}
             onChange={(e) => onFile(e.target.files?.[0])}
-            disabled={scanning || confirming}
+            disabled={scanning || confirming || !processingAcknowledged}
             className="block w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-lg file:border file:border-[#93C5FD] file:bg-[#EFF6FF] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-[#1D4ED8]"
           />
         </div>
@@ -193,6 +227,9 @@ export default function OcrReviewModal({
         {error ? <p className="mt-3 text-sm text-rose-500">{error}</p> : null}
         {message ? (
           <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-300">{message}</p>
+        ) : null}
+        {processingNotice ? (
+          <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">{processingNotice}</p>
         ) : null}
 
         {rows.length > 0 ? (

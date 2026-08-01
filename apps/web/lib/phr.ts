@@ -297,22 +297,30 @@ export async function getPhrCapabilities(): Promise<PhrCapabilityFlags> {
 
 /**
  * A single OCR-extracted candidate medication awaiting human confirmation
- * (Requirement 9.1–9.3). `requires_manual_confirm` is set by the backend for
- * low-confidence detections; the confirm endpoint rejects any candidate that
- * still carries it, so the user must review/clear it before committing.
+ * (Requirement 9.1–9.3). Every row is proposal-only. The server binds the
+ * complete scan set to an owner-bound review token and accepts only rows the
+ * person explicitly confirms; `requires_manual_confirm` is presentation
+ * metadata, never a client-side bypass switch.
  */
 export type PhrOcrCandidate = {
+  candidate_id: string;
   name: string;
   dose: string;
   frequency: string;
   ocr_confidence?: number | null;
   requires_manual_confirm: boolean;
+  confirmed: boolean;
 };
 
 /** Response of `POST /phr/import/ocr/scan`: nothing is committed (Req 9.1). */
 export type PhrOcrScanResult = {
   committed: boolean;
   candidates: PhrOcrCandidate[];
+  reviewToken: string;
+  processingDisclosure: {
+    providerCategory: "configured_ocr_service" | "google_cloud_vision" | "local_tesseract";
+    humanConfirmationRequired: boolean;
+  } | null;
 };
 
 function coerceOcrCandidate(raw: unknown): PhrOcrCandidate {
@@ -323,11 +331,13 @@ function coerceOcrCandidate(raw: unknown): PhrOcrCandidate {
       ? Math.min(1, Math.max(0, root.ocr_confidence))
       : null;
   return {
+    candidate_id: typeof root.candidate_id === "string" ? root.candidate_id : "",
     name: typeof root.name === "string" ? root.name : "",
     dose: typeof root.dose === "string" ? root.dose : "",
     frequency: typeof root.frequency === "string" ? root.frequency : "",
     ocr_confidence: confidence,
     requires_manual_confirm: root.requires_manual_confirm === true,
+    confirmed: root.confirmed === true,
   };
 }
 
@@ -344,20 +354,50 @@ export async function scanPhrOcr(file: File): Promise<PhrOcrScanResult> {
   const candidates = Array.isArray(root.candidates)
     ? root.candidates.map(coerceOcrCandidate)
     : [];
-  return { committed: root.committed === true, candidates };
+  const reviewToken = typeof root.review_token === "string" ? root.review_token : "";
+  if (!reviewToken || candidates.some((candidate) => !candidate.candidate_id)) {
+    throw new Error("OCR review session is unavailable");
+  }
+  const disclosure =
+    root.processing_disclosure && typeof root.processing_disclosure === "object"
+      ? (root.processing_disclosure as Record<string, unknown>)
+      : null;
+  const providerCategory = disclosure?.provider_category;
+  return {
+    committed: root.committed === true,
+    candidates,
+    reviewToken,
+    processingDisclosure:
+      providerCategory === "configured_ocr_service" ||
+      providerCategory === "google_cloud_vision" ||
+      providerCategory === "local_tesseract"
+        ? {
+            providerCategory,
+            humanConfirmationRequired: disclosure?.human_confirmation_required === true,
+          }
+        : null,
+  };
 }
 
 /**
  * Commit the user-reviewed candidate list as `ocr`-sourced medications
- * (Requirement 9.2, 9.4). Candidates still flagged `requires_manual_confirm`
- * are rejected by the server (422), so the modal must clear that flag on accept.
+ * (Requirement 9.2, 9.4). `reviewCandidateIds` retains the full signed scan
+ * set, including discarded rows, while `medications` contains only the
+ * explicitly accepted rows. This prevents a client from injecting a new OCR
+ * candidate after review without turning discards into stored data.
  */
 export async function confirmPhrOcr(
   medications: PhrOcrCandidate[],
+  reviewToken: string,
+  reviewCandidateIds: string[],
 ): Promise<PhrRecord> {
   const { data } = await api.post<PhrRecord>(
     "/api/v1/phr/import/ocr/confirm",
-    { medications },
+    {
+      medications,
+      review_token: reviewToken,
+      review_candidate_ids: reviewCandidateIds,
+    },
   );
   return data;
 }

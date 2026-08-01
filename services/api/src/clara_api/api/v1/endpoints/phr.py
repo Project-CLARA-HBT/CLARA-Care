@@ -14,7 +14,13 @@ not legally binding. All PHR-derived decision-support output is hedged.
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
+import hmac
+import json
 import secrets
+import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -34,7 +40,11 @@ from clara_api.compliance.consent import PURPOSE_SHARING
 from clara_api.compliance.service import ComplianceService
 from clara_api.core.auth_email import _send_via_smtp
 from clara_api.core.config import Settings, get_settings
-from clara_api.core.consent import PHR_CONSENT_PURPOSES, PhrConsentService
+from clara_api.core.consent import (
+    PHR_CONSENT_PURPOSES,
+    PhrConsentService,
+    ensure_medical_disclaimer_consent,
+)
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.core.upload_safety import (
@@ -73,6 +83,7 @@ from clara_api.schemas import (
     PhrEntryPatchRequest,
     PhrObservationCreateRequest,
     PhrOcrConfirmRequest,
+    PhrOcrScanResponse,
     PhrOnboardingResponse,
     PhrOnboardingUpdateRequest,
     PhrRecordResponse,
@@ -87,6 +98,8 @@ router = APIRouter()
 USER_ROLE_DEP = Depends(require_roles("normal", "researcher", "doctor", "admin"))
 SETTINGS_DEP = Depends(get_settings)
 PHR_ONBOARDING_VERSION = "2026-07-v1"
+_OCR_REVIEW_TOKEN_VERSION = "phr-ocr-review.v1"
+_OCR_REVIEW_TOKEN_TTL_SECONDS = 15 * 60
 PHR_ONBOARDING_OPTIONAL_FIELDS = [
     "full_name",
     "date_of_birth",
@@ -1115,18 +1128,78 @@ def _aware(value: datetime) -> datetime:
     return value
 
 
+def _ocr_review_candidate_ids(candidate_ids: list[str]) -> list[str]:
+    """Validate opaque IDs; the token never carries OCR text or medications."""
+
+    if (
+        len(candidate_ids) != len(set(candidate_ids))
+        or any(not isinstance(item, str) or not item.strip() for item in candidate_ids)
+    ):
+        raise ValueError("ocr_review_candidate_ids_invalid")
+    return sorted(candidate_ids)
+
+
+def _make_ocr_review_token(*, user_id: int, candidate_ids: list[str]) -> str:
+    """Create a short-lived, owner-bound capability for review-only OCR rows."""
+
+    expires_at = int(time.time()) + _OCR_REVIEW_TOKEN_TTL_SECONDS
+    encoded_ids = base64.urlsafe_b64encode(
+        json.dumps(_ocr_review_candidate_ids(candidate_ids), separators=(",", ":")).encode()
+    ).decode().rstrip("=")
+    message = f"{_OCR_REVIEW_TOKEN_VERSION}:{user_id}:{expires_at}:{encoded_ids}"
+    signature = hmac.new(
+        get_settings().jwt_secret_key.encode(), message.encode(), hashlib.sha256
+    ).hexdigest()
+    return f"{expires_at}.{encoded_ids}.{signature}"
+
+
+def _verify_ocr_review_token(*, token: str, user_id: int, candidate_ids: list[str]) -> None:
+    """Reject stale, cross-user or substituted OCR candidate sets without logging text."""
+
+    try:
+        raw_expiry, encoded_ids, supplied_signature = token.split(".", 2)
+        expires_at = int(raw_expiry)
+        padding = "=" * (-len(encoded_ids) % 4)
+        allowed_ids = json.loads(
+            base64.urlsafe_b64decode(f"{encoded_ids}{padding}").decode()
+        )
+        if not isinstance(allowed_ids, list):
+            raise ValueError("ocr_review_candidate_ids_invalid")
+        allowed_ids = _ocr_review_candidate_ids(allowed_ids)
+        submitted_ids = _ocr_review_candidate_ids(candidate_ids)
+        if not set(submitted_ids).issubset(set(allowed_ids)):
+            raise ValueError("ocr_review_candidate_ids_invalid")
+    except (
+        AttributeError,
+        TypeError,
+        UnicodeDecodeError,
+        ValueError,
+        binascii.Error,
+    ) as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="OCR review expired") from exc
+    message = f"{_OCR_REVIEW_TOKEN_VERSION}:{user_id}:{expires_at}:{encoded_ids}"
+    expected = hmac.new(
+        get_settings().jwt_secret_key.encode(), message.encode(), hashlib.sha256
+    ).hexdigest()
+    if (
+        expires_at < int(time.time())
+        or not hmac.compare_digest(supplied_signature, expected)
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="OCR review expired")
+
+
 # ---------------------------------------------------------------------------
 # OCR import with mandatory human confirmation (Req 9)
 # ---------------------------------------------------------------------------
 
 
-@router.post("/import/ocr/scan")
+@router.post("/import/ocr/scan", response_model=PhrOcrScanResponse)
 async def scan_phr_ocr(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
-) -> dict[str, Any]:
+) -> PhrOcrScanResponse:
     """Return OCR candidate entries WITHOUT committing anything (Req 9.1, 9.6).
 
     Reuses the careguard OCR bridge. Nothing is written to the PHR here; the user
@@ -1137,12 +1210,16 @@ async def scan_phr_ocr(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="PHR OCR import not enabled"
         )
-    _get_user_by_token(db, token)
+    user = _get_user_by_token(db, token)
+    ensure_medical_disclaimer_consent(db, user_id=user.id)
 
     # Lazy import keeps the careguard import cycle out of module load.
     from clara_api.api.v1.endpoints.careguard import (
+        _attach_ocr_source_coordinates,
+        _apply_ocr_correction,
         _detect_drugs_from_text,
         _enforce_low_confidence_manual_confirm,
+        _reject_ocr_prompt_injection,
         _scan_with_tgc_ocr,
     )
 
@@ -1173,21 +1250,54 @@ async def scan_phr_ocr(
         ) from exc
     file_name = verified.filename
     content_type = verified.media_type
-    extracted_text, _engine, _raw = _scan_with_tgc_ocr(file_bytes, file_name, content_type)
+    extracted_text, engine, _raw = _scan_with_tgc_ocr(file_bytes, file_name, content_type)
+    correction = _apply_ocr_correction(extracted_text)
+    _reject_ocr_prompt_injection(correction.corrected_text)
     detections = _enforce_low_confidence_manual_confirm(
-        _detect_drugs_from_text(extracted_text, db=db)
+        _detect_drugs_from_text(
+            correction.corrected_text,
+            db=db,
+            skip_ocr_correction=True,
+        )
+    )
+    detections = _attach_ocr_source_coordinates(
+        detections, corrected_text=correction.corrected_text
     )
     candidates = [
         {
+            "candidate_id": secrets.token_urlsafe(18),
             "name": d.drug_name or d.normalized_name,
             "dose": d.dosage or "",
             "frequency": "",
             "ocr_confidence": d.confidence,
-            "requires_manual_confirm": d.requires_manual_confirm,
+            # Every OCR row is review-only. A displayed confidence is never a
+            # substitute for the explicit acknowledgement on confirm.
+            "requires_manual_confirm": True,
+            "confirmed": False,
+            "source_coordinates": d.source_coordinates,
         }
-        for d in detections
+        for d in detections[:120]
     ]
-    return {"committed": False, "candidates": candidates}
+    engine_value = str(engine or "").lower()
+    provider_category = (
+        "google_cloud_vision"
+        if "google" in engine_value or "vision" in engine_value
+        else "local_tesseract"
+        if "tesseract" in engine_value
+        else "configured_ocr_service"
+    )
+    candidate_ids = [str(candidate["candidate_id"]) for candidate in candidates]
+    return PhrOcrScanResponse(
+        candidates=candidates,
+        review_token=_make_ocr_review_token(user_id=user.id, candidate_ids=candidate_ids),
+        processing_disclosure={
+            "processing_purpose": "medication_candidate_extraction",
+            "provider_category": provider_category,
+            "upload_persisted_by_clara": False,
+            "raw_text_logged_by_clara": False,
+            "human_confirmation_required": True,
+        },
+    )
 
 
 @router.post("/import/ocr/confirm", response_model=PhrEnhancedRecordResponse)
@@ -1208,18 +1318,32 @@ def confirm_phr_ocr(
             status_code=status.HTTP_404_NOT_FOUND, detail="PHR OCR import not enabled"
         )
     user = _get_user_by_token(db, token)
+    ensure_medical_disclaimer_consent(db, user_id=user.id)
     profile = _get_or_create_profile(db, user.id)
+
+    candidate_ids = payload.review_candidate_ids
+    _verify_ocr_review_token(
+        token=payload.review_token,
+        user_id=user.id,
+        candidate_ids=candidate_ids,
+    )
+    confirmed_candidate_ids = [candidate.candidate_id for candidate in payload.medications]
+    if (
+        len(confirmed_candidate_ids) != len(set(confirmed_candidate_ids))
+        or any(candidate_id not in set(candidate_ids) for candidate_id in confirmed_candidate_ids)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="OCR review candidates are invalid.",
+        )
 
     items = _clean_object_list(profile.medications_json)
     added: list[str] = []
     for candidate in payload.medications:
-        if candidate.requires_manual_confirm:
+        if not candidate.confirmed:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    f"Mục cần xác nhận thủ công trước khi lưu / candidate still requires "
-                    f"manual confirmation: '{candidate.name}'"
-                ),
+                detail="Mỗi mục OCR cần được xác nhận trước khi lưu.",
             )
         try:
             validated = validate_medication(

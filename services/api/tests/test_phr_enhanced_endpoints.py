@@ -26,6 +26,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from clara_api.api.v1.endpoints.phr import _make_ocr_review_token
 from clara_api.core.config import get_settings
 from clara_api.db.models import PhrAudit, PhrProfile, User
 from clara_api.db.session import SessionLocal
@@ -85,6 +86,12 @@ def _login(email: str) -> str:
 
 def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _ocr_review_token(email: str, candidate_ids: list[str]) -> str:
+    with SessionLocal() as db:
+        user = db.execute(select(User).where(User.email == email)).scalar_one()
+        return _make_ocr_review_token(user_id=user.id, candidate_ids=candidate_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -335,13 +342,23 @@ def test_property14_ocr_confirm_required_to_commit() -> None:
     _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
     token = _login("phr-ocr@example.com")
 
-    # Confirm with a clean (non-manual-confirm) candidate writes the entry.
+    candidate_id = "ocr-review-panadol-001"
+    # OCR candidates require an owner-bound review capability plus an explicit
+    # per-row acknowledgement before the user-authored final value can write.
     confirm = client.post(
         "/api/v1/phr/import/ocr/confirm",
         headers=_auth(token),
         json={
+            "review_token": _ocr_review_token("phr-ocr@example.com", [candidate_id]),
+            "review_candidate_ids": [candidate_id],
             "medications": [
-                {"name": "Panadol", "dose": "500mg", "ocr_confidence": 0.95},
+                {
+                    "candidate_id": candidate_id,
+                    "name": "Panadol",
+                    "dose": "500mg",
+                    "ocr_confidence": 0.95,
+                    "confirmed": True,
+                },
             ]
         },
     )
@@ -355,16 +372,72 @@ def test_property14_ocr_confirm_required_to_commit() -> None:
 def test_property14_ocr_confirm_blocks_low_confidence() -> None:
     _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
     token = _login("phr-ocr-block@example.com")
+    candidate_id = "ocr-review-blurry-001"
     resp = client.post(
         "/api/v1/phr/import/ocr/confirm",
         headers=_auth(token),
         json={
+            "review_token": _ocr_review_token("phr-ocr-block@example.com", [candidate_id]),
+            "review_candidate_ids": [candidate_id],
             "medications": [
-                {"name": "blurry", "requires_manual_confirm": True, "ocr_confidence": 0.2}
+                {
+                    "candidate_id": candidate_id,
+                    "name": "blurry",
+                    "requires_manual_confirm": True,
+                    "ocr_confidence": 0.2,
+                    "confirmed": False,
+                }
             ]
         },
     )
     assert resp.status_code == 422
+
+
+def test_property14_ocr_review_token_rejects_injected_candidate() -> None:
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
+    email = "phr-ocr-token-bound@example.com"
+    token = _login(email)
+    reviewed_ids = ["ocr-review-bound-001", "ocr-review-bound-002"]
+    response = client.post(
+        "/api/v1/phr/import/ocr/confirm",
+        headers=_auth(token),
+        json={
+            "review_token": _ocr_review_token(email, reviewed_ids),
+            "review_candidate_ids": reviewed_ids,
+            "medications": [
+                {
+                    "candidate_id": "ocr-review-injected-003",
+                    "name": "Panadol",
+                    "confirmed": True,
+                }
+            ],
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_property14_ocr_review_token_fails_closed_when_malformed() -> None:
+    """A corrupt review capability is rejected, never parsed into a 500 response."""
+
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
+    token = _login("phr-ocr-token-malformed@example.com")
+    candidate_id = "ocr-review-malformed-001"
+    response = client.post(
+        "/api/v1/phr/import/ocr/confirm",
+        headers=_auth(token),
+        json={
+            "review_token": "not-a-valid.%%%token.signature",
+            "review_candidate_ids": [candidate_id],
+            "medications": [
+                {
+                    "candidate_id": candidate_id,
+                    "name": "Panadol",
+                    "confirmed": True,
+                }
+            ],
+        },
+    )
+    assert response.status_code == 403
 
 
 def test_phr_ocr_rejects_disguised_document_before_ocr_bridge() -> None:

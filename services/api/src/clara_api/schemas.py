@@ -346,6 +346,26 @@ class OcrSourceCoordinate(BaseModel):
         return self
 
 
+class OcrDataProcessingDisclosure(BaseModel):
+    """Bounded disclosure returned with a review-only OCR result.
+
+    It identifies a processing category only: never an upstream URL, account,
+    raw upload, or OCR transcript. The client must acknowledge this disclosure
+    before it sends a file to an OCR adapter.
+    """
+
+    processing_purpose: Literal["medication_candidate_extraction"]
+    provider_category: Literal[
+        "configured_ocr_service", "google_cloud_vision", "local_tesseract"
+    ]
+    upload_persisted_by_clara: bool = False
+    raw_text_logged_by_clara: bool = False
+    human_confirmation_required: bool = True
+    schema_version: Literal["ocr-processing-disclosure.v1"] = (
+        "ocr-processing-disclosure.v1"
+    )
+
+
 class CabinetScanDetection(BaseModel):
     drug_name: str
     normalized_name: str
@@ -1367,16 +1387,35 @@ class PhrShareCreateRequest(BaseModel):
 class PhrOcrCandidate(BaseModel):
     """A single OCR-extracted candidate medication awaiting confirmation."""
 
+    candidate_id: str = Field(min_length=8, max_length=96)
     name: str = Field(min_length=1, max_length=160)
     dose: str = Field(default="", max_length=140)
     frequency: str = Field(default="", max_length=140)
     ocr_confidence: float | None = Field(default=None, ge=0, le=1)
-    requires_manual_confirm: bool = False
+    # OCR values are proposals. Every row needs an explicit user acceptance;
+    # numerical OCR confidence is not a confirmation surrogate.
+    requires_manual_confirm: bool = True
+    confirmed: bool = False
+    source_coordinates: list[OcrSourceCoordinate] = Field(default_factory=list)
+
+
+class PhrOcrScanResponse(BaseModel):
+    """Owner-bound review-only candidates; no PHR state is committed."""
+
+    committed: Literal[False] = False
+    candidates: list[PhrOcrCandidate] = Field(default_factory=list)
+    review_token: str = Field(min_length=20, max_length=4096)
+    processing_disclosure: OcrDataProcessingDisclosure
 
 
 class PhrOcrConfirmRequest(BaseModel):
     """User-edited candidate list to commit as ``ocr``-sourced entries."""
 
+    review_token: str = Field(min_length=20, max_length=4096)
+    # Includes every opaque ID returned by scan, including rows the person
+    # discards. This lets the API verify the owner-bound review capability
+    # without treating a discarded OCR proposal as confirmed data.
+    review_candidate_ids: list[str] = Field(min_length=1, max_length=120)
     medications: list[PhrOcrCandidate] = Field(default_factory=list, max_length=120)
 
 
