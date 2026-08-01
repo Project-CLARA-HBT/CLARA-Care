@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
+from time import monotonic
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,6 +94,9 @@ class GraphRagSidecar:
         # Provenance of the currently loaded domain graph: "database",
         # "static_json", or "none". Useful for diagnostics / regression tests.
         self._graph_source = "none"
+        self._graph_load_reason = "not_attempted"
+        self._last_db_attempt_at = 0.0
+        self._load_lock = threading.RLock()
         self._domain_graph_loaded = False
         self._domain_entities: dict[str, GraphRagSidecar._DomainEntity] = {}
         self._domain_edges: list[GraphRagSidecar._DomainEdge] = []
@@ -135,24 +140,39 @@ class GraphRagSidecar:
         request path.
         """
 
-        self._reset_graph_state()
-        self._graph_source = "none"
+        with self._load_lock:
+            self._reset_graph_state()
+            self._graph_source = "none"
+            self._graph_load_reason = "static_only"
 
-        if settings.rag_biomed_graph_enabled:
-            try:
-                if self._load_domain_graph_from_db():
-                    self._graph_source = "database"
-                    return
-            except Exception as exc:  # noqa: BLE001 - defensive: never crash on DB
-                logger.warning(
-                    "graphrag DB edge-load failed (%s); falling back to static JSON",
-                    exc.__class__.__name__,
-                )
-                self._reset_graph_state()
+            if settings.rag_biomed_graph_enabled:
+                self._last_db_attempt_at = monotonic()
+                try:
+                    if self._load_domain_graph_from_db():
+                        self._graph_source = "database"
+                        self._graph_load_reason = "database_loaded"
+                        return
+                    self._graph_load_reason = "database_unavailable_or_empty"
+                except Exception as exc:  # noqa: BLE001 - defensive: never crash on DB
+                    self._graph_load_reason = f"database_error:{exc.__class__.__name__}"
+                    logger.warning(
+                        "graphrag DB edge-load failed (%s); falling back to static JSON",
+                        exc.__class__.__name__,
+                    )
+                    self._reset_graph_state()
 
-        self._load_domain_graph_from_json()
-        if self._domain_graph_loaded:
-            self._graph_source = "static_json"
+            self._load_domain_graph_from_json()
+            if self._domain_graph_loaded:
+                self._graph_source = "static_json"
+
+    def _maybe_retry_database_graph(self) -> None:
+        """Recover from a transient DB graph failure without retrying per request."""
+
+        if not settings.rag_biomed_graph_enabled or self._graph_source == "database":
+            return
+        retry_seconds = max(30, int(getattr(settings, "rag_biomed_graph_retry_seconds", 300)))
+        if monotonic() - self._last_db_attempt_at >= retry_seconds:
+            self._load_domain_graph()
 
     # -- DB-backed edge load (task 8.2) --------------------------------------
 
@@ -503,6 +523,7 @@ class GraphRagSidecar:
         max_neighbors: int = 8,
         expansion_docs: int = 4,
     ) -> GraphRagResult:
+        self._maybe_retry_database_graph()
         safe_max_neighbors = max(1, int(max_neighbors))
         safe_expansion_docs = max(1, int(expansion_docs))
         query_tokens = self._tokenize(query)

@@ -660,6 +660,12 @@ class Settings(BaseSettings):
         ge=1,
         le=64,
     )
+    rag_biomed_graph_retry_seconds: int = Field(
+        default=300,
+        validation_alias="RAG_BIOMED_GRAPH_RETRY_SECONDS",
+        ge=30,
+        le=3600,
+    )
     rag_force_search_index: bool = Field(
         default=True,
         validation_alias="RAG_FORCE_SEARCH_INDEX",
