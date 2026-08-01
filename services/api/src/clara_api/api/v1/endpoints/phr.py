@@ -113,6 +113,11 @@ PHR_ONBOARDING_OPTIONAL_FIELDS = [
     "conditions",
     "medications",
 ]
+_PUBLIC_PHR_SHARE_UNAVAILABLE = {"code": "public_share_unavailable"}
+
+
+def _phr_share_token_hash(share_token: str) -> str:
+    return hashlib.sha256(share_token.encode("utf-8")).hexdigest()
 
 
 def _get_user_by_token(db: Session, token: TokenPayload) -> User:
@@ -1007,25 +1012,28 @@ def create_phr_share(
         )
 
     expires_at = datetime.now(UTC) + timedelta(days=payload.expires_in_days)
+    share_token = secrets.token_urlsafe(24)
     share = PhrShare(
         user_id=user.id,
-        share_token=secrets.token_urlsafe(24),
+        token_hash=_phr_share_token_hash(share_token),
         scope=payload.scope,
         is_active=True,
         expires_at=expires_at,
     )
     db.add(share)
     db.commit()
+    db.refresh(share)
     return {
-        "share_token": share.share_token,
+        "share_id": share.id,
+        "share_token": share_token,
         "scope": share.scope,
         "expires_at": share.expires_at.isoformat() if share.expires_at else None,
     }
 
 
-@router.delete("/share/{token_value}")
+@router.delete("/share/{share_id}")
 def revoke_phr_share(
-    token_value: str,
+    share_id: int,
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
@@ -1034,7 +1042,7 @@ def revoke_phr_share(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PHR sharing not enabled")
     user = _get_user_by_token(db, token)
     share = db.execute(
-        select(PhrShare).where(PhrShare.share_token == token_value, PhrShare.user_id == user.id)
+        select(PhrShare).where(PhrShare.id == share_id, PhrShare.user_id == user.id)
     ).scalar_one_or_none()
     if share is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
@@ -1054,14 +1062,14 @@ def read_shared_phr(
     if not phr_features(settings).sharing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PHR sharing not enabled")
     share = db.execute(
-        select(PhrShare).where(PhrShare.share_token == token_value)
+        select(PhrShare).where(PhrShare.token_hash == _phr_share_token_hash(token_value))
     ).scalar_one_or_none()
     if share is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_PHR_SHARE_UNAVAILABLE)
     if not share.is_active:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Share has been revoked")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_PHR_SHARE_UNAVAILABLE)
     if share.expires_at is not None and datetime.now(UTC) >= _aware(share.expires_at):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Share has expired")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_PHR_SHARE_UNAVAILABLE)
 
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == share.user_id)

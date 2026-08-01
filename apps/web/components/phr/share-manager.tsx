@@ -37,7 +37,7 @@ export default function ShareManager({
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [copiedToken, setCopiedToken] = useState("");
-  const [revokingToken, setRevokingToken] = useState("");
+  const [revokingShareId, setRevokingShareId] = useState<number | null>(null);
 
   const onCreate = async () => {
     setCreating(true);
@@ -56,16 +56,16 @@ export default function ShareManager({
     }
   };
 
-  const onRevoke = async (token: string) => {
-    setRevokingToken(token);
+  const onRevoke = async (shareId: number) => {
+    setRevokingShareId(shareId);
     setError("");
     try {
-      await revokePhrShare(token);
-      setLinks((prev) => prev.filter((l) => l.share_token !== token));
+      await revokePhrShare(shareId);
+      setLinks((prev) => prev.filter((l) => l.share_id !== shareId));
     } catch (err) {
       setError(safeUserFacingError(err, copy("phr.share.revokeError")));
     } finally {
-      setRevokingToken("");
+      setRevokingShareId(null);
     }
   };
 
@@ -138,7 +138,7 @@ export default function ShareManager({
           <ul className="mt-2 space-y-2">
             {links.map((link) => (
               <li
-                key={link.share_token}
+                key={link.share_id}
                 className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#93C5FD] bg-[#EEF6FF] p-3 dark:border-sky-700/70 dark:bg-slate-800/80"
               >
                 <code className="min-w-0 flex-1 truncate text-[12px] text-[var(--text-primary)]">
@@ -164,11 +164,11 @@ export default function ShareManager({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onRevoke(link.share_token)}
-                  disabled={revokingToken === link.share_token}
+                  onClick={() => onRevoke(link.share_id)}
+                  disabled={revokingShareId === link.share_id}
                   className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60 dark:border-rose-500/70 dark:bg-rose-500/15 dark:text-rose-100"
                 >
-                  {revokingToken === link.share_token
+                  {revokingShareId === link.share_id
                     ? copy("phr.share.revoking")
                     : copy("phr.share.revoke")}
                 </button>

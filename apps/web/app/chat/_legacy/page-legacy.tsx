@@ -2385,17 +2385,19 @@ export default function ChatWorkspacePage() {
     try {
       const share = await createWorkspaceConversationShare(conversationId, {
         expiresInHours: 168,
-        rotate: false,
+        rotate: Boolean(shareInfo?.is_active),
       });
       setShareInfo(share);
       await loadShares();
-      await copyText(share.public_url, t(uiLanguage, "chat.legacyWorkspace.notice.shareCopied"));
+      if (share.public_url) {
+        await copyText(share.public_url, t(uiLanguage, "chat.legacyWorkspace.notice.shareCopied"));
+      }
     } catch (cause) {
       setError(
         safeWorkspaceError(cause, uiLanguage, "chat.legacyWorkspace.error.createShare")
       );
     }
-  }, [activeConversationId, copyText, loadShares, uiLanguage, workspaceApiUnavailable]);
+  }, [activeConversationId, copyText, loadShares, shareInfo, uiLanguage, workspaceApiUnavailable]);
 
   const onRevokeShareActiveConversation = useCallback(async () => {
     const conversationId = asConversationId(activeConversationId);
@@ -3582,7 +3584,7 @@ export default function ChatWorkspacePage() {
                 <ul className="space-y-1.5">
                   {shares.slice(0, 8).map((item) => (
                     <li
-                      key={`${item.conversation_id}-${item.share_token}`}
+                      key={item.share_id}
                       className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1.5"
                     >
                       <p className="line-clamp-1 text-[11px] font-semibold text-[var(--text-primary)]">
@@ -3604,26 +3606,6 @@ export default function ChatWorkspacePage() {
                         >
                           {t(uiLanguage, "chat.legacyWorkspace.shares.open")}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void copyText(
-                              item.public_url,
-                              t(uiLanguage, "chat.legacyWorkspace.shares.copySuccess")
-                            )
-                          }
-                          className="rounded border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
-                        >
-                          {t(uiLanguage, "chat.legacyWorkspace.shares.copy")}
-                        </button>
-                        <a
-                          href={item.public_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded border border-cyan-300/70 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700 dark:border-cyan-700/70 dark:text-cyan-300"
-                        >
-                          {t(uiLanguage, "chat.legacyWorkspace.shares.visit")}
-                        </a>
                       </div>
                     </li>
                   ))}

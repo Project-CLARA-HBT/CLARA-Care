@@ -66,12 +66,11 @@ function makeShare(
   conversationId: number,
 ): WorkspaceConversationShareListItem {
   return {
+    share_id: conversationId,
     conversation_id: conversationId,
     conversation_title: `c-${conversationId}`,
     message_count: 1,
     last_message_at: "2026-01-01T00:00:00.000Z",
-    share_token: `tok-${conversationId}`,
-    public_url: `https://share/${conversationId}`,
     is_active: true,
     expires_at: null,
     created_at: "2026-01-01T00:00:00.000Z",
@@ -141,7 +140,16 @@ describe("useWorkspace notes", () => {
 describe("useWorkspace shares", () => {
   it("loadShares populates from the client; share refreshes the list", async () => {
     listWorkspaceShares.mockResolvedValue([makeShare(1)]);
-    createWorkspaceConversationShare.mockResolvedValue(undefined);
+    createWorkspaceConversationShare.mockResolvedValue({
+      share_id: 2,
+      conversation_id: 2,
+      share_token: "issued-token",
+      public_url: "https://share/2",
+      is_active: true,
+      expires_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
     const useWorkspace = await loadHook();
     const { result } = renderHook(() => useWorkspace());
 
@@ -157,7 +165,7 @@ describe("useWorkspace shares", () => {
 
     expect(createWorkspaceConversationShare).toHaveBeenCalledWith(2, {
       expiresInHours: 168,
-      rotate: false,
+      rotate: true,
     });
     expect(result.current.shares.map((s) => s.conversation_id)).toEqual([1, 2]);
   });

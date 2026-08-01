@@ -448,6 +448,15 @@ There are no measured before/after clinical or cost/latency improvements.
 
 ## Data migrations and rollback
 
+### Capability share hardening (`20260801_0047`)
+
+Workspace/Research và PHR public-share capabilities hiện chỉ lưu SHA-256 ở
+database; response tạo/xoay là nơi duy nhất có token thô. Migration backfill
+digest để các URL đã cấp vẫn đọc được, sau đó xóa cột plaintext. Owner metadata
+không còn trả URL cũ; thao tác cấp lại xoay capability và sao chép URL mới ngay
+lúc cấp. Downgrade chỉ tương thích schema vì hash không thể đảo ngược; xem
+`docs/runbooks/public-capability-share-rotation.md` trước khi rollback.
+
 Alembic revision `20260731_0046` adds the append-only
 `council_evidence_attachments` table, scoped by Council case, owner and
 completed Research job. It stores only server-built opaque snapshot/evidence

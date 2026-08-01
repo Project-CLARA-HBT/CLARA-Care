@@ -765,7 +765,7 @@ class WorkspaceConversationShare(Base):
     __table_args__ = (
         UniqueConstraint("session_id", name="uq_workspace_conversation_shares_session"),
         UniqueConstraint("research_job_id", name="uq_workspace_conversation_shares_research_job"),
-        UniqueConstraint("share_token", name="uq_workspace_conversation_shares_token"),
+        UniqueConstraint("token_hash", name="uq_workspace_conversation_shares_token_hash"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -787,7 +787,9 @@ class WorkspaceConversationShare(Base):
         index=True,
         nullable=True,
     )
-    share_token: Mapped[str] = mapped_column(String(160), index=True)
+    # Public share links are bearer capabilities.  Store only their SHA-256
+    # digest so a database disclosure cannot be replayed as a public URL.
+    token_hash: Mapped[str] = mapped_column(String(64), index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -2873,7 +2875,8 @@ class PhrShare(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    share_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # As with workspace shares, never persist a bearer capability in plaintext.
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     scope: Mapped[str] = mapped_column(String(32), default="full")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

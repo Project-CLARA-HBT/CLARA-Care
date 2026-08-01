@@ -9,6 +9,7 @@ import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import {
   WorkspaceConversationShareListItem,
+  createWorkspaceConversationShare,
   listWorkspaceShares,
   revokeWorkspaceConversationShare,
 } from "@/lib/workspace";
@@ -47,12 +48,23 @@ export default function ChatShareManagementPage() {
     }
   };
 
-  const onCopy = async (url: string) => {
+  const onReissue = async (conversationId: number) => {
     try {
-      await navigator.clipboard.writeText(url);
-      setNotice(t(language, "chatShares.copySuccess"));
+      const issued = await createWorkspaceConversationShare(conversationId, {
+        rotate: true,
+      });
+      if (!issued.public_url) throw new Error("share_url_not_issued");
+      try {
+        await navigator.clipboard.writeText(issued.public_url);
+      } catch {
+        // The capability exists only in this issuance response. Preserve a
+        // manual-copy path rather than dropping it when Clipboard is blocked.
+        window.prompt(t(language, "chatShares.copyPrompt"), issued.public_url);
+      }
+      setNotice(t(language, "chatShares.reissueSuccess"));
+      await load();
     } catch {
-      window.prompt(t(language, "chatShares.copyPrompt"), url);
+      setError(t(language, "chatShares.reissueError"));
     }
   };
 
@@ -104,7 +116,7 @@ export default function ChatShareManagementPage() {
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={`${item.conversation_id}-${item.share_token}`} className="border-b border-[color:var(--shell-border)]">
+                    <tr key={item.share_id} className="border-b border-[color:var(--shell-border)]">
                       <td className="px-2 py-2">
                         <div className="font-semibold text-[var(--text-primary)]">#{item.conversation_id}</div>
                         <div className="line-clamp-2 text-xs text-[var(--text-secondary)]">{item.conversation_title}</div>
@@ -125,41 +137,32 @@ export default function ChatShareManagementPage() {
                             })
                           : t(language, "chatShares.noExpiry")}
                       </td>
-                      <td className="max-w-[28rem] px-2 py-2">
-                        <div className="truncate text-xs text-[var(--text-secondary)]">{item.public_url}</div>
+                      <td className="max-w-[28rem] px-2 py-2 text-xs text-[var(--text-secondary)]">
+                        {t(language, "chatShares.linkReissueRequired")}
                       </td>
                       <td className="px-2 py-2">
                         <div className="flex flex-wrap gap-1.5">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            icon="content_copy"
-                            onClick={() => void onCopy(item.public_url)}
-                          >
-                            {t(language, "chatShares.copy")}
-                          </Button>
-                          <a
-                            href={item.public_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex min-h-9 items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-[0.8125rem] font-semibold text-[var(--text-secondary)] shadow-[var(--shadow-sm)] transition hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-muted)] focus-ring"
-                          >
-                            <span className="material-symbols-outlined text-[1.15em]" aria-hidden="true">
-                              open_in_new
-                            </span>
-                            {t(language, "chatShares.open")}
-                          </a>
                           {item.is_active ? (
-                            <Button
-                              type="button"
-                              variant="danger"
-                              size="sm"
-                              icon="link_off"
-                              onClick={() => void onRevoke(item.conversation_id)}
-                            >
-                              {t(language, "chatShares.revoke")}
-                            </Button>
+                            <>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                icon="refresh"
+                                onClick={() => void onReissue(item.conversation_id)}
+                              >
+                                {t(language, "chatShares.reissue")}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="danger"
+                                size="sm"
+                                icon="link_off"
+                                onClick={() => void onRevoke(item.conversation_id)}
+                              >
+                                {t(language, "chatShares.revoke")}
+                              </Button>
+                            </>
                           ) : null}
                         </div>
                       </td>

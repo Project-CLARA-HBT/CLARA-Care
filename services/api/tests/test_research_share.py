@@ -109,7 +109,10 @@ def test_share_is_idempotent_without_rotate(monkeypatch) -> None:
         json={"rotate": False},
     )
     assert second.status_code == 200, second.text
-    assert first.json()["share_token"] == second.json()["share_token"]
+    # An existing capability is never recoverable from storage. Reissue only
+    # happens when the owner explicitly requests rotation.
+    assert second.json()["share_token"] is None
+    assert second.json()["public_url"] is None
 
 
 def test_share_rotate_changes_token(monkeypatch) -> None:

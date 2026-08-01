@@ -1,5 +1,6 @@
 # ruff: noqa: B008
 
+import hashlib
 import json
 import re
 import secrets
@@ -288,12 +289,16 @@ def _public_share_url(share_token: str) -> str:
     return f"{base}/share/{share_token}"
 
 
+def _share_token_hash(share_token: str) -> str:
+    return hashlib.sha256(share_token.encode("utf-8")).hexdigest()
+
+
 def _generate_share_token(db: Session) -> str:
     for _ in range(8):
         candidate = secrets.token_urlsafe(24)
         exists = db.execute(
             select(WorkspaceConversationShare.id).where(
-                WorkspaceConversationShare.share_token == candidate
+                WorkspaceConversationShare.token_hash == _share_token_hash(candidate)
             )
         ).scalar_one_or_none()
         if exists is None:
@@ -308,11 +313,13 @@ def _serialize_share(
     share: WorkspaceConversationShare,
     *,
     conversation_id: int,
+    issued_token: str | None = None,
 ) -> WorkspaceConversationShareResponse:
     return WorkspaceConversationShareResponse(
+        share_id=share.id,
         conversation_id=conversation_id,
-        share_token=share.share_token,
-        public_url=_public_share_url(share.share_token),
+        share_token=issued_token,
+        public_url=_public_share_url(issued_token) if issued_token else None,
         is_active=bool(share.is_active),
         expires_at=share.expires_at,
         created_at=share.created_at,
@@ -1061,24 +1068,27 @@ def create_or_rotate_conversation_share(
     ).scalar_one_or_none()
 
     should_rotate = bool(payload.rotate) or share is None
+    issued_token: str | None = None
     if share is None:
+        issued_token = _generate_share_token(db)
         share = WorkspaceConversationShare(
             user_id=user.id,
             session_id=conversation_id,
-            share_token=_generate_share_token(db),
+            token_hash=_share_token_hash(issued_token),
             is_active=True,
         )
     else:
         share.is_active = True
         if should_rotate:
-            share.share_token = _generate_share_token(db)
+            issued_token = _generate_share_token(db)
+            share.token_hash = _share_token_hash(issued_token)
 
     share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(payload.expires_in_hours))
 
     db.add(share)
     db.commit()
     db.refresh(share)
-    return _serialize_share(share, conversation_id=conversation_id)
+    return _serialize_share(share, conversation_id=conversation_id, issued_token=issued_token)
 
 
 @router.get(
@@ -1158,7 +1168,7 @@ def list_workspace_shares(
     if not shares:
         return []
 
-    session_ids = [share.session_id for share in shares]
+    session_ids = [share.session_id for share in shares if share.session_id is not None]
     sessions = (
         db.execute(
             select(SessionModel).where(
@@ -1193,12 +1203,11 @@ def list_workspace_shares(
         title = (session_obj.title or "").strip() or f"Conversation #{session_obj.id}"
         payload.append(
             WorkspaceConversationShareListItem(
+                share_id=share.id,
                 conversation_id=session_obj.id,
                 conversation_title=title,
                 message_count=int(message_counts.get(session_obj.id, 0) or 0),
                 last_message_at=last_message_map.get(session_obj.id),
-                share_token=share.share_token,
-                public_url=_public_share_url(share.share_token),
                 is_active=bool(share.is_active),
                 expires_at=share.expires_at,
                 created_at=share.created_at,
@@ -1305,7 +1314,7 @@ def get_public_conversation_by_share_token(
 ) -> WorkspacePublicConversationResponse:
     share = db.execute(
         select(WorkspaceConversationShare).where(
-            WorkspaceConversationShare.share_token == share_token,
+            WorkspaceConversationShare.token_hash == _share_token_hash(share_token),
             WorkspaceConversationShare.is_active.is_(True),
         )
     ).scalar_one_or_none()

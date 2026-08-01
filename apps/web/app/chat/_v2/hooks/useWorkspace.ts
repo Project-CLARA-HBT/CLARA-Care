@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 
 import {
   WorkspaceConversationShareListItem,
+  WorkspaceConversationShare,
   WorkspaceNote,
   WorkspaceSearchResponse,
   createWorkspaceConversationShare,
@@ -48,7 +49,7 @@ export type UseWorkspace = {
   share: (
     conversationId: number,
     options?: { expiresInHours?: number; rotate?: boolean },
-  ) => Promise<WorkspaceConversationShareListItem[] | null>;
+  ) => Promise<WorkspaceConversationShare | null>;
   revokeShare: (conversationId: number) => Promise<void>;
   exportConversation: (
     conversationId: number,
@@ -115,13 +116,16 @@ export function useWorkspace(options?: {
       options?: { expiresInHours?: number; rotate?: boolean },
     ) => {
       if (apiUnavailable) return null;
-      await createWorkspaceConversationShare(conversationId, {
+      const issued = await createWorkspaceConversationShare(conversationId, {
         expiresInHours: options?.expiresInHours ?? 168,
-        rotate: options?.rotate ?? false,
+        // A user-facing Share action must issue a usable URL. Once a token has
+        // left the issuing response it is intentionally unrecoverable, so
+        // repeat actions rotate instead of returning a stale capability.
+        rotate: options?.rotate ?? true,
       });
       const next = await listWorkspaceShares({ limit: 80, activeOnly: false });
       setShares(next);
-      return next;
+      return issued;
     },
     [apiUnavailable],
   );

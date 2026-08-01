@@ -991,9 +991,13 @@ class WorkspaceConversationShareCreateRequest(BaseModel):
 
 
 class WorkspaceConversationShareResponse(BaseModel):
+    share_id: int
     conversation_id: int
-    share_token: str
-    public_url: str
+    # Capability material is returned only while it is issued/rotated.  It is
+    # deliberately absent on an owner metadata read because the DB stores only
+    # a digest and cannot safely recover it.
+    share_token: str | None = None
+    public_url: str | None = None
     is_active: bool
     expires_at: datetime | None = None
     created_at: datetime
@@ -1008,8 +1012,9 @@ class ResearchTier2ShareResponse(BaseModel):
     """
 
     job_id: str
-    share_token: str
-    public_url: str
+    share_id: int
+    share_token: str | None = None
+    public_url: str | None = None
     is_active: bool
     expires_at: datetime | None = None
     created_at: datetime
@@ -1017,12 +1022,11 @@ class ResearchTier2ShareResponse(BaseModel):
 
 
 class WorkspaceConversationShareListItem(BaseModel):
+    share_id: int
     conversation_id: int
     conversation_title: str
     message_count: int = 0
     last_message_at: datetime | None = None
-    share_token: str
-    public_url: str
     is_active: bool
     expires_at: datetime | None = None
     created_at: datetime

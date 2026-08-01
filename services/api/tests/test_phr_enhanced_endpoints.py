@@ -19,6 +19,7 @@ These run against the real FastAPI app + SQLite session, mirroring the existing
 
 from __future__ import annotations
 
+import hashlib
 import os
 from collections.abc import Generator
 
@@ -28,7 +29,7 @@ from sqlalchemy import select
 
 from clara_api.api.v1.endpoints.phr import _make_ocr_review_token
 from clara_api.core.config import get_settings
-from clara_api.db.models import PhrAudit, PhrProfile, User
+from clara_api.db.models import PhrAudit, PhrProfile, PhrShare, User
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
@@ -299,6 +300,12 @@ def test_property16_share_read_revoke_and_access_log() -> None:
     )
     created = client.post("/api/v1/phr/share", headers=_auth(token), json={"scope": "full"})
     share_token = created.json()["share_token"]
+    with SessionLocal() as db:
+        stored_share = db.execute(
+            select(PhrShare).where(PhrShare.id == created.json()["share_id"])
+        ).scalar_one()
+        assert stored_share.token_hash == hashlib.sha256(share_token.encode()).hexdigest()
+        assert not hasattr(stored_share, "share_token")
 
     # Public read works while active.
     read = client.get(f"/api/v1/phr/shared/{share_token}")
@@ -321,10 +328,11 @@ def test_property16_share_read_revoke_and_access_log() -> None:
         )
     assert len(share_reads) >= 1
 
-    # Revoke ⇒ 410 Gone.
-    client.delete(f"/api/v1/phr/share/{share_token}", headers=_auth(token))
+    # Revocation must not disclose an otherwise valid capability's lifecycle.
+    client.delete(f"/api/v1/phr/share/{created.json()['share_id']}", headers=_auth(token))
     gone = client.get(f"/api/v1/phr/shared/{share_token}")
-    assert gone.status_code == 410
+    assert gone.status_code == 404
+    assert gone.json() == {"detail": {"code": "public_share_unavailable"}}
 
 
 def test_property16_unknown_token_404() -> None:

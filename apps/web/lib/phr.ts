@@ -502,6 +502,7 @@ export type PhrShareScope = "full" | "emergency_card";
 
 /** A created share link as returned by `POST /phr/share`. */
 export type PhrShare = {
+  share_id: number;
   share_token: string;
   scope: PhrShareScope;
   expires_at?: string | null;
@@ -516,16 +517,17 @@ export async function createPhrShare(
   scope: PhrShareScope = "full",
   expiresInDays?: number | null,
 ): Promise<PhrShare> {
-  const { data } = await api.post<PhrShare>("/api/v1/phr/share", {
+  const payload: { scope: PhrShareScope; expires_in_days?: number } = {
     scope,
-    expires_in_days: expiresInDays ?? null,
-  });
+  };
+  if (expiresInDays != null) payload.expires_in_days = expiresInDays;
+  const { data } = await api.post<PhrShare>("/api/v1/phr/share", payload);
   return data;
 }
 
 /** Revoke a previously created share link (Requirement 12.3). */
-export async function revokePhrShare(token: string): Promise<void> {
-  await api.delete(`/api/v1/phr/share/${encodeURIComponent(token)}`);
+export async function revokePhrShare(shareId: number): Promise<void> {
+  await api.delete(`/api/v1/phr/share/${shareId}`);
 }
 
 /**

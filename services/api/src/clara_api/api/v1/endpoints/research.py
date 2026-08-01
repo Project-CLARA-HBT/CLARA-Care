@@ -5560,6 +5560,10 @@ def _research_share_public_url(share_token: str) -> str:
     return f"{base}/share/{share_token}"
 
 
+def _research_share_token_hash(share_token: str) -> str:
+    return hashlib.sha256(share_token.encode("utf-8")).hexdigest()
+
+
 def _generate_research_share_token(db: Session) -> str:
     """Generate a unique share token, mirroring the workspace share mechanism."""
 
@@ -5567,7 +5571,7 @@ def _generate_research_share_token(db: Session) -> str:
         candidate = secrets.token_urlsafe(24)
         exists = db.execute(
             select(WorkspaceConversationShare.id).where(
-                WorkspaceConversationShare.share_token == candidate
+                WorkspaceConversationShare.token_hash == _research_share_token_hash(candidate)
             )
         ).scalar_one_or_none()
         if exists is None:
@@ -5582,11 +5586,13 @@ def _serialize_research_share(
     share: WorkspaceConversationShare,
     *,
     job_id: str,
+    issued_token: str | None = None,
 ) -> ResearchTier2ShareResponse:
     return ResearchTier2ShareResponse(
         job_id=job_id,
-        share_token=share.share_token,
-        public_url=_research_share_public_url(share.share_token),
+        share_id=share.id,
+        share_token=issued_token,
+        public_url=_research_share_public_url(issued_token) if issued_token else None,
         is_active=bool(share.is_active),
         expires_at=share.expires_at,
         created_at=share.created_at,
@@ -5638,25 +5644,28 @@ def share_research_tier2_job(
     ).scalar_one_or_none()
 
     should_rotate = bool(request.rotate) or share is None
+    issued_token: str | None = None
     if share is None:
+        issued_token = _generate_research_share_token(db)
         share = WorkspaceConversationShare(
             user_id=user.id,
             session_id=None,
             research_job_id=job.id,
-            share_token=_generate_research_share_token(db),
+            token_hash=_research_share_token_hash(issued_token),
             is_active=True,
         )
     else:
         share.is_active = True
         if should_rotate:
-            share.share_token = _generate_research_share_token(db)
+            issued_token = _generate_research_share_token(db)
+            share.token_hash = _research_share_token_hash(issued_token)
 
     share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(request.expires_in_hours))
 
     db.add(share)
     db.commit()
     db.refresh(share)
-    return _serialize_research_share(share, job_id=job_id)
+    return _serialize_research_share(share, job_id=job_id, issued_token=issued_token)
 
 
 def _build_research_job_stream_headers() -> dict[str, str]:

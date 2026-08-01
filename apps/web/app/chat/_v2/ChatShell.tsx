@@ -534,7 +534,7 @@ export default function ChatShell() {
           if (id) {
             void workspace.share(id).then((rows) => {
               const created = rows?.find((row) => row.conversation_id === id);
-              if (created) void copyShareUrl(created.public_url);
+              if (created?.public_url) void copyShareUrl(created.public_url);
             });
           }
         },

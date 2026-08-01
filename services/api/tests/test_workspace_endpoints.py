@@ -1,9 +1,11 @@
+import hashlib
 from datetime import UTC, datetime, timedelta
 import io
 import json
 import zipfile
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from clara_api.db.models import Query as QueryModel
 from clara_api.db.models import SessionModel, User, WorkspaceConversationShare
@@ -498,13 +500,23 @@ def test_workspace_conversation_share_public_access_and_revoke() -> None:
     assert share_payload["is_active"] is True
     assert "/share/" in share_payload["public_url"]
     assert share_payload["expires_at"] is not None
+    with SessionLocal() as db:
+        stored_share = db.execute(
+            select(WorkspaceConversationShare).where(
+                WorkspaceConversationShare.id == share_payload["share_id"]
+            )
+        ).scalar_one()
+        assert stored_share.token_hash == hashlib.sha256(share_token.encode()).hexdigest()
+        assert not hasattr(stored_share, "share_token")
 
     get_share_response = client.get(
         f"/api/v1/workspace/conversations/{conversation_id}/share",
         headers=owner_headers,
     )
     assert get_share_response.status_code == 200
-    assert get_share_response.json()["share_token"] == share_token
+    # The capability is only returned at issuance; owner reads are metadata-only.
+    assert get_share_response.json()["share_token"] is None
+    assert get_share_response.json()["public_url"] is None
 
     public_response = client.get(f"/api/v1/workspace/public/conversations/{share_token}")
     assert public_response.status_code == 200
@@ -545,7 +557,10 @@ def test_workspace_public_share_expiry_does_not_disclose_capability_state() -> N
     with SessionLocal() as db:
         share = (
             db.query(WorkspaceConversationShare)
-            .filter(WorkspaceConversationShare.share_token == token)
+            .filter(
+                WorkspaceConversationShare.token_hash
+                == hashlib.sha256(token.encode()).hexdigest()
+            )
             .one()
         )
         share.expires_at = datetime.now(UTC) - timedelta(seconds=1)
