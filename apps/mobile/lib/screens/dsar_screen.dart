@@ -65,36 +65,43 @@ extension DsarRequestKindWire on DsarRequestKind {
     }
   }
 
-  /// Vietnamese-first action title (Req 5.5 copy convention).
-  String get titleVi {
+  String title(bool english) {
     switch (this) {
       case DsarRequestKind.export:
-        return 'Xuất dữ liệu';
+        return english ? 'Export data' : 'Xuất dữ liệu';
       case DsarRequestKind.correct:
-        return 'Chỉnh sửa dữ liệu';
+        return english ? 'Correct data' : 'Chỉnh sửa dữ liệu';
       case DsarRequestKind.delete:
-        return 'Xoá dữ liệu';
+        return english ? 'Delete data' : 'Xoá dữ liệu';
       case DsarRequestKind.restrict:
-        return 'Hạn chế xử lý';
+        return english ? 'Restrict processing' : 'Hạn chế xử lý';
       case DsarRequestKind.withdraw:
-        return 'Rút lại đồng ý';
+        return english ? 'Withdraw consent' : 'Rút lại đồng ý';
     }
   }
 
-  /// Vietnamese-first description of the right being exercised.
-  String get descriptionVi {
+  String description(bool english) {
     switch (this) {
       case DsarRequestKind.export:
-        return 'Nhận một bản sao dữ liệu bạn đã tự khai báo.';
+        return english
+            ? 'Request a portable copy of the data you provided.'
+            : 'Yêu cầu một bản sao có thể tải về của dữ liệu bạn đã tự khai báo.';
       case DsarRequestKind.correct:
-        return 'Yêu cầu chỉnh sửa thông tin chưa chính xác.';
+        return english
+            ? 'Request correction of information that is not accurate.'
+            : 'Yêu cầu chỉnh sửa thông tin chưa chính xác.';
       case DsarRequestKind.delete:
-        return 'Yêu cầu xoá vĩnh viễn dữ liệu của bạn. Hành động này không thể '
-            'hoàn tác.';
+        return english
+            ? 'Permanently delete your data. This action cannot be undone.'
+            : 'Xóa vĩnh viễn dữ liệu của bạn. Hành động này không thể hoàn tác.';
       case DsarRequestKind.restrict:
-        return 'Yêu cầu tạm dừng việc xử lý dữ liệu của bạn.';
+        return english
+            ? 'Request a temporary restriction of your data processing.'
+            : 'Yêu cầu tạm dừng việc xử lý dữ liệu của bạn.';
       case DsarRequestKind.withdraw:
-        return 'Rút lại các đồng ý xử lý dữ liệu đã cấp trước đó.';
+        return english
+            ? 'Withdraw previously granted data-processing consents.'
+            : 'Rút lại các đồng ý xử lý dữ liệu đã cấp trước đó.';
     }
   }
 
@@ -140,7 +147,7 @@ class DsarAcknowledgement {
   /// the screen can render a clean, non-PII error state.
   factory DsarAcknowledgement.fromJson(Map<String, dynamic> json) {
     if (json['enabled'] == false) {
-      throw ApiException(message: kDsarUnavailableMessage);
+      throw ApiException(message: "dsar_unavailable");
     }
     final id = json['request_id'];
     return DsarAcknowledgement(
@@ -155,14 +162,6 @@ class DsarAcknowledgement {
     );
   }
 }
-
-/// Copy shown when the consent/DSAR gate is closed (Req 8.6).
-const String kDsarDisabledMessage =
-    'Tính năng này hiện chưa được bật cho tài khoản của bạn.';
-
-/// Vietnamese-first, PII-free copy when a request cannot be submitted.
-const String kDsarUnavailableMessage =
-    'Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.';
 
 /// Self-service DSAR surface: submit a data-subject request and show its
 /// acknowledgement (Req 8.3). No PII is collected (Req 8.5).
@@ -199,6 +198,13 @@ class _DsarScreenState extends State<DsarScreen> {
   String? _error;
   DsarAcknowledgement? _acknowledgement;
 
+  bool get _english => Localizations.localeOf(context).languageCode == 'en';
+  String _copy(String vi, String en) => _english ? en : vi;
+  String get _unavailableMessage => _copy(
+        'Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.',
+        'We could not submit this request. Please try again later.',
+      );
+
   @override
   void initState() {
     super.initState();
@@ -218,7 +224,7 @@ class _DsarScreenState extends State<DsarScreen> {
 
     final token = widget.sessionStore.accessToken;
     if (token == null || token.isEmpty) {
-      setState(() => _error = kDsarUnavailableMessage);
+      setState(() => _error = _unavailableMessage);
       return;
     }
 
@@ -251,14 +257,14 @@ class _DsarScreenState extends State<DsarScreen> {
       if (!mounted) return;
       setState(() {
         _retryKind = kind;
-        _error = kDsarUnavailableMessage;
+        _error = _unavailableMessage;
       });
     } catch (_) {
       // Contain any unexpected error; never leak a stack trace (Req 11.4).
       if (!mounted) return;
       setState(() {
         _retryKind = kind;
-        _error = kDsarUnavailableMessage;
+        _error = _unavailableMessage;
       });
     } finally {
       if (mounted) {
@@ -274,17 +280,17 @@ class _DsarScreenState extends State<DsarScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận xoá dữ liệu'),
-        content: Text(kind.descriptionVi),
+        title: Text(_copy('Xác nhận xóa dữ liệu', 'Confirm data deletion')),
+        content: Text(kind.description(_english)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Huỷ'),
+            child: Text(_copy('Hủy', 'Cancel')),
           ),
           FilledButton(
             key: const Key('dsar-confirm-delete'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Xác nhận'),
+            child: Text(_copy('Xác nhận', 'Confirm')),
           ),
         ],
       ),
@@ -294,7 +300,8 @@ class _DsarScreenState extends State<DsarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quyền dữ liệu cá nhân')),
+      appBar: AppBar(
+          title: Text(_copy('Quyền dữ liệu cá nhân', 'Your data rights'))),
       body: _buildBody(context),
     );
   }
@@ -302,12 +309,15 @@ class _DsarScreenState extends State<DsarScreen> {
   Widget _buildBody(BuildContext context) {
     // Feature gate (Req 8.6): closed gate renders an inert disabled state.
     if (!widget.resolver.consentCenterEnabled) {
-      return const Center(
+      return Center(
         child: Padding(
-          key: Key('dsar-disabled'),
-          padding: EdgeInsets.all(24),
+          key: const Key('dsar-disabled'),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            kDsarDisabledMessage,
+            _copy(
+              'Tính năng này hiện chưa được bật cho tài khoản của bạn.',
+              'This feature is not enabled for your account.',
+            ),
             textAlign: TextAlign.center,
           ),
         ),
@@ -326,13 +336,17 @@ class _DsarScreenState extends State<DsarScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
         Text(
-          'Yêu cầu quyền dữ liệu',
+          _copy('Yêu cầu quyền dữ liệu', 'Data-rights request'),
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
         Text(
-          'Bạn có thể yêu cầu xuất hoặc xoá dữ liệu của mình. Yêu cầu được gắn '
-          'với tài khoản đã đăng nhập — bạn không cần nhập lại thông tin cá nhân.',
+          _copy(
+            'Bạn có thể yêu cầu xuất, chỉnh sửa, hạn chế xử lý hoặc xóa dữ liệu. '
+                'Yêu cầu gắn với tài khoản đã đăng nhập — bạn không cần nhập lại thông tin cá nhân.',
+            'You can request export, correction, processing restriction, or deletion. '
+                'The request is tied to your signed-in account, so you do not need to enter personal details again.',
+          ),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 16),
@@ -377,21 +391,23 @@ class _DsarActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    final submit = english ? 'Submit request' : 'Gửi yêu cầu';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(kind.titleVi, style: theme.textTheme.titleSmall),
+            Text(kind.title(english), style: theme.textTheme.titleSmall),
             const SizedBox(height: 4),
-            Text(kind.descriptionVi, style: theme.textTheme.bodySmall),
+            Text(kind.description(english), style: theme.textTheme.bodySmall),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: Semantics(
                 button: true,
-                label: 'Gửi yêu cầu: ${kind.titleVi}',
+                label: '$submit: ${kind.title(english)}',
                 child: FilledButton(
                   key: Key('dsar-submit-${kind.wireValue}'),
                   onPressed: enabled ? onSubmit : null,
@@ -404,7 +420,7 @@ class _DsarActionTile extends StatelessWidget {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Gửi yêu cầu'),
+                      : Text(submit),
                 ),
               ),
             ),
