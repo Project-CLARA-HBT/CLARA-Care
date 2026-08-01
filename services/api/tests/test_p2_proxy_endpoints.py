@@ -691,7 +691,9 @@ def test_research_tier2_job_create_preserves_language_and_runtime_overrides(
         assert row.request_payload["ui_language"] == "en"
         assert row.request_payload["answer_language"] == "en"
         assert row.request_payload["deep_pass_count"] == 2
-        assert isinstance(row.request_payload["llm_runtime"], dict)
+        # Provider credentials and caller-selected runtimes must not be
+        # persisted with research jobs. Model selection is registry-governed.
+        assert "llm_runtime" not in row.request_payload
         assert row.request_payload["llm_runtime"]["base_url"] == "https://runtime.example/v1"
 
 
