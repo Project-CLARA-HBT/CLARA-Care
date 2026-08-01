@@ -116,7 +116,10 @@ export default function OcrReviewModal({
       setMessage(copy("phr.ocr.confirmed"));
       setRows([]);
       onConfirmed?.();
-      onClose();
+      // Keep the modal open long enough for the explicit success state to be
+      // perceived. The caller has already refreshed owner-scoped record data;
+      // closing remains an intentional user action, not an implicit write-side
+      // navigation change.
     } catch (err) {
       setError(safeUserFacingError(err, copy("phr.ocr.confirmError")));
     } finally {
