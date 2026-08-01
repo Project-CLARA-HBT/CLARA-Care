@@ -438,7 +438,7 @@ export default function AppShell({ children }: Props) {
             <button
               type="button"
               onClick={() => setIsMobileNavOpen(true)}
-              aria-label="Open navigation menu"
+              aria-label={t(uiLanguage, "navigation.openMobile")}
               aria-expanded={isMobileNavOpen}
               className="app-topbar-icon shrink-0"
             >
@@ -509,7 +509,7 @@ export default function AppShell({ children }: Props) {
           className="fixed inset-0 z-[70] lg:hidden"
           role="dialog"
           aria-modal="true"
-          aria-label="Mobile navigation"
+          aria-label={t(uiLanguage, "navigation.mobileDialog")}
         >
           <button
             type="button"
@@ -577,15 +577,17 @@ export default function AppShell({ children }: Props) {
             <div className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4">
               <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                  Preferences
+                  {t(uiLanguage, "preferences.title")}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between gap-2">
                   <div
                     className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
                     role="group"
-                    aria-label="Theme preferences"
+                    aria-label={t(uiLanguage, "theme.preference")}
                   >
-                    <span className="sr-only">Theme</span>
+                    <span className="sr-only">
+                      {t(uiLanguage, "theme.preference")}
+                    </span>
                     {THEME_OPTIONS.map((option) => {
                       const active = themePreference === option.value;
                       const optionLabel = t(uiLanguage, option.labelKey);
