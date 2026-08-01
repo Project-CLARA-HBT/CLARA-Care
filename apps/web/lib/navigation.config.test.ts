@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getGroupedNavItems,
   getMobilePrimaryNav,
   getNavItemsByRole,
+  getPageMeta,
   getRoleHomePath,
   isAuthenticatedUtilityRoute,
   isRouteAllowedForRole,
@@ -21,10 +23,18 @@ describe("authenticated navigation defaults", () => {
 
   it("keeps research visible for evidence roles while preserving consumer deep links", () => {
     for (const role of ["researcher", "doctor", "admin"] as const) {
-      expect(getNavItemsByRole(role).some((item) => item.href === "/research")).toBe(true);
-      expect(getNavItemsByRole(role).some((item) => item.href === "/evidence")).toBe(true);
-      expect(getNavItemsByRole(role).some((item) => item.href === "/visits")).toBe(true);
-      expect(getNavItemsByRole(role).some((item) => item.href === "/family")).toBe(true);
+      expect(
+        getNavItemsByRole(role).some((item) => item.href === "/research"),
+      ).toBe(true);
+      expect(
+        getNavItemsByRole(role).some((item) => item.href === "/evidence"),
+      ).toBe(true);
+      expect(
+        getNavItemsByRole(role).some((item) => item.href === "/visits"),
+      ).toBe(true);
+      expect(
+        getNavItemsByRole(role).some((item) => item.href === "/family"),
+      ).toBe(true);
     }
     const consumer = getNavItemsByRole("normal").map((item) => item.href);
     expect(consumer).not.toContain("/research");
@@ -34,7 +44,9 @@ describe("authenticated navigation defaults", () => {
   });
 
   it("preserves an explicit safe next destination after login", () => {
-    expect(resolvePostLoginPath({ nextPath: "/phr", role: "normal" })).toBe("/phr");
+    expect(resolvePostLoginPath({ nextPath: "/phr", role: "normal" })).toBe(
+      "/phr",
+    );
   });
 
   it("leads the consumer mobile nav with Today/LifeMap, not Chat (chat is not the IA)", () => {
@@ -74,5 +86,24 @@ describe("authenticated navigation defaults", () => {
     // and forward into the correct hub tab.
     expect(isRouteAllowedForRole("/selfmed", "normal")).toBe(true);
     expect(isRouteAllowedForRole("/careguard", "normal")).toBe(true);
+  });
+
+  it("localizes every visible navigation label, page meta, and group label", () => {
+    const english = getNavItemsByRole("admin", "en");
+    expect(english.find((item) => item.href === "/scribe")?.label).toBe(
+      "Visit notes",
+    );
+    expect(
+      english.find((item) => item.href === "/admin/observability")?.page.title,
+    ).toBe("Operational monitoring");
+    expect(
+      getGroupedNavItems("doctor", "en").find(
+        (group) => group.key === "clinical",
+      )?.label,
+    ).toBe("Clinical");
+    expect(getPageMeta("/dashboard/control-tower", "en").title).toBe(
+      "Knowledge control",
+    );
+    expect(getPageMeta("/unknown-route", "en").title).toBe("Workspace");
   });
 });

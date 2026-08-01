@@ -42,7 +42,10 @@ import {
   setActiveProfileId,
   type ProfileContext,
 } from "@/lib/profile-context";
-import { activateOwnedProfile, getProfileContext } from "@/lib/profile-context-api";
+import {
+  activateOwnedProfile,
+  getProfileContext,
+} from "@/lib/profile-context-api";
 import { listFamilyNotifications } from "@/lib/visit-family";
 import { getPhrOnboarding } from "@/lib/phr-onboarding";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
@@ -61,12 +64,14 @@ const THEME_OPTIONS: Array<{
   { value: "system", labelKey: "theme.system", iconClass: "fa-desktop" },
 ];
 
-const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string; labelKey: UITranslationKey }> = [
+const LANGUAGE_OPTIONS: Array<{
+  value: UILanguage;
+  label: string;
+  labelKey: UITranslationKey;
+}> = [
   { value: "vi", label: "VI", labelKey: "language.vi" },
   { value: "en", label: "EN", labelKey: "language.en" },
 ];
-
-
 
 const IMMERSIVE_LAYOUT_PREFIXES = ["/chat", "/research", "/council", "/scribe"];
 const SIDEBAR_COLLAPSE_STORAGE_KEY = "clara_sidebar_collapsed";
@@ -84,7 +89,9 @@ export default function AppShell({ children }: Props) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRoleHydrated, setIsRoleHydrated] = useState(false);
   const [isSessionChecked, setIsSessionChecked] = useState(false);
-  const [profileContext, setProfileContext] = useState<ProfileContext | null>(null);
+  const [profileContext, setProfileContext] = useState<ProfileContext | null>(
+    null,
+  );
   const [isProfileChanging, setIsProfileChanging] = useState(false);
   const [familyNotificationCount, setFamilyNotificationCount] = useState(0);
 
@@ -165,7 +172,10 @@ export default function AppShell({ children }: Props) {
         if (!active) return;
         // A revoked/expired shared profile is resolved by the server back to a
         // safe context. Persist exactly that answer and discard old UI caches.
-        if (context.reset_required || context.active_profile_id !== getActiveProfileId()) {
+        if (
+          context.reset_required ||
+          context.active_profile_id !== getActiveProfileId()
+        ) {
           setActiveProfileId(context.active_profile_id);
         }
         setProfileContext(context);
@@ -341,8 +351,15 @@ export default function AppShell({ children }: Props) {
   };
 
   const handleProfileChange = async (profileId: string) => {
-    if (!profileId || profileId === profileContext?.active_profile_id || isProfileChanging) return;
-    const target = profileContext?.profiles.find((profile) => profile.id === profileId);
+    if (
+      !profileId ||
+      profileId === profileContext?.active_profile_id ||
+      isProfileChanging
+    )
+      return;
+    const target = profileContext?.profiles.find(
+      (profile) => profile.id === profileId,
+    );
     // Shared profiles are display contexts only in this release. A selection
     // cannot turn a narrow Family grant into a whole-record workspace.
     if (!target || target.kind !== "self") return;
@@ -497,7 +514,7 @@ export default function AppShell({ children }: Props) {
           <button
             type="button"
             onClick={() => setIsMobileNavOpen(false)}
-            aria-label="Close mobile navigation"
+            aria-label={t(uiLanguage, "navigation.closeMobile")}
             className="absolute inset-0 bg-[rgba(15,23,42,0.45)] backdrop-blur-sm"
           />
           <aside className="absolute left-0 top-0 h-full w-[min(90vw,390px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl">
@@ -517,14 +534,14 @@ export default function AppShell({ children }: Props) {
                     CLARA
                   </p>
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Trợ lý y tế của bạn
+                    {t(uiLanguage, "brand.healthAssistant")}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileNavOpen(false)}
-                aria-label="Close menu"
+                aria-label={t(uiLanguage, "action.closeMenu")}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
               >
                 <span className="material-symbols-outlined text-base">
@@ -538,7 +555,7 @@ export default function AppShell({ children }: Props) {
                 <section key={group.key}>
                   <p className="mb-2 flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     <span className="material-symbols-outlined text-[15px]">
-                      {getGroupMeta(group.key).icon}
+                      {getGroupMeta(group.key, uiLanguage).icon}
                     </span>
                     {group.label}
                   </p>
@@ -602,7 +619,9 @@ export default function AppShell({ children }: Props) {
                     role="group"
                     aria-label={t(uiLanguage, "language.preference")}
                   >
-                    <span className="sr-only">{t(uiLanguage, "language.preference")}</span>
+                    <span className="sr-only">
+                      {t(uiLanguage, "language.preference")}
+                    </span>
                     {LANGUAGE_OPTIONS.map((option) => {
                       const active = uiLanguage === option.value;
                       return (
@@ -637,7 +656,11 @@ export default function AppShell({ children }: Props) {
                 <span className="material-symbols-outlined text-[18px]">
                   logout
                 </span>
-                <span>{isLoggingOut ? t(uiLanguage, "action.signingOut") : t(uiLanguage, "action.signOut")}</span>
+                <span>
+                  {isLoggingOut
+                    ? t(uiLanguage, "action.signingOut")
+                    : t(uiLanguage, "action.signOut")}
+                </span>
               </button>
             </div>
           </aside>
