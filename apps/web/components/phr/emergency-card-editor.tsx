@@ -11,6 +11,7 @@ import {
   type PhrEmergencyCard,
   type PhrEmergencyCardField,
 } from "@/lib/phr";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 
@@ -23,38 +24,12 @@ import { safeUserFacingError } from "@/lib/user-facing-text";
  * capability is effective (Requirement 18.1).
  */
 
-const COPY = {
-  vi: {
-    title: "Thẻ khẩn cấp",
-    description:
-      "Chọn các mục hiển thị trên thẻ khẩn cấp. Bản xem trước cập nhật ngay bên dưới.",
-    loading: "Đang tải thẻ khẩn cấp...",
-    error: "Chưa thể tải thẻ khẩn cấp.",
-    include: "Hiển thị",
-    none: "Không có dữ liệu",
-    preview: "Xem trước thẻ",
-  },
-  en: {
-    title: "Emergency card",
-    description:
-      "Choose which sections appear on your emergency card. The preview updates below.",
-    loading: "Loading emergency card...",
-    error: "Unable to load the emergency card.",
-    include: "Show",
-    none: "No data",
-    preview: "Card preview",
-  },
-} as const;
-
-const FIELD_LABELS: Record<
-  PhrEmergencyCardField,
-  Record<UILanguage, string>
-> = {
-  allergies: { vi: "Dị ứng", en: "Allergies" },
-  current_medications: { vi: "Thuốc đang dùng", en: "Current medications" },
-  conditions: { vi: "Bệnh nền", en: "Conditions" },
-  blood_type: { vi: "Nhóm máu", en: "Blood type" },
-  emergency_contact: { vi: "Liên hệ khẩn cấp", en: "Emergency contact" },
+const FIELD_LABEL_KEYS: Record<PhrEmergencyCardField, UITranslationKey> = {
+  allergies: "phr.emergencyCard.field.allergies",
+  current_medications: "phr.emergencyCard.field.currentMedications",
+  conditions: "phr.emergencyCard.field.conditions",
+  blood_type: "phr.emergencyCard.field.bloodType",
+  emergency_contact: "phr.emergencyCard.field.emergencyContact",
 };
 
 type Inclusion = Record<PhrEmergencyCardField, boolean>;
@@ -72,7 +47,8 @@ export default function EmergencyCardEditor({
 }: {
   uiLanguage: UILanguage;
 }) {
-  const text = COPY[uiLanguage];
+  const copy = (key: UITranslationKey) => t(uiLanguage, key);
+  const loadErrorText = copy("phr.emergencyCard.error");
   const [card, setCard] = useState<PhrEmergencyCard | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -84,11 +60,11 @@ export default function EmergencyCardEditor({
     try {
       setCard(await getPhrEmergencyCard());
     } catch (err) {
-      setError(safeUserFacingError(err, text.error));
+      setError(safeUserFacingError(err, loadErrorText));
     } finally {
       setLoading(false);
     }
-  }, [text.error]);
+  }, [loadErrorText]);
 
   useEffect(() => {
     load();
@@ -109,10 +85,10 @@ export default function EmergencyCardEditor({
   return (
     <section className="rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
       <p className="text-sm font-semibold text-[var(--text-primary)]">
-        {text.title}
+        {copy("phr.emergencyCard.title")}
       </p>
       <p className="mt-1 text-[13px] leading-6 text-[var(--text-secondary)]">
-        {text.description}
+        {copy("phr.emergencyCard.description")}
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -128,23 +104,26 @@ export default function EmergencyCardEditor({
                 setInclude((prev) => ({ ...prev, [field]: e.target.checked }))
               }
             />
-            {FIELD_LABELS[field][uiLanguage]}
+            {copy(FIELD_LABEL_KEYS[field])}
           </label>
         ))}
       </div>
 
       <div className="mt-4">
-        <AsyncSection<PhrEmergencyCard> state={state} loadingLabel={text.loading}>
+        <AsyncSection<PhrEmergencyCard>
+          state={state}
+          loadingLabel={copy("phr.emergencyCard.loading")}
+        >
           {(data) => (
             <div className="space-y-3 rounded-2xl border border-[#93C5FD] bg-[#EEF6FF] p-4 dark:border-sky-700/70 dark:bg-slate-800/80">
               <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
-                {text.preview}
+                {copy("phr.emergencyCard.preview")}
               </p>
 
               {include.allergies ? (
                 <div>
                   <p className="text-xs font-semibold text-[var(--text-secondary)]">
-                    {FIELD_LABELS.allergies[uiLanguage]}
+                    {copy(FIELD_LABEL_KEYS.allergies)}
                   </p>
                   {data.allergies && data.allergies.length > 0 ? (
                     <ul className="mt-1 list-disc pl-5 text-[13px] text-[var(--text-primary)]">
@@ -157,7 +136,7 @@ export default function EmergencyCardEditor({
                     </ul>
                   ) : (
                     <p className="text-[13px] text-[var(--text-secondary)]">
-                      {text.none}
+                      {copy("phr.emergencyCard.none")}
                     </p>
                   )}
                 </div>
@@ -166,7 +145,7 @@ export default function EmergencyCardEditor({
               {include.current_medications ? (
                 <div>
                   <p className="text-xs font-semibold text-[var(--text-secondary)]">
-                    {FIELD_LABELS.current_medications[uiLanguage]}
+                    {copy(FIELD_LABEL_KEYS.current_medications)}
                   </p>
                   {data.current_medications &&
                   data.current_medications.length > 0 ? (
@@ -179,7 +158,7 @@ export default function EmergencyCardEditor({
                     </ul>
                   ) : (
                     <p className="text-[13px] text-[var(--text-secondary)]">
-                      {text.none}
+                      {copy("phr.emergencyCard.none")}
                     </p>
                   )}
                 </div>
@@ -188,7 +167,7 @@ export default function EmergencyCardEditor({
               {include.conditions ? (
                 <div>
                   <p className="text-xs font-semibold text-[var(--text-secondary)]">
-                    {FIELD_LABELS.conditions[uiLanguage]}
+                    {copy(FIELD_LABEL_KEYS.conditions)}
                   </p>
                   {data.conditions && data.conditions.length > 0 ? (
                     <ul className="mt-1 list-disc pl-5 text-[13px] text-[var(--text-primary)]">
@@ -200,7 +179,7 @@ export default function EmergencyCardEditor({
                     </ul>
                   ) : (
                     <p className="text-[13px] text-[var(--text-secondary)]">
-                      {text.none}
+                      {copy("phr.emergencyCard.none")}
                     </p>
                   )}
                 </div>
@@ -209,18 +188,18 @@ export default function EmergencyCardEditor({
               {include.blood_type ? (
                 <p className="text-[13px] text-[var(--text-primary)]">
                   <span className="font-semibold text-[var(--text-secondary)]">
-                    {FIELD_LABELS.blood_type[uiLanguage]}:
+                    {copy(FIELD_LABEL_KEYS.blood_type)}:
                   </span>{" "}
-                  {data.blood_type || text.none}
+                  {data.blood_type || copy("phr.emergencyCard.none")}
                 </p>
               ) : null}
 
               {include.emergency_contact ? (
                 <p className="text-[13px] text-[var(--text-primary)]">
                   <span className="font-semibold text-[var(--text-secondary)]">
-                    {FIELD_LABELS.emergency_contact[uiLanguage]}:
+                    {copy(FIELD_LABEL_KEYS.emergency_contact)}:
                   </span>{" "}
-                  {data.emergency_contact?.name || text.none}
+                  {data.emergency_contact?.name || copy("phr.emergencyCard.none")}
                   {data.emergency_contact?.phone
                     ? ` · ${data.emergency_contact.phone}`
                     : ""}

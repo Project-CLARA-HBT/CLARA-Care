@@ -175,10 +175,11 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   token contains only opaque candidate IDs, not OCR text, and supports
   discarding candidates. This source checkpoint has not run tests, build or
   deployment.
-- The PHR read-only share manager and FHIR export control now resolve their
-  scopes, statuses and safe errors through the same typed vi/en catalog. This
-  does not change the server-enforced sharing-consent, capability, expiry,
-  revocation or owner-scoped export boundary.
+- The PHR read-only share manager, FHIR export control and emergency-card
+  field selector now resolve their scopes, statuses and safe errors through
+  the same typed vi/en catalog. This does not change the server-enforced
+  sharing-consent, capability, expiry, revocation, owner-scoped export or
+  emergency-card data boundary.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be
