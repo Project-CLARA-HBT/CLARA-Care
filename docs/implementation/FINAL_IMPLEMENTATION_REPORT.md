@@ -247,6 +247,10 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   file-removal label. Citation content, source URLs, upload behavior and every
   research/evidence release boundary are unchanged. This source checkpoint has
   not run tests, build or deployment.
+- The legacy Research flow timeline now localizes its status, mode, bounded
+  telemetry labels, empty state and date/number/duration rendering via the
+  typed vi/en catalog. It makes no change to stage/event data, RAG execution or
+  release policy. This source checkpoint has not run tests, build or deployment.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be

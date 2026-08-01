@@ -81,6 +81,11 @@ recorded as implementation evidence, not release evidence.
   numbers use the application locale; source/citation content remains exactly
   server-provided and no retrieval, evidence or permission logic changed.
 
+- The adjacent Research flow timeline now resolves its modes, status chips,
+  progress, timestamps, durations, bounded payload labels and empty states
+  through the same typed vi/en catalog and locale formatter. It does not alter
+  stage/event source data, Research execution, or release decisions.
+
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only
   acknowledges a closed selector; API adds the deterministic projection only
