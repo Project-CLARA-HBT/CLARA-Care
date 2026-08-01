@@ -643,6 +643,7 @@ sharing, retention and release-hardening checkpoints:
 | Gate | Result | Evidence / limitation |
 | --- | --- | --- |
 | Focused API CSRF and health contracts | pass | `31 passed` (`test_health.py` and `test_rbac_owner_scope_csrf.py`); verifies malformed lower-case bearer does not bypass cookie CSRF and metrics accepts the header token only. |
+| Research Tier2 API contracts | pass with warnings | `59 passed` in `39.66s` (`tests/test_p2_proxy_endpoints.py`). The quality gate now preserves an upstream `block`/`escalate` safety verdict while it withholds a degraded research answer; the request contract also proves provider/runtime credentials are neither caller-selected nor persisted. |
 | Web lint | pass with warnings | Exit 0; eight existing React hook-dependency warnings remain. |
 | Web type-check | pass | `npx tsc --noEmit` exited 0. |
 | Web i18n and terminology | pass | `npm run i18n:check` (3,241 vi/en keys; 38 migrated surfaces) and `npm run consumer-terminology:check` passed. |
