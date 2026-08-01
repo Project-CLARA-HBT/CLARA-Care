@@ -103,10 +103,6 @@ jobs:
       DEPLOY_USER: ${{ vars.DEPLOY_SSH_USER || 'root' }}
       DEPLOY_ROOT: ${{ vars.DEPLOY_ROOT || '/opt/clara-care' }}
       PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || 'https://theclaracare.com' }}
-      DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
-      DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
-      DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
-      GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
       GHCR_PULL_USERNAME: ${{ vars.GHCR_PULL_USERNAME || github.actor }}
       IMAGE_TAG: ${{ needs.preflight.outputs.image_tag }}
       REGISTRY_REPO: ${{ needs.preflight.outputs.registry_repo }}
@@ -116,6 +112,11 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Validate controlled-host inputs
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
         run: |
           set -euo pipefail
           for required in DEPLOY_HOST DEPLOY_SSH_PRIVATE_KEY DEPLOY_SSH_KNOWN_HOSTS DEPLOY_ENV_FILE GHCR_PULL_TOKEN; do
@@ -130,6 +131,9 @@ jobs:
           esac
 
       - name: Configure pinned SSH trust
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           install -d -m 700 "$HOME/.ssh"
@@ -166,6 +170,8 @@ jobs:
           tar -C "$RUNNER_TEMP/clara-release" -czf "$RUNNER_TEMP/clara-release.tgz" "$RELEASE_NAME"
 
       - name: Install protected environment and release bundle on target
+        env:
+          DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
         run: |
           set -euo pipefail
           ssh -F "$RUNNER_TEMP/ssh-config" clara-target \
@@ -180,6 +186,8 @@ jobs:
             "set -eu; cd '$DEPLOY_ROOT/releases/.incoming-$RELEASE_NAME'; tar -xzf release.tgz; rm release.tgz; test -x '$RELEASE_NAME/scripts/deploy/deploy_release_bundle.sh'; mv '$RELEASE_NAME' '$DEPLOY_ROOT/releases/$RELEASE_NAME'; rmdir '$DEPLOY_ROOT/releases/.incoming-$RELEASE_NAME'"
 
       - name: Authenticate target host to GHCR without argv secrets
+        env:
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
         run: |
           set -euo pipefail
           printf '%s' "$GHCR_PULL_TOKEN" | ssh -F "$RUNNER_TEMP/ssh-config" clara-target \

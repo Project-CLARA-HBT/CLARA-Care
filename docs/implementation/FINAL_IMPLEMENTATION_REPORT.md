@@ -12,6 +12,31 @@ documentation-only checkpoint did **not** run format, lint, type checks,
 tests, builds, evaluation or deployment. Earlier execution records below are
 historical evidence only; they do not validate commits made after those runs.
 
+### Follow-on operational hardening (2026-08-02)
+
+`d0c0a29a` replaces the former CD behavior that started Compose and ran database
+migrations on a GitHub runner. The controlled workflow now checks immutable
+GHCR manifests, pins SSH host trust, transfers only a bounded release bundle to
+the protected target, injects the target environment and GHCR token through SSH
+stdin rather than command arguments, verifies a pre-migration Postgres backup,
+runs migration and local smoke checks on that host, then records the prior
+release and backup paths for a deliberate rollback. It checks the public CSP,
+HSTS, frame/nosniff/referrer/permissions headers and the anonymous PHR viewer
+route after target activation. The target environment must still be provisioned
+with the documented GitHub environment secrets; this source checkpoint neither
+ran a production deployment nor asserts that those protected inputs exist.
+
+The subsequent security refinement scopes SSH, environment and GHCR secrets to
+the individual CD steps that consume them. It also applies a package-lock
+override that resolves Next's optional Sharp dependency to `0.35.3`; a fresh
+production `npm audit --omit=dev` recorded one high (`postcss`) and one moderate
+(`next` aggregation), down from three high before the override. The remaining
+PostCSS 8.4.31 is an exact nested dependency of Next 15.5.22. The audit metadata
+listed no compatible fixed Next version (its proposed version is 9.3.3), and
+Next 16.2.12 still declares the same PostCSS pin. It remains a release blocker
+until a compatible framework/vendor remediation or reviewed replacement exists;
+it is not suppressed or reported as fixed.
+
 ## Executive summary
 
 This implementation pass strengthened CLARA's safety and evidence boundaries:
