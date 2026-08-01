@@ -1103,6 +1103,15 @@ class ApiClient {
     );
   }
 
+  /// Reads a public, read-only PHR share by opaque token. No access token is
+  /// attached: possession of the one-time token is the endpoint's capability.
+  /// Callers must never persist or log that token.
+  Future<Map<String, dynamic>> getPublicSharedResource({
+    required String token,
+  }) {
+    return _get('/api/v1/phr/shared/${Uri.encodeComponent(token)}');
+  }
+
   Future<Map<String, dynamic>> runCouncil({
     required String accessToken,
     required Map<String, dynamic> payload,

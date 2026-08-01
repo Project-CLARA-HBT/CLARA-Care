@@ -45,6 +45,12 @@ recorded as implementation evidence, not release evidence.
   the DSAR queue suppresses caught transport text. The gate source is added but
   intentionally not executed in the feature-first checkpoint.
 
+- The mobile public share viewer no longer owns a parallel HTTP transport. It
+  delegates its opaque, read-only token request to the shared `ApiClient`,
+  deliberately attaches no access token, does not persist the capability, and
+  retains the strict whitelist projection plus non-PII failure collapse. Its
+  focused fake-client widget source is present but unrun in this checkpoint.
+
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only
   acknowledges a closed selector; API adds the deterministic projection only

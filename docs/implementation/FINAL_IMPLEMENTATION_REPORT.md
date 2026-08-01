@@ -210,6 +210,12 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   transactional anonymization route, rather than creating a generic deletion
   request. Retry state stores only that closed kind, and safe errors suppress
   upstream transport detail. Focused widget contracts are added but unrun.
+- The mobile public PHR share viewer now likewise delegates its opaque,
+  read-only token request to the shared API client instead of retaining a
+  second HTTP transport. It deliberately sends no access token, never persists
+  the capability in the viewer, preserves the strict safe-field projection,
+  and collapses all public-link errors to one non-PII unavailable message.
+  Its focused fake-client widget contracts are added but unrun.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be

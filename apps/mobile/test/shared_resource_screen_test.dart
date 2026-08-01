@@ -8,14 +8,16 @@
 //   * With the `sharing_mobile_enabled` gate off, no network call is made and a
 //     disabled state is shown (Req 12.4).
 //
-// A fake [SharedResourceFetcher] is injected directly, so the tests run without
-// platform channels or a live server.
+// A method-level [FakeApiClient] is injected directly, so the tests run without
+// platform channels or a live server and exercise the canonical client seam.
 
 import 'package:clara_mobile/core/api_client.dart';
 import 'package:clara_mobile/core/feature_flags.dart';
 import 'package:clara_mobile/screens/shared_resource_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'fakes/fake_api_client.dart';
 
 MobileFeatureFlagResolver _flags({required bool sharing}) {
   return MobileFeatureFlagResolver(
@@ -34,47 +36,56 @@ void main() {
   testWidgets('valid token renders the end-user-safe shared view', (
     tester,
   ) async {
-    var called = 0;
-    Future<Map<String, dynamic>> fetcher(String token) async {
-      called += 1;
-      expect(token, 'good-token');
-      return <String, dynamic>{
-        'scope': 'full',
-        'record': {
-          'profile': {
-            'full_name': 'Nguyen Van A',
-            'blood_type': 'O+',
-            'gender': 'nam',
-          },
-          'allergies': [
-            {'name': 'Penicillin', 'severity': 'high', 'reaction': 'phát ban'},
-          ],
-          'conditions': [
-            {'name': 'Tăng huyết áp', 'status': 'active'},
-          ],
-          'medications': [
-            {'name': 'Amlodipine', 'dose': '5mg'},
-          ],
-          // Internal runtime fields that MUST NOT be rendered (Req 12.3).
-          'mode': 'deep_research',
-          'retrieval': {'k': 8},
-          'source_errors': ['connector-x timeout'],
-          'policy': {'verdict': 'allow'},
+    final api = FakeApiClient()
+      ..stub(
+        'getPublicSharedResource',
+        responder: (call) {
+          expect(call.args['token'], 'good-token');
+          return <String, dynamic>{
+            'scope': 'full',
+            'record': {
+              'profile': {
+                'full_name': 'Nguyen Van A',
+                'blood_type': 'O+',
+                'gender': 'nam',
+              },
+              'allergies': [
+                {
+                  'name': 'Penicillin',
+                  'severity': 'high',
+                  'reaction': 'phát ban'
+                },
+              ],
+              'conditions': [
+                {'name': 'Tăng huyết áp', 'status': 'active'},
+              ],
+              'medications': [
+                {'name': 'Amlodipine', 'dose': '5mg'},
+              ],
+              // Internal runtime fields that MUST NOT be rendered (Req 12.3).
+              'mode': 'deep_research',
+              'retrieval': {'k': 8},
+              'source_errors': ['connector-x timeout'],
+              'policy': {'verdict': 'allow'},
+            },
+            'hedge': 'hedge text',
+          };
         },
-        'hedge': 'hedge text',
-      };
-    }
+      );
 
     await tester.pumpWidget(MaterialApp(
       home: SharedResourceScreen(
+        apiClient: api,
         token: 'good-token',
-        fetcher: fetcher,
         flags: _flags(sharing: true),
       ),
     ));
     await tester.pumpAndSettle();
 
-    expect(called, 1);
+    expect(
+      api.invocations.where((call) => call.method == 'getPublicSharedResource'),
+      hasLength(1),
+    );
 
     // Safe content is rendered (Req 12.1, 12.3).
     expect(find.text('Hồ sơ sức khỏe được chia sẻ'), findsOneWidget);
@@ -94,17 +105,19 @@ void main() {
   testWidgets('invalid/expired token shows a clear non-PII error', (
     tester,
   ) async {
-    Future<Map<String, dynamic>> fetcher(String token) async {
-      throw ApiException(
-        statusCode: 410,
-        message: kSharedResourceUnavailableMessage,
+    final api = FakeApiClient()
+      ..stub(
+        'getPublicSharedResource',
+        error: ApiException(
+          statusCode: 410,
+          message: kSharedResourceUnavailableMessage,
+        ),
       );
-    }
 
     await tester.pumpWidget(MaterialApp(
       home: SharedResourceScreen(
+        apiClient: api,
         token: 'expired-token',
-        fetcher: fetcher,
         flags: _flags(sharing: true),
       ),
     ));
@@ -120,26 +133,26 @@ void main() {
   testWidgets('emergency-card scope renders only whitelisted fields', (
     tester,
   ) async {
-    Future<Map<String, dynamic>> fetcher(String token) async =>
-        <String, dynamic>{
-          'scope': 'emergency_card',
-          'emergency_card': {
-            'disclaimer': {'vi': 'Thẻ tự khai.', 'en': 'Self declared.'},
-            'allergies': [
-              {'name': 'Aspirin', 'severity': 'high', 'reaction': ''},
-            ],
-            'current_medications': [
-              {'name': 'Metformin', 'dose': '500mg'},
-            ],
-            'blood_type': 'A+',
-            'emergency_contact': {'name': 'Tran B', 'phone': '0900000000'},
-          },
-        };
+    final api = FakeApiClient()
+      ..stub('getPublicSharedResource', response: <String, dynamic>{
+        'scope': 'emergency_card',
+        'emergency_card': {
+          'disclaimer': {'vi': 'Thẻ tự khai.', 'en': 'Self declared.'},
+          'allergies': [
+            {'name': 'Aspirin', 'severity': 'high', 'reaction': ''},
+          ],
+          'current_medications': [
+            {'name': 'Metformin', 'dose': '500mg'},
+          ],
+          'blood_type': 'A+',
+          'emergency_contact': {'name': 'Tran B', 'phone': '0900000000'},
+        },
+      });
 
     await tester.pumpWidget(MaterialApp(
       home: SharedResourceScreen(
+        apiClient: api,
         token: 'card-token',
-        fetcher: fetcher,
         flags: _flags(sharing: true),
       ),
     ));
@@ -155,22 +168,25 @@ void main() {
   testWidgets('gate off: no fetch and disabled state shown (Req 12.4)', (
     tester,
   ) async {
-    var called = 0;
-    Future<Map<String, dynamic>> fetcher(String token) async {
-      called += 1;
-      return <String, dynamic>{'scope': 'full', 'record': {}};
-    }
+    final api = FakeApiClient()
+      ..stub(
+        'getPublicSharedResource',
+        response: <String, dynamic>{'scope': 'full', 'record': {}},
+      );
 
     await tester.pumpWidget(MaterialApp(
       home: SharedResourceScreen(
+        apiClient: api,
         token: 'any-token',
-        fetcher: fetcher,
         flags: _flags(sharing: false),
       ),
     ));
     await tester.pumpAndSettle();
 
-    expect(called, 0);
+    expect(
+      api.invocations.where((call) => call.method == 'getPublicSharedResource'),
+      isEmpty,
+    );
     expect(find.byKey(const Key('sharing-disabled')), findsOneWidget);
     expect(find.byKey(const Key('shared-resource-body')), findsNothing);
   });

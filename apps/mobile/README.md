@@ -201,6 +201,11 @@ irreversible delete action requires a second confirmation and calls only the
 server's transactional `/api/v1/compliance/dsar/delete` route; export,
 correction, restriction, and withdrawal remain closed-kind DSAR requests.
 
+The read-only sharing surface also uses the shared API client. Its opaque
+capability token is passed only to `GET /api/v1/phr/shared/{token}` without an
+access token, is never persisted or logged by the viewer, and every public-link
+failure collapses to the same non-PII unavailable message.
+
 Existing build-time flags (also default OFF):
 
 | `--dart-define` flag                  | Surface |

@@ -235,6 +235,13 @@ class FakeApiClient extends ApiClient {
     return _dispatch('deleteDsarData', const {}, accessToken: accessToken);
   }
 
+  @override
+  Future<Map<String, dynamic>> getPublicSharedResource({
+    required String token,
+  }) {
+    return _dispatch('getPublicSharedResource', {'token': token});
+  }
+
   // --- Research --------------------------------------------------------------
 
   @override

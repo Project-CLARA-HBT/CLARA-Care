@@ -60,14 +60,6 @@ import 'states/skeleton.dart';
 /// It carries no PII and identifies only the surface viewed.
 const String kMobileHomeViewedEvent = 'mobile_home_viewed';
 
-/// CLARA_API base URL for surfaces that build their own read-only fetcher
-/// (the public shared-resource viewer). Mirrors `dashboard_screen.dart` /
-/// `main.dart`'s `--dart-define=CLARA_API_BASE_URL` so wiring stays additive.
-const String _homeApiBaseUrl = String.fromEnvironment(
-  'CLARA_API_BASE_URL',
-  defaultValue: 'http://localhost:8100',
-);
-
 /// The modern, role-aware Home surface for Experience_V2.
 ///
 /// Takes the same dependencies as `DashboardScreen` ([apiClient],
@@ -336,10 +328,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 // viewer surfaces an error state until a token arrives via a
                 // share link. The card exists so the surface is reachable when
                 // the gate is on.
+                apiClient: widget.apiClient,
                 token: '',
-                fetcher: createHttpSharedResourceFetcher(
-                  baseUrl: _homeApiBaseUrl,
-                ),
                 flags: resolver,
               ),
             ),
