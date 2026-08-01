@@ -215,9 +215,9 @@ These behaviors are regression-locked and must be preserved by every change:
 ## Deploy, CI/CD & Ops
 
 - **Compose stacks**: `deploy/docker/docker-compose.yml` (infra), `docker-compose.app.yml` (api/ml/web/searxng), `docker-compose.deploy.yml` (server deploy).
-- **CI/CD** (`.github/workflows/`): `ci.yml` (quality/test/build/security + CLARA-Eval VN smoke), `cd.yml` (preflight → staging → production), `release.yml` (semver tag, locked CLARA-Eval VN gate, build/push images), `active-eval.yml` (nightly evidence), `clara-eval-vn.yml` (manual smoke/judge report), `branch-protection-sync.yml`.
+- **CI/CD** (`.github/workflows/`): `ci.yml` (quality/test/build/security + CLARA-Eval VN smoke), `cd.yml` (immutable-image preflight → controlled SSH target deployment), `release.yml` (semver tag, locked CLARA-Eval VN gate, build/push images), `active-eval.yml` (nightly evidence), `clara-eval-vn.yml` (manual smoke/judge report), `branch-protection-sync.yml`. CD must never run a production Compose stack on a GitHub runner.
 - **Cross-client product wording**: `contracts/consumer-terminology/consumer-terminology.v1.json` is the canonical static VI/EN source for shared task-first labels. Its checked-in web/Dart projections are verified by `cd apps/web && npm run consumer-terminology:check`; never use it for medical free text or safety state.
-- **Scripts** (`scripts/`): deploy (`deploy/redeploy_app_stack.sh`), ops (`ops/validate_runtime_env.sh`, backup/cleanup/cron installers, source-hub auto-crawl), release (semver + image push), and demo/eval loops.
+- **Scripts** (`scripts/`): deploy (`deploy/redeploy_app_stack.sh` for an operator source checkout; `deploy/deploy_release_bundle.sh` for immutable CI releases on the target host), ops (`ops/validate_runtime_env.sh`, backup/cleanup/cron installers, source-hub auto-crawl), release (semver + image push), and demo/eval loops. See `docs/runbooks/controlled-vps-deploy.md` for protected inputs and rollback.
 
 ## Onboarding Path for New Contributors
 
