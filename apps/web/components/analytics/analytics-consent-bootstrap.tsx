@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { getConsentStatus } from "@/lib/consent";
 import { getAnalyticsClient } from "@/lib/analytics";
 import { getRole } from "@/lib/auth-store";
@@ -20,8 +21,23 @@ import { getRole } from "@/lib/auth-store";
  * its safe, suppressed default and never breaks the surrounding product flow.
  */
 export default function AnalyticsConsentBootstrap() {
+  const pathname = usePathname() ?? "";
+  const isPublicCapability =
+    pathname.startsWith("/share/") || pathname.startsWith("/phr/shared/");
+
   useEffect(() => {
     let cancelled = false;
+
+    // Capability URLs are bearer secrets. Never call a consent endpoint or
+    // initialize analytics while a public share is open; doing so can expose
+    // its path in third-party/browser request metadata. Existing public shares
+    // also get the same privacy boundary.
+    if (isPublicCapability) {
+      getAnalyticsClient().setConsent(false);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const sync = async () => {
       const client = getAnalyticsClient();
@@ -49,7 +65,7 @@ export default function AnalyticsConsentBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isPublicCapability]);
 
   return null;
 }

@@ -63,6 +63,9 @@ recorded as implementation evidence, not release evidence.
   public API endpoint, and renders only an explicit PHR field allowlist. It
   neither displays the token nor projects raw upstream/token-state errors.
   Its focused route and client-contract test sources are present but unrun.
+  Capability routes also suppress Analytics Consent bootstrap and set
+  `noindex`/`no-referrer` metadata so an opaque share URL is not passed into
+  analytics consent traffic or search/referrer surfaces.
 
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only

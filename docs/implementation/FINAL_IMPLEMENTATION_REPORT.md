@@ -230,6 +230,10 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   same profile/allergy/condition/medication or emergency-card fields as mobile,
   and collapses all failures to one localized unavailable state. Focused source
   contracts are added but unrun.
+- Public capability routes now suppress Analytics Consent bootstrap and use
+  `noindex`/`no-referrer` metadata, preventing a share URL from becoming an
+  analytics-consent request referrer or a searchable page. The API's existing
+  global no-store security header remains the response-cache control.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be
