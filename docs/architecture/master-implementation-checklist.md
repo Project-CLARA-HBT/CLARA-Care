@@ -31,7 +31,9 @@ recorded as implementation evidence, not release evidence.
   upload/confirmation boundary, scans through the existing safe upload and
   prompt-injection path, binds opaque candidate IDs to a short-lived
   owner-scoped review token, and requires explicit confirmation for every
-  persisted candidate. Its consent, disclosure, errors, controls and ARIA
+  persisted candidate. Corrected-text offsets are client-validated and shown
+  only in a collapsed source reference; they are deliberately stripped from
+  the confirmation mutation. Its consent, disclosure, errors, controls and ARIA
   labels are now catalog-backed and included in the static i18n gate. This
   remains an unrun source checkpoint, not runtime or OCR-quality evidence.
 

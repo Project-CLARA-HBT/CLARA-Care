@@ -247,6 +247,8 @@ const VI_MESSAGES = {
   "phr.ocr.confirmed": "Đã lưu các mục đã chọn.",
   "phr.ocr.nothingAccepted": "Hãy chấp nhận ít nhất một mục để lưu.",
   "phr.ocr.close": "Đóng",
+  "phr.ocr.sourceDetails": "Chi tiết đối chiếu OCR",
+  "phr.ocr.sourceOffset": "Vị trí trong văn bản OCR đã chuẩn hóa: {start}–{end}",
   "phr.share.title": "Chia sẻ hồ sơ (chỉ đọc)",
   "phr.share.description":
     "Tạo liên kết chỉ đọc để chia sẻ hồ sơ. Bạn có thể thu hồi bất cứ lúc nào.",
@@ -4035,6 +4037,8 @@ const EN_MESSAGES: MessageCatalog = {
   "phr.ocr.confirmed": "Saved the accepted entries.",
   "phr.ocr.nothingAccepted": "Accept at least one entry to save.",
   "phr.ocr.close": "Close",
+  "phr.ocr.sourceDetails": "OCR source reference",
+  "phr.ocr.sourceOffset": "Location in normalized OCR text: {start}–{end}",
   "phr.share.title": "Share record (read-only)",
   "phr.share.description":
     "Create read-only links to share your record. You can revoke them anytime.",

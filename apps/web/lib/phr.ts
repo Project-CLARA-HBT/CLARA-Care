@@ -310,6 +310,14 @@ export type PhrOcrCandidate = {
   ocr_confidence?: number | null;
   requires_manual_confirm: boolean;
   confirmed: boolean;
+  /** Read-only corrected-text offsets for a reviewed OCR proposal. */
+  source_coordinates?: PhrOcrSourceCoordinate[];
+};
+
+export type PhrOcrSourceCoordinate = {
+  coordinate_system: "corrected_text_codepoint_offset";
+  start: number;
+  end: number;
 };
 
 /** Response of `POST /phr/import/ocr/scan`: nothing is committed (Req 9.1). */
@@ -323,6 +331,22 @@ export type PhrOcrScanResult = {
   } | null;
 };
 
+function coerceOcrSourceCoordinate(raw: unknown): PhrOcrSourceCoordinate | null {
+  const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const start = value.start;
+  const end = value.end;
+  if (
+    value.coordinate_system !== "corrected_text_codepoint_offset" ||
+    !Number.isSafeInteger(start) ||
+    !Number.isSafeInteger(end) ||
+    start < 0 ||
+    end < start
+  ) {
+    return null;
+  }
+  return { coordinate_system: value.coordinate_system, start, end };
+}
+
 function coerceOcrCandidate(raw: unknown): PhrOcrCandidate {
   const root =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
@@ -330,6 +354,12 @@ function coerceOcrCandidate(raw: unknown): PhrOcrCandidate {
     typeof root.ocr_confidence === "number" && Number.isFinite(root.ocr_confidence)
       ? Math.min(1, Math.max(0, root.ocr_confidence))
       : null;
+  const sourceCoordinates = Array.isArray(root.source_coordinates)
+    ? root.source_coordinates
+        .map(coerceOcrSourceCoordinate)
+        .filter((coordinate): coordinate is PhrOcrSourceCoordinate => coordinate !== null)
+        .slice(0, 24)
+    : [];
   return {
     candidate_id: typeof root.candidate_id === "string" ? root.candidate_id : "",
     name: typeof root.name === "string" ? root.name : "",
@@ -338,6 +368,7 @@ function coerceOcrCandidate(raw: unknown): PhrOcrCandidate {
     ocr_confidence: confidence,
     requires_manual_confirm: root.requires_manual_confirm === true,
     confirmed: root.confirmed === true,
+    source_coordinates: sourceCoordinates,
   };
 }
 

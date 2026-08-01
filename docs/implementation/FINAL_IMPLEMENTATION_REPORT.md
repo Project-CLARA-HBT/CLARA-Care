@@ -168,9 +168,11 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   claim that all remaining web/mobile strings are localized.
 - PHR OCR imports now require medical-disclaimer consent before upload and
   confirmation, fail closed on the existing OCR prompt-injection screen, attach
-  reviewable text offsets, and return a short-lived owner-bound review token.
+  reviewable corrected-text offsets, and return a short-lived owner-bound review token.
   The web modal requires explicit acceptance for every retained candidate;
-  scan output never commits a medication. Its complete user-facing copy now
+  scan output never commits a medication. Those bounded offsets appear only in
+  a collapsed source-reference control and are stripped before confirmation.
+  Its complete user-facing copy now
   uses the typed vi/en catalog instead of a component-local bilingual map. The
   token contains only opaque candidate IDs, not OCR text, and supports
   discarding candidates. This source checkpoint has not run tests, build or

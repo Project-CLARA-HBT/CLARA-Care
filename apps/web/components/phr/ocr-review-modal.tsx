@@ -32,7 +32,10 @@ export default function OcrReviewModal({
   uiLanguage: UILanguage;
   onConfirmed?: () => void;
 }) {
-  const copy = (key: UITranslationKey) => t(uiLanguage, key);
+  const copy = (
+    key: UITranslationKey,
+    values: Record<string, string | number> = {},
+  ) => t(uiLanguage, key, values);
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -105,11 +108,13 @@ export default function OcrReviewModal({
     setMessage("");
     try {
       await confirmPhrOcr(
-        accepted.map(({ _accepted, ...c }) => ({
-          ...c,
-          requires_manual_confirm: false,
-          confirmed: true,
-        })),
+        accepted.map(
+          ({ _accepted, source_coordinates: _sourceCoordinates, ...candidate }) => ({
+            ...candidate,
+            requires_manual_confirm: false,
+            confirmed: true,
+          }),
+        ),
         reviewToken,
         reviewCandidateIds,
       );
@@ -241,6 +246,25 @@ export default function OcrReviewModal({
                     </button>
                   </div>
                 </div>
+                {row.source_coordinates?.length ? (
+                  <details className="mt-3 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+                    <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">
+                      {copy("phr.ocr.sourceDetails")}
+                    </summary>
+                    <ul className="mt-2 space-y-1">
+                      {row.source_coordinates.map((coordinate, coordinateIndex) => (
+                        <li
+                          key={`${coordinate.start}-${coordinate.end}-${coordinateIndex}`}
+                        >
+                          {copy("phr.ocr.sourceOffset", {
+                            start: coordinate.start,
+                            end: coordinate.end,
+                          })}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
               </div>
             ))}
 
