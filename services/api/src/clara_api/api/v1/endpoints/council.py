@@ -40,7 +40,10 @@ _ALLOWED_AUDIO_TYPES = {
     "audio/x-m4a",
     "application/octet-stream",
 }
-_COUNCIL_EVIDENCE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+# Citation identifiers are opaque data, not route segments.  Allow canonical
+# DOI values (which contain `/`) while still bounding the accepted character
+# set and length before they cross the Council boundary.
+_COUNCIL_EVIDENCE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
 _COUNCIL_EVIDENCE_CATEGORIES = frozenset(
     {
         "clinical_guideline",
@@ -1096,8 +1099,8 @@ def run_council_case(
     # Preserve a valid ML-side disclosure when available. If the Council run
     # does not carry one, only the intake's operational model id is considered;
     # transcript and other clinical fields are deliberately never inspected.
-    _intake = _as_dict(case_item.intake_json)
-    _intake_details = _as_dict(_intake.get("details"))
+    _intake = _as_dict(case_item.intake_json) or {}
+    _intake_details = _as_dict(_intake.get("details")) or {}
     _intake_model_used = _intake_details.get("model_used")
     raw_result = service.with_disclosure(
         raw_result,

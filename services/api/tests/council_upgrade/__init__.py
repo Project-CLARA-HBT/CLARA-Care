@@ -86,6 +86,7 @@ COUNCIL_UPGRADE_FLAGS: Mapping[str, str] = {
     "COUNCIL_MODEL_DISCLOSURE_ENABLED": "council_model_disclosure_enabled",
     "COUNCIL_OBSERVABILITY_ENABLED": "council_observability_enabled",
     "COUNCIL_MOBILE_PARITY_ENABLED": "council_mobile_parity_enabled",
+    "COUNCIL_EVIDENCE_PACKET_SHADOW_ENABLED": "council_evidence_packet_shadow_enabled",
 }
 
 # Convenience tuple of the Settings attribute names for the boolean flags.
