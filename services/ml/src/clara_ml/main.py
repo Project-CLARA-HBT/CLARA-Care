@@ -41,6 +41,7 @@ from clara_ml.llm.model_registry import (
 from clara_ml.medical_answer_v2 import build_medical_answer_v2
 from clara_ml.medical_harness import postprocess_stages, preflight_harness
 from clara_ml.model_router import (
+    SemanticSafetyDecision,
     build_shadow_task_route,
     public_encoder_shadow_metadata,
     public_shadow_metadata,
@@ -541,7 +542,7 @@ def _classify_medical_request_with_llm(
     query: str,
     *,
     role_hint: str | None,
-) -> dict[str, Any]:
+) -> SemanticSafetyDecision:
     """Use the configured LLM as the primary semantic safety/intent classifier.
 
     This distinguishes medication history from a request to alter treatment and
@@ -591,36 +592,24 @@ def _classify_medical_request_with_llm(
     if not isinstance(parsed, dict):
         raise TypeError("Medical intent classifier returned a non-object")
 
-    action = str(parsed.get("action") or "").strip().lower()
+    # Emergency model output can never be a refusal: it is normalized to the
+    # deterministic escalation branch below.  Everything else must satisfy the
+    # strict, extra-forbidden Pydantic contract instead of escaping as a free
+    # dictionary from the provider boundary.
     reason = str(parsed.get("reason") or "").strip().lower()
     emergency = _as_bool(parsed.get("emergency"), False) or reason == "emergency"
-    if action not in {"allow", "block"}:
-        raise ValueError("Medical intent classifier returned invalid action")
-    if reason not in {
-        "none",
-        "prescription_request",
-        "dosage_request",
-        "diagnosis_request",
-        "emergency",
-    }:
-        raise ValueError("Medical intent classifier returned invalid reason")
-    task = str(parsed.get("task") or "general_health_qa").strip().lower()
-    if task not in _SEMANTIC_ROUTING_TASKS:
-        raise ValueError("Medical intent classifier returned invalid task")
-    if (task == "emergency") != emergency:
-        raise ValueError("Medical intent classifier returned inconsistent task")
-    try:
-        confidence = max(0.0, min(1.0, float(parsed.get("confidence") or 0.0)))
-    except (TypeError, ValueError):
-        confidence = 0.0
-    return {
-        "action": "allow" if emergency else action,
+    candidate = {
+        **parsed,
         "reason": reason,
         "emergency": emergency,
-        "task": task,
-        "confidence": confidence,
-        "model_used": response.model,
+        "action": "allow" if emergency else parsed.get("action"),
+        "task": str(parsed.get("task") or "").strip().lower(),
+        "model_used": str(response.model or "").strip(),
     }
+    try:
+        return SemanticSafetyDecision.model_validate(candidate)
+    except Exception as exc:  # noqa: BLE001 - never expose provider parse detail
+        raise ValueError("Medical intent classifier returned invalid contract") from exc
 
 
 def _classify_lifemap_ask_with_llm(query: str, *, locale: str) -> dict[str, Any]:
@@ -1147,22 +1136,20 @@ def routed_chat_infer(payload: dict) -> dict:
     # fail-safe floor only when the closed-schema LLM classifier is unavailable;
     # it must not turn explicitly negated symptoms into an emergency.
     safety_route = router.route(query, role_hint=role_hint)
-    semantic_route: dict[str, Any] | None = None
+    semantic_route: SemanticSafetyDecision | None = None
     try:
         semantic_route = _classify_medical_request_with_llm(
             redact_pii(query).redacted_text,
             role_hint=role_hint,
         )
-        legal_guard_reason = (
-            str(semantic_route["reason"]) if semantic_route["action"] == "block" else None
-        )
+        legal_guard_reason = semantic_route.reason if semantic_route.action == "block" else None
     except Exception:  # noqa: BLE001 - deterministic guard is the safe outage path
         logger.warning("Medical semantic router unavailable; using safety fallback")
         if not safety_route.emergency:
             legal_guard_reason = _detect_legal_guard_violation(query, channel="chat")
         else:
             legal_guard_reason = None
-    if legal_guard_reason and not (semantic_route and semantic_route.get("emergency")):
+    if legal_guard_reason and not (semantic_route and semantic_route.emergency):
         return _legal_guard_refusal(role_hint=role_hint, reason=legal_guard_reason)
 
     rag_flow_payload = payload.get("rag_flow")
@@ -1222,8 +1209,8 @@ def routed_chat_infer(payload: dict) -> dict:
         clinical_context=clinical_context,
         router=router,
         semantic_emergency=(
-            bool(semantic_route["emergency"])
-            if semantic_route is not None and float(semantic_route.get("confidence") or 0.0) >= 0.7
+            semantic_route.emergency
+            if semantic_route is not None and semantic_route.confidence >= 0.7
             else None
         ),
     )
@@ -1235,17 +1222,17 @@ def routed_chat_infer(payload: dict) -> dict:
         for stage in preflight.stages:
             if stage.get("stage") == "intent_acuity":
                 stage["role"] = role_hint
-    if semantic_route and semantic_route.get("emergency"):
+    if semantic_route and semantic_route.emergency:
         route.intent = "emergency_triage"
-        route.confidence = max(route.confidence, float(semantic_route["confidence"]))
+        route.confidence = max(route.confidence, semantic_route.confidence)
         route.emergency = True
         emergency_red_flags = [*emergency_red_flags, "llm_semantic_emergency_signal"]
         preflight.stages.append(
             {
                 "stage": "llm_semantic_safety_router",
                 "status": "escalate",
-                "confidence": semantic_route["confidence"],
-                "model_used": semantic_route["model_used"],
+                "confidence": semantic_route.confidence,
+                "model_used": semantic_route.model_used,
             }
         )
 
@@ -1326,7 +1313,7 @@ def routed_chat_infer(payload: dict) -> dict:
     task_route_shadow = build_shadow_task_route(
         pii.redacted_text,
         legacy_route=route,
-        semantic_route=semantic_route,
+        semantic_route=semantic_route.model_dump() if semantic_route is not None else None,
         settings=settings,
     )
 
@@ -1360,27 +1347,27 @@ def routed_chat_infer(payload: dict) -> dict:
         semantic_route
         and intent_router_enabled
         and settings.semantic_intent_routing_enabled
-        and semantic_route.get("action") == "allow"
-        and not semantic_route.get("emergency")
-        and float(semantic_route.get("confidence") or 0.0) >= 0.7
+        and semantic_route.action == "allow"
+        and not semantic_route.emergency
+        and semantic_route.confidence >= 0.7
     ):
         semantic_intent = _semantic_intent_for_task(
-            task=str(semantic_route.get("task") or ""),
+            task=semantic_route.task,
             role=route.role,
         )
         if semantic_intent:
             route.intent = semantic_intent
             route.confidence = max(
                 route.confidence,
-                float(semantic_route.get("confidence") or 0.0),
+                semantic_route.confidence,
             )
             semantic_intent_applied = True
             preflight.stages.append(
                 {
                     "stage": "llm_semantic_intent_router",
                     "status": "applied",
-                    "task": str(semantic_route.get("task") or ""),
-                    "model_used": str(semantic_route.get("model_used") or ""),
+                    "task": semantic_route.task,
+                    "model_used": semantic_route.model_used,
                 }
             )
 

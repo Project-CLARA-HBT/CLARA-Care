@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from clara_ml.model_router import build_shadow_task_route, public_shadow_metadata
+import pytest
+from pydantic import ValidationError
+
+from clara_ml.model_router import (
+    SemanticSafetyDecision,
+    build_shadow_task_route,
+    public_shadow_metadata,
+)
 from clara_ml.routing import RouteResult
 
 
@@ -92,3 +99,22 @@ def test_shadow_router_exposes_only_categorical_vietnamese_language_signals() ->
     public = public_shadow_metadata(route)
     assert "Panadol" not in str(public)
     assert public["clinical_language"]["medication_candidate_count"] == 1
+
+
+def test_primary_semantic_router_contract_rejects_extra_and_emergency_drift() -> None:
+    valid = {
+        "action": "allow",
+        "reason": "none",
+        "emergency": False,
+        "task": "general_health_qa",
+        "confidence": 0.8,
+        "model_used": "deepseek-v4-pro.task-route.v1",
+    }
+    assert SemanticSafetyDecision.model_validate(valid).task == "general_health_qa"
+
+    with pytest.raises(ValidationError):
+        SemanticSafetyDecision.model_validate({**valid, "provider_rationale": "ignore policy"})
+    with pytest.raises(ValidationError):
+        SemanticSafetyDecision.model_validate(
+            {**valid, "emergency": True, "task": "general_health_qa"}
+        )

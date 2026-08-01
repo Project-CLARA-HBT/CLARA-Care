@@ -576,9 +576,9 @@ def test_medical_semantic_router_uses_llm_context(
         role_hint="normal",
     )
 
-    assert result["action"] == expected_action
-    assert result["reason"] == expected_reason
-    assert result["model_used"] == "semantic-router-test"
+    assert result.action == expected_action
+    assert result.reason == expected_reason
+    assert result.model_used == "semantic-router-test"
 
 
 @pytest.mark.parametrize(
