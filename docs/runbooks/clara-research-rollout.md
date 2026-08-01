@@ -70,7 +70,6 @@ API flags (`services/api/src/clara_api/core/config.py`):
 | `RESEARCH_PERSONALIZATION_ENABLED`            | `false` | Consent-gated PHR/cabinet personalization         |
 | `RESEARCH_EXPORT_ENABLED`                     | `false` | `POST .../export?format=md\|docx\|pdf`            |
 | `RESEARCH_SHARE_ENABLED`                      | `false` | Read-only share via `WorkspaceConversationShare`  |
-| `RESEARCH_QUALITY_GATE_ENABLED`               | `false` | Golden-set regression gate in CI                  |
 | `RESEARCH_DURABLE_UPLOADS_ENABLED`            | `false` | Durable, owner-isolated uploaded files            |
 | `RESEARCH_UPLOAD_OBJECT_STORE_URL`            | `""`    | Object-store backend URL for durable uploads      |
 
@@ -177,7 +176,7 @@ retrieval quality holds.
 
 ### Golden-set quality gate
 
-1. Enable `RESEARCH_QUALITY_GATE_ENABLED` in the staging/CI environment.
+1. Enable `RESEARCH_QUALITY_GATE_ENABLED` only in the CI evaluator environment.
 2. Run the Vietnamese golden-set harness (`services/ml` `research_quality` +
    `golden_set_vi`). It computes `recall@k`, `faithfulness`,
    `citation_accuracy`, `unsupported_claim_rate`, and `refusal_compliance`

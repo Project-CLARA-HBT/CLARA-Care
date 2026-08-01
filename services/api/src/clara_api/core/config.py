@@ -549,10 +549,6 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="RESEARCH_SHARE_ENABLED",
     )
-    research_quality_gate_enabled: bool = Field(
-        default=False,
-        validation_alias="RESEARCH_QUALITY_GATE_ENABLED",
-    )
     research_durable_uploads_enabled: bool = Field(
         default=False,
         validation_alias="RESEARCH_DURABLE_UPLOADS_ENABLED",
