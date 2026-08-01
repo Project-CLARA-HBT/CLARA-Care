@@ -203,6 +203,13 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   device-local pseudo-ledger whose toggles could not affect API policy. Product
   analytics remains disabled by default and is not presented as a server
   compliance purpose. Focused widget contracts are added but unrun.
+- The mobile Data Rights screen now shares the authenticated API client rather
+  than maintaining a second direct-HTTP transport. Only a closed DSAR kind is
+  sent for non-destructive requests. Its explicit second confirmation for
+  deletion maps solely to `/api/v1/compliance/dsar/delete`, the server's
+  transactional anonymization route, rather than creating a generic deletion
+  request. Retry state stores only that closed kind, and safe errors suppress
+  upstream transport detail. Focused widget contracts are added but unrun.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be

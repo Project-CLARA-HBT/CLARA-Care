@@ -1076,6 +1076,33 @@ class ApiClient {
     );
   }
 
+  /// Submits a non-destructive DSAR request (`export`, `correct`, `restrict`, or
+  /// `withdraw`) against the authenticated subject. The request contains only
+  /// the closed request kind and inherits the shared auth/refresh boundary.
+  Future<Map<String, dynamic>> submitDsarRequest({
+    required String accessToken,
+    required String kind,
+  }) {
+    return _post(
+      '/api/v1/compliance/dsar/request',
+      body: <String, dynamic>{'kind': kind},
+      accessToken: accessToken,
+    );
+  }
+
+  /// Performs the server's transactional, irreversible DSAR deletion flow.
+  /// Callers must obtain an explicit, separate confirmation before this method;
+  /// it is deliberately not routed through the generic request endpoint.
+  Future<Map<String, dynamic>> deleteDsarData({
+    required String accessToken,
+  }) {
+    return _post(
+      '/api/v1/compliance/dsar/delete',
+      body: const <String, dynamic>{},
+      accessToken: accessToken,
+    );
+  }
+
   Future<Map<String, dynamic>> runCouncil({
     required String accessToken,
     required Map<String, dynamic> payload,

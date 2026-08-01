@@ -1,13 +1,10 @@
-import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../core/a11y.dart';
 import '../core/analytics.dart';
 import '../core/api_client.dart';
 import '../core/feature_flags.dart';
+import '../core/session_store.dart';
 import '../widgets/error_retry_view.dart';
 
 // =============================================================================
@@ -24,15 +21,9 @@ import '../widgets/error_retry_view.dart';
 //         [MobileFeatureFlagResolver]: with the flag off the surface is inert
 //         and exposes no controls (Req 8.6 / 15.1).
 //
-// ----------------------------------------------------------------------------
-// api_client.dart is owned by another writer this wave and currently has no
-// DSAR method. To stay additive and testable NOW, this screen takes an
-// injectable [DsarSubmitter] callback — mirroring `shared_resource_screen.dart`'s
-// injectable fetcher. Production wires [createHttpDsarSubmitter] (a thin POST to
-// `/api/v1/compliance/dsar/request` using the same patterns as ApiClient:
-// bounded timeout, ApiException, Vietnamese-first PII-free copy, session-only
-// auth). Once ApiClient grows a `submitDsar(kind:)` method, the default
-// submitter is the single seam to swap over — no screen changes required.
+// The screen calls the shared ApiClient, not a local HTTP seam. In particular,
+// irreversible deletion maps only to `/dsar/delete`, never the generic request
+// endpoint, so the user-facing confirmation matches server behavior.
 // =============================================================================
 
 /// The PDPD data-subject request kinds, matching the server contract
@@ -165,17 +156,6 @@ class DsarAcknowledgement {
   }
 }
 
-/// Submits a DSAR request of [kind] for the authenticated session and returns
-/// its acknowledgement.
-///
-/// Implementations MUST throw an [ApiException] (with a Vietnamese-first,
-/// PII-free [ApiException.message]) on any failure — transport error, timeout,
-/// auth failure, or a disabled surface — so the screen can render a clean error
-/// state. The only argument is the request *kind*; no PII ever crosses this
-/// seam (Req 8.5).
-typedef DsarSubmitter = Future<DsarAcknowledgement> Function(
-    DsarRequestKind kind);
-
 /// Copy shown when the consent/DSAR gate is closed (Req 8.6).
 const String kDsarDisabledMessage =
     'Tính năng này hiện chưa được bật cho tài khoản của bạn.';
@@ -184,86 +164,23 @@ const String kDsarDisabledMessage =
 const String kDsarUnavailableMessage =
     'Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.';
 
-/// Builds the production [DsarSubmitter]: a bounded, authenticated POST to
-/// `/{baseUrl}/api/v1/compliance/dsar/request` carrying only `{ "kind": ... }`.
-///
-/// The request is scoped to the authenticated session via the bearer
-/// [accessToken]; NO identifying body fields are sent (Req 8.3, 8.5). Error
-/// mapping mirrors [ApiClient]: timeout / transport / HTTP errors all surface as
-/// [ApiException] with Vietnamese-first, PII-free messages.
-DsarSubmitter createHttpDsarSubmitter({
-  required String baseUrl,
-  required String Function() accessToken,
-  http.Client? client,
-  Duration requestTimeout = const Duration(seconds: 30),
-}) {
-  final httpClient = client ?? http.Client();
-  final base =
-      baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
-  return (DsarRequestKind kind) async {
-    final uri = Uri.parse('$base/api/v1/compliance/dsar/request');
-    final token = accessToken();
-    final http.Response response;
-    try {
-      response = await httpClient
-          .post(
-            uri,
-            headers: <String, String>{
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              if (token.isNotEmpty) 'Authorization': 'Bearer $token',
-            },
-            // Body carries ONLY the request kind — no PII (Req 8.5).
-            body: jsonEncode(<String, String>{'kind': kind.wireValue}),
-          )
-          .timeout(requestTimeout);
-    } on TimeoutException {
-      throw ApiException(message: 'Hết thời gian chờ phản hồi từ server.');
-    } catch (_) {
-      throw ApiException(message: 'Không thể kết nối tới server.');
-    }
-
-    if (response.statusCode == 401 || response.statusCode == 403) {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
-      );
-    }
-    if (response.statusCode >= 400) {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: kDsarUnavailableMessage,
-      );
-    }
-
-    Object? decoded;
-    try {
-      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
-    } catch (_) {
-      decoded = null;
-    }
-    if (decoded is! Map<String, dynamic>) {
-      throw ApiException(message: 'Phản hồi không hợp lệ từ server.');
-    }
-    return DsarAcknowledgement.fromJson(decoded);
-  };
-}
-
 /// Self-service DSAR surface: submit a data-subject request and show its
 /// acknowledgement (Req 8.3). No PII is collected (Req 8.5).
 class DsarScreen extends StatefulWidget {
   const DsarScreen({
     super.key,
+    required this.apiClient,
     required this.resolver,
-    required this.submitter,
+    required this.sessionStore,
     Analytics? analytics,
   }) : _analytics = analytics;
+
+  final ApiClient apiClient;
 
   /// Resolved feature gates; DSAR must be enabled to render controls (Req 8.6).
   final MobileFeatureFlagResolver resolver;
 
-  /// Injectable submit seam (see [createHttpDsarSubmitter]).
-  final DsarSubmitter submitter;
+  final SessionStore sessionStore;
 
   /// Optional analytics override (tests inject a recording client). Only the
   /// coarse request kind is ever emitted — never PII (Req 8.5).
@@ -278,6 +195,7 @@ class _DsarScreenState extends State<DsarScreen> {
 
   bool _submitting = false;
   DsarRequestKind? _pendingKind;
+  DsarRequestKind? _retryKind;
   String? _error;
   DsarAcknowledgement? _acknowledgement;
 
@@ -298,15 +216,28 @@ class _DsarScreenState extends State<DsarScreen> {
       }
     }
 
+    final token = widget.sessionStore.accessToken;
+    if (token == null || token.isEmpty) {
+      setState(() => _error = kDsarUnavailableMessage);
+      return;
+    }
+
     setState(() {
       _submitting = true;
       _pendingKind = kind;
+      _retryKind = null;
       _error = null;
       _acknowledgement = null;
     });
 
     try {
-      final ack = await widget.submitter(kind);
+      final payload = kind.isDestructive
+          ? await widget.apiClient.deleteDsarData(accessToken: token)
+          : await widget.apiClient.submitDsarRequest(
+              accessToken: token,
+              kind: kind.wireValue,
+            );
+      final ack = DsarAcknowledgement.fromJson(payload);
       if (!mounted) return;
       // Coarse, PII-free analytics: only the request kind label is emitted.
       _analytics.track(
@@ -314,14 +245,21 @@ class _DsarScreenState extends State<DsarScreen> {
         props: <String, Object?>{'kind': kind.wireValue},
       );
       setState(() => _acknowledgement = ack);
-    } on ApiException catch (error) {
-      // ApiException messages are Vietnamese-first and PII-free by contract.
+    } on ApiException {
+      // Do not surface gateway or upstream detail in a primary data-rights
+      // view. The retry uses only the same closed request kind.
       if (!mounted) return;
-      setState(() => _error = error.message);
+      setState(() {
+        _retryKind = kind;
+        _error = kDsarUnavailableMessage;
+      });
     } catch (_) {
       // Contain any unexpected error; never leak a stack trace (Req 11.4).
       if (!mounted) return;
-      setState(() => _error = kDsarUnavailableMessage);
+      setState(() {
+        _retryKind = kind;
+        _error = kDsarUnavailableMessage;
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -402,7 +340,7 @@ class _DsarScreenState extends State<DsarScreen> {
           ErrorRetryView(
             message: _error!,
             onRetry: () {
-              final kind = _pendingKind;
+              final kind = _retryKind;
               setState(() => _error = null);
               if (kind != null) {
                 _submit(kind);
@@ -458,8 +396,7 @@ class _DsarActionTile extends StatelessWidget {
                   key: Key('dsar-submit-${kind.wireValue}'),
                   onPressed: enabled ? onSubmit : null,
                   style: FilledButton.styleFrom(
-                    minimumSize:
-                        const Size(kMinTouchTarget, kMinTouchTarget),
+                    minimumSize: const Size(kMinTouchTarget, kMinTouchTarget),
                   ),
                   child: busy
                       ? const SizedBox(

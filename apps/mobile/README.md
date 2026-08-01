@@ -196,6 +196,11 @@ device-local switches for policy state; if the ledger cannot be read, it shows
 no controls. Product analytics remains disabled by default and is not presented
 as a server compliance purpose.
 
+The Data Rights screen also uses the shared authenticated API client. Its
+irreversible delete action requires a second confirmation and calls only the
+server's transactional `/api/v1/compliance/dsar/delete` route; export,
+correction, restriction, and withdrawal remain closed-kind DSAR requests.
+
 Existing build-time flags (also default OFF):
 
 | `--dart-define` flag                  | Surface |

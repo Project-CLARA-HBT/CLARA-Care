@@ -219,6 +219,22 @@ class FakeApiClient extends ApiClient {
     );
   }
 
+  @override
+  Future<Map<String, dynamic>> submitDsarRequest({
+    required String accessToken,
+    required String kind,
+  }) {
+    return _dispatch('submitDsarRequest', {'kind': kind},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteDsarData({
+    required String accessToken,
+  }) {
+    return _dispatch('deleteDsarData', const {}, accessToken: accessToken);
+  }
+
   // --- Research --------------------------------------------------------------
 
   @override
