@@ -196,6 +196,13 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   withdrawal route and catalog keys; no new consent policy, access grant or
   mutation path was introduced. A static catalog contract guards this visible
   ledger coverage. This source checkpoint has not run tests, build or deployment.
+- Mobile's gated Consent Center now reads and mutates the same append-only
+  `/api/v1/compliance/consent` ledger as web for all six server purposes. It
+  re-reads canonical state after each grant/withdrawal, fails closed without
+  showing a control when the ledger cannot be read, and removes the obsolete
+  device-local pseudo-ledger whose toggles could not affect API policy. Product
+  analytics remains disabled by default and is not presented as a server
+  compliance purpose. Focused widget contracts are added but unrun.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be

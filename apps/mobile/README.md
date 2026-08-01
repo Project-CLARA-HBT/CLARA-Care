@@ -190,6 +190,12 @@ New mobile feature flags (define name → server `feature_flags` key → surface
 | `CONSENT_CENTER_MOBILE_ENABLED`       | `consent_center_mobile_enabled`    | Granular consent center + DSAR self-service |
 | `SHARING_MOBILE_ENABLED`              | `sharing_mobile_enabled`           | Read-only shared-resource / deep-link surface |
 
+The gated mobile Consent Center reads and mutates the same server-authoritative
+append-only `/api/v1/compliance/consent` ledger as web. It never substitutes
+device-local switches for policy state; if the ledger cannot be read, it shows
+no controls. Product analytics remains disabled by default and is not presented
+as a server compliance purpose.
+
 Existing build-time flags (also default OFF):
 
 | `--dart-define` flag                  | Surface |

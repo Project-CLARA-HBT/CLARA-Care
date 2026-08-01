@@ -319,6 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
             subtitle: 'Quản lý quyền riêng tư & yêu cầu dữ liệu',
             onTap: () => _openScreen(
               ConsentCenterScreen(
+                apiClient: widget.apiClient,
                 resolver: resolver,
                 sessionStore: widget.sessionStore,
               ),

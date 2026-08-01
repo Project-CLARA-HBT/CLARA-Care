@@ -393,6 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   enabled: true,
                   onTap: () => _openScreen(
                     ConsentCenterScreen(
+                      apiClient: widget.apiClient,
                       resolver: resolver,
                       sessionStore: widget.sessionStore,
                     ),

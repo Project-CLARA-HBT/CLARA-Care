@@ -1032,6 +1032,50 @@ class ApiClient {
     );
   }
 
+  /// Reads the server-authoritative, append-only compliance-consent ledger.
+  /// This is distinct from the medical-disclaimer gate above: it contains the
+  /// six purpose-specific grants used by web and API policy enforcement.
+  Future<Map<String, dynamic>> getComplianceConsents({
+    required String accessToken,
+  }) {
+    return _get(
+      '/api/v1/compliance/consent',
+      accessToken: accessToken,
+    );
+  }
+
+  /// Appends a purpose-specific compliance consent grant. The server validates
+  /// the purpose and owns the policy version; a mobile client never persists a
+  /// local replacement ledger.
+  Future<void> grantComplianceConsent({
+    required String accessToken,
+    required String purpose,
+    String? policyVersion,
+  }) async {
+    await _post(
+      '/api/v1/compliance/consent/grant',
+      body: <String, dynamic>{
+        'purpose': purpose,
+        if (policyVersion != null && policyVersion.isNotEmpty)
+          'policy_version': policyVersion,
+      },
+      accessToken: accessToken,
+    );
+  }
+
+  /// Appends a purpose-specific withdrawal. It never deletes prior consent
+  /// history and the server remains the sole authority for the current state.
+  Future<void> withdrawComplianceConsent({
+    required String accessToken,
+    required String purpose,
+  }) async {
+    await _post(
+      '/api/v1/compliance/consent/withdraw',
+      body: <String, dynamic>{'purpose': purpose},
+      accessToken: accessToken,
+    );
+  }
+
   Future<Map<String, dynamic>> runCouncil({
     required String accessToken,
     required Map<String, dynamic> payload,

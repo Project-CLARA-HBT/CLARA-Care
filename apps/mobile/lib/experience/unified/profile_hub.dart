@@ -191,6 +191,7 @@ class ProfileHub extends StatelessWidget {
           title: copy[ConsumerTerm.profileHubConsentTitle],
           subtitle: copy[ConsumerTerm.profileHubConsentDescription],
           builder: (_) => ConsentCenterScreen(
+            apiClient: apiClient,
             resolver: resolver,
             sessionStore: sessionStore,
           ),
