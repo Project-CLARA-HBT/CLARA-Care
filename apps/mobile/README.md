@@ -214,6 +214,23 @@ gate. Before a production Android release, publish a matching verified
 `/.well-known/assetlinks.json` for the release signing certificate on both
 domains; no certificate fingerprint is committed in this repository.
 
+### Production Android signing and App Links
+
+The Android package is `com.theclaracare.app`. A release build never falls back
+to a debug signing key. The CI workflow requires these protected GitHub secrets:
+
+- `CLARA_RELEASE_STORE_BASE64`
+- `CLARA_RELEASE_STORE_PASSWORD`
+- `CLARA_RELEASE_KEY_ALIAS`
+- `CLARA_RELEASE_KEY_PASSWORD`
+
+Set `ANDROID_APP_LINK_CERT_SHA256` in the web deployment to the production
+certificate's public SHA-256 fingerprint (`AA:BB:...`, 32 pairs). The dynamic
+`/.well-known/assetlinks.json` route returns 404 while that value is absent or
+malformed, rather than publishing an invalid association. Set the same web
+environment for both `theclaracare.com` and `www.theclaracare.com` before
+shipping a signed APK.
+
 Existing build-time flags (also default OFF):
 
 | `--dart-define` flag                  | Surface |

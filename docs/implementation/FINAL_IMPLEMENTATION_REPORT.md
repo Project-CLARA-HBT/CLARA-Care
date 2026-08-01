@@ -467,6 +467,16 @@ nhãn. Kết quả chỉ gồm count. Revision thêm index cho các timestamp cu
 xóa/ẩn danh. Kiểm thử mới được thêm nhưng chưa chạy trong checkpoint này theo
 thứ tự triển khai được yêu cầu.
 
+### Web/mobile release hardening
+
+Next production build no longer ignores TypeScript or ESLint failures. Android
+now uses package `com.theclaracare.app` and never assigns the debug keystore to
+release builds. CI fails closed unless protected release-signing inputs are
+present, verifies the produced APK signature, and the web only serves Android
+Digital Asset Links after a syntactically valid production certificate
+fingerprint is configured. This source change has not yet been built, signed or
+deployed in this checkpoint.
+
 Alembic revision `20260731_0046` adds the append-only
 `council_evidence_attachments` table, scoped by Council case, owner and
 completed Research job. It stores only server-built opaque snapshot/evidence

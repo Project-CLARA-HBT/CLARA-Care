@@ -45,14 +45,6 @@ const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
   poweredByHeader: false,
-  eslint: {
-    // Keep lint in a separate CI/local step to reduce production build cost.
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    // Skip heavyweight type checking on constrained builders.
-    ignoreBuildErrors: true,
-  },
   experimental: {
     cpus: 1,
     // Keep build artifacts in the main process; the build worker can leave an

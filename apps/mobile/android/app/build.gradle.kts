@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.clara_mobile"
+    namespace = "com.theclaracare.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,21 +15,41 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.clara_mobile"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.theclaracare.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    val releaseStoreFile = providers.gradleProperty("CLARA_RELEASE_STORE_FILE").orNull
+    val releaseStorePassword = providers.gradleProperty("CLARA_RELEASE_STORE_PASSWORD").orNull
+    val releaseKeyAlias = providers.gradleProperty("CLARA_RELEASE_KEY_ALIAS").orNull
+    val releaseKeyPassword = providers.gradleProperty("CLARA_RELEASE_KEY_PASSWORD").orNull
+    val releaseSigningReady = listOf(
+        releaseStoreFile,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
+
+    if (releaseSigningReady) {
+        signingConfigs.create("release") {
+            storeFile = file(requireNotNull(releaseStoreFile))
+            storePassword = requireNotNull(releaseStorePassword)
+            keyAlias = requireNotNull(releaseKeyAlias)
+            keyPassword = requireNotNull(releaseKeyPassword)
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Never fall back to the debug keystore. CI verifies signing inputs
+            // before build; a local release without them is deliberately
+            // unsigned and cannot be mistaken for a distributable artifact.
+            if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
