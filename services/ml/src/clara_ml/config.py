@@ -650,6 +650,10 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="RAG_BIOMED_GRAPH_ENABLED",
     )
+    rag_biomed_graph_static_fallback_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_BIOMED_GRAPH_STATIC_FALLBACK_ENABLED",
+    )
     rag_biomed_graph_path: str = Field(
         default="",
         validation_alias="RAG_BIOMED_GRAPH_PATH",
