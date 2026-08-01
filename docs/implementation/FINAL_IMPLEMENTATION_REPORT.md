@@ -242,6 +242,11 @@ under PR-14, not a fresh security, PII or runtime-validation result.
   capability semantics, audit behavior or backend policy was changed; the
   endpoint now normalizes all unavailable lifecycle states to one opaque 404
   code. This source checkpoint has not run tests, build or deployment.
+- The legacy Research right rail's attached-file and evidence panels now use
+  typed vi/en labels, locale-aware file sizes and a localized accessible
+  file-removal label. Citation content, source URLs, upload behavior and every
+  research/evidence release boundary are unchanged. This source checkpoint has
+  not run tests, build or deployment.
 
 - `d53af25a` and `99a69fbe`: CareGuard ambiguity is a terminal, fail-closed
   DrugBank clarification contract from ML through web/mobile; no result can be

@@ -75,6 +75,12 @@ recorded as implementation evidence, not release evidence.
   to the same opaque 404 code. This preserves the existing authorized content
   and backend sharing semantics; focused source verification remains unrun.
 
+- The legacy Research right rail now resolves its attached-file and evidence
+  panel chrome—including actions, empty states, accessible remove label and
+  citation tier/source labels—through typed vi/en catalog keys. File-size
+  numbers use the application locale; source/citation content remains exactly
+  server-provided and no retrieval, evidence or permission logic changed.
+
 - PR-11 adds a default-off, three-way API/ML/web reader-mode boundary.
   `plain_language` is the default and `professional` is role-limited. ML only
   acknowledges a closed selector; API adds the deterministic projection only
