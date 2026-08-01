@@ -653,6 +653,7 @@ sharing, retention and release-hardening checkpoints:
 | Judge report | pass | Direct target implementation emitted all required judge-report files, including HTML, Markdown, JSON/CSV manifests, critical-errors, ablations and examples. It measures fixture-manifest integrity only and marks 28 product metrics `not_measured` with reasons and commands. |
 | Python repository lint | fail (baseline) | `ruff check` reports 652 pre-existing findings across scripts and API/ML tests. No broad automatic rewrite was applied. |
 | Python repository type-check | fail (baseline) | `mypy` reports 337 errors in 45 files across existing API/ML source. This is a separate remediation backlog; it is not hidden by the release configuration. |
+| Full API suite | interrupted (environment) | The direct `services/api/.venv/bin/python -m pytest -q` run remained CPU-active for over 10 minutes and wrote about 8 GB of SQLite test I/O before controlled SIGINT. It produced no terminal result, so it is neither pass nor fail evidence. Focused CSRF/health contracts remain the confirmed API result. |
 
 `make` is unavailable in this workspace (`make: command not found`), so the
 eval targets were executed through the exact Python commands in the Makefile.
