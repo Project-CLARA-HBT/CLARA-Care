@@ -8,6 +8,7 @@ import {
   EmptyState,
   InlineError,
   LoadingCards,
+  StatCard,
   SurfaceCard,
 } from "@/components/ui/surface";
 import { getLifeMapToday, type LifeMapToday } from "@/lib/lifemap";
@@ -137,6 +138,29 @@ export default function TodayPage() {
           <LoadingCards />
         ) : (
           <>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <StatCard
+                label={t(language, "today.pending")}
+                value={tasks.length}
+                hint={t(language, "today.accepted")}
+                icon="task_alt"
+                tone="brand"
+              />
+              <StatCard
+                label={t(language, "today.episodes")}
+                value={today?.episodes.length ?? 0}
+                hint={t(language, "today.following")}
+                icon="route"
+              />
+              <StatCard
+                label={t(language, "today.confirmation")}
+                value={today?.pending_confirmation_count ?? 0}
+                hint={t(language, "today.notConclusion")}
+                icon="pending_actions"
+                tone={today?.pending_confirmation_count ? "warn" : "neutral"}
+              />
+            </div>
+
             <SurfaceCard className="overflow-hidden">
               <div className="flex items-center justify-between gap-4 border-b border-[color:var(--shell-border)] px-5 py-4">
                 <div>
