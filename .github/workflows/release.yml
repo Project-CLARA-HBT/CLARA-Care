@@ -40,7 +40,7 @@ jobs:
       registry_repo: ${{ steps.ctx.outputs.registry_repo }}
     steps:
       - name: Checkout release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.target_branch }}
@@ -93,12 +93,12 @@ jobs:
       CLARA_EVAL_ML_INTERNAL_KEY: ${{ secrets.CLARA_EVAL_ML_INTERNAL_KEY }}
     steps:
       - name: Checkout release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.prepare-release-context.outputs.release_ref }}
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
 
@@ -147,7 +147,7 @@ jobs:
 
       - name: Upload locked release evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: clara-eval-vn-release-${{ needs.prepare-release-context.outputs.release_tag }}
           path: artifacts/clara-eval-vn/release-${{ needs.prepare-release-context.outputs.release_tag }}
@@ -163,7 +163,7 @@ jobs:
       release_sha: ${{ needs.prepare-release-context.outputs.release_sha }}
     steps:
       - name: Checkout evaluated release SHA
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.prepare-release-context.outputs.release_sha }}
           fetch-depth: 0
@@ -192,16 +192,16 @@ jobs:
     needs: [prepare-release-context, clara-eval-release-gate, create-semver-tag]
     steps:
       - name: Checkout release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare-release-context.outputs.release_ref }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
       - name: Login GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -224,7 +224,7 @@ jobs:
           echo "manifest_path=$manifest_path" >> "$GITHUB_OUTPUT"
 
       - name: Upload release manifest artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: image-manifest-${{ needs.prepare-release-context.outputs.release_tag }}
           path: ${{ steps.build.outputs.manifest_path }}
@@ -238,7 +238,7 @@ jobs:
           printf '%s\n' "${{ needs.prepare-release-context.outputs.release_sha }}" > "$sha_file"
 
       - name: Upload standalone release SHA artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-sha-${{ needs.prepare-release-context.outputs.release_tag }}
           path: release-artifacts/release-sha-${{ needs.prepare-release-context.outputs.release_tag }}.txt
@@ -250,19 +250,19 @@ jobs:
     needs: [prepare-release-context, create-semver-tag, build-push-images]
     steps:
       - name: Checkout release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare-release-context.outputs.release_ref }}
 
       - name: Download release manifest artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: image-manifest-${{ needs.prepare-release-context.outputs.release_tag }}
           path: release-artifacts
 
       - name: Download standalone release SHA artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: release-sha-${{ needs.prepare-release-context.outputs.release_tag }}
           path: release-artifacts
