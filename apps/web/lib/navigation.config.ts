@@ -762,6 +762,62 @@ export function getNavItemsByRole(
   ).map((item) => localizeNavigationItem(item, language));
 }
 
+/**
+ * Compact everyday navigation. The complete route inventory remains available
+ * for deep links and role guards, while the shell shows only the tasks users
+ * perform most often. Chat is intentionally omitted because the shell already
+ * renders a persistent “Hỏi CLARA” action.
+ */
+const SIDEBAR_NAV_HREFS: Record<UserRole, ReadonlySet<string>> = {
+  normal: new Set([
+    "/today",
+    "/lifemap",
+    "/medicines",
+    "/phr",
+    "/visits",
+    "/family",
+    "/huong-dan",
+  ]),
+  researcher: new Set([
+    "/dashboard",
+    "/lifemap",
+    "/medicines",
+    "/research",
+    "/evidence",
+    "/huong-dan",
+  ]),
+  doctor: new Set([
+    "/dashboard",
+    "/today",
+    "/lifemap",
+    "/visits",
+    "/medicines",
+    "/research",
+    "/scribe",
+    "/council",
+  ]),
+  admin: new Set([
+    "/dashboard",
+    "/research",
+    "/medicines",
+    "/admin/overview",
+    "/admin/observability",
+    "/huong-dan",
+  ]),
+};
+
+export function getSidebarNavItems(
+  role: UserRole,
+  language: UILanguage = "vi",
+  activePathname?: string,
+): NavigationItem[] {
+  return getNavItemsByRole(role, language).filter(
+    (item) =>
+      SIDEBAR_NAV_HREFS[role].has(item.href) ||
+      Boolean(activePathname && isActiveRoute(activePathname, item.href)),
+  );
+}
+
 export function isRouteAllowedForRole(
   pathname: string,
   role: UserRole,

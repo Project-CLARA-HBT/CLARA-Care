@@ -7,6 +7,7 @@ import { beginLogout } from "@/lib/logout";
 import NavItem from "@/components/navigation/nav-item";
 import {
   getGroupedNavItems,
+  getSidebarNavItems,
   getRoleHomePath,
   isActiveRoute,
   type UserRole,
@@ -51,7 +52,15 @@ export default function SidebarNav({
   activeProfile = null,
 }: SidebarNavProps) {
   const pathname = usePathname();
-  const groups = getGroupedNavItems(role, uiLanguage);
+  const compactItems = getSidebarNavItems(role, uiLanguage, pathname);
+  const groups = getGroupedNavItems(role, uiLanguage)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        compactItems.some((compactItem) => compactItem.href === item.href),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
   const homeHref = getRoleHomePath(role);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const roleLabel = t(uiLanguage, ROLE_LABEL_KEYS[role]);
