@@ -964,7 +964,10 @@ def attach_council_evidence_snapshot(
     ).scalar_one_or_none()
     if job is None:
         # Keep owner isolation: another user's job and an unknown id are both 404.
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Research snapshot không khả dụng.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Research snapshot không khả dụng.",
+        )
     packet = _council_packet_from_research_snapshot(job)
     if packet is None:
         raise HTTPException(

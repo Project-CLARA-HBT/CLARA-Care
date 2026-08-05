@@ -1065,11 +1065,20 @@ def read_shared_phr(
         select(PhrShare).where(PhrShare.token_hash == _phr_share_token_hash(token_value))
     ).scalar_one_or_none()
     if share is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_PHR_SHARE_UNAVAILABLE)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_PUBLIC_PHR_SHARE_UNAVAILABLE,
+        )
     if not share.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_PHR_SHARE_UNAVAILABLE)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_PUBLIC_PHR_SHARE_UNAVAILABLE,
+        )
     if share.expires_at is not None and datetime.now(UTC) >= _aware(share.expires_at):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PUBLIC_PHR_SHARE_UNAVAILABLE)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_PUBLIC_PHR_SHARE_UNAVAILABLE,
+        )
 
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == share.user_id)
@@ -1182,7 +1191,10 @@ def _verify_ocr_review_token(*, token: str, user_id: int, candidate_ids: list[st
         ValueError,
         binascii.Error,
     ) as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="OCR review expired") from exc
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="OCR review expired",
+        ) from exc
     message = f"{_OCR_REVIEW_TOKEN_VERSION}:{user_id}:{expires_at}:{encoded_ids}"
     expected = hmac.new(
         get_settings().jwt_secret_key.encode(), message.encode(), hashlib.sha256
@@ -1221,8 +1233,8 @@ async def scan_phr_ocr(
 
     # Lazy import keeps the careguard import cycle out of module load.
     from clara_api.api.v1.endpoints.careguard import (
-        _attach_ocr_source_coordinates,
         _apply_ocr_correction,
+        _attach_ocr_source_coordinates,
         _detect_drugs_from_text,
         _enforce_low_confidence_manual_confirm,
         _reject_ocr_prompt_injection,

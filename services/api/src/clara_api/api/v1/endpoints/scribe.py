@@ -106,7 +106,10 @@ def _audio_magic_matches(content_type: str, payload: bytes) -> bool:
 
 def _validate_audio_payload(*, content_type: str, payload: bytes, verify_magic: bool) -> None:
     if not payload:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Audio payload is empty.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Audio payload is empty.",
+        )
     if len(payload) > _MAX_AUDIO_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -1387,7 +1390,10 @@ def get_recording_derived_data_capability(
 
     settings = get_settings()
     if not settings.rag_scribe_recording_data_deletion_enabled:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scribe data deletion is disabled.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scribe data deletion is disabled.",
+        )
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     return ScribeRecordingDataCapabilityResponse(
@@ -1414,7 +1420,10 @@ def delete_recording_derived_data(
 
     settings = get_settings()
     if not settings.rag_scribe_recording_data_deletion_enabled:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scribe data deletion is disabled.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scribe data deletion is disabled.",
+        )
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     transcript_chars = len(item.transcript or "")
@@ -1432,7 +1441,10 @@ def delete_recording_derived_data(
         action="recording_derived_data_deleted",
         from_status=item.status,
         to_status=item.status,
-        detail={"transcript_chars_deleted": transcript_chars, "segment_count_deleted": segment_count},
+        detail={
+            "transcript_chars_deleted": transcript_chars,
+            "segment_count_deleted": segment_count,
+        },
     )
     db.commit()
     return {
@@ -1687,7 +1699,10 @@ def get_unsupported_statement_review_queue(
 
     settings = get_settings()
     if not settings.rag_scribe_grounding_enabled:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scribe grounding is disabled.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scribe grounding is disabled.",
+        )
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     versions = list(
@@ -2784,7 +2799,10 @@ async def scribe_session_stream(
 
     audio_bytes = await audio_file.read()
     if not audio_file.filename:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing audio file name.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing audio file name.",
+        )
     content_type = _normalize_audio_content_type(audio_file.content_type)
     _validate_audio_payload(
         content_type=content_type,

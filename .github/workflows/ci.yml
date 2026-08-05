@@ -70,6 +70,7 @@ jobs:
               for path in files
               if path.endswith(".py")
               and path.startswith(("services/", "scripts/", "evaluation/"))
+              and os.path.isfile(path)
           ]
           outputs = {
               "api": any_path(lambda p: p.startswith("services/api/")),

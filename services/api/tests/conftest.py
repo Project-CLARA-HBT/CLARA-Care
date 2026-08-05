@@ -1,3 +1,5 @@
+# Application imports intentionally follow the isolated DATABASE_URL setup.
+# ruff: noqa: E402
 from __future__ import annotations
 
 import os
@@ -7,7 +9,6 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-
 
 # This module is loaded by pytest before application modules.  Set a private
 # SQLite path *before* importing the session module so a local full-suite run

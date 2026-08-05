@@ -41,9 +41,11 @@ from clara_api.db.models import (
     PhrProfile,
     PhrReminder,
     PhrVersion,
-    Query as QueryModel,
     ScribeAudit,
     ScribeSession,
+)
+from clara_api.db.models import (
+    Query as QueryModel,
 )
 
 # Retention actions a category may declare.
