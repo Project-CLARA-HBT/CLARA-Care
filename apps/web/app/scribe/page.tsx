@@ -13,6 +13,7 @@ import type { UILanguage } from "@/lib/ui-language";
 import {
   ScribeAnalyticsSummary,
   ScribeSession,
+  captureScribeConsent,
   createScribeSession,
   deleteScribeRecordingData,
   getScribeAnalyticsSummary,
@@ -47,23 +48,23 @@ type ScribeCopy = (
 ) => string;
 
 const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, (_, index) => 18 + ((index * 13) % 72));
-const panelClass = "rounded-xl border border-[color:var(--shell-border)] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+const panelClass = "rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] shadow-[var(--shadow-soft)]";
 const panelPaddedClass = `${panelClass} p-4`;
 const panelPaddedLgClass = `${panelClass} p-5`;
-const softPanelClass = "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
-const sectionTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[color:var(--text-muted)] dark:text-slate-200";
-const accentTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[color:var(--brand-600)] dark:text-sky-100";
-const bodyTextClass = "text-[color:var(--text-primary)] dark:text-slate-100";
-const secondaryTextClass = "text-[color:var(--text-muted)] dark:text-slate-300";
-const mutedTextClass = "text-[color:var(--text-muted)] dark:text-slate-400";
+const softPanelClass = "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]";
+const sectionTitleClass = "text-base font-semibold text-[color:var(--text-primary)]";
+const accentTitleClass = "text-base font-semibold text-[color:var(--text-primary)]";
+const bodyTextClass = "text-[color:var(--text-primary)]";
+const secondaryTextClass = "text-[color:var(--text-secondary)]";
+const mutedTextClass = "text-[color:var(--text-muted)]";
 const primaryButtonClass =
-  "rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-[color:var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)] disabled:opacity-100 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400";
+  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[color:var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)]";
 const secondaryButtonClass =
-  "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[color:var(--brand-700)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)] disabled:opacity-100 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100";
+  "min-h-11 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:opacity-60";
 const dangerButtonClass =
-  "rounded-lg border border-rose-700 bg-rose-600 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-rose-700";
+  "min-h-11 rounded-lg border border-[color:var(--danger-500)] bg-[color:var(--danger-500)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95";
 const transcriptInputClass =
-  "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] outline-none transition focus:border-[color:var(--brand-600)] focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-sky-400";
+  "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] outline-none transition focus:border-[color:var(--brand-600)] focus:bg-[color:var(--surface-panel)] focus:ring-4 focus:ring-[color:var(--surface-brand-soft)]";
 
 function formatDate(language: UILanguage, value: string): string {
   const date = new Date(value);
@@ -215,6 +216,7 @@ export default function ScribePage() {
   const [isLiveAnalyzing, setIsLiveAnalyzing] = useState(false);
   const [isDeletingRecordingData, setIsDeletingRecordingData] = useState(false);
   const [showRecordingDataDeleteConfirmation, setShowRecordingDataDeleteConfirmation] = useState(false);
+  const [recordingConsentCaptured, setRecordingConsentCaptured] = useState(false);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [lastTranscribeMs, setLastTranscribeMs] = useState<number | null>(null);
@@ -545,6 +547,22 @@ export default function ScribePage() {
     waveformFrameRef.current = window.requestAnimationFrame(tick);
   }, [stopWaveformLoop]);
 
+  const onCaptureRecordingConsent = useCallback(async () => {
+    setError("");
+    try {
+      const sessionId = await ensureSessionReady();
+      if (!sessionId) {
+        setError(copy("scribe.error.createSession"));
+        return;
+      }
+      await captureScribeConsent(sessionId, { method: "verbal", scope: "encounter" });
+      setRecordingConsentCaptured(true);
+      pushNotice("success", copy("scribe.notice.consentCaptured"));
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("scribe.error.consent")));
+    }
+  }, [copy, ensureSessionReady, pushNotice]);
+
   const onStartRecording = useCallback(async () => {
     setError("");
     setMode("workspace");
@@ -561,6 +579,14 @@ export default function ScribePage() {
         return;
       }
 
+      if (!recordingConsentCaptured) {
+        setError(copy("scribe.error.consentRequired"));
+        return;
+      }
+
+      // Consent is a browser-side gate as well as an API invariant. Never
+      // request microphone access or create an audio pipeline until the
+      // clinician has explicitly captured the encounter consent.
       const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
@@ -624,7 +650,7 @@ export default function ScribePage() {
       setIsRecording(false);
       setError(safeUserFacingError(cause, copy("scribe.error.startRecording")));
     }
-  }, [copy, ensureSessionReady, processChunkQueue, pushNotice, startWaveformLoop, teardownAudioPipeline]);
+  }, [copy, ensureSessionReady, processChunkQueue, pushNotice, recordingConsentCaptured, startWaveformLoop, teardownAudioPipeline]);
 
   const onStopRecording = useCallback(() => {
     setIsRecording(false);
@@ -736,7 +762,7 @@ export default function ScribePage() {
       const updated = await updateScribeSession(selectedSession.id, { status: "finalized" });
       setSelectedSession(updated);
       upsertSession(updated);
-      pushNotice("success", copy("scribe.notice.finalized"));
+      pushNotice("success", copy("scribe.notice.draftCompleted"));
       // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
       trackScribeGenerated({ action: "finalize" });
       const nextAnalytics = await getScribeAnalyticsSummary();
@@ -822,12 +848,53 @@ export default function ScribePage() {
   }, [clearLiveAnalyzeTimer, clearPersistTimer, teardownAudioPipeline]);
 
   return (
-    <PageShell title="" description="" variant="plain">
+    <PageShell
+      title={copy("navigation.item.scribe.title")}
+      description={copy("navigation.item.scribe.subtitle")}
+      variant="plain"
+    >
       <section className="space-y-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-white px-4 py-3 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
+        <ol className="grid gap-2 sm:grid-cols-4" aria-label={copy("scribe.workflow.aria")}>
+          {[
+            copy("scribe.workflow.capture"),
+            copy("scribe.workflow.transcript"),
+            copy("scribe.workflow.soap"),
+            copy("scribe.workflow.complete"),
+          ].map((label, index) => {
+            const currentStage =
+              selectedSession?.status === "finalized" || selectedSession?.status === "completed"
+                ? 3
+                : Object.values(selectedSoap).some((value) => Boolean(value?.trim()))
+                  ? 2
+                  : transcriptDraft.trim()
+                    ? 1
+                    : 0;
+            const active = index === currentStage;
+            const complete = index < currentStage;
+            return (
+              <li
+                key={label}
+                aria-current={active ? "step" : undefined}
+                className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium ${
+                  active
+                    ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] text-[color:var(--text-primary)]"
+                    : complete
+                      ? "border-[color:var(--status-ok-border)] bg-[color:var(--status-ok-bg)] text-[color:var(--status-ok-text)]"
+                      : "border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]"
+                }`}
+              >
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-current text-xs">
+                  {complete ? "✓" : index + 1}
+                </span>
+                {label}
+              </li>
+            );
+          })}
+        </ol>
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] px-4 py-3 shadow-[var(--shadow-soft)]">
           <div className="flex items-center gap-6">
-            <span className="text-lg font-black tracking-tight text-[color:var(--brand-600)] dark:text-sky-100">ScribeOS v2.4</span>
-            <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-1 dark:border-sky-700/70 dark:bg-slate-800/90">
+            <span className="text-sm font-semibold text-[color:var(--text-secondary)]">{copy("scribe.tab.workspace")}</span>
+            <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-1">
               <button
                 type="button"
                 onClick={() => setMode("workspace")}
@@ -861,6 +928,22 @@ export default function ScribePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs text-[color:var(--text-secondary)]">
+              <input
+                type="checkbox"
+                checked={recordingConsentCaptured}
+                onChange={(event) => {
+                  if (!event.target.checked) setRecordingConsentCaptured(false);
+                }}
+                className="h-4 w-4 accent-[var(--brand-600)]"
+              />
+              <span>{copy("scribe.consent.checkbox")}</span>
+            </label>
+            {!recordingConsentCaptured ? (
+              <button type="button" onClick={() => void onCaptureRecordingConsent()} className={secondaryButtonClass}>
+                {copy("scribe.enterprise.consent.capture")}
+              </button>
+            ) : null}
             {isRecording ? (
               <button
                 type="button"

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import PageShell from "@/components/ui/page-shell";
 import {
   EmptyState,
@@ -9,6 +10,7 @@ import {
   SurfaceCard,
 } from "@/components/ui/surface";
 import Button from "@/components/ui/button";
+import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
@@ -61,8 +63,18 @@ function FamilyAccessLogRow({
   );
 }
 
-export default function FamilyPage() {
+type FamilyTab = "shared" | "received" | "log";
+
+function isFamilyTab(value: string | null): value is FamilyTab {
+  return value === "shared" || value === "received" || value === "log";
+}
+
+function FamilyWorkspace() {
   const language = useUILanguage();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab: FamilyTab = isFamilyTab(requestedTab) ? requestedTab : "shared";
   const copy = useCallback(
     (key: UITranslationKey, values?: Record<string, string | number>) =>
       t(language, key, values ?? {}),
@@ -118,6 +130,15 @@ export default function FamilyPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const changeTab = (key: string) => {
+    if (!isFamilyTab(key)) return;
+    const next = new URLSearchParams(searchParams.toString());
+    if (key === "shared") next.delete("tab");
+    else next.set("tab", key);
+    const query = next.toString();
+    router.replace(query ? `/family?${query}` : "/family", { scroll: false });
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,19 +196,45 @@ export default function FamilyPage() {
       title={copy("familyCircle.title")}
       description={copy("familyCircle.description")}
     >
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="space-y-5">
-          {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
-          {loading ? (
-            <LoadingCards count={2} />
-          ) : (
-            <>
-              <SurfaceCard className="overflow-hidden">
+      <div className="space-y-5">
+        {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
+        <Tabs
+          idBase="family-support"
+          ariaLabel={copy("familyCircle.tabs.label")}
+          active={activeTab}
+          onChange={changeTab}
+          items={[
+            { key: "shared", label: copy("familyCircle.tabs.shared"), icon: "share" },
+            { key: "received", label: copy("familyCircle.tabs.received"), icon: "diversity_1" },
+            { key: "log", label: copy("familyCircle.tabs.log"), icon: "history" },
+          ]}
+        />
+
+        {loading ? (
+          <LoadingCards count={1} />
+        ) : (
+          <>
+            <TabPanel idBase="family-support" tabKey="shared" active={activeTab}>
+              <div className="space-y-4">
+                <SurfaceCard className="overflow-hidden">
                 <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
-                  <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.grants.title")}</h2>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    {copy("familyCircle.grants.description")}
-                  </p>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.grants.title")}</h2>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {copy("familyCircle.grants.description")}
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+                        {copy("familyCircle.invite.title")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {copy("familyCircle.invite.description")}
+                      </p>
+                    </div>
+                    <Button as="link" href="/family/invite" size="sm" icon="person_add">
+                      {copy("familyCircle.invite.start")}
+                    </Button>
+                  </div>
                 </div>
                 {grants.length ? (
                   <ul className="divide-y divide-[color:var(--shell-border)]">
@@ -214,17 +261,53 @@ export default function FamilyPage() {
                     ))}
                   </ul>
                 ) : (
-                  <EmptyState
-                    icon="family_restroom"
-                    title={copy("familyCircle.grants.emptyTitle")}
-                    description={copy("familyCircle.grants.emptyDescription")}
-                  />
+                  <div className="p-5">
+                    <EmptyState
+                      icon="family_restroom"
+                      title={copy("familyCircle.grants.emptyTitle")}
+                      description={copy("familyCircle.grants.emptyDescription")}
+                    >
+                      <Button as="link" href="/family/invite" icon="person_add">
+                        {copy("familyCircle.invite.start")}
+                      </Button>
+                    </EmptyState>
+                  </div>
                 )}
               </SurfaceCard>
 
+                {createdToken ? (
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4">
+                    <p className="text-sm text-[var(--status-warn-text)]">
+                      {copy("familyCircle.invite.createdNotice")}
+                    </p>
+                    <code className="mt-2 block break-all text-xs text-[var(--status-warn-text)]">
+                      {createdToken}
+                    </code>
+                  </div>
+                ) : null}
+              </div>
+            </TabPanel>
+
+            <TabPanel idBase="family-support" tabKey="received" active={activeTab}>
               <SurfaceCard className="overflow-hidden">
                 <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
-                  <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.relationships.title")}</h2>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.relationships.title")}</h2>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {copy("familyCircle.relationships.description")}
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-[var(--text-primary)]">
+                        {copy("familyCircle.accept.title")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {copy("familyCircle.accept.description")}
+                      </p>
+                    </div>
+                    <Button as="link" href="/family/accept" size="sm" variant="secondary" icon="verified_user">
+                      {copy("familyCircle.accept.start")}
+                    </Button>
+                  </div>
                 </div>
                 {relationships.length ? (
                   <div className="grid gap-3 p-4 sm:grid-cols-2">
@@ -240,14 +323,22 @@ export default function FamilyPage() {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState
-                    icon="diversity_1"
-                    title={copy("familyCircle.relationships.emptyTitle")}
-                    description={copy("familyCircle.relationships.emptyDescription")}
-                  />
+                  <div className="p-5">
+                    <EmptyState
+                      icon="diversity_1"
+                      title={copy("familyCircle.relationships.emptyTitle")}
+                      description={copy("familyCircle.relationships.emptyDescription")}
+                    >
+                      <Button as="link" href="/family/accept" variant="secondary" icon="verified_user">
+                        {copy("familyCircle.accept.start")}
+                      </Button>
+                    </EmptyState>
+                  </div>
                 )}
               </SurfaceCard>
+            </TabPanel>
 
+            <TabPanel idBase="family-support" tabKey="log" active={activeTab}>
               <SurfaceCard className="p-5">
                 <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.accessLog.title")}</h2>
                 <div className="mt-4 space-y-2">
@@ -268,42 +359,18 @@ export default function FamilyPage() {
                   ) : null}
                 </div>
               </SurfaceCard>
-            </>
-          )}
-        </div>
-
-        <aside className="space-y-5">
-          <SurfaceCard className="border-[color:var(--brand-200)] bg-[var(--surface-brand-soft)] p-5">
-            <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.invite.title")}</h2>
-            <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-              {copy("familyCircle.invite.description")}
-            </p>
-            <Button as="link" href="/family/invite" className="mt-4" block icon="person_add">
-              {copy("familyCircle.invite.start")}
-            </Button>
-            {createdToken ? (
-              <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3">
-                <p className="text-xs text-[var(--status-warn-text)]">
-                  {copy("familyCircle.invite.createdNotice")}
-                </p>
-                <code className="mt-2 block break-all text-xs text-[var(--status-warn-text)]">
-                  {createdToken}
-                </code>
-              </div>
-            ) : null}
-          </SurfaceCard>
-
-          <SurfaceCard className="p-5">
-            <h2 className="font-semibold text-[var(--text-primary)]">{copy("familyCircle.accept.title")}</h2>
-            <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-              {copy("familyCircle.accept.description")}
-            </p>
-            <Button as="link" href="/family/accept" variant="secondary" className="mt-4" block icon="verified_user">
-              {copy("familyCircle.accept.start")}
-            </Button>
-          </SurfaceCard>
-        </aside>
+            </TabPanel>
+          </>
+        )}
       </div>
     </PageShell>
+  );
+}
+
+export default function FamilyPage() {
+  return (
+    <Suspense fallback={null}>
+      <FamilyWorkspace />
+    </Suspense>
   );
 }

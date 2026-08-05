@@ -122,33 +122,33 @@ test.describe("authenticated care workspace", () => {
     }
   });
 
-  test("desktop navigation, command bar, theme and collapse state work", async ({ page, isMobile }) => {
-    test.skip(isMobile, "desktop shell assertion");
+  test("desktop navigation, command bar, theme and collapse state work", async ({ page, isMobile }, testInfo) => {
+    test.skip(isMobile || testInfo.project.name.includes("tablet"), "desktop shell assertion");
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("complementary", { name: "Điều hướng chính" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Mở CLARA Chat" })).toBeVisible();
-    await expect(page.getByText("Tổng quan công việc", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Hôm nay|Today/ }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tổng quan công việc", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Chuyển sang giao diện tối" }).click();
     await expect(page.locator("html")).toHaveClass(/dark/);
 
-    await page.getByRole("button", { name: "Thu gọn thanh điều hướng" }).click();
-    await expect(page.locator("aside.app-navigation")).toHaveClass(/w-\[5rem\]/);
+    await page.getByRole("button", { name: /Thu gọn|Collapse/ }).click();
+    await expect(page.locator("aside.app-navigation")).toHaveClass(/w-\[4\.25rem\]/);
     await page.reload();
-    await expect(page.locator("aside.app-navigation")).toHaveClass(/w-\[5rem\]/);
+    await expect(page.locator("aside.app-navigation")).toHaveClass(/w-\[4\.25rem\]/);
   });
 
   test("mobile navigation opens, routes, and leaves the accessibility tree when closed", async ({ page, isMobile }) => {
     test.skip(!isMobile, "mobile shell assertion");
     await page.goto("/dashboard");
 
-    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Open navigation menu" }).click();
-    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).toBeVisible();
-    await page.getByRole("link", { name: /Thuốc & an toàn/ }).first().click();
+    await expect(page.getByRole("dialog", { name: /Mobile navigation|Điều hướng trên điện thoại/ })).toHaveCount(0);
+    await page.getByRole("button", { name: /Mở điều hướng trên điện thoại|Open mobile navigation/ }).click();
+    await expect(page.getByRole("dialog", { name: /Mobile navigation|Điều hướng trên điện thoại/ })).toBeVisible();
+    await page.getByRole("link", { name: /Thuốc|Medicines/ }).first().click();
     await expect(page).toHaveURL(/\/medicines/);
-    await expect(page.getByRole("dialog", { name: "Mobile navigation" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: /Mobile navigation|Điều hướng trên điện thoại/ })).toHaveCount(0);
   });
 
   test("LifeMap meets the keyboard, semantic, text-scale and reduced-motion matrix", async ({

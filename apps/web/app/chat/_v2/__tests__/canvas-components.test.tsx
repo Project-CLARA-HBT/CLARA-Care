@@ -127,6 +127,39 @@ describe("AnswerRenderer", () => {
     ).toHaveTextContent("supported");
     expect(screen.getByText("Deep passes")).toBeInTheDocument();
   });
+
+  it("does not expose research diagnostics to a general user", () => {
+    render(
+      <AnswerRenderer
+        result={makeTier2({
+          answer: "Patient-friendly answer",
+          deepPassCount: 3,
+          verificationStatus: { verdict: "supported" },
+        })}
+        uiLanguage="en"
+        role="normal"
+      />,
+    );
+    expect(screen.queryByRole("region", { name: /research integrity/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("Deep passes")).not.toBeInTheDocument();
+  });
+
+  it("removes hidden reasoning and raw confidence lines from answer text", () => {
+    render(
+      <AnswerRenderer
+        result={makeTier1([
+          "Useful patient-facing guidance.",
+          "chain-of-thought: private scratchpad",
+          "internal reasoning: hidden",
+          "provider/model id: secret-provider",
+          "confidence: 0.93",
+        ].join("\n"))}
+        uiLanguage="en"
+      />,
+    );
+    expect(screen.getByText("Useful patient-facing guidance.")).toBeInTheDocument();
+    expect(screen.queryByText(/private scratchpad|secret-provider|confidence: 0\.93/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("FlowTimeline", () => {
@@ -184,6 +217,20 @@ describe("TurnView", () => {
     render(<TurnView turn={turn} uiLanguage="en" />);
     expect(screen.getByText("What is metformin?")).toBeInTheDocument();
     expect(screen.getByText("It is a diabetes medicine.")).toBeInTheDocument();
+  });
+
+  it("places the answer before collapsed explainability details", () => {
+    const turn: ConversationItem = {
+      id: "t-answer-first",
+      query: "What should I know?",
+      result: makeTier2({ answer: "The important answer comes first." }),
+      createdAt: Date.now(),
+    };
+    const { container } = render(<TurnView turn={turn} uiLanguage="en" />);
+    const answer = screen.getByText("The important answer comes first.");
+    const disclosure = screen.getByText("Why did CLARA give this answer?");
+    expect(answer.compareDocumentPosition(disclosure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelector("details")?.hasAttribute("open")).toBe(false);
   });
 
   it("lets a user escalate an answer into the existing research workflow", () => {

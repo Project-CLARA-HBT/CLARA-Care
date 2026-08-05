@@ -19,6 +19,8 @@ type AppTopbarProps = {
   onProfileChange?: (profileId: string) => void;
   isProfileChanging?: boolean;
   familyNotificationCount?: number;
+  onLogout?: () => void;
+  isLoggingOut?: boolean;
 };
 
 const ROLE_LABEL_KEYS: Record<UserRole, UITranslationKey> = {
@@ -39,6 +41,8 @@ export default function AppTopbar({
   onProfileChange,
   isProfileChanging = false,
   familyNotificationCount = 0,
+  onLogout,
+  isLoggingOut = false,
 }: AppTopbarProps) {
   const pathname = usePathname();
   const page = getPageMeta(pathname, uiLanguage);
@@ -62,41 +66,6 @@ export default function AppTopbar({
       </div>
 
       <div className="flex shrink-0 items-center gap-[min(0.5rem,8px)]">
-        {profiles.length > 0 ? (
-          <label className="hidden max-w-[17rem] items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-1.5 xl:flex">
-            <span className="material-symbols-outlined text-[18px] text-[var(--brand-600)]" aria-hidden="true">
-              person_pin_circle
-            </span>
-            <span className="sr-only">{t(uiLanguage, "profile.active")}</span>
-            <select
-              aria-label={t(uiLanguage, "profile.active")}
-              value={activeProfileId ?? ""}
-              disabled={isProfileChanging || !onProfileChange}
-              onChange={(event) => onProfileChange?.(event.target.value)}
-              className="max-w-[12.5rem] bg-transparent text-xs font-semibold text-[var(--text-primary)] outline-none disabled:cursor-wait"
-            >
-              {profiles.map((profile) => (
-                <option key={profile.id} value={profile.id} disabled={profile.kind !== "self"}>
-                  {profile.kind === "shared" ? t(uiLanguage, "profile.shared") : ""}{profile.display_name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <Link
-          href="/chat"
-          className="app-ask-button"
-          aria-label={t(uiLanguage, "action.askClara")}
-        >
-          <span
-            className="material-symbols-outlined text-[19px]"
-            aria-hidden="true"
-          >
-            auto_awesome
-          </span>
-          <span>{t(uiLanguage, "action.askClara")}</span>
-        </Link>
-
         <Link
           href="/huong-dan"
           className="app-topbar-icon"
@@ -156,22 +125,54 @@ export default function AppTopbar({
           {uiLanguage.toUpperCase()}
         </button>
 
-        <div
-          className="app-profile-chip"
-          aria-label={t(uiLanguage, "profile.currentRole", { role: roleLabel })}
-        >
-          <span className="app-profile-avatar" aria-hidden="true">
-            {roleLabel.slice(0, 1)}
-          </span>
-          <span className="hidden text-left xl:block">
-            <span className="block text-xs font-semibold text-[var(--text-primary)]">
-              {profiles.find((profile) => profile.id === activeProfileId)?.display_name ?? t(uiLanguage, "profile.account")}
+        <details className="group relative">
+          <summary
+            className="app-profile-chip cursor-pointer list-none"
+            aria-label={t(uiLanguage, "profile.currentRole", { role: roleLabel })}
+          >
+            <span className="app-profile-avatar" aria-hidden="true">
+              {roleLabel.slice(0, 1)}
             </span>
-            <span className="block text-[11px] text-[var(--text-muted)]">
-              {roleLabel}
+            <span className="hidden text-left xl:block">
+              <span className="block max-w-36 truncate text-xs font-semibold text-[var(--text-primary)]">
+                {profiles.find((profile) => profile.id === activeProfileId)?.display_name ?? t(uiLanguage, "profile.account")}
+              </span>
+              <span className="block text-[11px] text-[var(--text-muted)]">{roleLabel}</span>
             </span>
-          </span>
-        </div>
+            <span className="material-symbols-outlined hidden text-[16px] text-[var(--text-muted)] transition group-open:rotate-180 xl:block" aria-hidden="true">expand_more</span>
+          </summary>
+          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-xl">
+            <p className="px-1 text-xs font-semibold text-[var(--text-primary)]">{t(uiLanguage, "profile.account")}</p>
+            <p className="mt-0.5 px-1 text-[11px] text-[var(--text-muted)]">{roleLabel}</p>
+            {profiles.length > 0 ? (
+              <label className="mt-3 block">
+                <span className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">{t(uiLanguage, "profile.active")}</span>
+                <select
+                  aria-label={t(uiLanguage, "profile.active")}
+                  value={activeProfileId ?? ""}
+                  disabled={isProfileChanging || !onProfileChange}
+                  onChange={(event) => onProfileChange?.(event.target.value)}
+                  className="min-h-11 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm font-semibold text-[var(--text-primary)] outline-none disabled:cursor-wait"
+                >
+                  {profiles.map((profile) => (
+                    <option key={profile.id} value={profile.id} disabled={profile.kind !== "self"}>
+                      {profile.kind === "shared" ? `${t(uiLanguage, "profile.shared")} ` : ""}{profile.display_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <button
+              type="button"
+              onClick={onLogout}
+              disabled={!onLogout || isLoggingOut}
+              className="mt-3 flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[var(--status-danger-text)] transition hover:bg-[var(--status-danger-soft)] disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>
+              {isLoggingOut ? t(uiLanguage, "action.signingOut") : t(uiLanguage, "action.signOut")}
+            </button>
+          </div>
+        </details>
       </div>
     </header>
   );

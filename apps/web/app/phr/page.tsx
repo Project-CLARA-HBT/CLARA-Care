@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import PageShell from "@/components/ui/page-shell";
 import Button from "@/components/ui/button";
+import Icon, { type IconName } from "@/components/ui/icon";
 import { Field, Textarea } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import AsyncSection, {
@@ -357,22 +358,29 @@ function PhrHub({
     (key: UITranslationKey) => t(uiLanguage, key),
     [uiLanguage],
   );
-  const sections = [
+  type HubItem = {
+    href: string;
+    icon: IconName;
+    title: string;
+    description: string;
+  };
+
+  const sections: HubItem[] = [
     {
       href: "/phr/identity",
-      icon: "badge",
+      icon: "user-card",
       title: copy("phr.hub.identity.title"),
       description: copy("phr.hub.identity.description"),
     },
     {
       href: "/phr/body",
-      icon: "accessibility_new",
+      icon: "body",
       title: copy("phr.hub.body.title"),
       description: copy("phr.hub.body.description"),
     },
     {
       href: "/phr/contact",
-      icon: "contact_phone",
+      icon: "contact",
       title: copy("phr.hub.contact.title"),
       description: copy("phr.hub.contact.description"),
     },
@@ -384,7 +392,7 @@ function PhrHub({
     },
     {
       href: "/phr/conditions",
-      icon: "clinical_notes",
+      icon: "clinical-notes",
       title: text.conditions,
       description: copy("phr.hub.conditions.description"),
     },
@@ -396,11 +404,11 @@ function PhrHub({
     },
   ];
 
-  const tools = [
+  const tools: HubItem[] = [
     capabilities.completeness_meter
       ? {
           href: "/phr/status",
-          icon: "donut_large",
+          icon: "progress" as const,
           title: text.completenessTitle,
           description: copy("phr.hub.status.description"),
         }
@@ -408,7 +416,7 @@ function PhrHub({
     capabilities.ocr_import
       ? {
           href: "/phr/ocr",
-          icon: "document_scanner",
+          icon: "scan" as const,
           title: copy("phr.hub.ocr.title"),
           description: copy("phr.hub.ocr.description"),
         }
@@ -440,12 +448,12 @@ function PhrHub({
     capabilities.reminders
       ? {
           href: "/phr/reminders",
-          icon: "notifications_active",
+          icon: "notifications" as const,
           title: copy("phr.hub.reminders.title"),
           description: copy("phr.hub.reminders.description"),
         }
       : null,
-  ].filter((tool): tool is NonNullable<typeof tool> => tool !== null);
+  ].filter((tool): tool is HubItem => tool !== null);
 
   return (
     <PageShell variant="plain" title={text.title} description={text.description}>
@@ -469,7 +477,7 @@ function PhrHub({
           {sections.map((item) => (
             <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-36 justify-start whitespace-normal p-4 text-left">
               <span className="flex items-start gap-3">
-                <span aria-hidden="true" className="material-symbols-rounded mt-0.5 text-[22px] text-[var(--brand-600)]">{item.icon}</span>
+                <Icon name={item.icon} size={22} className="mt-0.5 text-[var(--brand-600)]" />
                 <span>
                   <span className="block text-sm font-bold text-[var(--text-primary)]">{item.title}</span>
                   <span className="mt-1 block text-[13px] font-normal leading-5 text-[var(--text-secondary)]">{item.description}</span>
@@ -483,7 +491,7 @@ function PhrHub({
             {tools.map((item) => (
               <Button key={item.href} as="link" href={item.href} variant="ghost" className="h-auto min-h-28 justify-start whitespace-normal p-4 text-left">
                 <span className="flex items-start gap-3">
-                  <span aria-hidden="true" className="material-symbols-rounded mt-0.5 text-[22px] text-[var(--text-secondary)]">{item.icon}</span>
+                  <Icon name={item.icon} size={22} className="mt-0.5 text-[var(--text-secondary)]" />
                   <span>
                     <span className="block text-sm font-bold text-[var(--text-primary)]">{item.title}</span>
                     <span className="mt-1 block text-[13px] font-normal leading-5 text-[var(--text-secondary)]">{item.description}</span>

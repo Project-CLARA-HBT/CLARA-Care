@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   getGroupedNavItems,
-  getMobilePrimaryNav,
   getNavItemsByRole,
   getPageMeta,
   getRoleHomePath,
@@ -11,6 +10,11 @@ import {
   isRouteAllowedForRole,
   resolvePostLoginPath,
 } from "@/lib/navigation.config";
+import {
+  getAvailableWorkspaces,
+  getMobileWorkspaceNav,
+  getWorkspaceNavigation,
+} from "@/lib/navigation.workspaces";
 
 describe("authenticated navigation defaults", () => {
   it("lands consumers on Today and professional roles on dashboard, never chat", () => {
@@ -50,15 +54,35 @@ describe("authenticated navigation defaults", () => {
     );
   });
 
-  it("leads the consumer mobile nav with Today/LifeMap, not Chat (chat is not the IA)", () => {
-    const primary = getMobilePrimaryNav("normal").map((item) => item.href);
-    // Per the LifeMap product spec §6.1, chat is an input/explanation surface,
-    // not a primary consumer destination. Today must lead; chat is reached via
-    // the persistent "Hỏi CLARA" action instead of a bottom tab.
+  it("keeps mobile navigation to four workspace tasks plus the separate More control", () => {
+    const primary = getMobileWorkspaceNav("normal", "personal").map((item) => item.href);
     expect(primary[0]).toBe("/today");
+    expect(primary).toContain("/chat");
     expect(primary).toContain("/lifemap");
     expect(primary).toContain("/medicines");
-    expect(primary).not.toContain("/chat");
+    expect(primary).toHaveLength(4);
+  });
+
+  it("limits every available workspace to seven primary destinations", () => {
+    for (const role of ["normal", "researcher", "doctor", "admin"] as const) {
+      for (const workspace of getAvailableWorkspaces(role)) {
+        const navigation = getWorkspaceNavigation(role, workspace.id);
+        expect(navigation.primary.length).toBeGreaterThan(0);
+        expect(navigation.primary.length).toBeLessThanOrEqual(7);
+        expect(new Set(navigation.primary.map((item) => item.href)).size).toBe(
+          navigation.primary.length,
+        );
+      }
+    }
+  });
+
+  it("keeps secondary personal capabilities reachable through More", () => {
+    const secondary = getWorkspaceNavigation("normal", "personal").secondary.map(
+      (item) => item.href,
+    );
+    expect(secondary).toEqual(
+      expect.arrayContaining(["/visits", "/family", "/chat/shares", "/huong-dan"]),
+    );
   });
 
   it("allows onboarding without turning it into permanent navigation", () => {

@@ -84,12 +84,19 @@ function TurnView({
         >
           {tier2Result ? (
             <div className="space-y-3">
-              <FlowTimeline result={tier2Result} uiLanguage={uiLanguage} />
               <AnswerRenderer
                 result={turn.result}
                 uiLanguage={uiLanguage}
                 role={role}
               />
+              <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+                <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">
+                  {t(uiLanguage, "chat.turnView.explain")}
+                </summary>
+                <div className="mt-3">
+                  <FlowTimeline result={tier2Result} uiLanguage={uiLanguage} />
+                </div>
+              </details>
             </div>
           ) : (
             <AnswerRenderer

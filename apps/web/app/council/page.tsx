@@ -834,7 +834,11 @@ export default function CouncilPage() {
 
   if (!view || !isAnalyzedCase) {
     return (
-      <PageShell title="" variant="plain">
+      <PageShell
+        title={t(language, "navigation.item.council.title")}
+        description={t(language, "navigation.item.council.subtitle")}
+        variant="plain"
+      >
         <div className="space-y-5">
           <CouncilWorkspaceNav />
           <CouncilEmptyState
@@ -858,7 +862,11 @@ export default function CouncilPage() {
   }
 
   return (
-    <PageShell title="" variant="plain">
+    <PageShell
+      title={t(language, "navigation.item.council.title")}
+      description={t(language, "navigation.item.council.subtitle")}
+      variant="plain"
+    >
       <div className="space-y-5">
         <CouncilWorkspaceNav />
 

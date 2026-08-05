@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import Icon, { type IconName } from "./icon";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
@@ -31,15 +32,14 @@ function classesFor(variant: Variant, size: Size, block: boolean, className: str
   return `${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${block ? "w-full" : ""} ${className}`;
 }
 
+const ICON_ALIASES: Record<string, IconName> = {
+  badge: "user-card", accessibility_new: "body", contact_phone: "contact",
+  clinical_notes: "clinical-notes", medication: "medication", warning: "warning",
+  save: "clinical-notes", add: "progress", delete: "warning", arrow_back: "fallback",
+};
+
 function Glyph({ glyph, spin }: { glyph: string; spin: boolean }) {
-  return (
-    <span
-      className={`material-symbols-outlined text-[1.15em] ${spin ? "animate-spin" : ""}`}
-      aria-hidden="true"
-    >
-      {glyph}
-    </span>
-  );
+  return <Icon name={ICON_ALIASES[glyph] ?? "fallback"} size="1.15em" className={spin ? "animate-spin" : ""} />;
 }
 
 type CommonProps = {

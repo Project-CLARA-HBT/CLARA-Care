@@ -8,7 +8,6 @@ import {
   EmptyState,
   InlineError,
   LoadingCards,
-  StatCard,
   SurfaceCard,
 } from "@/components/ui/surface";
 import { getLifeMapToday, type LifeMapToday } from "@/lib/lifemap";
@@ -28,33 +27,6 @@ function dueLabel(value: string | null, language: UILanguage): string {
         minute: "2-digit",
       });
 }
-
-const QUICK_ACTIONS = [
-  {
-    href: "/chat",
-    icon: "chat_paste_go",
-    title: "today.askTitle",
-    description: "today.askDescription",
-  },
-  {
-    href: "/medicines",
-    icon: "medication",
-    title: "today.medicineTitle",
-    description: "today.medicineDescription",
-  },
-  {
-    href: "/phr",
-    icon: "description",
-    title: "today.recordTitle",
-    description: "today.recordDescription",
-  },
-  {
-    href: "/lifemap/visit-prep",
-    icon: "event_available",
-    title: "today.visitTitle",
-    description: "today.visitDescription",
-  },
-] as const;
 
 export default function TodayPage() {
   const [today, setToday] = useState<LifeMapToday | null>(null);
@@ -94,73 +66,10 @@ export default function TodayPage() {
       <div className="space-y-5">
         {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
 
-        <SurfaceCard className="p-5">
-          <div className="max-w-2xl">
-            <h2 className="font-semibold text-[var(--text-primary)]">
-              {t(language, "today.startHere")}
-            </h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              {t(language, "today.startHereDescription")}
-            </p>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {QUICK_ACTIONS.map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="focus-ring group flex min-h-28 items-start gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/45 p-4 transition hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-panel)]"
-              >
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-                  <span className="material-symbols-outlined text-xl" aria-hidden="true">
-                    {action.icon}
-                  </span>
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-medium text-[var(--text-primary)]">
-                    {t(language, action.title)}
-                  </span>
-                  <span className="mt-1 block text-sm leading-5 text-[var(--text-secondary)]">
-                    {t(language, action.description)}
-                  </span>
-                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[var(--text-brand)]">
-                    {t(language, "today.openAction")}
-                    <span className="material-symbols-outlined text-base" aria-hidden="true">
-                      arrow_forward
-                    </span>
-                  </span>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </SurfaceCard>
-
         {loading ? (
           <LoadingCards />
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <StatCard
-                label={t(language, "today.pending")}
-                value={tasks.length}
-                hint={t(language, "today.accepted")}
-                icon="task_alt"
-                tone="brand"
-              />
-              <StatCard
-                label={t(language, "today.episodes")}
-                value={today?.episodes.length ?? 0}
-                hint={t(language, "today.following")}
-                icon="route"
-              />
-              <StatCard
-                label={t(language, "today.confirmation")}
-                value={today?.pending_confirmation_count ?? 0}
-                hint={t(language, "today.notConclusion")}
-                icon="pending_actions"
-                tone={today?.pending_confirmation_count ? "warn" : "neutral"}
-              />
-            </div>
-
             <SurfaceCard className="overflow-hidden">
               <div className="flex items-center justify-between gap-4 border-b border-[color:var(--shell-border)] px-5 py-4">
                 <div>
@@ -209,13 +118,62 @@ export default function TodayPage() {
                     title={t(language, "today.emptyTitle")}
                     description={t(language, "today.emptyDescription")}
                   >
-                    <Button as="link" href="/lifemap">
-                      {t(language, "today.createEpisode")}
-                    </Button>
+                    <div className="flex flex-col items-center gap-3 sm:flex-row">
+                      <Button as="link" href="/lifemap/new">
+                        {t(language, "today.createEpisode")}
+                      </Button>
+                      <Link
+                        href="/chat"
+                        className="focus-ring rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text-brand)] hover:underline"
+                      >
+                        {t(language, "today.askTitle")}
+                      </Link>
+                    </div>
                   </EmptyState>
                 </div>
               )}
             </SurfaceCard>
+
+            {tasks.length ? (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-sm text-[var(--text-secondary)]">
+                <span>
+                  {today?.pending_confirmation_count ?? 0} {t(language, "today.notConclusion").toLocaleLowerCase(language === "vi" ? "vi-VN" : "en-US")}
+                </span>
+                <span>{today?.episodes.length ?? 0} · {t(language, "today.following")}</span>
+                <Link href="/lifemap" className="focus-ring rounded-md font-semibold text-[var(--text-brand)] hover:underline">
+                  {t(language, "today.openLifeMap")}
+                </Link>
+                <Link href="/chat" className="focus-ring rounded-md font-semibold text-[var(--text-brand)] hover:underline">
+                  {t(language, "today.askTitle")}
+                </Link>
+              </div>
+            ) : null}
+
+            <details className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
+              <summary className="focus-ring cursor-pointer rounded-md text-sm font-semibold text-[var(--text-primary)]">
+                {t(language, "today.startHere")}
+              </summary>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                {t(language, "today.startHereDescription")}
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {[
+                  ["/chat", "today.askTitle", "today.askDescription"],
+                  ["/medicines", "today.medicineTitle", "today.medicineDescription"],
+                  ["/phr", "today.recordTitle", "today.recordDescription"],
+                  ["/visits", "today.visitTitle", "today.visitDescription"],
+                ].map(([href, title, description]) => (
+                  <Link key={href} href={href} className="focus-ring rounded-lg p-3 hover:bg-[var(--surface-muted)]">
+                    <span className="block text-sm font-semibold text-[var(--text-brand)]">
+                      {t(language, title as Parameters<typeof t>[1])} · {t(language, "today.openAction")}
+                    </span>
+                    <span className="mt-1 block text-sm text-[var(--text-secondary)]">
+                      {t(language, description as Parameters<typeof t>[1])}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </details>
           </>
         )}
       </div>

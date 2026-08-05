@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import { UserRole, getRole } from "@/lib/auth-store";
 import { getSystemDashboard, normalizeSystemDashboard } from "@/lib/system";
+import { t } from "@/lib/i18n/catalog";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type TodayTask = {
   id: string;
@@ -98,9 +100,8 @@ function activityToneClass(tone: ActivityItem["tone"]): string {
 }
 
 export default function DashboardPage() {
+  const language = useUILanguage();
   const [role, setRole] = useState<UserRole>("normal");
-  const [requestCount, setRequestCount] = useState<number | null>(null);
-  const [errorCount, setErrorCount] = useState<number | null>(null);
   const [cabinetCount, setCabinetCount] = useState<number | null>(null);
   const [expiringSoonCount, setExpiringSoonCount] = useState<number | null>(null);
   const [expiredCount, setExpiredCount] = useState<number | null>(null);
@@ -127,8 +128,6 @@ export default function DashboardPage() {
       setRole((dashboard.user.role as UserRole) ?? getRole());
       setHealthStatus(dashboard.runtime.apiStatus);
       setMlStatus(dashboard.runtime.mlStatus);
-      setRequestCount(dashboard.runtime.requestCount);
-      setErrorCount(dashboard.runtime.errorCount);
 
       setCabinetCount(dashboard.cabinet.itemTotal);
       setExpiringSoonCount(dashboard.cabinet.expiringSoonTotal);
@@ -174,10 +173,7 @@ export default function DashboardPage() {
   const greeting = ROLE_GREETINGS[role] ?? ROLE_GREETINGS.normal;
   const lastUpdatedLabel = formatLastUpdated(generatedAt);
 
-  const activeCases = useMemo(() => {
-    const inferred = Math.max(recentQueries.length, Math.max(0, Math.trunc((requestCount ?? 0) / 2)));
-    return Math.max(1, Math.min(99, inferred || 12));
-  }, [recentQueries.length, requestCount]);
+  const activeCases = serverTasks.length > 0 ? serverTasks.length : null;
 
   const cautionCases = useMemo(() => {
     if (dashboardUnavailable) return 0;
@@ -190,8 +186,8 @@ export default function DashboardPage() {
     cabinetCount !== null || expiringSoonCount !== null || expiredCount !== null;
   const hasConnectedSources = totalSources > 0 || enabledSources > 0;
 
-  const councilTotal = 12;
-  const councilDone = useMemo(() => Math.max(0, Math.min(councilTotal, recentQueries.length)), [recentQueries.length]);
+  const councilTotal = recentQueries.length > 0 ? recentQueries.length : null;
+  const councilDone = recentQueries.length;
 
   const activityItems = useMemo<ActivityItem[]>(() => {
     if (recentQueries.length > 0) {
@@ -205,32 +201,7 @@ export default function DashboardPage() {
       }));
     }
 
-    return [
-      {
-        id: "default-1",
-        title: "So sánh DASH vs Địa Trung Hải",
-        detail: "Phiên tư vấn dinh dưỡng gần nhất • Sẵn sàng mở lại",
-        timestamp: "2 giờ trước",
-        status: "Hoàn tất",
-        tone: "primary",
-      },
-      {
-        id: "default-2",
-        title: "Phân tích tương tác Metformin",
-        detail: "Rà soát thuốc trong hành trình chăm sóc gần đây",
-        timestamp: "5 giờ trước",
-        status: "Đã rà soát",
-        tone: "secondary",
-      },
-      {
-        id: "default-3",
-        title: "Ghi âm thăm khám: Nguyễn Văn A",
-        detail: "Ghi chú buổi khám đang chờ hoàn thiện",
-        timestamp: "Hôm qua",
-        status: "Đang tiếp tục",
-        tone: "muted",
-      },
-    ];
+    return [];
   }, [recentQueries]);
 
   const assistantInsight = useMemo(() => {
@@ -241,12 +212,8 @@ export default function DashboardPage() {
     if ((expiredCount ?? 0) > 0) {
       return `Có ${formatCount(expiredCount)} thuốc đã quá hạn. Nên kiểm tra lại trước khi tiếp tục tư vấn hoặc sử dụng.`;
     }
-    const err = Math.max(0, errorCount ?? 0);
-    if (err > 0) {
-      return "Một vài phiên gần đây cần xem kỹ thêm. Hãy đối chiếu cảnh báo và nguồn tham khảo trước khi chốt khuyến nghị.";
-    }
     return "Hôm nay chưa có tín hiệu khẩn cấp nổi bật. Bạn có thể bắt đầu từ tủ thuốc hoặc tiếp tục phiên hỗ trợ gần nhất.";
-  }, [alerts, dashboardUnavailable, errorCount, expiredCount]);
+  }, [alerts, dashboardUnavailable, expiredCount]);
 
   const safetySummary = useMemo(() => {
     if (dashboardUnavailable) {
@@ -264,7 +231,7 @@ export default function DashboardPage() {
     if ((expiredCount ?? 0) > 0) {
       return {
         eyebrow: "Cảnh báo an toàn",
-        title: `Cần xem lại ${formatCount(Math.max(1, importantNotes))} lưu ý an toàn trước khi tiếp tục`,
+        title: `Cần xem lại ${formatCount(importantNotes)} lưu ý an toàn trước khi tiếp tục`,
         detail: "Có thuốc cần kiểm tra lại sớm. Hãy rà soát trước khi tiếp tục.",
       };
     }
@@ -272,7 +239,7 @@ export default function DashboardPage() {
     if (alerts.length > 0) {
       return {
         eyebrow: "Cảnh báo an toàn",
-        title: `Cần xem lại ${formatCount(Math.max(1, importantNotes))} lưu ý an toàn trước khi tiếp tục`,
+        title: `Cần xem lại ${formatCount(importantNotes)} lưu ý an toàn trước khi tiếp tục`,
         detail: "Có thông tin cần kiểm tra lại trước khi tiếp tục.",
       };
     }
@@ -280,7 +247,7 @@ export default function DashboardPage() {
     if ((expiringSoonCount ?? 0) > 0) {
       return {
         eyebrow: "Cảnh báo an toàn",
-        title: `Cần xem lại ${formatCount(Math.max(1, importantNotes))} lưu ý an toàn trước khi tiếp tục`,
+        title: `Cần xem lại ${formatCount(importantNotes)} lưu ý an toàn trước khi tiếp tục`,
         detail: "Kiểm tra sớm để tránh gián đoạn theo dõi hoặc sử dụng.",
       };
     }
@@ -309,7 +276,7 @@ export default function DashboardPage() {
       return {
         kind: "link" as const,
         href: "/medicines?tab=safety",
-        title: `Xem ${formatCount(Math.max(1, safetyCount))} lưu ý cần xử lý`,
+        title: `Xem ${formatCount(safetyCount)} lưu ý cần xử lý`,
         detail: "Rà soát cảnh báo trước khi tiếp tục",
         icon: "health_and_safety",
       };
@@ -343,56 +310,19 @@ export default function DashboardPage() {
 
   const todayTasks = useMemo<TodayTask[]>(() => {
     if (serverTasks.length > 0) return serverTasks.slice(0, 4);
-    return [
-      {
-        id: "review-meds",
-        title: "Rà soát thuốc",
-        detail: "Kiểm tra danh mục thuốc hiện tại",
-        tone: "normal",
-        href: "/medicines?tab=cabinet",
-      },
-      {
-        id: "check-ddi",
-        title: "Kiểm tra tương tác",
-        detail: "Đối chiếu tương tác đa thuốc",
-        tone: "warn",
-        href: "/medicines?tab=safety",
-      },
-      {
-        id: "conduct-council",
-        title: "Hội chẩn AI",
-        detail: "Hội chẩn các ca cần quyết định",
-        tone: "normal",
-        href: "/council",
-      },
-      {
-        id: "record-findings",
-        title: "Ghi nhận kết quả",
-        detail: "Ghi nhận kết luận và theo dõi",
-        tone: "normal",
-        href: "/scribe",
-      },
-    ];
+    return [];
   }, [serverTasks]);
 
   const workflowTasks = useMemo<TodayTask[]>(
     () =>
-      (todayTasks.length >= 4
-        ? todayTasks.slice(0, 4)
-        : [
-            ...todayTasks,
-            { id: "fallback-1", title: "Rà soát thuốc", detail: "", tone: "normal" as TodayTask["tone"], href: "/medicines?tab=cabinet" },
-            { id: "fallback-2", title: "Kiểm tra tương tác", detail: "", tone: "warn" as TodayTask["tone"], href: "/medicines?tab=safety" },
-            { id: "fallback-3", title: "Hội chẩn AI", detail: "", tone: "normal" as TodayTask["tone"], href: "/council" },
-            { id: "fallback-4", title: "Ghi nhận kết quả", detail: "", tone: "normal" as TodayTask["tone"], href: "/scribe" },
-          ]).slice(0, 4),
+      todayTasks.slice(0, 4),
     [todayTasks]
   );
 
   const workflowStates = useMemo<WorkflowState[]>(() => {
     const medsDone = (cabinetCount ?? 0) > 0;
-    const ddiDone = (requestCount ?? 0) > 0;
-    const councilDoneStep = councilDone >= councilTotal;
+    const ddiDone = cabinetCount !== null && cabinetCount > 0;
+    const councilDoneStep = councilTotal !== null && councilDone >= councilTotal;
     const councilRunning = !councilDoneStep && councilDone > 0;
     const recordDone = recentQueries.length >= 3;
 
@@ -402,7 +332,7 @@ export default function DashboardPage() {
       councilDoneStep ? "done" : councilRunning ? "current" : "pending",
       recordDone ? "done" : councilRunning || councilDoneStep ? "current" : "pending",
     ];
-  }, [cabinetCount, councilDone, recentQueries.length, requestCount]);
+  }, [cabinetCount, councilDone, councilTotal, recentQueries.length]);
 
   const completedWorkflowSteps = useMemo(
     () => workflowStates.filter((state) => state === "done").length,
@@ -411,7 +341,11 @@ export default function DashboardPage() {
   const workflowProgress = Math.round((completedWorkflowSteps / 4) * 100);
 
   return (
-    <PageShell title="" description="" variant="plain">
+    <PageShell
+      title={t(language, "navigation.item.dashboard.title")}
+      description={t(language, "navigation.item.dashboard.subtitle")}
+      variant="plain"
+    >
       <div className="space-y-10">
         <section className="overflow-hidden rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)] lg:items-start">
@@ -422,7 +356,7 @@ export default function DashboardPage() {
               <div>
                 <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-[var(--text-brand)] sm:text-4xl">{greeting}</h2>
                 <p className="max-w-3xl text-sm leading-7 text-[var(--text-secondary)] sm:text-lg">
-                  Hôm nay có <span className="rounded-lg bg-[var(--surface-muted)] px-2 py-0.5 font-bold text-[var(--text-brand)]">{activeCases} hồ sơ</span> cần theo dõi.
+                  Hôm nay có <span className="rounded-lg bg-[var(--surface-muted)] px-2 py-0.5 font-bold text-[var(--text-brand)]">{activeCases === null ? "chưa có dữ liệu" : `${activeCases} hồ sơ`}</span> cần theo dõi.
                   <br />
                   Trong đó có <span className="rounded-lg bg-[var(--surface-muted)] px-2 py-0.5 font-bold text-[var(--text-brand)]">{cautionCases} nhóm việc</span> cần xem lại trước khi tiếp tục.
                 </p>
@@ -500,7 +434,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="rounded-xl bg-[var(--surface-muted)] p-4 sm:col-span-2 lg:col-span-1">
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Tương tác nghiêm trọng</p>
-                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">0</p>
+                  <p className="mt-2 text-2xl font-bold text-[var(--text-brand)]">Chưa có dữ liệu</p>
                 </div>
               </div>
             </div>
@@ -510,18 +444,27 @@ export default function DashboardPage() {
         <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)]">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">Luồng công việc hàng ngày</h3>
-            <span className="text-xs font-semibold text-[var(--text-secondary)]">
-              Đã hoàn thành: {completedWorkflowSteps}/4 bước
-            </span>
+            {workflowTasks.length > 0 ? (
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                Đã hoàn thành: {completedWorkflowSteps}/{workflowTasks.length} bước
+              </span>
+            ) : null}
           </div>
 
           <div className="relative grid gap-4 md:grid-cols-4">
-            <div className="absolute left-[12.5%] right-[12.5%] top-8 hidden h-1 overflow-hidden rounded-full bg-[var(--surface-muted)] md:block">
-              <div
-                className="h-full rounded-full bg-[var(--brand-500)] transition-[width] duration-300 ease-out"
-                style={{ width: `${Math.max(0, Math.min(100, workflowProgress))}%` }}
-              />
-            </div>
+            {workflowTasks.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 text-sm text-[var(--text-secondary)] md:col-span-4">
+                Chưa có nhiệm vụ từ hệ thống để hiển thị.
+              </p>
+            ) : null}
+            {workflowTasks.length > 0 ? (
+              <div className="absolute left-[12.5%] right-[12.5%] top-8 hidden h-1 overflow-hidden rounded-full bg-[var(--surface-muted)] md:block">
+                <div
+                  className="h-full rounded-full bg-[var(--brand-500)] transition-[width] duration-300 ease-out"
+                  style={{ width: `${Math.max(0, Math.min(100, workflowProgress))}%` }}
+                />
+              </div>
+            ) : null}
 
             {workflowTasks.map((task, index) => {
               const state = workflowStates[index] ?? "pending";
@@ -576,12 +519,14 @@ export default function DashboardPage() {
               <span className="rounded bg-blue-500/10 px-2 py-1 text-[10px] font-bold">Tiến độ hội chẩn</span>
             </div>
             <h4 className="text-2xl font-bold text-[var(--text-brand)]">
-              {councilDone} / {councilTotal} ca
+              {councilTotal === null ? "Chưa có dữ liệu" : `${councilDone} / ${councilTotal} ca`}
             </h4>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">Đã hoàn thành hội chẩn AI</p>
-            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
-              <div className="h-full bg-[var(--brand-500)]" style={{ width: `${(councilDone / councilTotal) * 100}%` }} />
-            </div>
+            {councilTotal !== null ? (
+              <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
+                <div className="h-full bg-[var(--brand-500)]" style={{ width: `${(councilDone / councilTotal) * 100}%` }} />
+              </div>
+            ) : null}
           </article>
 
           <article className="col-span-12 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 lg:col-span-4">
@@ -706,7 +651,12 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="space-y-4">
-              {activityItems.map((item) => (
+            {activityItems.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 text-sm text-[var(--text-secondary)]">
+                Chưa có phiên hỗ trợ nào để hiển thị.
+              </p>
+            ) : null}
+            {activityItems.map((item) => (
                 <article
                   key={item.id}
                   className={`flex flex-wrap items-start justify-between gap-3 rounded-lg border border-[color:var(--shell-border)] border-l-4 bg-[var(--surface-panel)] p-4 shadow-[var(--shadow-soft)] ${activityToneClass(item.tone)}`}
@@ -750,9 +700,9 @@ export default function DashboardPage() {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-lg bg-white/70 p-3 dark:bg-slate-900/50">
-                    <span className="text-xs font-medium text-[var(--text-secondary)]">Độ tự tin ước tính</span>
-                    <span className="text-xs font-bold text-cyan-700 dark:text-cyan-300">
-                      Cao ({Math.max(0.5, Math.min(0.98, 1 - (errorCount ?? 0) * 0.02)).toFixed(2)})
+                    <span className="text-xs font-medium text-[var(--text-secondary)]">Độ tin cậy</span>
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                      Chưa có thước đo đã hiệu chuẩn
                     </span>
                   </div>
                   <button

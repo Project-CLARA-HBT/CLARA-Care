@@ -1,7 +1,28 @@
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
+import {
+  DEFAULT_POST_LOGIN_PATH,
+  PUBLIC_ROUTES,
+  getRoleHomePath,
+  isAuthenticatedUtilityRoute,
+  isPublicRoute,
+  isRouteAllowedForRole,
+  resolvePostLoginPath,
+  sanitizeNextPath,
+  type UserRole,
+} from "@/lib/navigation.access";
 
-export type UserRole = "normal" | "researcher" | "doctor" | "admin";
+export type { UserRole } from "@/lib/navigation.access";
+export {
+  DEFAULT_POST_LOGIN_PATH,
+  PUBLIC_ROUTES,
+  getRoleHomePath,
+  isAuthenticatedUtilityRoute,
+  isPublicRoute,
+  isRouteAllowedForRole,
+  resolvePostLoginPath,
+  sanitizeNextPath,
+};
 export type NavGroupKey =
   | "care"
   | "medicines"
@@ -33,33 +54,6 @@ export type NavGroupMeta = {
   label: string;
   shortLabel: string;
   icon: string;
-};
-
-export const PUBLIC_ROUTES = new Set([
-  "/",
-  "/legal",
-  "/legal/privacy",
-  "/legal/terms",
-  "/legal/consent",
-  "/legal/cookies",
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-]);
-
-export const DEFAULT_POST_LOGIN_PATH = "/today";
-
-const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
-const AUTHENTICATED_UTILITY_ROUTES = new Set(["/welcome", "/role-select"]);
-const AUTHENTICATED_UTILITY_PREFIXES = ["/welcome/"];
-
-const ROLE_HOME_PATHS: Record<UserRole, string> = {
-  normal: "/today",
-  researcher: "/dashboard",
-  doctor: "/dashboard",
-  admin: "/dashboard",
 };
 
 const NAV_ITEMS: NavigationItem[] = [
@@ -705,54 +699,6 @@ const GROUP_KEYS: Record<
   support: { label: "navigation.support", shortLabel: "navigation.support" },
 };
 
-export function isPublicRoute(pathname: string): boolean {
-  return (
-    PUBLIC_ROUTES.has(pathname) ||
-    pathname.startsWith("/share/") ||
-    pathname.startsWith("/phr/shared/")
-  );
-}
-
-/**
- * Signed-in flows that should be route-guarded but not shown as permanent
- * navigation destinations. Onboarding is intentionally transient: once the
- * user has completed or skipped it, the everyday sidebar stays uncluttered.
- */
-export function isAuthenticatedUtilityRoute(pathname: string): boolean {
-  return (
-    AUTHENTICATED_UTILITY_ROUTES.has(pathname) ||
-    AUTHENTICATED_UTILITY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-  );
-}
-
-export function getRoleHomePath(role: UserRole = "normal"): string {
-  return ROLE_HOME_PATHS[role] ?? DEFAULT_POST_LOGIN_PATH;
-}
-
-export function sanitizeNextPath(
-  nextPath: string | null | undefined,
-): string | null {
-  if (!nextPath) return null;
-  if (!nextPath.startsWith("/") || nextPath.startsWith("//")) return null;
-  try {
-    const parsed = new URL(nextPath, "http://localhost");
-    if (AUTH_ENTRY_ROUTES.has(parsed.pathname)) return null;
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return null;
-  }
-}
-
-export function resolvePostLoginPath(options: {
-  nextPath?: string | null;
-  role?: UserRole;
-}): string {
-  return (
-    sanitizeNextPath(options.nextPath) ??
-    getRoleHomePath(options.role ?? "normal")
-  );
-}
-
 export function getNavItemsByRole(
   role: UserRole,
   language: UILanguage = "vi",
@@ -760,15 +706,6 @@ export function getNavItemsByRole(
   return NAV_ITEMS.filter(
     (item) => item.roles.includes(role) && !item.hiddenForRoles?.includes(role),
   ).map((item) => localizeNavigationItem(item, language));
-}
-
-export function isRouteAllowedForRole(
-  pathname: string,
-  role: UserRole,
-): boolean {
-  return NAV_ITEMS.some(
-    (item) => item.roles.includes(role) && isActiveRoute(pathname, item.href),
-  );
 }
 
 export function getGroupedNavItems(

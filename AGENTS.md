@@ -63,6 +63,14 @@ After web changes: run `npm run lint` and `npm run test` in `apps/web`.
 Start with the tests closest to your change, then widen. Do not claim
 validation passed unless you actually ran it.
 
+For the UI modernization program, read `docs/ui-modernization/07-exec-plan.md`,
+`08-task-list.md`, and the applicable requirements before changing production
+frontend code. Keep route authorization separate from navigation presentation,
+preserve all capabilities through More/context/direct links, and update the
+ExecPlan and decision log after each checkpoint. Use bounded subagent audits or
+reviews with non-overlapping ownership; the root agent integrates shared shell,
+navigation, token, and primitive changes.
+
 ## Safety-first invariants (regression-locked — must preserve)
 
 - **RBAC** — `require_roles(...)` (`services/api/.../core/rbac.py`) gates routes; `admin` has implicit access, others get 403.

@@ -23,17 +23,17 @@ const MIGRATED_SURFACES = [
   },
   {
     path: "components/app-shell.tsx",
-    required: ["@/lib/i18n/catalog", "action.askClara", "language.preference"],
+    required: ["@/lib/i18n/catalog", "navigation.workspace.label", "language.preference"],
     forbidden: ["Hỏi CLARA", "Ask CLARA", "Tùy chọn ngôn ngữ", "Language preferences"],
   },
   {
     path: "components/navigation/app-topbar.tsx",
-    required: ["@/lib/i18n/catalog", "action.askClara", "language.change"],
+    required: ["@/lib/i18n/catalog", "action.signOut", "language.change"],
     forbidden: ["Hỏi CLARA", "Ask CLARA", "Đổi ngôn ngữ", "Change language"],
   },
   {
     path: "components/sidebar-nav.tsx",
-    required: ["@/lib/i18n/catalog", "navigation.primary", "action.signOut"],
+    required: ["@/lib/i18n/catalog", "navigation.primary", "navigation.workspace.choose"],
     forbidden: ["Hỏi CLARA", "Ask CLARA", "Đăng xuất", "Sign out", "Điều hướng chính", "Primary navigation"],
   },
   {

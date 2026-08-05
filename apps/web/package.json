@@ -2,6 +2,10 @@
   "name": "clara-web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <21",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -10,8 +14,14 @@
     "consumer-terminology:generate": "node scripts/generate-consumer-terminology.mjs",
     "consumer-terminology:check": "node scripts/generate-consumer-terminology.mjs --check && node scripts/check-consumer-terminology-contract.mjs",
     "i18n:check": "node scripts/check-i18n.mjs",
+    "route-matrix:check": "node scripts/check-route-capability-matrix.mjs",
+    "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:a11y": "playwright test e2e/accessibility.spec.ts",
+    "test:e2e:visual": "playwright test e2e/visual.spec.ts",
+    "bundle:check": "node scripts/check-bundle-budget.mjs"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.13.23",
@@ -27,6 +37,7 @@
     "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "1.62.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

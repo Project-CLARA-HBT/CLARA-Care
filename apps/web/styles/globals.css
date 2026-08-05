@@ -8,7 +8,7 @@
   --workspace-gutter-lg: 1.75rem;
   --workspace-gutter-2xl: 2.25rem;
   --touch-target-min: 44px;
-  --shell-nav-width: 17rem;
+  --shell-nav-width: 15rem;
 
   /* Foundation */
   --color-bg: #f4f6fb;
@@ -281,7 +281,7 @@
 
 .app-sidebar-action {
   display: inline-flex;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
@@ -318,8 +318,8 @@
 .app-topbar-language,
 .app-mobile-ask {
   display: inline-flex;
-  width: min(2.65rem, 48px);
-  min-height: min(2.65rem, 48px);
+  width: 2.75rem;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;

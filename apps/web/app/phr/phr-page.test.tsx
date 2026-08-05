@@ -84,7 +84,7 @@ afterEach(cleanup);
 
 describe("PHR focused hub", () => {
   it("keeps the root as a hub of one-concept routes", async () => {
-    render(<PhrPage />);
+    const { container } = render(<PhrPage />);
 
     await waitFor(() => {
       expect(screen.getByRole("link", { name: /Thông tin cơ bản/ })).toHaveAttribute("href", "/phr/identity");
@@ -93,6 +93,18 @@ describe("PHR focused hub", () => {
     expect(screen.getByRole("link", { name: /Dị ứng/ })).toHaveAttribute("href", "/phr/allergies");
     expect(screen.queryByLabelText("Họ và tên")).not.toBeInTheDocument();
     expect(mocks.getPhrRecord).not.toHaveBeenCalled();
+    expect(container.querySelectorAll("svg[data-icon]")).toHaveLength(6);
+    expect(container.querySelector(".material-symbols-rounded")).not.toBeInTheDocument();
+    for (const leakedGlyph of [
+      "badge",
+      "accessibility_new",
+      "contact_phone",
+      "warning",
+      "clinical_notes",
+      "medication",
+    ]) {
+      expect(container).not.toHaveTextContent(leakedGlyph);
+    }
   });
 
   it("shows only body measurements on the focused body route", async () => {

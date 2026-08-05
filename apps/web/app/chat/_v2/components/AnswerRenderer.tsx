@@ -16,6 +16,7 @@ import {
 import type { UserRole } from "@/lib/auth-store";
 import MedicalAnswerCanvas from "@/app/chat/_v2/components/MedicalAnswerCanvas";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { sanitizeAssistantAnswer } from "@/lib/user-facing-text";
 
 /**
  * Typographic answer renderer for the rebuilt CLARA Chat (CHAT_V2).
@@ -67,7 +68,7 @@ function AnswerRenderer({
     values: Record<string, string | number> = {},
   ) => t(uiLanguage, key, values);
   const degraded = isDegradedAnswer(result);
-  const baseAnswer = result.answer?.trim() || "";
+  const baseAnswer = sanitizeAssistantAnswer(result.answer?.trim() || "");
   const citations = result.tier === "tier2" ? result.citations : [];
   const tracedClaims =
     result.tier === "tier2" ? (result.tracedClaims ?? []) : [];
@@ -145,17 +146,15 @@ function AnswerRenderer({
         />
       ) : null}
 
-      {result.tier === "tier2" ? (
-        <section
-          className="mt-4 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] p-3"
-          aria-label={copy("chat.answerRenderer.integrity.aria")}
-        >
+      {result.tier === "tier2" && (role === "researcher" || role === "admin") ? (
+        <details className="mt-4 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--text-primary)]">
+            {copy("chat.answerRenderer.integrity.title")}
+          </summary>
+          <section aria-label={copy("chat.answerRenderer.integrity.aria")}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--text-brand)]">
-                {copy("chat.answerRenderer.integrity.title")}
-              </p>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
                 {copy("chat.answerRenderer.integrity.description")}
               </p>
             </div>
@@ -193,7 +192,8 @@ function AnswerRenderer({
               {result.verificationStatus.note}
             </p>
           ) : null}
-        </section>
+          </section>
+        </details>
       ) : null}
 
       {citationRegistry.length ? (
