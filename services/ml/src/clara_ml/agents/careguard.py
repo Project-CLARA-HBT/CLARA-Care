@@ -876,7 +876,10 @@ def _normalize_medications_with_strict_drugbank_choices(
             3,
         ),
         "pair_coverage_ratio": round(
-            min(max((len(normalized_medications) / input_count) if input_count else 1.0, 0.0),
+            min(
+                max((len(normalized_medications) / input_count) if input_count else 1.0, 0.0),
+                1.0,
+            ),
             3,
         ),
         "normalized_inputs": normalized_inputs[:20],
