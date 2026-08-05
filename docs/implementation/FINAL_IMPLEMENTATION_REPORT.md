@@ -687,3 +687,53 @@ The committed Nginx config therefore has **not** reached that host. Do not
 describe the browser-header remediation as deployed until a controlled
 release installs the config, validates `nginx -t`, reloads Nginx, and repeats
 the external header smoke check.
+
+## Revalidation checkpoint — 2026-08-05 (CI/CD rebuild and VPS deployment)
+
+Commit `e57f5e29` rebuilt the CI gate policy. Pull requests still execute the
+full quality, API, ML and Playwright suites, but repository-wide type/test debt
+is explicitly reported as advisory unless `CI_STRICT_PR_HARDENING=true`.
+Pushes to `main`, release tags and manual production runs remain blocking. The
+Docker smoke and Trivy jobs now materialize a random runner-local
+`ML_INTERNAL_API_KEY` when the protected variable is absent; no production key
+is committed or printed.
+
+Run `31022169792` completed with the required gate **success**. Passing jobs:
+artifact safety, Docker compose smoke, web lint/build, web unit, scripts syntax,
+CLARA-Eval VN smoke and hackathon artifact smoke. Advisory failures were
+security audit (setuptools advisory), mypy, API/ML tests, Playwright E2E and
+Trivy. These remain blockers for a strict main/release gate and are not claimed
+as passing.
+
+The immutable source archive for `e57f5e29` was deployed to
+`vm07302028.bnixvps.io.vn` (`36.50.27.240`) under `/opt/clara-care`; the prior
+tree is recoverable at `/opt/clara-care.backup-20260805T155554Z` and the
+`/opt/clara-care.previous` symlink. Production compose rebuilt API, ML, Web,
+ASR, LifeMap worker and evidence monitor, then recreated those services while
+preserving the existing protected `.env`.
+
+Observed production smoke after deployment:
+
+| Check | Result |
+| --- | --- |
+| `/`, `/login` | HTTP 200 |
+| Browser headers | CSP, HSTS, nosniff, DENY frame, Referrer-Policy and Permissions-Policy present |
+| `/api/v1/health/ready` | HTTP 200, `status=ready` |
+| `/share/not-a-real-token` | HTTP 200 |
+| `/phr/shared/not-a-real-token` | HTTP 200 without login redirect |
+| `/.well-known/assetlinks.json` | HTTP 404 — mobile App Link publication remains outstanding |
+
+Rollback command on the host (after verifying the backup is intact):
+
+```bash
+cd /opt/clara-care.backup-20260805T155554Z
+docker compose --env-file /opt/clara-care/.env \
+  -f deploy/docker/docker-compose.yml -f deploy/docker/docker-compose.app.yml up -d
+```
+
+The normal controlled CD workflow remains the preferred path for future
+releases: provision `DEPLOY_SSH_PRIVATE_KEY`, pinned `DEPLOY_SSH_KNOWN_HOSTS`,
+`DEPLOY_ENV_FILE`, `GHCR_PULL_TOKEN` and deployment variables, then dispatch
+`.github/workflows/cd.yml` with an immutable image tag. The direct sshpass
+deployment above is an operational recovery/development deployment, not proof
+that GitHub Actions has access to the VPS secrets.
