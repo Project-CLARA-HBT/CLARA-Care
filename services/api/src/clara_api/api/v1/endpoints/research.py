@@ -1270,10 +1270,10 @@ def _is_trace_key(key: str) -> bool:
 
 
 def _normalize_trace_value(value: Any) -> Any:
-    if isinstance(value, (str, int, float, bool)):
+    if isinstance(value, str | int | float | bool):
         return value
     if isinstance(value, list):
-        compact = [item for item in value if isinstance(item, (str, int, float, bool))]
+        compact = [item for item in value if isinstance(item, str | int | float | bool)]
         return compact[:20] if compact else None
     if isinstance(value, dict):
         compact: dict[str, Any] = {}
@@ -1872,7 +1872,7 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
 def _coerce_personal_mode(value: Any) -> bool:
     if isinstance(value, bool):
         return value
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return value != 0
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "on"}
@@ -2708,7 +2708,7 @@ def _apply_research_quality_gates(
     support_ratio_raw = verification_summary.get("support_ratio")
     support_ratio = (
         float(support_ratio_raw)
-        if isinstance(support_ratio_raw, (int, float))
+        if isinstance(support_ratio_raw, int | float)
         else None
     )
     total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
@@ -2893,7 +2893,7 @@ def _build_evidence_snapshot(
         "sources": sources if isinstance(sources, list) else [],
         "citation_registry": registry if isinstance(registry, list) else [],
         "retrieval_trace": result.get("retrieval_trace")
-        if isinstance(result.get("retrieval_trace"), (dict, list))
+        if isinstance(result.get("retrieval_trace"), dict | list)
         else None,
     }
     return {
@@ -3822,7 +3822,7 @@ def _build_vn_source_urls(source: str, query: str) -> list[str]:
     if not isinstance(source_def, dict):
         return []
     search_urls = source_def.get("search_urls")
-    if not isinstance(search_urls, (list, tuple)):
+    if not isinstance(search_urls, list | tuple):
         return []
 
     query_text = query.strip()

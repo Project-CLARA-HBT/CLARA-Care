@@ -1277,7 +1277,7 @@ def _audit_to_flow_events(rows: list[ScribeAudit]) -> list[dict[str, Any]]:
         source_count = 0
         for key in ("segment_count", "version_no"):
             raw = detail.get(key)
-            if isinstance(raw, (int, float)):
+            if isinstance(raw, int | float):
                 source_count = int(raw)
                 break
         events.append(

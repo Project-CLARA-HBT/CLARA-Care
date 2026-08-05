@@ -385,7 +385,7 @@ def test_workspace_suggestions_and_search_return_valid_structure() -> None:
         assert isinstance(item["id"], str)
         assert isinstance(item["text"], str)
         assert isinstance(item["category"], str)
-        assert isinstance(item["score"], (int, float))
+        assert isinstance(item["score"], int | float)
 
     search_response = client.get("/api/v1/workspace/search?q=warfarin&limit=10", headers=headers)
     assert search_response.status_code == 200

@@ -312,7 +312,7 @@ def _sanitize_labs(value: Any) -> dict[str, float | str]:
         name = str(key).strip()[:120]
         if not name:
             continue
-        if isinstance(item, (int, float)) and not isinstance(item, bool):
+        if isinstance(item, int | float) and not isinstance(item, bool):
             normalized[name] = float(item)
             continue
         text = str(item).strip()
@@ -339,7 +339,7 @@ def _normalize_run_payload(value: dict[str, Any] | None) -> dict[str, Any]:
 
     specialist_count_raw = payload.get("specialist_count", payload.get("specialistCount", 3))
     specialist_count = 3
-    if isinstance(specialist_count_raw, (int, float)) and not isinstance(
+    if isinstance(specialist_count_raw, int | float) and not isinstance(
         specialist_count_raw, bool
     ):
         specialist_count = int(specialist_count_raw)
