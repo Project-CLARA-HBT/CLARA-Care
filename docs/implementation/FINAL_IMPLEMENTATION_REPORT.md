@@ -210,6 +210,21 @@ under PR-14, not a fresh security, PII or runtime-validation result.
 
 ## Latest implementation checkpoints
 
+- GitHub Actions now conforms to the repository's enforced supply-chain
+  policy: every workflow action reference is pinned to an immutable full
+  commit SHA, the invalid `administration` workflow permission is removed,
+  and CI no longer depends on the non-allowlisted `dorny/paths-filter` action.
+  The replacement in-repository path classifier preserves the existing job
+  outputs and changed-Python file list. CI changed from pre-job
+  `startup_failure` to a run with scheduled jobs after `af70a779`; the full run
+  result was still pending when this report entry was written. Workflow files
+  passed `actionlint`; this is not a claim that the pending jobs passed.
+- The manual mobile APK release script no longer hard-codes one developer's
+  macOS JDK, Android SDK or Flutter paths. It now requires the same protected
+  release-keystore inputs as CI, verifies the produced APK with `apksigner`,
+  and fails closed when toolchain/signing inputs are absent. `bash -n` passed;
+  no signed APK was built because protected signing material is not present in
+  this checkout.
 - The `/huong-dan` task guide now resolves its complete static task, step,
   action and label copy through the typed vi/en catalog and reacts to the
   persisted UI locale. This is a bounded consumer-surface migration, not a
