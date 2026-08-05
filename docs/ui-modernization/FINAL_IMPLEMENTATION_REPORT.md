@@ -1,0 +1,49 @@
+# CLARA UI Modernization — Implementation Report
+
+## Executive summary
+
+The web application now has a documented, workspace-based navigation model, a task-first shell, typed SVG icons, progressive disclosure for personal flows, safer Chat presentation, and a calmer Scribe workflow. Existing routes remain reachable through primary navigation, More/context actions, direct links, and compatibility redirects; server-side authorization remains authoritative.
+
+## Delivered
+
+- Planning gate and full UI modernization specification in `docs/ui-modernization/00...11`.
+- Personal, clinical, research, and admin workspace navigation with a seven-item primary limit.
+- AppShell focus trap/restore, mobile drawer, workspace switcher, profile selector, and consolidated profile/logout controls.
+- PHR SVG icon abstraction and Button icon fallback; no raw icon names in the PHR hub.
+- Today, Family, Visit preparation, Chat, Dashboard, Council, and Scribe presentation improvements.
+- Scribe consent-before-microphone gate and draft-versus-signed wording.
+- Answer sanitization for telemetry and common hidden-reasoning markers.
+- Route capability matrix, i18n contract checks, bundle budget check, axe smoke, visual smoke, and four viewport Playwright projects.
+
+## Validation
+
+- `npm run type-check`: pass.
+- `npm run i18n:check`: pass (3,271 Vietnamese/English keys; 38 migrated surfaces).
+- `npm run lint`: pass with eight pre-existing React Hook warnings.
+- `npm run test:unit`: pass, 91 files / 694 tests.
+- `npm run build`: pass, 91 app routes.
+- `npm run route-matrix:check`: pass, 79/79 page routes.
+- `npm run bundle:check`: pass within the measured 5% budget.
+- Focused core E2E after shell repair: 8 passed, 2 skipped across desktop/mobile.
+- Desktop and mobile axe smoke: pass for `/` and `/login`.
+- Mobile visual smoke: `/login` passed; `/` has one environment/API-proxy 500 console response and remains a follow-up rather than being hidden.
+
+## Safety and privacy
+
+No medical decision logic, RBAC, consent backend, audit, emergency, DrugBank, FIDES, or provenance contract was weakened. The browser Scribe flow now requires explicit consent capture before microphone access. Raw chain-of-thought, provider diagnostics, and uncalibrated confidence are not shown to ordinary users.
+
+## Known limitations
+
+- Dashboard still contains legacy Vietnamese copy and should receive a dedicated typed catalog migration.
+- Some legacy Material Symbols usage remains outside the PHR/Button boundary.
+- The public landing mobile visual smoke is blocked by a reproducible 500 response from the local API proxy; investigate the response source before release.
+- Authenticated real-user RBAC/consent E2E requires service credentials and was not fabricated in this environment.
+
+## Rollback
+
+Revert commit `05ef3751` or deploy the previous known-good web artifact. No database migration was introduced. The uncommitted deployment-script change and unrelated user data remain untouched.
+
+## Branch / review
+
+Branch: `feat/ui-modernization-v2`  
+Pull request: https://github.com/Project-CLARA-HBT/CLARA-Care/pull/117
