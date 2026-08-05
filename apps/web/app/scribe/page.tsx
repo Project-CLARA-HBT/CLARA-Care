@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
-import { Button } from "@/components/ui/button";
-import { InlineError, SurfaceCard } from "@/components/ui/surface";
 import EnterpriseReview from "@/components/scribe/enterprise-review";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import { getRole, type UserRole } from "@/lib/auth-store";
@@ -202,7 +200,6 @@ export default function ScribePage() {
     { key: "plan", title: copy("scribe.soap.plan"), valueKey: "plan" },
   ] as const, [copy]);
   const [mode, setMode] = useState<WorkspaceMode>("workspace");
-  const [showWorkspace, setShowWorkspace] = useState(false);
   const [sessions, setSessions] = useState<ScribeSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [selectedSession, setSelectedSession] = useState<ScribeSession | null>(null);
@@ -823,64 +820,6 @@ export default function ScribePage() {
       teardownAudioPipeline();
     };
   }, [clearLiveAnalyzeTimer, clearPersistTimer, teardownAudioPipeline]);
-
-  if (!showWorkspace) {
-    return (
-      <PageShell
-        title={copy("scribe.home.title")}
-        description={copy("scribe.home.description")}
-        variant="plain"
-      >
-        <div className="mx-auto max-w-3xl space-y-5">
-          {error ? <InlineError message={error} /> : null}
-          <SurfaceCard className="p-5 sm:p-6">
-            <span className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-              <span className="material-symbols-outlined text-[26px]" aria-hidden="true">clinical_notes</span>
-            </span>
-            <h2 className="mt-4 text-xl font-semibold text-[var(--text-primary)]">
-              {copy("scribe.action.createSession")}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              {copy("scribe.home.description")}
-            </p>
-            <Button
-              type="button"
-              className="mt-5"
-              icon="add"
-              loading={isCreating}
-              loadingLabel={copy("scribe.action.creating")}
-              onClick={() => {
-                void onCreateSession().then(() => setShowWorkspace(true));
-              }}
-            >
-              {copy("scribe.action.createSession")}
-            </Button>
-          </SurfaceCard>
-
-          {sessions.length ? (
-            <SurfaceCard className="p-5">
-              <h2 className="font-semibold text-[var(--text-primary)]">{copy("scribe.sessions.title")}</h2>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                {copy("scribe.sessions.count", { count: sessions.length })}
-              </p>
-              <Button type="button" variant="secondary" className="mt-4" onClick={() => setShowWorkspace(true)}>
-                {copy("scribe.tab.workspace")}
-              </Button>
-            </SurfaceCard>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={() => setShowWorkspace(true)}
-            className="focus-ring mx-auto flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
-          >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">tune</span>
-            {copy("scribe.home.advanced")}
-          </button>
-        </div>
-      </PageShell>
-    );
-  }
 
   return (
     <PageShell title="" description="" variant="plain">

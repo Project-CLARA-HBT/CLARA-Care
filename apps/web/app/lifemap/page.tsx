@@ -197,7 +197,6 @@ export default function LifeMapPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showWorkspace, setShowWorkspace] = useState(false);
   const [taskTitle, setTaskTitle] = useState("");
   const [episodeId, setEpisodeId] = useState("");
   const [captureEnabled, setCaptureEnabled] = useState(false);
@@ -762,83 +761,6 @@ export default function LifeMapPage() {
       setSaving(false);
     }
   };
-
-  if (!showWorkspace) {
-    return (
-      <PageShell
-        variant="plain"
-        title={copy("lifemap.title")}
-        description={copy("lifemap.description")}
-      >
-        <div className="mx-auto max-w-3xl space-y-5">
-          {error ? <InlineError message={error} onRetry={() => void load()} /> : null}
-          <SurfaceCard className="p-5 sm:p-6">
-            <Badge tone="brand">{copy("lifemap.episodes.title")}</Badge>
-            <h2 className="mt-3 text-xl font-semibold text-[var(--text-primary)]">
-              {loading
-                ? copy("lifemap.loading")
-                : data?.episodes.length
-                  ? data.episodes[0]?.title
-                  : copy("lifemap.create.title")}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              {data?.episodes.length
-                ? copy("lifemap.tasks.description")
-                : copy("lifemap.create.description")}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Button as="link" href="/lifemap/new" icon="add">
-                {copy("lifemap.create.start")}
-              </Button>
-              <Button as="link" href="/lifemap/visit-prep" variant="secondary" icon="clinical_notes">
-                {copy("lifemap.visitPrep.create")}
-              </Button>
-            </div>
-          </SurfaceCard>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SurfaceCard className="p-5">
-              <span className="material-symbols-outlined text-[24px] text-[var(--text-brand)]" aria-hidden="true">
-                task_alt
-              </span>
-              <h2 className="mt-3 font-semibold text-[var(--text-primary)]">
-                {copy("lifemap.tasks.title")}
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                {copy("lifemap.tasks.description")}
-              </p>
-              <Button as="link" href="/today" variant="ghost" size="sm" className="mt-3">
-                {copy("lifemap.tasks.openToday")}
-              </Button>
-            </SurfaceCard>
-            <SurfaceCard className="p-5">
-              <span className="material-symbols-outlined text-[24px] text-[var(--text-brand)]" aria-hidden="true">
-                manage_search
-              </span>
-              <h2 className="mt-3 font-semibold text-[var(--text-primary)]">
-                {copy("lifemap.ask.title")}
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                {copy("lifemap.ask.description")}
-              </p>
-              <Button type="button" variant="ghost" size="sm" className="mt-3" onClick={() => setShowWorkspace(true)}>
-                {copy("lifemap.ask.submit")}
-              </Button>
-            </SurfaceCard>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowWorkspace(true)}
-            className="focus-ring mx-auto flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
-          >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">tune</span>
-            {copy("lifemap.advanced.open")}
-          </button>
-        </div>
-      </PageShell>
-    );
-  }
 
   return (
     <PageShell

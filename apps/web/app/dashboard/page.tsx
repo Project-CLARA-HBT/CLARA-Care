@@ -115,7 +115,6 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [dashboardUnavailable, setDashboardUnavailable] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
 
   const refreshDashboard = useCallback(async () => {
     setIsRefreshing(true);
@@ -410,46 +409,6 @@ export default function DashboardPage() {
     [workflowStates]
   );
   const workflowProgress = Math.round((completedWorkflowSteps / 4) * 100);
-
-  if (!showDetails) {
-    return (
-      <PageShell title="" description="" variant="plain">
-        <div className="mx-auto max-w-4xl space-y-5">
-          <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Hôm nay</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">{greeting}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              Chọn một việc để bắt đầu. Các chỉ số vận hành chi tiết chỉ mở khi bạn cần.
-            </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {todayTasks.slice(0, 2).map((task) => (
-                <Link key={task.id} href={task.href} className="focus-ring rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 transition hover:border-[color:var(--brand-500)] hover:bg-[var(--surface-panel)]">
-                  <span className="font-semibold text-[var(--text-primary)]">{task.title}</span>
-                  {task.detail ? <span className="mt-1 block text-sm text-[var(--text-secondary)]">{task.detail}</span> : null}
-                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[var(--text-brand)]">Mở <span className="material-symbols-outlined text-base" aria-hidden="true">arrow_forward</span></span>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Lối tắt">
-            {QUICK_ACCESS.slice(0, 3).map((item) => (
-              <Link key={item.href} href={item.href} className="focus-ring rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5">
-                <span className="material-symbols-outlined text-[22px] text-[var(--text-brand)]" aria-hidden="true">{item.icon}</span>
-                <span className="mt-2 block font-semibold text-[var(--text-primary)]">{item.title}</span>
-                <span className="mt-1 block text-sm leading-5 text-[var(--text-secondary)]">{item.detail}</span>
-              </Link>
-            ))}
-          </section>
-
-          <button type="button" onClick={() => setShowDetails(true)} className="focus-ring mx-auto flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]">
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">monitoring</span>
-            Xem chỉ số và hoạt động chi tiết
-          </button>
-        </div>
-      </PageShell>
-    );
-  }
 
   return (
     <PageShell title="" description="" variant="plain">
