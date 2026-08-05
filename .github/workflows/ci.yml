@@ -36,48 +36,79 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
 
       - name: Filter paths
         id: filter
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
-        with:
-          list-files: json
-          filters: |
-            api:
-              - 'services/api/**'
-            ml:
-              - 'services/ml/**'
-            web:
-              - 'apps/web/**'
-              - 'apps/mobile/lib/core/consumer_terminology*.dart'
-              - 'apps/mobile/lib/experience/unified/unified_root.dart'
-              - 'contracts/consumer-terminology/**'
-            docs:
-              - 'docs/**'
-            scripts:
-              - 'scripts/**'
-            hackathon:
-              - 'scripts/demo/**'
-              - 'data/demo/**'
-              - 'docs/hackathon/**'
-            docker:
-              - 'deploy/docker/**'
-              - 'services/**/Dockerfile'
-              - 'apps/web/Dockerfile'
-              - '.env.example'
-            ci:
-              - '.github/workflows/**'
-              - 'Makefile'
-              - 'README.md'
-            python:
-              - 'services/**/*.py'
-              - 'scripts/**/*.py'
-              - 'evaluation/**/*.py'
-              - 'services/**/pyproject.toml'
-            python_changed:
-              - 'services/**/*.py'
-              - 'scripts/**/*.py'
-              - 'evaluation/**/*.py'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          FORCE_ALL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          zero = "0" * 40
+          base = os.environ.get("BASE_SHA", "").strip()
+          force_all = os.environ.get("FORCE_ALL", "false").lower() == "true"
+          if force_all or not base or base == zero:
+              files = subprocess.check_output(
+                  ["git", "ls-files"], text=True
+              ).splitlines()
+          else:
+              files = subprocess.check_output(
+                  ["git", "diff", "--name-only", f"{base}...HEAD"], text=True
+              ).splitlines()
+
+          def any_path(predicate):
+              return any(predicate(path) for path in files)
+
+          python_files = [
+              path
+              for path in files
+              if path.endswith(".py")
+              and path.startswith(("services/", "scripts/", "evaluation/"))
+          ]
+          outputs = {
+              "api": any_path(lambda p: p.startswith("services/api/")),
+              "ml": any_path(lambda p: p.startswith("services/ml/")),
+              "web": any_path(
+                  lambda p: p.startswith("apps/web/")
+                  or p.startswith("contracts/consumer-terminology/")
+                  or p == "apps/mobile/lib/experience/unified/unified_root.dart"
+                  or (
+                      p.startswith("apps/mobile/lib/core/consumer_terminology")
+                      and p.endswith(".dart")
+                  )
+              ),
+              "docs": any_path(lambda p: p.startswith("docs/")),
+              "scripts": any_path(lambda p: p.startswith("scripts/")),
+              "hackathon": any_path(
+                  lambda p: p.startswith(("scripts/demo/", "data/demo/", "docs/hackathon/"))
+              ),
+              "docker": any_path(
+                  lambda p: p.startswith("deploy/docker/")
+                  or p == "apps/web/Dockerfile"
+                  or p == ".env.example"
+                  or (p.startswith("services/") and p.endswith("/Dockerfile"))
+              ),
+              "ci": any_path(
+                  lambda p: p.startswith(".github/workflows/")
+                  or p in {"Makefile", "README.md"}
+              ),
+              "python": bool(python_files)
+              or any_path(
+                  lambda p: p.startswith("services/") and p.endswith("/pyproject.toml")
+              ),
+              "python_changed_files": json.dumps(python_files, separators=(",", ":")),
+          }
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              for key, value in outputs.items():
+                  rendered = str(value).lower() if isinstance(value, bool) else value
+                  output.write(f"{key}={rendered}\n")
+          PY
 
   quality:
     name: docs-check + ruff + mypy
