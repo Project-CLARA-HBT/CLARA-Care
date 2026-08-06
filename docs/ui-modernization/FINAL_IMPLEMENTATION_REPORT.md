@@ -11,6 +11,8 @@ The web application now has a documented, workspace-based navigation model, a ta
 - AppShell focus trap/restore, mobile drawer, workspace switcher, profile selector, and consolidated profile/logout controls.
 - PHR SVG icon abstraction and Button icon fallback; no raw icon names in the PHR hub.
 - Today, Family, Visit preparation, Chat, Dashboard, Council, and Scribe presentation improvements.
+- Professional Dashboard rebuilt around a calm task-first hierarchy: scoped work status, the highest-priority real alert, next action, role-aware workflow shortcuts, concise account data, and real recent activity. Synthetic values from the supplied visual reference are never used as user data.
+- Dashboard alert normalization now preserves backend severity, message, and destination so critical operational or medicine warnings are neither flattened nor routed to the wrong page.
 - Scribe consent-before-microphone gate and draft-versus-signed wording.
 - Answer sanitization for telemetry and common hidden-reasoning markers.
 - Route capability matrix, i18n contract checks, bundle budget check, axe smoke, visual smoke, and four viewport Playwright projects.
@@ -20,12 +22,14 @@ The web application now has a documented, workspace-based navigation model, a ta
 - `npm run type-check`: pass.
 - `npm run i18n:check`: pass (3,271 Vietnamese/English keys; 38 migrated surfaces).
 - `npm run lint`: pass with eight pre-existing React Hook warnings.
-- `npm run test:unit`: pass, 91 files / 695 tests.
+- `npm run test:unit`: pass, 92 files / 701 tests.
 - `npm run build`: pass, 91 app routes.
 - `npm run route-matrix:check`: pass, 79/79 page routes.
-- `npm run bundle:check`: pass within the measured 5% budget.
+- `npm run bundle:check`: pass at +0.29%, within the measured 5% budget.
 - Full Playwright E2E across desktop, laptop, tablet, and mobile: 31 passed, 5 intentionally skipped by viewport applicability.
 - Axe and visual smoke: pass for `/` and `/login` across all four viewports.
+- Dashboard Playwright suite: 8/8 pass across 1440×900 desktop, 1280×800 laptop, tablet, and 390×844 mobile. It covers role-aware content, structured alert routing, non-reassuring error states, and horizontal reflow.
+- Dashboard screenshots: `evidence/after/desktop/dashboard.png`, `dashboard-laptop.png`, `dashboard-tablet.png`, and `evidence/after/mobile/dashboard.png`.
 
 ## Safety and privacy
 
@@ -33,7 +37,7 @@ No medical decision logic, RBAC, consent backend, audit, emergency, DrugBank, FI
 
 ## Known limitations
 
-- Dashboard still contains legacy Vietnamese copy and should receive a dedicated typed catalog migration.
+- Dashboard stable UI is bilingual through its scoped copy helper; backend-authored task/alert text remains server-provided and is currently Vietnamese-first. A future API contract can add localized server copy without changing alert severity or provenance.
 - Some legacy Material Symbols usage remains outside the PHR/Button boundary.
 - The public landing no longer calls authenticated consent APIs; the former mobile proxy 500 is regression-tested and resolved.
 - Authenticated real-user RBAC/consent E2E requires service credentials and was not fabricated in this environment.

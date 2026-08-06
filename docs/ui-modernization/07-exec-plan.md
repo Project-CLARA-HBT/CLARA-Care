@@ -114,3 +114,14 @@ Validation: clean build, bundle budget, visual diff, route inventory, docs-check
 ## Progress update protocol
 
 After every milestone, update this file, `08-task-list.md`, and `11-decisions-and-progress.md` with commit, files, tests, failures/repairs, and rollback state. Never mark a task complete because a skeleton compiles.
+
+## Dashboard visual follow-up — 2026-08-06
+
+- [x] Rebuilt `/dashboard` from the supplied visual hierarchy without copying external fonts, icon fonts, avatars, or synthetic health data.
+- [x] Kept the route professional-only and made shortcuts role-aware for researcher, doctor, and admin workspaces.
+- [x] Preserved structured alert severity/message/destination through normalization and rendered the highest-priority alert before ordinary tasks.
+- [x] Removed health-reassuring inference from empty/loading/error operational data.
+- [x] Replaced dark-unsafe brand shades with the semantic `--text-brand` token and repaired mobile badge reflow.
+- [x] Added focused normalizer/data-integrity tests plus an eight-case Playwright matrix and four screenshot artifacts.
+
+Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.

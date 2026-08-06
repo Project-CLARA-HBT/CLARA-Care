@@ -20,6 +20,7 @@ export const ICON_NAMES = [
   "share",
   "emergency",
   "notifications",
+  "arrow-right",
   "fallback",
 ] as const;
 
@@ -38,6 +39,7 @@ const ICON_PATHS: Record<IconName, string> = {
   share: "M8.5 12.5 15.5 8m-7 3.5 7 4.5M18 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm12 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
   emergency: "M9 3h6v6h6v6h-6v6H9v-6H3V9h6V3Z",
   notifications: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4",
+  "arrow-right": "M5 12h14m-5-5 5 5-5 5",
   fallback: "M4 4h16v16H4zM9.5 9a2.5 2.5 0 1 1 3.2 2.4c-.7.3-.7.9-.7 1.6m0 3h.01",
 };
 

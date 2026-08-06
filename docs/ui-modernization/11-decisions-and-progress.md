@@ -12,6 +12,9 @@
 | 2026-08-06 | Keep Chat rollback and legacy CSS until parity evidence. | Compatibility is a release safety requirement. |
 | 2026-08-06 | Keep warnings/escalation visible; collapse only technical detail. | Progressive disclosure cannot hide medical safety information. |
 | 2026-08-06 | No DB migration for core presentation milestones. | Existing contracts can support honest UI states; optional schema improvements need separate rollback. |
+| 2026-08-06 | Treat `/dashboard` as a professional, role-aware workspace rather than a personal LifeMap home. | Route policy allows researcher/doctor/admin only; personal users already land on `/today`. The supplied mock informs hierarchy and visual language, not authorization or fabricated personal data. |
+| 2026-08-06 | Preserve structured dashboard alerts through the web normalizer. | Flattening alert objects lost severity and destination, which could hide a critical warning or send the user to the wrong workflow. |
+| 2026-08-06 | Never infer health stability from an empty operational alert list. | The dashboard now says only whether CLARA flagged work in the loaded scope and displays an explicit unknown state while loading or after failure. |
 
 ## Audit feedback resolution
 
@@ -53,6 +56,7 @@
 - M5 clinical: Scribe uses shared calm surfaces and explicit Record → Transcript review → SOAP review → Complete stepper; Council receives catalog-backed page heading. Existing Scribe safety/integration tests pass.
 - M7 harness: `route-matrix:check`, `bundle:check`, i18n, type-check, desktop/mobile axe and visual smoke pass against standalone artifact. Full unit suite: 91 files / 694 tests passed after the post-review consent and answer-boundary coverage. Full E2E: 27 passed, 5 failed (shell assertions/temporary mobile proxy error under repair), 4 skipped.
 - Post-review safety repairs: Scribe now requires an explicit consent checkbox and consent API capture before `getUserMedia`; completion is labeled as a draft rather than a signed/exported note. The answer boundary now filters common English/Vietnamese/XML reasoning markers. Mobile drawer initial focus excludes the backdrop and route navigation restores focus to its trigger. Dashboard no longer maps global runtime request totals to personal case counts.
+- Dashboard visual follow-up: rebuilt from the provided reference using existing semantic tokens and typed SVG icons; kept the real professional route/RBAC contract; introduced researcher/doctor/admin shortcut sets; retained structured alert severity/message/href; removed medical reassurance from unknown/empty operational states; used `--text-brand` for dark-mode AA contrast; and added dashboard E2E at all four supported viewports. Independent review findings were repaired before deployment.
 
 ### Checkpoint template
 

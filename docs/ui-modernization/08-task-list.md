@@ -28,13 +28,14 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-20 | NFR-COMPAT-001, NFR-MAINT-001 | Remove only proven-dead CSS/components and update compatibility docs. | Cleanup | UI-18/UI-19 | globals/styles/legacy docs | import/build/visual evidence | pending |
 | UI-21 | all | Independent architecture/UX/a11y/regression/medical-safety review and repairs. | Root + reviewers | UI-20 | changed files | final review loop | pending |
 | UI-22 | all | Final reports, commits, push/PR and controlled deploy if approved by evidence. | Root | UI-21 | docs, git, deploy | full release checklist | pending |
+| UI-23 | FR-OVR-001, NFR-A11Y-001, NFR-RESP-001, NFR-SEC-001 | Rebuild the professional Dashboard from the supplied reference with real data, scoped wording and correct alert routing. | Root | UI-05/UI-06/UI-18 | dashboard page, system normalizer, Icon, tests/evidence | unit + four-viewport E2E + build | done |
 
 ## Traceability matrix
 
 | Requirement groups | Tasks | Implementation files | Tests/evidence | Status |
 |---|---|---|---|---|
 | FR-NAV / FR-SHELL | UI-05–07 | navigation registries, AppShell, navigation components | workspace, route, shell, mobile E2E | done |
-| FR-OVR / FR-TODAY | UI-08 | dashboard/today | state + E2E + screenshot | done |
+| FR-OVR / FR-TODAY | UI-08/UI-23 | dashboard/today, system normalizer | state + structured-alert tests + four-viewport E2E + screenshots | done |
 | FR-LIFE | UI-09 | lifemap/guided-flow | wizard/safety/E2E | pending |
 | FR-VISIT | UI-10 | visits/new/flow | integration/E2E | done |
 | FR-FAM | UI-11 | family pages/components | tab/invite/revoke/E2E | done |
