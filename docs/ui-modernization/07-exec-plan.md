@@ -135,3 +135,13 @@ Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 
 - [x] Replaced the last remaining font-dependent mobile bottom-nav glyph and mobile notification glyph with bundled typed SVG icons after four-viewport E2E exposed 22–23px horizontal overflow before the external font loaded.
 
 Validation: API LifeMap foundation contracts 4/4; Ruff; web type-check; i18n contract; full web unit suite 92 files/702 tests; production build (91 routes); and `/today` E2E 12/12 across desktop, laptop, tablet, and mobile. Existing unrelated React Hook lint warnings remain build warnings. Rollback is a single checkpoint revert; no schema migration is needed.
+
+## Chat visual-system checkpoint — 2026-08-06
+
+- [x] Applied the Clara Health System dark token palette and Be Vietnam Pro at the shared token layer; light-mode tokens remain unchanged.
+- [x] Kept Chat answer-first and removed the duplicate Research topbar link; Research remains a real Chat response mode.
+- [x] Rendered a calm, explicit insufficient-evidence state from the actual evidence-release result. It offers the existing visit-preparation route, never an invented source, diagnosis, appointment, or clinical conclusion.
+- [x] Kept one canonical source disclosure whenever a citation registry exists, preserved inline source anchors, and retained role-gated diagnostics plus no-CoT filtering.
+- [x] Migrated high-frequency Chat welcome/sidebar/shared-button icons to bundled SVG output to prevent raw icon-name flashes.
+
+Validation: token/contrast tests, Chat canvas/welcome/composer/shell tests, i18n and TypeScript checks. Rollback: `NEXT_PUBLIC_CHAT_V2=false` selects the preserved legacy Chat, or revert this web-only checkpoint. No schema/API contract changed.

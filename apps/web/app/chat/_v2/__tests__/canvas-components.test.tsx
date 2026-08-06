@@ -91,6 +91,26 @@ describe("AnswerRenderer", () => {
     expect(screen.queryByText(/Degraded/i)).not.toBeInTheDocument();
   });
 
+  it("uses a calm evidence boundary and an existing visit-preparation route when release is blocked", () => {
+    render(
+      <AnswerRenderer
+        result={makeTier2({
+          answer: "",
+          evidenceRelease: {
+            passed: false,
+            reasons: ["no_retrieved_evidence"],
+          },
+        })}
+        uiLanguage="en"
+      />,
+    );
+    expect(screen.getByText(/not enough evidence/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /prepare for a visit/i })).toHaveAttribute(
+      "href",
+      "/visits/new",
+    );
+  });
+
   it("renders citations for a tier2 answer", () => {
     const result = makeTier2({
       answer: "Answer",

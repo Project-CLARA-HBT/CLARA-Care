@@ -167,16 +167,13 @@ describe("ChatShell — accessibility scaffolding", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps primary product navigation and theme control visible in chat", async () => {
+  it("keeps essential navigation and theme control visible without duplicating Research", async () => {
     await renderShell();
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "href",
       "/dashboard",
     );
-    expect(screen.getByRole("link", { name: "Research" })).toHaveAttribute(
-      "href",
-      "/research",
-    );
+    expect(screen.queryByRole("link", { name: "Research" })).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /switch to dark theme/i }),
     ).toBeInTheDocument();

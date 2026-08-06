@@ -84,13 +84,13 @@ describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => 
       globals.match(
         /html\.dark,\s*html\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/,
       )?.[1] ?? "";
-    expect(dark).toContain("--bg-canvas: #1b1a19;");
-    expect(dark).toContain("--surface-panel: #292929;");
-    expect(dark).toContain("--surface-muted: #333333;");
-    expect(dark).toContain("--text-primary: #ffffff;");
-    expect(dark).toContain("--text-secondary: #d6d6d6;");
-    expect(dark).toContain("--shell-border: #484848;");
-    expect(dark).toContain("--shell-border-strong: #8a8886;");
+    expect(dark).toContain("--bg-canvas: #101419;");
+    expect(dark).toContain("--surface-panel: #1d2025;");
+    expect(dark).toContain("--surface-muted: #272a30;");
+    expect(dark).toContain("--text-primary: #e1e2e9;");
+    expect(dark).toContain("--text-secondary: #c1c7d3;");
+    expect(dark).toContain("--shell-border: #414751;");
+    expect(dark).toContain("--shell-border-strong: #8b919d;");
   });
 
   it.each(SURFACE_FILES)(

@@ -7,7 +7,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | ID | Requirements | Objective | Owner | Dependencies | Likely files | Acceptance/tests | Status |
 |---|---|---|---|---|---|---|---|
 | UI-01 | NFR-MAINT-001 | Pin Node/npm metadata and add explicit web type-check script. | Foundation | baseline | `.nvmrc`, `apps/web/package.json`, CI | npm ci, type-check, build | done |
-| UI-02 | NFR-THEME-001, NFR-A11Y-001 | Add semantic token aliases and update contrast/focus guards. | Foundation | UI-01 | `styles/*`, `tailwind.config.ts` | token/contrast tests, light/dark visual | pending |
+| UI-02 | NFR-THEME-001, NFR-A11Y-001 | Add semantic token aliases and update contrast/focus guards. | Foundation | UI-01 | `styles/*`, `tailwind.config.ts` | token/contrast tests, light/dark visual | done |
 | UI-03 | FR-PHR-002 | Implement typed SVG Icon/fallback and migrate PHR/shared primitives. | Foundation | UI-02 | `components/ui/icon.tsx`, `app/phr/page.tsx` | icon unit/E2E with fonts blocked | done |
 | UI-04 | NFR-A11Y-002, NFR-A11Y-003 | Harden Field, Alert, SideSheet, ConfirmDialog and 44px targets. | Foundation | UI-02 | `components/ui/*`, dialogs | component focus/semantics tests | pending |
 | UI-05 | FR-NAV-001–006 | Create exhaustive route capability manifest, then split route/access/navigation/legacy registries and add workspace model. | Shell | UI-01 | `lib/navigation*`, `route-capability-matrix.md`, new registry files | route classification, role/flag/property/redirect tests | done |
@@ -19,7 +19,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-11 | FR-FAM-001/002 | Family URL-backed tabs and explicit invitation review. | Personal | UI-04/UI-06 | family routes/components | tabs/share/revoke E2E | done |
 | UI-12 | FR-PHR-001/003 | PHR ProgressList/section UX and conflict-safe presentation. | Personal | UI-03/UI-04 | phr routes/components | form/provenance/a11y tests | pending |
 | UI-13 | FR-MED-001–004 | Medicines first-run/CTA hierarchy and distinct model copy. | Personal | UI-03/UI-04 | medicines pages/components | flow/safety E2E | pending |
-| UI-14 | FR-CHAT-001–005 | Chat two-column answer-first disclosure and role-gated diagnostics. | Chat | UI-04/UI-06 | `app/chat/_v2/*` | parity/privacy/citation/E2E | in_progress |
+| UI-14 | FR-CHAT-001–005 | Chat two-column answer-first disclosure and role-gated diagnostics. | Chat | UI-04/UI-06 | `app/chat/_v2/*` | parity/privacy/citation/E2E | done |
 | UI-15 | FR-EVID-001, FR-RES-001 | Evidence step disclosure and Source Hub browse/sync split. | Chat | UI-14 | evidence/research routes | release-gate/citation tests | pending |
 | UI-16 | FR-COUNCIL-001–003 | Council case context and result hierarchy. | Clinical | UI-04/UI-06 | council routes/components | safety/role/E2E | pending |
 | UI-17 | FR-SCRIBE-001–003 | Canonical Scribe stages, consent and sign semantics. | Clinical | UI-04/UI-06 | scribe page/components/libs | workflow/safety/E2E | in_progress |

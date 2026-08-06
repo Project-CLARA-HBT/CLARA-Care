@@ -15,6 +15,8 @@
 | 2026-08-06 | Treat `/dashboard` as a professional, role-aware workspace rather than a personal LifeMap home. | Route policy allows researcher/doctor/admin only; personal users already land on `/today`. The supplied mock informs hierarchy and visual language, not authorization or fabricated personal data. |
 | 2026-08-06 | Preserve structured dashboard alerts through the web normalizer. | Flattening alert objects lost severity and destination, which could hide a critical warning or send the user to the wrong workflow. |
 | 2026-08-06 | Never infer health stability from an empty operational alert list. | The dashboard now says only whether CLARA flagged work in the loaded scope and displays an explicit unknown state while loading or after failure. |
+| 2026-08-06 | Use the supplied Clara Health System palette as the exact dark-mode token source. | It replaces the old charcoal override globally while preserving approved light-mode behavior and contrast guards. |
+| 2026-08-06 | Represent blocked evidence release as insufficient evidence, not a partial clinical conclusion. | The UI offers only evidence refinement already present in Chat and the existing visit-preparation route; it does not imply clinician availability. |
 
 ## Audit feedback resolution
 

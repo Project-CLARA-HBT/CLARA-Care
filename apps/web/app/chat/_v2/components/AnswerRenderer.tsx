@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -94,14 +95,14 @@ function AnswerRenderer({
 
       {evidenceRelease && !evidenceRelease.passed ? (
         <section
-          className="rounded-2xl border border-amber-300/60 bg-amber-50/85 p-3 text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/35 dark:text-amber-100"
+          className="rounded-[14px] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-[var(--status-warn-text)]"
           role="status"
           aria-label={copy("chat.answerRenderer.releaseBoundary.aria")}
         >
-          <p className="text-sm font-semibold">
+          <p className="text-[15px] font-semibold text-[var(--text-primary)]">
             {copy("chat.answerRenderer.releaseBoundary.title")}
           </p>
-          <p className="mt-1 text-xs leading-5">
+          <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
             {copy("chat.answerRenderer.releaseBoundary.description")}
           </p>
           {evidenceRelease.reasons.length ? (
@@ -111,6 +112,12 @@ function AnswerRenderer({
               ))}
             </ul>
           ) : null}
+          <Link
+            href="/visits/new"
+            className="mt-3 inline-flex min-h-9 items-center rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--surface-panel)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--shell-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
+          >
+            {copy("chat.answerRenderer.releaseBoundary.prepareVisit")}
+          </Link>
         </section>
       ) : null}
 
@@ -253,7 +260,7 @@ function AnswerRenderer({
         </section>
       ) : null}
 
-      {presentation?.citationVisibility === "expanded" && citations.length ? (
+      {presentation?.citationVisibility === "expanded" && citations.length && !citationRegistry.length ? (
         <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             {copy("chat.answerRenderer.presentation.sources")}
@@ -273,7 +280,7 @@ function AnswerRenderer({
         </section>
       ) : null}
 
-      {citations.length ? (
+      {citations.length && !citationRegistry.length ? (
         <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             {copy("chat.answerRenderer.references", {

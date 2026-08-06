@@ -95,14 +95,10 @@
   --focus-ring-offset: 2px;
 
   --font-sans:
-    "Inter", "Inter var", "Segoe UI Variable", "Segoe UI", ui-sans-serif,
+    "Be Vietnam Pro", "Segoe UI Variable", "Segoe UI", ui-sans-serif,
     system-ui, -apple-system, Helvetica, Arial, sans-serif;
-  --font-display:
-    "Inter", "Inter var", "Segoe UI Variable Display", "Segoe UI",
-    ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-chat:
-    "Segoe UI", ui-sans-serif, system-ui, -apple-system, Helvetica, Arial,
-    sans-serif;
+  --font-display: var(--font-sans);
+  --font-chat: var(--font-sans);
 }
 
 @media (min-width: 1280px) {
@@ -535,22 +531,22 @@ html[data-theme="dark"] .medical-markdown::before {
 html.dark,
 html[data-theme="dark"] {
   color-scheme: dark;
-  --color-bg: #1b1a19;
-  --bg-canvas: #1b1a19;
-  --bg-elev-1: #242424;
-  --bg-elev-2: #292929;
-  --bg-elev-3: #303030;
-  --text-primary: #ffffff;
-  --text-secondary: #d6d6d6;
-  --text-muted: #b3b3b3;
-  --text-brand: #75b6e7;
-  --surface-sidebar: #202020;
-  --surface-header: #242424;
-  --surface-panel: #292929;
-  --surface-muted: #333333;
-  --surface-brand-soft: #0f3b5f;
-  --shell-border: #484848;
-  --shell-border-strong: #8a8886;
+  --color-bg: #101419;
+  --bg-canvas: #101419;
+  --bg-elev-1: #191c21;
+  --bg-elev-2: #1d2025;
+  --bg-elev-3: #272a30;
+  --text-primary: #e1e2e9;
+  --text-secondary: #c1c7d3;
+  --text-muted: #c1c7d3;
+  --text-brand: #a4c9ff;
+  --surface-sidebar: #0b0e13;
+  --surface-header: rgba(16, 20, 25, 0.92);
+  --surface-panel: #1d2025;
+  --surface-muted: #272a30;
+  --surface-brand-soft: rgba(164, 201, 255, 0.12);
+  --shell-border: #414751;
+  --shell-border-strong: #8b919d;
   --status-ok-bg: rgba(16, 185, 129, 0.24);
   --status-ok-border: rgba(16, 185, 129, 0.42);
   --status-ok-text: #6ee7b7;
@@ -563,17 +559,22 @@ html[data-theme="dark"] {
   --status-neutral-bg: rgba(148, 163, 184, 0.2);
   --status-neutral-border: rgba(148, 163, 184, 0.38);
   --status-neutral-text: #cbd5e1;
-  --dashboard-accent-soft: rgba(59, 130, 246, 0.22);
-  --dashboard-side-panel-bg: rgba(19, 27, 46, 0.74);
-  --glass-fill: rgba(19, 27, 46, 0.6);
-  --glass-stroke: rgba(67, 71, 79, 0.42);
-  --glass-highlight: rgba(34, 42, 61, 0.65);
+  --dashboard-accent-soft: rgba(164, 201, 255, 0.12);
+  --dashboard-side-panel-bg: rgba(29, 32, 37, 0.92);
+  --glass-fill: rgba(29, 32, 37, 0.88);
+  --glass-stroke: rgba(65, 71, 81, 0.88);
+  --glass-highlight: rgba(39, 42, 48, 0.86);
   --shadow-soft: 0 18px 36px -30px rgba(2, 6, 23, 0.82);
   --shadow-float: 0 26px 62px -42px rgba(2, 6, 23, 0.88);
   --shadow-hero: 0 32px 94px -54px rgba(2, 6, 23, 0.92);
   --shadow-focus: 0 0 0 3px rgba(99, 155, 255, 0.35);
   --shadow-chrome: 0 22px 56px -34px rgba(2, 6, 23, 0.9);
-  --focus-ring-color: #7dd3fc;
+  --focus-ring-color: #a4c9ff;
+}
+
+html.dark body,
+html[data-theme="dark"] body {
+  background-image: none;
 }
 
 * {
@@ -756,11 +757,6 @@ html[data-theme="dark"]
  * All other v2 token pairs (primary/secondary/brand/status text on their
  * backgrounds, both themes) already clear AA.
  */
-html.dark .clara-chat-v2,
-html[data-theme="dark"] .clara-chat-v2 {
-  --text-muted: #9aa7be;
-}
-
 .clara-chat-v2 {
   background:
     radial-gradient(

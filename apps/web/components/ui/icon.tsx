@@ -24,6 +24,13 @@ export const ICON_NAMES = [
   "check",
   "more",
   "arrow-right",
+  "chat",
+  "search",
+  "folder",
+  "menu",
+  "send",
+  "theme",
+  "stop",
   "fallback",
 ] as const;
 
@@ -46,6 +53,13 @@ const ICON_PATHS: Record<IconName, string> = {
   check: "m5 12 4 4L19 6",
   more: "M5 12h.01M12 12h.01M19 12h.01",
   "arrow-right": "M5 12h14m-5-5 5 5-5 5",
+  chat: "M4 5h16v11H8l-4 4V5Zm4 4h8m-8 3h5",
+  search: "m20 20-4.4-4.4M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z",
+  folder: "M3 6h7l2 2h9v11H3V6Zm0 3h18",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  send: "m4 4 16 8-16 8 3-8-3-8Zm3 8h9",
+  theme: "M12 3v2m0 14v2m9-9h-2M5 12H3m15.4 6.4-1.4-1.4M7 7 5.6 5.6m12.8 0L17 7M7 17l-1.4 1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z",
+  stop: "M6 6h12v12H6z",
   fallback: "M4 4h16v16H4zM9.5 9a2.5 2.5 0 1 1 3.2 2.4c-.7.3-.7.9-.7 1.6m0 3h.01",
 };
 

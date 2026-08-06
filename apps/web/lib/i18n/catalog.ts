@@ -1482,9 +1482,10 @@ const VI_MESSAGES = {
   "chat.answerRenderer.integrity.verification": "Kiểm chứng",
   "chat.answerRenderer.integrity.notReported": "Chưa báo cáo",
   "chat.answerRenderer.releaseBoundary.aria": "Giới hạn phát hành bằng chứng",
-  "chat.answerRenderer.releaseBoundary.title": "Chưa phát hành kết luận y khoa",
+  "chat.answerRenderer.releaseBoundary.title": "Chưa đủ bằng chứng để trả lời chắc chắn",
   "chat.answerRenderer.releaseBoundary.description":
-    "CLARA đã giữ lại phần kết luận vì bằng chứng chưa đáp ứng điều kiện kiểm tra. Bạn có thể thu hẹp câu hỏi hoặc xem nguồn trước khi hỏi lại.",
+    "CLARA đã giữ lại phần kết luận vì bằng chứng chưa đáp ứng điều kiện kiểm tra. Bạn có thể thu hẹp câu hỏi, xem nguồn hoặc chuẩn bị thông tin để trao đổi với bác sĩ.",
+  "chat.answerRenderer.releaseBoundary.prepareVisit": "Chuẩn bị đi khám",
   "chat.answerRenderer.releaseBoundary.reason.noCitations":
     "Chưa có nguồn dẫn có thể mở để đối chiếu.",
   "chat.answerRenderer.releaseBoundary.reason.noRetrievedEvidence":
@@ -1545,7 +1546,6 @@ const VI_MESSAGES = {
   "chat.shell.conversationCanvas": "Khung trò chuyện",
   "chat.shell.openSidebar": "Mở sidebar",
   "chat.shell.dashboard": "Tổng quan",
-  "chat.shell.research": "Nghiên cứu",
   "chat.shell.openAllTools": "Mở các công cụ",
   "chat.shell.allTools": "Các công cụ",
   "chat.shell.tools": "Công cụ",
@@ -5421,9 +5421,10 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.answerRenderer.integrity.notReported": "Not reported",
   "chat.answerRenderer.releaseBoundary.aria": "Evidence release boundary",
   "chat.answerRenderer.releaseBoundary.title":
-    "No clinical conclusion was released",
+    "There is not enough evidence for a confident answer",
   "chat.answerRenderer.releaseBoundary.description":
-    "CLARA withheld the conclusion because the evidence did not pass the required checks. Narrow the question or inspect the sources before trying again.",
+    "CLARA withheld the conclusion because the evidence did not pass the required checks. Narrow the question, inspect the sources, or prepare information to discuss with a clinician.",
+  "chat.answerRenderer.releaseBoundary.prepareVisit": "Prepare for a visit",
   "chat.answerRenderer.releaseBoundary.reason.noCitations":
     "There are no resolvable sources to inspect.",
   "chat.answerRenderer.releaseBoundary.reason.noRetrievedEvidence":
@@ -5484,7 +5485,6 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.shell.conversationCanvas": "Conversation canvas",
   "chat.shell.openSidebar": "Open sidebar",
   "chat.shell.dashboard": "Dashboard",
-  "chat.shell.research": "Research",
   "chat.shell.openAllTools": "Open all tools",
   "chat.shell.allTools": "All tools",
   "chat.shell.tools": "Tools",

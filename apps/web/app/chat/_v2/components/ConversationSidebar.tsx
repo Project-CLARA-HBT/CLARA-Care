@@ -14,6 +14,7 @@ import {
   type ConversationDayBucket,
 } from "@/app/chat/_v2/lib/chat-format";
 import { Button, IconButton } from "@/app/chat/_v2/components/primitives";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Conversation list / search / folders entry for the rebuilt CLARA Chat.
@@ -95,12 +96,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--brand-600)] text-white">
-            <span
-              className="material-symbols-outlined text-[17px]"
-              aria-hidden="true"
-            >
-              forum
-            </span>
+            <Icon name="chat" size={17} />
           </span>
           <p className="text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
             CLARA
@@ -123,12 +119,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
           placeholder={t(uiLanguage, "chat.sidebar.searchPlaceholder")}
           className="min-h-[38px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus-visible:border-[color:var(--brand-500)] focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]/20"
         />
-        <span
-          aria-hidden="true"
-          className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]"
-        >
-          search
-        </span>
+        <Icon name="search" size={18} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
       </div>
 
       {/* Folders / workspace entry point (progressive disclosure — Req 2.4, 6.4). */}
@@ -138,12 +129,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
           onClick={onOpenFolders}
           className="flex w-full items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5 py-2 text-left text-[12px] font-semibold text-[var(--text-secondary)] transition hover:border-[color:var(--shell-border-strong)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)]"
         >
-          <span
-            aria-hidden="true"
-            className="material-symbols-outlined text-[18px]"
-          >
-            folder
-          </span>
+          <Icon name="folder" size={18} />
           {t(uiLanguage, "chat.sidebar.saved")}
         </button>
       ) : null}

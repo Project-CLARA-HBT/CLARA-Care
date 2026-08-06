@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -65,6 +66,7 @@ import TelemetryPanelLazy from "@/app/chat/_v2/components/TelemetryPanelLazy";
 import { Badge, IconButton } from "@/app/chat/_v2/components/primitives";
 import { usePrefersReducedMotion } from "@/app/chat/_v2/theme/usePrefersReducedMotion";
 import { useResolvedTheme } from "@/app/chat/_v2/theme/useResolvedTheme";
+import { useFocusTrap } from "@/app/chat/_v2/lib/useFocusTrap";
 
 /**
  * ChatShell — the rebuilt CLARA Chat (CHAT_V2) layout + orchestration.
@@ -109,6 +111,7 @@ export default function ChatShell() {
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAppMenuOpen, setIsAppMenuOpen] = useState(false);
+  const appToolsMenuRef = useRef<HTMLDivElement | null>(null);
 
   const conversations = useConversations();
   const turns = useChatTurns();
@@ -124,6 +127,7 @@ export default function ChatShell() {
   // so decorative motion can be neutralized consistently.
   const resolvedTheme = useResolvedTheme();
   const prefersReducedMotion = usePrefersReducedMotion();
+  useFocusTrap(isAppMenuOpen, appToolsMenuRef);
 
   // Focus management for the composer (Requirement 5.1, 5.4). The composer is a
   // self-contained presentational component, so the shell focuses it by its
@@ -216,6 +220,11 @@ export default function ChatShell() {
     const timer = window.setTimeout(() => setNotice(""), 2500);
     return () => window.clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    if (!isAppMenuOpen) return;
+    appToolsMenuRef.current?.querySelector<HTMLElement>("button, a[href]")?.focus();
+  }, [isAppMenuOpen]);
 
   // --- Debounced workspace search -------------------------------------------
   useEffect(() => {
@@ -408,6 +417,8 @@ export default function ChatShell() {
       conversations,
       mode,
       personalMode,
+      outputMode,
+      outputModesEnabled,
       query,
       retrievalStackMode,
       stream,
@@ -609,6 +620,7 @@ export default function ChatShell() {
       if (key === "escape") {
         setIsWorkspaceOpen(false);
         setIsMobileSidebarOpen(false);
+        setIsAppMenuOpen(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -690,12 +702,6 @@ export default function ChatShell() {
                 >
                   {t(uiLanguage, "chat.shell.dashboard")}
                 </Link>
-                <Link
-                  href="/research"
-                  className="rounded-lg px-2.5 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
-                >
-                  {t(uiLanguage, "chat.shell.research")}
-                </Link>
               </nav>
               <IconButton
                 label={
@@ -742,8 +748,11 @@ export default function ChatShell() {
 
           {isAppMenuOpen ? (
             <div
+              ref={appToolsMenuRef}
               className="absolute right-3 top-[3.35rem] z-30 w-[min(92vw,22rem)] rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl shadow-slate-950/10"
               role="dialog"
+              aria-modal="true"
+              tabIndex={-1}
               aria-label={t(uiLanguage, "chat.shell.claraTools")}
             >
               <div className="flex items-center justify-between px-2 py-1.5">
