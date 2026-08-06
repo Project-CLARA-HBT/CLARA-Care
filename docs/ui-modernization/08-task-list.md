@@ -18,7 +18,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-10 | FR-VISIT-001/002 | Focused Visit preparation steps and contextual consent. | Personal | UI-04/UI-06 | visits routes/components | integration/E2E | done |
 | UI-11 | FR-FAM-001/002 | Family URL-backed tabs and explicit invitation review. | Personal | UI-04/UI-06 | family routes/components | tabs/share/revoke E2E | done |
 | UI-12 | FR-PHR-001/003 | PHR ProgressList/section UX and conflict-safe presentation. | Personal | UI-03/UI-04 | phr routes/components | form/provenance/a11y tests | pending |
-| UI-13 | FR-MED-001–004 | Medicines first-run/CTA hierarchy and distinct model copy. | Personal | UI-03/UI-04 | medicines pages/components | flow/safety E2E | pending |
+| UI-13 | FR-MED-001–004 | Medicines first-run/CTA hierarchy and distinct model copy. | Personal | UI-03/UI-04 | medicines pages/components | flow/safety E2E | done |
 | UI-14 | FR-CHAT-001–005 | Chat two-column answer-first disclosure and role-gated diagnostics. | Chat | UI-04/UI-06 | `app/chat/_v2/*` | parity/privacy/citation/E2E | done |
 | UI-15 | FR-EVID-001, FR-RES-001 | Evidence step disclosure and Source Hub browse/sync split. | Chat | UI-14 | evidence/research routes | release-gate/citation tests | pending |
 | UI-16 | FR-COUNCIL-001–003 | Council case context and result hierarchy. | Clinical | UI-04/UI-06 | council routes/components | safety/role/E2E | pending |
@@ -40,7 +40,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | FR-VISIT | UI-10 | visits/new/flow | integration/E2E | done |
 | FR-FAM | UI-11 | family pages/components | tab/invite/revoke/E2E | done |
 | FR-PHR | UI-03/UI-12 | icon, PHR routes/components | icon/form/provenance/E2E | in_progress |
-| FR-MED | UI-13 | medicines components | normalization/DDI/flow tests | pending |
+| FR-MED | UI-13 | medicines components | normalization/DDI/flow tests | done |
 | FR-CHAT / FR-EVID / FR-RES | UI-14–15 | Chat V2, Evidence, Source Hub | citation/privacy/role/E2E | in_progress |
 | FR-COUNCIL | UI-16 | Council routes/view models | safety/role/E2E | in_progress |
 | FR-SCRIBE | UI-17 | Scribe routes/components/libs | workflow/consent/sign tests | in_progress |

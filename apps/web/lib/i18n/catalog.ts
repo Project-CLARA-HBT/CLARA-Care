@@ -1617,8 +1617,7 @@ const VI_MESSAGES = {
   "medicines.list.trackedDescription":
     "Chỉ dữ liệu bạn xác nhận mới có mặt ở đây.",
   "medicines.list.addStepByStep": "Thêm thuốc theo từng bước",
-  "medicines.list.checkDrugbank": "Kiểm tra tương tác DrugBank",
-  "medicines.list.checkingDrugbank": "Đang đối chiếu DrugBank…",
+  "medicines.list.openSafety": "Kiểm tra an toàn tương tác",
   "medicines.list.noDoseOrSchedule": "Chưa có liều/lịch dùng",
   "medicines.list.active": "Đang theo dõi",
   "medicines.list.ended": "Đã kết thúc",
@@ -1629,13 +1628,9 @@ const VI_MESSAGES = {
   "medicines.list.emptyTitle": "Chưa có thuốc nào",
   "medicines.list.emptyDescription":
     "Thêm thuốc bạn đang dùng để theo dõi. Đừng dùng danh sách này thay cho đơn hoặc hướng dẫn của bác sĩ.",
-  "medicines.list.verifiedResult": "Kết quả đã đối chiếu DrugBank",
-  "medicines.list.sourceVersion": "Nguồn phiên bản: {version}",
-  "medicines.list.alert": "Cảnh báo",
-  "medicines.list.alertFallback":
-    "Có tương tác cần được dược sĩ hoặc bác sĩ đánh giá.",
-  "medicines.list.noAlerts":
-    "DrugBank không ghi nhận cảnh báo DDI cho các thuốc đã chọn trong lần đối chiếu này. Điều này không thay thế tư vấn cá nhân từ dược sĩ hoặc bác sĩ.",
+  "medicines.list.firstRun.add": "Thêm thuốc theo nhãn hoặc đơn của bạn",
+  "medicines.list.firstRun.confirm": "Xác nhận thông tin trước khi theo dõi",
+  "medicines.list.firstRun.safety": "Kiểm tra an toàn khi có đủ thông tin",
   "medicines.list.editTitle": "Sửa bản ghi thuốc",
   "medicines.list.formDescription":
     "Nhập theo nhãn hoặc đơn của bạn; CLARA không suy đoán thuốc.",
@@ -5556,8 +5551,7 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.list.trackedDescription":
     "Only information you confirmed appears here.",
   "medicines.list.addStepByStep": "Add medication step by step",
-  "medicines.list.checkDrugbank": "Check DrugBank interactions",
-  "medicines.list.checkingDrugbank": "Checking DrugBank…",
+  "medicines.list.openSafety": "Check interaction safety",
   "medicines.list.noDoseOrSchedule": "No dose or schedule yet",
   "medicines.list.active": "Tracking",
   "medicines.list.ended": "Ended",
@@ -5568,13 +5562,9 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.list.emptyTitle": "No medication yet",
   "medicines.list.emptyDescription":
     "Add medication you are taking to track it. Do not use this list instead of a prescription or your clinician's instructions.",
-  "medicines.list.verifiedResult": "DrugBank-checked result",
-  "medicines.list.sourceVersion": "Source version: {version}",
-  "medicines.list.alert": "Alert",
-  "medicines.list.alertFallback":
-    "A pharmacist or clinician needs to review this possible interaction.",
-  "medicines.list.noAlerts":
-    "DrugBank did not identify a DDI alert for the selected medicines in this check. This does not replace personalised advice from a pharmacist or clinician.",
+  "medicines.list.firstRun.add": "Add medication from your label or prescription",
+  "medicines.list.firstRun.confirm": "Confirm the details before tracking",
+  "medicines.list.firstRun.safety": "Check safety when enough information is available",
   "medicines.list.editTitle": "Edit medication record",
   "medicines.list.formDescription":
     "Enter it from your label or prescription; CLARA does not guess medication.",

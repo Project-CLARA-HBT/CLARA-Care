@@ -217,9 +217,9 @@ export default function MedicinesCabinetTab() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-            <span className="inline-flex items-center gap-1"><i className="fa fa-lock" aria-hidden="true" /> {t(language, "medicines.cabinet.verifiedSource")}</span>
-            <span className="inline-flex items-center gap-1"><i className="fa fa-database" aria-hidden="true" /> {t(language, "medicines.cabinet.accountData")}</span>
-            <span className="inline-flex items-center gap-1"><i className="fa fa-clock-o" aria-hidden="true" /> {t(language, "medicines.cabinet.updateAnytime")}</span>
+            <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">verified_user</span> {t(language, "medicines.cabinet.verifiedSource")}</span>
+            <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">database</span> {t(language, "medicines.cabinet.accountData")}</span>
+            <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">update</span> {t(language, "medicines.cabinet.updateAnytime")}</span>
           </div>
         </SurfaceCard>
 
@@ -309,11 +309,11 @@ export default function MedicinesCabinetTab() {
 
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-[var(--text-muted)]">
                         <span className="inline-flex items-center gap-1">
-                          <i className="fa fa-calendar" aria-hidden="true" /> {t(language, "medicines.cabinet.expiryValue", { date: formatDate(language, item.expires_on) })}
+                          <span className="material-symbols-outlined text-sm" aria-hidden="true">event</span> {t(language, "medicines.cabinet.expiryValue", { date: formatDate(language, item.expires_on) })}
                         </span>
                         {item.ocr_confidence !== null ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-[var(--status-ok-text)]">
-                            <i className="fa fa-check-circle" aria-hidden="true" /> OCR {Math.round(item.ocr_confidence * 100)}%
+                            <span className="material-symbols-outlined text-sm" aria-hidden="true">check_circle</span> OCR {Math.round(item.ocr_confidence * 100)}%
                           </span>
                         ) : null}
                       </div>
@@ -335,8 +335,8 @@ export default function MedicinesCabinetTab() {
 
                   <div className="border-t border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-3">
                     <div className="flex flex-wrap items-center gap-4 text-[10px] text-[var(--text-muted)]">
-                      <span className="inline-flex items-center gap-1"><i className="fa fa-shield" aria-hidden="true" /> {t(language, "medicines.cabinet.saved")}</span>
-                      <span className="inline-flex items-center gap-1"><i className="fa fa-history" aria-hidden="true" /> {t(language, "medicines.cabinet.updated", { date: formatDate(language, item.updated_at) })}</span>
+                      <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">shield</span> {t(language, "medicines.cabinet.saved")}</span>
+                      <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">history</span> {t(language, "medicines.cabinet.updated", { date: formatDate(language, item.updated_at) })}</span>
                     </div>
                   </div>
                 </SurfaceCard>

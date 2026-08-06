@@ -13,7 +13,7 @@ const BASE =
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "border border-[color:var(--brand-700)] bg-[var(--brand-600)] text-white shadow-[var(--shadow-sm)] hover:bg-[var(--brand-700)] active:translate-y-px",
+    "border border-[color:var(--brand-700)] bg-[var(--brand-600)] text-[var(--button-primary-text)] shadow-[var(--shadow-sm)] hover:bg-[var(--brand-700)] active:translate-y-px",
   secondary:
     "border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-[var(--shadow-sm)] hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-muted)]",
   ghost:

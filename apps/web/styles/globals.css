@@ -38,6 +38,7 @@
   --brand-600: #2563eb;
   --brand-700: #1d4ed8;
   --brand-800: #1e40af;
+  --button-primary-text: #ffffff;
   --accent-500: #6366f1;
   --accent-600: #4f46e5;
   --success-500: #16a34a;
@@ -540,6 +541,14 @@ html[data-theme="dark"] {
   --text-secondary: #c1c7d3;
   --text-muted: #c1c7d3;
   --text-brand: #a4c9ff;
+  /* Clara Health System: primary actions use the solid secondary container;
+   * the lighter primary shades remain reserved for emphasis and focus. */
+  --brand-400: #d4e3ff;
+  --brand-500: #a4c9ff;
+  --brand-600: #0053db;
+  --brand-700: #003ea8;
+  --brand-800: #002a78;
+  --button-primary-text: #cdd7ff;
   --surface-sidebar: #0b0e13;
   --surface-header: rgba(16, 20, 25, 0.92);
   --surface-panel: #1d2025;
