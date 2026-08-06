@@ -469,6 +469,15 @@ function PhrHub({
   ].filter((tool): tool is HubItem => tool !== null);
   const completed = sections.filter((item) => item.complete).length;
   const nextSection = sections.find((item) => !item.complete) ?? sections[0];
+  const renderSectionRows = (items: HubItem[]) => items.map((item) => (
+    <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-[76px] w-full justify-start whitespace-normal p-4 text-left">
+      <span className="flex w-full items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"><Icon name={item.icon} size={21} /></span>
+        <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[var(--text-primary)]">{item.title}</span><span className="mt-1 block text-[13px] font-normal leading-5 text-[var(--text-secondary)]">{item.description}</span></span>
+        <span className={`shrink-0 text-xs font-semibold ${item.complete ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)]"}`}>{item.complete ? copy("phr.hub.status.complete") : copy("phr.hub.status.incomplete")}</span>
+      </span>
+    </Button>
+  ));
 
   return (
     <PageShell variant="plain" title={text.title} description={text.description}>
@@ -487,26 +496,16 @@ function PhrHub({
             {sections.map((item) => <span key={item.href} className={`h-2 rounded-full ${item.complete ? "bg-[var(--brand-500)]" : "bg-[var(--surface-muted)]"}`} />)}
           </div>
         </section>
-        <section aria-label={copy("phr.hub.sections.record")} className="space-y-2">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("phr.hub.sections.record")}</h2>
-          {sections.map((item) => (
-            <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-[76px] w-full justify-start whitespace-normal p-4 text-left">
-              <span className="flex w-full items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"><Icon name={item.icon} size={21} /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-[var(--text-primary)]">{item.title}</span>
-                  <span className="mt-1 block text-[13px] font-normal leading-5 text-[var(--text-secondary)]">{item.description}</span>
-                </span>
-                <span className={`shrink-0 text-xs font-semibold ${item.complete ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)]"}`}>{item.complete ? copy("phr.hub.status.complete") : copy("phr.hub.status.incomplete")}</span>
-              </span>
-            </Button>
-          ))}
-        </section>
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3">
-          <div className="min-w-0"><p className="text-sm font-bold text-[var(--text-primary)]">{text.consentTitle}</p><p className="mt-0.5 text-[13px] leading-6 text-[var(--text-secondary)]">{text.consentBody}</p></div>
-          <Button as="link" href="/account/consent" variant="secondary" size="sm">{text.consentLink}</Button>
-        </section>
-        <p role="note" className="px-1 text-[13px] leading-6 text-[var(--text-secondary)]">{text.disclaimer}</p>
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6" aria-label={copy("phr.hub.sections.record")}>
+            <section className="space-y-2"><h2 className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("phr.hub.sections.personal")}</h2>{renderSectionRows(sections.slice(0, 3))}</section>
+            <section className="space-y-2"><h2 className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("phr.hub.sections.important")}</h2>{renderSectionRows(sections.slice(3))}</section>
+          </div>
+          <aside className="space-y-4">
+            <section className="chrome-panel rounded-[var(--radius-xl)] p-5"><span className="material-symbols-outlined text-[var(--text-brand)]" aria-hidden="true">shield_lock</span><h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">{text.consentTitle}</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{text.consentBody}</p><Button as="link" href="/account/consent" variant="secondary" size="sm" className="mt-4">{text.consentLink}</Button></section>
+            <p role="note" className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-[13px] leading-6 text-[var(--text-secondary)]">{text.disclaimer}</p>
+          </aside>
+        </div>
         {tools.length > 0 ? (
           <section aria-label={copy("phr.hub.sections.tools")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {tools.map((item) => (
