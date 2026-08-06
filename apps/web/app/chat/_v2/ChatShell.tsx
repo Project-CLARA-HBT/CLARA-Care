@@ -653,7 +653,7 @@ export default function ChatShell() {
         ) : null}
         <aside
           className={[
-            "fixed inset-y-0 left-0 z-50 w-[min(86vw,18rem)] border-r border-[color:var(--shell-border)] bg-[var(--surface-panel)] transition-transform duration-200 motion-reduce:transition-none xl:relative xl:z-0 xl:w-auto xl:translate-x-0",
+            "fixed inset-y-0 left-0 z-50 w-[min(86vw,18rem)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] transition-transform duration-200 motion-reduce:transition-none xl:relative xl:z-0 xl:w-auto xl:translate-x-0",
             isMobileSidebarOpen
               ? "translate-x-0"
               : "-translate-x-[110%] xl:translate-x-0",

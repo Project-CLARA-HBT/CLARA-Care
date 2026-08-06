@@ -382,7 +382,7 @@
 
 html.dark .app-navigation,
 html[data-theme="dark"] .app-navigation {
-  background: linear-gradient(180deg, rgb(32 32 32 / 96%), rgb(27 26 25 / 98%));
+  background: var(--surface-sidebar);
 }
 
 html.dark .app-nav-item-active,
