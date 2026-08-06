@@ -63,11 +63,11 @@ type Props = {
 const THEME_OPTIONS: Array<{
   value: ThemePreference;
   labelKey: UITranslationKey;
-  iconClass: string;
+  icon: "light_mode" | "dark_mode" | "desktop_windows";
 }> = [
-  { value: "light", labelKey: "theme.light", iconClass: "fa-sun-o" },
-  { value: "dark", labelKey: "theme.dark", iconClass: "fa-moon-o" },
-  { value: "system", labelKey: "theme.system", iconClass: "fa-desktop" },
+  { value: "light", labelKey: "theme.light", icon: "light_mode" },
+  { value: "dark", labelKey: "theme.dark", icon: "dark_mode" },
+  { value: "system", labelKey: "theme.system", icon: "desktop_windows" },
 ];
 
 const LANGUAGE_OPTIONS: Array<{
@@ -706,10 +706,7 @@ export default function AppShell({ children }: Props) {
                           aria-pressed={active}
                           title={optionLabel}
                         >
-                          <i
-                            className={`fa ${option.iconClass} text-[13px]`}
-                            aria-hidden="true"
-                          />
+                          <span className="material-symbols-outlined text-[15px]" aria-hidden="true">{option.icon}</span>
                           <span className="sr-only">{optionLabel}</span>
                         </button>
                       );
