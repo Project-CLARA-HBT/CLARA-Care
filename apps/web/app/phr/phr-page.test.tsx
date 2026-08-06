@@ -131,4 +131,37 @@ describe("PHR focused hub", () => {
     expect(await screen.findByText(/Chưa có dị ứng nào trong hồ sơ/)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Tên dị ứng")).not.toBeInTheDocument();
   });
+
+  it("separates current medicines from medicines no longer used", async () => {
+    mocks.pathname = "/phr/medications";
+    mocks.getPhrRecord.mockResolvedValue({
+      ...record,
+      medications: [
+        {
+          id: "current",
+          name: "Thuốc đang dùng",
+          dose: "",
+          frequency: "",
+          started_on: null,
+          is_current: true,
+          note: "",
+        },
+        {
+          id: "past",
+          name: "Thuốc đã ngừng",
+          dose: "",
+          frequency: "",
+          started_on: null,
+          is_current: false,
+          note: "",
+        },
+      ],
+    });
+
+    render(<PhrPage />);
+
+    expect(await screen.findByDisplayValue("Thuốc đang dùng")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Thuốc đã ngừng")).not.toBeInTheDocument();
+    expect(screen.getByText("Thuốc đã ngừng dùng (1)")).toBeInTheDocument();
+  });
 });

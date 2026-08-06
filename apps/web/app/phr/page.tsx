@@ -431,7 +431,7 @@ function PhrHub({
       icon: "medication",
       title: text.medications,
       description: copy("phr.hub.medications.description"),
-      complete: record.medications.length > 0,
+      complete: record.medications.some((item) => item.is_current),
     },
   ];
 
@@ -574,6 +574,8 @@ export default function PhrPage() {
     "conditions",
     "medications",
   ].includes(section ?? "");
+  const currentMedications = record.medications.filter((item) => item.is_current);
+  const pastMedications = record.medications.filter((item) => !item.is_current);
   const needsRecord = isHub || isRecordEditor || section === "reminders";
 
   useEffect(() => {
@@ -1345,12 +1347,12 @@ export default function PhrPage() {
               </Button>
             </div>
             <div className="space-y-3">
-              {record.medications.length === 0 ? (
+              {currentMedications.length === 0 ? (
                 <div className="rounded-[var(--radius-lg)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 text-sm leading-6 text-[var(--text-secondary)]">
                   {text.noMedications}
                 </div>
               ) : null}
-              {record.medications.map((item) => (
+              {currentMedications.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
                     <Field
@@ -1435,6 +1437,16 @@ export default function PhrPage() {
                   </div>
                 </div>
               ))}
+              {pastMedications.length > 0 ? (
+                <details className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">Thuốc đã ngừng dùng ({pastMedications.length})</summary>
+                  <div className="mt-3 space-y-3">
+                    {pastMedications.map((item) => (
+                      <div key={item.id} className="text-sm text-[var(--text-secondary)]">{item.name || text.unknown}</div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
             </div>
           </article> : null}
         </section> : null}
