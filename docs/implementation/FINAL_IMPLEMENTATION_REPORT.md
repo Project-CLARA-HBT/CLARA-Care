@@ -738,7 +738,7 @@ releases: provision `DEPLOY_SSH_PRIVATE_KEY`, pinned `DEPLOY_SSH_KNOWN_HOSTS`,
 deployment above is an operational recovery/development deployment, not proof
 that GitHub Actions has access to the VPS secrets.
 
-## Today real-data checkpoint (2026-08-06, pending deployment)
+## Today real-data checkpoint (2026-08-06, deployed)
 
 `/today` now has active, completed, caught-up, and first-time presentations
 derived solely from the profile-scoped `/lifemap/today` response. The API adds a
@@ -755,4 +755,9 @@ web unit suite 92 files/702 tests, production web build (91 routes), and Today
 E2E 12/12 across 1440px desktop, 1280px laptop, tablet, and 390px mobile.
 Existing unrelated React Hook dependency warnings remain warnings during the
 web build. No database migration is required. Rollback is the single checkpoint
-revert followed by rebuilding API and web services.
+revert followed by rebuilding API and web services. The code checkpoint is
+`082cd3cc`, pushed to `feat/ui-modernization-v2` and deployed with backup
+`/opt/clara-backups/pre-today-20260806-143635.tgz`; API readiness returned
+`status=ready`, and the live unauthenticated `/today` route correctly returned
+the login redirect with CSP, HSTS, nosniff, frame protection, Referrer-Policy,
+and Permissions-Policy intact.
