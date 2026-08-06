@@ -349,10 +349,16 @@ function PhrHub({
   text,
   uiLanguage,
   capabilities,
+  record,
+  loading,
+  error,
 }: {
   text: PhrText;
   uiLanguage: UILanguage;
   capabilities: PhrCapabilityFlags;
+  record: PhrRecord;
+  loading: boolean;
+  error: string;
 }) {
   const copy = useCallback(
     (key: UITranslationKey) => t(uiLanguage, key),
@@ -363,6 +369,7 @@ function PhrHub({
     icon: IconName;
     title: string;
     description: string;
+    complete?: boolean;
   };
 
   const sections: HubItem[] = [
@@ -371,36 +378,42 @@ function PhrHub({
       icon: "user-card",
       title: copy("phr.hub.identity.title"),
       description: copy("phr.hub.identity.description"),
+      complete: Boolean(record.full_name.trim() && record.date_of_birth),
     },
     {
       href: "/phr/body",
       icon: "body",
       title: copy("phr.hub.body.title"),
       description: copy("phr.hub.body.description"),
+      complete: record.height_cm !== null && record.weight_kg !== null,
     },
     {
       href: "/phr/contact",
       icon: "contact",
       title: copy("phr.hub.contact.title"),
       description: copy("phr.hub.contact.description"),
+      complete: Boolean(record.phone.trim() || record.emergency_contact_phone.trim()),
     },
     {
       href: "/phr/allergies",
       icon: "warning",
       title: text.allergies,
       description: copy("phr.hub.allergies.description"),
+      complete: record.allergies.length > 0,
     },
     {
       href: "/phr/conditions",
       icon: "clinical-notes",
       title: text.conditions,
       description: copy("phr.hub.conditions.description"),
+      complete: record.conditions.length > 0,
     },
     {
       href: "/phr/medications",
       icon: "medication",
       title: text.medications,
       description: copy("phr.hub.medications.description"),
+      complete: record.medications.length > 0,
     },
   ];
 
@@ -454,38 +467,46 @@ function PhrHub({
         }
       : null,
   ].filter((tool): tool is HubItem => tool !== null);
+  const completed = sections.filter((item) => item.complete).length;
+  const nextSection = sections.find((item) => !item.complete) ?? sections[0];
 
   return (
     <PageShell variant="plain" title={text.title} description={text.description}>
       <div className="space-y-5">
-        <p
-          role="note"
-          className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-4 py-3 text-[13px] leading-6 text-[var(--status-warn-text)]"
-        >
-          {text.disclaimer}
-        </p>
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-[var(--text-primary)]">{text.consentTitle}</p>
-            <p className="mt-0.5 text-[13px] leading-6 text-[var(--text-secondary)]">{text.consentBody}</p>
+        {error ? <p role="alert" className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger-text)]">{error}</p> : null}
+        <section className="chrome-panel rounded-[var(--radius-xl)] p-5 sm:p-6" aria-label={copy("phr.hub.progress.label")}>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("phr.hub.progress.eyebrow")}</p>
+              <h2 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{t(uiLanguage, "phr.hub.progress.title", { completed, total: sections.length })}</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">{copy("phr.hub.progress.description")}</p>
+            </div>
+            {!loading ? <Button as="link" href={nextSection.href} icon="arrow_forward" iconTrailing>{copy("phr.hub.progress.continue")}</Button> : null}
           </div>
-          <Button as="link" href="/account/consent" variant="secondary" size="sm">
-            {text.consentLink}
-          </Button>
+          <div className="mt-5 grid grid-cols-6 gap-2" role="progressbar" aria-valuemin={0} aria-valuemax={sections.length} aria-valuenow={completed} aria-label={copy("phr.hub.progress.label")}>
+            {sections.map((item) => <span key={item.href} className={`h-2 rounded-full ${item.complete ? "bg-[var(--brand-500)]" : "bg-[var(--surface-muted)]"}`} />)}
+          </div>
         </section>
-        <section aria-label={copy("phr.hub.sections.record")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <section aria-label={copy("phr.hub.sections.record")} className="space-y-2">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("phr.hub.sections.record")}</h2>
           {sections.map((item) => (
-            <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-36 justify-start whitespace-normal p-4 text-left">
-              <span className="flex items-start gap-3">
-                <Icon name={item.icon} size={22} className="mt-0.5 text-[var(--brand-600)]" />
-                <span>
+            <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-[76px] w-full justify-start whitespace-normal p-4 text-left">
+              <span className="flex w-full items-center gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"><Icon name={item.icon} size={21} /></span>
+                <span className="min-w-0 flex-1">
                   <span className="block text-sm font-bold text-[var(--text-primary)]">{item.title}</span>
                   <span className="mt-1 block text-[13px] font-normal leading-5 text-[var(--text-secondary)]">{item.description}</span>
                 </span>
+                <span className={`shrink-0 text-xs font-semibold ${item.complete ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)]"}`}>{item.complete ? copy("phr.hub.status.complete") : copy("phr.hub.status.incomplete")}</span>
               </span>
             </Button>
           ))}
         </section>
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3">
+          <div className="min-w-0"><p className="text-sm font-bold text-[var(--text-primary)]">{text.consentTitle}</p><p className="mt-0.5 text-[13px] leading-6 text-[var(--text-secondary)]">{text.consentBody}</p></div>
+          <Button as="link" href="/account/consent" variant="secondary" size="sm">{text.consentLink}</Button>
+        </section>
+        <p role="note" className="px-1 text-[13px] leading-6 text-[var(--text-secondary)]">{text.disclaimer}</p>
         {tools.length > 0 ? (
           <section aria-label={copy("phr.hub.sections.tools")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {tools.map((item) => (
@@ -532,7 +553,7 @@ export default function PhrPage() {
     "conditions",
     "medications",
   ].includes(section ?? "");
-  const needsRecord = isRecordEditor || section === "reminders";
+  const needsRecord = isHub || isRecordEditor || section === "reminders";
 
   useEffect(() => {
     setUiLanguage(getStoredUILanguage());
@@ -721,7 +742,7 @@ export default function PhrPage() {
   };
 
   if (isHub) {
-    return <PhrHub text={text} uiLanguage={uiLanguage} capabilities={capabilities} />;
+    return <PhrHub text={text} uiLanguage={uiLanguage} capabilities={capabilities} record={record} loading={loading} error={error} />;
   }
 
   if (!section) {

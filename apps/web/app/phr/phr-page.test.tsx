@@ -92,8 +92,10 @@ describe("PHR focused hub", () => {
     expect(screen.getByRole("link", { name: /Chỉ số cơ thể/ })).toHaveAttribute("href", "/phr/body");
     expect(screen.getByRole("link", { name: /Dị ứng/ })).toHaveAttribute("href", "/phr/allergies");
     expect(screen.queryByLabelText("Họ và tên")).not.toBeInTheDocument();
-    expect(mocks.getPhrRecord).not.toHaveBeenCalled();
-    expect(container.querySelectorAll("svg[data-icon]")).toHaveLength(6);
+    expect(mocks.getPhrRecord).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("progressbar", { name: "Tiến độ hoàn thiện hồ sơ" })).toHaveAttribute("aria-valuenow", "2");
+    expect(screen.getByRole("link", { name: /Tiếp tục hoàn thiện/ })).toHaveAttribute("href", "/phr/contact");
+    expect(container.querySelectorAll("svg[data-icon]")).toHaveLength(7);
     expect(container.querySelector(".material-symbols-rounded")).not.toBeInTheDocument();
     for (const leakedGlyph of [
       "badge",
