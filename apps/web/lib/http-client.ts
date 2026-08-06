@@ -2,7 +2,10 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { clearTokens, getCsrfToken } from "@/lib/auth-store";
 import { getActiveProfileId } from "@/lib/profile-context";
 
-type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+  _csrfRetry?: boolean;
+};
 
 const DEFAULT_TIMEOUT_MS = 90000;
 const REFRESH_TIMEOUT_MS = 30000;
@@ -40,6 +43,32 @@ const apiBaseUrl = resolveApiBaseUrl();
 
 function hasApiV1Suffix(value: string): boolean {
   return /\/api\/v1\/?$/.test(value);
+}
+
+function isUnsafeMethod(method: unknown): boolean {
+  const normalized = String(method ?? "get").toUpperCase();
+  return normalized !== "GET" && normalized !== "HEAD" && normalized !== "OPTIONS";
+}
+
+/**
+ * A refresh rotates the server's double-submit CSRF cookie. A stale browser
+ * tab can therefore receive one 403 after a refresh/login in another tab.
+ * Retry only that exact, server-declared condition once; no mutation ever
+ * proceeds without the newly matched cookie/header pair.
+ */
+export function shouldRetryCsrfFailure(
+  error: { response?: { status?: number; data?: { detail?: string } } },
+  request: Pick<RetryableRequestConfig, "method" | "_csrfRetry"> | undefined,
+  isAuthBypassCall: boolean,
+): boolean {
+  return Boolean(
+    request &&
+      !request._csrfRetry &&
+      !isAuthBypassCall &&
+      isUnsafeMethod(request.method) &&
+      error.response?.status === 403 &&
+      error.response.data?.detail === "CSRF validation failed",
+  );
 }
 
 function trimLeadingApiV1(value: string): string {
@@ -249,8 +278,7 @@ api.interceptors.request.use(async (config) => {
     config.url = trimLeadingApiV1(requestUrl);
   }
 
-  const method = String(config.method ?? "get").toUpperCase();
-  const isUnsafe = method !== "GET" && method !== "HEAD" && method !== "OPTIONS";
+  const isUnsafe = isUnsafeMethod(config.method);
 
   // This is a presentation/cache partition hint, never an authorization
   // credential. The API resolves it only against owned profiles or live grants.
@@ -275,6 +303,16 @@ api.interceptors.response.use(
     const requestUrl = String(originalRequest?.url ?? "");
     const isAuthRefreshCall = requestUrl.includes("/auth/refresh");
     const isAuthBypassCall = AUTH_REFRESH_BYPASS_PATHS.some((path) => requestUrl.includes(path));
+
+    if (shouldRetryCsrfFailure(error, originalRequest, isAuthBypassCall)) {
+      originalRequest!._csrfRetry = true;
+      const refreshed = await ensureSingleFlightRefresh();
+      if (refreshed) {
+        // The request interceptor reads document.cookie again here, so this
+        // retry uses the CSRF value just rotated by `/auth/refresh`.
+        return api(originalRequest!);
+      }
+    }
 
     if (
       error.response?.status === 401 &&

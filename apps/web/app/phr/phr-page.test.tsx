@@ -132,6 +132,23 @@ describe("PHR focused hub", () => {
     expect(screen.queryByText("Dị ứng")).not.toBeInTheDocument();
   });
 
+  it("renders a BMI visualization only from two or more recorded measurements", async () => {
+    mocks.pathname = "/phr/body";
+    mocks.getPhrCapabilities.mockResolvedValue({
+      enhanced: true, consent_enforcement: false, reconciliation: false,
+      allergy_aware_ddi: false, ocr_import: false, observations: true,
+      export: false, sharing: false, reminders: false, completeness_meter: false,
+    });
+    mocks.getPhrBodyMeasurements.mockResolvedValue([
+      { observed_on: "2026-08-02", height_cm: 165, weight_kg: 60, bmi: 22, information_source: "self-declared" },
+      { observed_on: "2026-08-01", height_cm: 165, weight_kg: 61, bmi: 22.4, information_source: "self-declared" },
+    ]);
+    render(<PhrPage />);
+
+    expect(await screen.findByRole("img", { name: "Xu hướng BMI theo lần đo" })).toBeInTheDocument();
+    expect(screen.getAllByText("BMI 22")).toHaveLength(2);
+  });
+
   it("shows truthful empty allergy state instead of a placeholder record", async () => {
     mocks.pathname = "/phr/allergies";
     render(<PhrPage />);

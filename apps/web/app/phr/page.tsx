@@ -95,6 +95,7 @@ const PHR_TEXT_KEYS = {
   allergyNoneKnownAction: "phr.allergy.action.noneKnown", pastMedications: "phr.medication.past",
   resumeMedication: "phr.medication.action.resume",
   mobileHistory: "phr.mobile.history", mobileProgress: "phr.mobile.progress",
+  bodyTrend: "phr.body.trend", bodyTrendNeedMore: "phr.body.trendNeedMore",
 } as const satisfies Record<string, UITranslationKey>;
 
 type PhrText = { [Key in keyof typeof PHR_TEXT_KEYS]: string };
@@ -151,6 +152,49 @@ function parseInputNumber(value: string): number | null {
   if (!normalized) return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function BodyMassIndexTrend({
+  measurements,
+  title,
+  needMore,
+}: {
+  measurements: PhrBodyMeasurement[];
+  title: string;
+  needMore: string;
+}) {
+  if (measurements.length < 2) {
+    return <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{needMore}</p>;
+  }
+  const chronological = [...measurements].reverse();
+  const values = chronological.map((item) => item.bmi);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(max - min, 1);
+  const points = chronological.map((item, index) => {
+    const x = 18 + (index / (chronological.length - 1)) * 264;
+    const y = 18 + ((max - item.bmi) / span) * 104;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const latest = chronological.at(-1)!;
+
+  return (
+    <figure className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
+      <figcaption className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-[var(--text-primary)]">
+        <span>{title}</span>
+        <Badge tone="brand">BMI {latest.bmi}</Badge>
+      </figcaption>
+      <svg className="mt-3 h-36 w-full" viewBox="0 0 300 140" role="img" aria-label={title}>
+        <line x1="18" x2="282" y1="122" y2="122" stroke="var(--shell-border)" strokeWidth="1" />
+        <polyline points={points} fill="none" stroke="var(--brand-500)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {chronological.map((item, index) => {
+          const [x, y] = points.split(" ")[index].split(",");
+          return <circle key={item.observed_on} cx={x} cy={y} r="4" fill="var(--brand-500)"><title>{`${item.observed_on}: BMI ${item.bmi}`}</title></circle>;
+        })}
+      </svg>
+      <div className="flex justify-between text-xs text-[var(--text-secondary)]"><span>{chronological[0].observed_on}</span><span>{latest.observed_on}</span></div>
+    </figure>
+  );
 }
 
 function normalizeRecord(record: PhrRecord): PhrRecord {
@@ -1202,15 +1246,18 @@ export default function PhrPage() {
                   ) : bodyMeasurements.length === 0 ? (
                     <p className="mt-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--text-secondary)]">{text.bodyHistoryEmpty}</p>
                   ) : (
-                    <ul className="mt-3 divide-y divide-[color:var(--shell-border)] rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]">
-                      {bodyMeasurements.map((measurement) => (
-                        <li key={measurement.observed_on} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                          <span className="text-sm font-semibold text-[var(--text-primary)]">{formatLocaleDate(uiLanguage, measurement.observed_on, { dateStyle: "medium" })}</span>
-                          <span className="text-sm text-[var(--text-secondary)]">{measurement.height_cm} cm · {measurement.weight_kg} kg</span>
-                          <Badge tone="brand">BMI {measurement.bmi}</Badge>
-                        </li>
-                      ))}
-                    </ul>
+                    <>
+                      <BodyMassIndexTrend measurements={bodyMeasurements} title={text.bodyTrend} needMore={text.bodyTrendNeedMore} />
+                      <ul className="mt-3 divide-y divide-[color:var(--shell-border)] rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]">
+                        {bodyMeasurements.map((measurement) => (
+                          <li key={measurement.observed_on} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                            <span className="text-sm font-semibold text-[var(--text-primary)]">{formatLocaleDate(uiLanguage, measurement.observed_on, { dateStyle: "medium" })}</span>
+                            <span className="text-sm text-[var(--text-secondary)]">{measurement.height_cm} cm · {measurement.weight_kg} kg</span>
+                            <Badge tone="brand">BMI {measurement.bmi}</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
                   )}
                 </div>
               ) : null}
