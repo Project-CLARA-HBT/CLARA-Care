@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -58,6 +58,12 @@ const record = {
   emergency_contact_phone: "",
   insurance_id: "",
   notes: "",
+  contact_email: "",
+  emergency_contact_relationship: "",
+  emergency_contact_note: "",
+  insurance_provider: "",
+  insurance_expiry: null,
+  allergy_status: "unknown",
   allergies: [],
   conditions: [],
   medications: [],
@@ -92,15 +98,17 @@ describe("PHR focused hub", () => {
     const { container } = render(<PhrPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: /Thông tin cơ bản/ })).toHaveAttribute("href", "/phr/identity");
+      expect(screen.getAllByRole("link", { name: /Thông tin cơ bản/ })[0]).toHaveAttribute("href", "/phr/identity");
     });
-    expect(screen.getByRole("link", { name: /Chỉ số cơ thể/ })).toHaveAttribute("href", "/phr/body");
-    expect(screen.getByRole("link", { name: /Dị ứng/ })).toHaveAttribute("href", "/phr/allergies");
+    expect(screen.getAllByRole("link", { name: /Chỉ số cơ thể/ })[0]).toHaveAttribute("href", "/phr/body");
+    expect(screen.getAllByRole("link", { name: /Dị ứng/ })[0]).toHaveAttribute("href", "/phr/allergies");
     expect(screen.queryByLabelText("Họ và tên")).not.toBeInTheDocument();
     expect(mocks.getPhrRecord).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("progressbar", { name: "Tiến độ hoàn thiện hồ sơ" })).toHaveAttribute("aria-valuenow", "2");
-    expect(screen.getByRole("link", { name: /Tiếp tục hoàn thiện/ })).toHaveAttribute("href", "/phr/contact");
-    expect(container.querySelectorAll("svg[data-icon]")).toHaveLength(7);
+    expect(screen.getAllByRole("progressbar", { name: "Tiến độ hoàn thiện hồ sơ" })[0]).toHaveAttribute("aria-valuenow", "50");
+    expect(screen.getAllByRole("progressbar", { name: "Tiến độ hoàn thiện hồ sơ" })[1]).toHaveAttribute("aria-valuenow", "2");
+    expect(screen.getAllByRole("link", { name: /Tiếp tục hoàn thiện/ })[0]).toHaveAttribute("href", "/phr/conditions");
+    expect(screen.getAllByRole("link", { name: /Tiếp tục hoàn thiện/ })[1]).toHaveAttribute("href", "/phr/contact");
+    expect(container.querySelectorAll("svg[data-icon]").length).toBeGreaterThanOrEqual(7);
     expect(container.querySelector(".material-symbols-rounded")).not.toBeInTheDocument();
     for (const leakedGlyph of [
       "badge",
@@ -163,5 +171,23 @@ describe("PHR focused hub", () => {
     expect(await screen.findByDisplayValue("Thuốc đang dùng")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Thuốc đã ngừng")).not.toBeInTheDocument();
     expect(screen.getByText("Thuốc đã ngừng dùng (1)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Đánh dấu đang dùng" })).toBeInTheDocument();
+  });
+
+  it("persists an explicit no-known-allergy declaration", async () => {
+    mocks.pathname = "/phr/allergies";
+    mocks.updatePhrRecord.mockImplementation(async (payload) => payload);
+    render(<PhrPage />);
+
+    const action = await screen.findByRole("button", { name: "Tôi chưa từng ghi nhận dị ứng" });
+    fireEvent.click(action);
+
+    await waitFor(() => {
+      expect(mocks.updatePhrRecord).toHaveBeenCalledWith(expect.objectContaining({
+        allergy_status: "none_known",
+        allergies: [],
+      }));
+    });
+    expect(screen.getByText("Bạn chưa từng ghi nhận dị ứng")).toBeInTheDocument();
   });
 });

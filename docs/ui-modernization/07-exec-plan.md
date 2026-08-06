@@ -52,6 +52,8 @@ Rollback: revert M2 or set short-lived shell flag; both paths use the same acces
 - [x] Complete PHR detailed states: record-derived ProgressList, identity/contact-insurance, paired body-measurement history/BMI, allergy/condition/medication empty and populated views, provenance-preserving editing, and mobile review.
 - [x] Remove duplicate Medicines CTAs; preserve course/cabinet/DDI distinction and keep CareGuard as the canonical DDI surface.
 
+PHR detail checkpoint (2026-08-06): the supplied detail designs now map to separate identity, body, contact/insurance, allergy, condition, medication and responsive overview states. Paired body measurements are server-derived; empty panels contain no demo clinical data; an explicit no-known-allergy declaration persists immediately; inactive medicines remain retained and can be restored to current use. The mobile overview intentionally condenses the six desktop sections into four data-derived cards without removing the direct section routes.
+
 Validation: state matrices, consent/provenance/safety tests, personal E2E, visual matrix.
 Rollback: per-route revert; keep aliases and shared domain components.
 

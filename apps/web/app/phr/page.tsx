@@ -91,6 +91,10 @@ const PHR_TEXT_KEYS = {
   bodyBmi: "phr.body.bmi", bodyHistory: "phr.body.history", bodyHistoryEmpty: "phr.body.historyEmpty",
   bodyHistorySave: "phr.body.historySave", bodyHistorySaving: "phr.body.historySaving",
   noAllergies: "phr.empty.allergies", noConditions: "phr.empty.conditions", noMedications: "phr.empty.medications",
+  allergyEmptyUnknown: "phr.allergy.empty.unknown", allergyEmptyNoneKnown: "phr.allergy.empty.noneKnown",
+  allergyNoneKnownAction: "phr.allergy.action.noneKnown", pastMedications: "phr.medication.past",
+  resumeMedication: "phr.medication.action.resume",
+  mobileHistory: "phr.mobile.history", mobileProgress: "phr.mobile.progress",
 } as const satisfies Record<string, UITranslationKey>;
 
 type PhrText = { [Key in keyof typeof PHR_TEXT_KEYS]: string };
@@ -417,7 +421,7 @@ function PhrHub({
       icon: "warning",
       title: text.allergies,
       description: copy("phr.hub.allergies.description"),
-      complete: record.allergies.length > 0,
+      complete: record.allergies.length > 0 || record.allergy_status === "none_known",
     },
     {
       href: "/phr/conditions",
@@ -487,6 +491,39 @@ function PhrHub({
   ].filter((tool): tool is HubItem => tool !== null);
   const completed = sections.filter((item) => item.complete).length;
   const nextSection = sections.find((item) => !item.complete) ?? sections[0];
+  const mobileSections: HubItem[] = [
+    {
+      href: "/phr/identity",
+      icon: "user-card",
+      title: copy("phr.hub.identity.title"),
+      description: "",
+      complete: Boolean(record.full_name.trim() && record.date_of_birth),
+    },
+    {
+      href: "/phr/body",
+      icon: "body",
+      title: copy("phr.hub.body.title"),
+      description: "",
+      complete: record.height_cm !== null && record.weight_kg !== null,
+    },
+    {
+      href: "/phr/conditions",
+      icon: "clinical-notes",
+      title: text.mobileHistory,
+      description: "",
+      complete: record.conditions.length > 0 || record.medications.some((item) => item.is_current),
+    },
+    {
+      href: "/phr/allergies",
+      icon: "warning",
+      title: text.allergies,
+      description: "",
+      complete: record.allergies.length > 0 || record.allergy_status === "none_known",
+    },
+  ];
+  const mobileCompleted = mobileSections.filter((item) => item.complete).length;
+  const mobilePercent = Math.round((mobileCompleted / mobileSections.length) * 100);
+  const mobileNext = mobileSections.find((item) => !item.complete) ?? mobileSections[0];
   const renderSectionRows = (items: HubItem[]) => items.map((item) => (
     <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-[76px] w-full justify-start whitespace-normal p-4 text-left">
       <span className="flex w-full items-center gap-3">
@@ -499,7 +536,31 @@ function PhrHub({
 
   return (
     <PageShell variant="plain" title={text.title} description={text.description}>
-      <div className="space-y-5">
+      <div className="space-y-5 md:hidden">
+        {error ? <p role="alert" className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger-text)]">{error}</p> : null}
+        <section aria-label={copy("phr.hub.progress.label")}>
+          <div className="flex items-center gap-4">
+            <div className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--surface-muted)]" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={mobilePercent} aria-label={copy("phr.hub.progress.label")}>
+              <div className="h-full rounded-full bg-[var(--brand-500)]" style={{ width: `${mobilePercent}%` }} />
+            </div>
+            <span className="text-lg font-bold text-[var(--text-primary)]">{mobilePercent}%</span>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{text.mobileProgress}</p>
+        </section>
+        <section className="space-y-4" aria-label={copy("phr.hub.sections.record")}>
+          {mobileSections.map((item) => (
+            <Button key={item.href} as="link" href={item.href} variant="secondary" className="h-auto min-h-[96px] w-full justify-start whitespace-normal rounded-[var(--radius-xl)] p-5 text-left">
+              <span className="flex w-full items-center gap-4">
+                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full ${item.complete ? "bg-[var(--surface-brand-soft)] text-[var(--text-brand)]" : "bg-[var(--surface-muted)] text-[var(--text-muted)]"}`}><Icon name={item.icon} size={25} /></span>
+                <span className="min-w-0 flex-1"><span className="block text-xl font-semibold text-[var(--text-primary)]">{item.title}</span><span className={`mt-1 block text-sm font-semibold ${item.complete ? "text-[var(--status-ok-text)]" : "text-[var(--status-warn-text)]"}`}>{item.complete ? copy("phr.hub.status.complete") : copy("phr.hub.status.incomplete")}</span></span>
+                <Icon name="arrow-right" size={22} className="text-[var(--text-secondary)]" />
+              </span>
+            </Button>
+          ))}
+        </section>
+        {!loading ? <Button as="link" href={mobileNext.href} icon="arrow_forward" iconTrailing className="w-full justify-center py-4 text-base">{copy("phr.hub.progress.continue")}</Button> : null}
+      </div>
+      <div className="hidden space-y-5 md:block">
         {error ? <p role="alert" className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger-text)]">{error}</p> : null}
         <section className="chrome-panel rounded-[var(--radius-xl)] p-5 sm:p-6" aria-label={copy("phr.hub.progress.label")}>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -795,22 +856,26 @@ export default function PhrPage() {
     }
   };
 
-  const onSave = async () => {
+  const persistRecord = async (recordToSave: PhrRecord) => {
     setSaving(true);
     setMessage("");
     setError("");
     try {
       const payload: PhrRecord = {
-        ...record,
-        full_name: record.full_name.trim(),
-        gender: record.gender.trim(),
-        blood_type: record.blood_type.trim().toUpperCase(),
-        phone: record.phone.trim(),
-        address: record.address.trim(),
-        emergency_contact_name: record.emergency_contact_name.trim(),
-        emergency_contact_phone: record.emergency_contact_phone.trim(),
-        insurance_id: record.insurance_id.trim(),
-        notes: record.notes.trim(),
+        ...recordToSave,
+        full_name: recordToSave.full_name.trim(),
+        gender: recordToSave.gender.trim(),
+        blood_type: recordToSave.blood_type.trim().toUpperCase(),
+        phone: recordToSave.phone.trim(),
+        contact_email: recordToSave.contact_email.trim(),
+        address: recordToSave.address.trim(),
+        emergency_contact_name: recordToSave.emergency_contact_name.trim(),
+        emergency_contact_phone: recordToSave.emergency_contact_phone.trim(),
+        emergency_contact_relationship: recordToSave.emergency_contact_relationship.trim(),
+        emergency_contact_note: recordToSave.emergency_contact_note.trim(),
+        insurance_provider: recordToSave.insurance_provider.trim(),
+        insurance_id: recordToSave.insurance_id.trim(),
+        notes: recordToSave.notes.trim(),
       };
       const saved = await updatePhrRecord(payload);
       setRecord(normalizeRecord(saved));
@@ -822,6 +887,20 @@ export default function PhrPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const onSave = async () => {
+    await persistRecord(record);
+  };
+
+  const markNoKnownAllergies = async () => {
+    const nextRecord = {
+      ...record,
+      allergy_status: "none_known" as const,
+      allergies: [],
+    };
+    setRecord(nextRecord);
+    await persistRecord(nextRecord);
   };
 
   if (isHub) {
@@ -1160,12 +1239,16 @@ export default function PhrPage() {
                 <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6 text-center">
                   <span className="material-symbols-outlined text-4xl text-[var(--text-brand)]" aria-hidden="true">medical_information</span>
                   <p className="mt-3 text-base font-semibold text-[var(--text-primary)]">
-                    {record.allergy_status === "none_known" ? "Bạn chưa từng ghi nhận dị ứng" : "Bạn chưa thêm thông tin dị ứng"}
+                    {record.allergy_status === "none_known" ? text.allergyEmptyNoneKnown : text.allergyEmptyUnknown}
                   </p>
                   <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)]">{text.noAllergies}</p>
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
                     <Button type="button" size="sm" icon="add" onClick={addAllergy}>{text.add}</Button>
-                    <Button type="button" size="sm" variant="secondary" onClick={() => setField("allergy_status", "none_known")}>Tôi chưa từng ghi nhận dị ứng</Button>
+                    {record.allergy_status !== "none_known" ? (
+                      <Button type="button" size="sm" variant="secondary" onClick={markNoKnownAllergies} loading={saving}>
+                        {text.allergyNoneKnownAction}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
@@ -1439,10 +1522,15 @@ export default function PhrPage() {
               ))}
               {pastMedications.length > 0 ? (
                 <details className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
-                  <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">Thuốc đã ngừng dùng ({pastMedications.length})</summary>
+                  <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">{text.pastMedications} ({pastMedications.length})</summary>
                   <div className="mt-3 space-y-3">
                     {pastMedications.map((item) => (
-                      <div key={item.id} className="text-sm text-[var(--text-secondary)]">{item.name || text.unknown}</div>
+                      <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] bg-[var(--surface-base)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+                        <span>{item.name || text.unknown}</span>
+                        <Button type="button" size="sm" variant="secondary" onClick={() => updateMedication(item.id, { is_current: true })}>
+                          {text.resumeMedication}
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 </details>

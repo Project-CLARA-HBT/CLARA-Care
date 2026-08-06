@@ -17,7 +17,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-09 | FR-LIFE-001–004 | Progressive LifeMap creation and episode presentation without truth changes. | Personal | UI-04/UI-06 | lifemap routes, guided flow | wizard/state/safety E2E | pending |
 | UI-10 | FR-VISIT-001/002 | Focused Visit preparation steps and contextual consent. | Personal | UI-04/UI-06 | visits routes/components | integration/E2E | done |
 | UI-11 | FR-FAM-001/002 | Family URL-backed tabs and explicit invitation review. | Personal | UI-04/UI-06 | family routes/components | tabs/share/revoke E2E | done |
-| UI-12 | FR-PHR-001/003 | PHR ProgressList, detailed record sections, body-measurement history/BMI, and conflict-safe presentation. | Personal | UI-03/UI-04 | phr routes/components, PHR observations API | form/provenance/a11y/API tests | done |
+| UI-12 | FR-PHR-001/003 | PHR ProgressList, detailed record sections, body-measurement history/BMI, and conflict-safe presentation. | Personal | UI-03/UI-04 | phr routes/components, PHR observations API | form/provenance/a11y/API tests, responsive mobile overview | done |
 | UI-13 | FR-MED-001–004 | Medicines first-run/CTA hierarchy and distinct model copy. | Personal | UI-03/UI-04 | medicines pages/components | flow/safety E2E | done |
 | UI-14 | FR-CHAT-001–005 | Chat two-column answer-first disclosure and role-gated diagnostics. | Chat | UI-04/UI-06 | `app/chat/_v2/*` | parity/privacy/citation/E2E | done |
 | UI-15 | FR-EVID-001, FR-RES-001 | Evidence step disclosure and Source Hub browse/sync split. | Chat | UI-14 | evidence/research routes | release-gate/citation tests | pending |
