@@ -109,10 +109,16 @@ const EMPTY_RECORD: PhrRecord = {
   height_cm: null,
   weight_kg: null,
   phone: "",
+  contact_email: "",
   address: "",
   emergency_contact_name: "",
   emergency_contact_phone: "",
+  emergency_contact_relationship: "",
+  emergency_contact_note: "",
+  insurance_provider: "",
   insurance_id: "",
+  insurance_expiry: null,
+  allergy_status: "unknown",
   notes: "",
   allergies: [],
   conditions: [],
@@ -176,6 +182,12 @@ function normalizeRecord(record: PhrRecord): PhrRecord {
   return {
     ...EMPTY_RECORD,
     ...record,
+    allergy_status:
+      normalizedAllergies.length > 0
+        ? "recorded"
+        : record.allergy_status === "none_known"
+          ? "none_known"
+          : "unknown",
     allergies: normalizedAllergies,
     conditions: normalizedConditions,
     medications: normalizedMeds,
@@ -549,6 +561,7 @@ export default function PhrPage() {
   const [bodyMeasurements, setBodyMeasurements] = useState<PhrBodyMeasurement[]>([]);
   const [bodyMeasurementsLoading, setBodyMeasurementsLoading] = useState(false);
   const [bodyMeasurementSaving, setBodyMeasurementSaving] = useState(false);
+  const [bodyMeasurementDate, setBodyMeasurementDate] = useState("");
 
   const text = useMemo(() => getPhrText(uiLanguage), [uiLanguage]);
   const isHub = pathname === "/phr" || pathname === "/phr/";
@@ -705,6 +718,7 @@ export default function PhrPage() {
   const addAllergy = () => {
     setRecord((prev) => ({
       ...prev,
+      allergy_status: "recorded",
       allergies: [
         ...prev.allergies,
         { id: makeId(), name: "", reaction: "", severity: "unknown", note: "" },
@@ -760,6 +774,7 @@ export default function PhrPage() {
       const created = await createPhrBodyMeasurement({
         height_cm: heightCm,
         weight_kg: weightKg,
+        ...(bodyMeasurementDate ? { observed_on: bodyMeasurementDate } : {}),
       });
       setBodyMeasurements((previous) => [
         created,
@@ -982,6 +997,13 @@ export default function PhrPage() {
               }
             /> : null}
             {section === "body" ? <Field
+              label="Ngày đo"
+              type="date"
+              wrapperClassName="md:col-span-2 md:max-w-[calc(50%-0.5rem)]"
+              value={bodyMeasurementDate}
+              onChange={(event) => setBodyMeasurementDate(event.target.value)}
+            /> : null}
+            {section === "body" ? <Field
               label={text.weight}
               inputMode="decimal"
               value={record.weight_kg ?? ""}
@@ -989,16 +1011,25 @@ export default function PhrPage() {
                 setField("weight_kg", parseInputNumber(e.target.value))
               }
             /> : null}
+            {section === "contact" ? <p className="md:col-span-2 border-b border-[color:var(--shell-border)] pb-2 text-sm font-semibold text-[var(--text-primary)]">Thông tin liên hệ</p> : null}
             {section === "contact" ? <Field
               label={text.phone}
               value={record.phone}
               onChange={(e) => setField("phone", e.target.value)}
             /> : null}
             {section === "contact" ? <Field
-              label={text.insurance}
-              value={record.insurance_id}
-              onChange={(e) => setField("insurance_id", e.target.value)}
+              label="Email"
+              type="email"
+              value={record.contact_email}
+              onChange={(e) => setField("contact_email", e.target.value)}
             /> : null}
+            {section === "contact" ? <Field
+              label={text.address}
+              wrapperClassName="md:col-span-2"
+              value={record.address}
+              onChange={(e) => setField("address", e.target.value)}
+            /> : null}
+            {section === "contact" ? <p className="md:col-span-2 mt-2 border-b border-[color:var(--shell-border)] pb-2 text-sm font-semibold text-[var(--text-primary)]">Liên hệ khẩn cấp</p> : null}
             {section === "contact" ? <Field
               label={text.emergencyName}
               value={record.emergency_contact_name}
@@ -1014,10 +1045,32 @@ export default function PhrPage() {
               }
             /> : null}
             {section === "contact" ? <Field
-              label={text.address}
+              label="Mối quan hệ"
+              value={record.emergency_contact_relationship}
+              onChange={(e) => setField("emergency_contact_relationship", e.target.value)}
+            /> : null}
+            {section === "contact" ? <Field
+              label="Lưu ý liên hệ khẩn cấp"
               wrapperClassName="md:col-span-2"
-              value={record.address}
-              onChange={(e) => setField("address", e.target.value)}
+              value={record.emergency_contact_note}
+              onChange={(e) => setField("emergency_contact_note", e.target.value)}
+            /> : null}
+            {section === "contact" ? <p className="md:col-span-2 mt-2 border-b border-[color:var(--shell-border)] pb-2 text-sm font-semibold text-[var(--text-primary)]">Bảo hiểm y tế</p> : null}
+            {section === "contact" ? <Field
+              label="Nhà cung cấp bảo hiểm"
+              value={record.insurance_provider}
+              onChange={(e) => setField("insurance_provider", e.target.value)}
+            /> : null}
+            {section === "contact" ? <Field
+              label={text.insurance}
+              value={record.insurance_id}
+              onChange={(e) => setField("insurance_id", e.target.value)}
+            /> : null}
+            {section === "contact" ? <Field
+              label="Ngày hết hạn bảo hiểm"
+              type="date"
+              value={toInputDate(record.insurance_expiry)}
+              onChange={(e) => setField("insurance_expiry", e.target.value || null)}
             /> : null}
             {section === "contact" ? <Textarea
               label={text.notes}
@@ -1102,8 +1155,16 @@ export default function PhrPage() {
             </div>
             <div className="space-y-3">
               {record.allergies.length === 0 ? (
-                <div className="rounded-[var(--radius-lg)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 text-sm leading-6 text-[var(--text-secondary)]">
-                  {text.noAllergies}
+                <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6 text-center">
+                  <span className="material-symbols-outlined text-4xl text-[var(--text-brand)]" aria-hidden="true">medical_information</span>
+                  <p className="mt-3 text-base font-semibold text-[var(--text-primary)]">
+                    {record.allergy_status === "none_known" ? "Bạn chưa từng ghi nhận dị ứng" : "Bạn chưa thêm thông tin dị ứng"}
+                  </p>
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)]">{text.noAllergies}</p>
+                  <div className="mt-5 flex flex-wrap justify-center gap-3">
+                    <Button type="button" size="sm" icon="add" onClick={addAllergy}>{text.add}</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => setField("allergy_status", "none_known")}>Tôi chưa từng ghi nhận dị ứng</Button>
+                  </div>
                 </div>
               ) : null}
               {record.allergies.map((item) => (

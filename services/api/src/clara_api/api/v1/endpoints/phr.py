@@ -141,6 +141,14 @@ def _clean_object_list(value: Any) -> list[dict[str, Any]]:
     return rows
 
 
+def _allergy_status(profile: PhrProfile) -> str:
+    return (
+        profile.allergy_status
+        if profile.allergy_status in {"unknown", "none_known", "recorded"}
+        else "unknown"
+    )
+
+
 def _serialize_profile(profile: PhrProfile | None) -> PhrRecordResponse:
     if profile is None:
         return PhrRecordResponse()
@@ -342,25 +350,28 @@ def update_phr_onboarding(
     return _serialize_onboarding(db, user=user, profile=profile)
 
 
-@router.get("/record", response_model=PhrRecordResponse)
+@router.get("/record")
 def get_phr_record(
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
-) -> PhrRecordResponse:
+    settings: Settings = SETTINGS_DEP,
+) -> PhrRecordResponse | PhrEnhancedRecordResponse:
     user = _get_user_by_token(db, token)
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == user.id)
     ).scalar_one_or_none()
+    if phr_features(settings).enhanced:
+        return _enhanced_response(profile) if profile is not None else PhrEnhancedRecordResponse()
     return _serialize_profile(profile)
 
 
-@router.put("/record", response_model=PhrRecordResponse)
+@router.put("/record")
 def upsert_phr_record(
     payload: PhrRecordUpdateRequest,
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
-) -> PhrRecordResponse:
+) -> PhrRecordResponse | PhrEnhancedRecordResponse:
     user = _get_user_by_token(db, token)
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == user.id)
@@ -396,10 +407,16 @@ def upsert_phr_record(
     profile.height_cm = payload.height_cm
     profile.weight_kg = payload.weight_kg
     profile.phone = payload.phone.strip()
+    profile.contact_email = payload.contact_email.strip()
     profile.address = payload.address.strip()
     profile.emergency_contact_name = payload.emergency_contact_name.strip()
     profile.emergency_contact_phone = payload.emergency_contact_phone.strip()
+    profile.emergency_contact_relationship = payload.emergency_contact_relationship.strip()
+    profile.emergency_contact_note = payload.emergency_contact_note.strip()
+    profile.insurance_provider = payload.insurance_provider.strip()
     profile.insurance_id = payload.insurance_id.strip()
+    profile.insurance_expiry = payload.insurance_expiry
+    profile.allergy_status = "recorded" if allergies_json else payload.allergy_status
     profile.notes = payload.notes.strip()
     profile.allergies_json = allergies_json
     profile.conditions_json = conditions_json
@@ -407,7 +424,7 @@ def upsert_phr_record(
 
     db.commit()
     db.refresh(profile)
-    return _serialize_profile(profile)
+    return _enhanced_response(profile) if enhanced else _serialize_profile(profile)
 
 
 def _enhanced_write_entries(
@@ -510,10 +527,16 @@ def _enhanced_response(profile: PhrProfile) -> PhrEnhancedRecordResponse:
         height_cm=profile.height_cm,
         weight_kg=profile.weight_kg,
         phone=profile.phone or "",
+        contact_email=profile.contact_email or "",
         address=profile.address or "",
         emergency_contact_name=profile.emergency_contact_name or "",
         emergency_contact_phone=profile.emergency_contact_phone or "",
+        emergency_contact_relationship=profile.emergency_contact_relationship or "",
+        emergency_contact_note=profile.emergency_contact_note or "",
+        insurance_provider=profile.insurance_provider or "",
         insurance_id=profile.insurance_id or "",
+        insurance_expiry=profile.insurance_expiry,
+        allergy_status=_allergy_status(profile),
         notes=profile.notes or "",
         allergies=_clean_object_list(profile.allergies_json),
         conditions=_clean_object_list(profile.conditions_json),

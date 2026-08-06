@@ -83,10 +83,16 @@ export type PhrRecord = {
   height_cm?: number | null;
   weight_kg?: number | null;
   phone: string;
+  contact_email: string;
   address: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
+  emergency_contact_relationship: string;
+  emergency_contact_note: string;
+  insurance_provider: string;
   insurance_id: string;
+  insurance_expiry?: string | null;
+  allergy_status: "unknown" | "none_known" | "recorded";
   notes: string;
   allergies: PhrAllergyItem[];
   conditions: PhrConditionItem[];

@@ -545,6 +545,24 @@ def test_body_measurement_rejects_future_dates() -> None:
     assert response.status_code == 422
 
 
+def test_enhanced_record_persists_contact_insurance_and_honest_allergy_state() -> None:
+    _enable("PHR_ENHANCED_ENABLED")
+    token = _login("phr-contact-detail@example.com")
+    payload = {
+        "contact_email": "contact@example.com",
+        "emergency_contact_relationship": "Anh trai",
+        "emergency_contact_note": "Liên hệ sau giờ làm",
+        "insurance_provider": "BHYT",
+        "insurance_expiry": "2027-01-01",
+        "allergy_status": "none_known",
+    }
+    saved = client.put("/api/v1/phr/record", headers=_auth(token), json=payload)
+    assert saved.status_code == 200
+    body = saved.json()
+    for key, value in payload.items():
+        assert body[key] == value
+
+
 def test_export_is_downloadable_fhir_bundle() -> None:
     _enable("PHR_ENHANCED_ENABLED", "PHR_EXPORT_ENABLED")
     token = _login("phr-export@example.com")

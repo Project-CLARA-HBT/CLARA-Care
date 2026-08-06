@@ -1276,10 +1276,16 @@ class PhrRecordUpdateRequest(BaseModel):
     height_cm: float | None = Field(default=None, ge=0, le=300)
     weight_kg: float | None = Field(default=None, ge=0, le=800)
     phone: str = Field(default="", max_length=64)
+    contact_email: str = Field(default="", max_length=254)
     address: str = Field(default="", max_length=2000)
     emergency_contact_name: str = Field(default="", max_length=255)
     emergency_contact_phone: str = Field(default="", max_length=64)
+    emergency_contact_relationship: str = Field(default="", max_length=80)
+    emergency_contact_note: str = Field(default="", max_length=2000)
+    insurance_provider: str = Field(default="", max_length=255)
     insurance_id: str = Field(default="", max_length=128)
+    insurance_expiry: date | None = None
+    allergy_status: Literal["unknown", "none_known", "recorded"] = "unknown"
     notes: str = Field(default="", max_length=4000)
     allergies: list[PhrAllergyItemLegacy] = Field(default_factory=list, max_length=80)
     conditions: list[PhrConditionItemLegacy] = Field(default_factory=list, max_length=80)
@@ -1351,10 +1357,16 @@ class PhrEnhancedRecordResponse(BaseModel):
     height_cm: float | None = None
     weight_kg: float | None = None
     phone: str = ""
+    contact_email: str = ""
     address: str = ""
     emergency_contact_name: str = ""
     emergency_contact_phone: str = ""
+    emergency_contact_relationship: str = ""
+    emergency_contact_note: str = ""
+    insurance_provider: str = ""
     insurance_id: str = ""
+    insurance_expiry: date | None = None
+    allergy_status: Literal["unknown", "none_known", "recorded"] = "unknown"
     notes: str = ""
     allergies: list[PhrAllergyItem] = Field(default_factory=list)
     conditions: list[PhrConditionItem] = Field(default_factory=list)

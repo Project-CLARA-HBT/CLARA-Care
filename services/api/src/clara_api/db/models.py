@@ -857,10 +857,20 @@ class PhrProfile(Base):
     height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     phone: Mapped[str] = mapped_column(String(64), default="")
+    contact_email: Mapped[str] = mapped_column(String(254), default="", server_default="")
     address: Mapped[str] = mapped_column(Text, default="")
     emergency_contact_name: Mapped[str] = mapped_column(String(255), default="")
     emergency_contact_phone: Mapped[str] = mapped_column(String(64), default="")
+    emergency_contact_relationship: Mapped[str] = mapped_column(
+        String(80), default="", server_default=""
+    )
+    emergency_contact_note: Mapped[str] = mapped_column(Text, default="", server_default="")
+    insurance_provider: Mapped[str] = mapped_column(String(255), default="", server_default="")
     insurance_id: Mapped[str] = mapped_column(String(128), default="")
+    insurance_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    allergy_status: Mapped[str] = mapped_column(
+        String(32), default="unknown", server_default="unknown"
+    )
     notes: Mapped[str] = mapped_column(Text, default="")
     allergies_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
     conditions_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
