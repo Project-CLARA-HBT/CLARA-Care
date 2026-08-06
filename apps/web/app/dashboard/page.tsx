@@ -308,6 +308,11 @@ export default function DashboardPage() {
     [recentQueries.length]
   );
 
+  const visibleQuickAccess = useMemo(
+    () => QUICK_ACCESS.filter((item) => role !== "normal" || !["/council", "/scribe"].includes(item.href)),
+    [role],
+  );
+
   const todayTasks = useMemo<TodayTask[]>(() => {
     if (serverTasks.length > 0) return serverTasks.slice(0, 4);
     return [];
@@ -395,7 +400,7 @@ export default function DashboardPage() {
                     </div>
                   </Link>
                 )}
-                <Link
+                {role !== "normal" ? <Link
                   href={secondaryAction.href}
                   className="group flex min-h-16 flex-1 items-center gap-3 rounded-xl border border-[color:var(--shell-border)] bg-white/80 px-4 py-3 text-left text-[var(--text-primary)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] dark:bg-slate-900/50"
                 >
@@ -406,15 +411,15 @@ export default function DashboardPage() {
                     <p className="text-sm font-bold text-[var(--text-brand)]">{secondaryAction.title}</p>
                     <p className="text-xs text-[var(--text-secondary)]">{secondaryAction.detail}</p>
                   </div>
-                </Link>
-                <button
+                </Link> : null}
+                {role !== "normal" ? <button
                   type="button"
                   onClick={refreshDashboard}
                   disabled={isRefreshing}
                   className="inline-flex min-h-16 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isRefreshing ? "Đang đồng bộ..." : "Làm mới dữ liệu"}
-                </button>
+                </button> : null}
               </div>
             </div>
 
@@ -628,7 +633,7 @@ export default function DashboardPage() {
             <p className="mt-2 text-sm text-[var(--text-secondary)]">Khi muốn chuyển nhanh sang một bước cụ thể, bạn có thể bắt đầu từ đây.</p>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-            {QUICK_ACCESS.map((item) => (
+            {visibleQuickAccess.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

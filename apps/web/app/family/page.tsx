@@ -159,6 +159,11 @@ function FamilyWorkspace() {
     }
   }, [copy]);
   useEffect(() => void load(), [load]);
+  useEffect(() => {
+    if (!createdToken) return;
+    const timer = window.setTimeout(() => setCreatedToken(""), 60_000);
+    return () => window.clearTimeout(timer);
+  }, [createdToken]);
 
   const revoke = async (grantId: string) => {
     setSaving(true);

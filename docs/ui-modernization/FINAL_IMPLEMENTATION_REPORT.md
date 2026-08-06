@@ -20,13 +20,12 @@ The web application now has a documented, workspace-based navigation model, a ta
 - `npm run type-check`: pass.
 - `npm run i18n:check`: pass (3,271 Vietnamese/English keys; 38 migrated surfaces).
 - `npm run lint`: pass with eight pre-existing React Hook warnings.
-- `npm run test:unit`: pass, 91 files / 694 tests.
+- `npm run test:unit`: pass, 91 files / 695 tests.
 - `npm run build`: pass, 91 app routes.
 - `npm run route-matrix:check`: pass, 79/79 page routes.
 - `npm run bundle:check`: pass within the measured 5% budget.
-- Focused core E2E after shell repair: 8 passed, 2 skipped across desktop/mobile.
-- Desktop and mobile axe smoke: pass for `/` and `/login`.
-- Mobile visual smoke: `/login` passed; `/` has one environment/API-proxy 500 console response and remains a follow-up rather than being hidden.
+- Full Playwright E2E across desktop, laptop, tablet, and mobile: 31 passed, 5 intentionally skipped by viewport applicability.
+- Axe and visual smoke: pass for `/` and `/login` across all four viewports.
 
 ## Safety and privacy
 
@@ -36,7 +35,7 @@ No medical decision logic, RBAC, consent backend, audit, emergency, DrugBank, FI
 
 - Dashboard still contains legacy Vietnamese copy and should receive a dedicated typed catalog migration.
 - Some legacy Material Symbols usage remains outside the PHR/Button boundary.
-- The public landing mobile visual smoke is blocked by a reproducible 500 response from the local API proxy; investigate the response source before release.
+- The public landing no longer calls authenticated consent APIs; the former mobile proxy 500 is regression-tested and resolved.
 - Authenticated real-user RBAC/consent E2E requires service credentials and was not fabricated in this environment.
 
 ## Rollback

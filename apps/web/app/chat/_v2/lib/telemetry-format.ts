@@ -402,86 +402,14 @@ export function normalizeConfidenceRatio(
   return undefined;
 }
 
-function extractConfidenceFromScores(
-  scores: ResearchTier2Result["telemetry"]["scores"],
-  preferredKeywords: string[],
-): number | undefined {
-  for (const score of scores) {
-    if (typeof score.value !== "number") continue;
-    const label = score.label.trim().toLowerCase();
-    if (!preferredKeywords.some((keyword) => label.includes(keyword))) continue;
-    const normalized = normalizeConfidenceRatio(score.value);
-    if (normalized !== undefined) return normalized;
-  }
-  return undefined;
-}
-
-/** Derives an overall confidence ratio (0..1) from a tier2 result, or undefined. */
+/**
+ * Confidence is intentionally not rendered until the API contract carries a
+ * calibration/version marker. Raw provider, routing, retrieval, and verifier
+ * scores are not interchangeable probabilities and must not be averaged into
+ * a patient-facing percentage.
+ */
 export function resolveTelemetryConfidence(
-  result: ResearchTier2Result | null,
+  _result: ResearchTier2Result | null,
 ): number | undefined {
-  if (!result) return undefined;
-
-  const explicit = normalizeConfidenceRatio(
-    result.verificationStatus?.confidence,
-  );
-  if (explicit !== undefined) return explicit;
-
-  const matrixConfidences = result.telemetry.verificationMatrix
-    .map((item) => normalizeConfidenceRatio(item.confidence))
-    .filter((value): value is number => value !== undefined);
-  if (matrixConfidences.length) {
-    const avg =
-      matrixConfidences.reduce((sum, value) => sum + value, 0) /
-      matrixConfidences.length;
-    return Math.max(0, Math.min(1, avg));
-  }
-
-  const scoreConfidence = extractConfidenceFromScores(result.telemetry.scores, [
-    "verification confidence",
-    "confidence",
-  ]);
-  if (scoreConfidence !== undefined) return scoreConfidence;
-
-  const relevanceConfidenceRaw = extractConfidenceFromScores(
-    result.telemetry.scores,
-    ["relevance", "retrieval score", "score"],
-  );
-  if (relevanceConfidenceRaw !== undefined && relevanceConfidenceRaw > 0) {
-    return relevanceConfidenceRaw;
-  }
-
-  const routing = normalizeConfidenceRatio(result.debug.routing?.confidence);
-  if (routing !== undefined) return routing;
-
-  const hasAnswer = Boolean(result.answer?.trim());
-  const citationCount = result.citations.length;
-  const docCount = result.telemetry.docs.length;
-  const sourceAttemptCount = result.telemetry.sourceAttempts.length;
-  const flowStageCount = result.flowStages.length;
-  const verificationCount = result.telemetry.verificationMatrix.length;
-  const errorCount = result.telemetry.errors.length;
-
-  const hasSignal =
-    hasAnswer ||
-    citationCount > 0 ||
-    docCount > 0 ||
-    sourceAttemptCount > 0 ||
-    flowStageCount > 0 ||
-    verificationCount > 0;
-  if (!hasSignal) return undefined;
-
-  let heuristic = 0.5;
-  heuristic += Math.min(6, citationCount) * 0.03;
-  heuristic += Math.min(10, docCount) * 0.015;
-  heuristic += Math.min(6, sourceAttemptCount) * 0.01;
-  heuristic += Math.min(4, flowStageCount) * 0.02;
-  heuristic += Math.min(3, verificationCount) * 0.025;
-  if (hasAnswer) heuristic += 0.08;
-  if (errorCount > 0) heuristic -= Math.min(0.18, errorCount * 0.06);
-  if (relevanceConfidenceRaw === 0 && (citationCount > 0 || docCount > 0)) {
-    heuristic = Math.max(heuristic, 0.58);
-  }
-
-  return Math.max(0.18, Math.min(0.92, heuristic));
+  return undefined;
 }

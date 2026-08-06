@@ -5,9 +5,12 @@ test.describe("baseline visual smoke", () => {
     test(`captures a stable synthetic screenshot for ${path}`, async ({ page }) => {
       const runtimeErrors: string[] = [];
       page.on("pageerror", (error) => runtimeErrors.push(error.message));
-      page.on("console", (message) => {
-        if (message.type() === "error") runtimeErrors.push(message.text());
-      });
+    page.on("console", (message) => {
+      if (message.type() === "error") runtimeErrors.push(message.text());
+    });
+    page.on("response", (response) => {
+      if (response.status() >= 500) runtimeErrors.push(`${response.status()} ${response.url()}`);
+    });
       await page.goto(path, { waitUntil: "domcontentloaded", timeout: 15_000 });
       await expect(page.locator("main#main-content")).toBeVisible({ timeout: 15_000 });
       const viewport = await page.evaluate(() => ({

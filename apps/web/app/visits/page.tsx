@@ -144,6 +144,11 @@ function VisitsWorkspace() {
       setError(safeUserFacingError(cause, copy("visits.loadVisitDataError"))),
     );
   }, [copy, selectedId]);
+  useEffect(() => {
+    if (!share) return;
+    const timer = window.setTimeout(() => setShare(null), 60_000);
+    return () => window.clearTimeout(timer);
+  }, [share]);
 
   const choose = (id: string) => {
     setSelectedId(id); setQuestion(null); setComplete(false); setProgress({ answered: 0, total: 0 });

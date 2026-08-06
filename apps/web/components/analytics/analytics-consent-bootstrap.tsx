@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { getConsentStatus } from "@/lib/consent";
 import { getAnalyticsClient } from "@/lib/analytics";
 import { getRole } from "@/lib/auth-store";
+import { isPublicRoute } from "@/lib/navigation.access";
 
 /**
  * Bootstraps the Analytics facade and wires analytics consent from the existing
@@ -22,8 +23,7 @@ import { getRole } from "@/lib/auth-store";
  */
 export default function AnalyticsConsentBootstrap() {
   const pathname = usePathname() ?? "";
-  const isPublicCapability =
-    pathname.startsWith("/share/") || pathname.startsWith("/phr/shared/");
+  const isPublicCapability = isPublicRoute(pathname);
 
   useEffect(() => {
     let cancelled = false;

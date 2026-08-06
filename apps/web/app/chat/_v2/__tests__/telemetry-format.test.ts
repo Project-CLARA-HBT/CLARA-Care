@@ -202,9 +202,9 @@ describe("normalizeConfidenceRatio", () => {
 });
 
 describe("resolveTelemetryConfidence", () => {
-  it("prefers explicit verification confidence", () => {
+  it("does not expose an uncalibrated verifier score as confidence", () => {
     const result = makeResult({ verificationStatus: { confidence: 0.9 } });
-    expect(resolveTelemetryConfidence(result)).toBe(0.9);
+    expect(resolveTelemetryConfidence(result)).toBeUndefined();
   });
 
   it("returns undefined when there is no signal", () => {

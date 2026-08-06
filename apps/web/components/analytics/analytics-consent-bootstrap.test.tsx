@@ -43,4 +43,11 @@ describe("AnalyticsConsentBootstrap public capabilities", () => {
     expect(mocks.getConsentStatus).not.toHaveBeenCalled();
     expect(mocks.identify).not.toHaveBeenCalled();
   });
+
+  it("does not request authenticated consent from the public landing page", async () => {
+    mocks.pathname = "/";
+    render(<AnalyticsConsentBootstrap />);
+    await waitFor(() => expect(mocks.setConsent).toHaveBeenCalledWith(false));
+    expect(mocks.getConsentStatus).not.toHaveBeenCalled();
+  });
 });
