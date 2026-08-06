@@ -14,9 +14,12 @@ import AsyncSection, {
 import {
   DEFAULT_PHR_CAPABILITIES,
   getPhrCapabilities,
+  createPhrBodyMeasurement,
+  getPhrBodyMeasurements,
   getPhrCompleteness,
   getPhrRecord,
   type PhrAllergyItem,
+  type PhrBodyMeasurement,
   type PhrCapabilityFlags,
   type PhrCompleteness,
   type PhrCompletenessClass,
@@ -85,6 +88,9 @@ const PHR_TEXT_KEYS = {
   completenessLoading: "phr.completeness.loading", completenessError: "phr.completeness.error",
   completenessComplete: "phr.completeness.complete", completenessPresent: "phr.completeness.present",
   completenessMissing: "phr.completeness.missing",
+  bodyBmi: "phr.body.bmi", bodyHistory: "phr.body.history", bodyHistoryEmpty: "phr.body.historyEmpty",
+  bodyHistorySave: "phr.body.historySave", bodyHistorySaving: "phr.body.historySaving",
+  noAllergies: "phr.empty.allergies", noConditions: "phr.empty.conditions", noMedications: "phr.empty.medications",
 } as const satisfies Record<string, UITranslationKey>;
 
 type PhrText = { [Key in keyof typeof PHR_TEXT_KEYS]: string };
@@ -540,6 +546,9 @@ export default function PhrPage() {
   const [completeness, setCompleteness] = useState<PhrCompleteness | null>(null);
   const [completenessLoading, setCompletenessLoading] = useState(false);
   const [completenessError, setCompletenessError] = useState<string>("");
+  const [bodyMeasurements, setBodyMeasurements] = useState<PhrBodyMeasurement[]>([]);
+  const [bodyMeasurementsLoading, setBodyMeasurementsLoading] = useState(false);
+  const [bodyMeasurementSaving, setBodyMeasurementSaving] = useState(false);
 
   const text = useMemo(() => getPhrText(uiLanguage), [uiLanguage]);
   const isHub = pathname === "/phr" || pathname === "/phr/";
@@ -632,6 +641,32 @@ export default function PhrPage() {
     refreshCompleteness();
   }, [refreshCompleteness]);
 
+  useEffect(() => {
+    let mounted = true;
+    if (section !== "body" || !capabilities.observations) {
+      setBodyMeasurements([]);
+      return () => {
+        mounted = false;
+      };
+    }
+    setBodyMeasurementsLoading(true);
+    getPhrBodyMeasurements()
+      .then((items) => {
+        if (mounted) setBodyMeasurements(items);
+      })
+      .catch(() => {
+        // History is additive: a temporary failure must not hide the current
+        // record editor or replace it with an unsafe inferred value.
+        if (mounted) setBodyMeasurements([]);
+      })
+      .finally(() => {
+        if (mounted) setBodyMeasurementsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [capabilities.observations, section]);
+
   const completenessState: AsyncState<PhrCompleteness> = selectAsyncState({
     loading: completenessLoading,
     error: completenessError || null,
@@ -709,6 +744,38 @@ export default function PhrPage() {
         },
       ],
     }));
+  };
+
+  const saveBodyMeasurement = async () => {
+    const heightCm = record.height_cm;
+    const weightKg = record.weight_kg;
+    if (heightCm == null || weightKg == null) {
+      setError(text.saveError);
+      return;
+    }
+    setBodyMeasurementSaving(true);
+    setMessage("");
+    setError("");
+    try {
+      const created = await createPhrBodyMeasurement({
+        height_cm: heightCm,
+        weight_kg: weightKg,
+      });
+      setBodyMeasurements((previous) => [
+        created,
+        ...previous.filter((item) => item.observed_on !== created.observed_on),
+      ]);
+      setRecord((previous) => ({
+        ...previous,
+        height_cm: created.height_cm,
+        weight_kg: created.weight_kg,
+      }));
+      setMessage(text.saveOk);
+    } catch (err) {
+      setError(safeUserFacingError(err, text.saveError));
+    } finally {
+      setBodyMeasurementSaving(false);
+    }
   };
 
   const onSave = async () => {
@@ -960,6 +1027,61 @@ export default function PhrPage() {
               onChange={(e) => setField("notes", e.target.value)}
             /> : null}
           </div>
+          {section === "body" ? (
+            <div className="mt-6 border-t border-[color:var(--shell-border)] pt-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                    {text.bodyBmi}
+                  </p>
+                  {record.height_cm && record.weight_kg ? (
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--text-primary)]">
+                      {(record.weight_kg / ((record.height_cm / 100) ** 2)).toFixed(1)}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">{text.bodyHistoryEmpty}</p>
+                  )}
+                </div>
+                {capabilities.observations ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    icon="add"
+                    onClick={saveBodyMeasurement}
+                    disabled={
+                      bodyMeasurementSaving ||
+                      record.height_cm === null ||
+                      record.weight_kg === null
+                    }
+                    loading={bodyMeasurementSaving}
+                    loadingLabel={text.bodyHistorySaving}
+                  >
+                    {text.bodyHistorySave}
+                  </Button>
+                ) : null}
+              </div>
+              {capabilities.observations ? (
+                <div className="mt-5">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{text.bodyHistory}</p>
+                  {bodyMeasurementsLoading ? (
+                    <p className="mt-3 text-sm text-[var(--text-secondary)]">{text.loading}</p>
+                  ) : bodyMeasurements.length === 0 ? (
+                    <p className="mt-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--text-secondary)]">{text.bodyHistoryEmpty}</p>
+                  ) : (
+                    <ul className="mt-3 divide-y divide-[color:var(--shell-border)] rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]">
+                      {bodyMeasurements.map((measurement) => (
+                        <li key={measurement.observed_on} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                          <span className="text-sm font-semibold text-[var(--text-primary)]">{formatLocaleDate(uiLanguage, measurement.observed_on, { dateStyle: "medium" })}</span>
+                          <span className="text-sm text-[var(--text-secondary)]">{measurement.height_cm} cm · {measurement.weight_kg} kg</span>
+                          <Badge tone="brand">BMI {measurement.bmi}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </section> : null}
 
         {(["allergies", "conditions", "medications"] as const).includes(section as "allergies" | "conditions" | "medications") ? <section className="grid gap-4">
@@ -979,6 +1101,11 @@ export default function PhrPage() {
               </Button>
             </div>
             <div className="space-y-3">
+              {record.allergies.length === 0 ? (
+                <div className="rounded-[var(--radius-lg)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 text-sm leading-6 text-[var(--text-secondary)]">
+                  {text.noAllergies}
+                </div>
+              ) : null}
               {record.allergies.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
@@ -1064,6 +1191,11 @@ export default function PhrPage() {
               </Button>
             </div>
             <div className="space-y-3">
+              {record.conditions.length === 0 ? (
+                <div className="rounded-[var(--radius-lg)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 text-sm leading-6 text-[var(--text-secondary)]">
+                  {text.noConditions}
+                </div>
+              ) : null}
               {record.conditions.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">
@@ -1152,6 +1284,11 @@ export default function PhrPage() {
               </Button>
             </div>
             <div className="space-y-3">
+              {record.medications.length === 0 ? (
+                <div className="rounded-[var(--radius-lg)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-5 text-sm leading-6 text-[var(--text-secondary)]">
+                  {text.noMedications}
+                </div>
+              ) : null}
               {record.medications.map((item) => (
                 <div key={item.id} className={phrItemClass}>
                   <div className="grid gap-2">

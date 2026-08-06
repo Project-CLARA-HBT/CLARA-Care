@@ -49,7 +49,7 @@ Rollback: revert M2 or set short-lived shell flag; both paths use the same acces
 - [ ] Migrate LifeMap creation/episode details progressively.
 - [x] Convert Visit preparation to focused steps while preserving current API.
 - [x] Convert Family to tabs and explicit share review.
-- [x] Convert PHR hub to a record-derived ProgressList and retain focused, provenance-preserving sections.
+- [ ] Complete PHR detailed states: record-derived ProgressList, identity/contact-insurance, paired body-measurement history/BMI, allergy/condition/medication empty and populated views, provenance-preserving editing, and mobile review.
 - [x] Remove duplicate Medicines CTAs; preserve course/cabinet/DDI distinction and keep CareGuard as the canonical DDI surface.
 
 Validation: state matrices, consent/provenance/safety tests, personal E2E, visual matrix.

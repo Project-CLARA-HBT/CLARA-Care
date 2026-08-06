@@ -1382,6 +1382,19 @@ class PhrObservationCreateRequest(BaseModel):
     observed_on: date | None = None
 
 
+class PhrBodyMeasurementCreateRequest(BaseModel):
+    """One user-entered height/weight measurement at a single point in time.
+
+    Keeping the pair in one request prevents the UI from accidentally deriving
+    BMI from values recorded on unrelated dates.  The values are persisted as
+    standard PHR observations so they remain included in export and DSAR flows.
+    """
+
+    height_cm: float = Field(gt=0, le=300)
+    weight_kg: float = Field(gt=0, le=800)
+    observed_on: date | None = None
+
+
 class PhrShareCreateRequest(BaseModel):
     scope: Literal["full", "emergency_card"] = "full"
     expires_in_days: int = Field(default=30, ge=1, le=365)

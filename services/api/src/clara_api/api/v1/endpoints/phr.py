@@ -21,7 +21,7 @@ import hmac
 import json
 import secrets
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import (
@@ -78,6 +78,7 @@ from clara_api.phr.validator import (
     validate_observation,
 )
 from clara_api.schemas import (
+    PhrBodyMeasurementCreateRequest,
     PhrConsentMutationRequest,
     PhrEnhancedRecordResponse,
     PhrEntryPatchRequest,
@@ -802,6 +803,154 @@ def set_phr_consent(
 # ---------------------------------------------------------------------------
 # Observations (Req 10)
 # ---------------------------------------------------------------------------
+
+
+_BODY_HEIGHT_OBSERVATION = "body_height_cm"
+_BODY_WEIGHT_OBSERVATION = "body_weight_kg"
+
+
+def _body_measurement_rows(profile: PhrProfile, db: Session) -> list[dict[str, Any]]:
+    """Return only complete height/weight pairs, newest first.
+
+    Generic observations deliberately do not imply that values on different
+    dates belong together.  This projection accepts the two reserved body
+    observation names only when both occur on the same date.
+    """
+
+    grouped: dict[date, dict[str, float]] = {}
+    rows = db.execute(
+        select(PhrObservation).where(
+            PhrObservation.profile_id == profile.id,
+            PhrObservation.name.in_((_BODY_HEIGHT_OBSERVATION, _BODY_WEIGHT_OBSERVATION)),
+            PhrObservation.observed_on.is_not(None),
+        )
+    ).scalars()
+    for row in rows:
+        if row.observed_on is None:
+            continue
+        try:
+            value = float(row.value)
+        except (TypeError, ValueError):
+            continue
+        values = grouped.setdefault(row.observed_on, {})
+        values[row.name] = value
+
+    result: list[dict[str, Any]] = []
+    for observed_on, values in grouped.items():
+        height_cm = values.get(_BODY_HEIGHT_OBSERVATION)
+        weight_kg = values.get(_BODY_WEIGHT_OBSERVATION)
+        if height_cm is None or weight_kg is None:
+            continue
+        height_m = height_cm / 100
+        result.append(
+            {
+                "observed_on": observed_on.isoformat(),
+                "height_cm": height_cm,
+                "weight_kg": weight_kg,
+                "bmi": round(weight_kg / (height_m * height_m), 1),
+                "information_source": "self-declared",
+            }
+        )
+    return sorted(result, key=lambda item: str(item["observed_on"]), reverse=True)
+
+
+@router.get("/body-measurements")
+def list_phr_body_measurements(
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+    settings: Settings = SETTINGS_DEP,
+) -> dict[str, Any]:
+    if not phr_features(settings).observations:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="PHR observations not enabled"
+        )
+    user = _get_user_by_token(db, token)
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        return {"measurements": []}
+    return {"measurements": _body_measurement_rows(profile, db)}
+
+
+@router.post("/body-measurements")
+def create_phr_body_measurement(
+    payload: PhrBodyMeasurementCreateRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+    settings: Settings = SETTINGS_DEP,
+) -> dict[str, Any]:
+    """Atomically record a paired body measurement and update current values."""
+
+    if not phr_features(settings).observations:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="PHR observations not enabled"
+        )
+    observed_on = payload.observed_on or date.today()
+    try:
+        validate_observation(
+            {
+                "name": _BODY_HEIGHT_OBSERVATION,
+                "value": str(payload.height_cm),
+                "unit": "cm",
+                "observed_on": observed_on,
+            }
+        )
+        validate_observation(
+            {
+                "name": _BODY_WEIGHT_OBSERVATION,
+                "value": str(payload.weight_kg),
+                "unit": "kg",
+                "observed_on": observed_on,
+            }
+        )
+    except PhrValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message
+        ) from exc
+
+    user = _get_user_by_token(db, token)
+    profile = _get_or_create_profile(db, user.id)
+    height = PhrObservation(
+        profile_id=profile.id,
+        entry_id=secrets.token_urlsafe(16),
+        name=_BODY_HEIGHT_OBSERVATION,
+        value=str(payload.height_cm),
+        unit="cm",
+        observed_on=observed_on,
+        information_source="self-declared",
+    )
+    weight = PhrObservation(
+        profile_id=profile.id,
+        entry_id=secrets.token_urlsafe(16),
+        name=_BODY_WEIGHT_OBSERVATION,
+        value=str(payload.weight_kg),
+        unit="kg",
+        observed_on=observed_on,
+        information_source="self-declared",
+    )
+    db.add_all((height, weight))
+    profile.height_cm = payload.height_cm
+    profile.weight_kg = payload.weight_kg
+    audit_svc.record_change(
+        db,
+        profile=profile,
+        action=audit_svc.ACTION_CREATE,
+        entity="body_measurement",
+        actor_user_id=user.id,
+        # Audit metadata intentionally excludes sensitive measurement values.
+        after={"observed_on": observed_on.isoformat(), "fields": ["height_cm", "weight_kg"]},
+        snapshot=_record_dict(profile, db),
+    )
+    db.commit()
+    height_m = payload.height_cm / 100
+    return {
+        "observed_on": observed_on.isoformat(),
+        "height_cm": payload.height_cm,
+        "weight_kg": payload.weight_kg,
+        "bmi": round(payload.weight_kg / (height_m * height_m), 1),
+        "information_source": "self-declared",
+    }
 
 
 @router.get("/observations")

@@ -507,6 +507,44 @@ def test_observations_numeric_validation_and_listing() -> None:
     assert len(listing.json()["observations"]) == 1
 
 
+def test_body_measurements_are_paired_by_date_and_update_current_values() -> None:
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OBSERVATIONS_ENABLED")
+    token = _login("phr-body@example.com")
+    created = client.post(
+        "/api/v1/phr/body-measurements",
+        headers=_auth(token),
+        json={"height_cm": 165, "weight_kg": 55, "observed_on": "2026-07-01"},
+    )
+    assert created.status_code == 200
+    assert created.json()["bmi"] == 20.2
+
+    listing = client.get("/api/v1/phr/body-measurements", headers=_auth(token))
+    assert listing.status_code == 200
+    assert listing.json()["measurements"] == [
+        {
+            "observed_on": "2026-07-01",
+            "height_cm": 165.0,
+            "weight_kg": 55.0,
+            "bmi": 20.2,
+            "information_source": "self-declared",
+        }
+    ]
+    record = client.get("/api/v1/phr/record", headers=_auth(token))
+    assert record.json()["height_cm"] == 165.0
+    assert record.json()["weight_kg"] == 55.0
+
+
+def test_body_measurement_rejects_future_dates() -> None:
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OBSERVATIONS_ENABLED")
+    token = _login("phr-body-future@example.com")
+    response = client.post(
+        "/api/v1/phr/body-measurements",
+        headers=_auth(token),
+        json={"height_cm": 165, "weight_kg": 55, "observed_on": "2999-01-01"},
+    )
+    assert response.status_code == 422
+
+
 def test_export_is_downloadable_fhir_bundle() -> None:
     _enable("PHR_ENHANCED_ENABLED", "PHR_EXPORT_ENABLED")
     token = _login("phr-export@example.com")

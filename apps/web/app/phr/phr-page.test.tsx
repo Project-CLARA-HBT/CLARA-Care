@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   getPhrRecord: vi.fn(),
   getPhrCapabilities: vi.fn(),
   getPhrCompleteness: vi.fn(),
+  getPhrBodyMeasurements: vi.fn(),
+  createPhrBodyMeasurement: vi.fn(),
   updatePhrRecord: vi.fn(),
 }));
 
@@ -36,6 +38,8 @@ vi.mock("@/lib/phr", () => ({
   getPhrRecord: mocks.getPhrRecord,
   getPhrCapabilities: mocks.getPhrCapabilities,
   getPhrCompleteness: mocks.getPhrCompleteness,
+  getPhrBodyMeasurements: mocks.getPhrBodyMeasurements,
+  createPhrBodyMeasurement: mocks.createPhrBodyMeasurement,
   updatePhrRecord: mocks.updatePhrRecord,
 }));
 
@@ -78,6 +82,7 @@ beforeEach(() => {
     completeness_meter: false,
   });
   mocks.getPhrCompleteness.mockResolvedValue({ score: 0, present: [], missing: [] });
+  mocks.getPhrBodyMeasurements.mockResolvedValue([]);
 });
 
 afterEach(cleanup);
@@ -117,5 +122,13 @@ describe("PHR focused hub", () => {
     expect(screen.getByLabelText("Cân nặng (kg)")).toHaveValue("55");
     expect(screen.queryByLabelText("Họ và tên")).not.toBeInTheDocument();
     expect(screen.queryByText("Dị ứng")).not.toBeInTheDocument();
+  });
+
+  it("shows truthful empty allergy state instead of a placeholder record", async () => {
+    mocks.pathname = "/phr/allergies";
+    render(<PhrPage />);
+
+    expect(await screen.findByText(/Chưa có dị ứng nào trong hồ sơ/)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Tên dị ứng")).not.toBeInTheDocument();
   });
 });

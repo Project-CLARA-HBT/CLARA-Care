@@ -106,6 +106,43 @@ export async function updatePhrRecord(payload: PhrRecord): Promise<PhrRecord> {
 }
 
 // ---------------------------------------------------------------------------
+// Body measurements
+// ---------------------------------------------------------------------------
+
+/** A height/weight pair recorded at the same time; BMI is server-derived. */
+export type PhrBodyMeasurement = {
+  observed_on: string;
+  height_cm: number;
+  weight_kg: number;
+  bmi: number;
+  information_source: PhrInformationSource;
+};
+
+export type PhrBodyMeasurementInput = Pick<
+  PhrBodyMeasurement,
+  "height_cm" | "weight_kg"
+> & {
+  observed_on?: string;
+};
+
+export async function getPhrBodyMeasurements(): Promise<PhrBodyMeasurement[]> {
+  const { data } = await api.get<{ measurements?: PhrBodyMeasurement[] }>(
+    "/api/v1/phr/body-measurements",
+  );
+  return Array.isArray(data.measurements) ? data.measurements : [];
+}
+
+export async function createPhrBodyMeasurement(
+  payload: PhrBodyMeasurementInput,
+): Promise<PhrBodyMeasurement> {
+  const { data } = await api.post<PhrBodyMeasurement>(
+    "/api/v1/phr/body-measurements",
+    payload,
+  );
+  return data;
+}
+
+// ---------------------------------------------------------------------------
 // Completeness meter (personal-health-record Requirement 16)
 // ---------------------------------------------------------------------------
 
