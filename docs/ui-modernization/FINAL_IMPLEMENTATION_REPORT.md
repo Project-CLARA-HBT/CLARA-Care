@@ -54,9 +54,12 @@ Pull request: https://github.com/Project-CLARA-HBT/CLARA-Care/pull/117
 ## Production deployment
 
 - Deployed commit: `f360e7b9`.
+- Dashboard deployment checkpoint: `316a9599` on 2026-08-06; the web image was rebuilt from that archive and the web container alone was recreated.
 - Target: `https://theclaracare.com` (`36.50.27.240`).
 - Web image rebuilt without cache on Node `v20.20.2` and the web container was force-recreated only after the image build passed.
 - Live verification: `/`, `/login`, `/share/not-a-real-token`, and `/phr/shared/not-a-real-token` return `200`; a mobile Playwright load of `/` reports no 5xx response or page error.
 - Security headers verified live: CSP, HSTS, `nosniff`, `DENY` frame policy, strict referrer policy, and permissions policy.
 - Rollback backup: `/opt/clara-backups/pre-ui-20260806-090113.tgz`.
+- Dashboard rollback backup: `/opt/clara-backups/pre-dashboard-20260806-135130.tgz`.
+- Live dashboard verification: the unauthenticated document follows the expected `307` auth redirect to `/login?next=%2Fdashboard`; a 390×844 Chromium load reached the login page with status `200`, no page error, and no 5xx response. The container reports Node `v20.20.2`; CSP, HSTS, `nosniff`, frame denial, referrer policy, and permissions policy remain present.
 - `/.well-known/assetlinks.json` remains intentionally fail-closed (`404`) because the production Android release certificate fingerprint is not configured and no release keystore is present on the server. Do not invent or substitute a debug fingerprint; set `ANDROID_APP_LINK_CERT_SHA256` after the release certificate exists, then recreate the web container.
