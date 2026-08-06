@@ -13,6 +13,7 @@ import {
 import {
   getAvailableWorkspaces,
   getMobileWorkspaceNav,
+  getWorkspaceForPath,
   getWorkspaceNavigation,
 } from "@/lib/navigation.workspaces";
 
@@ -24,6 +25,19 @@ describe("authenticated navigation defaults", () => {
       expect(getRoleHomePath(role)).toBe("/dashboard");
       expect(resolvePostLoginPath({ role })).toBe("/dashboard");
     }
+  });
+
+  it("treats the professional overview as a default route, not a workspace item", () => {
+    for (const role of ["researcher", "doctor", "admin"] as const) {
+      for (const workspace of getAvailableWorkspaces(role)) {
+        expect(getWorkspaceNavigation(role, workspace.id).primary.map((item) => item.href))
+          .not.toContain("/dashboard");
+      }
+    }
+    expect(getWorkspaceForPath("/dashboard", "doctor", "research")).toBe("research");
+    expect(getWorkspaceForPath("/dashboard", "doctor")).toBe("clinical");
+    expect(getWorkspaceForPath("/dashboard", "researcher")).toBe("research");
+    expect(getWorkspaceForPath("/dashboard", "admin")).toBe("admin");
   });
 
   it("keeps research visible for evidence roles while preserving consumer deep links", () => {

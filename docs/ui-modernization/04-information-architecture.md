@@ -9,6 +9,9 @@ The current tree is documented in `00-current-state-audit.md`. Navigation is a s
 No active capability is removed. New route-level splits are introduced only where they materially improve a focused workflow and existing API state can support them.
 
 ```text
+Default overview (professional roles)
+└─ /dashboard (role-scoped measured overview; not a workspace destination)
+
 Personal
 ├─ /today
 ├─ /chat
@@ -20,7 +23,6 @@ Personal
 └─ More: /visits*, /family*, /community*, /huong-dan, /account/*
 
 Clinical
-├─ /dashboard (real-data role view; no invented patient directory/work queue)
 ├─ /chat
 ├─ /council and /council/new/*
 └─ /scribe
@@ -45,11 +47,12 @@ Administration
 | Workspace | Primary (≤7) | Secondary / More |
 |---|---|---|
 | Personal | Hôm nay, Hỏi CLARA, Hành trình, Thuốc, Hồ sơ | Chuẩn bị đi khám, Người thân hỗ trợ, Cộng đồng when enabled, Quyền riêng tư & dữ liệu, Trợ giúp |
-| Clinical | Tổng quan công việc (`/dashboard`), Hỏi CLARA (`/chat`), Hội chẩn (`/council`), Ghi chép khám (`/scribe`) | Hồ sơ đang xem (`/phr`), Chuẩn bị buổi khám, Thuốc & tương tác, Bằng chứng |
+| Default overview (professional) | Tổng quan (`/dashboard`) | Không thuộc workspace; shell giữ workspace được chọn gần nhất |
+| Clinical | Hỏi CLARA (`/chat`), Hội chẩn (`/council`), Ghi chép khám (`/scribe`) | Hồ sơ đang xem (`/phr`), Chuẩn bị buổi khám, Thuốc & tương tác, Bằng chứng |
 | Research | Hỏi CLARA, Thư viện bằng chứng, Nguồn nghiên cứu | Lịch sử inside Chat, Chia sẻ truy vấn, Help/account |
 | Administration | Tổng quan, Nguồn tri thức, Luồng trả lời, Giám sát, Phân tích | Clinical analytics, moderation, DSAR, audit log, RAG tools |
 
-`normal` receives Personal. `researcher` receives Personal + Research. `doctor` receives Personal + Clinical + Research. `admin` receives all four. “Tổng quan công việc” maps to the existing `/dashboard`; it must render only measured API data and must not imply a patient directory or work queue that does not exist. “Hồ sơ đang xem” remains contextual/More and uses the existing active-profile context; it is shown with that label only when a permitted non-self profile is selected, otherwise it is “Hồ sơ cá nhân”.
+`normal` receives Personal. `researcher` receives Personal + Research. `doctor` receives Personal + Clinical + Research. `admin` receives all four. “Tổng quan” maps to the existing `/dashboard` as the authenticated default for professional roles, not as an Administration or Clinical navigation item. It renders only measured API data and must not imply a patient directory or work queue that does not exist. The shell retains the last permitted workspace on this route and picks a role-appropriate presentation fallback only if none was stored. “Hồ sơ đang xem” remains contextual/More and uses the existing active-profile context; it is shown with that label only when a permitted non-self profile is selected, otherwise it is “Hồ sơ cá nhân”.
 
 ## Old-to-new route map
 
@@ -102,7 +105,7 @@ More is a discovery surface, not an authorization boundary. Its visible text lab
 2. UI workspaces never grant permission.
 3. A direct route chooses the current workspace if it contains the route, otherwise its canonical permitted workspace.
 4. Store only `clara_workspace_v1 = WorkspaceId`.
-5. Stale/forbidden values fall back safely: personal `/today`, researcher Research `/chat`, doctor Clinical `/dashboard`, admin Administration `/admin/overview`.
+5. Stale/forbidden values fall back safely: personal `/today`; professional default is `/dashboard`; workspace fallback is Research for researcher, Clinical for doctor, and Administration for admin.
 6. A profile switch invalidates route-local health caches but does not persist profile data in workspace storage.
 7. Public shares/auth/legal routes mount no authenticated workspace shell.
 

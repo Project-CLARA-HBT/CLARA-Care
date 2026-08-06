@@ -34,7 +34,7 @@ const WORKSPACE_ORDER: WorkspaceId[] = ["personal", "clinical", "research", "adm
 
 const PRIMARY_HREFS: Record<WorkspaceId, string[]> = {
   personal: ["/today", "/chat", "/lifemap", "/medicines", "/phr"],
-  clinical: ["/dashboard", "/chat", "/council", "/scribe"],
+  clinical: ["/chat", "/council", "/scribe"],
   research: ["/chat", "/evidence", "/research/source-hub"],
   admin: [
     "/admin/overview",
@@ -56,7 +56,7 @@ const SECONDARY_HREFS: Record<WorkspaceId, string[]> = {
     "/huong-dan",
   ],
   clinical: ["/phr", "/evidence", "/research/source-hub", "/huong-dan"],
-  research: ["/dashboard", "/chat/shares", "/huong-dan"],
+  research: ["/chat/shares", "/huong-dan"],
   admin: [
     "/admin/community-moderation",
     "/admin/analytics/clinical",
@@ -178,6 +178,18 @@ export function getWorkspaceForPath(
   current?: WorkspaceId,
 ): WorkspaceId {
   const available = getAvailableWorkspaces(role).map((entry) => entry.id);
+  // `/dashboard` is the authenticated professional landing page, not a
+  // workspace destination. Keep the user's current permitted workspace in the
+  // shell while the overview is open; use a role-appropriate presentation
+  // fallback only when there is no prior choice. Route authorization remains
+  // independently enforced by navigation.access.ts.
+  if (pathname === "/dashboard") {
+    if (current && available.includes(current)) return current;
+    if (role === "researcher" && available.includes("research")) return "research";
+    if (role === "doctor" && available.includes("clinical")) return "clinical";
+    if (role === "admin" && available.includes("admin")) return "admin";
+    return available[0] ?? "personal";
+  }
   if (current && available.includes(current)) {
     const currentPaths = [...PRIMARY_HREFS[current], ...SECONDARY_HREFS[current]];
     if (currentPaths.some((href) => isActiveRoute(pathname, href))) return current;
