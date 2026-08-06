@@ -17,7 +17,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-09 | FR-LIFE-001–004 | Progressive LifeMap creation and episode presentation without truth changes. | Personal | UI-04/UI-06 | lifemap routes, guided flow | wizard/state/safety E2E | pending |
 | UI-10 | FR-VISIT-001/002 | Focused Visit preparation steps and contextual consent. | Personal | UI-04/UI-06 | visits routes/components | integration/E2E | done |
 | UI-11 | FR-FAM-001/002 | Family URL-backed tabs and explicit invitation review. | Personal | UI-04/UI-06 | family routes/components | tabs/share/revoke E2E | done |
-| UI-12 | FR-PHR-001/003 | PHR ProgressList, detailed record sections, body-measurement history/BMI, and conflict-safe presentation. | Personal | UI-03/UI-04 | phr routes/components, PHR observations API | form/provenance/a11y/API tests | in_progress |
+| UI-12 | FR-PHR-001/003 | PHR ProgressList, detailed record sections, body-measurement history/BMI, and conflict-safe presentation. | Personal | UI-03/UI-04 | phr routes/components, PHR observations API | form/provenance/a11y/API tests | done |
 | UI-13 | FR-MED-001–004 | Medicines first-run/CTA hierarchy and distinct model copy. | Personal | UI-03/UI-04 | medicines pages/components | flow/safety E2E | done |
 | UI-14 | FR-CHAT-001–005 | Chat two-column answer-first disclosure and role-gated diagnostics. | Chat | UI-04/UI-06 | `app/chat/_v2/*` | parity/privacy/citation/E2E | done |
 | UI-15 | FR-EVID-001, FR-RES-001 | Evidence step disclosure and Source Hub browse/sync split. | Chat | UI-14 | evidence/research routes | release-gate/citation tests | pending |
@@ -39,7 +39,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | FR-LIFE | UI-09 | lifemap/guided-flow | wizard/safety/E2E | pending |
 | FR-VISIT | UI-10 | visits/new/flow | integration/E2E | done |
 | FR-FAM | UI-11 | family pages/components | tab/invite/revoke/E2E | done |
-| FR-PHR | UI-03/UI-12 | icon, PHR routes/components, observations API | icon/form/provenance/API/E2E | in_progress |
+| FR-PHR | UI-03/UI-12 | icon, PHR routes/components, observations API | icon/form/provenance/API/E2E | done |
 | FR-MED | UI-13 | medicines components | normalization/DDI/flow tests | done |
 | FR-CHAT / FR-EVID / FR-RES | UI-14–15 | Chat V2, Evidence, Source Hub | citation/privacy/role/E2E | in_progress |
 | FR-COUNCIL | UI-16 | Council routes/view models | safety/role/E2E | in_progress |
