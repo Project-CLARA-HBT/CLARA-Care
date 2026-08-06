@@ -737,3 +737,22 @@ releases: provision `DEPLOY_SSH_PRIVATE_KEY`, pinned `DEPLOY_SSH_KNOWN_HOSTS`,
 `.github/workflows/cd.yml` with an immutable image tag. The direct sshpass
 deployment above is an operational recovery/development deployment, not proof
 that GitHub Actions has access to the VPS secrets.
+
+## Today real-data checkpoint (2026-08-06, pending deployment)
+
+`/today` now has active, completed, caught-up, and first-time presentations
+derived solely from the profile-scoped `/lifemap/today` response. The API adds a
+read-only, timezone-aware seven-day completion projection and scoped task
+episode/version metadata; it does not change a LifeMap task, event, revision,
+provenance record, confirmation or authorization rule. Completion continues on
+the existing task-detail screen with `If-Match` and an idempotency key. The
+checkpoint also replaces two mobile shell font-glyphs that caused 22–23px
+horizontal overflow while the external icon font was unavailable with bundled
+typed SVG icons.
+
+Evidence: API foundation contracts 4/4, Ruff, web type-check, i18n contract,
+web unit suite 92 files/702 tests, production web build (91 routes), and Today
+E2E 12/12 across 1440px desktop, 1280px laptop, tablet, and 390px mobile.
+Existing unrelated React Hook dependency warnings remain warnings during the
+web build. No database migration is required. Rollback is the single checkpoint
+revert followed by rebuilding API and web services.

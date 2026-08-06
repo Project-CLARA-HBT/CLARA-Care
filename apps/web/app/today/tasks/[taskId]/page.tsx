@@ -55,7 +55,7 @@ export default function TodayTaskDetailPage() {
     setCompleting(true);
     setError("");
     try {
-      await completeLifeMapTask(task.id);
+      await completeLifeMapTask(task.id, task.version);
       setCompleted(true);
     } catch {
       setError(t(language, "today.taskDetail.completeError"));

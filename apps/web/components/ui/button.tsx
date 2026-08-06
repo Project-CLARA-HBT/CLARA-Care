@@ -36,6 +36,7 @@ const ICON_ALIASES: Record<string, IconName> = {
   badge: "user-card", accessibility_new: "body", contact_phone: "contact",
   clinical_notes: "clinical-notes", medication: "medication", warning: "warning",
   save: "clinical-notes", add: "progress", delete: "warning", arrow_back: "fallback",
+  arrow_forward: "arrow-right",
 };
 
 function Glyph({ glyph, spin }: { glyph: string; spin: boolean }) {

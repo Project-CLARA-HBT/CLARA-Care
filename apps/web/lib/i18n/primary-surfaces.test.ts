@@ -39,11 +39,11 @@ describe("primary shell i18n hard-coded copy scanner", () => {
   it("keeps the Today task-first surface catalog-backed and locale-formatted", () => {
     const source = readFileSync(resolve(ROOT, "app/today/page.tsx"), "utf8");
     expect(source).toContain('from "@/lib/i18n/catalog"');
-    expect(source).toContain('getStoredUILanguage');
+    expect(source).toContain('useUILanguage');
     expect(source).toContain('t(language, "today.title")');
-    expect(source).toContain('t(language, "today.emptyDescription")');
-    expect(source).toContain('t(language, "today.startHere")');
-    expect(source).toContain('language === "vi" ? "vi-VN" : "en-US"');
+    expect(source).toContain('"today.emptyDescription"');
+    expect(source).toContain('"today.startHere"');
+    expect(source).toContain('formatLocaleDate(language');
     for (const href of ['"/chat"', '"/medicines"', '"/phr"']) {
       expect(source).toContain(href);
     }

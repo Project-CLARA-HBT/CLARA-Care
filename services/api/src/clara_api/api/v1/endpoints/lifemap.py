@@ -12,6 +12,7 @@ import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
@@ -204,6 +205,8 @@ class TodayResponse(BaseModel):
     tasks: list[dict]
     episodes: list[dict]
     pending_confirmation_count: int
+    completed_today_count: int = 0
+    activity_days: list[dict] = Field(default_factory=list)
 
 
 def _scope(
@@ -1549,6 +1552,47 @@ def today(
     token: TokenPayload = USER_ROLE_DEP,
 ) -> TodayResponse:
     scope = _scope(db, token, x_profile, action="view")
+    generated_at = datetime.now(UTC)
+    try:
+        profile_timezone = ZoneInfo(scope.profile.timezone or "Asia/Ho_Chi_Minh")
+    except ZoneInfoNotFoundError:
+        profile_timezone = ZoneInfo("UTC")
+    local_now = generated_at.astimezone(profile_timezone)
+    local_today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    local_week_start = local_today_start - timedelta(days=6)
+    local_tomorrow_start = local_today_start + timedelta(days=1)
+    completed_timestamps = list(
+        db.execute(
+            select(LifeMapCareTask.completed_at).where(
+                LifeMapCareTask.profile_id == scope.profile.id,
+                LifeMapCareTask.status == "completed",
+                LifeMapCareTask.completed_at.is_not(None),
+                LifeMapCareTask.completed_at >= local_week_start.astimezone(UTC),
+                LifeMapCareTask.completed_at < local_tomorrow_start.astimezone(UTC),
+            )
+        ).scalars()
+    )
+    completed_by_local_date: dict[str, int] = {}
+    for completed_at in completed_timestamps:
+        if completed_at is None:
+            continue
+        aware_completed_at = (
+            completed_at.replace(tzinfo=UTC)
+            if completed_at.tzinfo is None
+            else completed_at.astimezone(UTC)
+        )
+        date_key = aware_completed_at.astimezone(profile_timezone).date().isoformat()
+        completed_by_local_date[date_key] = completed_by_local_date.get(date_key, 0) + 1
+    activity_days = [
+        {
+            "date": (local_week_start + timedelta(days=offset)).date().isoformat(),
+            "completed_count": completed_by_local_date.get(
+                (local_week_start + timedelta(days=offset)).date().isoformat(), 0
+            ),
+        }
+        for offset in range(7)
+    ]
+    completed_today_count = completed_by_local_date.get(local_now.date().isoformat(), 0)
     tasks = list(
         db.execute(
             select(LifeMapCareTask)
@@ -1573,6 +1617,7 @@ def today(
             .order_by(LifeMapEpisode.priority.desc(), LifeMapEpisode.updated_at.desc())
         ).scalars()
     )
+    episodes_by_id = {item.id: item for item in episodes}
     drafts = db.execute(
         select(LifeMapEvent.id).where(
             LifeMapEvent.profile_id == scope.profile.id,
@@ -1581,7 +1626,7 @@ def today(
         )
     ).all()
     result = TodayResponse(
-        generated_at=datetime.now(UTC),
+        generated_at=generated_at,
         tasks=[
             {
                 "id": item.public_id,
@@ -1589,6 +1634,16 @@ def today(
                 "due_at": item.due_at,
                 "status": item.status,
                 "version": item.version_no,
+                "episode_id": (
+                    episodes_by_id[item.episode_id].public_id
+                    if item.episode_id in episodes_by_id
+                    else None
+                ),
+                "episode_title": (
+                    episodes_by_id[item.episode_id].title
+                    if item.episode_id in episodes_by_id
+                    else None
+                ),
             }
             for item in tasks
         ],
@@ -1597,6 +1652,8 @@ def today(
             for item in episodes
         ],
         pending_confirmation_count=len(drafts),
+        completed_today_count=completed_today_count,
+        activity_days=activity_days,
     )
     _audit_read(db, scope, entity="today")
     return result

@@ -125,3 +125,13 @@ After every milestone, update this file, `08-task-list.md`, and `11-decisions-an
 - [x] Added focused normalizer/data-integrity tests plus an eight-case Playwright matrix and four screenshot artifacts.
 
 Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.
+
+## Today real-data state follow-up — 2026-08-06
+
+- [x] Rebuilt `/today` around the supplied active, completed, and first-time hierarchy using only server-returned LifeMap data.
+- [x] Added a read-only, profile-scoped Today projection for completed tasks in the current local day and previous six local days; it changes no LifeMap event, revision, provenance, confirmation, or task transition.
+- [x] Sent the user from an open task to its existing detail/confirmation screen; completion remains an explicit versioned mutation with `If-Match` and an idempotency key.
+- [x] Added an honest caught-up state for an open journey without a current task. No durations, steps, medicines, progress percentages, or clinical status are invented.
+- [x] Replaced the last remaining font-dependent mobile bottom-nav glyph and mobile notification glyph with bundled typed SVG icons after four-viewport E2E exposed 22–23px horizontal overflow before the external font loaded.
+
+Validation: API LifeMap foundation contracts 4/4; Ruff; web type-check; i18n contract; full web unit suite 92 files/702 tests; production build (91 routes); and `/today` E2E 12/12 across desktop, laptop, tablet, and mobile. Existing unrelated React Hook lint warnings remain build warnings. Rollback is a single checkpoint revert; no schema migration is needed.

@@ -661,8 +661,6 @@ const VI_MESSAGES = {
   "today.createEpisode": "Tạo hành trình",
   "today.connectionError": "Kiểm tra kết nối rồi thử lại.",
   "today.startHere": "Bạn muốn làm gì khác?",
-  "today.startHereDescription":
-    "Mở thêm lựa chọn khi bạn cần; danh sách việc hôm nay vẫn là trọng tâm.",
   "today.askTitle": "Hỏi về sức khỏe",
   "today.askDescription":
     "Nêu điều bạn đang lo; CLARA sẽ giúp xác định bước an toàn tiếp theo.",
@@ -675,7 +673,28 @@ const VI_MESSAGES = {
   "today.visitTitle": "Chuẩn bị đi khám",
   "today.visitDescription":
     "Chuẩn bị câu hỏi và thông tin quan trọng cho buổi khám.",
-  "today.openAction": "Mở",
+  "today.statusTitle": "Nhịp chăm sóc hôm nay",
+  "today.openTaskCount": "{count} việc đang chờ",
+  "today.completedTaskCount": "{count} việc đã hoàn thành hôm nay",
+  "today.noOpenTasks": "Hiện không có việc đang chờ",
+  "today.noDueDate": "Không có hạn cụ thể",
+  "today.upcoming": "Sắp tới",
+  "today.otherActions": "Tác vụ khác",
+  "today.pendingConfirmations": "{count} ghi nhận đang chờ bạn xác nhận",
+  "today.completedTitle": "Bạn đã hoàn thành các việc hôm nay",
+  "today.completedDescription":
+    "Các việc hoàn tất đã được ghi nhận. Bạn có thể nghỉ ngơi hoặc cập nhật nếu có thay đổi.",
+  "today.updateChange": "Cập nhật thay đổi",
+  "today.weeklyProgress": "Hoạt động 7 ngày",
+  "today.activeDays": "{count}/7 ngày có việc hoàn thành",
+  "today.viewJourney": "Xem hành trình",
+  "today.firstTitle": "Bạn chưa có việc cần làm hôm nay",
+  "today.caughtUpTitle": "Hiện không có việc đang chờ",
+  "today.caughtUpDescription":
+    "Hành trình của bạn vẫn đang được theo dõi. Mở LifeMap để xem hoặc điều chỉnh bước tiếp theo.",
+  "today.stepGoal": "Chọn điều muốn theo dõi",
+  "today.stepTask": "Thêm việc phù hợp",
+  "today.stepToday": "Xem việc trong Hôm nay",
   "today.taskDetail.pageTitle": "Chi tiết việc hôm nay",
   "today.taskDetail.pageDescription":
     "Xem một việc, hiểu thời điểm cần làm, rồi mới xác nhận hoàn tất.",
@@ -4576,8 +4595,6 @@ const EN_MESSAGES: MessageCatalog = {
   "today.createEpisode": "Create journey",
   "today.connectionError": "Check your connection and try again.",
   "today.startHere": "What else would you like to do?",
-  "today.startHereDescription":
-    "Open more choices when needed; today’s accepted tasks remain the focus.",
   "today.askTitle": "Ask about your health",
   "today.askDescription":
     "Share what concerns you; CLARA will help identify a safe next step.",
@@ -4590,7 +4607,28 @@ const EN_MESSAGES: MessageCatalog = {
   "today.visitTitle": "Prepare for a visit",
   "today.visitDescription":
     "Prepare your questions and important information for a visit.",
-  "today.openAction": "Open",
+  "today.statusTitle": "Today’s care rhythm",
+  "today.openTaskCount": "{count} open tasks",
+  "today.completedTaskCount": "{count} tasks completed today",
+  "today.noOpenTasks": "There are no open tasks right now",
+  "today.noDueDate": "No specific due date",
+  "today.upcoming": "Upcoming",
+  "today.otherActions": "Other actions",
+  "today.pendingConfirmations": "{count} records are waiting for your confirmation",
+  "today.completedTitle": "You completed today’s tasks",
+  "today.completedDescription":
+    "Completed tasks have been recorded. You can rest or add an update if something changes.",
+  "today.updateChange": "Add an update",
+  "today.weeklyProgress": "Seven-day activity",
+  "today.activeDays": "{count}/7 days with a completed task",
+  "today.viewJourney": "View journey",
+  "today.firstTitle": "You have no tasks for today yet",
+  "today.caughtUpTitle": "There are no open tasks right now",
+  "today.caughtUpDescription":
+    "Your journey is still being tracked. Open LifeMap to review or adjust the next step.",
+  "today.stepGoal": "Choose what to track",
+  "today.stepTask": "Add an appropriate task",
+  "today.stepToday": "See tasks in Today",
   "today.taskDetail.pageTitle": "Today’s task",
   "today.taskDetail.pageDescription":
     "Review one task, understand when it is due, then confirm it is done.",

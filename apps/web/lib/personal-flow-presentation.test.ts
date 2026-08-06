@@ -11,8 +11,9 @@ describe("personal workspace progressive disclosure", () => {
     const today = source("app/today/page.tsx");
     expect(today).not.toContain("QUICK_ACTIONS");
     expect(today).not.toContain("<StatCard");
-    expect(today).toContain('href="/lifemap/new"');
+    expect(today).toContain('"/lifemap/new"');
     expect(today).toContain('href="/chat"');
+    expect(today).toContain('"today.emptyDescription"');
   });
 
   it("organizes Family support into shared, received and access-log tabs", () => {

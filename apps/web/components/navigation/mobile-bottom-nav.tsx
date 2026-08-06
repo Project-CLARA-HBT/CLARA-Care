@@ -6,6 +6,7 @@ import { isActiveRoute, type UserRole } from "@/lib/navigation.config";
 import { getMobileWorkspaceNav, type WorkspaceId } from "@/lib/navigation.workspaces";
 import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import Icon from "@/components/ui/icon";
 
 type MobileBottomNavProps = {
   role: UserRole;
@@ -45,7 +46,7 @@ export default function MobileBottomNav({ role, workspace, onOpenMore }: MobileB
               className="focus-ring flex min-h-[56px] w-full flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] px-2 py-1.5 text-center text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
               aria-label={moreLabel}
             >
-              <span className="material-symbols-outlined text-[19px]" aria-hidden="true">more_horiz</span>
+              <Icon name="more" size={19} />
               <span className="max-w-full truncate text-[11px] font-semibold leading-tight">{moreLabel}</span>
             </button>
           </li>

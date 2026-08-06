@@ -8,6 +8,7 @@ import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
 import AppTopbar from "@/components/navigation/app-topbar";
 import NavItem from "@/components/navigation/nav-item";
+import Icon from "@/components/ui/icon";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
 import {
   clearTokens,
@@ -539,7 +540,7 @@ export default function AppShell({ children }: Props) {
               className="app-topbar-icon relative"
               aria-label={familyNotificationCount > 0 ? t(uiLanguage, "family.pendingTasks", { count: familyNotificationCount }) : t(uiLanguage, "family.title")}
             >
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">notifications</span>
+              <Icon name="notifications" size={18} />
               {familyNotificationCount > 0 ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--danger-500)]" aria-hidden="true" /> : null}
             </Link>
           </header>

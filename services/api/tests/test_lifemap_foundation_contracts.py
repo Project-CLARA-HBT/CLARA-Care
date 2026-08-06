@@ -115,12 +115,21 @@ def test_care_loop_is_idempotent_and_visible_in_today() -> None:
     )
     today = client.get("/api/v1/lifemap/today", headers=headers).json()
     assert [item["id"] for item in today["tasks"]] == [task_id]
+    assert today["tasks"][0]["episode_id"] == episode.json()["id"]
+    assert today["tasks"][0]["episode_title"] == "Theo dõi đau đầu"
+    assert today["tasks"][0]["version"] == 2
+    assert today["completed_today_count"] == 0
+    assert len(today["activity_days"]) == 7
     completed = client.post(
         f"/api/v1/lifemap/tasks/{task_id}/complete",
         headers={**headers, "Idempotency-Key": "complete-1"},
         json={"evidence": {"source": "user"}},
     )
     assert completed.json()["status"] == "completed"
+    completed_today = client.get("/api/v1/lifemap/today", headers=headers).json()
+    assert completed_today["tasks"] == []
+    assert completed_today["completed_today_count"] == 1
+    assert completed_today["activity_days"][-1]["completed_count"] == 1
     replay = client.post(
         f"/api/v1/lifemap/tasks/{task_id}/complete",
         headers={**headers, "Idempotency-Key": "complete-1"},

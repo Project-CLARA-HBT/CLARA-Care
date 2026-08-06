@@ -41,6 +41,10 @@ export type LifeMapTask = {
   id: string;
   title: string;
   due_at: string | null;
+  status?: "accepted" | "in_progress" | string;
+  version?: number;
+  episode_id?: string | null;
+  episode_title?: string | null;
 };
 
 export type LifeMapEpisode = {
@@ -54,6 +58,8 @@ export type LifeMapToday = {
   tasks: LifeMapTask[];
   episodes: LifeMapEpisode[];
   pending_confirmation_count: number;
+  completed_today_count?: number;
+  activity_days?: Array<{ date: string; completed_count: number }>;
 };
 
 export type LifeMapReplayEvent = {
@@ -363,11 +369,16 @@ export async function getLifeMapClientContract(): Promise<LifeMapClientContract>
   ).data;
 }
 
-export async function completeLifeMapTask(taskId: string): Promise<void> {
+export async function completeLifeMapTask(taskId: string, version?: number): Promise<void> {
   await api.post(
     `/lifemap/tasks/${encodeURIComponent(taskId)}/complete`,
     { evidence: { source: "user" } },
-    { headers: { "Idempotency-Key": idempotencyKey() } },
+    {
+      headers: {
+        "Idempotency-Key": idempotencyKey(),
+        ...(Number.isFinite(version) ? { "If-Match": String(version) } : {}),
+      },
+    },
   );
 }
 
