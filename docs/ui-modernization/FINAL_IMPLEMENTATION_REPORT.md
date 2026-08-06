@@ -46,3 +46,13 @@ Revert commit `05ef3751` or deploy the previous known-good web artifact. No data
 
 Branch: `feat/ui-modernization-v2`  
 Pull request: https://github.com/Project-CLARA-HBT/CLARA-Care/pull/117
+
+## Production deployment
+
+- Deployed commit: `f360e7b9`.
+- Target: `https://theclaracare.com` (`36.50.27.240`).
+- Web image rebuilt without cache on Node `v20.20.2` and the web container was force-recreated only after the image build passed.
+- Live verification: `/`, `/login`, `/share/not-a-real-token`, and `/phr/shared/not-a-real-token` return `200`; a mobile Playwright load of `/` reports no 5xx response or page error.
+- Security headers verified live: CSP, HSTS, `nosniff`, `DENY` frame policy, strict referrer policy, and permissions policy.
+- Rollback backup: `/opt/clara-backups/pre-ui-20260806-090113.tgz`.
+- `/.well-known/assetlinks.json` remains intentionally fail-closed (`404`) because the production Android release certificate fingerprint is not configured and no release keystore is present on the server. Do not invent or substitute a debug fingerprint; set `ANDROID_APP_LINK_CERT_SHA256` after the release certificate exists, then recreate the web container.
