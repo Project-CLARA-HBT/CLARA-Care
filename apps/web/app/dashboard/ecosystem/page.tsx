@@ -56,28 +56,28 @@ function labelFor(language: "vi" | "en", prefix: string, value: string): string 
 
 function statusClass(status: string): string {
   const normalized = status.toLowerCase();
-  if (normalized === "ok" || normalized === "healthy") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (normalized === "degraded" || normalized === "warning") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (normalized === "ok" || normalized === "healthy") return "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
+  if (normalized === "degraded" || normalized === "warning") return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
   if (normalized === "down" || normalized === "unreachable" || normalized === "error") {
-    return "border-red-200 bg-red-50 text-red-700";
+    return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
   }
-  return "border-slate-200 bg-slate-100 text-slate-700";
+  return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
 }
 
 function severityClass(severity: string): string {
   const normalized = severity.toLowerCase();
-  if (normalized === "critical") return "border-red-200 bg-red-50 text-red-700";
-  if (normalized === "warning") return "border-amber-200 bg-amber-50 text-amber-700";
-  if (normalized === "info") return "border-blue-200 bg-blue-50 text-blue-700";
-  return "border-slate-200 bg-slate-100 text-slate-700";
+  if (normalized === "critical") return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
+  if (normalized === "warning") return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
+  if (normalized === "info") return "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
+  return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
 }
 
 function severityAccentClass(severity: string): string {
   const normalized = severity.toLowerCase();
-  if (normalized === "critical") return "border-l-red-500";
-  if (normalized === "warning") return "border-l-amber-500";
-  if (normalized === "info") return "border-l-blue-500";
-  return "border-l-slate-400";
+  if (normalized === "critical") return "border-l-[color:var(--status-danger-text)]";
+  if (normalized === "warning") return "border-l-[color:var(--status-warn-text)]";
+  if (normalized === "info") return "border-l-[color:var(--text-brand)]";
+  return "border-l-[color:var(--shell-border-strong)]";
 }
 
 function trustScoreClass(score: number | null): string {
@@ -233,19 +233,19 @@ export default function EcosystemCenterPage() {
   return (
     <PageShell title={copy("ecosystem.pageTitle")}>
       <div className="space-y-5">
-        <section className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-slate-100 shadow-lg shadow-slate-900/10 sm:p-6">
+        <section className="rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-[var(--text-primary)] sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">{copy("ecosystem.eyebrow")}</p>
-              <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">{copy("ecosystem.pageTitle")}</h2>
-              <p className="max-w-3xl text-sm leading-6 text-slate-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-brand)]">{copy("ecosystem.eyebrow")}</p>
+              <h2 className="text-xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-2xl">{copy("ecosystem.pageTitle")}</h2>
+              <p className="max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
                 {copy("ecosystem.description")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/dashboard"
-                className="inline-flex min-h-11 items-center rounded-lg border border-slate-500 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:border-slate-300 hover:bg-slate-700/70"
+                className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-[color:var(--shell-border)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:border-[color:var(--brand-primary)]/40 hover:bg-[var(--surface-muted)]"
               >
                 {copy("ecosystem.backToDashboard")}
               </Link>
@@ -253,21 +253,21 @@ export default function EcosystemCenterPage() {
                 type="button"
                 onClick={onRefresh}
                 disabled={isRefreshing}
-                className="inline-flex min-h-11 items-center rounded-lg bg-cyan-500 px-3 py-1.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-3 py-1.5 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isRefreshing ? copy("ecosystem.refreshing") : copy("ecosystem.refresh")}
               </button>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-            <span className="rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1">
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1">
               {copy("ecosystem.updated", { date: snapshot.generatedAt ? formatDateTime(language, snapshot.generatedAt) : copy("ecosystem.noData") })}
             </span>
-            <span className="rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1">
+            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1">
               {copy("ecosystem.partners", { count: formatCount(language, snapshot.summary.partnersTotal) })}
             </span>
-            <span className="rounded-full border border-slate-600 bg-slate-800/70 px-2.5 py-1">
+            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1">
               {copy("ecosystem.unacknowledgedAlerts", { count: formatCount(language, alertOverview.unacknowledged) })}
             </span>
           </div>

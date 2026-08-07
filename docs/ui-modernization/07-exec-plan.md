@@ -190,6 +190,13 @@ Validation: targeted LifeMap and Admin observability tests pass 7/7; lint and Ty
 
 Validation: targeted Scribe integration/regression tests pass 7/7; Council/Scribe lint and TypeScript checks pass. Rollback: component-only revert; no clinical-generation, consent or signing behavior changed.
 
+## Ecosystem operational surface follow-up — 2026-08-08
+
+- [x] Began the dashboard ecosystem visual migration from local slate/white/gradient treatments to canonical deep-well surfaces and semantic status colors.
+- [x] All values, bars and summary states remain bound to the existing `getSystemEcosystem` snapshot. Missing values continue to render as unavailable rather than as fabricated operational measurements.
+
+Validation: Ecosystem lint and TypeScript checks pass. Rollback: page-only revert; no system telemetry or operator action contract changed.
+
 ## Today real-data state follow-up — 2026-08-06
 
 - [x] Rebuilt `/today` around the supplied active, completed, and first-time hierarchy using only server-returned LifeMap data.
