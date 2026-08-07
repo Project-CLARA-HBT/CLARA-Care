@@ -197,6 +197,13 @@ Validation: targeted Scribe integration/regression tests pass 7/7; Council/Scrib
 
 Validation: Ecosystem lint and TypeScript checks pass. Rollback: page-only revert; no system telemetry or operator action contract changed.
 
+## Dashboard responsive evidence refresh — 2026-08-08
+
+- [x] Ran the production-artifact Dashboard Playwright suite after the visual checkpoints across 1440×900, 1280×800, 768×1024 and 390×844.
+- [x] All eight state/viewport checks passed. The suite verifies real structured-alert prioritization, non-reassuring failure copy, authorized shortcut presentation and horizontal-overflow limits; screenshots are in `apps/web/test-results/dashboard-*.png` and remain synthetic/no-PII.
+
+Validation: `npm run test:e2e -- e2e/dashboard.spec.ts` passes (8/8). Rollback: no behavior change; this is release evidence only.
+
 ## Today real-data state follow-up — 2026-08-06
 
 - [x] Rebuilt `/today` around the supplied active, completed, and first-time hierarchy using only server-returned LifeMap data.
