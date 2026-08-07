@@ -9533,13 +9533,24 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     strict_deepseek_required = bool(settings.deepseek_required)
     deepseek_fallback_enabled = not strict_deepseek_required
     deep_beta_cap = max(6, min(int(settings.deep_beta_pass_cap), 64))
-    pass_count_cap = deep_beta_cap if research_mode == "deep_beta" else _DEFAULT_DEEP_PASS_CAP
+    deep_cap = max(1, min(int(settings.deep_research_pass_cap), _DEFAULT_DEEP_PASS_CAP))
+    pass_count_cap = deep_beta_cap if research_mode == "deep_beta" else deep_cap
     deep_pass_count = _resolve_deep_pass_count(
         payload,
         int(planner_hints.get("deep_pass_count", 1)),
         cap=pass_count_cap,
     )
     planner_hints["deep_pass_count"] = deep_pass_count
+    retrieval_budget = planner_hints.get("retrieval_budget")
+    if isinstance(retrieval_budget, dict):
+        # The planner is allowed to ask for broad coverage, but the service
+        # owns the executable budget.  This prevents a prompt/planner output
+        # from silently expanding a user request into 14–20 retrieval passes.
+        retrieval_budget["pass_cap"] = pass_count_cap
+        retrieval_budget["target_pass_count"] = min(
+            max(1, int(retrieval_budget.get("target_pass_count") or 1)),
+            pass_count_cap,
+        )
     if isinstance(planner_trace.get("planner_hints"), dict):
         planner_trace["planner_hints"]["deep_pass_count"] = deep_pass_count
     deep_subqueries: list[str] = [topic]

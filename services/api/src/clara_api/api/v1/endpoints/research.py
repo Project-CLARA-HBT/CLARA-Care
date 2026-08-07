@@ -1131,75 +1131,6 @@ def _build_clarifying_questions(*, ui_language: str) -> list[ResearchClarifyQues
     ]
 
 
-def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    research_mode, retrieval_stack_mode = _resolve_tier2_execution_modes(payload)
-    answer_language = _normalize_answer_language_value(
-        payload.get("ui_language") or payload.get("answer_language"),
-        default="vi",
-    )
-    if answer_language == "en":
-        fallback_answer_text = (
-            "Deep retrieval is currently busy or temporarily unable to reach the RAG stack. "
-            "Using a safety-first fallback for now: prioritize guideline-based care, "
-            "double-check major drug interactions, and escalate to a clinician when there are "
-            "comorbidities or red-flag symptoms."
-        )
-        fallback_answer_markdown = (
-            "## Quick conclusion\n"
-            f"{fallback_answer_text}\n\n"
-            "## Detailed analysis\n"
-            "- The deep research path is temporarily unavailable, "
-            "so this answer stays conservative.\n"
-            "- Re-check key decisions against primary sources or the treating clinician.\n\n"
-            "## Safety recommendations\n"
-            "- Do not self-prescribe or change dosing without qualified clinical advice.\n"
-            "- If there is comorbidity or polypharmacy, "
-            "confirm the next step with a clinician or pharmacist."
-        )
-    else:
-        fallback_answer_text = (
-            "Hệ thống truy xuất chuyên sâu đang bận hoặc tạm thời không kết nối được nguồn RAG. "
-            "Tạm thời dùng chế độ an toàn: bạn nên ưu tiên phác đồ chính thống, "
-            "đối chiếu tương tác thuốc quan trọng, "
-            "và trao đổi bác sĩ khi có bệnh nền hoặc dấu hiệu nặng."
-        )
-        fallback_answer_markdown = (
-            "## Kết luận nhanh\n"
-            f"{fallback_answer_text}\n\n"
-            "## Phân tích chi tiết\n"
-            "- Luồng nghiên cứu chuyên sâu tạm thời không khả dụng, "
-            "nên câu trả lời này dùng chế độ an toàn.\n"
-            "- Ưu tiên xác minh lại thông tin với nguồn chuyên môn hoặc bác sĩ điều trị.\n\n"
-            "## Khuyến nghị an toàn\n"
-            "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
-            "- Nếu có bệnh nền hoặc đa thuốc, cần tham khảo bác sĩ/dược sĩ trước khi áp dụng."
-        )
-    return {
-        "answer": fallback_answer_markdown,
-        "answer_markdown": fallback_answer_markdown,
-        "summary": fallback_answer_text,
-        "answer_format": "markdown",
-        "render_hints": dict(_DEFAULT_MARKDOWN_RENDER_HINTS),
-        "metadata": {
-            "research_mode": research_mode,
-            "retrieval_stack_mode": retrieval_stack_mode,
-            "deep_pass_count": 0,
-            "answer_format": "markdown",
-            "render_hints": dict(_DEFAULT_MARKDOWN_RENDER_HINTS),
-        },
-        "context_debug": {},
-        "flow_events": [],
-        "citations": [],
-        "fallback": True,
-        "source_mode": payload.get("source_mode"),
-        "research_mode": research_mode,
-        "retrieval_stack_mode": retrieval_stack_mode,
-        "ui_language": answer_language,
-        "answer_language": answer_language,
-        "deep_pass_count": 0,
-    }
-
-
 def _first_dict(*values: Any) -> dict[str, Any] | None:
     for value in values:
         if isinstance(value, dict):
@@ -2750,8 +2681,11 @@ def _apply_research_quality_gates(
     if gate_reasons:
         gated["degraded"] = True
         gated["degraded_reason"] = ";".join(gate_reasons)
-        gated["fallback_used"] = True
-        metadata["fallback_used"] = True
+        # This is a policy abstention, not a model or research fallback.  Do
+        # not let UI telemetry imply that unverified clinical prose was
+        # replaced by another generated answer.
+        gated["fallback_used"] = False
+        metadata["fallback_used"] = False
         metadata["degraded_path"] = True
         gated["metadata"] = metadata
         # A failed medical-evidence gate is a release block, not merely a badge.
@@ -3024,7 +2958,6 @@ def _run_research_job(job_id: str) -> None:
     try:
         if not _claim_research_job(db, job_id=job_id, worker_id=worker_id):
             return
-        settings = get_settings()
         job = db.execute(
             select(ResearchJob).where(ResearchJob.job_id == job_id)
         ).scalar_one_or_none()
@@ -3084,11 +3017,9 @@ def _run_research_job(job_id: str) -> None:
 
         ml_response = _invoke_ml_tier2_with_progress(
             ml_payload=request_payload,
-            fail_soft_payload=(
-                None
-                if settings.deepseek_strict_mode
-                else _research_tier2_fallback_payload(request_payload)
-            ),
+            # Research failures must surface as failures.  Never substitute a
+            # generic model/research response for an unavailable upstream run.
+            fail_soft_payload=None,
             heartbeat=_heartbeat,
         )
         normalized = _normalize_tier2_response(ml_response)
@@ -5007,11 +4938,9 @@ def research_tier2(
     response = proxy_ml_post(
         "/v1/research/tier2",
         upstream_payload,
-        fail_soft_payload=(
-            None
-            if settings.deepseek_strict_mode
-            else _research_tier2_fallback_payload(upstream_payload)
-        ),
+        # Keep the synchronous surface fail-closed as well; callers receive a
+        # structured upstream error, never a synthetic research answer.
+        fail_soft_payload=None,
         timeout_seconds=resolve_sync_research_timeout(settings.ml_research_timeout_seconds),
     )
     normalized = _normalize_tier2_response(response)

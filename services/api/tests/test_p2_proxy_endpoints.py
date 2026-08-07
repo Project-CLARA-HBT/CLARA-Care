@@ -1539,7 +1539,7 @@ def test_research_tier2_job_stream_surfaces_deep_beta_result_mode() -> None:
     assert metadata_payload["research_mode"] == "deep_beta"
 
 
-def test_research_tier2_returns_fail_soft_payload_with_retry(
+def test_research_tier2_returns_upstream_error_without_synthetic_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1557,20 +1557,12 @@ def test_research_tier2_returns_fail_soft_payload_with_retry(
         json={"question": "summary", "source_mode": "uploaded_files", "uploaded_file_ids": []},
     )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["fallback"] is True
-    assert payload["metadata"]["research_mode"] == "fast"
-    assert payload["metadata"]["deep_pass_count"] == 0
-    assert payload["citations"] == []
-    assert payload["fallback_reason"] == "ConnectError"
-    assert payload["attribution"]["channel"] == "research"
-    assert payload["attribution"]["fallback_used"] is True
-    assert payload["attribution"]["mode"] == "fast"
+    assert response.status_code == 502
+    assert "fallback" not in response.text.lower()
     assert call_count["count"] == 2
 
 
-def test_research_tier2_fail_soft_keeps_deep_mode_flags(
+def test_research_tier2_deep_failure_never_substitutes_a_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1592,19 +1584,8 @@ def test_research_tier2_fail_soft_keeps_deep_mode_flags(
         },
     )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["fallback"] is True
-    assert payload["research_mode"] == "deep"
-    assert payload["retrieval_stack_mode"] == "full"
-    assert payload["deep_pass_count"] == 0
-    assert payload["metadata"]["research_mode"] == "deep"
-    assert payload["metadata"]["retrieval_stack_mode"] == "full"
-    assert payload["metadata"]["deep_pass_count"] == 0
-    assert payload["fallback_reason"] == "ConnectError"
-    assert payload["attribution"]["channel"] == "research"
-    assert payload["attribution"]["fallback_used"] is True
-    assert payload["attribution"]["mode"] == "deep"
+    assert response.status_code == 502
+    assert "fallback" not in response.text.lower()
     assert call_count["count"] == 2
 
 
@@ -1644,7 +1625,7 @@ def test_research_tier2_sync_path_enforces_extended_timeout(
     assert float(captured["timeout"]) >= 600.0
 
 
-def test_research_tier2_fail_soft_reflects_fast_full_downgrade(
+def test_research_tier2_fast_failure_never_substitutes_a_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1666,21 +1647,12 @@ def test_research_tier2_fail_soft_reflects_fast_full_downgrade(
         },
     )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["fallback"] is True
-    assert payload["research_mode"] == "fast"
-    assert payload["retrieval_stack_mode"] == "auto"
-    assert payload["metadata"]["research_mode"] == "fast"
-    assert payload["metadata"]["retrieval_stack_mode"] == "auto"
-    assert payload["fallback_reason"] == "ConnectError"
-    assert payload["attribution"]["channel"] == "research"
-    assert payload["attribution"]["fallback_used"] is True
-    assert payload["attribution"]["mode"] == "fast"
+    assert response.status_code == 502
+    assert "fallback" not in response.text.lower()
     assert call_count["count"] == 2
 
 
-def test_research_tier2_fail_soft_keeps_deep_beta_mode_flags(
+def test_research_tier2_deep_beta_failure_never_substitutes_a_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1698,17 +1670,8 @@ def test_research_tier2_fail_soft_keeps_deep_beta_mode_flags(
         json={"query": "deep beta fail soft", "research_mode": "deep_beta"},
     )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["fallback"] is True
-    assert payload["research_mode"] == "deep_beta"
-    assert payload["deep_pass_count"] == 0
-    assert payload["metadata"]["research_mode"] == "deep_beta"
-    assert payload["metadata"]["deep_pass_count"] == 0
-    assert payload["fallback_reason"] == "ConnectError"
-    assert payload["attribution"]["channel"] == "research"
-    assert payload["attribution"]["fallback_used"] is True
-    assert payload["attribution"]["mode"] == "deep_beta"
+    assert response.status_code == 502
+    assert "fallback" not in response.text.lower()
     assert call_count["count"] == 2
 
 

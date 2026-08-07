@@ -244,6 +244,12 @@ class Settings(BaseSettings):
         ge=6,
         le=64,
     )
+    deep_research_pass_cap: int = Field(
+        default=4,
+        validation_alias="DEEP_RESEARCH_PASS_CAP",
+        ge=1,
+        le=20,
+    )
     deep_beta_reasoning_llm_enabled: bool = Field(
         default=True,
         validation_alias=AliasChoices(

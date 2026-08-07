@@ -326,6 +326,7 @@ services:
       # operational limits deployment-owned: request payloads cannot enlarge
       # the retrieval/reasoning budget or disable evidence checks.
       DEEP_BETA_PASS_CAP: ${DEEP_BETA_PASS_CAP:-8}
+      DEEP_RESEARCH_PASS_CAP: ${DEEP_RESEARCH_PASS_CAP:-4}
       DEEP_BETA_REASONING_LLM_ENABLED: ${DEEP_BETA_REASONING_LLM_ENABLED:-true}
       DEEP_BETA_REASONING_LLM_NODES: ${DEEP_BETA_REASONING_LLM_NODES:-3}
       DEEP_BETA_REASONING_LLM_TIMEOUT_SECONDS: ${DEEP_BETA_REASONING_LLM_TIMEOUT_SECONDS:-12}
