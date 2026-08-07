@@ -183,6 +183,13 @@ Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 
 
 Validation: targeted LifeMap and Admin observability tests pass 7/7; lint and TypeScript checks pass for all changed web surfaces. Rollback: revert this UI-only checkpoint; LifeMap mutations, profile scope, consent, telemetry collection and route authorization are unchanged.
 
+## Council and Scribe workflow-surface follow-up — 2026-08-08
+
+- [x] Replaced the gradient Council case-creation/result actions with canonical solid primary controls and converted warning/escalation panels to the shared semantic danger/warning tokens.
+- [x] Aligned the active Scribe workspace header, tabs, session list and first-use session panel with the same deep-well card stack; recording consent, WebAudio capture, transcript, draft SOAP and finalize contracts are untouched.
+
+Validation: targeted Scribe integration/regression tests pass 7/7; Council/Scribe lint and TypeScript checks pass. Rollback: component-only revert; no clinical-generation, consent or signing behavior changed.
+
 ## Today real-data state follow-up — 2026-08-06
 
 - [x] Rebuilt `/today` around the supplied active, completed, and first-time hierarchy using only server-returned LifeMap data.

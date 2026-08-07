@@ -893,7 +893,7 @@ export default function ScribePage() {
             );
           })}
         </ol>
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] px-4 py-3 shadow-[var(--shadow-soft)]">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] px-4 py-3">
           <div className="flex items-center gap-6">
             <span className="text-sm font-semibold text-[color:var(--text-secondary)]">{copy("scribe.tab.workspace")}</span>
             <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-1">
@@ -902,8 +902,8 @@ export default function ScribePage() {
                 onClick={() => setMode("workspace")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
                   mode === "workspace"
-                    ? "bg-[color:var(--brand-600)] text-white shadow-sm"
-                    : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
+                    ? "bg-[color:var(--brand-600)] text-[#cdd7ff]"
+                    : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
                 {copy("scribe.tab.workspace")}
@@ -912,7 +912,7 @@ export default function ScribePage() {
                 type="button"
                 onClick={() => setMode("review")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "review" ? "bg-[color:var(--brand-600)] text-white shadow-sm" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
+                  mode === "review" ? "bg-[color:var(--brand-600)] text-[#cdd7ff]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
                 {copy("scribe.tab.review")}
@@ -921,7 +921,7 @@ export default function ScribePage() {
                 type="button"
                 onClick={() => setMode("enterprise")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "enterprise" ? "bg-[color:var(--brand-600)] text-white shadow-sm" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
+                  mode === "enterprise" ? "bg-[color:var(--brand-600)] text-[#cdd7ff]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
                 {copy("scribe.tab.enterprise")}
@@ -989,7 +989,7 @@ export default function ScribePage() {
             <div className={panelPaddedClass}>
               <div className="flex items-center justify-between">
                 <h2 className={sectionTitleClass}>{copy("scribe.sessions.title")}</h2>
-                <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--brand-700)] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
+                <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--text-brand)]">
                   {copy("scribe.sessions.count", { count: formatLocaleNumber(language, sessions.length) })}
                 </span>
               </div>
@@ -1013,8 +1013,8 @@ export default function ScribePage() {
                     onClick={() => void onSelectSession(item.id)}
                     className={`w-full rounded-xl border p-3 text-left transition ${
                       active
-                        ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] shadow-sm dark:border-sky-400 dark:bg-sky-500/20"
-                        : "border-[color:var(--shell-border)] bg-white hover:border-[color:var(--brand-600)] hover:bg-[color:var(--surface-muted)] dark:border-sky-800 dark:bg-slate-900/90 dark:hover:border-sky-500"
+                        ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)]"
+                        : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] hover:border-[color:var(--brand-600)] hover:bg-[color:var(--surface-muted)]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1032,7 +1032,7 @@ export default function ScribePage() {
               })}
 
               {!isLoading && sessions.length === 0 ? (
-                <p className={`rounded-xl border border-[color:var(--shell-border)] bg-white p-4 text-sm font-medium ${secondaryTextClass}`}>
+                <p className={`rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-sm font-medium ${secondaryTextClass}`}>
                   {copy("scribe.sessions.empty")}
                 </p>
               ) : null}
