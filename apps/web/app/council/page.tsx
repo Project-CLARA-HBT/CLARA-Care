@@ -45,10 +45,10 @@ type CouncilBannerState =
 type GuardAction = "override" | "pause";
 
 const PANEL_CLASS =
-  "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)]";
+  "rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
 const SOFT_PANEL_CLASS =
-  "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]";
-const BODY_TEXT_CLASS = "text-[color:var(--text-primary)] dark:text-slate-100";
+  "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]";
+const BODY_TEXT_CLASS = "text-[color:var(--text-primary)]";
 const SECONDARY_TEXT_CLASS =
   "text-[color:var(--text-secondary)]";
 const MUTED_TEXT_CLASS = "text-[color:var(--text-muted)]";
