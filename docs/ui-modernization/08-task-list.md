@@ -24,7 +24,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-16 | FR-COUNCIL-001–003 | Council case context and result hierarchy. | Clinical | UI-04/UI-06 | council routes/components | safety/role/E2E | pending |
 | UI-17 | FR-SCRIBE-001–003 | Canonical Scribe stages, consent and sign semantics. | Clinical | UI-04/UI-06 | scribe page/components/libs | workflow/safety/E2E | in_progress |
 | UI-18 | NFR-PERF-001/002 | Add bundle budget, console/hydration, visual and axe E2E. | Test | UI-03/UI-07 | scripts, `e2e/*`, config | four viewport matrix | done |
-| UI-19 | NFR-I18N-001, NFR-RESP-001 | Sweep labels/errors/aria, typography, mobile/tablet and theme. | Test | UI-08–17 | catalog/pages/styles | i18n/terminology/a11y/visual | in_progress |
+| UI-19 | NFR-I18N-001, NFR-RESP-001 | Sweep labels/errors/aria, typography, mobile/tablet and theme. | Test | UI-08–17 | catalog/pages/styles, `12-design-route-map.md` | i18n/terminology/a11y/visual | in_progress |
 | UI-20 | NFR-COMPAT-001, NFR-MAINT-001 | Remove only proven-dead CSS/components and update compatibility docs. | Cleanup | UI-18/UI-19 | globals/styles/legacy docs | import/build/visual evidence | pending |
 | UI-21 | all | Independent architecture/UX/a11y/regression/medical-safety review and repairs. | Root + reviewers | UI-20 | changed files | final review loop | pending |
 | UI-22 | all | Final reports, commits, push/PR and controlled deploy if approved by evidence. | Root | UI-21 | docs, git, deploy | full release checklist | pending |

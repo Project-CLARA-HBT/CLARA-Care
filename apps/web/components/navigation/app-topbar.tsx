@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { getPageMeta, type UserRole } from "@/lib/navigation.config";
+import { type UserRole } from "@/lib/navigation.config";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { ThemePreference } from "@/lib/theme";
 import type { UILanguage } from "@/lib/ui-language";
@@ -44,8 +43,6 @@ export default function AppTopbar({
   onLogout,
   isLoggingOut = false,
 }: AppTopbarProps) {
-  const pathname = usePathname();
-  const page = getPageMeta(pathname, uiLanguage);
   const roleLabel = t(uiLanguage, ROLE_LABEL_KEYS[role]);
   const nextTheme: ThemePreference =
     themePreference === "dark" ? "light" : "dark";
@@ -57,11 +54,8 @@ export default function AppTopbar({
   return (
     <header className="app-command-bar sticky top-0 z-40 hidden h-[4.5rem] items-center justify-between gap-5 border-b border-[color:var(--shell-border)] px-6 lg:flex xl:px-8">
       <div className="min-w-0">
-        <p className="truncate text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
-          {page.title}
-        </p>
-        <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
-          {roleLabel}
+        <p className="truncate text-xl font-semibold tracking-[-0.02em] text-[var(--text-brand)]">
+          CLARA-Care
         </p>
       </div>
 
@@ -91,7 +85,7 @@ export default function AppTopbar({
           title={t(uiLanguage, "family.title")}
         >
           <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
-            family_restroom
+            notifications
           </span>
           {familyNotificationCount > 0 ? (
             <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[var(--danger-500)] px-1 text-center text-[10px] font-bold leading-4 text-white" aria-hidden="true">

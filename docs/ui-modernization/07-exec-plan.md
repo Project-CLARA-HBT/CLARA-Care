@@ -23,7 +23,7 @@ Validation: docs links/path check, baseline lint/type/unit/build/E2E evidence. B
 
 ### M1 — Foundations
 
-- [ ] Add semantic token aliases and update token/contrast tests.
+- [x] Apply the canonical Clara Health System deep-well aliases to the shared shell and set the default preference to dark.
 - [x] Add typed SVG Icon and fallback; fix PHR raw icon regression.
 - [ ] Harden Field, Alert/LiveStatus, SideSheet, ConfirmDialog, and touch targets.
 - [ ] Add primitive tests.
@@ -125,6 +125,15 @@ After every milestone, update this file, `08-task-list.md`, and `11-decisions-an
 - [x] Removed health-reassuring inference from empty/loading/error operational data.
 - [x] Replaced dark-unsafe brand shades with the semantic `--text-brand` token and repaired mobile badge reflow.
 - [x] Added focused normalizer/data-integrity tests plus an eight-case Playwright matrix and four screenshot artifacts.
+
+## Design-system shell checkpoint — 2026-08-07
+
+- [x] Mapped every supplied design family to its route(s) in `12-design-route-map.md`; no design reference is allowed to imply a route or capability absent from the product.
+- [x] Made the canonical Clara Health System dark palette the initial shared theme, including the exact deep-well surface stack, primary/secondary/error status tones, Be Vietnam Pro scale, 256px desktop navigation and 1120px desktop canvas.
+- [x] Removed light gradients, elevated shadows and the personal-workspace selector from the shared shell; professional workspace switching remains available so route access is not affected.
+- [x] Reskinned common cards, navigation states, Council panels and Scribe primary actions to use shared tonal layers instead of local white/slate treatments.
+
+Validation: `cd apps/web && npm run lint` passes with seven pre-existing React Hook dependency warnings only. Rollback: revert this web-only checkpoint; no API, schema, consent, RBAC or CSRF behavior changed.
 
 Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.
 

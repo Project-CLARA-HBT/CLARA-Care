@@ -29,7 +29,7 @@ export function SurfaceCard({
 }) {
   return (
     <section
-      className={`rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-[var(--shadow-sm)] transition ${
+      className={`rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-[var(--shadow-sm)] transition ${
         interactive
           ? "hover:-translate-y-0.5 hover:shadow-[var(--shadow-float)] hover:border-[color:var(--shell-border-strong)]/60"
           : ""

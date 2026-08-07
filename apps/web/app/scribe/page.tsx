@@ -58,7 +58,7 @@ const bodyTextClass = "text-[color:var(--text-primary)]";
 const secondaryTextClass = "text-[color:var(--text-secondary)]";
 const mutedTextClass = "text-[color:var(--text-muted)]";
 const primaryButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[color:var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)]";
+  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 py-2 text-sm font-semibold text-[color:var(--button-primary-text)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)]";
 const secondaryButtonClass =
   "min-h-11 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:opacity-60";
 const dangerButtonClass =

@@ -44,13 +44,13 @@ type CouncilBannerState =
 type GuardAction = "override" | "pause";
 
 const PANEL_CLASS =
-  "rounded-lg border border-[color:var(--shell-border)] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+  "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)]";
 const SOFT_PANEL_CLASS =
-  "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
+  "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]";
 const BODY_TEXT_CLASS = "text-[color:var(--text-primary)] dark:text-slate-100";
 const SECONDARY_TEXT_CLASS =
-  "text-[color:var(--text-muted)] dark:text-slate-300";
-const MUTED_TEXT_CLASS = "text-[color:var(--text-muted)] dark:text-slate-400";
+  "text-[color:var(--text-secondary)]";
+const MUTED_TEXT_CLASS = "text-[color:var(--text-muted)]";
 
 function parseNumericLab(value: string): number | null {
   const match = value.match(/-?\d+(?:\.\d+)?/);

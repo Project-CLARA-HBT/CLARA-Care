@@ -65,17 +65,17 @@ function findHardcodedHex(source: string): string[] {
 }
 
 describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => {
-  it("freezes the approved semantic light palette", () => {
+  it("freezes the approved canonical default palette", () => {
     const globals = readFileSync(resolve(here, "globals.css"), "utf8");
     const root = globals.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
-    expect(root).toContain("--bg-canvas: #f4f6fb;");
-    expect(root).toContain("--surface-sidebar: #f8faff;");
-    expect(root).toContain("--surface-panel: #ffffff;");
-    expect(root).toContain("--surface-muted: #f6f8fc;");
-    expect(root).toContain("--text-primary: #172033;");
-    expect(root).toContain("--text-secondary: #46556a;");
-    expect(root).toContain("--shell-border: #dfe5ef;");
-    expect(root).toContain("--shell-border-strong: #94a3bd;");
+    expect(root).toContain("--bg-canvas: #101419;");
+    expect(root).toContain("--surface-sidebar: #0b0e13;");
+    expect(root).toContain("--surface-panel: #1d2025;");
+    expect(root).toContain("--surface-muted: #272a30;");
+    expect(root).toContain("--text-primary: #e1e2e9;");
+    expect(root).toContain("--text-secondary: #c1c7d3;");
+    expect(root).toContain("--shell-border: #414751;");
+    expect(root).toContain("--shell-border-strong: #8b919d;");
   });
 
   it("freezes the approved semantic dark palette", () => {

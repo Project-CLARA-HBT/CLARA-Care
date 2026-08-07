@@ -48,7 +48,7 @@ export default function SidebarNav({
     <aside
       className={[
         "app-navigation sticky top-0 hidden h-screen shrink-0 border-r border-[color:var(--shell-border)] lg:flex lg:flex-col",
-        collapsed ? "w-[4.25rem] px-2" : "w-[15rem] px-3",
+        collapsed ? "w-[4.25rem] px-2" : "w-64 px-3",
       ].join(" ")}
       aria-label={t(uiLanguage, "navigation.primary")}
     >
@@ -79,7 +79,7 @@ export default function SidebarNav({
         ) : null}
       </div>
 
-      <div className="py-3">
+      {workspace !== "personal" ? <div className="py-3">
         {collapsed ? (
           <button
             type="button"
@@ -118,7 +118,7 @@ export default function SidebarNav({
             </span>
           </label>
         )}
-      </div>
+      </div> : null}
 
       <div className="clara-scrollbar flex-1 overflow-y-auto pb-4">
         <nav className="space-y-1" aria-label={navigation.workspace.label}>

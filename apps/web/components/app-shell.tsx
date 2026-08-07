@@ -554,7 +554,7 @@ export default function AppShell({ children }: Props) {
                 ? isChatLayout
                   ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0 sm:pb-20 sm:pt-0 lg:px-0 lg:pb-0 lg:pt-0"
                   : "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0.5 sm:pb-20 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
-                : "px-4 pb-[calc(env(safe-area-inset-bottom,0px)+7rem)] pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-12 lg:pt-8 xl:px-10",
+                : "px-4 pb-[calc(env(safe-area-inset-bottom,0px)+7rem)] pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-12 lg:pb-12 lg:pt-8",
             ].join(" ")}
           >
             <div
@@ -564,7 +564,7 @@ export default function AppShell({ children }: Props) {
                 // own full-bleed layout. Every other page shares ONE consistent
                 // centered content column so page width never jumps between
                 // routes.
-                isImmersiveLayout ? "max-w-none" : "mx-auto max-w-[1200px]",
+                isImmersiveLayout ? "max-w-none" : "mx-auto max-w-[1120px]",
               ].join(" ")}
             >
               {children}

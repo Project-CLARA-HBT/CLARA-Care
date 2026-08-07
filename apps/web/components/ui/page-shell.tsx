@@ -13,7 +13,7 @@ export default function PageShell({
   const heading = (
     <header className="page-intro max-w-4xl">
       {title ? (
-        <h1 className="text-[1.5rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--text-primary)] sm:text-[1.9rem] lg:text-[2.15rem]">
+        <h1 className="text-[24px] font-bold leading-8 tracking-[-0.02em] text-[var(--text-primary)] lg:text-[32px] lg:leading-10">
           {title}
         </h1>
       ) : null}
@@ -27,7 +27,7 @@ export default function PageShell({
 
   if (variant === "plain") {
     return (
-      <section className="space-y-5">
+      <section className="space-y-8">
         {hasHeading ? heading : null}
         <div>{children}</div>
       </section>
@@ -35,9 +35,9 @@ export default function PageShell({
   }
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-8">
       {hasHeading ? heading : null}
-      <div className="fluent-card rounded-2xl p-4 sm:p-6 lg:p-7">
+      <div className="fluent-card rounded-xl p-4 sm:p-6">
         {children}
       </div>
     </section>
