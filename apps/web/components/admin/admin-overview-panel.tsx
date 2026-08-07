@@ -150,7 +150,7 @@ export default function AdminOverviewPanel() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="grid gap-4 lg:grid-cols-2 [&>article]:!rounded-[var(--radius-xl)] [&>article]:!border-t-[#2A3950] [&>article]:!border-[color:var(--shell-border)] [&>article]:!bg-[var(--surface-panel)] [&>article]:!shadow-none">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -214,7 +214,7 @@ export default function AdminOverviewPanel() {
         </article>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 [&>article]:!rounded-[var(--radius-xl)] [&>article]:!border-t-[#2A3950] [&>article]:!border-[color:var(--shell-border)] [&>article]:!bg-[var(--surface-panel)] [&>article]:!shadow-none">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
           <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Retrieval Connectors</p>
           <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalSources}</p>
@@ -242,7 +242,7 @@ export default function AdminOverviewPanel() {
         </article>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 [&>article]:!rounded-[var(--radius-xl)] [&>article]:!border-t-[#2A3950] [&>article]:!border-[color:var(--shell-border)] [&>article]:!bg-[var(--surface-panel)] [&>article]:!shadow-none">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
           <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Knowledge Hubs</p>
           <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalKnowledgeSources}</p>
@@ -268,7 +268,7 @@ export default function AdminOverviewPanel() {
         </article>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] [&>article]:!rounded-[var(--radius-xl)] [&>article]:!border-t-[#2A3950] [&>article]:!border-[color:var(--shell-border)] [&>article]:!bg-[var(--surface-panel)] [&>article]:!shadow-none">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Source Priority Trend</h3>
@@ -296,7 +296,7 @@ export default function AdminOverviewPanel() {
         </article>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <section className="rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Unified Source Inventory</h3>
           <span className="text-xs text-slate-500 dark:text-slate-400">Hiển thị toàn bộ source hiện có</span>
