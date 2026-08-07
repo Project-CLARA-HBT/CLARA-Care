@@ -607,6 +607,24 @@ def _resolve_trace_identifiers(payload: dict[str, Any]) -> tuple[str, str]:
 def _resolve_evidence_handoff_profile(research_mode: str | None = None) -> dict[str, int]:
     mode = str(research_mode or "fast").strip().lower()
     if mode == "deep_beta":
+        # The reader-first DeepBeta response must remain evidence-rich without
+        # shipping a dossier-sized context to every reasoning/report call.
+        # Technical provenance remains in the response envelope; synthesis gets
+        # the smallest sufficient, bounded handoff.
+        if _deep_beta_clean_body_active():
+            return {
+                **_DEFAULT_EVIDENCE_HANDOFF_PROFILE,
+                "citation_context_rows": 10,
+                "citation_trace_rows": 10,
+                "reasoning_pass_summaries": 6,
+                "reasoning_evidence_rows": 12,
+                "verification_pass_summaries": 8,
+                "verification_evidence_rows": 12,
+                "verification_reasoning_nodes": 6,
+                "report_citations": 8,
+                "report_pass_summaries": 4,
+                "report_reasoning_chain_cards": 6,
+            }
         return _DEEP_BETA_EVIDENCE_HANDOFF_PROFILE
     return _DEFAULT_EVIDENCE_HANDOFF_PROFILE
 
@@ -4313,7 +4331,12 @@ def _synthesize_deep_beta_long_report(
         30.0,
     )
     report_max_tokens = (
-        max(int(settings.deep_beta_report_max_tokens), 4096)
+        # Clean-body DeepBeta is intentionally bounded.  The prior hard
+        # minimum of 4096 silently ignored the deployment budget and was a
+        # major source of gateway timeouts under concurrent research jobs.
+        min(max(int(settings.deep_beta_report_max_tokens), 1024), 4096)
+        if mode == "deep_beta" and _deep_beta_clean_body_active()
+        else max(int(settings.deep_beta_report_max_tokens), 4096)
         if mode == "deep_beta"
         else max(min(int(settings.deep_beta_report_max_tokens), 8192), 2048)
     )
