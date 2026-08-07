@@ -47,8 +47,10 @@ type ScribeCopy = (
   values?: Record<string, string | number>,
 ) => string;
 
-const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, (_, index) => 18 + ((index * 13) % 72));
-const panelClass = "rounded-2xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] shadow-[var(--shadow-soft)]";
+// An idle recorder has no audio signal.  Keep the visual baseline flat; real
+// amplitude is populated only by the Web Audio analyser while recording.
+const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, () => 8);
+const panelClass = "rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
 const panelPaddedClass = `${panelClass} p-4`;
 const panelPaddedLgClass = `${panelClass} p-5`;
 const softPanelClass = "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]";
@@ -62,7 +64,7 @@ const primaryButtonClass =
 const secondaryButtonClass =
   "min-h-11 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:opacity-60";
 const dangerButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--danger-500)] bg-[color:var(--danger-500)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95";
+  "min-h-11 rounded-lg border border-[color:var(--danger-500)] bg-[color:var(--danger-500)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95";
 const transcriptInputClass =
   "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] outline-none transition focus:border-[color:var(--brand-600)] focus:bg-[color:var(--surface-panel)] focus:ring-4 focus:ring-[color:var(--surface-brand-soft)]";
 
