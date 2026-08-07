@@ -18,6 +18,7 @@ không phải xác nhận lâm sàng.
 | PHR screen links | Pass | `/phr`, `identity`, `body`, `contact`, `allergies`, `conditions`, `medications`, `status`, `export`, `sharing`, `emergency-card`, `reminders` đều trả 200. |
 | Personal/professional primary screens | Pass | `/today`, `/chat`, `/lifemap`, `/medicines`, `/family`, `/visits`, `/evidence`, `/council`, `/scribe`, `/dashboard`, `/research/source-hub`, `/account/consent` đều trả 200 với session admin. |
 | Public health | Pass | Trang chủ public trả HTTP 200; container web trả `WEB_OK`. |
+| Internal navigation crawl | Pass | Thu 32 internal links từ các màn primary đã đăng nhập; không có link nào trả HTTP 4xx/5xx. |
 
 ## Lỗi đã tìm thấy và đã sửa
 
@@ -78,4 +79,3 @@ bằng chứng rằng tính năng lâm sàng đã được xác nhận.
 - `21a56746` (CSRF) đã được build/deploy trước audit Council.
 - `fc6062a5` (Council empty state) đang build web độc lập tại thời điểm ghi báo
   cáo; chỉ xác nhận hoàn tất sau khi log Docker ghi `Container clara-app-web-1 Started`.
-
