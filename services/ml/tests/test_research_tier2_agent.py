@@ -3116,3 +3116,30 @@ def test_legacy_runtime_payloads_pass_deployment_settings_to_every_research_task
         retries == tier2.settings.deepseek_retries_per_base
         for _task, _settings, _timeout, retries in captured
     )
+
+
+def test_deep_beta_strict_synthesis_never_returns_baseline_without_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Strict DeepBeta must fail closed rather than label a baseline as LLM output."""
+
+    monkeypatch.setattr(tier2.settings, "deep_beta_report_llm_enabled", True)
+    monkeypatch.setattr(
+        tier2,
+        "_resolve_runtime_llm_config",
+        lambda _runtime: ("router", "", "", ""),
+    )
+
+    result = tier2._synthesize_deep_beta_long_report(
+        topic="Educational hypertension guideline question",
+        answer_markdown="## Kết luận nhanh\nBản nháp không được trả về.",
+        citations=[],
+        verification_matrix_payload={},
+        reasoning_nodes=[],
+        deep_pass_summaries=[],
+        llm_runtime={},
+        research_mode="deep_beta",
+        strict_llm_required=True,
+    )
+
+    assert result is None
