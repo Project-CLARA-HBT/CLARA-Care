@@ -143,6 +143,13 @@ Validation: `cd apps/web && npm run lint` passes with seven pre-existing React H
 
 Validation: `npm run lint` passes with the seven tracked pre-existing hook warnings; focused PHR/Council tests pass 23/23. Rollback: revert the component-only checkpoint; no API/schema/safety-policy changes.
 
+## Medicines consent-state screen checkpoint — 2026-08-07
+
+- [x] Aligned the real consent-required medicines screen, including legal links, disabled state, error/retry boundary and primary acknowledgement control, with the canonical dark surface and status colors.
+- [x] The screen remains a backend-gated consent step; this checkpoint changes no acceptance logic, request, CSRF protection or medical-data access rule.
+
+Validation: focused Medicines tests pass 7/7. Rollback: component-only revert.
+
 Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.
 
 ## Today real-data state follow-up — 2026-08-06
