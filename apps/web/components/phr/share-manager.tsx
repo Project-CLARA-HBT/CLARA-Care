@@ -80,7 +80,7 @@ export default function ShareManager({
   };
 
   return (
-    <section className="rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
+    <section className="rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-6">
       <p className="text-sm font-semibold text-[var(--text-primary)]">
         {copy("phr.share.title")}
       </p>
@@ -90,7 +90,7 @@ export default function ShareManager({
 
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
             {copy("phr.share.scope")}
           </span>
           <select
@@ -103,7 +103,7 @@ export default function ShareManager({
           </select>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
             {copy("phr.share.expiry")}
           </span>
           <input
@@ -118,16 +118,16 @@ export default function ShareManager({
           type="button"
           onClick={onCreate}
           disabled={creating}
-          className="inline-flex min-h-[38px] items-center rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-4 text-sm font-semibold text-[#1D4ED8] transition hover:bg-[#DBEAFE] disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100"
+          className="inline-flex min-h-[38px] items-center rounded-lg bg-[#60a5fa] px-4 text-sm font-semibold text-[#003a6b] transition hover:bg-[#a4c9ff] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {creating ? copy("phr.share.creating") : copy("phr.share.create")}
         </button>
       </div>
 
-      {error ? <p className="mt-3 text-sm text-rose-500">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[#ffb4ab]">{error}</p> : null}
 
       <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+        <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
           {copy("phr.share.activeLinks")}
         </p>
         {links.length === 0 ? (
@@ -139,7 +139,7 @@ export default function ShareManager({
             {links.map((link) => (
               <li
                 key={link.share_id}
-                className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#93C5FD] bg-[#EEF6FF] p-3 dark:border-sky-700/70 dark:bg-slate-800/80"
+                className="flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--bg-elev-3)] p-3"
               >
                 <code className="min-w-0 flex-1 truncate text-[12px] text-[var(--text-primary)]">
                   {shareUrl(link.share_token)}
@@ -156,7 +156,7 @@ export default function ShareManager({
                 <button
                   type="button"
                   onClick={() => onCopy(link.share_token)}
-                  className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600/70 dark:bg-slate-700/40 dark:text-slate-200"
+                  className="rounded-full border border-[color:var(--shell-border)] bg-[var(--bg-elev-2)] px-3 py-1 text-xs font-bold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
                 >
                   {copiedToken === link.share_token
                     ? copy("phr.share.copied")
@@ -166,7 +166,7 @@ export default function ShareManager({
                   type="button"
                   onClick={() => onRevoke(link.share_id)}
                   disabled={revokingShareId === link.share_id}
-                  className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60 dark:border-rose-500/70 dark:bg-rose-500/15 dark:text-rose-100"
+                  className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-1 text-xs font-bold text-[var(--status-danger-text)] transition hover:bg-[#93000a]/30 disabled:opacity-60"
                 >
                   {revokingShareId === link.share_id
                     ? copy("phr.share.revoking")

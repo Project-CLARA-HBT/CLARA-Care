@@ -135,6 +135,14 @@ After every milestone, update this file, `08-task-list.md`, and `11-decisions-an
 
 Validation: `cd apps/web && npm run lint` passes with seven pre-existing React Hook dependency warnings only. Rollback: revert this web-only checkpoint; no API, schema, consent, RBAC or CSRF behavior changed.
 
+## PHR and Council screen-surface checkpoint — 2026-08-07
+
+- [x] Converted the actual PHR detail surfaces for sharing, FHIR export, emergency-card preview, reminders and OCR review from legacy white/slate/sky treatments to the supplied deep-well card, control, status-chip and error palette.
+- [x] Converted the Council result flow canvas itself (not the shared shell) to the supplied 14px card frame, tonal canvas and canonical primary/warning/error states; no visual-only green clinical-success signal is introduced.
+- [x] Kept all PHR mutation, consent, share scope/revocation, OCR manual-confirmation, Council emergency and backend authorization behavior untouched.
+
+Validation: `npm run lint` passes with the seven tracked pre-existing hook warnings; focused PHR/Council tests pass 23/23. Rollback: revert the component-only checkpoint; no API/schema/safety-policy changes.
+
 Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.
 
 ## Today real-data state follow-up — 2026-08-06

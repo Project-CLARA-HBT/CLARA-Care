@@ -48,7 +48,7 @@ export default function PhrModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-2xl rounded-2xl border border-[#B6D4FE] bg-white shadow-xl dark:border-sky-700/60 dark:bg-slate-900">
+      <div className="w-full max-w-2xl rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] shadow-none">
         <div className="flex items-center justify-between gap-3 border-b border-[color:var(--shell-border)] px-5 py-3.5">
           <p className="text-sm font-bold text-[var(--text-primary)]">{title}</p>
           <button

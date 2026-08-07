@@ -83,7 +83,7 @@ export default function EmergencyCardEditor({
   }, [card, uiLanguage]);
 
   return (
-    <section className="rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
+    <section className="rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-6">
       <p className="text-sm font-semibold text-[var(--text-primary)]">
         {copy("phr.emergencyCard.title")}
       </p>
@@ -95,7 +95,7 @@ export default function EmergencyCardEditor({
         {PHR_EMERGENCY_CARD_FIELDS.map((field) => (
           <label
             key={field}
-            className="inline-flex items-center gap-2 rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-3 py-1.5 text-xs font-semibold text-[#1D4ED8] dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100"
+            className="inline-flex items-center gap-2 rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--status-ok-text)]"
           >
             <input
               type="checkbox"
@@ -115,8 +115,8 @@ export default function EmergencyCardEditor({
           loadingLabel={copy("phr.emergencyCard.loading")}
         >
           {(data) => (
-            <div className="space-y-3 rounded-2xl border border-[#93C5FD] bg-[#EEF6FF] p-4 dark:border-sky-700/70 dark:bg-slate-800/80">
-              <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+            <div className="space-y-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--bg-elev-3)] p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
                 {copy("phr.emergencyCard.preview")}
               </p>
 

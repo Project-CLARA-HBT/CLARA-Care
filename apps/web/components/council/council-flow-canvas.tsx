@@ -158,8 +158,8 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
     : t(language, "council.flow.review.professionalReview");
 
   return (
-    <section className="relative overflow-hidden rounded-[1.7rem] border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_10%_8%,rgba(96,165,250,0.24),transparent_30%),radial-gradient(circle_at_92%_86%,rgba(59,130,246,0.18),transparent_34%),linear-gradient(160deg,rgba(255,255,255,0.92),rgba(241,245,249,0.86))] p-4 shadow-[0_24px_70px_rgba(15,23,42,0.14)] dark:bg-[radial-gradient(circle_at_10%_8%,rgba(96,165,250,0.16),transparent_34%),radial-gradient(circle_at_92%_86%,rgba(59,130,246,0.14),transparent_36%),linear-gradient(160deg,rgba(2,6,23,0.9),rgba(15,23,42,0.88))] dark:shadow-[0_28px_80px_rgba(2,6,23,0.72)] sm:p-5 [--c-node-inactive-fill:#e2e8f0] [--c-node-inactive-stroke:#94a3b8] [--c-node-inactive-title:#334155] [--c-node-inactive-subtitle:#64748b] [--c-node-core-fill:#dff6ff] [--c-node-core-stroke:#2563eb] [--c-node-core-title:#0f172a] [--c-node-core-subtitle:#1e40af] [--c-node-branch-fill:#e2e8f0] [--c-node-branch-stroke:#94a3b8] [--c-node-branch-title:#334155] [--c-node-branch-subtitle:#64748b] [--c-node-followup-fill:#fef3c7] [--c-node-followup-stroke:#f59e0b] [--c-node-followup-title:#92400e] [--c-node-followup-subtitle:#b45309] [--c-node-emergency-fill:#fee2e2] [--c-node-emergency-stroke:#ef4444] [--c-node-emergency-title:#991b1b] [--c-node-emergency-subtitle:#b91c1c] [--c-node-citations-fill:#dcfce7] [--c-node-citations-stroke:#22c55e] [--c-node-citations-title:#166534] [--c-node-citations-subtitle:#15803d] [--c-edge-core:#2563eb] [--c-edge-muted:#94a3b8] [--c-edge-warning:#f59e0b] [--c-edge-danger:#ef4444] dark:[--c-node-inactive-fill:#0f172a] dark:[--c-node-inactive-stroke:#475569] dark:[--c-node-inactive-title:#cbd5e1] dark:[--c-node-inactive-subtitle:#94a3b8] dark:[--c-node-core-fill:#172554] dark:[--c-node-core-stroke:#60a5fa] dark:[--c-node-core-title:#e0f2fe] dark:[--c-node-core-subtitle:#93c5fd] dark:[--c-node-branch-fill:#1e293b] dark:[--c-node-branch-stroke:#64748b] dark:[--c-node-branch-title:#cbd5e1] dark:[--c-node-branch-subtitle:#94a3b8] dark:[--c-node-followup-fill:#451a03] dark:[--c-node-followup-stroke:#fbbf24] dark:[--c-node-followup-title:#fde68a] dark:[--c-node-followup-subtitle:#fcd34d] dark:[--c-node-emergency-fill:#450a0a] dark:[--c-node-emergency-stroke:#f87171] dark:[--c-node-emergency-title:#fecaca] dark:[--c-node-emergency-subtitle:#fca5a5] dark:[--c-node-citations-fill:#052e16] dark:[--c-node-citations-stroke:#4ade80] dark:[--c-node-citations-title:#bbf7d0] dark:[--c-node-citations-subtitle:#86efac] dark:[--c-edge-core:#60a5fa] dark:[--c-edge-muted:#64748b] dark:[--c-edge-warning:#fbbf24] dark:[--c-edge-danger:#f87171]">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:26px_26px] dark:bg-[linear-gradient(to_right,rgba(71,85,105,0.32)_1px,transparent_1px),linear-gradient(to_bottom,rgba(71,85,105,0.32)_1px,transparent_1px)]" />
+    <section className="relative overflow-hidden rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-4 sm:p-5 [--c-node-inactive-fill:#272a30] [--c-node-inactive-stroke:#414751] [--c-node-inactive-title:#c1c7d3] [--c-node-inactive-subtitle:#8b919d] [--c-node-core-fill:#1d2025] [--c-node-core-stroke:#60a5fa] [--c-node-core-title:#e1e2e9] [--c-node-core-subtitle:#a4c9ff] [--c-node-branch-fill:#272a30] [--c-node-branch-stroke:#414751] [--c-node-branch-title:#c1c7d3] [--c-node-branch-subtitle:#8b919d] [--c-node-followup-fill:#4b3500] [--c-node-followup-stroke:#fabd34] [--c-node-followup-title:#ffdea4] [--c-node-followup-subtitle:#fabd34] [--c-node-emergency-fill:#93000a] [--c-node-emergency-stroke:#ffb4ab] [--c-node-emergency-title:#ffdad6] [--c-node-emergency-subtitle:#ffb4ab] [--c-node-citations-fill:#272a30] [--c-node-citations-stroke:#a4c9ff] [--c-node-citations-title:#e1e2e9] [--c-node-citations-subtitle:#a4c9ff] [--c-edge-core:#a4c9ff] [--c-edge-muted:#8b919d] [--c-edge-warning:#fabd34] [--c-edge-danger:#ffb4ab]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(65,71,81,0.28)_1px,transparent_1px),linear-gradient(to_bottom,rgba(65,71,81,0.28)_1px,transparent_1px)] bg-[size:26px_26px]" />
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -173,7 +173,7 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
           <span
             className={`rounded-full border px-2 py-1 ${
               props.needsMoreInfo
-                ? "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/35 dark:text-amber-200"
+                ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
                 : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
             }`}
           >
@@ -182,7 +182,7 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
           <span
             className={`rounded-full border px-2 py-1 ${
               props.isEmergency
-                ? "border-red-300 bg-red-100 text-red-800 dark:border-red-700/50 dark:bg-red-950/35 dark:text-red-200"
+                ? "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
                 : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
             }`}
           >
@@ -192,18 +192,18 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
       </div>
 
       <div className="relative mt-4 flex flex-wrap items-center gap-2 text-[11px]">
-        <span className="rounded-full border border-cyan-300/70 bg-cyan-100/90 px-2.5 py-1 font-semibold text-cyan-800 dark:border-cyan-500/45 dark:bg-cyan-950/50 dark:text-cyan-200">
+        <span className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-2.5 py-1 font-semibold text-[var(--status-ok-text)]">
           {t(language, "council.flow.legend.core")}
         </span>
-        <span className="rounded-full border border-amber-300/70 bg-amber-100/90 px-2.5 py-1 font-semibold text-amber-800 dark:border-amber-500/45 dark:bg-amber-950/50 dark:text-amber-200">
+        <span className="rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2.5 py-1 font-semibold text-[var(--status-warn-text)]">
           {t(language, "council.flow.legend.needsMoreInfo")}
         </span>
-        <span className="rounded-full border border-rose-300/70 bg-rose-100/90 px-2.5 py-1 font-semibold text-rose-800 dark:border-rose-500/45 dark:bg-rose-950/50 dark:text-rose-200">
+        <span className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2.5 py-1 font-semibold text-[var(--status-danger-text)]">
           {t(language, "council.flow.legend.emergency")}
         </span>
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--shell-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.66),rgba(226,232,240,0.56))] p-3 dark:bg-[linear-gradient(180deg,rgba(2,6,23,0.45),rgba(15,23,42,0.62))]">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-[color:var(--shell-border)] bg-[var(--bg-elev-1)] p-3">
         <svg
           viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
           className="h-[440px] w-[1400px] min-w-[1200px]"

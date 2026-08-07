@@ -137,7 +137,7 @@ export default function OcrReviewModal({
       <button
         type="button"
         onClick={onOpen}
-        className="inline-flex min-h-[38px] items-center rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-3 text-sm font-semibold text-[#1D4ED8] transition hover:bg-[#DBEAFE] dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100"
+        className="inline-flex min-h-[38px] items-center rounded-lg bg-[#60a5fa] px-3 text-sm font-semibold text-[#003a6b] transition hover:bg-[#a4c9ff]"
       >
         {copy("phr.ocr.open")}
       </button>
@@ -172,16 +172,16 @@ export default function OcrReviewModal({
             aria-label={copy("phr.ocr.pick")}
             onChange={(e) => onFile(e.target.files?.[0])}
             disabled={scanning || confirming || !processingAcknowledged}
-            className="block w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-lg file:border file:border-[#93C5FD] file:bg-[#EFF6FF] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-[#1D4ED8]"
+            className="block w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-lg file:border file:border-[color:var(--shell-border)] file:bg-[var(--bg-elev-3)] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-[var(--text-brand)]"
           />
         </div>
 
         {scanning ? (
           <p className="mt-3 text-sm text-[var(--text-secondary)]">{copy("phr.ocr.scanning")}</p>
         ) : null}
-        {error ? <p className="mt-3 text-sm text-rose-500">{error}</p> : null}
+        {error ? <p className="mt-3 text-sm text-[#ffb4ab]">{error}</p> : null}
         {message ? (
-          <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-300">{message}</p>
+          <p className="mt-3 text-sm text-[var(--status-ok-text)]">{message}</p>
         ) : null}
         {processingNotice ? (
           <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">{processingNotice}</p>
@@ -194,8 +194,8 @@ export default function OcrReviewModal({
                 key={idx}
                 className={`rounded-2xl border p-3 ${
                   row._accepted
-                    ? "border-emerald-300 bg-emerald-50/60 dark:border-emerald-500/50 dark:bg-emerald-500/10"
-                    : "border-[#93C5FD] bg-[#EEF6FF] dark:border-sky-700/70 dark:bg-slate-800/80"
+                    ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)]"
+                    : "border-[color:var(--shell-border)] bg-[var(--bg-elev-3)]"
                 }`}
               >
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -223,7 +223,7 @@ export default function OcrReviewModal({
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {row.requires_manual_confirm && !row._accepted ? (
-                    <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-200">
+                    <span className="inline-flex items-center rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--status-warn-text)]">
                       {copy("phr.ocr.needsReview")}
                     </span>
                   ) : null}
@@ -231,7 +231,7 @@ export default function OcrReviewModal({
                     <button
                       type="button"
                       onClick={() => patchRow(idx, { _accepted: !row._accepted })}
-                      className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/60 dark:bg-emerald-500/15 dark:text-emerald-100"
+                      className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-1 text-xs font-bold text-[var(--status-ok-text)] transition hover:bg-[#60a5fa]/20"
                     >
                       {row._accepted ? copy("phr.ocr.accepted") : copy("phr.ocr.accept")}
                     </button>
@@ -240,7 +240,7 @@ export default function OcrReviewModal({
                       onClick={() =>
                         setRows((prev) => prev.filter((_, i) => i !== idx))
                       }
-                      className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/70 dark:bg-rose-500/15 dark:text-rose-100"
+                      className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-1 text-xs font-bold text-[var(--status-danger-text)] transition hover:bg-[#93000a]/30"
                     >
                       {copy("phr.ocr.discard")}
                     </button>
@@ -273,7 +273,7 @@ export default function OcrReviewModal({
                 type="button"
                 onClick={onConfirm}
                 disabled={confirming}
-                className="inline-flex min-h-[38px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-[38px] items-center rounded-lg bg-[#60a5fa] px-4 text-sm font-semibold text-[#003a6b] transition hover:bg-[#a4c9ff] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {confirming ? copy("phr.ocr.confirming") : copy("phr.ocr.confirm")}
               </button>

@@ -49,7 +49,7 @@ export default function PhrExportButton({
   };
 
   return (
-    <section className="rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
+    <section className="rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-6">
       <p className="text-sm font-semibold text-[var(--text-primary)]">
         {copy("phr.export.title")}
       </p>
@@ -58,7 +58,7 @@ export default function PhrExportButton({
       </p>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
             {copy("phr.export.scope")}
           </span>
           <select
@@ -77,12 +77,12 @@ export default function PhrExportButton({
           type="button"
           onClick={onDownload}
           disabled={busy}
-          className="inline-flex min-h-[38px] items-center rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-4 text-sm font-semibold text-[#1D4ED8] transition hover:bg-[#DBEAFE] disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100"
+          className="inline-flex min-h-[38px] items-center rounded-lg bg-[#60a5fa] px-4 text-sm font-semibold text-[#003a6b] transition hover:bg-[#a4c9ff] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy ? copy("phr.export.downloading") : copy("phr.export.download")}
         </button>
       </div>
-      {error ? <p className="mt-3 text-sm text-rose-500">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[#ffb4ab]">{error}</p> : null}
     </section>
   );
 }

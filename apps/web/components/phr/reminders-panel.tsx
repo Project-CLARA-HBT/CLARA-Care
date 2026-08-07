@@ -112,7 +112,7 @@ export default function RemindersPanel({
   });
 
   return (
-    <section className="rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
+    <section className="rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-6">
       <p className="text-sm font-semibold text-[var(--text-primary)]">
         {copy("phr.reminders.title")}
       </p>
@@ -127,7 +127,7 @@ export default function RemindersPanel({
       ) : (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
               {copy("phr.reminders.medication")}
             </span>
             <select
@@ -144,7 +144,7 @@ export default function RemindersPanel({
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
               {copy("phr.reminders.remaining")}
             </span>
             <input
@@ -157,7 +157,7 @@ export default function RemindersPanel({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
               {copy("phr.reminders.threshold")}
             </span>
             <input
@@ -169,7 +169,7 @@ export default function RemindersPanel({
               }
             />
           </label>
-          <label className="inline-flex items-center gap-2 text-sm font-semibold text-[#374151] dark:text-slate-200 sm:col-span-2">
+          <label className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)] sm:col-span-2">
             <input
               type="checkbox"
               checked={nudge}
@@ -182,7 +182,7 @@ export default function RemindersPanel({
               type="button"
               onClick={onAdd}
               disabled={adding || !medId}
-              className="inline-flex min-h-[38px] items-center rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-4 text-sm font-semibold text-[#1D4ED8] transition hover:bg-[#DBEAFE] disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100"
+              className="inline-flex min-h-[38px] items-center rounded-lg bg-[#60a5fa] px-4 text-sm font-semibold text-[#003a6b] transition hover:bg-[#a4c9ff] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {adding ? copy("phr.reminders.adding") : copy("phr.reminders.add")}
             </button>
@@ -190,10 +190,10 @@ export default function RemindersPanel({
         </div>
       )}
 
-      {addError ? <p className="mt-3 text-sm text-rose-500">{addError}</p> : null}
+      {addError ? <p className="mt-3 text-sm text-[#ffb4ab]">{addError}</p> : null}
 
       <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
+        <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
           {copy("phr.reminders.configured")}
         </p>
         <div className="mt-2">
@@ -208,23 +208,23 @@ export default function RemindersPanel({
                 {data.map((r) => (
                   <li
                     key={r.id}
-                    className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#93C5FD] bg-[#EEF6FF] p-3 dark:border-sky-700/70 dark:bg-slate-800/80"
+                    className="flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--bg-elev-3)] p-3"
                   >
                     <span className="text-[13px] font-semibold text-[var(--text-primary)]">
                       {medName(r.medication_entry_id)}
                     </span>
                     {r.medication_due ? (
-                      <span className="inline-flex items-center rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:border-sky-500/60 dark:bg-sky-500/15 dark:text-sky-100">
+                      <span className="inline-flex items-center rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--status-ok-text)]">
                         {copy("phr.reminders.due")}
                       </span>
                     ) : null}
                     {r.refill_due ? (
-                      <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-200">
+                      <span className="inline-flex items-center rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--status-warn-text)]">
                         {copy("phr.reminders.refill")}
                       </span>
                     ) : null}
                     {r.caregiver_nudge_enabled ? (
-                      <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-600/70 dark:bg-slate-700/40 dark:text-slate-200">
+                      <span className="inline-flex items-center rounded-full border border-[color:var(--status-neutral-border)] bg-[var(--status-neutral-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--status-neutral-text)]">
                         {copy("phr.reminders.nudgeOn")}
                       </span>
                     ) : null}
