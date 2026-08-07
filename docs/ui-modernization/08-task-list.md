@@ -14,7 +14,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-06 | FR-SHELL-001–006 | Extract shell presentation and profile/workspace providers. | Shell | UI-04/UI-05 | `components/app-shell.tsx`, navigation | shell unit/E2E, public/401 tests | done |
 | UI-07 | FR-SHELL-005 | Replace mobile drawer with SideSheet and add More/bottom nav. | Shell | UI-04/UI-06 | `app-shell.tsx`, navigation | focus/restore/mobile E2E | done |
 | UI-08 | FR-TODAY-001/002, FR-OVR-001 | Remove fabricated dashboard fallback; make Today task-first with truthful active/completed/first-time/caught-up states. | Personal | UI-06 | dashboard/today pages, LifeMap Today projection | API contract, state tests, four-viewport personal E2E | done |
-| UI-09 | FR-LIFE-001–004 | Progressive LifeMap creation and episode presentation without truth changes. | Personal | UI-04/UI-06 | lifemap routes, guided flow | wizard/state/safety E2E | pending |
+| UI-09 | FR-LIFE-001–004 | Progressive LifeMap creation and episode presentation without truth changes. | Personal | UI-04/UI-06 | lifemap routes, guided flow | wizard/state/safety E2E | in_progress |
 | UI-10 | FR-VISIT-001/002 | Focused Visit preparation steps and contextual consent. | Personal | UI-04/UI-06 | visits routes/components | integration/E2E | done |
 | UI-11 | FR-FAM-001/002 | Family URL-backed tabs and explicit invitation review. | Personal | UI-04/UI-06 | family routes/components | tabs/share/revoke E2E | done |
 | UI-12 | FR-PHR-001/003 | PHR ProgressList, detailed record sections, body-measurement history/BMI, conflict-safe presentation and per-screen deep-well visual parity. | Personal | UI-03/UI-04 | phr routes/components, PHR observations API | form/provenance/a11y/API tests, responsive mobile overview | done |
@@ -36,7 +36,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 |---|---|---|---|---|
 | FR-NAV / FR-SHELL | UI-05–07 | navigation registries, AppShell, navigation components | workspace, route, shell, mobile E2E | done |
 | FR-OVR / FR-TODAY | UI-08/UI-23 | dashboard/today, system normalizer, LifeMap Today projection | state + structured-alert/API contract tests + four-viewport E2E + screenshots | done |
-| FR-LIFE | UI-09 | lifemap/guided-flow | wizard/safety/E2E | pending |
+| FR-LIFE | UI-09 | lifemap/guided-flow | wizard/safety/E2E | in_progress |
 | FR-VISIT | UI-10 | visits/new/flow | integration/E2E | done |
 | FR-FAM | UI-11 | family pages/components | tab/invite/revoke/E2E | done |
 | FR-PHR | UI-03/UI-12 | icon, PHR routes/components, observations API | icon/form/provenance/API/E2E | done |

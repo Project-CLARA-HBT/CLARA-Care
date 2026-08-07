@@ -153,9 +153,8 @@ export default function DashboardPage() {
       variant="plain"
     >
       <div className="space-y-8">
-        <section className="relative overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[color:var(--surface-brand-soft)] blur-3xl" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <section className="rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-6 sm:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 {copy("Không gian công việc", "Work workspace")}
@@ -183,7 +182,7 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-            <Link href={primary.href} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 text-sm font-semibold text-white shadow-[var(--shadow-soft)] transition hover:bg-[var(--brand-700)]">
+            <Link href={primary.href} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-lg)] bg-[var(--brand-600)] px-6 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)]">
               <Icon name="progress" size={18} />
               {primary.label}
             </Link>
@@ -248,7 +247,7 @@ export default function DashboardPage() {
             <Link href={featuredTask?.href ?? "/chat"} className="text-sm font-semibold text-[var(--text-brand)] hover:underline">{copy("Mở công việc", "Open work")}</Link>
           </div>
           <div className="grid gap-5 md:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
-            <Link href={featuredTask?.href ?? "/chat"} className="group rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)] transition hover:border-[color:var(--text-brand)]">
+            <Link href={featuredTask?.href ?? "/chat"} className="group rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 transition-colors hover:border-[color:var(--text-brand)]">
               <span className="inline-flex rounded-md bg-[var(--surface-brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--text-brand)]">{featuredTask ? copy("Đang chờ xử lý", "Pending") : copy("Sẵn sàng", "Ready")}</span>
               <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{featuredTask?.title ?? copy("Bắt đầu một công việc với CLARA", "Start a task with CLARA")}</h3>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{featuredTask?.detail ?? copy("Chọn một lối tắt phù hợp với vai trò của bạn ở bên dưới.", "Choose a role-appropriate shortcut below.")}</p>

@@ -76,7 +76,7 @@ export default function AdminShell({ activeTab, title, description, children }: 
       </div>
 
       <nav
-        className="rounded-[1.4rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-soft"
+        className="rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5"
         aria-label="Admin navigation"
       >
         <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
@@ -88,9 +88,9 @@ export default function AdminShell({ activeTab, title, description, children }: 
                   href={tab.href}
                   aria-current={isActive ? "page" : undefined}
                   className={[
-                    "group flex min-h-[90px] flex-col justify-between rounded-xl border p-3 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900",
+                    "group flex min-h-[90px] flex-col justify-between rounded-[var(--radius-lg)] border p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-primary)]/15",
                     isActive
-                      ? "border-sky-500 bg-sky-100/80 text-sky-900 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.22)] dark:bg-sky-950/50 dark:text-sky-100"
+                      ? "border-[color:var(--brand-600)] bg-[var(--brand-600)] text-[#cdd7ff]"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-[color:var(--shell-border-strong)] hover:text-[var(--text-primary)]"
                   ].join(" ")}
                 >
@@ -100,7 +100,7 @@ export default function AdminShell({ activeTab, title, description, children }: 
                       className={[
                         "inline-flex min-w-[2rem] items-center justify-center rounded-lg border px-2 py-0.5 text-[11px] font-semibold",
                         isActive
-                          ? "border-sky-300/80 bg-white/70 text-sky-800 dark:border-sky-700 dark:bg-sky-950/80 dark:text-sky-200"
+                          ? "border-[#cdd7ff]/30 bg-[#00174b]/25 text-[#cdd7ff]"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-muted)]"
                       ].join(" ")}
                       aria-hidden="true"

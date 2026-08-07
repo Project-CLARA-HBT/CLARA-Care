@@ -174,6 +174,15 @@ Validation: focused Council tests pass 10/10 and web type-check passes. Rollback
 
 Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.
 
+## LifeMap and operational-visualization checkpoint — 2026-08-08
+
+- [x] Reordered `/lifemap` around the actual open journeys and accepted Today tasks returned by the profile-scoped LifeMap projection. The first-use state now leads only to the existing guided journey flow; it does not expose task creation before an episode exists.
+- [x] Kept replay, question, provenance, capture, review and visit-preparation capabilities intact as contextual lower-level panels. No task count, progress, duration or health state is fabricated: every displayed task is returned by `getLifeMapToday`.
+- [x] Updated Dashboard/Admin shell and chart frames to use the canonical deep-well tonal card system rather than local glow/neon styling.
+- [x] Removed unsupported observability copy that implied a fixed ML node count or an estimated p95 value. The console now labels derived indices as derived and describes average latency only when returned by telemetry.
+
+Validation: targeted LifeMap and Admin observability tests pass 7/7; lint and TypeScript checks pass for all changed web surfaces. Rollback: revert this UI-only checkpoint; LifeMap mutations, profile scope, consent, telemetry collection and route authorization are unchanged.
+
 ## Today real-data state follow-up — 2026-08-06
 
 - [x] Rebuilt `/today` around the supplied active, completed, and first-time hierarchy using only server-returned LifeMap data.

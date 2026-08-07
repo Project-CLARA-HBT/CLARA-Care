@@ -569,12 +569,12 @@ export default function AdminObservabilityPanel() {
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-300">
+          <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
             <input
               type="checkbox"
-              className="h-3.5 w-3.5 accent-cyan-400"
+              className="h-3.5 w-3.5 accent-[var(--brand-primary)]"
               checked={autoRefresh}
               onChange={(event) => setAutoRefresh(event.target.checked)}
             />
@@ -583,16 +583,16 @@ export default function AdminObservabilityPanel() {
           <button
             type="button"
             onClick={() => void load()}
-            className="rounded-lg border border-cyan-400/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
+            className="rounded-[var(--radius-md)] border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--text-brand)] transition-colors hover:bg-[var(--surface-muted)]"
           >
             Refresh
           </button>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-slate-400">
-          <span>RUNTIME ID: CLARA-X9-00124</span>
-          <span className="text-slate-600">|</span>
-          <span>SYNC: {state.loading ? "IN PROGRESS" : "SUCCESSFUL"}</span>
-          <span className="text-slate-600">|</span>
+        <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+          <span>Ảnh chụp telemetry</span>
+          <span className="text-[var(--text-muted)]">|</span>
+          <span>Đồng bộ: {state.loading ? "đang cập nhật" : state.error ? "cần thử lại" : "đã cập nhật"}</span>
+          <span className="text-[var(--text-muted)]">|</span>
           <span>UPDATED: {lastUpdate} GMT+7</span>
         </div>
       </section>
@@ -626,7 +626,7 @@ export default function AdminObservabilityPanel() {
             <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Trạng thái ML</p>
             <p className="mt-2 text-xl font-bold text-slate-100">{state.mlReachable === false ? "Mất kết nối" : "Đang hoạt động"}</p>
             <p className="mt-1 text-[11px] text-slate-400">{state.mlStatus || "Unknown"}</p>
-            <p className="mt-3 text-[11px] font-semibold text-cyan-300">Node cluster: {state.mlReachable === false ? "0/4 active" : "4/4 active"}</p>
+            <p className="mt-3 text-[11px] font-semibold text-[var(--text-secondary)]">Trạng thái phụ thuộc do API báo cáo.</p>
           </article>
 
           <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
@@ -640,13 +640,13 @@ export default function AdminObservabilityPanel() {
           <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Độ trễ</p>
             <p className="mt-2 text-2xl font-black text-slate-100">{latencyMs}ms</p>
-            <p className="mt-1 text-[11px] text-cyan-300">p95 ước tính: {Math.max(latencyMs, 1)}ms</p>
+            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">Độ trễ trung bình trong ảnh chụp hiện tại.</p>
           </article>
 
           <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Độ ổn định</p>
             <p className="mt-2 text-2xl font-black text-slate-100">{Math.round(runtimeStability)}</p>
-            <p className="mt-1 text-[11px] text-slate-400">Metric index: {runtimeStability > 80 ? "Nominal" : "Watch"}</p>
+            <p className="mt-1 text-[11px] text-slate-400">Chỉ số dẫn xuất từ telemetry hiện có.</p>
           </article>
 
           <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
@@ -849,9 +849,9 @@ export default function AdminObservabilityPanel() {
         )}
       </AsyncSection>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-[11px] font-mono text-slate-400">
-        <span>RUNTIME ID: CLARA-X9-00124</span>
-        <span>TELEMETRY SYNC: {state.loading ? "IN PROGRESS" : "SUCCESSFUL"}</span>
+      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-[11px] font-mono text-[var(--text-secondary)]">
+        <span>Ảnh chụp telemetry</span>
+        <span>Đồng bộ: {state.loading ? "đang cập nhật" : state.error ? "cần thử lại" : "đã cập nhật"}</span>
         <span>LAST UPDATE: {lastUpdate} GMT+7</span>
       </footer>
     </div>

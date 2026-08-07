@@ -19,6 +19,7 @@
 | 2026-08-06 | Represent blocked evidence release as insufficient evidence, not a partial clinical conclusion. | The UI offers only evidence refinement already present in Chat and the existing visit-preparation route; it does not imply clinician availability. |
 | 2026-08-07 | Use the supplied Clara Health System dark design as the application default. | The reference is explicitly dark and applies to all web surfaces. Existing theme controls remain for preference compatibility, but the no-preference initial state is dark. |
 | 2026-08-07 | Do not show a workspace selector in the personal shell. | Today is the default personal home, not a workspace destination. Clinical/research/admin selectors remain because they preserve authorized navigation. |
+| 2026-08-08 | Do not render unsupported observability metrics as though they were measured. | Fixed node-count and estimated p95 labels were removed. Charts may visualize returned telemetry or clearly labelled client-side derivations, but never a fabricated operational value. |
 
 ## Audit feedback resolution
 
@@ -71,6 +72,7 @@
 - Research workspace screen checkpoint: aligned live frame/search/synthesis/watch states, including the clarification boundary and result rail, with the supplied tonal card system. Source selection/upload/job execution and role routing are unchanged. Focused Research tests pass 31/31; lint only reports the seven tracked pre-existing Hook warnings. Rollback is component-only.
 - CSRF profile-save repair: browser production smoke verified login → `/phr/identity` → save and the API's expected missing-header 403 / matching-header 200 boundary. The web cookie reader now selects the final duplicate-name CSRF cookie, matching the server parser after a cookie-domain migration; a regression test protects this stale-session case. No CSRF exemption or backend policy was added.
 - Council empty-state E2E repair: an owner with no Council case previously caused the client to request `/council/cases/latest`, receive its expected 404 and render that as a loading error. The three Council entry views now request one owner-scoped list item and render a normal empty state when it is absent; stale local case selection is cleared. Focused Council tests pass 10/10 and type-check passes.
+- LifeMap/operational visualization checkpoint: `/lifemap` now puts profile-scoped journeys and accepted Today tasks before optional expert tools. The empty state leads only to the existing guided journey workflow and hides the task form until an episode exists. Dashboard/Admin card frames use the supplied deep-well card language; fixed ML-cluster and p95 estimates were removed from observability. Targeted LifeMap/Admin tests pass 7/7; lint and TypeScript checks pass. This is UI-only and leaves LifeMap, telemetry, consent and RBAC contracts unchanged.
 
 ### Checkpoint template
 
