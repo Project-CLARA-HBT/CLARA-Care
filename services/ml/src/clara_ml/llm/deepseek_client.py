@@ -177,7 +177,26 @@ class DeepSeekClient:
                                     json=model_payload,
                                 )
                                 response.raise_for_status()
-                        data = response.json()
+                        # Some OpenAI-compatible gateways return an SSE stream
+                        # even when the request explicitly sets ``stream: false``.
+                        # Normalize that transport variation at the provider
+                        # boundary so every governed task still receives the
+                        # ordinary completion contract below.  This is not a
+                        # request-owned behaviour and does not change model,
+                        # prompt, guardrail, or fallback selection.
+                        content_type = str(
+                            getattr(response, "headers", {}).get("content-type", "")
+                        ).lower()
+                        if "text/event-stream" in content_type:
+                            content, response_model = self._consume_chat_stream(response)
+                            if not content:
+                                raise RuntimeError("DeepSeek SSE response content is empty")
+                            data = {
+                                "choices": [{"message": {"content": content}}],
+                                "model": response_model or model,
+                            }
+                        else:
+                            data = response.json()
                         if not isinstance(data, dict):
                             raise RuntimeError("DeepSeek response has invalid format")
                         return data
