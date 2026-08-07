@@ -9246,8 +9246,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     if research_mode == "deep_beta":
         if rag_reranker_enabled_override is None:
             rag_reranker_enabled_override = True
-        if rag_graphrag_enabled_override is None:
-            rag_graphrag_enabled_override = True
+        # GraphRAG remains deployment-governed.  Forcing it for every DeepBeta
+        # request made a non-ready graph sidecar an implicit dependency and
+        # caused avoidable stalls; hybrid retrieval and reranking still run.
+        # An operator may explicitly enable GraphRAG once its graph store has
+        # passed health checks.
     effective_rag_reranker_enabled = (
         bool(settings.rag_reranker_enabled)
         if rag_reranker_enabled_override is None
@@ -10748,7 +10751,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         rag_sources=rag_sources,
         uploaded_documents=uploaded_documents,
         planner_hints=planner_hints,
-        generation_enabled=True,
+        # DeepBeta has a dedicated, citation-aware report synthesizer below.
+        # Generating a full dossier here first duplicates the most expensive
+        # model call and is a primary timeout source.  Retrieval-only output is
+        # an internal draft; it is never returned if the report is successful.
+        generation_enabled=research_mode != "deep_beta",
         strict_deepseek_required=strict_deepseek_required,
         rag_reranker_enabled=rag_reranker_enabled_override,
         rag_graphrag_enabled=rag_graphrag_enabled_override,

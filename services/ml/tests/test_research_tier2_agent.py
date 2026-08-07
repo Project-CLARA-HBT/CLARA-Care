@@ -2092,7 +2092,10 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
         )
         == 4
     )
-    assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 4
+    # DeepBeta keeps every pipeline pass retrieval-only; final prose is
+    # generated once by its citation-aware report synthesizer rather than by a
+    # duplicate dossier generation in the RAG pipeline.
+    assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 5
     evidence_audit_span = next(
         item for item in stage_spans if str(item.get("stage")) == "deep_beta_evidence_audit"
     )
