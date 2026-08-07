@@ -48,7 +48,8 @@ def _summary(result: dict[str, Any], *, mode: str, guard_expected: bool) -> dict
     quality = result.get("quality_gate") if isinstance(result.get("quality_gate"), dict) else {}
     metadata = result.get("metadata") if isinstance(result.get("metadata"), dict) else {}
     model = str(result.get("model_used") or metadata.get("model_used") or "")
-    blocked = str(result.get("policy_action") or "") == "block" or model.endswith("guard-v1")
+    policy_action = str(result.get("policy_action") or "").strip().lower()
+    blocked = policy_action in {"block", "escalate"} or model.endswith("guard-v1")
     return {
         "mode_fidelity": result.get("research_mode") == mode,
         "answer_present": bool(str(result.get("answer") or "").strip()),
