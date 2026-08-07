@@ -16,6 +16,7 @@ import { trackResearchSourcesSynced, trackResearchViewed } from "@/lib/analytics
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
+import PageShell from "@/components/ui/page-shell";
 
 const SOURCE_LABEL_KEYS: Record<SourceHubSourceKey, UITranslationKey> = {
   pubmed: "research.sourceHub.source.pubmed",
@@ -183,8 +184,12 @@ export default function ResearchSourceHubPage() {
   };
 
   return (
-    <main className="min-h-[100dvh] bg-[var(--bg-canvas)] px-4 py-6 text-[var(--text-primary)] sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell
+      variant="plain"
+      title={t(language, "research.sourceHub.title")}
+      description={t(language, "research.sourceHub.description")}
+    >
+      <div className="mx-auto max-w-[1120px] space-y-6 text-[var(--text-primary)]">
         <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
@@ -403,6 +408,6 @@ export default function ResearchSourceHubPage() {
           </div>
         </section>
       </div>
-    </main>
+    </PageShell>
   );
 }
