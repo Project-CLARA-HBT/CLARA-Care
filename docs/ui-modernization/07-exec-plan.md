@@ -157,6 +157,14 @@ Validation: focused Medicines tests pass 7/7. Rollback: component-only revert.
 
 Validation: focused Research tests pass 31/31; lint passes with the seven tracked pre-existing hook warnings. Rollback: component-only revert.
 
+## CSRF profile-save repair — 2026-08-07
+
+- [x] Reproduced the production cookie-auth boundary: a PHR save without the header is 403; the matching double-submit token is 200; a browser login and identity-save smoke succeeds.
+- [x] Changed the browser CSRF cookie reader to select the final duplicate-name cookie, matching the API parser and preventing stale pre-domain-migration cookies from generating a false CSRF failure.
+- [x] Preserved CSRF enforcement; no mutation route was exempted and no authorization/consent behavior changed.
+
+Validation: focused auth-store/http-client/PHR tests pass 10/10; lint passes with the seven tracked pre-existing hook warnings. Rollback: revert the client reader and its regression test.
+
 Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.
 
 ## Today real-data state follow-up — 2026-08-06

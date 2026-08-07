@@ -69,6 +69,7 @@
 - PHR/Council screen checkpoint: converted the live PHR share/export/emergency/reminder/OCR surfaces and Council SVG flow canvas from local white/slate/sky gradients to the supplied individual screen treatments. Focused PHR/Council tests pass 23/23; `npm run lint` still has only the seven pre-existing Hook warnings. These components retain their existing consent, revocation, manual-review, emergency and role behavior. Rollback is a component-only revert.
 - Medicines consent screen checkpoint: aligned the real consent-required gate, legal links, disabled action and retry/error boundary with the supplied dark palette. The acceptance mutation and its CSRF/consent gating are unchanged. Focused medicines tests pass 7/7; rollback is component-only.
 - Research workspace screen checkpoint: aligned live frame/search/synthesis/watch states, including the clarification boundary and result rail, with the supplied tonal card system. Source selection/upload/job execution and role routing are unchanged. Focused Research tests pass 31/31; lint only reports the seven tracked pre-existing Hook warnings. Rollback is component-only.
+- CSRF profile-save repair: browser production smoke verified login → `/phr/identity` → save and the API's expected missing-header 403 / matching-header 200 boundary. The web cookie reader now selects the final duplicate-name CSRF cookie, matching the server parser after a cookie-domain migration; a regression test protects this stale-session case. No CSRF exemption or backend policy was added.
 
 ### Checkpoint template
 

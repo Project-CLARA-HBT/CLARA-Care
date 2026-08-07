@@ -1,35 +1,27 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { getCsrfToken } from "./auth-store";
 
-import { clearTokens, markAuthenticatedBrowserSession } from "@/lib/auth-store";
-
-const LEGACY_ACCESS_TOKEN_KEY = "clara_access_token_session";
-const LEGACY_REFRESH_TOKEN_KEY = "clara_refresh_token_session";
-
-describe("browser auth storage", () => {
-  beforeEach(() => {
-    window.sessionStorage.clear();
-    window.localStorage.clear();
-    document.cookie = "clara_client_session=; Path=/; Max-Age=0; SameSite=Lax";
+describe("getCsrfToken", () => {
+  afterEach(() => {
+    document.cookie = "clara_csrf_token=; Path=/; Max-Age=0";
   });
 
-  it("purges legacy script-readable tokens after a successful cookie login", () => {
-    window.sessionStorage.setItem(LEGACY_ACCESS_TOKEN_KEY, "legacy-access");
-    window.sessionStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, "legacy-refresh");
-
-    markAuthenticatedBrowserSession();
-
-    expect(window.sessionStorage.getItem(LEGACY_ACCESS_TOKEN_KEY)).toBeNull();
-    expect(window.sessionStorage.getItem(LEGACY_REFRESH_TOKEN_KEY)).toBeNull();
-    expect(document.cookie).toContain("clara_client_session=1");
+  it("reads the browser CSRF cookie", () => {
+    document.cookie = "clara_csrf_token=active-token; Path=/";
+    expect(getCsrfToken()).toBe("active-token");
   });
 
-  it("clears legacy tokens on logout as well", () => {
-    window.sessionStorage.setItem(LEGACY_ACCESS_TOKEN_KEY, "legacy-access");
-    window.sessionStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, "legacy-refresh");
-
-    clearTokens();
-
-    expect(window.sessionStorage.getItem(LEGACY_ACCESS_TOKEN_KEY)).toBeNull();
-    expect(window.sessionStorage.getItem(LEGACY_REFRESH_TOKEN_KEY)).toBeNull();
+  it("uses the final duplicate-name value, matching the API cookie parser", () => {
+    const descriptor = Object.getOwnPropertyDescriptor(document, "cookie");
+    Object.defineProperty(document, "cookie", {
+      configurable: true,
+      get: () => "clara_csrf_token=stale; clara_csrf_token=fresh",
+    });
+    try {
+      expect(getCsrfToken()).toBe("fresh");
+    } finally {
+      if (descriptor) Object.defineProperty(document, "cookie", descriptor);
+      else delete (document as { cookie?: string }).cookie;
+    }
   });
 });

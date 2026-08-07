@@ -98,11 +98,24 @@ export function setRole(role: UserRole): void {
 export function getCsrfToken(): string | null {
   if (!isBrowser()) return null;
   const cookies = document.cookie ? document.cookie.split(";") : [];
+  // A browser can retain an older host-only cookie after a deployment changes
+  // the configured cookie domain.  Requests send duplicate-name cookies in
+  // order and Starlette's parser retains the final value.  Mirror that
+  // last-value behaviour here so the header and the cookie observed by the
+  // CSRF middleware stay paired; returning the first value caused a spurious
+  // 403 on profile saves for affected existing sessions.
+  let token: string | null = null;
   for (const chunk of cookies) {
     const [rawKey, ...rest] = chunk.trim().split("=");
     if (rawKey !== CSRF_COOKIE_NAME) continue;
     const value = rest.join("=");
-    return value ? decodeURIComponent(value) : null;
+    if (!value) continue;
+    try {
+      token = decodeURIComponent(value);
+    } catch {
+      // A malformed legacy cookie must not prevent a later valid token from
+      // being selected; the normal CSRF recovery path will refresh if needed.
+    }
   }
-  return null;
+  return token;
 }
