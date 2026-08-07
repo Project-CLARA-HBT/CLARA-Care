@@ -165,6 +165,13 @@ Validation: focused Research tests pass 31/31; lint passes with the seven tracke
 
 Validation: focused auth-store/http-client/PHR tests pass 10/10; lint passes with the seven tracked pre-existing hook warnings. Rollback: revert the client reader and its regression test.
 
+## Council empty-state E2E repair — 2026-08-07
+
+- [x] Replaced the latest-case 404 request in the three Council result/workspace entry points with an owner-scoped one-item list query; an empty history is now a normal empty state rather than an API error.
+- [x] Clears an obsolete locally remembered case id when no owner-scoped case remains; no other user's data is requested or inferred.
+
+Validation: focused Council tests pass 10/10 and web type-check passes. Rollback: revert the web-only empty-state adapter.
+
 Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.
 
 ## Today real-data state follow-up — 2026-08-06

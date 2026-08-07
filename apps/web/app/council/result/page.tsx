@@ -14,6 +14,7 @@ import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-tex
 import {
   CouncilCaseRecord,
   buildSnapshotFromCouncilCase,
+  clearActiveCouncilCaseId,
   getActiveCouncilCaseId,
   getCouncilCase,
   getLatestCouncilCase,
@@ -46,14 +47,19 @@ export default function CouncilResultPage() {
     const load = async () => {
       setError("");
       try {
-        let loaded: CouncilCaseRecord;
+        let loaded: CouncilCaseRecord | null;
         if (queryCaseId) {
           loaded = await getCouncilCase(queryCaseId);
         } else {
           loaded = await getLatestCouncilCase();
         }
-        setActiveCouncilCaseId(loaded.id);
-        setCaseItem(loaded);
+        if (loaded) {
+          setActiveCouncilCaseId(loaded.id);
+          setCaseItem(loaded);
+        } else {
+          clearActiveCouncilCaseId();
+          setCaseItem(null);
+        }
       } catch (cause) {
         setError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }

@@ -70,6 +70,7 @@
 - Medicines consent screen checkpoint: aligned the real consent-required gate, legal links, disabled action and retry/error boundary with the supplied dark palette. The acceptance mutation and its CSRF/consent gating are unchanged. Focused medicines tests pass 7/7; rollback is component-only.
 - Research workspace screen checkpoint: aligned live frame/search/synthesis/watch states, including the clarification boundary and result rail, with the supplied tonal card system. Source selection/upload/job execution and role routing are unchanged. Focused Research tests pass 31/31; lint only reports the seven tracked pre-existing Hook warnings. Rollback is component-only.
 - CSRF profile-save repair: browser production smoke verified login → `/phr/identity` → save and the API's expected missing-header 403 / matching-header 200 boundary. The web cookie reader now selects the final duplicate-name CSRF cookie, matching the server parser after a cookie-domain migration; a regression test protects this stale-session case. No CSRF exemption or backend policy was added.
+- Council empty-state E2E repair: an owner with no Council case previously caused the client to request `/council/cases/latest`, receive its expected 404 and render that as a loading error. The three Council entry views now request one owner-scoped list item and render a normal empty state when it is absent; stale local case selection is cleared. Focused Council tests pass 10/10 and type-check passes.
 
 ### Checkpoint template
 

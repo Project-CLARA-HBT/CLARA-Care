@@ -17,6 +17,7 @@ import {
   CouncilStreamStage,
   attachCouncilEvidenceSnapshot,
   buildSnapshotFromCouncilCase,
+  clearActiveCouncilCaseId,
   getActiveCouncilCaseId,
   getCouncilCase,
   listCouncilEvidenceAttachments,
@@ -383,14 +384,19 @@ export default function CouncilPage() {
     const load = async () => {
       setLoadError("");
       try {
-        let loaded: CouncilCaseRecord;
+        let loaded: CouncilCaseRecord | null;
         if (queryCaseId) {
           loaded = await getCouncilCase(queryCaseId);
         } else {
           loaded = await getLatestCouncilCase();
         }
-        setActiveCouncilCaseId(loaded.id);
-        setCaseItem(loaded);
+        if (loaded) {
+          setActiveCouncilCaseId(loaded.id);
+          setCaseItem(loaded);
+        } else {
+          clearActiveCouncilCaseId();
+          setCaseItem(null);
+        }
       } catch (cause) {
         setLoadError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }

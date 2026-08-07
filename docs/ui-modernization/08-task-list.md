@@ -21,7 +21,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-13 | FR-MED-001–004 | Medicines first-run/CTA hierarchy and distinct model copy. | Personal | UI-03/UI-04 | medicines pages/components | flow/safety E2E | done |
 | UI-14 | FR-CHAT-001–005 | Chat two-column answer-first disclosure and role-gated diagnostics. | Chat | UI-04/UI-06 | `app/chat/_v2/*` | parity/privacy/citation/E2E | done |
 | UI-15 | FR-EVID-001, FR-RES-001 | Evidence step disclosure and Source Hub browse/sync split. | Chat | UI-14 | evidence/research routes | release-gate/citation tests | pending |
-| UI-16 | FR-COUNCIL-001–003 | Council case context, result hierarchy and canonical deep-well flow canvas. | Clinical | UI-04/UI-06 | council routes/components | safety/role/E2E | in_progress |
+| UI-16 | FR-COUNCIL-001–003 | Council case context, result hierarchy, canonical deep-well flow canvas and first-use empty state without false API failure. | Clinical | UI-04/UI-06 | council routes/components | safety/role/E2E | in_progress |
 | UI-17 | FR-SCRIBE-001–003 | Canonical Scribe stages, consent and sign semantics. | Clinical | UI-04/UI-06 | scribe page/components/libs | workflow/safety/E2E | in_progress |
 | UI-18 | NFR-PERF-001/002 | Add bundle budget, console/hydration, visual and axe E2E. | Test | UI-03/UI-07 | scripts, `e2e/*`, config | four viewport matrix | done |
 | UI-19 | NFR-I18N-001, NFR-RESP-001, NFR-SEC-001 | Sweep labels/errors/aria, typography, mobile/tablet/theme and browser cookie-auth CSRF regression paths. | Test | UI-08–17 | catalog/pages/styles/auth-store, `12-design-route-map.md` | i18n/terminology/a11y/visual/CSRF smoke | in_progress |

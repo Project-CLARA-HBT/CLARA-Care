@@ -855,9 +855,16 @@ export async function listCouncilCases(limit = 20, offset = 0): Promise<CouncilC
   return response.data;
 }
 
-export async function getLatestCouncilCase(): Promise<CouncilCaseRecord> {
-  const response = await api.get<CouncilCaseRecord>("/council/cases/latest");
-  return response.data;
+/**
+ * Returns the newest owner-scoped case, if one exists. An empty case history is
+ * a valid first-use state, not an upstream error; using the list endpoint keeps
+ * the workspace quiet instead of issuing a visible 404 on every first visit.
+ */
+export async function getLatestCouncilCase(): Promise<CouncilCaseRecord | null> {
+  const response = await api.get<CouncilCaseListResponse>("/council/cases", {
+    params: { limit: 1, offset: 0 },
+  });
+  return response.data.items[0] ?? null;
 }
 
 export async function getCouncilCase(caseId: number): Promise<CouncilCaseRecord> {
