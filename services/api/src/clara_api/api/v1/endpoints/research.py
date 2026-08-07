@@ -1844,6 +1844,34 @@ def _compact_text(value: Any, *, limit: int = 160) -> str:
     return f"{text[:limit].rstrip()}..."
 
 
+def _age_band(date_of_birth: Any) -> str:
+    """Return a coarse age band for personalised research prompts.
+
+    Deep/DeepBeta only need clinically relevant context.  Names and exact birth
+    dates are neither necessary nor appropriate to send to an LLM provider, so
+    retain the useful life-stage signal without forwarding a direct identifier.
+    """
+
+    if date_of_birth is None:
+        return ""
+    try:
+        today = datetime.now(tz=UTC).date()
+        age = today.year - date_of_birth.year - (
+            (today.month, today.day) < (date_of_birth.month, date_of_birth.day)
+        )
+    except (AttributeError, TypeError, ValueError):
+        return ""
+    if age < 0:
+        return ""
+    if age < 18:
+        return "under_18"
+    if age < 40:
+        return "18_39"
+    if age < 65:
+        return "40_64"
+    return "65_plus"
+
+
 def _build_personal_context_payload(
     db: Session,
     *,
@@ -1863,13 +1891,11 @@ def _build_personal_context_payload(
         conditions = _as_dict_list(profile.conditions_json)
         profile_medications = _as_dict_list(profile.medications_json)
         profile_payload = {
-            "full_name": profile.full_name or "",
-            "date_of_birth": profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+            # Data minimisation: personal-mode synthesis receives only the
+            # life-stage and clinical fields it can legitimately use. Never
+            # relay direct identifiers, free-text notes, or an exact DOB.
+            "age_band": _age_band(profile.date_of_birth),
             "gender": profile.gender or "",
-            "blood_type": profile.blood_type or "",
-            "height_cm": profile.height_cm,
-            "weight_kg": profile.weight_kg,
-            "notes": profile.notes or "",
         }
 
     cabinet = db.execute(

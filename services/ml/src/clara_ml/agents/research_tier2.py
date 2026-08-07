@@ -816,23 +816,17 @@ def _build_personal_context_suffix(
 
     profile_lines: list[str] = []
     if profile:
-        full_name = _compact_personal_text(profile.get("full_name"), limit=80)
-        date_of_birth = _compact_personal_text(profile.get("date_of_birth"), limit=20)
+        age_band = _compact_personal_text(profile.get("age_band"), limit=16)
         gender = _compact_personal_text(profile.get("gender"), limit=32)
-        blood_type = _compact_personal_text(profile.get("blood_type"), limit=16)
-        if full_name:
-            profile_lines.append(full_name)
-        if date_of_birth:
-            profile_lines.append(f"DOB: {date_of_birth}")
+        if age_band:
+            profile_lines.append(f"Age band: {age_band}")
         if gender:
             profile_lines.append(f"Gender: {gender}")
-        if blood_type:
-            profile_lines.append(f"Blood: {blood_type}")
 
     if answer_language == "en":
         lines = [
             "### Personal Context (PHR + Medicine Cabinet)",
-            "Use this context to personalize recommendations, contraindications, and monitoring.",
+            "Use only this consented clinical context to surface relevant cautions, interactions, and questions to discuss. Do not infer a diagnosis, prescribe, or change a personal dose.",
         ]
         if profile_lines:
             lines.append(f"- Profile: {', '.join(profile_lines)}")
@@ -847,7 +841,7 @@ def _build_personal_context_suffix(
     else:
         lines = [
             "### Bối Cảnh Cá Nhân (PHR + Tủ Thuốc)",
-            "Dùng ngữ cảnh này để cá thể hóa khuyến nghị, chống chỉ định và kế hoạch theo dõi.",
+            "Chỉ dùng ngữ cảnh lâm sàng đã có đồng ý này để nêu lưu ý, tương tác và câu hỏi cần trao đổi. Không suy ra chẩn đoán, kê đơn hoặc thay đổi liều cá nhân.",
         ]
         if profile_lines:
             lines.append(f"- Hồ sơ: {', '.join(profile_lines)}")
