@@ -383,9 +383,6 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
         # non-authoritative Encoder-SLM signal into a primary LLM route.
         raise ValueError("encoder_shadow_requires_dedicated_registry_adapter")
     registry_enabled = _bool(settings, "model_registry_enabled", True)
-    rollback_requested = registry_enabled and _bool(
-        settings, "model_registry_force_rollback", False
-    )
     legacy_model = _text(settings, "deepseek_model")
     if not legacy_model:
         raise ValueError("deepseek_model_required")
@@ -397,21 +394,19 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
     if task_routing_enabled and contract.model_profile == "flash" and flash_model:
         primary_model = flash_model
         model_version = FLASH_MODEL_VERSION
-        fallback_model = pro_model if pro_model != primary_model else ""
     elif task_routing_enabled:
         primary_model = pro_model
         model_version = PRIMARY_MODEL_VERSION
-        fallback_model = flash_model if flash_model != primary_model else ""
     else:
         primary_model = legacy_model
         model_version = PRIMARY_MODEL_VERSION
-        fallback_model = _text(settings, "deepseek_fallback_model")
-    rollback_model = _text(settings, "model_registry_rollback_model")
-    if not rollback_model:
-        rollback_model = _text(settings, "deepseek_fallback_model")
-
-    rollback_applied = rollback_requested and bool(rollback_model)
-    model = rollback_model if rollback_applied else primary_model
+    # A failed model call must be surfaced to the caller, never silently
+    # retried against a second model or replaced by an operator rollback.  That
+    # keeps provenance truthful and prevents a lower-capability response from
+    # being mistaken for the configured route in a medical workflow.
+    fallback_model = ""
+    rollback_applied = False
+    model = primary_model
     selection = ModelSelection(
         task=task,
         provider="deepseek",
@@ -425,7 +420,7 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
             if rollback_applied
             else (contract.model_profile if task_routing_enabled else "legacy")
         ),
-        fallback_model="" if rollback_applied else fallback_model,
+        fallback_model=fallback_model,
         rollback_applied=rollback_applied,
         registry_enabled=registry_enabled,
     )

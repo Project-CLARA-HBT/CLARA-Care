@@ -462,8 +462,15 @@ def _detect_legal_guard_violation(query: str, *, channel: str = "chat") -> str |
             "diagnostic accuracy",
             "diagnostic criteria",
             "diagnostic workup",
+            "diagnostic test",
+            "diagnostic evaluation",
+            "test sensitivity",
+            "test specificity",
             "evidence for diagnosis",
             "guideline for diagnosis",
+            "xet nghiem chan doan",
+            "danh gia chan doan",
+            "do chinh xac chan doan",
         )
     )
     personalized_diagnosis = any(
