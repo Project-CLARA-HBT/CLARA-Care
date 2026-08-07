@@ -77,5 +77,5 @@ bằng chứng rằng tính năng lâm sàng đã được xác nhận.
 ## Triển khai
 
 - `21a56746` (CSRF) đã được build/deploy trước audit Council.
-- `fc6062a5` (Council empty state) đang build web độc lập tại thời điểm ghi báo
-  cáo; chỉ xác nhận hoàn tất sau khi log Docker ghi `Container clara-app-web-1 Started`.
+- `fc6062a5` (Council empty state) đã build, recreate container và public
+  health check thành công. Smoke sau deploy trên `/council` không còn API 4xx.
