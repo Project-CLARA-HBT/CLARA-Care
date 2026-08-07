@@ -2255,6 +2255,17 @@ def _empty_job_progress() -> dict[str, Any]:
     }
 
 
+def _safe_failure_stage(progress: Any) -> str:
+    """Expose a bounded pipeline stage in failure telemetry, never upstream text."""
+
+    if not isinstance(progress, dict):
+        return "unknown"
+    value = str(progress.get("active_stage") or "").strip().lower()
+    if not value or not re.fullmatch(r"[a-z0-9_]{1,64}", value):
+        return "unknown"
+    return value
+
+
 def _stage_from_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     stage_map: dict[str, dict[str, Any]] = {}
     for event in events:
@@ -3136,7 +3147,14 @@ def _run_research_job(job_id: str) -> None:
                 job.status = "failed"
                 # Do not persist a provider exception verbatim: SDKs and
                 # upstream gateways may echo prompt content or request details.
-                job.error_text = f"research_job_failed:{exc.__class__.__name__}"
+                # Keep the error PII-safe while making production failures
+                # actionable.  A bounded execution stage distinguishes a
+                # timeout during retrieval from one during report synthesis;
+                # provider text, query text and prompt content are never kept.
+                job.error_text = (
+                    f"research_job_failed:{exc.__class__.__name__}:"
+                    f"{_safe_failure_stage(job.progress_json)}"
+                )
                 job.completed_at = datetime.now(tz=UTC)
                 job.worker_id = None
                 job.lease_heartbeat_at = None
