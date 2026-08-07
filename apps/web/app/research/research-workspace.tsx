@@ -196,8 +196,8 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
 
   return (
     <div className="min-h-[100dvh] bg-[var(--bg-canvas)] px-3 py-5 text-[var(--text-primary)] sm:px-6 lg:px-10 lg:py-8">
-      <div className="mx-auto max-w-[1260px] space-y-5">
-        <header className="overflow-hidden rounded-[1.75rem] border border-[color:var(--shell-border)] bg-[linear-gradient(135deg,var(--surface-panel),var(--surface-brand-soft))] p-5 shadow-sm sm:p-7">
+      <div className="mx-auto max-w-[1120px] space-y-8">
+        <header className="overflow-hidden rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-6 sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-brand)]">
@@ -223,7 +223,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold ${tab === id ? "bg-[var(--brand-600)] text-white" : "text-[var(--text-secondary)] hover:bg-[var(--surface-panel)]"}`}
+                className={`whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold ${tab === id ? "bg-[#0053db] text-[#cdd7ff]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"}`}
               >
                 {label}
               </button>
@@ -235,7 +235,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
           onSubmit={run}
           className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]"
         >
-          <section className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm sm:p-6">
+          <section className="rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-6">
             {tab === "frame" ? (
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
@@ -249,7 +249,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                   onChange={(e) => setQuestion(e.target.value)}
                   rows={5}
                   placeholder={t(language, "research.frame.placeholder")}
-                  className="mt-4 w-full resize-y rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm leading-6 outline-none focus:border-[var(--brand-500)] focus:ring-2 focus:ring-blue-500/15"
+                  className="mt-4 w-full resize-y rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-sm leading-6 outline-none focus:border-[#a4c9ff] focus:ring-2 focus:ring-[#a4c9ff]/15"
                 />
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {[
@@ -273,14 +273,14 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                   ))}
                 </div>
                 {questions.length ? (
-                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm font-bold text-amber-900">
+                  <div className="mt-5 rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4">
+                    <p className="text-sm font-bold text-[var(--status-warn-text)]">
                       {t(language, "research.clarify.title")}
                     </p>
                     {questions.map((item) => (
                       <label
                         key={item.id}
-                        className="mt-3 block text-sm text-amber-950"
+                        className="mt-3 block text-sm text-[var(--status-warn-text)]"
                       >
                         <span className="font-semibold">{item.question}</span>
                         <input
@@ -291,7 +291,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                               [item.id]: e.target.value,
                             }))
                           }
-                          className="mt-1.5 min-h-10 w-full rounded-xl border border-amber-300 bg-white px-3 outline-none"
+                          className="mt-1.5 min-h-10 w-full rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--bg-elev-2)] px-3 text-[var(--text-primary)] outline-none"
                         />
                       </label>
                     ))}
@@ -419,14 +419,14 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
               <button
                 type="submit"
                 disabled={isRunning || clarifyPending}
-                className="min-h-11 rounded-xl bg-[var(--brand-600)] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-h-11 rounded-lg bg-[#60a5fa] px-5 text-sm font-bold text-[#003a6b] transition hover:bg-[#a4c9ff] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isRunning ? t(language, "research.action.running") : t(language, "research.action.start")}
               </button>
             </div>
           </section>
           <aside className="space-y-4">
-            <div className="rounded-[1.5rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+            <div className="rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-6">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 {t(language, "research.manifest.eyebrow")}
               </p>
@@ -455,7 +455,7 @@ export default function ResearchWorkspace({ initialTab = "frame" }: Props) {
                 </div>
               </dl>
             </div>
-            <div className="rounded-[1.5rem] border border-blue-200 bg-blue-50 p-5 text-sm leading-6 text-blue-950">
+            <div className="rounded-[14px] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-5 text-sm leading-6 text-[var(--text-secondary)]">
               <p className="font-bold">{t(language, "research.guard.title")}</p>
               <p className="mt-2">
                 {t(language, "research.guard.description")}

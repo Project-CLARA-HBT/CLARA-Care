@@ -150,6 +150,13 @@ Validation: `npm run lint` passes with the seven tracked pre-existing hook warni
 
 Validation: focused Medicines tests pass 7/7. Rollback: component-only revert.
 
+## Research workspace screen checkpoint — 2026-08-07
+
+- [x] Aligned the live Research Workspace's frame/search/synthesis/watch states: page width, stage tabs, form focus, clarification boundary, results rail and primary action now use the supplied tonal card system instead of a gradient/light-blue treatment.
+- [x] Source selection, upload, job execution, clarification and result handling remain unchanged and are still available only through their existing route/role contract.
+
+Validation: focused Research tests pass 31/31; lint passes with the seven tracked pre-existing hook warnings. Rollback: component-only revert.
+
 Validation: type-check, lint (existing warnings only), route matrix 79/79, i18n 3,271 pairs, full unit suite 92 files/701 tests, production build 91 routes, bundle +0.29%, and dashboard E2E 8/8. Rollback is a single dashboard checkpoint revert; there is no schema migration.
 
 ## Today real-data state follow-up — 2026-08-06
