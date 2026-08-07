@@ -41,7 +41,8 @@ def _login(client: httpx.Client) -> str:
 def _summary(result: dict[str, Any], *, mode: str, guard_expected: bool) -> dict[str, Any]:
     citations = result.get("citations") if isinstance(result.get("citations"), list) else []
     quality = result.get("quality_gate") if isinstance(result.get("quality_gate"), dict) else {}
-    model = str(result.get("model_used") or "")
+    metadata = result.get("metadata") if isinstance(result.get("metadata"), dict) else {}
+    model = str(result.get("model_used") or metadata.get("model_used") or "")
     blocked = str(result.get("policy_action") or "") == "block" or model.endswith("guard-v1")
     return {
         "mode_fidelity": result.get("research_mode") == mode,
@@ -49,7 +50,14 @@ def _summary(result: dict[str, Any], *, mode: str, guard_expected: bool) -> dict
         "citation_count": len(citations),
         "verification_present": bool(result.get("verification_matrix") or result.get("verification")),
         "quality_gate_passed": bool(quality.get("passed")),
+        "quality_reasons": quality.get("reasons") if isinstance(quality.get("reasons"), list) else [],
+        "verification_state": (
+            quality.get("verifier", {}).get("state")
+            if isinstance(quality.get("verifier"), dict)
+            else None
+        ),
         "degraded": bool(result.get("degraded")),
+        "degraded_reason": str(result.get("degraded_reason") or ""),
         "fallback_used": bool(result.get("fallback_used") or result.get("fallback")),
         "guard_expected": guard_expected,
         "guard_observed": blocked,
