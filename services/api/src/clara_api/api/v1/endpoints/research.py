@@ -2874,7 +2874,11 @@ def _invoke_ml_tier2_with_progress(
     headers: dict[str, str] = {}
     if settings.ml_internal_api_key.strip():
         headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
-    timeout_seconds = max(settings.ml_service_timeout_seconds * 3.0, 480.0)
+    # The async job boundary must be longer than one ML synthesis attempt, but
+    # it must also terminate a stalled dependency instead of pinning a worker
+    # for eight minutes.  Failures are surfaced as failed jobs; no response is
+    # fabricated or retried through another model.
+    timeout_seconds = max(settings.ml_service_timeout_seconds * 1.5, 30.0)
     started = datetime.now(tz=UTC)
     request_kwargs: dict[str, Any] = {"json": ml_payload, "timeout": timeout_seconds}
     if headers:
