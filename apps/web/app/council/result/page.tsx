@@ -263,7 +263,7 @@ export default function CouncilResultPage() {
                 onClick={() => {
                   router.push("/council/new");
                 }}
-                className="inline-flex min-h-[44px] items-center rounded-xl border border-red-300/55 bg-red-100/80 px-4 text-sm font-semibold text-red-800 dark:border-red-700/45 dark:bg-red-950/30 dark:text-red-200"
+                className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 text-sm font-semibold text-[var(--status-danger-text)] transition-colors hover:bg-[#93000a]/25"
               >
                 {t(language, "council.result.openNewCase")}
               </button>
