@@ -154,7 +154,7 @@ export default function CouncilNewSpecialistsPage() {
       <div className="space-y-5">
         <CouncilWorkspaceNav />
 
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             {t(language, "council.step", { step: 2, id: caseItem?.id ?? "--" })}
           </p>
@@ -181,7 +181,7 @@ export default function CouncilNewSpecialistsPage() {
                   key={option.id}
                   className={`flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
                     checked
-                      ? "border-sky-400 bg-sky-100 text-sky-900"
+                      ? "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-muted)]"
                   } ${disableUnchecked ? "opacity-60" : "cursor-pointer"}`}
                 >
@@ -219,7 +219,7 @@ export default function CouncilNewSpecialistsPage() {
             type="button"
             onClick={() => void onSaveAndNext()}
             disabled={isSaving || !caseItem}
-            className="inline-flex min-h-[44px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
             {isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 3 })}
           </button>

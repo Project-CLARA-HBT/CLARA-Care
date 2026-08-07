@@ -60,13 +60,13 @@ const bodyTextClass = "text-[color:var(--text-primary)]";
 const secondaryTextClass = "text-[color:var(--text-secondary)]";
 const mutedTextClass = "text-[color:var(--text-muted)]";
 const primaryButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-4 py-2 text-sm font-semibold text-[color:var(--button-primary-text)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)]";
+  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-primary)]";
 const secondaryButtonClass =
   "min-h-11 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:opacity-60";
 const dangerButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--danger-500)] bg-[color:var(--danger-500)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95";
+  "min-h-11 rounded-lg border border-[color:var(--status-danger-border)] bg-[#93000a] px-4 py-2 text-sm font-semibold text-[#ffdad6] transition hover:opacity-90";
 const transcriptInputClass =
-  "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] outline-none transition focus:border-[color:var(--brand-600)] focus:bg-[color:var(--surface-panel)] focus:ring-4 focus:ring-[color:var(--surface-brand-soft)]";
+  "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition focus:border-[color:var(--brand-primary)] focus:bg-[var(--surface-panel)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15";
 
 function formatDate(language: UILanguage, value: string): string {
   const date = new Date(value);
@@ -1086,10 +1086,10 @@ export default function ScribePage() {
                 </div>
 
                 <div className={panelClass}>
-                  <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3 dark:border-sky-800">
+                  <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3">
                     <h3 className={sectionTitleClass}>{copy("scribe.transcript.liveTitle")}</h3>
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--brand-700)] dark:text-sky-100">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[color:var(--brand-600)] animate-pulse" : "bg-slate-500"}`} />
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-brand)]">
+                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[var(--brand-primary)] animate-pulse" : "bg-[var(--text-muted)]"}`} />
                       {isRecording ? copy("scribe.status.recording") : copy("scribe.status.stopped")}
                     </div>
                   </div>
@@ -1104,7 +1104,7 @@ export default function ScribePage() {
                             {row.timestamp}
                           </span>
                           <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[color:var(--brand-600)] dark:text-sky-100">{row.speaker}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-brand)]">{row.speaker}</p>
                             <p className={`text-sm leading-6 ${secondaryTextClass}`}>{stripTelemetryLabels(row.text)}</p>
                           </div>
                         </div>
@@ -1112,7 +1112,7 @@ export default function ScribePage() {
                     )}
                   </div>
 
-                  <div className="border-t border-[color:var(--shell-border)] p-4 dark:border-sky-800">
+                  <div className="border-t border-[color:var(--shell-border)] p-4">
                     <textarea
                       value={transcriptDraft}
                       onChange={(event) => setTranscriptDraft(event.target.value)}
@@ -1153,7 +1153,7 @@ export default function ScribePage() {
                   <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 clara-scrollbar">
                     {soapSectionLabels.map((item) => (
                       <article key={item.key} className={`${softPanelClass} p-3`}>
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">{item.title}</p>
                         <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
                           {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || copy("scribe.noData")}
                         </p>

@@ -81,28 +81,28 @@ function severityAccentClass(severity: string): string {
 }
 
 function trustScoreClass(score: number | null): string {
-  if (score === null || !Number.isFinite(score)) return "border-slate-200 bg-slate-100 text-slate-700";
-  if (score >= 85) return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (score >= 70) return "border-amber-200 bg-amber-50 text-amber-700";
-  return "border-red-200 bg-red-50 text-red-700";
+  if (score === null || !Number.isFinite(score)) return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
+  if (score >= 85) return "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
+  if (score >= 70) return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
+  return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
 }
 
 function driftRiskClass(value: string): string {
   const normalized = value.toLowerCase();
-  if (normalized === "low" || normalized === "thap") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (normalized === "low" || normalized === "thap") return "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
   if (normalized === "medium" || normalized === "trung binh" || normalized === "trung bình") {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
   }
   if (normalized === "high" || normalized === "cao" || normalized === "critical") {
-    return "border-red-200 bg-red-50 text-red-700";
+    return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
   }
-  return "border-slate-200 bg-slate-100 text-slate-700";
+  return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
 }
 
 function acknowledgedClass(value: boolean | null): string {
-  if (value === true) return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (value === false) return "border-amber-200 bg-amber-50 text-amber-700";
-  return "border-slate-200 bg-slate-100 text-slate-700";
+  if (value === true) return "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
+  if (value === false) return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
+  return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
 }
 
 function barWidth(value: number | null, max: number): string {
@@ -276,44 +276,44 @@ export default function EcosystemCenterPage() {
             {summaryCards.map((card) => (
               <article
                 key={card.label}
-                className={`rounded-xl border bg-white/95 p-3 text-slate-900 ${
+                className={`rounded-[14px] border border-t-[#2A3950] bg-[var(--surface-panel)] p-3 text-[var(--text-primary)] ${
                   card.tone === "danger"
-                    ? "border-red-200"
+                    ? "border-[color:var(--status-danger-border)]"
                     : card.tone === "warning"
-                      ? "border-amber-200"
+                      ? "border-[color:var(--status-warn-border)]"
                       : card.tone === "good"
-                        ? "border-emerald-200"
-                        : "border-slate-200"
+                        ? "border-[color:var(--brand-primary)]/30"
+                        : "border-[color:var(--shell-border)]"
                 }`}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{card.label}</p>
-                <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">{card.value}</p>
-                <p className="mt-2 text-xs text-slate-600">{card.helper}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{card.label}</p>
+                <p className="mt-1 text-3xl font-semibold tracking-tight text-[var(--text-primary)]">{card.value}</p>
+                <p className="mt-2 text-xs text-[var(--text-secondary)]">{card.helper}</p>
               </article>
             ))}
           </div>
         </section>
 
         {isLoading ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-secondary)]">
             {copy("ecosystem.loading")}
           </div>
         ) : null}
 
         {forbidden ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-4 py-3 text-sm text-[var(--status-warn-text)]">
             {copy("ecosystem.accessDenied")}
           </div>
         ) : null}
 
         {error && !forbidden ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+          <div className="rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger-text)]">{error}</div>
         ) : null}
 
         {!isLoading && !forbidden ? (
           <>
             <div className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
-              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{copy("ecosystem.partnerHealth.eyebrow")}</p>
@@ -420,7 +420,7 @@ export default function EcosystemCenterPage() {
                 )}
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{copy("ecosystem.dataTrust.eyebrow")}</p>
                   <h3 className="mt-1 text-base font-semibold text-slate-900">{copy("ecosystem.dataTrust.title")}</h3>
@@ -526,7 +526,7 @@ export default function EcosystemCenterPage() {
               </section>
             </div>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{copy("ecosystem.alerts.eyebrow")}</p>
