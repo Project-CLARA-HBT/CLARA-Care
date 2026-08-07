@@ -47,6 +47,19 @@ Artifact: `artifacts/research-benchmarks/production-2026-08-08-run2-partial.json
 
 Therefore this tuning **did not fix DeepBeta**. It demonstrates that the bottleneck is not only the optional parallel reasoning node. No claim of DeepBeta readiness is justified.
 
+## Smoke test sau tối ưu DeepBeta
+
+Sau benchmark trên, luồng DeepBeta được điều chỉnh thêm tại commit `9abf8daa`, `be3ff719` và `b23429d5`:
+
+- Clean-body synthesis tôn trọng trần 2.048 tokens thay vì ép tối thiểu 4.096 tokens.
+- Không cưỡng bức GraphRAG ở DeepBeta; GraphRAG chỉ chạy khi deployment đã bật và graph store sẵn sàng. Hybrid retrieval + reranking vẫn giữ nguyên.
+- Bỏ lượt tạo dossier trùng lặp ở RAG pipeline. DeepBeta dùng retrieval-only làm draft nội bộ và chỉ thực hiện một lượt report synthesis có citation.
+- Personal mode chỉ chuyển bối cảnh lâm sàng đã được đồng ý và tối thiểu cần thiết: nhóm tuổi, giới tính, dị ứng, bệnh nền và thuốc. Tên, ngày sinh chính xác và ghi chú tự do không đi qua boundary API → ML.
+
+Một smoke test đơn luồng bằng prompt giáo dục không-PHI “Explain sensitivity and specificity in diagnostic test evaluation.” hoàn tất sau **109.70 s**, có **9 citations**, có answer, `fallback_used=false`. Quality gate vẫn không pass và response được gắn `degraded=true`; vì vậy kết quả này chỉ chứng minh đường chạy không timeout và không fallback, **không** chứng minh chất lượng lâm sàng hay độ sẵn sàng phát hành. Mốc đối chiếu trước tối ưu là hai ca tương đương hoàn tất trong 156–168 s; đây không phải so sánh có đối chứng và không được diễn giải thành SLA.
+
+Từ commit `2474de5f`, job thất bại cũng lưu `research_job_failed:<exception>:<stage>` với stage có whitelist ký tự, không lưu prompt, PII hay lỗi provider nguyên văn. Điều này phục vụ phân biệt retrieval/report timeout trong lần benchmark kế tiếp.
+
 ## Required next engineering work
 
 1. Add structured failure reason from ML to the job result (currently the benchmark receives only `RuntimeError`); distinguish API watchdog, model timeout, retrieval connector delay and verifier/report stage.
