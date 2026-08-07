@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -87,9 +88,13 @@ def _run_case(client: httpx.Client, token: str, case: tuple[str, str, bool], mod
             created = client.post("http://127.0.0.1:8000/api/v1/research/tier2/jobs", headers=headers, json=payload)
             created.raise_for_status()
             job_id = str(created.json()["job_id"])
-            deadline = time.monotonic() + 180
+            deadline = time.monotonic() + 195
             while True:
-                status = client.get(f"http://127.0.0.1:8000/api/v1/research/tier2/jobs/{job_id}", headers=headers)
+                status = client.get(
+                    f"http://127.0.0.1:8000/api/v1/research/tier2/jobs/{job_id}",
+                    headers=headers,
+                    timeout=15,
+                )
                 status.raise_for_status()
                 job = status.json()
                 if job.get("status") in {"completed", "failed", "cancelled"}:
@@ -125,9 +130,18 @@ def main() -> None:
     with httpx.Client(timeout=200) as client:
         token = _login(client)
         for mode in MODES:
-            for case in CASES:
-                records.append(_run_case(client, token, case, mode))
-                _write(records)
+            if mode == "fast":
+                for case in CASES:
+                    records.append(_run_case(client, token, case, mode))
+                    _write(records)
+                continue
+            # A bounded four-user workload exposes contention while preserving
+            # an individual latency record for every case.
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = [executor.submit(_run_case, client, token, case, mode) for case in CASES]
+                for future in as_completed(futures):
+                    records.append(future.result())
+                    _write(records)
     print(OUTPUT_PATH.read_text(encoding="utf-8"))
 
 
