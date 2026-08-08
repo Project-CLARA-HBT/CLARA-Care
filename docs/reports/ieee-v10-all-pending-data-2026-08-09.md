@@ -1,6 +1,6 @@
 # IEEE v10 — số liệu đã chạy và các mục còn thiếu
 
-Ngày chạy: 2026-08-09. Revision evaluator: `c406c813d6f53caa10f87e3189da1c622a2cd223`.
+Ngày chạy: 2026-08-09. Revision evaluator: `c6fa95c9081bd881059c24588701db504e7cc513`.
 Worktree tại thời điểm chạy là **dirty** (`git_status_sha256`
 `04f1fac15e30ca03cca5bfdd108e3a5720bf3db443756191feeb99746074d2d3`),
 vì vậy đây là evidence có provenance rõ ràng nhưng chưa phải submission build
@@ -11,11 +11,11 @@ validation, clinical safety, diagnostic accuracy, hay hiệu quả trên bệnh 
 
 | Cohort/run | Artifact cuối | CSV/JSON gốc |
 |---|---|---|
-| Q2 synthetic | `artifacts/glhs-q2/2026-08-09-q2-frozen-c406c813-synthetic/` | `cases.csv`, `outcomes.csv`, `per_run.csv`, `baseline_comparison.csv`, `cost_of_success.csv`, `summary.json` |
-| MIMIC-IV Demo-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c406c813-mimic-iv-demo/` | `external_cases.csv`, `external_outcomes.csv`, `external_baseline_comparison.csv`, `summary.json` |
-| MIMIC-IV-ED Demo-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c406c813-mimic-iv-ed-demo/` | cùng cấu trúc artifact |
-| Synthea FHIR STU3-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c406c813-synthea-stu3/` | cùng cấu trúc artifact |
-| Model arm | `artifacts/glhs-q2/2026-08-09-q2-model-arm-6c8a22d8/` | `model_per_run.csv`, `model_arm_contract.json`, `integrated/model_arm_by_experiment.csv`, `integrated/model_arm_summary.json` |
+| Q2 synthetic | `artifacts/glhs-q2/2026-08-09-q2-frozen-c6fa95c9-synthetic/` | `cases.csv`, `outcomes.csv`, `per_run.csv`, `baseline_comparison.csv`, `cost_of_success.csv`, `summary.json` |
+| MIMIC-IV Demo-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c6fa95c9-mimic-iv-demo/` | `external_cases.csv`, `external_outcomes.csv`, `external_baseline_comparison.csv`, `summary.json` |
+| MIMIC-IV-ED Demo-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c6fa95c9-mimic-iv-ed-demo/` | cùng cấu trúc artifact |
+| Synthea FHIR STU3-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c6fa95c9-synthea-stu3/` | cùng cấu trúc artifact |
+| Model arm | `artifacts/glhs-q2/2026-08-09-q2-model-arm-acd5bbe1/` | `model_per_run.csv`, `model_arm_contract.json`, `integrated/model_arm_by_experiment.csv`, `integrated/model_arm_summary.json` |
 
 Mỗi artifact Q2 có `evidence-manifest.json`, policy/oracle/relevance/holdout
 manifest, environment và figures SVG. Chạy lại bằng `make eval-glhs-q2`; model
@@ -98,7 +98,7 @@ contract ghi `fallback_model=""` và `rollback_applied=false`.
 | State correct | 249/360 (69.17%) |
 | Direct / compositional / ambiguity | 60/90; 149/216; 40/54 |
 | Seed 20260808 / 20260809 / 20260810 | 83/120; 81/120; 85/120 |
-| Latency P50 / P95 | 199.38 / 332.21 ms |
+| Latency P50 / P95 | 194.35 / 281.88 ms |
 | Degraded/fallback indication | 0/360 |
 
 Không có token usage/cost trong provider response contract, vì vậy không được
