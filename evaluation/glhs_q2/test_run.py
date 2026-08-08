@@ -10,7 +10,7 @@ from xml.etree import ElementTree
 import pytest
 
 from evaluation.glhs_q2.integrate_model_arm import integrate
-from evaluation.glhs_q2.run import SYSTEMS, THSS_PROFILES, _case, main, run, write
+from evaluation.glhs_q2.run import SYSTEMS, THSS_PROFILES, _case, run, write
 from evaluation.glhs_q2.run_model_arm import PROMPT_VERSION, SEEDS
 
 

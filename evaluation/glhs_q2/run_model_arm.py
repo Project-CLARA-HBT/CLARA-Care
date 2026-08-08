@@ -6,7 +6,14 @@ must return normally; timeout/HTTP/schema failures are recorded per case.
 """
 from __future__ import annotations
 
-import argparse, csv, hashlib, json, os, time, urllib.error, urllib.request
+import argparse
+import csv
+import hashlib
+import json
+import os
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 SEEDS = (20260808, 20260809, 20260810)
@@ -26,7 +33,11 @@ def _direct_selection_contract() -> dict[str, object]:
     """Freeze non-secret registry selection before the first provider call."""
 
     from clara_ml.config import settings
-    from clara_ml.llm.model_registry import ModelTask, resolve_model_selection, task_contract
+    from clara_ml.llm.model_registry import (
+        ModelTask,
+        resolve_model_selection,
+        task_contract,
+    )
 
     task = ModelTask.MEDICAL_SAFETY_ROUTER
     selection = resolve_model_selection(task, settings)

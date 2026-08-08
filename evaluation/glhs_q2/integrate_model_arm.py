@@ -16,7 +16,6 @@ from pathlib import Path
 
 from evaluation.glhs_q2.run_model_arm import PROMPT_VERSION, SEEDS
 
-
 REQUIRED_FIELDS = {
     "case_id", "seed", "expected_state", "scenario", "experiment", "status",
     "latency_ms", "model_used", "policy_action", "guard_reason", "degraded", "json_valid", "state",
