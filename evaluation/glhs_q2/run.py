@@ -491,6 +491,67 @@ def _operational_metrics(rows: list[Outcome]) -> list[dict[str, object]]:
     ]
 
 
+def _cost_of_success(rows: list[Outcome]) -> list[dict[str, object]]:
+    """Emit the predeclared benefit/cost table without mislabelling simulation.
+
+    This experiment has no database, model-token, or human-time instrumentation.
+    It therefore reports only the deterministic state-layer timing and the
+    declared THSS context-token *proxy*.  ``not_measured`` is preserved for TPR
+    context rather than assigning it an invented token budget.
+    """
+
+    by_system = {system: [row for row in rows if row.system == system] for system in SYSTEMS}
+    full = by_system[REFERENCE_SYSTEM]
+    full_p95 = _percentile([row.latency_us for row in full], 0.95)
+    full_escalations = sum(row.automation == "safe_escalation" for row in full)
+    # The frozen default THSS profile has five items, at 12 proxy tokens/item.
+    context_proxy: dict[str, int | None] = {
+        REFERENCE_SYSTEM: 60,
+        "glhs_no_gst": 60,
+        # No-THSS exposes the full authorized profile (10 declared items).
+        "glhs_no_thss": 120,
+        # TPR has no THSS compiler in this protocol; do not infer its context.
+        "temporal_provenance_resolver": None,
+    }
+    output: list[dict[str, object]] = []
+    for baseline in ("glhs_no_gst", "glhs_no_thss", "temporal_provenance_resolver"):
+        baseline_rows = by_system[baseline]
+        baseline_p95 = _percentile([row.latency_us for row in baseline_rows], 0.95)
+        baseline_failures = sum(not row.state_correct for row in baseline_rows)
+        full_failures = sum(not row.state_correct for row in full)
+        baseline_escalations = sum(row.automation == "safe_escalation" for row in baseline_rows)
+        baseline_context = context_proxy[baseline]
+        output.append(
+            {
+                "comparison": f"glhs_full_vs_{baseline}",
+                "cases": len(full),
+                "failure_reduction_numerator": baseline_failures - full_failures,
+                "failure_reduction_denominator": len(full),
+                "full_state_layer_p95_us": full_p95,
+                "baseline_state_layer_p95_us": baseline_p95,
+                "state_layer_p95_delta_us": full_p95 - baseline_p95,
+                "latency_scope": "pure_python_structural_simulation_not_database_or_llm",
+                "full_context_tokens_proxy": context_proxy[REFERENCE_SYSTEM],
+                "baseline_context_tokens_proxy": baseline_context,
+                "context_tokens_proxy_delta": (
+                    context_proxy[REFERENCE_SYSTEM] - baseline_context
+                    if baseline_context is not None
+                    else None
+                ),
+                "context_scope": (
+                    "frozen_thss_proxy_12_tokens_per_item"
+                    if baseline_context is not None
+                    else "not_measured_tpr_has_no_thss_compiler_in_protocol"
+                ),
+                "full_safe_escalation_numerator": full_escalations,
+                "baseline_safe_escalation_numerator": baseline_escalations,
+                "safe_escalation_delta": full_escalations - baseline_escalations,
+                "review_burden_scope": "safe_escalation_count_not_human_time",
+            }
+        )
+    return output
+
+
 def _comparisons(rows: list[Outcome], seed: int) -> dict[str, dict[str, object]]:
     """Paired subject-cluster comparison for one cohort or frozen stratum."""
 
@@ -970,6 +1031,7 @@ def run(
         "error_analysis": error_analysis,
         "stratified_metrics": _stratified_metrics(outcomes),
         "operational_metrics": _operational_metrics(outcomes),
+        "cost_of_success": _cost_of_success(outcomes),
         "scalability": _scalability(seed),
         "per_run": per_run,
         "model_arm": model_arm_summary,
@@ -1141,6 +1203,7 @@ def write(
     _write_csv(output / "error_analysis.csv", result["error_analysis"])
     _write_csv(output / "stratified_metrics.csv", result["stratified_metrics"])
     _write_csv(output / "operational_metrics.csv", result["operational_metrics"])
+    _write_csv(output / "cost_of_success.csv", result["cost_of_success"])
     _write_csv(output / "scalability.csv", result["scalability"])
     _write_csv(output / "outcomes.csv", result["outcomes"])
     if model_arm_source is not None:
@@ -1201,7 +1264,7 @@ def write(
         ),
     ]
     (output / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    artifact_names = ["summary.json", "environment.json", "cases.csv", "outcomes.csv", "external_cases.csv", "external_outcomes.csv", "external_stratified_metrics.csv", "external_baseline_comparison.csv", "per_run.csv", "conformance.csv", "baseline_comparison.csv", "ablation.csv", "thss_ablation.csv", "error_analysis.csv", "stratified_metrics.csv", "operational_metrics.csv", "scalability.csv", "policy.json", "task_relevance_manifest.json", "oracle_manifest.json", "holdout_manifest.json", "mechanism_evidence.json", "baseline-comparison.svg", "thss-privacy-utility.svg", "conflict-automation.svg", "error-breakdown.svg", "latency.svg", "scalability.svg", "report.md"]
+    artifact_names = ["summary.json", "environment.json", "cases.csv", "outcomes.csv", "external_cases.csv", "external_outcomes.csv", "external_stratified_metrics.csv", "external_baseline_comparison.csv", "per_run.csv", "conformance.csv", "baseline_comparison.csv", "ablation.csv", "thss_ablation.csv", "error_analysis.csv", "stratified_metrics.csv", "operational_metrics.csv", "cost_of_success.csv", "scalability.csv", "policy.json", "task_relevance_manifest.json", "oracle_manifest.json", "holdout_manifest.json", "mechanism_evidence.json", "baseline-comparison.svg", "thss-privacy-utility.svg", "conflict-automation.svg", "error-breakdown.svg", "latency.svg", "scalability.svg", "report.md"]
     if model_arm_source is not None:
         artifact_names.extend(["model_arm_contract.json", "model_per_run.csv", "model_arm_summary.json", "model_arm_by_experiment.csv"])
     manifest = {"schema_version": "glhs-q2-evidence-manifest-v1", "summary_sha256": digest, "frozen_input_sha256": frozen_input_sha256, "artifacts": artifact_names, "limitations": result["protocol"]["limitations"], "reproducibility": result["reproducibility"]}
