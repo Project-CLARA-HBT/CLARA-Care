@@ -73,6 +73,10 @@ python3 -m evaluation.glhs_q2.prepare_synthea_archive \
   --output /secure/local/q2-derived/synthea-stu3-full-development \
   --selection-modulus 1 \
   --lawful-access-attestation 'Local Synthea archive, non-clinical structural evaluation.'
+
+make eval-glhs-q2-external-stream \
+  MANIFEST=/secure/local/q2-derived/synthea-stu3-full-development/manifest.json \
+  OUTPUT=artifacts/glhs-q2/synthea-stu3-full-development
 ```
 
 This still produces a **synthetic development** structural cohort. It is not

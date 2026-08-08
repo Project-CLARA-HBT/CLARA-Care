@@ -181,5 +181,13 @@ eval-glhs-q2-model-integrate:
 	@test -n "$(MODEL_ARM_SOURCE)" || (echo "MODEL_ARM_SOURCE is required" >&2; exit 2)
 	@python3 -m evaluation.glhs_q2.integrate_model_arm --source "$(MODEL_ARM_SOURCE)" --output "$(or $(MODEL_ARM_OUTPUT),artifacts/glhs-q2/model-arm-latest)"
 
+# Memory-bounded evaluator for a lawful, already privacy-minimised external
+# structural manifest. It rejects anything other than a development partition
+# and never loads raw clinical source data.
+eval-glhs-q2-external-stream:
+	@test -n "$(MANIFEST)" || (echo "MANIFEST is required" >&2; exit 2)
+	@test -n "$(OUTPUT)" || (echo "OUTPUT is required" >&2; exit 2)
+	@python3 -m evaluation.glhs_q2.run_external_stream --manifest "$(MANIFEST)" --output "$(OUTPUT)"
+
 precommit-install:
 	pre-commit install
