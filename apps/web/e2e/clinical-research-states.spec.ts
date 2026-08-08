@@ -73,6 +73,10 @@ test.describe("Evidence, Source Hub, Council and Scribe states", () => {
       await expect(content).toBeVisible();
       await expect(page.locator("body")).not.toContainText("Application error");
       await expect(page.locator("body")).not.toContainText("Traceback");
+      const horizontalOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(horizontalOverflow, `${route.path} must keep horizontal scrolling within its local controls`).toBeLessThanOrEqual(1);
     }
 
     await expect(page.getByText("Chưa có phiên nào.", { exact: true })).toBeVisible();
