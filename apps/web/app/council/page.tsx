@@ -404,7 +404,7 @@ export default function CouncilPage() {
     if (queryCaseId !== undefined) {
       void load();
     }
-  }, [queryCaseId]);
+  }, [language, queryCaseId]);
 
   // Load the owner-isolated, newest-first run history for the active case
   // (Req 2.4). Owner isolation is enforced server-side; we render only what the

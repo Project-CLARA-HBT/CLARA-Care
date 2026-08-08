@@ -113,7 +113,7 @@ export default function ResearchSourceHubPage() {
       }
     };
     void initialize();
-  }, [loadCatalog, loadRecords]);
+  }, [language, loadCatalog, loadRecords]);
 
   const activeCatalogEntry = useMemo(
     () => catalog.find((item) => item.key === activeSource) ?? null,
