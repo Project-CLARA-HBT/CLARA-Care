@@ -184,7 +184,7 @@ state matches; it does not establish clinical model performance.”
 <!-- FULL_SYNTHEA_MACHINE_RESULTS:START -->
 ## Full Synthea FHIR STU3 result (machine-rendered)
 
-Artifact: `artifacts/glhs-q2/2026-08-09-synthea-stu3-full/`; validation: `publication-validation.json`.
+Artifact: `artifacts/glhs-q2/2026-08-09-synthea-stu3-full-clean-03f67117/`; validation: `publication-validation.json`.
 
 - Source FHIR patient bundles scanned: **1,594,095**
 - Selected tokenized structural cases / evaluated subjects: **1,594,095 / 1,594,095**

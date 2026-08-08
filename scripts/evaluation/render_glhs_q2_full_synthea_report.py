@@ -54,12 +54,19 @@ def render(*, artifact: Path, report: Path) -> None:
     bundles = source_scan.get("fhir_patient_bundles")
     if not all(isinstance(value, int) for value in (cases, selected, bundles)):
         raise ValueError("source_counts_invalid")
+    # Reports are committed and reviewed across machines.  Preserve a concise,
+    # repository-relative artifact location whenever both paths share a root;
+    # only retain an absolute location for an intentionally external artifact.
+    try:
+        artifact_label = artifact.resolve().relative_to(report.resolve().parents[2]).as_posix()
+    except ValueError:
+        artifact_label = artifact.as_posix()
     section = "\n".join(
         [
             _START,
             "## Full Synthea FHIR STU3 result (machine-rendered)",
             "",
-            f"Artifact: `{artifact.as_posix()}/`; validation: `publication-validation.json`.",
+            f"Artifact: `{artifact_label}/`; validation: `publication-validation.json`.",
             "",
             f"- Source FHIR patient bundles scanned: **{bundles:,}**",
             f"- Selected tokenized structural cases / evaluated subjects: **{selected:,} / {cases:,}**",
