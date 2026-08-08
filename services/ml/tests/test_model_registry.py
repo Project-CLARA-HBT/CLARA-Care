@@ -10,7 +10,6 @@ import pytest
 from clara_ml.llm.model_registry import (
     FLASH_MODEL_VERSION,
     PRIMARY_MODEL_VERSION,
-    ROLLBACK_MODEL_VERSION,
     TASK_CONTRACTS,
     TASK_CONTRACT_SCHEMA_VERSION,
     ModelTask,
@@ -105,7 +104,7 @@ def test_default_selection_routes_critical_tasks_to_deepseek_v4_pro() -> None:
     assert selection.risk_level == "critical"
     assert selection.rollback_applied is False
     assert selection.model_profile == "pro"
-    assert selection.fallback_model == "deepseek-v4-flash"
+    assert selection.fallback_model == ""
 
 
 def test_bounded_low_latency_tasks_route_to_deepseek_v4_flash() -> None:
@@ -114,7 +113,7 @@ def test_bounded_low_latency_tasks_route_to_deepseek_v4_flash() -> None:
     assert selection.model == "deepseek-v4-flash"
     assert selection.model_version == FLASH_MODEL_VERSION
     assert selection.model_profile == "flash"
-    assert selection.fallback_model == "deepseek-v4-pro"
+    assert selection.fallback_model == ""
 
 
 def test_registry_selection_evidence_is_default_off_and_aggregate_only() -> None:
@@ -146,8 +145,8 @@ def test_registry_selection_evidence_is_default_off_and_aggregate_only() -> None
     }
 
 
-def test_registry_selection_evidence_marks_rollback_without_model_identifier() -> None:
-    resolve_model_selection(
+def test_registry_selection_evidence_never_discloses_or_applies_a_rollback() -> None:
+    selection = resolve_model_selection(
         ModelTask.MEDICAL_SAFETY_ROUTER,
         _settings(
             model_routing_observability_enabled=True,
@@ -156,10 +155,12 @@ def test_registry_selection_evidence_marks_rollback_without_model_identifier() -
         ),
     )
 
+    assert selection.model == "deepseek-v4-pro"
+    assert selection.rollback_applied is False
     rendered = repr(model_routing_evidence.snapshot())
     assert "private-prior-model-name" not in rendered
-    assert ROLLBACK_MODEL_VERSION in rendered
-    assert "rollback_applied': True" in rendered
+    assert PRIMARY_MODEL_VERSION in rendered
+    assert "rollback_applied': False" in rendered
 
 
 def test_lifemap_text_draft_extraction_is_governed_by_flash_contract() -> None:
@@ -208,7 +209,7 @@ def test_task_routing_kill_switch_restores_configured_legacy_model() -> None:
     assert selection.model_profile == "legacy"
 
 
-def test_rollback_needs_an_explicit_prior_model_and_never_fakes_it() -> None:
+def test_rollback_request_is_ignored_to_preserve_model_provenance() -> None:
     unavailable = resolve_model_selection(
         ModelTask.MEDICAL_SAFETY_ROUTER,
         _settings(model_registry_force_rollback=True),
@@ -217,16 +218,16 @@ def test_rollback_needs_an_explicit_prior_model_and_never_fakes_it() -> None:
     assert unavailable.rollback_applied is False
     assert unavailable.model_version == PRIMARY_MODEL_VERSION
 
-    rolled_back = resolve_model_selection(
+    ignored = resolve_model_selection(
         ModelTask.MEDICAL_SAFETY_ROUTER,
         _settings(
             model_registry_force_rollback=True,
             model_registry_rollback_model="deepseek-previous",
         ),
     )
-    assert rolled_back.model == "deepseek-previous"
-    assert rolled_back.rollback_applied is True
-    assert rolled_back.model_version == ROLLBACK_MODEL_VERSION
+    assert ignored.model == "deepseek-v4-pro"
+    assert ignored.rollback_applied is False
+    assert ignored.model_version == PRIMARY_MODEL_VERSION
 
 
 def test_kill_switch_preserves_primary_even_if_rollback_is_requested() -> None:
@@ -243,7 +244,7 @@ def test_kill_switch_preserves_primary_even_if_rollback_is_requested() -> None:
     assert selection.rollback_applied is False
 
 
-def test_task_client_uses_selected_rollback_without_an_audio_provider_seam() -> None:
+def test_task_client_never_uses_a_requested_rollback_model() -> None:
     client, selection = build_task_client(
         ModelTask.SCRIBE_TRANSCRIPTION,
         _settings(
@@ -254,8 +255,9 @@ def test_task_client_uses_selected_rollback_without_an_audio_provider_seam() -> 
         retries_per_base=0,
     )
 
-    assert selection.rollback_applied is True
-    assert client.model == "deepseek-previous"
+    assert selection.rollback_applied is False
+    assert client.model == "deepseek-v4-flash"
+    assert client._fallback_model == ""
     assert client._timeout_seconds == 90.0
     assert client._retries_per_base == 0
     assert client._audio_base_urls == []

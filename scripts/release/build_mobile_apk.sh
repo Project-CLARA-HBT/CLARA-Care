@@ -1,27 +1,43 @@
 #!/usr/bin/env bash
 # Build the CLARA mobile release APK (Unified experience) with the production
-# API base URL. Reuses the locally-provisioned JDK17 + Android SDK.
-set -u
+# API base URL. Toolchain locations come from PATH/JAVA_HOME/ANDROID_HOME so
+# the same script works on developer machines and release runners.
+set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 MOBILE="$ROOT/apps/mobile"
 
-export JAVA_HOME="$HOME/clara-toolchain/jdk17/Contents/Home"
-export PATH="$JAVA_HOME/bin:$PATH"
-export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
-export ANDROID_HOME="$ANDROID_SDK_ROOT"
-export PATH="$ANDROID_SDK_ROOT/platform-tools:$PATH"
-
-FLUTTER=/usr/local/bin/flutter
+FLUTTER="${FLUTTER_BIN:-$(command -v flutter || true)}"
 API_BASE="${CLARA_API_BASE_URL:-https://theclaracare.com}"
 
-cd "$MOBILE" || { echo "no mobile dir"; exit 1; }
+if [ -z "$FLUTTER" ] || [ ! -x "$FLUTTER" ]; then
+  echo "Flutter executable not found; set FLUTTER_BIN or add flutter to PATH." >&2
+  exit 1
+fi
+
+for required in \
+  ORG_GRADLE_PROJECT_CLARA_RELEASE_STORE_FILE \
+  ORG_GRADLE_PROJECT_CLARA_RELEASE_STORE_PASSWORD \
+  ORG_GRADLE_PROJECT_CLARA_RELEASE_KEY_ALIAS \
+  ORG_GRADLE_PROJECT_CLARA_RELEASE_KEY_PASSWORD; do
+  if [ -z "${!required:-}" ]; then
+    echo "Missing required signed-release input: $required" >&2
+    exit 1
+  fi
+done
+
+if [ ! -s "$ORG_GRADLE_PROJECT_CLARA_RELEASE_STORE_FILE" ]; then
+  echo "Release keystore is missing or empty." >&2
+  exit 1
+fi
+
+cd "$MOBILE"
 
 echo "== ensure android project =="
-[ -d android ] || "$FLUTTER" create --platforms=android --project-name clara_mobile . 2>&1 | tail -8
+[ -d android ] || { echo "Committed Android project is missing." >&2; exit 1; }
 
 echo "== pub get =="
-for a in 1 2 3; do "$FLUTTER" pub get 2>&1 | tail -6 && break; sleep 5; done
+"$FLUTTER" pub get
 
 echo "== build apk (unified, base=$API_BASE) =="
 # The unified root is the only client-side default we force here. Additive
@@ -29,10 +45,19 @@ echo "== build apk (unified, base=$API_BASE) =="
 # their rollout flags into permanent build defaults in a release artifact.
 "$FLUTTER" build apk --release \
   --dart-define=MOBILE_UNIFIED_ENABLED=true \
-  --dart-define=CLARA_API_BASE_URL="$API_BASE" 2>&1 | tail -40
+  --dart-define=CLARA_API_BASE_URL="$API_BASE"
 
 APK=build/app/outputs/flutter-apk/app-release.apk
 if [ -f "$APK" ]; then
+  APKSIGNER="${APKSIGNER_BIN:-}"
+  if [ -z "$APKSIGNER" ] && [ -n "${ANDROID_HOME:-}" ]; then
+    APKSIGNER="$(find "$ANDROID_HOME/build-tools" -path '*/apksigner' -type f 2>/dev/null | sort -V | tail -1)"
+  fi
+  if [ -z "$APKSIGNER" ] || [ ! -x "$APKSIGNER" ]; then
+    echo "apksigner not found; set APKSIGNER_BIN or ANDROID_HOME." >&2
+    exit 1
+  fi
+  "$APKSIGNER" verify --verbose "$APK"
   mkdir -p "$ROOT/dist"
   OUT="$ROOT/clara-mobile-release.apk"
   cp "$APK" "$OUT"

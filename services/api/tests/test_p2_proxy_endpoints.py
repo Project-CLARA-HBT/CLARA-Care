@@ -691,8 +691,9 @@ def test_research_tier2_job_create_preserves_language_and_runtime_overrides(
         assert row.request_payload["ui_language"] == "en"
         assert row.request_payload["answer_language"] == "en"
         assert row.request_payload["deep_pass_count"] == 2
-        assert isinstance(row.request_payload["llm_runtime"], dict)
-        assert row.request_payload["llm_runtime"]["base_url"] == "https://runtime.example/v1"
+        # Provider credentials and caller-selected runtimes must not be
+        # persisted with research jobs. Model selection is registry-governed.
+        assert "llm_runtime" not in row.request_payload
 
 
 def test_research_tier2_job_create_persists_ui_language(
@@ -1538,7 +1539,7 @@ def test_research_tier2_job_stream_surfaces_deep_beta_result_mode() -> None:
     assert metadata_payload["research_mode"] == "deep_beta"
 
 
-def test_research_tier2_returns_fail_soft_payload_with_retry(
+def test_research_tier2_returns_upstream_error_without_synthetic_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1556,20 +1557,12 @@ def test_research_tier2_returns_fail_soft_payload_with_retry(
         json={"question": "summary", "source_mode": "uploaded_files", "uploaded_file_ids": []},
     )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["fallback"] is True
-    assert payload["metadata"]["research_mode"] == "fast"
-    assert payload["metadata"]["deep_pass_count"] == 0
-    assert payload["citations"] == []
-    assert payload["fallback_reason"] == "ConnectError"
-    assert payload["attribution"]["channel"] == "research"
-    assert payload["attribution"]["fallback_used"] is True
-    assert payload["attribution"]["mode"] == "fast"
+    assert response.status_code == 502
+    assert "fallback" not in response.text.lower()
     assert call_count["count"] == 2
 
 
-def test_research_tier2_fail_soft_keeps_deep_mode_flags(
+def test_research_tier2_deep_failure_never_substitutes_a_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1591,19 +1584,8 @@ def test_research_tier2_fail_soft_keeps_deep_mode_flags(
         },
     )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["fallback"] is True
-    assert payload["research_mode"] == "deep"
-    assert payload["retrieval_stack_mode"] == "full"
-    assert payload["deep_pass_count"] == 0
-    assert payload["metadata"]["research_mode"] == "deep"
-    assert payload["metadata"]["retrieval_stack_mode"] == "full"
-    assert payload["metadata"]["deep_pass_count"] == 0
-    assert payload["fallback_reason"] == "ConnectError"
-    assert payload["attribution"]["channel"] == "research"
-    assert payload["attribution"]["fallback_used"] is True
-    assert payload["attribution"]["mode"] == "deep"
+    assert response.status_code == 502
+    assert "fallback" not in response.text.lower()
     assert call_count["count"] == 2
 
 
@@ -1643,7 +1625,7 @@ def test_research_tier2_sync_path_enforces_extended_timeout(
     assert float(captured["timeout"]) >= 600.0
 
 
-def test_research_tier2_fail_soft_reflects_fast_full_downgrade(
+def test_research_tier2_fast_failure_never_substitutes_a_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1665,21 +1647,12 @@ def test_research_tier2_fail_soft_reflects_fast_full_downgrade(
         },
     )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["fallback"] is True
-    assert payload["research_mode"] == "fast"
-    assert payload["retrieval_stack_mode"] == "auto"
-    assert payload["metadata"]["research_mode"] == "fast"
-    assert payload["metadata"]["retrieval_stack_mode"] == "auto"
-    assert payload["fallback_reason"] == "ConnectError"
-    assert payload["attribution"]["channel"] == "research"
-    assert payload["attribution"]["fallback_used"] is True
-    assert payload["attribution"]["mode"] == "fast"
+    assert response.status_code == 502
+    assert "fallback" not in response.text.lower()
     assert call_count["count"] == 2
 
 
-def test_research_tier2_fail_soft_keeps_deep_beta_mode_flags(
+def test_research_tier2_deep_beta_failure_never_substitutes_a_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     token = _login("alice@research.clara")
@@ -1697,17 +1670,8 @@ def test_research_tier2_fail_soft_keeps_deep_beta_mode_flags(
         json={"query": "deep beta fail soft", "research_mode": "deep_beta"},
     )
 
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["fallback"] is True
-    assert payload["research_mode"] == "deep_beta"
-    assert payload["deep_pass_count"] == 0
-    assert payload["metadata"]["research_mode"] == "deep_beta"
-    assert payload["metadata"]["deep_pass_count"] == 0
-    assert payload["fallback_reason"] == "ConnectError"
-    assert payload["attribution"]["channel"] == "research"
-    assert payload["attribution"]["fallback_used"] is True
-    assert payload["attribution"]["mode"] == "deep_beta"
+    assert response.status_code == 502
+    assert "fallback" not in response.text.lower()
     assert call_count["count"] == 2
 
 
@@ -1889,10 +1853,12 @@ def test_research_tier2_ignores_caller_llm_runtime_overrides(
     forwarded = captured["json"]
     assert isinstance(forwarded, dict)
     rag_flow = forwarded["rag_flow"]
-    assert rag_flow["llm_provider"] == "hitechcloud_gpt53_codex_high"
-    assert rag_flow["llm_base_url"] == "https://platform.hitechcloud.one/v1"
-    assert rag_flow["llm_model"] == "gpt-5.3-codex-high"
-    assert rag_flow["llm_api_key"] == ""
+    # Runtime/provider selection is owned by the server-side model registry.
+    # It must neither forward caller-controlled values nor serialize a
+    # provider credential into the API→ML payload.
+    assert not {"llm_provider", "llm_base_url", "llm_model", "llm_api_key"}.intersection(
+        rag_flow
+    )
 
 
 @pytest.mark.parametrize(

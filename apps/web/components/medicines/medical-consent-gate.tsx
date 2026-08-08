@@ -94,8 +94,8 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
 
   if (!accepted) {
     return (
-      <section className="chrome-panel rounded-[1.5rem] border border-amber-300/60 p-6">
-        <p className="inline-flex rounded-full border border-amber-300/55 bg-amber-100/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">
+      <section className="chrome-panel rounded-[14px] border border-[color:var(--status-warn-border)] border-t-[#2A3950] p-6">
+        <p className="inline-flex rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--status-warn-text)]">
           {t(language, "medicines.consent.requiredStep")}
         </p>
         <h2 className="mt-3 text-2xl font-semibold text-[var(--text-primary)]">{t(language, "medicines.consent.title")}</h2>
@@ -104,11 +104,11 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
         </p>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
           {t(language, "medicines.consent.readFull")} {" "}
-          <Link href="/legal/consent" className="font-semibold text-blue-700 hover:underline dark:text-cyan-300">
+          <Link href="/legal/consent" className="font-semibold text-[var(--text-brand)] hover:underline">
             {t(language, "medicines.consent.consentLink")}
           </Link>
           {" "}{t(language, "medicines.consent.and")} {" "}
-          <Link href="/legal/privacy" className="font-semibold text-blue-700 hover:underline dark:text-cyan-300">
+          <Link href="/legal/privacy" className="font-semibold text-[var(--text-brand)] hover:underline">
             {t(language, "medicines.consent.privacyLink")}
           </Link>
           .
@@ -133,19 +133,19 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
           type="button"
           onClick={onAccept}
           disabled={isSaving || !checked}
-          className="mt-4 min-h-12 rounded-xl border border-blue-700 bg-blue-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:border-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
+          className="mt-4 min-h-12 rounded-lg bg-[#60a5fa] px-5 py-2 text-sm font-bold text-[#003a6b] transition hover:bg-[#a4c9ff] disabled:cursor-not-allowed disabled:bg-[var(--surface-muted)] disabled:text-[var(--text-muted)]"
         >
           {isSaving ? t(language, "medicines.consent.saving") : t(language, "medicines.consent.accept")}
         </button>
 
         {error ? (
-          <div className="mt-3 space-y-2 rounded-xl border border-red-300/50 bg-red-500/10 p-3">
-            <p className="text-sm text-red-200">{error}</p>
-            <p className="text-xs text-red-100/90">{t(language, "medicines.consent.retryNotice")}</p>
+          <div className="mt-3 space-y-2 rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-3">
+            <p className="text-sm text-[var(--status-danger-text)]">{error}</p>
+            <p className="text-xs text-[var(--status-danger-text)]">{t(language, "medicines.consent.retryNotice")}</p>
             <button
               type="button"
               onClick={() => void onRetryStatus()}
-              className="inline-flex min-h-11 items-center rounded-xl border border-red-300/55 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/30"
+              className="inline-flex min-h-11 items-center rounded-lg border border-[color:var(--status-danger-border)] bg-[#93000a]/30 px-4 py-2 text-sm font-semibold text-[var(--status-danger-text)] transition hover:bg-[#93000a]/45"
             >
               {t(language, "medicines.consent.retry")}
             </button>

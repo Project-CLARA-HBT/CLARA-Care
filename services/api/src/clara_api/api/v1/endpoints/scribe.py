@@ -106,7 +106,10 @@ def _audio_magic_matches(content_type: str, payload: bytes) -> bool:
 
 def _validate_audio_payload(*, content_type: str, payload: bytes, verify_magic: bool) -> None:
     if not payload:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Audio payload is empty.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Audio payload is empty.",
+        )
     if len(payload) > _MAX_AUDIO_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -168,6 +171,16 @@ class ScribeSessionResponse(BaseModel):
     last_processed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class ScribeRecordingDataCapabilityResponse(BaseModel):
+    """Read-only, owner-scoped availability for the data-rights control."""
+
+    session_id: int
+    recording_data_deletion_available: Literal[True]
+    # The API never persists raw audio bytes; this makes the UI explanation a
+    # server contract rather than an inferred implementation detail.
+    raw_audio_persisted: Literal[False]
 
 
 class ScribeSessionListResponse(BaseModel):
@@ -1264,7 +1277,7 @@ def _audit_to_flow_events(rows: list[ScribeAudit]) -> list[dict[str, Any]]:
         source_count = 0
         for key in ("segment_count", "version_no"):
             raw = detail.get(key)
-            if isinstance(raw, (int, float)):
+            if isinstance(raw, int | float):
                 source_count = int(raw)
                 break
         events.append(
@@ -1358,6 +1371,38 @@ def revoke_consent(
     return {"session_id": item.id, "consent_id": consent.id, "revoked": True}
 
 
+@router.get(
+    "/sessions/{session_id}/recording-data/capability",
+    response_model=ScribeRecordingDataCapabilityResponse,
+)
+def get_recording_derived_data_capability(
+    session_id: int,
+    token: TokenPayload = DOCTOR_ROLE_DEP,
+    db: Session = Depends(get_db),
+) -> ScribeRecordingDataCapabilityResponse:
+    """Return the kill-switch-backed deletion capability for one owned session.
+
+    The endpoint intentionally returns the same 404 while the deletion feature
+    is off as the mutation route, so a browser cannot infer rollout state from
+    another user's session. It exposes no transcript, ASR metadata, audit entry
+    or note content.
+    """
+
+    settings = get_settings()
+    if not settings.rag_scribe_recording_data_deletion_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scribe data deletion is disabled.",
+        )
+    user = _get_user_by_token(db, token)
+    item = _get_owned_session(db, user_id=user.id, session_id=session_id)
+    return ScribeRecordingDataCapabilityResponse(
+        session_id=item.id,
+        recording_data_deletion_available=True,
+        raw_audio_persisted=False,
+    )
+
+
 @router.delete("/sessions/{session_id}/recording-data")
 def delete_recording_derived_data(
     session_id: int,
@@ -1375,7 +1420,10 @@ def delete_recording_derived_data(
 
     settings = get_settings()
     if not settings.rag_scribe_recording_data_deletion_enabled:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scribe data deletion is disabled.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scribe data deletion is disabled.",
+        )
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     transcript_chars = len(item.transcript or "")
@@ -1393,7 +1441,10 @@ def delete_recording_derived_data(
         action="recording_derived_data_deleted",
         from_status=item.status,
         to_status=item.status,
-        detail={"transcript_chars_deleted": transcript_chars, "segment_count_deleted": segment_count},
+        detail={
+            "transcript_chars_deleted": transcript_chars,
+            "segment_count_deleted": segment_count,
+        },
     )
     db.commit()
     return {
@@ -1648,7 +1699,10 @@ def get_unsupported_statement_review_queue(
 
     settings = get_settings()
     if not settings.rag_scribe_grounding_enabled:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scribe grounding is disabled.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scribe grounding is disabled.",
+        )
     user = _get_user_by_token(db, token)
     item = _get_owned_session(db, user_id=user.id, session_id=session_id)
     versions = list(
@@ -2745,7 +2799,10 @@ async def scribe_session_stream(
 
     audio_bytes = await audio_file.read()
     if not audio_file.filename:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing audio file name.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing audio file name.",
+        )
     content_type = _normalize_audio_content_type(audio_file.content_type)
     _validate_audio_payload(
         content_type=content_type,

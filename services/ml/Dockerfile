@@ -18,6 +18,13 @@ COPY services/ml/src /app/src
 RUN python -m pip install --no-cache-dir "uv==0.8.22" \
     && uv sync --frozen --no-dev --no-editable
 
+# ML inference never needs root privileges.  Model/cache mounts must be
+# provisioned with this uid by deployment rather than relying on root writes.
+RUN groupadd --system --gid 10001 clara \
+    && useradd --system --uid 10001 --gid clara --home-dir /app --no-create-home clara \
+    && chown -R clara:clara /app
+USER clara
+
 EXPOSE 8010
 
 CMD ["sh", "-c", "uvicorn clara_ml.main:app --app-dir src --host 0.0.0.0 --port 8010 --workers ${ML_UVICORN_WORKERS:-1}"]

@@ -607,6 +607,24 @@ def _resolve_trace_identifiers(payload: dict[str, Any]) -> tuple[str, str]:
 def _resolve_evidence_handoff_profile(research_mode: str | None = None) -> dict[str, int]:
     mode = str(research_mode or "fast").strip().lower()
     if mode == "deep_beta":
+        # The reader-first DeepBeta response must remain evidence-rich without
+        # shipping a dossier-sized context to every reasoning/report call.
+        # Technical provenance remains in the response envelope; synthesis gets
+        # the smallest sufficient, bounded handoff.
+        if _deep_beta_clean_body_active():
+            return {
+                **_DEFAULT_EVIDENCE_HANDOFF_PROFILE,
+                "citation_context_rows": 10,
+                "citation_trace_rows": 10,
+                "reasoning_pass_summaries": 6,
+                "reasoning_evidence_rows": 12,
+                "verification_pass_summaries": 8,
+                "verification_evidence_rows": 12,
+                "verification_reasoning_nodes": 6,
+                "report_citations": 8,
+                "report_pass_summaries": 4,
+                "report_reasoning_chain_cards": 6,
+            }
         return _DEEP_BETA_EVIDENCE_HANDOFF_PROFILE
     return _DEFAULT_EVIDENCE_HANDOFF_PROFILE
 
@@ -798,23 +816,17 @@ def _build_personal_context_suffix(
 
     profile_lines: list[str] = []
     if profile:
-        full_name = _compact_personal_text(profile.get("full_name"), limit=80)
-        date_of_birth = _compact_personal_text(profile.get("date_of_birth"), limit=20)
+        age_band = _compact_personal_text(profile.get("age_band"), limit=16)
         gender = _compact_personal_text(profile.get("gender"), limit=32)
-        blood_type = _compact_personal_text(profile.get("blood_type"), limit=16)
-        if full_name:
-            profile_lines.append(full_name)
-        if date_of_birth:
-            profile_lines.append(f"DOB: {date_of_birth}")
+        if age_band:
+            profile_lines.append(f"Age band: {age_band}")
         if gender:
             profile_lines.append(f"Gender: {gender}")
-        if blood_type:
-            profile_lines.append(f"Blood: {blood_type}")
 
     if answer_language == "en":
         lines = [
             "### Personal Context (PHR + Medicine Cabinet)",
-            "Use this context to personalize recommendations, contraindications, and monitoring.",
+            "Use only this consented clinical context to surface relevant cautions, interactions, and questions to discuss. Do not infer a diagnosis, prescribe, or change a personal dose.",
         ]
         if profile_lines:
             lines.append(f"- Profile: {', '.join(profile_lines)}")
@@ -829,7 +841,7 @@ def _build_personal_context_suffix(
     else:
         lines = [
             "### Bối Cảnh Cá Nhân (PHR + Tủ Thuốc)",
-            "Dùng ngữ cảnh này để cá thể hóa khuyến nghị, chống chỉ định và kế hoạch theo dõi.",
+            "Chỉ dùng ngữ cảnh lâm sàng đã có đồng ý này để nêu lưu ý, tương tác và câu hỏi cần trao đổi. Không suy ra chẩn đoán, kê đơn hoặc thay đổi liều cá nhân.",
         ]
         if profile_lines:
             lines.append(f"- Hồ sơ: {', '.join(profile_lines)}")
@@ -4248,12 +4260,14 @@ def _synthesize_deep_beta_long_report(
     llm_runtime: dict[str, Any] | None = None,
     research_mode: str = "deep_beta",
     answer_language: str = "vi",
-) -> str:
+    personal_context_suffix: str = "",
+    strict_llm_required: bool = False,
+) -> str | None:
     if not settings.deep_beta_report_llm_enabled:
-        return answer_markdown
+        return None if strict_llm_required else answer_markdown
     _, api_key, _base_url, _model = _resolve_runtime_llm_config(llm_runtime)
     if not api_key:
-        return answer_markdown
+        return None if strict_llm_required else answer_markdown
 
     mode = str(research_mode or "deep_beta").strip().lower()
     handoff_profile = _resolve_evidence_handoff_profile(mode)
@@ -4313,7 +4327,12 @@ def _synthesize_deep_beta_long_report(
         30.0,
     )
     report_max_tokens = (
-        max(int(settings.deep_beta_report_max_tokens), 4096)
+        # Clean-body DeepBeta is intentionally bounded.  The prior hard
+        # minimum of 4096 silently ignored the deployment budget and was a
+        # major source of gateway timeouts under concurrent research jobs.
+        min(max(int(settings.deep_beta_report_max_tokens), 1024), 4096)
+        if mode == "deep_beta" and _deep_beta_clean_body_active()
+        else max(int(settings.deep_beta_report_max_tokens), 4096)
         if mode == "deep_beta"
         else max(min(int(settings.deep_beta_report_max_tokens), 8192), 2048)
     )
@@ -4402,6 +4421,7 @@ def _synthesize_deep_beta_long_report(
         f"reasoning_nodes={json.dumps(reasoning_nodes, ensure_ascii=False)}\n"
         f"reasoning_chain_cards={json.dumps(reasoning_chain_cards, ensure_ascii=False)}\n"
         f"deep_pass_summaries={json.dumps(compact_passes, ensure_ascii=False)}\n"
+        f"consented_personal_context={personal_context_suffix}\n"
     )
     system_prompt = (
         "You are CLARA medical research synthesizer. "
@@ -4423,7 +4443,7 @@ def _synthesize_deep_beta_long_report(
             llm_runtime=llm_runtime,
         )
         if client is None:
-            return answer_markdown
+            return None if strict_llm_required else answer_markdown
         # Wall-clock start for the synthesis-v2 convergence/enrichment bound
         # (Requirement 2.4): total synthesis time is capped at
         # ``report_timeout_seconds`` and the best-so-far report is kept on
@@ -4765,6 +4785,8 @@ def _synthesize_deep_beta_long_report(
             research_mode=mode,
         )
     except Exception:
+        if strict_llm_required:
+            return None
         return _ensure_deep_beta_report_artifacts(
             markdown_text=answer_markdown,
             deep_pass_summaries=deep_pass_summaries,
@@ -9185,8 +9207,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         if personalization_allowed and personal_context
         else ""
     )
-    if personal_context_suffix:
-        topic = f"{topic}\n\n{personal_context_suffix}".strip()
+    # Keep retrieval, guard classification and query planning grounded in the
+    # user's actual question.  PHR is consented *synthesis* context, not a
+    # search query: mixing it into ``topic`` reduced retrieval precision and
+    # could make an educational question look like an unsafe personal request.
+    # It is supplied to the final Deep/DeepBeta synthesis below, where it can
+    # surface only relevant cautions, interactions and discussion prompts.
     trace_id, run_id = _resolve_trace_identifiers(payload)
     source_mode = str(payload.get("source_mode") or "").strip().lower() or None
     role_hint = str(payload.get("role") or "").strip().lower() or None
@@ -9229,8 +9255,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     if research_mode == "deep_beta":
         if rag_reranker_enabled_override is None:
             rag_reranker_enabled_override = True
-        if rag_graphrag_enabled_override is None:
-            rag_graphrag_enabled_override = True
+        # GraphRAG remains deployment-governed.  Forcing it for every DeepBeta
+        # request made a non-ready graph sidecar an implicit dependency and
+        # caused avoidable stalls; hybrid retrieval and reranking still run.
+        # An operator may explicitly enable GraphRAG once its graph store has
+        # passed health checks.
     effective_rag_reranker_enabled = (
         bool(settings.rag_reranker_enabled)
         if rag_reranker_enabled_override is None
@@ -9527,19 +9556,33 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     )
 
     pipeline = RagPipelineP1()
-    # Only service-level policy should force strict upstream generation.
-    # Request-level runtime overrides are best-effort and must still degrade
-    # gracefully to telemetry-rich fallback when the external gateway is down.
-    strict_deepseek_required = bool(settings.deepseek_required)
+    # The API-owned strict flag is a policy control, not an end-user model
+    # override.  In strict mode an unavailable upstream must surface as a
+    # failed/degraded job; returning local synthesis would misrepresent it as
+    # a model-backed research answer.
+    strict_deepseek_required = bool(
+        payload.get("strict_deepseek_required", False)
+    ) or bool(settings.deepseek_required)
     deepseek_fallback_enabled = not strict_deepseek_required
     deep_beta_cap = max(6, min(int(settings.deep_beta_pass_cap), 64))
-    pass_count_cap = deep_beta_cap if research_mode == "deep_beta" else _DEFAULT_DEEP_PASS_CAP
+    deep_cap = max(1, min(int(settings.deep_research_pass_cap), _DEFAULT_DEEP_PASS_CAP))
+    pass_count_cap = deep_beta_cap if research_mode == "deep_beta" else deep_cap
     deep_pass_count = _resolve_deep_pass_count(
         payload,
         int(planner_hints.get("deep_pass_count", 1)),
         cap=pass_count_cap,
     )
     planner_hints["deep_pass_count"] = deep_pass_count
+    retrieval_budget = planner_hints.get("retrieval_budget")
+    if isinstance(retrieval_budget, dict):
+        # The planner is allowed to ask for broad coverage, but the service
+        # owns the executable budget.  This prevents a prompt/planner output
+        # from silently expanding a user request into 14–20 retrieval passes.
+        retrieval_budget["pass_cap"] = pass_count_cap
+        retrieval_budget["target_pass_count"] = min(
+            max(1, int(retrieval_budget.get("target_pass_count") or 1)),
+            pass_count_cap,
+        )
     if isinstance(planner_trace.get("planner_hints"), dict):
         planner_trace["planner_hints"]["deep_pass_count"] = deep_pass_count
     deep_subqueries: list[str] = [topic]
@@ -10720,7 +10763,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         rag_sources=rag_sources,
         uploaded_documents=uploaded_documents,
         planner_hints=planner_hints,
-        generation_enabled=True,
+        # DeepBeta has a dedicated, citation-aware report synthesizer below.
+        # Generating a full dossier here first duplicates the most expensive
+        # model call and is a primary timeout source.  Retrieval-only output is
+        # an internal draft; it is never returned if the report is successful.
+        generation_enabled=research_mode != "deep_beta",
         strict_deepseek_required=strict_deepseek_required,
         rag_reranker_enabled=rag_reranker_enabled_override,
         rag_graphrag_enabled=rag_graphrag_enabled_override,
@@ -10835,6 +10882,8 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 research_mode=research_mode,
                 rank_enabled=recency_trust_ranking_enabled,
             )
+    if not citations and strict_deepseek_required:
+        raise RuntimeError("tier2_evidence_unavailable")
     fallback_used = _infer_fallback_used(rag_result)
     generation_trace = (
         rag_result.trace.get("generation")
@@ -10913,7 +10962,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             llm_runtime=llm_runtime,
             research_mode=research_mode,
             answer_language=answer_language,
+            personal_context_suffix=personal_context_suffix,
+            strict_llm_required=strict_deepseek_required,
         )
+        if research_mode == "deep_beta" and strict_deepseek_required and rewritten_report is None:
+            raise RuntimeError("deep_beta_synthesis_unavailable")
         report_changed = bool(
             str(rewritten_report or "").strip()
             and str(rewritten_report).strip() != str(answer_markdown).strip()

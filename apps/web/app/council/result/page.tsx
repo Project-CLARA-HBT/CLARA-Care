@@ -14,6 +14,7 @@ import { safeUserFacingError, stripTelemetryLabels } from "@/lib/user-facing-tex
 import {
   CouncilCaseRecord,
   buildSnapshotFromCouncilCase,
+  clearActiveCouncilCaseId,
   getActiveCouncilCaseId,
   getCouncilCase,
   getLatestCouncilCase,
@@ -46,14 +47,19 @@ export default function CouncilResultPage() {
     const load = async () => {
       setError("");
       try {
-        let loaded: CouncilCaseRecord;
+        let loaded: CouncilCaseRecord | null;
         if (queryCaseId) {
           loaded = await getCouncilCase(queryCaseId);
         } else {
           loaded = await getLatestCouncilCase();
         }
-        setActiveCouncilCaseId(loaded.id);
-        setCaseItem(loaded);
+        if (loaded) {
+          setActiveCouncilCaseId(loaded.id);
+          setCaseItem(loaded);
+        } else {
+          clearActiveCouncilCaseId();
+          setCaseItem(null);
+        }
       } catch (cause) {
         setError(safeUserFacingError(cause, t(language, "council.error.loadCase")));
       }
@@ -171,13 +177,13 @@ export default function CouncilResultPage() {
               </div>
 
               {view.summary.escalationReason ? (
-                <p className="mt-3 rounded-xl border border-red-300/40 bg-red-50/80 px-3 py-2 text-sm text-red-700 dark:border-red-700/45 dark:bg-red-950/20 dark:text-red-300">
+                <p className="mt-3 rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-sm text-[var(--status-danger-text)]">
                   {t(language, "council.result.escalationReason", { reason: stripTelemetryLabels(view.summary.escalationReason) })}
                 </p>
               ) : null}
 
               {medicationSafety?.reviewRequired ? (
-                <p className="mt-3 rounded-xl border border-amber-300/55 bg-amber-50/80 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/45 dark:bg-amber-950/25 dark:text-amber-200">
+                <p className="mt-3 rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-sm text-[var(--status-warn-text)]">
                   {medicationSafety.state === "requires_clarification"
                     ? t(language, "council.result.medicationSafety.clarificationNotice")
                     : medicationSafety.state === "unavailable"
@@ -248,7 +254,7 @@ export default function CouncilResultPage() {
               </Link>
               <Link
                 href="/council/new"
-                className="inline-flex min-h-[44px] items-center rounded-xl border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white"
+                className="inline-flex min-h-[44px] items-center rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)]"
               >
                 {t(language, "council.result.newCase")}
               </Link>
@@ -257,7 +263,7 @@ export default function CouncilResultPage() {
                 onClick={() => {
                   router.push("/council/new");
                 }}
-                className="inline-flex min-h-[44px] items-center rounded-xl border border-red-300/55 bg-red-100/80 px-4 text-sm font-semibold text-red-800 dark:border-red-700/45 dark:bg-red-950/30 dark:text-red-200"
+                className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 text-sm font-semibold text-[var(--status-danger-text)] transition-colors hover:opacity-90"
               >
                 {t(language, "council.result.openNewCase")}
               </button>

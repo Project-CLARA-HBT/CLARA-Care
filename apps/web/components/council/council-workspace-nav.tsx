@@ -29,8 +29,8 @@ export default function CouncilWorkspaceNav({ className = "" }: { className?: st
   const language = useUILanguage();
 
   return (
-    <nav className={`rounded-[1.3rem] border border-[#B6D4FE] bg-white p-2.5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90 ${className}`.trim()}>
-      <p className="px-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#4B5563] dark:text-slate-200">{t(language, "council.nav.title")}</p>
+    <nav className={`rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] p-3 ${className}`.trim()}>
+      <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{t(language, "council.nav.title")}</p>
       <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
         {COUNCIL_WORKSPACE_LINKS.map((item) => {
           const active = isActiveLink(pathname, item.href);
@@ -40,12 +40,12 @@ export default function CouncilWorkspaceNav({ className = "" }: { className?: st
               href={item.href}
               className={`rounded-xl border px-3 py-2.5 transition ${
                 active
-                  ? "border-[#2563EB] bg-[#DBEAFE] text-[#1E3A8A] shadow-sm dark:border-sky-400 dark:bg-sky-500/20 dark:text-sky-100"
-                  : "border-[#B6D4FE] bg-white text-[#1F2937] hover:border-[#2563EB] hover:bg-[#F8FBFF] dark:border-sky-800 dark:bg-slate-900/90 dark:text-slate-100 dark:hover:border-sky-500"
+                  ? "border-transparent bg-[color:var(--surface-brand-soft)] text-[color:var(--text-brand)]"
+                  : "border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] text-[color:var(--text-primary)] hover:border-[color:var(--shell-border-strong)] hover:bg-[color:var(--surface-muted)]"
               }`}
             >
               <p className="text-sm font-bold">{t(language, item.labelKey)}</p>
-              <p className="mt-0.5 text-xs font-medium text-[#4B5563] dark:text-slate-300">{t(language, item.hintKey)}</p>
+              <p className="mt-0.5 text-xs font-medium text-[color:var(--text-secondary)]">{t(language, item.hintKey)}</p>
             </Link>
           );
         })}

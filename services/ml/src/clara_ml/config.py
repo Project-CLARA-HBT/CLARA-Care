@@ -244,6 +244,12 @@ class Settings(BaseSettings):
         ge=6,
         le=64,
     )
+    deep_research_pass_cap: int = Field(
+        default=4,
+        validation_alias="DEEP_RESEARCH_PASS_CAP",
+        ge=1,
+        le=20,
+    )
     deep_beta_reasoning_llm_enabled: bool = Field(
         default=True,
         validation_alias=AliasChoices(
@@ -650,6 +656,10 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="RAG_BIOMED_GRAPH_ENABLED",
     )
+    rag_biomed_graph_static_fallback_enabled: bool = Field(
+        default=True,
+        validation_alias="RAG_BIOMED_GRAPH_STATIC_FALLBACK_ENABLED",
+    )
     rag_biomed_graph_path: str = Field(
         default="",
         validation_alias="RAG_BIOMED_GRAPH_PATH",
@@ -659,6 +669,12 @@ class Settings(BaseSettings):
         validation_alias="RAG_BIOMED_GRAPH_MAX_EDGES",
         ge=1,
         le=64,
+    )
+    rag_biomed_graph_retry_seconds: int = Field(
+        default=300,
+        validation_alias="RAG_BIOMED_GRAPH_RETRY_SECONDS",
+        ge=30,
+        le=3600,
     )
     rag_force_search_index: bool = Field(
         default=True,
@@ -916,6 +932,14 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="COUNCIL_LLM_SHADOW_ENABLED",
     )
+    # Adds specialist-profile, independent claim-verification and adjudication
+    # audit records to the existing Council LLM shadow. Both this and the
+    # parent shadow flag must be enabled; the result never changes the released
+    # rule-engine triage, recommendation, facts or clinician-review directive.
+    council_specialist_workflow_shadow_enabled: bool = Field(
+        default=False,
+        validation_alias="COUNCIL_SPECIALIST_WORKFLOW_SHADOW_ENABLED",
+    )
     council_llm_max_tokens: int = Field(
         default=1200,
         validation_alias="COUNCIL_LLM_MAX_TOKENS",
@@ -976,6 +1000,16 @@ class Settings(BaseSettings):
     rag_ingestion_enabled: bool = Field(
         default=False,
         validation_alias="RAG_INGESTION_ENABLED",
+    )
+    # Live scientific gap-fill is intentionally a separate opt-in from the
+    # offline corpus scheduler.  When enabled, only documents from a curated
+    # registry source with complete provenance are handed to the same atomic
+    # ingestion boundary used by offline connectors.  This is a kill switch:
+    # a bad connector, unavailable embeddings, or an unavailable store must
+    # never slow or change the answer request that discovered the document.
+    rag_gap_fill_persistence_enabled: bool = Field(
+        default=False,
+        validation_alias="RAG_GAP_FILL_PERSISTENCE_ENABLED",
     )
     # A corpus-wide watermark backfill can issue network requests to every
     # enabled source. Keep it independently dark even when incremental

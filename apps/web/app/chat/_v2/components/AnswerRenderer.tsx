@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -16,6 +17,7 @@ import {
 import type { UserRole } from "@/lib/auth-store";
 import MedicalAnswerCanvas from "@/app/chat/_v2/components/MedicalAnswerCanvas";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import { sanitizeAssistantAnswer } from "@/lib/user-facing-text";
 
 /**
  * Typographic answer renderer for the rebuilt CLARA Chat (CHAT_V2).
@@ -67,7 +69,7 @@ function AnswerRenderer({
     values: Record<string, string | number> = {},
   ) => t(uiLanguage, key, values);
   const degraded = isDegradedAnswer(result);
-  const baseAnswer = result.answer?.trim() || "";
+  const baseAnswer = sanitizeAssistantAnswer(result.answer?.trim() || "");
   const citations = result.tier === "tier2" ? result.citations : [];
   const tracedClaims =
     result.tier === "tier2" ? (result.tracedClaims ?? []) : [];
@@ -93,14 +95,14 @@ function AnswerRenderer({
 
       {evidenceRelease && !evidenceRelease.passed ? (
         <section
-          className="rounded-2xl border border-amber-300/60 bg-amber-50/85 p-3 text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/35 dark:text-amber-100"
+          className="rounded-[14px] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-4 text-[var(--status-warn-text)]"
           role="status"
           aria-label={copy("chat.answerRenderer.releaseBoundary.aria")}
         >
-          <p className="text-sm font-semibold">
+          <p className="text-[15px] font-semibold text-[var(--text-primary)]">
             {copy("chat.answerRenderer.releaseBoundary.title")}
           </p>
-          <p className="mt-1 text-xs leading-5">
+          <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
             {copy("chat.answerRenderer.releaseBoundary.description")}
           </p>
           {evidenceRelease.reasons.length ? (
@@ -110,6 +112,12 @@ function AnswerRenderer({
               ))}
             </ul>
           ) : null}
+          <Link
+            href="/visits/new"
+            className="mt-3 inline-flex min-h-9 items-center rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--surface-panel)] px-3 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--shell-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
+          >
+            {copy("chat.answerRenderer.releaseBoundary.prepareVisit")}
+          </Link>
         </section>
       ) : null}
 
@@ -145,17 +153,15 @@ function AnswerRenderer({
         />
       ) : null}
 
-      {result.tier === "tier2" ? (
-        <section
-          className="mt-4 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] p-3"
-          aria-label={copy("chat.answerRenderer.integrity.aria")}
-        >
+      {result.tier === "tier2" && (role === "researcher" || role === "admin") ? (
+        <details className="mt-4 rounded-2xl border border-[color:var(--shell-border-strong)] bg-[var(--surface-muted)] p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--text-primary)]">
+            {copy("chat.answerRenderer.integrity.title")}
+          </summary>
+          <section aria-label={copy("chat.answerRenderer.integrity.aria")}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--text-brand)]">
-                {copy("chat.answerRenderer.integrity.title")}
-              </p>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
                 {copy("chat.answerRenderer.integrity.description")}
               </p>
             </div>
@@ -193,7 +199,8 @@ function AnswerRenderer({
               {result.verificationStatus.note}
             </p>
           ) : null}
-        </section>
+          </section>
+        </details>
       ) : null}
 
       {citationRegistry.length ? (
@@ -253,7 +260,7 @@ function AnswerRenderer({
         </section>
       ) : null}
 
-      {presentation?.citationVisibility === "expanded" && citations.length ? (
+      {presentation?.citationVisibility === "expanded" && citations.length && !citationRegistry.length ? (
         <section className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             {copy("chat.answerRenderer.presentation.sources")}
@@ -273,7 +280,7 @@ function AnswerRenderer({
         </section>
       ) : null}
 
-      {citations.length ? (
+      {citations.length && !citationRegistry.length ? (
         <details className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             {copy("chat.answerRenderer.references", {

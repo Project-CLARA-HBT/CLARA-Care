@@ -6,6 +6,7 @@ import {
   PHR_EXPORT_RESOURCES,
   type PhrExportResource,
 } from "@/lib/phr";
+import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 
@@ -16,34 +17,13 @@ import { safeUserFacingError } from "@/lib/user-facing-text";
  * effective (Requirement 18.1).
  */
 
-const COPY = {
-  vi: {
-    title: "Xuất hồ sơ (FHIR)",
-    description:
-      "Tải hồ sơ dưới định dạng FHIR R4 (application/fhir+json) để chia sẻ với cơ sở y tế.",
-    scope: "Phạm vi",
-    download: "Tải xuống",
-    downloading: "Đang xuất...",
-    error: "Xuất hồ sơ thất bại.",
-  },
-  en: {
-    title: "Export record (FHIR)",
-    description:
-      "Download your record as a FHIR R4 bundle (application/fhir+json) to share with a clinic.",
-    scope: "Scope",
-    download: "Download",
-    downloading: "Exporting...",
-    error: "Export failed.",
-  },
-} as const;
-
-const RESOURCE_LABELS: Record<PhrExportResource, Record<UILanguage, string>> = {
-  all: { vi: "Toàn bộ", en: "All" },
-  patient: { vi: "Bệnh nhân", en: "Patient" },
-  allergy: { vi: "Dị ứng", en: "Allergies" },
-  condition: { vi: "Bệnh nền", en: "Conditions" },
-  medication: { vi: "Thuốc", en: "Medications" },
-  observation: { vi: "Chỉ số", en: "Observations" },
+const RESOURCE_LABEL_KEYS: Record<PhrExportResource, UITranslationKey> = {
+  all: "phr.export.resource.all",
+  patient: "phr.export.resource.patient",
+  allergy: "phr.export.resource.allergy",
+  condition: "phr.export.resource.condition",
+  medication: "phr.export.resource.medication",
+  observation: "phr.export.resource.observation",
 };
 
 export default function PhrExportButton({
@@ -51,7 +31,7 @@ export default function PhrExportButton({
 }: {
   uiLanguage: UILanguage;
 }) {
-  const text = COPY[uiLanguage];
+  const copy = (key: UITranslationKey) => t(uiLanguage, key);
   const [resource, setResource] = useState<PhrExportResource>("all");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -62,24 +42,24 @@ export default function PhrExportButton({
     try {
       await exportPhr(resource);
     } catch (err) {
-      setError(safeUserFacingError(err, text.error));
+      setError(safeUserFacingError(err, copy("phr.export.error")));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <section className="rounded-2xl border border-[#B6D4FE] bg-white p-5 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
+    <section className="rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-6">
       <p className="text-sm font-semibold text-[var(--text-primary)]">
-        {text.title}
+        {copy("phr.export.title")}
       </p>
       <p className="mt-1 text-[13px] leading-6 text-[var(--text-secondary)]">
-        {text.description}
+        {copy("phr.export.description")}
       </p>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#374151] dark:text-slate-200">
-            {text.scope}
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+            {copy("phr.export.scope")}
           </span>
           <select
             className="input"
@@ -88,7 +68,7 @@ export default function PhrExportButton({
           >
             {PHR_EXPORT_RESOURCES.map((r) => (
               <option key={r} value={r}>
-                {RESOURCE_LABELS[r][uiLanguage]}
+                {copy(RESOURCE_LABEL_KEYS[r])}
               </option>
             ))}
           </select>
@@ -97,12 +77,12 @@ export default function PhrExportButton({
           type="button"
           onClick={onDownload}
           disabled={busy}
-          className="inline-flex min-h-[38px] items-center rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-4 text-sm font-semibold text-[#1D4ED8] transition hover:bg-[#DBEAFE] disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-500/70 dark:bg-sky-500/18 dark:text-sky-100"
+          className="inline-flex min-h-[38px] items-center rounded-lg bg-[#60a5fa] px-4 text-sm font-semibold text-[#003a6b] transition hover:bg-[#a4c9ff] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {busy ? text.downloading : text.download}
+          {busy ? copy("phr.export.downloading") : copy("phr.export.download")}
         </button>
       </div>
-      {error ? <p className="mt-3 text-sm text-rose-500">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[#ffb4ab]">{error}</p> : null}
     </section>
   );
 }

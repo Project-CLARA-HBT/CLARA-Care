@@ -27,6 +27,42 @@ RiskLevel = Literal["low", "medium", "high", "critical"]
 ModelTier = Literal["deterministic", "encoder_slm", "generative_slm", "medium_llm", "large_llm"]
 Persona = Literal["personal", "clinical", "evidence"]
 Language = Literal["vi", "en", "mixed", "unknown"]
+SemanticRouterAction = Literal["allow", "block"]
+SemanticRouterReason = Literal[
+    "none",
+    "prescription_request",
+    "dosage_request",
+    "diagnosis_request",
+    "emergency",
+]
+
+
+class SemanticSafetyDecision(BaseModel):
+    """Closed LLM boundary for primary chat safety/intent classification.
+
+    This model contains no generated clinical prose, source text, provider
+    rationale, treatment instruction, or access decision.  It is parsed before
+    any semantic route may influence the existing chat intent path; the
+    deterministic emergency/legal guards remain authoritative outside this
+    model boundary.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    action: SemanticRouterAction
+    reason: SemanticRouterReason
+    emergency: bool
+    task: TaskName
+    confidence: float = Field(ge=0.0, le=1.0)
+    model_used: str = Field(min_length=1, max_length=160)
+
+    @model_validator(mode="after")
+    def _emergency_task_is_consistent(self) -> "SemanticSafetyDecision":
+        if (self.task == "emergency") != self.emergency:
+            raise ValueError("semantic_router_emergency_task_mismatch")
+        if self.emergency and self.action != "allow":
+            raise ValueError("semantic_router_emergency_must_escalate")
+        return self
 
 
 class ClinicalLanguageSignals(BaseModel):

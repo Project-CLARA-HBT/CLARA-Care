@@ -107,7 +107,9 @@ INTENTIONAL_PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
     {
         # Liveness endpoints (Requirement 6.3).
         ("GET", "/health"),
+        ("GET", "/health/ready"),
         ("GET", "/api/v1/health"),
+        ("GET", "/api/v1/health/ready"),
         # Operator-token-gated Prometheus scrape. Not RBAC-gated via a
         # dependency; it enforces a static metrics token inside the handler, so
         # it is intentionally outside the role system.
@@ -128,7 +130,15 @@ INTENTIONAL_PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
 # Public, unauthenticated read-only path prefixes. Mirrors the CSRF-exempt
 # public prefixes declared in ``main.py``; only GET reads live here and no
 # mutating route exists under these prefixes.
-INTENTIONAL_PUBLIC_PREFIXES: tuple[str, ...] = ("/api/v1/phr/shared/",)
+INTENTIONAL_PUBLIC_PREFIXES: tuple[str, ...] = (
+    # Public capability readers are deliberately exact, GET-only routes.  The
+    # tokens are high-entropy and their handlers return a generic unavailable
+    # response on absent/revoked/expired capability; mutations remain owner
+    # authenticated and are not covered by these prefixes.
+    "/api/v1/phr/shared/",
+    "/api/v1/workspace/public/conversations/",
+    "/api/v1/visit-packs/shared/",
+)
 
 
 def is_intentionally_public(method: str, path: str) -> bool:
@@ -136,7 +146,11 @@ def is_intentionally_public(method: str, path: str) -> bool:
 
     if (method.upper(), path) in INTENTIONAL_PUBLIC_ROUTES:
         return True
-    return any(path.startswith(prefix) for prefix in INTENTIONAL_PUBLIC_PREFIXES)
+    # A future public mutation under one of these path families must fail the
+    # deny-by-default inventory test rather than inheriting a read exemption.
+    return method.upper() == "GET" and any(
+        path.startswith(prefix) for prefix in INTENTIONAL_PUBLIC_PREFIXES
+    )
 
 
 # ---------------------------------------------------------------------------

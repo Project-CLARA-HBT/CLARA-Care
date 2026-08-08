@@ -10,11 +10,9 @@ import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import {
-  checkDrugBankDdi,
   correctMedicationCourse,
   endMedicationCourse,
   getMedicationCourses,
-  type DrugBankDdiResult,
   type MedicationCourse,
 } from "@/lib/medication-courses";
 
@@ -23,9 +21,7 @@ export default function MedicinesListTab() {
   const [courses, setCourses] = useState<MedicationCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<DrugBankDdiResult | null>(null);
   const [name, setName] = useState("");
   const [dose, setDose] = useState("");
   const [schedule, setSchedule] = useState("");
@@ -73,31 +69,11 @@ export default function MedicinesListTab() {
         reason: t(language, "medicines.list.correctionReason"),
       });
       clearEditing();
-      setResult(null);
       await load();
     } catch (cause) {
       setError(safeUserFacingError(cause, t(language, "medicines.list.saveError")));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const check = async () => {
-    setChecking(true);
-    setError("");
-    setResult(null);
-    try {
-      setResult(
-        await checkDrugBankDdi(
-          courses
-            .filter((course) => course.status === "active")
-            .map((course) => course.id),
-        ),
-      );
-    } catch (cause) {
-      setError(safeUserFacingError(cause, t(language, "medicines.list.checkError")));
-    } finally {
-      setChecking(false);
     }
   };
 
@@ -134,7 +110,7 @@ export default function MedicinesListTab() {
     }
   };
 
-  const activeCourses = courses.filter((course) => course.status === "active");
+  const hasCourses = courses.length > 0;
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -146,30 +122,24 @@ export default function MedicinesListTab() {
         ) : (
           <>
             <SurfaceCard className="overflow-hidden">
-              <div className="flex flex-col gap-3 border-b border-[color:var(--shell-border)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.list.trackedTitle")}</h2>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    {t(language, "medicines.list.trackedDescription")}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button as="link" href="/medicines/add" size="sm" icon="add">
-                    {t(language, "medicines.list.addStepByStep")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={activeCourses.length < 2}
-                    loading={checking}
-                    loadingLabel={t(language, "medicines.list.checkingDrugbank")}
-                    onClick={() => void check()}
-                    icon="labs"
-                  >
-                    {t(language, "medicines.list.checkDrugbank")}
-                  </Button>
-                </div>
-              </div>
-              {courses.length ? (
+              {hasCourses ? (
+                <>
+                  <div className="flex flex-col gap-3 border-b border-[color:var(--shell-border)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.list.trackedTitle")}</h2>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {t(language, "medicines.list.trackedDescription")}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button as="link" href="/medicines/add" size="sm" icon="add">
+                        {t(language, "medicines.list.addStepByStep")}
+                      </Button>
+                      <Button as="link" href="/medicines?tab=safety" size="sm" variant="secondary" icon="labs">
+                        {t(language, "medicines.list.openSafety")}
+                      </Button>
+                    </div>
+                  </div>
                 <ul className="divide-y divide-[color:var(--shell-border)]">
                   {courses.map((course) => (
                     <li key={course.id} className="flex items-start gap-3 px-5 py-4">
@@ -238,62 +208,38 @@ export default function MedicinesListTab() {
                     </li>
                   ))}
                 </ul>
+                </>
               ) : (
-                <div className="p-5">
+                <div className="px-5 py-8 sm:px-8 sm:py-12">
                   <EmptyState
                     icon="medication"
                     title={t(language, "medicines.list.emptyTitle")}
                     description={t(language, "medicines.list.emptyDescription")}
-                  />
+                  >
+                    <Button as="link" href="/medicines/add" icon="add">
+                      {t(language, "medicines.list.addStepByStep")}
+                    </Button>
+                  </EmptyState>
+                  <ol className="mx-auto mt-8 grid max-w-2xl gap-3 border-t border-[color:var(--shell-border)] pt-6 sm:grid-cols-3">
+                    {[
+                      ["add_circle", t(language, "medicines.list.firstRun.add")],
+                      ["fact_check", t(language, "medicines.list.firstRun.confirm")],
+                      ["health_and_safety", t(language, "medicines.list.firstRun.safety")],
+                    ].map(([icon, label], index) => (
+                      <li key={String(icon)} className="flex items-center gap-3 text-left sm:flex-col sm:text-center">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-muted)] text-[var(--text-brand)]">
+                          <span className="material-symbols-outlined text-lg" aria-hidden="true">{icon}</span>
+                        </span>
+                        <span className="text-sm text-[var(--text-secondary)]">
+                          <span className="mr-1 font-semibold text-[var(--text-primary)]">{index + 1}.</span>{label}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               )}
             </SurfaceCard>
 
-            {result ? (
-              <SurfaceCard className="p-5">
-                <div className="flex items-start gap-3">
-                  <span
-                    className="material-symbols-outlined text-[var(--status-ok-text)]"
-                    aria-hidden="true"
-                  >
-                    verified
-                  </span>
-                  <div>
-                    <p className="font-semibold text-[var(--text-primary)]">
-                      {t(language, "medicines.list.verifiedResult")}
-                    </p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {t(language, "medicines.list.sourceVersion", { version: result.source_version })}
-                    </p>
-                  </div>
-                </div>
-                {result.ddi_alerts.length ? (
-                  <ul className="mt-4 space-y-2">
-                    {result.ddi_alerts.map((alert, index) => (
-                      <li
-                        key={index}
-                        className="rounded-[var(--radius-lg)] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-sm text-[var(--status-warn-text)]"
-                      >
-                        <p className="font-semibold">{alert.severity ?? t(language, "medicines.list.alert")}</p>
-                        <p className="mt-1">
-                          {alert.message ||
-                            t(language, "medicines.list.alertFallback")}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-3 text-sm text-[var(--status-ok-text)]">
-                    {t(language, "medicines.list.noAlerts")}
-                  </p>
-                )}
-                {result.recommendation ? (
-                  <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                    {result.recommendation}
-                  </p>
-                ) : null}
-              </SurfaceCard>
-            ) : null}
           </>
         )}
       </div>
@@ -357,19 +303,7 @@ export default function MedicinesListTab() {
               </Button>
             </form>
           </SurfaceCard>
-        ) : (
-          <SurfaceCard className="border-[color:var(--brand-200)] bg-[var(--surface-brand-soft)] p-5">
-            <h2 className="font-semibold text-[var(--text-primary)]">
-              {t(language, "medicines.list.addStepByStep")}
-            </h2>
-            <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
-              {t(language, "medicines.list.formDescription")}
-            </p>
-            <Button as="link" href="/medicines/add" className="mt-4" block icon="add">
-              {t(language, "medicines.list.addStepByStep")}
-            </Button>
-          </SurfaceCard>
-        )}
+        ) : null}
 
         <SurfaceCard className="p-5">
           <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "medicines.list.cabinetTitle")}</h2>

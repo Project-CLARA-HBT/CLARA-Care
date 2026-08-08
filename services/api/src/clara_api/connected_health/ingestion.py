@@ -7,7 +7,7 @@ import json
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.connected_health.control import ConnectorImportResponse
@@ -18,10 +18,12 @@ from clara_api.db.models import (
     ConnectorAccount,
     ConnectorImportBatch,
     ConnectorSyncCursor,
+    PhrProfile,
     User,
     WearableObservation,
     WearableObservationVersion,
 )
+from clara_api.glhs.adapters import ingest_connected_health_observation, owner_profile_scope
 
 
 def _payload_hash(payload: ImportPayload) -> str:
@@ -213,6 +215,45 @@ def import_batch(
                 affected_steps_dates.add(current.observed_start.date())
 
     db.flush()
+    # Connected-health rows are provider evidence, not clinician-confirmed
+    # health state. Mirror their active/update/tombstone semantics through the
+    # API-owned GLHS adapter before committing the connector cursor.
+    profile = db.get(PhrProfile, connector.profile_id)
+    if profile is None:  # connector ownership should make this unreachable
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Connector profile missing",
+        )
+    scope = owner_profile_scope(profile=profile, actor=user)
+    affected_keys = [
+        (record.data_origin, record.provider_record_id) for record in payload.records
+    ] + [
+        (tombstone.data_origin, tombstone.provider_record_id)
+        for tombstone in payload.tombstones
+    ]
+    affected_selectors = [
+        and_(
+            WearableObservation.data_origin == data_origin,
+            WearableObservation.provider_record_id == provider_record_id,
+        )
+        for data_origin, provider_record_id in affected_keys
+    ]
+    affected_records = list(
+        db.execute(
+            select(WearableObservation).where(
+                WearableObservation.connector_id == connector.id,
+                WearableObservation.profile_id == connector.profile_id,
+                or_(*affected_selectors),
+            )
+        ).scalars()
+    )
+    for observation in affected_records:
+        ingest_connected_health_observation(
+            db,
+            scope=scope,
+            observation=observation,
+            idempotency_key=payload.idempotency_key,
+        )
     if affected_steps_dates:
         recompute_steps_daily_aggregates(
             db,

@@ -97,8 +97,11 @@ async def transcribe(
             vad_filter=True,
         )
         text = " ".join(seg.text.strip() for seg in segments).strip()
-    except Exception as exc:  # noqa: BLE001 — trả lỗi rõ thay vì 500 câm
-        raise HTTPException(status_code=422, detail=f"Whisper decode failed: {exc}") from exc
+    except Exception as exc:  # noqa: BLE001 — do not expose decoder/provider detail
+        # Audio can contain sensitive clinical speech.  Keep the server-side
+        # exception chained for observability, but never reflect its raw text
+        # (which may include filenames/provider detail) to a caller.
+        raise HTTPException(status_code=422, detail="Không thể xử lý tệp âm thanh") from exc
 
     return {
         "text": text,

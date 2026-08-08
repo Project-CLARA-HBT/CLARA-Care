@@ -14,16 +14,6 @@ import 'phr_screen.dart';
 import 'research_screen.dart';
 import 'scribe_screen.dart';
 import 'selfmed_cabinet_screen.dart';
-import 'shared_resource_screen.dart';
-
-/// CLARA_API base URL for surfaces that build their own read-only fetcher
-/// (e.g. the public shared-resource viewer). Mirrors `main.dart`'s
-/// `--dart-define=CLARA_API_BASE_URL` so wiring stays additive without
-/// reaching into [ApiClient]'s private base URL (Req 13, 15.5).
-const String _dashboardApiBaseUrl = String.fromEnvironment(
-  'CLARA_API_BASE_URL',
-  defaultValue: 'http://localhost:8100',
-);
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -393,28 +383,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   enabled: true,
                   onTap: () => _openScreen(
                     ConsentCenterScreen(
+                      apiClient: widget.apiClient,
                       resolver: resolver,
                       sessionStore: widget.sessionStore,
-                    ),
-                  ),
-                ),
-              if (resolver.sharingEnabled)
-                _FeatureTile(
-                  icon: Icons.share_outlined,
-                  title: 'Nội dung chia sẻ',
-                  subtitle: 'Xem tài nguyên được chia sẻ',
-                  enabled: true,
-                  onTap: () => _openScreen(
-                    SharedResourceScreen(
-                      // The dashboard entry point carries no deep-link token;
-                      // the read-only viewer surfaces an error state until a
-                      // token arrives via a share link. The tile exists so the
-                      // surface is reachable when the gate is on (Req 12, 13.1).
-                      token: '',
-                      fetcher: createHttpSharedResourceFetcher(
-                        baseUrl: _dashboardApiBaseUrl,
-                      ),
-                      flags: resolver,
                     ),
                   ),
                 ),
@@ -597,8 +568,7 @@ class _MetricsView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (requestsTotal != null)
-              Text('Tổng số request: $requestsTotal'),
+            if (requestsTotal != null) Text('Tổng số request: $requestsTotal'),
             if (avgLatencyMs != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),

@@ -23,17 +23,17 @@ const MIGRATED_SURFACES = [
   },
   {
     path: "components/app-shell.tsx",
-    required: ["@/lib/i18n/catalog", "action.askClara", "language.preference"],
+    required: ["@/lib/i18n/catalog", "navigation.workspace.label", "language.preference"],
     forbidden: ["Hỏi CLARA", "Ask CLARA", "Tùy chọn ngôn ngữ", "Language preferences"],
   },
   {
     path: "components/navigation/app-topbar.tsx",
-    required: ["@/lib/i18n/catalog", "action.askClara", "language.change"],
+    required: ["@/lib/i18n/catalog", "action.signOut", "language.change"],
     forbidden: ["Hỏi CLARA", "Ask CLARA", "Đổi ngôn ngữ", "Change language"],
   },
   {
     path: "components/sidebar-nav.tsx",
-    required: ["@/lib/i18n/catalog", "navigation.primary", "action.signOut"],
+    required: ["@/lib/i18n/catalog", "navigation.primary", "navigation.workspace.choose"],
     forbidden: ["Hỏi CLARA", "Ask CLARA", "Đăng xuất", "Sign out", "Điều hướng chính", "Primary navigation"],
   },
   {
@@ -131,6 +131,97 @@ const MIGRATED_SURFACES = [
     ],
   },
   {
+    // OCR is a medical-data processing surface: localized acknowledgement,
+    // disclosure, errors and accessible labels must move as one catalog-backed
+    // boundary rather than leaving a component-local bilingual map behind.
+    path: "components/phr/ocr-review-modal.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "phr.ocr.disclosure",
+      "phr.ocr.consentNotice",
+      "phr.ocr.processingNotice",
+      "phr.ocr.confirmError",
+    ],
+    forbidden: [
+      "Quét đơn thuốc (OCR)",
+      "Scan prescription (OCR)",
+      "Tải lên ảnh hoặc tệp đơn thuốc.",
+      "Upload a prescription image or file.",
+    ],
+  },
+  {
+    path: "components/phr/share-manager.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "phr.share.createError",
+      "phr.share.scopeEmergency",
+      "formatLocaleDate(uiLanguage",
+    ],
+    forbidden: ["Chia sẻ hồ sơ (chỉ đọc)", "Share record (read-only)"],
+  },
+  {
+    path: "components/phr/export-button.tsx",
+    required: ["@/lib/i18n/catalog", "phr.export.title", "phr.export.resource.all"],
+    forbidden: ["Xuất hồ sơ (FHIR)", "Export record (FHIR)"],
+  },
+  {
+    path: "components/phr/emergency-card-editor.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "phr.emergencyCard.title",
+      "phr.emergencyCard.field.allergies",
+    ],
+    forbidden: ["Thẻ khẩn cấp", "Emergency card"],
+  },
+  {
+    path: "components/phr/reminders-panel.tsx",
+    required: ["@/lib/i18n/catalog", "phr.reminders.title", "phr.reminders.addError"],
+    forbidden: ["Nhắc uống thuốc", "Medication reminders"],
+  },
+  {
+    // The ledger exposes all six backend consent purposes. Keeping AI
+    // transparency in the same catalog-backed card flow makes an active or
+    // withdrawn acknowledgement visible rather than silently hiding it.
+    path: "app/account/consent/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      '"ai_transparency"',
+      "consent.purpose.aiTransparency.label",
+      "safeUserFacingError",
+    ],
+    forbidden: ["AI transparency", "Minh bạch AI"],
+  },
+  {
+    path: "app/account/data/delete/[step]/delete-data-flow-client.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "account.dataDelete.confirmation",
+      "formatLocaleDate(uiLanguage",
+    ],
+    forbidden: [
+      "Xóa dữ liệu cá nhân",
+      "Delete personal data",
+      "toLocaleString()",
+      "toLocaleDateString()",
+    ],
+  },
+  {
+    path: "app/admin/dsar/page.tsx",
+    required: [
+      "@/lib/i18n/catalog",
+      "admin.dsar.loadError",
+      "admin.dsar.status.received",
+      "formatLocaleDate(uiLanguage",
+    ],
+    forbidden: [
+      "Hàng đợi DSAR (Quản trị)",
+      "DSAR queue (Admin)",
+      "err instanceof Error ? err.message",
+      "toLocaleString()",
+      "toLocaleDateString()",
+    ],
+  },
+  {
     path: "app/lifemap/new/start-client.tsx",
     required: [
       "@/lib/i18n/catalog",
@@ -204,7 +295,8 @@ const MIGRATED_SURFACES = [
       "@/lib/i18n/catalog",
       "chat.workspace.title",
       "chat.workspace.notice.shareCreated",
-      "formatLocaleDate(uiLanguage, item.expires_at)",
+      "formatLocaleDate(",
+      "item.expires_at",
     ],
     forbidden: [
       "Không gian làm việc",
@@ -533,6 +625,26 @@ for (const surface of MIGRATED_SURFACES) {
   }
 }
 
+// These source files resolve a closed, TypeScript-constrained status enum into
+// catalog keys. A literal-only scan cannot see the individual suffixes, so
+// bind each dynamic prefix to its actual source expression instead of treating
+// every unreferenced key as live. Adding a new dynamic prefix requires an
+// explicit entry here and therefore remains reviewable in CI.
+const DYNAMIC_KEY_PREFIXES = [
+  {
+    prefix: "research.workspace.timeline.status.",
+    sourceToken: "`research.workspace.timeline.status.${status}`",
+  },
+  {
+    prefix: "ecosystem.status.",
+    sourceToken: 'labelFor(language, "ecosystem.status"',
+  },
+  {
+    prefix: "ecosystem.driftRisk.",
+    sourceToken: 'labelFor(language, "ecosystem.driftRisk"',
+  },
+];
+
 // Detect accidental dead catalog entries in production source. Dynamic typed
 // lookups (role/group/theme maps) are explicitly verified by the migrated
 // surface contracts above, so a key is live if either a direct t() call or its
@@ -544,9 +656,15 @@ const sourceText = collectSourceFiles(resolve(WEB_ROOT, "app"))
   .map((path) => readFileSync(path, "utf8"))
   .join("\n");
 const contractKeys = new Set(MIGRATED_SURFACES.flatMap((surface) => surface.required));
+for (const dynamicKey of DYNAMIC_KEY_PREFIXES) {
+  if (!sourceText.includes(dynamicKey.sourceToken)) {
+    fail(`dynamic catalog source is missing: ${dynamicKey.sourceToken}`);
+  }
+}
 for (const key of viSet) {
   const directUse = sourceText.includes(`"${key}"`) || sourceText.includes(`'${key}'`);
-  if (!directUse && !contractKeys.has(key)) {
+  const dynamicUse = DYNAMIC_KEY_PREFIXES.some(({ prefix }) => key.startsWith(prefix));
+  if (!directUse && !contractKeys.has(key) && !dynamicUse) {
     fail(`catalog key is not referenced by production source: ${key}`);
   }
 }

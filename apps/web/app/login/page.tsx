@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/lib/http-client";
-import { setAccessToken, setRefreshToken, setRole as setStoredRole } from "@/lib/auth-store";
+import { markAuthenticatedBrowserSession, setRole as setStoredRole } from "@/lib/auth-store";
 import Button from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
@@ -42,19 +42,13 @@ export default function LoginPage() {
     refresh_token?: string;
     role?: "normal" | "researcher" | "doctor" | "admin";
   }) => {
-    const accessToken = payload.access_token;
-    const refreshToken = payload.refresh_token;
     const serverRole = payload.role;
 
-    if (!accessToken) {
-      throw new Error(t(language, "auth.login.missingToken"));
-    }
-
     const nextRole = serverRole ?? "normal";
-    setAccessToken(accessToken);
-    if (refreshToken) {
-      setRefreshToken(refreshToken);
-    }
+    // The API has already set HttpOnly access/refresh cookies. Its token fields
+    // remain for native clients, but a browser must not retain them in
+    // script-readable storage.
+    markAuthenticatedBrowserSession();
     setStoredRole(nextRole);
     const targetPath = resolvePostLoginPath({
       nextPath:

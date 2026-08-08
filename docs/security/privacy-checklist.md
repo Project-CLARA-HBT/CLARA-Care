@@ -3,6 +3,16 @@
 Use this operational checklist before a release; it is not a certification.
 
 - [ ] RBAC/profile isolation and consent/CSRF contract tests passed.
+- [ ] Cookie-session CSRF tests cover malformed, mixed-case and revoked Bearer
+      headers; exemption is allowed only for an actually valid explicit token.
+- [ ] Browser access and refresh credentials are HttpOnly-cookie-only. Verify
+      no `clara_access_token_session` or `clara_refresh_token_session` value
+      remains in sessionStorage after login, refresh or logout.
+- [ ] Metrics credentials are passed exclusively in `X-Metrics-Token`; no
+      dashboard, smoke script, documentation or monitor uses `?token=`.
+- [ ] Both the active web image and the active reverse proxy emit CSP, HSTS,
+      `nosniff`, frame, referrer and permissions policies with no
+      `X-Powered-By`; retain the external HTTPS header-smoke evidence.
 - [ ] Emergency and legal hard-guard invariant tests passed.
 - [ ] FIDES/claim verification and DrugBank required-source tests passed.
 - [ ] Eval manifests/fixtures contain no PHI, secrets, prompts or provider keys.
@@ -20,6 +30,11 @@ Use this operational checklist before a release; it is not a certification.
 - [ ] CI/CD uploaded only status/readiness diagnostics and the artifact safety
       guard passed; raw container logs, runtime `.env`, and mined hard-negative
       JSONL/free-text query data were not uploaded.
+- [ ] A controlled deployment ran Compose, migration and service smoke checks
+      on the pinned target host rather than a GitHub runner. SSH host trust was
+      pinned, deploy/GHCR credentials were supplied only to their owning steps
+      and over stdin where applicable, the target `.env` remained mode `600`,
+      and the release/backup receipts are retained for rollback.
 - [ ] Model/prompt/retrieval manifests are immutable and rollback choice is
       documented before enabling a risky model path.
 - [ ] Untrusted PHR OCR and Research uploads passed bounded-read,
@@ -30,4 +45,8 @@ Use this operational checklist before a release; it is not a certification.
 - [ ] Upload retention and deletion propagation checks passed.
 - [ ] Dependency, secret, SAST/container scans and restore drill have current
       evidence; otherwise release remains blocked.
+- [ ] Production `npm audit --omit=dev --audit-level=high` has no unreviewed
+      result. A framework advisory with no compatible fixed release is a tracked
+      release blocker, not a reason to lower the audit threshold or add a broad
+      scanner suppression.
 - [ ] Release locked suite is measured, not merely structurally green.

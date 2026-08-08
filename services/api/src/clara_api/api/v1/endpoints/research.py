@@ -61,8 +61,6 @@ from clara_api.db.models import (
     FederatedSourceRecord,
     KnowledgeDocument,
     KnowledgeSource,
-    MedicineCabinet,
-    MedicineItem,
     PhrProfile,
     ResearchJob,
     SessionModel,
@@ -74,6 +72,8 @@ from clara_api.db.models import (
     Query as QueryModel,
 )
 from clara_api.db.session import SessionLocal, get_db
+from clara_api.glhs.adapters import owner_profile_scope
+from clara_api.glhs.gateway import compile_thss
 from clara_api.observability.admin_audit import (
     ACTION_KB_DOCUMENT_STATUS,
     ACTION_KB_SOURCE_CREATE,
@@ -1131,75 +1131,6 @@ def _build_clarifying_questions(*, ui_language: str) -> list[ResearchClarifyQues
     ]
 
 
-def _research_tier2_fallback_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    research_mode, retrieval_stack_mode = _resolve_tier2_execution_modes(payload)
-    answer_language = _normalize_answer_language_value(
-        payload.get("ui_language") or payload.get("answer_language"),
-        default="vi",
-    )
-    if answer_language == "en":
-        fallback_answer_text = (
-            "Deep retrieval is currently busy or temporarily unable to reach the RAG stack. "
-            "Using a safety-first fallback for now: prioritize guideline-based care, "
-            "double-check major drug interactions, and escalate to a clinician when there are "
-            "comorbidities or red-flag symptoms."
-        )
-        fallback_answer_markdown = (
-            "## Quick conclusion\n"
-            f"{fallback_answer_text}\n\n"
-            "## Detailed analysis\n"
-            "- The deep research path is temporarily unavailable, "
-            "so this answer stays conservative.\n"
-            "- Re-check key decisions against primary sources or the treating clinician.\n\n"
-            "## Safety recommendations\n"
-            "- Do not self-prescribe or change dosing without qualified clinical advice.\n"
-            "- If there is comorbidity or polypharmacy, "
-            "confirm the next step with a clinician or pharmacist."
-        )
-    else:
-        fallback_answer_text = (
-            "Hệ thống truy xuất chuyên sâu đang bận hoặc tạm thời không kết nối được nguồn RAG. "
-            "Tạm thời dùng chế độ an toàn: bạn nên ưu tiên phác đồ chính thống, "
-            "đối chiếu tương tác thuốc quan trọng, "
-            "và trao đổi bác sĩ khi có bệnh nền hoặc dấu hiệu nặng."
-        )
-        fallback_answer_markdown = (
-            "## Kết luận nhanh\n"
-            f"{fallback_answer_text}\n\n"
-            "## Phân tích chi tiết\n"
-            "- Luồng nghiên cứu chuyên sâu tạm thời không khả dụng, "
-            "nên câu trả lời này dùng chế độ an toàn.\n"
-            "- Ưu tiên xác minh lại thông tin với nguồn chuyên môn hoặc bác sĩ điều trị.\n\n"
-            "## Khuyến nghị an toàn\n"
-            "- Không tự ý kê đơn hoặc điều chỉnh liều khi chưa có tư vấn chuyên môn.\n"
-            "- Nếu có bệnh nền hoặc đa thuốc, cần tham khảo bác sĩ/dược sĩ trước khi áp dụng."
-        )
-    return {
-        "answer": fallback_answer_markdown,
-        "answer_markdown": fallback_answer_markdown,
-        "summary": fallback_answer_text,
-        "answer_format": "markdown",
-        "render_hints": dict(_DEFAULT_MARKDOWN_RENDER_HINTS),
-        "metadata": {
-            "research_mode": research_mode,
-            "retrieval_stack_mode": retrieval_stack_mode,
-            "deep_pass_count": 0,
-            "answer_format": "markdown",
-            "render_hints": dict(_DEFAULT_MARKDOWN_RENDER_HINTS),
-        },
-        "context_debug": {},
-        "flow_events": [],
-        "citations": [],
-        "fallback": True,
-        "source_mode": payload.get("source_mode"),
-        "research_mode": research_mode,
-        "retrieval_stack_mode": retrieval_stack_mode,
-        "ui_language": answer_language,
-        "answer_language": answer_language,
-        "deep_pass_count": 0,
-    }
-
-
 def _first_dict(*values: Any) -> dict[str, Any] | None:
     for value in values:
         if isinstance(value, dict):
@@ -1270,10 +1201,10 @@ def _is_trace_key(key: str) -> bool:
 
 
 def _normalize_trace_value(value: Any) -> Any:
-    if isinstance(value, (str, int, float, bool)):
+    if isinstance(value, str | int | float | bool):
         return value
     if isinstance(value, list):
-        compact = [item for item in value if isinstance(item, (str, int, float, bool))]
+        compact = [item for item in value if isinstance(item, str | int | float | bool)]
         return compact[:20] if compact else None
     if isinstance(value, dict):
         compact: dict[str, Any] = {}
@@ -1872,7 +1803,7 @@ def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
 def _coerce_personal_mode(value: Any) -> bool:
     if isinstance(value, bool):
         return value
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return value != 0
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "on"}
@@ -1913,135 +1844,139 @@ def _compact_text(value: Any, *, limit: int = 160) -> str:
     return f"{text[:limit].rstrip()}..."
 
 
+def _age_band(date_of_birth: Any) -> str:
+    """Return a coarse age band for personalised research prompts.
+
+    Deep/DeepBeta only need clinically relevant context.  Names and exact birth
+    dates are neither necessary nor appropriate to send to an LLM provider, so
+    retain the useful life-stage signal without forwarding a direct identifier.
+    """
+
+    if date_of_birth is None:
+        return ""
+    try:
+        today = datetime.now(tz=UTC).date()
+        age = (
+            today.year
+            - date_of_birth.year
+            - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+        )
+    except (AttributeError, TypeError, ValueError):
+        return ""
+    if age < 0:
+        return ""
+    if age < 18:
+        return "under_18"
+    if age < 40:
+        return "18_39"
+    if age < 65:
+        return "40_64"
+    return "65_plus"
+
+
 def _build_personal_context_payload(
     db: Session,
     *,
-    user_id: int,
+    user: User,
     answer_language: str,
 ) -> dict[str, Any]:
+    """Compile model context from THSS, never from direct PHR/cabinet reads."""
+
     profile = db.execute(
-        select(PhrProfile).where(PhrProfile.user_id == user_id)
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
     ).scalar_one_or_none()
+    if profile is None:
+        return {
+            "snapshot_id": None,
+            "profile": {},
+            "allergies": [],
+            "conditions": [],
+            "medications": [],
+            "observations": [],
+            "lifemap": [],
+            "conflicts": [],
+            "summary_markdown": "",
+        }
+    snapshot = compile_thss(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=user, purpose="research"),
+        task="research_personalization",
+        purpose="research",
+        allowed_data_classes=frozenset(
+            {"lifemap", "medications", "allergies", "conditions", "observations"}
+        ),
+        selection_policy="strict",
+    )
+    medications: list[dict[str, Any]] = []
     allergies: list[dict[str, Any]] = []
     conditions: list[dict[str, Any]] = []
-    profile_medications: list[dict[str, Any]] = []
-    profile_payload: dict[str, Any] = {}
-
-    if profile is not None:
-        allergies = _as_dict_list(profile.allergies_json)
-        conditions = _as_dict_list(profile.conditions_json)
-        profile_medications = _as_dict_list(profile.medications_json)
-        profile_payload = {
-            "full_name": profile.full_name or "",
-            "date_of_birth": profile.date_of_birth.isoformat() if profile.date_of_birth else None,
-            "gender": profile.gender or "",
-            "blood_type": profile.blood_type or "",
-            "height_cm": profile.height_cm,
-            "weight_kg": profile.weight_kg,
-            "notes": profile.notes or "",
+    observations: list[dict[str, Any]] = []
+    lifemap: list[dict[str, Any]] = []
+    for assertion in snapshot.assertions:
+        value = assertion.get("value")
+        if not isinstance(value, dict):
+            continue
+        item = {
+            "assertion_id": assertion["id"],
+            "predicate": assertion["semantic_key"],
+            "value": value,
+            "epistemic_state": assertion["epistemic_state"],
         }
-
-    cabinet = db.execute(
-        select(MedicineCabinet).where(MedicineCabinet.user_id == user_id)
-    ).scalar_one_or_none()
-    cabinet_items: list[dict[str, Any]] = []
-    if cabinet is not None:
-        rows = (
-            db.execute(
-                select(MedicineItem)
-                .where(MedicineItem.cabinet_id == cabinet.id)
-                .order_by(MedicineItem.updated_at.desc(), MedicineItem.id.desc())
-                .limit(120)
-            )
-            .scalars()
-            .all()
-        )
-        cabinet_items = [
-            {
-                "name": item.drug_name or item.normalized_name or "",
-                "normalized_name": item.normalized_name or "",
-                "dose": item.dosage or "",
-                "dosage_form": item.dosage_form or "",
-                "quantity": item.quantity,
-                "source": item.source or "",
-                "expires_on": item.expires_on.isoformat() if item.expires_on else None,
-                "note": item.note or "",
-            }
-            for item in rows
-        ]
-
-    merged_medications: list[dict[str, Any]] = []
-    seen_medication_keys: set[str] = set()
-    for item in profile_medications:
-        name = _compact_text(item.get("name"), limit=120)
-        if not name:
-            continue
-        key = name.lower()
-        if key in seen_medication_keys:
-            continue
-        seen_medication_keys.add(key)
-        merged_medications.append(
-            {
-                "name": name,
-                "dose": _compact_text(item.get("dose"), limit=80),
-                "frequency": _compact_text(item.get("frequency"), limit=80),
-                "note": _compact_text(item.get("note"), limit=140),
-                "source": "phr",
-            }
-        )
-    for item in cabinet_items:
-        name = _compact_text(item.get("name"), limit=120)
-        if not name:
-            continue
-        key = name.lower()
-        if key in seen_medication_keys:
-            continue
-        seen_medication_keys.add(key)
-        merged_medications.append(
-            {
-                "name": name,
-                "dose": _compact_text(item.get("dose"), limit=80),
-                "frequency": "",
-                "note": _compact_text(item.get("note"), limit=140),
-                "source": "cabinet",
-            }
-        )
+        if assertion["type"] == "medications":
+            medications.append(item)
+        elif assertion["type"] == "allergies":
+            allergies.append(item)
+        elif assertion["type"] == "conditions":
+            conditions.append(item)
+        elif assertion["type"] == "observations":
+            observations.append(item)
+        elif assertion["type"] == "lifemap":
+            lifemap.append(item)
 
     if answer_language == "en":
-        header = "Personal health context (PHR + medicine cabinet):"
-        allergies_label = "Allergies"
-        conditions_label = "Conditions"
-        meds_label = "Current meds"
+        header = "Task-bounded personal health context:"
+        meds_label = "Governed medication reports"
+        allergies_label = "Self-reported allergies"
+        conditions_label = "Self-reported conditions"
     else:
-        header = "Bối cảnh sức khỏe cá nhân (PHR + tủ thuốc):"
-        allergies_label = "Dị ứng"
-        conditions_label = "Bệnh nền"
-        meds_label = "Thuốc hiện có"
+        header = "Bối cảnh sức khỏe cá nhân theo tác vụ:"
+        meds_label = "Báo cáo thuốc đã được quản trị"
+        allergies_label = "Dị ứng do người dùng khai báo"
+        conditions_label = "Tình trạng do người dùng khai báo"
 
-    allergy_names = [str(item.get("name") or "").strip() for item in allergies][:12]
-    condition_names = [str(item.get("name") or "").strip() for item in conditions][:12]
-    med_names = [str(item.get("name") or "").strip() for item in merged_medications][:16]
+    med_names = [
+        _compact_text(item["value"].get("medication_name"), limit=120) for item in medications
+    ][:16]
     summary_lines = [f"- {header}"]
-    if allergy_names:
-        allergy_str = ", ".join(name for name in allergy_names if name)
-        summary_lines.append(f"- {allergies_label}: {allergy_str}.")
-    if condition_names:
-        condition_str = ", ".join(name for name in condition_names if name)
-        summary_lines.append(f"- {conditions_label}: {condition_str}.")
     if med_names:
         summary_lines.append(f"- {meds_label}: {', '.join([name for name in med_names if name])}.")
-    summary_markdown = "\n".join(summary_lines)
+    allergy_names = [_compact_text(item["value"].get("name"), limit=120) for item in allergies][:16]
+    if allergy_names:
+        summary_lines.append(
+            f"- {allergies_label}: {', '.join([name for name in allergy_names if name])}."
+        )
+    condition_names = [
+        _compact_text(item["value"].get("name"), limit=120) for item in conditions
+    ][:16]
+    if condition_names:
+        summary_lines.append(
+            f"- {conditions_label}: {', '.join([name for name in condition_names if name])}."
+        )
+    summary_markdown = (
+        "\n".join(summary_lines)
+        if medications or allergies or conditions or observations or lifemap
+        else ""
+    )
 
     return {
-        "profile": profile_payload,
+        "snapshot_id": snapshot.snapshot_id,
+        "profile": {},
         "allergies": allergies,
         "conditions": conditions,
-        "medications": merged_medications,
-        "medicine_cabinet": {
-            "exists": cabinet is not None,
-            "label": cabinet.label if cabinet is not None else "",
-            "items": cabinet_items,
-        },
+        "medications": medications,
+        "observations": observations,
+        "lifemap": lifemap,
+        "conflicts": list(snapshot.conflicts),
         "summary_markdown": summary_markdown,
     }
 
@@ -2071,9 +2006,7 @@ def _clamp_gap_fill_request_keys(container: dict[str, Any], *, ceiling: int) -> 
         container[key] = max(0, min(requested, ceiling))
 
 
-def _enforce_api_gap_fill_ceiling(
-    payload: dict[str, Any], *, hard_max: int
-) -> dict[str, Any]:
+def _enforce_api_gap_fill_ceiling(payload: dict[str, Any], *, hard_max: int) -> dict[str, Any]:
     """Clamp any requested gap-fill pass count to the API hard ceiling (clara-research R5.5).
 
     The Research_API enforces ``RESEARCH_API_GAP_FILL_HARD_MAX`` externally so a
@@ -2197,7 +2130,7 @@ def _build_tier2_upstream_payload(
         if include_personal:
             personal_context = _build_personal_context_payload(
                 db,
-                user_id=user.id,
+                user=user,
                 answer_language=answer_language,
             )
             upstream_payload["personal_context"] = personal_context
@@ -2262,9 +2195,11 @@ def _enforce_request_execution_contract(
             request_payload.get("output_mode"),
             role=str(request_payload.get("role") or ""),
         )
-        candidate_output_mode = str(
-            response.get("output_mode") or metadata_obj.get("output_mode") or ""
-        ).strip().lower()
+        candidate_output_mode = (
+            str(response.get("output_mode") or metadata_obj.get("output_mode") or "")
+            .strip()
+            .lower()
+        )
         if candidate_output_mode == expected_output_mode:
             response["output_mode"] = expected_output_mode
             metadata_obj["output_mode"] = expected_output_mode
@@ -2296,6 +2231,17 @@ def _empty_job_progress() -> dict[str, Any]:
         "status_note": "",
         "reasoning_steps": [],
     }
+
+
+def _safe_failure_stage(progress: Any) -> str:
+    """Expose a bounded pipeline stage in failure telemetry, never upstream text."""
+
+    if not isinstance(progress, dict):
+        return "unknown"
+    value = str(progress.get("active_stage") or "").strip().lower()
+    if not value or not re.fullmatch(r"[a-z0-9_]{1,64}", value):
+        return "unknown"
+    return value
 
 
 def _stage_from_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -2515,13 +2461,9 @@ def _serialize_research_job(
         progress=progress,
         result=result,
         error=job.error_text or None,
-        run_manifest=(
-            job.run_manifest_json if isinstance(job.run_manifest_json, dict) else None
-        ),
+        run_manifest=(job.run_manifest_json if isinstance(job.run_manifest_json, dict) else None),
         evidence_snapshot=(
-            job.evidence_snapshot_json
-            if isinstance(job.evidence_snapshot_json, dict)
-            else None
+            job.evidence_snapshot_json if isinstance(job.evidence_snapshot_json, dict) else None
         ),
         attempt_count=int(job.attempt_count or 0),
         recovery_count=int(job.recovery_count or 0),
@@ -2571,6 +2513,7 @@ def _apply_research_quality_gates(
     citations = gated.get("citations")
     if not isinstance(citations, list):
         citations = gated.get("sources") if isinstance(gated.get("sources"), list) else []
+
     def is_resolvable_citation(item: Any) -> bool:
         if not isinstance(item, dict):
             return False
@@ -2617,9 +2560,7 @@ def _apply_research_quality_gates(
     unsupported = gated.get("unsupported_claims")
     unsupported_count = len(unsupported) if isinstance(unsupported, list) else 0
     citation_count = len(real_citations)
-    answer_present = bool(
-        str(gated.get("answer_markdown") or gated.get("answer") or "").strip()
-    )
+    answer_present = bool(str(gated.get("answer_markdown") or gated.get("answer") or "").strip())
     mode = _coerce_research_mode(request_payload)
     raw_verification_matrix = gated.get("verification_matrix")
     verification_matrix = (
@@ -2631,20 +2572,15 @@ def _apply_research_quality_gates(
         else {}
     )
     verification_rows = (
-        verification_matrix.get("rows")
-        if isinstance(verification_matrix.get("rows"), list)
-        else []
+        verification_matrix.get("rows") if isinstance(verification_matrix.get("rows"), list) else []
     )
     verification_state = str(verification_matrix.get("state") or "").strip().lower()
     verification_version = str(verification_matrix.get("version") or "").strip()
-    verifier_counts_well_formed = (
-        is_nonnegative_integral_number(verification_summary.get("total_claims"))
-        and is_nonnegative_integral_number(verification_summary.get("supported_claims"))
-    )
+    verifier_counts_well_formed = is_nonnegative_integral_number(
+        verification_summary.get("total_claims")
+    ) and is_nonnegative_integral_number(verification_summary.get("supported_claims"))
     verifier_total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
-    verifier_supported_claims = safe_nonnegative_int(
-        verification_summary.get("supported_claims")
-    )
+    verifier_supported_claims = safe_nonnegative_int(verification_summary.get("supported_claims"))
     verifier_support_ratio = verification_summary.get("support_ratio")
     verifier_ratio_matches_counts = False
     if is_unit_interval_number(verifier_support_ratio) and verifier_counts_well_formed:
@@ -2682,9 +2618,7 @@ def _apply_research_quality_gates(
         1
         for row in verification_rows
         if isinstance(row, dict)
-        and str(
-            row.get("support_status") or row.get("status") or row.get("verdict") or ""
-        )
+        and str(row.get("support_status") or row.get("status") or row.get("verdict") or "")
         .strip()
         .lower()
         in {"unsupported", "insufficient", "contradicted", "failed", "error"}
@@ -2706,11 +2640,7 @@ def _apply_research_quality_gates(
         or real_citations
     )
     support_ratio_raw = verification_summary.get("support_ratio")
-    support_ratio = (
-        float(support_ratio_raw)
-        if isinstance(support_ratio_raw, (int, float))
-        else None
-    )
+    support_ratio = float(support_ratio_raw) if isinstance(support_ratio_raw, int | float) else None
     total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
     gate_reasons: list[str] = []
     if answer_present and citation_count == 0:
@@ -2721,12 +2651,7 @@ def _apply_research_quality_gates(
         gate_reasons.append(verifier_contract_reason)
     if unsupported_count:
         gate_reasons.append("unsupported_claims")
-    if (
-        answer_present
-        and support_ratio is not None
-        and support_ratio <= 0.0
-        and total_claims > 0
-    ):
+    if answer_present and support_ratio is not None and support_ratio <= 0.0 and total_claims > 0:
         gate_reasons.append("zero_claim_support")
     quality_gate = {
         "schema_version": "1.0",
@@ -2750,8 +2675,11 @@ def _apply_research_quality_gates(
     if gate_reasons:
         gated["degraded"] = True
         gated["degraded_reason"] = ";".join(gate_reasons)
-        gated["fallback_used"] = True
-        metadata["fallback_used"] = True
+        # This is a policy abstention, not a model or research fallback.  Do
+        # not let UI telemetry imply that unverified clinical prose was
+        # replaced by another generated answer.
+        gated["fallback_used"] = False
+        metadata["fallback_used"] = False
         metadata["degraded_path"] = True
         gated["metadata"] = metadata
         # A failed medical-evidence gate is a release block, not merely a badge.
@@ -2760,9 +2688,7 @@ def _apply_research_quality_gates(
         # Keep the evidence and verifier diagnostics so the UI can explain the
         # abstention and a researcher can refine the request.
         language = str(
-            request_payload.get("ui_language")
-            or request_payload.get("answer_language")
-            or "vi"
+            request_payload.get("ui_language") or request_payload.get("answer_language") or "vi"
         ).lower()
         safe_answer = (
             "CLARA could not retrieve enough verifiable evidence for this research "
@@ -2777,7 +2703,16 @@ def _apply_research_quality_gates(
         gated["answer_markdown"] = safe_answer
         gated["citations"] = real_citations
         gated["sources"] = real_citations
-        gated["policy_action"] = "warn"
+        # A degraded evidence response is normally an explicit warning.  It
+        # must never downgrade an independent safety verdict that already
+        # blocked or escalated the request (for example, a contradicted dosage
+        # claim from the ML verifier).  The policy action is consumed by the
+        # clinical-answer renderer, so preserving the stricter action here is
+        # part of the API safety boundary rather than presentation metadata.
+        existing_policy_action = str(gated.get("policy_action") or "").strip().lower()
+        gated["policy_action"] = (
+            existing_policy_action if existing_policy_action in {"block", "escalate"} else "warn"
+        )
     return gated
 
 
@@ -2853,13 +2788,9 @@ def _build_research_run_manifest(
         "input_sha256": _canonical_sha256(request_payload),
         "research_mode": _coerce_research_mode(request_payload),
         "source_mode": str(request_payload.get("source_mode") or "hybrid"),
-        "retrieval_stack_mode": str(
-            request_payload.get("retrieval_stack_mode") or "auto"
-        ),
+        "retrieval_stack_mode": str(request_payload.get("retrieval_stack_mode") or "auto"),
         "answer_language": str(
-            request_payload.get("ui_language")
-            or request_payload.get("answer_language")
-            or "vi"
+            request_payload.get("ui_language") or request_payload.get("answer_language") or "vi"
         ),
         "selected_sources": {
             "knowledge_source_ids": list(request_payload.get("source_ids") or []),
@@ -2882,7 +2813,7 @@ def _build_evidence_snapshot(
         "sources": sources if isinstance(sources, list) else [],
         "citation_registry": registry if isinstance(registry, list) else [],
         "retrieval_trace": result.get("retrieval_trace")
-        if isinstance(result.get("retrieval_trace"), (dict, list))
+        if isinstance(result.get("retrieval_trace"), dict | list)
         else None,
     }
     return {
@@ -2929,7 +2860,11 @@ def _invoke_ml_tier2_with_progress(
     headers: dict[str, str] = {}
     if settings.ml_internal_api_key.strip():
         headers["X-ML-Internal-Key"] = settings.ml_internal_api_key.strip()
-    timeout_seconds = max(settings.ml_service_timeout_seconds * 3.0, 480.0)
+    # The async job boundary must be longer than one ML synthesis attempt, but
+    # it must also terminate a stalled dependency instead of pinning a worker
+    # for eight minutes.  Failures are surfaced as failed jobs; no response is
+    # fabricated or retried through another model.
+    timeout_seconds = max(settings.ml_service_timeout_seconds * 1.5, 30.0)
     started = datetime.now(tz=UTC)
     request_kwargs: dict[str, Any] = {"json": ml_payload, "timeout": timeout_seconds}
     if headers:
@@ -3013,7 +2948,6 @@ def _run_research_job(job_id: str) -> None:
     try:
         if not _claim_research_job(db, job_id=job_id, worker_id=worker_id):
             return
-        settings = get_settings()
         job = db.execute(
             select(ResearchJob).where(ResearchJob.job_id == job_id)
         ).scalar_one_or_none()
@@ -3073,11 +3007,9 @@ def _run_research_job(job_id: str) -> None:
 
         ml_response = _invoke_ml_tier2_with_progress(
             ml_payload=request_payload,
-            fail_soft_payload=(
-                None
-                if settings.deepseek_strict_mode
-                else _research_tier2_fallback_payload(request_payload)
-            ),
+            # Research failures must surface as failures.  Never substitute a
+            # generic model/research response for an unavailable upstream run.
+            fail_soft_payload=None,
             heartbeat=_heartbeat,
         )
         normalized = _normalize_tier2_response(ml_response)
@@ -3164,7 +3096,14 @@ def _run_research_job(job_id: str) -> None:
                 job.status = "failed"
                 # Do not persist a provider exception verbatim: SDKs and
                 # upstream gateways may echo prompt content or request details.
-                job.error_text = f"research_job_failed:{exc.__class__.__name__}"
+                # Keep the error PII-safe while making production failures
+                # actionable.  A bounded execution stage distinguishes a
+                # timeout during retrieval from one during report synthesis;
+                # provider text, query text and prompt content are never kept.
+                job.error_text = (
+                    f"research_job_failed:{exc.__class__.__name__}:"
+                    f"{_safe_failure_stage(job.progress_json)}"
+                )
                 job.completed_at = datetime.now(tz=UTC)
                 job.worker_id = None
                 job.lease_heartbeat_at = None
@@ -3811,7 +3750,7 @@ def _build_vn_source_urls(source: str, query: str) -> list[str]:
     if not isinstance(source_def, dict):
         return []
     search_urls = source_def.get("search_urls")
-    if not isinstance(search_urls, (list, tuple)):
+    if not isinstance(search_urls, list | tuple):
         return []
 
     query_text = query.strip()
@@ -4785,9 +4724,7 @@ async def upload_file_to_knowledge_source(
 
         file_name = file.filename or "uploaded-file"
         content_type = file.content_type or "application/octet-stream"
-        file_bytes = await read_upload_bytes_with_limit(
-            file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES
-        )
+        file_bytes = await read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
         if not file_bytes:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
         verified = _validate_upload_safety(
@@ -4996,11 +4933,9 @@ def research_tier2(
     response = proxy_ml_post(
         "/v1/research/tier2",
         upstream_payload,
-        fail_soft_payload=(
-            None
-            if settings.deepseek_strict_mode
-            else _research_tier2_fallback_payload(upstream_payload)
-        ),
+        # Keep the synchronous surface fail-closed as well; callers receive a
+        # structured upstream error, never a synthetic research answer.
+        fail_soft_payload=None,
         timeout_seconds=resolve_sync_research_timeout(settings.ml_research_timeout_seconds),
     )
     normalized = _normalize_tier2_response(response)
@@ -5051,14 +4986,10 @@ def research_clarify(
         and research_mode in _CLARIFY_DEEP_MODES
     )
     if not gate_open or not query_text:
-        return ResearchClarifyResponse(
-            ambiguous=False, research_mode=research_mode, questions=[]
-        )
+        return ResearchClarifyResponse(ambiguous=False, research_mode=research_mode, questions=[])
 
     ambiguous = _detect_query_ambiguity(query_text)
-    questions = (
-        _build_clarifying_questions(ui_language=payload.ui_language) if ambiguous else []
-    )
+    questions = _build_clarifying_questions(ui_language=payload.ui_language) if ambiguous else []
     return ResearchClarifyResponse(
         ambiguous=ambiguous,
         research_mode=research_mode,
@@ -5177,9 +5108,7 @@ def get_research_tier2_job(
 _RESEARCH_EXPORT_FORMATS = ("md", "docx", "pdf")
 _RESEARCH_EXPORT_MEDIA_TYPES = {
     "md": "text/markdown; charset=utf-8",
-    "docx": (
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ),
+    "docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
     "pdf": "application/pdf",
 }
 
@@ -5448,12 +5377,11 @@ def _render_export_pdf(*, query_text: str, result: dict[str, Any]) -> bytes:
 
     kids = " ".join(f"{number} 0 R" for number in page_object_numbers)
     objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
-    objects[2] = (
-        f"<< /Type /Pages /Kids [{kids}] /Count {len(page_object_numbers)} >>"
-    ).encode("latin-1")
+    objects[2] = (f"<< /Type /Pages /Kids [{kids}] /Count {len(page_object_numbers)} >>").encode(
+        "latin-1"
+    )
     objects[3] = (
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica "
-        b"/Encoding /WinAnsiEncoding >>"
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
     )
 
     pdf = bytearray(b"%PDF-1.4\n")
@@ -5471,8 +5399,7 @@ def _render_export_pdf(*, query_text: str, result: dict[str, Any]) -> bytes:
     for number in sorted(objects):
         pdf += f"{offsets[number]:010d} 00000 n \n".encode("latin-1")
     pdf += (
-        f"trailer\n<< /Size {total_objects} /Root 1 0 R >>\n"
-        f"startxref\n{xref_offset}\n%%EOF"
+        f"trailer\n<< /Size {total_objects} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF"
     ).encode("latin-1")
     return bytes(pdf)
 
@@ -5560,6 +5487,10 @@ def _research_share_public_url(share_token: str) -> str:
     return f"{base}/share/{share_token}"
 
 
+def _research_share_token_hash(share_token: str) -> str:
+    return hashlib.sha256(share_token.encode("utf-8")).hexdigest()
+
+
 def _generate_research_share_token(db: Session) -> str:
     """Generate a unique share token, mirroring the workspace share mechanism."""
 
@@ -5567,7 +5498,7 @@ def _generate_research_share_token(db: Session) -> str:
         candidate = secrets.token_urlsafe(24)
         exists = db.execute(
             select(WorkspaceConversationShare.id).where(
-                WorkspaceConversationShare.share_token == candidate
+                WorkspaceConversationShare.token_hash == _research_share_token_hash(candidate)
             )
         ).scalar_one_or_none()
         if exists is None:
@@ -5582,11 +5513,13 @@ def _serialize_research_share(
     share: WorkspaceConversationShare,
     *,
     job_id: str,
+    issued_token: str | None = None,
 ) -> ResearchTier2ShareResponse:
     return ResearchTier2ShareResponse(
         job_id=job_id,
-        share_token=share.share_token,
-        public_url=_research_share_public_url(share.share_token),
+        share_id=share.id,
+        share_token=issued_token,
+        public_url=_research_share_public_url(issued_token) if issued_token else None,
         is_active=bool(share.is_active),
         expires_at=share.expires_at,
         created_at=share.created_at,
@@ -5638,26 +5571,28 @@ def share_research_tier2_job(
     ).scalar_one_or_none()
 
     should_rotate = bool(request.rotate) or share is None
+    issued_token: str | None = None
     if share is None:
+        issued_token = _generate_research_share_token(db)
         share = WorkspaceConversationShare(
             user_id=user.id,
             session_id=None,
             research_job_id=job.id,
-            share_token=_generate_research_share_token(db),
+            token_hash=_research_share_token_hash(issued_token),
             is_active=True,
         )
     else:
         share.is_active = True
         if should_rotate:
-            share.share_token = _generate_research_share_token(db)
+            issued_token = _generate_research_share_token(db)
+            share.token_hash = _research_share_token_hash(issued_token)
 
-    if request.expires_in_hours is not None:
-        share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(request.expires_in_hours))
+    share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(request.expires_in_hours))
 
     db.add(share)
     db.commit()
     db.refresh(share)
-    return _serialize_research_share(share, job_id=job_id)
+    return _serialize_research_share(share, job_id=job_id, issued_token=issued_token)
 
 
 def _build_research_job_stream_headers() -> dict[str, str]:

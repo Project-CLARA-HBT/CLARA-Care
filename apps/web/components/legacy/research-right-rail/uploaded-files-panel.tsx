@@ -1,5 +1,10 @@
-import { DragEvent } from "react";
+"use client";
+
+import type { DragEvent } from "react";
+import { formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { UploadedResearchFile } from "@/lib/research";
+import type { UILanguage } from "@/lib/ui-language";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type UploadedFilesPanelProps = {
   files: UploadedResearchFile[];
@@ -14,14 +19,18 @@ type UploadedFilesPanelProps = {
   onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
 };
 
-function formatFileSize(size?: number): string {
-  if (!size || Number.isNaN(size)) return "Không rõ dung lượng";
-  if (size < 1024) return `${size} B`;
+function formatFileSize(
+  size: number | undefined,
+  unknown: string,
+  language: UILanguage,
+): string {
+  if (!size || Number.isNaN(size)) return unknown;
+  if (size < 1024) return `${formatLocaleNumber(language, size)} B`;
   const kb = size / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  if (kb < 1024) return `${formatLocaleNumber(language, kb)} KB`;
   const mb = kb / 1024;
-  if (mb < 1024) return `${mb.toFixed(1)} MB`;
-  return `${(mb / 1024).toFixed(2)} GB`;
+  if (mb < 1024) return `${formatLocaleNumber(language, mb)} MB`;
+  return `${formatLocaleNumber(language, mb / 1024)} GB`;
 }
 
 export default function UploadedFilesPanel({
@@ -34,12 +43,16 @@ export default function UploadedFilesPanel({
   onDrop,
   onDragOver,
   onDragEnter,
-  onDragLeave
+  onDragLeave,
 }: UploadedFilesPanelProps) {
+  const language = useUILanguage();
+
   return (
     <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Uploaded Files</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          {t(language, "research.workspace.files.title")}
+        </p>
         {files.length ? (
           <button
             type="button"
@@ -47,7 +60,7 @@ export default function UploadedFilesPanel({
             disabled={isUploading}
             className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           >
-            Xóa hết
+            {t(language, "research.workspace.files.clearAll")}
           </button>
         ) : null}
       </div>
@@ -61,10 +74,12 @@ export default function UploadedFilesPanel({
           "mt-3 rounded-2xl border-2 border-dashed p-3 text-center transition",
           isDragActive
             ? "border-sky-400 bg-sky-50 dark:border-sky-500 dark:bg-sky-950/40"
-            : "border-slate-300 bg-slate-50/80 dark:border-slate-600 dark:bg-slate-800/65"
+            : "border-slate-300 bg-slate-50/80 dark:border-slate-600 dark:bg-slate-800/65",
         ].join(" ")}
       >
-        <p className="text-xs text-slate-600 dark:text-slate-300">Kéo thả tài liệu vào đây</p>
+        <p className="text-xs text-slate-600 dark:text-slate-300">
+          {t(language, "research.workspace.files.dropzone")}
+        </p>
       </div>
 
       {uploadError ? (
@@ -81,16 +96,27 @@ export default function UploadedFilesPanel({
               className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800/75"
             >
               <div className="min-w-0">
-                <p className="truncate font-semibold text-slate-800 dark:text-slate-100" title={file.name}>
+                <p
+                  className="truncate font-semibold text-slate-800 dark:text-slate-100"
+                  title={file.name}
+                >
                   {file.name}
                 </p>
-                <p className="text-slate-500 dark:text-slate-400">{formatFileSize(file.size)}</p>
+                <p className="text-slate-500 dark:text-slate-400">
+                  {formatFileSize(
+                    file.size,
+                    t(language, "research.workspace.files.sizeUnknown"),
+                    language,
+                  )}
+                </p>
               </div>
               <button
                 type="button"
                 className="rounded-full px-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 onClick={() => onRemoveFile(file.id)}
-                aria-label={`Xóa file ${file.name}`}
+                aria-label={t(language, "research.workspace.files.remove", {
+                  name: file.name,
+                })}
               >
                 x
               </button>
@@ -98,7 +124,9 @@ export default function UploadedFilesPanel({
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Chưa có file đính kèm.</p>
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+          {t(language, "research.workspace.files.empty")}
+        </p>
       )}
     </section>
   );

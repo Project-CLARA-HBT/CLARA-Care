@@ -55,7 +55,7 @@ def test_control_tower_config_get_and_put() -> None:
     )
     assert put_response.status_code == 200
     updated = put_response.json()
-    assert updated["rag_flow"]["deepseek_fallback_enabled"] is True
+    assert updated["rag_flow"]["deepseek_fallback_enabled"] is False
     assert updated["rag_flow"]["rule_verification_enabled"] is False
     assert updated["rag_flow"]["llm_provider"] == "hitechcloud_gpt53_codex_high"
     assert updated["rag_flow"]["llm_base_url"] == "https://platform.hitechcloud.one/v1"

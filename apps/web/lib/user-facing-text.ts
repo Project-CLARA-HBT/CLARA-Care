@@ -39,6 +39,18 @@ const TELEMETRY_LABEL_PATTERNS: RegExp[] = [
   /policy:\s*allow(?:\s*\/\s*warn)?/gi
 ];
 
+const HIDDEN_REASONING_LINE_PATTERNS: RegExp[] = [
+  /chain[-\s]of[-\s]thought/i,
+  /internal\s+reasoning/i,
+  /^(?:\s{0,3}(?:thought|analysis|reasoning|scratchpad)\s*:)/i,
+  /let(?:'|’)s\s+think\s+step\s+by\s+step/i,
+  /<\/?(?:analysis|reasoning|thought)>/i,
+  /(?:phân\s+tích|suy\s+luận|suy\s+nghĩ)\s*:/i,
+  /retrieval_internal/i,
+  /provider\s*\/\s*model\s+id/i,
+  /(?:raw\s+)?confidence\s*:\s*(?:0(?:\.\d+)?|1(?:\.0+)?)/i,
+];
+
 /**
  * Markers that signal a string carries internal/technical content which must
  * not reach an End_User. Mirrors the denylist already used in
@@ -229,6 +241,28 @@ export function stripTelemetryLabels(text: string): string {
     .replace(/\s+/g, " ")
     .replace(/^[\s,.;:•·|/–—-]+/, "")
     .replace(/[\s,.;:•·|/–—-]+$/, "")
+    .trim();
+}
+
+/**
+ * Final browser-side defense for generative answer text. Provider diagnostics,
+ * hidden-reasoning markers and uncalibrated raw confidence lines are omitted;
+ * the remaining patient-facing prose and citations stay intact.
+ */
+export function sanitizeAssistantAnswer(text: string): string {
+  if (typeof text !== "string" || !text) return "";
+  return text
+    .split("\n")
+    .filter((line) => !HIDDEN_REASONING_LINE_PATTERNS.some((pattern) => pattern.test(line)))
+    .map((line) =>
+      TELEMETRY_LABEL_PATTERNS.reduce(
+        (clean, pattern) => clean.replace(pattern, " "),
+        line,
+      )
+        .replace(/[ \t]{2,}/g, " ")
+        .trimEnd(),
+    )
+    .join("\n")
     .trim();
 }
 

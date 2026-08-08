@@ -776,6 +776,132 @@ export default function LifeMapPage() {
             <LoadingCards count={2} />
           ) : (
             <>
+              <SurfaceCard className="overflow-hidden">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--shell-border)] px-5 py-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                      {copy("lifemap.episodes.eyebrow")}
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                      {copy("lifemap.episodes.title")}
+                    </h2>
+                  </div>
+                  <Button
+                    as="link"
+                    href="/lifemap/new"
+                    size="sm"
+                    icon="add"
+                  >
+                    {copy("lifemap.create.start")}
+                  </Button>
+                </div>
+                {data?.episodes.length ? (
+                  <div className="grid divide-y divide-[color:var(--shell-border)] lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.72fr)] lg:divide-x lg:divide-y-0">
+                    <ul className="divide-y divide-[color:var(--shell-border)]">
+                      {data.episodes.map((episode) => {
+                        const taskCount = data.tasks.filter(
+                          (task) => task.episode_id === episode.id,
+                        ).length;
+                        return (
+                          <li
+                            key={episode.id}
+                            className="flex items-center gap-3 px-5 py-4"
+                          >
+                            <span
+                              className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                              aria-hidden="true"
+                            >
+                              <span className="material-symbols-outlined">route</span>
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-[var(--text-primary)]">
+                                {episode.title}
+                              </p>
+                              <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                                {copy("lifemap.episodes.createdByYou")}
+                                {taskCount
+                                  ? ` · ${taskCount} ${copy("lifemap.tasks.title").toLocaleLowerCase(language)}`
+                                  : ""}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                icon="history"
+                                loading={replayLoading}
+                                aria-label={copy("lifemap.episodes.replay")}
+                                onClick={() => void openReplay(episode.id)}
+                              >
+                                <span className="hidden sm:inline">
+                                  {copy("lifemap.episodes.replay")}
+                                </span>
+                              </Button>
+                              {questionEnabled ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  icon="help"
+                                  loading={saving}
+                                  aria-label={copy("lifemap.episodes.question")}
+                                  onClick={() => void loadQuestion(episode.id)}
+                                >
+                                  <span className="hidden sm:inline">
+                                    {copy("lifemap.episodes.question")}
+                                  </span>
+                                </Button>
+                              ) : null}
+                            </div>
+                            <Badge tone={priorityTone(episode.priority)}>
+                              {priorityLabel(episode.priority, copy)}
+                            </Badge>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <div className="bg-[var(--surface-muted)] p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                        {copy("lifemap.tasks.title")}
+                      </p>
+                      {data.tasks.length ? (
+                        <ul className="mt-3 space-y-2">
+                          {data.tasks.slice(0, 3).map((task) => (
+                            <li key={task.id} className="flex gap-2 text-sm text-[var(--text-primary)]">
+                              <span className="material-symbols-outlined text-[18px] text-[var(--text-brand)]" aria-hidden="true">
+                                task_alt
+                              </span>
+                              <span>{task.title}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                          {copy("lifemap.tasks.empty")}
+                        </p>
+                      )}
+                      <Link
+                        href="/today"
+                        className="focus-ring mt-4 inline-flex rounded-lg text-sm font-semibold text-[var(--text-brand)] hover:underline"
+                      >
+                        {copy("lifemap.tasks.openToday")}
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5">
+                    <EmptyState
+                      icon="route"
+                      title={copy("lifemap.episodes.emptyTitle")}
+                      description={copy("lifemap.episodes.emptyDescription")}
+                    >
+                      <Button as="link" href="/lifemap/new" icon="add">
+                        {copy("lifemap.create.start")}
+                      </Button>
+                    </EmptyState>
+                  </div>
+                )}
+              </SurfaceCard>
+
               {askEnabled ? (
                 <SurfaceCard className="overflow-hidden">
                   <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
@@ -1232,68 +1358,6 @@ export default function LifeMapPage() {
                 </SurfaceCard>
               ) : null}
 
-              <SurfaceCard className="overflow-hidden">
-                <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    {copy("lifemap.episodes.eyebrow")}
-                  </p>
-                  <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                    {copy("lifemap.episodes.title")}
-                  </h2>
-                </div>
-                {data?.episodes.length ? (
-                  <ul className="divide-y divide-[color:var(--shell-border)]">
-                    {data.episodes.map((episode) => (
-                      <li key={episode.id} className="flex items-center gap-3 px-5 py-4">
-                        <span
-                          className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
-                          aria-hidden="true"
-                        >
-                          <span className="material-symbols-outlined">route</span>
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-[var(--text-primary)]">{episode.title}</p>
-                          <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
-                            {copy("lifemap.episodes.createdByYou")}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon="history"
-                          loading={replayLoading}
-                          onClick={() => void openReplay(episode.id)}
-                        >
-                          {copy("lifemap.episodes.replay")}
-                        </Button>
-                        {questionEnabled ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon="help"
-                            loading={saving}
-                            onClick={() => void loadQuestion(episode.id)}
-                          >
-                            {copy("lifemap.episodes.question")}
-                          </Button>
-                        ) : null}
-                        <Badge tone={priorityTone(episode.priority)}>
-                          {priorityLabel(episode.priority, copy)}
-                        </Badge>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="p-5">
-                    <EmptyState
-                      icon="route"
-                      title={copy("lifemap.episodes.emptyTitle")}
-                      description={copy("lifemap.episodes.emptyDescription")}
-                    />
-                  </div>
-                )}
-              </SurfaceCard>
-
               {nextQuestion?.ask ? (
                 <SurfaceCard className="p-5">
                   <Badge tone="brand">{copy("lifemap.question.badge")}</Badge>
@@ -1301,7 +1365,7 @@ export default function LifeMapPage() {
                     {nextQuestion.question}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    {copy("lifemap.question.why", { reason: nextQuestion.why })}
+                    {copy("lifemap.question.why", { reason: nextQuestion.why ?? "" })}
                   </p>
                   <div className="mt-4 space-y-3">
                     <Textarea
@@ -2056,43 +2120,45 @@ export default function LifeMapPage() {
             </Button>
           </SurfaceCard>
 
-          <SurfaceCard className="p-5">
-            <h2 className="font-semibold text-[var(--text-primary)]">
-              {copy("lifemap.taskCreate.title")}
-            </h2>
-            <form className="mt-4 space-y-3.5" onSubmit={(event) => void makeTask(event)}>
-              <Select
-                label={copy("lifemap.taskCreate.episode")}
-                required
-                value={episodeId}
-                onChange={(event) => setEpisodeId(event.target.value)}
-              >
-                <option value="">{copy("lifemap.taskCreate.chooseEpisode")}</option>
-                {data?.episodes.map((episode) => (
-                  <option key={episode.id} value={episode.id}>
-                    {episode.title}
-                  </option>
-                ))}
-              </Select>
-              <Field
-                label={copy("lifemap.taskCreate.label")}
-                required
-                value={taskTitle}
-                onChange={(event) => setTaskTitle(event.target.value)}
-                disabled={!episodeId}
-                placeholder={copy("lifemap.taskCreate.placeholder")}
-              />
-              <Button
-                type="submit"
-                variant="secondary"
-                block
-                disabled={saving || !episodeId}
-                icon="playlist_add"
-              >
-                {copy("lifemap.taskCreate.submit")}
-              </Button>
-            </form>
-          </SurfaceCard>
+          {data?.episodes.length ? (
+            <SurfaceCard className="p-5">
+              <h2 className="font-semibold text-[var(--text-primary)]">
+                {copy("lifemap.taskCreate.title")}
+              </h2>
+              <form className="mt-4 space-y-3.5" onSubmit={(event) => void makeTask(event)}>
+                <Select
+                  label={copy("lifemap.taskCreate.episode")}
+                  required
+                  value={episodeId}
+                  onChange={(event) => setEpisodeId(event.target.value)}
+                >
+                  <option value="">{copy("lifemap.taskCreate.chooseEpisode")}</option>
+                  {data.episodes.map((episode) => (
+                    <option key={episode.id} value={episode.id}>
+                      {episode.title}
+                    </option>
+                  ))}
+                </Select>
+                <Field
+                  label={copy("lifemap.taskCreate.label")}
+                  required
+                  value={taskTitle}
+                  onChange={(event) => setTaskTitle(event.target.value)}
+                  disabled={!episodeId}
+                  placeholder={copy("lifemap.taskCreate.placeholder")}
+                />
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  block
+                  disabled={saving || !episodeId}
+                  icon="playlist_add"
+                >
+                  {copy("lifemap.taskCreate.submit")}
+                </Button>
+              </form>
+            </SurfaceCard>
+          ) : null}
         </aside>
       </div>
     </PageShell>

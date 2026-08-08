@@ -190,6 +190,47 @@ New mobile feature flags (define name → server `feature_flags` key → surface
 | `CONSENT_CENTER_MOBILE_ENABLED`       | `consent_center_mobile_enabled`    | Granular consent center + DSAR self-service |
 | `SHARING_MOBILE_ENABLED`              | `sharing_mobile_enabled`           | Read-only shared-resource / deep-link surface |
 
+The gated mobile Consent Center reads and mutates the same server-authoritative
+append-only `/api/v1/compliance/consent` ledger as web. It never substitutes
+device-local switches for policy state; if the ledger cannot be read, it shows
+no controls. Product analytics remains disabled by default and is not presented
+as a server compliance purpose.
+
+The Data Rights screen also uses the shared authenticated API client. Its
+irreversible delete action requires a second confirmation and calls only the
+server's transactional `/api/v1/compliance/dsar/delete` route; export,
+correction, restriction, and withdrawal remain closed-kind DSAR requests.
+
+The read-only sharing surface also uses the shared API client. Its opaque
+capability token is passed only to `GET /api/v1/phr/shared/{token}` without an
+access token, is never persisted or logged by the viewer, and every public-link
+failure collapses to the same non-PII unavailable message.
+
+Android accepts only canonical `https://theclaracare.com/phr/shared/{token}`
+(or `www`) links and handles both cold-start and already-running intents through
+an in-memory native bridge. The viewer stays behind
+`SHARING_MOBILE_ENABLED=true` and the API's independent `PHR_SHARING_ENABLED`
+gate. Before a production Android release, publish a matching verified
+`/.well-known/assetlinks.json` for the release signing certificate on both
+domains; no certificate fingerprint is committed in this repository.
+
+### Production Android signing and App Links
+
+The Android package is `com.theclaracare.app`. A release build never falls back
+to a debug signing key. The CI workflow requires these protected GitHub secrets:
+
+- `CLARA_RELEASE_STORE_BASE64`
+- `CLARA_RELEASE_STORE_PASSWORD`
+- `CLARA_RELEASE_KEY_ALIAS`
+- `CLARA_RELEASE_KEY_PASSWORD`
+
+Set `ANDROID_APP_LINK_CERT_SHA256` in the web deployment to the production
+certificate's public SHA-256 fingerprint (`AA:BB:...`, 32 pairs). The dynamic
+`/.well-known/assetlinks.json` route returns 404 while that value is absent or
+malformed, rather than publishing an invalid association. Set the same web
+environment for both `theclaracare.com` and `www.theclaracare.com` before
+shipping a signed APK.
+
 Existing build-time flags (also default OFF):
 
 | `--dart-define` flag                  | Surface |

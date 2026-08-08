@@ -18,8 +18,8 @@ import fc from "fast-check";
  *   - large text / UI components / borders: >= 3:1
  *
  * The token values are read from `globals.css` so the test fails if a token is
- * regressed below AA. We assert against the actual `:root` (light) and
- * `html.dark` (dark) token blocks parsed from that file.
+ * regressed below AA. The canonical default is the dark Clara Health System
+ * palette; the explicit `html.dark` block remains a compatibility mirror.
  */
 
 type Rgb = [number, number, number];
@@ -112,7 +112,7 @@ const DARK = darkBlock();
 
 const LIGHT_CANVAS = parseColor(readToken(LIGHT, "bg-canvas")) as Rgba;
 const DARK_CANVAS = parseColor(readToken(DARK, "bg-canvas")) as Rgba;
-const LIGHT_CANVAS_RGB = composite(LIGHT_CANVAS, [255, 255, 255]);
+const LIGHT_CANVAS_RGB = composite(LIGHT_CANVAS, [16, 20, 25]);
 const DARK_CANVAS_RGB = composite(DARK_CANVAS, [255, 255, 255]);
 const WHITE: Rgb = [255, 255, 255];
 
@@ -136,35 +136,35 @@ const PAIRS: Pair[] = [
     label: "LIGHT text-primary on canvas",
     fg: token(LIGHT, "text-primary"),
     bg: LIGHT_CANVAS,
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   {
     label: "LIGHT text-secondary on canvas",
     fg: token(LIGHT, "text-secondary"),
     bg: LIGHT_CANVAS,
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   {
     label: "LIGHT text-muted on surface-muted",
     fg: token(LIGHT, "text-muted"),
     bg: token(LIGHT, "surface-muted"),
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   {
     label: "LIGHT text-brand on canvas",
     fg: token(LIGHT, "text-brand"),
     bg: LIGHT_CANVAS,
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   {
     label: "LIGHT text-brand on surface-brand-soft",
     fg: token(LIGHT, "text-brand"),
     bg: token(LIGHT, "surface-brand-soft"),
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   // ---- LIGHT: white label on brand buttons (normal text >= 4.5) ----
@@ -172,7 +172,7 @@ const PAIRS: Pair[] = [
     label: "LIGHT white text on brand-700 button",
     fg: [255, 255, 255, 1],
     bg: token(LIGHT, "brand-700"),
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   // ---- LIGHT: brand-600 as UI/large-text (>= 3) ----
@@ -180,7 +180,7 @@ const PAIRS: Pair[] = [
     label: "LIGHT brand-600 on white (link/large)",
     fg: token(LIGHT, "brand-600"),
     bg: [255, 255, 255, 1],
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 3.0
   },
   // ---- LIGHT: status text on status bg (normal text >= 4.5) ----
@@ -188,28 +188,28 @@ const PAIRS: Pair[] = [
     label: "LIGHT status-ok-text on status-ok-bg",
     fg: token(LIGHT, "status-ok-text"),
     bg: token(LIGHT, "status-ok-bg"),
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   {
     label: "LIGHT status-warn-text on status-warn-bg",
     fg: token(LIGHT, "status-warn-text"),
     bg: token(LIGHT, "status-warn-bg"),
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   {
     label: "LIGHT status-danger-text on status-danger-bg",
     fg: token(LIGHT, "status-danger-text"),
     bg: token(LIGHT, "status-danger-bg"),
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   {
     label: "LIGHT status-neutral-text on status-neutral-bg",
     fg: token(LIGHT, "status-neutral-text"),
     bg: token(LIGHT, "status-neutral-bg"),
-    base: WHITE,
+    base: LIGHT_CANVAS_RGB,
     min: 4.5
   },
   // ---- DARK: text on canvas (normal text >= 4.5) ----

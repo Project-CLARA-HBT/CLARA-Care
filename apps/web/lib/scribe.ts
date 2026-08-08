@@ -1,5 +1,5 @@
 import api from "@/lib/http-client";
-import { getAccessToken, getCsrfToken } from "@/lib/auth-store";
+import { getCsrfToken } from "@/lib/auth-store";
 import { parseContentDispositionFilename } from "@/lib/scribe-review";
 
 export type ScribeSoapRequest = {
@@ -46,6 +46,24 @@ export type ScribeSession = {
   last_processed_at?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** Owner-scoped deployment capability for the selected Scribe session. */
+export type ScribeRecordingDataCapability = {
+  session_id: number;
+  recording_data_deletion_available: true;
+  /** CLARA forwards audio in memory and does not persist raw audio bytes. */
+  raw_audio_persisted: false;
+};
+
+/** Result of deleting persistent transcript/diarization data for one owned session. */
+export type ScribeRecordingDataDeletionResult = {
+  session_id: number;
+  deleted: true;
+  /** CLARA forwards audio in memory and does not persist raw audio bytes. */
+  raw_audio_persisted: false;
+  /** Signed clinical documents remain available after this data-rights action. */
+  signed_note_preserved: boolean;
 };
 
 export type ScribeSessionListResponse = {
@@ -189,6 +207,38 @@ export async function createScribeSession(payload: ScribeSessionCreatePayload): 
 
 export async function getScribeSession(sessionId: number): Promise<ScribeSession> {
   const response = await api.get<ScribeSession>(`/scribe/sessions/${sessionId}`);
+  return response.data;
+}
+
+/**
+ * Resolve the server-owned rollout capability for one already selected session.
+ * The endpoint returns 404 while deletion is kill-switched off; callers must
+ * render no destructive UI on a rejection and must not infer availability.
+ */
+export async function getScribeRecordingDataCapability(
+  sessionId: number
+): Promise<ScribeRecordingDataCapability> {
+  const response = await api.get<ScribeRecordingDataCapability>(
+    `/scribe/sessions/${sessionId}/recording-data/capability`
+  );
+  return response.data;
+}
+
+/**
+ * Delete only persistent recording-derived data (transcript + ASR/diarization
+ * metadata) for an owned Scribe session. This never deletes raw audio because
+ * raw audio is not stored, and it never deletes a signed note or audit trail.
+ *
+ * The deployment-owned API kill switch is authoritative. Callers should expose
+ * the destructive control only when `recording_data_deletion_available` came
+ * from the selected session, then treat a rejection as unavailable.
+ */
+export async function deleteScribeRecordingData(
+  sessionId: number
+): Promise<ScribeRecordingDataDeletionResult> {
+  const response = await api.delete<ScribeRecordingDataDeletionResult>(
+    `/scribe/sessions/${sessionId}/recording-data`
+  );
   return response.data;
 }
 
@@ -653,8 +703,6 @@ export async function streamScribe(
   if (options.templateId) form.append("template_id", options.templateId);
 
   const headers: Record<string, string> = { Accept: "text/event-stream" };
-  const accessToken = getAccessToken();
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const csrfToken = getCsrfToken();
   if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 

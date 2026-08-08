@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.core.config import get_settings
 from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
@@ -36,6 +37,7 @@ from clara_api.db.models import (
     MedicationCourseChange,
 )
 from clara_api.db.session import get_db
+from clara_api.glhs.adapters import ingest_lifemap_event, ingest_medication_course
 from clara_api.lifemap.capture_artifacts import (
     ArtifactSecurityError,
     EncryptedCaptureArtifactStore,
@@ -1141,6 +1143,19 @@ def review_candidate(
         )
         db.add(revision)
         db.flush()
+        # The reviewed capture is a new immutable source revision.  Mirror it
+        # before commit so the LifeMap projection and governed ledger cannot
+        # diverge.  An owner confirmation remains documented rather than a
+        # clinical confirmation inside the adapter.
+        ingest_lifemap_event(
+            db,
+            scope=scope,
+            event=event,
+            revision=revision,
+            idempotency_key=(
+                f"lifemap-capture-review:{candidate.public_id}:{idempotency_key}"
+            ),
+        )
         if episode is not None and question is not None:
             db.add(
                 LifeMapEpisodeEventLink(
@@ -1234,6 +1249,19 @@ def review_candidate(
                     reason_code="capture_explicit_user_confirmation",
                     actor_user_id=scope.actor.id,
                 )
+            )
+            # RxNorm normalization is useful provenance, but it is not an
+            # exact licensed DrugBank identity.  The adapter therefore stores
+            # this course only as ``medications_unresolved`` candidate state
+            # unless a future deterministic DrugBank binding is supplied.
+            ingest_medication_course(
+                db,
+                scope=scope,
+                course=course,
+                idempotency_key=(
+                    f"lifemap-capture-medication:{candidate.public_id}:"
+                    f"{course.public_id}:v{course.version_no}:{idempotency_key}"
+                ),
             )
             response["medication_course_id"] = course.public_id
         session.status = "completed"

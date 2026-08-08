@@ -4,7 +4,9 @@ import {
   addScribeAddendum,
   amendScribeNote,
   captureScribeConsent,
+  deleteScribeRecordingData,
   exportScribeNote,
+  getScribeRecordingDataCapability,
   generateScribeNote,
   getScribeAudit,
   getScribeCoding,
@@ -27,13 +29,14 @@ import {
 
 // `vi.mock` is hoisted above module-level declarations, so the mock fns must be
 // created inside `vi.hoisted` to be safely referenced by the factory below.
-const { post, get, patch } = vi.hoisted(() => ({
+const { post, get, patch, delete: remove } = vi.hoisted(() => ({
   post: vi.fn(),
   get: vi.fn(),
   patch: vi.fn(),
+  delete: vi.fn(),
 }));
 
-vi.mock("@/lib/http-client", () => ({ default: { post, get, patch } }));
+vi.mock("@/lib/http-client", () => ({ default: { post, get, patch, delete: remove } }));
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -55,6 +58,41 @@ describe("captureScribeConsent (Req 4)", () => {
     post.mockResolvedValueOnce({ data: { session_id: 7, consent_id: 1, captured: true } });
     await captureScribeConsent(7);
     expect(post).toHaveBeenCalledWith("/scribe/sessions/7/consent", {});
+  });
+});
+
+describe("deleteScribeRecordingData (data rights)", () => {
+  it("gets the selected session's backend capability before exposing deletion", async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        session_id: 7,
+        recording_data_deletion_available: true,
+        raw_audio_persisted: false,
+      },
+    });
+
+    const capability = await getScribeRecordingDataCapability(7);
+
+    expect(get).toHaveBeenCalledWith("/scribe/sessions/7/recording-data/capability");
+    expect(capability.recording_data_deletion_available).toBe(true);
+    expect(capability.raw_audio_persisted).toBe(false);
+  });
+
+  it("DELETEs only the selected session's recording-derived data", async () => {
+    remove.mockResolvedValueOnce({
+      data: {
+        session_id: 7,
+        deleted: true,
+        raw_audio_persisted: false,
+        signed_note_preserved: true,
+      },
+    });
+
+    const result = await deleteScribeRecordingData(7);
+
+    expect(remove).toHaveBeenCalledWith("/scribe/sessions/7/recording-data");
+    expect(result.raw_audio_persisted).toBe(false);
+    expect(result.signed_note_preserved).toBe(true);
   });
 });
 

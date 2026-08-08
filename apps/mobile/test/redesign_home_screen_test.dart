@@ -42,10 +42,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // PHR is always available regardless of the summary.
-      expect(find.text('Hồ sơ sức khỏe'), findsOneWidget);
+      expect(find.text('Lưu thông tin sức khỏe'), findsOneWidget);
 
       // No privileged tools are derived when the summary is unavailable.
-      expect(find.text('Trò chuyện'), findsNothing);
+      expect(find.text('Hỏi về vấn đề sức khỏe'), findsNothing);
       expect(find.text('Hội chẩn AI'), findsNothing);
       expect(find.text('Ghi chú lâm sàng'), findsNothing);
 
@@ -64,9 +64,12 @@ void main() {
       await tester.pumpWidget(_host(await _home(summary: summary)));
       await tester.pumpAndSettle();
 
-      expect(find.text('Trò chuyện'), findsOneWidget);
-      expect(find.text('Kiểm tra tương tác thuốc'), findsOneWidget);
-      expect(find.text('Hồ sơ sức khỏe'), findsOneWidget);
+      // This label is intentionally present in both the primary quick action
+      // and the derived tool card; the safety contract is reachability, not
+      // singular presentation.
+      expect(find.text('Hỏi về vấn đề sức khỏe'), findsWidgets);
+      expect(find.text('Kiểm tra thuốc'), findsOneWidget);
+      expect(find.text('Lưu thông tin sức khỏe'), findsOneWidget);
       // A gate that was not granted stays hidden.
       expect(find.text('Hội chẩn AI'), findsNothing);
       // No retry when a summary loaded successfully.

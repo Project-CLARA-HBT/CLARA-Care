@@ -68,7 +68,9 @@ class Query(Base):
     role: Mapped[str] = mapped_column(String(32), index=True)
     user_input: Mapped[str] = mapped_column(Text)
     response_text: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
 
 class ScribeSession(Base):
@@ -406,7 +408,9 @@ class AuthToken(Base):
     token_hash: Mapped[str] = mapped_column(String(128), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
     user: Mapped[User] = relationship("User")
 
@@ -444,6 +448,7 @@ class MedicineCabinet(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
+        index=True,
     )
 
     user: Mapped[User] = relationship("User")
@@ -765,7 +770,7 @@ class WorkspaceConversationShare(Base):
     __table_args__ = (
         UniqueConstraint("session_id", name="uq_workspace_conversation_shares_session"),
         UniqueConstraint("research_job_id", name="uq_workspace_conversation_shares_research_job"),
-        UniqueConstraint("share_token", name="uq_workspace_conversation_shares_token"),
+        UniqueConstraint("token_hash", name="uq_workspace_conversation_shares_token_hash"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -787,7 +792,9 @@ class WorkspaceConversationShare(Base):
         index=True,
         nullable=True,
     )
-    share_token: Mapped[str] = mapped_column(String(160), index=True)
+    # Public share links are bearer capabilities.  Store only their SHA-256
+    # digest so a database disclosure cannot be replayed as a public URL.
+    token_hash: Mapped[str] = mapped_column(String(64), index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -835,9 +842,7 @@ class PhrProfile(Base):
     __tablename__ = "phr_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
@@ -850,10 +855,20 @@ class PhrProfile(Base):
     height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     phone: Mapped[str] = mapped_column(String(64), default="")
+    contact_email: Mapped[str] = mapped_column(String(254), default="", server_default="")
     address: Mapped[str] = mapped_column(Text, default="")
     emergency_contact_name: Mapped[str] = mapped_column(String(255), default="")
     emergency_contact_phone: Mapped[str] = mapped_column(String(64), default="")
+    emergency_contact_relationship: Mapped[str] = mapped_column(
+        String(80), default="", server_default=""
+    )
+    emergency_contact_note: Mapped[str] = mapped_column(Text, default="", server_default="")
+    insurance_provider: Mapped[str] = mapped_column(String(255), default="", server_default="")
     insurance_id: Mapped[str] = mapped_column(String(128), default="")
+    insurance_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    allergy_status: Mapped[str] = mapped_column(
+        String(32), default="unknown", server_default="unknown"
+    )
     notes: Mapped[str] = mapped_column(Text, default="")
     allergies_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
     conditions_json: Mapped[list[dict] | dict | None] = mapped_column(JSON, nullable=True)
@@ -866,9 +881,7 @@ class PhrProfile(Base):
     onboarding_status: Mapped[str] = mapped_column(
         String(32), default="pending", server_default="pending", index=True
     )
-    onboarding_version: Mapped[str] = mapped_column(
-        String(32), default="", server_default=""
-    )
+    onboarding_version: Mapped[str] = mapped_column(String(32), default="", server_default="")
     onboarding_completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -953,9 +966,7 @@ class LifeMapEvent(Base):
     __tablename__ = "lifemap_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -973,9 +984,7 @@ class LifeMapEvent(Base):
     lifecycle_status: Mapped[str] = mapped_column(
         String(24), default="active", server_default="active", index=True
     )
-    current_revision_no: Mapped[int] = mapped_column(
-        Integer, default=1, server_default="1"
-    )
+    current_revision_no: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     created_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
@@ -991,9 +1000,7 @@ class LifeMapEpisode(Base):
     __tablename__ = "lifemap_episodes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1027,9 +1034,7 @@ class LifeMapEpisodeGoalRevision(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     episode_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_episodes.id", ondelete="CASCADE"), index=True
     )
@@ -1042,9 +1047,7 @@ class LifeMapEpisodeGoalRevision(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     reason: Mapped[str] = mapped_column(String(255), default="")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class GuidedFlowDraft(Base):
@@ -1063,9 +1066,7 @@ class GuidedFlowDraft(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1080,21 +1081,13 @@ class GuidedFlowDraft(Base):
     )
     revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    committed_resource_type: Mapped[str | None] = mapped_column(
-        String(64), nullable=True
-    )
+    committed_resource_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     committed_resource_public_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True, index=True
     )
-    committed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    abandoned_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    committed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    abandoned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -1106,9 +1099,7 @@ class LifeMapCareTask(Base):
     __tablename__ = "lifemap_care_tasks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1137,9 +1128,7 @@ class LifeMapDecisionLedger(Base):
     __tablename__ = "lifemap_decision_ledger"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1169,9 +1158,7 @@ class LifeMapEpisodeEventLink(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1190,12 +1177,8 @@ class LifeMapEpisodeEventLink(Base):
     status: Mapped[str] = mapped_column(
         String(24), default="active", server_default="active", index=True
     )
-    linked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    unlinked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    linked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    unlinked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class LifeMapDecisionInput(Base):
@@ -1221,9 +1204,7 @@ class LifeMapDecisionInput(Base):
         ForeignKey("lifemap_event_revisions.id", ondelete="RESTRICT"), index=True
     )
     input_role: Mapped[str] = mapped_column(String(64), default="", index=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapBaselineDefinition(Base):
@@ -1239,9 +1220,7 @@ class LifeMapBaselineDefinition(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     signal_key: Mapped[str] = mapped_column(String(64), index=True)
     version: Mapped[str] = mapped_column(String(64), index=True)
     canonical_unit: Mapped[str] = mapped_column(String(32))
@@ -1257,12 +1236,8 @@ class LifeMapBaselineDefinition(Base):
         String(24), default="draft", server_default="draft", index=True
     )
     approved_by: Mapped[str] = mapped_column(String(120), default="")
-    approved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapBaselineSnapshot(Base):
@@ -1279,9 +1254,7 @@ class LifeMapBaselineSnapshot(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1334,9 +1307,7 @@ class LifeMapBaselineChange(Base):
     __tablename__ = "lifemap_baseline_changes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1350,9 +1321,7 @@ class LifeMapBaselineChange(Base):
     absolute_change: Mapped[float | None] = mapped_column(Float, nullable=True)
     relative_change: Mapped[float | None] = mapped_column(Float, nullable=True)
     rule_version: Mapped[str] = mapped_column(String(64))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapQuestionDefinition(Base):
@@ -1369,9 +1338,7 @@ class LifeMapQuestionDefinition(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     field_key: Mapped[str] = mapped_column(String(64), index=True)
     version: Mapped[str] = mapped_column(String(64), index=True)
     locale: Mapped[str] = mapped_column(String(16), index=True)
@@ -1386,9 +1353,7 @@ class LifeMapQuestionDefinition(Base):
         String(24), default="draft", server_default="draft", index=True
     )
     approved_by: Mapped[str] = mapped_column(String(120), default="")
-    approved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class LifeMapQuestionInteraction(Base):
@@ -1397,9 +1362,7 @@ class LifeMapQuestionInteraction(Base):
     __tablename__ = "lifemap_question_interactions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1528,9 +1491,7 @@ class LifeMapReviewFinding(Base):
     __tablename__ = "lifemap_review_findings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1560,9 +1521,7 @@ class LifeMapReviewFindingAction(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     finding_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_review_findings.id", ondelete="CASCADE"), index=True
     )
@@ -1586,9 +1545,7 @@ class LifeMapSourceRevocation(Base):
     __tablename__ = "lifemap_source_revocations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1612,9 +1569,7 @@ class LifeMapDisputeCase(Base):
     __tablename__ = "lifemap_dispute_cases"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1642,9 +1597,7 @@ class LifeMapDisputeAction(Base):
     __tablename__ = "lifemap_dispute_actions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     case_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_dispute_cases.id", ondelete="CASCADE"),
         unique=True,
@@ -1705,9 +1658,7 @@ class LifeMapCaptureSession(Base):
     __tablename__ = "lifemap_capture_sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1721,15 +1672,9 @@ class LifeMapCaptureSession(Base):
     schema_version: Mapped[str] = mapped_column(String(64))
     locale: Mapped[str] = mapped_column(String(16), default="vi")
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    abandoned_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    abandoned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -1741,9 +1686,7 @@ class LifeMapCaptureArtifact(Base):
     __tablename__ = "lifemap_capture_artifacts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     session_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_capture_sessions.id", ondelete="CASCADE"), index=True
     )
@@ -1762,9 +1705,7 @@ class LifeMapCaptureArtifact(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapCaptureJob(Base):
@@ -1773,9 +1714,7 @@ class LifeMapCaptureJob(Base):
     __tablename__ = "lifemap_capture_jobs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     session_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_capture_sessions.id", ondelete="CASCADE"), index=True
     )
@@ -1791,20 +1730,14 @@ class LifeMapCaptureJob(Base):
     )
     attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     max_attempts: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
-    lease_owner: Mapped[str | None] = mapped_column(
-        String(128), nullable=True, index=True
-    )
+    lease_owner: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     lease_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
     error_code: Mapped[str] = mapped_column(String(64), default="")
     extractor_version: Mapped[str] = mapped_column(String(96), default="")
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapCaptureCandidate(Base):
@@ -1813,9 +1746,7 @@ class LifeMapCaptureCandidate(Base):
     __tablename__ = "lifemap_capture_candidates"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     session_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_capture_sessions.id", ondelete="CASCADE"), index=True
     )
@@ -1831,9 +1762,7 @@ class LifeMapCaptureCandidate(Base):
     field_path: Mapped[str] = mapped_column(String(160))
     value_json: Mapped[dict] = mapped_column(JSON)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
-    field_confidence_json: Mapped[dict] = mapped_column(
-        JSON, default=dict, server_default="{}"
-    )
+    field_confidence_json: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")
     source_span_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     missing_critical_fields_json: Mapped[list[str]] = mapped_column(
         JSON, default=list, server_default="[]"
@@ -1846,9 +1775,7 @@ class LifeMapCaptureCandidate(Base):
     status: Mapped[str] = mapped_column(
         String(24), default="draft", server_default="draft", index=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapCaptureReviewAction(Base):
@@ -1857,9 +1784,7 @@ class LifeMapCaptureReviewAction(Base):
     __tablename__ = "lifemap_capture_review_actions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     candidate_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_capture_candidates.id", ondelete="CASCADE"), index=True
     )
@@ -1872,9 +1797,7 @@ class LifeMapCaptureReviewAction(Base):
     action: Mapped[str] = mapped_column(String(24), index=True)
     patch_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     reason_code: Mapped[str] = mapped_column(String(64), default="")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapOutboxEvent(Base):
@@ -1915,9 +1838,7 @@ class HealthSourceReference(Base):
     __tablename__ = "health_source_references"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -1944,9 +1865,7 @@ class LifeMapEventRevision(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     event_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_events.id", ondelete="CASCADE"), index=True
     )
@@ -2000,9 +1919,7 @@ class LifeMapTaskAction(Base):
     __tablename__ = "lifemap_task_actions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     task_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_care_tasks.id", ondelete="CASCADE"), index=True
     )
@@ -2036,9 +1953,7 @@ class LifeMapCommandRecord(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -2050,9 +1965,7 @@ class LifeMapCommandRecord(Base):
     request_digest: Mapped[str] = mapped_column(String(64))
     status_code: Mapped[int] = mapped_column(Integer)
     response_json: Mapped[dict] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapProjectionDependency(Base):
@@ -2079,9 +1992,7 @@ class LifeMapProjectionDependency(Base):
         nullable=True,
         index=True,
     )
-    input_projection_type: Mapped[str | None] = mapped_column(
-        String(64), nullable=True
-    )
+    input_projection_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     input_projection_public_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True
     )
@@ -2095,15 +2006,285 @@ class LifeMapProjectionDependency(Base):
     invalidation_reason: Mapped[str] = mapped_column(String(96), default="")
 
 
+class GlhsStateVersion(Base):
+    """An append-only, profile-scoped version of governed health state.
+
+    A state version deliberately contains no denormalised clinical document.  Its
+    contents are the active assertions selected by the associated transition;
+    projections may be rebuilt from that ledger.
+    """
+
+    __tablename__ = "glhs_state_versions"
+    __table_args__ = (
+        UniqueConstraint("profile_id", "state_version", name="uq_glhs_profile_state_version"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    state_version: Mapped[int] = mapped_column(Integer)
+    valid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
+
+
+class GlhsEvidence(Base):
+    """Canonical evidence pointer with explicit valid and recorded time.
+
+    Source content remains in its source-owned store.  This ledger stores only
+    a governed pointer and a fingerprint, so derived stores never become a
+    second authoritative copy of health content.
+    """
+
+    __tablename__ = "glhs_evidence"
+    __table_args__ = (
+        UniqueConstraint("profile_id", "fingerprint", name="uq_glhs_evidence_fingerprint"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    source_reference_id: Mapped[int] = mapped_column(
+        ForeignKey("health_source_references.id", ondelete="RESTRICT"), index=True
+    )
+    evidence_kind: Mapped[str] = mapped_column(String(64), index=True)
+    artifact_type: Mapped[str] = mapped_column(String(64), default="source_record")
+    artifact_public_id: Mapped[str] = mapped_column(String(96), default="", index=True)
+    fingerprint: Mapped[str] = mapped_column(String(128), index=True)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    valid_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    time_precision: Mapped[str] = mapped_column(String(24), default="exact")
+    estimated_time: Mapped[bool] = mapped_column(Boolean, default=False)
+    source_timezone: Mapped[str] = mapped_column(String(64), default="")
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class GlhsAssertion(Base):
+    """A provenance-bound health proposition, independent from lifecycle."""
+
+    __tablename__ = "glhs_assertions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    semantic_key: Mapped[str] = mapped_column(String(255), index=True)
+    assertion_type: Mapped[str] = mapped_column(String(64), index=True)
+    subject_kind: Mapped[str] = mapped_column(String(64), default="profile")
+    predicate: Mapped[str] = mapped_column(String(128), default="")
+    value_json: Mapped[dict | list] = mapped_column(JSON)
+    value_fingerprint: Mapped[str] = mapped_column(String(128), index=True)
+    epistemic_state: Mapped[str] = mapped_column(String(24), index=True)
+    lifecycle_status: Mapped[str] = mapped_column(String(24), default="candidate", index=True)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    valid_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    time_precision: Mapped[str] = mapped_column(String(24), default="exact")
+    estimated_time: Mapped[bool] = mapped_column(Boolean, default=False)
+    asserted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    asserted_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    process_kind: Mapped[str] = mapped_column(String(32), default="user")
+    policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class GlhsAssertionEvidence(Base):
+    """Many-to-many assertion/evidence lineage; evidence is never implicit."""
+
+    __tablename__ = "glhs_assertion_evidence"
+    __table_args__ = (
+        UniqueConstraint("assertion_id", "evidence_id", name="uq_glhs_assertion_evidence"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assertion_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_assertions.id", ondelete="CASCADE"), index=True
+    )
+    evidence_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_evidence.id", ondelete="RESTRICT"), index=True
+    )
+    relation: Mapped[str] = mapped_column(String(32), default="supports")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GlhsRelation(Base):
+    """Explicit relation ledger.  Relations never imply temporal causality."""
+
+    __tablename__ = "glhs_relations"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "from_assertion_id",
+            "to_assertion_id",
+            "relation_type",
+            name="uq_glhs_relation",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    from_assertion_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_assertions.id", ondelete="CASCADE"), index=True
+    )
+    to_assertion_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_assertions.id", ondelete="CASCADE"), index=True
+    )
+    relation_type: Mapped[str] = mapped_column(String(48), index=True)
+    asserted_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    evidence_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_evidence.id", ondelete="SET NULL"), nullable=True
+    )
+    policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GlhsTransition(Base):
+    """Explainable, optimistic-concurrency protected GST ledger."""
+
+    __tablename__ = "glhs_transitions"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id", "idempotency_key_hash", name="uq_glhs_transition_idempotency"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    base_state_version: Mapped[int] = mapped_column(Integer)
+    resulting_state_version: Mapped[int] = mapped_column(Integer)
+    valid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    transition_kind: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(24), default="applied", index=True)
+    reason_code: Mapped[str] = mapped_column(String(96), default="")
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    actor_role: Mapped[str] = mapped_column(String(32), default="")
+    process_kind: Mapped[str] = mapped_column(String(32), default="user")
+    review_state: Mapped[str] = mapped_column(String(24), default="not_required")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
+    idempotency_key_hash: Mapped[str] = mapped_column(String(128))
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class GlhsTransitionItem(Base):
+    __tablename__ = "glhs_transition_items"
+    __table_args__ = (
+        UniqueConstraint("transition_id", "assertion_id", "action", name="uq_glhs_transition_item"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    transition_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_transitions.id", ondelete="CASCADE"), index=True
+    )
+    assertion_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_assertions.id", ondelete="RESTRICT"), index=True
+    )
+    prior_assertion_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_assertions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GlhsConflict(Base):
+    """A material contradiction retained until an explicit resolution transition."""
+
+    __tablename__ = "glhs_conflicts"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "semantic_key",
+            "left_assertion_id",
+            "right_assertion_id",
+            name="uq_glhs_conflict_pair",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    semantic_key: Mapped[str] = mapped_column(String(255), index=True)
+    left_assertion_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_assertions.id", ondelete="RESTRICT"), index=True
+    )
+    right_assertion_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_assertions.id", ondelete="RESTRICT"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(24), default="open", index=True)
+    reason_code: Mapped[str] = mapped_column(String(96), default="comparable_authority_conflict")
+    created_transition_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_transitions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    resolved_transition_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_transitions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class GlhsSnapshotManifest(Base):
+    """Auditable THSS manifest containing opaque assertion/provenance identifiers."""
+
+    __tablename__ = "glhs_snapshot_manifests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    state_version: Mapped[int] = mapped_column(Integer, index=True)
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    actor_role: Mapped[str] = mapped_column(String(32), default="")
+    task: Mapped[str] = mapped_column(String(96), index=True)
+    purpose: Mapped[str] = mapped_column(String(64), index=True)
+    data_classes_json: Mapped[list | dict] = mapped_column(JSON)
+    assertion_ids_json: Mapped[list | dict] = mapped_column(JSON)
+    provenance_ids_json: Mapped[list | dict] = mapped_column(JSON)
+    conflict_ids_json: Mapped[list | dict] = mapped_column(JSON)
+    selection_policy: Mapped[str] = mapped_column(String(64), default="strict")
+    policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class MedicationCourse(Base):
     """Confirmed medication use, not an OCR or model assertion."""
 
     __tablename__ = "medication_courses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -2154,9 +2335,7 @@ class MedicationCourseChange(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     course_id: Mapped[int] = mapped_column(
         ForeignKey("medication_courses.id", ondelete="CASCADE"), index=True
     )
@@ -2170,9 +2349,7 @@ class MedicationCourseChange(Base):
     actor_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class LifeMapVisit(Base):
@@ -2181,9 +2358,7 @@ class LifeMapVisit(Base):
     __tablename__ = "lifemap_visits"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -2207,9 +2382,7 @@ class VisitConcern(Base):
     __tablename__ = "visit_concerns"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -2230,9 +2403,7 @@ class VisitEpisodeLink(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -2254,9 +2425,7 @@ class VisitPackVersion(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -2291,9 +2460,7 @@ class VisitConsent(Base):
     __tablename__ = "visit_consents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -2316,9 +2483,7 @@ class VisitShare(Base):
     __tablename__ = "visit_shares"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     pack_version_id: Mapped[int] = mapped_column(
         ForeignKey("visit_pack_versions.id", ondelete="CASCADE"), index=True
     )
@@ -2349,9 +2514,7 @@ class VisitIntakeAnswer(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -2383,9 +2546,7 @@ class VisitDocument(Base):
     __tablename__ = "visit_documents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -2432,9 +2593,7 @@ class VisitPlanDraft(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     visit_id: Mapped[int] = mapped_column(
         ForeignKey("lifemap_visits.id", ondelete="CASCADE"), index=True
     )
@@ -2477,9 +2636,7 @@ class VisitInstructionCandidate(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     draft_id: Mapped[int] = mapped_column(
         ForeignKey("visit_plan_drafts.id", ondelete="CASCADE"), index=True
     )
@@ -2504,13 +2661,9 @@ class VisitInstructionCandidate(Base):
     reviewed_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     review_reason: Mapped[str] = mapped_column(String(255), default="")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class FamilyInvitation(Base):
@@ -2519,9 +2672,7 @@ class FamilyInvitation(Base):
     __tablename__ = "family_invitations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     inviter_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -2552,9 +2703,7 @@ class FamilyAccessGrant(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     grantor_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -2566,9 +2715,7 @@ class FamilyAccessGrant(Base):
     )
     object_type: Mapped[str] = mapped_column(String(32), index=True)
     object_id: Mapped[str] = mapped_column(String(64), index=True)
-    data_classes_json: Mapped[list[str]] = mapped_column(
-        JSON, default=list, server_default="[]"
-    )
+    data_classes_json: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
     allowed_actions_json: Mapped[list[str]] = mapped_column(JSON)
     purpose: Mapped[str] = mapped_column(String(64), index=True)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -2589,9 +2736,7 @@ class FamilyAccessLog(Base):
     __tablename__ = "family_access_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -2873,7 +3018,8 @@ class PhrShare(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    share_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # As with workspace shares, never persist a bearer capability in plaintext.
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     scope: Mapped[str] = mapped_column(String(32), default="full")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -3100,9 +3246,7 @@ class ClinicalCase(Base):
     __tablename__ = "clinical_cases"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     owner_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -3150,9 +3294,7 @@ class ClinicalWorkflowRun(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     case_id: Mapped[int] = mapped_column(
         ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
     )
@@ -3201,9 +3343,7 @@ class EvidenceRecord(Base):
     __tablename__ = "clinical_evidence_records"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     case_id: Mapped[int] = mapped_column(
         ForeignKey("clinical_cases.id", ondelete="CASCADE"), index=True
     )
@@ -3232,9 +3372,7 @@ class EvidenceRunSubscription(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
@@ -3244,15 +3382,11 @@ class EvidenceRunSubscription(Base):
     )
     status: Mapped[str] = mapped_column(String(24), default="active", index=True)
     delivery_channel: Mapped[str] = mapped_column(String(32), default="in_app")
-    interval_hours: Mapped[int] = mapped_column(
-        Integer, default=168, server_default="168"
-    )
+    interval_hours: Mapped[int] = mapped_column(Integer, default=168, server_default="168")
     next_check_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
-    last_checked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -3270,9 +3404,7 @@ class EvidenceApplicabilityRule(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     question_class: Mapped[str] = mapped_column(String(64), index=True)
     version: Mapped[str] = mapped_column(String(64))
     required_fact_types_json: Mapped[list[str]] = mapped_column(JSON)
@@ -3283,12 +3415,8 @@ class EvidenceApplicabilityRule(Base):
     approved_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    approved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class EvidenceSourceCheckpoint(Base):
@@ -3305,9 +3433,7 @@ class EvidenceSourceCheckpoint(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     subscription_id: Mapped[int] = mapped_column(
         ForeignKey("evidence_run_subscriptions.id", ondelete="CASCADE"),
         index=True,
@@ -3316,9 +3442,7 @@ class EvidenceSourceCheckpoint(Base):
     provider: Mapped[str] = mapped_column(String(64), index=True)
     cursor: Mapped[str] = mapped_column(String(512), default="")
     watermark_digest: Mapped[str] = mapped_column(String(128), default="")
-    checked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class EvidenceMonitorJob(Base):
@@ -3327,25 +3451,17 @@ class EvidenceMonitorJob(Base):
     __tablename__ = "evidence_monitor_jobs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     subscription_id: Mapped[int] = mapped_column(
         ForeignKey("evidence_run_subscriptions.id", ondelete="CASCADE"),
         index=True,
     )
-    dedupe_key: Mapped[str] = mapped_column(
-        String(128), unique=True, index=True
-    )
+    dedupe_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     status: Mapped[str] = mapped_column(
         String(24), default="pending", server_default="pending", index=True
     )
-    scheduled_for: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), index=True
-    )
-    next_attempt_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), index=True
-    )
+    scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     lease_owner: Mapped[str] = mapped_column(String(96), default="")
     lease_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
@@ -3357,28 +3473,18 @@ class EvidenceMonitorJob(Base):
         nullable=True,
         index=True,
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class EvidenceChangeAssessment(Base):
     """Versioned material-change/contradiction result awaiting human review."""
 
     __tablename__ = "evidence_change_assessments"
-    __table_args__ = (
-        UniqueConstraint(
-            "monitor_job_id", name="uq_evidence_change_assessment_job"
-        ),
-    )
+    __table_args__ = (UniqueConstraint("monitor_job_id", name="uq_evidence_change_assessment_job"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     monitor_job_id: Mapped[int] = mapped_column(
         ForeignKey("evidence_monitor_jobs.id", ondelete="CASCADE"),
         index=True,
@@ -3406,13 +3512,9 @@ class EvidenceChangeAssessment(Base):
     reviewed_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     review_reason: Mapped[str] = mapped_column(String(255), default="")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class EvidenceChangeNotification(Base):
@@ -3420,22 +3522,16 @@ class EvidenceChangeNotification(Base):
 
     __tablename__ = "evidence_change_notifications"
     __table_args__ = (
-        UniqueConstraint(
-            "assessment_id", name="uq_evidence_change_notification_assessment"
-        ),
+        UniqueConstraint("assessment_id", name="uq_evidence_change_notification_assessment"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     assessment_id: Mapped[int] = mapped_column(
         ForeignKey("evidence_change_assessments.id", ondelete="CASCADE"),
         index=True,
     )
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
@@ -3443,12 +3539,8 @@ class EvidenceChangeNotification(Base):
         String(24), default="unread", server_default="unread", index=True
     )
     payload_json: Mapped[dict] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    read_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class GuidelineArtifact(Base):
@@ -3457,9 +3549,7 @@ class GuidelineArtifact(Base):
     __tablename__ = "guideline_artifacts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    public_id: Mapped[str] = mapped_column(
-        String(36), unique=True, index=True, default=_public_id
-    )
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
     title: Mapped[str] = mapped_column(String(500))
     source_provider: Mapped[str] = mapped_column(String(64), index=True)
     source_url: Mapped[str] = mapped_column(String(2_000))

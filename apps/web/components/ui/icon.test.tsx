@@ -1,0 +1,30 @@
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+
+import Icon, { type IconName } from "@/components/ui/icon";
+
+afterEach(cleanup);
+
+describe("Icon", () => {
+  it("renders decorative icons as bundled SVG without visible glyph text", () => {
+    const { container } = render(<Icon name="medication" />);
+
+    const icon = container.querySelector("svg");
+    expect(icon).toHaveAttribute("data-icon", "medication");
+    expect(icon).toHaveAttribute("aria-hidden", "true");
+    expect(container).not.toHaveTextContent("medication");
+  });
+
+  it("gives a meaningful standalone icon an accessible name", () => {
+    render(<Icon name="warning" label="Cảnh báo" />);
+
+    expect(screen.getByRole("img", { name: "Cảnh báo" })).toBeInTheDocument();
+  });
+
+  it("uses the bundled fallback for an unexpected runtime name", () => {
+    const { container } = render(<Icon name={"unknown-provider-glyph" as IconName} />);
+
+    expect(container.querySelector("svg")).toHaveAttribute("data-icon", "fallback");
+    expect(container).not.toHaveTextContent("unknown-provider-glyph");
+  });
+});

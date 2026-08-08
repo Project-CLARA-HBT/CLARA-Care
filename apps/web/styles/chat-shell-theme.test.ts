@@ -21,4 +21,10 @@ describe("CLARA Chat theme integration", () => {
       /html\.dark \.clara-chat-v2,[\s\S]*?html\[data-theme="dark"\] \.clara-chat-v2\s*\{\s*background:\s*var\(--bg-canvas\);\s*\}/,
     );
   });
+
+  it("uses the shared sidebar surface for the dark application shell", () => {
+    expect(styles).toMatch(
+      /html\.dark \.app-navigation,[\s\S]*?html\[data-theme="dark"\] \.app-navigation\s*\{\s*background:\s*var\(--surface-sidebar\);\s*\}/,
+    );
+  });
 });

@@ -2092,7 +2092,10 @@ def test_run_research_tier2_deep_beta_emits_beta_stages_and_metadata(monkeypatch
         )
         == 4
     )
-    assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 4
+    # DeepBeta keeps every pipeline pass retrieval-only; final prose is
+    # generated once by its citation-aware report synthesizer rather than by a
+    # duplicate dossier generation in the RAG pipeline.
+    assert sum(1 for item in call_log if item.get("generation_enabled") is False) == 5
     evidence_audit_span = next(
         item for item in stage_spans if str(item.get("stage")) == "deep_beta_evidence_audit"
     )
@@ -3113,3 +3116,30 @@ def test_legacy_runtime_payloads_pass_deployment_settings_to_every_research_task
         retries == tier2.settings.deepseek_retries_per_base
         for _task, _settings, _timeout, retries in captured
     )
+
+
+def test_deep_beta_strict_synthesis_never_returns_baseline_without_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Strict DeepBeta must fail closed rather than label a baseline as LLM output."""
+
+    monkeypatch.setattr(tier2.settings, "deep_beta_report_llm_enabled", True)
+    monkeypatch.setattr(
+        tier2,
+        "_resolve_runtime_llm_config",
+        lambda _runtime: ("router", "", "", ""),
+    )
+
+    result = tier2._synthesize_deep_beta_long_report(
+        topic="Educational hypertension guideline question",
+        answer_markdown="## Kết luận nhanh\nBản nháp không được trả về.",
+        citations=[],
+        verification_matrix_payload={},
+        reasoning_nodes=[],
+        deep_pass_summaries=[],
+        llm_runtime={},
+        research_mode="deep_beta",
+        strict_llm_required=True,
+    )
+
+    assert result is None

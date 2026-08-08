@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import lru_cache
@@ -40,6 +41,8 @@ class ModelTask(StrEnum):
     SCRIBE_ASR_CORRECTION = "scribe_asr_correction"
     COUNCIL_INTAKE = "council_intake"
     COUNCIL_SHADOW = "council_shadow"
+    COUNCIL_CLAIM_VERIFICATION = "council_claim_verification"
+    COUNCIL_ADJUDICATION = "council_adjudication"
     RAG_RERANKING = "rag_reranking"
     FACTCHECK_NLI = "factcheck_nli"
     RAG_SYNTHESIS = "rag_synthesis"
@@ -141,9 +144,33 @@ class AsrProviderSelection:
     contract_schema_version: str
 
 
-TASK_CONTRACTS_PATH = (
-    Path(__file__).resolve().parents[3] / "config" / "task_contracts" / "contracts.json"
-)
+_TASK_CONTRACTS_RELATIVE = Path("config") / "task_contracts" / "contracts.json"
+
+
+def _task_contracts_path() -> Path:
+    """Resolve the checked-in contract in source and installed-container layouts.
+
+    The former path assumed ``clara_ml`` always lived beneath ``services/ml/src``.
+    That is true in a checkout but false after installation into site-packages,
+    where the deploy image deliberately stores the manifest at ``/app/config``.
+    We only accept an explicit readable local file and otherwise fail closed;
+    there is no in-code default contract or routing fallback.
+    """
+
+    configured = os.getenv("CLARA_ML_TASK_CONTRACTS_PATH", "").strip()
+    candidates = ([Path(configured)] if configured else []) + [
+        Path(__file__).resolve().parents[3] / _TASK_CONTRACTS_RELATIVE,
+        Path.cwd() / _TASK_CONTRACTS_RELATIVE,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate.resolve()
+    # Keep an informative deterministic path in the raised load error without
+    # silently accepting an unversioned fallback manifest.
+    return candidates[0]
+
+
+TASK_CONTRACTS_PATH = _task_contracts_path()
 _RISK_LEVELS = frozenset({"low", "medium", "high", "critical"})
 _MODEL_TIERS = frozenset(
     {"deterministic", "encoder_slm", "generative_slm", "medium_llm", "large_llm"}
@@ -381,9 +408,6 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
         # non-authoritative Encoder-SLM signal into a primary LLM route.
         raise ValueError("encoder_shadow_requires_dedicated_registry_adapter")
     registry_enabled = _bool(settings, "model_registry_enabled", True)
-    rollback_requested = registry_enabled and _bool(
-        settings, "model_registry_force_rollback", False
-    )
     legacy_model = _text(settings, "deepseek_model")
     if not legacy_model:
         raise ValueError("deepseek_model_required")
@@ -395,21 +419,19 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
     if task_routing_enabled and contract.model_profile == "flash" and flash_model:
         primary_model = flash_model
         model_version = FLASH_MODEL_VERSION
-        fallback_model = pro_model if pro_model != primary_model else ""
     elif task_routing_enabled:
         primary_model = pro_model
         model_version = PRIMARY_MODEL_VERSION
-        fallback_model = flash_model if flash_model != primary_model else ""
     else:
         primary_model = legacy_model
         model_version = PRIMARY_MODEL_VERSION
-        fallback_model = _text(settings, "deepseek_fallback_model")
-    rollback_model = _text(settings, "model_registry_rollback_model")
-    if not rollback_model:
-        rollback_model = _text(settings, "deepseek_fallback_model")
-
-    rollback_applied = rollback_requested and bool(rollback_model)
-    model = rollback_model if rollback_applied else primary_model
+    # A failed model call must be surfaced to the caller, never silently
+    # retried against a second model or replaced by an operator rollback.  That
+    # keeps provenance truthful and prevents a lower-capability response from
+    # being mistaken for the configured route in a medical workflow.
+    fallback_model = ""
+    rollback_applied = False
+    model = primary_model
     selection = ModelSelection(
         task=task,
         provider="deepseek",
@@ -423,7 +445,7 @@ def resolve_model_selection(task: ModelTask, settings: Any) -> ModelSelection:
             if rollback_applied
             else (contract.model_profile if task_routing_enabled else "legacy")
         ),
-        fallback_model="" if rollback_applied else fallback_model,
+        fallback_model=fallback_model,
         rollback_applied=rollback_applied,
         registry_enabled=registry_enabled,
     )

@@ -9,7 +9,6 @@ import {
 
 vi.mock("@/lib/http-client", () => ({ default: { post: vi.fn() } }));
 vi.mock("@/lib/auth-store", () => ({
-  getAccessToken: () => "test-token",
   getCsrfToken: () => "csrf",
 }));
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 import 'core/api_client.dart';
 import 'core/feature_flags.dart';
+import 'core/public_share_link.dart';
 import 'core/session_store.dart';
 import 'experience/language_controller.dart';
 import 'experience/theme_controller.dart';
@@ -23,6 +24,8 @@ void main() async {
 
   final sessionStore = SessionStore();
   final apiClient = ApiClient(baseUrl: _defaultApiBaseUrl);
+  final publicShareLinks = PublicShareLinkController();
+  await publicShareLinks.start();
 
   // Enable pre-flight expiry refresh + single 401-retry against /auth/refresh,
   // persisting or clearing the secure-storage session (Req 6.2, 6.3). Additive:
@@ -58,6 +61,7 @@ void main() async {
     ClaraApp(
       apiClient: apiClient,
       sessionStore: sessionStore,
+      publicShareLinks: publicShareLinks,
       languageController: languageController,
       themeController: themeController,
     ),

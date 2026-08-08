@@ -1,7 +1,7 @@
-# ruff: noqa: E501
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +21,8 @@ from clara_ml.nlp.vietnamese_clinical import (
     fold_vietnamese_for_matching,
 )
 from clara_ml.nlp_vi import enrich_clinical_utterance_with_llm
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -169,7 +171,6 @@ _FREE_TEXT_MEDICATION_STOPWORDS = frozenset(
         "dung",
         "xai",
         "su",
-        "dung",
         "taking",
         "take",
         "on",
@@ -182,7 +183,6 @@ _FREE_TEXT_MEDICATION_STOPWORDS = frozenset(
         "viên",
         "sang",
         "trua",
-        "toi",
         "ngay",
         "lan",
     }
@@ -876,7 +876,10 @@ def _normalize_medications_with_strict_drugbank_choices(
             3,
         ),
         "pair_coverage_ratio": round(
-            min(max((len(normalized_medications) / input_count) if input_count else 1.0, 0.0),
+            min(
+                max((len(normalized_medications) / input_count) if input_count else 1.0, 0.0),
+                1.0,
+            ),
             3,
         ),
         "normalized_inputs": normalized_inputs[:20],
@@ -997,7 +1000,7 @@ def _free_text_medication_candidates(
     for width in range(min(4, len(tokens)), 0, -1):
         if len(candidates) >= _MAX_FREE_TEXT_MEDICATION_CANDIDATES:
             break
-        for start in range(0, len(tokens) - width + 1):
+        for start in range(len(tokens) - width + 1):
             phrase_tokens = tokens[start : start + width]
             folded_phrase_tokens = [fold_vietnamese_for_matching(token) for token in phrase_tokens]
             if not phrase_tokens or all(token in _FREE_TEXT_MEDICATION_STOPWORDS for token in folded_phrase_tokens):
@@ -1276,8 +1279,11 @@ def _get_drugbank_store() -> DrugBankDdiStore | None:
                 and _DRUGBANK_STORE.readiness().get("state") == "ready"
             ):
                 return _DRUGBANK_STORE
-        except Exception:  # noqa: BLE001 - a readiness failure must fail closed
-            pass
+        except Exception as exc:  # noqa: BLE001 - readiness must fail closed
+            logger.warning(
+                "careguard_drugbank_cached_readiness_failed error_type=%s",
+                exc.__class__.__name__,
+            )
         # A mounted bundle can arrive or be atomically refreshed after this
         # process started. Re-evaluate a degraded/missing store instead of
         # retaining an unsafe stale cache until a manual restart.
@@ -2309,7 +2315,7 @@ def run_careguard_analyze(payload: dict) -> dict:
             for source_name in external.source_used:
                 if source_name not in source_used:
                     source_used.append(source_name)
-        except Exception as exc:  # pragma: no cover - defensive hard-crash guard
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover
             source_errors["external"] = [f"unhandled_error:{exc.__class__.__name__}"]
     elif needs_external_lookup and not drugbank_layer_version:
         source_errors["external"] = ["disabled_by_config"]

@@ -80,9 +80,11 @@ export type WorkspaceSearchResponse = {
 };
 
 export type WorkspaceConversationShare = {
+  share_id: number;
   conversation_id: number;
-  share_token: string;
-  public_url: string;
+  /** Present only in the response that issues or rotates a capability. */
+  share_token?: string | null;
+  public_url?: string | null;
   is_active: boolean;
   expires_at?: string | null;
   created_at: string;
@@ -90,12 +92,11 @@ export type WorkspaceConversationShare = {
 };
 
 export type WorkspaceConversationShareListItem = {
+  share_id: number;
   conversation_id: number;
   conversation_title: string;
   message_count: number;
   last_message_at?: string | null;
-  share_token: string;
-  public_url: string;
   is_active: boolean;
   expires_at?: string | null;
   created_at: string;
@@ -113,7 +114,6 @@ export type WorkspacePublicConversationMessage = {
 export type WorkspacePublicConversation = {
   conversation_id: number;
   title: string;
-  owner_label: string;
   expires_at?: string | null;
   messages: WorkspacePublicConversationMessage[];
 };

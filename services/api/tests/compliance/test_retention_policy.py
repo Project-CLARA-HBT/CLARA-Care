@@ -18,7 +18,16 @@ from clara_api.compliance.retention import (
     run_retention_sweep,
 )
 from clara_api.core.config import get_settings
-from clara_api.db.models import PhrObservation, PhrProfile, User
+from clara_api.db.models import (
+    AuthToken,
+    MedicineCabinet,
+    MedicineItem,
+    PhrObservation,
+    PhrProfile,
+    Query,
+    SessionModel,
+    User,
+)
 from clara_api.db.session import SessionLocal
 
 from . import set_compliance_flags
@@ -173,4 +182,94 @@ class TestRetentionSweep:
             assert first["swept"] == 1
             # Re-running performs no further writes and re-counts nothing.
             assert second["swept"] == 0
+        get_settings.cache_clear()
+
+    def test_sweep_deletes_declared_query_and_session_token_categories(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        set_compliance_flags(monkeypatch, compliance_retention_job_enabled=True)
+        now = datetime(2026, 8, 1, tzinfo=UTC)
+        with SessionLocal() as db:
+            user = User(email="retention-query@example.com", hashed_password="x", role="normal")
+            db.add(user)
+            db.flush()
+            session = SessionModel(user_id=user.id, title="old conversation")
+            db.add(session)
+            db.flush()
+            old_query = Query(
+                session_id=session.id,
+                role="normal",
+                user_input="old sensitive question",
+                response_text="old sensitive answer",
+                created_at=now - timedelta(days=366),
+            )
+            fresh_query = Query(
+                session_id=session.id,
+                role="normal",
+                user_input="fresh question",
+                response_text="fresh answer",
+                created_at=now - timedelta(days=10),
+            )
+            old_token = AuthToken(
+                user_id=user.id,
+                token_type="refresh_jwt",
+                token_hash="old-token-hash",
+                expires_at=now + timedelta(days=1),
+                created_at=now - timedelta(days=91),
+            )
+            fresh_token = AuthToken(
+                user_id=user.id,
+                token_type="refresh_jwt",
+                token_hash="fresh-token-hash",
+                expires_at=now + timedelta(days=1),
+                created_at=now - timedelta(days=10),
+            )
+            db.add_all([old_query, fresh_query, old_token, fresh_token])
+            db.commit()
+            old_query_id, fresh_query_id = old_query.id, fresh_query.id
+            old_token_id, fresh_token_id = old_token.id, fresh_token.id
+
+            summary = run_retention_sweep(db, get_settings(), now=now)
+            db.commit()
+
+            assert summary["query_log"] == 1
+            assert summary["session_token"] == 1
+            assert db.get(Query, old_query_id) is None
+            assert db.get(Query, fresh_query_id) is not None
+            assert db.get(AuthToken, old_token_id) is None
+            assert db.get(AuthToken, fresh_token_id) is not None
+        get_settings.cache_clear()
+
+    def test_sweep_anonymizes_declared_medicine_cabinet_category(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        set_compliance_flags(monkeypatch, compliance_retention_job_enabled=True)
+        now = datetime(2026, 8, 1, tzinfo=UTC)
+        with SessionLocal() as db:
+            user = User(email="retention-cabinet@example.com", hashed_password="x", role="normal")
+            db.add(user)
+            db.flush()
+            cabinet = MedicineCabinet(
+                user_id=user.id,
+                label="Tu thuoc cua Nguyen Van A",
+                updated_at=now - timedelta(days=1096),
+            )
+            db.add(cabinet)
+            db.flush()
+            item = MedicineItem(
+                cabinet_id=cabinet.id,
+                drug_name="metformin",
+                normalized_name="metformin",
+            )
+            db.add(item)
+            db.commit()
+            item_id = item.id
+
+            summary = run_retention_sweep(db, get_settings(), now=now)
+            db.commit()
+
+            assert summary["medicine_cabinet"] == 1
+            db.refresh(cabinet)
+            assert cabinet.label == ""
+            assert db.get(MedicineItem, item_id) is None
         get_settings.cache_clear()

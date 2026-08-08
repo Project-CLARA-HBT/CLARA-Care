@@ -57,6 +57,8 @@ from clara_api.db.models import (
     VnDrugMappingAudit,
 )
 from clara_api.db.session import get_db
+from clara_api.glhs.adapters import ingest_medication_course, owner_profile_scope
+from clara_api.glhs.gateway import compile_thss
 from clara_api.phr.audit import write_audit
 from clara_api.phr.features import phr_features
 from clara_api.phr.provenance import hedge_text_bilingual
@@ -2430,6 +2432,22 @@ def import_detections(
                     actor_user_id=user.id,
                 )
             )
+            # The OCR result only becomes health state after the user's
+            # explicit import confirmation.  Mirror that immutable evidence
+            # into GLHS instead of allowing the cabinet/import side effect to
+            # remain a parallel, ungoverned medication truth.  The adapter
+            # deliberately keeps entries without an exact DrugBank identity
+            # as unresolved candidates, so this call cannot cause a fuzzy OCR
+            # match or the local mapping dictionary to feed DDI automatically.
+            ingest_medication_course(
+                db,
+                scope=owner_profile_scope(profile=profile, actor=user),
+                course=course,
+                idempotency_key=(
+                    "careguard-capture-import:"
+                    f"{candidate.public_id}:{course.public_id}:v{course.version_no}"
+                ),
+            )
         existing_names.add(normalized)
         inserted += 1
         prioritized_fields.append(
@@ -2548,17 +2566,42 @@ def run_auto_ddi_check(
         phr_meds: list[dict[str, Any]] = []
         phr_allergies: list[dict[str, Any]] = []
         if profile is not None:
-            phr_meds = [
-                {
-                    "id": str(m.get("id") or ""),
-                    "rx_cui": str(m.get("rx_cui") or ""),
-                    "normalized_name": str(m.get("normalized_name") or ""),
-                    "name": str(m.get("name") or ""),
-                }
-                for m in (profile.medications_json or [])
-                if isinstance(m, dict)
-            ]
-            phr_allergies = [a for a in (profile.allergies_json or []) if isinstance(a, dict)]
+            # Do not use legacy profile JSON as AI input.  THSS binds the
+            # personal projection to one profile, one purpose, allowed data
+            # classes, current governed state, and an opaque audit manifest.
+            # In particular, ``medications_unresolved`` is not requested here:
+            # a self-declared or OCR-derived name without deterministic
+            # DrugBank identity cannot influence automated DDI reasoning.
+            snapshot = compile_thss(
+                db,
+                scope=owner_profile_scope(profile=profile, actor=user),
+                task="careguard_reconciliation",
+                purpose="self_care",
+                allowed_data_classes=frozenset({"medications", "allergies"}),
+                selection_policy="strict",
+            )
+            for assertion in snapshot.assertions:
+                value = assertion.get("value")
+                if not isinstance(value, dict):
+                    continue
+                if assertion["type"] == "medications":
+                    drugbank_id = str(value.get("drugbank_id") or "").strip()
+                    if not drugbank_id:
+                        # Defensive in case an older projection violated the
+                        # type boundary; never send it downstream.
+                        continue
+                    name = str(value.get("medication_name") or "").strip()
+                    phr_meds.append(
+                        {
+                            "id": str(assertion["id"]),
+                            "rx_cui": "",
+                            "normalized_name": name,
+                            "name": name,
+                            "drugbank_id": drugbank_id,
+                        }
+                    )
+                elif assertion["type"] == "allergies":
+                    phr_allergies.append(value)
         cabinet_payload = [
             {
                 "id": str(item.id),
@@ -2570,7 +2613,7 @@ def run_auto_ddi_check(
         ]
         reconciled = reconcile(phr_meds, cabinet_payload)
         request_payload["reconciled_medications"] = reconciled.as_dict()["medications"]
-        phr_derived = bool(phr_meds)
+        phr_derived = bool(phr_meds or phr_allergies)
 
         # Allergy-aware DDI requires personalization consent (Req 7.3, 7.4).
         if flags.allergy_aware_ddi and phr_allergies:

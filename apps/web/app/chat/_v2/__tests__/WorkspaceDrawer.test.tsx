@@ -35,12 +35,11 @@ function makeShare(
 ): WorkspaceConversationShareListItem {
   const now = new Date().toISOString();
   return {
+    share_id: 1,
     conversation_id: 7,
     conversation_title: "Aspirin chat",
     message_count: 3,
     last_message_at: now,
-    share_token: "tok_abc",
-    public_url: "https://clara.example/s/tok_abc",
     is_active: true,
     expires_at: null,
     created_at: now,

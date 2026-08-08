@@ -101,16 +101,16 @@ function formatCompact(value: number): string {
 
 function colorForHeat(value: number): string {
   const alpha = clamp(value, 0, 100) / 100;
-  if (alpha > 0.75) return `rgba(244,63,94,${0.24 + alpha * 0.54})`;
-  if (alpha > 0.45) return `rgba(245,158,11,${0.2 + alpha * 0.46})`;
+  if (alpha > 0.75) return `rgba(255,180,171,${0.24 + alpha * 0.54})`;
+  if (alpha > 0.45) return `rgba(250,189,52,${0.2 + alpha * 0.46})`;
   return `rgba(96, 165, 250,${0.18 + alpha * 0.4})`;
 }
 
 function toneToColor(tone: TelemetryBarItem["tone"]): string {
-  if (tone === "ok") return "#34d399";
-  if (tone === "warn") return "#f59e0b";
-  if (tone === "danger" || tone === "error") return "#fb7185";
-  return "#60a5fa";
+  if (tone === "ok") return "#a4c9ff";
+  if (tone === "warn") return "#fabd34";
+  if (tone === "danger" || tone === "error") return "#ffb4ab";
+  return "#a4c9ff";
 }
 
 function toneLabel(tone: TelemetryBarItem["tone"]): string {
@@ -128,10 +128,10 @@ function toneTexture(tone: TelemetryBarItem["tone"], color: string): string {
 }
 
 function stageTone(stage: ConduitStage["status"]): string {
-  if (stage === "ok") return "border-emerald-500/45 bg-emerald-500/15 text-emerald-700 dark:border-emerald-400/70 dark:bg-emerald-500/20 dark:text-emerald-100";
-  if (stage === "warn") return "border-amber-500/45 bg-amber-500/15 text-amber-700 dark:border-amber-400/70 dark:bg-amber-500/20 dark:text-amber-100";
-  if (stage === "error") return "border-rose-500/45 bg-rose-500/15 text-rose-700 dark:border-rose-400/70 dark:bg-rose-500/20 dark:text-rose-100";
-  return "border-slate-500/40 bg-slate-500/10 text-slate-700 dark:border-slate-400/60 dark:bg-slate-500/20 dark:text-slate-100";
+  if (stage === "ok") return "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
+  if (stage === "warn") return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
+  if (stage === "error") return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
+  return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
 }
 
 function stageStatusLabel(stage: ConduitStage["status"]): string {
@@ -251,7 +251,7 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
         </div>
       }
       >
-        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.16),transparent_52%),linear-gradient(180deg,rgba(148,163,184,0.08),transparent)] p-2">
+        <div className="rounded-[var(--radius-lg)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2">
         <svg
           viewBox={`0 0 ${prepared.width} ${prepared.chartHeight}`}
           className="w-full"
@@ -383,7 +383,7 @@ export function SegmentRingGauge({
 
   return (
     <div
-      className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_30%_10%,rgba(96,165,250,0.15),transparent_58%),var(--surface-muted)] p-2.5"
+      className="rounded-[var(--radius-lg)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2.5"
       role="meter"
       aria-label={`${label} gauge`}
       aria-valuemin={0}
@@ -454,7 +454,7 @@ export function RadarPulseChart({ title, description, axes, size = 280 }: RadarP
 
   return (
     <ChartFrame title={title} description={description}>
-      <div className="rounded-xl border border-[color:var(--shell-border)] bg-[radial-gradient(circle_at_center,rgba(96,165,250,0.12),transparent_62%),var(--surface-muted)] p-2">
+      <div className="rounded-[var(--radius-lg)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2">
         <svg viewBox={`0 0 ${canvas} ${canvas}`} className="h-[260px] w-full" role="img" aria-label={title || "radar chart"}>
           <defs>
             <filter id={`${radarId}-glow`} x="-30%" y="-30%" width="160%" height="160%">

@@ -83,10 +83,16 @@ export type PhrRecord = {
   height_cm?: number | null;
   weight_kg?: number | null;
   phone: string;
+  contact_email: string;
   address: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
+  emergency_contact_relationship: string;
+  emergency_contact_note: string;
+  insurance_provider: string;
   insurance_id: string;
+  insurance_expiry?: string | null;
+  allergy_status: "unknown" | "none_known" | "recorded";
   notes: string;
   allergies: PhrAllergyItem[];
   conditions: PhrConditionItem[];
@@ -102,6 +108,43 @@ export async function getPhrRecord(): Promise<PhrRecord> {
 
 export async function updatePhrRecord(payload: PhrRecord): Promise<PhrRecord> {
   const { data } = await api.put<PhrRecord>("/api/v1/phr/record", payload);
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Body measurements
+// ---------------------------------------------------------------------------
+
+/** A height/weight pair recorded at the same time; BMI is server-derived. */
+export type PhrBodyMeasurement = {
+  observed_on: string;
+  height_cm: number;
+  weight_kg: number;
+  bmi: number;
+  information_source: PhrInformationSource;
+};
+
+export type PhrBodyMeasurementInput = Pick<
+  PhrBodyMeasurement,
+  "height_cm" | "weight_kg"
+> & {
+  observed_on?: string;
+};
+
+export async function getPhrBodyMeasurements(): Promise<PhrBodyMeasurement[]> {
+  const { data } = await api.get<{ measurements?: PhrBodyMeasurement[] }>(
+    "/api/v1/phr/body-measurements",
+  );
+  return Array.isArray(data.measurements) ? data.measurements : [];
+}
+
+export async function createPhrBodyMeasurement(
+  payload: PhrBodyMeasurementInput,
+): Promise<PhrBodyMeasurement> {
+  const { data } = await api.post<PhrBodyMeasurement>(
+    "/api/v1/phr/body-measurements",
+    payload,
+  );
   return data;
 }
 
@@ -257,7 +300,8 @@ export const DEFAULT_PHR_CAPABILITIES: PhrCapabilityFlags = {
  * surface the backend would reject (Requirement 18.1).
  */
 export function parsePhrCapabilities(raw: unknown): PhrCapabilityFlags {
-  const root = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const root =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   // The endpoint wraps flags under `{ "flags": {...} }`; tolerate a bare object too.
   const flagsSource =
     root.flags && typeof root.flags === "object"
@@ -297,37 +341,95 @@ export async function getPhrCapabilities(): Promise<PhrCapabilityFlags> {
 
 /**
  * A single OCR-extracted candidate medication awaiting human confirmation
- * (Requirement 9.1–9.3). `requires_manual_confirm` is set by the backend for
- * low-confidence detections; the confirm endpoint rejects any candidate that
- * still carries it, so the user must review/clear it before committing.
+ * (Requirement 9.1–9.3). Every row is proposal-only. The server binds the
+ * complete scan set to an owner-bound review token and accepts only rows the
+ * person explicitly confirms; `requires_manual_confirm` is presentation
+ * metadata, never a client-side bypass switch.
  */
 export type PhrOcrCandidate = {
+  candidate_id: string;
   name: string;
   dose: string;
   frequency: string;
   ocr_confidence?: number | null;
   requires_manual_confirm: boolean;
+  confirmed: boolean;
+  /** Read-only corrected-text offsets for a reviewed OCR proposal. */
+  source_coordinates?: PhrOcrSourceCoordinate[];
+};
+
+export type PhrOcrSourceCoordinate = {
+  coordinate_system: "corrected_text_codepoint_offset";
+  start: number;
+  end: number;
 };
 
 /** Response of `POST /phr/import/ocr/scan`: nothing is committed (Req 9.1). */
 export type PhrOcrScanResult = {
   committed: boolean;
   candidates: PhrOcrCandidate[];
+  reviewToken: string;
+  processingDisclosure: {
+    providerCategory:
+      | "configured_ocr_service"
+      | "google_cloud_vision"
+      | "local_tesseract";
+    humanConfirmationRequired: boolean;
+  } | null;
 };
+
+function coerceOcrSourceCoordinate(
+  raw: unknown,
+): PhrOcrSourceCoordinate | null {
+  const value =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const start = value.start;
+  const end = value.end;
+  if (
+    value.coordinate_system !== "corrected_text_codepoint_offset" ||
+    typeof start !== "number" ||
+    typeof end !== "number" ||
+    !Number.isSafeInteger(start) ||
+    !Number.isSafeInteger(end) ||
+    start < 0 ||
+    end < start
+  ) {
+    return null;
+  }
+  return {
+    coordinate_system: "corrected_text_codepoint_offset",
+    start,
+    end,
+  };
+}
 
 function coerceOcrCandidate(raw: unknown): PhrOcrCandidate {
   const root =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const confidence =
-    typeof root.ocr_confidence === "number" && Number.isFinite(root.ocr_confidence)
+    typeof root.ocr_confidence === "number" &&
+    Number.isFinite(root.ocr_confidence)
       ? Math.min(1, Math.max(0, root.ocr_confidence))
       : null;
+  const sourceCoordinates = Array.isArray(root.source_coordinates)
+    ? root.source_coordinates
+        .map(coerceOcrSourceCoordinate)
+        .filter(
+          (coordinate): coordinate is PhrOcrSourceCoordinate =>
+            coordinate !== null,
+        )
+        .slice(0, 24)
+    : [];
   return {
+    candidate_id:
+      typeof root.candidate_id === "string" ? root.candidate_id : "",
     name: typeof root.name === "string" ? root.name : "",
     dose: typeof root.dose === "string" ? root.dose : "",
     frequency: typeof root.frequency === "string" ? root.frequency : "",
     ocr_confidence: confidence,
     requires_manual_confirm: root.requires_manual_confirm === true,
+    confirmed: root.confirmed === true,
+    source_coordinates: sourceCoordinates,
   };
 }
 
@@ -344,21 +446,50 @@ export async function scanPhrOcr(file: File): Promise<PhrOcrScanResult> {
   const candidates = Array.isArray(root.candidates)
     ? root.candidates.map(coerceOcrCandidate)
     : [];
-  return { committed: root.committed === true, candidates };
+  const reviewToken =
+    typeof root.review_token === "string" ? root.review_token : "";
+  if (!reviewToken || candidates.some((candidate) => !candidate.candidate_id)) {
+    throw new Error("OCR review session is unavailable");
+  }
+  const disclosure =
+    root.processing_disclosure && typeof root.processing_disclosure === "object"
+      ? (root.processing_disclosure as Record<string, unknown>)
+      : null;
+  const providerCategory = disclosure?.provider_category;
+  return {
+    committed: root.committed === true,
+    candidates,
+    reviewToken,
+    processingDisclosure:
+      providerCategory === "configured_ocr_service" ||
+      providerCategory === "google_cloud_vision" ||
+      providerCategory === "local_tesseract"
+        ? {
+            providerCategory,
+            humanConfirmationRequired:
+              disclosure?.human_confirmation_required === true,
+          }
+        : null,
+  };
 }
 
 /**
  * Commit the user-reviewed candidate list as `ocr`-sourced medications
- * (Requirement 9.2, 9.4). Candidates still flagged `requires_manual_confirm`
- * are rejected by the server (422), so the modal must clear that flag on accept.
+ * (Requirement 9.2, 9.4). `reviewCandidateIds` retains the full signed scan
+ * set, including discarded rows, while `medications` contains only the
+ * explicitly accepted rows. This prevents a client from injecting a new OCR
+ * candidate after review without turning discards into stored data.
  */
 export async function confirmPhrOcr(
   medications: PhrOcrCandidate[],
+  reviewToken: string,
+  reviewCandidateIds: string[],
 ): Promise<PhrRecord> {
-  const { data } = await api.post<PhrRecord>(
-    "/api/v1/phr/import/ocr/confirm",
-    { medications },
-  );
+  const { data } = await api.post<PhrRecord>("/api/v1/phr/import/ocr/confirm", {
+    medications,
+    review_token: reviewToken,
+    review_candidate_ids: reviewCandidateIds,
+  });
   return data;
 }
 
@@ -420,6 +551,7 @@ export type PhrShareScope = "full" | "emergency_card";
 
 /** A created share link as returned by `POST /phr/share`. */
 export type PhrShare = {
+  share_id: number;
   share_token: string;
   scope: PhrShareScope;
   expires_at?: string | null;
@@ -434,16 +566,31 @@ export async function createPhrShare(
   scope: PhrShareScope = "full",
   expiresInDays?: number | null,
 ): Promise<PhrShare> {
-  const { data } = await api.post<PhrShare>("/api/v1/phr/share", {
+  const payload: { scope: PhrShareScope; expires_in_days?: number } = {
     scope,
-    expires_in_days: expiresInDays ?? null,
-  });
+  };
+  if (expiresInDays != null) payload.expires_in_days = expiresInDays;
+  const { data } = await api.post<PhrShare>("/api/v1/phr/share", payload);
   return data;
 }
 
 /** Revoke a previously created share link (Requirement 12.3). */
-export async function revokePhrShare(token: string): Promise<void> {
-  await api.delete(`/api/v1/phr/share/${encodeURIComponent(token)}`);
+export async function revokePhrShare(shareId: number): Promise<void> {
+  await api.delete(`/api/v1/phr/share/${shareId}`);
+}
+
+/**
+ * Reads a public, read-only PHR share by opaque capability token.
+ *
+ * This endpoint intentionally needs no authenticated session. Callers must
+ * never log, persist, or render the token; the public viewer applies a strict
+ * field whitelist before displaying the untyped server envelope.
+ */
+export async function getPublicPhrShare(token: string): Promise<unknown> {
+  const { data } = await api.get<unknown>(
+    `/api/v1/phr/shared/${encodeURIComponent(token)}`,
+  );
+  return data;
 }
 
 // ---------------------------------------------------------------------------
@@ -483,7 +630,9 @@ export type PhrEmergencyCard = {
  * master flag is off (Requirement 18.1).
  */
 export async function getPhrEmergencyCard(): Promise<PhrEmergencyCard> {
-  const { data } = await api.get<PhrEmergencyCard>("/api/v1/phr/emergency-card");
+  const { data } = await api.get<PhrEmergencyCard>(
+    "/api/v1/phr/emergency-card",
+  );
   return data && typeof data === "object" ? data : {};
 }
 

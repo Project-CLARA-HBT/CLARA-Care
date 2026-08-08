@@ -11,6 +11,32 @@ from clara_api.core.session_security import session_security
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+def _has_bearer_scheme(request: Request) -> bool:
+    """Return whether the caller explicitly selected Bearer authentication.
+
+    RFC 7235 authentication schemes are case-insensitive.  Keeping this parser
+    shared with the CSRF boundary prevents a lowercase/malformed ``bearer``
+    header from bypassing CSRF while authentication silently falls back to a
+    cookie session.
+    """
+
+    header = request.headers.get("Authorization", "").strip()
+    if not header:
+        return False
+    scheme, _, _ = header.partition(" ")
+    return scheme.lower() == "bearer"
+
+
+def extract_bearer_token(request: Request) -> str | None:
+    """Extract an explicitly supplied Bearer credential without cookie fallback."""
+
+    if not _has_bearer_scheme(request):
+        return None
+    _, _, raw_token = request.headers.get("Authorization", "").partition(" ")
+    token = raw_token.strip()
+    return token or None
+
+
 def _reject_if_revoked(payload: TokenPayload) -> TokenPayload:
     """Reject a denylisted (revoked-at-logout) access token.
 
@@ -51,14 +77,33 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
 
 
 def _extract_access_token(request: Request) -> str:
-    auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.removeprefix("Bearer ").strip()
-        if token:
-            return token
+    # An explicit Bearer attempt owns authentication for this request.  Never
+    # downgrade a malformed/invalid bearer credential into cookie auth: callers
+    # must receive an auth failure rather than unintentionally switching
+    # transports (and CSRF policy remains aligned with this decision).
+    if _has_bearer_scheme(request):
+        return extract_bearer_token(request) or ""
     cookie_name = get_settings().auth_cookie_access_name
     token = request.cookies.get(cookie_name, "").strip()
     return token
+
+
+def has_valid_explicit_bearer_token(request: Request) -> bool:
+    """Whether this request will genuinely authenticate by Bearer token.
+
+    CSRF exemption is safe only for a valid, non-revoked explicit credential.
+    Invalid, expired, empty, or revoked headers deliberately return ``False``;
+    a simultaneous cookie session must therefore satisfy the normal CSRF check.
+    """
+
+    token = extract_bearer_token(request)
+    if not token:
+        return False
+    try:
+        _reject_if_revoked(decode_access_token(token))
+    except HTTPException:
+        return False
+    return True
 
 
 async def get_current_token(

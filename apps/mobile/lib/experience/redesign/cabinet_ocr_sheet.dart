@@ -37,8 +37,14 @@ import '../../theme/tokens.dart';
 class _CabinetOcrCopy {
   const _CabinetOcrCopy._(this._english);
 
-  factory _CabinetOcrCopy.forContext(BuildContext context) {
-    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+  factory _CabinetOcrCopy.forContext(
+    BuildContext context, {
+    String? preferredLocale,
+  }) {
+    // Vietnamese is the documented safe default.  A component-level lookup of
+    // MaterialApp's platform locale made this sheet silently switch to English
+    // when the app language controller had not supplied a preference.
+    final language = (preferredLocale ?? 'vi').trim().toLowerCase();
     return _CabinetOcrCopy._(language == 'en');
   }
 
@@ -62,9 +68,12 @@ class _CabinetOcrCopy {
   String get captureDescription => _english
       ? 'Take or choose a medicine-label photo so CLARA can identify the medicine name and dose. You confirm the information before it is added to your cabinet.'
       : 'Chụp hoặc chọn ảnh nhãn thuốc để CLARA nhận dạng tên thuốc và liều lượng. Bạn sẽ xác nhận thông tin trước khi thêm vào tủ thuốc.';
-  String get takePhoto => _english ? 'Take medicine-label photo' : 'Chụp ảnh nhãn thuốc';
-  String get choosePhoto => _english ? 'Choose from library' : 'Chọn từ thư viện';
-  String get scanning => _english ? 'Reading medicine label…' : 'Đang nhận dạng nhãn thuốc…';
+  String get takePhoto =>
+      _english ? 'Take medicine-label photo' : 'Chụp ảnh nhãn thuốc';
+  String get choosePhoto =>
+      _english ? 'Choose from library' : 'Chọn từ thư viện';
+  String get scanning =>
+      _english ? 'Reading medicine label…' : 'Đang nhận dạng nhãn thuốc…';
   String get reviewDescription => _english
       ? 'Check the identified information, select medicines to add, then choose “Add to cabinet”. Low-confidence items need your manual confirmation before they are added.'
       : 'Kiểm tra thông tin nhận dạng, tick chọn các thuốc muốn thêm rồi nhấn “Thêm vào tủ thuốc”. Những mục chưa đọc rõ từ nguồn cần bạn xác nhận thủ công trước khi thêm.';
@@ -75,17 +84,24 @@ class _CabinetOcrCopy {
       : 'Không nhận được thông tin thuốc từ ảnh. Thử chụp lại rõ hơn.';
   String selectMedicine(String name) =>
       _english ? 'Select $name' : 'Chọn $name';
-  String get unknownMedicine => _english ? 'Medicine name unavailable' : 'Không rõ tên thuốc';
-  String dosage(String value) => _english ? 'Dose: $value' : 'Liều lượng: $value';
-  String brand(String value) => _english ? 'Brand: $value' : 'Tên thương mại: $value';
+  String get unknownMedicine =>
+      _english ? 'Medicine name unavailable' : 'Không rõ tên thuốc';
+  String dosage(String value) =>
+      _english ? 'Dose: $value' : 'Liều lượng: $value';
+  String brand(String value) =>
+      _english ? 'Brand: $value' : 'Tên thương mại: $value';
   String manufacturer(String value) =>
       _english ? 'Manufacturer: $value' : 'Nhà sản xuất: $value';
   String confidence(bool high, int percent) => _english
-      ? (high ? 'Higher-confidence detection ($percent%)' : 'Manual confirmation needed ($percent%)')
+      ? (high
+          ? 'Higher-confidence detection ($percent%)'
+          : 'Manual confirmation needed ($percent%)')
       : (high ? 'Độ tin cậy cao ($percent%)' : 'Cần xác nhận ($percent%)');
-  String get confidencePrefix => _english ? 'Detection confidence' : 'Độ tin cậy';
+  String get confidencePrefix =>
+      _english ? 'Detection confidence' : 'Độ tin cậy';
   String get statusPrefix => _english ? 'Status' : 'Trạng thái';
-  String get extractedText => _english ? 'Recognized text' : 'Văn bản nhận dạng';
+  String get extractedText =>
+      _english ? 'Recognized text' : 'Văn bản nhận dạng';
 }
 
 /// The default confidence threshold used to classify a detection when the
@@ -137,12 +153,14 @@ class CabinetOcrSheet extends StatefulWidget {
     required this.apiClient,
     required this.accessToken,
     required this.connectivity,
+    this.locale,
     @visibleForTesting ImagePicker? imagePicker,
   }) : _imagePicker = imagePicker;
 
   final ApiClient apiClient;
   final String accessToken;
   final ConnectivityService connectivity;
+  final String? locale;
 
   /// Injectable picker for tests; production uses a default [ImagePicker].
   final ImagePicker? _imagePicker;
@@ -165,7 +183,10 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   bool _showExtractedText = false;
 
   bool get _isOnline => widget.connectivity.currentValue;
-  _CabinetOcrCopy get _copy => _CabinetOcrCopy.forContext(context);
+  _CabinetOcrCopy get _copy => _CabinetOcrCopy.forContext(
+        context,
+        preferredLocale: widget.locale,
+      );
 
   // --- Capture (R4.1) -------------------------------------------------------
 
@@ -314,7 +335,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final copy = _CabinetOcrCopy.forContext(context);
+    final copy = _copy;
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: viewInsets),
@@ -354,7 +375,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
 
   Widget _header(BuildContext context) {
     final theme = Theme.of(context);
-    final copy = _CabinetOcrCopy.forContext(context);
+    final copy = _copy;
     return Row(
       children: [
         Expanded(
@@ -375,7 +396,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   // --- Phase 1: capture -----------------------------------------------------
 
   Widget _buildCapture(BuildContext context) {
-    final copy = _CabinetOcrCopy.forContext(context);
+    final copy = _copy;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -411,7 +432,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   // --- Phase 2: review + Phase 3: import ------------------------------------
 
   Widget _buildReview(BuildContext context) {
-    final copy = _CabinetOcrCopy.forContext(context);
+    final copy = _copy;
     if (_detections.isEmpty) {
       return _buildEmptyReview(context);
     }
@@ -456,7 +477,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   }
 
   Widget _buildEmptyReview(BuildContext context) {
-    final copy = _CabinetOcrCopy.forContext(context);
+    final copy = _copy;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -483,12 +504,11 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
     _ReviewDetection detection,
   ) {
     final theme = Theme.of(context);
-    final copy = _CabinetOcrCopy.forContext(context);
+    final copy = _copy;
     final highConfidence = detection.confidence >= _threshold;
     final details = <String>[
       if (detection.dosage.isNotEmpty) copy.dosage(detection.dosage),
-      if (detection.brandName.isNotEmpty)
-        copy.brand(detection.brandName),
+      if (detection.brandName.isNotEmpty) copy.brand(detection.brandName),
       if (detection.manufacturer.isNotEmpty)
         copy.manufacturer(detection.manufacturer),
     ];
@@ -552,7 +572,7 @@ class _CabinetOcrSheetState extends State<CabinetOcrSheet> {
   }
 
   Widget _buildExtractedText(BuildContext context) {
-    final copy = _CabinetOcrCopy.forContext(context);
+    final copy = _copy;
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(

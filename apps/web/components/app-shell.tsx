@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { isAxiosError } from "axios";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
 import AppTopbar from "@/components/navigation/app-topbar";
 import NavItem from "@/components/navigation/nav-item";
+import Icon from "@/components/ui/icon";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
 import {
   clearTokens,
@@ -17,8 +18,6 @@ import {
 import api from "@/lib/http-client";
 import { beginLogout } from "@/lib/logout";
 import {
-  getGroupMeta,
-  getGroupedNavItems,
   getRoleHomePath,
   isActiveRoute,
   isAuthenticatedUtilityRoute,
@@ -26,6 +25,13 @@ import {
   isRouteAllowedForRole,
   type UserRole,
 } from "@/lib/navigation.config";
+import {
+  getAvailableWorkspaces,
+  getWorkspaceForPath,
+  getWorkspaceNavigation,
+  isWorkspaceAvailable,
+  type WorkspaceId,
+} from "@/lib/navigation.workspaces";
 import {
   applyThemePreference,
   getStoredThemePreference,
@@ -42,7 +48,10 @@ import {
   setActiveProfileId,
   type ProfileContext,
 } from "@/lib/profile-context";
-import { activateOwnedProfile, getProfileContext } from "@/lib/profile-context-api";
+import {
+  activateOwnedProfile,
+  getProfileContext,
+} from "@/lib/profile-context-api";
 import { listFamilyNotifications } from "@/lib/visit-family";
 import { getPhrOnboarding } from "@/lib/phr-onboarding";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
@@ -54,22 +63,25 @@ type Props = {
 const THEME_OPTIONS: Array<{
   value: ThemePreference;
   labelKey: UITranslationKey;
-  iconClass: string;
+  icon: "light_mode" | "dark_mode" | "desktop_windows";
 }> = [
-  { value: "light", labelKey: "theme.light", iconClass: "fa-sun-o" },
-  { value: "dark", labelKey: "theme.dark", iconClass: "fa-moon-o" },
-  { value: "system", labelKey: "theme.system", iconClass: "fa-desktop" },
+  { value: "light", labelKey: "theme.light", icon: "light_mode" },
+  { value: "dark", labelKey: "theme.dark", icon: "dark_mode" },
+  { value: "system", labelKey: "theme.system", icon: "desktop_windows" },
 ];
 
-const LANGUAGE_OPTIONS: Array<{ value: UILanguage; label: string; labelKey: UITranslationKey }> = [
+const LANGUAGE_OPTIONS: Array<{
+  value: UILanguage;
+  label: string;
+  labelKey: UITranslationKey;
+}> = [
   { value: "vi", label: "VI", labelKey: "language.vi" },
   { value: "en", label: "EN", labelKey: "language.en" },
 ];
 
-
-
 const IMMERSIVE_LAYOUT_PREFIXES = ["/chat", "/research", "/council", "/scribe"];
 const SIDEBAR_COLLAPSE_STORAGE_KEY = "clara_sidebar_collapsed";
+const WORKSPACE_STORAGE_KEY = "clara_active_workspace";
 
 export default function AppShell({ children }: Props) {
   const pathname = usePathname();
@@ -84,9 +96,14 @@ export default function AppShell({ children }: Props) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRoleHydrated, setIsRoleHydrated] = useState(false);
   const [isSessionChecked, setIsSessionChecked] = useState(false);
-  const [profileContext, setProfileContext] = useState<ProfileContext | null>(null);
+  const [profileContext, setProfileContext] = useState<ProfileContext | null>(
+    null,
+  );
   const [isProfileChanging, setIsProfileChanging] = useState(false);
   const [familyNotificationCount, setFamilyNotificationCount] = useState(0);
+  const [workspace, setWorkspace] = useState<WorkspaceId>("personal");
+  const mobileDialogRef = useRef<HTMLDivElement>(null);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
 
   const hideSidebar =
     isPublicRoute(pathname) || isAuthenticatedUtilityRoute(pathname);
@@ -165,7 +182,10 @@ export default function AppShell({ children }: Props) {
         if (!active) return;
         // A revoked/expired shared profile is resolved by the server back to a
         // safe context. Persist exactly that answer and discard old UI caches.
-        if (context.reset_required || context.active_profile_id !== getActiveProfileId()) {
+        if (
+          context.reset_required ||
+          context.active_profile_id !== getActiveProfileId()
+        ) {
           setActiveProfileId(context.active_profile_id);
         }
         setProfileContext(context);
@@ -200,9 +220,31 @@ export default function AppShell({ children }: Props) {
 
   useEffect(() => {
     if (!isMobileNavOpen) return;
+    const dialog = mobileDialogRef.current;
+    const focusable = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]):not([data-mobile-backdrop]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+    focusable()[0]?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsMobileNavOpen(false);
+        requestAnimationFrame(() => mobileTriggerRef.current?.focus());
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const controls = focusable();
+      if (controls.length === 0) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -251,6 +293,20 @@ export default function AppShell({ children }: Props) {
   }, []);
 
   useEffect(() => {
+    if (!isRoleHydrated) return;
+    let stored: WorkspaceId | undefined;
+    try {
+      const raw = window.localStorage.getItem(`${WORKSPACE_STORAGE_KEY}:${role}`);
+      if (raw === "personal" || raw === "clinical" || raw === "research" || raw === "admin") {
+        stored = raw;
+      }
+    } catch {
+      stored = undefined;
+    }
+    setWorkspace(getWorkspaceForPath(pathname, role, stored));
+  }, [isRoleHydrated, pathname, role]);
+
+  useEffect(() => {
     if (themePreference !== "system") return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => applyThemePreference("system");
@@ -264,9 +320,13 @@ export default function AppShell({ children }: Props) {
     return () => media.removeListener(onChange);
   }, [themePreference]);
 
-  const mobileNavGroups = useMemo(
-    () => getGroupedNavItems(role, uiLanguage),
+  const workspaces = useMemo(
+    () => getAvailableWorkspaces(role, uiLanguage),
     [role, uiLanguage],
+  );
+  const workspaceNavigation = useMemo(
+    () => getWorkspaceNavigation(role, workspace, uiLanguage),
+    [role, uiLanguage, workspace],
   );
 
   useEffect(() => {
@@ -318,6 +378,11 @@ export default function AppShell({ children }: Props) {
     saveUILanguage(nextLanguage);
   };
 
+  const closeMobileNavigation = () => {
+    setIsMobileNavOpen(false);
+    requestAnimationFrame(() => mobileTriggerRef.current?.focus());
+  };
+
   const toggleSidebarCollapse = () => {
     setIsSidebarCollapsed((current) => {
       const next = !current;
@@ -333,6 +398,19 @@ export default function AppShell({ children }: Props) {
     });
   };
 
+  const handleWorkspaceChange = (nextWorkspace: WorkspaceId) => {
+    if (!isWorkspaceAvailable(role, nextWorkspace)) return;
+    setWorkspace(nextWorkspace);
+    try {
+      window.localStorage.setItem(`${WORKSPACE_STORAGE_KEY}:${role}`, nextWorkspace);
+    } catch {
+      // Preference persistence is optional.
+    }
+    setIsMobileNavOpen(false);
+    const target = getWorkspaceNavigation(role, nextWorkspace, uiLanguage).workspace.homeHref;
+    if (!isActiveRoute(pathname, target)) router.push(target);
+  };
+
   const handleLogout = () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
@@ -341,8 +419,15 @@ export default function AppShell({ children }: Props) {
   };
 
   const handleProfileChange = async (profileId: string) => {
-    if (!profileId || profileId === profileContext?.active_profile_id || isProfileChanging) return;
-    const target = profileContext?.profiles.find((profile) => profile.id === profileId);
+    if (
+      !profileId ||
+      profileId === profileContext?.active_profile_id ||
+      isProfileChanging
+    )
+      return;
+    const target = profileContext?.profiles.find(
+      (profile) => profile.id === profileId,
+    );
     // Shared profiles are display contexts only in this release. A selection
     // cannot turn a narrow Family grant into a whole-record workspace.
     if (!target || target.kind !== "self") return;
@@ -384,7 +469,7 @@ export default function AppShell({ children }: Props) {
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
       <a href="#main-content" className="skip-link">
-        Bỏ qua, tới nội dung chính
+        {t(uiLanguage, "navigation.skipToContent")}
       </a>
       <TransparencyNoticeGate />
       <div
@@ -401,6 +486,8 @@ export default function AppShell({ children }: Props) {
           uiLanguage={uiLanguage}
           onLanguageChange={handleLanguageChange}
           activeProfile={activeProfile}
+          workspace={workspace}
+          onWorkspaceChange={handleWorkspaceChange}
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -415,13 +502,16 @@ export default function AppShell({ children }: Props) {
             onProfileChange={handleProfileChange}
             isProfileChanging={isProfileChanging}
             familyNotificationCount={familyNotificationCount}
+            onLogout={handleLogout}
+            isLoggingOut={isLoggingOut}
           />
 
           <header className="app-command-bar sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[color:var(--shell-border)] px-4 lg:hidden">
             <button
+              ref={mobileTriggerRef}
               type="button"
               onClick={() => setIsMobileNavOpen(true)}
-              aria-label="Open navigation menu"
+              aria-label={t(uiLanguage, "navigation.openMobile")}
               aria-expanded={isMobileNavOpen}
               className="app-topbar-icon shrink-0"
             >
@@ -446,16 +536,12 @@ export default function AppShell({ children }: Props) {
             </Link>
 
             <Link
-              href="/chat"
-              className="app-mobile-ask"
-              aria-label={t(uiLanguage, "action.askClara")}
+              href="/family"
+              className="app-topbar-icon relative"
+              aria-label={familyNotificationCount > 0 ? t(uiLanguage, "family.pendingTasks", { count: familyNotificationCount }) : t(uiLanguage, "family.title")}
             >
-              <span
-                className="material-symbols-outlined text-[18px]"
-                aria-hidden="true"
-              >
-                auto_awesome
-              </span>
+              <Icon name="notifications" size={18} />
+              {familyNotificationCount > 0 ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--danger-500)]" aria-hidden="true" /> : null}
             </Link>
           </header>
 
@@ -468,7 +554,7 @@ export default function AppShell({ children }: Props) {
                 ? isChatLayout
                   ? "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0 sm:pb-20 sm:pt-0 lg:px-0 lg:pb-0 lg:pt-0"
                   : "px-0 pb-[calc(env(safe-area-inset-bottom,0px)+4.2rem)] pt-0 sm:px-0.5 sm:pb-20 sm:pt-0 lg:px-0.5 lg:pb-1 lg:pt-0"
-                : "px-4 pb-[calc(env(safe-area-inset-bottom,0px)+7rem)] pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-12 lg:pt-8 xl:px-10",
+                : "px-4 pb-[calc(env(safe-area-inset-bottom,0px)+7rem)] pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-12 lg:pb-12 lg:pt-8",
             ].join(" ")}
           >
             <div
@@ -478,7 +564,7 @@ export default function AppShell({ children }: Props) {
                 // own full-bleed layout. Every other page shares ONE consistent
                 // centered content column so page width never jumps between
                 // routes.
-                isImmersiveLayout ? "max-w-none" : "mx-auto max-w-[1200px]",
+                isImmersiveLayout ? "max-w-none" : "mx-auto max-w-[1120px]",
               ].join(" ")}
             >
               {children}
@@ -489,15 +575,17 @@ export default function AppShell({ children }: Props) {
 
       {isMobileNavOpen ? (
         <div
+          ref={mobileDialogRef}
           className="fixed inset-0 z-[70] lg:hidden"
           role="dialog"
           aria-modal="true"
-          aria-label="Mobile navigation"
+          aria-label={t(uiLanguage, "navigation.mobileDialog")}
         >
           <button
             type="button"
-            onClick={() => setIsMobileNavOpen(false)}
-            aria-label="Close mobile navigation"
+            onClick={closeMobileNavigation}
+            aria-label={t(uiLanguage, "navigation.closeMobile")}
+            data-mobile-backdrop="true"
             className="absolute inset-0 bg-[rgba(15,23,42,0.45)] backdrop-blur-sm"
           />
           <aside className="absolute left-0 top-0 h-full w-[min(90vw,390px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl">
@@ -517,14 +605,14 @@ export default function AppShell({ children }: Props) {
                     CLARA
                   </p>
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Trợ lý y tế của bạn
+                    {t(uiLanguage, "brand.healthAssistant")}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsMobileNavOpen(false)}
-                aria-label="Close menu"
+                onClick={closeMobileNavigation}
+                aria-label={t(uiLanguage, "action.closeMenu")}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
               >
                 <span className="material-symbols-outlined text-base">
@@ -533,42 +621,73 @@ export default function AppShell({ children }: Props) {
               </button>
             </div>
 
-            <div className="mt-4 h-[calc(100%-126px)] space-y-4 overflow-y-auto pr-1 clara-scrollbar">
-              {mobileNavGroups.map((group) => (
-                <section key={group.key}>
-                  <p className="mb-2 flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    <span className="material-symbols-outlined text-[15px]">
-                      {getGroupMeta(group.key).icon}
-                    </span>
-                    {group.label}
-                  </p>
-                  <nav className="space-y-1">
-                    {group.items.map((item) => (
-                      <NavItem
-                        key={item.href}
-                        item={item}
-                        active={isActiveRoute(pathname, item.href)}
-                        variant="drawer"
-                        onNavigate={() => setIsMobileNavOpen(false)}
-                      />
+            <div className="mt-4 h-[calc(100%-126px)] space-y-5 overflow-y-auto pr-1 clara-scrollbar">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
+                  {t(uiLanguage, "navigation.workspace.label")}
+                </span>
+                <select
+                  value={workspace}
+                  onChange={(event) => handleWorkspaceChange(event.target.value as WorkspaceId)}
+                  className="min-h-11 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm font-semibold text-[var(--text-primary)]"
+                >
+                  {workspaces.map((entry) => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
+                </select>
+              </label>
+
+              {profileContext?.profiles?.length ? (
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
+                    {t(uiLanguage, "profile.active")}
+                  </span>
+                  <select
+                    value={profileContext.active_profile_id ?? ""}
+                    onChange={(event) => void handleProfileChange(event.target.value)}
+                    disabled={isProfileChanging}
+                    className="min-h-11 w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm font-semibold text-[var(--text-primary)]"
+                  >
+                    {profileContext.profiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>{profile.display_name}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              <section>
+                <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{workspaceNavigation.workspace.label}</p>
+                <nav className="space-y-1" aria-label={workspaceNavigation.workspace.label}>
+                  {workspaceNavigation.primary.map((item) => (
+                    <NavItem key={item.href} item={item} active={isActiveRoute(pathname, item.href)} variant="drawer" onNavigate={closeMobileNavigation} />
+                  ))}
+                </nav>
+              </section>
+
+              {workspaceNavigation.secondary.length > 0 ? (
+                <section>
+                  <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(uiLanguage, "navigation.more")}</p>
+                  <nav className="space-y-1" aria-label={t(uiLanguage, "navigation.more")}>
+                    {workspaceNavigation.secondary.map((item) => (
+                      <NavItem key={item.href} item={item} active={isActiveRoute(pathname, item.href)} variant="drawer" onNavigate={closeMobileNavigation} />
                     ))}
                   </nav>
                 </section>
-              ))}
+              ) : null}
             </div>
 
             <div className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4">
               <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                  Preferences
+                  {t(uiLanguage, "preferences.title")}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between gap-2">
                   <div
                     className="inline-flex items-center gap-0.5 rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-0.5"
                     role="group"
-                    aria-label="Theme preferences"
+                    aria-label={t(uiLanguage, "theme.preference")}
                   >
-                    <span className="sr-only">Theme</span>
+                    <span className="sr-only">
+                      {t(uiLanguage, "theme.preference")}
+                    </span>
                     {THEME_OPTIONS.map((option) => {
                       const active = themePreference === option.value;
                       const optionLabel = t(uiLanguage, option.labelKey);
@@ -587,10 +706,7 @@ export default function AppShell({ children }: Props) {
                           aria-pressed={active}
                           title={optionLabel}
                         >
-                          <i
-                            className={`fa ${option.iconClass} text-[13px]`}
-                            aria-hidden="true"
-                          />
+                          <span className="material-symbols-outlined text-[15px]" aria-hidden="true">{option.icon}</span>
                           <span className="sr-only">{optionLabel}</span>
                         </button>
                       );
@@ -602,7 +718,9 @@ export default function AppShell({ children }: Props) {
                     role="group"
                     aria-label={t(uiLanguage, "language.preference")}
                   >
-                    <span className="sr-only">{t(uiLanguage, "language.preference")}</span>
+                    <span className="sr-only">
+                      {t(uiLanguage, "language.preference")}
+                    </span>
                     {LANGUAGE_OPTIONS.map((option) => {
                       const active = uiLanguage === option.value;
                       return (
@@ -637,14 +755,18 @@ export default function AppShell({ children }: Props) {
                 <span className="material-symbols-outlined text-[18px]">
                   logout
                 </span>
-                <span>{isLoggingOut ? t(uiLanguage, "action.signingOut") : t(uiLanguage, "action.signOut")}</span>
+                <span>
+                  {isLoggingOut
+                    ? t(uiLanguage, "action.signingOut")
+                    : t(uiLanguage, "action.signOut")}
+                </span>
               </button>
             </div>
           </aside>
         </div>
       ) : null}
 
-      <MobileBottomNav role={role} />
+      <MobileBottomNav role={role} workspace={workspace} onOpenMore={() => setIsMobileNavOpen(true)} />
     </div>
   );
 }

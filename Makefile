@@ -1,8 +1,8 @@
-SHELL := /bin/zsh
+SHELL := /bin/bash
 COMPOSE_FILE := deploy/docker/docker-compose.yml
 APP_COMPOSE_FILE := deploy/docker/docker-compose.app.yml
 
-.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-down docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report
+.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-down docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report eval-glhs-q3 eval-glhs-q2 eval-glhs-q2-model-integrate
 
 help:
 	@echo "CLARA P0 Make targets"
@@ -30,6 +30,9 @@ help:
 	@echo "  eval-nightly      Emit nightly CLARA-Eval VN evidence artifacts (live metrics require approved dependencies)"
 	@echo "  eval-release      Run release-locked CLARA-Eval VN gate (fails closed without approved live evidence)"
 	@echo "  eval-judge-report Generate artifacts/judge-report with honest measurement status"
+	@echo "  eval-glhs-q3      Run the non-clinical GLHS structural comparison"
+	@echo "  eval-glhs-q2      Run the frozen 400-case GLHS Q2 structural protocol"
+	@echo "  eval-glhs-q2-model-integrate  Validate and summarise a completed frozen model arm"
 
 setup-env:
 	@test -f .env || cp .env.example .env
@@ -67,7 +70,13 @@ dev-api:
 		echo "services/api chưa tồn tại"; \
 		exit 1; \
 	fi
-	cd services/api && uvicorn clara_api.main:app --app-dir src --host 0.0.0.0 --port $${API_PORT:-8000} --reload
+	@if [ -x services/api/.venv/bin/uvicorn ]; then \
+		services/api/.venv/bin/uvicorn clara_api.main:app --app-dir services/api/src --host 0.0.0.0 --port $${API_PORT:-8000} --reload; \
+	elif command -v uv >/dev/null 2>&1; then \
+		uv run --directory services/api uvicorn clara_api.main:app --app-dir services/api/src --host 0.0.0.0 --port $${API_PORT:-8000} --reload; \
+	else \
+		echo "Cần services/api/.venv hoặc uv." >&2; exit 127; \
+	fi
 
 dev-web:
 	@if [ ! -d apps/web ]; then \
@@ -81,7 +90,13 @@ dev-ml:
 		echo "services/ml chưa tồn tại"; \
 		exit 1; \
 	fi
-	cd services/ml && uvicorn clara_ml.main:app --app-dir src --host 0.0.0.0 --port $${ML_PORT:-8010} --reload
+	@if [ -x services/ml/.venv/bin/uvicorn ]; then \
+		services/ml/.venv/bin/uvicorn clara_ml.main:app --app-dir services/ml/src --host 0.0.0.0 --port $${ML_PORT:-8110} --reload; \
+	elif command -v uv >/dev/null 2>&1; then \
+		uv run --directory services/ml uvicorn clara_ml.main:app --app-dir services/ml/src --host 0.0.0.0 --port $${ML_PORT:-8110} --reload; \
+	else \
+		echo "Cần services/ml/.venv hoặc uv." >&2; exit 127; \
+	fi
 
 lint:
 	@targets=""; \
@@ -89,14 +104,18 @@ lint:
 		if [ -d "$$d" ]; then targets="$$targets $$d"; fi; \
 	done; \
 	if [ -n "$$targets" ]; then \
-		ruff check $$targets; \
+		if [ -x services/api/.venv/bin/ruff ]; then services/api/.venv/bin/ruff check $$targets; \
+		elif command -v ruff >/dev/null 2>&1; then ruff check $$targets; \
+		else echo "No ruff runner available (need services/api/.venv or PATH)." >&2; exit 127; fi; \
 	else \
 		echo "No Python source directories found."; \
 	fi
 
 type-check:
 	@if [ -d services/api/src ] || [ -d services/ml/src ]; then \
-		mypy services/api/src services/ml/src --ignore-missing-imports; \
+		if [ -x services/api/.venv/bin/mypy ]; then services/api/.venv/bin/mypy services/api/src services/ml/src --ignore-missing-imports; \
+		elif command -v mypy >/dev/null 2>&1; then mypy services/api/src services/ml/src --ignore-missing-imports; \
+		else echo "No mypy runner available (need services/api/.venv or PATH)." >&2; exit 127; fi; \
 	else \
 		echo "No type-check targets found."; \
 	fi
@@ -144,6 +163,37 @@ eval-release:
 
 eval-judge-report:
 	@python3 -m evaluation.clara_eval.run --config evaluation/configs/judge_demo.yaml --output artifacts/judge-report
+
+# GLHS Q3 is structural and synthetic by design. It never reads a patient
+# record or auto-downloads credentialed MIMIC data.
+eval-glhs-q3:
+	@python3 -m evaluation.glhs_q3.run --output artifacts/glhs-q3/latest
+
+# Q2 freezes policy/relevance/oracle/holdout artifacts before comparator
+# execution. It is structural conformance only, never clinical validation.
+eval-glhs-q2:
+	@python3 -m evaluation.glhs_q2.run --output artifacts/glhs-q2/latest
+
+# The model arm is executed against an explicitly configured ML endpoint by an
+# operator.  This target deliberately only accepts a completed raw artifact and
+# fails closed for partial grids; it does not retry with another model.
+eval-glhs-q2-model-integrate:
+	@test -n "$(MODEL_ARM_SOURCE)" || (echo "MODEL_ARM_SOURCE is required" >&2; exit 2)
+	@python3 -m evaluation.glhs_q2.integrate_model_arm --source "$(MODEL_ARM_SOURCE)" --output "$(or $(MODEL_ARM_OUTPUT),artifacts/glhs-q2/model-arm-latest)"
+
+# Memory-bounded evaluator for a lawful, already privacy-minimised external
+# structural manifest. It rejects anything other than a development partition
+# and never loads raw clinical source data.
+eval-glhs-q2-external-stream:
+	@test -n "$(MANIFEST)" || (echo "MANIFEST is required" >&2; exit 2)
+	@test -n "$(OUTPUT)" || (echo "OUTPUT is required" >&2; exit 2)
+	@python3 -m evaluation.glhs_q2.run_external_stream --manifest "$(MANIFEST)" --output "$(OUTPUT)"
+
+# Read-only publication gate for a completed Q2 artifact. This verifies the
+# output accounting/release boundary without re-running or tuning any policy.
+eval-glhs-q2-validate:
+	@test -n "$(ARTIFACT)" || (echo "ARTIFACT is required" >&2; exit 2)
+	@python3 -m evaluation.glhs_q2.validate_artifact --artifact "$(ARTIFACT)"
 
 precommit-install:
 	pre-commit install

@@ -35,6 +35,7 @@ cross the offshore boundary) and on the response envelope the API returns.
 from __future__ import annotations
 
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -42,7 +43,7 @@ from sqlalchemy import select
 
 from clara_api.compliance import consent as consent_ledger
 from clara_api.core.config import get_settings
-from clara_api.db.models import PhrProfile, User
+from clara_api.db.models import User
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 from clara_api.phr.provenance import hedge_text_bilingual
@@ -94,25 +95,34 @@ def _add_item(token: str, drug_name: str) -> None:
     assert response.status_code == 200
 
 
-def _seed_phr_medication(email: str, *, normalized_name: str = "warfarin") -> None:
-    """Give the user a self-declared PHR medication so reconciliation is PHR-derived."""
-    with SessionLocal() as db:
-        user_id = int(db.execute(select(User.id).where(User.email == email)).scalar_one())
-        profile = db.execute(
-            select(PhrProfile).where(PhrProfile.user_id == user_id)
-        ).scalar_one_or_none()
-        if profile is None:
-            profile = PhrProfile(user_id=user_id, full_name="Guardrail Subject")
-            db.add(profile)
-        profile.medications_json = [
-            {
-                "id": "phr-med-1",
-                "rx_cui": "",
-                "normalized_name": normalized_name,
-                "name": normalized_name,
-            }
-        ]
-        db.commit()
+def _seed_governed_medication(token: str, *, medication_name: str = "Warfarin") -> None:
+    """Create a profile and exact DrugBank medication through public commands.
+
+    This intentionally avoids inserting legacy PHR JSON from a test fixture:
+    CareGuard reconciliation is allowed to read governed THSS medication state,
+    not a locally fabricated profile projection.
+    """
+    profile = client.put(
+        "/api/v1/phr/record",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"full_name": "Guardrail Subject"},
+    )
+    assert profile.status_code == 200, profile.text
+    course = client.post(
+        "/api/v1/medication-courses",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Idempotency-Key": uuid4().hex,
+        },
+        json={
+            "medication_name": medication_name,
+            "drugbank_id": "DB00682",
+            "dose_text": "5 mg",
+            "route_text": "oral",
+            "form_text": "tablet",
+        },
+    )
+    assert course.status_code == 201, course.text
 
 
 def _grant_cross_border(email: str) -> None:
@@ -200,7 +210,7 @@ def test_reconciliation_flag_off_payload_is_legacy_cabinet_only(monkeypatch) -> 
     email = "guardrail-recon-off@example.com"
     token = _login(email)
     _add_item(token, "Warfarin")
-    _seed_phr_medication(email)
+    _seed_governed_medication(token)
 
     captured: dict[str, Any] = {}
     monkeypatch.setattr(
@@ -224,7 +234,7 @@ def test_reconciliation_flag_on_adds_reconciled_medications_and_hedge(monkeypatc
     email = "guardrail-recon-on@example.com"
     token = _login(email)
     _add_item(token, "Warfarin")
-    _seed_phr_medication(email)
+    _seed_governed_medication(token)
 
     _enable_env(
         monkeypatch,
@@ -257,7 +267,7 @@ def test_phr_derived_output_carries_self_declared_clinician_hedge(monkeypatch) -
     email = "guardrail-hedge@example.com"
     token = _login(email)
     _add_item(token, "Warfarin")
-    _seed_phr_medication(email)
+    _seed_governed_medication(token)
 
     _enable_env(
         monkeypatch,
@@ -295,7 +305,7 @@ def test_cross_border_guard_strips_phr_fields_without_consent(monkeypatch) -> No
     email = "guardrail-xborder-block@example.com"
     token = _login(email)
     _add_item(token, "Warfarin")
-    _seed_phr_medication(email)
+    _seed_governed_medication(token)
 
     _enable_env(
         monkeypatch,
@@ -329,7 +339,7 @@ def test_cross_border_guard_retains_phr_fields_with_consent(monkeypatch) -> None
     email = "guardrail-xborder-allow@example.com"
     token = _login(email)
     _add_item(token, "Warfarin")
-    _seed_phr_medication(email)
+    _seed_governed_medication(token)
     _grant_cross_border(email)
 
     _enable_env(

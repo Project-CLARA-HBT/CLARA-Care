@@ -45,7 +45,6 @@ import '../screens/phr_screen.dart';
 import '../screens/research_screen.dart';
 import '../screens/scribe_screen.dart';
 import '../screens/selfmed_cabinet_screen.dart';
-import '../screens/shared_resource_screen.dart';
 import '../theme/components/clara_card.dart';
 import '../theme/components/section_header.dart';
 import '../theme/tokens.dart';
@@ -59,14 +58,6 @@ import 'states/skeleton.dart';
 /// because `analytics.dart` is owned by another concern and is not edited here.
 /// It carries no PII and identifies only the surface viewed.
 const String kMobileHomeViewedEvent = 'mobile_home_viewed';
-
-/// CLARA_API base URL for surfaces that build their own read-only fetcher
-/// (the public shared-resource viewer). Mirrors `dashboard_screen.dart` /
-/// `main.dart`'s `--dart-define=CLARA_API_BASE_URL` so wiring stays additive.
-const String _homeApiBaseUrl = String.fromEnvironment(
-  'CLARA_API_BASE_URL',
-  defaultValue: 'http://localhost:8100',
-);
 
 /// The modern, role-aware Home surface for Experience_V2.
 ///
@@ -319,27 +310,9 @@ class _HomeScreenState extends State<HomeScreen> {
             subtitle: 'Quản lý quyền riêng tư & yêu cầu dữ liệu',
             onTap: () => _openScreen(
               ConsentCenterScreen(
+                apiClient: widget.apiClient,
                 resolver: resolver,
                 sessionStore: widget.sessionStore,
-              ),
-            ),
-          ),
-        if (resolver.sharingEnabled)
-          _QuickActionCard(
-            icon: Icons.share_outlined,
-            title: 'Nội dung chia sẻ',
-            subtitle: 'Xem tài nguyên được chia sẻ',
-            onTap: () => _openScreen(
-              SharedResourceScreen(
-                // No deep-link token from the Home entry point; the read-only
-                // viewer surfaces an error state until a token arrives via a
-                // share link. The card exists so the surface is reachable when
-                // the gate is on.
-                token: '',
-                fetcher: createHttpSharedResourceFetcher(
-                  baseUrl: _homeApiBaseUrl,
-                ),
-                flags: resolver,
               ),
             ),
           ),

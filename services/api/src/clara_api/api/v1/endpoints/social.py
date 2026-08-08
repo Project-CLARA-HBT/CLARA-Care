@@ -25,7 +25,7 @@ Safety invariants (regression-locked, mirror the rest of CLARA):
 from __future__ import annotations
 
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -104,6 +104,40 @@ def _require_social_consent(db: Session, *, user_id: int) -> None:
                 "Bạn cần đồng ý tham gia cộng đồng CLARA "
                 "(quy tắc ứng xử & quyền riêng tư) trước khi đăng nội dung."
             ),
+        )
+
+
+def _enforce_social_write_rate(db: Session, *, user_id: int) -> None:
+    """Enforce the configured rolling one-minute post/comment write budget.
+
+    The counter is derived from durable social rows rather than process memory,
+    so the limit remains meaningful across API workers and restarts.  It counts
+    only the high-impact user-authored surfaces advertised by
+    ``SOCIAL_WRITE_RATE_PER_MINUTE``; reactions and moderation actions follow
+    their own authorization and global-rate-limit boundaries.
+    """
+
+    cutoff = datetime.now(UTC) - timedelta(minutes=1)
+    post_count = int(
+        db.execute(
+            select(func.count(SocialPost.id)).where(
+                SocialPost.author_id == user_id,
+                SocialPost.created_at >= cutoff,
+            )
+        ).scalar_one()
+    )
+    comment_count = int(
+        db.execute(
+            select(func.count(SocialComment.id)).where(
+                SocialComment.author_id == user_id,
+                SocialComment.created_at >= cutoff,
+            )
+        ).scalar_one()
+    )
+    if post_count + comment_count >= int(get_settings().social_write_rate_per_minute):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Bạn đã gửi quá nhiều nội dung trong một phút. Vui lòng thử lại sau.",
         )
 
 
@@ -323,6 +357,18 @@ def _handle_for(db: Session, user_id: int) -> str:
     return p.handle if p else f"clara{user_id}"
 
 
+def _handles_for(db: Session, user_ids: set[int]) -> dict[int, str]:
+    """Resolve social handles in one query, avoiding a feed/comment N+1."""
+
+    if not user_ids:
+        return {}
+    rows = db.execute(
+        select(SocialProfile.user_id, SocialProfile.handle).where(SocialProfile.user_id.in_(user_ids))
+    ).all()
+    handles = {int(user_id): str(handle) for user_id, handle in rows}
+    return {user_id: handles.get(user_id, f"clara{user_id}") for user_id in user_ids}
+
+
 # --------------------------------------------------------------------------
 # Consent routes
 # --------------------------------------------------------------------------
@@ -458,13 +504,21 @@ def list_communities(
         .scalars()
         .all()
     )
+    member_counts = {
+        int(community_id): int(count)
+        for community_id, count in db.execute(
+            select(SocialMembership.community_id, func.count(SocialMembership.id))
+            .where(SocialMembership.community_id.in_([community.id for community in communities]))
+            .group_by(SocialMembership.community_id)
+        ).all()
+    } if communities else {}
     return [
         CommunityResponse(
             id=c.id,
             slug=c.slug,
             name=c.name,
             description=c.description,
-            member_count=_member_count(db, c.id),
+            member_count=member_counts.get(c.id, 0),
             joined=c.id in joined_ids,
         )
         for c in communities
@@ -535,29 +589,46 @@ def leave_community(
 # --------------------------------------------------------------------------
 # Posts / comments / reactions
 # --------------------------------------------------------------------------
+def _posts_out(db: Session, posts: list[SocialPost]) -> list[PostResponse]:
+    """Serialize posts with three bounded aggregate queries, never N+1."""
+
+    if not posts:
+        return []
+    post_ids = [post.id for post in posts]
+    handles = _handles_for(db, {post.author_id for post in posts})
+    comment_counts = {
+        int(post_id): int(count)
+        for post_id, count in db.execute(
+            select(SocialComment.post_id, func.count(SocialComment.id))
+            .where(SocialComment.post_id.in_(post_ids), SocialComment.is_deleted.is_(False))
+            .group_by(SocialComment.post_id)
+        ).all()
+    }
+    reaction_counts = {
+        int(post_id): int(count)
+        for post_id, count in db.execute(
+            select(SocialReaction.post_id, func.count(SocialReaction.id))
+            .where(SocialReaction.post_id.in_(post_ids))
+            .group_by(SocialReaction.post_id)
+        ).all()
+    }
+    return [
+        PostResponse(
+            id=post.id,
+            community_id=post.community_id,
+            author_handle=handles[post.author_id],
+            title=post.title,
+            body=post.body,
+            created_at=post.created_at.isoformat() if post.created_at else "",
+            comment_count=comment_counts.get(post.id, 0),
+            reaction_count=reaction_counts.get(post.id, 0),
+        )
+        for post in posts
+    ]
+
+
 def _post_out(db: Session, post: SocialPost) -> PostResponse:
-    comment_count = int(
-        db.execute(
-            select(func.count(SocialComment.id)).where(
-                SocialComment.post_id == post.id, SocialComment.is_deleted.is_(False)
-            )
-        ).scalar_one()
-    )
-    reaction_count = int(
-        db.execute(
-            select(func.count(SocialReaction.id)).where(SocialReaction.post_id == post.id)
-        ).scalar_one()
-    )
-    return PostResponse(
-        id=post.id,
-        community_id=post.community_id,
-        author_handle=_handle_for(db, post.author_id),
-        title=post.title,
-        body=post.body,
-        created_at=post.created_at.isoformat() if post.created_at else "",
-        comment_count=comment_count,
-        reaction_count=reaction_count,
-    )
+    return _posts_out(db, [post])[0]
 
 
 @router.post("/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
@@ -569,6 +640,7 @@ def create_post(
     _require_social_enabled()
     user = _require_user(token, db)
     _require_social_consent(db, user_id=user.id)
+    _enforce_social_write_rate(db, user_id=user.id)
     community = db.get(SocialCommunity, payload.community_id)
     if community is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy cộng đồng")
@@ -639,7 +711,7 @@ def list_community_posts(
         .scalars()
         .all()
     )
-    return [_post_out(db, p) for p in posts]
+    return _posts_out(db, posts)
 
 
 @router.get("/feed", response_model=list[PostResponse])
@@ -666,7 +738,7 @@ def get_feed(
         stmt = stmt.where(SocialPost.community_id.in_(joined_ids))
     stmt = stmt.order_by(SocialPost.created_at.desc(), SocialPost.id.desc()).limit(limit).offset(offset)
     posts = db.execute(stmt).scalars().all()
-    return [_post_out(db, p) for p in posts]
+    return _posts_out(db, posts)
 
 
 @router.post(
@@ -683,6 +755,7 @@ def create_comment(
     _require_social_enabled()
     user = _require_user(token, db)
     _require_social_consent(db, user_id=user.id)
+    _enforce_social_write_rate(db, user_id=user.id)
     post = db.get(SocialPost, post_id)
     if post is None or post.is_deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bài viết")
@@ -706,6 +779,8 @@ def create_comment(
 @router.get("/posts/{post_id}/comments", response_model=list[CommentResponse])
 def list_comments(
     post_id: int,
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
     db: Session = Depends(get_db),
 ) -> list[CommentResponse]:
@@ -716,15 +791,18 @@ def list_comments(
             select(SocialComment)
             .where(SocialComment.post_id == post_id, SocialComment.is_deleted.is_(False))
             .order_by(SocialComment.created_at.asc(), SocialComment.id.asc())
+            .limit(limit)
+            .offset(offset)
         )
         .scalars()
         .all()
     )
+    handles = _handles_for(db, {comment.author_id for comment in comments})
     return [
         CommentResponse(
             id=c.id,
             post_id=c.post_id,
-            author_handle=_handle_for(db, c.author_id),
+            author_handle=handles[c.author_id],
             body=c.body,
             created_at=c.created_at.isoformat() if c.created_at else "",
         )

@@ -1,5 +1,17 @@
 import { useMemo } from "react";
-import { ResearchFlowEvent, ResearchFlowStage, ResearchFlowStageStatus } from "@/lib/research";
+import {
+  formatLocaleDate,
+  formatLocaleNumber,
+  t,
+  type UITranslationKey,
+} from "@/lib/i18n/catalog";
+import {
+  ResearchFlowEvent,
+  ResearchFlowStage,
+  ResearchFlowStageStatus,
+} from "@/lib/research";
+import type { UILanguage } from "@/lib/ui-language";
+import { useUILanguage } from "@/lib/use-ui-language";
 
 type FlowTimelineMode =
   | "idle"
@@ -28,48 +40,48 @@ type TimelineSummary = {
 const STATUS_META: Record<
   ResearchFlowStageStatus,
   {
-    label: string;
     markerClass: string;
     badgeClass: string;
     lineClass: string;
   }
 > = {
   pending: {
-    label: "pending",
-    markerClass: "border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900",
-    badgeClass: "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
-    lineClass: "bg-slate-200 dark:bg-slate-700"
+    markerClass:
+      "border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900",
+    badgeClass:
+      "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    lineClass: "bg-slate-200 dark:bg-slate-700",
   },
   in_progress: {
-    label: "in progress",
     markerClass: "border-sky-500 bg-sky-500",
-    badgeClass: "border-sky-300 bg-sky-100 text-sky-700 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
-    lineClass: "bg-sky-400 dark:bg-sky-600"
+    badgeClass:
+      "border-sky-300 bg-sky-100 text-sky-700 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
+    lineClass: "bg-sky-400 dark:bg-sky-600",
   },
   completed: {
-    label: "completed",
     markerClass: "border-emerald-500 bg-emerald-500",
-    badgeClass: "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-    lineClass: "bg-emerald-400 dark:bg-emerald-600"
+    badgeClass:
+      "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+    lineClass: "bg-emerald-400 dark:bg-emerald-600",
   },
   warning: {
-    label: "warning",
     markerClass: "border-amber-500 bg-amber-500",
-    badgeClass: "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-    lineClass: "bg-amber-400 dark:bg-amber-600"
+    badgeClass:
+      "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+    lineClass: "bg-amber-400 dark:bg-amber-600",
   },
   failed: {
-    label: "failed",
     markerClass: "border-rose-500 bg-rose-500",
-    badgeClass: "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-    lineClass: "bg-rose-400 dark:bg-rose-600"
+    badgeClass:
+      "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+    lineClass: "bg-rose-400 dark:bg-rose-600",
   },
   skipped: {
-    label: "skipped",
     markerClass: "border-slate-400 bg-slate-400",
-    badgeClass: "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
-    lineClass: "bg-slate-200 dark:bg-slate-700"
-  }
+    badgeClass:
+      "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    lineClass: "bg-slate-200 dark:bg-slate-700",
+  },
 };
 
 function normalizeStatus(status?: string): ResearchFlowStageStatus {
@@ -78,76 +90,134 @@ function normalizeStatus(status?: string): ResearchFlowStageStatus {
   return "pending";
 }
 
-function resolveModeLabel(mode: FlowTimelineMode): string {
-  if (mode === "flow-events") return "Realtime flow events";
-  if (mode === "metadata-stages") return "Server stage summary";
-  if (mode === "local-fallback") return "Fallback cục bộ";
-  if (mode === "server-await") return "Server reasoning in progress";
-  return "Đang chờ";
+function statusLabel(
+  language: UILanguage,
+  status: ResearchFlowStageStatus,
+): string {
+  return t(
+    language,
+    `research.workspace.timeline.status.${status}` as UITranslationKey,
+  );
 }
 
-function formatEventTime(value?: string): string {
+function resolveModeLabel(
+  language: UILanguage,
+  mode: FlowTimelineMode,
+): string {
+  const key: Record<FlowTimelineMode, UITranslationKey> = {
+    idle: "research.workspace.timeline.mode.idle",
+    "flow-events": "research.workspace.timeline.mode.flowEvents",
+    "metadata-stages": "research.workspace.timeline.mode.serverStages",
+    "local-fallback": "research.workspace.timeline.mode.localFallback",
+    "server-await": "research.workspace.timeline.mode.serverAwait",
+  };
+  return t(language, key[mode]);
+}
+
+function formatEventTime(language: UILanguage, value?: string): string {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return value;
-  return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return formatLocaleDate(language, date, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
-function formatDuration(durationMs?: number): string | null {
-  if (durationMs === undefined || !Number.isFinite(durationMs) || durationMs < 0) return null;
-  if (durationMs < 1000) return `${Math.round(durationMs)}ms`;
+function formatDuration(
+  language: UILanguage,
+  durationMs?: number,
+): string | null {
+  if (
+    durationMs === undefined ||
+    !Number.isFinite(durationMs) ||
+    durationMs < 0
+  )
+    return null;
+  if (durationMs < 1000)
+    return `${formatLocaleNumber(language, Math.round(durationMs))} ms`;
   const seconds = durationMs / 1000;
-  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  if (seconds < 60) return `${formatLocaleNumber(language, seconds)} s`;
   const minutes = Math.floor(seconds / 60);
   const remainSeconds = Math.round(seconds % 60);
-  return `${minutes}m ${remainSeconds}s`;
+  return `${formatLocaleNumber(language, minutes)} min ${formatLocaleNumber(language, remainSeconds)} s`;
 }
 
-function formatPayloadPreview(payload?: Record<string, unknown>): string {
+function formatPayloadPreview(
+  language: UILanguage,
+  payload?: Record<string, unknown>,
+): string {
   if (!payload) return "";
 
   const parts: string[] = [];
   if (typeof payload.elapsed_seconds === "number") {
-    parts.push(`elapsed=${payload.elapsed_seconds.toFixed(1)}s`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.elapsed")}=${formatLocaleNumber(language, payload.elapsed_seconds)} s`,
+    );
   }
   if (typeof payload.progress_percent === "number") {
-    parts.push(`progress=${payload.progress_percent}%`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.progress")}=${formatLocaleNumber(language, payload.progress_percent)}%`,
+    );
   }
   if (typeof payload.heartbeat_seq === "number") {
-    parts.push(`tick=#${payload.heartbeat_seq}`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.tick")}=#${formatLocaleNumber(language, payload.heartbeat_seq)}`,
+    );
   }
   if (typeof payload.top_k === "number") {
-    parts.push(`top_k=${payload.top_k}`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.topK")}=${formatLocaleNumber(language, payload.top_k)}`,
+    );
   }
   if (typeof payload.source_count === "number") {
-    parts.push(`source_count=${payload.source_count}`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.sources")}=${formatLocaleNumber(language, payload.source_count)}`,
+    );
   }
   if (typeof payload.total_candidates === "number") {
-    parts.push(`candidates=${payload.total_candidates}`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.candidates")}=${formatLocaleNumber(language, payload.total_candidates)}`,
+    );
   }
   if (typeof payload.selected_count === "number") {
-    parts.push(`selected=${payload.selected_count}`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.selected")}=${formatLocaleNumber(language, payload.selected_count)}`,
+    );
   }
   if (typeof payload.pass_index === "number") {
-    parts.push(`pass=${payload.pass_index}`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.pass")}=${formatLocaleNumber(language, payload.pass_index)}`,
+    );
   }
   if (typeof payload.phase === "string") {
-    parts.push(`phase=${payload.phase}`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.phase")}=${payload.phase}`,
+    );
   }
   if (Array.isArray(payload.top_docs) && payload.top_docs.length > 0) {
-    parts.push(`top_docs=${payload.top_docs.length}`);
-  }
-  if (typeof payload.error === "string" && payload.error.trim()) {
-    parts.push(`error=${payload.error}`);
+    parts.push(
+      `${t(language, "research.workspace.timeline.payload.topDocuments")}=${formatLocaleNumber(language, payload.top_docs.length)}`,
+    );
   }
   if (parts.length > 0) return parts.join(" · ");
 
   const keyMap: Record<string, string> = {
-    confidence: "độ tin cậy",
-    severity: "mức độ",
-    supported_claims: "claim hỗ trợ",
-    total_claims: "tổng claim",
-    evidence_count: "số bằng chứng",
+    confidence: t(language, "research.workspace.timeline.payload.confidence"),
+    severity: t(language, "research.workspace.timeline.payload.severity"),
+    supported_claims: t(
+      language,
+      "research.workspace.timeline.payload.supportedClaims",
+    ),
+    total_claims: t(
+      language,
+      "research.workspace.timeline.payload.totalClaims",
+    ),
+    evidence_count: t(
+      language,
+      "research.workspace.timeline.payload.evidenceCount",
+    ),
   };
   const keys = Object.keys(payload)
     .slice(0, 3)
@@ -158,7 +228,7 @@ function formatPayloadPreview(payload?: Record<string, unknown>): string {
 function isErrorDetail(detail?: string): boolean {
   const text = (detail ?? "").toLowerCase();
   return ["error", "failed", "timeout", "exception", "refused"].some((token) =>
-    text.includes(token)
+    text.includes(token),
   );
 }
 
@@ -187,40 +257,65 @@ function summarizeStages(stages: ResearchFlowStage[]): TimelineSummary {
 
 function getProgressPercent(summary: TimelineSummary): number {
   if (summary.total <= 0) return 0;
-  const done = summary.completed + summary.warning + summary.skipped + summary.failed;
+  const done =
+    summary.completed + summary.warning + summary.skipped + summary.failed;
   return Math.max(0, Math.min(100, Math.round((done / summary.total) * 100)));
 }
 
-function formatPayloadValue(value: unknown): string {
-  if (value == null) return "null";
-  if (typeof value === "string") return value.length > 72 ? `${value.slice(0, 72)}...` : value;
-  if (typeof value === "number") return Number.isFinite(value) ? `${value}` : "NaN";
+function formatPayloadValue(language: UILanguage, value: unknown): string {
+  if (value == null)
+    return t(language, "research.workspace.timeline.payload.empty");
+  if (typeof value === "string")
+    return value.length > 72 ? `${value.slice(0, 72)}...` : value;
+  if (typeof value === "number")
+    return Number.isFinite(value)
+      ? formatLocaleNumber(language, value)
+      : t(language, "research.workspace.timeline.payload.notANumber");
   if (typeof value === "boolean") return String(value);
-  if (Array.isArray(value)) return `array(${value.length})`;
-  if (typeof value === "object") return "object";
+  if (Array.isArray(value))
+    return t(language, "research.workspace.timeline.payload.array", {
+      count: value.length,
+    });
+  if (typeof value === "object")
+    return t(language, "research.workspace.timeline.payload.object");
   return String(value);
 }
 
-function extractPayloadChips(payload?: Record<string, unknown>): Array<{ key: string; value: string }> {
+function extractPayloadChips(
+  language: UILanguage,
+  payload?: Record<string, unknown>,
+): Array<{ key: string; value: string }> {
   if (!payload) return [];
   const keyMap: Record<string, string> = {
-    elapsed_seconds: "đã chạy",
-    heartbeat_seq: "nhịp",
-    phase: "pha",
-    progress_percent: "tiến độ",
-    research_mode: "mode",
-    source_mode: "nguồn",
+    elapsed_seconds: t(language, "research.workspace.timeline.payload.elapsed"),
+    heartbeat_seq: t(language, "research.workspace.timeline.payload.tick"),
+    phase: t(language, "research.workspace.timeline.payload.phase"),
+    progress_percent: t(
+      language,
+      "research.workspace.timeline.payload.progress",
+    ),
+    research_mode: t(language, "research.workspace.timeline.payload.mode"),
+    source_mode: t(language, "research.workspace.timeline.payload.sources"),
   };
   return Object.entries(payload)
     .slice(0, 6)
     .map(([key, value]) => {
       if (key === "elapsed_seconds" && typeof value === "number") {
-        return { key: keyMap[key] ?? key, value: `${value.toFixed(1)}s` };
+        return {
+          key: keyMap[key] ?? key,
+          value: `${formatLocaleNumber(language, value)} s`,
+        };
       }
       if (key === "progress_percent" && typeof value === "number") {
-        return { key: keyMap[key] ?? key, value: `${value}%` };
+        return {
+          key: keyMap[key] ?? key,
+          value: `${formatLocaleNumber(language, value)}%`,
+        };
       }
-      return { key: keyMap[key] ?? key, value: formatPayloadValue(value) };
+      return {
+        key: keyMap[key] ?? key,
+        value: formatPayloadValue(language, value),
+      };
     });
 }
 
@@ -242,12 +337,17 @@ export default function FlowTimelinePanel({
   stages,
   events,
   isProcessing,
-  mode
+  mode,
 }: FlowTimelinePanelProps) {
+  const language = useUILanguage();
   const summary = summarizeStages(stages);
   const progressPercent = getProgressPercent(summary);
-  const totalDurationMs = stages.reduce((acc, stage) => acc + (stage.durationMs ?? 0), 0);
-  const durationText = totalDurationMs > 0 ? formatDuration(totalDurationMs) : null;
+  const totalDurationMs = stages.reduce(
+    (acc, stage) => acc + (stage.durationMs ?? 0),
+    0,
+  );
+  const durationText =
+    totalDurationMs > 0 ? formatDuration(language, totalDurationMs) : null;
   const liveBars = useMemo(() => {
     if (!events.length) {
       const baseline = [
@@ -257,7 +357,7 @@ export default function FlowTimelinePanel({
         78 + summary.inProgress * 4,
         66 + summary.warning * 6,
         49 + summary.completed * 2,
-        33 + summary.failed * 8
+        33 + summary.failed * 8,
       ];
       return baseline.map((value) => clampPercent(value));
     }
@@ -289,12 +389,21 @@ export default function FlowTimelinePanel({
       computed.unshift(fallback[computed.length] ?? 36);
     }
     return computed.slice(-7);
-  }, [events, summary.completed, summary.failed, summary.inProgress, summary.pending, summary.warning]);
+  }, [
+    events,
+    summary.completed,
+    summary.failed,
+    summary.inProgress,
+    summary.pending,
+    summary.warning,
+  ]);
 
   return (
     <section className="research-panel-modern rounded-[1.35rem] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Flow Timeline</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          {t(language, "research.workspace.timeline.title")}
+        </p>
         <span className="research-chip rounded-full px-2 py-0.5 text-[11px]">
           {stages.length}
         </span>
@@ -302,17 +411,18 @@ export default function FlowTimelinePanel({
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className="research-chip rounded-full px-2.5 py-1 text-[11px] font-medium">
-          {resolveModeLabel(mode)}
+          {resolveModeLabel(language, mode)}
         </span>
         {durationText ? (
           <span className="research-chip rounded-full border-cyan-300/60 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-medium text-cyan-700 dark:text-cyan-200">
-            tổng thời lượng: {durationText}
+            {t(language, "research.workspace.timeline.totalDuration")}:{" "}
+            {durationText}
           </span>
         ) : null}
         {isProcessing ? (
           <span className="research-chip-cyan inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-            Đang xử lý
+            {t(language, "research.workspace.timeline.processing")}
           </span>
         ) : null}
       </div>
@@ -320,11 +430,11 @@ export default function FlowTimelinePanel({
       <div className="research-live-engine mt-3 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-cyan-200/95 dark:text-cyan-100">
-            Live Analysis Engine
+            {t(language, "research.workspace.timeline.liveEngine")}
           </p>
           <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cyan-200 dark:text-cyan-100">
             <span className="research-pulse-dot" />
-            Active
+            {t(language, "research.workspace.timeline.active")}
           </span>
         </div>
         <div className="h-16">
@@ -335,7 +445,7 @@ export default function FlowTimelinePanel({
                 className="research-live-bar"
                 style={{
                   height: `${height}%`,
-                  opacity: `${0.42 + index * 0.08}`
+                  opacity: `${0.42 + index * 0.08}`,
                 }}
               />
             ))}
@@ -346,33 +456,49 @@ export default function FlowTimelinePanel({
       {stages.length ? (
         <div className="mt-3 rounded-xl border border-cyan-200/30 bg-cyan-500/5 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/20">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <p className="font-semibold text-[var(--text-primary)]">Tiến độ xử lý</p>
+            <p className="font-semibold text-[var(--text-primary)]">
+              {t(language, "research.workspace.timeline.progress")}
+            </p>
             <p className="text-[var(--text-secondary)]">{progressPercent}%</p>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80">
             <div
               className={[
                 "h-full transition-all",
-                summary.failed ? "bg-rose-500" : summary.warning ? "bg-amber-500" : "bg-emerald-500",
+                summary.failed
+                  ? "bg-rose-500"
+                  : summary.warning
+                    ? "bg-amber-500"
+                    : "bg-emerald-500",
               ].join(" ")}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
             <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              completed: {summary.completed}
+              {t(language, "research.workspace.timeline.count.completed", {
+                count: summary.completed,
+              })}
             </span>
             <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-              in progress: {summary.inProgress}
+              {t(language, "research.workspace.timeline.count.inProgress", {
+                count: summary.inProgress,
+              })}
             </span>
             <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-              warning: {summary.warning}
+              {t(language, "research.workspace.timeline.count.warning", {
+                count: summary.warning,
+              })}
             </span>
             <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-rose-700 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-              failed: {summary.failed}
+              {t(language, "research.workspace.timeline.count.failed", {
+                count: summary.failed,
+              })}
             </span>
             <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              pending: {summary.pending}
+              {t(language, "research.workspace.timeline.count.pending", {
+                count: summary.pending,
+              })}
             </span>
           </div>
         </div>
@@ -384,52 +510,92 @@ export default function FlowTimelinePanel({
             const status = STATUS_META[normalizeStatus(stage.status)];
             const isLast = index === stages.length - 1;
             return (
-              <li key={`${stage.id}-${index}`} className="relative rounded-2xl border border-cyan-200/30 bg-white/55 p-3 dark:border-cyan-900/40 dark:bg-slate-900/45">
+              <li
+                key={`${stage.id}-${index}`}
+                className="relative rounded-2xl border border-cyan-200/30 bg-white/55 p-3 dark:border-cyan-900/40 dark:bg-slate-900/45"
+              >
                 <div className="flex items-start gap-3">
                   <div className="relative mt-0.5 flex w-4 justify-center">
-                    <span className={["h-3.5 w-3.5 rounded-full border-2", status.markerClass].join(" ")} />
-                    {!isLast ? <span className={["absolute top-4 h-8 w-0.5", status.lineClass].join(" ")} /> : null}
+                    <span
+                      className={[
+                        "h-3.5 w-3.5 rounded-full border-2",
+                        status.markerClass,
+                      ].join(" ")}
+                    />
+                    {!isLast ? (
+                      <span
+                        className={[
+                          "absolute top-4 h-8 w-0.5",
+                          status.lineClass,
+                        ].join(" ")}
+                      />
+                    ) : null}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{stage.label}</p>
-                      <span className={["rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", status.badgeClass].join(" ")}>
-                        {status.label}
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {stage.label}
+                      </p>
+                      <span
+                        className={[
+                          "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                          status.badgeClass,
+                        ].join(" ")}
+                      >
+                        {statusLabel(language, normalizeStatus(stage.status))}
                       </span>
                     </div>
                     {stage.detail ? (
-                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{stage.detail}</p>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                        {stage.detail}
+                      </p>
                     ) : null}
-                    {stage.start || stage.end || stage.durationMs !== undefined || stage.eventCount !== undefined ? (
+                    {stage.start ||
+                    stage.end ||
+                    stage.durationMs !== undefined ||
+                    stage.eventCount !== undefined ? (
                       <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
                         {stage.start ? (
                           <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                            bắt đầu: {formatEventTime(stage.start)}
+                            {t(language, "research.workspace.timeline.started")}
+                            : {formatEventTime(language, stage.start)}
                           </span>
                         ) : null}
                         {stage.end ? (
                           <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                            kết thúc: {formatEventTime(stage.end)}
+                            {t(language, "research.workspace.timeline.ended")}:{" "}
+                            {formatEventTime(language, stage.end)}
                           </span>
                         ) : null}
-                        {formatDuration(stage.durationMs) ? (
+                        {formatDuration(language, stage.durationMs) ? (
                           <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                            duration: {formatDuration(stage.durationMs)}
+                            {t(
+                              language,
+                              "research.workspace.timeline.duration",
+                            )}
+                            : {formatDuration(language, stage.durationMs)}
                           </span>
                         ) : null}
                         {stage.eventCount !== undefined ? (
                           <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                            events: {stage.eventCount}
+                            {t(language, "research.workspace.timeline.events")}:{" "}
+                            {formatLocaleNumber(language, stage.eventCount)}
                           </span>
                         ) : null}
                         {stage.sourceCount !== undefined ? (
                           <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                            sources: {stage.sourceCount}
+                            {t(language, "research.workspace.timeline.sources")}
+                            : {formatLocaleNumber(language, stage.sourceCount)}
                           </span>
                         ) : null}
                         {stage.componentCount !== undefined ? (
                           <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                            components: {stage.componentCount}
+                            {t(
+                              language,
+                              "research.workspace.timeline.components",
+                            )}
+                            :{" "}
+                            {formatLocaleNumber(language, stage.componentCount)}
                           </span>
                         ) : null}
                       </div>
@@ -443,32 +609,51 @@ export default function FlowTimelinePanel({
       ) : (
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
           {isProcessing
-            ? "Server đang xử lý. Timeline sẽ hiển thị khi backend trả flow events/stages thật."
-            : "Backend chưa trả telemetry flow cho phiên này, nên không hiển thị stage giả lập sau khi hoàn tất."}
+            ? t(language, "research.workspace.timeline.waiting")
+            : t(language, "research.workspace.timeline.empty")}
         </p>
       )}
 
       {events.length ? (
         <div className="mt-4 rounded-2xl border border-cyan-200/30 bg-cyan-500/5 p-3 dark:border-cyan-900/55 dark:bg-cyan-950/18">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Event Log</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            {t(language, "research.workspace.timeline.eventLog")}
+          </p>
           <ul className="mt-2 max-h-[22rem] space-y-1.5 overflow-y-auto pr-1">
             {events.slice(-10).map((event) => {
               const status = STATUS_META[normalizeStatus(event.status)];
-              const payloadPreview = formatPayloadPreview(event.payload);
-              const payloadChips = extractPayloadChips(event.payload);
+              const payloadPreview = formatPayloadPreview(
+                language,
+                event.payload,
+              );
+              const payloadChips = extractPayloadChips(language, event.payload);
               return (
-                <li key={event.id} className="rounded-lg border border-cyan-200/35 bg-white/80 p-2 text-xs text-slate-600 dark:border-cyan-900/45 dark:bg-slate-900/55 dark:text-slate-300">
+                <li
+                  key={event.id}
+                  className="rounded-lg border border-cyan-200/35 bg-white/80 p-2 text-xs text-slate-600 dark:border-cyan-900/45 dark:bg-slate-900/55 dark:text-slate-300"
+                >
                   <div className="flex flex-wrap items-center gap-1">
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">{event.label}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      {event.label}
+                    </span>
                     {event.component ? (
                       <span className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
                         {event.component}
                       </span>
                     ) : null}
-                    <span className={["rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase", status.badgeClass].join(" ")}>
-                      {status.label}
+                    <span
+                      className={[
+                        "rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase",
+                        status.badgeClass,
+                      ].join(" ")}
+                    >
+                      {statusLabel(language, normalizeStatus(event.status))}
                     </span>
-                    {event.timestamp ? <span className="text-[11px] opacity-80">{formatEventTime(event.timestamp)}</span> : null}
+                    {event.timestamp ? (
+                      <span className="text-[11px] opacity-80">
+                        {formatEventTime(language, event.timestamp)}
+                      </span>
+                    ) : null}
                   </div>
                   {event.detail ? (
                     <p
@@ -476,14 +661,16 @@ export default function FlowTimelinePanel({
                         "mt-0.5 text-[11px]",
                         isErrorDetail(event.detail)
                           ? "font-medium text-rose-700 dark:text-rose-300"
-                          : "text-slate-500 dark:text-slate-400"
+                          : "text-slate-500 dark:text-slate-400",
                       ].join(" ")}
                     >
                       {event.detail}
                     </p>
                   ) : null}
                   {payloadPreview ? (
-                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{payloadPreview}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      {payloadPreview}
+                    </p>
                   ) : null}
                   {payloadChips.length ? (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -500,7 +687,10 @@ export default function FlowTimelinePanel({
                   {event.payload ? (
                     <details className="mt-1">
                       <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        Payload chi tiết
+                        {t(
+                          language,
+                          "research.workspace.timeline.payload.details",
+                        )}
                       </summary>
                       <pre className="mt-1 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-2 text-[10px] text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                         {safeStringifyPayload(event.payload)}

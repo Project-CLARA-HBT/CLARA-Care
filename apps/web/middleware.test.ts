@@ -5,7 +5,9 @@ import { middleware } from "@/middleware";
 
 describe("authentication middleware", () => {
   it("redirects a protected route when no session signal exists", () => {
-    const response = middleware(new NextRequest("https://clara.test/dashboard"));
+    const response = middleware(
+      new NextRequest("https://clara.test/dashboard"),
+    );
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
@@ -28,6 +30,15 @@ describe("authentication middleware", () => {
       headers: { cookie: "clara_client_session=1" },
     });
     const response = middleware(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("leaves an opaque public PHR share route reachable without a session", () => {
+    const response = middleware(
+      new NextRequest("https://theclaracare.com/phr/shared/opaque-token"),
+    );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();

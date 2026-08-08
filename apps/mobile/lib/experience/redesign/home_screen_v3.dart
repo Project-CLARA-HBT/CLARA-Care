@@ -328,6 +328,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
             accent: const Color(0xFFF59E0B),
             onTap: () => _openScreen(
               ConsentCenterScreen(
+                apiClient: widget.apiClient,
                 resolver: resolver,
                 sessionStore: widget.sessionStore,
               ),

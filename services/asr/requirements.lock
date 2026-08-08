@@ -1,0 +1,8 @@
+# Direct production dependency lock for the ASR sidecar.  All first-party
+# requirements are exact pins; build environments without a resolver can still
+# reproduce this declared top-level graph.  Regenerate a hash-complete lock
+# with `uv lock` from pyproject.toml before a dependency upgrade.
+fastapi==0.139.2
+uvicorn==0.51.0
+python-multipart==0.0.32
+faster-whisper==1.2.1

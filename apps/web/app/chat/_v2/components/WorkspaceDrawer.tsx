@@ -148,15 +148,18 @@ export default function WorkspaceDrawer({
     if (!conversationId || apiUnavailable || isCreatingShare) return;
     setIsCreatingShare(true);
     try {
-      const rows = await workspace.share(conversationId, {
+      const alreadyShared = workspace.shares.some(
+        (item) => item.conversation_id === conversationId && item.is_active,
+      );
+      const effectiveRotate = rotate || alreadyShared;
+      const created = await workspace.share(conversationId, {
         expiresInHours: expiryHours ?? undefined,
-        rotate,
+        rotate: effectiveRotate,
       });
-      const created = rows?.find((row) => row.conversation_id === conversationId);
-      if (created) onCopyShareUrl(created.public_url);
+      if (created?.public_url) onCopyShareUrl(created.public_url);
       notify(
         copy(
-          rotate
+          effectiveRotate
             ? "chat.workspace.notice.shareRotated"
             : "chat.workspace.notice.shareCreated",
         ),
@@ -172,12 +175,11 @@ export default function WorkspaceDrawer({
     if (apiUnavailable || busyShareId !== null) return;
     setBusyShareId(id);
     try {
-      const rows = await workspace.share(id, {
+      const updated = await workspace.share(id, {
         expiresInHours: expiryHours ?? undefined,
         rotate: true,
       });
-      const updated = rows?.find((row) => row.conversation_id === id);
-      if (updated) onCopyShareUrl(updated.public_url);
+      if (updated?.public_url) onCopyShareUrl(updated.public_url);
       notify(copy("chat.workspace.notice.shareRotated"));
     } catch {
       notify(copy("chat.workspace.notice.shareRotateFailed"));
@@ -455,7 +457,7 @@ export default function WorkspaceDrawer({
                     const isBusy = busyShareId === item.conversation_id;
                     return (
                       <li
-                        key={`${item.conversation_id}-${item.share_token}`}
+                        key={item.share_id}
                         className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2"
                       >
                         <p className="line-clamp-1 text-[12px] font-semibold text-[var(--text-primary)]">
@@ -477,13 +479,6 @@ export default function WorkspaceDrawer({
                             : ""}
                         </p>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => onCopyShareUrl(item.public_url)}
-                            className="rounded-lg border border-[color:var(--shell-border)] px-2 py-0.5 text-[10px] text-[var(--text-secondary)] hover:border-[color:var(--shell-border-strong)]"
-                          >
-                            {copy("chat.workspace.copy")}
-                          </button>
                           {item.is_active && !apiUnavailable ? (
                             <>
                               <button

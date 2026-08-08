@@ -85,7 +85,7 @@ describe("skip link for logical tab order (Req 5.4)", () => {
   it("renders the skip link as the first focusable element targeting #main-content", () => {
     expect(appShell).toContain('href="#main-content"');
     expect(appShell).toContain('className="skip-link"');
-    expect(appShell).toContain("Bỏ qua, tới nội dung chính");
+    expect(appShell).toContain('t(uiLanguage, "navigation.skipToContent")');
   });
 
   it("marks the main content landmark with the skip-link target id", () => {

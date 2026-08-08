@@ -39,12 +39,12 @@ describe("primary shell i18n hard-coded copy scanner", () => {
   it("keeps the Today task-first surface catalog-backed and locale-formatted", () => {
     const source = readFileSync(resolve(ROOT, "app/today/page.tsx"), "utf8");
     expect(source).toContain('from "@/lib/i18n/catalog"');
-    expect(source).toContain('getStoredUILanguage');
+    expect(source).toContain('useUILanguage');
     expect(source).toContain('t(language, "today.title")');
-    expect(source).toContain('t(language, "today.emptyDescription")');
-    expect(source).toContain('t(language, "today.startHere")');
-    expect(source).toContain('language === "vi" ? "vi-VN" : "en-US"');
-    for (const href of ['href: "/chat"', 'href: "/medicines"', 'href: "/phr"', 'href: "/visits"']) {
+    expect(source).toContain('"today.emptyDescription"');
+    expect(source).toContain('"today.startHere"');
+    expect(source).toContain('formatLocaleDate(language');
+    for (const href of ['"/chat"', '"/medicines"', '"/phr"']) {
       expect(source).toContain(href);
     }
     for (const literal of ["Việc nên làm tiếp theo", "Hôm nay chưa có việc nào", "Mở LifeMap"]) {
@@ -84,5 +84,29 @@ describe("primary shell i18n hard-coded copy scanner", () => {
     expect(source).toContain('t(language, "surface.loading")');
     expect(source).not.toContain('>Chưa thể tải dữ liệu<');
     expect(source).not.toContain('>Thử lại<');
+  });
+
+  it("keeps PHR OCR consent and review copy in the shared typed catalog", () => {
+    const source = readFileSync(
+      resolve(ROOT, "components/phr/ocr-review-modal.tsx"),
+      "utf8",
+    );
+    expect(source).toContain('from "@/lib/i18n/catalog"');
+    for (const key of [
+      "phr.ocr.disclosure",
+      "phr.ocr.consentNotice",
+      "phr.ocr.processingNotice",
+      "phr.ocr.confirmError",
+    ]) {
+      expect(source).toContain(key);
+    }
+    for (const literal of [
+      "Quét đơn thuốc (OCR)",
+      "Scan prescription (OCR)",
+      "Tải lên ảnh hoặc tệp đơn thuốc.",
+      "Upload a prescription image or file.",
+    ]) {
+      expect(source).not.toContain(literal);
+    }
   });
 });

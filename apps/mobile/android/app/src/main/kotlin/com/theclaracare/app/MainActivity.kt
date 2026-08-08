@@ -1,4 +1,4 @@
-package com.example.clara_mobile
+package com.theclaracare.app
 
 import io.flutter.embedding.android.FlutterActivity
 

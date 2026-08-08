@@ -1,10 +1,26 @@
+# Application imports intentionally follow the isolated DATABASE_URL setup.
+# ruff: noqa: E402
 from __future__ import annotations
 
 import os
+import tempfile
 import time
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
+
+# This module is loaded by pytest before application modules.  Set a private
+# SQLite path *before* importing the session module so a local full-suite run
+# never falls back to the developer's ``services/api/clara.db`` file.  CI can
+# supply a deterministic path through CLARA_TEST_DATABASE_URL; application
+# DATABASE_URL is deliberately ignored by tests.
+_TEST_DATABASE_DIRECTORY = tempfile.TemporaryDirectory(prefix="clara-api-pytest-")
+_TEST_DATABASE_PATH = Path(_TEST_DATABASE_DIRECTORY.name) / "clara-test.db"
+os.environ["DATABASE_URL"] = os.environ.get(
+    "CLARA_TEST_DATABASE_URL",
+    f"sqlite+pysqlite:///{_TEST_DATABASE_PATH}",
+)
 
 from clara_api.core.bootstrap_admin import ensure_bootstrap_admin
 from clara_api.core.config import get_settings

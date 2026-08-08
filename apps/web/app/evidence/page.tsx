@@ -81,16 +81,24 @@ function EvidenceMatrixView({ matrix, language }: { matrix: EvidenceMatrix; lang
     );
   }
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {groups.map(([sourceClass, records]) => (
-        <section key={sourceClass} className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)]">
-          <div className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)]/65 px-4 py-3">
-            <h3 className="font-semibold text-[var(--text-primary)]">{labelForSourceClass(language, sourceClass)}</h3>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">{t(language, "evidence.matrix.provenance", { count: records.length })}</p>
+        <section
+          key={sourceClass}
+          className="overflow-hidden rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="material-symbols-outlined text-[var(--text-brand)]" aria-hidden="true">
+                {sourceClass === "guideline" ? "menu_book" : "science"}
+              </span>
+              <h3 className="font-semibold text-[var(--text-primary)]">{labelForSourceClass(language, sourceClass)}</h3>
+            </div>
+            <Badge tone="neutral">{t(language, "evidence.matrix.provenance", { count: records.length })}</Badge>
           </div>
           <ul className="divide-y divide-[color:var(--shell-border)]">
             {records.map((record) => (
-              <li key={record.evidence_id} className="px-4 py-4">
+              <li key={record.evidence_id} className="px-5 py-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium leading-6 text-[var(--text-primary)]">{record.title}</p>
@@ -114,7 +122,11 @@ function EvidenceMatrixView({ matrix, language }: { matrix: EvidenceMatrix; lang
                     {Object.entries(record.identifiers).map(([key, value]) => `${key.toUpperCase()}: ${value}`).join(" · ")}
                   </p>
                 ) : null}
-                {record.excerpt ? <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{record.excerpt}</p> : null}
+                {record.excerpt ? (
+                  <blockquote className="mt-4 rounded-[var(--radius-lg)] border-l-2 border-[var(--brand-400)] bg-[var(--surface-base)] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)]">
+                    {record.excerpt}
+                  </blockquote>
+                ) : null}
               </li>
             ))}
           </ul>

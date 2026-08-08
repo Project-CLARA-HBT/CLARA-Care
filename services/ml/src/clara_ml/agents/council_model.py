@@ -19,6 +19,13 @@ from clara_ml.agents.council_evidence_packet import (
     public_evidence_packet_summary,
     validated_council_evidence_packet,
 )
+from clara_ml.agents.council_shadow_contracts import (
+    COUNCIL_SHADOW_CONTRACT_VERSION,
+    CouncilShadowSpecialistOpinion,
+    resolve_council_shadow_specialist_profile,
+    run_specialist_shadow_workflow,
+    verify_council_shadow_specialist_opinion,
+)
 from clara_ml.config import settings
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.llm.model_registry import ModelTask, build_task_client
@@ -37,7 +44,7 @@ _LEGACY_TRIAGE_BY_SUGGESTION = {
     "insufficient_data": "routine_follow_up",
 }
 _TRIAGE_SUGGESTIONS = frozenset(_LEGACY_TRIAGE_BY_SUGGESTION)
-_SHADOW_CONTRACT_VERSION = "council-specialist-shadow.v4"
+_SHADOW_CONTRACT_VERSION = COUNCIL_SHADOW_CONTRACT_VERSION
 
 # Shadow specialists can suggest only a bounded operational action class, never
 # free-text treatment or prescribing. The deterministic contract verifier also
@@ -190,6 +197,100 @@ def _supported_findings(
     return findings
 
 
+def _normalize_profile_bound_assessment(
+    raw: dict[str, Any],
+    *,
+    specialist: str,
+    model: str,
+    valid_fact_ids: set[str],
+) -> dict[str, Any] | None:
+    """Project a verified v5 profile-bound opinion into the legacy envelope.
+
+    The current Council shadow envelope remains compatible for callers while
+    the actual provider boundary is v5: closed schema, code-owned specialist
+    prompt, ``case_packet`` tool only, and per-finding fact IDs.  The legacy
+    envelope is a projection, not a second model output contract.
+    """
+
+    profile = resolve_council_shadow_specialist_profile(specialist)
+    if profile is None:
+        return None
+    try:
+        opinion = CouncilShadowSpecialistOpinion.model_validate(raw)
+    except ValidationError:
+        return None
+    if opinion.specialty != profile.specialty:
+        return None
+    verified = verify_council_shadow_specialist_opinion(
+        opinion,
+        valid_case_fact_ids=valid_fact_ids,
+    )
+    if verified is None:
+        return None
+
+    supported_findings = [
+        {
+            "statement": finding.statement,
+            "evidence_ids": list(finding.evidence_case_fact_ids),
+        }
+        for finding in opinion.supported_findings
+    ]
+    supporting_ids: list[str] = []
+    for finding in supported_findings:
+        for fact_id in finding["evidence_ids"]:
+            if fact_id not in supporting_ids:
+                supporting_ids.append(fact_id)
+    if _ACTION_CLASS_SEVERITY[opinion.safe_next_action_class] < _MIN_ACTION_SEVERITY_BY_TRIAGE[
+        opinion.triage_suggestion
+    ]:
+        return None
+
+    evidence_status = "supported_case_facts"
+    if opinion.abstain:
+        evidence_status = "abstained_insufficient_evidence"
+    elif opinion.missing_information or opinion.uncertainties:
+        evidence_status = "supported_with_uncertainties"
+    specialist_opinion = {
+        "specialty": opinion.specialty,
+        "supported_findings": [item["statement"] for item in supported_findings],
+        "evidence_ids": supporting_ids,
+        "red_flags": [],
+        "missing_information": list(opinion.missing_information),
+        "uncertainties": list(opinion.uncertainties),
+        "suggested_questions": list(opinion.suggested_questions),
+        "triage_suggestion": _TRIAGE_SUGGESTION_BY_LEGACY[opinion.triage_suggestion],
+        "abstained": opinion.abstain,
+    }
+    return {
+        "contract_version": _SHADOW_CONTRACT_VERSION,
+        "specialist": opinion.specialty,
+        "prompt_version": profile.prompt_version,
+        "source_class": opinion.source_class,
+        "tool": opinion.tool,
+        "specialist_opinion": specialist_opinion,
+        "supported_findings": supported_findings,
+        "evidence_ids": supporting_ids,
+        "supporting_case_fact_ids": supporting_ids,
+        "contradicting_case_fact_ids": [],
+        "missing_decisive_data": list(opinion.missing_information),
+        "uncertainties": list(opinion.uncertainties),
+        "suggested_questions": list(opinion.suggested_questions),
+        "abstained": opinion.abstain,
+        "abstention_reason": opinion.abstention_reason if opinion.abstain else None,
+        "triage": opinion.triage_suggestion,
+        "triage_suggestion": _TRIAGE_SUGGESTION_BY_LEGACY[opinion.triage_suggestion],
+        "safe_next_action_class": opinion.safe_next_action_class,
+        "model": model,
+        "evidence_scope": "case_packet_only",
+        "evidence_status": evidence_status,
+        "verification": {
+            "method": "deterministic_case_fact_and_profile_validation",
+            "status": "passed",
+            "self_verification_performed": False,
+        },
+    }
+
+
 def _normalize_assessment(
     raw: dict[str, Any],
     *,
@@ -197,6 +298,25 @@ def _normalize_assessment(
     model: str,
     valid_fact_ids: set[str],
 ) -> dict[str, Any] | None:
+    profile = resolve_council_shadow_specialist_profile(specialist)
+    if profile is None:
+        # The model path must never create an ad-hoc specialist or prompt
+        # contract from request data. The deterministic Council can still use
+        # its historic specialty names; this additive shadow path cannot.
+        return None
+    # A response advertising any v5 profile-bound field must pass the entire
+    # closed v5 contract.  It must not fall through to the old permissive
+    # compatibility parser after a malformed v5 response.
+    if any(
+        key in raw
+        for key in ("contract_version", "prompt_version", "source_class", "tool")
+    ):
+        return _normalize_profile_bound_assessment(
+            raw,
+            specialist=specialist,
+            model=model,
+            valid_fact_ids=valid_fact_ids,
+        )
     try:
         # Parse first so malformed/extra model output cannot drift the shadow
         # contract.  ``Strict*`` fields reject coerced booleans/numbers; this is
@@ -281,7 +401,14 @@ def _normalize_assessment(
     }
 
     return {
-        "contract_version": _SHADOW_CONTRACT_VERSION,
+        # Code-owned profile binding for the v5 specialist → independent
+        # verifier workflow. These are not model claims and no request can
+        # override them. The legacy-compatible keys below are retained for the
+        # existing audit shape, but the verifier consumes only this closed v5
+        # projection via `_workflow_assessment`.
+        "prompt_version": profile.prompt_version,
+        "source_class": "case_packet_fact",
+        "tool": "case_packet",
         "specialist": specialist,
         "specialist_opinion": specialist_opinion,
         "supported_findings": supported_findings,
@@ -307,6 +434,47 @@ def _normalize_assessment(
             "status": "passed",
             "self_verification_performed": False,
         },
+    }
+
+
+def _workflow_assessment(assessment: dict[str, Any]) -> dict[str, Any]:
+    """Project legacy-compatible specialist output into the strict v5 schema.
+
+    The model response has already passed the existing case-fact normalizer.
+    This projection deliberately drops model/provider metadata, raw prompts,
+    legacy evidence lists and any fields that could be mistaken for a released
+    clinical conclusion. The independent verifier rejects any remaining
+    malformed source binding.
+    """
+
+    findings: list[dict[str, Any]] = []
+    for item in assessment.get("supported_findings", []):
+        if not isinstance(item, dict):
+            continue
+        statement = item.get("statement")
+        evidence_ids = item.get("evidence_ids")
+        if not isinstance(statement, str) or not isinstance(evidence_ids, list):
+            continue
+        findings.append(
+            {
+                "statement": statement,
+                "evidence_case_fact_ids": [value for value in evidence_ids if isinstance(value, str)],
+            }
+        )
+    return {
+        "contract_version": assessment.get("contract_version"),
+        "specialty": assessment.get("specialist"),
+        "prompt_version": assessment.get("prompt_version"),
+        "source_class": assessment.get("source_class"),
+        "tool": assessment.get("tool"),
+        "supported_findings": findings,
+        "missing_information": assessment.get("missing_decisive_data", []),
+        "uncertainties": assessment.get("uncertainties", []),
+        "suggested_questions": assessment.get("suggested_questions", []),
+        "abstain": assessment.get("abstained", False),
+        "abstention_reason": assessment.get("abstention_reason") or "",
+        "triage_suggestion": assessment.get("triage"),
+        "safe_next_action_class": assessment.get("safe_next_action_class"),
     }
 
 
@@ -454,23 +622,27 @@ def run_model_council_shadow(
     failures: list[dict[str, str]] = []
     valid_fact_ids = {str(item["id"]) for item in packet["facts"]}
     for specialist in specialists:
+        profile = resolve_council_shadow_specialist_profile(specialist)
+        if profile is None:
+            failures.append({"specialist": str(specialist), "code": "unsupported_profile"})
+            continue
         prompt = (
             f"Specialty: {specialist}. Independently review the case packet below. "
             "This is decision support, not diagnosis or prescribing. Use only supplied "
-            "facts. Return one JSON object with keys: supported_findings (list of "
-            "{statement, evidence_ids}), evidence_ids (list), supporting_case_fact_ids "
-            "(list), contradicting_case_fact_ids (list), missing_information (list), "
-            "red_flags (list), uncertainties (list), suggested_questions (list), "
-            "abstain (boolean), abstention_reason (string required when abstain=true), "
-            "triage_suggestion "
-            "(emergency|same_day|scheduled_review|self_care_information|insufficient_data), and "
-            "safe_next_action_class (one of collect_more_information, clinician_review, "
-            "same_day_in_person_review, emergency_evaluation). Do not return confidence, "
-            "probability, a diagnosis, treatment instruction, or medication-dose change. "
-            "Never invent a fact or citation. A separate evidence-availability packet, when "
-            "present, contains only opaque retrieval IDs and categories. It is not evidence "
-            "content: do not use it to support a finding, diagnose, prescribe, or alter triage. "
-            "Only supplied CASE_PACKET fact IDs can support a finding.\n\n"
+            "facts. Return exactly one JSON object and no extra keys. Its contract_version must be "
+            f"{_SHADOW_CONTRACT_VERSION}; specialty must be {profile.specialty!r}; prompt_version "
+            f"must be {profile.prompt_version!r}; source_class must be 'case_packet_fact'; and tool "
+            "must be 'case_packet'. Include supported_findings (list of {statement, "
+            "evidence_case_fact_ids}), missing_information (list), uncertainties (list), "
+            "suggested_questions (list), abstain (boolean), abstention_reason (a nonempty string "
+            "only when abstain=true), triage_suggestion "
+            "(routine_follow_up|same_day_review|emergency_escalation), and safe_next_action_class "
+            "(collect_more_information|clinician_review|same_day_in_person_review|"
+            "emergency_evaluation). Do not return confidence, probability, a diagnosis, treatment "
+            "instruction, or medication-dose change. Never invent a fact or citation. A separate "
+            "evidence-availability packet, when present, contains only opaque retrieval IDs and "
+            "categories. It is not evidence content: do not use it to support a finding, diagnose, "
+            "prescribe, or alter triage. Only supplied CASE_PACKET fact IDs can support a finding.\n\n"
             f"CASE_PACKET={json.dumps(packet, ensure_ascii=False, sort_keys=True)}"
         )
         if evidence_packet is not None:
@@ -522,6 +694,25 @@ def run_model_council_shadow(
         "case_fact_count": len(packet["facts"]),
         "adjudication": _shadow_adjudication(assessments),
     }
+    if settings.council_specialist_workflow_shadow_enabled:
+        # The v5 verifier/adjudicator is a second, independently default-off
+        # deterministic shadow projection. It receives only closed specialist
+        # records and the pre-existing deterministic baseline passed by
+        # ``run_council``. Its result is retained beside (not written into) the
+        # legacy audit summary so it cannot alter a released triage or
+        # recommendation during the compatibility transition.
+        workflow_packet = {
+            **packet,
+            "deterministic_baseline_triage": payload.get("deterministic_baseline_triage"),
+            "deterministic_baseline_requires_human_review": payload.get(
+                "deterministic_baseline_requires_human_review"
+            ),
+        }
+        result["governed_specialist_workflow"] = run_specialist_shadow_workflow(
+            workflow_packet,
+            [_workflow_assessment(assessment) for assessment in assessments],
+            client=client,
+        )
     if has_evidence_packet:
         result["evidence_packet"] = evidence_summary
     return result

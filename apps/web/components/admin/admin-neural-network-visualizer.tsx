@@ -43,7 +43,6 @@ const NODES: NeuralNode[] = [
 
   { id: "matrix", label: "Claim Matrix", layer: 3, row: 0, kind: "toggle", toggleKey: "rule_verification_enabled" },
   { id: "cite", label: "Citation Selector", layer: 3, row: 1, kind: "required" },
-  { id: "fallback", label: "Fallback Branch", layer: 3, row: 2, kind: "toggle", toggleKey: "deepseek_fallback_enabled" },
 
   { id: "answer", label: "Answer Synthesizer", layer: 4, row: 0, kind: "required" },
   { id: "telemetry", label: "Telemetry Stream", layer: 4, row: 1, kind: "required" },
@@ -62,10 +61,8 @@ const EDGES: NeuralEdge[] = [
   { from: "index", to: "verify" },
   { from: "verify", to: "matrix" },
   { from: "index", to: "cite" },
-  { from: "verify", to: "fallback" },
   { from: "matrix", to: "answer" },
   { from: "cite", to: "answer" },
-  { from: "fallback", to: "answer" },
   { from: "answer", to: "telemetry" },
   { from: "telemetry", to: "store" },
 ];
@@ -136,7 +133,7 @@ export default function AdminNeuralNetworkVisualizer({
     canvas.height = Math.round(SCENE_H * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.fillStyle = "#0b1220";
+    ctx.fillStyle = "#0b0e13";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     const anchor = document.createElement("a");
@@ -146,13 +143,13 @@ export default function AdminNeuralNetworkVisualizer({
   };
 
   return (
-    <section className="rounded-2xl border border-cyan-200/60 bg-white/80 p-4 shadow-[0_16px_44px_rgba(14,116,144,0.14)] dark:border-cyan-700/35 dark:bg-slate-950/80">
+    <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Neural Network Flow
           </p>
-          <h4 className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h4 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
             Runtime Graph: Retrieval → Rerank → NLI → Answer
           </h4>
         </div>
@@ -160,21 +157,21 @@ export default function AdminNeuralNetworkVisualizer({
           <button
             type="button"
             onClick={exportSvg}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[color:var(--brand-primary)]"
           >
             Export SVG
           </button>
           <button
             type="button"
             onClick={() => void exportJpg()}
-            className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+            className="rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-3 py-1.5 text-xs font-medium text-[#cdd7ff] hover:bg-[var(--brand-700)]"
           >
             Export JPG
           </button>
         </div>
       </div>
 
-      <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200/80 bg-[radial-gradient(circle_at_15%_18%,rgba(96,165,250,0.12),transparent_42%),radial-gradient(circle_at_82%_84%,rgba(59,130,246,0.12),transparent_44%),linear-gradient(160deg,rgba(255,255,255,0.98),rgba(240,249,255,0.9))] p-2 dark:border-slate-800 dark:bg-[radial-gradient(circle_at_15%_18%,rgba(96,165,250,0.12),transparent_42%),radial-gradient(circle_at_82%_84%,rgba(59,130,246,0.12),transparent_44%),linear-gradient(160deg,rgba(2,6,23,0.98),rgba(15,23,42,0.9))]">
+      <div className="mt-3 overflow-x-auto rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SCENE_W} ${SCENE_H}`}
@@ -182,17 +179,6 @@ export default function AdminNeuralNetworkVisualizer({
           role="img"
           aria-label="CLARA neural network admin flow"
         >
-          <defs>
-            <linearGradient id="edgeOn" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#3b82f6" />
-            </linearGradient>
-            <linearGradient id="edgeOff" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#64748b" />
-              <stop offset="100%" stopColor="#94a3b8" />
-            </linearGradient>
-          </defs>
-
           {EDGES.map((edge) => {
             const from = NODES.find((item) => item.id === edge.from);
             const to = NODES.find((item) => item.id === edge.to);
@@ -205,7 +191,7 @@ export default function AdminNeuralNetworkVisualizer({
                 key={`${edge.from}-${edge.to}`}
                 d={edgePath(from, to)}
                 fill="none"
-                stroke={active ? "url(#edgeOn)" : "url(#edgeOff)"}
+                stroke={active ? "#60a5fa" : "#414751"}
                 strokeOpacity={active ? 0.9 : 0.42}
                 strokeWidth={active ? 2.6 : 1.9}
                 strokeDasharray={active ? "0" : "5 5"}
@@ -217,8 +203,8 @@ export default function AdminNeuralNetworkVisualizer({
             const pos = nodePosition(node);
             const status = statusMap.get(node.id) ?? "off";
             const active = status !== "off";
-            const fill = status === "required" ? "#0f172a" : active ? "#172554" : "#1e293b";
-            const border = status === "required" ? "#60a5fa" : active ? "#60a5fa" : "#64748b";
+            const fill = status === "required" ? "#1d2025" : active ? "#272a30" : "#191c21";
+            const border = status === "required" || active ? "#a4c9ff" : "#414751";
             const label = status === "required" ? "CORE" : active ? "LIVE" : "OFF";
             return (
               <g key={node.id}>
@@ -233,10 +219,10 @@ export default function AdminNeuralNetworkVisualizer({
                   strokeWidth={1.6}
                   opacity={0.96}
                 />
-                <text x={pos.x + 14} y={pos.y + 30} fill="#e2e8f0" fontSize="13" fontWeight="700">
+                <text x={pos.x + 14} y={pos.y + 30} fill="#e1e2e9" fontSize="13" fontWeight="700">
                   {node.label}
                 </text>
-                <text x={pos.x + 14} y={pos.y + 52} fill="#93c5fd" fontSize="11" fontWeight="600">
+                <text x={pos.x + 14} y={pos.y + 52} fill="#a4c9ff" fontSize="11" fontWeight="600">
                   {label}
                 </text>
               </g>
@@ -246,13 +232,13 @@ export default function AdminNeuralNetworkVisualizer({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-        <span className="rounded-full border border-cyan-300 bg-cyan-50 px-2 py-1 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
+        <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-1 text-[var(--text-brand)]">
           CORE
         </span>
-        <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-1 text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+        <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-1 text-[var(--text-brand)]">
           LIVE (toggle bật)
         </span>
-        <span className="rounded-full border border-slate-300 bg-slate-50 px-2 py-1 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-[var(--text-secondary)]">
           OFF (toggle tắt)
         </span>
       </div>

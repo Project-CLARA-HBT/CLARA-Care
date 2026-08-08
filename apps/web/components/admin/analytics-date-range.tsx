@@ -84,7 +84,7 @@ export default function AnalyticsDateRange({
         disabled={busy || invalid}
         className={[
           "min-h-[44px] rounded-[var(--radius-sm)] border border-[color:var(--brand-600)]",
-          "bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-white transition",
+          "bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[#cdd7ff] transition",
           "hover:bg-[var(--brand-700)] focus-visible:outline-none focus-visible:ring-2",
           "focus-visible:ring-[color:var(--brand-600)] focus-visible:ring-offset-2",
           "focus-visible:ring-offset-[color:var(--surface-muted)]",

@@ -19,6 +19,7 @@ These run against the real FastAPI app + SQLite session, mirroring the existing
 
 from __future__ import annotations
 
+import hashlib
 import os
 from collections.abc import Generator
 
@@ -26,8 +27,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from clara_api.api.v1.endpoints import research
+from clara_api.api.v1.endpoints.phr import _make_ocr_review_token
 from clara_api.core.config import get_settings
-from clara_api.db.models import PhrAudit, PhrProfile, User
+from clara_api.db.models import GlhsAssertion, PhrAudit, PhrProfile, PhrShare, User
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
@@ -87,6 +90,47 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def _ocr_review_token(email: str, candidate_ids: list[str]) -> str:
+    with SessionLocal() as db:
+        user = db.execute(select(User).where(User.email == email)).scalar_one()
+        return _make_ocr_review_token(user_id=user.id, candidate_ids=candidate_ids)
+
+
+def test_research_personal_context_uses_governed_phr_state() -> None:
+    """Research personal context is THSS-derived, including PHR list records."""
+    email = "phr-research-thss@example.com"
+    token = _login(email)
+    saved = client.put(
+        "/api/v1/phr/record",
+        headers=_auth(token),
+        json={
+            "full_name": "Research subject",
+            "allergies": [{"id": "allergy-1", "name": "Penicillin"}],
+            "conditions": [{"id": "condition-1", "name": "Tăng huyết áp"}],
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    course = client.post(
+        "/api/v1/medication-courses",
+        headers={**_auth(token), "Idempotency-Key": "phr-research-governed-medication"},
+        json={"medication_name": "Warfarin", "drugbank_id": "DB00682"},
+    )
+    assert course.status_code == 201, course.text
+    with SessionLocal() as db:
+        user = db.execute(select(User).where(User.email == email)).scalar_one()
+        context = research._build_personal_context_payload(
+            db,
+            user=user,
+            answer_language="vi",
+        )
+    assert context["snapshot_id"]
+    assert [entry["value"]["name"] for entry in context["allergies"]] == ["Penicillin"]
+    assert [entry["value"]["name"] for entry in context["conditions"]] == ["Tăng huyết áp"]
+    assert [entry["value"]["medication_name"] for entry in context["medications"]] == ["Warfarin"]
+    assert "Penicillin" in context["summary_markdown"]
+    assert "Tăng huyết áp" in context["summary_markdown"]
+
+
 # ---------------------------------------------------------------------------
 # Property 22 — flags-off legacy equivalence
 # ---------------------------------------------------------------------------
@@ -140,6 +184,108 @@ def test_property22_put_record_legacy_item_shape() -> None:
         "is_current",
         "note",
     }
+
+
+def test_cookie_authenticated_phr_save_requires_and_accepts_matching_csrf() -> None:
+    """A browser PHR save succeeds only with the login-issued CSRF pair.
+
+    This regression covers the actual browser transport (HttpOnly auth cookie
+    plus readable double-submit token), rather than the bearer transport used
+    by most endpoint tests.  It must remain independent of the GLHS adapter:
+    CSRF is enforced before a mutation reaches PHR persistence.
+    """
+
+    client.cookies.clear()
+    try:
+        _login("phr-cookie-save@example.com")
+        settings = get_settings()
+        csrf_token = client.cookies.get(settings.auth_csrf_cookie_name)
+        assert csrf_token
+
+        rejected = client.put("/api/v1/phr/record", json={"full_name": "Cookie User"})
+        assert rejected.status_code == 403
+        assert rejected.json()["detail"] == "CSRF validation failed"
+
+        saved = client.put(
+            "/api/v1/phr/record",
+            headers={settings.auth_csrf_header_name: csrf_token},
+            json={"full_name": "Cookie User"},
+        )
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["full_name"] == "Cookie User"
+    finally:
+        client.cookies.clear()
+
+
+def test_phr_list_edits_are_provenance_bound_and_supersede_without_drug_guessing() -> None:
+    """PHR lists converge into GLHS without treating free-text drugs as DDI-ready."""
+
+    token = _login("phr-glhs-sync@example.com")
+    initial = {
+        "allergies": [{"id": "a1", "name": "Penicillin"}],
+        "conditions": [{"id": "c1", "name": "Tăng huyết áp", "status": "active"}],
+        "medications": [{"id": "m1", "name": "Panadol", "dose": "500 mg"}],
+    }
+    assert client.put("/api/v1/phr/record", headers=_auth(token), json=initial).status_code == 200
+    updated = {
+        "allergies": [],
+        "conditions": [{"id": "c1", "name": "Tăng huyết áp", "status": "monitoring"}],
+        "medications": initial["medications"],
+    }
+    assert client.put("/api/v1/phr/record", headers=_auth(token), json=updated).status_code == 200
+
+    with SessionLocal() as db:
+        user = db.execute(
+            select(User).where(User.email == "phr-glhs-sync@example.com")
+        ).scalar_one()
+        profile = db.execute(select(PhrProfile).where(PhrProfile.user_id == user.id)).scalar_one()
+        rows = list(
+            db.execute(
+                select(GlhsAssertion)
+                .where(GlhsAssertion.profile_id == profile.id)
+                .order_by(GlhsAssertion.id)
+            ).scalars()
+        )
+    assert [(row.assertion_type, row.lifecycle_status) for row in rows] == [
+        ("allergies", "superseded"),
+        ("conditions", "superseded"),
+        ("medications_unresolved", "candidate"),
+        ("conditions", "active"),
+    ]
+
+
+def test_unresolved_phr_medication_corrections_and_removal_retire_candidates() -> None:
+    """A non-DrugBank medication remains a candidate through its full lifecycle."""
+
+    token = _login("phr-glhs-candidate-lifecycle@example.com")
+    first = {"medications": [{"id": "m1", "name": "Panadol", "dose": "500 mg"}]}
+    corrected = {
+        "medications": [{"id": "m1", "name": "Paracetamol", "dose": "650 mg"}]
+    }
+    assert client.put("/api/v1/phr/record", headers=_auth(token), json=first).status_code == 200
+    assert client.put("/api/v1/phr/record", headers=_auth(token), json=corrected).status_code == 200
+    assert (
+        client.put("/api/v1/phr/record", headers=_auth(token), json={"medications": []}).status_code
+        == 200
+    )
+
+    with SessionLocal() as db:
+        user = db.execute(
+            select(User).where(User.email == "phr-glhs-candidate-lifecycle@example.com")
+        ).scalar_one()
+        profile = db.execute(select(PhrProfile).where(PhrProfile.user_id == user.id)).scalar_one()
+        candidates = list(
+            db.execute(
+                select(GlhsAssertion)
+                .where(
+                    GlhsAssertion.profile_id == profile.id,
+                    GlhsAssertion.assertion_type == "medications_unresolved",
+                )
+                .order_by(GlhsAssertion.id)
+            ).scalars()
+        )
+    assert len(candidates) == 2
+    assert {row.lifecycle_status for row in candidates} == {"superseded"}
 
 
 def test_property22_enhanced_endpoints_404_with_flags_off() -> None:
@@ -198,6 +344,34 @@ def test_property13_entry_crud_audit_and_versions() -> None:
     )
     assert cond.status_code == 200
     assert cond.json()["allergies"][0] == allergy
+
+    patched = client.patch(
+        f"/api/v1/phr/entries/allergy/{allergy['id']}",
+        headers=_auth(token),
+        json={"fields": {"severity": "severe"}},
+    )
+    assert patched.status_code == 200
+    removed = client.delete(
+        f"/api/v1/phr/entries/allergy/{allergy['id']}", headers=_auth(token)
+    )
+    assert removed.status_code == 200
+    assert removed.json()["allergies"] == []
+
+    with SessionLocal() as db:
+        user = db.execute(select(User).where(User.email == "phr-entries@example.com")).scalar_one()
+        profile = db.execute(select(PhrProfile).where(PhrProfile.user_id == user.id)).scalar_one()
+        allergy_assertions = list(
+            db.execute(
+                select(GlhsAssertion)
+                .where(
+                    GlhsAssertion.profile_id == profile.id,
+                    GlhsAssertion.assertion_type == "allergies",
+                )
+                .order_by(GlhsAssertion.id)
+            ).scalars()
+        )
+    assert allergy_assertions
+    assert {row.lifecycle_status for row in allergy_assertions} == {"superseded"}
 
     # Version monotonicity: current_version_no increased across changes.
     enhanced = client.get("/api/v1/phr/record/enhanced", headers=_auth(token))
@@ -292,6 +466,12 @@ def test_property16_share_read_revoke_and_access_log() -> None:
     )
     created = client.post("/api/v1/phr/share", headers=_auth(token), json={"scope": "full"})
     share_token = created.json()["share_token"]
+    with SessionLocal() as db:
+        stored_share = db.execute(
+            select(PhrShare).where(PhrShare.id == created.json()["share_id"])
+        ).scalar_one()
+        assert stored_share.token_hash == hashlib.sha256(share_token.encode()).hexdigest()
+        assert not hasattr(stored_share, "share_token")
 
     # Public read works while active.
     read = client.get(f"/api/v1/phr/shared/{share_token}")
@@ -314,10 +494,11 @@ def test_property16_share_read_revoke_and_access_log() -> None:
         )
     assert len(share_reads) >= 1
 
-    # Revoke ⇒ 410 Gone.
-    client.delete(f"/api/v1/phr/share/{share_token}", headers=_auth(token))
+    # Revocation must not disclose an otherwise valid capability's lifecycle.
+    client.delete(f"/api/v1/phr/share/{created.json()['share_id']}", headers=_auth(token))
     gone = client.get(f"/api/v1/phr/shared/{share_token}")
-    assert gone.status_code == 410
+    assert gone.status_code == 404
+    assert gone.json() == {"detail": {"code": "public_share_unavailable"}}
 
 
 def test_property16_unknown_token_404() -> None:
@@ -335,14 +516,24 @@ def test_property14_ocr_confirm_required_to_commit() -> None:
     _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
     token = _login("phr-ocr@example.com")
 
-    # Confirm with a clean (non-manual-confirm) candidate writes the entry.
+    candidate_id = "ocr-review-panadol-001"
+    # OCR candidates require an owner-bound review capability plus an explicit
+    # per-row acknowledgement before the user-authored final value can write.
     confirm = client.post(
         "/api/v1/phr/import/ocr/confirm",
         headers=_auth(token),
         json={
+            "review_token": _ocr_review_token("phr-ocr@example.com", [candidate_id]),
+            "review_candidate_ids": [candidate_id],
             "medications": [
-                {"name": "Panadol", "dose": "500mg", "ocr_confidence": 0.95},
-            ]
+                {
+                    "candidate_id": candidate_id,
+                    "name": "Panadol",
+                    "dose": "500mg",
+                    "ocr_confidence": 0.95,
+                    "confirmed": True,
+                },
+            ],
         },
     )
     assert confirm.status_code == 200
@@ -355,16 +546,72 @@ def test_property14_ocr_confirm_required_to_commit() -> None:
 def test_property14_ocr_confirm_blocks_low_confidence() -> None:
     _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
     token = _login("phr-ocr-block@example.com")
+    candidate_id = "ocr-review-blurry-001"
     resp = client.post(
         "/api/v1/phr/import/ocr/confirm",
         headers=_auth(token),
         json={
+            "review_token": _ocr_review_token("phr-ocr-block@example.com", [candidate_id]),
+            "review_candidate_ids": [candidate_id],
             "medications": [
-                {"name": "blurry", "requires_manual_confirm": True, "ocr_confidence": 0.2}
-            ]
+                {
+                    "candidate_id": candidate_id,
+                    "name": "blurry",
+                    "requires_manual_confirm": True,
+                    "ocr_confidence": 0.2,
+                    "confirmed": False,
+                }
+            ],
         },
     )
     assert resp.status_code == 422
+
+
+def test_property14_ocr_review_token_rejects_injected_candidate() -> None:
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
+    email = "phr-ocr-token-bound@example.com"
+    token = _login(email)
+    reviewed_ids = ["ocr-review-bound-001", "ocr-review-bound-002"]
+    response = client.post(
+        "/api/v1/phr/import/ocr/confirm",
+        headers=_auth(token),
+        json={
+            "review_token": _ocr_review_token(email, reviewed_ids),
+            "review_candidate_ids": reviewed_ids,
+            "medications": [
+                {
+                    "candidate_id": "ocr-review-injected-003",
+                    "name": "Panadol",
+                    "confirmed": True,
+                }
+            ],
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_property14_ocr_review_token_fails_closed_when_malformed() -> None:
+    """A corrupt review capability is rejected, never parsed into a 500 response."""
+
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OCR_IMPORT_ENABLED")
+    token = _login("phr-ocr-token-malformed@example.com")
+    candidate_id = "ocr-review-malformed-001"
+    response = client.post(
+        "/api/v1/phr/import/ocr/confirm",
+        headers=_auth(token),
+        json={
+            "review_token": "not-a-valid.%%%token.signature",
+            "review_candidate_ids": [candidate_id],
+            "medications": [
+                {
+                    "candidate_id": candidate_id,
+                    "name": "Panadol",
+                    "confirmed": True,
+                }
+            ],
+        },
+    )
+    assert response.status_code == 403
 
 
 def test_phr_ocr_rejects_disguised_document_before_ocr_bridge() -> None:
@@ -424,6 +671,62 @@ def test_observations_numeric_validation_and_listing() -> None:
     assert ok.status_code == 200
     listing = client.get("/api/v1/phr/observations", headers=_auth(token))
     assert len(listing.json()["observations"]) == 1
+
+
+def test_body_measurements_are_paired_by_date_and_update_current_values() -> None:
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OBSERVATIONS_ENABLED")
+    token = _login("phr-body@example.com")
+    created = client.post(
+        "/api/v1/phr/body-measurements",
+        headers=_auth(token),
+        json={"height_cm": 165, "weight_kg": 55, "observed_on": "2026-07-01"},
+    )
+    assert created.status_code == 200
+    assert created.json()["bmi"] == 20.2
+
+    listing = client.get("/api/v1/phr/body-measurements", headers=_auth(token))
+    assert listing.status_code == 200
+    assert listing.json()["measurements"] == [
+        {
+            "observed_on": "2026-07-01",
+            "height_cm": 165.0,
+            "weight_kg": 55.0,
+            "bmi": 20.2,
+            "information_source": "self-declared",
+        }
+    ]
+    record = client.get("/api/v1/phr/record", headers=_auth(token))
+    assert record.json()["height_cm"] == 165.0
+    assert record.json()["weight_kg"] == 55.0
+
+
+def test_body_measurement_rejects_future_dates() -> None:
+    _enable("PHR_ENHANCED_ENABLED", "PHR_OBSERVATIONS_ENABLED")
+    token = _login("phr-body-future@example.com")
+    response = client.post(
+        "/api/v1/phr/body-measurements",
+        headers=_auth(token),
+        json={"height_cm": 165, "weight_kg": 55, "observed_on": "2999-01-01"},
+    )
+    assert response.status_code == 422
+
+
+def test_enhanced_record_persists_contact_insurance_and_honest_allergy_state() -> None:
+    _enable("PHR_ENHANCED_ENABLED")
+    token = _login("phr-contact-detail@example.com")
+    payload = {
+        "contact_email": "contact@example.com",
+        "emergency_contact_relationship": "Anh trai",
+        "emergency_contact_note": "Liên hệ sau giờ làm",
+        "insurance_provider": "BHYT",
+        "insurance_expiry": "2027-01-01",
+        "allergy_status": "none_known",
+    }
+    saved = client.put("/api/v1/phr/record", headers=_auth(token), json=payload)
+    assert saved.status_code == 200
+    body = saved.json()
+    for key, value in payload.items():
+        assert body[key] == value
 
 
 def test_export_is_downloadable_fhir_bundle() -> None:

@@ -43,6 +43,11 @@ from clara_api.db.models import (
     VisitPlanDraft,
     VisitShare,
 )
+from clara_api.glhs.adapters import (
+    ingest_visit_document,
+    owner_profile_scope,
+    retire_visit_document_assertions,
+)
 
 
 class DomainNotFoundError(LookupError):
@@ -462,6 +467,18 @@ def create_visit_document(
     )
     db.add(document)
     db.flush()
+    # A document is governed evidence, not an implicit clinical assertion.
+    # This records only its availability/provenance in GLHS; no transcript or
+    # signed note text is interpreted into health state here.
+    profile = db.get(PhrProfile, visit.profile_id)
+    if profile is None:
+        raise DomainNotFoundError("Profile not found")
+    ingest_visit_document(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=owner, purpose="visit_preparation"),
+        document=document,
+        idempotency_key=f"visit-document:{document.public_id}:revision:{document.revision_no}",
+    )
     return document
 
 
@@ -513,6 +530,15 @@ def withdraw_visit_document(
             source_public_id=document.public_id,
             reason="source_document_withdrawn",
         )
+        profile = db.get(PhrProfile, document.profile_id)
+        if profile is None:
+            raise DomainNotFoundError("Profile not found")
+        retire_visit_document_assertions(
+            db,
+            scope=owner_profile_scope(profile=profile, actor=owner, purpose="visit_preparation"),
+            document=document,
+            idempotency_key=f"visit-document:{document.public_id}:withdraw",
+        )
     db.flush()
     return document
 
@@ -551,6 +577,15 @@ def delete_visit_document(
             source_kind="document",
             source_public_id=document.public_id,
             reason="source_document_deleted",
+        )
+        profile = db.get(PhrProfile, document.profile_id)
+        if profile is None:
+            raise DomainNotFoundError("Profile not found")
+        retire_visit_document_assertions(
+            db,
+            scope=owner_profile_scope(profile=profile, actor=owner, purpose="visit_preparation"),
+            document=document,
+            idempotency_key=f"visit-document:{document.public_id}:delete",
         )
     db.flush()
     return document

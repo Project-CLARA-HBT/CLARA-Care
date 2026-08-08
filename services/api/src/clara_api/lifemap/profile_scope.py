@@ -48,11 +48,7 @@ class ProfileAccessPolicy:
 
     @property
     def delegated_actor_role(self) -> str:
-        return (
-            "clinician"
-            if "doctor" in {self.token_role, self.account_role}
-            else "caregiver"
-        )
+        return "clinician" if "doctor" in {self.token_role, self.account_role} else "caregiver"
 
 
 def _profile_selector(value: str):
@@ -64,11 +60,7 @@ def _profile_selector(value: str):
 
 
 def _data_classes(grant: FamilyAccessGrant) -> frozenset[str]:
-    return frozenset(
-        str(item)
-        for item in (grant.data_classes_json or [])
-        if isinstance(item, str)
-    )
+    return frozenset(str(item) for item in (grant.data_classes_json or []) if isinstance(item, str))
 
 
 def _grant_covers_profile(grant: FamilyAccessGrant, profile: PhrProfile) -> bool:
@@ -141,7 +133,17 @@ def resolve_profile_scope(
                     "export",
                 }
             ),
-            allowed_data_classes=frozenset({"lifemap", "medications", "visits", "evidence"}),
+            allowed_data_classes=frozenset(
+                {
+                    "lifemap",
+                    "medications",
+                    "allergies",
+                    "conditions",
+                    "observations",
+                    "visits",
+                    "evidence",
+                }
+            ),
         )
 
     # Administrative role is not a health-data capability. Support/admin access
@@ -180,9 +182,7 @@ def resolve_profile_scope(
     ).scalars()
     for grant in grants:
         actions = frozenset(
-            str(item)
-            for item in (grant.allowed_actions_json or [])
-            if isinstance(item, str)
+            str(item) for item in (grant.allowed_actions_json or []) if isinstance(item, str)
         )
         classes = _data_classes(grant)
         if _grant_covers_profile(grant, profile) and action in actions and data_class in classes:

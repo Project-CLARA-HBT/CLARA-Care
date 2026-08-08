@@ -19,7 +19,7 @@ export const resolveTheme = (preference: ThemePreference, prefersDark: boolean):
 
 export const getSystemTheme = (): ResolvedTheme => {
   if (typeof window === "undefined") {
-    return "light";
+    return "dark";
   }
 
   return window.matchMedia(THEME_QUERY).matches ? "dark" : "light";
@@ -27,11 +27,11 @@ export const getSystemTheme = (): ResolvedTheme => {
 
 export const getStoredThemePreference = (): ThemePreference => {
   if (typeof window === "undefined") {
-    return "light";
+    return "dark";
   }
 
   const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return isThemePreference(raw) ? raw : "light";
+  return isThemePreference(raw) ? raw : "dark";
 };
 
 export const saveThemePreference = (preference: ThemePreference): void => {
@@ -58,7 +58,7 @@ export const getThemeInitScript = (): string =>
     try {
       const key = "${THEME_STORAGE_KEY}";
       const raw = window.localStorage.getItem(key);
-      const preference = raw === "light" || raw === "dark" || raw === "system" ? raw : "light";
+      const preference = raw === "light" || raw === "dark" || raw === "system" ? raw : "dark";
       const prefersDark = window.matchMedia("${THEME_QUERY}").matches;
       const resolved = preference === "system" ? (prefersDark ? "dark" : "light") : preference;
       const root = document.documentElement;

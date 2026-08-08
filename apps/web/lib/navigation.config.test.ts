@@ -1,13 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  getMobilePrimaryNav,
+  getGroupedNavItems,
   getNavItemsByRole,
+  getPageMeta,
   getRoleHomePath,
   isAuthenticatedUtilityRoute,
+  isPublicRoute,
   isRouteAllowedForRole,
   resolvePostLoginPath,
 } from "@/lib/navigation.config";
+import {
+  getAvailableWorkspaces,
+  getMobileWorkspaceNav,
+  getWorkspaceForPath,
+  getWorkspaceNavigation,
+} from "@/lib/navigation.workspaces";
 
 describe("authenticated navigation defaults", () => {
   it("lands consumers on Today and professional roles on dashboard, never chat", () => {
@@ -19,12 +27,33 @@ describe("authenticated navigation defaults", () => {
     }
   });
 
+  it("treats the professional overview as a default route, not a workspace item", () => {
+    for (const role of ["researcher", "doctor", "admin"] as const) {
+      for (const workspace of getAvailableWorkspaces(role)) {
+        expect(getWorkspaceNavigation(role, workspace.id).primary.map((item) => item.href))
+          .not.toContain("/dashboard");
+      }
+    }
+    expect(getWorkspaceForPath("/dashboard", "doctor", "research")).toBe("research");
+    expect(getWorkspaceForPath("/dashboard", "doctor")).toBe("clinical");
+    expect(getWorkspaceForPath("/dashboard", "researcher")).toBe("research");
+    expect(getWorkspaceForPath("/dashboard", "admin")).toBe("admin");
+  });
+
   it("keeps research visible for evidence roles while preserving consumer deep links", () => {
     for (const role of ["researcher", "doctor", "admin"] as const) {
-      expect(getNavItemsByRole(role).some((item) => item.href === "/research")).toBe(true);
-      expect(getNavItemsByRole(role).some((item) => item.href === "/evidence")).toBe(true);
-      expect(getNavItemsByRole(role).some((item) => item.href === "/visits")).toBe(true);
-      expect(getNavItemsByRole(role).some((item) => item.href === "/family")).toBe(true);
+      expect(
+        getNavItemsByRole(role).some((item) => item.href === "/research"),
+      ).toBe(true);
+      expect(
+        getNavItemsByRole(role).some((item) => item.href === "/evidence"),
+      ).toBe(true);
+      expect(
+        getNavItemsByRole(role).some((item) => item.href === "/visits"),
+      ).toBe(true);
+      expect(
+        getNavItemsByRole(role).some((item) => item.href === "/family"),
+      ).toBe(true);
     }
     const consumer = getNavItemsByRole("normal").map((item) => item.href);
     expect(consumer).not.toContain("/research");
@@ -34,18 +63,40 @@ describe("authenticated navigation defaults", () => {
   });
 
   it("preserves an explicit safe next destination after login", () => {
-    expect(resolvePostLoginPath({ nextPath: "/phr", role: "normal" })).toBe("/phr");
+    expect(resolvePostLoginPath({ nextPath: "/phr", role: "normal" })).toBe(
+      "/phr",
+    );
   });
 
-  it("leads the consumer mobile nav with Today/LifeMap, not Chat (chat is not the IA)", () => {
-    const primary = getMobilePrimaryNav("normal").map((item) => item.href);
-    // Per the LifeMap product spec §6.1, chat is an input/explanation surface,
-    // not a primary consumer destination. Today must lead; chat is reached via
-    // the persistent "Hỏi CLARA" action instead of a bottom tab.
+  it("keeps mobile navigation to four workspace tasks plus the separate More control", () => {
+    const primary = getMobileWorkspaceNav("normal", "personal").map((item) => item.href);
     expect(primary[0]).toBe("/today");
+    expect(primary).toContain("/chat");
     expect(primary).toContain("/lifemap");
     expect(primary).toContain("/medicines");
-    expect(primary).not.toContain("/chat");
+    expect(primary).toHaveLength(4);
+  });
+
+  it("limits every available workspace to seven primary destinations", () => {
+    for (const role of ["normal", "researcher", "doctor", "admin"] as const) {
+      for (const workspace of getAvailableWorkspaces(role)) {
+        const navigation = getWorkspaceNavigation(role, workspace.id);
+        expect(navigation.primary.length).toBeGreaterThan(0);
+        expect(navigation.primary.length).toBeLessThanOrEqual(7);
+        expect(new Set(navigation.primary.map((item) => item.href)).size).toBe(
+          navigation.primary.length,
+        );
+      }
+    }
+  });
+
+  it("keeps secondary personal capabilities reachable through More", () => {
+    const secondary = getWorkspaceNavigation("normal", "personal").secondary.map(
+      (item) => item.href,
+    );
+    expect(secondary).toEqual(
+      expect.arrayContaining(["/visits", "/family", "/chat/shares", "/huong-dan"]),
+    );
   });
 
   it("allows onboarding without turning it into permanent navigation", () => {
@@ -54,6 +105,10 @@ describe("authenticated navigation defaults", () => {
     expect(
       getNavItemsByRole("normal").some((item) => item.href === "/welcome"),
     ).toBe(false);
+  });
+
+  it("keeps opaque public PHR share routes outside the authenticated shell", () => {
+    expect(isPublicRoute("/phr/shared/opaque-token")).toBe(true);
   });
 
   it("consolidates medication surfaces into one Medicines hub entry", () => {
@@ -74,5 +129,24 @@ describe("authenticated navigation defaults", () => {
     // and forward into the correct hub tab.
     expect(isRouteAllowedForRole("/selfmed", "normal")).toBe(true);
     expect(isRouteAllowedForRole("/careguard", "normal")).toBe(true);
+  });
+
+  it("localizes every visible navigation label, page meta, and group label", () => {
+    const english = getNavItemsByRole("admin", "en");
+    expect(english.find((item) => item.href === "/scribe")?.label).toBe(
+      "Visit notes",
+    );
+    expect(
+      english.find((item) => item.href === "/admin/observability")?.page.title,
+    ).toBe("Operational monitoring");
+    expect(
+      getGroupedNavItems("doctor", "en").find(
+        (group) => group.key === "clinical",
+      )?.label,
+    ).toBe("Clinical");
+    expect(getPageMeta("/dashboard/control-tower", "en").title).toBe(
+      "Knowledge control",
+    );
+    expect(getPageMeta("/unknown-route", "en").title).toBe("Workspace");
   });
 });

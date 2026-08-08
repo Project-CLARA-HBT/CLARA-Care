@@ -494,89 +494,89 @@ export default function AdminKnowledgeSourcesPage() {
     >
       <div className="space-y-6">
         <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-          <article className="rounded-2xl border border-slate-200 bg-[#001c38] p-4 shadow-lg dark:border-slate-700">
+          <article className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-cyan-100">{t(language, "admin.knowledgeSources.connectionMap")}</h3>
-              <span className="rounded-full border border-cyan-300/40 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-100">
+              <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--text-primary)]">{t(language, "admin.knowledgeSources.connectionMap")}</h3>
+              <span className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--status-ok-text)]">
                 {t(language, "admin.knowledgeSources.live")}
               </span>
             </div>
             <div className="mt-3 grid gap-4 md:grid-cols-[1fr_0.9fr]">
-              <div className="relative overflow-hidden rounded-xl border border-cyan-300/20 bg-slate-900/45 p-4">
+              <div className="relative overflow-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
                 <svg className="h-44 w-full" viewBox="0 0 560 210" aria-hidden="true">
-                  <path d="M90 36 L280 106" stroke="rgba(147,239,238,0.65)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-                  <path d="M468 36 L280 106" stroke="rgba(147,239,238,0.65)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-                  <path d="M90 178 L280 106" stroke="rgba(147,239,238,0.65)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-                  <path d="M468 178 L280 106" stroke="rgba(147,239,238,0.65)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-                  <circle cx="280" cy="106" r="34" fill="rgba(0,75,135,0.85)" stroke="rgba(147,239,238,0.85)" />
-                  <text x="280" y="112" textAnchor="middle" fill="#93efee" fontSize="11" fontWeight="700">
+                  <path d="M90 36 L280 106" stroke="var(--shell-border-strong)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+                  <path d="M468 36 L280 106" stroke="var(--shell-border-strong)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+                  <path d="M90 178 L280 106" stroke="var(--shell-border-strong)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+                  <path d="M468 178 L280 106" stroke="var(--shell-border-strong)" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+                  <circle cx="280" cy="106" r="34" fill="var(--brand-700)" stroke="var(--brand-primary)" />
+                  <text x="280" y="112" textAnchor="middle" fill="var(--on-secondary-container)" fontSize="11" fontWeight="700">
                     HUB CORE
                   </text>
-                  <circle cx="90" cy="36" r="14" fill="rgba(147,239,238,0.24)" />
-                  <circle cx="468" cy="36" r="14" fill="rgba(147,239,238,0.24)" />
-                  <circle cx="90" cy="178" r="14" fill="rgba(147,239,238,0.24)" />
-                  <circle cx="468" cy="178" r="14" fill="rgba(147,239,238,0.24)" />
-                  <text x="90" y="39" textAnchor="middle" fill="#d3e4ff" fontSize="9">RAG</text>
-                  <text x="468" y="39" textAnchor="middle" fill="#d3e4ff" fontSize="9">Docs</text>
-                  <text x="90" y="181" textAnchor="middle" fill="#d3e4ff" fontSize="9">Med DB</text>
-                  <text x="468" y="181" textAnchor="middle" fill="#d3e4ff" fontSize="9">Trials</text>
+                  <circle cx="90" cy="36" r="14" fill="var(--surface-brand-soft)" />
+                  <circle cx="468" cy="36" r="14" fill="var(--surface-brand-soft)" />
+                  <circle cx="90" cy="178" r="14" fill="var(--surface-brand-soft)" />
+                  <circle cx="468" cy="178" r="14" fill="var(--surface-brand-soft)" />
+                  <text x="90" y="39" textAnchor="middle" fill="var(--text-primary)" fontSize="9">RAG</text>
+                  <text x="468" y="39" textAnchor="middle" fill="var(--text-primary)" fontSize="9">Docs</text>
+                  <text x="90" y="181" textAnchor="middle" fill="var(--text-primary)" fontSize="9">Med DB</text>
+                  <text x="468" y="181" textAnchor="middle" fill="var(--text-primary)" fontSize="9">Trials</text>
                 </svg>
               </div>
-              <div className="space-y-2.5 rounded-xl border border-cyan-300/20 bg-slate-900/45 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">{t(language, "admin.knowledgeSources.recordsBySource")}</p>
+              <div className="space-y-2.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.recordsBySource")}</p>
                 {sourceRecordDistribution.length ? (
                   sourceRecordDistribution.map(([source, count]) => (
                     <div key={source}>
-                      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-cyan-100">
+                      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-[var(--text-primary)]">
                         <span className="truncate">{SOURCE_LABELS[source]}</span>
                         <span className="font-mono">{count}</span>
                       </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-highest)]">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-400"
+                          className="h-full rounded-full bg-[var(--brand-primary)]"
                           style={{ width: `${Math.max(6, Math.round((count / maxSourceRecordCount) * 100))}%` }}
                         />
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-300">{t(language, "admin.knowledgeSources.noSyncedRecords")}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{t(language, "admin.knowledgeSources.noSyncedRecords")}</p>
                 )}
               </div>
             </div>
           </article>
 
           <article className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.activeConnectors")}</p>
-              <p className="mt-1 text-2xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{activeRagConnectors}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.kpi.activeConnectorsHint")}</p>
+            <div className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.kpi.activeConnectors")}</p>
+              <p className="mt-1 text-2xl font-black text-[var(--text-brand)]">{activeRagConnectors}</p>
+              <p className="text-xs text-[var(--text-secondary)]">{t(language, "admin.knowledgeSources.kpi.activeConnectorsHint")}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.sources")}</p>
-              <p className="mt-1 text-2xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{sources.length}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.kpi.sourcesHint")}</p>
+            <div className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.kpi.sources")}</p>
+              <p className="mt-1 text-2xl font-black text-[var(--text-brand)]">{sources.length}</p>
+              <p className="text-xs text-[var(--text-secondary)]">{t(language, "admin.knowledgeSources.kpi.sourcesHint")}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.federatedRecords")}</p>
-              <p className="mt-1 text-2xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{sourceHubRecords.length}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.kpi.federatedRecordsHint")}</p>
+            <div className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.kpi.federatedRecords")}</p>
+              <p className="mt-1 text-2xl font-black text-[var(--text-brand)]">{sourceHubRecords.length}</p>
+              <p className="text-xs text-[var(--text-secondary)]">{t(language, "admin.knowledgeSources.kpi.federatedRecordsHint")}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.activeDocuments")}</p>
-              <p className="mt-1 text-2xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{activeDocumentCount}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.kpi.activeDocumentsHint")}</p>
+            <div className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.kpi.activeDocuments")}</p>
+              <p className="mt-1 text-2xl font-black text-[var(--text-brand)]">{activeDocumentCount}</p>
+              <p className="text-xs text-[var(--text-secondary)]">{t(language, "admin.knowledgeSources.kpi.activeDocumentsHint")}</p>
             </div>
           </article>
         </section>
 
         {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
+          <p className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm text-[var(--status-danger-text)]">
             {error}
           </p>
         ) : null}
         {message ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+          <p className="rounded-xl border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm text-[var(--status-ok-text)]">
             {message}
           </p>
         ) : null}

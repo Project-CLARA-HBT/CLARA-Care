@@ -112,10 +112,9 @@ export default function AuthField({
               aria-label={isPasswordVisible ? "An mat khau" : "Hien mat khau"}
               disabled={disabled}
             >
-              <i
-                aria-hidden="true"
-                className={isPasswordVisible ? "fa fa-eye-slash text-base" : "fa fa-eye text-base"}
-              />
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                {isPasswordVisible ? "visibility_off" : "visibility"}
+              </span>
             </button>
           ) : null}
         </div>

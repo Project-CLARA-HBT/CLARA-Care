@@ -488,6 +488,7 @@ export function buildCouncilView(snapshot: CouncilRunSnapshot): CouncilViewModel
       steps: snapshot.result.reasoningTimeline.map((item) => ({
         sequence: item.sequence,
         step: item.step,
+        detail: "",
       })),
     },
   };

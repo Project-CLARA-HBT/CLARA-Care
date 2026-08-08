@@ -1,11 +1,14 @@
+import hashlib
 import io
 import json
 import zipfile
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from clara_api.db.models import Query as QueryModel
-from clara_api.db.models import SessionModel, User
+from clara_api.db.models import SessionModel, User, WorkspaceConversationShare
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
@@ -382,7 +385,7 @@ def test_workspace_suggestions_and_search_return_valid_structure() -> None:
         assert isinstance(item["id"], str)
         assert isinstance(item["text"], str)
         assert isinstance(item["category"], str)
-        assert isinstance(item["score"], (int, float))
+        assert isinstance(item["score"], int | float)
 
     search_response = client.get("/api/v1/workspace/search?q=warfarin&limit=10", headers=headers)
     assert search_response.status_code == 200
@@ -497,13 +500,23 @@ def test_workspace_conversation_share_public_access_and_revoke() -> None:
     assert share_payload["is_active"] is True
     assert "/share/" in share_payload["public_url"]
     assert share_payload["expires_at"] is not None
+    with SessionLocal() as db:
+        stored_share = db.execute(
+            select(WorkspaceConversationShare).where(
+                WorkspaceConversationShare.id == share_payload["share_id"]
+            )
+        ).scalar_one()
+        assert stored_share.token_hash == hashlib.sha256(share_token.encode()).hexdigest()
+        assert not hasattr(stored_share, "share_token")
 
     get_share_response = client.get(
         f"/api/v1/workspace/conversations/{conversation_id}/share",
         headers=owner_headers,
     )
     assert get_share_response.status_code == 200
-    assert get_share_response.json()["share_token"] == share_token
+    # The capability is only returned at issuance; owner reads are metadata-only.
+    assert get_share_response.json()["share_token"] is None
+    assert get_share_response.json()["public_url"] is None
 
     public_response = client.get(f"/api/v1/workspace/public/conversations/{share_token}")
     assert public_response.status_code == 200
@@ -511,7 +524,7 @@ def test_workspace_conversation_share_public_access_and_revoke() -> None:
     assert public_payload["conversation_id"] == conversation_id
     assert isinstance(public_payload["messages"], list)
     assert len(public_payload["messages"]) >= 1
-    assert "owner_label" in public_payload
+    assert "owner_label" not in public_payload
 
     revoke_response = client.delete(
         f"/api/v1/workspace/conversations/{conversation_id}/share",
@@ -524,6 +537,38 @@ def test_workspace_conversation_share_public_access_and_revoke() -> None:
         f"/api/v1/workspace/public/conversations/{share_token}"
     )
     assert public_after_revoke_response.status_code == 404
+    assert public_after_revoke_response.json() == {
+        "detail": {"code": "public_share_unavailable"}
+    }
+
+
+def test_workspace_public_share_expiry_does_not_disclose_capability_state() -> None:
+    email = "workspace-share-expiry@example.com"
+    owner_headers = _auth_headers(_login(email))
+    conversation_id = _create_conversation(email, "Private shared conversation")
+    create_response = client.post(
+        f"/api/v1/workspace/conversations/{conversation_id}/share",
+        headers=owner_headers,
+        json={"expires_in_hours": 24},
+    )
+    assert create_response.status_code == 200
+    token = create_response.json()["share_token"]
+
+    with SessionLocal() as db:
+        share = (
+            db.query(WorkspaceConversationShare)
+            .filter(
+                WorkspaceConversationShare.token_hash
+                == hashlib.sha256(token.encode()).hexdigest()
+            )
+            .one()
+        )
+        share.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        db.commit()
+
+    expired_response = client.get(f"/api/v1/workspace/public/conversations/{token}")
+    assert expired_response.status_code == 404
+    assert expired_response.json() == {"detail": {"code": "public_share_unavailable"}}
 
 
 def test_workspace_public_share_caps_message_count() -> None:

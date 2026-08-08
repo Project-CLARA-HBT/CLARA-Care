@@ -198,9 +198,12 @@ mitigation and requires no clinical-code redeploy.
 ## Notes
 
 - The retention job (`COMPLIANCE_RETENTION_JOB_ENABLED`) is the only flag that
-  performs irreversible data changes (anonymization). Enable it last, verify the
-  cron under `scripts/ops/` in staging against a non-production dataset first,
-  and confirm append-only audit rows survive (P4) before the production flip.
+  performs irreversible data changes (anonymization/deletion). Enable it last,
+  verify the cron under `scripts/ops/` in staging against a non-production
+  dataset first, and confirm append-only audit rows survive (P4) before the
+  production flip. Its summary must contain counts only; it clears expired PHR
+  and medicine-cabinet health data, query/response logs and auth-token hashes
+  according to `docs/compliance/ropa.md`.
 - Bumping `COMPLIANCE_TRANSPARENCY_NOTICE_VERSION` is itself a user-visible
   change: it forces re-acknowledgement on next access. Treat a version bump like
   a re-enablement — verify P9 in staging before applying it to production.

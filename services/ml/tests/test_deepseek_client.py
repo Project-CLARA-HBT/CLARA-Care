@@ -39,6 +39,19 @@ class _DummyStreamResponse(_DummyResponse):
             yield line
 
 
+class _DummySseResponse(_DummyResponse):
+    """A non-streaming HTTP call whose gateway body is nevertheless SSE."""
+
+    def __init__(self, status_code: int, lines: list[str]) -> None:
+        super().__init__(status_code, {})
+        self._lines = lines
+        self.headers = {"content-type": "text/event-stream; charset=utf-8"}
+
+    def iter_lines(self):
+        for line in self._lines:
+            yield line
+
+
 def test_generate_enforces_registry_generation_contract_values(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -240,6 +253,47 @@ def test_generate_recovers_from_stream_when_json_content_is_empty(
 
     assert response.content == "hello"
     assert response.model == "gpt-5.3-codex"
+
+
+def test_generate_normalizes_gateway_sse_for_non_streaming_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An OpenAI-compatible gateway may send SSE despite ``stream: false``."""
+
+    class FakeClient:
+        def __init__(self, timeout: float) -> None:
+            self.timeout = timeout
+
+        def __enter__(self) -> "FakeClient":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def post(self, url: str, **kwargs: object) -> _DummySseResponse:
+            payload = kwargs.get("json")
+            assert isinstance(payload, dict)
+            assert payload["stream"] is False
+            return _DummySseResponse(
+                200,
+                [
+                    'data: {"object":"chat.completion.chunk","model":"router/flash","choices":[{"index":0,"delta":{"role":"assistant","content":"OK"},"finish_reason":null}]}',
+                    'data: {"object":"chat.completion.chunk","model":"router/flash","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+                    "data: [DONE]",
+                ],
+            )
+
+    monkeypatch.setattr("clara_ml.llm.deepseek_client.httpx.Client", FakeClient)
+    client = DeepSeekClient(
+        api_key="test-key",
+        base_url="https://router.example.test/v1",
+        model="router/flash",
+    )
+
+    response = client.generate("hello")
+
+    assert response.content == "OK"
+    assert response.model == "router/flash"
 
 
 def test_generate_falls_back_to_secondary_model_on_primary_unavailable(

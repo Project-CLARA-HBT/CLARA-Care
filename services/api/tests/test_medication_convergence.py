@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from clara_api.api.v1.endpoints import medication_safety
-from clara_api.db.models import MedicationCourse, MedicationCourseChange
+from clara_api.db.models import GlhsAssertion, MedicationCourse, MedicationCourseChange
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
@@ -22,17 +22,23 @@ def _account(label: str) -> dict[str, str]:
         },
     )
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-    assert client.put(
-        "/api/v1/phr/record",
-        headers=headers,
-        json={"full_name": "Medication V2"},
-    ).status_code == 200
+    assert (
+        client.put(
+            "/api/v1/phr/record",
+            headers=headers,
+            json={"full_name": "Medication V2"},
+        ).status_code
+        == 200
+    )
     status = client.get("/api/v1/auth/consent-status", headers=headers).json()
-    assert client.post(
-        "/api/v1/auth/consent",
-        headers=headers,
-        json={"accepted": True, "consent_version": status["required_version"]},
-    ).status_code == 200
+    assert (
+        client.post(
+            "/api/v1/auth/consent",
+            headers=headers,
+            json={"accepted": True, "consent_version": status["required_version"]},
+        ).status_code
+        == 200
+    )
     return headers
 
 
@@ -122,9 +128,7 @@ def test_course_commands_are_opaque_idempotent_and_append_only() -> None:
     assert history.status_code == 200, history.text
     assert history.json()["course_id"] == body["id"]
     assert history.json()["current_version"] == 3
-    assert [
-        (item["version"], item["action"]) for item in history.json()["changes"]
-    ] == [
+    assert [(item["version"], item["action"]) for item in history.json()["changes"]] == [
         (1, "confirmed_create"),
         (2, "correct"),
         (3, "end"),
@@ -154,6 +158,16 @@ def test_course_commands_are_opaque_idempotent_and_append_only() -> None:
             (2, "correct"),
             (3, "end"),
         ]
+        assertions = list(
+            db.execute(
+                select(GlhsAssertion)
+                .where(GlhsAssertion.profile_id == course.profile_id)
+                .order_by(GlhsAssertion.id)
+            ).scalars()
+        )
+        assert len(assertions) == 2
+        assert [item.lifecycle_status for item in assertions] == ["superseded", "superseded"]
+        assert [item.value_json["dose_text"] for item in assertions] == ["500 mg", "500 mg"]
 
 
 def test_hypothetical_ddi_is_separate_and_explicit(monkeypatch) -> None:

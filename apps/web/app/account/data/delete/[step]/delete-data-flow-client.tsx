@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -22,91 +22,22 @@ import {
   onUILanguageChange,
   type UILanguage,
 } from "@/lib/ui-language";
+import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 
 import type { DeleteFlowStep } from "./page";
 
-const STEPS = [
-  { id: "review", label: "Hệ quả" },
-  { id: "confirm", label: "Xác nhận" },
-  { id: "status", label: "Biên nhận" },
+const STEPS: ReadonlyArray<{ id: DeleteFlowStep; label: UITranslationKey }> = [
+  { id: "review", label: "account.dataDelete.step.review" },
+  { id: "confirm", label: "account.dataDelete.step.confirm" },
+  { id: "status", label: "account.dataDelete.step.status" },
 ];
 
-const COPY = {
-  vi: {
-    title: "Xóa dữ liệu cá nhân",
-    reviewTitle: "Trước khi gửi yêu cầu xóa",
-    reviewDescription:
-      "Hãy đọc hệ quả trước. Bạn vẫn có thể quay lại Dữ liệu của tôi mà chưa gửi yêu cầu.",
-    confirmTitle: "Xác nhận yêu cầu xóa",
-    confirmDescription:
-      "Chỉ gửi khi bạn hiểu đây là yêu cầu không thể hoàn tác.",
-    statusTitle: "Biên nhận yêu cầu xóa",
-    statusDescription: "Bạn có thể theo dõi tiến độ tại Dữ liệu của tôi.",
-    consequenceTitle: "Điều gì sẽ xảy ra",
-    consequence:
-      "CLARA sẽ xử lý yêu cầu xóa hoặc ẩn danh hóa dữ liệu cá nhân của bạn theo thời hạn luật định.",
-    retentionTitle: "Dữ liệu được giữ lại",
-    retention:
-      "Một số bản ghi audit/tuân thủ không chứa dữ liệu định danh vẫn có thể được giữ theo nghĩa vụ pháp lý.",
-    confirmation:
-      "Tôi hiểu yêu cầu này có thể xóa hoặc ẩn danh hóa dữ liệu cá nhân và không thể hoàn tác.",
-    continue: "Tiếp tục",
-    confirm: "Gửi yêu cầu xóa",
-    sending: "Đang gửi yêu cầu…",
-    back: "Quay lại",
-    cancel: "Hủy, quay lại dữ liệu của tôi",
-    receipt: "Yêu cầu đã được ghi nhận.",
-    unknownReceipt: "Không tìm thấy biên nhận này. Bạn có thể xem lịch sử yêu cầu của mình.",
-    unavailable: "Yêu cầu quyền dữ liệu hiện chưa được bật cho môi trường này.",
-    loading: "Đang tải biên nhận…",
-    loadError: "Không thể tải biên nhận lúc này. Vui lòng thử lại.",
-    submitError: "Không thể gửi yêu cầu lúc này. Vui lòng thử lại.",
-    requestId: "Mã yêu cầu",
-    submittedAt: "Gửi lúc",
-    dueAt: "Hạn xử lý",
-    status: "Trạng thái",
-  },
-  en: {
-    title: "Delete personal data",
-    reviewTitle: "Before you request deletion",
-    reviewDescription:
-      "Read the consequences first. You can still return to My data without sending a request.",
-    confirmTitle: "Confirm your deletion request",
-    confirmDescription: "Only submit when you understand this request cannot be undone.",
-    statusTitle: "Deletion request receipt",
-    statusDescription: "You can follow progress from My data.",
-    consequenceTitle: "What will happen",
-    consequence:
-      "CLARA will process a request to delete or anonymize your personal data within the statutory window.",
-    retentionTitle: "Data retained",
-    retention:
-      "Some audit or compliance records without identifying data may still be retained under legal obligations.",
-    confirmation:
-      "I understand this request may delete or anonymize my personal data and cannot be undone.",
-    continue: "Continue",
-    confirm: "Submit deletion request",
-    sending: "Submitting request…",
-    back: "Back",
-    cancel: "Cancel and return to My data",
-    receipt: "Your request has been recorded.",
-    unknownReceipt: "This receipt could not be found. You can review your request history.",
-    unavailable: "Data-subject requests are not enabled for this environment yet.",
-    loading: "Loading receipt…",
-    loadError: "Could not load the receipt. Please try again.",
-    submitError: "Could not submit your request. Please try again.",
-    requestId: "Request ID",
-    submittedAt: "Submitted",
-    dueAt: "Due",
-    status: "Status",
-  },
-} as const;
-
-const STATUS_LABELS = {
-  received: { vi: "Đã tiếp nhận", en: "Received" },
-  in_progress: { vi: "Đang xử lý", en: "In progress" },
-  fulfilled: { vi: "Đã hoàn tất", en: "Fulfilled" },
-  rejected: { vi: "Đã từ chối", en: "Rejected" },
-} as const;
+const STATUS_LABEL_KEYS: Record<DsarRequestRecord["status"], UITranslationKey> = {
+  received: "account.dataDelete.status.received",
+  in_progress: "account.dataDelete.status.inProgress",
+  fulfilled: "account.dataDelete.status.fulfilled",
+  rejected: "account.dataDelete.status.rejected",
+};
 
 function flowPath(step: DeleteFlowStep, requestId?: string | number) {
   const base = `/account/data/delete/${step}`;
@@ -122,7 +53,11 @@ export default function DeleteDataFlowClient({ step }: { step: DeleteFlowStep })
   const [receipt, setReceipt] = useState<DsarRequestRecord | null>(null);
   const [loadingReceipt, setLoadingReceipt] = useState(step === "status");
 
-  const text = useMemo(() => COPY[uiLanguage], [uiLanguage]);
+  const copy = (key: UITranslationKey) => t(uiLanguage, key);
+  const flowSteps = STEPS.map((item) => ({ ...item, label: copy(item.label) }));
+  const unknownReceiptText = copy("account.dataDelete.unknownReceipt");
+  const loadErrorText = copy("account.dataDelete.loadError");
+  const submitErrorText = copy("account.dataDelete.submitError");
   const currentStep = STEPS.findIndex((candidate) => candidate.id === step);
   const requestId = searchParams.get("request");
   const available = isDsarEnabled();
@@ -147,11 +82,11 @@ export default function DeleteDataFlowClient({ step }: { step: DeleteFlowStep })
         );
         setReceipt(match ?? null);
         if (!match) {
-          setSaveState({ kind: "error", message: text.unknownReceipt });
+          setSaveState({ kind: "error", message: unknownReceiptText });
         }
       })
       .catch(() => {
-        if (active) setSaveState({ kind: "error", message: text.loadError });
+        if (active) setSaveState({ kind: "error", message: loadErrorText });
       })
       .finally(() => {
         if (active) setLoadingReceipt(false);
@@ -159,7 +94,7 @@ export default function DeleteDataFlowClient({ step }: { step: DeleteFlowStep })
     return () => {
       active = false;
     };
-  }, [available, requestId, step, text.loadError, text.unknownReceipt]);
+  }, [available, loadErrorText, requestId, step, unknownReceiptText]);
 
   const submit = useCallback(async () => {
     if (!acknowledged) return;
@@ -169,28 +104,33 @@ export default function DeleteDataFlowClient({ step }: { step: DeleteFlowStep })
       router.replace(flowPath("status", record.id));
     } catch {
       // Never surface raw infrastructure details on a data-rights screen.
-      setSaveState({ kind: "error", message: text.submitError });
+      setSaveState({ kind: "error", message: submitErrorText });
     }
-  }, [acknowledged, router, text.submitError]);
+  }, [acknowledged, router, submitErrorText]);
 
   const title =
     step === "review"
-      ? text.reviewTitle
+      ? copy("account.dataDelete.reviewTitle")
       : step === "confirm"
-        ? text.confirmTitle
-        : text.statusTitle;
+        ? copy("account.dataDelete.confirmTitle")
+        : copy("account.dataDelete.statusTitle");
   const description =
     step === "review"
-      ? text.reviewDescription
+      ? copy("account.dataDelete.reviewDescription")
       : step === "confirm"
-        ? text.confirmDescription
-        : text.statusDescription;
+        ? copy("account.dataDelete.confirmDescription")
+        : copy("account.dataDelete.statusDescription");
 
   if (!available) {
     return (
-      <GuidedFlowShell title={text.title} description={text.unavailable} steps={STEPS} currentStep={0}>
+      <GuidedFlowShell
+        title={copy("account.dataDelete.title")}
+        description={copy("account.dataDelete.unavailable")}
+        steps={flowSteps}
+        currentStep={0}
+      >
         <StepActions
-          nextLabel={text.cancel}
+          nextLabel={copy("account.dataDelete.cancel")}
           nextType="button"
           onNext={() => router.push("/account/data")}
         />
@@ -200,87 +140,102 @@ export default function DeleteDataFlowClient({ step }: { step: DeleteFlowStep })
 
   return (
     <GuidedFlowShell
-      eyebrow={text.title}
+      eyebrow={copy("account.dataDelete.title")}
       title={title}
       description={description}
-      steps={STEPS}
+      steps={flowSteps}
       currentStep={currentStep}
       saveState={saveState}
     >
       {step === "review" ? (
         <div className="space-y-6">
           <ReviewSection
-            title={text.consequenceTitle}
-            items={[{ label: text.consequenceTitle, value: text.consequence }]}
+            title={copy("account.dataDelete.consequenceTitle")}
+            items={[
+              {
+                label: copy("account.dataDelete.consequenceTitle"),
+                value: copy("account.dataDelete.consequence"),
+              },
+            ]}
           />
           <ReviewSection
-            title={text.retentionTitle}
-            items={[{ label: text.retentionTitle, value: text.retention }]}
+            title={copy("account.dataDelete.retentionTitle")}
+            items={[
+              {
+                label: copy("account.dataDelete.retentionTitle"),
+                value: copy("account.dataDelete.retention"),
+              },
+            ]}
           />
           <StepActions
-            nextLabel={text.continue}
+            nextLabel={copy("account.dataDelete.continue")}
             nextType="button"
             onNext={() => router.push(flowPath("confirm"))}
-            back={{ label: text.cancel, href: "/account/data" }}
+            back={{ label: copy("account.dataDelete.cancel"), href: "/account/data" }}
           />
         </div>
       ) : step === "confirm" ? (
         <div className="space-y-6">
           <p className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm leading-6 text-[var(--status-danger-text)]">
-            {text.consequence}
+            {copy("account.dataDelete.consequence")}
           </p>
           <Toggle
             checked={acknowledged}
             onChange={setAcknowledged}
-            label={text.confirmation}
+            label={copy("account.dataDelete.confirmation")}
           />
           <StepActions
-            nextLabel={text.confirm}
+            nextLabel={copy("account.dataDelete.confirm")}
             nextType="button"
             onNext={() => void submit()}
             nextDisabled={!acknowledged}
             saving={saveState.kind === "saving"}
-            savingLabel={text.sending}
-            back={{ label: text.back, href: flowPath("review") }}
+            savingLabel={copy("account.dataDelete.sending")}
+            back={{ label: copy("account.dataDelete.back"), href: flowPath("review") }}
           />
         </div>
       ) : loadingReceipt ? (
         <p role="status" className="text-sm text-[var(--text-secondary)]">
-          {text.loading}
+          {copy("account.dataDelete.loading")}
         </p>
       ) : receipt ? (
         <div className="space-y-6">
           <p role="status" className="rounded-[var(--radius-lg)] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm font-medium text-[var(--status-ok-text)]">
-            {text.receipt}
+            {copy("account.dataDelete.receipt")}
           </p>
           <ReviewSection
-            title={text.statusTitle}
+            title={copy("account.dataDelete.statusTitle")}
             items={[
-              { label: text.requestId, value: String(receipt.id) },
+              { label: copy("account.dataDelete.requestId"), value: String(receipt.id) },
               {
-                label: text.submittedAt,
+                label: copy("account.dataDelete.submittedAt"),
                 value: receipt.created_at
-                  ? new Date(receipt.created_at).toLocaleString()
+                  ? formatLocaleDate(uiLanguage, receipt.created_at, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })
                   : "–",
               },
               {
-                label: text.dueAt,
-                value: receipt.due_at ? new Date(receipt.due_at).toLocaleDateString() : "–",
+                label: copy("account.dataDelete.dueAt"),
+                value: receipt.due_at
+                  ? formatLocaleDate(uiLanguage, receipt.due_at)
+                  : "–",
               },
             ]}
           />
           <Badge tone="neutral">
-            {text.status}: {STATUS_LABELS[receipt.status][uiLanguage]}
+            {copy("account.dataDelete.status")}: {copy(STATUS_LABEL_KEYS[receipt.status])}
           </Badge>
           <StepActions
-            nextLabel={text.cancel}
+            nextLabel={copy("account.dataDelete.cancel")}
             nextType="button"
             onNext={() => router.push("/account/data")}
           />
         </div>
       ) : (
         <StepActions
-          nextLabel={text.cancel}
+          nextLabel={copy("account.dataDelete.cancel")}
           nextType="button"
           onNext={() => router.push("/account/data")}
         />

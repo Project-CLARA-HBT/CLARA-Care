@@ -14,8 +14,14 @@ not legally binding. All PHR-derived decision-support output is hedged.
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
+import hmac
+import json
 import secrets
-from datetime import UTC, datetime, timedelta
+import time
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import (
@@ -34,7 +40,11 @@ from clara_api.compliance.consent import PURPOSE_SHARING
 from clara_api.compliance.service import ComplianceService
 from clara_api.core.auth_email import _send_via_smtp
 from clara_api.core.config import Settings, get_settings
-from clara_api.core.consent import PHR_CONSENT_PURPOSES, PhrConsentService
+from clara_api.core.consent import (
+    PHR_CONSENT_PURPOSES,
+    PhrConsentService,
+    ensure_medical_disclaimer_consent,
+)
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.core.upload_safety import (
@@ -51,6 +61,11 @@ from clara_api.db.models import (
     User,
 )
 from clara_api.db.session import get_db
+from clara_api.glhs.adapters import (
+    ingest_phr_observation,
+    ingest_phr_record_entries,
+    owner_profile_scope,
+)
 from clara_api.phr import audit as audit_svc
 from clara_api.phr.completeness import completeness_telemetry, score_completeness
 from clara_api.phr.emergency_card import build_emergency_card
@@ -68,11 +83,13 @@ from clara_api.phr.validator import (
     validate_observation,
 )
 from clara_api.schemas import (
+    PhrBodyMeasurementCreateRequest,
     PhrConsentMutationRequest,
     PhrEnhancedRecordResponse,
     PhrEntryPatchRequest,
     PhrObservationCreateRequest,
     PhrOcrConfirmRequest,
+    PhrOcrScanResponse,
     PhrOnboardingResponse,
     PhrOnboardingUpdateRequest,
     PhrRecordResponse,
@@ -87,6 +104,8 @@ router = APIRouter()
 USER_ROLE_DEP = Depends(require_roles("normal", "researcher", "doctor", "admin"))
 SETTINGS_DEP = Depends(get_settings)
 PHR_ONBOARDING_VERSION = "2026-07-v1"
+_OCR_REVIEW_TOKEN_VERSION = "phr-ocr-review.v1"
+_OCR_REVIEW_TOKEN_TTL_SECONDS = 15 * 60
 PHR_ONBOARDING_OPTIONAL_FIELDS = [
     "full_name",
     "date_of_birth",
@@ -100,6 +119,11 @@ PHR_ONBOARDING_OPTIONAL_FIELDS = [
     "conditions",
     "medications",
 ]
+_PUBLIC_PHR_SHARE_UNAVAILABLE = {"code": "public_share_unavailable"}
+
+
+def _phr_share_token_hash(share_token: str) -> str:
+    return hashlib.sha256(share_token.encode("utf-8")).hexdigest()
 
 
 def _get_user_by_token(db: Session, token: TokenPayload) -> User:
@@ -120,6 +144,14 @@ def _clean_object_list(value: Any) -> list[dict[str, Any]]:
         if isinstance(item, dict):
             rows.append(item)
     return rows
+
+
+def _allergy_status(profile: PhrProfile) -> str:
+    return (
+        profile.allergy_status
+        if profile.allergy_status in {"unknown", "none_known", "recorded"}
+        else "unknown"
+    )
 
 
 def _serialize_profile(profile: PhrProfile | None) -> PhrRecordResponse:
@@ -147,9 +179,7 @@ def _serialize_profile(profile: PhrProfile | None) -> PhrRecordResponse:
     )
 
 
-def _serialize_onboarding(
-    db: Session, *, user: User, profile: PhrProfile
-) -> PhrOnboardingResponse:
+def _serialize_onboarding(db: Session, *, user: User, profile: PhrProfile) -> PhrOnboardingResponse:
     onboarding_status = profile.onboarding_status or "pending"
     if onboarding_status not in {"pending", "completed", "skipped"}:
         onboarding_status = "pending"
@@ -310,38 +340,52 @@ def update_phr_onboarding(
         after={
             "status": profile.onboarding_status,
             "version": profile.onboarding_version,
-            "fields_supplied": sorted(
-                supplied.intersection(set(PHR_ONBOARDING_OPTIONAL_FIELDS))
-            ),
+            "fields_supplied": sorted(supplied.intersection(set(PHR_ONBOARDING_OPTIONAL_FIELDS))),
             "personalization_consent_changed": "personalization_consent" in supplied,
         },
         snapshot=_record_dict(profile, db),
     )
+    if supplied.intersection(list_fields):
+        # Onboarding is a health-state write too.  Mirror it in the same
+        # transaction so a later personalized consumer cannot observe an
+        # ungoverned list update between the profile projection and GLHS.
+        db.flush()
+        ingest_phr_record_entries(
+            db,
+            scope=owner_profile_scope(profile=profile, actor=user),
+            allergies=_clean_object_list(profile.allergies_json),
+            conditions=_clean_object_list(profile.conditions_json),
+            medications=_clean_object_list(profile.medications_json),
+            idempotency_key=f"phr-onboarding:{profile.public_id}:{now.isoformat()}",
+        )
     db.commit()
     db.refresh(profile)
     _no_store(response)
     return _serialize_onboarding(db, user=user, profile=profile)
 
 
-@router.get("/record", response_model=PhrRecordResponse)
+@router.get("/record")
 def get_phr_record(
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
-) -> PhrRecordResponse:
+    settings: Settings = SETTINGS_DEP,
+) -> PhrRecordResponse | PhrEnhancedRecordResponse:
     user = _get_user_by_token(db, token)
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == user.id)
     ).scalar_one_or_none()
+    if phr_features(settings).enhanced:
+        return _enhanced_response(profile) if profile is not None else PhrEnhancedRecordResponse()
     return _serialize_profile(profile)
 
 
-@router.put("/record", response_model=PhrRecordResponse)
+@router.put("/record")
 def upsert_phr_record(
     payload: PhrRecordUpdateRequest,
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
-) -> PhrRecordResponse:
+) -> PhrRecordResponse | PhrEnhancedRecordResponse:
     user = _get_user_by_token(db, token)
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == user.id)
@@ -358,9 +402,7 @@ def upsert_phr_record(
     # byte-for-byte unchanged (Req 18.1, Correctness Property 22).
     if enhanced:
         try:
-            allergies_json, conditions_json, medications_json = _enhanced_write_entries(
-                payload, db
-            )
+            allergies_json, conditions_json, medications_json = _enhanced_write_entries(payload, db)
         except PhrValidationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message
@@ -377,18 +419,38 @@ def upsert_phr_record(
     profile.height_cm = payload.height_cm
     profile.weight_kg = payload.weight_kg
     profile.phone = payload.phone.strip()
+    profile.contact_email = payload.contact_email.strip()
     profile.address = payload.address.strip()
     profile.emergency_contact_name = payload.emergency_contact_name.strip()
     profile.emergency_contact_phone = payload.emergency_contact_phone.strip()
+    profile.emergency_contact_relationship = payload.emergency_contact_relationship.strip()
+    profile.emergency_contact_note = payload.emergency_contact_note.strip()
+    profile.insurance_provider = payload.insurance_provider.strip()
     profile.insurance_id = payload.insurance_id.strip()
+    profile.insurance_expiry = payload.insurance_expiry
+    profile.allergy_status = "recorded" if allergies_json else payload.allergy_status
     profile.notes = payload.notes.strip()
     profile.allergies_json = allergies_json
     profile.conditions_json = conditions_json
     profile.medications_json = medications_json
 
+    # The legacy PHR response remains compatible, but writes are mirrored into
+    # the provenance-bound ledger before commit.  Unresolved free-text drugs
+    # stay candidates and cannot enter medication safety context.
+    db.flush()
+    profile_write_version = profile.updated_at.isoformat() if profile.updated_at else "pending"
+    ingest_phr_record_entries(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=user),
+        allergies=allergies_json,
+        conditions=conditions_json,
+        medications=medications_json,
+        idempotency_key=f"phr-record:{profile.public_id}:{profile_write_version}",
+    )
+
     db.commit()
     db.refresh(profile)
-    return _serialize_profile(profile)
+    return _enhanced_response(profile) if enhanced else _serialize_profile(profile)
 
 
 def _enhanced_write_entries(
@@ -491,10 +553,16 @@ def _enhanced_response(profile: PhrProfile) -> PhrEnhancedRecordResponse:
         height_cm=profile.height_cm,
         weight_kg=profile.weight_kg,
         phone=profile.phone or "",
+        contact_email=profile.contact_email or "",
         address=profile.address or "",
         emergency_contact_name=profile.emergency_contact_name or "",
         emergency_contact_phone=profile.emergency_contact_phone or "",
+        emergency_contact_relationship=profile.emergency_contact_relationship or "",
+        emergency_contact_note=profile.emergency_contact_note or "",
+        insurance_provider=profile.insurance_provider or "",
         insurance_id=profile.insurance_id or "",
+        insurance_expiry=profile.insurance_expiry,
+        allergy_status=_allergy_status(profile),
         notes=profile.notes or "",
         allergies=_clean_object_list(profile.allergies_json),
         conditions=_clean_object_list(profile.conditions_json),
@@ -600,6 +668,20 @@ def create_phr_entry(
         after=new_entry,
         snapshot=_record_dict(profile, db),
     )
+    # A targeted record entry is health-state input as well; retain the list
+    # projection for compatibility but make GLHS the governed counterpart.
+    db.flush()
+    ingest_phr_record_entries(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=user),
+        allergies=_clean_object_list(profile.allergies_json),
+        conditions=_clean_object_list(profile.conditions_json),
+        medications=_clean_object_list(profile.medications_json),
+        idempotency_key=(
+            f"phr-entry-create:{profile.public_id}:{kind}:"
+            f"{new_entry.get('id') or new_entry.get('entry_id')}"
+        ),
+    )
     db.commit()
     db.refresh(profile)
     return _enhanced_response(profile)
@@ -668,6 +750,20 @@ def patch_phr_entry(
         after=updated,
         snapshot=_record_dict(profile, db),
     )
+    # Targeted edits mirror the entire current list so removed/replaced items
+    # receive the required superseding transition as well.
+    db.flush()
+    ingest_phr_record_entries(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=user),
+        allergies=_clean_object_list(profile.allergies_json),
+        conditions=_clean_object_list(profile.conditions_json),
+        medications=_clean_object_list(profile.medications_json),
+        idempotency_key=(
+            f"phr-entry-patch:{profile.public_id}:{kind}:{entry_id}:"
+            f"{hashlib.sha256(json.dumps(updated, sort_keys=True).encode()).hexdigest()}"
+        ),
+    )
     db.commit()
     db.refresh(profile)
     return _enhanced_response(profile)
@@ -708,6 +804,18 @@ def delete_phr_entry(
         actor_user_id=user.id,
         before=target,
         snapshot=_record_dict(profile, db),
+    )
+    # Deletion is represented as a superseding GST transition.  The legacy
+    # JSON row disappears from the projection, while provenance remains in the
+    # append-only health-state ledger.
+    db.flush()
+    ingest_phr_record_entries(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=user),
+        allergies=_clean_object_list(profile.allergies_json),
+        conditions=_clean_object_list(profile.conditions_json),
+        medications=_clean_object_list(profile.medications_json),
+        idempotency_key=f"phr-entry-delete:{profile.public_id}:{kind}:{entry_id}",
     )
     db.commit()
     db.refresh(profile)
@@ -786,6 +894,158 @@ def set_phr_consent(
 # ---------------------------------------------------------------------------
 
 
+_BODY_HEIGHT_OBSERVATION = "body_height_cm"
+_BODY_WEIGHT_OBSERVATION = "body_weight_kg"
+
+
+def _body_measurement_rows(profile: PhrProfile, db: Session) -> list[dict[str, Any]]:
+    """Return only complete height/weight pairs, newest first.
+
+    Generic observations deliberately do not imply that values on different
+    dates belong together.  This projection accepts the two reserved body
+    observation names only when both occur on the same date.
+    """
+
+    grouped: dict[date, dict[str, float]] = {}
+    rows = db.execute(
+        select(PhrObservation).where(
+            PhrObservation.profile_id == profile.id,
+            PhrObservation.name.in_((_BODY_HEIGHT_OBSERVATION, _BODY_WEIGHT_OBSERVATION)),
+            PhrObservation.observed_on.is_not(None),
+        )
+    ).scalars()
+    for row in rows:
+        if row.observed_on is None:
+            continue
+        try:
+            value = float(row.value)
+        except (TypeError, ValueError):
+            continue
+        values = grouped.setdefault(row.observed_on, {})
+        values[row.name] = value
+
+    result: list[dict[str, Any]] = []
+    for observed_on, values in grouped.items():
+        height_cm = values.get(_BODY_HEIGHT_OBSERVATION)
+        weight_kg = values.get(_BODY_WEIGHT_OBSERVATION)
+        if height_cm is None or weight_kg is None:
+            continue
+        height_m = height_cm / 100
+        result.append(
+            {
+                "observed_on": observed_on.isoformat(),
+                "height_cm": height_cm,
+                "weight_kg": weight_kg,
+                "bmi": round(weight_kg / (height_m * height_m), 1),
+                "information_source": "self-declared",
+            }
+        )
+    return sorted(result, key=lambda item: str(item["observed_on"]), reverse=True)
+
+
+@router.get("/body-measurements")
+def list_phr_body_measurements(
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+    settings: Settings = SETTINGS_DEP,
+) -> dict[str, Any]:
+    if not phr_features(settings).observations:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="PHR observations not enabled"
+        )
+    user = _get_user_by_token(db, token)
+    profile = db.execute(
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        return {"measurements": []}
+    return {"measurements": _body_measurement_rows(profile, db)}
+
+
+@router.post("/body-measurements")
+def create_phr_body_measurement(
+    payload: PhrBodyMeasurementCreateRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER_ROLE_DEP,
+    settings: Settings = SETTINGS_DEP,
+) -> dict[str, Any]:
+    """Atomically record a paired body measurement and update current values."""
+
+    if not phr_features(settings).observations:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="PHR observations not enabled"
+        )
+    observed_on = payload.observed_on or date.today()
+    try:
+        validate_observation(
+            {
+                "name": _BODY_HEIGHT_OBSERVATION,
+                "value": str(payload.height_cm),
+                "unit": "cm",
+                "observed_on": observed_on,
+            }
+        )
+        validate_observation(
+            {
+                "name": _BODY_WEIGHT_OBSERVATION,
+                "value": str(payload.weight_kg),
+                "unit": "kg",
+                "observed_on": observed_on,
+            }
+        )
+    except PhrValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message
+        ) from exc
+
+    user = _get_user_by_token(db, token)
+    profile = _get_or_create_profile(db, user.id)
+    height = PhrObservation(
+        profile_id=profile.id,
+        entry_id=secrets.token_urlsafe(16),
+        name=_BODY_HEIGHT_OBSERVATION,
+        value=str(payload.height_cm),
+        unit="cm",
+        observed_on=observed_on,
+        information_source="self-declared",
+    )
+    weight = PhrObservation(
+        profile_id=profile.id,
+        entry_id=secrets.token_urlsafe(16),
+        name=_BODY_WEIGHT_OBSERVATION,
+        value=str(payload.weight_kg),
+        unit="kg",
+        observed_on=observed_on,
+        information_source="self-declared",
+    )
+    db.add_all((height, weight))
+    db.flush()
+    owner_scope = owner_profile_scope(profile=profile, actor=user)
+    ingest_phr_observation(db, scope=owner_scope, observation=height)
+    ingest_phr_observation(db, scope=owner_scope, observation=weight)
+    profile.height_cm = payload.height_cm
+    profile.weight_kg = payload.weight_kg
+    audit_svc.record_change(
+        db,
+        profile=profile,
+        action=audit_svc.ACTION_CREATE,
+        entity="body_measurement",
+        actor_user_id=user.id,
+        # Audit metadata intentionally excludes sensitive measurement values.
+        after={"observed_on": observed_on.isoformat(), "fields": ["height_cm", "weight_kg"]},
+        snapshot=_record_dict(profile, db),
+    )
+    db.commit()
+    height_m = payload.height_cm / 100
+    return {
+        "observed_on": observed_on.isoformat(),
+        "height_cm": payload.height_cm,
+        "weight_kg": payload.weight_kg,
+        "bmi": round(payload.weight_kg / (height_m * height_m), 1),
+        "information_source": "self-declared",
+    }
+
+
 @router.get("/observations")
 def list_phr_observations(
     db: Session = Depends(get_db),
@@ -860,6 +1120,12 @@ def create_phr_observation(
         information_source="self-declared",
     )
     db.add(obs)
+    db.flush()
+    ingest_phr_observation(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=user),
+        observation=obs,
+    )
     audit_svc.record_change(
         db,
         profile=profile,
@@ -993,28 +1259,29 @@ def create_phr_share(
             ),
         )
 
-    expires_at = None
-    if payload.expires_in_days is not None:
-        expires_at = datetime.now(UTC) + timedelta(days=payload.expires_in_days)
+    expires_at = datetime.now(UTC) + timedelta(days=payload.expires_in_days)
+    share_token = secrets.token_urlsafe(24)
     share = PhrShare(
         user_id=user.id,
-        share_token=secrets.token_urlsafe(24),
+        token_hash=_phr_share_token_hash(share_token),
         scope=payload.scope,
         is_active=True,
         expires_at=expires_at,
     )
     db.add(share)
     db.commit()
+    db.refresh(share)
     return {
-        "share_token": share.share_token,
+        "share_id": share.id,
+        "share_token": share_token,
         "scope": share.scope,
         "expires_at": share.expires_at.isoformat() if share.expires_at else None,
     }
 
 
-@router.delete("/share/{token_value}")
+@router.delete("/share/{share_id}")
 def revoke_phr_share(
-    token_value: str,
+    share_id: int,
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
@@ -1023,7 +1290,7 @@ def revoke_phr_share(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PHR sharing not enabled")
     user = _get_user_by_token(db, token)
     share = db.execute(
-        select(PhrShare).where(PhrShare.share_token == token_value, PhrShare.user_id == user.id)
+        select(PhrShare).where(PhrShare.id == share_id, PhrShare.user_id == user.id)
     ).scalar_one_or_none()
     if share is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
@@ -1043,14 +1310,23 @@ def read_shared_phr(
     if not phr_features(settings).sharing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PHR sharing not enabled")
     share = db.execute(
-        select(PhrShare).where(PhrShare.share_token == token_value)
+        select(PhrShare).where(PhrShare.token_hash == _phr_share_token_hash(token_value))
     ).scalar_one_or_none()
     if share is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_PUBLIC_PHR_SHARE_UNAVAILABLE,
+        )
     if not share.is_active:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Share has been revoked")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_PUBLIC_PHR_SHARE_UNAVAILABLE,
+        )
     if share.expires_at is not None and datetime.now(UTC) >= _aware(share.expires_at):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Share has expired")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_PUBLIC_PHR_SHARE_UNAVAILABLE,
+        )
 
     profile = db.execute(
         select(PhrProfile).where(PhrProfile.user_id == share.user_id)
@@ -1115,18 +1391,79 @@ def _aware(value: datetime) -> datetime:
     return value
 
 
+def _ocr_review_candidate_ids(candidate_ids: list[str]) -> list[str]:
+    """Validate opaque IDs; the token never carries OCR text or medications."""
+
+    if len(candidate_ids) != len(set(candidate_ids)) or any(
+        not isinstance(item, str) or not item.strip() for item in candidate_ids
+    ):
+        raise ValueError("ocr_review_candidate_ids_invalid")
+    return sorted(candidate_ids)
+
+
+def _make_ocr_review_token(*, user_id: int, candidate_ids: list[str]) -> str:
+    """Create a short-lived, owner-bound capability for review-only OCR rows."""
+
+    expires_at = int(time.time()) + _OCR_REVIEW_TOKEN_TTL_SECONDS
+    encoded_ids = (
+        base64.urlsafe_b64encode(
+            json.dumps(_ocr_review_candidate_ids(candidate_ids), separators=(",", ":")).encode()
+        )
+        .decode()
+        .rstrip("=")
+    )
+    message = f"{_OCR_REVIEW_TOKEN_VERSION}:{user_id}:{expires_at}:{encoded_ids}"
+    signature = hmac.new(
+        get_settings().jwt_secret_key.encode(), message.encode(), hashlib.sha256
+    ).hexdigest()
+    return f"{expires_at}.{encoded_ids}.{signature}"
+
+
+def _verify_ocr_review_token(*, token: str, user_id: int, candidate_ids: list[str]) -> None:
+    """Reject stale, cross-user or substituted OCR candidate sets without logging text."""
+
+    try:
+        raw_expiry, encoded_ids, supplied_signature = token.split(".", 2)
+        expires_at = int(raw_expiry)
+        padding = "=" * (-len(encoded_ids) % 4)
+        allowed_ids = json.loads(base64.urlsafe_b64decode(f"{encoded_ids}{padding}").decode())
+        if not isinstance(allowed_ids, list):
+            raise ValueError("ocr_review_candidate_ids_invalid")
+        allowed_ids = _ocr_review_candidate_ids(allowed_ids)
+        submitted_ids = _ocr_review_candidate_ids(candidate_ids)
+        if not set(submitted_ids).issubset(set(allowed_ids)):
+            raise ValueError("ocr_review_candidate_ids_invalid")
+    except (
+        AttributeError,
+        TypeError,
+        UnicodeDecodeError,
+        ValueError,
+        binascii.Error,
+    ) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="OCR review expired",
+        ) from exc
+    message = f"{_OCR_REVIEW_TOKEN_VERSION}:{user_id}:{expires_at}:{encoded_ids}"
+    expected = hmac.new(
+        get_settings().jwt_secret_key.encode(), message.encode(), hashlib.sha256
+    ).hexdigest()
+    if expires_at < int(time.time()) or not hmac.compare_digest(supplied_signature, expected):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="OCR review expired")
+
+
 # ---------------------------------------------------------------------------
 # OCR import with mandatory human confirmation (Req 9)
 # ---------------------------------------------------------------------------
 
 
-@router.post("/import/ocr/scan")
+@router.post("/import/ocr/scan", response_model=PhrOcrScanResponse)
 async def scan_phr_ocr(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
     settings: Settings = SETTINGS_DEP,
-) -> dict[str, Any]:
+) -> PhrOcrScanResponse:
     """Return OCR candidate entries WITHOUT committing anything (Req 9.1, 9.6).
 
     Reuses the careguard OCR bridge. Nothing is written to the PHR here; the user
@@ -1137,12 +1474,16 @@ async def scan_phr_ocr(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="PHR OCR import not enabled"
         )
-    _get_user_by_token(db, token)
+    user = _get_user_by_token(db, token)
+    ensure_medical_disclaimer_consent(db, user_id=user.id)
 
     # Lazy import keeps the careguard import cycle out of module load.
     from clara_api.api.v1.endpoints.careguard import (
+        _apply_ocr_correction,
+        _attach_ocr_source_coordinates,
         _detect_drugs_from_text,
         _enforce_low_confidence_manual_confirm,
+        _reject_ocr_prompt_injection,
         _scan_with_tgc_ocr,
     )
 
@@ -1173,21 +1514,54 @@ async def scan_phr_ocr(
         ) from exc
     file_name = verified.filename
     content_type = verified.media_type
-    extracted_text, _engine, _raw = _scan_with_tgc_ocr(file_bytes, file_name, content_type)
+    extracted_text, engine, _raw = _scan_with_tgc_ocr(file_bytes, file_name, content_type)
+    correction = _apply_ocr_correction(extracted_text)
+    _reject_ocr_prompt_injection(correction.corrected_text)
     detections = _enforce_low_confidence_manual_confirm(
-        _detect_drugs_from_text(extracted_text, db=db)
+        _detect_drugs_from_text(
+            correction.corrected_text,
+            db=db,
+            skip_ocr_correction=True,
+        )
+    )
+    detections = _attach_ocr_source_coordinates(
+        detections, corrected_text=correction.corrected_text
     )
     candidates = [
         {
+            "candidate_id": secrets.token_urlsafe(18),
             "name": d.drug_name or d.normalized_name,
             "dose": d.dosage or "",
             "frequency": "",
             "ocr_confidence": d.confidence,
-            "requires_manual_confirm": d.requires_manual_confirm,
+            # Every OCR row is review-only. A displayed confidence is never a
+            # substitute for the explicit acknowledgement on confirm.
+            "requires_manual_confirm": True,
+            "confirmed": False,
+            "source_coordinates": d.source_coordinates,
         }
-        for d in detections
+        for d in detections[:120]
     ]
-    return {"committed": False, "candidates": candidates}
+    engine_value = str(engine or "").lower()
+    provider_category = (
+        "google_cloud_vision"
+        if "google" in engine_value or "vision" in engine_value
+        else "local_tesseract"
+        if "tesseract" in engine_value
+        else "configured_ocr_service"
+    )
+    candidate_ids = [str(candidate["candidate_id"]) for candidate in candidates]
+    return PhrOcrScanResponse(
+        candidates=candidates,
+        review_token=_make_ocr_review_token(user_id=user.id, candidate_ids=candidate_ids),
+        processing_disclosure={
+            "processing_purpose": "medication_candidate_extraction",
+            "provider_category": provider_category,
+            "upload_persisted_by_clara": False,
+            "raw_text_logged_by_clara": False,
+            "human_confirmation_required": True,
+        },
+    )
 
 
 @router.post("/import/ocr/confirm", response_model=PhrEnhancedRecordResponse)
@@ -1208,18 +1582,31 @@ def confirm_phr_ocr(
             status_code=status.HTTP_404_NOT_FOUND, detail="PHR OCR import not enabled"
         )
     user = _get_user_by_token(db, token)
+    ensure_medical_disclaimer_consent(db, user_id=user.id)
     profile = _get_or_create_profile(db, user.id)
+
+    candidate_ids = payload.review_candidate_ids
+    _verify_ocr_review_token(
+        token=payload.review_token,
+        user_id=user.id,
+        candidate_ids=candidate_ids,
+    )
+    confirmed_candidate_ids = [candidate.candidate_id for candidate in payload.medications]
+    if len(confirmed_candidate_ids) != len(set(confirmed_candidate_ids)) or any(
+        candidate_id not in set(candidate_ids) for candidate_id in confirmed_candidate_ids
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="OCR review candidates are invalid.",
+        )
 
     items = _clean_object_list(profile.medications_json)
     added: list[str] = []
     for candidate in payload.medications:
-        if candidate.requires_manual_confirm:
+        if not candidate.confirmed:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    f"Mục cần xác nhận thủ công trước khi lưu / candidate still requires "
-                    f"manual confirmation: '{candidate.name}'"
-                ),
+                detail="Mỗi mục OCR cần được xác nhận trước khi lưu.",
             )
         try:
             validated = validate_medication(
@@ -1257,6 +1644,21 @@ def confirm_phr_ocr(
         actor_user_id=user.id,
         after={"ocr_imported_count": len(added)},
         snapshot=_record_dict(profile, db),
+    )
+    # OCR is merely extraction until the user confirms this request.  After
+    # that confirmation, preserve the same record entries in GLHS as
+    # unresolved medication candidates; no fuzzy OCR name can feed DDI.
+    db.flush()
+    ingest_phr_record_entries(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=user),
+        allergies=_clean_object_list(profile.allergies_json),
+        conditions=_clean_object_list(profile.conditions_json),
+        medications=_clean_object_list(profile.medications_json),
+        idempotency_key=(
+            "phr-ocr-confirm:"
+            f"{profile.public_id}:{hashlib.sha256(','.join(sorted(added)).encode()).hexdigest()}"
+        ),
     )
     db.commit()
     db.refresh(profile)

@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from clara_api.api.v1.endpoints import lifemap_capture as capture_endpoint
 from clara_api.core.config import get_settings
 from clara_api.db.models import (
+    GlhsAssertion,
     LifeMapCaptureCandidate,
     LifeMapCaptureReviewAction,
     LifeMapCaptureSession,
@@ -449,6 +450,21 @@ def test_medication_capture_requires_critical_review_then_creates_confirmed_cour
         assert course.normalization_system == "rxnorm"
         assert course.normalization_code == "161"
         assert course.provenance_json["normalization"]["decision"] == "accepted"
+        event_assertion = db.execute(
+            select(GlhsAssertion).where(
+                GlhsAssertion.semantic_key
+                == f"lifemap_event:{confirmed.json()['event_id']}",
+            )
+        ).scalar_one()
+        assert event_assertion.lifecycle_status == "active"
+        assert event_assertion.epistemic_state == "documented"
+        medication_assertion = db.execute(
+            select(GlhsAssertion).where(
+                GlhsAssertion.semantic_key == f"medication_course:{course.public_id}",
+            )
+        ).scalar_one()
+        assert medication_assertion.assertion_type == "medications_unresolved"
+        assert medication_assertion.lifecycle_status == "candidate"
 
 
 def test_medication_capture_never_accepts_an_unmapped_normalization(

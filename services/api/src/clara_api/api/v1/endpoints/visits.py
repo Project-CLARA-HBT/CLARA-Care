@@ -19,6 +19,7 @@ from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     LifeMapEpisode,
     LifeMapEvent,
+    LifeMapEventRevision,
     LifeMapVisit,
     MedicationCourse,
     PhrProfile,
@@ -32,6 +33,7 @@ from clara_api.db.models import (
     VisitShare,
 )
 from clara_api.db.session import get_db
+from clara_api.glhs.adapters import ingest_lifemap_event, owner_profile_scope
 from clara_api.lifemap.visit_family_service import (
     DomainNotFoundError,
     DomainValidationError,
@@ -511,9 +513,7 @@ def extract_plan_endpoint(
         resolved_visit_id = _resolve_visit_id(db, user.id, visit_id)
         document_selector = VisitDocument.public_id == payload.document_id
         if payload.document_id.isdecimal():
-            document_selector = document_selector | (
-                VisitDocument.id == int(payload.document_id)
-            )
+            document_selector = document_selector | (VisitDocument.id == int(payload.document_id))
         document = db.execute(
             select(VisitDocument).where(
                 document_selector,
@@ -525,10 +525,7 @@ def extract_plan_endpoint(
             raise DomainNotFoundError("Visit document not found")
         ensure_medical_disclaimer_consent(db, user_id=user.id)
         extraction: dict[str, Any] | None = None
-        if (
-            get_settings().lifemap_visit_extraction_enabled
-            and document.text_content
-        ):
+        if get_settings().lifemap_visit_extraction_enabled and document.text_content:
             try:
                 extraction = proxy_ml_post(
                     "/v1/lifemap/visit/extract",
@@ -561,12 +558,8 @@ def extract_plan_endpoint(
                 )
                 draft.provenance_json = {
                     **draft.provenance_json,
-                    "reason_code": str(
-                        extraction.get("reason_code") or "no_grounded_candidates"
-                    ),
-                    "security_findings": list(
-                        extraction.get("security_findings") or []
-                    )[:10],
+                    "reason_code": str(extraction.get("reason_code") or "no_grounded_candidates"),
+                    "security_findings": list(extraction.get("security_findings") or [])[:10],
                 }
         db.commit()
         return {
@@ -593,9 +586,7 @@ def withdraw_plan_endpoint(
     user, profile = _scope(db, token)
     try:
         resolved_visit_id = _resolve_visit_id(db, user.id, visit_id)
-        resolved_draft_id = _resolve_owned_id(
-            db, VisitPlanDraft, draft_id, profile_id=profile.id
-        )
+        resolved_draft_id = _resolve_owned_id(db, VisitPlanDraft, draft_id, profile_id=profile.id)
         draft = withdraw_visit_plan_draft(
             db,
             owner=user,
@@ -648,6 +639,26 @@ def confirm_plan_endpoint(
             episode_id=resolved_episode_id,
             confirmation_key=idempotency_key,
         )
+        # A selected, source-grounded visit instruction may create a LifeMap
+        # event, but it still travels through the same governed transition
+        # adapter.  The adapter preserves owner confirmation as documented
+        # rather than silently asserting clinical confirmation.
+        scope = owner_profile_scope(profile=profile, actor=user)
+        for event in events:
+            revision = db.execute(
+                select(LifeMapEventRevision).where(
+                    LifeMapEventRevision.event_id == event.id,
+                    LifeMapEventRevision.profile_id == profile.id,
+                    LifeMapEventRevision.revision_no == event.current_revision_no,
+                )
+            ).scalar_one()
+            ingest_lifemap_event(
+                db,
+                scope=scope,
+                event=event,
+                revision=revision,
+                idempotency_key=f"{idempotency_key}:{event.public_id}",
+            )
         db.commit()
         return {
             "id": draft.public_id,
@@ -767,12 +778,10 @@ def visit_pack_options_endpoint(
     )
     return {
         "concerns": [
-            {"id": row.public_id, "label": row.text, "priority": row.priority}
-            for row in concerns
+            {"id": row.public_id, "label": row.text, "priority": row.priority} for row in concerns
         ],
         "episodes": [
-            {"id": row.public_id, "label": row.title, "status": row.status}
-            for row in episodes
+            {"id": row.public_id, "label": row.title, "status": row.status} for row in episodes
         ],
         "events": [
             {
@@ -808,9 +817,7 @@ def approve_pack_endpoint(
 ) -> dict[str, Any]:
     user, profile = _scope(db, token)
     try:
-        resolved_pack_id = _resolve_owned_id(
-            db, VisitPackVersion, pack_id, profile_id=profile.id
-        )
+        resolved_pack_id = _resolve_owned_id(db, VisitPackVersion, pack_id, profile_id=profile.id)
         pack = approve_visit_pack(db, owner=user, pack_id=resolved_pack_id)
         db.commit()
         return {
@@ -833,9 +840,7 @@ def create_share_endpoint(
 ) -> dict[str, Any]:
     user, profile = _scope(db, token)
     try:
-        resolved_pack_id = _resolve_owned_id(
-            db, VisitPackVersion, pack_id, profile_id=profile.id
-        )
+        resolved_pack_id = _resolve_owned_id(db, VisitPackVersion, pack_id, profile_id=profile.id)
         share, token_value = create_visit_share(
             db,
             owner=user,
@@ -863,12 +868,8 @@ def revoke_share_endpoint(
 ) -> dict[str, str]:
     user, profile = _scope(db, token)
     try:
-        resolved_pack_id = _resolve_owned_id(
-            db, VisitPackVersion, pack_id, profile_id=profile.id
-        )
-        resolved_share_id = _resolve_owned_id(
-            db, VisitShare, share_id, profile_id=profile.id
-        )
+        resolved_pack_id = _resolve_owned_id(db, VisitPackVersion, pack_id, profile_id=profile.id)
+        resolved_share_id = _resolve_owned_id(db, VisitShare, share_id, profile_id=profile.id)
         revoke_visit_share(
             db,
             owner=user,

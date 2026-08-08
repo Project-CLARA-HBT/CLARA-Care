@@ -21,7 +21,6 @@ const FLOW_TOGGLES = [
   "rag_reranker_enabled",
   "rag_nli_enabled",
   "rag_graphrag_enabled",
-  "deepseek_fallback_enabled",
   "scientific_retrieval_enabled",
   "web_retrieval_enabled",
   "file_retrieval_enabled"
@@ -38,7 +37,7 @@ const DEFAULT_FLOW: ControlTowerRagFlowConfig = {
   rag_nli_enabled: true,
   rag_graphrag_enabled: true,
   verification_enabled: true,
-  deepseek_fallback_enabled: true,
+  deepseek_fallback_enabled: false,
   low_context_threshold: 0.2,
   precision_at_k: 10,
   recall_at_k: 10,

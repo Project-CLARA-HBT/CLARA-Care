@@ -40,7 +40,10 @@ _ALLOWED_AUDIO_TYPES = {
     "audio/x-m4a",
     "application/octet-stream",
 }
-_COUNCIL_EVIDENCE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+# Citation identifiers are opaque data, not route segments.  Allow canonical
+# DOI values (which contain `/`) while still bounding the accepted character
+# set and length before they cross the Council boundary.
+_COUNCIL_EVIDENCE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
 _COUNCIL_EVIDENCE_CATEGORIES = frozenset(
     {
         "clinical_guideline",
@@ -309,7 +312,7 @@ def _sanitize_labs(value: Any) -> dict[str, float | str]:
         name = str(key).strip()[:120]
         if not name:
             continue
-        if isinstance(item, (int, float)) and not isinstance(item, bool):
+        if isinstance(item, int | float) and not isinstance(item, bool):
             normalized[name] = float(item)
             continue
         text = str(item).strip()
@@ -336,7 +339,7 @@ def _normalize_run_payload(value: dict[str, Any] | None) -> dict[str, Any]:
 
     specialist_count_raw = payload.get("specialist_count", payload.get("specialistCount", 3))
     specialist_count = 3
-    if isinstance(specialist_count_raw, (int, float)) and not isinstance(
+    if isinstance(specialist_count_raw, int | float) and not isinstance(
         specialist_count_raw, bool
     ):
         specialist_count = int(specialist_count_raw)
@@ -961,7 +964,10 @@ def attach_council_evidence_snapshot(
     ).scalar_one_or_none()
     if job is None:
         # Keep owner isolation: another user's job and an unknown id are both 404.
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Research snapshot không khả dụng.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Research snapshot không khả dụng.",
+        )
     packet = _council_packet_from_research_snapshot(job)
     if packet is None:
         raise HTTPException(
@@ -1096,8 +1102,8 @@ def run_council_case(
     # Preserve a valid ML-side disclosure when available. If the Council run
     # does not carry one, only the intake's operational model id is considered;
     # transcript and other clinical fields are deliberately never inspected.
-    _intake = _as_dict(case_item.intake_json)
-    _intake_details = _as_dict(_intake.get("details"))
+    _intake = _as_dict(case_item.intake_json) or {}
+    _intake_details = _as_dict(_intake.get("details")) or {}
     _intake_model_used = _intake_details.get("model_used")
     raw_result = service.with_disclosure(
         raw_result,

@@ -126,188 +126,188 @@ export default function AdminOverviewPanel() {
   return (
     <div className="space-y-4">
       {error ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--danger-border)] bg-[var(--surface-danger-soft)] px-3 py-2 text-sm text-[var(--text-danger)]">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => void reload()}
-            className="rounded-lg border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 dark:border-rose-800 dark:bg-slate-900 dark:text-rose-300"
+            className="rounded-lg border border-[color:var(--danger-border)] bg-[var(--surface-panel)] px-2 py-1 text-xs font-medium text-[var(--text-danger)]"
           >
             Retry
           </button>
         </div>
       ) : null}
       {inventoryError ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-3 py-2 text-sm text-[var(--text-warning)]">
           <span>{inventoryError}</span>
           <button
             type="button"
             onClick={() => setInventoryReloadTick((prev) => prev + 1)}
-            className="rounded-lg border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-200"
+            className="rounded-lg border border-[color:var(--status-warning-border)] bg-[var(--surface-panel)] px-2 py-1 text-xs font-medium text-[var(--text-warning)]"
           >
             Reload
           </button>
         </div>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <section className="grid gap-4 lg:grid-cols-2 [&>article]:!rounded-[var(--radius-xl)] [&>article]:!border-t-[#2A3950] [&>article]:!border-[color:var(--shell-border)] [&>article]:!bg-[var(--surface-panel)] [&>article]:!shadow-none">
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">RAG Configuration Block</p>
-              <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Source Matrix</h3>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Theo dõi coverage, taxonomy và mức ưu tiên của nguồn tri thức.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">RAG Configuration Block</p>
+              <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Source Matrix</h3>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">Theo dõi coverage, taxonomy và mức ưu tiên của nguồn tri thức.</p>
             </div>
-            <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <span className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-[11px] font-mono text-[var(--text-secondary)]">
               sources:{totalSources}
             </span>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Enabled</p>
-              <p className="mt-1 text-lg font-semibold text-emerald-600">{enabledSources}</p>
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Enabled</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--status-ok-text)]">{enabledSources}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Categories</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{categoryCount}</p>
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Categories</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{categoryCount}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Coverage</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{pct(sourceCoverage)}</p>
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Coverage</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{pct(sourceCoverage)}</p>
             </div>
           </div>
-          <div className="mt-3 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
-            <div className="h-2 rounded-full bg-gradient-to-r from-sky-500 to-cyan-400" style={{ width: `${Math.round(sourceCoverage * 100)}%` }} />
+          <div className="mt-3 overflow-hidden rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)]">
+            <div className="h-2 rounded-full bg-[#60a5fa]" style={{ width: `${Math.round(sourceCoverage * 100)}%` }} />
           </div>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Answer Flow Block</p>
-              <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Decision Orchestration</h3>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Giám sát trạng thái các flow flags và ngưỡng low-context của router.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Answer Flow Block</p>
+              <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Decision Orchestration</h3>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">Giám sát trạng thái các flow flags và ngưỡng low-context của router.</p>
             </div>
-            <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-mono text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <span className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-[11px] font-mono text-[var(--text-secondary)]">
               flags:{flowEnabledCount}/{flowTotal}
             </span>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Flow Flags</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Flow Flags</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                 {flowEnabledCount}/{flowTotal}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Flow Coverage</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{pct(flowCoverage)}</p>
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Flow Coverage</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{pct(flowCoverage)}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">low_context_threshold</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{config?.rag_flow.low_context_threshold ?? 0}</p>
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">low_context_threshold</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{config?.rag_flow.low_context_threshold ?? 0}</p>
             </div>
           </div>
-          <div className="mt-3 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
-            <div className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-sky-500" style={{ width: `${Math.round(flowCoverage * 100)}%` }} />
+          <div className="mt-3 overflow-hidden rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)]">
+            <div className="h-2 rounded-full bg-[#60a5fa]" style={{ width: `${Math.round(flowCoverage * 100)}%` }} />
           </div>
         </article>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Retrieval Connectors</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalSources}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Nguồn dữ liệu đang khai báo</p>
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 [&>article]:!rounded-[var(--radius-xl)] [&>article]:!border-t-[#2A3950] [&>article]:!border-[color:var(--shell-border)] [&>article]:!bg-[var(--surface-panel)] [&>article]:!shadow-none">
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Retrieval Connectors</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">{totalSources}</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Nguồn dữ liệu đang khai báo</p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Enabled Sources</p>
-          <p className="mt-2 text-3xl font-semibold text-emerald-600">{enabledSources}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Coverage {pct(sourceCoverage)}</p>
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Enabled Sources</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--status-ok-text)]">{enabledSources}</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Coverage {pct(sourceCoverage)}</p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Flow Flags</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Flow Flags</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">
             {flowEnabledCount}/{flowTotal}
           </p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Router, verification, fallback</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Router, verification, fail-closed generation</p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Categories</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{categoryCount}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Nhóm nguồn dữ liệu</p>
-        </article>
-      </section>
-
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Knowledge Hubs</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalKnowledgeSources}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Active {activeKnowledgeSources}</p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Federated Connectors</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalSourceHubCatalog}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Live sync {liveSourceHubCatalog}</p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Unified Sources</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{totalUnifiedSources}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Connectors + Knowledge + Federation</p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-          <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Unified Active</p>
-          <p className="mt-2 text-3xl font-semibold text-emerald-600">{totalActiveUnifiedSources}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Đang usable trong pipeline</p>
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Categories</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">{categoryCount}</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Nhóm nguồn dữ liệu</p>
         </article>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 [&>article]:!rounded-[var(--radius-xl)] [&>article]:!border-t-[#2A3950] [&>article]:!border-[color:var(--shell-border)] [&>article]:!bg-[var(--surface-panel)] [&>article]:!shadow-none">
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Knowledge Hubs</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">{totalKnowledgeSources}</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Active {activeKnowledgeSources}</p>
+        </article>
+
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Federated Connectors</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">{totalSourceHubCatalog}</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Live sync {liveSourceHubCatalog}</p>
+        </article>
+
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Unified Sources</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--text-primary)]">{totalUnifiedSources}</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Connectors + Knowledge + Federation</p>
+        </article>
+
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <p className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Unified Active</p>
+          <p className="mt-2 text-3xl font-semibold text-[var(--status-ok-text)]">{totalActiveUnifiedSources}</p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">Đang usable trong pipeline</p>
+        </article>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] [&>article]:!rounded-[var(--radius-xl)] [&>article]:!border-t-[#2A3950] [&>article]:!border-[color:var(--shell-border)] [&>article]:!bg-[var(--surface-panel)] [&>article]:!shadow-none">
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Source Priority Trend</h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Top 10 sources</span>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Source Priority Trend</h3>
+            <span className="text-xs text-[var(--text-muted)]">Top 10 sources</span>
           </div>
           <div className="mt-3">
             {isLoading ? (
-              <div className="h-14 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+              <div className="h-14 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
             ) : (
-              <Sparkline points={prioritySeries} stroke="#2563eb" />
+              <Sparkline points={prioritySeries} stroke="#a4c9ff" />
             )}
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Điểm cao hơn thể hiện ưu tiên cao hơn (priority gần 1).</p>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">Điểm cao hơn thể hiện ưu tiên cao hơn (priority gần 1).</p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+        <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Flow Balance</h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Threshold vs Flags</span>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Flow Balance</h3>
+            <span className="text-xs text-[var(--text-muted)]">Threshold vs Flags</span>
           </div>
           <div className="mt-3">
-            {isLoading ? <div className="h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" /> : <BarBlocks values={thresholdSeries} />}
+            {isLoading ? <div className="h-16 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> : <BarBlocks values={thresholdSeries} />}
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">`low_context_threshold` đang là {config?.rag_flow.low_context_threshold ?? 0}.</p>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">`low_context_threshold` đang là {config?.rag_flow.low_context_threshold ?? 0}.</p>
         </article>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <section className="rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Unified Source Inventory</h3>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Hiển thị toàn bộ source hiện có</span>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Unified Source Inventory</h3>
+          <span className="text-xs text-[var(--text-muted)]">Hiển thị toàn bộ source hiện có</span>
         </div>
         {isLoading || isInventoryLoading ? (
-          <div className="mt-3 h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+          <div className="mt-3 h-24 animate-pulse rounded-xl bg-[var(--surface-muted)]" />
         ) : (
-          <div className="mt-3 max-h-[32rem] overflow-auto rounded-xl border border-slate-200 dark:border-slate-700">
+          <div className="mt-3 max-h-[32rem] overflow-auto rounded-xl border border-[color:var(--shell-border)]">
             <table className="min-w-full text-left text-sm">
               <thead>
-                <tr className="sticky top-0 border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                <tr className="sticky top-0 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs uppercase tracking-wider text-[var(--text-muted)]">
                   <th className="px-2 py-2">Group</th>
                   <th className="px-2 py-2">Source</th>
                   <th className="px-2 py-2">Id</th>
@@ -318,12 +318,12 @@ export default function AdminOverviewPanel() {
               </thead>
               <tbody>
                 {unifiedRows.map((source) => (
-                  <tr key={source.key} className="border-b border-slate-100 last:border-0 dark:border-slate-800">
-                    <td className="px-2 py-2 text-slate-600 dark:text-slate-300">{source.group}</td>
-                    <td className="px-2 py-2 font-medium text-slate-800 dark:text-slate-100">{source.name}</td>
-                    <td className="px-2 py-2 font-mono text-xs text-slate-600 dark:text-slate-300">{source.id}</td>
-                    <td className="px-2 py-2 text-slate-600 dark:text-slate-300">{source.meta1}</td>
-                    <td className="px-2 py-2 text-slate-600 dark:text-slate-300">{source.meta2}</td>
+                  <tr key={source.key} className="border-b border-[color:var(--shell-border)] last:border-0">
+                    <td className="px-2 py-2 text-[var(--text-secondary)]">{source.group}</td>
+                    <td className="px-2 py-2 font-medium text-[var(--text-primary)]">{source.name}</td>
+                    <td className="px-2 py-2 font-mono text-xs text-[var(--text-secondary)]">{source.id}</td>
+                    <td className="px-2 py-2 text-[var(--text-secondary)]">{source.meta1}</td>
+                    <td className="px-2 py-2 text-[var(--text-secondary)]">{source.meta2}</td>
                     <td className="px-2 py-2">
                       <span
                         className={[
@@ -331,8 +331,8 @@ export default function AdminOverviewPanel() {
                           source.status === "enabled" ||
                           source.status === "active" ||
                           source.status === "live-sync"
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                            : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            ? "bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+                            : "bg-[var(--surface-muted)] text-[var(--text-secondary)]"
                         ].join(" ")}
                       >
                         {source.status}

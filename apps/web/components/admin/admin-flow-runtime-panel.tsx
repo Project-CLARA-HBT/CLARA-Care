@@ -148,16 +148,16 @@ export default function AdminFlowRuntimePanel() {
   }, [items]);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+    <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             Runtime Monitor
           </p>
-          <h3 className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h3 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
             Realtime Flow Events
           </h3>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
             Theo dõi sequence/stage/status/note từ API `/system/flow-events` để kiểm soát pipeline đang chạy.
           </p>
         </div>
@@ -166,7 +166,7 @@ export default function AdminFlowRuntimePanel() {
           <select
             value={sourceFilter}
             onChange={(event) => setSourceFilter(event.target.value as SourceFilter)}
-            className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+            className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--text-primary)]"
           >
             <option value="chat">source: chat</option>
             <option value="all">source: all</option>
@@ -178,8 +178,8 @@ export default function AdminFlowRuntimePanel() {
             className={cx(
               "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
               isAutoRefresh
-                ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                : "border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                ? "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
             )}
           >
             {isAutoRefresh ? "Auto refresh: ON" : "Auto refresh: OFF"}
@@ -188,7 +188,7 @@ export default function AdminFlowRuntimePanel() {
           <button
             type="button"
             onClick={() => void loadInitial()}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+            className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition hover:border-[color:var(--brand-primary)]"
           >
             Reload
           </button>
@@ -196,44 +196,44 @@ export default function AdminFlowRuntimePanel() {
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-5">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">latest sequence</p>
-          <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{latestSequence}</p>
+        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">latest sequence</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{latestSequence}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/40">
-          <p className="text-[10px] uppercase tracking-wider text-emerald-700 dark:text-emerald-300">ok</p>
-          <p className="mt-1 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{statusSummary.ok}</p>
+        <div className="rounded-xl border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--text-brand)]">ok</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--text-brand)]">{statusSummary.ok}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/40">
-          <p className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">warn</p>
-          <p className="mt-1 text-sm font-semibold text-amber-700 dark:text-amber-300">{statusSummary.warn}</p>
+        <div className="rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--text-warning)]">warn</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--text-warning)]">{statusSummary.warn}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-rose-50 px-3 py-2 dark:border-rose-900 dark:bg-rose-950/40">
-          <p className="text-[10px] uppercase tracking-wider text-rose-700 dark:text-rose-300">error</p>
-          <p className="mt-1 text-sm font-semibold text-rose-700 dark:text-rose-300">{statusSummary.error}</p>
+        <div className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--text-danger)]">error</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--text-danger)]">{statusSummary.error}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">pending</p>
-          <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{statusSummary.pending}</p>
+        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">pending</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{statusSummary.pending}</p>
         </div>
       </div>
 
       {error ? (
-        <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+        <p className="mt-3 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-xs text-[var(--status-danger-text)]">
           {error}
         </p>
       ) : null}
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+      <div className="mt-3 overflow-hidden rounded-xl border border-[color:var(--shell-border)]">
         <TelemetryPanel
           role={role}
           summary={
-            <p className="px-3 py-5 text-xs text-slate-500 dark:text-slate-400">
+            <p className="px-3 py-5 text-xs text-[var(--text-muted)]">
               Chi tiết telemetry runtime (payload từng flow event) chỉ hiển thị cho quản trị viên. Tổng quan trạng thái phía trên đã được tóm tắt an toàn.
             </p>
           }
         >
-          <div className="grid grid-cols-[5.5rem_11rem_1fr_7rem] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+          <div className="grid grid-cols-[5.5rem_11rem_1fr_7rem] gap-3 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
             <span>Sequence</span>
             <span>Time</span>
             <span>Stage / Note</span>
@@ -243,9 +243,9 @@ export default function AdminFlowRuntimePanel() {
           <div className="max-h-[28rem] overflow-y-auto">
             {isLoading ? (
               <div className="space-y-2 p-3">
-                <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
-                <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
-                <div className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                <div className="h-10 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+                <div className="h-10 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+                <div className="h-10 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
               </div>
             ) : items.length ? (
               items.map((item) => {
@@ -253,16 +253,16 @@ export default function AdminFlowRuntimePanel() {
                 return (
                   <div
                     key={`${item.sequence}-${item.stage}-${item.timestamp}`}
-                    className="grid grid-cols-[5.5rem_11rem_1fr_7rem] gap-3 border-b border-slate-100 px-3 py-2 text-xs text-slate-700 last:border-b-0 dark:border-slate-800 dark:text-slate-200"
+                    className="grid grid-cols-[5.5rem_11rem_1fr_7rem] gap-3 border-b border-[color:var(--shell-border)] px-3 py-2 text-xs text-[var(--text-secondary)] last:border-b-0"
                   >
-                    <span className="font-mono text-slate-500 dark:text-slate-400">#{item.sequence}</span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">{formatTimestamp(item.timestamp)}</span>
+                    <span className="font-mono text-[var(--text-muted)]">#{item.sequence}</span>
+                    <span className="text-[11px] text-[var(--text-muted)]">{formatTimestamp(item.timestamp)}</span>
                     <div>
-                      <p className="font-semibold text-slate-900 dark:text-slate-100">
+                      <p className="font-semibold text-[var(--text-primary)]">
                         {item.stage}
                         {item.sourceCount !== null ? ` (${item.sourceCount})` : ""}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">
+                      <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
                         {item.note || item.eventType || "No note"}
                       </p>
                     </div>
@@ -270,13 +270,13 @@ export default function AdminFlowRuntimePanel() {
                       className={cx(
                         "inline-flex h-fit w-fit rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                         status === "ok" &&
-                          "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+                          "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
                         status === "warn" &&
-                          "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+                          "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
                         status === "error" &&
-                          "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+                          "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]",
                         status === "pending" &&
-                          "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                          "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
                       )}
                     >
                       {item.status || "pending"}
@@ -285,7 +285,7 @@ export default function AdminFlowRuntimePanel() {
                 );
               })
             ) : (
-              <p className="px-3 py-5 text-xs text-slate-500 dark:text-slate-400">
+              <p className="px-3 py-5 text-xs text-[var(--text-muted)]">
                 Chưa có flow event nào cho bộ lọc hiện tại.
               </p>
             )}

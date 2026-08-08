@@ -216,7 +216,7 @@ export default function CouncilNewIntakePage() {
       <div className="space-y-5">
         <CouncilWorkspaceNav />
 
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             {t(language, "council.step", { step: 1, id: caseItem?.id ?? "--" })}
           </p>
@@ -228,7 +228,7 @@ export default function CouncilNewIntakePage() {
               onClick={() => setIntakeMode("transcript")}
               className={`min-h-[42px] rounded-lg border px-3 text-sm font-semibold ${
                 intakeMode === "transcript"
-                  ? "border-cyan-400 bg-cyan-100 text-cyan-900"
+                  ? "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                   : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
               }`}
             >
@@ -239,7 +239,7 @@ export default function CouncilNewIntakePage() {
               onClick={() => setIntakeMode("audio")}
               className={`min-h-[42px] rounded-lg border px-3 text-sm font-semibold ${
                 intakeMode === "audio"
-                  ? "border-cyan-400 bg-cyan-100 text-cyan-900"
+                  ? "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                   : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-primary)]"
               }`}
             >
@@ -270,14 +270,14 @@ export default function CouncilNewIntakePage() {
             type="button"
             onClick={() => void onExtractIntake()}
             disabled={isExtracting || !caseItem}
-            className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
             {isExtracting ? t(language, "council.intake.processing") : t(language, "council.intake.normalize")}
           </button>
 
-          {extractNotice ? <p className="mt-3 text-sm text-emerald-400">{extractNotice}</p> : null}
+          {extractNotice ? <p className="mt-3 text-sm text-[var(--text-brand)]">{extractNotice}</p> : null}
           {extractWarnings.length ? (
-            <ul className="mt-2 list-disc pl-5 text-xs text-amber-300">
+            <ul className="mt-2 list-disc pl-5 text-xs text-[var(--status-warn-text)]">
               {extractWarnings.map((item, index) => (
                 <li key={`${item}-${index}`}>{item}</li>
               ))}
@@ -286,7 +286,7 @@ export default function CouncilNewIntakePage() {
         </section>
 
         <section className="grid gap-3 md:grid-cols-2">
-          <label className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <span className="text-sm font-semibold">{t(language, "council.intake.symptoms")}</span>
             <textarea
               value={draft.symptomsInput}
@@ -294,7 +294,7 @@ export default function CouncilNewIntakePage() {
               className="mt-2 min-h-[130px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm"
             />
           </label>
-          <label className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <span className="text-sm font-semibold">{t(language, "council.intake.labs")}</span>
             <textarea
               value={draft.labsInput}
@@ -302,7 +302,7 @@ export default function CouncilNewIntakePage() {
               className="mt-2 min-h-[130px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm"
             />
           </label>
-          <label className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <span className="text-sm font-semibold">{t(language, "council.intake.medicines")}</span>
             <textarea
               value={draft.medicationsInput}
@@ -310,7 +310,7 @@ export default function CouncilNewIntakePage() {
               className="mt-2 min-h-[130px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm"
             />
           </label>
-          <label className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <span className="text-sm font-semibold">{t(language, "council.intake.history")}</span>
             <textarea
               value={draft.historyInput}
@@ -320,7 +320,7 @@ export default function CouncilNewIntakePage() {
           </label>
         </section>
 
-        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+        {error ? <p className="text-sm text-[var(--status-danger-text)]">{error}</p> : null}
 
         <div className="flex flex-wrap justify-between gap-2">
           <Link href="/council/new" className="inline-flex min-h-[42px] items-center rounded-lg border border-[color:var(--shell-border)] px-4 text-sm font-semibold">
@@ -330,7 +330,7 @@ export default function CouncilNewIntakePage() {
             type="button"
             onClick={() => void onSaveAndNext()}
             disabled={isSaving || !caseItem}
-            className="inline-flex min-h-[44px] items-center rounded-lg border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
             {isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 2 })}
           </button>

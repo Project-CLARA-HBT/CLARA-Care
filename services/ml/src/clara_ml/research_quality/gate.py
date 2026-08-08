@@ -61,10 +61,9 @@ __all__ = [
     "main",
 ]
 
-#: Environment flag that turns the CI regression gate on. The canonical flag is
-#: declared in the API settings (``RESEARCH_QUALITY_GATE_ENABLED``); the ML CI
-#: runner reads the same environment variable so a single CI toggle drives both
-#: services.
+#: Environment flag that turns the CI-only regression gate on. It is not an API
+#: runtime flag and is deliberately absent from production compose so deploys
+#: cannot be mistaken for release-gate execution.
 QUALITY_GATE_ENV_VAR = "RESEARCH_QUALITY_GATE_ENABLED"
 
 #: Environment variable carrying the recorded legacy recall@k baseline the gate

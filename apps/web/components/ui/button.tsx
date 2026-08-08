@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import Icon, { type IconName } from "./icon";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
@@ -12,13 +13,13 @@ const BASE =
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "border border-[color:var(--brand-700)] bg-[var(--brand-600)] text-white shadow-[var(--shadow-sm)] hover:bg-[var(--brand-700)] active:translate-y-px",
+    "border border-[color:var(--brand-700)] bg-[var(--brand-600)] text-[var(--button-primary-text)] hover:bg-[var(--brand-700)] active:translate-y-px",
   secondary:
-    "border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)] shadow-[var(--shadow-sm)] hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-muted)]",
+    "border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)] hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-muted)]",
   ghost:
     "border border-transparent bg-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]",
   danger:
-    "border border-[color:var(--danger-500)] bg-[var(--danger-500)] text-white shadow-[var(--shadow-sm)] hover:brightness-95 active:translate-y-px",
+    "border border-[color:var(--danger-500)] bg-[var(--danger-500)] text-white hover:brightness-95 active:translate-y-px",
 };
 
 const SIZES: Record<Size, string> = {
@@ -31,15 +32,15 @@ function classesFor(variant: Variant, size: Size, block: boolean, className: str
   return `${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${block ? "w-full" : ""} ${className}`;
 }
 
+const ICON_ALIASES: Record<string, IconName> = {
+  badge: "user-card", accessibility_new: "body", contact_phone: "contact",
+  clinical_notes: "clinical-notes", medication: "medication", warning: "warning",
+  save: "clinical-notes", add: "progress", delete: "warning", arrow_back: "fallback",
+  arrow_forward: "arrow-right",
+};
+
 function Glyph({ glyph, spin }: { glyph: string; spin: boolean }) {
-  return (
-    <span
-      className={`material-symbols-outlined text-[1.15em] ${spin ? "animate-spin" : ""}`}
-      aria-hidden="true"
-    >
-      {glyph}
-    </span>
-  );
+  return <Icon name={ICON_ALIASES[glyph] ?? "fallback"} size="1.15em" className={spin ? "animate-spin" : ""} />;
 }
 
 type CommonProps = {

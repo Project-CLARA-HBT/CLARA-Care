@@ -36,7 +36,6 @@ type FlowFlags = {
   ragReranker: boolean;
   ragNli: boolean;
   ragGraphRag: boolean;
-  deepseekFallback: boolean;
   scientificRetrieval: boolean;
   webRetrieval: boolean;
   fileRetrieval: boolean;
@@ -118,7 +117,6 @@ const INITIAL_STATE: ObservabilityState = {
     ragReranker: true,
     ragNli: false,
     ragGraphRag: true,
-    deepseekFallback: false,
     scientificRetrieval: false,
     webRetrieval: false,
     fileRetrieval: false
@@ -197,7 +195,7 @@ function computeFlowHealth(flow: FlowFlags): number {
     "scientificRetrieval"
   ];
   const requiredOn = requiredKeys.filter((key) => flow[key]).length;
-  const optionalOn = [flow.deepseekFallback, flow.webRetrieval, flow.fileRetrieval, flow.ragGraphRag].filter(Boolean).length;
+  const optionalOn = [flow.webRetrieval, flow.fileRetrieval, flow.ragGraphRag].filter(Boolean).length;
   return clamp(requiredOn * 11 + optionalOn * 6);
 }
 
@@ -255,7 +253,6 @@ export default function AdminObservabilityPanel() {
         ragReranker: Boolean(config.rag_flow.rag_reranker_enabled),
         ragNli: Boolean(config.rag_flow.rag_nli_enabled),
         ragGraphRag: Boolean(config.rag_flow.rag_graphrag_enabled),
-        deepseekFallback: Boolean(config.rag_flow.deepseek_fallback_enabled),
         scientificRetrieval: Boolean(config.rag_flow.scientific_retrieval_enabled),
         webRetrieval: Boolean(config.rag_flow.web_retrieval_enabled),
         fileRetrieval: Boolean(config.rag_flow.file_retrieval_enabled)
@@ -561,7 +558,6 @@ export default function AdminObservabilityPanel() {
     { label: "RAG NLI", enabled: state.flow.ragNli, detail: "Bật bước NLI trong pipeline RAG." },
     { label: "Neural Reranker", enabled: state.flow.ragReranker, detail: "Rerank evidence bằng mô hình neural." },
     { label: "GraphRAG", enabled: state.flow.ragGraphRag, detail: "Nhánh truy xuất theo đồ thị tri thức." },
-    { label: "DeepSeek Fallback", enabled: state.flow.deepseekFallback, detail: "Dự phòng đường suy luận khi degrade." },
     { label: "Scientific Retrieval", enabled: state.flow.scientificRetrieval, detail: "Ưu tiên nguồn y khoa chuẩn." },
     { label: "Web Retrieval", enabled: state.flow.webRetrieval, detail: "Bổ sung khi nguồn nội bộ thiếu ngữ cảnh." },
     { label: "File Retrieval", enabled: state.flow.fileRetrieval, detail: "Truy xuất dữ liệu tài liệu đã upload." }
@@ -569,12 +565,12 @@ export default function AdminObservabilityPanel() {
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-300">
+          <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
             <input
               type="checkbox"
-              className="h-3.5 w-3.5 accent-cyan-400"
+              className="h-3.5 w-3.5 accent-[var(--brand-primary)]"
               checked={autoRefresh}
               onChange={(event) => setAutoRefresh(event.target.checked)}
             />
@@ -583,22 +579,22 @@ export default function AdminObservabilityPanel() {
           <button
             type="button"
             onClick={() => void load()}
-            className="rounded-lg border border-cyan-400/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20"
+            className="rounded-[var(--radius-md)] border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--text-brand)] transition-colors hover:bg-[var(--surface-muted)]"
           >
             Refresh
           </button>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-slate-400">
-          <span>RUNTIME ID: CLARA-X9-00124</span>
-          <span className="text-slate-600">|</span>
-          <span>SYNC: {state.loading ? "IN PROGRESS" : "SUCCESSFUL"}</span>
-          <span className="text-slate-600">|</span>
+        <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+          <span>Ảnh chụp telemetry</span>
+          <span className="text-[var(--text-muted)]">|</span>
+          <span>Đồng bộ: {state.loading ? "đang cập nhật" : state.error ? "cần thử lại" : "đã cập nhật"}</span>
+          <span className="text-[var(--text-muted)]">|</span>
           <span>UPDATED: {lastUpdate} GMT+7</span>
         </div>
       </section>
 
       {state.error && state.loaded ? (
-        <p className="rounded-lg border border-amber-700/50 bg-amber-950/25 px-3 py-2 text-xs text-amber-200">
+        <p className="rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-xs text-[var(--status-warn-text)]">
           {state.error}
         </p>
       ) : null}
@@ -612,51 +608,51 @@ export default function AdminObservabilityPanel() {
       >
         {() => (
           <div className="grid grid-cols-12 gap-6">
-        <section className="col-span-12 lg:col-span-8 grid grid-cols-2 gap-4 xl:grid-cols-3">
-          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Sức khỏe API</p>
-            <p className="mt-2 text-2xl font-black text-cyan-300">{state.apiStatus || "UNKNOWN"}</p>
-            <p className="mt-1 text-[11px] text-slate-400">{state.apiMessage || "Không có chi tiết"}</p>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
-              <div className="h-full bg-cyan-400" style={{ width: `${clamp(runtimeStability)}%` }} />
+        <section className="col-span-12 lg:col-span-8 grid grid-cols-2 gap-4 xl:grid-cols-3 [&>article]:rounded-[14px] [&>article]:border [&>article]:border-t-[#2A3950] [&>article]:border-[color:var(--shell-border)] [&>article]:bg-[var(--surface-panel)]">
+          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Sức khỏe API</p>
+            <p className="mt-2 text-2xl font-black text-[var(--text-brand)]">{state.apiStatus || "UNKNOWN"}</p>
+            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">{state.apiMessage || "Không có chi tiết"}</p>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]">
+              <div className="h-full bg-[#60a5fa]" style={{ width: `${clamp(runtimeStability)}%` }} />
             </div>
           </article>
 
-          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Trạng thái ML</p>
-            <p className="mt-2 text-xl font-bold text-slate-100">{state.mlReachable === false ? "Mất kết nối" : "Đang hoạt động"}</p>
-            <p className="mt-1 text-[11px] text-slate-400">{state.mlStatus || "Unknown"}</p>
-            <p className="mt-3 text-[11px] font-semibold text-cyan-300">Node cluster: {state.mlReachable === false ? "0/4 active" : "4/4 active"}</p>
+          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Trạng thái ML</p>
+            <p className="mt-2 text-xl font-bold text-[var(--text-primary)]">{state.mlReachable === false ? "Mất kết nối" : "Đang hoạt động"}</p>
+            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">{state.mlStatus || "Unknown"}</p>
+            <p className="mt-3 text-[11px] font-semibold text-[var(--text-secondary)]">Trạng thái phụ thuộc do API báo cáo.</p>
           </article>
 
-          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Request / Lỗi</p>
-            <p className="mt-2 text-2xl font-black text-slate-100">
-              {formatCount(state.requestCount)} <span className="text-lg text-rose-300">/ {formatCount(state.errorCount)}</span>
+          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Request / Lỗi</p>
+            <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+              {formatCount(state.requestCount)} <span className="text-lg text-[var(--status-danger-text)]">/ {formatCount(state.errorCount)}</span>
             </p>
-            <p className="mt-1 text-[11px] text-slate-400">Trong khung theo dõi gần nhất</p>
+            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">Trong khung theo dõi gần nhất</p>
           </article>
 
-          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Độ trễ</p>
-            <p className="mt-2 text-2xl font-black text-slate-100">{latencyMs}ms</p>
-            <p className="mt-1 text-[11px] text-cyan-300">p95 ước tính: {Math.max(latencyMs, 1)}ms</p>
+          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Độ trễ</p>
+            <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">{latencyMs}ms</p>
+            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">Độ trễ trung bình trong ảnh chụp hiện tại.</p>
           </article>
 
-          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Độ ổn định</p>
-            <p className="mt-2 text-2xl font-black text-slate-100">{Math.round(runtimeStability)}</p>
-            <p className="mt-1 text-[11px] text-slate-400">Metric index: {runtimeStability > 80 ? "Nominal" : "Watch"}</p>
+          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Độ ổn định</p>
+            <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">{Math.round(runtimeStability)}</p>
+            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">Chỉ số dẫn xuất từ telemetry hiện có.</p>
           </article>
 
-          <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Mức kiểm chứng</p>
-            <p className="mt-2 text-2xl font-black text-cyan-300">{Math.round(verificationStrength)}%</p>
-            <p className="mt-1 text-[11px] text-slate-400">Low-context threshold: {Math.round(state.lowContextThreshold * 100)}%</p>
+          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Mức kiểm chứng</p>
+            <p className="mt-2 text-2xl font-black text-[var(--text-brand)]">{Math.round(verificationStrength)}%</p>
+            <p className="mt-1 text-[11px] text-[var(--text-secondary)]">Low-context threshold: {Math.round(state.lowContextThreshold * 100)}%</p>
           </article>
         </section>
 
-        <section className="col-span-12 lg:col-span-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <section className="col-span-12 lg:col-span-4 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <RadarPulseChart
             title="Radar điều khiển"
             description="Vận hành, kiểm chứng, độ phủ, flow, API"
@@ -666,12 +662,12 @@ export default function AdminObservabilityPanel() {
 
           <div className="mt-4 grid grid-cols-2 gap-2">
             {signalItems.map((item) => (
-              <div key={item.label} className="rounded-md border border-slate-800 bg-slate-950/60 px-2 py-2">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500">{item.label}</p>
+              <div key={item.label} className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-2">
+                <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{item.label}</p>
                 <p
                   className={[
                     "mt-1 text-base font-bold",
-                    item.tone === "danger" ? "text-rose-300" : item.tone === "warn" ? "text-amber-300" : "text-cyan-300"
+                    item.tone === "danger" ? "text-[var(--status-danger-text)]" : item.tone === "warn" ? "text-[var(--status-warn-text)]" : "text-[var(--text-brand)]"
                   ].join(" ")}
                 >
                   {item.value}
@@ -681,7 +677,7 @@ export default function AdminObservabilityPanel() {
           </div>
         </section>
 
-        <section className="col-span-12 lg:col-span-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <section className="col-span-12 lg:col-span-6 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <NeonAreaChart
             title="Áp lực lưu lượng"
             description="Request và lỗi theo thời gian"
@@ -691,15 +687,15 @@ export default function AdminObservabilityPanel() {
           />
         </section>
 
-        <section className="col-span-12 lg:col-span-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <section className="col-span-12 lg:col-span-6 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <div className="grid grid-cols-2 gap-3">
             <SegmentRingGauge label="Độ trễ" value={clamp(100 - latencyMs / 5)} tone="cyan" />
             <SegmentRingGauge label="Độ phủ" value={Math.round(sourceCoverage)} tone="violet" />
             <SegmentRingGauge label="Flow" value={Math.round(flowHealth)} tone="emerald" />
             <SegmentRingGauge label="Success" value={clamp(100 - errorRate)} tone="amber" />
           </div>
-          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">Hiệu năng tổng quan</p>
+          <div className="mt-4 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+            <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Hiệu năng tổng quan</p>
             <NeonAreaChart
               title=""
               description=""
@@ -710,36 +706,36 @@ export default function AdminObservabilityPanel() {
           </div>
         </section>
 
-        <section className="col-span-12 lg:col-span-7 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+        <section className="col-span-12 lg:col-span-7 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-100">Luồng Xử Lý (Processing Pipeline)</h3>
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">Luồng Xử Lý (Processing Pipeline)</h3>
             <div className="flex gap-2">
-              <span className="rounded bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-200">Live Flow</span>
-              <span className="rounded bg-slate-800 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Latency {latencyMs}ms</span>
+              <span className="rounded bg-[var(--surface-brand-soft)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-brand)]">Live Flow</span>
+              <span className="rounded bg-[var(--surface-muted)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Latency {latencyMs}ms</span>
             </div>
           </div>
           <ConduitFlowLine title="" description="" stages={pipelineStages} />
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {flowRows.map((row) => (
-              <div key={row.label} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+              <div key={row.label} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-slate-100">{row.label}</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{row.label}</p>
                   <span
                     className={[
                       "inline-flex rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                      row.enabled ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200" : "border-slate-600 bg-slate-800 text-slate-300"
+                      row.enabled ? "border-[color:var(--brand-primary)]/40 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]" : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
                     ].join(" ")}
                   >
                     {row.enabled ? "Bật" : "Tắt"}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-slate-400">{row.detail}</p>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">{row.detail}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="col-span-12 lg:col-span-5 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+        <section className="col-span-12 lg:col-span-5 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <MatrixHeatmapMini
             title="Ma Trận Áp Lực Rủi Ro"
             description="Lỗi, độ trễ, độ phủ, flow"
@@ -750,17 +746,17 @@ export default function AdminObservabilityPanel() {
             maxLabel="Nghiêm trọng"
           />
 
-          <div className="mt-4 border-t border-slate-800 pt-4">
-            <h4 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Cảnh Báo Cần Xử Lý</h4>
+          <div className="mt-4 border-t border-[color:var(--shell-border)] pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">Cảnh Báo Cần Xử Lý</h4>
             <div className="mt-3 space-y-2">
               {alerts.map((alert, index) => {
                 const levelLabel = alert.level === "critical" ? "Nghiêm trọng" : alert.level === "warn" ? "Cảnh báo" : "Ổn định";
                 const toneClass =
                   alert.level === "critical"
-                    ? "border-rose-700/50 bg-rose-950/30 text-rose-200"
+                    ? "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
                     : alert.level === "warn"
-                      ? "border-amber-700/50 bg-amber-950/25 text-amber-200"
-                      : "border-cyan-700/40 bg-cyan-950/20 text-cyan-100";
+                      ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
+                      : "border-[color:var(--brand-primary)]/35 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
 
                 return (
                   <div key={`${alert.title}-${index}`} className={["rounded-lg border p-3", toneClass].join(" ")}>
@@ -776,7 +772,7 @@ export default function AdminObservabilityPanel() {
                           type="button"
                           onClick={() => void handleAcknowledge(alert.alertId as string)}
                           disabled={Boolean(ackPending[alert.alertId]) || Boolean(ackDone[alert.alertId])}
-                          className="rounded-md border border-current/40 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-md border border-current/40 bg-[var(--surface-panel)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {ackDone[alert.alertId]
                             ? "Đã xác nhận"
@@ -785,7 +781,7 @@ export default function AdminObservabilityPanel() {
                               : "Xác nhận"}
                         </button>
                         {ackError[alert.alertId] ? (
-                          <span className="text-[11px] text-rose-200">{ackError[alert.alertId]}</span>
+                          <span className="text-[11px] text-[var(--status-danger-text)]">{ackError[alert.alertId]}</span>
                         ) : null}
                       </div>
                     ) : null}
@@ -796,11 +792,11 @@ export default function AdminObservabilityPanel() {
           </div>
         </section>
 
-        <section className="col-span-12 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+        <section className="col-span-12 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-bold text-slate-100">Độ trễ theo tuyến (p50 / p90 / p99)</h3>
-              <p className="mt-0.5 text-[11px] text-slate-400">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Độ trễ theo tuyến (p50 / p90 / p99)</h3>
+              <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
                 Phân vị độ trễ cho từng route từ ảnh chụp `/system/metrics`.
               </p>
             </div>
@@ -808,8 +804,8 @@ export default function AdminObservabilityPanel() {
               className={[
                 "rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
                 percentilesEnabled
-                  ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
-                  : "border-slate-600 bg-slate-800 text-slate-300"
+                  ? "border-[color:var(--brand-primary)]/40 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                  : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
               ].join(" ")}
             >
               {percentilesEnabled ? "Đang bật" : "Chưa bật"}
@@ -817,9 +813,9 @@ export default function AdminObservabilityPanel() {
           </div>
 
           {percentilesEnabled ? (
-            <div className="overflow-x-auto rounded-lg border border-slate-800">
+            <div className="overflow-x-auto rounded-lg border border-[color:var(--shell-border)]">
               <table className="w-full min-w-[480px] text-left text-xs">
-                <thead className="bg-slate-950/60 text-[10px] uppercase tracking-wider text-slate-500">
+                <thead className="bg-[var(--surface-muted)] text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                   <tr>
                     <th className="px-3 py-2 font-semibold">Tuyến</th>
                     <th className="px-3 py-2 text-right font-semibold">p50</th>
@@ -829,18 +825,18 @@ export default function AdminObservabilityPanel() {
                 </thead>
                 <tbody>
                   {state.routePercentiles.map((row) => (
-                    <tr key={row.route} className="border-t border-slate-800/80">
-                      <td className="px-3 py-2 font-mono text-[11px] text-slate-200">{row.route}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-cyan-200">{formatLatencyMs(row.p50Ms)}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-amber-200">{formatLatencyMs(row.p90Ms)}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-rose-200">{formatLatencyMs(row.p99Ms)}</td>
+                    <tr key={row.route} className="border-t border-[color:var(--shell-border)]">
+                      <td className="px-3 py-2 font-mono text-[11px] text-[var(--text-primary)]">{row.route}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-[var(--text-brand)]">{formatLatencyMs(row.p50Ms)}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-[var(--status-warn-text)]">{formatLatencyMs(row.p90Ms)}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-[var(--status-danger-text)]">{formatLatencyMs(row.p99Ms)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-slate-700 bg-slate-950/40 px-4 py-6 text-center text-xs text-slate-400">
+            <p className="rounded-lg border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-6 text-center text-xs text-[var(--text-secondary)]">
               Phân vị độ trễ theo tuyến chưa được bật. Hệ thống đang hiển thị độ trễ trung bình ({latencyMs}ms).
             </p>
           )}
@@ -849,9 +845,9 @@ export default function AdminObservabilityPanel() {
         )}
       </AsyncSection>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-[11px] font-mono text-slate-400">
-        <span>RUNTIME ID: CLARA-X9-00124</span>
-        <span>TELEMETRY SYNC: {state.loading ? "IN PROGRESS" : "SUCCESSFUL"}</span>
+      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-[11px] font-mono text-[var(--text-secondary)]">
+        <span>Ảnh chụp telemetry</span>
+        <span>Đồng bộ: {state.loading ? "đang cập nhật" : state.error ? "cần thử lại" : "đã cập nhật"}</span>
         <span>LAST UPDATE: {lastUpdate} GMT+7</span>
       </footer>
     </div>

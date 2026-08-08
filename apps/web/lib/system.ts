@@ -77,6 +77,13 @@ export type SystemDashboardTask = {
   count: number | null;
 };
 
+export type SystemDashboardAlert = {
+  id: string;
+  severity: "warning" | "critical";
+  message: string;
+  href: string;
+};
+
 export type SystemDashboardSnapshot = {
   generatedAt: string | null;
   user: {
@@ -120,7 +127,7 @@ export type SystemDashboardSnapshot = {
   research: {
     recentQueries: Array<{ id: string; query: string; createdAt: number }>;
   };
-  alerts: string[];
+  alerts: SystemDashboardAlert[];
   tasks: SystemDashboardTask[];
 };
 
@@ -578,12 +585,21 @@ export function normalizeSystemDashboard(data: SystemDashboardRawResponse): Syst
   const research = asRecord(root.research);
 
   const alerts = asArray(root.alerts)
-    .map((row) => {
+    .map((row, index) => {
       const item = asRecord(row);
-      if (!item) return asText(row);
-      return asText(item.message) ?? asText(item.detail) ?? asText(item.id);
+      const message = item
+        ? asText(item.message) ?? asText(item.detail) ?? asText(item.id)
+        : asText(row);
+      if (!message) return null;
+      const rawSeverity = item ? asLowerText(item.severity) : "warning";
+      return {
+        id: (item ? asText(item.id) : null) ?? `alert-${index + 1}`,
+        severity: rawSeverity === "critical" ? ("critical" as const) : ("warning" as const),
+        message,
+        href: (item ? asText(item.href) : null) ?? "/dashboard",
+      };
     })
-    .filter((row): row is string => Boolean(row));
+    .filter((row): row is SystemDashboardAlert => Boolean(row));
 
   const tasks = asArray(root.tasks)
     .map((row) => asRecord(row))

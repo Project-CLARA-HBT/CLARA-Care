@@ -91,28 +91,27 @@ export default function AdminAnswerFlowPanel() {
     );
   return (
     <div className="space-y-4">
-      <section className="relative overflow-hidden rounded-[30px] border border-cyan-200/60 bg-[radial-gradient(circle_at_10%_8%,rgba(96,165,250,0.2),transparent_34%),radial-gradient(circle_at_90%_92%,rgba(59,130,246,0.14),transparent_38%),linear-gradient(162deg,rgba(255,255,255,0.95),rgba(236,254,255,0.9))] p-4 shadow-[0_24px_72px_rgba(14,116,144,0.18)] dark:border-cyan-600/35 dark:bg-[radial-gradient(circle_at_10%_8%,rgba(96,165,250,0.14),transparent_34%),radial-gradient(circle_at_90%_92%,rgba(59,130,246,0.12),transparent_38%),linear-gradient(162deg,rgba(2,6,23,0.94),rgba(15,23,42,0.9))] dark:shadow-[0_30px_84px_rgba(2,6,23,0.82)]">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(59,130,246,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(59,130,246,0.08)_1px,transparent_1px)] bg-[size:24px_24px] dark:bg-[linear-gradient(to_right,rgba(59,130,246,0.16)_1px,transparent_1px),linear-gradient(to_bottom,rgba(59,130,246,0.16)_1px,transparent_1px)]" />
+      <section className="relative overflow-hidden rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
+            <span className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 font-medium text-[var(--text-secondary)]">
               Flow {enabledFlowCount}/{flowToggleKeys.length}
             </span>
-            <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
+            <span className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 font-medium text-[var(--text-secondary)]">
               Health {flowHealthLabel}
             </span>
-            <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
+            <span className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 font-medium text-[var(--text-secondary)]">
               Low Context {config?.rag_flow.low_context_threshold.toFixed(2) ?? "0.00"}
             </span>
-            <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
-              Fallback {config?.rag_flow.deepseek_fallback_enabled ? "enabled" : "disabled"}
+            <span className="rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2.5 py-1 font-medium text-[var(--text-brand)]">
+              Generation fail-closed
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => void reload()}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500"
+              className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition hover:border-[color:var(--brand-primary)]"
             >
               Reload
             </button>
@@ -120,7 +119,7 @@ export default function AdminAnswerFlowPanel() {
               type="button"
               disabled={!isDirty || isSaving || isLoading || !config}
               onClick={() => void save()}
-              className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
+              className="rounded-lg bg-[var(--brand-600)] px-3 py-1.5 text-xs font-medium text-[#cdd7ff] transition hover:bg-[var(--brand-700)] disabled:opacity-50"
             >
               {isSaving ? "Saving..." : "Save Flow"}
             </button>
@@ -128,48 +127,48 @@ export default function AdminAnswerFlowPanel() {
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-4">
-          <div className="rounded-xl border border-cyan-200/70 bg-white/70 px-3 py-2 backdrop-blur dark:border-cyan-700/40 dark:bg-slate-900/70">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Flow Flags</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Flow Flags</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
               {enabledFlowCount}/{flowToggleKeys.length}
             </p>
           </div>
-          <div className="rounded-xl border border-cyan-200/70 bg-white/70 px-3 py-2 backdrop-blur dark:border-cyan-700/40 dark:bg-slate-900/70">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Flow Health</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{flowHealthLabel}</p>
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Flow Health</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{flowHealthLabel}</p>
           </div>
-          <div className="rounded-xl border border-cyan-200/70 bg-white/70 px-3 py-2 backdrop-blur dark:border-cyan-700/40 dark:bg-slate-900/70">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">low_context_threshold</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{config?.rag_flow.low_context_threshold.toFixed(2) ?? "0.00"}</p>
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">low_context_threshold</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{config?.rag_flow.low_context_threshold.toFixed(2) ?? "0.00"}</p>
           </div>
-          <div className="rounded-xl border border-cyan-200/70 bg-white/70 px-3 py-2 backdrop-blur dark:border-cyan-700/40 dark:bg-slate-900/70">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Fallback</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
-              {config?.rag_flow.deepseek_fallback_enabled ? "enabled" : "disabled"}
+          <div className="rounded-xl border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-brand)]">Generation policy</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+              Fail closed
             </p>
           </div>
         </div>
 
-        <section className="mt-3 rounded-2xl border border-violet-200 bg-violet-50/75 p-3 shadow-sm dark:border-violet-800 dark:bg-violet-950/30">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-700 dark:text-violet-300">Governed model runtime</p>
-          <p className="mt-1 text-xs leading-5 text-slate-700 dark:text-slate-200">
+        <section className="mt-3 rounded-xl border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-brand)]">Governed model runtime</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
             DeepSeek V4 được chọn theo task contract: Pro cho safety/reasoning, Flash cho tác vụ giới hạn độ trễ. Provider, endpoint, model và API key chỉ cấu hình qua môi trường triển khai; Control Tower không thể thay đổi chúng.
           </p>
         </section>
 
         {error ? (
-          <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">
+          <p className="mt-3 rounded-lg border border-[color:var(--danger-border)] bg-[var(--surface-danger-soft)] px-3 py-2 text-sm text-[var(--text-danger)]">
             {error}
           </p>
         ) : null}
         {message ? (
-          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+          <p className="mt-3 rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2 text-sm text-[var(--text-brand)]">
             {message}
           </p>
         ) : null}
 
         {isLoading ? (
-          <div className="mt-4 h-48 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+          <div className="mt-4 h-48 animate-pulse rounded-xl bg-[var(--surface-muted)]" />
         ) : (
           <>
             <div className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_0.45fr]">
@@ -180,30 +179,30 @@ export default function AdminAnswerFlowPanel() {
                 selectedNodeId={selectedNode}
               />
 
-              <section className="rounded-2xl border border-cyan-200/60 bg-white/78 p-4 shadow-[0_16px_42px_rgba(14,116,144,0.14)] backdrop-blur dark:border-cyan-700/35 dark:bg-slate-900/80 dark:shadow-[0_20px_48px_rgba(2,6,23,0.74)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Node Inspector</p>
-                <h4 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{selectedNodeInfo.title}</h4>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{selectedNodeInfo.subtitle}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">{selectedNodeInfo.description}</p>
+              <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Node Inspector</p>
+                <h4 className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{selectedNodeInfo.title}</h4>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">{selectedNodeInfo.subtitle}</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{selectedNodeInfo.description}</p>
 
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/50">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700 dark:text-amber-300">Risk Note</p>
-                  <p className="mt-1 text-xs leading-5 text-amber-800 dark:text-amber-200">{selectedNodeInfo.riskNote}</p>
+                <div className="mt-3 rounded-xl border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-warning)]">Risk Note</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-warning)]">{selectedNodeInfo.riskNote}</p>
                 </div>
 
                 {selectedToggleKey ? (
-                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Flow Toggle</p>
+                  <div className="mt-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                    <p className="text-xs font-semibold text-[var(--text-primary)]">Flow Toggle</p>
                     <div className="mt-2 flex items-center justify-between gap-2">
-                      <p className="text-xs text-slate-600 dark:text-slate-300">Bật/tắt node này trực tiếp từ inspector.</p>
+                      <p className="text-xs text-[var(--text-secondary)]">Bật/tắt node này trực tiếp từ inspector.</p>
                       <button
                         type="button"
                         onClick={() => setFlowToggle(selectedToggleKey, !Boolean(selectedToggleEnabled))}
                         className={[
                           "rounded-full px-3 py-1 text-xs font-semibold transition",
                           selectedToggleEnabled
-                            ? "border border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                            : "border border-slate-300 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                            ? "border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                            : "border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:bg-[var(--surface-high)]"
                         ].join(" ")}
                       >
                         {selectedToggleEnabled ? "ON" : "OFF"}
@@ -212,11 +211,11 @@ export default function AdminAnswerFlowPanel() {
                   </div>
                 ) : null}
 
-                {selectedNode === "deepseek_fallback" || selectedNode === "verification" ? (
-                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Threshold Tuning</p>
-                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                      Điều chỉnh ngưỡng để quyết định khi nào kích hoạt fallback low-context.
+                {selectedNode === "verification" ? (
+                  <div className="mt-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                    <p className="text-xs font-semibold text-[var(--text-primary)]">Threshold Tuning</p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      Điều chỉnh ngưỡng để xác định khi nào cần chặn phát hành do thiếu ngữ cảnh.
                     </p>
                     <div className="mt-3 grid gap-2">
                       <input
@@ -234,7 +233,7 @@ export default function AdminAnswerFlowPanel() {
                         step={0.05}
                         value={config?.rag_flow.low_context_threshold ?? 0}
                         onChange={(event) => setLowContextThreshold(toNumber(event.target.value))}
-                        className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                        className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1 text-sm text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-primary)]"
                       />
                     </div>
                   </div>
@@ -242,18 +241,18 @@ export default function AdminAnswerFlowPanel() {
               </section>
             </div>
 
-            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Research Debug Preview</p>
-              <h4 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Debugger luồng trả lời theo thời gian thực</h4>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                Mô phỏng các nhánh route/retrieve/verify/policy và xem khi nào nhánh fallback được kích hoạt trước khi publish.
+            <section className="mt-4 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Research Debug Preview</p>
+              <h4 className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Debugger luồng trả lời theo thời gian thực</h4>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                Mô phỏng các nhánh route/retrieve/verify/policy và xem điều kiện nào chặn phát hành trước khi publish.
               </p>
-              <div className="mt-3 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+              <div className="mt-3 grid gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                  <p className="text-xs text-[var(--text-secondary)]">
                     Low-context score giả lập cho phiên debug
                   </p>
-                  <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
+                  <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]">
                     {debugLowContextScore.toFixed(2)}
                   </span>
                 </div>
@@ -281,10 +280,10 @@ export default function AdminAnswerFlowPanel() {
 
       <AdminNeuralNetworkVisualizer ragFlow={config?.rag_flow} />
 
-      <section className="rounded-2xl border border-cyan-200/60 bg-white/78 p-4 shadow-[0_16px_42px_rgba(14,116,144,0.14)] backdrop-blur dark:border-cyan-700/35 dark:bg-slate-900/80 dark:shadow-[0_20px_48px_rgba(2,6,23,0.74)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Council Flow</p>
-        <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Sơ đồ hội chẩn ở phần quản trị</h3>
-        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+      <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Council Flow</p>
+        <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Sơ đồ hội chẩn ở phần quản trị</h3>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">
           Flow canvas được chuyển vào Admin. Trạng thái `needs_more_info` dùng debug score hiện tại để mô phỏng nhanh.
         </p>
         <div className="mt-3">
@@ -296,15 +295,15 @@ export default function AdminAnswerFlowPanel() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-cyan-200/60 bg-white/78 p-4 shadow-[0_16px_42px_rgba(14,116,144,0.14)] backdrop-blur dark:border-cyan-700/35 dark:bg-slate-900/80 dark:shadow-[0_20px_48px_rgba(2,6,23,0.74)]">
+      <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Flow Signal Blocks</h3>
-          <span className="text-xs text-slate-500 dark:text-slate-400">{flowToggleKeys.length} flags + threshold</span>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Flow Signal Blocks</h3>
+          <span className="text-xs text-[var(--text-muted)]">{flowToggleKeys.length} flags + threshold</span>
         </div>
         <div className="mt-3">
-          {isLoading ? <div className="h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" /> : <BarBlocks values={flowVisual} />}
+          {isLoading ? <div className="h-16 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> : <BarBlocks values={flowVisual} />}
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
           Khối cuối là `low_context_threshold`; các khối trước là trạng thái flow flags hiện tại.
         </p>
       </section>

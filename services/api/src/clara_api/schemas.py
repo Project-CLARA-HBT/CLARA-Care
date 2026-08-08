@@ -346,6 +346,26 @@ class OcrSourceCoordinate(BaseModel):
         return self
 
 
+class OcrDataProcessingDisclosure(BaseModel):
+    """Bounded disclosure returned with a review-only OCR result.
+
+    It identifies a processing category only: never an upstream URL, account,
+    raw upload, or OCR transcript. The client must acknowledge this disclosure
+    before it sends a file to an OCR adapter.
+    """
+
+    processing_purpose: Literal["medication_candidate_extraction"]
+    provider_category: Literal[
+        "configured_ocr_service", "google_cloud_vision", "local_tesseract"
+    ]
+    upload_persisted_by_clara: bool = False
+    raw_text_logged_by_clara: bool = False
+    human_confirmation_required: bool = True
+    schema_version: Literal["ocr-processing-disclosure.v1"] = (
+        "ocr-processing-disclosure.v1"
+    )
+
+
 class CabinetScanDetection(BaseModel):
     drug_name: str
     normalized_name: str
@@ -541,7 +561,7 @@ class RagFlowConfig(BaseModel):
     rag_reranker_enabled: bool = True
     rag_nli_enabled: bool = True
     rag_graphrag_enabled: bool = True
-    deepseek_fallback_enabled: bool = True
+    deepseek_fallback_enabled: bool = False
     low_context_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
     precision_at_k: int = Field(default=10, ge=1, le=50)
     recall_at_k: int = Field(default=10, ge=1, le=50)
@@ -554,12 +574,13 @@ class RagFlowConfig(BaseModel):
     def _normalize_legacy_verification_enabled(cls, value: Any) -> Any:
         if not isinstance(value, dict):
             return value
-        if "rule_verification_enabled" in value:
-            return value
-        if "verification_enabled" not in value:
-            return value
         normalized = dict(value)
-        normalized["rule_verification_enabled"] = normalized.get("verification_enabled")
+        if "rule_verification_enabled" not in normalized and "verification_enabled" in normalized:
+            normalized["rule_verification_enabled"] = normalized.get("verification_enabled")
+        # Generation never has a lower-evidence recovery model.  Preserve the
+        # historical field for backward-compatible reads, but fail closed even
+        # if an older admin payload tries to re-enable it.
+        normalized["deepseek_fallback_enabled"] = False
         return normalized
 
 
@@ -966,14 +987,18 @@ class WorkspaceConversationListResponse(BaseModel):
 
 
 class WorkspaceConversationShareCreateRequest(BaseModel):
-    expires_in_hours: int | None = Field(default=None, ge=1, le=720)
+    expires_in_hours: int = Field(default=168, ge=1, le=720)
     rotate: bool = False
 
 
 class WorkspaceConversationShareResponse(BaseModel):
+    share_id: int
     conversation_id: int
-    share_token: str
-    public_url: str
+    # Capability material is returned only while it is issued/rotated.  It is
+    # deliberately absent on an owner metadata read because the DB stores only
+    # a digest and cannot safely recover it.
+    share_token: str | None = None
+    public_url: str | None = None
     is_active: bool
     expires_at: datetime | None = None
     created_at: datetime
@@ -988,8 +1013,9 @@ class ResearchTier2ShareResponse(BaseModel):
     """
 
     job_id: str
-    share_token: str
-    public_url: str
+    share_id: int
+    share_token: str | None = None
+    public_url: str | None = None
     is_active: bool
     expires_at: datetime | None = None
     created_at: datetime
@@ -997,12 +1023,11 @@ class ResearchTier2ShareResponse(BaseModel):
 
 
 class WorkspaceConversationShareListItem(BaseModel):
+    share_id: int
     conversation_id: int
     conversation_title: str
     message_count: int = 0
     last_message_at: datetime | None = None
-    share_token: str
-    public_url: str
     is_active: bool
     expires_at: datetime | None = None
     created_at: datetime
@@ -1020,7 +1045,6 @@ class WorkspacePublicConversationMessageResponse(BaseModel):
 class WorkspacePublicConversationResponse(BaseModel):
     conversation_id: int
     title: str
-    owner_label: str
     expires_at: datetime | None = None
     messages: list[WorkspacePublicConversationMessageResponse] = Field(default_factory=list)
 
@@ -1253,10 +1277,16 @@ class PhrRecordUpdateRequest(BaseModel):
     height_cm: float | None = Field(default=None, ge=0, le=300)
     weight_kg: float | None = Field(default=None, ge=0, le=800)
     phone: str = Field(default="", max_length=64)
+    contact_email: str = Field(default="", max_length=254)
     address: str = Field(default="", max_length=2000)
     emergency_contact_name: str = Field(default="", max_length=255)
     emergency_contact_phone: str = Field(default="", max_length=64)
+    emergency_contact_relationship: str = Field(default="", max_length=80)
+    emergency_contact_note: str = Field(default="", max_length=2000)
+    insurance_provider: str = Field(default="", max_length=255)
     insurance_id: str = Field(default="", max_length=128)
+    insurance_expiry: date | None = None
+    allergy_status: Literal["unknown", "none_known", "recorded"] = "unknown"
     notes: str = Field(default="", max_length=4000)
     allergies: list[PhrAllergyItemLegacy] = Field(default_factory=list, max_length=80)
     conditions: list[PhrConditionItemLegacy] = Field(default_factory=list, max_length=80)
@@ -1328,10 +1358,16 @@ class PhrEnhancedRecordResponse(BaseModel):
     height_cm: float | None = None
     weight_kg: float | None = None
     phone: str = ""
+    contact_email: str = ""
     address: str = ""
     emergency_contact_name: str = ""
     emergency_contact_phone: str = ""
+    emergency_contact_relationship: str = ""
+    emergency_contact_note: str = ""
+    insurance_provider: str = ""
     insurance_id: str = ""
+    insurance_expiry: date | None = None
+    allergy_status: Literal["unknown", "none_known", "recorded"] = "unknown"
     notes: str = ""
     allergies: list[PhrAllergyItem] = Field(default_factory=list)
     conditions: list[PhrConditionItem] = Field(default_factory=list)
@@ -1359,24 +1395,56 @@ class PhrObservationCreateRequest(BaseModel):
     observed_on: date | None = None
 
 
+class PhrBodyMeasurementCreateRequest(BaseModel):
+    """One user-entered height/weight measurement at a single point in time.
+
+    Keeping the pair in one request prevents the UI from accidentally deriving
+    BMI from values recorded on unrelated dates.  The values are persisted as
+    standard PHR observations so they remain included in export and DSAR flows.
+    """
+
+    height_cm: float = Field(gt=0, le=300)
+    weight_kg: float = Field(gt=0, le=800)
+    observed_on: date | None = None
+
+
 class PhrShareCreateRequest(BaseModel):
     scope: Literal["full", "emergency_card"] = "full"
-    expires_in_days: int | None = Field(default=None, ge=1, le=365)
+    expires_in_days: int = Field(default=30, ge=1, le=365)
 
 
 class PhrOcrCandidate(BaseModel):
     """A single OCR-extracted candidate medication awaiting confirmation."""
 
+    candidate_id: str = Field(min_length=8, max_length=96)
     name: str = Field(min_length=1, max_length=160)
     dose: str = Field(default="", max_length=140)
     frequency: str = Field(default="", max_length=140)
     ocr_confidence: float | None = Field(default=None, ge=0, le=1)
-    requires_manual_confirm: bool = False
+    # OCR values are proposals. Every row needs an explicit user acceptance;
+    # numerical OCR confidence is not a confirmation surrogate.
+    requires_manual_confirm: bool = True
+    confirmed: bool = False
+    source_coordinates: list[OcrSourceCoordinate] = Field(default_factory=list)
+
+
+class PhrOcrScanResponse(BaseModel):
+    """Owner-bound review-only candidates; no PHR state is committed."""
+
+    committed: Literal[False] = False
+    candidates: list[PhrOcrCandidate] = Field(default_factory=list)
+    review_token: str = Field(min_length=20, max_length=4096)
+    processing_disclosure: OcrDataProcessingDisclosure
 
 
 class PhrOcrConfirmRequest(BaseModel):
     """User-edited candidate list to commit as ``ocr``-sourced entries."""
 
+    review_token: str = Field(min_length=20, max_length=4096)
+    # Includes every opaque ID returned by scan, including rows the person
+    # discards. This lets the API verify the owner-bound review capability
+    # without treating a discarded OCR proposal as confirmed data.
+    review_candidate_ids: list[str] = Field(min_length=1, max_length=120)
     medications: list[PhrOcrCandidate] = Field(default_factory=list, max_length=120)
 
 

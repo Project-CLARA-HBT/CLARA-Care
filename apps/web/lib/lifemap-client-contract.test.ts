@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import api from "@/lib/http-client";
 import {
+  completeLifeMapTask,
   getLifeMapClientContract,
   LIFE_MAP_CLIENT_STATES,
 } from "@/lib/lifemap";
 
 vi.mock("@/lib/http-client", () => ({
-  default: { get: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }));
 
 describe("LifeMap client contract", () => {
@@ -44,5 +45,22 @@ describe("LifeMap client contract", () => {
     expect(contract.states.offline.truth_authority).toBe(false);
     expect(contract.offline_policy.queued_health_mutations_supported).toBe(false);
     expect(api.get).toHaveBeenCalledWith("/lifemap/v2/client-contract");
+  });
+
+  it("completes a task with optimistic concurrency and idempotency", async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: {} });
+
+    await completeLifeMapTask("task/one", 7);
+
+    expect(api.post).toHaveBeenCalledWith(
+      "/lifemap/tasks/task%2Fone/complete",
+      { evidence: { source: "user" } },
+      {
+        headers: expect.objectContaining({
+          "Idempotency-Key": expect.any(String),
+          "If-Match": "7",
+        }),
+      },
+    );
   });
 });

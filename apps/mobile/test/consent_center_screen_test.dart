@@ -1,37 +1,15 @@
-// Feature: clara-mobile-feature-parity — Task 10.1 (Req 8.1, 8.2, 8.4).
+// Feature: clara-mobile-feature-parity — canonical consent ledger contract.
 //
-// Widget test for the granular consent center. It asserts the load-bearing
-// invariant of the task: toggling the *analytics* purpose drives the shared
-// `Analytics` facade — granting calls `setConsent(granted: true)` and
-// withdrawing calls `setConsent(granted: false)` immediately (Requirement 8.4 /
-// Property P7). It also confirms the surface is gated behind
-// `consent_center_mobile_enabled` (Requirement 8.6 / 15.1).
-//
-// A real `ConsentStore` backed by an in-memory secure-storage seam drives the
-// genuine persistence + facade-wiring plumbing without platform channels, and a
-// spy `Analytics` records every `setConsent` call.
+// The mobile screen must use the same server-owned, append-only consent ledger
+// as web. These widget contracts keep it from regressing to a device-local
+// switch that looks successful without changing policy enforcement.
 
-import 'package:clara_mobile/core/analytics.dart';
-import 'package:clara_mobile/core/consent_state.dart';
 import 'package:clara_mobile/core/feature_flags.dart';
 import 'package:clara_mobile/screens/consent_center_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fakes/fakes.dart';
-
-/// Spy over the production [Analytics] facade that records every consent flip.
-class SpyAnalytics extends Analytics {
-  SpyAnalytics() : super(transport: RecordingAnalyticsTransport());
-
-  final List<bool> consentCalls = <bool>[];
-
-  @override
-  void setConsent({required bool granted}) {
-    consentCalls.add(granted);
-    super.setConsent(granted: granted);
-  }
-}
 
 MobileFeatureFlagResolver _resolver({required bool consentEnabled}) {
   return MobileFeatureFlagResolver(
@@ -43,115 +21,118 @@ MobileFeatureFlagResolver _resolver({required bool consentEnabled}) {
   );
 }
 
+Map<String, dynamic> _ledger({bool personalization = false}) =>
+    <String, dynamic>{
+      'enabled': true,
+      'policy_version': '2026-04-v1',
+      'consents': <String, bool>{
+        'core_service': true,
+        'ai_transparency': true,
+        'personalization': personalization,
+        'research': false,
+        'cross_border_processing': false,
+        'sharing': false,
+      },
+    };
+
 void main() {
   testWidgets(
-      'toggling analytics consent drives Analytics.setConsent (grant=true, withdraw=false)',
+      'renders all six server ledger purposes including AI transparency',
       (tester) async {
-    final spy = SpyAnalytics();
-    final store = ConsentStore(
-      storage: InMemorySessionSecureStorage(),
-      analytics: spy,
-    );
-    final session = FakeSessionStore.empty();
+    final api = FakeApiClient()
+      ..stub('getComplianceConsents', response: _ledger());
+    final session = await FakeSessionStore.authenticated();
 
     await tester.pumpWidget(MaterialApp(
       home: ConsentCenterScreen(
+        apiClient: api,
         resolver: _resolver(consentEnabled: true),
         sessionStore: session,
-        consentStore: store,
       ),
     ));
     await tester.pumpAndSettle();
 
-    // Analytics defaults to OFF (privacy-first); the switch reflects that.
-    expect(store.isGranted(ConsentPurpose.analytics), isFalse);
-    await tester.dragUntilVisible(
-      find.text(ConsentPurpose.analytics.titleVi),
-      find.byType(Scrollable),
-      const Offset(0, -240),
-    );
-
-    final analyticsSwitch = find.ancestor(
-      of: find.text(ConsentPurpose.analytics.titleVi),
-      matching: find.byType(SwitchListTile),
-    );
-    expect(analyticsSwitch, findsOneWidget);
-
-    // Grant analytics → facade receives setConsent(true).
-    await tester.tap(analyticsSwitch);
-    await tester.pumpAndSettle();
-    expect(store.isGranted(ConsentPurpose.analytics), isTrue);
-    expect(spy.consentCalls.last, isTrue);
-
-    // Withdraw analytics → facade receives setConsent(false) immediately.
-    await tester.tap(analyticsSwitch);
-    await tester.pumpAndSettle();
-    expect(store.isGranted(ConsentPurpose.analytics), isFalse);
-    expect(spy.consentCalls.last, isFalse);
+    expect(find.text('Minh bạch AI'), findsOneWidget);
+    expect(find.text('Xử lý bởi mô hình bên thứ ba / xuyên biên giới'),
+        findsOneWidget);
+    expect(api.wasCalled('getComplianceConsents'), isTrue);
   });
 
-  testWidgets('withdrawing analytics consent suppresses analytics transmission',
+  testWidgets('a grant appends through the API then re-reads server truth',
       (tester) async {
-    // A real, *configured* facade so transmission would occur if consented.
-    final transport = RecordingAnalyticsTransport();
-    final analytics = Analytics(transport: transport)
-      ..init(
-        const AnalyticsConfig(provider: 'test', apiKey: 'k'),
-        consentGranted: true,
+    var personalization = false;
+    final api = FakeApiClient()
+      ..stub(
+        'getComplianceConsents',
+        responder: (_) => _ledger(personalization: personalization),
+      )
+      ..stub(
+        'grantComplianceConsent',
+        responder: (invocation) {
+          expect(invocation.args['purpose'], 'personalization');
+          personalization = true;
+          return <String, dynamic>{};
+        },
       );
-    final store = ConsentStore(
-      storage: InMemorySessionSecureStorage(),
-      analytics: analytics,
-    );
+    final session = await FakeSessionStore.authenticated();
 
     await tester.pumpWidget(MaterialApp(
       home: ConsentCenterScreen(
+        apiClient: api,
         resolver: _resolver(consentEnabled: true),
-        sessionStore: FakeSessionStore.empty(),
-        consentStore: store,
+        sessionStore: session,
       ),
     ));
     await tester.pumpAndSettle();
 
-    // load() synced the facade to the persisted analytics grant (false) →
-    // transmission is suppressed even though credentials are present.
-    await tester.dragUntilVisible(
-      find.text(ConsentPurpose.analytics.titleVi),
-      find.byType(Scrollable),
-      const Offset(0, -240),
-    );
-    final analyticsSwitch = find.ancestor(
-      of: find.text(ConsentPurpose.analytics.titleVi),
+    final toggle = find.ancestor(
+      of: find.text('Cá nhân hóa'),
       matching: find.byType(SwitchListTile),
     );
-
-    // Grant then withdraw; after withdrawal a capture must not transmit.
-    await tester.tap(analyticsSwitch);
-    await tester.pumpAndSettle();
-    await tester.tap(analyticsSwitch);
+    await tester.tap(toggle);
     await tester.pumpAndSettle();
 
-    transport.reset();
-    analytics.capture(const AnalyticsEvent('post_withdraw_event'));
-    expect(transport.transmissions, 0);
+    expect(api.wasCalled('grantComplianceConsent'), isTrue);
+    expect(
+        api.callsTo('getComplianceConsents').length, greaterThanOrEqualTo(2));
   });
 
-  testWidgets('surface is gated off when consent_center flag is absent',
+  testWidgets('a ledger failure fails closed without exposing switches',
       (tester) async {
+    final api = FakeApiClient()
+      ..stub('getComplianceConsents', error: StateError('unavailable'));
+    final session = await FakeSessionStore.authenticated();
+
     await tester.pumpWidget(MaterialApp(
       home: ConsentCenterScreen(
-        resolver: _resolver(consentEnabled: false),
-        sessionStore: FakeSessionStore.empty(),
-        consentStore: ConsentStore(
-          storage: InMemorySessionSecureStorage(),
-          analytics: SpyAnalytics(),
-        ),
+        apiClient: api,
+        resolver: _resolver(consentEnabled: true),
+        sessionStore: session,
       ),
     ));
     await tester.pumpAndSettle();
 
-    // No purpose toggles are exposed when the gate is off.
     expect(find.byType(SwitchListTile), findsNothing);
-    expect(find.text('Tính năng này hiện chưa được bật.'), findsOneWidget);
+    expect(
+        find.text('Không thể tải trạng thái đồng ý lúc này. Vui lòng thử lại.'),
+        findsOneWidget);
+  });
+
+  testWidgets('feature flag off exposes no control and makes no ledger request',
+      (tester) async {
+    final api = FakeApiClient();
+    final session = await FakeSessionStore.authenticated();
+
+    await tester.pumpWidget(MaterialApp(
+      home: ConsentCenterScreen(
+        apiClient: api,
+        resolver: _resolver(consentEnabled: false),
+        sessionStore: session,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SwitchListTile), findsNothing);
+    expect(api.wasCalled('getComplianceConsents'), isFalse);
   });
 }

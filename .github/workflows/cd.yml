@@ -1,21 +1,22 @@
-name: CD
+name: Controlled deployment
 
 on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (vX.Y.Z or sha-<shortsha>)"
+        description: "Immutable GHCR image tag to deploy (for example sha-abcdef0)"
         required: true
         type: string
-      promote_to_production:
-        description: "Promote to production after staging smoke passes"
+      target_environment:
+        description: "Protected GitHub environment with the target-host secrets"
         required: true
-        default: true
-        type: boolean
+        default: production
+        type: choice
+        options: [staging, production]
       deployment_reason:
-        description: "Release note or incident ticket id"
+        description: "Release note or incident/change ticket"
         required: false
-        default: "manual-release"
+        default: manual-release
         type: string
 
 permissions:
@@ -23,7 +24,7 @@ permissions:
   packages: read
 
 concurrency:
-  group: cd-${{ github.ref_name }}
+  group: controlled-deploy-${{ inputs.target_environment }}
   cancel-in-progress: false
 
 env:
@@ -31,380 +32,200 @@ env:
 
 jobs:
   preflight:
-    name: preflight image checks
+    name: immutable-image and migration preflight
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     outputs:
-      image_tag: ${{ steps.ctx.outputs.image_tag }}
-      registry_repo: ${{ steps.ctx.outputs.registry_repo }}
+      image_tag: ${{ steps.context.outputs.image_tag }}
+      registry_repo: ${{ steps.context.outputs.registry_repo }}
+      release_name: ${{ steps.context.outputs.release_name }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Checkout release source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Resolve deploy context
-        id: ctx
+      - name: Resolve immutable release context
+        id: context
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
           set -euo pipefail
-          image_tag="${{ github.event.inputs.image_tag }}"
+          case "$IMAGE_TAG" in
+            ''|*[!A-Za-z0-9._-]*)
+              echo "image_tag must be a non-empty OCI-safe immutable tag" >&2
+              exit 2
+              ;;
+          esac
           registry_repo="ghcr.io/${GITHUB_REPOSITORY,,}"
-          echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
-          echo "registry_repo=$registry_repo" >> "$GITHUB_OUTPUT"
-
+          release_name="${IMAGE_TAG}-${GITHUB_SHA:0:12}"
           {
-            echo "### CD Preflight"
-            echo "- image_tag: \`$image_tag\`"
-            echo "- registry_repo: \`$registry_repo\`"
-            echo "- reason: \`${{ github.event.inputs.deployment_reason }}\`"
+            echo "image_tag=$IMAGE_TAG"
+            echo "registry_repo=$registry_repo"
+            echo "release_name=$release_name"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Controlled deployment preflight"
+            echo "- image tag: \`$IMAGE_TAG\`"
+            echo "- source SHA: \`${GITHUB_SHA}\`"
+            echo "- reason: \`${{ inputs.deployment_reason }}\`"
+            echo "- target: \`${{ inputs.target_environment }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Login GHCR
-        uses: docker/login-action@v4
+      - name: Verify every migration has a downgrade
+        run: python3 scripts/ops/check_migration_downgrade.py services/api/alembic/versions
+
+      - name: Authenticate to GHCR for manifest checks
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify release images exist
+      - name: Verify immutable release images exist
+        env:
+          IMAGE_TAG: ${{ steps.context.outputs.image_tag }}
+          REGISTRY_REPO: ${{ steps.context.outputs.registry_repo }}
         run: |
           set -euo pipefail
-          image_tag="${{ steps.ctx.outputs.image_tag }}"
-          repo="${{ steps.ctx.outputs.registry_repo }}"
-          for svc in api ml asr web; do
-            image="${repo}/clara-${svc}:${image_tag}"
-            echo "Checking image: ${image}"
-            docker manifest inspect "${image}" >/dev/null
+          for service in api ml asr web; do
+            docker manifest inspect "${REGISTRY_REPO}/clara-${service}:${IMAGE_TAG}" >/dev/null
           done
 
-  deploy-staging:
-    name: deploy staging + smoke
+  deploy:
+    name: deploy on controlled host
     needs: preflight
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     environment:
-      name: staging
+      name: ${{ inputs.target_environment }}
     env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_SSH_PORT || '22' }}
+      DEPLOY_USER: ${{ vars.DEPLOY_SSH_USER || 'root' }}
+      DEPLOY_ROOT: ${{ vars.DEPLOY_ROOT || '/opt/clara-care' }}
+      PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || 'https://theclaracare.com' }}
+      GHCR_PULL_USERNAME: ${{ vars.GHCR_PULL_USERNAME || github.actor }}
       IMAGE_TAG: ${{ needs.preflight.outputs.image_tag }}
       REGISTRY_REPO: ${{ needs.preflight.outputs.registry_repo }}
+      RELEASE_NAME: ${{ needs.preflight.outputs.release_name }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Checkout release source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Login GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Prepare env
-        run: |
-          set -euo pipefail
-          if [ -z "${{ secrets.DEPLOY_ENV_FILE }}" ]; then
-            echo "[error] DEPLOY_ENV_FILE secret is required for staging deployments"
-            exit 1
-          fi
-          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > .env
-          {
-            echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
-            echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
-            echo "ASR_IMAGE=${REGISTRY_REPO}/clara-asr:${IMAGE_TAG}"
-            echo "WEB_IMAGE=${REGISTRY_REPO}/clara-web:${IMAGE_TAG}"
-            # Requirement 6.6: do NOT force the implicit SQLite database fallback.
-            # The deploy stack defaults DATABASE_FALLBACK_ENABLED to false; any
-            # fallback is an explicit, documented opt-in supplied deliberately via
-            # the DEPLOY_ENV_FILE secret (written to .env above).
-          } >> .env
-          # The governed ML runtime must declare the V4 Pro/Flash pair in the
-          # protected deployment environment.  Do this before image pulls so a
-          # stale secret cannot silently deploy the legacy single-model path.
-          REQUIRE_DEEPSEEK=true ./scripts/ops/validate_runtime_env.sh .env
-
-      - name: Pull and deploy staging stack
-        run: |
-          set -euo pipefail
-          retry_cmd() {
-            local max_attempts="$1"
-            shift
-            local attempt=1
-            until "$@"; do
-              if [ "$attempt" -ge "$max_attempts" ]; then
-                echo "[error] command failed after ${max_attempts} attempts: $*"
-                return 1
-              fi
-              echo "[warn] command failed (attempt ${attempt}/${max_attempts}): $*"
-              sleep $((attempt * 5))
-              attempt=$((attempt + 1))
-            done
-            return 0
-          }
-
-          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml config >/dev/null
-          retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml pull
-          retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml up -d
-
-      - name: Apply staging database migrations
-        run: |
-          set -euo pipefail
-          compose=(docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml)
-          "${compose[@]}" exec -T api alembic upgrade head
-          "${compose[@]}" exec -T api alembic current
-
-      - name: Run staging smoke checks
-        run: |
-          set -euo pipefail
-
-          wait_http() {
-            local url="$1"
-            local name="$2"
-            local attempts=60
-            local i=1
-            while [ "$i" -le "$attempts" ]; do
-              if curl -fsS --max-time 5 "$url" >/tmp/"$name".json 2>/dev/null; then
-                echo "[ok] ${name} ready at ${url}"
-                return 0
-              fi
-              echo "[wait] ${name} not ready (${i}/${attempts})"
-              sleep 3
-              i=$((i + 1))
-            done
-            echo "[error] ${name} did not become ready: ${url}"
-            return 1
-          }
-
-          wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/health" "api-root-health"
-          wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/api/v1/health" "api-v1-health"
-          wait_http "http://127.0.0.1:${APP_ML_PORT:-8110}/health" "ml-health"
-          wait_http "http://127.0.0.1:${APP_ASR_PORT:-8190}/ready" "asr-ready"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/" "web-home"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research" "web-research"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/deepdive" "web-research-deepdive"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/analyze" "web-research-analyze"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/citations" "web-research-citations"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/details" "web-research-details"
-
-      - name: Capture staging compose status
-        if: always()
-        run: |
-          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml ps > /tmp/cd-staging-ps.txt || true
-          python3 scripts/security/check_ci_artifact_safety.py /tmp/cd-staging-ps.txt
-
-      - name: Verify staging diagnostics are safe to retain
-        if: always()
-        run: |
-          python3 scripts/security/check_ci_artifact_safety.py --allow-missing \
-            /tmp/cd-staging-ps.txt /tmp/*health*.json /tmp/web-*.json
-
-      - name: Upload staging smoke responses
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: staging-smoke-${{ github.run_id }}
-          path: |
-            /tmp/*health*.json
-            /tmp/web-*.json
-            /tmp/cd-staging-ps.txt
-          if-no-files-found: ignore
-
-
-  promote-production:
-    name: manual promote production + smoke
-    needs: [preflight, deploy-staging]
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    if: ${{ github.event.inputs.promote_to_production == 'true' }}
-    environment:
-      name: production
-    env:
-      IMAGE_TAG: ${{ needs.preflight.outputs.image_tag }}
-      REGISTRY_REPO: ${{ needs.preflight.outputs.registry_repo }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Login GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Prepare env
-        run: |
-          set -euo pipefail
-          if [ -z "${{ secrets.DEPLOY_ENV_FILE }}" ]; then
-            echo "[error] DEPLOY_ENV_FILE secret is required for production deployments"
-            exit 1
-          fi
-          printf '%s\n' "${{ secrets.DEPLOY_ENV_FILE }}" > .env
-          {
-            echo "API_IMAGE=${REGISTRY_REPO}/clara-api:${IMAGE_TAG}"
-            echo "ML_IMAGE=${REGISTRY_REPO}/clara-ml:${IMAGE_TAG}"
-            echo "ASR_IMAGE=${REGISTRY_REPO}/clara-asr:${IMAGE_TAG}"
-            echo "WEB_IMAGE=${REGISTRY_REPO}/clara-web:${IMAGE_TAG}"
-            # Requirement 6.6: do NOT force the implicit SQLite database fallback
-            # in production. The deploy stack defaults DATABASE_FALLBACK_ENABLED to
-            # false and the in-code guard refuses implicit production fallback; any
-            # fallback must be an explicit, documented opt-in supplied deliberately
-            # via the DEPLOY_ENV_FILE secret (written to .env above).
-          } >> .env
-          # Keep production on the same governed V4 Pro/Flash configuration as
-          # staging; an incomplete secret fails before any image is pulled.
-          REQUIRE_DEEPSEEK=true ./scripts/ops/validate_runtime_env.sh .env
-
-      - name: Set up Python for migration checks
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Verify target migrations define a downgrade
-        run: |
-          set -euo pipefail
-          # Requirement 9.3 / design Property 23: every migration to be deployed
-          # must define a downgrade() so a failed migration can be rolled back
-          # (see docs/runbooks/backup-restore.md "Pre-migration backup & rollback").
-          # Static, dependency-free gate — fails the deploy if any migration lacks
-          # a downgrade(). Runs before any image is pulled or alembic upgrade runs.
-          python scripts/ops/check_migration_downgrade.py services/api/alembic/versions
-
-      - name: Pre-migration database backup
+      - name: Validate controlled-host inputs
         env:
-          CLARA_POSTGRES_CONTAINER: ${{ vars.CLARA_POSTGRES_CONTAINER || 'clara-postgres' }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
         run: |
           set -euo pipefail
-          # Requirement 9.3 / 9.5 + docs/runbooks/backup-restore.md ("Postgres
-          # (primary)" and "Pre-migration backup & rollback"): take and verify a
-          # fresh Postgres backup BEFORE the new stack starts and runs
-          # `alembic upgrade head`. A failed migration rolls back to the prior
-          # image and, if needed, this pre-migration backup.
-          #
-          # Credentials are sourced only from the secret-store-injected .env
-          # (never printed); the dump is written off the repo tree.
-          set -a
-          # shellcheck disable=SC1091
-          . ./.env
-          set +a
+          for required in DEPLOY_HOST DEPLOY_SSH_PRIVATE_KEY DEPLOY_SSH_KNOWN_HOSTS DEPLOY_ENV_FILE GHCR_PULL_TOKEN; do
+            if [ -z "${!required}" ]; then
+              echo "Missing protected deployment input: $required" >&2
+              exit 2
+            fi
+          done
+          case "$DEPLOY_ROOT" in
+            /opt/clara-care|/opt/clara-care/*) ;;
+            *) echo "DEPLOY_ROOT must stay under /opt/clara-care" >&2; exit 2 ;;
+          esac
 
-          container="${CLARA_POSTGRES_CONTAINER}"
-          backup_dir="${PRE_MIGRATION_BACKUP_DIR:-/opt/clara-care/backups/pre-migration}"
-          ts="$(date -u +%Y%m%dT%H%M%SZ)"
-          dump="${backup_dir}/pg_clara_${ts}.dump"
+      - name: Configure pinned SSH trust
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          cat > "$RUNNER_TEMP/ssh-config" <<EOF
+          Host clara-target
+            HostName $DEPLOY_HOST
+            Port $DEPLOY_PORT
+            User $DEPLOY_USER
+            IdentityFile $HOME/.ssh/id_ed25519
+            UserKnownHostsFile $HOME/.ssh/known_hosts
+            StrictHostKeyChecking yes
+            IdentitiesOnly yes
+          EOF
+          chmod 600 "$RUNNER_TEMP/ssh-config"
 
-          if ! docker ps --format '{{.Names}}' | grep -qx "${container}"; then
-            echo "[info] postgres container '${container}' is not running — no existing"
-            echo "[info] database to back up (initial deploy). Skipping pre-migration backup."
-            exit 0
-          fi
+      - name: Assemble release bundle without source worktree
+        run: |
+          set -euo pipefail
+          bundle="$RUNNER_TEMP/clara-release/$RELEASE_NAME"
+          mkdir -p "$bundle/deploy/docker" "$bundle/scripts/deploy" "$bundle/scripts/ops"
+          install -m 644 deploy/docker/docker-compose.deploy.yml "$bundle/deploy/docker/docker-compose.deploy.yml"
+          install -m 755 scripts/deploy/deploy_release_bundle.sh "$bundle/scripts/deploy/deploy_release_bundle.sh"
+          install -m 755 scripts/ops/validate_runtime_env.sh "$bundle/scripts/ops/validate_runtime_env.sh"
+          printf 'API_IMAGE=%s/clara-api:%s\nML_IMAGE=%s/clara-ml:%s\nASR_IMAGE=%s/clara-asr:%s\nWEB_IMAGE=%s/clara-web:%s\n' \
+            "$REGISTRY_REPO" "$IMAGE_TAG" "$REGISTRY_REPO" "$IMAGE_TAG" \
+            "$REGISTRY_REPO" "$IMAGE_TAG" "$REGISTRY_REPO" "$IMAGE_TAG" \
+            > "$bundle/images.env"
+          printf '{"source_sha":"%s","image_tag":"%s","workflow_run":"%s"}\n' \
+            "$GITHUB_SHA" "$IMAGE_TAG" "$GITHUB_RUN_ID" > "$bundle/release.json"
+          tar -C "$RUNNER_TEMP/clara-release" -czf "$RUNNER_TEMP/clara-release.tgz" "$RELEASE_NAME"
 
-          mkdir -p "${backup_dir}"
-          chmod 700 "${backup_dir}" || true
+      - name: Install protected environment and release bundle on target
+        env:
+          DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
+        run: |
+          set -euo pipefail
+          ssh -F "$RUNNER_TEMP/ssh-config" clara-target \
+            "install -d -m 700 '$DEPLOY_ROOT' '$DEPLOY_ROOT/releases' '$DEPLOY_ROOT/backups'; rm -rf '$DEPLOY_ROOT/releases/.incoming-$RELEASE_NAME'; install -d -m 700 '$DEPLOY_ROOT/releases/.incoming-$RELEASE_NAME'"
+          # The secret crosses the encrypted SSH channel over stdin only; it is
+          # never a command argument, process environment on the target, or log.
+          printf '%s\n' "$DEPLOY_ENV_FILE" | ssh -F "$RUNNER_TEMP/ssh-config" clara-target \
+            "umask 077; install -m 600 /dev/stdin '$DEPLOY_ROOT/.env'"
+          scp -F "$RUNNER_TEMP/ssh-config" "$RUNNER_TEMP/clara-release.tgz" \
+            "clara-target:$DEPLOY_ROOT/releases/.incoming-$RELEASE_NAME/release.tgz"
+          ssh -F "$RUNNER_TEMP/ssh-config" clara-target \
+            "set -eu; cd '$DEPLOY_ROOT/releases/.incoming-$RELEASE_NAME'; tar -xzf release.tgz; rm release.tgz; test -x '$RELEASE_NAME/scripts/deploy/deploy_release_bundle.sh'; mv '$RELEASE_NAME' '$DEPLOY_ROOT/releases/$RELEASE_NAME'; rmdir '$DEPLOY_ROOT/releases/.incoming-$RELEASE_NAME'"
 
-          echo "[backup] dumping database from container '${container}' to ${dump}"
-          # Consistent custom-format logical dump (includes alembic_version), per
-          # the runbook's Postgres backup procedure.
-          docker exec "${container}" pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Fc \
-            > "${dump}"
+      - name: Authenticate target host to GHCR without argv secrets
+        env:
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_PULL_TOKEN" | ssh -F "$RUNNER_TEMP/ssh-config" clara-target \
+            "docker login ghcr.io --username '$GHCR_PULL_USERNAME' --password-stdin"
 
-          # Integrity: checksum + non-empty assertion (a bad/empty backup fails the deploy).
-          sha256sum "${dump}" > "${dump}.sha256"
-          ( cd "${backup_dir}" && sha256sum -c "$(basename "${dump}").sha256" )
-          if [ ! -s "${dump}" ]; then
-            echo "[error] pre-migration backup is empty: ${dump}" >&2
+      - name: Deploy, migrate, and run host-local smoke checks
+        run: |
+          set -euo pipefail
+          ssh -F "$RUNNER_TEMP/ssh-config" clara-target \
+            "'$DEPLOY_ROOT/releases/$RELEASE_NAME/scripts/deploy/deploy_release_bundle.sh' --root-dir '$DEPLOY_ROOT' --release-dir '$DEPLOY_ROOT/releases/$RELEASE_NAME'"
+
+      - name: Verify public routing and browser security headers
+        run: |
+          set -euo pipefail
+          headers="$RUNNER_TEMP/public-headers.txt"
+          curl --fail --silent --show-error --location --max-time 15 --dump-header "$headers" --output /dev/null "$PUBLIC_BASE_URL/"
+          for header in strict-transport-security content-security-policy x-content-type-options x-frame-options referrer-policy permissions-policy; do
+            grep -qi "^${header}:" "$headers" || { echo "Missing public header: $header" >&2; exit 1; }
+          done
+          phr_status="$(curl --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' "$PUBLIC_BASE_URL/phr/shared/not-a-real-token")"
+          if [ "$phr_status" != 200 ]; then
+            echo "Public PHR viewer route must be reachable without authentication, got $phr_status" >&2
             exit 1
           fi
-          chmod 600 "${dump}" "${dump}.sha256" || true
 
-          echo "[ok] verified pre-migration backup: ${dump}"
-          {
-            echo "### Pre-migration backup"
-            echo "- container: \`${container}\`"
-            echo "- artifact: \`${dump}\`"
-            echo "- target image tag: \`${IMAGE_TAG}\`"
-            echo "- rollback: redeploy prior image; if needed restore this backup (see docs/runbooks/backup-restore.md)"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Pull and deploy production stack
-        run: |
-          set -euo pipefail
-          retry_cmd() {
-            local max_attempts="$1"
-            shift
-            local attempt=1
-            until "$@"; do
-              if [ "$attempt" -ge "$max_attempts" ]; then
-                echo "[error] command failed after ${max_attempts} attempts: $*"
-                return 1
-              fi
-              echo "[warn] command failed (attempt ${attempt}/${max_attempts}): $*"
-              sleep $((attempt * 5))
-              attempt=$((attempt + 1))
-            done
-            return 0
-          }
-
-          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml config >/dev/null
-          retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml pull
-          retry_cmd 3 docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml up -d
-
-      - name: Apply production database migrations
-        run: |
-          set -euo pipefail
-          # The verified backup above is the rollback boundary. The migration
-          # runs from the just-deployed API image before shallow health checks.
-          compose=(docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml)
-          "${compose[@]}" exec -T api alembic upgrade head
-          "${compose[@]}" exec -T api alembic current
-
-      - name: Run production smoke checks
-        run: |
-          set -euo pipefail
-
-          wait_http() {
-            local url="$1"
-            local name="$2"
-            local attempts=60
-            local i=1
-            while [ "$i" -le "$attempts" ]; do
-              if curl -fsS --max-time 5 "$url" >/tmp/"$name".json 2>/dev/null; then
-                echo "[ok] ${name} ready at ${url}"
-                return 0
-              fi
-              echo "[wait] ${name} not ready (${i}/${attempts})"
-              sleep 3
-              i=$((i + 1))
-            done
-            echo "[error] ${name} did not become ready: ${url}"
-            return 1
-          }
-
-          wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/health" "prod-api-root-health"
-          wait_http "http://127.0.0.1:${APP_API_PORT:-8100}/api/v1/health" "prod-api-v1-health"
-          wait_http "http://127.0.0.1:${APP_ML_PORT:-8110}/health" "prod-ml-health"
-          wait_http "http://127.0.0.1:${APP_ASR_PORT:-8190}/ready" "prod-asr-ready"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/" "prod-web-home"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research" "prod-web-research"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/deepdive" "prod-web-research-deepdive"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/analyze" "prod-web-research-analyze"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/citations" "prod-web-research-citations"
-          wait_http "http://127.0.0.1:${APP_WEB_PORT:-3100}/research/details" "prod-web-research-details"
-
-      - name: Capture production compose status
+      - name: Record non-sensitive deployment receipt
         if: always()
         run: |
-          docker compose --env-file .env -f deploy/docker/docker-compose.deploy.yml ps > /tmp/cd-production-ps.txt || true
-          python3 scripts/security/check_ci_artifact_safety.py /tmp/cd-production-ps.txt
+          set -euo pipefail
+          ssh -F "$RUNNER_TEMP/ssh-config" clara-target \
+            "docker compose --project-name clara-app --env-file '$DEPLOY_ROOT/.env' --env-file '$DEPLOY_ROOT/releases/$RELEASE_NAME/images.env' -f '$DEPLOY_ROOT/releases/$RELEASE_NAME/deploy/docker/docker-compose.deploy.yml' ps --format json" \
+            > "$RUNNER_TEMP/compose-status.json" || true
+          python3 scripts/security/check_ci_artifact_safety.py --allow-missing "$RUNNER_TEMP/compose-status.json"
 
-      - name: Verify production diagnostics are safe to retain
+      - name: Upload sanitized deployment receipt
         if: always()
-        run: |
-          python3 scripts/security/check_ci_artifact_safety.py --allow-missing \
-            /tmp/cd-production-ps.txt /tmp/prod-*.json
-
-      - name: Upload production smoke responses
-        if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: production-smoke-${{ github.run_id }}
-          path: |
-            /tmp/prod-*.json
-            /tmp/cd-production-ps.txt
+          name: deployment-receipt-${{ github.run_id }}
+          path: ${{ runner.temp }}/compose-status.json
           if-no-files-found: ignore

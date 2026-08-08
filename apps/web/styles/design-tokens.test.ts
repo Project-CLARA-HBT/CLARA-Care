@@ -37,6 +37,14 @@ const SURFACE_FILES = [
   "admin/knowledge-sources/page.tsx"
 ];
 
+const COUNCIL_FLOW_FILES = [
+  "council/new/page.tsx",
+  "council/new/intake/page.tsx",
+  "council/new/specialists/page.tsx",
+  "council/new/review/page.tsx",
+  "council/result/page.tsx",
+];
+
 const PUBLIC_SURFACE_FILES = [
   resolve(here, "..", "components", "landing", "clara-kp3-landing.tsx"),
   resolve(here, "..", "components", "landing", "landing-faq-accordion.tsx"),
@@ -65,17 +73,17 @@ function findHardcodedHex(source: string): string[] {
 }
 
 describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => {
-  it("freezes the approved semantic light palette", () => {
+  it("freezes the approved canonical default palette", () => {
     const globals = readFileSync(resolve(here, "globals.css"), "utf8");
     const root = globals.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
-    expect(root).toContain("--bg-canvas: #f4f6fb;");
-    expect(root).toContain("--surface-sidebar: #f8faff;");
-    expect(root).toContain("--surface-panel: #ffffff;");
-    expect(root).toContain("--surface-muted: #f6f8fc;");
-    expect(root).toContain("--text-primary: #172033;");
-    expect(root).toContain("--text-secondary: #46556a;");
-    expect(root).toContain("--shell-border: #dfe5ef;");
-    expect(root).toContain("--shell-border-strong: #94a3bd;");
+    expect(root).toContain("--bg-canvas: #101419;");
+    expect(root).toContain("--surface-sidebar: #0b0e13;");
+    expect(root).toContain("--surface-panel: #1d2025;");
+    expect(root).toContain("--surface-muted: #272a30;");
+    expect(root).toContain("--text-primary: #e1e2e9;");
+    expect(root).toContain("--text-secondary: #c1c7d3;");
+    expect(root).toContain("--shell-border: #414751;");
+    expect(root).toContain("--shell-border-strong: #8b919d;");
   });
 
   it("freezes the approved semantic dark palette", () => {
@@ -84,13 +92,13 @@ describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => 
       globals.match(
         /html\.dark,\s*html\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/,
       )?.[1] ?? "";
-    expect(dark).toContain("--bg-canvas: #1b1a19;");
-    expect(dark).toContain("--surface-panel: #292929;");
-    expect(dark).toContain("--surface-muted: #333333;");
-    expect(dark).toContain("--text-primary: #ffffff;");
-    expect(dark).toContain("--text-secondary: #d6d6d6;");
-    expect(dark).toContain("--shell-border: #484848;");
-    expect(dark).toContain("--shell-border-strong: #8a8886;");
+    expect(dark).toContain("--bg-canvas: #101419;");
+    expect(dark).toContain("--surface-panel: #1d2025;");
+    expect(dark).toContain("--surface-muted: #272a30;");
+    expect(dark).toContain("--text-primary: #e1e2e9;");
+    expect(dark).toContain("--text-secondary: #c1c7d3;");
+    expect(dark).toContain("--shell-border: #414751;");
+    expect(dark).toContain("--shell-border-strong: #8b919d;");
   });
 
   it.each(SURFACE_FILES)(
@@ -112,6 +120,23 @@ describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => 
     expect(combined).toMatch(/var\(--surface-(muted|brand-soft)\)/);
     expect(combined).toMatch(/var\(--shell-border\)/);
   });
+
+  it("keeps Source Hub status, chips and focus states on the CLARA palette", () => {
+    const sourceHub = readFileSync(resolve(appDir, "research/source-hub/page.tsx"), "utf8");
+    expect(sourceHub).toMatch(/var\(--surface-brand-soft\)/);
+    expect(sourceHub).toMatch(/var\(--brand-primary\)/);
+    expect(sourceHub).toMatch(/var\(--text-brand\)/);
+    expect(sourceHub).not.toMatch(/(?:bg|text|border|ring)-blue-/);
+  });
+
+  it.each(COUNCIL_FLOW_FILES)(
+    "%s keeps its card edge and action colors tokenized",
+    (relativePath) => {
+      const source = readFileSync(resolve(appDir, relativePath), "utf8");
+      expect(findHardcodedHex(source), `Hardcoded color utilities found in ${relativePath}`).toEqual([]);
+      expect(source).toMatch(/var\(--(card-top-border|on-secondary-container|status-danger-bg)\)/);
+    },
+  );
 
   it("keeps public landing and authentication surfaces on semantic palette families", () => {
     const combined = PUBLIC_SURFACE_FILES.map((path) => readFileSync(path, "utf8")).join("\n");

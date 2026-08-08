@@ -1,5 +1,6 @@
 # ruff: noqa: B008
 
+import hashlib
 import json
 import re
 import secrets
@@ -17,6 +18,7 @@ from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import Query as QueryModel
 from clara_api.db.models import (
+    ResearchJob,
     SessionModel,
     User,
     WorkspaceChannel,
@@ -66,6 +68,7 @@ _DEFAULT_SUGGESTIONS: tuple[str, ...] = (
     "Tóm tắt ADR nghiêm trọng cần đi viện",
 )
 _PUBLIC_SHARE_MESSAGE_LIMIT = 200
+_PUBLIC_SHARE_UNAVAILABLE_DETAIL = {"code": "public_share_unavailable"}
 settings = get_settings()
 
 
@@ -286,12 +289,16 @@ def _public_share_url(share_token: str) -> str:
     return f"{base}/share/{share_token}"
 
 
+def _share_token_hash(share_token: str) -> str:
+    return hashlib.sha256(share_token.encode("utf-8")).hexdigest()
+
+
 def _generate_share_token(db: Session) -> str:
     for _ in range(8):
         candidate = secrets.token_urlsafe(24)
         exists = db.execute(
             select(WorkspaceConversationShare.id).where(
-                WorkspaceConversationShare.share_token == candidate
+                WorkspaceConversationShare.token_hash == _share_token_hash(candidate)
             )
         ).scalar_one_or_none()
         if exists is None:
@@ -306,11 +313,13 @@ def _serialize_share(
     share: WorkspaceConversationShare,
     *,
     conversation_id: int,
+    issued_token: str | None = None,
 ) -> WorkspaceConversationShareResponse:
     return WorkspaceConversationShareResponse(
+        share_id=share.id,
         conversation_id=conversation_id,
-        share_token=share.share_token,
-        public_url=_public_share_url(share.share_token),
+        share_token=issued_token,
+        public_url=_public_share_url(issued_token) if issued_token else None,
         is_active=bool(share.is_active),
         expires_at=share.expires_at,
         created_at=share.created_at,
@@ -318,13 +327,13 @@ def _serialize_share(
     )
 
 
-def _mask_owner_label(email: str) -> str:
-    raw = email.strip()
-    if "@" not in raw:
-        return "anonymous"
-    name, domain = raw.split("@", 1)
-    safe_name = name[:3] if len(name) >= 3 else name
-    return f"{safe_name}***@{domain}"
+def _public_share_unavailable() -> HTTPException:
+    """Keep an opaque public capability from disclosing its lifecycle state."""
+
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=_PUBLIC_SHARE_UNAVAILABLE_DETAIL,
+    )
 
 
 def _extract_answer_text(raw_text: str) -> str:
@@ -344,6 +353,18 @@ def _extract_answer_text(raw_text: str) -> str:
         if isinstance(value, str) and value.strip():
             return value
     return stripped
+
+
+def _public_research_report_body(result: object) -> str:
+    """Return only the already-releaseable textual report projection."""
+
+    if not isinstance(result, dict):
+        return ""
+    for key in ("answer_markdown", "answer", "summary", "message"):
+        value = result.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
 
 
 def _slug_file_name(value: str) -> str:
@@ -1047,25 +1068,27 @@ def create_or_rotate_conversation_share(
     ).scalar_one_or_none()
 
     should_rotate = bool(payload.rotate) or share is None
+    issued_token: str | None = None
     if share is None:
+        issued_token = _generate_share_token(db)
         share = WorkspaceConversationShare(
             user_id=user.id,
             session_id=conversation_id,
-            share_token=_generate_share_token(db),
+            token_hash=_share_token_hash(issued_token),
             is_active=True,
         )
     else:
         share.is_active = True
         if should_rotate:
-            share.share_token = _generate_share_token(db)
+            issued_token = _generate_share_token(db)
+            share.token_hash = _share_token_hash(issued_token)
 
-    if payload.expires_in_hours is not None:
-        share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(payload.expires_in_hours))
+    share.expires_at = datetime.now(tz=UTC) + timedelta(hours=int(payload.expires_in_hours))
 
     db.add(share)
     db.commit()
     db.refresh(share)
-    return _serialize_share(share, conversation_id=conversation_id)
+    return _serialize_share(share, conversation_id=conversation_id, issued_token=issued_token)
 
 
 @router.get(
@@ -1145,7 +1168,7 @@ def list_workspace_shares(
     if not shares:
         return []
 
-    session_ids = [share.session_id for share in shares]
+    session_ids = [share.session_id for share in shares if share.session_id is not None]
     sessions = (
         db.execute(
             select(SessionModel).where(
@@ -1180,12 +1203,11 @@ def list_workspace_shares(
         title = (session_obj.title or "").strip() or f"Conversation #{session_obj.id}"
         payload.append(
             WorkspaceConversationShareListItem(
+                share_id=share.id,
                 conversation_id=session_obj.id,
                 conversation_title=title,
                 message_count=int(message_counts.get(session_obj.id, 0) or 0),
                 last_message_at=last_message_map.get(session_obj.id),
-                share_token=share.share_token,
-                public_url=_public_share_url(share.share_token),
                 is_active=bool(share.is_active),
                 expires_at=share.expires_at,
                 created_at=share.created_at,
@@ -1292,22 +1314,42 @@ def get_public_conversation_by_share_token(
 ) -> WorkspacePublicConversationResponse:
     share = db.execute(
         select(WorkspaceConversationShare).where(
-            WorkspaceConversationShare.share_token == share_token,
+            WorkspaceConversationShare.token_hash == _share_token_hash(share_token),
             WorkspaceConversationShare.is_active.is_(True),
         )
     ).scalar_one_or_none()
     if share is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Liên kết chia sẻ không tồn tại.",
-        )
+        raise _public_share_unavailable()
 
     now = datetime.now(tz=UTC)
     expires_at = _as_utc_aware(share.expires_at)
     if expires_at is not None and expires_at < now:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="Liên kết chia sẻ đã hết hạn.",
+        raise _public_share_unavailable()
+
+    if share.research_job_id is not None:
+        job = db.execute(
+            select(ResearchJob).where(
+                ResearchJob.id == share.research_job_id,
+                ResearchJob.user_id == share.user_id,
+                ResearchJob.status == "completed",
+            )
+        ).scalar_one_or_none()
+        report_body = _public_research_report_body(job.result_json if job else None)
+        if job is None or not report_body:
+            raise _public_share_unavailable()
+        return WorkspacePublicConversationResponse(
+            conversation_id=share.id,
+            title="Báo cáo nghiên cứu được chia sẻ",
+            expires_at=expires_at,
+            messages=[
+                WorkspacePublicConversationMessageResponse(
+                    query_id=share.id,
+                    role="research_report",
+                    query="Báo cáo nghiên cứu",
+                    answer=report_body,
+                    created_at=job.completed_at or job.updated_at or now,
+                )
+            ],
         )
 
     session_obj = db.execute(
@@ -1316,12 +1358,8 @@ def get_public_conversation_by_share_token(
             SessionModel.user_id == share.user_id,
         )
     ).scalar_one_or_none()
-    owner = db.execute(select(User).where(User.id == share.user_id)).scalar_one_or_none()
-    if session_obj is None or owner is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation không tồn tại.",
-        )
+    if session_obj is None:
+        raise _public_share_unavailable()
 
     rows = (
         db.execute(
@@ -1347,7 +1385,6 @@ def get_public_conversation_by_share_token(
     return WorkspacePublicConversationResponse(
         conversation_id=session_obj.id,
         title=(session_obj.title or "").strip() or f"Conversation #{session_obj.id}",
-        owner_label=_mask_owner_label(owner.email),
         expires_at=expires_at,
         messages=messages,
     )

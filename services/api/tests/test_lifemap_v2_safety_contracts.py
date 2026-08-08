@@ -15,6 +15,7 @@ from clara_api.core.security import create_access_token, decode_access_token
 from clara_api.db.models import (
     FamilyAccessGrant,
     FamilyAccessLog,
+    GlhsAssertion,
     HealthSourceReference,
     LifeMapDisputeAction,
     LifeMapDisputeCase,
@@ -28,6 +29,8 @@ from clara_api.db.models import (
     PhrProfile,
 )
 from clara_api.db.session import SessionLocal
+from clara_api.glhs.adapters import ingest_lifemap_event
+from clara_api.glhs.gateway import compile_thss
 from clara_api.lifemap.domain import (
     TASK_TRANSITIONS,
     TRUTH_TRANSITIONS,
@@ -72,9 +75,7 @@ def _live_grant_expiry() -> str:
 
 def _role_account(role: str) -> tuple[dict[str, str], str, str]:
     email = f"lifemap-{role}-{uuid4().hex}@{role}.clara"
-    login = client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "secret123"}
-    )
+    login = client.post("/api/v1/auth/login", json={"email": email, "password": "secret123"})
     assert login.status_code == 200
     token = create_access_token(subject=email, role=role)
     return (
@@ -124,6 +125,32 @@ def test_generic_capture_cannot_claim_confirmation_and_ids_are_opaque() -> None:
     )
     assert resolved.status_code == 200
     assert resolved.json()["truth_state"] == "confirmed"
+    with SessionLocal() as db:
+        event = db.execute(
+            select(LifeMapEvent).where(LifeMapEvent.public_id == body["id"])
+        ).scalar_one()
+        assertions = list(
+            db.execute(
+                select(GlhsAssertion)
+                .where(
+                    GlhsAssertion.profile_id == event.profile_id,
+                    GlhsAssertion.semantic_key == f"lifemap_event:{event.public_id}",
+                )
+                .order_by(GlhsAssertion.id)
+            ).scalars()
+        )
+        # Owner acknowledgement remains documented; it is never silently
+        # promoted to clinical confirmation in the governed ledger.
+        assert [row.epistemic_state for row in assertions] == [
+            "reported",
+            "documented",
+            "documented",
+        ]
+        assert [row.lifecycle_status for row in assertions] == [
+            "superseded",
+            "superseded",
+            "active",
+        ]
     invalid_resolve = client.post(
         f"/api/v1/lifemap/events/{body['id']}/resolve",
         headers=_idempotent(headers, f"resolve-invalid-{uuid4().hex}"),
@@ -184,11 +211,14 @@ def test_safety_critical_dispute_requires_clinical_resolution() -> None:
             "payload": {"name": "source-only fixture"},
         },
     ).json()
-    assert client.post(
-        f"/api/v1/lifemap/events/{created['id']}/dispute",
-        headers=_idempotent(headers, f"dispute-{uuid4().hex}"),
-        json={"reason": "Medication source conflict"},
-    ).status_code == 200
+    assert (
+        client.post(
+            f"/api/v1/lifemap/events/{created['id']}/dispute",
+            headers=_idempotent(headers, f"dispute-{uuid4().hex}"),
+            json={"reason": "Medication source conflict"},
+        ).status_code
+        == 200
+    )
     queue = client.get("/api/v1/lifemap/v2/disputes", headers=headers).json()
     assert queue[0]["requires_clinical_review"] is True
     denied = client.post(
@@ -239,6 +269,19 @@ def test_source_revocation_invalidates_outputs_and_removes_retrieval_context() -
         )
         db.add(revision)
         db.flush()
+        scope = resolve_profile_scope(
+            db,
+            decode_access_token(headers["Authorization"].removeprefix("Bearer ")),
+            requested_profile=profile_public_id,
+            action="view",
+        )
+        ingest_lifemap_event(
+            db,
+            scope=scope,
+            event=event,
+            revision=revision,
+            idempotency_key=f"fixture-lifemap-glhs-{uuid4().hex}",
+        )
         db.add(
             LifeMapProjectionDependency(
                 profile_id=profile.id,
@@ -265,6 +308,7 @@ def test_source_revocation_invalidates_outputs_and_removes_retrieval_context() -
     )
     assert revoked.status_code == 200, revoked.text
     assert revoked.json()["invalidated_projection_count"] == 1
+    assert revoked.json()["retired_glhs_assertion_count"] == 1
     with SessionLocal() as db:
         assert db.execute(select(LifeMapSourceRevocation)).scalars().one()
         dependency = db.execute(
@@ -273,11 +317,32 @@ def test_source_revocation_invalidates_outputs_and_removes_retrieval_context() -
             )
         ).scalar_one()
         assert dependency.invalidated_at is not None
-        assert retrieve_revision_evidence(
+        assertion = db.execute(
+            select(GlhsAssertion).where(GlhsAssertion.profile_id == internal_profile_id)
+        ).scalar_one()
+        assert assertion.lifecycle_status == "superseded"
+        scope = resolve_profile_scope(
             db,
-            profile_id=internal_profile_id,
-            query="Source-bound",
-        ) == []
+            decode_access_token(headers["Authorization"].removeprefix("Bearer ")),
+            requested_profile=profile_public_id,
+            action="view",
+        )
+        snapshot = compile_thss(
+            db,
+            scope=scope,
+            task="source_revocation_regression",
+            purpose="self_care",
+            allowed_data_classes=frozenset({"lifemap"}),
+        )
+        assert snapshot.assertions == ()
+        assert (
+            retrieve_revision_evidence(
+                db,
+                profile_id=internal_profile_id,
+                query="Source-bound",
+            )
+            == []
+        )
 
 
 def test_command_replay_is_stable_and_digest_conflicts_fail_closed() -> None:
@@ -495,13 +560,10 @@ def test_doctor_requires_a_live_grant_and_admin_role_is_not_profile_access() -> 
                 FamilyAccessLog.outcome == "denied",
             )
         ).scalar_one()
-        assert support_denial.metadata_json == {
-            "reason_code": "break_glass_required"
-        }
+        assert support_denial.metadata_json == {"reason_code": "break_glass_required"}
 
     revoked = client.delete(
-        f"/api/v1/family/access-grants/"
-        f"{accepted_by_recipient['lifemap-doctor']['id']}",
+        f"/api/v1/family/access-grants/{accepted_by_recipient['lifemap-doctor']['id']}",
         headers=owner,
     )
     assert revoked.status_code == 200
@@ -536,17 +598,11 @@ def test_lifemap_reads_and_changes_append_minimum_data_audit_records() -> None:
                 .order_by(PhrAudit.id)
             ).scalars()
         )
-        change = next(
-            row
-            for row in rows
-            if row.action == "change" and row.entity == "episode"
-        )
+        change = next(row for row in rows if row.action == "change" and row.entity == "episode")
         assert change.entity_id == episode.json()["id"]
         assert change.before_json is None
         assert change.after_json is None
-        read = next(
-            row for row in rows if row.action == "read" and row.entity == "today"
-        )
+        read = next(row for row in rows if row.action == "read" and row.entity == "today")
         assert read.scope == "owner:self_care"
 
 
@@ -597,23 +653,27 @@ def test_expired_grant_and_confused_deputy_profile_swap_fail_closed() -> None:
         json={"token": invitation["token"]},
     )
     assert accepted.status_code == 201
-    assert client.get(
-        "/api/v1/lifemap/today",
-        headers={**doctor, "X-CLARA-Profile-Context": profile_b},
-    ).status_code == 404
+    assert (
+        client.get(
+            "/api/v1/lifemap/today",
+            headers={**doctor, "X-CLARA-Profile-Context": profile_b},
+        ).status_code
+        == 404
+    )
 
     with SessionLocal() as db:
         grant = db.execute(
-            select(FamilyAccessGrant).where(
-                FamilyAccessGrant.public_id == accepted.json()["id"]
-            )
+            select(FamilyAccessGrant).where(FamilyAccessGrant.public_id == accepted.json()["id"])
         ).scalar_one()
         grant.expires_at = datetime.now(UTC) - timedelta(seconds=1)
         db.commit()
-    assert client.get(
-        "/api/v1/lifemap/today",
-        headers={**doctor, "X-CLARA-Profile-Context": profile_a},
-    ).status_code == 404
+    assert (
+        client.get(
+            "/api/v1/lifemap/today",
+            headers={**doctor, "X-CLARA-Profile-Context": profile_a},
+        ).status_code
+        == 404
+    )
 
 
 def test_correction_is_append_only_and_invalid_task_transitions_are_blocked() -> None:
@@ -633,9 +693,7 @@ def test_correction_is_append_only_and_invalid_task_transitions_are_blocked() ->
         json={"payload": {"value": 2}, "reason": "Sửa giá trị nhập nhầm"},
     )
     assert corrected.status_code == 200
-    history = client.get(
-        f"/api/v1/lifemap/events/{event['id']}/history", headers=headers
-    )
+    history = client.get(f"/api/v1/lifemap/events/{event['id']}/history", headers=headers)
     assert history.status_code == 200
     assert [row["revision"] for row in history.json()] == [1, 2]
     assert history.json()[0]["payload"] == {"value": 1}
@@ -749,11 +807,13 @@ def test_revisions_and_source_checksums_are_immutable() -> None:
         internal_profile_id = db.execute(
             select(PhrProfile.id).where(PhrProfile.public_id == profile_id)
         ).scalar_one()
-        revision = db.execute(
-            select(LifeMapEventRevision).where(
-                LifeMapEventRevision.public_id.in_(revision_ids)
+        revision = (
+            db.execute(
+                select(LifeMapEventRevision).where(LifeMapEventRevision.public_id.in_(revision_ids))
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         assert revision is not None
         revision.reason_code = "mutated"
         with pytest.raises(ValueError, match="revisions are immutable"):
@@ -798,9 +858,7 @@ def test_v2_and_ai_capabilities_default_off_and_are_server_authoritative() -> No
     for key in expected:
         assert getattr(settings, f"{key}_enabled") is False
 
-    capabilities = client.get(
-        f"/api/v1/profiles/{profile_id}/capabilities", headers=headers
-    )
+    capabilities = client.get(f"/api/v1/profiles/{profile_id}/capabilities", headers=headers)
     assert capabilities.status_code == 200
     projected = capabilities.json()["capabilities"]
     assert expected <= set(projected)
@@ -843,9 +901,7 @@ def test_outbox_operational_health_is_admin_only_and_contains_no_payload() -> No
 def test_dead_letter_replay_resets_retry_budget_and_resolution_is_terminal(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        get_settings(), "admin_audit_log_enabled", True, raising=False
-    )
+    monkeypatch.setattr(get_settings(), "admin_audit_log_enabled", True, raising=False)
     headers, _profile_id = _account("outbox-admin")
     created = client.post(
         "/api/v1/lifemap/episodes",
@@ -855,11 +911,15 @@ def test_dead_letter_replay_resets_retry_budget_and_resolution_is_terminal(
     assert created.status_code == 201
 
     with SessionLocal() as db:
-        row = db.execute(
-            select(LifeMapOutboxEvent)
-            .where(LifeMapOutboxEvent.status == "pending")
-            .order_by(LifeMapOutboxEvent.id.desc())
-        ).scalars().first()
+        row = (
+            db.execute(
+                select(LifeMapOutboxEvent)
+                .where(LifeMapOutboxEvent.status == "pending")
+                .order_by(LifeMapOutboxEvent.id.desc())
+            )
+            .scalars()
+            .first()
+        )
         assert row is not None
         event_id = row.event_id
         row.status = "dead_letter"
@@ -893,9 +953,7 @@ def test_dead_letter_replay_resets_retry_budget_and_resolution_is_terminal(
     )
     assert resolved.status_code == 200
     assert resolved.json()["status"] == "resolved"
-    listing = client.get(
-        "/api/v1/lifemap/admin/outbox/dead-letters", headers=admin
-    )
+    listing = client.get("/api/v1/lifemap/admin/outbox/dead-letters", headers=admin)
     assert listing.status_code == 200
     assert event_id not in {item["event_id"] for item in listing.json()}
     health = client.get("/api/v1/lifemap/admin/outbox/health", headers=admin)

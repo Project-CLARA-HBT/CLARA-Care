@@ -13,8 +13,11 @@ import type { UILanguage } from "@/lib/ui-language";
 import {
   ScribeAnalyticsSummary,
   ScribeSession,
+  captureScribeConsent,
   createScribeSession,
+  deleteScribeRecordingData,
   getScribeAnalyticsSummary,
+  getScribeRecordingDataCapability,
   getScribeSession,
   listScribeSessions,
   normalizeSoapSections,
@@ -44,24 +47,26 @@ type ScribeCopy = (
   values?: Record<string, string | number>,
 ) => string;
 
-const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, (_, index) => 18 + ((index * 13) % 72));
-const panelClass = "rounded-xl border border-[color:var(--shell-border)] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+// An idle recorder has no audio signal.  Keep the visual baseline flat; real
+// amplitude is populated only by the Web Audio analyser while recording.
+const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, () => 8);
+const panelClass = "rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
 const panelPaddedClass = `${panelClass} p-4`;
 const panelPaddedLgClass = `${panelClass} p-5`;
-const softPanelClass = "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
-const sectionTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[color:var(--text-muted)] dark:text-slate-200";
-const accentTitleClass = "text-xs font-black uppercase tracking-[0.18em] text-[color:var(--brand-600)] dark:text-sky-100";
-const bodyTextClass = "text-[color:var(--text-primary)] dark:text-slate-100";
-const secondaryTextClass = "text-[color:var(--text-muted)] dark:text-slate-300";
-const mutedTextClass = "text-[color:var(--text-muted)] dark:text-slate-400";
+const softPanelClass = "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]";
+const sectionTitleClass = "text-base font-semibold text-[color:var(--text-primary)]";
+const accentTitleClass = "text-base font-semibold text-[color:var(--text-primary)]";
+const bodyTextClass = "text-[color:var(--text-primary)]";
+const secondaryTextClass = "text-[color:var(--text-secondary)]";
+const mutedTextClass = "text-[color:var(--text-muted)]";
 const primaryButtonClass =
-  "rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-[color:var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)] disabled:opacity-100 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400";
+  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-primary)]";
 const secondaryButtonClass =
-  "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[color:var(--brand-700)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)] disabled:opacity-100 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100";
+  "min-h-11 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:opacity-60";
 const dangerButtonClass =
-  "rounded-lg border border-rose-700 bg-rose-600 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-rose-700";
+  "min-h-11 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--error-container)] px-4 py-2 text-sm font-semibold text-[var(--on-error-container)] transition hover:opacity-90";
 const transcriptInputClass =
-  "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] outline-none transition focus:border-[color:var(--brand-600)] focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-sky-400";
+  "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition focus:border-[color:var(--brand-primary)] focus:bg-[var(--surface-panel)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15";
 
 function formatDate(language: UILanguage, value: string): string {
   const date = new Date(value);
@@ -211,6 +216,9 @@ export default function ScribePage() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isLiveAnalyzing, setIsLiveAnalyzing] = useState(false);
+  const [isDeletingRecordingData, setIsDeletingRecordingData] = useState(false);
+  const [showRecordingDataDeleteConfirmation, setShowRecordingDataDeleteConfirmation] = useState(false);
+  const [recordingConsentCaptured, setRecordingConsentCaptured] = useState(false);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [lastTranscribeMs, setLastTranscribeMs] = useState<number | null>(null);
@@ -222,6 +230,7 @@ export default function ScribePage() {
   const selectedSessionIdRef = useRef<number | null>(null);
   const transcriptDraftRef = useRef("");
   const persistTimerRef = useRef<number | null>(null);
+  const pendingTranscriptSavesRef = useRef<Set<Promise<void>>>(new Set());
   const liveAnalyzeTimerRef = useRef<number | null>(null);
   const recordingTickTimerRef = useRef<number | null>(null);
 
@@ -252,6 +261,8 @@ export default function ScribePage() {
     () => buildLiveInsights(selectedSession, transcriptDraft, copy),
     [copy, selectedSession, transcriptDraft]
   );
+  const [recordingDataDeletionAvailable, setRecordingDataDeletionAvailable] = useState(false);
+  const canDeleteSelectedRecordingData = selectedSession !== null && recordingDataDeletionAvailable;
 
   const pushNotice = useCallback((tone: NoticeTone, message: string) => {
     setNotice({ tone, message });
@@ -276,6 +287,19 @@ export default function ScribePage() {
     if (persistTimerRef.current !== null) {
       window.clearTimeout(persistTimerRef.current);
       persistTimerRef.current = null;
+    }
+  }, []);
+
+  const refreshRecordingDataDeletionCapability = useCallback(async (sessionId: number) => {
+    try {
+      const capability = await getScribeRecordingDataCapability(sessionId);
+      if (selectedSessionIdRef.current === sessionId) {
+        setRecordingDataDeletionAvailable(capability.recording_data_deletion_available);
+      }
+    } catch {
+      // The server keeps this deployment capability fail-closed (404 when off).
+      // Do not surface a raw error or show a destructive control by inference.
+      if (selectedSessionIdRef.current === sessionId) setRecordingDataDeletionAvailable(false);
     }
   }, []);
 
@@ -339,18 +363,20 @@ export default function ScribePage() {
         selectedSessionIdRef.current = detail.id;
         setSelectedSession(detail);
         setTranscriptDraft(detail.transcript ?? "");
+        await refreshRecordingDataDeletionCapability(detail.id);
       } else {
         setSelectedSessionId(null);
         selectedSessionIdRef.current = null;
         setSelectedSession(null);
         setTranscriptDraft("");
+        setRecordingDataDeletionAvailable(false);
       }
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("scribe.error.load")));
     } finally {
       setIsLoading(false);
     }
-  }, [copy]);
+  }, [copy, refreshRecordingDataDeletionCapability]);
 
   useEffect(() => {
     void refreshData();
@@ -397,7 +423,9 @@ export default function ScribePage() {
       clearPersistTimer();
       const delayMs = immediate ? 80 : 1200;
       persistTimerRef.current = window.setTimeout(() => {
-        void saveTranscript(nextTranscript);
+        const pendingSave = saveTranscript(nextTranscript);
+        pendingTranscriptSavesRef.current.add(pendingSave);
+        void pendingSave.finally(() => pendingTranscriptSavesRef.current.delete(pendingSave));
       }, delayMs);
     },
     [clearPersistTimer, saveTranscript]
@@ -497,8 +525,9 @@ export default function ScribePage() {
     selectedSessionIdRef.current = created.id;
     setSelectedSession(created);
     upsertSession(created);
+    await refreshRecordingDataDeletionCapability(created.id);
     return created.id;
-  }, [copy, language, upsertSession]);
+  }, [copy, language, refreshRecordingDataDeletionCapability, upsertSession]);
 
   const startWaveformLoop = useCallback(() => {
     const analyser = analyserRef.current;
@@ -520,6 +549,22 @@ export default function ScribePage() {
     waveformFrameRef.current = window.requestAnimationFrame(tick);
   }, [stopWaveformLoop]);
 
+  const onCaptureRecordingConsent = useCallback(async () => {
+    setError("");
+    try {
+      const sessionId = await ensureSessionReady();
+      if (!sessionId) {
+        setError(copy("scribe.error.createSession"));
+        return;
+      }
+      await captureScribeConsent(sessionId, { method: "verbal", scope: "encounter" });
+      setRecordingConsentCaptured(true);
+      pushNotice("success", copy("scribe.notice.consentCaptured"));
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("scribe.error.consent")));
+    }
+  }, [copy, ensureSessionReady, pushNotice]);
+
   const onStartRecording = useCallback(async () => {
     setError("");
     setMode("workspace");
@@ -536,6 +581,14 @@ export default function ScribePage() {
         return;
       }
 
+      if (!recordingConsentCaptured) {
+        setError(copy("scribe.error.consentRequired"));
+        return;
+      }
+
+      // Consent is a browser-side gate as well as an API invariant. Never
+      // request microphone access or create an audio pipeline until the
+      // clinician has explicitly captured the encounter consent.
       const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
@@ -599,7 +652,7 @@ export default function ScribePage() {
       setIsRecording(false);
       setError(safeUserFacingError(cause, copy("scribe.error.startRecording")));
     }
-  }, [copy, ensureSessionReady, processChunkQueue, pushNotice, startWaveformLoop, teardownAudioPipeline]);
+  }, [copy, ensureSessionReady, processChunkQueue, pushNotice, recordingConsentCaptured, startWaveformLoop, teardownAudioPipeline]);
 
   const onStopRecording = useCallback(() => {
     setIsRecording(false);
@@ -623,10 +676,11 @@ export default function ScribePage() {
       selectedSessionIdRef.current = detail.id;
       setSelectedSession(detail);
       setTranscriptDraft(detail.transcript ?? "");
+      await refreshRecordingDataDeletionCapability(detail.id);
     } catch (cause) {
       setError(safeUserFacingError(cause, copy("scribe.error.openSession")));
     }
-  }, [copy]);
+  }, [copy, refreshRecordingDataDeletionCapability]);
 
   const onCreateSession = useCallback(async () => {
     setIsCreating(true);
@@ -642,6 +696,7 @@ export default function ScribePage() {
       setSelectedSession(created);
       setTranscriptDraft(created.transcript ?? "");
       upsertSession(created);
+      await refreshRecordingDataDeletionCapability(created.id);
       pushNotice("success", copy("scribe.notice.created"));
       const nextAnalytics = await getScribeAnalyticsSummary();
       setAnalytics(nextAnalytics);
@@ -650,7 +705,7 @@ export default function ScribePage() {
     } finally {
       setIsCreating(false);
     }
-  }, [copy, language, pushNotice, upsertSession]);
+  }, [copy, language, pushNotice, refreshRecordingDataDeletionCapability, upsertSession]);
 
   const onSaveTranscript = useCallback(async () => {
     if (!selectedSession) return;
@@ -709,7 +764,7 @@ export default function ScribePage() {
       const updated = await updateScribeSession(selectedSession.id, { status: "finalized" });
       setSelectedSession(updated);
       upsertSession(updated);
-      pushNotice("success", copy("scribe.notice.finalized"));
+      pushNotice("success", copy("scribe.notice.draftCompleted"));
       // Coarse, non-PII product event (Req 9.1, 9.4); no transcript/note content.
       trackScribeGenerated({ action: "finalize" });
       const nextAnalytics = await getScribeAnalyticsSummary();
@@ -720,6 +775,68 @@ export default function ScribePage() {
       setIsSaving(false);
     }
   }, [copy, pushNotice, selectedSession, upsertSession]);
+
+  const onDeleteRecordingData = useCallback(async () => {
+    if (!selectedSession || !canDeleteSelectedRecordingData) return;
+
+    const sessionId = selectedSession.id;
+    setIsDeletingRecordingData(true);
+    setError("");
+    // A pending local autosave must never repopulate the transcript immediately
+    // after the explicit deletion succeeds. The action is unavailable while
+    // recording/transcribing/other mutations are in progress.
+    clearPersistTimer();
+    clearLiveAnalyzeTimer();
+    try {
+      // Wait for an already-started debounced save before deleting. This keeps
+      // the explicit destructive action ordered after every local transcript
+      // write the browser initiated, so the deletion remains the final write.
+      await Promise.all([...pendingTranscriptSavesRef.current]);
+      await deleteScribeRecordingData(sessionId);
+      const clearedSession = {
+        ...selectedSession,
+        transcript: "",
+        last_processed_at: null,
+      };
+      transcriptDraftRef.current = "";
+      setTranscriptDraft("");
+      setSelectedSession(clearedSession);
+      upsertSession(clearedSession);
+      setShowRecordingDataDeleteConfirmation(false);
+
+      // Re-read the owner-scoped server truth after clearing the local draft.
+      // If a successful delete is followed by a transient read failure, retain
+      // the safer cleared local state instead of showing stale transcript text.
+      try {
+        const refreshed = await getScribeSession(sessionId);
+        setSelectedSession(refreshed);
+        setTranscriptDraft(refreshed.transcript ?? "");
+        transcriptDraftRef.current = refreshed.transcript ?? "";
+        upsertSession(refreshed);
+      } catch {
+        // The deletion already succeeded. Do not replace safe local state with
+        // a raw transport error or stale sensitive text.
+      }
+      try {
+        setAnalytics(await getScribeAnalyticsSummary());
+      } catch {
+        // Analytics is secondary to the completed data-rights action.
+      }
+      pushNotice("success", copy("scribe.recordingData.notice.deleted"));
+    } catch (cause) {
+      setError(safeUserFacingError(cause, copy("scribe.recordingData.error.delete")));
+    } finally {
+      setIsDeletingRecordingData(false);
+    }
+  }, [
+    canDeleteSelectedRecordingData,
+    clearLiveAnalyzeTimer,
+    clearPersistTimer,
+    copy,
+    pushNotice,
+    selectedSession,
+    upsertSession,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -733,19 +850,60 @@ export default function ScribePage() {
   }, [clearLiveAnalyzeTimer, clearPersistTimer, teardownAudioPipeline]);
 
   return (
-    <PageShell title="" description="" variant="plain">
+    <PageShell
+      title={copy("navigation.item.scribe.title")}
+      description={copy("navigation.item.scribe.subtitle")}
+      variant="plain"
+    >
       <section className="space-y-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-white px-4 py-3 shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90">
+        <ol className="grid gap-2 sm:grid-cols-4" aria-label={copy("scribe.workflow.aria")}>
+          {[
+            copy("scribe.workflow.capture"),
+            copy("scribe.workflow.transcript"),
+            copy("scribe.workflow.soap"),
+            copy("scribe.workflow.complete"),
+          ].map((label, index) => {
+            const currentStage =
+              selectedSession?.status === "finalized" || selectedSession?.status === "completed"
+                ? 3
+                : Object.values(selectedSoap).some((value) => Boolean(value?.trim()))
+                  ? 2
+                  : transcriptDraft.trim()
+                    ? 1
+                    : 0;
+            const active = index === currentStage;
+            const complete = index < currentStage;
+            return (
+              <li
+                key={label}
+                aria-current={active ? "step" : undefined}
+                className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium ${
+                  active
+                    ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] text-[color:var(--text-primary)]"
+                    : complete
+                      ? "border-[color:var(--status-ok-border)] bg-[color:var(--status-ok-bg)] text-[color:var(--status-ok-text)]"
+                      : "border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]"
+                }`}
+              >
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-current text-xs">
+                  {complete ? "✓" : index + 1}
+                </span>
+                {label}
+              </li>
+            );
+          })}
+        </ol>
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] px-4 py-3">
           <div className="flex items-center gap-6">
-            <span className="text-lg font-black tracking-tight text-[color:var(--brand-600)] dark:text-sky-100">ScribeOS v2.4</span>
-            <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-1 dark:border-sky-700/70 dark:bg-slate-800/90">
+            <span className="text-sm font-semibold text-[color:var(--text-secondary)]">{copy("scribe.tab.workspace")}</span>
+            <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-1">
               <button
                 type="button"
                 onClick={() => setMode("workspace")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
                   mode === "workspace"
-                    ? "bg-[color:var(--brand-600)] text-white shadow-sm"
-                    : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
+                    ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]"
+                    : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
                 {copy("scribe.tab.workspace")}
@@ -754,7 +912,7 @@ export default function ScribePage() {
                 type="button"
                 onClick={() => setMode("review")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "review" ? "bg-[color:var(--brand-600)] text-white shadow-sm" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
+                  mode === "review" ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
                 {copy("scribe.tab.review")}
@@ -763,7 +921,7 @@ export default function ScribePage() {
                 type="button"
                 onClick={() => setMode("enterprise")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "enterprise" ? "bg-[color:var(--brand-600)] text-white shadow-sm" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)] dark:text-slate-200 dark:hover:bg-slate-700"
+                  mode === "enterprise" ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
                 {copy("scribe.tab.enterprise")}
@@ -772,6 +930,22 @@ export default function ScribePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs text-[color:var(--text-secondary)]">
+              <input
+                type="checkbox"
+                checked={recordingConsentCaptured}
+                onChange={(event) => {
+                  if (!event.target.checked) setRecordingConsentCaptured(false);
+                }}
+                className="h-4 w-4 accent-[var(--brand-600)]"
+              />
+              <span>{copy("scribe.consent.checkbox")}</span>
+            </label>
+            {!recordingConsentCaptured ? (
+              <button type="button" onClick={() => void onCaptureRecordingConsent()} className={secondaryButtonClass}>
+                {copy("scribe.enterprise.consent.capture")}
+              </button>
+            ) : null}
             {isRecording ? (
               <button
                 type="button"
@@ -815,7 +989,7 @@ export default function ScribePage() {
             <div className={panelPaddedClass}>
               <div className="flex items-center justify-between">
                 <h2 className={sectionTitleClass}>{copy("scribe.sessions.title")}</h2>
-                <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--brand-700)] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
+                <span className="rounded-full border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--text-brand)]">
                   {copy("scribe.sessions.count", { count: formatLocaleNumber(language, sessions.length) })}
                 </span>
               </div>
@@ -839,8 +1013,8 @@ export default function ScribePage() {
                     onClick={() => void onSelectSession(item.id)}
                     className={`w-full rounded-xl border p-3 text-left transition ${
                       active
-                        ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)] shadow-sm dark:border-sky-400 dark:bg-sky-500/20"
-                        : "border-[color:var(--shell-border)] bg-white hover:border-[color:var(--brand-600)] hover:bg-[color:var(--surface-muted)] dark:border-sky-800 dark:bg-slate-900/90 dark:hover:border-sky-500"
+                        ? "border-[color:var(--brand-600)] bg-[color:var(--surface-brand-soft)]"
+                        : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] hover:border-[color:var(--brand-600)] hover:bg-[color:var(--surface-muted)]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -858,7 +1032,7 @@ export default function ScribePage() {
               })}
 
               {!isLoading && sessions.length === 0 ? (
-                <p className={`rounded-xl border border-[color:var(--shell-border)] bg-white p-4 text-sm font-medium ${secondaryTextClass}`}>
+                <p className={`rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-sm font-medium ${secondaryTextClass}`}>
                   {copy("scribe.sessions.empty")}
                 </p>
               ) : null}
@@ -912,10 +1086,10 @@ export default function ScribePage() {
                 </div>
 
                 <div className={panelClass}>
-                  <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3 dark:border-sky-800">
+                  <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3">
                     <h3 className={sectionTitleClass}>{copy("scribe.transcript.liveTitle")}</h3>
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--brand-700)] dark:text-sky-100">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[color:var(--brand-600)] animate-pulse" : "bg-slate-500"}`} />
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-brand)]">
+                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[var(--brand-primary)] animate-pulse" : "bg-[var(--text-muted)]"}`} />
                       {isRecording ? copy("scribe.status.recording") : copy("scribe.status.stopped")}
                     </div>
                   </div>
@@ -930,7 +1104,7 @@ export default function ScribePage() {
                             {row.timestamp}
                           </span>
                           <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[color:var(--brand-600)] dark:text-sky-100">{row.speaker}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--text-brand)]">{row.speaker}</p>
                             <p className={`text-sm leading-6 ${secondaryTextClass}`}>{stripTelemetryLabels(row.text)}</p>
                           </div>
                         </div>
@@ -938,7 +1112,7 @@ export default function ScribePage() {
                     )}
                   </div>
 
-                  <div className="border-t border-[color:var(--shell-border)] p-4 dark:border-sky-800">
+                  <div className="border-t border-[color:var(--shell-border)] p-4">
                     <textarea
                       value={transcriptDraft}
                       onChange={(event) => setTranscriptDraft(event.target.value)}
@@ -979,7 +1153,7 @@ export default function ScribePage() {
                   <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 clara-scrollbar">
                     {soapSectionLabels.map((item) => (
                       <article key={item.key} className={`${softPanelClass} p-3`}>
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">{item.title}</p>
                         <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
                           {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || copy("scribe.noData")}
                         </p>
@@ -1007,7 +1181,7 @@ export default function ScribePage() {
                     ) : (
                       liveInsights.map((item) => (
                         <article key={item.id} className={`${softPanelClass} p-3`}>
-                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</p>
+                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-brand)]">{item.title}</p>
                           <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>{item.detail}</p>
                         </article>
                       ))
@@ -1041,7 +1215,7 @@ export default function ScribePage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6 shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90">
+                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6">
                   <div className="mb-5 flex items-center justify-between">
                     <div>
                       <h2 className={`text-2xl font-black tracking-tight ${bodyTextClass}`}>{copy("scribe.review.summaryTitle")}</h2>
@@ -1049,7 +1223,7 @@ export default function ScribePage() {
                         {copy("scribe.review.sessionCode", { code: selectedSession ? `#${selectedSession.id}` : "--" })}
                       </p>
                     </div>
-                    <span className="rounded-full border border-[color:var(--shell-border)] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--brand-700)] dark:border-sky-600 dark:bg-slate-900 dark:text-sky-100">
+                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-brand)]">
                       {scribeStatusLabel(selectedSession?.status, copy)}
                     </span>
                   </div>
@@ -1057,8 +1231,8 @@ export default function ScribePage() {
                   <div className="space-y-5">
                     {soapSectionLabels.map((item) => (
                       <section key={item.key}>
-                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</h5>
-                        <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-white p-4 dark:border-sky-800 dark:bg-slate-900/90">
+                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-brand)]">{item.title}</h5>
+                        <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
                           <p className={`whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
                             {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || copy("scribe.noData")}
                           </p>
@@ -1080,7 +1254,7 @@ export default function ScribePage() {
                 <div className={panelPaddedClass}>
                   <h3 className={accentTitleClass}>{copy("scribe.review.council")}</h3>
                   <div className={`mt-3 ${softPanelClass} p-3`}>
-                    <p className="text-[10px] font-black uppercase text-[color:var(--brand-600)] dark:text-sky-100">{copy("scribe.review.keySummary")}</p>
+                    <p className="text-[10px] font-black uppercase text-[var(--text-brand)]">{copy("scribe.review.keySummary")}</p>
                     <p className={`mt-2 text-xs leading-5 ${secondaryTextClass}`}>
                       {liveInsights[0]?.detail || copy("scribe.review.noSummary")}
                     </p>
@@ -1100,7 +1274,7 @@ export default function ScribePage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`text-[8px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>{copy("scribe.processingSpeed")}</p>
-                      <div className="text-sm font-black text-[color:var(--brand-700)] dark:text-sky-100">
+                      <div className="text-sm font-black text-[var(--text-brand)]">
                         {/* Raw per-segment pipeline latency is internal telemetry — admin only (Req 4.3). */}
                         <TelemetryPanel role={role} summaryText="--" className="inline">
                           <span>
@@ -1111,8 +1285,8 @@ export default function ScribePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
-                      <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">{isRecording ? copy("scribe.status.recording") : copy("scribe.status.waiting")}</span>
+                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[var(--brand-primary)] animate-pulse" : "bg-[var(--surface-high)]"}`} />
+                      <span className="text-[10px] font-black uppercase text-[var(--status-ok-text)]">{isRecording ? copy("scribe.status.recording") : copy("scribe.status.waiting")}</span>
                     </div>
                   </div>
                 </div>
@@ -1121,6 +1295,37 @@ export default function ScribePage() {
           )}
         </section>
 
+        {canDeleteSelectedRecordingData ? (
+          <section className={`${panelPaddedLgClass} border-[color:var(--status-danger-border)]`} data-testid="scribe-recording-data-controls">
+            <h2 className={sectionTitleClass}>{copy("scribe.recordingData.title")}</h2>
+            <p className={`mt-2 text-sm leading-6 ${secondaryTextClass}`}>
+              {copy("scribe.recordingData.description")}
+            </p>
+            <ul className={`mt-3 list-disc space-y-1 pl-5 text-sm ${secondaryTextClass}`}>
+              <li>{copy("scribe.recordingData.deletes")}</li>
+              <li>{copy("scribe.recordingData.audioNotStored")}</li>
+              <li>{copy("scribe.recordingData.retained")}</li>
+            </ul>
+            <button
+              type="button"
+              onClick={() => setShowRecordingDataDeleteConfirmation(true)}
+              disabled={
+                isDeletingRecordingData ||
+                isRecording ||
+                isTranscribing ||
+                isSaving ||
+                isRegenerating ||
+                isLiveAnalyzing
+              }
+              className={`mt-4 ${dangerButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {isDeletingRecordingData
+                ? copy("scribe.recordingData.deleting")
+                : copy("scribe.recordingData.deleteAction")}
+            </button>
+          </section>
+        ) : null}
+
         <section className={`grid grid-cols-2 gap-3 md:grid-cols-4 ${panelPaddedClass}`}>
           <div className={`${softPanelClass} p-3`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.totalSessions")}</p>
@@ -1128,7 +1333,7 @@ export default function ScribePage() {
           </div>
           <div className={`${softPanelClass} p-3`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.completedSessions")}</p>
-            <p className="mt-2 text-xl font-black text-[color:var(--brand-700)] dark:text-sky-100">{analytics?.completed_sessions ?? 0}</p>
+            <p className="mt-2 text-xl font-black text-[var(--text-brand)]">{analytics?.completed_sessions ?? 0}</p>
           </div>
           <div className={`${softPanelClass} p-3`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.today")}</p>
@@ -1144,18 +1349,59 @@ export default function ScribePage() {
       </section>
 
       {error ? (
-        <p className="mt-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100">{error}</p>
+        <p className="mt-4 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-2 text-sm font-semibold text-[var(--status-danger-text)]">{error}</p>
       ) : null}
       {notice ? (
         <p
           className={`mt-4 rounded-lg border px-4 py-2 text-sm font-semibold ${
             notice.tone === "success"
-              ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/70 dark:bg-emerald-500/20 dark:text-emerald-100"
-              : "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100"
+              ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+              : "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
           }`}
         >
           {notice.message}
         </p>
+      ) : null}
+      {showRecordingDataDeleteConfirmation && canDeleteSelectedRecordingData ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-lowest)]/70 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="scribe-recording-data-confirm-title"
+          aria-describedby="scribe-recording-data-confirm-description"
+        >
+          <div className="w-full max-w-lg rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--danger-border)] bg-[var(--surface-panel)] p-6">
+            <h2 id="scribe-recording-data-confirm-title" className={`text-lg font-bold ${bodyTextClass}`}>
+              {copy("scribe.recordingData.confirmTitle")}
+            </h2>
+            <p id="scribe-recording-data-confirm-description" className={`mt-3 text-sm leading-6 ${secondaryTextClass}`}>
+              {copy("scribe.recordingData.confirmDescription")}
+            </p>
+            <p className={`mt-3 text-sm leading-6 ${secondaryTextClass}`}>
+              {copy("scribe.recordingData.confirmRetained")}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRecordingDataDeleteConfirmation(false)}
+                disabled={isDeletingRecordingData}
+                className={secondaryButtonClass}
+              >
+                {copy("scribe.recordingData.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onDeleteRecordingData()}
+                disabled={isDeletingRecordingData}
+                className={`${dangerButtonClass} disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {isDeletingRecordingData
+                  ? copy("scribe.recordingData.deleting")
+                  : copy("scribe.recordingData.confirmAction")}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </PageShell>
   );

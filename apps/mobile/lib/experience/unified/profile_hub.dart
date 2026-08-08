@@ -191,6 +191,7 @@ class ProfileHub extends StatelessWidget {
           title: copy[ConsumerTerm.profileHubConsentTitle],
           subtitle: copy[ConsumerTerm.profileHubConsentDescription],
           builder: (_) => ConsentCenterScreen(
+            apiClient: apiClient,
             resolver: resolver,
             sessionStore: sessionStore,
           ),
@@ -202,15 +203,9 @@ class ProfileHub extends StatelessWidget {
           title: copy[ConsumerTerm.profileHubDataRightsTitle],
           subtitle: copy[ConsumerTerm.profileHubDataRightsDescription],
           builder: (_) => DsarScreen(
+            apiClient: apiClient,
             resolver: resolver,
-            // The DSAR surface sends only the chosen coarse request kind.
-            // It reads the current bearer token at submit time so an expired
-            // or logged-out session cannot be replayed from this navigation
-            // entry.
-            submitter: createHttpDsarSubmitter(
-              baseUrl: apiClient.baseUrl,
-              accessToken: () => sessionStore.accessToken ?? '',
-            ),
+            sessionStore: sessionStore,
           ),
         ),
       );

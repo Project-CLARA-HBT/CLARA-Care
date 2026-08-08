@@ -156,6 +156,7 @@ vi.mock("@/lib/ui-language", () => ({
   onUILanguageChange: () => vi.fn(),
 }));
 vi.mock("@/lib/research", () => ({
+  isResearchOutputModesEnabled: () => false,
   resolveChatTransport: () => "tier1_chat",
   appendResearchConversationMessage: vi.fn().mockResolvedValue({ id: 1 }),
   createResearchConversation: vi.fn().mockResolvedValue({ id: 1 }),

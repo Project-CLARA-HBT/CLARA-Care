@@ -80,19 +80,19 @@ export type EnterpriseReviewProps = {
 
 // --- shared styling (kept consistent with the surrounding scribe page) -------
 const panelClass =
-  "rounded-xl border border-[#B6D4FE] bg-white shadow-sm dark:border-sky-700/60 dark:bg-slate-900/90";
+  "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-panel)]";
 const panelPaddedClass = `${panelClass} p-4`;
 const softPanelClass =
-  "rounded-lg border border-[#93C5FD] bg-[#EEF6FF] shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90";
+  "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]";
 const sectionTitleClass =
-  "text-xs font-black uppercase tracking-[0.18em] text-[#4B5563] dark:text-slate-200";
-const secondaryTextClass = "text-[#4B5563] dark:text-slate-300";
-const mutedTextClass = "text-[#64748B] dark:text-slate-400";
-const bodyTextClass = "text-[#1F2937] dark:text-slate-100";
+  "text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)]";
+const secondaryTextClass = "text-[color:var(--text-secondary)]";
+const mutedTextClass = "text-[color:var(--text-muted)]";
+const bodyTextClass = "text-[color:var(--text-primary)]";
 const primaryButtonClass =
-  "rounded-lg border border-[#2563EB] bg-[#2563EB] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:border-[#93C5FD] disabled:bg-[#DBEAFE] disabled:text-[#1F2937] disabled:opacity-100 dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400";
+  "rounded-lg border border-transparent bg-[color:var(--brand-600)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--button-primary-text)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[color:var(--surface-brand-soft)] disabled:text-[color:var(--text-primary)] disabled:opacity-100";
 const secondaryButtonClass =
-  "rounded-lg border border-[#93C5FD] bg-[#EFF6FF] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#1D4ED8] transition hover:bg-[#DBEAFE] disabled:cursor-not-allowed disabled:bg-[#DBEAFE] disabled:text-[#1F2937] disabled:opacity-100 dark:border-sky-500/70 dark:bg-sky-500/20 dark:text-sky-100";
+  "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-brand)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:bg-[color:var(--surface-muted)] disabled:text-[color:var(--text-primary)] disabled:opacity-100";
 const dangerButtonClass =
   "rounded-lg border border-rose-700 bg-rose-600 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-rose-700";
 const sectionTextareaClass =

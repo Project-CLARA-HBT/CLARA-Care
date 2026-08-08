@@ -186,6 +186,62 @@ class FakeApiClient extends ApiClient {
         accessToken: accessToken);
   }
 
+  @override
+  Future<Map<String, dynamic>> getComplianceConsents({
+    required String accessToken,
+  }) {
+    return _dispatch('getComplianceConsents', const {},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<void> grantComplianceConsent({
+    required String accessToken,
+    required String purpose,
+    String? policyVersion,
+  }) async {
+    await _dispatch(
+      'grantComplianceConsent',
+      {'purpose': purpose, 'policyVersion': policyVersion},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<void> withdrawComplianceConsent({
+    required String accessToken,
+    required String purpose,
+  }) async {
+    await _dispatch(
+      'withdrawComplianceConsent',
+      {'purpose': purpose},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> submitDsarRequest({
+    required String accessToken,
+    required String kind,
+  }) {
+    return _dispatch('submitDsarRequest', {'kind': kind},
+        accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteDsarData({
+    required String accessToken,
+  }) {
+    return _dispatch('deleteDsarData', const {}, accessToken: accessToken);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPublicSharedResource({
+    required String token,
+  }) {
+    return _dispatch('getPublicSharedResource', {'token': token});
+  }
+
   // --- Research --------------------------------------------------------------
 
   @override

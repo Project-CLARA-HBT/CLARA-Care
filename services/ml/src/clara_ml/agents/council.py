@@ -1570,6 +1570,12 @@ def run_council(payload: dict) -> dict:
             "labs": labs,
             "medications": medications,
             "history": history,
+            # The released rule-engine result is passed only as an immutable
+            # baseline for the nested shadow adjudication audit. The shadow
+            # merge may describe a higher review floor but cannot write back to
+            # this deterministic result, its facts, or its recommendation.
+            "deterministic_baseline_triage": consensus_triage,
+            "deterministic_baseline_requires_human_review": True,
         }
         # Only the separately default-off, shadow-only path may pass the
         # server-created evidence availability packet onward. The validator in

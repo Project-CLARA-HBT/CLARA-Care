@@ -9,7 +9,6 @@ import {
 
 vi.mock("@/lib/http-client", () => ({ default: { post: vi.fn(), get: vi.fn(), patch: vi.fn() } }));
 vi.mock("@/lib/auth-store", () => ({
-  getAccessToken: () => "test-token",
   getCsrfToken: () => "csrf",
 }));
 
@@ -67,7 +66,7 @@ describe("streamScribe", () => {
     expect(result.note?.template_id).toBe("soap");
   });
 
-  it("POSTs multipart audio with language + template_id to the session stream URL", async () => {
+  it("POSTs multipart audio with language + template_id using cookie auth", async () => {
     const fetchMock = vi.fn().mockResolvedValue(sseStream(["event: done\ndata: {}\n\n"]));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -85,7 +84,7 @@ describe("streamScribe", () => {
     expect(init.credentials).toBe("include");
     const headers = init.headers as Record<string, string>;
     expect(headers.Accept).toBe("text/event-stream");
-    expect(headers.Authorization).toBe("Bearer test-token");
+    expect(headers.Authorization).toBeUndefined();
     expect(headers["X-CSRF-Token"]).toBe("csrf");
     const form = init.body as FormData;
     expect(form).toBeInstanceOf(FormData);

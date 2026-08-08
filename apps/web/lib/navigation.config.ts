@@ -1,9 +1,35 @@
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
+import {
+  DEFAULT_POST_LOGIN_PATH,
+  PUBLIC_ROUTES,
+  getRoleHomePath,
+  isAuthenticatedUtilityRoute,
+  isPublicRoute,
+  isRouteAllowedForRole,
+  resolvePostLoginPath,
+  sanitizeNextPath,
+  type UserRole,
+} from "@/lib/navigation.access";
 
-export type UserRole = "normal" | "researcher" | "doctor" | "admin";
+export type { UserRole } from "@/lib/navigation.access";
+export {
+  DEFAULT_POST_LOGIN_PATH,
+  PUBLIC_ROUTES,
+  getRoleHomePath,
+  isAuthenticatedUtilityRoute,
+  isPublicRoute,
+  isRouteAllowedForRole,
+  resolvePostLoginPath,
+  sanitizeNextPath,
+};
 export type NavGroupKey =
-  "care" | "medicines" | "explore" | "clinical" | "admin" | "support";
+  | "care"
+  | "medicines"
+  | "explore"
+  | "clinical"
+  | "admin"
+  | "support";
 
 export type PageMeta = {
   title: string;
@@ -28,33 +54,6 @@ export type NavGroupMeta = {
   label: string;
   shortLabel: string;
   icon: string;
-};
-
-export const PUBLIC_ROUTES = new Set([
-  "/",
-  "/legal",
-  "/legal/privacy",
-  "/legal/terms",
-  "/legal/consent",
-  "/legal/cookies",
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-]);
-
-export const DEFAULT_POST_LOGIN_PATH = "/today";
-
-const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
-const AUTHENTICATED_UTILITY_ROUTES = new Set(["/welcome", "/role-select"]);
-const AUTHENTICATED_UTILITY_PREFIXES = ["/welcome/"];
-
-const ROLE_HOME_PATHS: Record<UserRole, string> = {
-  normal: "/today",
-  researcher: "/dashboard",
-  doctor: "/dashboard",
-  admin: "/dashboard",
 };
 
 const NAV_ITEMS: NavigationItem[] = [
@@ -150,7 +149,8 @@ const NAV_ITEMS: NavigationItem[] = [
     hiddenForRoles: ["normal"],
     page: {
       title: "Tra cứu y khoa",
-      subtitle: "Phân tích chuyên sâu với nguồn, độ chắc chắn và dấu vết luận điểm.",
+      subtitle:
+        "Phân tích chuyên sâu với nguồn, độ chắc chắn và dấu vết luận điểm.",
     },
   },
   {
@@ -372,10 +372,11 @@ type LocalizedNavigationKeys = {
   subtitle: UITranslationKey;
 };
 
-// Personal-mode destinations are intentionally kept in a typed catalog rather
-// than duplicated in the shell. Administrative and clinical routes retain
-// their Vietnamese source copy until their domain pages are migrated.
-const PERSONAL_NAVIGATION_KEYS: Partial<Record<string, LocalizedNavigationKeys>> = {
+// Every navigation destination is catalog-backed. The Vietnamese source copy
+// in the static route definitions remains a compatibility fallback for callers
+// that do not pass a locale; all shell-facing routes use this map so English
+// switches labels, descriptions and page metadata together.
+const NAVIGATION_KEYS: Partial<Record<string, LocalizedNavigationKeys>> = {
   "/chat": {
     label: "navigation.item.chat.label",
     desc: "navigation.item.chat.desc",
@@ -418,10 +419,133 @@ const PERSONAL_NAVIGATION_KEYS: Partial<Record<string, LocalizedNavigationKeys>>
     title: "navigation.item.medicines.title",
     subtitle: "navigation.item.medicines.subtitle",
   },
+  "/dashboard": {
+    label: "navigation.item.dashboard.label",
+    desc: "navigation.item.dashboard.desc",
+    title: "navigation.item.dashboard.title",
+    subtitle: "navigation.item.dashboard.subtitle",
+  },
+  "/research": {
+    label: "navigation.item.research.label",
+    desc: "navigation.item.research.desc",
+    title: "navigation.item.research.title",
+    subtitle: "navigation.item.research.subtitle",
+  },
+  "/evidence": {
+    label: "navigation.item.evidence.label",
+    desc: "navigation.item.evidence.desc",
+    title: "navigation.item.evidence.title",
+    subtitle: "navigation.item.evidence.subtitle",
+  },
+  "/selfmed": {
+    label: "navigation.item.selfmed.label",
+    desc: "navigation.item.selfmed.desc",
+    title: "navigation.item.selfmed.title",
+    subtitle: "navigation.item.selfmed.subtitle",
+  },
+  "/careguard": {
+    label: "navigation.item.careguard.label",
+    desc: "navigation.item.careguard.desc",
+    title: "navigation.item.careguard.title",
+    subtitle: "navigation.item.careguard.subtitle",
+  },
+  "/research/source-hub": {
+    label: "navigation.item.sourceHub.label",
+    desc: "navigation.item.sourceHub.desc",
+    title: "navigation.item.sourceHub.title",
+    subtitle: "navigation.item.sourceHub.subtitle",
+  },
+  "/council": {
+    label: "navigation.item.council.label",
+    desc: "navigation.item.council.desc",
+    title: "navigation.item.council.title",
+    subtitle: "navigation.item.council.subtitle",
+  },
+  "/scribe": {
+    label: "navigation.item.scribe.label",
+    desc: "navigation.item.scribe.desc",
+    title: "navigation.item.scribe.title",
+    subtitle: "navigation.item.scribe.subtitle",
+  },
+  "/admin/overview": {
+    label: "navigation.item.adminOverview.label",
+    desc: "navigation.item.adminOverview.desc",
+    title: "navigation.item.adminOverview.title",
+    subtitle: "navigation.item.adminOverview.subtitle",
+  },
+  "/admin/knowledge-sources": {
+    label: "navigation.item.adminKnowledgeSources.label",
+    desc: "navigation.item.adminKnowledgeSources.desc",
+    title: "navigation.item.adminKnowledgeSources.title",
+    subtitle: "navigation.item.adminKnowledgeSources.subtitle",
+  },
+  "/admin/answer-flow": {
+    label: "navigation.item.adminAnswerFlow.label",
+    desc: "navigation.item.adminAnswerFlow.desc",
+    title: "navigation.item.adminAnswerFlow.title",
+    subtitle: "navigation.item.adminAnswerFlow.subtitle",
+  },
+  "/admin/observability": {
+    label: "navigation.item.adminObservability.label",
+    desc: "navigation.item.adminObservability.desc",
+    title: "navigation.item.adminObservability.title",
+    subtitle: "navigation.item.adminObservability.subtitle",
+  },
+  "/admin/community-moderation": {
+    label: "navigation.item.adminModeration.label",
+    desc: "navigation.item.adminModeration.desc",
+    title: "navigation.item.adminModeration.title",
+    subtitle: "navigation.item.adminModeration.subtitle",
+  },
+  "/admin/analytics": {
+    label: "navigation.item.adminAnalytics.label",
+    desc: "navigation.item.adminAnalytics.desc",
+    title: "navigation.item.adminAnalytics.title",
+    subtitle: "navigation.item.adminAnalytics.subtitle",
+  },
+  "/admin/analytics/clinical": {
+    label: "navigation.item.adminClinicalAnalytics.label",
+    desc: "navigation.item.adminClinicalAnalytics.desc",
+    title: "navigation.item.adminClinicalAnalytics.title",
+    subtitle: "navigation.item.adminClinicalAnalytics.subtitle",
+  },
+  "/huong-dan": {
+    label: "navigation.item.help.label",
+    desc: "navigation.item.help.desc",
+    title: "navigation.item.help.title",
+    subtitle: "navigation.item.help.subtitle",
+  },
+  "/account/consent": {
+    label: "navigation.item.consent.label",
+    desc: "navigation.item.consent.desc",
+    title: "navigation.item.consent.title",
+    subtitle: "navigation.item.consent.subtitle",
+  },
+  "/account/data": {
+    label: "navigation.item.dataRights.label",
+    desc: "navigation.item.dataRights.desc",
+    title: "navigation.item.dataRights.title",
+    subtitle: "navigation.item.dataRights.subtitle",
+  },
+  "/admin/dsar": {
+    label: "navigation.item.dsar.label",
+    desc: "navigation.item.dsar.desc",
+    title: "navigation.item.dsar.title",
+    subtitle: "navigation.item.dsar.subtitle",
+  },
+  "/community": {
+    label: "navigation.item.community.label",
+    desc: "navigation.item.community.desc",
+    title: "navigation.item.community.title",
+    subtitle: "navigation.item.community.subtitle",
+  },
 };
 
-function localizeNavigationItem(item: NavigationItem, language: UILanguage): NavigationItem {
-  const keys = PERSONAL_NAVIGATION_KEYS[item.href];
+function localizeNavigationItem(
+  item: NavigationItem,
+  language: UILanguage,
+): NavigationItem {
+  const keys = NAVIGATION_KEYS[item.href];
   if (!keys) return item;
   return {
     ...item,
@@ -539,8 +663,6 @@ const GROUP_ORDER: NavGroupKey[] = [
   "support",
 ];
 
-
-
 const GROUP_META: Record<NavGroupKey, NavGroupMeta> = {
   care: {
     label: "Chăm sóc của bạn",
@@ -562,73 +684,28 @@ const GROUP_META: Record<NavGroupKey, NavGroupMeta> = {
   support: { label: "Hỗ trợ", shortLabel: "Hỗ trợ", icon: "help" },
 };
 
-const DEFAULT_PAGE_META: PageMeta = {
-  title: "Không gian làm việc",
-  subtitle:
-    "Nền tảng trợ lý y tế giúp bạn xử lý công việc nhanh và rõ ràng hơn.",
+const GROUP_KEYS: Record<
+  NavGroupKey,
+  { label: UITranslationKey; shortLabel: UITranslationKey }
+> = {
+  care: { label: "navigation.care", shortLabel: "navigation.care" },
+  medicines: {
+    label: "navigation.medicines",
+    shortLabel: "navigation.medicines",
+  },
+  explore: { label: "navigation.explore", shortLabel: "navigation.explore" },
+  clinical: { label: "navigation.clinical", shortLabel: "navigation.clinical" },
+  admin: { label: "navigation.admin", shortLabel: "navigation.admin" },
+  support: { label: "navigation.support", shortLabel: "navigation.support" },
 };
-
-export function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.has(pathname);
-}
-
-/**
- * Signed-in flows that should be route-guarded but not shown as permanent
- * navigation destinations. Onboarding is intentionally transient: once the
- * user has completed or skipped it, the everyday sidebar stays uncluttered.
- */
-export function isAuthenticatedUtilityRoute(pathname: string): boolean {
-  return (
-    AUTHENTICATED_UTILITY_ROUTES.has(pathname) ||
-    AUTHENTICATED_UTILITY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-  );
-}
-
-export function getRoleHomePath(role: UserRole = "normal"): string {
-  return ROLE_HOME_PATHS[role] ?? DEFAULT_POST_LOGIN_PATH;
-}
-
-export function sanitizeNextPath(
-  nextPath: string | null | undefined,
-): string | null {
-  if (!nextPath) return null;
-  if (!nextPath.startsWith("/") || nextPath.startsWith("//")) return null;
-  try {
-    const parsed = new URL(nextPath, "http://localhost");
-    if (AUTH_ENTRY_ROUTES.has(parsed.pathname)) return null;
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return null;
-  }
-}
-
-export function resolvePostLoginPath(options: {
-  nextPath?: string | null;
-  role?: UserRole;
-}): string {
-  return (
-    sanitizeNextPath(options.nextPath) ??
-    getRoleHomePath(options.role ?? "normal")
-  );
-}
 
 export function getNavItemsByRole(
   role: UserRole,
   language: UILanguage = "vi",
 ): NavigationItem[] {
   return NAV_ITEMS.filter(
-    (item) =>
-      item.roles.includes(role) && !item.hiddenForRoles?.includes(role),
+    (item) => item.roles.includes(role) && !item.hiddenForRoles?.includes(role),
   ).map((item) => localizeNavigationItem(item, language));
-}
-
-export function isRouteAllowedForRole(
-  pathname: string,
-  role: UserRole,
-): boolean {
-  return NAV_ITEMS.some(
-    (item) => item.roles.includes(role) && isActiveRoute(pathname, item.href),
-  );
 }
 
 export function getGroupedNavItems(
@@ -640,7 +717,7 @@ export function getGroupedNavItems(
     const groupItems = items.filter((item) => item.group === groupKey);
     return {
       key: groupKey,
-      label: GROUP_META[groupKey].label,
+      label: t(language, GROUP_KEYS[groupKey].label),
       items: groupItems,
     };
   }).filter((group) => group.items.length > 0);
@@ -655,20 +732,46 @@ export function getMobilePrimaryNav(
     .slice(0, 4);
 }
 
-export function getGroupMeta(group: NavGroupKey): NavGroupMeta {
-  return GROUP_META[group];
+export function getGroupMeta(
+  group: NavGroupKey,
+  language: UILanguage = "vi",
+): NavGroupMeta {
+  const meta = GROUP_META[group];
+  const keys = GROUP_KEYS[group];
+  return {
+    ...meta,
+    label: t(language, keys.label),
+    shortLabel: t(language, keys.shortLabel),
+  };
 }
 
-
-
-export function getPageMeta(pathname: string, language: UILanguage = "vi"): PageMeta {
+export function getPageMeta(
+  pathname: string,
+  language: UILanguage = "vi",
+): PageMeta {
   const exact = NAV_ITEMS.find((item) => item.href === pathname);
   if (exact) return localizeNavigationItem(exact, language).page;
 
   if (pathname === "/research" || pathname.startsWith("/research/")) {
     return {
-      title: "Hỏi đáp y tế",
-      subtitle: "Luồng hỏi đáp đã hợp nhất về CLARA Chat.",
+      title: t(language, "navigation.page.researchRedirect.title"),
+      subtitle: t(language, "navigation.page.researchRedirect.subtitle"),
+    };
+  }
+
+  // These dashboard sub-pages have their own metadata. Resolve them before
+  // the generic `/dashboard` prefix route below.
+  if (pathname.startsWith("/dashboard/control-tower")) {
+    return {
+      title: t(language, "navigation.page.controlTower.title"),
+      subtitle: t(language, "navigation.page.controlTower.subtitle"),
+    };
+  }
+
+  if (pathname.startsWith("/dashboard/ecosystem")) {
+    return {
+      title: t(language, "navigation.page.ecosystem.title"),
+      subtitle: t(language, "navigation.page.ecosystem.subtitle"),
     };
   }
 
@@ -680,22 +783,10 @@ export function getPageMeta(pathname: string, language: UILanguage = "vi"): Page
   );
   if (prefixMatch) return localizeNavigationItem(prefixMatch, language).page;
 
-  if (pathname.startsWith("/dashboard/control-tower")) {
-    return {
-      title: "Điều phối tri thức",
-      subtitle:
-        "Thiết lập nguồn dữ liệu và luồng phản hồi cho hệ thống hỏi đáp.",
-    };
-  }
-
-  if (pathname.startsWith("/dashboard/ecosystem")) {
-    return {
-      title: "Hệ sinh thái đối tác",
-      subtitle: "Theo dõi trạng thái kết nối và độ tin cậy dữ liệu liên thông.",
-    };
-  }
-
-  return DEFAULT_PAGE_META;
+  return {
+    title: t(language, "navigation.page.default.title"),
+    subtitle: t(language, "navigation.page.default.subtitle"),
+  };
 }
 
 export function isActiveRoute(pathname: string, href: string): boolean {

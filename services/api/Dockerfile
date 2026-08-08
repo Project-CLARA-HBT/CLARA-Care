@@ -31,6 +31,14 @@ COPY services/api/alembic.ini /app/alembic.ini
 RUN python -m pip install --no-cache-dir "uv==0.8.22" \
     && uv sync --frozen --no-dev --no-editable
 
+# The server process must not run as root. Source and the virtual environment
+# are immutable at runtime; writable state belongs to explicitly mounted
+# volumes owned by the deployment, not the image layer.
+RUN groupadd --system --gid 10001 clara \
+    && useradd --system --uid 10001 --gid clara --home-dir /app --no-create-home clara \
+    && chown -R clara:clara /app
+USER clara
+
 EXPOSE 8000
 
 CMD ["sh", "-c", "uvicorn clara_api.main:app --app-dir src --host 0.0.0.0 --port 8000 --workers ${API_UVICORN_WORKERS:-1}"]

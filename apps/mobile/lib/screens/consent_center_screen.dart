@@ -2,82 +2,135 @@ import 'package:flutter/material.dart';
 
 import '../core/a11y.dart';
 import '../core/analytics.dart';
-import '../core/consent_state.dart';
+import '../core/api_client.dart';
 import '../core/feature_flags.dart';
 import '../core/session_store.dart';
 
 // =============================================================================
-// Granular consent center — clara-mobile-feature-parity Task 10.1
-// (Requirements 8.1, 8.2, 8.4).
+// Granular consent centre — server-authoritative mobile parity.
 //
-//   * 8.1 Self-service consent center listing every processing purpose
-//         (core service, personalization, research, cross-border, sharing,
-//         analytics) with grant/withdraw toggles.
-//   * 8.2 Withdrawal is at least as easy as granting — a single symmetric
-//         switch per purpose.
-//   * 8.4 Withdrawing the analytics purpose calls
-//         `Analytics.setConsent(granted: false)` immediately (and granting calls
-//         `setConsent(granted: true)`), wired through [ConsentStore].
-//   * Gated behind `consent_center_mobile_enabled` via
-//         [MobileFeatureFlagResolver]: with the flag off the surface is never
-//         exposed (Requirement 8.6 / 15.1).
-//
-// No PII is read, stored, or logged on this surface (Requirement 8.5 / 11.2):
-// only boolean grants + a policy version flow through the store.
+// The compliance ledger is an API-owned, append-only record. This screen must
+// never replace it with device-local switches: a local value would imply a
+// permission changed even when API policy still sees the old value. Analytics
+// remains disabled by default and is deliberately not represented as a server
+// compliance purpose until it has its own governed backend contract.
 // =============================================================================
 
-/// Self-service granular-consent center.
+enum _CompliancePurpose {
+  coreService,
+  aiTransparency,
+  personalization,
+  research,
+  crossBorderProcessing,
+  sharing,
+}
+
+extension on _CompliancePurpose {
+  String get wireName {
+    switch (this) {
+      case _CompliancePurpose.coreService:
+        return 'core_service';
+      case _CompliancePurpose.aiTransparency:
+        return 'ai_transparency';
+      case _CompliancePurpose.personalization:
+        return 'personalization';
+      case _CompliancePurpose.research:
+        return 'research';
+      case _CompliancePurpose.crossBorderProcessing:
+        return 'cross_border_processing';
+      case _CompliancePurpose.sharing:
+        return 'sharing';
+    }
+  }
+
+  bool get isLocked => this == _CompliancePurpose.coreService;
+
+  String title(bool english) {
+    switch (this) {
+      case _CompliancePurpose.coreService:
+        return english ? 'Core service' : 'Dịch vụ cốt lõi';
+      case _CompliancePurpose.aiTransparency:
+        return english ? 'AI transparency' : 'Minh bạch AI';
+      case _CompliancePurpose.personalization:
+        return english ? 'Personalization' : 'Cá nhân hóa';
+      case _CompliancePurpose.research:
+        return english ? 'Research use' : 'Nghiên cứu';
+      case _CompliancePurpose.crossBorderProcessing:
+        return english
+            ? 'Third-party / cross-border model processing'
+            : 'Xử lý bởi mô hình bên thứ ba / xuyên biên giới';
+      case _CompliancePurpose.sharing:
+        return english ? 'Sharing' : 'Chia sẻ';
+    }
+  }
+
+  String description(bool english) {
+    switch (this) {
+      case _CompliancePurpose.coreService:
+        return english
+            ? 'Required to provide CLARA core functionality while you use the service.'
+            : 'Cần thiết để cung cấp chức năng cốt lõi của CLARA trong khi bạn sử dụng dịch vụ.';
+      case _CompliancePurpose.aiTransparency:
+        return english
+            ? 'Acknowledgement of the current AI-system transparency notice.'
+            : 'Xác nhận thông báo minh bạch hiện hành về hệ thống AI.';
+      case _CompliancePurpose.personalization:
+        return english
+            ? 'Use your health record, medicine cabinet, and allergies to personalize support.'
+            : 'Dùng hồ sơ sức khỏe, tủ thuốc và dị ứng để cá nhân hóa hỗ trợ.';
+      case _CompliancePurpose.research:
+        return english
+            ? 'Allow de-identified data to improve retrieval and evidence verification.'
+            : 'Cho phép dùng dữ liệu đã khử định danh để cải thiện truy xuất và kiểm chứng bằng chứng.';
+      case _CompliancePurpose.crossBorderProcessing:
+        return english
+            ? 'Allow necessary data to be processed by a language model outside Vietnam.'
+            : 'Cho phép dữ liệu cần thiết được xử lý bởi mô hình ngôn ngữ ngoài Việt Nam.';
+      case _CompliancePurpose.sharing:
+        return english
+            ? 'Allow read-only sharing links for your records and conversations.'
+            : 'Cho phép liên kết chia sẻ chỉ đọc cho hồ sơ và cuộc trò chuyện của bạn.';
+    }
+  }
+}
+
+/// Server-authoritative granular-consent centre.
 ///
-/// Construct with the loaded [MobileFeatureFlagResolver] so the screen can
-/// fail-closed when the gate is off, and the [SessionStore] used to build a
-/// persistent [ConsentStore]. The analytics facade may be injected for tests;
-/// it defaults to the shared client.
+/// The feature flag controls only whether this entry is visible. If the flag,
+/// session, or ledger request is unavailable, no consent control is shown.
 class ConsentCenterScreen extends StatefulWidget {
   const ConsentCenterScreen({
     super.key,
+    required this.apiClient,
     required this.resolver,
     required this.sessionStore,
-    Analytics? analytics,
-    ConsentStore? consentStore,
-  })  : _analytics = analytics,
-        _consentStore = consentStore;
+  });
 
-  /// Resolved feature gates from `mobile/summary` + build defaults.
+  final ApiClient apiClient;
   final MobileFeatureFlagResolver resolver;
-
-  /// The session store, whose secure-storage seam backs consent persistence.
   final SessionStore sessionStore;
-
-  /// Optional analytics facade override (tests inject a spy/recording client).
-  final Analytics? _analytics;
-
-  /// Optional pre-built consent store (tests inject one with an in-memory seam).
-  final ConsentStore? _consentStore;
 
   @override
   State<ConsentCenterScreen> createState() => _ConsentCenterScreenState();
 }
 
 class _ConsentCenterScreenState extends State<ConsentCenterScreen> {
-  late final ConsentStore _store;
+  Map<String, bool> _grants = const <String, bool>{};
+  String? _policyVersion;
+  _CompliancePurpose? _savingPurpose;
   bool _loading = true;
-  ConsentPurpose? _savingPurpose;
+  bool _available = false;
+  String? _error;
+
+  bool get _english => Localizations.localeOf(context).languageCode == 'en';
+
+  String _copy(String vi, String en) => _english ? en : vi;
 
   @override
   void initState() {
     super.initState();
-    _store = widget._consentStore ??
-        ConsentStore(
-          // The SessionStore is itself a SessionSecureStorage-backed store; we
-          // reuse the same secure-storage seam via a dedicated store instance.
-          storage: _ConsentSecureStorageAdapter(widget.sessionStore),
-          analytics: widget._analytics,
-        );
-    // Only load/initialise when the gate is open; with the flag off the surface
-    // is inert (Requirement 8.6 / 15.1).
     if (widget.resolver.consentCenterEnabled) {
-      getAnalyticsClient()
-          .captureScreenView('mobile_consent_center_viewed');
+      getAnalyticsClient().captureScreenView('mobile_consent_center_viewed');
       _load();
     } else {
       _loading = false;
@@ -85,69 +138,179 @@ class _ConsentCenterScreenState extends State<ConsentCenterScreen> {
   }
 
   Future<void> _load() async {
-    await _store.load();
-    if (!mounted) return;
-    setState(() => _loading = false);
+    final token = widget.sessionStore.accessToken;
+    if (token == null || token.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _available = false;
+        _error = _copy(
+          'Không thể kiểm tra trạng thái đồng ý. Vui lòng đăng nhập lại.',
+          'We could not check consent status. Please sign in again.',
+        );
+      });
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final payload = await widget.apiClient.getComplianceConsents(
+        accessToken: token,
+      );
+      final rawGrants = payload['consents'];
+      final grants = <String, bool>{
+        for (final purpose in _CompliancePurpose.values)
+          purpose.wireName:
+              rawGrants is Map && rawGrants[purpose.wireName] == true,
+      };
+      if (!mounted) return;
+      setState(() {
+        _grants = grants;
+        _policyVersion = payload['policy_version'] is String
+            ? payload['policy_version'] as String
+            : null;
+        _available = payload['enabled'] == true;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _available = false;
+        _error = _copy(
+          'Không thể tải trạng thái đồng ý lúc này. Vui lòng thử lại.',
+          'We could not load consent status. Please try again.',
+        );
+      });
+    }
   }
 
-  Future<void> _toggle(ConsentPurpose purpose, bool granted) async {
-    setState(() => _savingPurpose = purpose);
-    await _store.setConsent(purpose, granted);
-    if (!mounted) return;
-    setState(() => _savingPurpose = null);
+  Future<void> _toggle(_CompliancePurpose purpose, bool nextGranted) async {
+    if (purpose.isLocked) return;
+    final token = widget.sessionStore.accessToken;
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _error = _copy(
+          'Không thể thay đổi đồng ý. Vui lòng đăng nhập lại.',
+          'We could not change consent. Please sign in again.',
+        );
+      });
+      return;
+    }
+
+    setState(() {
+      _savingPurpose = purpose;
+      _error = null;
+    });
+    try {
+      if (nextGranted) {
+        await widget.apiClient.grantComplianceConsent(
+          accessToken: token,
+          purpose: purpose.wireName,
+          policyVersion: _policyVersion,
+        );
+      } else {
+        await widget.apiClient.withdrawComplianceConsent(
+          accessToken: token,
+          purpose: purpose.wireName,
+        );
+      }
+      await _load();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = _copy(
+          'Không thể cập nhật đồng ý. Trạng thái hiện tại chưa thay đổi.',
+          'We could not update consent. The current state has not changed.',
+        );
+      });
+    } finally {
+      if (mounted) setState(() => _savingPurpose = null);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quyền riêng tư & đồng ý')),
+      appBar: AppBar(
+        title: Text(_copy('Quyền riêng tư & đồng ý', 'Privacy & consent')),
+      ),
       body: _buildBody(context),
     );
   }
 
   Widget _buildBody(BuildContext context) {
-    if (!widget.resolver.consentCenterEnabled) {
-      return const _UnavailableNotice();
+    if (!widget.resolver.consentCenterEnabled || (!_available && !_loading)) {
+      return _UnavailableNotice(
+        message: _error ??
+            _copy(
+              'Tính năng này hiện chưa được bật cho môi trường này.',
+              'This feature is not enabled for this environment.',
+            ),
+        onRetry: widget.resolver.consentCenterEnabled ? _load : null,
+      );
     }
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: [
+      children: <Widget>[
+        if (_error != null) ...<Widget>[
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Text(
-          'Quản lý đồng ý theo từng mục đích',
+          _copy(
+              'Quản lý đồng ý theo từng mục đích', 'Manage consent by purpose'),
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
         Text(
-          'Bạn có thể bật hoặc tắt từng mục đích bất cứ lúc nào. Việc rút lại '
-          'đồng ý dễ dàng như khi cấp đồng ý.',
+          _copy(
+            'Bạn có thể bật hoặc rút lại từng mục đích không bắt buộc bất cứ lúc nào.',
+            'You can grant or withdraw each optional purpose at any time.',
+          ),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 16),
-        for (final purpose in ConsentPurpose.values) _buildPurposeTile(purpose),
+        for (final purpose in _CompliancePurpose.values)
+          _buildPurposeTile(purpose),
       ],
     );
   }
 
-  Widget _buildPurposeTile(ConsentPurpose purpose) {
-    final granted = _store.isGranted(purpose);
+  Widget _buildPurposeTile(_CompliancePurpose purpose) {
+    final granted = purpose.isLocked || _grants[purpose.wireName] == true;
     final busy = _savingPurpose == purpose;
+    final stateLabel =
+        granted ? _copy('Đã bật', 'Enabled') : _copy('Đã tắt', 'Disabled');
     return Card(
       child: A11yLabeled(
-        label: '${purpose.titleVi}. ${granted ? "Đã bật" : "Đã tắt"}',
+        label: '${purpose.title(_english)}. $stateLabel',
         child: SwitchListTile(
           value: granted,
-          onChanged: busy ? null : (value) => _toggle(purpose, value),
+          onChanged: purpose.isLocked || busy
+              ? null
+              : (value) => _toggle(purpose, value),
           title: Row(
-            children: [
-              Expanded(child: Text(purpose.titleVi)),
-              if (purpose.isMandatory)
+            children: <Widget>[
+              Expanded(child: Text(purpose.title(_english))),
+              if (purpose.isLocked)
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: Text(
-                    'Bắt buộc',
+                    _copy('Bắt buộc', 'Required'),
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
                 ),
@@ -155,7 +318,7 @@ class _ConsentCenterScreenState extends State<ConsentCenterScreen> {
           ),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(purpose.descriptionVi),
+            child: Text(purpose.description(_english)),
           ),
           isThreeLine: true,
         ),
@@ -164,48 +327,32 @@ class _ConsentCenterScreenState extends State<ConsentCenterScreen> {
   }
 }
 
-/// Shown when the consent-center gate is off — the surface stays inert and
-/// reveals no controls (Requirement 8.6 / 15.1).
 class _UnavailableNotice extends StatelessWidget {
-  const _UnavailableNotice();
+  const _UnavailableNotice({required this.message, this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Text(
-          'Tính năng này hiện chưa được bật.',
-          textAlign: TextAlign.center,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(message, textAlign: TextAlign.center),
+            if (onRetry != null) ...<Widget>[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: onRetry,
+                child: Text(english ? 'Try again' : 'Thử lại'),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
-}
-
-/// Adapts a [SessionStore]'s underlying secure storage for consent persistence.
-///
-/// The session store does not expose its [SessionSecureStorage] directly, so we
-/// persist consent under a dedicated key via a fresh secure-storage instance of
-/// the same kind the app already uses. In tests, an explicit [ConsentStore]
-/// (with an in-memory seam) is injected instead, so this adapter only runs in
-/// production where `flutter_secure_storage` is available.
-class _ConsentSecureStorageAdapter implements SessionSecureStorage {
-  _ConsentSecureStorageAdapter(this._sessionStore)
-      : _delegate = FlutterSecureSessionStorage();
-
-  // Retained so the adapter's lifetime is tied to the owning session, even
-  // though persistence is delegated to the platform secure store by key.
-  // ignore: unused_field
-  final SessionStore _sessionStore;
-  final SessionSecureStorage _delegate;
-
-  @override
-  Future<String?> read(String key) => _delegate.read(key);
-
-  @override
-  Future<void> write(String key, String value) => _delegate.write(key, value);
-
-  @override
-  Future<void> delete(String key) => _delegate.delete(key);
 }

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
+from time import monotonic
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -85,13 +87,16 @@ class GraphRagSidecar:
         # DB-backed graph wiring (task 8.2, Requirement 10.1). Both are optional
         # and injectable for DI/tests; when neither is supplied the engine is
         # lazily resolved via ``rag.store.health.resolve_default_engine`` at load
-        # time. When no engine/store is available (or any DB error occurs) the
-        # sidecar falls back to the static-JSON domain graph unchanged.
+        # time. Production never silently substitutes a static graph after a DB
+        # failure: a stale graph is less safe than no graph expansion.
         self._engine = engine
         self._graph_store = graph_store
         # Provenance of the currently loaded domain graph: "database",
         # "static_json", or "none". Useful for diagnostics / regression tests.
         self._graph_source = "none"
+        self._graph_load_reason = "not_attempted"
+        self._last_db_attempt_at = 0.0
+        self._load_lock = threading.RLock()
         self._domain_graph_loaded = False
         self._domain_entities: dict[str, GraphRagSidecar._DomainEntity] = {}
         self._domain_edges: list[GraphRagSidecar._DomainEdge] = []
@@ -122,37 +127,67 @@ class GraphRagSidecar:
         self._domain_edges.clear()
         self._alias_index.clear()
 
+    def _static_json_fallback_allowed(self) -> bool:
+        """Return whether an explicitly requested non-production seed is safe.
+
+        The static graph exists for local development and isolated fixtures.  It
+        is not a production source of authority: a database schema/query error
+        must remain observable and retryable rather than silently producing an
+        out-of-date expansion.  This guard remains local to the sidecar so an
+        injected test store cannot accidentally weaken the deployed policy.
+        """
+
+        return bool(
+            getattr(settings, "rag_biomed_graph_static_fallback_enabled", False)
+            and str(getattr(settings, "environment", "")).strip().lower()
+            not in {"prod", "production"}
+        )
+
     def _load_domain_graph(self) -> None:
-        """Load the biomedical domain graph (DB-first, static-JSON fallback).
+        """Load the biomedical domain graph from the authoritative store.
 
         Requirement 10.1: the GraphRAG engine SHALL load drug-interaction and
         contraindication edges from ``kb_entity_edges`` rather than from a static
         JSON file. When ``settings.rag_biomed_graph_enabled`` is on AND a database
         engine/``GraphStore`` is available, edges are hydrated from the database
-        via :meth:`GraphStore.get_edges`. Any failure — no engine, missing tables,
-        an empty edge set, or any DB hiccup — falls back to the existing
-        static-JSON behavior UNCHANGED so graph loading can never crash the
-        request path.
+        via :meth:`GraphStore.get_edges`. A missing table, empty edge set or DB
+        failure leaves the graph unavailable and the caller continues with base
+        evidence. Static JSON can be enabled only for non-production local
+        fixtures through ``RAG_BIOMED_GRAPH_STATIC_FALLBACK_ENABLED=true``.
         """
 
-        self._reset_graph_state()
-        self._graph_source = "none"
+        with self._load_lock:
+            self._reset_graph_state()
+            self._graph_source = "none"
+            self._graph_load_reason = "static_only"
 
-        if settings.rag_biomed_graph_enabled:
-            try:
-                if self._load_domain_graph_from_db():
-                    self._graph_source = "database"
-                    return
-            except Exception as exc:  # noqa: BLE001 - defensive: never crash on DB
-                logger.warning(
-                    "graphrag DB edge-load failed (%s); falling back to static JSON",
-                    exc.__class__.__name__,
-                )
-                self._reset_graph_state()
+            if settings.rag_biomed_graph_enabled:
+                self._last_db_attempt_at = monotonic()
+                try:
+                    if self._load_domain_graph_from_db():
+                        self._graph_source = "database"
+                        self._graph_load_reason = "database_loaded"
+                        return
+                    self._graph_load_reason = "database_unavailable_or_empty"
+                except Exception as exc:  # noqa: BLE001 - defensive: never crash on DB
+                    self._graph_load_reason = f"database_error:{exc.__class__.__name__}"
+                    logger.warning("graphrag DB edge-load failed (%s)", exc.__class__.__name__)
+                    self._reset_graph_state()
 
-        self._load_domain_graph_from_json()
-        if self._domain_graph_loaded:
-            self._graph_source = "static_json"
+            if self._static_json_fallback_allowed():
+                self._load_domain_graph_from_json()
+                if self._domain_graph_loaded:
+                    self._graph_source = "static_json"
+                    self._graph_load_reason = "static_json_explicit_non_production"
+
+    def _maybe_retry_database_graph(self) -> None:
+        """Recover from a transient DB graph failure without retrying per request."""
+
+        if not settings.rag_biomed_graph_enabled or self._graph_source == "database":
+            return
+        retry_seconds = max(30, int(getattr(settings, "rag_biomed_graph_retry_seconds", 300)))
+        if monotonic() - self._last_db_attempt_at >= retry_seconds:
+            self._load_domain_graph()
 
     # -- DB-backed edge load (task 8.2) --------------------------------------
 
@@ -503,6 +538,7 @@ class GraphRagSidecar:
         max_neighbors: int = 8,
         expansion_docs: int = 4,
     ) -> GraphRagResult:
+        self._maybe_retry_database_graph()
         safe_max_neighbors = max(1, int(max_neighbors))
         safe_expansion_docs = max(1, int(expansion_docs))
         query_tokens = self._tokenize(query)

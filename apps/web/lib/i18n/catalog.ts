@@ -23,16 +23,23 @@ const VI_MESSAGES = {
   "navigation.clinical": "Lâm sàng",
   "navigation.admin": "Vận hành",
   "navigation.support": "Hỗ trợ",
-  "admin.controlTower.error.load": "Chưa thể tải cấu hình điều phối. Vui lòng thử lại.",
-  "admin.controlTower.error.save": "Chưa thể lưu cấu hình điều phối. Vui lòng thử lại.",
-  "admin.observability.error.load": "Chưa thể tải ảnh chụp trạng thái hệ thống. Vui lòng thử lại.",
-  "admin.observability.error.acknowledge": "Chưa thể xác nhận cảnh báo. Vui lòng thử lại.",
-  "admin.flowRuntime.error.load": "Chưa thể tải sự kiện vận hành. Vui lòng thử lại.",
-  "admin.flowRuntime.error.refresh": "Chưa thể cập nhật sự kiện vận hành. Vui lòng thử lại.",
+  "admin.controlTower.error.load":
+    "Chưa thể tải cấu hình điều phối. Vui lòng thử lại.",
+  "admin.controlTower.error.save":
+    "Chưa thể lưu cấu hình điều phối. Vui lòng thử lại.",
+  "admin.observability.error.load":
+    "Chưa thể tải ảnh chụp trạng thái hệ thống. Vui lòng thử lại.",
+  "admin.observability.error.acknowledge":
+    "Chưa thể xác nhận cảnh báo. Vui lòng thử lại.",
+  "admin.flowRuntime.error.load":
+    "Chưa thể tải sự kiện vận hành. Vui lòng thử lại.",
+  "admin.flowRuntime.error.refresh":
+    "Chưa thể cập nhật sự kiện vận hành. Vui lòng thử lại.",
   "navigation.item.chat.label": "Hỏi CLARA",
   "navigation.item.chat.desc": "Hỏi đáp sức khỏe có hướng dẫn an toàn",
   "navigation.item.chat.title": "Hỏi CLARA",
-  "navigation.item.chat.subtitle": "Hỏi điều bạn đang lo; CLARA sẽ hướng dẫn bước an toàn tiếp theo.",
+  "navigation.item.chat.subtitle":
+    "Hỏi điều bạn đang lo; CLARA sẽ hướng dẫn bước an toàn tiếp theo.",
   "navigation.item.today.label": "Hôm nay",
   "navigation.item.today.desc": "Những việc chăm sóc bạn đã chấp nhận",
   "navigation.item.today.title": "Hôm nay",
@@ -40,15 +47,18 @@ const VI_MESSAGES = {
   "navigation.item.lifemap.label": "Hành trình sức khỏe",
   "navigation.item.lifemap.desc": "Những điều bạn muốn theo dõi",
   "navigation.item.lifemap.title": "Hành trình sức khỏe",
-  "navigation.item.lifemap.subtitle": "Tổ chức điều bạn muốn theo dõi thành hành trình nhỏ.",
+  "navigation.item.lifemap.subtitle":
+    "Tổ chức điều bạn muốn theo dõi thành hành trình nhỏ.",
   "navigation.item.visits.label": "Chuẩn bị đi khám",
   "navigation.item.visits.desc": "Câu hỏi và thông tin cho buổi khám",
   "navigation.item.visits.title": "Chuẩn bị buổi khám",
-  "navigation.item.visits.subtitle": "Gom đúng thông tin bạn muốn mang đến buổi khám.",
+  "navigation.item.visits.subtitle":
+    "Gom đúng thông tin bạn muốn mang đến buổi khám.",
   "navigation.item.family.label": "Người thân hỗ trợ",
   "navigation.item.family.desc": "Chia sẻ tối thiểu với người hỗ trợ",
   "navigation.item.family.title": "Người thân hỗ trợ",
-  "navigation.item.family.subtitle": "Kiểm soát ai được xem hoặc hỗ trợ đúng một việc.",
+  "navigation.item.family.subtitle":
+    "Kiểm soát ai được xem hoặc hỗ trợ đúng một việc.",
   "navigation.item.phr.label": "Hồ sơ sức khỏe",
   "navigation.item.phr.desc": "Thông tin sức khỏe bạn tự quản lý",
   "navigation.item.phr.title": "Hồ sơ sức khỏe cá nhân",
@@ -56,19 +66,418 @@ const VI_MESSAGES = {
   "navigation.item.medicines.label": "Thuốc & an toàn",
   "navigation.item.medicines.desc": "Thuốc, tủ thuốc và kiểm tra tương tác",
   "navigation.item.medicines.title": "Thuốc & an toàn",
-  "navigation.item.medicines.subtitle": "Thuốc đã xác nhận, tủ thuốc và kiểm tra tương tác — tất cả ở một nơi.",
+  "navigation.item.medicines.subtitle":
+    "Thuốc đã xác nhận, tủ thuốc và kiểm tra tương tác — tất cả ở một nơi.",
+  "navigation.item.dashboard.label": "Tổng quan",
+  "navigation.item.dashboard.desc": "Bức tranh nhanh hôm nay",
+  "navigation.item.dashboard.title": "Tổng quan công việc",
+  "navigation.item.dashboard.subtitle":
+    "Theo dõi nhanh các tác vụ chăm sóc và vận hành trong ngày.",
+  "navigation.item.research.label": "Tra cứu y khoa",
+  "navigation.item.research.desc": "Tổng hợp và kiểm chứng bằng chứng",
+  "navigation.item.research.title": "Tra cứu y khoa",
+  "navigation.item.research.subtitle":
+    "Phân tích chuyên sâu với nguồn, độ chắc chắn và dấu vết luận điểm.",
+  "navigation.item.evidence.label": "Bằng chứng cập nhật",
+  "navigation.item.evidence.desc": "Câu hỏi LifeMap với nguồn kiểm chứng",
+  "navigation.item.evidence.title": "Bằng chứng đang cập nhật",
+  "navigation.item.evidence.subtitle":
+    "Gắn câu hỏi với hành trình, xem nguồn và phần chưa chắc chắn.",
+  "navigation.item.selfmed.label": "Tủ thuốc",
+  "navigation.item.selfmed.desc": "Đã hợp nhất vào Thuốc & an toàn",
+  "navigation.item.selfmed.title": "Tủ thuốc của tôi",
+  "navigation.item.selfmed.subtitle":
+    "Quản lý thuốc đang dùng và quét toa thuốc từ ảnh.",
+  "navigation.item.careguard.label": "Kiểm tra tương tác",
+  "navigation.item.careguard.desc": "Đã hợp nhất vào Thuốc & an toàn",
+  "navigation.item.careguard.title": "Kiểm tra tương tác thuốc",
+  "navigation.item.careguard.subtitle":
+    "Đối chiếu thuốc, dị ứng và triệu chứng để phát hiện rủi ro sớm.",
+  "navigation.item.sourceHub.label": "Nguồn nghiên cứu",
+  "navigation.item.sourceHub.desc": "PubMed, thuốc và nguồn y khoa",
+  "navigation.item.sourceHub.title": "Nguồn nghiên cứu",
+  "navigation.item.sourceHub.subtitle":
+    "Đồng bộ và tra cứu các nguồn y khoa phục vụ phân tích bằng chứng.",
+  "navigation.item.council.label": "Tham khảo nhiều chuyên khoa",
+  "navigation.item.council.desc": "Nhiều góc nhìn chuyên khoa",
+  "navigation.item.council.title": "Tham khảo nhiều chuyên khoa",
+  "navigation.item.council.subtitle":
+    "Tập hợp ý kiến đa chuyên khoa để xử lý ca khó.",
+  "navigation.item.scribe.label": "Ghi chép buổi khám",
+  "navigation.item.scribe.desc": "Ghi chép khám bệnh",
+  "navigation.item.scribe.title": "Ghi chép khám bệnh",
+  "navigation.item.scribe.subtitle":
+    "Soạn ghi chú khám nhanh theo định dạng rõ ràng, nhất quán.",
+  "navigation.item.adminOverview.label": "Quản trị hệ thống",
+  "navigation.item.adminOverview.desc": "Điều phối cấu hình và vận hành",
+  "navigation.item.adminOverview.title": "Quản trị hệ thống",
+  "navigation.item.adminOverview.subtitle":
+    "Bảng điều phối trung tâm cho cấu hình, chất lượng phản hồi và vận hành.",
+  "navigation.item.adminKnowledgeSources.label": "Nguồn tri thức",
+  "navigation.item.adminKnowledgeSources.desc": "Nguồn dữ liệu hợp nhất",
+  "navigation.item.adminKnowledgeSources.title": "Nguồn tri thức",
+  "navigation.item.adminKnowledgeSources.subtitle":
+    "Trung tâm hợp nhất connector truy xuất, tài liệu và đồng bộ nguồn y khoa.",
+  "navigation.item.adminAnswerFlow.label": "Luồng trả lời",
+  "navigation.item.adminAnswerFlow.desc": "Điều phối phân tích và phản hồi",
+  "navigation.item.adminAnswerFlow.title": "Luồng trả lời",
+  "navigation.item.adminAnswerFlow.subtitle":
+    "Điều phối các bước phân tích, xác minh và phản hồi cuối.",
+  "navigation.item.adminObservability.label": "Giám sát vận hành",
+  "navigation.item.adminObservability.desc": "Theo dõi cảnh báo runtime",
+  "navigation.item.adminObservability.title": "Giám sát vận hành",
+  "navigation.item.adminObservability.subtitle":
+    "Theo dõi tình trạng hệ thống, cảnh báo và tín hiệu runtime.",
+  "navigation.item.adminModeration.label": "Kiểm duyệt cộng đồng",
+  "navigation.item.adminModeration.desc": "Xử lý báo cáo nội dung cộng đồng",
+  "navigation.item.adminModeration.title": "Kiểm duyệt cộng đồng",
+  "navigation.item.adminModeration.subtitle":
+    "Xem xét và xử lý các báo cáo nội dung từ cộng đồng.",
+  "navigation.item.adminAnalytics.label": "Phân tích sản phẩm",
+  "navigation.item.adminAnalytics.desc": "Người dùng, khu vực và giữ chân",
+  "navigation.item.adminAnalytics.title": "Phân tích sản phẩm",
+  "navigation.item.adminAnalytics.subtitle":
+    "Xu hướng người dùng, mức độ sử dụng theo khu vực, phễu chuyển đổi và giữ chân.",
+  "navigation.item.adminClinicalAnalytics.label": "Phân tích lâm sàng",
+  "navigation.item.adminClinicalAnalytics.desc": "Kiểm chứng, DDI và độ trễ",
+  "navigation.item.adminClinicalAnalytics.title": "Phân tích lâm sàng",
+  "navigation.item.adminClinicalAnalytics.subtitle":
+    "Phán quyết kiểm chứng FIDES, phân bố tương tác thuốc và độ trễ theo tầng.",
+  "navigation.item.help.label": "Hướng dẫn",
+  "navigation.item.help.desc": "Bắt đầu trong 5 phút",
+  "navigation.item.help.title": "Trung tâm hướng dẫn",
+  "navigation.item.help.subtitle": "Các bước sử dụng nhanh cho người mới.",
+  "guide.eyebrow": "Bắt đầu tại đây",
+  "guide.title": "Hướng dẫn sử dụng CLARA",
+  "guide.description":
+    "Chọn việc bạn muốn làm, làm theo 3 bước ngắn, rồi mở thẳng đúng màn hình. CLARA chỉ hỗ trợ tham khảo; khi có dấu hiệu nguy hiểm, hãy liên hệ cơ sở y tế.",
+  "guide.tasks.chat.title": "Tôi muốn hỏi CLARA về triệu chứng hoặc thuốc",
+  "guide.tasks.chat.detail":
+    "Dùng khi bạn cần câu trả lời nhanh, dễ đọc, có nhắc an toàn.",
+  "guide.tasks.chat.step1": "Nhập câu hỏi bằng ngôn ngữ bình thường.",
+  "guide.tasks.chat.step2": "Chọn Nhanh nếu chỉ cần trả lời ngắn.",
+  "guide.tasks.chat.step3": "Đọc phần lưu ý an toàn trước khi làm theo.",
+  "guide.tasks.chat.action": "Mở hỏi CLARA",
+  "guide.tasks.thinking.title": "Tôi muốn câu trả lời kỹ hơn",
+  "guide.tasks.thinking.detail":
+    "Dùng Tư duy hoặc Pro khi cần phân tích dài, nhiều nguồn hơn.",
+  "guide.tasks.thinking.step1": "Bấm nút chỉnh chế độ cạnh ô nhập.",
+  "guide.tasks.thinking.step2":
+    "Chọn Tư duy cho phân tích kỹ hơn, Pro cho báo cáo dài.",
+  "guide.tasks.thinking.step3":
+    "Chọn Đầy đủ nguồn nếu muốn CLARA kiểm tra nhiều nguồn hơn.",
+  "guide.tasks.thinking.action": "Mở chế độ Tư duy",
+  "guide.tasks.cabinet.title": "Tôi muốn lưu thuốc đang dùng",
+  "guide.tasks.cabinet.detail":
+    "Tủ thuốc giúp CLARA nhớ danh sách thuốc để kiểm tra tương tác.",
+  "guide.tasks.cabinet.step1": "Thêm từng thuốc hoặc quét ảnh đơn thuốc.",
+  "guide.tasks.cabinet.step2": "Bổ sung liều dùng nếu biết.",
+  "guide.tasks.cabinet.step3":
+    "Khi có ít nhất 2 thuốc, chạy kiểm tra tương tác.",
+  "guide.tasks.cabinet.action": "Mở tủ thuốc",
+  "guide.tasks.interactions.title":
+    "Tôi muốn kiểm tra hai thuốc có kỵ nhau không",
+  "guide.tasks.interactions.detail":
+    "Dùng mục kiểm tra tương tác thuốc trước khi phối hợp nhiều thuốc.",
+  "guide.tasks.interactions.step1": "Đảm bảo tủ thuốc đã có ít nhất 2 thuốc.",
+  "guide.tasks.interactions.step2": "Bấm Kiểm tra tương tác thuốc.",
+  "guide.tasks.interactions.step3":
+    "Đọc cặp thuốc bị cảnh báo và phần Bạn nên làm gì.",
+  "guide.tasks.interactions.action": "Kiểm tra tương tác",
+  "guide.tasks.council.title": "Tôi là bác sĩ và cần hội chẩn ca khó",
+  "guide.tasks.council.detail":
+    "Tham khảo nhiều chuyên khoa phù hợp khi ca có nhiều hướng xử trí hoặc nhiều chuyên khoa.",
+  "guide.tasks.council.step1": "Nhập bối cảnh ca bệnh rõ ràng.",
+  "guide.tasks.council.step2": "Thêm kết quả xét nghiệm hoặc ghi chú nếu có.",
+  "guide.tasks.council.step3":
+    "Dùng kết quả như tài liệu tham khảo, không thay thế quyết định lâm sàng.",
+  "guide.tasks.council.action": "Mở tham khảo nhiều chuyên khoa",
+  "guide.tasks.scribe.title": "Tôi muốn ghi lại buổi khám",
+  "guide.tasks.scribe.detail":
+    "Ghi chép buổi khám giúp chuyển ghi chú thành bản tóm tắt có cấu trúc.",
+  "guide.tasks.scribe.step1": "Nhập hoặc dán nội dung buổi khám.",
+  "guide.tasks.scribe.step2":
+    "Kiểm tra lại bản ghi có cấu trúc trước khi dùng.",
+  "guide.tasks.scribe.step3":
+    "Không đưa thông tin nhạy cảm nếu chưa có đồng ý phù hợp.",
+  "guide.tasks.scribe.action": "Mở ghi chép buổi khám",
+  "guide.labels.title": "Các nhãn trong ô chat nghĩa là gì?",
+  "guide.labels.quick.term": "Nhanh",
+  "guide.labels.quick.meaning":
+    "Trả lời ngắn, ít chờ, hợp với câu hỏi đơn giản.",
+  "guide.labels.thinking.term": "Tư duy",
+  "guide.labels.thinking.meaning":
+    "Phân tích kỹ hơn, hợp với câu hỏi cần lý giải.",
+  "guide.labels.pro.term": "Pro",
+  "guide.labels.pro.meaning":
+    "Báo cáo dài và đầy đủ hơn, dùng khi cần nghiên cứu sâu.",
+  "guide.labels.autoSources.term": "Tự chọn nguồn",
+  "guide.labels.autoSources.meaning":
+    "CLARA tự chọn phạm vi nguồn phù hợp để tiết kiệm thời gian.",
+  "guide.labels.fullSources.term": "Đầy đủ nguồn",
+  "guide.labels.fullSources.meaning":
+    "CLARA kiểm tra nhiều nguồn hơn, có thể chờ lâu hơn.",
+  "phr.ocr.open": "Quét đơn thuốc (OCR)",
+  "phr.ocr.title": "Xem lại kết quả OCR",
+  "phr.ocr.intro":
+    "Tải lên ảnh hoặc tệp đơn thuốc. Không có mục nào được lưu cho đến khi bạn xác nhận.",
+  "phr.ocr.disclosure":
+    "Tôi đồng ý gửi tệp này để trích xuất các thuốc cần xem lại. CLARA không tự lưu thuốc từ kết quả OCR.",
+  "phr.ocr.consentNotice":
+    "Bạn cần có đồng ý y tế phù hợp trước khi CLARA gửi tệp đến dịch vụ OCR đã cấu hình.",
+  "phr.ocr.processingNotice":
+    "CLARA không lưu tệp tải lên; hãy kiểm tra từng mục trước khi lưu vào hồ sơ.",
+  "phr.ocr.pick": "Chọn tệp",
+  "phr.ocr.scanning": "Đang quét...",
+  "phr.ocr.scanError": "Quét tài liệu thất bại.",
+  "phr.ocr.noCandidates": "Không tìm thấy mục nào. Hãy thử tệp rõ hơn.",
+  "phr.ocr.name": "Tên thuốc",
+  "phr.ocr.dose": "Liều dùng",
+  "phr.ocr.frequency": "Tần suất",
+  "phr.ocr.needsReview": "Cần xem lại",
+  "phr.ocr.accept": "Chấp nhận",
+  "phr.ocr.accepted": "Đã chấp nhận",
+  "phr.ocr.discard": "Bỏ qua",
+  "phr.ocr.confirm": "Xác nhận & lưu",
+  "phr.ocr.confirming": "Đang lưu...",
+  "phr.ocr.confirmError": "Lưu các mục OCR thất bại.",
+  "phr.ocr.confirmed": "Đã lưu các mục đã chọn.",
+  "phr.ocr.nothingAccepted": "Hãy chấp nhận ít nhất một mục để lưu.",
+  "phr.ocr.close": "Đóng",
+  "phr.ocr.sourceDetails": "Chi tiết đối chiếu OCR",
+  "phr.ocr.sourceOffset":
+    "Vị trí trong văn bản OCR đã chuẩn hóa: {start}–{end}",
+  "phr.share.title": "Chia sẻ hồ sơ (chỉ đọc)",
+  "phr.share.description":
+    "Tạo liên kết chỉ đọc để chia sẻ hồ sơ. Bạn có thể thu hồi bất cứ lúc nào.",
+  "phr.share.scope": "Phạm vi",
+  "phr.share.scopeFull": "Toàn bộ hồ sơ",
+  "phr.share.scopeEmergency": "Chỉ thẻ khẩn cấp",
+  "phr.share.expiry": "Hết hạn sau (ngày)",
+  "phr.share.noExpiry": "Không giới hạn",
+  "phr.share.create": "Tạo liên kết",
+  "phr.share.creating": "Đang tạo...",
+  "phr.share.createError": "Tạo liên kết chia sẻ thất bại.",
+  "phr.share.activeLinks": "Liên kết đã tạo",
+  "phr.share.noLinks": "Chưa có liên kết nào trong phiên này.",
+  "phr.share.copy": "Sao chép",
+  "phr.share.copied": "Đã sao chép",
+  "phr.share.revoke": "Thu hồi",
+  "phr.share.revoking": "Đang thu hồi...",
+  "phr.share.revokeError": "Thu hồi liên kết thất bại.",
+  "phr.share.expiresAt": "Hết hạn",
+  "phr.share.never": "không giới hạn",
+  "phr.shared.eyebrow": "Liên kết chia sẻ chỉ đọc",
+  "phr.shared.fullTitle": "Hồ sơ sức khỏe được chia sẻ",
+  "phr.shared.emergencyTitle": "Thẻ khẩn cấp được chia sẻ",
+  "phr.shared.loading": "Đang mở nội dung được chia sẻ...",
+  "phr.shared.unavailable":
+    "Liên kết chia sẻ không hợp lệ, đã hết hạn hoặc đã bị thu hồi.",
+  "phr.shared.readOnly": "Chỉ xem",
+  "phr.shared.empty": "Liên kết này không có thông tin có thể hiển thị.",
+  "phr.shared.profile": "Thông tin cơ bản",
+  "phr.shared.allergies": "Dị ứng",
+  "phr.shared.conditions": "Tình trạng sức khỏe",
+  "phr.shared.medications": "Thuốc đang dùng",
+  "phr.shared.emergencyContact": "Liên hệ khẩn cấp",
+  "phr.shared.safety":
+    "Nếu có dấu hiệu nguy hiểm hoặc cần trợ giúp khẩn cấp, hãy liên hệ cơ sở y tế gần nhất.",
+  "phr.shared.value.mild": "nhẹ",
+  "phr.shared.value.moderate": "trung bình",
+  "phr.shared.value.severe": "nặng",
+  "phr.shared.value.unknown": "chưa rõ",
+  "phr.shared.value.active": "đang theo dõi",
+  "phr.shared.value.resolved": "đã ổn định",
+  "phr.shared.value.monitoring": "đang theo dõi",
+  "phr.shared.value.male": "nam",
+  "phr.shared.value.female": "nữ",
+  "phr.shared.value.other": "khác",
+  "workspace.shared.eyebrow": "Liên kết hội thoại chỉ đọc",
+  "workspace.shared.title": "Hội thoại được chia sẻ",
+  "workspace.shared.loading": "Đang mở hội thoại được chia sẻ...",
+  "workspace.shared.unavailable":
+    "Liên kết chia sẻ không hợp lệ, đã hết hạn hoặc đã bị thu hồi.",
+  "workspace.shared.readOnly": "Chỉ xem",
+  "workspace.shared.expires": "Liên kết hết hạn",
+  "workspace.shared.question": "Câu hỏi",
+  "workspace.shared.empty": "Liên kết này không có nội dung có thể hiển thị.",
+  "phr.export.title": "Xuất hồ sơ (FHIR)",
+  "phr.export.description":
+    "Tải hồ sơ dưới định dạng FHIR R4 (application/fhir+json) để chia sẻ với cơ sở y tế.",
+  "phr.export.scope": "Phạm vi",
+  "phr.export.download": "Tải xuống",
+  "phr.export.downloading": "Đang xuất...",
+  "phr.export.error": "Xuất hồ sơ thất bại.",
+  "phr.export.resource.all": "Toàn bộ",
+  "phr.export.resource.patient": "Bệnh nhân",
+  "phr.export.resource.allergy": "Dị ứng",
+  "phr.export.resource.condition": "Bệnh nền",
+  "phr.export.resource.medication": "Thuốc",
+  "phr.export.resource.observation": "Chỉ số",
+  "phr.emergencyCard.title": "Thẻ khẩn cấp",
+  "phr.emergencyCard.description":
+    "Chọn các mục hiển thị trên thẻ khẩn cấp. Bản xem trước cập nhật ngay bên dưới.",
+  "phr.emergencyCard.loading": "Đang tải thẻ khẩn cấp...",
+  "phr.emergencyCard.error": "Chưa thể tải thẻ khẩn cấp.",
+  "phr.emergencyCard.none": "Không có dữ liệu",
+  "phr.emergencyCard.preview": "Xem trước thẻ",
+  "phr.emergencyCard.field.allergies": "Dị ứng",
+  "phr.emergencyCard.field.currentMedications": "Thuốc đang dùng",
+  "phr.emergencyCard.field.conditions": "Bệnh nền",
+  "phr.emergencyCard.field.bloodType": "Nhóm máu",
+  "phr.emergencyCard.field.emergencyContact": "Liên hệ khẩn cấp",
+  "phr.reminders.title": "Nhắc uống thuốc",
+  "phr.reminders.description":
+    "Đặt nhắc cho thuốc đang dùng có tần suất, theo dõi lượng còn lại và nhắc người chăm sóc.",
+  "phr.reminders.medication": "Thuốc",
+  "phr.reminders.chooseMed": "Chọn thuốc",
+  "phr.reminders.noEligible":
+    "Chưa có thuốc đang dùng kèm tần suất. Hãy thêm tần suất cho thuốc trước.",
+  "phr.reminders.remaining": "Lượng còn lại",
+  "phr.reminders.threshold": "Ngưỡng nạp thêm",
+  "phr.reminders.caregiver": "Nhắc người chăm sóc khi quên liều",
+  "phr.reminders.add": "Tạo nhắc",
+  "phr.reminders.adding": "Đang tạo...",
+  "phr.reminders.addError": "Tạo nhắc thất bại.",
+  "phr.reminders.loading": "Đang tải danh sách nhắc...",
+  "phr.reminders.listError": "Chưa thể tải danh sách nhắc.",
+  "phr.reminders.empty": "Chưa có nhắc nào.",
+  "phr.reminders.configured": "Nhắc đã đặt",
+  "phr.reminders.due": "Đến giờ uống",
+  "phr.reminders.refill": "Cần nạp thêm",
+  "phr.reminders.nudgeOn": "Nhắc người chăm sóc: bật",
+  "account.dataDelete.step.review": "Hệ quả",
+  "account.dataDelete.step.confirm": "Xác nhận",
+  "account.dataDelete.step.status": "Biên nhận",
+  "account.dataDelete.title": "Xóa dữ liệu cá nhân",
+  "account.dataDelete.reviewTitle": "Trước khi gửi yêu cầu xóa",
+  "account.dataDelete.reviewDescription":
+    "Hãy đọc hệ quả trước. Bạn vẫn có thể quay lại Dữ liệu của tôi mà chưa gửi yêu cầu.",
+  "account.dataDelete.confirmTitle": "Xác nhận yêu cầu xóa",
+  "account.dataDelete.confirmDescription":
+    "Chỉ gửi khi bạn hiểu đây là yêu cầu không thể hoàn tác.",
+  "account.dataDelete.statusTitle": "Biên nhận yêu cầu xóa",
+  "account.dataDelete.statusDescription":
+    "Bạn có thể theo dõi tiến độ tại Dữ liệu của tôi.",
+  "account.dataDelete.consequenceTitle": "Điều gì sẽ xảy ra",
+  "account.dataDelete.consequence":
+    "CLARA sẽ xử lý yêu cầu xóa hoặc ẩn danh hóa dữ liệu cá nhân của bạn theo thời hạn luật định.",
+  "account.dataDelete.retentionTitle": "Dữ liệu được giữ lại",
+  "account.dataDelete.retention":
+    "Một số bản ghi audit/tuân thủ không chứa dữ liệu định danh vẫn có thể được giữ theo nghĩa vụ pháp lý.",
+  "account.dataDelete.confirmation":
+    "Tôi hiểu yêu cầu này có thể xóa hoặc ẩn danh hóa dữ liệu cá nhân và không thể hoàn tác.",
+  "account.dataDelete.continue": "Tiếp tục",
+  "account.dataDelete.confirm": "Gửi yêu cầu xóa",
+  "account.dataDelete.sending": "Đang gửi yêu cầu…",
+  "account.dataDelete.back": "Quay lại",
+  "account.dataDelete.cancel": "Hủy, quay lại dữ liệu của tôi",
+  "account.dataDelete.receipt": "Yêu cầu đã được ghi nhận.",
+  "account.dataDelete.unknownReceipt":
+    "Không tìm thấy biên nhận này. Bạn có thể xem lịch sử yêu cầu của mình.",
+  "account.dataDelete.unavailable":
+    "Yêu cầu quyền dữ liệu hiện chưa được bật cho môi trường này.",
+  "account.dataDelete.loading": "Đang tải biên nhận…",
+  "account.dataDelete.loadError":
+    "Không thể tải biên nhận lúc này. Vui lòng thử lại.",
+  "account.dataDelete.submitError":
+    "Không thể gửi yêu cầu lúc này. Vui lòng thử lại.",
+  "account.dataDelete.requestId": "Mã yêu cầu",
+  "account.dataDelete.submittedAt": "Gửi lúc",
+  "account.dataDelete.dueAt": "Hạn xử lý",
+  "account.dataDelete.status": "Trạng thái",
+  "account.dataDelete.status.received": "Đã tiếp nhận",
+  "account.dataDelete.status.inProgress": "Đang xử lý",
+  "account.dataDelete.status.fulfilled": "Đã hoàn tất",
+  "account.dataDelete.status.rejected": "Đã từ chối",
+  "admin.dsar.title": "Hàng đợi DSAR (Quản trị)",
+  "admin.dsar.description":
+    "Theo dõi và xử lý các yêu cầu của chủ thể dữ liệu theo Nghị định 13/2023/NĐ-CP, đối chiếu với thời hạn luật định.",
+  "admin.dsar.disabled":
+    "Tính năng yêu cầu quyền dữ liệu (DSAR) hiện chưa được bật cho môi trường này.",
+  "admin.dsar.forbidden": "Bạn không có quyền truy cập trang quản trị này.",
+  "admin.dsar.loading": "Đang tải hàng đợi...",
+  "admin.dsar.loadError":
+    "Không thể tải hoặc cập nhật hàng đợi DSAR. Vui lòng thử lại.",
+  "admin.dsar.empty": "Chưa có yêu cầu nào trong hàng đợi.",
+  "admin.dsar.overdueBadge": "Quá hạn",
+  "admin.dsar.overdueSummary": "{count} yêu cầu quá hạn",
+  "admin.dsar.none": "Không có yêu cầu quá hạn",
+  "admin.dsar.submittedAt": "Tiếp nhận",
+  "admin.dsar.dueAt": "Hạn xử lý",
+  "admin.dsar.resolvedAt": "Hoàn tất",
+  "admin.dsar.statusLabel": "Cập nhật trạng thái",
+  "admin.dsar.refId": "Mã yêu cầu",
+  "admin.dsar.saving": "Đang lưu...",
+  "admin.dsar.kind.export": "Xuất dữ liệu",
+  "admin.dsar.kind.correct": "Chỉnh sửa",
+  "admin.dsar.kind.delete": "Xóa",
+  "admin.dsar.kind.restrict": "Hạn chế xử lý",
+  "admin.dsar.kind.withdraw": "Rút đồng thuận",
+  "admin.dsar.status.received": "Đã tiếp nhận",
+  "admin.dsar.status.inProgress": "Đang xử lý",
+  "admin.dsar.status.fulfilled": "Đã hoàn tất",
+  "admin.dsar.status.rejected": "Đã từ chối",
+  "navigation.item.consent.label": "Trung tâm đồng thuận",
+  "navigation.item.consent.desc": "Quản lý đồng thuận theo mục đích",
+  "navigation.item.consent.title": "Trung tâm đồng thuận",
+  "navigation.item.consent.subtitle":
+    "Cấp hoặc rút đồng thuận cho từng mục đích xử lý dữ liệu cá nhân.",
+  "navigation.item.dataRights.label": "Dữ liệu của tôi",
+  "navigation.item.dataRights.desc": "Quyền truy cập, xuất và xóa dữ liệu",
+  "navigation.item.dataRights.title": "Dữ liệu của tôi",
+  "navigation.item.dataRights.subtitle":
+    "Thực hiện quyền của chủ thể dữ liệu: xuất, chỉnh sửa, xóa, hạn chế và rút đồng thuận.",
+  "navigation.item.dsar.label": "Hàng đợi DSAR",
+  "navigation.item.dsar.desc": "Xử lý yêu cầu quyền dữ liệu",
+  "navigation.item.dsar.title": "Hàng đợi DSAR (Quản trị)",
+  "navigation.item.dsar.subtitle":
+    "Theo dõi và xử lý các yêu cầu của chủ thể dữ liệu theo thời hạn luật định.",
+  "navigation.item.community.label": "Cộng đồng",
+  "navigation.item.community.desc": "Cộng đồng sức khỏe CLARA",
+  "navigation.item.community.title": "Cộng đồng sức khỏe",
+  "navigation.item.community.subtitle":
+    "Chia sẻ kinh nghiệm và hỗ trợ nhau. Không phải tư vấn y tế — nội dung được kiểm duyệt.",
+  "navigation.page.researchRedirect.title": "Hỏi đáp y tế",
+  "navigation.page.researchRedirect.subtitle":
+    "Luồng hỏi đáp đã hợp nhất về CLARA Chat.",
+  "navigation.page.controlTower.title": "Điều phối tri thức",
+  "navigation.page.controlTower.subtitle":
+    "Thiết lập nguồn dữ liệu và luồng phản hồi cho hệ thống hỏi đáp.",
+  "navigation.page.ecosystem.title": "Hệ sinh thái đối tác",
+  "navigation.page.ecosystem.subtitle":
+    "Theo dõi trạng thái kết nối và độ tin cậy dữ liệu liên thông.",
+  "navigation.page.default.title": "Không gian làm việc",
+  "navigation.page.default.subtitle":
+    "Nền tảng trợ lý y tế giúp bạn xử lý công việc nhanh và rõ ràng hơn.",
   "action.signOut": "Đăng xuất",
   "action.signingOut": "Đang đăng xuất…",
   "action.collapse": "Thu gọn",
   "action.expand": "Mở rộng",
+  "action.closeMenu": "Đóng menu",
+  "navigation.closeMobile": "Đóng điều hướng trên điện thoại",
+  "navigation.skipToContent": "Bỏ qua, tới nội dung chính",
+  "navigation.openMobile": "Mở điều hướng trên điện thoại",
+  "navigation.mobileDialog": "Điều hướng trên điện thoại",
+  "navigation.workspace.label": "Không gian làm việc",
+  "navigation.workspace.choose": "Chọn không gian làm việc",
+  "navigation.workspace.personal": "Cá nhân",
+  "navigation.workspace.clinical": "Lâm sàng",
+  "navigation.workspace.research": "Nghiên cứu",
+  "navigation.workspace.admin": "Quản trị",
+  "navigation.more": "Thêm",
+  "navigation.item.chatShares": "Liên kết đã chia sẻ",
+  "navigation.item.auditLog": "Nhật ký kiểm toán",
+  "navigation.item.ragEval": "Đánh giá truy xuất",
+  "navigation.item.ragIngestion": "Nạp dữ liệu truy xuất",
+  "preferences.title": "Tùy chọn",
+  "theme.preference": "Tùy chọn giao diện",
   "help.open": "Mở trung tâm hướng dẫn",
   "help.title": "Hướng dẫn",
   "family.title": "Vòng tròn gia đình",
   "profile.active": "Hồ sơ đang dùng",
   "profile.account": "Tài khoản",
-  "profile.yourAccount": "Tài khoản của bạn",
   "profile.shared": "Được chia sẻ · ",
-  "profile.sharedAccess": "Quyền được chia sẻ",
   "profile.currentRole": "Vai trò hiện tại: {role}",
   "role.normal": "Cá nhân",
   "role.researcher": "Nhà nghiên cứu",
@@ -79,17 +488,27 @@ const VI_MESSAGES = {
     "Vai trò được xác nhận từ tài khoản để bảo vệ đúng quyền truy cập.",
   "family.pendingTasks": "{count} nhiệm vụ chăm sóc được chia sẻ đang chờ",
   "familyCircle.title": "Vòng tròn gia đình",
-  "familyCircle.description": "Chia sẻ đúng một hành trình hoặc buổi khám cho đúng người, đúng mục đích — không mở toàn bộ hồ sơ.",
+  "familyCircle.description":
+    "Chia sẻ đúng một hành trình hoặc buổi khám cho đúng người, đúng mục đích — không mở toàn bộ hồ sơ.",
+  "familyCircle.tabs.label": "Các phần hỗ trợ người thân",
+  "familyCircle.tabs.shared": "Tôi chia sẻ",
+  "familyCircle.tabs.received": "Được chia sẻ với tôi",
+  "familyCircle.tabs.log": "Nhật ký truy cập",
   "familyCircle.loadError": "Chưa thể tải Vòng tròn gia đình.",
   "familyCircle.revokeError": "Chưa thể thu hồi quyền.",
   "familyCircle.renewError": "Chưa thể tạo lời mời gia hạn.",
   "familyCircle.grants.title": "Quyền bạn đã cấp",
-  "familyCircle.grants.description": "Thu hồi có hiệu lực ở lần truy cập tiếp theo.",
+  "familyCircle.grants.description":
+    "Thu hồi có hiệu lực ở lần truy cập tiếp theo.",
   "familyCircle.grants.emptyTitle": "Bạn chưa chia sẻ dữ liệu nào",
-  "familyCircle.grants.emptyDescription": "Khi cần, hãy cấp quyền tối thiểu cho một người có tài khoản CLARA.",
+  "familyCircle.grants.emptyDescription":
+    "Khi cần, hãy cấp quyền tối thiểu cho một người có tài khoản CLARA.",
   "familyCircle.relationships.title": "Bạn đang hỗ trợ",
+  "familyCircle.relationships.description":
+    "Chỉ những nội dung bạn đã chấp nhận hỗ trợ mới xuất hiện ở đây.",
   "familyCircle.relationships.emptyTitle": "Chưa nhận lời mời nào",
-  "familyCircle.relationships.emptyDescription": "Dán mã mời ở cột bên phải để chấp nhận đúng phạm vi được chia sẻ.",
+  "familyCircle.relationships.emptyDescription":
+    "Dán mã mời ở cột bên phải để chấp nhận đúng phạm vi được chia sẻ.",
   "familyCircle.accessLog.title": "Nhật ký truy cập",
   "familyCircle.accessLog.empty": "Chưa có lượt truy cập.",
   "familyCircle.accessLog.actor.owner": "Bạn",
@@ -102,15 +521,18 @@ const VI_MESSAGES = {
   "familyCircle.accessLog.action.invitationAccept": "chấp nhận lời mời",
   "familyCircle.accessLog.action.grantRevoke": "thu hồi quyền",
   "familyCircle.accessLog.action.grantRenewalInvited": "tạo lời mời gia hạn",
-  "familyCircle.accessLog.action.notificationAcknowledged": "xác nhận thông báo",
+  "familyCircle.accessLog.action.notificationAcknowledged":
+    "xác nhận thông báo",
   "familyCircle.accessLog.action.other": "thao tác được ghi nhận",
   "familyCircle.accessLog.outcome.allowed": "được cho phép",
   "familyCircle.accessLog.outcome.denied": "bị từ chối",
   "familyCircle.accessLog.outcome.failed": "không thực hiện được",
   "familyCircle.accessLog.outcome.unknown": "không xác định",
   "familyCircle.invite.title": "Mời người hỗ trợ",
-  "familyCircle.invite.description": "Người nhận phải dùng đúng email tài khoản CLARA. Mã hết hạn sau 7 ngày.",
-  "familyCircle.invite.createdNotice": "Mã chỉ hiển thị lần này; CLARA chưa tự gửi email.",
+  "familyCircle.invite.description":
+    "Người nhận phải dùng đúng email tài khoản CLARA. Mã hết hạn sau 7 ngày.",
+  "familyCircle.invite.createdNotice":
+    "Mã chỉ hiển thị lần này; CLARA chưa tự gửi email.",
   "familyCircle.invite.start": "Tạo lời mời theo từng bước",
   "familyInvite.eyebrow": "Chia sẻ tối thiểu",
   "familyInvite.step.recipient": "Người nhận",
@@ -121,10 +543,14 @@ const VI_MESSAGES = {
   "familyInvite.title.scope": "Chỉ chọn một nội dung để chia sẻ",
   "familyInvite.title.purpose": "Người này sẽ hỗ trợ việc gì?",
   "familyInvite.title.review": "Kiểm tra trước khi tạo mã mời",
-  "familyInvite.description.recipient": "Nhập email đúng với tài khoản CLARA của người nhận.",
-  "familyInvite.description.scope": "Họ không nhận quyền xem toàn bộ hồ sơ của bạn.",
-  "familyInvite.description.purpose": "Mục đích giúp CLARA giữ phạm vi quyền tối thiểu.",
-  "familyInvite.description.review": "Chỉ khi bạn xác nhận ở bước này, CLARA mới tạo lời mời.",
+  "familyInvite.description.recipient":
+    "Nhập email đúng với tài khoản CLARA của người nhận.",
+  "familyInvite.description.scope":
+    "Họ không nhận quyền xem toàn bộ hồ sơ của bạn.",
+  "familyInvite.description.purpose":
+    "Mục đích giúp CLARA giữ phạm vi quyền tối thiểu.",
+  "familyInvite.description.review":
+    "Chỉ khi bạn xác nhận ở bước này, CLARA mới tạo lời mời.",
   "familyInvite.field.email": "Email người nhận",
   "familyInvite.field.scope": "Loại nội dung",
   "familyInvite.field.item": "Nội dung được chia sẻ",
@@ -135,37 +561,48 @@ const VI_MESSAGES = {
   "familyInvite.purpose.visit": "Hỗ trợ buổi khám",
   "familyInvite.chooseItem": "Chọn nội dung",
   "familyInvite.loading": "Đang tải nội dung bạn có thể chia sẻ…",
-  "familyInvite.noItems": "Chưa có nội dung phù hợp để chia sẻ. Hãy tạo một hành trình hoặc buổi khám trước.",
+  "familyInvite.noItems":
+    "Chưa có nội dung phù hợp để chia sẻ. Hãy tạo một hành trình hoặc buổi khám trước.",
   "familyInvite.validation.email": "Nhập một địa chỉ email hợp lệ để tiếp tục.",
-  "familyInvite.validation.scope": "Chọn một nội dung thuộc hồ sơ của bạn để tiếp tục.",
+  "familyInvite.validation.scope":
+    "Chọn một nội dung thuộc hồ sơ của bạn để tiếp tục.",
   "familyInvite.cancel": "Hủy",
   "familyInvite.back": "Quay lại",
   "familyInvite.create": "Tạo mã mời",
   "familyInvite.saving": "Đang tạo mã mời…",
   "familyInvite.saved": "Mã mời đã được tạo.",
-  "familyInvite.saveFailed": "Chưa thể tạo mã mời. Không có quyền nào được cấp; hãy thử lại.",
-  "familyInvite.loadFailed": "Chưa thể tải nội dung được phép chia sẻ. Hãy thử lại sau.",
+  "familyInvite.saveFailed":
+    "Chưa thể tạo mã mời. Không có quyền nào được cấp; hãy thử lại.",
+  "familyInvite.loadFailed":
+    "Chưa thể tải nội dung được phép chia sẻ. Hãy thử lại sau.",
   "familyInvite.review.title": "Thông tin sẽ được chia sẻ",
-  "familyInvite.review.description": "CLARA chỉ cấp quyền tối thiểu cho đúng nội dung này.",
+  "familyInvite.review.description":
+    "CLARA chỉ cấp quyền tối thiểu cho đúng nội dung này.",
   "familyInvite.review.edit": "Chỉnh sửa",
   "familyInvite.review.empty": "Chưa chọn",
   "familyInvite.review.expiry": "Thời hạn mã mời",
   "familyInvite.review.sevenDays": "7 ngày",
-  "familyInvite.safetyNote": "Bạn luôn có thể thu hồi quyền sau này. CLARA lưu nhật ký truy cập cho phần đã chia sẻ.",
+  "familyInvite.safetyNote":
+    "Bạn luôn có thể thu hồi quyền sau này. CLARA lưu nhật ký truy cập cho phần đã chia sẻ.",
   "familyInvite.created.title": "Mã mời đã sẵn sàng",
-  "familyInvite.created.description": "Gửi mã này cho đúng người nhận qua kênh bạn tin cậy.",
-  "familyInvite.created.notice": "Mã chỉ hiển thị một lần. CLARA chưa tự gửi email hay cấp quyền truy cập.",
+  "familyInvite.created.description":
+    "Gửi mã này cho đúng người nhận qua kênh bạn tin cậy.",
+  "familyInvite.created.notice":
+    "Mã chỉ hiển thị một lần. CLARA chưa tự gửi email hay cấp quyền truy cập.",
   "familyInvite.created.done": "Quay lại người thân hỗ trợ",
   "familyCircle.accept.title": "Chấp nhận lời mời",
-  "familyCircle.accept.description": "Xem đúng phạm vi chia sẻ trước khi bạn cấp quyền.",
+  "familyCircle.accept.description":
+    "Xem đúng phạm vi chia sẻ trước khi bạn cấp quyền.",
   "familyCircle.accept.start": "Xem mã mời",
   "familyAccept.eyebrow": "Lời mời người thân",
   "familyAccept.step.code": "Mã mời",
   "familyAccept.step.review": "Xem quyền",
   "familyAccept.title.code": "Xem lời mời trước khi chấp nhận",
   "familyAccept.title.review": "Đây là quyền bạn sắp nhận",
-  "familyAccept.description.code": "Nhập mã mời. CLARA chưa cấp quyền truy cập ở bước này.",
-  "familyAccept.description.review": "Chỉ xác nhận nếu phạm vi này phù hợp với việc bạn hỗ trợ.",
+  "familyAccept.description.code":
+    "Nhập mã mời. CLARA chưa cấp quyền truy cập ở bước này.",
+  "familyAccept.description.review":
+    "Chỉ xác nhận nếu phạm vi này phù hợp với việc bạn hỗ trợ.",
   "familyAccept.field.code": "Mã mời",
   "familyAccept.field.scope": "Nội dung được chia sẻ",
   "familyAccept.field.actions": "Bạn có thể làm",
@@ -184,17 +621,21 @@ const VI_MESSAGES = {
   "familyAccept.validation.code": "Nhập mã mời đầy đủ để tiếp tục.",
   "familyAccept.preview": "Xem phạm vi",
   "familyAccept.previewing": "Đang kiểm tra mã mời…",
-  "familyAccept.previewFailed": "Mã mời không hợp lệ, đã hết hạn hoặc không dành cho tài khoản này.",
+  "familyAccept.previewFailed":
+    "Mã mời không hợp lệ, đã hết hạn hoặc không dành cho tài khoản này.",
   "familyAccept.accept": "Chấp nhận phạm vi này",
   "familyAccept.accepting": "Đang cấp quyền…",
   "familyAccept.accepted": "Bạn đã nhận quyền hỗ trợ trong phạm vi đã xem.",
-  "familyAccept.acceptFailed": "Chưa thể cấp quyền. Hãy xem lại mã mời rồi thử lại.",
+  "familyAccept.acceptFailed":
+    "Chưa thể cấp quyền. Hãy xem lại mã mời rồi thử lại.",
   "familyAccept.review.title": "Phạm vi giới hạn của lời mời",
-  "familyAccept.review.description": "Không có toàn bộ hồ sơ hoặc dữ liệu ngoài phạm vi này được chia sẻ.",
+  "familyAccept.review.description":
+    "Không có toàn bộ hồ sơ hoặc dữ liệu ngoài phạm vi này được chia sẻ.",
   "familyAccept.review.edit": "Dùng mã khác",
   "familyAccept.cancel": "Hủy",
   "familyAccept.back": "Quay lại",
-  "familyAccept.safetyNote": "Mã mời không được đặt trong liên kết. Bạn có thể xem phạm vi trước khi chọn cấp quyền.",
+  "familyAccept.safetyNote":
+    "Mã mời không được đặt trong liên kết. Bạn có thể xem phạm vi trước khi chọn cấp quyền.",
   "familyCircle.action.renew": "Gia hạn",
   "familyCircle.action.revoke": "Thu hồi",
   "familyCircle.action.revoked": "Đã thu hồi",
@@ -210,10 +651,6 @@ const VI_MESSAGES = {
   "familyCircle.permission.addObservation": "thêm ghi nhận",
   "familyCircle.permission.completeTask": "hoàn thành việc chăm sóc",
   "familyCircle.permission.other": "thao tác được cấp quyền",
-  "familyCircle.outcome.allowed": "được cho phép",
-  "familyCircle.outcome.denied": "bị từ chối",
-  "familyCircle.outcome.unknown": "không xác định",
-  "familyCircle.outcome.other": "đã ghi nhận",
   "today.description":
     "Một nhịp chăm sóc rõ ràng: chỉ những việc bạn đã chấp nhận mới xuất hiện ở đây.",
   "today.following": "Theo dõi cùng bạn",
@@ -223,9 +660,7 @@ const VI_MESSAGES = {
   "today.viewTask": "Xem việc",
   "today.createEpisode": "Tạo hành trình",
   "today.connectionError": "Kiểm tra kết nối rồi thử lại.",
-  "today.startHere": "Bạn muốn làm gì?",
-  "today.startHereDescription":
-    "Chọn một việc để bắt đầu. Bạn có thể quay lại bất cứ lúc nào.",
+  "today.startHere": "Bạn muốn làm gì khác?",
   "today.askTitle": "Hỏi về sức khỏe",
   "today.askDescription":
     "Nêu điều bạn đang lo; CLARA sẽ giúp xác định bước an toàn tiếp theo.",
@@ -238,7 +673,28 @@ const VI_MESSAGES = {
   "today.visitTitle": "Chuẩn bị đi khám",
   "today.visitDescription":
     "Chuẩn bị câu hỏi và thông tin quan trọng cho buổi khám.",
-  "today.openAction": "Mở",
+  "today.statusTitle": "Nhịp chăm sóc hôm nay",
+  "today.openTaskCount": "{count} việc đang chờ",
+  "today.completedTaskCount": "{count} việc đã hoàn thành hôm nay",
+  "today.noOpenTasks": "Hiện không có việc đang chờ",
+  "today.noDueDate": "Không có hạn cụ thể",
+  "today.upcoming": "Sắp tới",
+  "today.otherActions": "Tác vụ khác",
+  "today.pendingConfirmations": "{count} ghi nhận đang chờ bạn xác nhận",
+  "today.completedTitle": "Bạn đã hoàn thành các việc hôm nay",
+  "today.completedDescription":
+    "Các việc hoàn tất đã được ghi nhận. Bạn có thể nghỉ ngơi hoặc cập nhật nếu có thay đổi.",
+  "today.updateChange": "Cập nhật thay đổi",
+  "today.weeklyProgress": "Hoạt động 7 ngày",
+  "today.activeDays": "{count}/7 ngày có việc hoàn thành",
+  "today.viewJourney": "Xem hành trình",
+  "today.firstTitle": "Bạn chưa có việc cần làm hôm nay",
+  "today.caughtUpTitle": "Hiện không có việc đang chờ",
+  "today.caughtUpDescription":
+    "Hành trình của bạn vẫn đang được theo dõi. Mở LifeMap để xem hoặc điều chỉnh bước tiếp theo.",
+  "today.stepGoal": "Chọn điều muốn theo dõi",
+  "today.stepTask": "Thêm việc phù hợp",
+  "today.stepToday": "Xem việc trong Hôm nay",
   "today.taskDetail.pageTitle": "Chi tiết việc hôm nay",
   "today.taskDetail.pageDescription":
     "Xem một việc, hiểu thời điểm cần làm, rồi mới xác nhận hoàn tất.",
@@ -257,7 +713,8 @@ const VI_MESSAGES = {
   "today.taskDetail.backToList": "Quay lại danh sách",
   "today.taskDetail.completeAction": "Xác nhận hoàn tất",
   "today.taskDetail.completeError": "Không thể hoàn tất việc này.",
-  "today.taskDetail.notFoundTitle": "Việc này không còn trong danh sách hôm nay",
+  "today.taskDetail.notFoundTitle":
+    "Việc này không còn trong danh sách hôm nay",
   "today.taskDetail.notFoundDescription":
     "Có thể việc đã hoàn tất, được điều chỉnh, hoặc bạn đang mở một liên kết cũ.",
   "chatShares.title": "Quản lý liên kết chia sẻ",
@@ -269,37 +726,43 @@ const VI_MESSAGES = {
   "chatShares.loadError": "Không thể tải danh sách liên kết chia sẻ.",
   "chatShares.revokeError": "Không thể thu hồi liên kết chia sẻ.",
   "chatShares.revokeSuccess": "Đã thu hồi liên kết của cuộc trò chuyện #{id}.",
-  "chatShares.copySuccess": "Đã sao chép liên kết công khai.",
   "chatShares.copyPrompt": "Sao chép liên kết công khai",
   "chatShares.table.conversation": "Cuộc trò chuyện",
   "chatShares.table.messages": "Tin nhắn",
   "chatShares.table.status": "Trạng thái",
   "chatShares.table.expires": "Hết hạn",
   "chatShares.table.publicUrl": "Liên kết công khai",
+  "chatShares.linkReissueRequired": "Chọn xoay liên kết trong cuộc trò chuyện để nhận URL mới.",
+  "chatShares.reissue": "Cấp lại và sao chép",
+  "chatShares.reissueSuccess": "Đã cấp liên kết mới và sao chép vào bộ nhớ tạm.",
+  "chatShares.reissueError": "Không thể cấp lại liên kết. Hãy thử lại.",
   "chatShares.table.actions": "Thao tác",
   "chatShares.status.active": "Đang hoạt động",
   "chatShares.status.revoked": "Đã thu hồi",
   "chatShares.noExpiry": "Không có",
-  "chatShares.copy": "Sao chép",
-  "chatShares.open": "Mở",
   "chatShares.revoke": "Thu hồi",
   "chatShares.empty": "Chưa có liên kết chia sẻ nào.",
   "lifemap.title": "LifeMap",
-  "lifemap.description": "Tổ chức các điều bạn muốn theo dõi thành hành trình nhỏ, có thể xem lại và thay đổi bất cứ lúc nào.",
+  "lifemap.description":
+    "Tổ chức các điều bạn muốn theo dõi thành hành trình nhỏ, có thể xem lại và thay đổi bất cứ lúc nào.",
   "lifemap.priority.routine": "Khi thuận tiện",
   "lifemap.priority.soon": "Sớm",
   "lifemap.priority.urgent": "Cần ưu tiên",
   "lifemap.ask.badge": "AI có dẫn nguồn",
   "lifemap.ask.title": "Hỏi LifeMap của tôi",
-  "lifemap.ask.description": "Chỉ tra cứu dữ liệu bạn được phép xem. CLARA không chẩn đoán, kê đơn hay tự thay đổi LifeMap.",
+  "lifemap.ask.description":
+    "Chỉ tra cứu dữ liệu bạn được phép xem. CLARA không chẩn đoán, kê đơn hay tự thay đổi LifeMap.",
   "lifemap.ask.label": "Bạn muốn tìm điều gì?",
-  "lifemap.ask.placeholder": "Ví dụ: Các ghi nhận đau đầu gần đây của tôi là gì?",
-  "lifemap.ask.hint": "Câu trả lời sẽ chỉ ra đúng bản ghi và phiên bản đã dùng.",
+  "lifemap.ask.placeholder":
+    "Ví dụ: Các ghi nhận đau đầu gần đây của tôi là gì?",
+  "lifemap.ask.hint":
+    "Câu trả lời sẽ chỉ ra đúng bản ghi và phiên bản đã dùng.",
   "lifemap.ask.suggestions": "Bạn có thể bắt đầu với một câu hỏi như:",
   "lifemap.ask.suggestion.timeline": "Gần đây tôi đã ghi nhận những gì?",
   "lifemap.ask.suggestion.change": "Có điều gì thay đổi theo thời gian không?",
   "lifemap.ask.suggestion.missing": "Tôi còn thiếu thông tin nào để theo dõi?",
-  "lifemap.ask.suggestion.visit": "Tôi nên mang những ghi nhận nào đến buổi khám?",
+  "lifemap.ask.suggestion.visit":
+    "Tôi nên mang những ghi nhận nào đến buổi khám?",
   "lifemap.ask.submit": "Tra cứu",
   "lifemap.ask.loading": "Đang tra cứu…",
   "lifemap.ask.interpretedAs": "CLARA đã tìm theo: {intent}.",
@@ -308,40 +771,52 @@ const VI_MESSAGES = {
   "lifemap.ask.intent.visitPreparation": "thông tin để chuẩn bị buổi khám",
   "lifemap.ask.intent.missingness": "những thông tin có thể còn thiếu",
   "lifemap.ask.intent.explanation": "ý nghĩa của các ghi nhận hiện có",
-  "lifemap.ask.uncertain": "CLARA chưa có đủ ghi nhận phù hợp để trả lời chắc chắn trong phạm vi này.",
+  "lifemap.ask.uncertain":
+    "CLARA chưa có đủ ghi nhận phù hợp để trả lời chắc chắn trong phạm vi này.",
   "lifemap.ask.source": "Nguồn: {attribution} · {date} · phiên bản {revision}",
-  "lifemap.ask.caution": "Có thông tin đang tranh chấp, mâu thuẫn hoặc đã cũ; CLARA không tự giải quyết thay bạn.",
+  "lifemap.ask.caution":
+    "Có thông tin đang tranh chấp, mâu thuẫn hoặc đã cũ; CLARA không tự giải quyết thay bạn.",
   "lifemap.ask.disclosure": "Chế độ: {mode}. Không phải tư vấn y tế.",
   "lifemap.visitPrep.badge": "Bản nháp có dẫn nguồn",
   "lifemap.visitPrep.title": "Chuẩn bị buổi khám",
-  "lifemap.visitPrep.description": "Tạo một bản nháp để bạn tự xem lại trước khi trao đổi với nhân viên y tế. Bản nháp không làm thay đổi LifeMap.",
-  "lifemap.visitPrep.selectedEpisode": "Bản nháp sẽ chỉ dùng các ghi nhận thuộc hành trình đang chọn.",
-  "lifemap.visitPrep.allRecords": "Chọn một hành trình để thu hẹp phạm vi; nếu không, bản nháp dùng các ghi nhận LifeMap bạn được phép xem.",
+  "lifemap.visitPrep.description":
+    "Tạo một bản nháp để bạn tự xem lại trước khi trao đổi với nhân viên y tế. Bản nháp không làm thay đổi LifeMap.",
+  "lifemap.visitPrep.selectedEpisode":
+    "Bản nháp sẽ chỉ dùng các ghi nhận thuộc hành trình đang chọn.",
+  "lifemap.visitPrep.allRecords":
+    "Chọn một hành trình để thu hẹp phạm vi; nếu không, bản nháp dùng các ghi nhận LifeMap bạn được phép xem.",
   "lifemap.visitPrep.create": "Tạo bản nháp",
   "lifemap.visitPrep.loading": "Đang tạo bản nháp…",
   "lifemap.visitPrep.error": "Không thể tạo bản nháp chuẩn bị buổi khám.",
-  "lifemap.visitPrep.reviewOnly": "Hãy tự kiểm tra và chỉnh sửa trước khi sử dụng. CLARA không gửi hay lưu bản nháp này vào hồ sơ.",
+  "lifemap.visitPrep.reviewOnly":
+    "Hãy tự kiểm tra và chỉnh sửa trước khi sử dụng. CLARA không gửi hay lưu bản nháp này vào hồ sơ.",
   "lifemap.visitPrep.importantNow": "Điều quan trọng hiện tại",
   "lifemap.visitPrep.basedOn": "CLARA dựa vào",
   "lifemap.visitPrep.source": "Ngày {date} · nguồn {revision}",
   "lifemap.visitPrep.revisionSource": "Nguồn: {revision}",
   "lifemap.visitPrep.noSources": "Chưa có ghi nhận phù hợp trong phạm vi này.",
   "lifemap.visitPrep.questions": "Câu hỏi bạn có thể cân nhắc",
-  "lifemap.visitPrep.uncertainty": "Một số ghi nhận đang cũ, mâu thuẫn hoặc cần xem lại. CLARA không tự chọn thông tin nào đúng.",
+  "lifemap.visitPrep.uncertainty":
+    "Một số ghi nhận đang cũ, mâu thuẫn hoặc cần xem lại. CLARA không tự chọn thông tin nào đúng.",
   "lifemap.visitPrep.nextStep": "Bạn có thể làm tiếp:",
   "lifemap.visitPrep.urgentHelp": "Khi nào cần hỗ trợ khẩn cấp:",
-  "lifemap.visitPrep.provenance": "Bản nháp tham chiếu {count} phiên bản nguồn; không tạo hoặc xác nhận dữ liệu LifeMap.",
+  "lifemap.visitPrep.provenance":
+    "Bản nháp tham chiếu {count} phiên bản nguồn; không tạo hoặc xác nhận dữ liệu LifeMap.",
   "lifemap.guided.eyebrow": "LifeMap",
   "lifemap.guided.start.title": "Tạo hành trình sức khoẻ",
   "lifemap.guided.start.description": "Đang mở bản nháp an toàn của bạn…",
-  "lifemap.guided.start.loadError": "Chưa thể mở bản nháp. Vui lòng tải lại trang để thử lại.",
+  "lifemap.guided.start.loadError":
+    "Chưa thể mở bản nháp. Vui lòng tải lại trang để thử lại.",
   "lifemap.guided.start.preparing": "Đang chuẩn bị…",
   "lifemap.guided.start.preparingAria": "Đang chuẩn bị hành trình",
-  "lifemap.guided.loadError": "Bản nháp không còn khả dụng hoặc đã thay đổi. Quay lại LifeMap và thử lại.",
+  "lifemap.guided.loadError":
+    "Bản nháp không còn khả dụng hoặc đã thay đổi. Quay lại LifeMap và thử lại.",
   "lifemap.guided.title.requiredLabel": "Tên hành trình",
   "lifemap.guided.title.required": "Nhập ít nhất 2 ký tự.",
-  "lifemap.guided.saveConflict": "Không thể lưu vì bản nháp đã thay đổi hoặc kết nối bị gián đoạn. Tải lại trước khi thử tiếp.",
-  "lifemap.guided.commitError": "Chưa thể tạo hành trình. Bản nháp vẫn được giữ an toàn để bạn thử lại.",
+  "lifemap.guided.saveConflict":
+    "Không thể lưu vì bản nháp đã thay đổi hoặc kết nối bị gián đoạn. Tải lại trước khi thử tiếp.",
+  "lifemap.guided.commitError":
+    "Chưa thể tạo hành trình. Bản nháp vẫn được giữ an toàn để bạn thử lại.",
   "lifemap.guided.back": "Quay lại",
   "lifemap.guided.exit": "Thoát",
   "lifemap.guided.backToLifeMap": "Quay lại LifeMap",
@@ -354,9 +829,11 @@ const VI_MESSAGES = {
   "lifemap.guided.priority.routine": "Theo dõi thường lệ",
   "lifemap.guided.priority.soon": "Cần chú ý sớm",
   "lifemap.guided.priority.urgent": "Ưu tiên cao",
-  "lifemap.guided.priority.hint": "Mức ưu tiên giúp sắp xếp kế hoạch; không phải đánh giá mức độ khẩn cấp y tế.",
+  "lifemap.guided.priority.hint":
+    "Mức ưu tiên giúp sắp xếp kế hoạch; không phải đánh giá mức độ khẩn cấp y tế.",
   "lifemap.guided.review.title": "Thông tin hành trình",
-  "lifemap.guided.review.description": "Kiểm tra trước khi tạo. Bạn vẫn có thể chỉnh sửa sau.",
+  "lifemap.guided.review.description":
+    "Kiểm tra trước khi tạo. Bạn vẫn có thể chỉnh sửa sau.",
   "lifemap.guided.review.name": "Tên",
   "lifemap.guided.review.goal": "Mục tiêu",
   "lifemap.guided.review.priority": "Ưu tiên",
@@ -367,11 +844,14 @@ const VI_MESSAGES = {
   "lifemap.guided.page.goal": "Chọn một mục tiêu",
   "lifemap.guided.page.priority": "Xác định mức ưu tiên",
   "lifemap.guided.page.review": "Xem lại hành trình",
-  "lifemap.guided.page.description": "Mỗi bước chỉ hỏi một nhóm thông tin. Bản nháp được lưu trên máy chủ và không đưa nội dung sức khoẻ vào URL.",
-  "lifemap.guided.page.aside": "LifeMap hỗ trợ tự theo dõi và chuẩn bị trao đổi với nhân viên y tế; không thay thế chẩn đoán hoặc chăm sóc khẩn cấp.",
+  "lifemap.guided.page.description":
+    "Mỗi bước chỉ hỏi một nhóm thông tin. Bản nháp được lưu trên máy chủ và không đưa nội dung sức khoẻ vào URL.",
+  "lifemap.guided.page.aside":
+    "LifeMap hỗ trợ tự theo dõi và chuẩn bị trao đổi với nhân viên y tế; không thay thế chẩn đoán hoặc chăm sóc khẩn cấp.",
   "lifemap.summary.badge": "Tóm tắt có dẫn nguồn",
   "lifemap.summary.title": "Nhìn lại LifeMap",
-  "lifemap.summary.description": "Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang tranh chấp hay mâu thuẫn.",
+  "lifemap.summary.description":
+    "Gom các bản ghi hiện có mà không đổi trạng thái đúng, đang tranh chấp hay mâu thuẫn.",
   "lifemap.summary.scope": "Phạm vi",
   "lifemap.summary.day": "Theo ngày",
   "lifemap.summary.week": "Theo tuần",
@@ -379,7 +859,8 @@ const VI_MESSAGES = {
   "lifemap.summary.create": "Tạo tóm tắt",
   "lifemap.summary.citation": "{attribution} · {date} · nguồn {sources}",
   "lifemap.summary.empty": "Chưa đủ bản ghi để tạo tóm tắt.",
-  "lifemap.summary.notice": "Bản tóm tắt xác định theo quy tắc, không phải tư vấn y tế. Mọi nội dung đều giữ liên kết đến bản ghi nguồn.",
+  "lifemap.summary.notice":
+    "Bản tóm tắt xác định theo quy tắc, không phải tư vấn y tế. Mọi nội dung đều giữ liên kết đến bản ghi nguồn.",
   "lifemap.truth.draft": "Bản nháp",
   "lifemap.truth.userReported": "Bạn đã ghi nhận",
   "lifemap.truth.confirmed": "Đã xác nhận",
@@ -413,11 +894,13 @@ const VI_MESSAGES = {
   "lifemap.audit.questionDoNotAsk": "Người dùng không muốn được hỏi lại",
   "lifemap.audit.questionLater": "Để sau",
   "lifemap.audit.replayCorrection": "Người dùng sửa thông tin trong Replay",
-  "lifemap.audit.disputeResolved": "Đã kiểm tra lại nguồn và xác nhận phiên bản này",
+  "lifemap.audit.disputeResolved":
+    "Đã kiểm tra lại nguồn và xác nhận phiên bản này",
   "lifemap.audit.reviewResolved": "Người dùng đã kiểm tra các bản ghi nguồn",
   "lifemap.audit.reviewDismissed": "Người dùng xác nhận không cần xử lý",
   "lifemap.review.title": "Thông tin cần bạn kiểm tra",
-  "lifemap.review.description": "Quy tắc chỉ phát hiện khả năng trùng hoặc mâu thuẫn; CLARA không tự chọn bản nào đúng.",
+  "lifemap.review.description":
+    "Quy tắc chỉ phát hiện khả năng trùng hoặc mâu thuẫn; CLARA không tự chọn bản nào đúng.",
   "lifemap.review.scan": "Kiểm tra",
   "lifemap.review.kind.contradiction": "Có thể mâu thuẫn",
   "lifemap.review.kind.duplicate": "Có thể trùng",
@@ -433,30 +916,36 @@ const VI_MESSAGES = {
   "lifemap.episodes.replay": "Xem lại",
   "lifemap.episodes.question": "Một câu hỏi",
   "lifemap.episodes.emptyTitle": "Chưa có hành trình",
-  "lifemap.episodes.emptyDescription": "Bắt đầu bằng một mục tiêu đơn giản, ví dụ theo dõi triệu chứng hoặc chuẩn bị câu hỏi cho buổi khám.",
+  "lifemap.episodes.emptyDescription":
+    "Bắt đầu bằng một mục tiêu đơn giản, ví dụ theo dõi triệu chứng hoặc chuẩn bị câu hỏi cho buổi khám.",
   "lifemap.question.badge": "Một câu hỏi hữu ích",
   "lifemap.question.why": "Vì sao CLARA hỏi: {reason}",
   "lifemap.question.answerLabel": "Câu trả lời của bạn",
-  "lifemap.question.answerHint": "Câu trả lời sẽ thành bản nháp để bạn kiểm tra trước khi xác nhận.",
+  "lifemap.question.answerHint":
+    "Câu trả lời sẽ thành bản nháp để bạn kiểm tra trước khi xác nhận.",
   "lifemap.question.createDraft": "Tạo bản nháp",
   "lifemap.question.later": "Để sau",
   "lifemap.question.never": "Không hỏi lại",
   "lifemap.baseline.title": "Thay đổi so với chính bạn",
-  "lifemap.baseline.description": "Đây không phải mức bình thường lâm sàng hay chẩn đoán.",
+  "lifemap.baseline.description":
+    "Đây không phải mức bình thường lâm sàng hay chẩn đoán.",
   "lifemap.baseline.insufficient": "Chưa đủ dữ liệu",
   "lifemap.baseline.sampleDays": "{count} ngày dữ liệu · {version}",
   "lifemap.replay.eyebrow": "Health Replay",
-  "lifemap.replay.description": "Mỗi mục hiển thị đúng phiên bản, nguồn và quy tắc đã dùng.",
+  "lifemap.replay.description":
+    "Mỗi mục hiển thị đúng phiên bản, nguồn và quy tắc đã dùng.",
   "lifemap.replay.confirmed": "Đã xác nhận",
   "lifemap.replay.version": "Phiên bản {revision} · {policy}",
   "lifemap.replay.legacyPolicy": "quy tắc cũ",
   "lifemap.replay.why": "Vì sao có mục này: {reason}",
   "lifemap.replay.correctionLabel": "Thông tin đúng",
-  "lifemap.replay.correctionHint": "Chỉnh sửa tạo một phiên bản mới; lịch sử cũ vẫn được giữ để bạn kiểm tra.",
+  "lifemap.replay.correctionHint":
+    "Chỉnh sửa tạo một phiên bản mới; lịch sử cũ vẫn được giữ để bạn kiểm tra.",
   "lifemap.replay.saveCorrection": "Lưu phiên bản mới",
   "lifemap.replay.cancel": "Hủy",
   "lifemap.replay.disputeLabel": "Vì sao bạn chưa tin thông tin này?",
-  "lifemap.replay.disputeHint": "Tranh chấp không xóa dữ liệu. CLARA giữ nguyên nguồn và tạo một hàng đợi xem xét.",
+  "lifemap.replay.disputeHint":
+    "Tranh chấp không xóa dữ liệu. CLARA giữ nguyên nguồn và tạo một hàng đợi xem xét.",
   "lifemap.replay.submitDispute": "Gửi để xem xét",
   "lifemap.replay.edit": "Sửa thông tin",
   "lifemap.replay.dispute": "Chưa đúng / cần xem xét",
@@ -464,8 +953,10 @@ const VI_MESSAGES = {
   "lifemap.replay.compareLoading": "Đang so sánh…",
   "lifemap.replay.compareTitle": "Thay đổi giữa các phiên bản",
   "lifemap.replay.compareSource": "Vị trí trong nguồn",
-  "lifemap.replay.compareNoSource": "Không có vị trí nguồn được lưu cho phiên bản này.",
-  "lifemap.replay.compareNotice": "Đây là bản so sánh chỉ để xem. Không thay đổi thông tin sức khỏe hay trạng thái xác nhận.",
+  "lifemap.replay.compareNoSource":
+    "Không có vị trí nguồn được lưu cho phiên bản này.",
+  "lifemap.replay.compareNotice":
+    "Đây là bản so sánh chỉ để xem. Không thay đổi thông tin sức khỏe hay trạng thái xác nhận.",
   "lifemap.replay.compareBefore": "Trước",
   "lifemap.replay.compareAfter": "Sau",
   "lifemap.replay.compareEmpty": "Không có thay đổi ở các mục chính.",
@@ -475,20 +966,24 @@ const VI_MESSAGES = {
   "lifemap.replay.compareTruthState": "Trạng thái thông tin",
   "lifemap.replay.compareReason": "Lý do cập nhật",
   "lifemap.replay.empty": "Hành trình này chưa có bản ghi nào.",
-  "lifemap.replay.stale": "Một số kết quả cũ đang được tính lại vì thông tin nguồn đã thay đổi.",
+  "lifemap.replay.stale":
+    "Một số kết quả cũ đang được tính lại vì thông tin nguồn đã thay đổi.",
   "lifemap.disputes.eyebrow": "Hàng đợi tranh chấp",
   "lifemap.disputes.title": "Thông tin đang được xem xét",
-  "lifemap.disputes.description": "CLARA không tự chọn bên nào đúng. Mỗi quyết định tạo một phiên bản mới và giữ lại lịch sử nguồn.",
+  "lifemap.disputes.description":
+    "CLARA không tự chọn bên nào đúng. Mỗi quyết định tạo một phiên bản mới và giữ lại lịch sử nguồn.",
   "lifemap.disputes.resolved": "Đã xử lý",
   "lifemap.disputes.open": "Đang mở",
   "lifemap.disputes.version": "{eventType} · phiên bản {revision}",
-  "lifemap.disputes.clinicalReview": "Loại thông tin này cần người có quyền lâm sàng xem nguồn trước khi xác nhận lại.",
+  "lifemap.disputes.clinicalReview":
+    "Loại thông tin này cần người có quyền lâm sàng xem nguồn trước khi xác nhận lại.",
   "lifemap.disputes.resolve": "Xác nhận sau khi kiểm tra nguồn",
   "lifemap.capture.title": "Ghi nhận nhanh",
   "lifemap.capture.uploading": "Đang tải tệp lên…",
   "lifemap.capture.reading": "Đang đọc tệp…",
   "lifemap.capture.processing": "Đang tạo bản nháp…",
-  "lifemap.capture.description": "CLARA tạo bản nháp để bạn xem lại. Không có thông tin nào được xác nhận tự động.",
+  "lifemap.capture.description":
+    "CLARA tạo bản nháp để bạn xem lại. Không có thông tin nào được xác nhận tự động.",
   "lifemap.capture.deleteUpload": "Xóa tệp đã tải lên",
   "lifemap.capture.provenance": "Nguồn gốc",
   "lifemap.capture.viewFile": "Xem {filename}",
@@ -497,14 +992,18 @@ const VI_MESSAGES = {
   "lifemap.capture.draft": "Bản nháp cần xem lại",
   "lifemap.capture.rejected": "Đã từ chối",
   "lifemap.capture.unconfirmed": "Chưa xác nhận",
-  "lifemap.capture.lowConfidence": "Một số phần chưa đọc rõ từ nguồn. Hãy đối chiếu trước khi lưu.",
+  "lifemap.capture.lowConfidence":
+    "Một số phần chưa đọc rõ từ nguồn. Hãy đối chiếu trước khi lưu.",
   "lifemap.capture.required": "Cần bổ sung: {fields}",
-  "lifemap.capture.unsafe": "Nguồn có nội dung không an toàn; chỉ có thể từ chối bản nháp này.",
+  "lifemap.capture.unsafe":
+    "Nguồn có nội dung không an toàn; chỉ có thể từ chối bản nháp này.",
   "lifemap.capture.normalizeTitle": "Chuẩn hóa tên thuốc",
   "lifemap.capture.normalizeProposal": "CLARA đề xuất {name} · RxNorm {code}",
-  "lifemap.capture.normalizeAccept": "Dùng mã chuẩn này cho hồ sơ thuốc. Bản ghi chỉ được tạo sau khi bạn xác nhận bên dưới.",
+  "lifemap.capture.normalizeAccept":
+    "Dùng mã chuẩn này cho hồ sơ thuốc. Bản ghi chỉ được tạo sau khi bạn xác nhận bên dưới.",
   "lifemap.capture.normalizeLoading": "Đang kiểm tra từ điển thuốc…",
-  "lifemap.capture.normalizeEmpty": "Chưa tìm thấy mã chuẩn phù hợp. Tên gốc vẫn được giữ nguyên và chưa được chuẩn hóa.",
+  "lifemap.capture.normalizeEmpty":
+    "Chưa tìm thấy mã chuẩn phù hợp. Tên gốc vẫn được giữ nguyên và chưa được chuẩn hóa.",
   "lifemap.capture.saveEdit": "Lưu chỉnh sửa",
   "lifemap.capture.reject": "Từ chối",
   "lifemap.capture.confirm": "Xác nhận sau khi đối chiếu",
@@ -525,14 +1024,17 @@ const VI_MESSAGES = {
   "lifemap.capture.medicationLabel": "Nhãn thuốc",
   "lifemap.capture.visitDocument": "Tài liệu sau khám",
   "lifemap.capture.sourceFile": "Tệp nguồn",
-  "lifemap.capture.networkHint": "Cần kết nối mạng. CLARA chỉ tạo bản nháp và giữ nguồn để bạn đối chiếu.",
+  "lifemap.capture.networkHint":
+    "Cần kết nối mạng. CLARA chỉ tạo bản nháp và giữ nguồn để bạn đối chiếu.",
   "lifemap.capture.upload": "Tải lên và tạo bản nháp",
   "lifemap.tasks.title": "Việc đã được chấp nhận",
-  "lifemap.tasks.description": "Chỉ các việc bạn đồng ý mới được đưa vào Today.",
+  "lifemap.tasks.description":
+    "Chỉ các việc bạn đồng ý mới được đưa vào Today.",
   "lifemap.tasks.openToday": "Xem Today",
   "lifemap.tasks.empty": "Chưa có việc nào được chấp nhận.",
   "lifemap.create.title": "Tạo hành trình",
-  "lifemap.create.description": "Hoàn thành từng thông tin trên một trang riêng, sau đó kiểm tra trước khi tạo.",
+  "lifemap.create.description":
+    "Hoàn thành từng thông tin trên một trang riêng, sau đó kiểm tra trước khi tạo.",
   "lifemap.create.start": "Bắt đầu từng bước",
   "lifemap.taskCreate.title": "Thêm việc cho hôm nay",
   "lifemap.taskCreate.episode": "Thuộc hành trình",
@@ -541,15 +1043,19 @@ const VI_MESSAGES = {
   "lifemap.taskCreate.placeholder": "Ví dụ: Ghi lại thời điểm xuất hiện",
   "lifemap.taskCreate.submit": "Thêm vào Today",
   "visitPrep.title": "Chuẩn bị cho buổi khám",
-  "visitPrep.description": "Tạo bản nháp có dẫn nguồn để xem lại, rồi thêm ghi chú riêng của bạn trước khi đi khám.",
+  "visitPrep.description":
+    "Tạo bản nháp có dẫn nguồn để xem lại, rồi thêm ghi chú riêng của bạn trước khi đi khám.",
   "visitPrep.goalLabel": "Bạn muốn trao đổi điều gì trong buổi khám?",
-  "visitPrep.goalHint": "Không bắt buộc. CLARA chỉ dùng câu này để chọn các ghi nhận LifeMap liên quan.",
+  "visitPrep.goalHint":
+    "Không bắt buộc. CLARA chỉ dùng câu này để chọn các ghi nhận LifeMap liên quan.",
   "visitPrep.step.scope": "Chọn phạm vi",
   "visitPrep.step.review": "Xem và chuẩn bị",
   "visitPrep.build": "Tạo bản nháp",
   "visitPrep.building": "Đang tạo bản nháp…",
-  "visitPrep.unavailable": "Tính năng chuẩn bị buổi khám hiện chưa được bật cho hồ sơ này.",
-  "visitPrep.reviewNotice": "Bản nháp và các ghi nhận nguồn chỉ để đọc. Phần ghi chú bên dưới chỉ ở phiên làm việc này và không thay đổi hồ sơ sức khỏe của bạn.",
+  "visitPrep.unavailable":
+    "Tính năng chuẩn bị buổi khám hiện chưa được bật cho hồ sơ này.",
+  "visitPrep.reviewNotice":
+    "Bản nháp và các ghi nhận nguồn chỉ để đọc. Phần ghi chú bên dưới chỉ ở phiên làm việc này và không thay đổi hồ sơ sức khỏe của bạn.",
   "visitPrep.importantNow": "Điều quan trọng lúc này",
   "visitPrep.basedOn": "CLARA dựa vào các ghi nhận này",
   "visitPrep.uncertainty": "Điều cần kiểm tra thêm",
@@ -558,48 +1064,67 @@ const VI_MESSAGES = {
   "visitPrep.questions": "Câu hỏi bạn có thể mang theo",
   "visitPrep.copy": "Sao chép bản nháp",
   "visitPrep.copied": "Đã sao chép bản nháp",
-  "visitPrep.noDraft": "Chưa có bản nháp. Hãy chọn tạo bản nháp khi bạn sẵn sàng.",
+  "visitPrep.noDraft":
+    "Chưa có bản nháp. Hãy chọn tạo bản nháp khi bạn sẵn sàng.",
   "visitPrep.error": "Chưa thể tạo bản nháp. Kiểm tra kết nối rồi thử lại.",
   "visitPrep.back": "Quay lại lịch khám",
-  "visitPrep.noQuestions": "Chưa có câu hỏi gợi ý từ các ghi nhận trong phạm vi này.",
+  "visitPrep.noQuestions":
+    "Chưa có câu hỏi gợi ý từ các ghi nhận trong phạm vi này.",
   "visitPrep.localNotes.label": "Ghi chú hoặc câu hỏi của bạn",
-  "visitPrep.localNotes.hint": "Chỉ có trên trang này để bạn tự chuẩn bị. CLARA không gửi, lưu hoặc thêm phần này vào LifeMap.",
-  "visitPrep.localNotes.placeholder": "Ví dụ: Hỏi về triệu chứng xuất hiện lúc nào và cần mang theo kết quả nào.",
+  "visitPrep.localNotes.hint":
+    "Chỉ có trên trang này để bạn tự chuẩn bị. CLARA không gửi, lưu hoặc thêm phần này vào LifeMap.",
+  "visitPrep.localNotes.placeholder":
+    "Ví dụ: Hỏi về triệu chứng xuất hiện lúc nào và cần mang theo kết quả nào.",
   "visitPrep.localNotes.copyHeading": "Ghi chú hoặc câu hỏi của tôi",
   "visitPrep.adjustScope": "Điều chỉnh phạm vi",
   "chat.welcome.normal.eyebrow": "Hỏi theo cách của bạn",
   "chat.welcome.normal.title": "Bạn muốn tìm hiểu điều gì?",
-  "chat.welcome.normal.description": "Mô tả triệu chứng, thuốc đang dùng hoặc kết quả xét nghiệm. CLARA sẽ trả lời rõ ràng và chỉ ra khi nào bạn nên gặp bác sĩ.",
+  "chat.welcome.normal.description":
+    "Mô tả triệu chứng, thuốc đang dùng hoặc kết quả xét nghiệm. CLARA sẽ trả lời rõ ràng và chỉ ra khi nào bạn nên gặp bác sĩ.",
   "chat.welcome.normal.symptoms.label": "Hiểu triệu chứng",
-  "chat.welcome.normal.symptoms.prompt": "Tôi nên theo dõi những dấu hiệu nào khi bị đau đầu kéo dài?",
+  "chat.welcome.normal.symptoms.prompt":
+    "Tôi nên theo dõi những dấu hiệu nào khi bị đau đầu kéo dài?",
   "chat.welcome.normal.medicine.label": "Hỏi về thuốc",
-  "chat.welcome.normal.medicine.prompt": "Giải thích cách dùng thuốc này và những tác dụng phụ cần lưu ý.",
+  "chat.welcome.normal.medicine.prompt":
+    "Giải thích cách dùng thuốc này và những tác dụng phụ cần lưu ý.",
   "chat.welcome.normal.lab.label": "Đọc xét nghiệm",
-  "chat.welcome.normal.lab.prompt": "Giúp tôi hiểu kết quả xét nghiệm này bằng ngôn ngữ đơn giản.",
+  "chat.welcome.normal.lab.prompt":
+    "Giúp tôi hiểu kết quả xét nghiệm này bằng ngôn ngữ đơn giản.",
   "chat.welcome.normal.safety.label": "Kiểm tra an toàn",
-  "chat.welcome.normal.safety.prompt": "Các thuốc và thực phẩm bổ sung tôi đang dùng có tương tác không?",
+  "chat.welcome.normal.safety.prompt":
+    "Các thuốc và thực phẩm bổ sung tôi đang dùng có tương tác không?",
   "chat.welcome.researcher.eyebrow": "Tìm hiểu có dẫn nguồn",
   "chat.welcome.researcher.title": "Bắt đầu từ một câu hỏi nghiên cứu",
-  "chat.welcome.researcher.description": "Yêu cầu CLARA tổng hợp bằng chứng, đối chiếu kết quả và nêu rõ giới hạn của dữ liệu.",
+  "chat.welcome.researcher.description":
+    "Yêu cầu CLARA tổng hợp bằng chứng, đối chiếu kết quả và nêu rõ giới hạn của dữ liệu.",
   "chat.welcome.researcher.overview.label": "Tổng quan bằng chứng",
-  "chat.welcome.researcher.overview.prompt": "Tổng hợp bằng chứng gần đây về chủ đề này, nêu nguồn đã dùng và các giới hạn còn lại.",
+  "chat.welcome.researcher.overview.prompt":
+    "Tổng hợp bằng chứng gần đây về chủ đề này, nêu nguồn đã dùng và các giới hạn còn lại.",
   "chat.welcome.researcher.compare.label": "So sánh nghiên cứu",
-  "chat.welcome.researcher.compare.prompt": "So sánh thiết kế, quần thể và kết quả chính của các nghiên cứu liên quan.",
+  "chat.welcome.researcher.compare.prompt":
+    "So sánh thiết kế, quần thể và kết quả chính của các nghiên cứu liên quan.",
   "chat.welcome.researcher.claim.label": "Kiểm tra một nhận định",
-  "chat.welcome.researcher.claim.prompt": "Kiểm tra nhận định này, tìm bằng chứng ủng hộ và phản biện.",
+  "chat.welcome.researcher.claim.prompt":
+    "Kiểm tra nhận định này, tìm bằng chứng ủng hộ và phản biện.",
   "chat.welcome.researcher.gaps.label": "Tìm khoảng trống",
-  "chat.welcome.researcher.gaps.prompt": "Các khoảng trống bằng chứng và câu hỏi nghiên cứu tiếp theo là gì?",
+  "chat.welcome.researcher.gaps.prompt":
+    "Các khoảng trống bằng chứng và câu hỏi nghiên cứu tiếp theo là gì?",
   "chat.welcome.doctor.eyebrow": "Hỗ trợ quyết định lâm sàng",
   "chat.welcome.doctor.title": "Bạn đang cần làm rõ điều gì?",
-  "chat.welcome.doctor.description": "Nhập bối cảnh ca bệnh để nhận tóm tắt có cấu trúc, chẩn đoán phân biệt, cảnh báo an toàn và bằng chứng liên quan.",
+  "chat.welcome.doctor.description":
+    "Nhập bối cảnh ca bệnh để nhận tóm tắt có cấu trúc, chẩn đoán phân biệt, cảnh báo an toàn và bằng chứng liên quan.",
   "chat.welcome.doctor.summary.label": "Tóm tắt ca bệnh",
-  "chat.welcome.doctor.summary.prompt": "Tóm tắt ca bệnh này, nêu dữ kiện quan trọng và thông tin còn thiếu.",
+  "chat.welcome.doctor.summary.prompt":
+    "Tóm tắt ca bệnh này, nêu dữ kiện quan trọng và thông tin còn thiếu.",
   "chat.welcome.doctor.differential.label": "Chẩn đoán phân biệt",
-  "chat.welcome.doctor.differential.prompt": "Lập chẩn đoán phân biệt có ưu tiên và giải thích dữ kiện ủng hộ hoặc phản đối.",
+  "chat.welcome.doctor.differential.prompt":
+    "Lập chẩn đoán phân biệt có ưu tiên và giải thích dữ kiện ủng hộ hoặc phản đối.",
   "chat.welcome.doctor.medicines.label": "Rà soát thuốc",
-  "chat.welcome.doctor.medicines.prompt": "Rà soát đơn thuốc này về tương tác, chống chỉ định và theo dõi cần thiết.",
+  "chat.welcome.doctor.medicines.prompt":
+    "Rà soát đơn thuốc này về tương tác, chống chỉ định và theo dõi cần thiết.",
   "chat.welcome.doctor.risk.label": "Đánh giá nguy cơ",
-  "chat.welcome.doctor.risk.prompt": "Xác định dấu hiệu nguy hiểm và mức độ cần chuyển tuyến trong ca bệnh này.",
+  "chat.welcome.doctor.risk.prompt":
+    "Xác định dấu hiệu nguy hiểm và mức độ cần chuyển tuyến trong ca bệnh này.",
   "chat.composer.aria": "Khung soạn câu hỏi",
   "chat.composer.questionLabel": "Câu hỏi y tế của bạn",
   "chat.composer.placeholder": "Đặt câu hỏi về sức khỏe…",
@@ -617,7 +1142,8 @@ const VI_MESSAGES = {
   "chat.composer.allSources": "Tìm tất cả nguồn",
   "chat.composer.cancel": "Hủy phiên",
   "chat.composer.send": "Gửi",
-  "chat.composer.safetyNote": "Hãy xác nhận quyết định y tế quan trọng với nhân viên y tế.",
+  "chat.composer.safetyNote":
+    "Hãy xác nhận quyết định y tế quan trọng với nhân viên y tế.",
   "chat.legacyComposer.modeLabel": "Cách trả lời",
   "chat.legacyComposer.retrievalLabel": "Nguồn",
   "chat.legacyComposer.promptTray": "Gợi ý",
@@ -629,11 +1155,16 @@ const VI_MESSAGES = {
   "chat.legacyComposer.mode.deepBeta": "Pro",
   "chat.legacyComposer.retrieval.auto": "Tự chọn",
   "chat.legacyComposer.retrieval.full": "Đầy đủ",
-  "chat.legacyWorkspace.quickPrompt.metformin": "Tôi đang uống metformin, cần lưu ý gì?",
-  "chat.legacyWorkspace.quickPrompt.interactions": "Thuốc này có tương tác với thuốc nào?",
-  "chat.legacyWorkspace.quickPrompt.labResult": "Giải thích kết quả xét nghiệm này giúp tôi.",
-  "chat.legacyWorkspace.quickPrompt.seeDoctor": "Khi nào tôi nên đi khám bác sĩ?",
-  "chat.legacyWorkspace.quickPrompt.sideEffects": "Tác dụng phụ thường gặp của thuốc này là gì?",
+  "chat.legacyWorkspace.quickPrompt.metformin":
+    "Tôi đang uống metformin, cần lưu ý gì?",
+  "chat.legacyWorkspace.quickPrompt.interactions":
+    "Thuốc này có tương tác với thuốc nào?",
+  "chat.legacyWorkspace.quickPrompt.labResult":
+    "Giải thích kết quả xét nghiệm này giúp tôi.",
+  "chat.legacyWorkspace.quickPrompt.seeDoctor":
+    "Khi nào tôi nên đi khám bác sĩ?",
+  "chat.legacyWorkspace.quickPrompt.sideEffects":
+    "Tác dụng phụ thường gặp của thuốc này là gì?",
   "chat.sidebar.aria": "Danh sách hội thoại",
   "chat.sidebar.new": "Mới",
   "chat.sidebar.searchLabel": "Tìm hội thoại",
@@ -655,7 +1186,8 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.advanced": "Nâng cao",
   "chat.legacyWorkspace.folder.all": "Thư mục: Tất cả",
   "chat.legacyWorkspace.folder.openManager": "Mở quản lý thư mục",
-  "chat.legacyWorkspace.conversationCount": "{visible}/{total} hội thoại · {messages} tin",
+  "chat.legacyWorkspace.conversationCount":
+    "{visible}/{total} hội thoại · {messages} tin",
   "chat.legacyWorkspace.conversation.untitled": "Hội thoại chưa đặt tên",
   "chat.legacyWorkspace.conversation.day.today": "Hôm nay",
   "chat.legacyWorkspace.conversation.day.yesterday": "Hôm qua",
@@ -664,17 +1196,21 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.conversation.day.unknown": "Không rõ ngày",
   "chat.legacyWorkspace.conversation.selectAria": "Chọn hội thoại {id}",
   "chat.legacyWorkspace.conversation.openAria": "Mở hội thoại: {title}",
-  "chat.legacyWorkspace.conversation.metadata": "#{id} · {messages} tin · {time}{favorite}{local}",
+  "chat.legacyWorkspace.conversation.metadata":
+    "#{id} · {messages} tin · {time}{favorite}{local}",
   "chat.legacyWorkspace.conversation.favoriteSuffix": " · đã ghim",
   "chat.legacyWorkspace.conversation.localSuffix": " · đã lưu trên thiết bị",
   "chat.legacyWorkspace.conversation.loadingMore": "Đang tải thêm hội thoại…",
-  "chat.legacyWorkspace.conversation.emptyFiltered": "Không có hội thoại nào khớp bộ lọc hiện tại.",
+  "chat.legacyWorkspace.conversation.emptyFiltered":
+    "Không có hội thoại nào khớp bộ lọc hiện tại.",
   "chat.legacyWorkspace.conversation.startNew": "Bắt đầu chat mới",
   "chat.legacyWorkspace.notes.title": "Ghi chú",
+  "chat.legacyWorkspace.error.noteTitleRequired": "Tiêu đề ghi chú không được để trống.",
   "chat.legacyWorkspace.notes.draft": "Nháp",
   "chat.legacyWorkspace.notes.titlePlaceholder": "Tiêu đề ghi chú",
   "chat.legacyWorkspace.notes.contentPlaceholder": "Nội dung Markdown",
-  "chat.legacyWorkspace.notes.tagsPlaceholder": "Nhãn: warfarin, tương tác thuốc,…",
+  "chat.legacyWorkspace.notes.tagsPlaceholder":
+    "Nhãn: warfarin, tương tác thuốc,…",
   "chat.legacyWorkspace.notes.clear": "Xóa nội dung",
   "chat.legacyWorkspace.notes.save": "Lưu ghi chú",
   "chat.legacyWorkspace.notes.emptyContent": "(Trống)",
@@ -699,67 +1235,103 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.folder.delete": "Xóa",
   "chat.legacyWorkspace.folder.empty": "Không tìm thấy thư mục phù hợp.",
   "chat.legacyWorkspace.folder.renamePrompt": "Đổi tên thư mục",
-  "chat.legacyWorkspace.folder.deleteConfirm": "Xóa thư mục \"{name}\"?",
+  "chat.legacyWorkspace.folder.deleteConfirm": 'Xóa thư mục "{name}"?',
   "chat.legacyWorkspace.action.copyPrompt": "Sao chép",
   "chat.legacyWorkspace.confirm.bulkDelete": "Xóa {count} hội thoại đã chọn?",
-  "chat.legacyWorkspace.confirm.deleteNote": "Xóa ghi chú \"{name}\"?",
-  "chat.legacyWorkspace.confirm.deleteActiveConversation": "Xóa hội thoại đang mở?",
-  "chat.legacyWorkspace.notice.researchHistoryFallback": "Không gian trò chuyện chưa sẵn sàng, đang dùng lịch sử nghiên cứu làm nguồn hội thoại.",
-  "chat.legacyWorkspace.notice.partialData": "Không gian trò chuyện chỉ tải được một phần ({sources}).",
-  "chat.legacyWorkspace.notice.noDetailedMessages": "Hội thoại #{id} chưa có tin nhắn chi tiết.",
-  "chat.legacyWorkspace.notice.localCache": "Đang hiển thị bản đã lưu trên thiết bị của hội thoại #{id}.",
-  "chat.legacyWorkspace.notice.currentConversationSavedLocally": "Đã lưu hội thoại hiện tại trên thiết bị này. Đồng bộ sẽ thử lại sau.",
+  "chat.legacyWorkspace.confirm.deleteNote": 'Xóa ghi chú "{name}"?',
+  "chat.legacyWorkspace.confirm.deleteActiveConversation":
+    "Xóa hội thoại đang mở?",
+  "chat.legacyWorkspace.notice.researchHistoryFallback":
+    "Không gian trò chuyện chưa sẵn sàng, đang dùng lịch sử nghiên cứu làm nguồn hội thoại.",
+  "chat.legacyWorkspace.notice.partialData":
+    "Không gian trò chuyện chỉ tải được một phần ({sources}).",
+  "chat.legacyWorkspace.notice.noDetailedMessages":
+    "Hội thoại #{id} chưa có tin nhắn chi tiết.",
+  "chat.legacyWorkspace.notice.localCache":
+    "Đang hiển thị bản đã lưu trên thiết bị của hội thoại #{id}.",
+  "chat.legacyWorkspace.notice.currentConversationSavedLocally":
+    "Đã lưu hội thoại hiện tại trên thiết bị này. Đồng bộ sẽ thử lại sau.",
   "chat.legacyWorkspace.notice.copySuccess": "Đã sao chép.",
-  "chat.legacyWorkspace.notice.bulkMetadataUnavailable": "Không gian trò chuyện chưa sẵn sàng nên chưa thể cập nhật nhiều hội thoại cùng lúc.",
-  "chat.legacyWorkspace.notice.selectForBulkAction": "Hãy chọn hội thoại trước khi cập nhật nhiều mục.",
+  "chat.legacyWorkspace.notice.bulkMetadataUnavailable":
+    "Không gian trò chuyện chưa sẵn sàng nên chưa thể cập nhật nhiều hội thoại cùng lúc.",
+  "chat.legacyWorkspace.notice.selectForBulkAction":
+    "Hãy chọn hội thoại trước khi cập nhật nhiều mục.",
   "chat.legacyWorkspace.notice.bulkUpdated": "Đã cập nhật {count} hội thoại.",
-  "chat.legacyWorkspace.notice.selectForDelete": "Hãy chọn hội thoại trước khi xóa.",
-  "chat.legacyWorkspace.notice.bulkDeleted": "Đã xóa {deleted}/{total} hội thoại.",
-  "chat.legacyWorkspace.notice.selectForExport": "Hãy chọn hội thoại trước khi xuất.",
-  "chat.legacyWorkspace.notice.bulkExported": "Đã xuất {success}/{total} hội thoại ({format}).",
-  "chat.legacyWorkspace.notice.metadataUnavailable": "Không gian trò chuyện chưa sẵn sàng nên chưa thể cập nhật thông tin hội thoại.",
-  "chat.legacyWorkspace.notice.folderCreated": "Đã tạo thư mục \"{name}\".",
-  "chat.legacyWorkspace.notice.folderRenamed": "Đã đổi tên thư mục thành \"{name}\".",
+  "chat.legacyWorkspace.notice.selectForDelete":
+    "Hãy chọn hội thoại trước khi xóa.",
+  "chat.legacyWorkspace.notice.bulkDeleted":
+    "Đã xóa {deleted}/{total} hội thoại.",
+  "chat.legacyWorkspace.notice.selectForExport":
+    "Hãy chọn hội thoại trước khi xuất.",
+  "chat.legacyWorkspace.notice.bulkExported":
+    "Đã xuất {success}/{total} hội thoại ({format}).",
+  "chat.legacyWorkspace.notice.metadataUnavailable":
+    "Không gian trò chuyện chưa sẵn sàng nên chưa thể cập nhật thông tin hội thoại.",
+  "chat.legacyWorkspace.notice.folderCreated": 'Đã tạo thư mục "{name}".',
+  "chat.legacyWorkspace.notice.folderRenamed":
+    'Đã đổi tên thư mục thành "{name}".',
   "chat.legacyWorkspace.notice.folderDeleted": "Đã xóa thư mục.",
-  "chat.legacyWorkspace.notice.noAnswerForNote": "Chưa có câu trả lời để lưu thành ghi chú.",
+  "chat.legacyWorkspace.notice.noAnswerForNote":
+    "Chưa có câu trả lời để lưu thành ghi chú.",
   "chat.legacyWorkspace.notes.answerTitle": "Ghi chú từ câu trả lời mới",
   "chat.legacyWorkspace.notes.newTitle": "Ghi chú mới",
   "chat.legacyWorkspace.notice.noteUpdated": "Đã cập nhật ghi chú.",
   "chat.legacyWorkspace.notice.noteSaved": "Đã lưu ghi chú.",
   "chat.legacyWorkspace.notice.noteDeleted": "Đã xóa ghi chú.",
-  "chat.legacyWorkspace.notice.shareUnavailable": "Không gian trò chuyện chưa sẵn sàng nên chưa thể tạo liên kết chia sẻ.",
+  "chat.legacyWorkspace.notice.shareUnavailable":
+    "Không gian trò chuyện chưa sẵn sàng nên chưa thể tạo liên kết chia sẻ.",
   "chat.legacyWorkspace.notice.shareCopied": "Đã sao chép liên kết chia sẻ.",
-  "chat.legacyWorkspace.notice.revokeShareUnavailable": "Không gian trò chuyện chưa sẵn sàng nên chưa thể thu hồi liên kết chia sẻ.",
+  "chat.legacyWorkspace.notice.revokeShareUnavailable":
+    "Không gian trò chuyện chưa sẵn sàng nên chưa thể thu hồi liên kết chia sẻ.",
   "chat.legacyWorkspace.notice.shareRevoked": "Đã thu hồi liên kết chia sẻ.",
-  "chat.legacyWorkspace.notice.sharedConversationMissing": "Không tìm thấy hội thoại #{id} trong không gian trò chuyện hiện tại.",
-  "chat.legacyWorkspace.notice.conversationExported": "Đã xuất hội thoại #{id} ({format}).",
-  "chat.legacyWorkspace.notice.conversationExportedLocal": "Đã xuất hội thoại #{id} từ bản đã lưu trên thiết bị (Markdown).",
-  "chat.legacyWorkspace.notice.docxExportedFromCurrent": "Đã xuất DOCX từ nội dung hiện tại.",
-  "chat.legacyWorkspace.notice.docxFallbackToMarkdown": "DOCX chưa sẵn sàng, CLARA đã xuất Markdown để giữ lại nội dung.",
-  "chat.legacyWorkspace.notice.conversationRenamedLocal": "Đã đổi tên hội thoại trên thiết bị này.",
+  "chat.legacyWorkspace.notice.sharedConversationMissing":
+    "Không tìm thấy hội thoại #{id} trong không gian trò chuyện hiện tại.",
+  "chat.legacyWorkspace.notice.conversationExported":
+    "Đã xuất hội thoại #{id} ({format}).",
+  "chat.legacyWorkspace.notice.conversationExportedLocal":
+    "Đã xuất hội thoại #{id} từ bản đã lưu trên thiết bị (Markdown).",
+  "chat.legacyWorkspace.notice.docxExportedFromCurrent":
+    "Đã xuất DOCX từ nội dung hiện tại.",
+  "chat.legacyWorkspace.notice.docxFallbackToMarkdown":
+    "DOCX chưa sẵn sàng, CLARA đã xuất Markdown để giữ lại nội dung.",
+  "chat.legacyWorkspace.notice.conversationRenamedLocal":
+    "Đã đổi tên hội thoại trên thiết bị này.",
   "chat.legacyWorkspace.notice.conversationRenamed": "Đã đổi tên hội thoại.",
   "chat.legacyWorkspace.notice.conversationDeleted": "Đã xóa hội thoại.",
-  "chat.legacyWorkspace.error.loadConversations": "Chưa thể tải danh sách hội thoại.",
-  "chat.legacyWorkspace.error.loadWorkspace": "Chưa thể tải không gian trò chuyện.",
-  "chat.legacyWorkspace.error.loadMessages": "Chưa thể tải tin nhắn của hội thoại này.",
-  "chat.legacyWorkspace.error.search": "Chưa thể tìm trong không gian trò chuyện.",
-  "chat.legacyWorkspace.error.bulkUpdate": "Chưa thể cập nhật các hội thoại đã chọn.",
-  "chat.legacyWorkspace.error.answerPersist": "CLARA đã trả lời, nhưng chưa thể lưu hội thoại này.",
+  "chat.legacyWorkspace.error.loadConversations":
+    "Chưa thể tải danh sách hội thoại.",
+  "chat.legacyWorkspace.error.loadWorkspace":
+    "Chưa thể tải không gian trò chuyện.",
+  "chat.legacyWorkspace.error.loadMessages":
+    "Chưa thể tải tin nhắn của hội thoại này.",
+  "chat.legacyWorkspace.error.search":
+    "Chưa thể tìm trong không gian trò chuyện.",
+  "chat.legacyWorkspace.error.bulkUpdate":
+    "Chưa thể cập nhật các hội thoại đã chọn.",
+  "chat.legacyWorkspace.error.answerPersist":
+    "CLARA đã trả lời, nhưng chưa thể lưu hội thoại này.",
   "chat.legacyWorkspace.error.submit": "CLARA chưa thể xử lý câu hỏi này.",
-  "chat.legacyWorkspace.error.updateMetadata": "Chưa thể cập nhật thông tin hội thoại.",
+  "chat.legacyWorkspace.error.updateMetadata":
+    "Chưa thể cập nhật thông tin hội thoại.",
   "chat.legacyWorkspace.error.createFolder": "Chưa thể tạo thư mục.",
   "chat.legacyWorkspace.error.renameFolder": "Chưa thể đổi tên thư mục.",
   "chat.legacyWorkspace.error.deleteFolder": "Chưa thể xóa thư mục.",
   "chat.legacyWorkspace.error.saveNote": "Chưa thể lưu ghi chú.",
   "chat.legacyWorkspace.error.deleteNote": "Chưa thể xóa ghi chú.",
   "chat.legacyWorkspace.error.createShare": "Chưa thể tạo liên kết chia sẻ.",
-  "chat.legacyWorkspace.error.revokeShare": "Chưa thể thu hồi liên kết chia sẻ.",
-  "chat.legacyWorkspace.error.exportConversation": "Chưa thể xuất hội thoại này.",
-  "chat.legacyWorkspace.error.renameConversation": "Chưa thể đổi tên hội thoại.",
+  "chat.legacyWorkspace.error.revokeShare":
+    "Chưa thể thu hồi liên kết chia sẻ.",
+  "chat.legacyWorkspace.error.exportConversation":
+    "Chưa thể xuất hội thoại này.",
+  "chat.legacyWorkspace.error.renameConversation":
+    "Chưa thể đổi tên hội thoại.",
   "chat.legacyWorkspace.error.deleteConversation": "Chưa thể xóa hội thoại.",
-  "chat.legacyWorkspace.error.noValidChatResponse": "CLARA chưa nhận được phản hồi hợp lệ.",
-  "chat.legacyWorkspace.error.noValidResearchResponse": "CLARA chưa nhận được kết quả nghiên cứu hợp lệ.",
-  "chat.legacyWorkspace.error.chatStream": "Luồng phản hồi trò chuyện gặp sự cố.",
+  "chat.legacyWorkspace.error.noValidChatResponse":
+    "CLARA chưa nhận được phản hồi hợp lệ.",
+  "chat.legacyWorkspace.error.noValidResearchResponse":
+    "CLARA chưa nhận được kết quả nghiên cứu hợp lệ.",
+  "chat.legacyWorkspace.error.chatStream":
+    "Luồng phản hồi trò chuyện gặp sự cố.",
   "chat.legacyWorkspace.command.newChat": "Chat mới",
   "chat.legacyWorkspace.command.focusSearch": "Tìm trong không gian làm việc",
   "chat.legacyWorkspace.command.focusComposer": "Nhập câu hỏi",
@@ -771,15 +1343,18 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.command.exportDocx": "Xuất báo cáo (DOCX)",
   "chat.legacyWorkspace.command.exportMarkdown": "Xuất hội thoại ra Markdown",
   "chat.legacyWorkspace.command.share": "Tạo liên kết chia sẻ công khai",
-  "chat.legacyWorkspace.command.revokeShare": "Thu hồi liên kết chia sẻ hiện tại",
-  "chat.legacyWorkspace.command.saveNote": "Lưu câu trả lời gần nhất thành nháp ghi chú",
+  "chat.legacyWorkspace.command.revokeShare":
+    "Thu hồi liên kết chia sẻ hiện tại",
+  "chat.legacyWorkspace.command.saveNote":
+    "Lưu câu trả lời gần nhất thành nháp ghi chú",
   "chat.legacyWorkspace.command.openShares": "Mở quản lý chia sẻ",
   "chat.legacyWorkspace.active.ready": "Sẵn sàng cho chat mới",
   "chat.legacyWorkspace.active.openPanel": "Mở bảng hội thoại",
   "chat.legacyWorkspace.active.eyebrow": "Hội thoại đang mở",
   "chat.legacyWorkspace.active.newConversation": "Hội thoại mới",
   "chat.legacyWorkspace.active.newChat": "Chat mới",
-  "chat.legacyWorkspace.active.exportReportTitle": "Xuất báo cáo (định dạng .docx)",
+  "chat.legacyWorkspace.active.exportReportTitle":
+    "Xuất báo cáo (định dạng .docx)",
   "chat.legacyWorkspace.active.exportReport": "Xuất báo cáo",
   "chat.legacyWorkspace.active.moreActions": "Thao tác khác",
   "chat.legacyWorkspace.active.showTelemetry": "Hiện telemetry",
@@ -796,9 +1371,11 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.active.delete": "Xóa hội thoại",
   "chat.legacyWorkspace.clarify.aria": "Câu hỏi làm rõ",
   "chat.legacyWorkspace.clarify.title": "Làm rõ trước khi chạy",
-  "chat.legacyWorkspace.clarify.description": "Câu hỏi còn khá rộng. Trả lời vài câu để phiên nghiên cứu sâu bám đúng ý bạn, hoặc bỏ qua để chạy nguyên văn.",
+  "chat.legacyWorkspace.clarify.description":
+    "Câu hỏi còn khá rộng. Trả lời vài câu để phiên nghiên cứu sâu bám đúng ý bạn, hoặc bỏ qua để chạy nguyên văn.",
   "chat.legacyWorkspace.clarify.dismiss": "Đóng",
-  "chat.legacyWorkspace.clarify.answerPlaceholder": "Câu trả lời của bạn (không bắt buộc)",
+  "chat.legacyWorkspace.clarify.answerPlaceholder":
+    "Câu trả lời của bạn (không bắt buộc)",
   "chat.legacyWorkspace.clarify.submit": "Trả lời và bắt đầu nghiên cứu",
   "chat.legacyWorkspace.clarify.skip": "Bỏ qua và chạy câu hỏi gốc",
   "chat.legacyWorkspace.filter.summaryAria": "Lọc thư mục",
@@ -808,7 +1385,8 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.filter.allFolders": "Tất cả thư mục",
   "chat.legacyWorkspace.filter.clear": "Xóa",
   "chat.legacyWorkspace.bulk.title": "Thao tác hàng loạt",
-  "chat.legacyWorkspace.bulk.folderSelectAria": "Chọn thư mục cho các hội thoại đã chọn",
+  "chat.legacyWorkspace.bulk.folderSelectAria":
+    "Chọn thư mục cho các hội thoại đã chọn",
   "chat.legacyWorkspace.bulk.folderSkip": "Thư mục: Giữ nguyên",
   "chat.legacyWorkspace.bulk.folderNone": "Thư mục: Không gán",
   "chat.legacyWorkspace.bulk.folderNamed": "Thư mục: {name}",
@@ -825,7 +1403,8 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.canvas.analyzing": "CLARA đang phân tích câu hỏi…",
   "chat.legacyWorkspace.welcome.title": "CLARA có thể giúp gì cho bạn?",
   "chat.legacyWorkspace.welcome.askLead": "Bạn có thể hỏi về",
-  "chat.legacyWorkspace.welcome.askTopics": "thuốc, triệu chứng, kết quả xét nghiệm",
+  "chat.legacyWorkspace.welcome.askTopics":
+    "thuốc, triệu chứng, kết quả xét nghiệm",
   "chat.legacyWorkspace.welcome.askConnector": "hoặc",
   "chat.legacyWorkspace.welcome.askInteractions": "kiểm tra tương tác thuốc",
   "chat.legacyWorkspace.welcome.answerLead": "CLARA trả lời kèm",
@@ -833,7 +1412,8 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.welcome.answerConnector": "và",
   "chat.legacyWorkspace.welcome.answerSources": "nguồn tham khảo",
   "chat.legacyWorkspace.welcome.answerSuffix": "khi có.",
-  "chat.legacyWorkspace.welcome.disclaimer": "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế.",
+  "chat.legacyWorkspace.welcome.disclaimer":
+    "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế.",
   "chat.legacyWorkspace.welcome.medication": "Thuốc",
   "chat.legacyWorkspace.welcome.symptoms": "Triệu chứng",
   "chat.legacyWorkspace.welcome.labTests": "Xét nghiệm",
@@ -845,22 +1425,23 @@ const VI_MESSAGES = {
   "chat.legacyWorkspace.suggestions.empty": "Chưa có gợi ý.",
   "chat.legacyWorkspace.shares.title": "Chia sẻ",
   "chat.legacyWorkspace.shares.manage": "Quản lý",
-  "chat.legacyWorkspace.shares.unavailable": "Workspace API chưa sẵn sàng nên liên kết chia sẻ công khai đang tạm khóa.",
+  "chat.legacyWorkspace.shares.unavailable":
+    "Workspace API chưa sẵn sàng nên liên kết chia sẻ công khai đang tạm khóa.",
   "chat.legacyWorkspace.shares.active": "Đang hoạt động",
   "chat.legacyWorkspace.shares.revoked": "Đã thu hồi",
   "chat.legacyWorkspace.shares.metadata": "{status} · {count} tin",
   "chat.legacyWorkspace.shares.open": "Mở",
-  "chat.legacyWorkspace.shares.copy": "Sao chép",
-  "chat.legacyWorkspace.shares.copySuccess": "Đã sao chép liên kết công khai.",
-  "chat.legacyWorkspace.shares.visit": "Truy cập",
   "chat.legacyWorkspace.shares.empty": "Chưa có liên kết chia sẻ công khai.",
   "chat.legacyWorkspace.resize.aria": "Điều chỉnh độ rộng bảng hội thoại",
-  "chat.legacyWorkspace.resize.title": "Kéo để đổi độ rộng. Nhấp đúp để về mặc định.",
+  "chat.legacyWorkspace.resize.title":
+    "Kéo để đổi độ rộng. Nhấp đúp để về mặc định.",
   "chat.legacyWorkspace.followUp.checkInteractions": "Kiểm tra tương tác thuốc",
   "chat.legacyWorkspace.followUp.askSideEffects": "Hỏi về tác dụng phụ",
-  "chat.legacyWorkspace.followUp.enterMedicationList": "Nhập danh sách thuốc của tôi",
+  "chat.legacyWorkspace.followUp.enterMedicationList":
+    "Nhập danh sách thuốc của tôi",
   "chat.legacyWorkspace.followUp.createConsultReport": "Tạo báo cáo tư vấn",
-  "chat.legacyWorkspace.telemetry.emptySignal": "Tín hiệu sẽ hiện sau câu trả lời nghiên cứu tiếp theo.",
+  "chat.legacyWorkspace.telemetry.emptySignal":
+    "Tín hiệu sẽ hiện sau câu trả lời nghiên cứu tiếp theo.",
   "chat.commandPalette.closeAria": "Đóng bảng lệnh",
   "chat.commandPalette.title": "Bảng lệnh",
   "chat.commandPalette.searchLabel": "Tìm lệnh",
@@ -870,7 +1451,8 @@ const VI_MESSAGES = {
   "chat.answerCanvas.aria": "Bảng câu trả lời y khoa",
   "chat.answerCanvas.eyebrow.clinical": "Bảng hỗ trợ quyết định lâm sàng",
   "chat.answerCanvas.eyebrow.personal": "Kế hoạch sức khỏe của bạn",
-  "chat.answerCanvas.description": "Tách rõ mức khẩn cấp, hành động, bằng chứng và độ bất định.",
+  "chat.answerCanvas.description":
+    "Tách rõ mức khẩn cấp, hành động, bằng chứng và độ bất định.",
   "chat.answerCanvas.urgency.title": "Mức khẩn cấp",
   "chat.answerCanvas.urgency.empty": "Chưa có hướng dẫn chuyển tuyến.",
   "chat.answerCanvas.nextActions.title": "Việc nên làm tiếp theo",
@@ -880,32 +1462,44 @@ const VI_MESSAGES = {
   "chat.answerCanvas.evidence.support": "hỗ trợ",
   "chat.answerCanvas.evidence.inspectLedger": "Xem sổ bằng chứng",
   "chat.answerCanvas.evidence.trustTier": "Mức nguồn {tier}",
-  "chat.answerCanvas.evidence.empty": "Không có bằng chứng truy xuất được; chưa thể dùng để ra quyết định.",
+  "chat.answerCanvas.evidence.empty":
+    "Không có bằng chứng truy xuất được; chưa thể dùng để ra quyết định.",
   "chat.answerCanvas.uncertainty.title": "Độ bất định & dữ kiện còn thiếu",
   "chat.answerCanvas.uncertainty.label": "bất định",
   "chat.answerCanvas.uncertainty.missingCount": "{count} dữ kiện cần bổ sung",
   "chat.answerCanvas.medicineSafety.title": "An toàn thuốc",
-  "chat.answerCanvas.medicineSafety.description": "Câu trả lời này không thay thế đối chiếu thuốc hoặc kiểm tra tương tác. Hãy cung cấp đủ thuốc, thực phẩm bổ sung, liều và dị ứng; không tự bắt đầu hoặc ngừng thuốc kê đơn.",
+  "chat.answerCanvas.medicineSafety.description":
+    "Câu trả lời này không thay thế đối chiếu thuốc hoặc kiểm tra tương tác. Hãy cung cấp đủ thuốc, thực phẩm bổ sung, liều và dị ứng; không tự bắt đầu hoặc ngừng thuốc kê đơn.",
   "chat.answerRenderer.degraded": "Suy giảm · dự phòng nội bộ",
   "chat.answerRenderer.emptyAnswer": "(Chưa có nội dung trả lời)",
   "chat.answerRenderer.integrity.aria": "Độ tin cậy nghiên cứu",
   "chat.answerRenderer.integrity.title": "Độ tin cậy nghiên cứu",
-  "chat.answerRenderer.integrity.description": "Kiểm tra nền tảng của câu trả lời, không chỉ nội dung diễn giải.",
+  "chat.answerRenderer.integrity.description":
+    "Kiểm tra nền tảng của câu trả lời, không chỉ nội dung diễn giải.",
   "chat.answerRenderer.integrity.sources": "Nguồn",
   "chat.answerRenderer.integrity.tracedClaims": "Luận điểm truy vết",
   "chat.answerRenderer.integrity.deepPasses": "Lượt phân tích",
   "chat.answerRenderer.integrity.verification": "Kiểm chứng",
   "chat.answerRenderer.integrity.notReported": "Chưa báo cáo",
   "chat.answerRenderer.releaseBoundary.aria": "Giới hạn phát hành bằng chứng",
-  "chat.answerRenderer.releaseBoundary.title": "Chưa phát hành kết luận y khoa",
-  "chat.answerRenderer.releaseBoundary.description": "CLARA đã giữ lại phần kết luận vì bằng chứng chưa đáp ứng điều kiện kiểm tra. Bạn có thể thu hẹp câu hỏi hoặc xem nguồn trước khi hỏi lại.",
-  "chat.answerRenderer.releaseBoundary.reason.noCitations": "Chưa có nguồn dẫn có thể mở để đối chiếu.",
-  "chat.answerRenderer.releaseBoundary.reason.noRetrievedEvidence": "Chưa truy xuất được bằng chứng phù hợp cho câu hỏi này.",
-  "chat.answerRenderer.releaseBoundary.reason.verificationUnavailable": "Chưa thể hoàn tất bước kiểm tra bằng chứng.",
-  "chat.answerRenderer.releaseBoundary.reason.verificationSkipped": "Bước kiểm tra bằng chứng không được thực hiện cho lượt này.",
-  "chat.answerRenderer.releaseBoundary.reason.verificationInvalid": "Kết quả kiểm tra bằng chứng không đủ cấu trúc để phát hành an toàn.",
-  "chat.answerRenderer.releaseBoundary.reason.unsupportedClaims": "Có nhận định chưa được bằng chứng truy xuất hỗ trợ.",
-  "chat.answerRenderer.releaseBoundary.reason.zeroClaimSupport": "Không có nhận định nào được bằng chứng truy xuất hỗ trợ.",
+  "chat.answerRenderer.releaseBoundary.title": "Chưa đủ bằng chứng để trả lời chắc chắn",
+  "chat.answerRenderer.releaseBoundary.description":
+    "CLARA đã giữ lại phần kết luận vì bằng chứng chưa đáp ứng điều kiện kiểm tra. Bạn có thể thu hẹp câu hỏi, xem nguồn hoặc chuẩn bị thông tin để trao đổi với bác sĩ.",
+  "chat.answerRenderer.releaseBoundary.prepareVisit": "Chuẩn bị đi khám",
+  "chat.answerRenderer.releaseBoundary.reason.noCitations":
+    "Chưa có nguồn dẫn có thể mở để đối chiếu.",
+  "chat.answerRenderer.releaseBoundary.reason.noRetrievedEvidence":
+    "Chưa truy xuất được bằng chứng phù hợp cho câu hỏi này.",
+  "chat.answerRenderer.releaseBoundary.reason.verificationUnavailable":
+    "Chưa thể hoàn tất bước kiểm tra bằng chứng.",
+  "chat.answerRenderer.releaseBoundary.reason.verificationSkipped":
+    "Bước kiểm tra bằng chứng không được thực hiện cho lượt này.",
+  "chat.answerRenderer.releaseBoundary.reason.verificationInvalid":
+    "Kết quả kiểm tra bằng chứng không đủ cấu trúc để phát hành an toàn.",
+  "chat.answerRenderer.releaseBoundary.reason.unsupportedClaims":
+    "Có nhận định chưa được bằng chứng truy xuất hỗ trợ.",
+  "chat.answerRenderer.releaseBoundary.reason.zeroClaimSupport":
+    "Không có nhận định nào được bằng chứng truy xuất hỗ trợ.",
   "chat.answerRenderer.citationRegistry": "Danh mục trích dẫn",
   "chat.answerRenderer.trustTier": "Mức nguồn {tier}",
   "chat.answerRenderer.references": "Nguồn tham khảo ({count})",
@@ -915,12 +1509,15 @@ const VI_MESSAGES = {
   "chat.turnView.displayFailed": "Không thể hiển thị câu trả lời này.",
   "chat.turnView.refineEvidence": "Tinh chỉnh bằng lượt nghiên cứu mới",
   "chat.turnView.investigate": "Nghiên cứu y khoa chuyên sâu",
+  "chat.turnView.explain": "Vì sao CLARA đưa ra câu trả lời này?",
   "chat.telemetryPanel.aria": "Telemetry hệ thống",
   "chat.telemetryPanel.title": "Theo dõi",
   "chat.telemetryPanel.sourceIntel": "Nguồn",
   "chat.telemetryPanel.empty": "Chưa có tín hiệu nguồn.",
-  "chat.shell.notice.researchReady": "Đã sẵn sàng chế độ Nghiên cứu. Bạn có thể chỉnh câu hỏi hoặc chạy ngay.",
-  "chat.shell.notice.localFallback": "Đã lưu local; backend sync sẽ khôi phục sau.",
+  "chat.shell.notice.researchReady":
+    "Đã sẵn sàng chế độ Nghiên cứu. Bạn có thể chỉnh câu hỏi hoặc chạy ngay.",
+  "chat.shell.notice.localFallback":
+    "Đã lưu local; backend sync sẽ khôi phục sau.",
   "chat.shell.notice.cancelled": "Đã hủy phiên.",
   "chat.shell.notice.processFailed": "Không thể xử lý câu hỏi.",
   "chat.shell.notice.copied": "Đã sao chép.",
@@ -949,14 +1546,14 @@ const VI_MESSAGES = {
   "chat.shell.conversationCanvas": "Khung trò chuyện",
   "chat.shell.openSidebar": "Mở sidebar",
   "chat.shell.dashboard": "Tổng quan",
-  "chat.shell.research": "Nghiên cứu",
   "chat.shell.openAllTools": "Mở các công cụ",
   "chat.shell.allTools": "Các công cụ",
   "chat.shell.tools": "Công cụ",
   "chat.shell.commandPalette": "Bảng lệnh",
   "chat.shell.claraTools": "Công cụ CLARA",
   "chat.shell.close": "Đóng",
-  "chat.shell.disclaimer": "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế.",
+  "chat.shell.disclaimer":
+    "CLARA là AI hỗ trợ thông tin y tế, không thay thế bác sĩ hoặc nhân viên y tế.",
   "chat.workspace.expiry.oneDay": "24 giờ",
   "chat.workspace.expiry.sevenDays": "7 ngày",
   "chat.workspace.expiry.thirtyDays": "30 ngày",
@@ -1001,11 +1598,11 @@ const VI_MESSAGES = {
   "chat.workspace.createLink": "Tạo liên kết",
   "chat.workspace.rotateToken": "Làm mới token",
   "chat.workspace.sharingUnavailable": "Chia sẻ không khả dụng khi offline.",
-  "chat.workspace.openConversationToShare": "Mở một cuộc trò chuyện để chia sẻ.",
+  "chat.workspace.openConversationToShare":
+    "Mở một cuộc trò chuyện để chia sẻ.",
   "chat.workspace.status.active": "Đang hoạt động",
   "chat.workspace.status.revoked": "Đã thu hồi",
   "chat.workspace.expiresAt": "hết hạn {date}",
-  "chat.workspace.copy": "Sao chép",
   "chat.workspace.rotate": "Làm mới",
   "chat.workspace.revoke": "Thu hồi",
   "chat.workspace.noShares": "Chưa có chia sẻ.",
@@ -1017,10 +1614,10 @@ const VI_MESSAGES = {
   "medicines.tab.cabinet": "Tủ thuốc",
   "medicines.tab.safety": "An toàn tương tác",
   "medicines.list.trackedTitle": "Thuốc đang theo dõi",
-  "medicines.list.trackedDescription": "Chỉ dữ liệu bạn xác nhận mới có mặt ở đây.",
+  "medicines.list.trackedDescription":
+    "Chỉ dữ liệu bạn xác nhận mới có mặt ở đây.",
   "medicines.list.addStepByStep": "Thêm thuốc theo từng bước",
-  "medicines.list.checkDrugbank": "Kiểm tra tương tác DrugBank",
-  "medicines.list.checkingDrugbank": "Đang đối chiếu DrugBank…",
+  "medicines.list.openSafety": "Kiểm tra an toàn tương tác",
   "medicines.list.noDoseOrSchedule": "Chưa có liều/lịch dùng",
   "medicines.list.active": "Đang theo dõi",
   "medicines.list.ended": "Đã kết thúc",
@@ -1029,14 +1626,14 @@ const VI_MESSAGES = {
   "medicines.list.edit": "Sửa",
   "medicines.list.end": "Kết thúc",
   "medicines.list.emptyTitle": "Chưa có thuốc nào",
-  "medicines.list.emptyDescription": "Thêm thuốc bạn đang dùng để theo dõi. Đừng dùng danh sách này thay cho đơn hoặc hướng dẫn của bác sĩ.",
-  "medicines.list.verifiedResult": "Kết quả đã đối chiếu DrugBank",
-  "medicines.list.sourceVersion": "Nguồn phiên bản: {version}",
-  "medicines.list.alert": "Cảnh báo",
-  "medicines.list.alertFallback": "Có tương tác cần được dược sĩ hoặc bác sĩ đánh giá.",
-  "medicines.list.noAlerts": "DrugBank không ghi nhận cảnh báo DDI cho các thuốc đã chọn trong lần đối chiếu này. Điều này không thay thế tư vấn cá nhân từ dược sĩ hoặc bác sĩ.",
+  "medicines.list.emptyDescription":
+    "Thêm thuốc bạn đang dùng để theo dõi. Đừng dùng danh sách này thay cho đơn hoặc hướng dẫn của bác sĩ.",
+  "medicines.list.firstRun.add": "Thêm thuốc theo nhãn hoặc đơn của bạn",
+  "medicines.list.firstRun.confirm": "Xác nhận thông tin trước khi theo dõi",
+  "medicines.list.firstRun.safety": "Kiểm tra an toàn khi có đủ thông tin",
   "medicines.list.editTitle": "Sửa bản ghi thuốc",
-  "medicines.list.formDescription": "Nhập theo nhãn hoặc đơn của bạn; CLARA không suy đoán thuốc.",
+  "medicines.list.formDescription":
+    "Nhập theo nhãn hoặc đơn của bạn; CLARA không suy đoán thuốc.",
   "medicines.list.medicationName": "Tên thuốc",
   "medicines.list.dose": "Liều dùng",
   "medicines.list.schedule": "Lịch dùng",
@@ -1050,12 +1647,14 @@ const VI_MESSAGES = {
   "medicines.list.saving": "Đang lưu…",
   "medicines.list.cancelEdit": "Hủy chỉnh sửa",
   "medicines.list.cabinetTitle": "Tủ thuốc",
-  "medicines.list.cabinetDescription": "Quét nhãn, theo dõi hạn dùng và quản lý các mục trong tủ thuốc tại tab riêng.",
+  "medicines.list.cabinetDescription":
+    "Quét nhãn, theo dõi hạn dùng và quản lý các mục trong tủ thuốc tại tab riêng.",
   "medicines.list.openCabinet": "Mở tủ thuốc",
   "medicines.list.loadError": "Kiểm tra kết nối rồi thử lại.",
   "medicines.list.saveError": "Không thể lưu thuốc.",
   "medicines.list.checkError": "Không thể hoàn tất kiểm tra tương tác.",
-  "medicines.list.endConfirm": "Xác nhận ghi nhận thuốc này đã kết thúc? Đây chỉ là cập nhật hồ sơ, không phải lời khuyên ngừng thuốc.",
+  "medicines.list.endConfirm":
+    "Xác nhận ghi nhận thuốc này đã kết thúc? Đây chỉ là cập nhật hồ sơ, không phải lời khuyên ngừng thuốc.",
   "medicines.list.correctionReason": "Người dùng chỉnh sửa theo nguồn đang có",
   "medicines.list.endReason": "Người dùng cập nhật trạng thái hồ sơ",
   "medicines.list.endError": "Không thể cập nhật thuốc.",
@@ -1069,19 +1668,23 @@ const VI_MESSAGES = {
   "medicines.cabinet.normalization.review": "Cần xem lại",
   "medicines.cabinet.normalization.manual": "Nhập thủ công",
   "medicines.cabinet.normalization.unknown": "Chưa rõ",
-  "medicines.cabinet.description": "Thêm các thuốc bạn đang dùng để CLARA kiểm tra tương tác và nhắc lịch dùng thuốc.",
+  "medicines.cabinet.description":
+    "Thêm các thuốc bạn đang dùng để CLARA kiểm tra tương tác và nhắc lịch dùng thuốc.",
   "medicines.cabinet.add": "Thêm thuốc",
   "medicines.cabinet.checkInteractions": "Kiểm tra tương tác thuốc",
-  "medicines.cabinet.needsTwo": "Cần thêm ít nhất 2 thuốc để kiểm tra tương tác.",
+  "medicines.cabinet.needsTwo":
+    "Cần thêm ít nhất 2 thuốc để kiểm tra tương tác.",
   "medicines.cabinet.refresh": "Làm mới",
-  "medicines.cabinet.verifiedSource": "Kiểm tra an toàn qua nguồn được xác minh",
+  "medicines.cabinet.verifiedSource":
+    "Kiểm tra an toàn qua nguồn được xác minh",
   "medicines.cabinet.accountData": "Dữ liệu lưu trên tài khoản",
   "medicines.cabinet.updateAnytime": "Có thể cập nhật bất cứ lúc nào",
   "medicines.cabinet.readiness": "Mức sẵn sàng của dữ liệu",
   "medicines.cabinet.noMedicines": "CHƯA CÓ THUỐC",
   "medicines.cabinet.needsMore": "CẦN BỔ SUNG",
   "medicines.cabinet.ready": "ĐỦ DỮ LIỆU CƠ BẢN",
-  "medicines.cabinet.readinessDescription": "Đây là kiểm tra độ đầy đủ và hạn dùng của dữ liệu, không phải điểm rủi ro y khoa. Cảnh báo tương tác chỉ xuất hiện sau khi bạn chủ động kiểm tra qua nguồn DrugBank được xác minh.",
+  "medicines.cabinet.readinessDescription":
+    "Đây là kiểm tra độ đầy đủ và hạn dùng của dữ liệu, không phải điểm rủi ro y khoa. Cảnh báo tương tác chỉ xuất hiện sau khi bạn chủ động kiểm tra qua nguồn DrugBank được xác minh.",
   "medicines.cabinet.interactionData": "Dữ liệu để kiểm tra tương tác",
   "medicines.cabinet.atLeastTwo": "Cần ít nhất 2 thuốc",
   "medicines.cabinet.medicinesInCabinet": "{count} hoạt chất trong tủ",
@@ -1101,9 +1704,11 @@ const VI_MESSAGES = {
   "medicines.cabinet.deleted": "Đã xóa thuốc khỏi tủ.",
   "medicines.cabinet.deleteError": "Không thể xóa thuốc.",
   "medicines.cabinet.emptyTitle": "Tủ thuốc đang trống.",
-  "medicines.cabinet.emptyDescription": "Bắt đầu bằng “Thêm thuốc” để nhập tay hoặc quét OCR.",
+  "medicines.cabinet.emptyDescription":
+    "Bắt đầu bằng “Thêm thuốc” để nhập tay hoặc quét OCR.",
   "medicines.cabinet.doseValue": "Liều dùng: {dose} · Số lượng: {quantity}",
-  "medicines.cabinet.brandValue": "Tên thương mại: {brand} · Hãng: {manufacturer}",
+  "medicines.cabinet.brandValue":
+    "Tên thương mại: {brand} · Hãng: {manufacturer}",
   "medicines.cabinet.notAvailable": "Chưa có",
   "medicines.cabinet.expiryValue": "HSD: {date}",
   "medicines.cabinet.quantity": "Số lượng",
@@ -1111,7 +1716,8 @@ const VI_MESSAGES = {
   "medicines.cabinet.saved": "Đã lưu vào tủ thuốc",
   "medicines.cabinet.updated": "Cập nhật: {date}",
   "medicines.cabinet.timeline": "Lịch trình dùng thuốc",
-  "medicines.cabinet.timelineEmpty": "Chưa có dữ liệu lịch trình từ tủ thuốc. Hãy thêm thuốc hoặc cập nhật liều dùng để hệ thống tạo dòng thời gian.",
+  "medicines.cabinet.timelineEmpty":
+    "Chưa có dữ liệu lịch trình từ tủ thuốc. Hãy thêm thuốc hoặc cập nhật liều dùng để hệ thống tạo dòng thời gian.",
   "medicines.cabinet.next": "Tiếp theo",
   "medicines.cabinet.morning": "Buổi sáng",
   "medicines.cabinet.noon": "Buổi trưa",
@@ -1120,10 +1726,12 @@ const VI_MESSAGES = {
   "medicines.cabinet.following": "Theo dõi",
   "medicines.cabinet.addDose": "Cần bổ sung liều dùng",
   "medicines.cabinet.verifiedTitle": "Kiểm tra an toàn được xác minh",
-  "medicines.cabinet.verifiedDescription": "CLARA không suy luận cảnh báo từ tên thuốc trong tủ. Hãy mở kiểm tra tương tác để gửi các thuốc đã chọn tới luồng DrugBank/FIDES; nếu nguồn xác minh không sẵn sàng, kết quả sẽ bị chặn an toàn.",
+  "medicines.cabinet.verifiedDescription":
+    "CLARA không suy luận cảnh báo từ tên thuốc trong tủ. Hãy mở kiểm tra tương tác để gửi các thuốc đã chọn tới luồng DrugBank/FIDES; nếu nguồn xác minh không sẵn sàng, kết quả sẽ bị chặn an toàn.",
   "medicines.cabinet.openSafety": "Mở kiểm tra tương tác",
   "medicines.cabinet.guided.page.title": "Thêm thuốc",
-  "medicines.cabinet.guided.page.description": "Tải ảnh đơn thuốc, dán nội dung thuốc hoặc nhập thủ công từng thuốc vào tủ thuốc cá nhân.",
+  "medicines.cabinet.guided.page.description":
+    "Tải ảnh đơn thuốc, dán nội dung thuốc hoặc nhập thủ công từng thuốc vào tủ thuốc cá nhân.",
   "medicines.cabinet.guided.step.number": "Bước {number}",
   "medicines.cabinet.guided.optional": "Tùy chọn",
   "medicines.cabinet.guided.step.upload.title": "Tải đơn thuốc",
@@ -1136,39 +1744,60 @@ const VI_MESSAGES = {
   "medicines.cabinet.guided.step.manual.title": "Thêm thủ công",
   "medicines.cabinet.guided.step.manual.status": "Dùng nếu OCR chưa đúng",
   "medicines.cabinet.guided.file.title": "Tải ảnh đơn thuốc / hóa đơn",
-  "medicines.cabinet.guided.file.description": "Kéo thả ảnh/PDF đơn thuốc vào đây hoặc bấm Chọn file.",
+  "medicines.cabinet.guided.file.description":
+    "Kéo thả ảnh/PDF đơn thuốc vào đây hoặc bấm Chọn file.",
   "medicines.cabinet.guided.file.back": "Quay lại tủ thuốc",
   "medicines.cabinet.guided.file.openSafety": "Sang kiểm tra tương tác",
-  "medicines.cabinet.guided.file.dropTitle": "Kéo thả ảnh/PDF đơn thuốc vào đây",
-  "medicines.cabinet.guided.file.fileTypes": "Hỗ trợ ảnh đơn thuốc, hóa đơn thuốc hoặc file PDF.",
+  "medicines.cabinet.guided.file.dropTitle":
+    "Kéo thả ảnh/PDF đơn thuốc vào đây",
+  "medicines.cabinet.guided.file.fileTypes":
+    "Hỗ trợ ảnh đơn thuốc, hóa đơn thuốc hoặc file PDF.",
   "medicines.cabinet.guided.file.selected": "Đã chọn: {filename}",
-  "medicines.cabinet.guided.file.required": "Chọn file ảnh/PDF trước để quét OCR.",
+  "medicines.cabinet.guided.file.required":
+    "Chọn file ảnh/PDF trước để quét OCR.",
   "medicines.cabinet.guided.file.choose": "Chọn file",
   "medicines.cabinet.guided.file.scan": "Nhận diện thuốc từ file",
   "medicines.cabinet.guided.scanning": "Đang nhận diện...",
   "medicines.cabinet.guided.paste.title": "Nhập hoặc dán nội dung thuốc",
-  "medicines.cabinet.guided.paste.description": "Nếu OCR ngoài đã có sẵn nội dung, bạn có thể dán vào đây để nhận diện nhanh hơn.",
-  "medicines.cabinet.guided.paste.placeholder": "Ví dụ:\\naspirin 81mg\\nmetformin 500mg\\namlodipine 5mg",
+  "medicines.cabinet.guided.paste.description":
+    "Nếu OCR ngoài đã có sẵn nội dung, bạn có thể dán vào đây để nhận diện nhanh hơn.",
+  "medicines.cabinet.guided.paste.placeholder":
+    "Ví dụ:\\naspirin 81mg\\nmetformin 500mg\\namlodipine 5mg",
   "medicines.cabinet.guided.paste.scan": "Nhận diện từ nội dung đã dán",
-  "medicines.cabinet.guided.paste.required": "Dán hoặc nhập nội dung trước để tiếp tục.",
-  "medicines.cabinet.guided.notice.fileRequired": "Vui lòng chọn file ảnh/PDF đơn thuốc trước khi quét.",
-  "medicines.cabinet.guided.notice.fileDetected": "Nhận diện được {count} thuốc từ file.",
-  "medicines.cabinet.guided.notice.fileNotDetected": "Không nhận diện được thuốc từ file.",
-  "medicines.cabinet.guided.notice.fileScanError": "Không thể nhận diện thuốc từ file.",
-  "medicines.cabinet.guided.notice.textRequired": "Vui lòng dán hoặc nhập nội dung thuốc trước khi nhận diện.",
-  "medicines.cabinet.guided.notice.textDetected": "Nhận diện được {count} thuốc từ nội dung đã dán.",
-  "medicines.cabinet.guided.notice.textNotDetected": "Không nhận diện được thuốc từ nội dung đã dán.",
-  "medicines.cabinet.guided.notice.textScanError": "Không thể nhận diện thuốc từ nội dung đã dán.",
-  "medicines.cabinet.guided.notice.confirmBeforeImport": "Cần xác nhận các thuốc nhận diện chưa chắc chắn trước khi nhập.",
-  "medicines.cabinet.guided.notice.imported": "Đã thêm {count} thuốc vào tủ thuốc.",
-  "medicines.cabinet.guided.notice.importError": "Không thể nhập dữ liệu vào tủ thuốc.",
+  "medicines.cabinet.guided.paste.required":
+    "Dán hoặc nhập nội dung trước để tiếp tục.",
+  "medicines.cabinet.guided.notice.fileRequired":
+    "Vui lòng chọn file ảnh/PDF đơn thuốc trước khi quét.",
+  "medicines.cabinet.guided.notice.fileDetected":
+    "Nhận diện được {count} thuốc từ file.",
+  "medicines.cabinet.guided.notice.fileNotDetected":
+    "Không nhận diện được thuốc từ file.",
+  "medicines.cabinet.guided.notice.fileScanError":
+    "Không thể nhận diện thuốc từ file.",
+  "medicines.cabinet.guided.notice.textRequired":
+    "Vui lòng dán hoặc nhập nội dung thuốc trước khi nhận diện.",
+  "medicines.cabinet.guided.notice.textDetected":
+    "Nhận diện được {count} thuốc từ nội dung đã dán.",
+  "medicines.cabinet.guided.notice.textNotDetected":
+    "Không nhận diện được thuốc từ nội dung đã dán.",
+  "medicines.cabinet.guided.notice.textScanError":
+    "Không thể nhận diện thuốc từ nội dung đã dán.",
+  "medicines.cabinet.guided.notice.confirmBeforeImport":
+    "Cần xác nhận các thuốc nhận diện chưa chắc chắn trước khi nhập.",
+  "medicines.cabinet.guided.notice.imported":
+    "Đã thêm {count} thuốc vào tủ thuốc.",
+  "medicines.cabinet.guided.notice.importError":
+    "Không thể nhập dữ liệu vào tủ thuốc.",
   "medicines.cabinet.guided.detections.title": "Danh sách thuốc nhận diện",
   "medicines.cabinet.guided.detections.selected": "Đã chọn {selected}/{total}",
   "medicines.cabinet.guided.detections.selectAll": "Chọn tất cả",
   "medicines.cabinet.guided.detections.clearAll": "Bỏ chọn tất cả",
-  "medicines.cabinet.guided.detections.confirmAll": "Xác nhận các thuốc cần kiểm tra lại",
-  "medicines.cabinet.guided.detections.noReview": "Không có thuốc nhận diện chưa chắc chắn cần duyệt thêm.",
-  "medicines.cabinet.guided.detections.reviewRemaining": "Còn {pending}/{total} thuốc cần kiểm tra lại trước khi nhập.",
+  "medicines.cabinet.guided.detections.confirmAll":
+    "Xác nhận các thuốc cần kiểm tra lại",
+  "medicines.cabinet.guided.detections.noReview":
+    "Không có thuốc nhận diện chưa chắc chắn cần duyệt thêm.",
+  "medicines.cabinet.guided.detections.reviewRemaining":
+    "Còn {pending}/{total} thuốc cần kiểm tra lại trước khi nhập.",
   "medicines.cabinet.guided.notAvailable": "Chưa có",
   "medicines.cabinet.guided.detections.dose": "Liều: {dose}",
   "medicines.cabinet.guided.detections.brand": "Tên thương mại: {brand}",
@@ -1179,15 +1808,19 @@ const VI_MESSAGES = {
   "medicines.cabinet.guided.normalization.candidate": "Cần kiểm tra lại",
   "medicines.cabinet.guided.normalization.fallback": "Độ khớp tay: thấp",
   "medicines.cabinet.guided.normalization.unknown": "Chưa rõ",
-  "medicines.cabinet.guided.detections.confirmOne": "Tôi xác nhận thuốc OCR này đúng trước khi nhập.",
+  "medicines.cabinet.guided.detections.confirmOne":
+    "Tôi xác nhận thuốc OCR này đúng trước khi nhập.",
   "medicines.cabinet.guided.detections.importing": "Đang thêm vào tủ...",
   "medicines.cabinet.guided.detections.import": "Thêm {count} thuốc vào tủ",
-  "medicines.cabinet.guided.detections.selectRequired": "Chọn ít nhất 1 thuốc nhận diện để thêm vào tủ.",
-  "medicines.cabinet.guided.detections.confirmRequired": "Xác nhận các thuốc cần kiểm tra lại trước khi thêm vào tủ.",
+  "medicines.cabinet.guided.detections.selectRequired":
+    "Chọn ít nhất 1 thuốc nhận diện để thêm vào tủ.",
+  "medicines.cabinet.guided.detections.confirmRequired":
+    "Xác nhận các thuốc cần kiểm tra lại trước khi thêm vào tủ.",
   "medicines.cabinet.guided.detections.processing": "Đang xử lý, vui lòng chờ.",
   "medicines.cabinet.addManual.step": "Bước 3",
   "medicines.cabinet.addManual.title": "Nhập thuốc thủ công",
-  "medicines.cabinet.addManual.description": "Dùng khi đơn thuốc khó OCR hoặc bạn muốn thêm từng thuốc một.",
+  "medicines.cabinet.addManual.description":
+    "Dùng khi đơn thuốc khó OCR hoặc bạn muốn thêm từng thuốc một.",
   "medicines.cabinet.addManual.optional": "Tùy chọn",
   "medicines.cabinet.addManual.name": "Tên thuốc *",
   "medicines.cabinet.addManual.brand": "Tên thương mại",
@@ -1203,30 +1836,43 @@ const VI_MESSAGES = {
   "medicines.cabinet.addManual.quantityInput": "Số lượng thuốc",
   "medicines.cabinet.addManual.submit": "Thêm một thuốc vào tủ",
   "medicines.cabinet.addManual.saving": "Đang thêm…",
-  "medicines.cabinet.addManual.requirements": "Nhập ít nhất tên thuốc và liều dùng để thêm vào tủ.",
+  "medicines.cabinet.addManual.requirements":
+    "Nhập ít nhất tên thuốc và liều dùng để thêm vào tủ.",
   "medicines.safety.module": "Mô-đun an toàn thuốc",
   "medicines.safety.title": "Kiểm tra tương tác trong tủ thuốc",
   "medicines.safety.back": "Về tủ thuốc",
   "medicines.safety.inCabinet": "Thuốc đang có trong tủ",
   "medicines.safety.count": "{count} thuốc",
   "medicines.safety.loading": "Đang tải danh mục thuốc…",
-  "medicines.safety.loadError": "Không thể tải tủ thuốc lúc này. Vui lòng thử lại.",
-  "medicines.safety.empty": "Tủ thuốc chưa có dữ liệu. Vui lòng thêm thuốc trước khi kiểm tra tương tác.",
+  "medicines.safety.loadError":
+    "Không thể tải tủ thuốc lúc này. Vui lòng thử lại.",
+  "medicines.safety.empty":
+    "Tủ thuốc chưa có dữ liệu. Vui lòng thêm thuốc trước khi kiểm tra tương tác.",
   "medicines.safety.noDose": "Chưa có liều",
   "medicines.safety.setup": "Thiết lập kiểm tra",
-  "medicines.safety.setupDescription": "Có thể thêm dị ứng để tăng độ chính xác cảnh báo.",
+  "medicines.safety.setupDescription":
+    "Có thể thêm dị ứng để tăng độ chính xác cảnh báo.",
   "medicines.safety.freeText": "Hoặc dán danh sách thuốc để kiểm tra một lần",
-  "medicines.safety.freeTextPlaceholder": "Mỗi thuốc một dòng, ví dụ:\nWarfarin 5 mg\nIbuprofen 400 mg",
-  "medicines.safety.freeTextHint": "Danh sách này chỉ dùng cho lần kiểm tra này, không tự lưu vào hồ sơ. CLARA sẽ yêu cầu sửa tên nếu chưa xác định chắc chắn.",
-  "medicines.safety.freeTextNeedsTwo": "Nhập ít nhất {count} thuốc, mỗi thuốc một dòng hoặc cách nhau bằng dấu phẩy.",
-  "medicines.safety.freeTextClarificationTitle": "Cần làm rõ tên thuốc trước khi kiểm tra",
-  "medicines.safety.freeTextClarificationDescription": "CLARA chưa đưa ra kết luận tương tác. Kiểm tra lại tên/hoạt chất trên nhãn, sửa danh sách rồi thử lại.",
+  "medicines.safety.freeTextPlaceholder":
+    "Mỗi thuốc một dòng, ví dụ:\nWarfarin 5 mg\nIbuprofen 400 mg",
+  "medicines.safety.freeTextHint":
+    "Danh sách này chỉ dùng cho lần kiểm tra này, không tự lưu vào hồ sơ. CLARA sẽ yêu cầu sửa tên nếu chưa xác định chắc chắn.",
+  "medicines.safety.freeTextNeedsTwo":
+    "Nhập ít nhất {count} thuốc, mỗi thuốc một dòng hoặc cách nhau bằng dấu phẩy.",
+  "medicines.safety.freeTextClarificationTitle":
+    "Cần làm rõ tên thuốc trước khi kiểm tra",
+  "medicines.safety.freeTextClarificationDescription":
+    "CLARA chưa đưa ra kết luận tương tác. Kiểm tra lại tên/hoạt chất trên nhãn, sửa danh sách rồi thử lại.",
   "medicines.safety.allergies": "Dị ứng",
-  "medicines.safety.allergyPlaceholder": "Mỗi dòng một dị ứng hoặc phân tách bằng dấu phẩy",
+  "medicines.safety.allergyPlaceholder":
+    "Mỗi dòng một dị ứng hoặc phân tách bằng dấu phẩy",
   "medicines.safety.checking": "Đang kiểm tra tương tác…",
-  "medicines.safety.needsTwo": "Cần ít nhất {count} thuốc trong tủ để kiểm tra tương tác. Vui lòng thêm thuốc.",
-  "medicines.safety.cachedResult": "Đang hiển thị kết quả lưu gần nhất ({date}). Kết quả có thể đã cũ.",
-  "medicines.safety.cachedResultNoDate": "Đang hiển thị kết quả lưu gần nhất. Kết quả có thể đã cũ.",
+  "medicines.safety.needsTwo":
+    "Cần ít nhất {count} thuốc trong tủ để kiểm tra tương tác. Vui lòng thêm thuốc.",
+  "medicines.safety.cachedResult":
+    "Đang hiển thị kết quả lưu gần nhất ({date}). Kết quả có thể đã cũ.",
+  "medicines.safety.cachedResultNoDate":
+    "Đang hiển thị kết quả lưu gần nhất. Kết quả có thể đã cũ.",
   "medicines.safety.offline": "Ngoại tuyến / không phải thời gian thực",
   "medicines.safety.overview": "Kết quả tổng quan",
   "medicines.safety.risk": "Mức rủi ro: {risk}",
@@ -1241,16 +1887,22 @@ const VI_MESSAGES = {
   "medicines.safety.nextSteps": "Bạn nên làm gì tiếp theo",
   "medicines.safety.uncertainty": "Phần chưa chắc chắn",
   "medicines.safety.safetyNote": "Lưu ý an toàn",
-  "medicines.safety.drugbankVerified": "Đã đối chiếu bằng DrugBank được xác minh{version}.",
+  "medicines.safety.drugbankVerified":
+    "Đã đối chiếu bằng DrugBank được xác minh{version}.",
   "medicines.safety.drugbankVersion": " (phiên bản {version})",
-  "medicines.safety.checkUnavailable": "Chưa thể hoàn tất kết luận tương tác từ nguồn bắt buộc. Đây không phải kết luận không có tương tác.",
-  "medicines.safety.nameAmbiguity": "Một hoặc nhiều tên thuốc chưa được nhận diện đủ để đối chiếu tất cả cặp thuốc. Hãy kiểm tra lại tên thuốc hoặc hoạt chất rồi thử lại.",
+  "medicines.safety.checkUnavailable":
+    "Chưa thể hoàn tất kết luận tương tác từ nguồn bắt buộc. Đây không phải kết luận không có tương tác.",
+  "medicines.safety.nameAmbiguity":
+    "Một hoặc nhiều tên thuốc chưa được nhận diện đủ để đối chiếu tất cả cặp thuốc. Hãy kiểm tra lại tên thuốc hoặc hoạt chất rồi thử lại.",
   "medicines.safety.clarification.title": "Xác nhận thuốc trước khi kiểm tra",
-  "medicines.safety.clarification.description": "CLARA chưa kiểm tra tương tác vì cần xác nhận đúng thuốc trong nguồn DrugBank. Chọn thuốc phù hợp hoặc sửa tên thuốc trong tủ thuốc.",
+  "medicines.safety.clarification.description":
+    "CLARA chưa kiểm tra tương tác vì cần xác nhận đúng thuốc trong nguồn DrugBank. Chọn thuốc phù hợp hoặc sửa tên thuốc trong tủ thuốc.",
   "medicines.safety.clarification.choose": "Thuốc nào đúng?",
-  "medicines.safety.clarification.noCandidate": "Không tìm thấy lựa chọn đáng tin cậy. Hãy kiểm tra hoặc sửa tên/hoạt chất trên nhãn thuốc.",
+  "medicines.safety.clarification.noCandidate":
+    "Không tìm thấy lựa chọn đáng tin cậy. Hãy kiểm tra hoặc sửa tên/hoạt chất trên nhãn thuốc.",
   "medicines.safety.clarification.editCabinet": "Sửa tủ thuốc",
-  "medicines.safety.clarification.selectRequired": "Chọn hoặc sửa từng thuốc cần xác nhận trước khi tiếp tục kiểm tra.",
+  "medicines.safety.clarification.selectRequired":
+    "Chọn hoặc sửa từng thuốc cần xác nhận trước khi tiếp tục kiểm tra.",
   "medicines.safety.clarification.continue": "Tiếp tục kiểm tra tương tác",
   "medicines.safety.sources": "Nguồn tham khảo",
   "medicines.safety.noSources": "Chưa có dữ liệu nguồn tham khảo.",
@@ -1279,10 +1931,14 @@ const VI_MESSAGES = {
   "medicineAdd.title.details": "Ghi lại thông tin trên nhãn",
   "medicineAdd.title.schedule": "Thuốc được dùng khi nào?",
   "medicineAdd.title.review": "Kiểm tra trước khi lưu",
-  "medicineAdd.description.identity": "Nhập đúng tên trên nhãn hoặc đơn của bạn.",
-  "medicineAdd.description.details": "Liều, đường dùng và dạng bào chế đều có thể bỏ qua nếu bạn chưa rõ.",
-  "medicineAdd.description.schedule": "Ghi lại lịch dùng từ nhãn hoặc đơn; CLARA không đề xuất liều hay lịch dùng.",
-  "medicineAdd.description.review": "Xác nhận thông tin bạn đã nhập. Bạn luôn có thể chỉnh sửa bản ghi sau đó.",
+  "medicineAdd.description.identity":
+    "Nhập đúng tên trên nhãn hoặc đơn của bạn.",
+  "medicineAdd.description.details":
+    "Liều, đường dùng và dạng bào chế đều có thể bỏ qua nếu bạn chưa rõ.",
+  "medicineAdd.description.schedule":
+    "Ghi lại lịch dùng từ nhãn hoặc đơn; CLARA không đề xuất liều hay lịch dùng.",
+  "medicineAdd.description.review":
+    "Xác nhận thông tin bạn đã nhập. Bạn luôn có thể chỉnh sửa bản ghi sau đó.",
   "medicineAdd.field.name": "Tên thuốc trên nhãn hoặc đơn",
   "medicineAdd.field.dose": "Liều ghi trên nhãn",
   "medicineAdd.field.route": "Đường dùng",
@@ -1295,45 +1951,56 @@ const VI_MESSAGES = {
   "medicineAdd.placeholder.form": "Ví dụ: viên nén",
   "medicineAdd.placeholder.schedule": "Ví dụ: buổi tối",
   "medicineAdd.placeholder.drugbankId": "Nếu bạn đã có",
-  "medicineAdd.validation.name": "Nhập ít nhất 2 ký tự từ nhãn hoặc đơn của bạn.",
+  "medicineAdd.validation.name":
+    "Nhập ít nhất 2 ký tự từ nhãn hoặc đơn của bạn.",
   "medicineAdd.backToList": "Quay lại thuốc của tôi",
   "medicineAdd.back": "Quay lại",
   "medicineAdd.saving": "Đang lưu thuốc đã xác nhận…",
-  "medicineAdd.saveFailed": "Chưa thể lưu thuốc lúc này. Thông tin trên trang vẫn giữ nguyên để bạn thử lại.",
+  "medicineAdd.saveFailed":
+    "Chưa thể lưu thuốc lúc này. Thông tin trên trang vẫn giữ nguyên để bạn thử lại.",
   "medicineAdd.review.title": "Thuốc đã xác nhận",
-  "medicineAdd.review.description": "CLARA lưu đúng nội dung bạn xác nhận, không tự suy đoán thuốc hoặc hướng dẫn dùng thuốc.",
+  "medicineAdd.review.description":
+    "CLARA lưu đúng nội dung bạn xác nhận, không tự suy đoán thuốc hoặc hướng dẫn dùng thuốc.",
   "medicineAdd.review.editName": "Sửa tên",
   "medicineAdd.review.empty": "Chưa nhập",
   "medicineAdd.save": "Lưu thuốc đã xác nhận",
-  "medicineAdd.safetyNote": "Đây là bản ghi cá nhân, không thay thế đơn thuốc, tư vấn dược sĩ, bác sĩ hoặc chăm sóc khẩn cấp. Nội dung chỉ ở trong phiên này cho đến khi bạn xác nhận lưu.",
+  "medicineAdd.safetyNote":
+    "Đây là bản ghi cá nhân, không thay thế đơn thuốc, tư vấn dược sĩ, bác sĩ hoặc chăm sóc khẩn cấp. Nội dung chỉ ở trong phiên này cho đến khi bạn xác nhận lưu.",
   "medicines.consent.loading": "Đang kiểm tra điều khoản sử dụng y tế...",
   "medicines.consent.checkError": "Không thể kiểm tra đồng thuận y tế.",
-  "medicines.consent.acknowledgementRequired": "Vui lòng xác nhận trước khi tiếp tục.",
-  "medicines.consent.saveIncomplete": "Đã lưu xác nhận nhưng chưa lấy lại được trạng thái mới. Vui lòng kiểm tra lại.",
+  "medicines.consent.acknowledgementRequired":
+    "Vui lòng xác nhận trước khi tiếp tục.",
+  "medicines.consent.saveIncomplete":
+    "Đã lưu xác nhận nhưng chưa lấy lại được trạng thái mới. Vui lòng kiểm tra lại.",
   "medicines.consent.saveError": "Không thể lưu xác nhận đồng thuận.",
   "medicines.consent.requiredStep": "Bước bắt buộc trước khi dùng",
   "medicines.consent.title": "Tuyên bố miễn trừ trách nhiệm y tế",
-  "medicines.consent.description": "CLARA chỉ hỗ trợ cảnh báo an toàn thuốc và không thay thế bác sĩ. Không sử dụng ứng dụng để tự chẩn đoán, tự kê đơn hoặc tự điều chỉnh liều dùng.",
+  "medicines.consent.description":
+    "CLARA chỉ hỗ trợ cảnh báo an toàn thuốc và không thay thế bác sĩ. Không sử dụng ứng dụng để tự chẩn đoán, tự kê đơn hoặc tự điều chỉnh liều dùng.",
   "medicines.consent.readFull": "Xem đầy đủ tại",
   "medicines.consent.consentLink": "Đồng thuận sử dụng y tế",
   "medicines.consent.and": "và",
   "medicines.consent.privacyLink": "Chính sách quyền riêng tư",
   "medicines.consent.version": "Phiên bản điều khoản hiện tại",
-  "medicines.consent.acknowledgement": "Tôi đã đọc, hiểu và đồng ý với tuyên bố miễn trừ trách nhiệm y tế của CLARA.",
+  "medicines.consent.acknowledgement":
+    "Tôi đã đọc, hiểu và đồng ý với tuyên bố miễn trừ trách nhiệm y tế của CLARA.",
   "medicines.consent.saving": "Đang lưu xác nhận...",
   "medicines.consent.accept": "Đồng ý và tiếp tục",
-  "medicines.consent.retryNotice": "Nếu mạng hoặc phiên đăng nhập vừa thay đổi, vui lòng kiểm tra lại trạng thái đồng thuận.",
+  "medicines.consent.retryNotice":
+    "Nếu mạng hoặc phiên đăng nhập vừa thay đổi, vui lòng kiểm tra lại trạng thái đồng thuận.",
   "medicines.consent.retry": "Kiểm tra lại trạng thái đồng thuận",
-  "medicines.consent.acceptedTitle": "Bạn đã đồng ý điều khoản sử dụng y tế của CLARA",
+  "medicines.consent.acceptedTitle":
+    "Bạn đã đồng ý điều khoản sử dụng y tế của CLARA",
   "medicines.consent.acceptedAt": "Đã xác nhận lúc {date}",
   "medicines.consent.acceptedReady": "Bạn có thể bắt đầu sử dụng tủ thuốc.",
   "visits.loadError": "Chưa thể tải lịch khám.",
   "visits.loadVisitDataError": "Chưa thể tải dữ liệu buổi khám.",
-  "visits.createError": "Chưa thể tạo buổi khám.",
   "visits.answerRequired": "Hãy trả lời ngắn, hoặc chọn “Bỏ qua” / “Chưa rõ”.",
   "visits.answerError": "Chưa thể lưu câu trả lời.",
-  "visits.documentRequired": "Hãy chọn tệp, dán liên kết hoặc đặt tên cho ghi chú.",
-  "visits.documentSaveError": "Chưa thể lưu tài liệu. CLARA chỉ lưu nội dung bạn chọn.",
+  "visits.documentRequired":
+    "Hãy chọn tệp, dán liên kết hoặc đặt tên cho ghi chú.",
+  "visits.documentSaveError":
+    "Chưa thể lưu tài liệu. CLARA chỉ lưu nội dung bạn chọn.",
   "visits.documentPermissionError": "Chưa thể cập nhật quyền dùng tài liệu.",
   "visits.extractError": "Chưa thể kiểm tra tài liệu.",
   "visits.confirmError": "Chưa thể xác nhận các mục đã chọn.",
@@ -1343,34 +2010,50 @@ const VI_MESSAGES = {
   "visits.shareCreateError": "Chưa thể tạo liên kết chia sẻ.",
   "visits.shareRevokeError": "Chưa thể thu hồi liên kết.",
   "visits.scribeConsentError": "Chưa thể cập nhật đồng ý ghi âm.",
-  "visits.initialQuestionWithGoal": "Điều chính bạn muốn được hỗ trợ trong buổi khám là gì?",
-  "visits.initialQuestionWithGoalReason": "Giúp bác sĩ và bạn bắt đầu đúng trọng tâm.",
-  "visits.initialQuestionWithoutGoal": "Điều gì sẽ giúp buổi khám này hữu ích nhất với bạn?",
-  "visits.initialQuestionWithoutGoalReason": "Giúp buổi khám tập trung vào điều quan trọng với bạn.",
+  "visits.initialQuestionWithGoal":
+    "Điều chính bạn muốn được hỗ trợ trong buổi khám là gì?",
+  "visits.initialQuestionWithGoalReason":
+    "Giúp bác sĩ và bạn bắt đầu đúng trọng tâm.",
+  "visits.initialQuestionWithoutGoal":
+    "Điều gì sẽ giúp buổi khám này hữu ích nhất với bạn?",
+  "visits.initialQuestionWithoutGoalReason":
+    "Giúp buổi khám tập trung vào điều quan trọng với bạn.",
   "visits.extractedItem": "Mục trích xuất {index}",
   "visits.title": "Chuẩn bị buổi khám",
-  "visits.description": "Chuẩn bị từng bước, chỉ thêm và chia sẻ điều bạn tự chọn.",
+  "visits.description":
+    "Chuẩn bị từng bước, chỉ thêm và chia sẻ điều bạn tự chọn.",
+  "visits.stepsLabel": "Các bước chuẩn bị buổi khám",
+  "visits.step.concerns": "Triệu chứng",
+  "visits.step.records": "Thuốc và tài liệu",
+  "visits.step.questions": "Câu hỏi",
+  "visits.step.review": "Kiểm tra và chia sẻ",
   "visits.listEyebrow": "Buổi khám",
   "visits.choose": "Chọn một buổi",
   "visits.noScheduledTime": "Chưa đặt thời gian",
   "visits.emptyTitle": "Chưa có buổi khám",
-  "visits.emptyDescription": "Tạo một buổi khám theo từng bước ngắn để bắt đầu.",
+  "visits.emptyDescription":
+    "Tạo một buổi khám theo từng bước ngắn để bắt đầu.",
   "visits.controlTitle": "Bạn luôn kiểm soát",
-  "visits.controlDescription": "Không có tài liệu, câu trả lời hay kế hoạch nào tự vào hồ sơ hoặc tự được chia sẻ.",
+  "visits.controlDescription":
+    "Không có tài liệu, câu trả lời hay kế hoạch nào tự vào hồ sơ hoặc tự được chia sẻ.",
   "visits.startTitle": "Tạo buổi khám để bắt đầu",
-  "visits.startDescription": "CLARA hỏi từng câu ngắn và chỉ lưu điều bạn chọn.",
+  "visits.startDescription":
+    "CLARA hỏi từng câu ngắn và chỉ lưu điều bạn chọn.",
   "visits.stepOne": "Bước 1 · Chuẩn bị nhanh",
-  "visits.oneQuestionAtATime": "Mỗi lần chỉ một câu. Bạn có thể bỏ qua hoặc nói “chưa rõ”.",
+  "visits.oneQuestionAtATime":
+    "Mỗi lần chỉ một câu. Bạn có thể bỏ qua hoặc nói “chưa rõ”.",
   "visits.questionCount": "{answered}/{total} câu",
   "visits.startShortQuestions": "Bắt đầu 3–4 câu ngắn",
   "visits.answerPlaceholder": "Viết ngắn theo cách của bạn",
   "visits.saveAndContinue": "Lưu và tiếp tục",
   "visits.skip": "Bỏ qua",
   "visits.unknown": "Chưa rõ",
-  "visits.quickPrepComplete": "Đã xong phần chuẩn bị nhanh. Bạn có thể thêm câu hỏi hoặc tài liệu bên dưới.",
+  "visits.quickPrepComplete":
+    "Đã xong phần chuẩn bị nhanh. Bạn có thể thêm câu hỏi hoặc tài liệu bên dưới.",
   "visits.stepTwo": "Bước 2 · Tài liệu bạn chọn",
   "visits.addDocument": "Thêm tài liệu hoặc liên kết",
-  "visits.documentPrivacy": "CLARA chỉ lưu nội dung văn bản bạn chọn. Liên kết không được tự mở, đọc hay chia sẻ.",
+  "visits.documentPrivacy":
+    "CLARA chỉ lưu nội dung văn bản bạn chọn. Liên kết không được tự mở, đọc hay chia sẻ.",
   "visits.documentName": "Tên để bạn dễ nhận ra",
   "visits.textFileOptional": "Tệp văn bản (tuỳ chọn)",
   "visits.pasteContent": "Hoặc dán nội dung",
@@ -1387,8 +2070,10 @@ const VI_MESSAGES = {
   "visits.stepThree": "Bước 3 · Rà soát có căn cứ",
   "visits.confirmBeforeTasks": "Xác nhận trước khi tạo việc cần làm",
   "visits.noPlanTitle": "CLARA chưa tạo kế hoạch từ tài liệu này.",
-  "visits.noPlanReason": "Không có mục nào đủ căn cứ để đề xuất. Hãy xem lại với bác sĩ.",
-  "visits.draftGuidance": "Chỉ chọn chỉ dẫn của bác sĩ có đoạn nguồn hiển thị rõ ràng. Diễn giải AI chỉ để tham khảo và không thể tạo việc cần làm.",
+  "visits.noPlanReason":
+    "Không có mục nào đủ căn cứ để đề xuất. Hãy xem lại với bác sĩ.",
+  "visits.draftGuidance":
+    "Chỉ chọn chỉ dẫn của bác sĩ có đoạn nguồn hiển thị rõ ràng. Diễn giải AI chỉ để tham khảo và không thể tạo việc cần làm.",
   "visits.clinicianInstruction": "Chỉ dẫn được trích xuất · cần bạn xác nhận",
   "visits.aiInterpretation": "Diễn giải AI · không tạo việc cần làm",
   "visits.source": "Nguồn: “{source}”",
@@ -1398,7 +2083,8 @@ const VI_MESSAGES = {
   "visits.withdrawDraft": "Rút bản nháp",
   "visits.stepFour": "Bước 4 · Visit Pack",
   "visits.selectAndApprove": "Tự chọn và duyệt trước khi chia sẻ",
-  "visits.packPrivacy": "Chỉ các mục bạn đánh dấu được chụp vào phiên bản gói; không có chia sẻ ngầm.",
+  "visits.packPrivacy":
+    "Chỉ các mục bạn đánh dấu được chụp vào phiên bản gói; không có chia sẻ ngầm.",
   "visits.createNewVersion": "Tạo bản mới",
   "visits.createAndApprove": "Tạo và duyệt {count} mục",
   "visits.groupConcerns": "Điều cần hỏi",
@@ -1411,11 +2097,6 @@ const VI_MESSAGES = {
   "visits.createShare": "Tạo liên kết 7 ngày",
   "visits.revokeShare": "Thu hồi liên kết",
   "visits.createVisit": "Tạo buổi khám",
-  "visits.visitName": "Tên buổi khám",
-  "visits.visitNameExample": "Ví dụ: Tái khám tim mạch",
-  "visits.goalOptional": "Mục tiêu (tuỳ chọn)",
-  "visits.scheduledTime": "Thời gian dự kiến",
-  "visits.saveVisit": "Lưu buổi khám",
   "visits.concernTitle": "Điều cần hỏi bác sĩ",
   "visits.concernPlaceholder": "Điều gì khiến bạn băn khoăn nhất?",
   "visits.priorityRoutine": "Khi thuận tiện",
@@ -1423,11 +2104,13 @@ const VI_MESSAGES = {
   "visits.priorityUrgent": "Ưu tiên trao đổi",
   "visits.saveQuestion": "Lưu câu hỏi",
   "visits.scribeTitle": "Ghi âm Scribe",
-  "visits.scribeDescription": "Đồng ý chỉ áp dụng cho buổi đang chọn và có thể rút lại ngay.",
+  "visits.scribeDescription":
+    "Đồng ý chỉ áp dụng cho buổi đang chọn và có thể rút lại ngay.",
   "visits.revokeScribeConsent": "Rút lại đồng ý ghi âm",
   "visits.grantScribeConsent": "Đồng ý ghi âm buổi này",
   "visits.newVisitTitle": "Bắt đầu bằng thông tin quan trọng nhất",
-  "visits.newVisitDescription": "Tạo buổi khám trong bốn bước ngắn. Bạn kiểm tra lại trước khi lưu.",
+  "visits.newVisitDescription":
+    "Tạo buổi khám trong bốn bước ngắn. Bạn kiểm tra lại trước khi lưu.",
   "visits.startNewVisit": "Tạo buổi khám mới",
   "visitCreate.eyebrow": "Chuẩn bị buổi khám",
   "visitCreate.step.name": "Tên buổi khám",
@@ -1435,56 +2118,77 @@ const VI_MESSAGES = {
   "visitCreate.step.time": "Thời gian",
   "visitCreate.step.review": "Kiểm tra",
   "visitCreate.title.name": "Bạn gọi buổi khám này là gì?",
-  "visitCreate.title.purpose": "Điều gì quan trọng với bạn trong buổi khám này?",
+  "visitCreate.title.purpose":
+    "Điều gì quan trọng với bạn trong buổi khám này?",
   "visitCreate.title.time": "Buổi khám dự kiến khi nào?",
   "visitCreate.title.review": "Kiểm tra trước khi lưu",
   "visitCreate.description.name": "Dùng tên ngắn để bạn dễ tìm lại sau này.",
-  "visitCreate.description.purpose": "Tuỳ chọn. Viết theo cách của bạn; CLARA sẽ dùng điều này để bắt đầu phần chuẩn bị nhanh.",
-  "visitCreate.description.time": "Tuỳ chọn. Bạn có thể thêm hoặc đổi thời gian sau.",
-  "visitCreate.description.review": "CLARA chỉ lưu thông tin bạn xác nhận. Chưa có nội dung nào được chia sẻ.",
+  "visitCreate.description.purpose":
+    "Tuỳ chọn. Viết theo cách của bạn; CLARA sẽ dùng điều này để bắt đầu phần chuẩn bị nhanh.",
+  "visitCreate.description.time":
+    "Tuỳ chọn. Bạn có thể thêm hoặc đổi thời gian sau.",
+  "visitCreate.description.review":
+    "CLARA chỉ lưu thông tin bạn xác nhận. Chưa có nội dung nào được chia sẻ.",
   "visitCreate.field.name": "Tên buổi khám",
   "visitCreate.field.purpose": "Điều bạn muốn chuẩn bị",
   "visitCreate.field.time": "Thời gian dự kiến",
   "visitCreate.placeholder.name": "Ví dụ: Tái khám tim mạch",
-  "visitCreate.placeholder.purpose": "Ví dụ: Hỏi về kết quả xét nghiệm và thuốc đang dùng",
-  "visitCreate.validation.name": "Nhập ít nhất 2 ký tự để bạn có thể nhận ra buổi khám này.",
+  "visitCreate.placeholder.purpose":
+    "Ví dụ: Hỏi về kết quả xét nghiệm và thuốc đang dùng",
+  "visitCreate.validation.name":
+    "Nhập ít nhất 2 ký tự để bạn có thể nhận ra buổi khám này.",
   "visitCreate.cancel": "Quay lại lịch khám",
   "visitCreate.back": "Quay lại",
   "visitCreate.skip": "Bỏ qua lúc này",
   "visitCreate.saving": "Đang lưu buổi khám…",
-  "visitCreate.saveFailed": "Chưa thể lưu buổi khám. Thông tin trên trang vẫn giữ nguyên để bạn thử lại.",
+  "visitCreate.saveFailed":
+    "Chưa thể lưu buổi khám. Thông tin trên trang vẫn giữ nguyên để bạn thử lại.",
   "visitCreate.review.title": "Buổi khám của bạn",
-  "visitCreate.review.description": "Bạn có thể chỉnh sửa trước khi lưu. Sau khi lưu, CLARA sẽ hỏi từng câu ngắn để hỗ trợ chuẩn bị.",
+  "visitCreate.review.description":
+    "Bạn có thể chỉnh sửa trước khi lưu. Sau khi lưu, CLARA sẽ hỏi từng câu ngắn để hỗ trợ chuẩn bị.",
   "visitCreate.review.edit": "Sửa thông tin",
   "visitCreate.review.empty": "Chưa nhập",
   "visitCreate.save": "Lưu và bắt đầu chuẩn bị",
-  "visitCreate.safetyNote": "Tạo buổi khám không đồng nghĩa với đặt lịch y tế. CLARA không thay thế bác sĩ hoặc dịch vụ khẩn cấp.",
+  "visitCreate.safetyNote":
+    "Tạo buổi khám không đồng nghĩa với đặt lịch y tế. CLARA không thay thế bác sĩ hoặc dịch vụ khẩn cấp.",
   "consent.title": "Trung tâm đồng thuận",
-  "consent.description": "Cấp hoặc rút đồng thuận cho từng mục đích xử lý dữ liệu cá nhân của bạn. Rút đồng thuận dễ dàng như khi cấp.",
+  "consent.description":
+    "Cấp hoặc rút đồng thuận cho từng mục đích xử lý dữ liệu cá nhân của bạn. Rút đồng thuận dễ dàng như khi cấp.",
   "consent.loading": "Đang tải trạng thái đồng thuận...",
   "consent.loadError": "Không thể tải trạng thái đồng thuận. Vui lòng thử lại.",
-  "consent.disabled": "Tính năng quản lý đồng thuận theo mục đích hiện chưa được bật cho môi trường này.",
+  "consent.disabled":
+    "Tính năng quản lý đồng thuận theo mục đích hiện chưa được bật cho môi trường này.",
   "consent.granted": "Đã đồng ý",
   "consent.notGranted": "Chưa đồng ý",
   "consent.locked": "Bắt buộc",
   "consent.saving": "Đang lưu...",
-  "consent.sensitiveNote": "Dữ liệu sức khỏe, truy vấn lâm sàng, PHR, tủ thuốc, dị ứng và bệnh nền được coi là dữ liệu cá nhân nhạy cảm theo Nghị định 13/2023/NĐ-CP và chỉ được xử lý theo đồng thuận của bạn.",
+  "consent.sensitiveNote":
+    "Dữ liệu sức khỏe, truy vấn lâm sàng, PHR, tủ thuốc, dị ứng và bệnh nền được coi là dữ liệu cá nhân nhạy cảm theo Nghị định 13/2023/NĐ-CP và chỉ được xử lý theo đồng thuận của bạn.",
   "consent.updatedAt": "Cập nhật",
   "consent.purpose.coreService.label": "Dịch vụ cốt lõi",
-  "consent.purpose.coreService.description": "Xử lý cần thiết để cung cấp chức năng cốt lõi của CLARA. Đây là căn cứ pháp lý của dịch vụ và không thể tắt khi đang dùng.",
+  "consent.purpose.coreService.description":
+    "Xử lý cần thiết để cung cấp chức năng cốt lõi của CLARA. Đây là căn cứ pháp lý của dịch vụ và không thể tắt khi đang dùng.",
   "consent.purpose.personalization.label": "Cá nhân hóa",
-  "consent.purpose.personalization.description": "Dùng hồ sơ sức khỏe cá nhân (PHR), tủ thuốc và dị ứng của bạn để cá nhân hóa câu trả lời và kiểm tra tương tác thuốc.",
+  "consent.purpose.personalization.description":
+    "Dùng hồ sơ sức khỏe cá nhân (PHR), tủ thuốc và dị ứng của bạn để cá nhân hóa câu trả lời và kiểm tra tương tác thuốc.",
   "consent.purpose.research.label": "Nghiên cứu",
-  "consent.purpose.research.description": "Cho phép dùng dữ liệu đã khử định danh để cải thiện chất lượng truy xuất và kiểm chứng bằng chứng.",
-  "consent.purpose.crossBorder.label": "Xử lý bởi mô hình bên thứ ba / xuyên biên giới",
-  "consent.purpose.crossBorder.description": "Cho phép gửi dữ liệu cần thiết tới mô hình ngôn ngữ ngoài lãnh thổ Việt Nam. Khi tắt, hệ thống dùng đường xử lý nội địa hoặc trả lời dự phòng nội bộ.",
+  "consent.purpose.research.description":
+    "Cho phép dùng dữ liệu đã khử định danh để cải thiện chất lượng truy xuất và kiểm chứng bằng chứng.",
+  "consent.purpose.crossBorder.label":
+    "Xử lý bởi mô hình bên thứ ba / xuyên biên giới",
+  "consent.purpose.crossBorder.description":
+    "Cho phép gửi dữ liệu cần thiết tới mô hình ngôn ngữ ngoài lãnh thổ Việt Nam. Khi tắt, hệ thống dùng đường xử lý nội địa hoặc trả lời dự phòng nội bộ.",
   "consent.purpose.sharing.label": "Chia sẻ",
-  "consent.purpose.sharing.description": "Cho phép tạo liên kết chia sẻ chỉ đọc cho hồ sơ và cuộc trò chuyện của bạn (ví dụ chia sẻ PHR với người chăm sóc hoặc bác sĩ).",
+  "consent.purpose.sharing.description":
+    "Cho phép tạo liên kết chia sẻ chỉ đọc cho hồ sơ và cuộc trò chuyện của bạn (ví dụ chia sẻ PHR với người chăm sóc hoặc bác sĩ).",
   "consent.purpose.aiTransparency.label": "Minh bạch AI",
-  "consent.purpose.aiTransparency.description": "Xác nhận thông báo minh bạch về hệ thống AI.",
+  "consent.purpose.aiTransparency.description":
+    "Xác nhận thông báo minh bạch về hệ thống AI.",
   "dataRights.title": "Dữ liệu của tôi",
-  "dataRights.description": "Thực hiện quyền của chủ thể dữ liệu theo Nghị định 13/2023/NĐ-CP: truy cập, chỉnh sửa, xóa, hạn chế xử lý và rút đồng thuận.",
-  "dataRights.disabled": "Tính năng yêu cầu quyền dữ liệu (DSAR) hiện chưa được bật cho môi trường này.",
+  "dataRights.description":
+    "Thực hiện quyền của chủ thể dữ liệu theo Nghị định 13/2023/NĐ-CP: truy cập, chỉnh sửa, xóa, hạn chế xử lý và rút đồng thuận.",
+  "dataRights.disabled":
+    "Tính năng yêu cầu quyền dữ liệu (DSAR) hiện chưa được bật cho môi trường này.",
   "dataRights.loading": "Đang tải các yêu cầu của bạn...",
   "dataRights.loadError": "Không thể tải danh sách yêu cầu. Vui lòng thử lại.",
   "dataRights.submit": "Gửi yêu cầu",
@@ -1493,20 +2197,27 @@ const VI_MESSAGES = {
   "dataRights.download": "Tải xuống",
   "dataRights.historyTitle": "Lịch sử yêu cầu",
   "dataRights.noHistory": "Bạn chưa gửi yêu cầu nào.",
-  "dataRights.retentionNote": "Lưu ý: một số bản ghi audit/tuân thủ không chứa dữ liệu định danh sẽ được giữ lại theo nghĩa vụ pháp lý ngay cả sau khi xóa.",
-  "dataRights.acknowledged": "Đã ghi nhận yêu cầu. Chúng tôi sẽ xử lý trong thời hạn luật định.",
+  "dataRights.retentionNote":
+    "Lưu ý: một số bản ghi audit/tuân thủ không chứa dữ liệu định danh sẽ được giữ lại theo nghĩa vụ pháp lý ngay cả sau khi xóa.",
+  "dataRights.acknowledged":
+    "Đã ghi nhận yêu cầu. Chúng tôi sẽ xử lý trong thời hạn luật định.",
   "dataRights.submittedAt": "Gửi lúc",
   "dataRights.dueAt": "Hạn xử lý",
   "dataRights.action.export.label": "Xuất dữ liệu",
-  "dataRights.action.export.description": "Tải về bản sao có thể đọc bằng máy của toàn bộ dữ liệu cá nhân CLARA đang lưu về bạn (hồ sơ, PHR, tủ thuốc, đồng thuận).",
+  "dataRights.action.export.description":
+    "Tải về bản sao có thể đọc bằng máy của toàn bộ dữ liệu cá nhân CLARA đang lưu về bạn (hồ sơ, PHR, tủ thuốc, đồng thuận).",
   "dataRights.action.correct.label": "Yêu cầu chỉnh sửa",
-  "dataRights.action.correct.description": "Yêu cầu chỉnh sửa dữ liệu cá nhân không chính xác.",
+  "dataRights.action.correct.description":
+    "Yêu cầu chỉnh sửa dữ liệu cá nhân không chính xác.",
   "dataRights.action.restrict.label": "Hạn chế xử lý",
-  "dataRights.action.restrict.description": "Yêu cầu tạm dừng hoặc hạn chế việc xử lý dữ liệu cá nhân của bạn.",
+  "dataRights.action.restrict.description":
+    "Yêu cầu tạm dừng hoặc hạn chế việc xử lý dữ liệu cá nhân của bạn.",
   "dataRights.action.withdraw.label": "Rút đồng thuận",
-  "dataRights.action.withdraw.description": "Rút đồng thuận xử lý. Bạn cũng có thể quản lý theo từng mục đích tại Trung tâm đồng thuận.",
+  "dataRights.action.withdraw.description":
+    "Rút đồng thuận xử lý. Bạn cũng có thể quản lý theo từng mục đích tại Trung tâm đồng thuận.",
   "dataRights.action.delete.label": "Xóa dữ liệu",
-  "dataRights.action.delete.description": "Yêu cầu xóa hoặc ẩn danh hóa dữ liệu cá nhân của bạn, trừ dữ liệu phải lưu theo nghĩa vụ pháp lý (được công bố bên dưới).",
+  "dataRights.action.delete.description":
+    "Yêu cầu xóa hoặc ẩn danh hóa dữ liệu cá nhân của bạn, trừ dữ liệu phải lưu theo nghĩa vụ pháp lý (được công bố bên dưới).",
   "dataRights.action.unknown": "Yêu cầu quyền dữ liệu",
   "dataRights.status.received": "Đã tiếp nhận",
   "dataRights.status.inProgress": "Đang xử lý",
@@ -1515,15 +2226,18 @@ const VI_MESSAGES = {
   "dataRights.status.unknown": "Không xác định",
   "community.title": "Cộng đồng",
   "community.description": "Kết nối và chia sẻ cùng cộng đồng sức khỏe CLARA.",
-  "community.disclaimer": "Cộng đồng CLARA là nơi chia sẻ kinh nghiệm và hỗ trợ lẫn nhau. Đây KHÔNG phải tư vấn y tế: không kê đơn, chẩn đoán hay chỉ định liều dùng. Nội dung được kiểm duyệt để giữ an toàn. Trường hợp khẩn cấp, hãy gọi 115.",
+  "community.disclaimer":
+    "Cộng đồng CLARA là nơi chia sẻ kinh nghiệm và hỗ trợ lẫn nhau. Đây KHÔNG phải tư vấn y tế: không kê đơn, chẩn đoán hay chỉ định liều dùng. Nội dung được kiểm duyệt để giữ an toàn. Trường hợp khẩn cấp, hãy gọi 115.",
   "community.loading": "Đang tải…",
   "community.loadError": "Không thể tải cộng đồng lúc này. Vui lòng thử lại.",
   "community.consentError": "Không thể ghi nhận đồng ý. Vui lòng thử lại.",
   "community.joinError": "Không thể tham gia cộng đồng. Vui lòng thử lại.",
   "community.unavailable.title": "Cộng đồng sắp ra mắt",
-  "community.unavailable.description": "Tính năng cộng đồng sức khỏe đang được chuẩn bị và sẽ sớm mở.",
+  "community.unavailable.description":
+    "Tính năng cộng đồng sức khỏe đang được chuẩn bị và sẽ sớm mở.",
   "community.consent.title": "Tham gia để đăng bài & bình luận",
-  "community.consent.description": "Bạn vẫn có thể đọc bài. Đồng ý quy tắc cộng đồng để tham gia chia sẻ.",
+  "community.consent.description":
+    "Bạn vẫn có thể đọc bài. Đồng ý quy tắc cộng đồng để tham gia chia sẻ.",
   "community.consent.action": "Tôi đồng ý tham gia",
   "community.communities.heading": "Cộng đồng",
   "community.members": "{count} thành viên",
@@ -1539,15 +2253,13 @@ const VI_MESSAGES = {
   "community.compose.cancel": "Hủy",
   "community.compose.submitting": "Đang đăng…",
   "community.compose.chooseCommunity": "Vui lòng chọn cộng đồng.",
-  "community.compose.moderationBlocked": "Nội dung không phù hợp quy tắc cộng đồng (không kê đơn/chẩn đoán/liều dùng cá nhân) hoặc có dấu hiệu khẩn cấp. Vui lòng chỉnh sửa.",
+  "community.compose.moderationBlocked":
+    "Nội dung không phù hợp quy tắc cộng đồng (không kê đơn/chẩn đoán/liều dùng cá nhân) hoặc có dấu hiệu khẩn cấp. Vui lòng chỉnh sửa.",
   "community.compose.createError": "Không thể đăng bài. Vui lòng thử lại.",
   "community.compose.communityLabel": "Cộng đồng",
   "community.compose.titleLabel": "Tiêu đề",
   "community.compose.bodyLabel": "Nội dung",
   "community.dialog.close": "Đóng",
-  "community.reaction.helpful": "Hữu ích",
-  "community.reaction.relate": "Đồng cảm",
-  "community.reaction.thanks": "Cảm ơn",
   "community.reaction.joinToReact": "Tham gia cộng đồng để phản hồi",
   "community.reaction.sent": "Đã gửi phản hồi tích cực.",
   "community.reaction.error": "Không thể gửi phản hồi. Vui lòng thử lại.",
@@ -1558,8 +2270,10 @@ const VI_MESSAGES = {
   "community.comment.loading": "Đang tải bình luận…",
   "community.comment.loadError": "Không thể tải bình luận. Vui lòng thử lại.",
   "community.comment.empty": "Chưa có bình luận. Hãy là người đầu tiên.",
-  "community.comment.placeholder": "Chia sẻ suy nghĩ của bạn (không kê đơn/chẩn đoán/liều dùng)…",
-  "community.comment.moderationBlocked": "Bình luận không phù hợp quy tắc cộng đồng (không kê đơn/chẩn đoán/liều dùng) hoặc có dấu hiệu khẩn cấp.",
+  "community.comment.placeholder":
+    "Chia sẻ suy nghĩ của bạn (không kê đơn/chẩn đoán/liều dùng)…",
+  "community.comment.moderationBlocked":
+    "Bình luận không phù hợp quy tắc cộng đồng (không kê đơn/chẩn đoán/liều dùng) hoặc có dấu hiệu khẩn cấp.",
   "community.comment.submitError": "Không thể gửi bình luận. Vui lòng thử lại.",
   "community.comment.submitting": "Đang gửi…",
   "community.comment.submit": "Gửi bình luận",
@@ -1574,16 +2288,17 @@ const VI_MESSAGES = {
   "auth.legal.privacy": "Quyền riêng tư",
   "auth.legal.medicalConsent": "Đồng thuận y tế",
   "auth.login.title": "Đăng nhập",
-  "auth.login.description": "Đăng nhập để truy cập các công cụ sức khỏe và chăm sóc của CLARA.",
+  "auth.login.description":
+    "Đăng nhập để truy cập các công cụ sức khỏe và chăm sóc của CLARA.",
   "auth.login.password": "Mật khẩu",
   "auth.login.passwordPlaceholder": "Nhập mật khẩu",
   "auth.login.submit": "Đăng nhập",
   "auth.login.submitting": "Đang đăng nhập…",
   "auth.login.failure": "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.",
-  "auth.login.missingToken": "Phản hồi đăng nhập không hợp lệ. Vui lòng thử lại.",
   "auth.login.createAccount": "Tạo tài khoản",
   "auth.login.forgotPassword": "Quên mật khẩu?",
-  "auth.login.unverified": "Tài khoản chưa xác thực? Đi đến trang xác thực email",
+  "auth.login.unverified":
+    "Tài khoản chưa xác thực? Đi đến trang xác thực email",
   "auth.login.backToPassword": "Quay lại đăng nhập bằng mật khẩu",
   "auth.otp.title": "Xác thực OTP",
   "auth.otp.description": "Nhập mã OTP vừa gửi để hoàn tất đăng nhập.",
@@ -1596,12 +2311,14 @@ const VI_MESSAGES = {
   "auth.otp.verify": "Xác thực OTP",
   "auth.otp.verifying": "Đang xác thực…",
   "auth.register.title": "Tạo tài khoản",
-  "auth.register.description": "Khởi tạo tài khoản CLARA và chọn vai trò phù hợp với nhu cầu của bạn.",
+  "auth.register.description":
+    "Khởi tạo tài khoản CLARA và chọn vai trò phù hợp với nhu cầu của bạn.",
   "auth.register.fullName": "Họ và tên",
   "auth.register.fullNamePlaceholder": "Nguyễn Văn A",
   "auth.register.password": "Mật khẩu",
   "auth.register.passwordPlaceholder": "Tối thiểu 8 ký tự",
-  "auth.register.passwordHint": "Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái, 1 chữ số và không có khoảng trắng ở đầu/cuối.",
+  "auth.register.passwordHint":
+    "Ít nhất 8 ký tự, gồm tối thiểu 1 chữ cái, 1 chữ số và không có khoảng trắng ở đầu/cuối.",
   "auth.register.confirmPassword": "Xác nhận mật khẩu",
   "auth.register.confirmPasswordPlaceholder": "Nhập lại mật khẩu",
   "auth.register.confirmPasswordHint": "Nhập lại mật khẩu để tránh gõ nhầm.",
@@ -1617,40 +2334,55 @@ const VI_MESSAGES = {
   "auth.register.submitting": "Đang xử lý…",
   "auth.register.hasAccount": "Đã có tài khoản?",
   "auth.register.success": "Đăng ký thành công. Bạn có thể đăng nhập ngay.",
-  "auth.register.successPreview": "Đăng ký thành công. Mã xác thực (môi trường phát triển): {token}",
-  "auth.register.successSent": "Đăng ký thành công. Hệ thống đã gửi email xác thực; vui lòng kiểm tra hộp thư.",
-  "auth.register.successVerify": "Đăng ký thành công. Vui lòng xác thực email trước khi đăng nhập.",
+  "auth.register.successPreview":
+    "Đăng ký thành công. Mã xác thực (môi trường phát triển): {token}",
+  "auth.register.successSent":
+    "Đăng ký thành công. Hệ thống đã gửi email xác thực; vui lòng kiểm tra hộp thư.",
+  "auth.register.successVerify":
+    "Đăng ký thành công. Vui lòng xác thực email trước khi đăng nhập.",
   "auth.register.goToVerify": "Đi đến trang xác thực email",
-  "auth.register.failure": "Chưa thể tạo tài khoản. Vui lòng thử lại sau ít phút.",
-  "auth.register.failureConnection": "Chưa thể tạo tài khoản lúc này. Vui lòng thử lại sau ít phút hoặc kiểm tra kết nối.",
-  "auth.register.acceptRequired": "Vui lòng xác nhận đã đọc Điều khoản, Quyền riêng tư và Đồng thuận y tế trước khi tạo tài khoản.",
+  "auth.register.failure":
+    "Chưa thể tạo tài khoản. Vui lòng thử lại sau ít phút.",
+  "auth.register.failureConnection":
+    "Chưa thể tạo tài khoản lúc này. Vui lòng thử lại sau ít phút hoặc kiểm tra kết nối.",
+  "auth.register.acceptRequired":
+    "Vui lòng xác nhận đã đọc Điều khoản, Quyền riêng tư và Đồng thuận y tế trước khi tạo tài khoản.",
   "auth.register.passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự.",
-  "auth.register.passwordWhitespace": "Mật khẩu không được chứa khoảng trắng ở đầu hoặc cuối.",
-  "auth.register.passwordRequirements": "Mật khẩu phải có ít nhất 1 chữ cái và 1 chữ số.",
+  "auth.register.passwordWhitespace":
+    "Mật khẩu không được chứa khoảng trắng ở đầu hoặc cuối.",
+  "auth.register.passwordRequirements":
+    "Mật khẩu phải có ít nhất 1 chữ cái và 1 chữ số.",
   "auth.register.passwordMismatch": "Mật khẩu xác nhận không khớp.",
   "auth.passwordRecovery.title": "Quên mật khẩu",
-  "auth.passwordRecovery.description": "Nhập email tài khoản để nhận hướng dẫn đặt lại mật khẩu.",
+  "auth.passwordRecovery.description":
+    "Nhập email tài khoản để nhận hướng dẫn đặt lại mật khẩu.",
   "auth.passwordRecovery.submit": "Gửi yêu cầu",
   "auth.passwordRecovery.submitting": "Đang gửi…",
   "auth.passwordRecovery.back": "Quay lại đăng nhập",
-  "auth.passwordRecovery.previewNotice": "Yêu cầu đặt lại mật khẩu đã được tạo (môi trường phát triển).",
-  "auth.passwordRecovery.sentNotice": "Hệ thống đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.",
-  "auth.passwordRecovery.genericNotice": "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.",
+  "auth.passwordRecovery.previewNotice":
+    "Yêu cầu đặt lại mật khẩu đã được tạo (môi trường phát triển).",
+  "auth.passwordRecovery.sentNotice":
+    "Hệ thống đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.",
+  "auth.passwordRecovery.genericNotice":
+    "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.",
   "auth.passwordRecovery.error": "Không thể xử lý yêu cầu.",
   "auth.passwordRecovery.previewToken": "Mã đặt lại (môi trường phát triển):",
   "auth.passwordRecovery.openReset": "Mở trang đặt lại",
   "auth.passwordReset.title": "Đặt lại mật khẩu",
-  "auth.passwordReset.description": "Nhập mã đặt lại và mật khẩu mới để tiếp tục sử dụng tài khoản.",
+  "auth.passwordReset.description":
+    "Nhập mã đặt lại và mật khẩu mới để tiếp tục sử dụng tài khoản.",
   "auth.passwordReset.token": "Mã đặt lại mật khẩu",
   "auth.passwordReset.tokenPlaceholder": "Dán mã đặt lại tại đây",
   "auth.passwordReset.newPassword": "Mật khẩu mới",
-  "auth.passwordReset.success": "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập lại.",
+  "auth.passwordReset.success":
+    "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập lại.",
   "auth.passwordReset.error": "Không thể đặt lại mật khẩu.",
   "auth.passwordReset.submit": "Đặt lại mật khẩu",
   "auth.passwordReset.submitting": "Đang xử lý…",
   "auth.passwordReset.goToLogin": "Đi đến đăng nhập",
   "auth.verify.title": "Xác thực email",
-  "auth.verify.description": "Nhập mã xác thực hoặc yêu cầu gửi lại mã để kích hoạt tài khoản.",
+  "auth.verify.description":
+    "Nhập mã xác thực hoặc yêu cầu gửi lại mã để kích hoạt tài khoản.",
   "auth.verify.token": "Mã xác thực",
   "auth.verify.tokenPlaceholder": "Dán mã xác thực tại đây",
   "auth.verify.success": "Xác thực email thành công.",
@@ -1661,19 +2393,27 @@ const VI_MESSAGES = {
   "auth.verify.resendEmail": "Email tài khoản",
   "auth.verify.resend": "Gửi lại mã xác thực",
   "auth.verify.resending": "Đang gửi lại…",
-  "auth.verify.resendPreview": "Đã tạo mã xác thực mới (môi trường phát triển). Vui lòng xác thực ngay.",
-  "auth.verify.resendSent": "Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư.",
-  "auth.verify.resendGeneric": "Nếu tài khoản chưa xác thực, hệ thống đã xử lý yêu cầu gửi lại.",
+  "auth.verify.resendPreview":
+    "Đã tạo mã xác thực mới (môi trường phát triển). Vui lòng xác thực ngay.",
+  "auth.verify.resendSent":
+    "Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư.",
+  "auth.verify.resendGeneric":
+    "Nếu tài khoản chưa xác thực, hệ thống đã xử lý yêu cầu gửi lại.",
   "auth.verify.resendError": "Không thể gửi lại email xác thực.",
   "welcome.eyebrow": "Thiết lập CLARA",
-  "welcome.description.start": "Bắt đầu nhẹ nhàng, bạn luôn nắm quyền kiểm soát.",
-  "welcome.description.step": "Bước này không bắt buộc. Bạn có thể bỏ qua và cập nhật sau.",
+  "welcome.description.start":
+    "Bắt đầu nhẹ nhàng, bạn luôn nắm quyền kiểm soát.",
+  "welcome.description.step":
+    "Bước này không bắt buộc. Bạn có thể bỏ qua và cập nhật sau.",
   "welcome.loading": "Đang tải thiết lập",
-  "welcome.loadError": "Chưa thể tải bản thiết lập. Bạn có thể thử lại hoặc quay lại sau.",
+  "welcome.loadError":
+    "Chưa thể tải bản thiết lập. Bạn có thể thử lại hoặc quay lại sau.",
   "welcome.saveError": "Không thể lưu thay đổi lúc này. Vui lòng thử lại.",
   "welcome.completeError": "Không thể hoàn tất lúc này. Vui lòng thử lại.",
-  "welcome.privacy": "Dữ liệu được lưu vào hồ sơ của bạn, không nằm trong URL hoặc phân tích hành vi.",
-  "welcome.start.intro": "Thiết lập gồm các bước ngắn và tất cả thông tin sức khoẻ đều không bắt buộc. Mỗi lựa chọn được lưu an toàn để bạn có thể quay lại sau.",
+  "welcome.privacy":
+    "Dữ liệu được lưu vào hồ sơ của bạn, không nằm trong URL hoặc phân tích hành vi.",
+  "welcome.start.intro":
+    "Thiết lập gồm các bước ngắn và tất cả thông tin sức khoẻ đều không bắt buộc. Mỗi lựa chọn được lưu an toàn để bạn có thể quay lại sau.",
   "welcome.start.itemOne": "Một nhóm thông tin ở mỗi bước.",
   "welcome.start.itemTwo": "Xem lại trước khi hoàn tất.",
   "welcome.start.itemThree": "Có thể chỉnh sửa hoặc xoá trong Hồ sơ.",
@@ -1695,8 +2435,10 @@ const VI_MESSAGES = {
   "welcome.weight.label": "Cân nặng",
   "welcome.measurementError": "Nhập một số từ 0 đến {maximum}.",
   "welcome.personalization.label": "Cho phép cá nhân hoá",
-  "welcome.personalization.description": "Dùng hồ sơ sức khoẻ để gợi ý phù hợp hơn. Không bắt buộc và có thể thu hồi.",
-  "welcome.medicalDisclaimer": "CLARA là trợ lý tham khảo, không chẩn đoán hoặc thay thế bác sĩ.",
+  "welcome.personalization.description":
+    "Dùng hồ sơ sức khoẻ để gợi ý phù hợp hơn. Không bắt buộc và có thể thu hồi.",
+  "welcome.medicalDisclaimer":
+    "CLARA là trợ lý tham khảo, không chẩn đoán hoặc thay thế bác sĩ.",
   "welcome.review.title": "Thông tin tự khai báo",
   "welcome.review.description": "Thông tin trống vẫn có thể bổ sung sau.",
   "welcome.review.name": "Tên",
@@ -1709,8 +2451,10 @@ const VI_MESSAGES = {
   "welcome.review.notProvided": "Chưa cung cấp",
   "welcome.review.allowed": "Đã cho phép",
   "welcome.review.notAllowed": "Không cho phép",
-  "welcome.review.editAfter": "Bạn vẫn có thể sửa hoặc xoá các thông tin này trong Hồ sơ.",
-  "welcome.review.confirm": "Tôi xác nhận các thông tin trên là do chính tôi tự khai báo.",
+  "welcome.review.editAfter":
+    "Bạn vẫn có thể sửa hoặc xoá các thông tin này trong Hồ sơ.",
+  "welcome.review.confirm":
+    "Tôi xác nhận các thông tin trên là do chính tôi tự khai báo.",
   "welcome.review.complete": "Hoàn tất thiết lập",
   "welcome.continue": "Tiếp tục",
   "welcome.saving": "Đang lưu…",
@@ -1719,6 +2463,75 @@ const VI_MESSAGES = {
   "research.workspace.knowledgeSources.loading": "Đang tải nguồn dữ liệu…",
   "research.workspace.knowledgeSources.documents": "{count} tài liệu",
   "research.workspace.knowledgeSources.empty": "Chưa có nguồn tri thức nào.",
+  "research.workspace.files.title": "Tài liệu đính kèm",
+  "research.workspace.files.clearAll": "Xóa tất cả",
+  "research.workspace.files.dropzone": "Kéo và thả tài liệu vào đây",
+  "research.workspace.files.sizeUnknown": "Không rõ dung lượng",
+  "research.workspace.files.remove": "Xóa tệp {name}",
+  "research.workspace.files.empty": "Chưa có tệp đính kèm.",
+  "research.workspace.evidence.title": "Nguồn bằng chứng",
+  "research.workspace.evidence.tier": "Mức {tier}",
+  "research.workspace.evidence.openSource": "Mở nguồn",
+  "research.workspace.evidence.internalSource":
+    "Nguồn nội bộ hoặc tài liệu đính kèm.",
+  "research.workspace.evidence.empty":
+    "Chưa có nguồn bằng chứng cho câu trả lời này.",
+  "research.workspace.timeline.title": "Tiến trình xử lý",
+  "research.workspace.timeline.totalDuration": "Tổng thời lượng",
+  "research.workspace.timeline.processing": "Đang xử lý",
+  "research.workspace.timeline.liveEngine": "Bộ máy phân tích trực tiếp",
+  "research.workspace.timeline.active": "Đang hoạt động",
+  "research.workspace.timeline.progress": "Tiến độ xử lý",
+  "research.workspace.timeline.eventLog": "Nhật ký sự kiện",
+  "research.workspace.timeline.started": "Bắt đầu",
+  "research.workspace.timeline.ended": "Kết thúc",
+  "research.workspace.timeline.duration": "Thời lượng",
+  "research.workspace.timeline.events": "Sự kiện",
+  "research.workspace.timeline.sources": "Nguồn",
+  "research.workspace.timeline.components": "Thành phần",
+  "research.workspace.timeline.waiting":
+    "Máy chủ đang xử lý. Tiến trình sẽ hiện khi có sự kiện thực.",
+  "research.workspace.timeline.empty":
+    "Phiên này chưa có tiến trình do máy chủ cung cấp.",
+  "research.workspace.timeline.mode.idle": "Đang chờ",
+  "research.workspace.timeline.mode.flowEvents": "Sự kiện tiến trình trực tiếp",
+  "research.workspace.timeline.mode.serverStages":
+    "Tóm tắt các bước từ máy chủ",
+  "research.workspace.timeline.mode.localFallback": "Phương án dự phòng cục bộ",
+  "research.workspace.timeline.mode.serverAwait": "Máy chủ đang suy luận",
+  "research.workspace.timeline.status.pending": "Đang chờ",
+  "research.workspace.timeline.status.in_progress": "Đang thực hiện",
+  "research.workspace.timeline.status.completed": "Đã xong",
+  "research.workspace.timeline.status.warning": "Cần lưu ý",
+  "research.workspace.timeline.status.failed": "Không thể hoàn tất",
+  "research.workspace.timeline.status.skipped": "Đã bỏ qua",
+  "research.workspace.timeline.count.completed": "Đã xong: {count}",
+  "research.workspace.timeline.count.inProgress": "Đang thực hiện: {count}",
+  "research.workspace.timeline.count.warning": "Cần lưu ý: {count}",
+  "research.workspace.timeline.count.failed": "Không thể hoàn tất: {count}",
+  "research.workspace.timeline.count.pending": "Đang chờ: {count}",
+  "research.workspace.timeline.payload.elapsed": "Đã chạy",
+  "research.workspace.timeline.payload.progress": "Tiến độ",
+  "research.workspace.timeline.payload.tick": "Nhịp",
+  "research.workspace.timeline.payload.topK": "Số kết quả đầu",
+  "research.workspace.timeline.payload.sources": "Nguồn",
+  "research.workspace.timeline.payload.candidates": "Ứng viên",
+  "research.workspace.timeline.payload.selected": "Đã chọn",
+  "research.workspace.timeline.payload.pass": "Lượt",
+  "research.workspace.timeline.payload.phase": "Giai đoạn",
+  "research.workspace.timeline.payload.topDocuments": "Tài liệu đầu",
+  "research.workspace.timeline.payload.confidence": "Tín hiệu chưa hiệu chuẩn",
+  "research.workspace.timeline.payload.severity": "Mức độ",
+  "research.workspace.timeline.payload.supportedClaims":
+    "Luận điểm được hỗ trợ",
+  "research.workspace.timeline.payload.totalClaims": "Tổng luận điểm",
+  "research.workspace.timeline.payload.evidenceCount": "Số bằng chứng",
+  "research.workspace.timeline.payload.empty": "Trống",
+  "research.workspace.timeline.payload.notANumber": "Không phải số",
+  "research.workspace.timeline.payload.array": "Danh sách ({count})",
+  "research.workspace.timeline.payload.object": "Đối tượng",
+  "research.workspace.timeline.payload.mode": "Chế độ",
+  "research.workspace.timeline.payload.details": "Thông tin kỹ thuật chi tiết",
   "research.workspace.mode.fast": "Nhanh",
   "research.workspace.mode.deep": "Tư duy",
   "research.workspace.mode.pro": "Pro",
@@ -1726,9 +2539,11 @@ const VI_MESSAGES = {
   "research.workspace.retrieval.full": "Đầy đủ nguồn",
   "research.workspace.header.eyebrow": "Không gian nghiên cứu CLARA",
   "research.workspace.header.title": "Trợ lý y tế với luồng xử lý minh bạch",
-  "research.workspace.header.description": "Bố cục tách rõ cuộc trò chuyện, soạn câu hỏi, bằng chứng và tiến trình để bạn theo dõi chất lượng câu trả lời theo thời gian thực.",
+  "research.workspace.header.description":
+    "Bố cục tách rõ cuộc trò chuyện, soạn câu hỏi, bằng chứng và tiến trình để bạn theo dõi chất lượng câu trả lời theo thời gian thực.",
   "research.workspace.header.role": "Vai trò: {role}",
-  "research.workspace.header.sourcesAndFiles": "Nguồn: {sources} · Tệp: {files}",
+  "research.workspace.header.sourcesAndFiles":
+    "Nguồn: {sources} · Tệp: {files}",
   "research.workspace.composer.label": "Soạn câu hỏi",
   "research.workspace.composer.placeholder": "Hỏi một câu y tế bạn cần làm rõ…",
   "research.workspace.composer.attach": "Đính kèm",
@@ -1738,12 +2553,15 @@ const VI_MESSAGES = {
   "research.workspace.tier.deep": "Chuyên sâu",
   "research.workspace.mode.legend": "Chọn chế độ nghiên cứu",
   "research.workspace.retrieval.legend": "Chọn phạm vi nguồn",
-  "research.workspace.retrieval.fastModeTitle": "Chế độ Nhanh dùng phạm vi nguồn tự chọn để trả lời nhanh hơn.",
-  "research.workspace.retrieval.fastModeHint": "Chế độ Nhanh dùng phạm vi nguồn tự chọn để giảm thời gian chờ.",
+  "research.workspace.retrieval.fastModeTitle":
+    "Chế độ Nhanh dùng phạm vi nguồn tự chọn để trả lời nhanh hơn.",
+  "research.workspace.retrieval.fastModeHint":
+    "Chế độ Nhanh dùng phạm vi nguồn tự chọn để giảm thời gian chờ.",
   "research.workspace.action.submit": "Gửi",
   "research.workspace.action.submitting": "Đang xử lý…",
   "research.workspace.lastQuestion": "Câu hỏi",
-  "research.workspace.processing.deep": "CLARA đang xử lý ở chế độ {mode} · {retrieval}. Tiến trình sẽ cập nhật khi có kết quả.",
+  "research.workspace.processing.deep":
+    "CLARA đang xử lý ở chế độ {mode} · {retrieval}. Tiến trình sẽ cập nhật khi có kết quả.",
   "research.workspace.processing.fast": "CLARA đang tổng hợp trả lời nhanh…",
   "research.workspace.answer.fast": "Trả lời nhanh",
   "research.workspace.answer.deep": "Trả lời chuyên sâu",
@@ -1753,12 +2571,14 @@ const VI_MESSAGES = {
   "research.workspace.fallback.limited": "Nguồn giới hạn",
   "research.workspace.fallback.compared": "Có đối chiếu nguồn",
   "research.workspace.verification.pass": "Đã đối chiếu với nguồn hiện có",
-  "research.workspace.verification.needsReview": "Cần đối chiếu thêm với nguồn và chuyên gia",
+  "research.workspace.verification.needsReview":
+    "Cần đối chiếu thêm với nguồn và chuyên gia",
   "research.workspace.verification.evidenceCount": "số bằng chứng: {count}",
   "research.workspace.debug.title": "Gỡ lỗi ý định",
   "research.workspace.debug.role": "vai trò: {value}",
   "research.workspace.debug.intent": "ý định: {value}",
-  "research.workspace.debug.confidence": "tín hiệu định tuyến (chưa hiệu chuẩn): {value}",
+  "research.workspace.debug.confidence":
+    "tín hiệu định tuyến (chưa hiệu chuẩn): {value}",
   "research.workspace.debug.model": "mô hình: {value}",
   "research.workspace.debug.notAvailable": "không có",
   "research.workspace.analysisSteps": "Các bước phân tích",
@@ -1766,17 +2586,23 @@ const VI_MESSAGES = {
   "research.role.researcher": "Nhà nghiên cứu",
   "research.role.doctor": "Bác sĩ",
   "research.role.admin": "Quản trị",
-  "research.result.complete": "Kết quả đã hoàn tất. Mở Chi tiết để xem toàn bộ dữ liệu và bằng chứng.",
+  "research.result.complete":
+    "Kết quả đã hoàn tất. Mở Chi tiết để xem toàn bộ dữ liệu và bằng chứng.",
   "research.status.ready": "Sẵn sàng",
   "research.status.uploading": "Đang tải {file}…",
   "research.status.fileReady": "Tệp đã sẵn sàng cho lượt phân tích",
-  "research.status.reviewingQuestion": "Đang kiểm tra câu hỏi và các trường còn thiếu…",
-  "research.status.needsClarification": "Cần bạn xác nhận thêm trước khi tìm kiếm",
-  "research.status.synthesizing": "Đang tìm nguồn, đối chiếu bằng chứng và kiểm tra trích dẫn…",
-  "research.status.complete": "Hoàn tất — kiểm tra từng kết luận và nguồn trước khi sử dụng.",
+  "research.status.reviewingQuestion":
+    "Đang kiểm tra câu hỏi và các trường còn thiếu…",
+  "research.status.needsClarification":
+    "Cần bạn xác nhận thêm trước khi tìm kiếm",
+  "research.status.synthesizing":
+    "Đang tìm nguồn, đối chiếu bằng chứng và kiểm tra trích dẫn…",
+  "research.status.complete":
+    "Hoàn tất — kiểm tra từng kết luận và nguồn trước khi sử dụng.",
   "research.status.incomplete": "Lượt nghiên cứu chưa hoàn tất",
   "research.error.upload": "Không thể tải tệp nghiên cứu.",
-  "research.error.questionRequired": "Hãy nhập câu hỏi nghiên cứu trước khi chạy.",
+  "research.error.questionRequired":
+    "Hãy nhập câu hỏi nghiên cứu trước khi chạy.",
   "research.error.run": "Lượt nghiên cứu không hoàn tất.",
   "research.tab.frame": "1 · Đặt câu hỏi",
   "research.tab.search": "2 · Nguồn & tệp",
@@ -1785,10 +2611,12 @@ const VI_MESSAGES = {
   "research.stageLabel": "Các bước nghiên cứu",
   "research.eyebrow": "CLARA Research",
   "research.title": "Từ câu hỏi đến bằng chứng có thể kiểm tra",
-  "research.description": "Không chỉ trả lời. CLARA lưu câu hỏi, nguồn, cách tìm, điểm chưa chắc chắn và kết luận để bạn có thể kiểm tra, chia sẻ và cập nhật lại.",
+  "research.description":
+    "Không chỉ trả lời. CLARA lưu câu hỏi, nguồn, cách tìm, điểm chưa chắc chắn và kết luận để bạn có thể kiểm tra, chia sẻ và cập nhật lại.",
   "research.frame.eyebrow": "Khung PICO / PECO",
   "research.frame.title": "Bạn muốn biết điều gì?",
-  "research.frame.placeholder": "Ví dụ: Ở người lớn bị đái tháo đường type 2, metformin so với…",
+  "research.frame.placeholder":
+    "Ví dụ: Ở người lớn bị đái tháo đường type 2, metformin so với…",
   "research.field.population": "Nhóm người được xem xét",
   "research.field.intervention": "Can thiệp / yếu tố phơi nhiễm",
   "research.field.comparator": "Điều để so sánh",
@@ -1796,25 +2624,32 @@ const VI_MESSAGES = {
   "research.clarify.title": "Cần làm rõ trước khi chạy",
   "research.search.eyebrow": "Kế hoạch tìm kiếm",
   "research.search.title": "Nguồn nào sẽ được đối chiếu?",
-  "research.search.description": "Chọn nhóm nguồn hoặc để CLARA tự định tuyến theo loại câu hỏi. Các bản ghi và thời điểm truy xuất sẽ được giữ trong lượt chạy.",
+  "research.search.description":
+    "Chọn nhóm nguồn hoặc để CLARA tự định tuyến theo loại câu hỏi. Các bản ghi và thời điểm truy xuất sẽ được giữ trong lượt chạy.",
   "research.search.defaultSource": "Nguồn y khoa được kết nối",
-  "research.search.attach": "＋ Đính kèm bài báo, protocol hoặc tài liệu nội bộ",
+  "research.search.attach":
+    "＋ Đính kèm bài báo, protocol hoặc tài liệu nội bộ",
   "research.search.uploaded": "Đã thêm: {files}",
   "research.synthesis.eyebrow": "Tổng hợp bằng chứng",
   "research.synthesis.title": "Kết luận có nguồn và điểm chưa chắc chắn",
   "research.synthesis.details": "Mở dữ liệu chạy và bằng chứng",
-  "research.synthesis.empty": "Chưa có lượt chạy. Hãy đặt câu hỏi, chọn nguồn, rồi bắt đầu tổng hợp.",
+  "research.synthesis.empty":
+    "Chưa có lượt chạy. Hãy đặt câu hỏi, chọn nguồn, rồi bắt đầu tổng hợp.",
   "chat.composer.outputMode": "Cách trình bày",
   "chat.composer.outputMode.plainLanguage": "Dễ đọc",
   "chat.composer.outputMode.professional": "Chuyên môn",
-  "chat.answerRenderer.presentation.professionalAria": "Chế độ trình bày chuyên môn",
+  "chat.answerRenderer.presentation.professionalAria":
+    "Chế độ trình bày chuyên môn",
   "chat.answerRenderer.presentation.professionalTitle": "Bản xem chuyên môn",
-  "chat.answerRenderer.presentation.professionalDescription": "Hiển thị đầy đủ danh sách nguồn đã được phát hành; nội dung kết luận không thay đổi.",
+  "chat.answerRenderer.presentation.professionalDescription":
+    "Hiển thị đầy đủ danh sách nguồn đã được phát hành; nội dung kết luận không thay đổi.",
   "chat.answerRenderer.presentation.sources": "Nguồn đã phát hành",
   "research.watch.eyebrow": "Bằng chứng cập nhật",
   "research.watch.title": "Theo dõi thay đổi",
-  "research.watch.description": "Lượt theo dõi sẽ phát hiện bài mới, kết quả thử nghiệm, đính chính, rút bài và thay đổi hướng dẫn ảnh hưởng đến kết luận. Bản cập nhật cần được bạn xem xét trước khi thay thế kết luận hiện tại.",
-  "research.watch.note": "Chế độ theo dõi sẽ dùng protocol và snapshot của lượt chạy gần nhất{job}.",
+  "research.watch.description":
+    "Lượt theo dõi sẽ phát hiện bài mới, kết quả thử nghiệm, đính chính, rút bài và thay đổi hướng dẫn ảnh hưởng đến kết luận. Bản cập nhật cần được bạn xem xét trước khi thay thế kết luận hiện tại.",
+  "research.watch.note":
+    "Chế độ theo dõi sẽ dùng protocol và snapshot của lượt chạy gần nhất{job}.",
   "research.action.start": "Bắt đầu nghiên cứu",
   "research.action.running": "Đang tổng hợp…",
   "research.manifest.eyebrow": "Thông tin lượt chạy",
@@ -1826,11 +2661,14 @@ const VI_MESSAGES = {
   "research.manifest.files": "Tệp",
   "research.manifest.job": "Lượt chạy",
   "research.guard.title": "CLARA kiểm tra gì?",
-  "research.guard.description": "Nguồn, thời điểm, quần thể, thiết kế nghiên cứu, mâu thuẫn và điểm chưa chắc chắn. Đây là tổng hợp bằng chứng, không thay thế quyết định y khoa.",
+  "research.guard.description":
+    "Nguồn, thời điểm, quần thể, thiết kế nghiên cứu, mâu thuẫn và điểm chưa chắc chắn. Đây là tổng hợp bằng chứng, không thay thế quyết định y khoa.",
   "research.sourceHub.eyebrow": "Research Source Hub",
   "research.sourceHub.title": "Nguồn nghiên cứu",
-  "research.sourceHub.description": "Đồng bộ PubMed, dữ liệu thuốc và nguồn y khoa để hỗ trợ phân tích có bằng chứng. Mục này chỉ hiện với nhà nghiên cứu, bác sĩ và quản trị viên.",
-  "research.sourceHub.availableSummary": "{sources} nguồn khả dụng · {records} bản ghi đã lưu",
+  "research.sourceHub.description":
+    "Đồng bộ PubMed, dữ liệu thuốc và nguồn y khoa để hỗ trợ phân tích có bằng chứng. Mục này chỉ hiện với nhà nghiên cứu, bác sĩ và quản trị viên.",
+  "research.sourceHub.availableSummary":
+    "{sources} nguồn khả dụng · {records} bản ghi đã lưu",
   "research.sourceHub.sync.eyebrow": "Đồng bộ nguồn",
   "research.sourceHub.sync.title": "Lấy bản ghi nghiên cứu mới",
   "research.sourceHub.sync.docs": "Xem tài liệu nguồn",
@@ -1841,18 +2679,23 @@ const VI_MESSAGES = {
   "research.sourceHub.sync.submit": "Đồng bộ",
   "research.sourceHub.sync.running": "Đang đồng bộ…",
   "research.sourceHub.sync.queryRequired": "Vui lòng nhập chủ đề cần đồng bộ.",
-  "research.sourceHub.error.loadRecords": "Không thể tải dữ liệu nguồn nghiên cứu.",
+  "research.sourceHub.error.loadRecords":
+    "Không thể tải dữ liệu nguồn nghiên cứu.",
   "research.sourceHub.error.loadHub": "Không thể tải Source Hub.",
   "research.sourceHub.error.sync": "Không thể đồng bộ nguồn nghiên cứu.",
-  "research.sourceHub.sync.success": "Đã đồng bộ {source}: lấy {fetched}, lưu {stored} bản ghi.",
+  "research.sourceHub.sync.success":
+    "Đã đồng bộ {source}: lấy {fetched}, lưu {stored} bản ghi.",
   "research.sourceHub.distribution.eyebrow": "Phân bố dữ liệu",
   "research.sourceHub.distribution.title": "Bản ghi theo nguồn",
-  "research.sourceHub.distribution.empty": "Chưa có bản ghi. Hãy đồng bộ một nguồn để bắt đầu.",
+  "research.sourceHub.distribution.empty":
+    "Chưa có bản ghi. Hãy đồng bộ một nguồn để bắt đầu.",
   "research.sourceHub.records.eyebrow": "Bản ghi đã lưu",
   "research.sourceHub.records.title": "Kết quả nguồn nghiên cứu",
-  "research.sourceHub.records.filterPlaceholder": "Lọc theo tiêu đề hoặc truy vấn…",
+  "research.sourceHub.records.filterPlaceholder":
+    "Lọc theo tiêu đề hoặc truy vấn…",
   "research.sourceHub.records.filter": "Lọc",
-  "research.sourceHub.warning.summary": "Một số nguồn phản hồi chậm, dữ liệu hiển thị có thể chưa đầy đủ.",
+  "research.sourceHub.warning.summary":
+    "Một số nguồn phản hồi chậm, dữ liệu hiển thị có thể chưa đầy đủ.",
   "research.sourceHub.warning.admin": "Cảnh báo đồng bộ (chỉ quản trị viên)",
   "research.sourceHub.table.source": "Nguồn",
   "research.sourceHub.table.title": "Tiêu đề",
@@ -1860,7 +2703,8 @@ const VI_MESSAGES = {
   "research.sourceHub.table.published": "Công bố",
   "research.sourceHub.table.synced": "Đồng bộ",
   "research.sourceHub.table.loading": "Đang tải bản ghi…",
-  "research.sourceHub.table.empty": "Chưa có dữ liệu. Hãy đồng bộ một nguồn hoặc đổi bộ lọc.",
+  "research.sourceHub.table.empty":
+    "Chưa có dữ liệu. Hãy đồng bộ một nguồn hoặc đổi bộ lọc.",
   "research.sourceHub.source.pubmed": "PubMed",
   "research.sourceHub.source.rxnorm": "RxNorm",
   "research.sourceHub.source.openfda": "openFDA",
@@ -1875,54 +2719,71 @@ const VI_MESSAGES = {
   "research.sourceHub.source.vnDav": "Cục Quản lý Dược Việt Nam",
   "research.sourceHub.source.davidrug": "DAVIDrug",
   "admin.ragEval.title": "Đánh giá RAG",
-  "admin.ragEval.description": "Chạy bộ đánh giá hỏi đáp tiếng Việt và theo dõi chất lượng truy xuất, câu trả lời và trích dẫn. Chỉ dành cho quản trị viên.",
+  "admin.ragEval.description":
+    "Chạy bộ đánh giá hỏi đáp tiếng Việt và theo dõi chất lượng truy xuất, câu trả lời và trích dẫn. Chỉ dành cho quản trị viên.",
   "admin.ragEval.k": "Ngưỡng k",
   "admin.ragEval.run": "Chạy đánh giá",
   "admin.ragEval.running": "Đang chạy đánh giá…",
   "admin.ragEval.reload": "Tải lại kết quả",
   "admin.ragEval.latestRun": "Mã lần chạy gần nhất: {runId}",
-  "admin.ragEval.unavailable": "Dịch vụ đánh giá tạm thời không khả dụng. Kết quả có thể chưa sẵn sàng; vui lòng thử lại sau ít phút.",
-  "admin.ragEval.startUnavailable": "Chưa thể khởi chạy đánh giá lúc này. Bộ đánh giá có thể đang bận hoặc dịch vụ tạm gián đoạn — vui lòng thử lại sau.",
+  "admin.ragEval.unavailable":
+    "Dịch vụ đánh giá tạm thời không khả dụng. Kết quả có thể chưa sẵn sàng; vui lòng thử lại sau ít phút.",
+  "admin.ragEval.startUnavailable":
+    "Chưa thể khởi chạy đánh giá lúc này. Bộ đánh giá có thể đang bận hoặc dịch vụ tạm gián đoạn — vui lòng thử lại sau.",
   "admin.ragEval.loadError": "Không thể tải kết quả đánh giá.",
   "admin.ragEval.startError": "Không thể khởi chạy đánh giá.",
   "admin.ragEval.loading": "Đang tải kết quả đánh giá…",
   "admin.ragEval.emptyTitle": "Chưa có kết quả đánh giá",
-  "admin.ragEval.emptyDescription": "Nhấn “Chạy đánh giá” để khởi chạy bộ golden VN Q&A và xem các chỉ số chất lượng.",
-  "admin.ragEval.recallHint": "Tỉ lệ tài liệu liên quan được truy xuất trong top k",
+  "admin.ragEval.emptyDescription":
+    "Nhấn “Chạy đánh giá” để khởi chạy bộ golden VN Q&A và xem các chỉ số chất lượng.",
+  "admin.ragEval.recallHint":
+    "Tỉ lệ tài liệu liên quan được truy xuất trong top k",
   "admin.ragEval.ndcgHint": "Chất lượng xếp hạng có tính đến vị trí",
   "admin.ragEval.faithfulness": "Độ trung thực",
-  "admin.ragEval.faithfulnessHint": "Tỉ lệ luận điểm trong câu trả lời được ngữ cảnh hỗ trợ",
+  "admin.ragEval.faithfulnessHint":
+    "Tỉ lệ luận điểm trong câu trả lời được ngữ cảnh hỗ trợ",
   "admin.ragEval.citationAccuracy": "Độ chính xác trích dẫn",
   "admin.ragEval.citationHint": "Tỉ lệ trích dẫn khớp với nguồn yêu cầu",
   "admin.ragEval.trends": "Xu hướng qua các lần chạy",
-  "admin.ragEval.trendsDescription": "So sánh chỉ số chất lượng giữa {count} lần chạy gần nhất (thang %).",
+  "admin.ragEval.trendsDescription":
+    "So sánh chỉ số chất lượng giữa {count} lần chạy gần nhất (thang %).",
   "admin.ragEval.runLabel": "Lần {index}",
   "admin.ragEval.questionResults": "Kết quả theo từng câu hỏi",
-  "admin.ragEval.questionResultsDescription": "Chỉ số chi tiết cho mỗi câu hỏi trong bộ đánh giá.",
+  "admin.ragEval.questionResultsDescription":
+    "Chỉ số chi tiết cho mỗi câu hỏi trong bộ đánh giá.",
   "admin.ragEval.questionId": "Mã câu hỏi",
   "admin.ragEval.latency": "Độ trễ",
   "admin.ragEval.noRows": "Chưa có dòng kết quả theo câu hỏi.",
   "admin.ragIngestion.title": "Thu thập tri thức (RAG)",
-  "admin.ragIngestion.description": "Kích hoạt và theo dõi luồng thu thập tri thức ngoại tuyến.",
+  "admin.ragIngestion.description":
+    "Kích hoạt và theo dõi luồng thu thập tri thức ngoại tuyến.",
   "admin.ragIngestion.checkAccess": "Đang kiểm tra quyền truy cập…",
   "admin.ragIngestion.accessDenied": "Bạn không có quyền truy cập",
-  "admin.ragIngestion.accessDeniedDescription": "Trang quản trị thu thập tri thức chỉ dành cho quản trị viên.",
-  "admin.ragIngestion.intro": "Quản lý các nguồn, kích hoạt thu thập theo từng nguồn và theo dõi trạng thái cùng cảnh báo chế độ suy giảm.",
+  "admin.ragIngestion.accessDeniedDescription":
+    "Trang quản trị thu thập tri thức chỉ dành cho quản trị viên.",
+  "admin.ragIngestion.intro":
+    "Quản lý các nguồn, kích hoạt thu thập theo từng nguồn và theo dõi trạng thái cùng cảnh báo chế độ suy giảm.",
   "admin.ragIngestion.refresh": "Làm mới",
   "admin.ragIngestion.refreshing": "Đang làm mới…",
   "admin.ragIngestion.statsLoading": "Đang tải thống kê kho tri thức…",
   "admin.ragIngestion.statsEmptyTitle": "Chưa có thống kê kho tri thức",
-  "admin.ragIngestion.statsEmptyDescription": "Hiện chưa có số liệu kho tri thức để hiển thị.",
+  "admin.ragIngestion.statsEmptyDescription":
+    "Hiện chưa có số liệu kho tri thức để hiển thị.",
   "admin.ragIngestion.sources": "Nguồn tri thức",
-  "admin.ragIngestion.sourcesDescription": "Bậc tin cậy, chế độ thu thập, watermark gần nhất và trạng thái kích hoạt của từng nguồn.",
-  "admin.ragIngestion.degradedSources": "Dịch vụ xử lý tạm thời không khả dụng — danh sách nguồn có thể chưa đầy đủ. Vui lòng thử lại sau ít phút.",
+  "admin.ragIngestion.sourcesDescription":
+    "Bậc tin cậy, chế độ thu thập, watermark gần nhất và trạng thái kích hoạt của từng nguồn.",
+  "admin.ragIngestion.degradedSources":
+    "Dịch vụ xử lý tạm thời không khả dụng — danh sách nguồn có thể chưa đầy đủ. Vui lòng thử lại sau ít phút.",
   "admin.ragIngestion.sourcesLoading": "Đang tải danh sách nguồn…",
   "admin.ragIngestion.sourcesEmptyTitle": "Chưa có nguồn nào",
-  "admin.ragIngestion.sourcesEmptyDescription": "Chưa có nguồn tri thức nào được đăng ký trong hệ thống.",
+  "admin.ragIngestion.sourcesEmptyDescription":
+    "Chưa có nguồn tri thức nào được đăng ký trong hệ thống.",
   "admin.ragIngestion.statsTitle": "Thống kê kho tri thức",
-  "admin.ragIngestion.statsDescription": "Tổng quan tài liệu, đoạn văn bản và độ phủ của kho tri thức hiện tại.",
+  "admin.ragIngestion.statsDescription":
+    "Tổng quan tài liệu, đoạn văn bản và độ phủ của kho tri thức hiện tại.",
   "admin.ragIngestion.degradedTitle": "Cảnh báo chế độ suy giảm",
-  "admin.ragIngestion.degradedDescription": "Có {count} đoạn được lưu ở chế độ suy giảm. Cần kiểm tra dịch vụ embedding và thu thập lại các nguồn bị ảnh hưởng.",
+  "admin.ragIngestion.degradedDescription":
+    "Có {count} đoạn được lưu ở chế độ suy giảm. Cần kiểm tra dịch vụ embedding và thu thập lại các nguồn bị ảnh hưởng.",
   "admin.ragIngestion.documents": "Tài liệu",
   "admin.ragIngestion.documentsHint": "Số tài liệu đã thu thập",
   "admin.ragIngestion.chunks": "Đoạn văn bản",
@@ -1932,9 +2793,11 @@ const VI_MESSAGES = {
   "admin.ragIngestion.noDegraded": "Không có đoạn suy giảm",
   "admin.ragIngestion.coverage": "Độ phủ",
   "admin.ragIngestion.coverageHint": "Tỉ lệ độ phủ kho tri thức",
-  "admin.ragIngestion.enabledSources": "Nguồn đã kích hoạt: {enabled} / {total}",
+  "admin.ragIngestion.enabledSources":
+    "Nguồn đã kích hoạt: {enabled} / {total}",
   "admin.ragIngestion.jobTitle": "Trạng thái thu thập",
-  "admin.ragIngestion.jobEmptyDescription": "Chọn một nguồn bên dưới và nhấn “Chạy thu thập” để bắt đầu.",
+  "admin.ragIngestion.jobEmptyDescription":
+    "Chọn một nguồn bên dưới và nhấn “Chạy thu thập” để bắt đầu.",
   "admin.ragIngestion.noJob": "Chưa có tác vụ thu thập nào đang chạy.",
   "admin.ragIngestion.jobError": "Không thể thực hiện thu thập",
   "admin.ragIngestion.jobSource": "Nguồn: {source}",
@@ -1944,7 +2807,8 @@ const VI_MESSAGES = {
   "admin.ragIngestion.updated": "Đã cập nhật",
   "admin.ragIngestion.skipped": "Đã bỏ qua",
   "admin.ragIngestion.degraded": "Suy giảm",
-  "admin.ragIngestion.jobDegraded": "Cảnh báo: tác vụ này tạo {count} đoạn ở chế độ suy giảm.",
+  "admin.ragIngestion.jobDegraded":
+    "Cảnh báo: tác vụ này tạo {count} đoạn ở chế độ suy giảm.",
   "admin.ragIngestion.jobErrors": "Có {count} lỗi trong quá trình thu thập.",
   "admin.ragIngestion.source": "Nguồn",
   "admin.ragIngestion.trustTier": "Bậc tin cậy",
@@ -1988,6 +2852,11 @@ const VI_MESSAGES = {
   "scribe.action.saving": "Đang lưu…",
   "scribe.action.saveToRecord": "Lưu vào hồ sơ",
   "scribe.status.finalized": "Hoàn tất",
+  "scribe.workflow.aria": "Các bước ghi chép khám bệnh",
+  "scribe.workflow.capture": "Ghi âm",
+  "scribe.workflow.transcript": "Kiểm tra bản ghi",
+  "scribe.workflow.soap": "Kiểm tra SOAP",
+  "scribe.workflow.complete": "Hoàn tất",
   "scribe.status.ready": "Sẵn sàng",
   "scribe.status.processing": "Đang xử lý",
   "scribe.status.error": "Lỗi",
@@ -2022,12 +2891,14 @@ const VI_MESSAGES = {
   "scribe.liveAnalysis.title": "Phân tích trực tiếp",
   "scribe.liveAnalysis.empty": "Chưa có gợi ý.",
   "scribe.review.statusTitle": "Trạng thái kiểm tra",
-  "scribe.review.statusDescription": "CLARA không hiển thị phần trăm tin cậy chưa được hiệu chuẩn. Hãy kiểm tra bản ghi gốc, cảnh báo và phần SOAP trước khi sử dụng.",
+  "scribe.review.statusDescription":
+    "CLARA không hiển thị phần trăm tin cậy chưa được hiệu chuẩn. Hãy kiểm tra bản ghi gốc, cảnh báo và phần SOAP trước khi sử dụng.",
   "scribe.review.signalStability": "Độ ổn định tín hiệu",
   "scribe.review.summaryTitle": "Tổng hợp ghi chú lâm sàng",
   "scribe.review.sessionCode": "Mã phiên: {code}",
   "scribe.review.specialistCoding": "Mã hóa cần chuyên môn",
-  "scribe.review.codingDescription": "CLARA không tự gán mã chẩn đoán hoặc thủ thuật từ bản ghi. Người có thẩm quyền cần chọn và xác nhận mã trong hệ thống nghiệp vụ phù hợp.",
+  "scribe.review.codingDescription":
+    "CLARA không tự gán mã chẩn đoán hoặc thủ thuật từ bản ghi. Người có thẩm quyền cần chọn và xác nhận mã trong hệ thống nghiệp vụ phù hợp.",
   "scribe.review.council": "Chuyển hội chẩn AI",
   "scribe.review.keySummary": "Tóm tắt chính",
   "scribe.review.noSummary": "Chưa có dữ liệu tổng hợp để chuyển hội chẩn.",
@@ -2042,7 +2913,8 @@ const VI_MESSAGES = {
   "scribe.insight.plan": "Kế hoạch nháp",
   "scribe.insight.warning": "Cảnh báo an toàn",
   "scribe.insight.transcript": "Đã ghi nhận bản ghi",
-  "scribe.insight.transcriptDetail": "Đã ghi nhận {count} từ để phân tích tiếp.",
+  "scribe.insight.transcriptDetail":
+    "Đã ghi nhận {count} từ để phân tích tiếp.",
   "scribe.speaker.audio": "Âm thanh",
   "scribe.speaker.clinician": "Bác sĩ",
   "scribe.speaker.patient": "Người bệnh",
@@ -2051,42 +2923,74 @@ const VI_MESSAGES = {
   "scribe.error.liveAnalysis": "Phân tích trực tiếp thất bại.",
   "scribe.error.transcribe": "Không thể chuyển âm thanh trực tiếp thành chữ.",
   "scribe.error.transcribeNotice": "Chuyển âm thanh thành chữ thất bại.",
-  "scribe.error.browserRecording": "Trình duyệt không hỗ trợ ghi âm thời gian thực.",
+  "scribe.error.browserRecording":
+    "Trình duyệt không hỗ trợ ghi âm thời gian thực.",
   "scribe.error.createSession": "Không thể tạo phiên để ghi âm.",
   "scribe.error.startRecording": "Không thể bắt đầu ghi âm trực tiếp.",
+  "scribe.error.consentRequired": "Hãy ghi nhận đồng thuận trước khi bật micro.",
+  "scribe.error.consent": "Không thể ghi nhận đồng thuận.",
   "scribe.error.openSession": "Không thể mở phiên.",
   "scribe.error.create": "Không thể tạo phiên.",
   "scribe.error.emptyTranscript": "Bản ghi đang trống.",
   "scribe.error.regenerate": "Không thể tạo lại ghi chú SOAP.",
   "scribe.error.finalize": "Không thể hoàn tất ghi chú.",
   "scribe.notice.started": "Đã bắt đầu ghi âm trực tiếp.",
+  "scribe.notice.consentCaptured": "Đã ghi nhận đồng thuận cho phiên này.",
   "scribe.notice.stopped": "Đã dừng ghi âm.",
   "scribe.notice.created": "Đã tạo phiên mới.",
   "scribe.notice.saved": "Đã lưu bản ghi.",
   "scribe.notice.regenerated": "Đã tạo lại ghi chú SOAP.",
-  "scribe.notice.finalized": "Đã hoàn tất ghi chú.",
+  "scribe.notice.draftCompleted": "Đã hoàn tất bản nháp để tiếp tục kiểm tra hoặc ký.",
+  "scribe.consent.checkbox": "Tôi đã xác nhận người bệnh đồng ý ghi âm",
+  "scribe.recordingData.title": "Xóa dữ liệu phiên âm của phiên này",
+  "scribe.recordingData.description":
+    "Chỉ dùng khi bạn muốn xóa phần dữ liệu được tạo từ lần ghi âm của phiên đang chọn.",
+  "scribe.recordingData.deletes":
+    "Xóa bản ghi chữ và thông tin đoạn phiên âm/nhận diện người nói đã lưu.",
+  "scribe.recordingData.audioNotStored":
+    "Tệp âm thanh gốc không được CLARA lưu trữ.",
+  "scribe.recordingData.retained":
+    "Ghi chú đã ký (nếu có) và nhật ký kiểm toán vẫn được giữ nguyên.",
+  "scribe.recordingData.deleteAction": "Xóa dữ liệu phiên âm",
+  "scribe.recordingData.deleting": "Đang xóa…",
+  "scribe.recordingData.confirmTitle": "Xóa dữ liệu phiên âm?",
+  "scribe.recordingData.confirmDescription":
+    "Thao tác này xóa bản ghi chữ và thông tin đoạn phiên âm của phiên đang chọn. Không thể hoàn tác.",
+  "scribe.recordingData.confirmRetained":
+    "CLARA không lưu tệp âm thanh gốc. Ghi chú đã ký và nhật ký kiểm toán không bị xóa.",
+  "scribe.recordingData.confirmAction": "Xác nhận xóa dữ liệu phiên âm",
+  "scribe.recordingData.cancel": "Hủy",
+  "scribe.recordingData.notice.deleted":
+    "Đã xóa dữ liệu phiên âm của phiên này.",
+  "scribe.recordingData.error.delete":
+    "Chưa thể xóa dữ liệu phiên âm. Vui lòng thử lại.",
   "scribe.sessionTitle.recording": "Phiên ghi âm {date}",
   "scribe.sessionTitle.default": "Phiên {date}",
   "scribe.enterprise.consent.title": "Xác nhận đồng thuận",
-  "scribe.enterprise.consent.description": "Cần ghi nhận đồng thuận của người bệnh trước khi ghi âm hoặc chuyển âm thanh thành chữ.",
+  "scribe.enterprise.consent.description":
+    "Cần ghi nhận đồng thuận của người bệnh trước khi ghi âm hoặc chuyển âm thanh thành chữ.",
   "scribe.enterprise.consent.capturing": "Đang ghi nhận…",
   "scribe.enterprise.consent.capture": "Ghi nhận đồng thuận",
   "scribe.enterprise.transcript.uploadAudio": "Tải tệp âm thanh",
   "scribe.enterprise.transcript.signedReadOnly": "Ghi chú đã ký — chỉ đọc.",
   "scribe.enterprise.transcript.empty": "Chưa có nội dung phiên âm.",
   "scribe.enterprise.transcript.weakSignal": "tín hiệu yếu",
-  "scribe.enterprise.transcript.streamingFallback": "Phiên âm trực tiếp gặp sự cố. CLARA đã chuyển sang phiên âm theo lô.",
-  "scribe.enterprise.transcript.placeholder": "Bản ghi sẽ hiển thị ở đây; bạn có thể chỉnh sửa trước khi soạn ghi chú.",
+  "scribe.enterprise.transcript.streamingFallback":
+    "Phiên âm trực tiếp gặp sự cố. CLARA đã chuyển sang phiên âm theo lô.",
+  "scribe.enterprise.transcript.placeholder":
+    "Bản ghi sẽ hiển thị ở đây; bạn có thể chỉnh sửa trước khi soạn ghi chú.",
   "scribe.enterprise.transcript.sourceBatch": "Nguồn: phiên âm theo lô",
   "scribe.enterprise.transcript.sourceLive": "Nguồn: phiên âm trực tiếp",
   "scribe.enterprise.transcript.degradedCount": "{count} đoạn tín hiệu yếu",
   "scribe.enterprise.corrections.title": "Đề xuất thuật ngữ cần bác sĩ duyệt",
-  "scribe.enterprise.corrections.description": "CLARA không tự sửa bản ghi. Hãy đối chiếu với âm thanh hoặc nguồn gốc, rồi tự chỉnh sửa bản ghi nếu phù hợp.",
+  "scribe.enterprise.corrections.description":
+    "CLARA không tự sửa bản ghi. Hãy đối chiếu với âm thanh hoặc nguồn gốc, rồi tự chỉnh sửa bản ghi nếu phù hợp.",
   "scribe.enterprise.speaker.other": "Khác",
   "scribe.enterprise.speaker.unknown": "Chưa rõ",
   "scribe.enterprise.note.templateTitle": "Mẫu ghi chú",
   "scribe.enterprise.note.template.soap": "SOAP",
-  "scribe.enterprise.note.template.historyPhysical": "Bệnh sử & khám thực thể (H&P)",
+  "scribe.enterprise.note.template.historyPhysical":
+    "Bệnh sử & khám thực thể (H&P)",
   "scribe.enterprise.note.template.progressNote": "Ghi chú diễn tiến",
   "scribe.enterprise.note.template.referralLetter": "Thư chuyển tuyến",
   "scribe.enterprise.note.template.vnMedicalRecord": "Bệnh án",
@@ -2095,7 +2999,8 @@ const VI_MESSAGES = {
   "scribe.enterprise.note.title": "Ghi chú lâm sàng",
   "scribe.enterprise.note.exported": "Đã xuất bản",
   "scribe.enterprise.note.signed": "Đã ký",
-  "scribe.enterprise.note.empty": "Chưa có ghi chú. Chọn mẫu và bấm “Soạn ghi chú”.",
+  "scribe.enterprise.note.empty":
+    "Chưa có ghi chú. Chọn mẫu và bấm “Soạn ghi chú”.",
   "scribe.enterprise.note.saveEdits": "Lưu chỉnh sửa",
   "scribe.enterprise.note.signing": "Đang ký…",
   "scribe.enterprise.note.sign": "Ký ghi chú",
@@ -2107,32 +3012,42 @@ const VI_MESSAGES = {
   "scribe.enterprise.note.error.save": "Không thể lưu ghi chú.",
   "scribe.enterprise.note.error.sign": "Không thể ký ghi chú.",
   "scribe.enterprise.note.error.amend": "Không thể tạo bản sửa đổi.",
-  "scribe.enterprise.note.error.exportUnavailable": "Tính năng xuất bản chưa được bật cho phiên này.",
+  "scribe.enterprise.note.error.exportUnavailable":
+    "Tính năng xuất bản chưa được bật cho phiên này.",
   "scribe.enterprise.note.error.export": "Không thể xuất bản ghi chú.",
   "scribe.enterprise.note.notice.generated": "Đã soạn ghi chú theo mẫu.",
-  "scribe.enterprise.note.notice.generatedFallback": "Đã tạo ghi chú SOAP (chế độ tiêu chuẩn).",
+  "scribe.enterprise.note.notice.generatedFallback":
+    "Đã tạo ghi chú SOAP (chế độ tiêu chuẩn).",
   "scribe.enterprise.note.notice.saved": "Đã lưu chỉnh sửa ghi chú.",
   "scribe.enterprise.note.notice.signed": "Đã ký ghi chú lâm sàng.",
-  "scribe.enterprise.note.notice.signedFallback": "Đã hoàn tất ghi chú (chế độ tiêu chuẩn).",
+  "scribe.enterprise.note.notice.signedFallback":
+    "Đã hoàn tất ghi chú (chế độ tiêu chuẩn).",
   "scribe.enterprise.note.notice.amended": "Đã tạo bản sửa đổi mới (amended).",
   "scribe.enterprise.note.notice.exported": "Đã xuất bản ghi chú ({format}).",
   "scribe.enterprise.grounding.title": "Đối chiếu bản ghi",
   "scribe.enterprise.grounding.rate": "{rate} có dẫn chứng",
-  "scribe.enterprise.grounding.summary": "{grounded} câu có dẫn chứng · {unverified} câu chưa xác minh",
+  "scribe.enterprise.grounding.summary":
+    "{grounded} câu có dẫn chứng · {unverified} câu chưa xác minh",
   "scribe.enterprise.grounding.status.grounded": "Có dẫn chứng",
   "scribe.enterprise.grounding.status.unverified": "Chưa xác minh",
   "scribe.enterprise.grounding.critical": "an toàn",
   "scribe.enterprise.grounding.spanCount": "{count} đoạn",
-  "scribe.enterprise.grounding.expandStatement": "Mở dẫn chứng cho: {statement}",
-  "scribe.enterprise.grounding.collapseStatement": "Thu gọn dẫn chứng cho: {statement}",
-  "scribe.enterprise.grounding.noSupportingSpans": "Không có đoạn bản ghi nào hỗ trợ câu này.",
+  "scribe.enterprise.grounding.expandStatement":
+    "Mở dẫn chứng cho: {statement}",
+  "scribe.enterprise.grounding.collapseStatement":
+    "Thu gọn dẫn chứng cho: {statement}",
+  "scribe.enterprise.grounding.noSupportingSpans":
+    "Không có đoạn bản ghi nào hỗ trợ câu này.",
   "scribe.enterprise.grounding.unresolved": "chưa khớp",
   "scribe.enterprise.grounding.noContent": "(không tìm thấy nội dung)",
-  "scribe.enterprise.grounding.candidatesTitle": "Cần bác sĩ xác nhận ({count})",
-  "scribe.enterprise.grounding.candidatesDescription": "Các phát biểu an toàn quan trọng dưới đây không có dẫn chứng trong bản ghi nên không được khẳng định trong ghi chú.",
+  "scribe.enterprise.grounding.candidatesTitle":
+    "Cần bác sĩ xác nhận ({count})",
+  "scribe.enterprise.grounding.candidatesDescription":
+    "Các phát biểu an toàn quan trọng dưới đây không có dẫn chứng trong bản ghi nên không được khẳng định trong ghi chú.",
   "scribe.enterprise.coding.title": "Gợi ý mã E/M · CPT",
   "scribe.enterprise.coding.confirmedCount": "{confirmed}/{total} đã xác nhận",
-  "scribe.enterprise.coding.description": "Các mã dưới đây chỉ mang tính tư vấn. Không mã nào được chọn sẵn — bác sĩ cần tự xác nhận từng mã trước khi sử dụng.",
+  "scribe.enterprise.coding.description":
+    "Các mã dưới đây chỉ mang tính tư vấn. Không mã nào được chọn sẵn — bác sĩ cần tự xác nhận từng mã trước khi sử dụng.",
   "scribe.enterprise.coding.emTitle": "Mức khám (E/M)",
   "scribe.enterprise.coding.cptTitle": "Thủ thuật (CPT)",
   "scribe.enterprise.coding.confirmCode": "Xác nhận mã {code}",
@@ -2142,12 +3057,14 @@ const VI_MESSAGES = {
   "scribe.enterprise.coding.evidence": "Dẫn chứng",
   "scribe.enterprise.addendum.title": "Phụ lục ghi chú",
   "scribe.enterprise.addendum.count": "{count} phụ lục",
-  "scribe.enterprise.addendum.description": "Phụ lục được gắn thời gian, không thay đổi nội dung đã ký và không tạo bản sửa đổi mới.",
+  "scribe.enterprise.addendum.description":
+    "Phụ lục được gắn thời gian, không thay đổi nội dung đã ký và không tạo bản sửa đổi mới.",
   "scribe.enterprise.addendum.timestamp": "{date} UTC · {author}",
   "scribe.enterprise.addendum.author": "Bác sĩ #{id}",
   "scribe.enterprise.addendum.authorFallback": "Bác sĩ",
   "scribe.enterprise.addendum.empty": "Chưa có phụ lục nào.",
-  "scribe.enterprise.addendum.placeholder": "Thêm thông tin bổ sung sau khi ký (không thay đổi nội dung đã ký)…",
+  "scribe.enterprise.addendum.placeholder":
+    "Thêm thông tin bổ sung sau khi ký (không thay đổi nội dung đã ký)…",
   "scribe.enterprise.addendum.inputLabel": "Nội dung phụ lục ghi chú",
   "scribe.enterprise.addendum.saving": "Đang lưu…",
   "scribe.enterprise.addendum.submit": "Thêm phụ lục",
@@ -2165,13 +3082,16 @@ const VI_MESSAGES = {
   "scribe.enterprise.process.status.failed": "lỗi",
   "scribe.enterprise.process.status.warning": "cảnh báo",
   "admin.knowledgeSources.title": "Nguồn tri thức",
-  "admin.knowledgeSources.description": "Kho tri thức hợp nhất và ưu tiên nguồn truy xuất.",
+  "admin.knowledgeSources.description":
+    "Kho tri thức hợp nhất và ưu tiên nguồn truy xuất.",
   "admin.knowledgeSources.connectionMap": "Sơ đồ kết nối nguồn tri thức",
   "admin.knowledgeSources.live": "Trực tiếp",
   "admin.knowledgeSources.recordsBySource": "Số bản ghi theo nguồn",
-  "admin.knowledgeSources.noSyncedRecords": "Chưa có bản ghi đồng bộ từ hệ thống.",
+  "admin.knowledgeSources.noSyncedRecords":
+    "Chưa có bản ghi đồng bộ từ hệ thống.",
   "admin.knowledgeSources.kpi.activeConnectors": "Kết nối đang bật",
-  "admin.knowledgeSources.kpi.activeConnectorsHint": "Kết nối truy xuất đang bật",
+  "admin.knowledgeSources.kpi.activeConnectorsHint":
+    "Kết nối truy xuất đang bật",
   "admin.knowledgeSources.kpi.sources": "Nguồn tri thức",
   "admin.knowledgeSources.kpi.sourcesHint": "Kho tri thức đã tạo",
   "admin.knowledgeSources.kpi.federatedRecords": "Bản ghi liên thông",
@@ -2213,7 +3133,8 @@ const VI_MESSAGES = {
   "admin.knowledgeSources.noDocuments": "Chưa có tài liệu trong nguồn này.",
   "admin.knowledgeSources.documents": "Tài liệu",
   "admin.knowledgeSources.federatedTitle": "Nguồn lâm sàng liên thông",
-  "admin.knowledgeSources.federatedDescription": "Đồng bộ dữ liệu từ PubMed, RxNorm, openFDA, DAVIDrug và các nguồn chuẩn khác.",
+  "admin.knowledgeSources.federatedDescription":
+    "Đồng bộ dữ liệu từ PubMed, RxNorm, openFDA, DAVIDrug và các nguồn chuẩn khác.",
   "admin.knowledgeSources.filterPlaceholder": "Lọc theo truy vấn hoặc tiêu đề…",
   "admin.knowledgeSources.filter": "Lọc",
   "admin.knowledgeSources.source": "Nguồn",
@@ -2232,19 +3153,27 @@ const VI_MESSAGES = {
   "admin.knowledgeSources.table.published": "Ngày xuất bản",
   "admin.knowledgeSources.table.synced": "Đã đồng bộ",
   "admin.knowledgeSources.error.loadSources": "Không thể tải nguồn tri thức.",
-  "admin.knowledgeSources.error.loadDocuments": "Không thể tải tài liệu của nguồn.",
+  "admin.knowledgeSources.error.loadDocuments":
+    "Không thể tải tài liệu của nguồn.",
   "admin.knowledgeSources.error.create": "Không thể tạo nguồn.",
   "admin.knowledgeSources.error.upload": "Không thể tải tệp lên nguồn.",
-  "admin.knowledgeSources.error.updateDocument": "Không thể cập nhật trạng thái tài liệu.",
-  "admin.knowledgeSources.error.loadCatalog": "Không thể tải danh mục nguồn liên thông.",
-  "admin.knowledgeSources.error.loadRecords": "Không thể tải bản ghi liên thông.",
-  "admin.knowledgeSources.error.syncQueryRequired": "Hãy nhập truy vấn đồng bộ.",
+  "admin.knowledgeSources.error.updateDocument":
+    "Không thể cập nhật trạng thái tài liệu.",
+  "admin.knowledgeSources.error.loadCatalog":
+    "Không thể tải danh mục nguồn liên thông.",
+  "admin.knowledgeSources.error.loadRecords":
+    "Không thể tải bản ghi liên thông.",
+  "admin.knowledgeSources.error.syncQueryRequired":
+    "Hãy nhập truy vấn đồng bộ.",
   "admin.knowledgeSources.error.sync": "Không thể đồng bộ nguồn liên thông.",
-  "admin.knowledgeSources.error.loadRegistry": "Không thể tải sổ đăng ký nguồn RAG.",
-  "admin.knowledgeSources.error.updateRegistry": "Không thể cập nhật nguồn RAG.",
+  "admin.knowledgeSources.error.loadRegistry":
+    "Không thể tải sổ đăng ký nguồn RAG.",
+  "admin.knowledgeSources.error.updateRegistry":
+    "Không thể cập nhật nguồn RAG.",
   "admin.knowledgeSources.notice.created": "Đã tạo nguồn tri thức mới.",
   "admin.knowledgeSources.notice.uploaded": "Đã tải tài liệu lên.",
-  "admin.knowledgeSources.notice.synced": "Đồng bộ {source}: đã lấy {fetched}, đã lưu {stored}.",
+  "admin.knowledgeSources.notice.synced":
+    "Đồng bộ {source}: đã lấy {fetched}, đã lưu {stored}.",
   "admin.knowledgeSources.notice.warning": "Cảnh báo:",
   "admin.knowledgeSources.tier.one": "Bậc 1 · Cơ quan quản lý / nhãn thuốc",
   "admin.knowledgeSources.tier.two": "Bậc 2 · Hướng dẫn lâm sàng",
@@ -2253,30 +3182,39 @@ const VI_MESSAGES = {
   "admin.knowledgeSources.tier.unassigned": "Chưa phân bậc",
   "admin.knowledgeSources.fetchMode.crawl": "Thu thập web",
   "admin.knowledgeSources.registry.title": "Sổ đăng ký nguồn RAG",
-  "admin.knowledgeSources.registry.description": "Quản lý kho tri thức RAG bền vững: bậc tin cậy, giấy phép, ghi nguồn và trạng thái kích hoạt của từng nguồn.",
-  "admin.knowledgeSources.registry.guidance": "Bật hoặc tắt nguồn và điều chỉnh bậc tin cậy. Cột Giấy phép và Ghi nguồn nêu nghĩa vụ ghi nhận bản quyền (UMLS/SNOMED/RxNorm).",
-  "admin.knowledgeSources.registry.unavailableTitle": "Dịch vụ xử lý tạm thời không khả dụng",
-  "admin.knowledgeSources.registry.unavailableDescription": "Danh sách nguồn RAG có thể chưa đầy đủ và thay đổi chưa được áp dụng. Vui lòng thử lại.",
+  "admin.knowledgeSources.registry.description":
+    "Quản lý kho tri thức RAG bền vững: bậc tin cậy, giấy phép, ghi nguồn và trạng thái kích hoạt của từng nguồn.",
+  "admin.knowledgeSources.registry.guidance":
+    "Bật hoặc tắt nguồn và điều chỉnh bậc tin cậy. Cột Giấy phép và Ghi nguồn nêu nghĩa vụ ghi nhận bản quyền (UMLS/SNOMED/RxNorm).",
+  "admin.knowledgeSources.registry.unavailableTitle":
+    "Dịch vụ xử lý tạm thời không khả dụng",
+  "admin.knowledgeSources.registry.unavailableDescription":
+    "Danh sách nguồn RAG có thể chưa đầy đủ và thay đổi chưa được áp dụng. Vui lòng thử lại.",
   "admin.knowledgeSources.registry.loading": "Đang tải sổ đăng ký nguồn RAG…",
   "admin.knowledgeSources.registry.emptyTitle": "Chưa có nguồn RAG",
-  "admin.knowledgeSources.registry.emptyDescription": "Chưa có nguồn nào được đăng ký trong kho tri thức RAG.",
+  "admin.knowledgeSources.registry.emptyDescription":
+    "Chưa có nguồn nào được đăng ký trong kho tri thức RAG.",
   "admin.knowledgeSources.registry.trustTier": "Bậc tin cậy",
   "admin.knowledgeSources.registry.trustTierFor": "Bậc tin cậy của {source}",
   "admin.knowledgeSources.registry.license": "Giấy phép",
   "admin.knowledgeSources.registry.attribution": "Ghi nguồn",
   "admin.knowledgeSources.registry.fetchMode": "Chế độ thu thập",
-  "admin.knowledgeSources.registry.missingId": "Thiếu định danh nguồn — không thể cập nhật",
+  "admin.knowledgeSources.registry.missingId":
+    "Thiếu định danh nguồn — không thể cập nhật",
   "admin.knowledgeSources.registry.disableSource": "Tắt nguồn này",
   "admin.knowledgeSources.registry.enableSource": "Bật nguồn này",
-  "admin.knowledgeSources.registry.updateUnavailable": "Dịch vụ xử lý tạm thời không khả dụng — thay đổi chưa được áp dụng. Vui lòng thử lại sau ít phút.",
+  "admin.knowledgeSources.registry.updateUnavailable":
+    "Dịch vụ xử lý tạm thời không khả dụng — thay đổi chưa được áp dụng. Vui lòng thử lại sau ít phút.",
   "admin.knowledgeSources.registry.updated": "Đã cập nhật nguồn {source}.",
   "evidence.page.title": "Bằng chứng đang cập nhật",
-  "evidence.page.description": "Đặt một câu hỏi gắn với hành trình của bạn. CLARA chỉ hiển thị nguồn đã kiểm chứng và nói rõ khi chưa đủ bằng chứng.",
+  "evidence.page.description":
+    "Đặt một câu hỏi gắn với hành trình của bạn. CLARA chỉ hiển thị nguồn đã kiểm chứng và nói rõ khi chưa đủ bằng chứng.",
   "evidence.error.loadEpisodes": "Không thể tải hành trình LifeMap.",
   "evidence.error.saveQuestion": "Không thể lưu câu hỏi bằng chứng.",
   "evidence.error.confirmQuestion": "Không thể xác nhận câu hỏi.",
   "evidence.error.run": "Chưa thể truy xuất bằng chứng đã kiểm chứng.",
-  "evidence.error.runIncomplete": "Quá trình truy xuất bằng chứng không hoàn tất. Không có kết luận y khoa nào được phát hành.",
+  "evidence.error.runIncomplete":
+    "Quá trình truy xuất bằng chứng không hoàn tất. Không có kết luận y khoa nào được phát hành.",
   "evidence.error.subscription": "Không thể cập nhật đăng ký theo dõi.",
   "evidence.error.interval": "Không thể cập nhật tần suất theo dõi.",
   "evidence.error.notification": "Không thể đánh dấu thông báo đã đọc.",
@@ -2291,73 +3229,93 @@ const VI_MESSAGES = {
   "evidence.missing.population": "bối cảnh hoặc nhóm người liên quan",
   "evidence.missing.outcomes": "điều bạn muốn biết kết quả",
   "evidence.missing.timeHorizon": "khoảng thời gian bạn quan tâm",
-  "evidence.missing.eligibility": "quy tắc áp dụng nghiên cứu đã được kiểm định",
-  "evidence.matrix.empty": "Chưa có bản ghi bằng chứng đã xác minh cho lần chạy này.",
+  "evidence.missing.eligibility":
+    "quy tắc áp dụng nghiên cứu đã được kiểm định",
+  "evidence.matrix.empty":
+    "Chưa có bản ghi bằng chứng đã xác minh cho lần chạy này.",
   "evidence.matrix.provenance": "{count} nguồn được lưu với provenance",
   "evidence.matrix.openSource": "Mở nguồn",
   "evidence.interpretation.applicability": "Có áp dụng cho bạn không?",
   "evidence.interpretation.missing": "Còn thiếu: {item}.",
   "evidence.interpretation.contradictions": "Điểm chưa thống nhất",
-  "evidence.interpretation.defaultContradiction": "Các nguồn có kết quả cần đối chiếu thêm.",
+  "evidence.interpretation.defaultContradiction":
+    "Các nguồn có kết quả cần đối chiếu thêm.",
   "evidence.interpretation.relatedSources": "Nguồn liên quan: {sources}",
   "evidence.run.processing": "Đang xử lý chuyên sâu",
-  "evidence.run.starting": "Đang khởi tạo run và gửi câu hỏi đến hệ thống truy xuất.",
-  "evidence.run.retrieving": "Đang tìm và phân loại guideline, nghiên cứu gốc, tổng quan và bình luận.",
-  "evidence.run.verifying": "Đang kiểm tra provenance, chất lượng nguồn và các điểm mâu thuẫn.",
-  "evidence.run.finishing": "Đang hoàn tất ma trận bằng chứng và hiệu chỉnh độ không chắc chắn.",
+  "evidence.run.starting":
+    "Đang khởi tạo run và gửi câu hỏi đến hệ thống truy xuất.",
+  "evidence.run.retrieving":
+    "Đang tìm và phân loại guideline, nghiên cứu gốc, tổng quan và bình luận.",
+  "evidence.run.verifying":
+    "Đang kiểm tra provenance, chất lượng nguồn và các điểm mâu thuẫn.",
+  "evidence.run.finishing":
+    "Đang hoàn tất ma trận bằng chứng và hiệu chỉnh độ không chắc chắn.",
   "evidence.run.updated": "Đã cập nhật tiến trình {count} lần. ",
-  "evidence.run.wait": "Tác vụ có thể mất vài phút. Bạn không cần gửi lại câu hỏi.",
+  "evidence.run.wait":
+    "Tác vụ có thể mất vài phút. Bạn không cần gửi lại câu hỏi.",
   "evidence.result.title": "Kết quả bằng chứng",
   "evidence.result.verifiedSources": "{count} nguồn đã xác minh",
   "evidence.result.notReleased": "Không phát hành kết luận",
   "evidence.result.safeStopTitle": "CLARA dừng ở đây để an toàn.",
-  "evidence.result.safeStopBody": "Không có câu trả lời y khoa được tạo khi provenance không đầy đủ. Bạn có thể bổ sung bối cảnh hoặc thảo luận câu hỏi này với chuyên gia y tế.",
+  "evidence.result.safeStopBody":
+    "Không có câu trả lời y khoa được tạo khi provenance không đầy đủ. Bạn có thể bổ sung bối cảnh hoặc thảo luận câu hỏi này với chuyên gia y tế.",
   "evidence.result.uncertainty": "Độ không chắc chắn của lần chạy này",
   "evidence.intro.title": "Không phải một câu trả lời đoán trước",
-  "evidence.intro.body": "Câu hỏi được gắn với LifeMap, sau đó mới truy xuất hướng dẫn, nghiên cứu chính, tổng quan và bình luận theo từng nhóm nguồn. Thiếu nguồn đáng tin cậy thì CLARA sẽ nói là chưa có kết luận.",
+  "evidence.intro.body":
+    "Câu hỏi được gắn với LifeMap, sau đó mới truy xuất hướng dẫn, nghiên cứu chính, tổng quan và bình luận theo từng nhóm nguồn. Thiếu nguồn đáng tin cậy thì CLARA sẽ nói là chưa có kết luận.",
   "evidence.notifications.title": "Thay đổi đã được rà soát",
   "evidence.notifications.markRead": "Đánh dấu đã đọc",
   "evidence.notifications.read": "Đã đọc",
   "evidence.step.question": "Bước 1 · Câu hỏi của bạn",
   "evidence.question.title": "Đặt câu hỏi theo hành trình",
-  "evidence.question.description": "Bạn luôn xem và xác nhận câu hỏi trước khi truy xuất chuyên sâu.",
+  "evidence.question.description":
+    "Bạn luôn xem và xác nhận câu hỏi trước khi truy xuất chuyên sâu.",
   "evidence.question.emptyTitle": "Cần một hành trình",
-  "evidence.question.emptyDescription": "Tạo một hành trình LifeMap trước, rồi quay lại để đặt câu hỏi có ngữ cảnh.",
+  "evidence.question.emptyDescription":
+    "Tạo một hành trình LifeMap trước, rồi quay lại để đặt câu hỏi có ngữ cảnh.",
   "evidence.question.openLifeMap": "Mở LifeMap",
   "evidence.question.episode": "Thuộc hành trình",
   "evidence.question.text": "Điều bạn muốn biết",
-  "evidence.question.textPlaceholder": "Ví dụ: Có bằng chứng nào giúp tôi chuẩn bị cuộc hẹn về huyết áp?",
+  "evidence.question.textPlaceholder":
+    "Ví dụ: Có bằng chứng nào giúp tôi chuẩn bị cuộc hẹn về huyết áp?",
   "evidence.question.population": "Bối cảnh bạn đã xác nhận",
-  "evidence.question.populationPlaceholder": "Ví dụ: người lớn, đã được bác sĩ nói có tăng huyết áp",
+  "evidence.question.populationPlaceholder":
+    "Ví dụ: người lớn, đã được bác sĩ nói có tăng huyết áp",
   "evidence.question.outcomes": "Điều bạn muốn theo dõi",
   "evidence.question.outcomesHint": "(mỗi dòng một ý)",
-  "evidence.question.outcomesPlaceholder": "Ví dụ:\nGiảm huyết áp\nTác dụng không mong muốn",
+  "evidence.question.outcomesPlaceholder":
+    "Ví dụ:\nGiảm huyết áp\nTác dụng không mong muốn",
   "evidence.question.horizon": "Khoảng thời gian",
   "evidence.question.horizonPlaceholder": "Ví dụ: 3 tháng tới",
   "evidence.question.save": "Lưu để xem lại",
   "evidence.question.saving": "Đang lưu…",
   "evidence.step.confirm": "Bước 2 · Xác nhận",
   "evidence.confirm.confirmed": "Bạn đã xác nhận câu hỏi này.",
-  "evidence.confirm.pending": "Hãy kiểm tra câu hỏi và bối cảnh trước khi CLARA tìm nguồn.",
+  "evidence.confirm.pending":
+    "Hãy kiểm tra câu hỏi và bối cảnh trước khi CLARA tìm nguồn.",
   "evidence.confirm.missing": "Có thể sẽ cần thêm: {items}.",
   "evidence.confirm.action": "Tôi đã kiểm tra câu hỏi",
   "evidence.confirm.search": "Tìm bằng chứng",
   "evidence.confirm.searching": "Đang tìm nguồn đã xác minh…",
   "evidence.subscription.title": "Theo dõi thay đổi quan trọng",
-  "evidence.subscription.description": "Kết quả tìm kiếm mới không tự tạo thông báo. Chỉ thay đổi quan trọng đã được chuyên gia chấp nhận mới xuất hiện ở đây.",
+  "evidence.subscription.description":
+    "Kết quả tìm kiếm mới không tự tạo thông báo. Chỉ thay đổi quan trọng đã được chuyên gia chấp nhận mới xuất hiện ở đây.",
   "evidence.subscription.interval": "Tần suất kiểm tra",
   "evidence.subscription.daily": "Mỗi ngày",
   "evidence.subscription.weekly": "Mỗi tuần",
   "evidence.subscription.monthly": "Mỗi 30 ngày",
   "evidence.subscription.stop": "Dừng theo dõi cập nhật",
   "evidence.subscription.start": "Theo dõi cập nhật quan trọng",
-  "evidence.subscription.disabled": "Bạn đã lưu lựa chọn theo dõi. Tác vụ kiểm tra định kỳ hiện chưa được quản trị viên bật.",
+  "evidence.subscription.disabled":
+    "Bạn đã lưu lựa chọn theo dõi. Tác vụ kiểm tra định kỳ hiện chưa được quản trị viên bật.",
   "evidence.subscription.attached": "Gắn với: {title}",
   "council.new.title": "Ca hội chẩn mới",
-  "council.new.description": "Tạo ca, nhập thông tin cần thiết, chọn góc nhìn chuyên môn rồi mới yêu cầu CLARA phân tích.",
+  "council.new.description":
+    "Tạo ca, nhập thông tin cần thiết, chọn góc nhìn chuyên môn rồi mới yêu cầu CLARA phân tích.",
   "council.new.flow": "Quy trình theo bước",
   "council.new.heading": "Tạo ca trước khi phân tích",
-  "council.new.intro": "CLARA không tạo phân tích từ dữ liệu giả. Hãy tạo ca, rà soát thông tin, chọn chuyên khoa, rồi mới bắt đầu hội chẩn.",
+  "council.new.intro":
+    "CLARA không tạo phân tích từ dữ liệu giả. Hãy tạo ca, rà soát thông tin, chọn chuyên khoa, rồi mới bắt đầu hội chẩn.",
   "council.new.create": "Tạo ca mới",
   "council.new.creating": "Đang tạo ca…",
   "council.new.recent": "Các ca gần đây",
@@ -2373,31 +3331,39 @@ const VI_MESSAGES = {
   "council.error.saveSpecialists": "Không thể lưu các chuyên khoa đã chọn.",
   "council.error.run": "Chưa thể chạy hội chẩn lúc này.",
   "council.evidence.title": "Nguồn nghiên cứu để rà soát",
-  "council.evidence.description": "Chỉ gắn danh sách nguồn đã kiểm chứng để đối chiếu ở chế độ thử nghiệm. Việc này không thay đổi kết luận, mức độ khẩn hay quyết định của hội chẩn.",
+  "council.evidence.description":
+    "Chỉ gắn danh sách nguồn đã kiểm chứng để đối chiếu ở chế độ thử nghiệm. Việc này không thay đổi kết luận, mức độ khẩn hay quyết định của hội chẩn.",
   "council.evidence.noneAttached": "Chưa gắn nguồn nghiên cứu nào.",
-  "council.evidence.current": "Đang dùng ảnh chụp nguồn mới nhất: {count} nguồn, gắn lúc {date}.",
+  "council.evidence.current":
+    "Đang dùng ảnh chụp nguồn mới nhất: {count} nguồn, gắn lúc {date}.",
   "council.evidence.selectorLabel": "Chọn một ảnh chụp nguồn đã hoàn tất",
   "council.evidence.selectorPlaceholder": "Chọn ảnh chụp nguồn…",
   "council.evidence.option": "{count} nguồn đã kiểm chứng · hoàn tất {date}",
-  "council.evidence.noEligible": "Chưa có ảnh chụp nguồn đã hoàn tất, có provenance phù hợp.",
+  "council.evidence.noEligible":
+    "Chưa có ảnh chụp nguồn đã hoàn tất, có provenance phù hợp.",
   "council.evidence.attach": "Gắn để rà soát",
   "council.evidence.attaching": "Đang gắn…",
-  "council.evidence.attached": "Đã gắn ảnh chụp nguồn để rà soát. Chạy lại hội chẩn để dùng trong chế độ thử nghiệm nếu tính năng được bật.",
+  "council.evidence.attached":
+    "Đã gắn ảnh chụp nguồn để rà soát. Chạy lại hội chẩn để dùng trong chế độ thử nghiệm nếu tính năng được bật.",
   "council.evidence.attachError": "Chưa thể gắn ảnh chụp nguồn lúc này.",
   "council.intake.title": "Nhập thông tin ca",
-  "council.intake.description": "Bước 1/3: nhập và rà soát thông tin ca trước khi phân tích.",
+  "council.intake.description":
+    "Bước 1/3: nhập và rà soát thông tin ca trước khi phân tích.",
   "council.step": "Bước {step}/3 · Ca #{id}",
   "council.intake.heading": "Thông tin ban đầu",
   "council.intake.mode.transcript": "Bản ghi chữ",
   "council.intake.mode.audio": "Tệp âm thanh",
   "council.intake.fileSelected": "Đã chọn: {name}",
   "council.intake.transcriptPlaceholder": "Dán bản ghi tại đây…",
-  "council.intake.audioTranscriptPlaceholder": "(Không bắt buộc) Dán bản ghi hỗ trợ…",
+  "council.intake.audioTranscriptPlaceholder":
+    "(Không bắt buộc) Dán bản ghi hỗ trợ…",
   "council.intake.transcriptRequired": "Hãy dán bản ghi trước khi chuẩn hóa.",
-  "council.intake.audioRequired": "Hãy tải tệp âm thanh hoặc dán bản ghi hỗ trợ.",
+  "council.intake.audioRequired":
+    "Hãy tải tệp âm thanh hoặc dán bản ghi hỗ trợ.",
   "council.intake.normalize": "Chuẩn hóa thông tin",
   "council.intake.processing": "Đang xử lý…",
-  "council.intake.normalized": "Đã chuẩn hóa thông tin vào ca hiện tại. Bạn có thể chỉnh sửa trước khi sang bước 2.",
+  "council.intake.normalized":
+    "Đã chuẩn hóa thông tin vào ca hiện tại. Bạn có thể chỉnh sửa trước khi sang bước 2.",
   "council.intake.symptoms": "Triệu chứng",
   "council.intake.labs": "Xét nghiệm",
   "council.intake.medicines": "Thuốc",
@@ -2407,7 +3373,8 @@ const VI_MESSAGES = {
   "council.action.nextStep": "Sang bước {step}",
   "council.action.saving": "Đang lưu…",
   "council.specialists.title": "Chọn chuyên khoa",
-  "council.specialists.description": "Bước 2/3: chọn các góc nhìn chuyên môn để rà soát ca.",
+  "council.specialists.description":
+    "Bước 2/3: chọn các góc nhìn chuyên môn để rà soát ca.",
   "council.specialists.heading": "Chọn chuyên khoa",
   "council.specialists.count": "Số chuyên khoa (2–5)",
   "council.specialists.selected": "Đã chọn {selected}/{total} chuyên khoa.",
@@ -2418,9 +3385,11 @@ const VI_MESSAGES = {
   "council.specialist.pharmacology": "Dược lâm sàng",
   "council.specialist.nephrology": "Thận học",
   "council.review.title": "Rà soát trước khi hội chẩn",
-  "council.review.description": "Bước 3/3: kiểm tra nội dung ca và chuyên khoa trước khi chạy phân tích.",
+  "council.review.description":
+    "Bước 3/3: kiểm tra nội dung ca và chuyên khoa trước khi chạy phân tích.",
   "council.review.heading": "Rà soát trước khi chạy",
-  "council.review.dataRequired": "Hãy nhập thông tin ca trước khi chạy hội chẩn.",
+  "council.review.dataRequired":
+    "Hãy nhập thông tin ca trước khi chạy hội chẩn.",
   "council.review.symptoms": "Triệu chứng: {count}",
   "council.review.labs": "Xét nghiệm: {count}",
   "council.review.medicines": "Thuốc: {count}",
@@ -2442,7 +3411,8 @@ const VI_MESSAGES = {
   "council.empty.landing": "Về trang Hội chẩn",
   "council.result.title": "Kết quả hội chẩn",
   "council.result.description": "Kết quả hội chẩn gần nhất ở dạng gọn, dễ đọc.",
-  "council.result.emptyDescription": "Hãy tạo ca mới để có kết quả hiển thị ở đây.",
+  "council.result.emptyDescription":
+    "Hãy tạo ca mới để có kết quả hiển thị ở đây.",
   "council.result.summary": "Tóm tắt",
   "council.result.summaryTitle": "Tóm tắt kết quả",
   "council.result.time": "Thời gian",
@@ -2452,7 +3422,8 @@ const VI_MESSAGES = {
   "council.result.consensus": "Đồng thuận chuyên khoa",
   "council.result.consensusReview": "Cần rà soát",
   "council.result.consensusClear": "Chưa thấy bất đồng trọng yếu",
-  "council.result.consensusHint": "Không phải xác suất hoặc độ tin cậy lâm sàng",
+  "council.result.consensusHint":
+    "Không phải xác suất hoặc độ tin cậy lâm sàng",
   "council.result.professionalReview": "Rà soát chuyên môn",
   "council.result.reviewRequired": "Bắt buộc",
   "council.result.reviewBeforeUse": "Cần trước khi dùng",
@@ -2466,19 +3437,25 @@ const VI_MESSAGES = {
   "council.result.ruleRisk": "Tín hiệu nguy cơ theo quy tắc (chỉ theo dõi)",
   "council.result.ruleRiskPresent": "có tín hiệu",
   "council.result.ruleRiskDisabled": "chưa bật",
-  "council.result.ruleRiskHint": "Đây là điểm heuristic chưa hiệu chuẩn; không thay thế phân luồng an toàn hoặc nhận định chuyên môn.",
+  "council.result.ruleRiskHint":
+    "Đây là điểm heuristic chưa hiệu chuẩn; không thay thế phân luồng an toàn hoặc nhận định chuyên môn.",
   "council.result.medicationSafety.label": "Kiểm tra an toàn thuốc",
   "council.result.medicationSafety.checked": "Đã kiểm tra",
   "council.result.medicationSafety.unavailable": "Chưa thể xác nhận",
   "council.result.medicationSafety.clarification": "Cần xác nhận thuốc",
   "council.result.medicationSafety.version": "Nguồn DrugBank: {version}",
-  "council.result.medicationSafety.noVersion": "Phiên bản nguồn chưa được ghi nhận",
-  "council.result.medicationSafety.reviewNotice": "Kiểm tra an toàn thuốc cần được bác sĩ hoặc dược sĩ rà soát trước khi dùng kết quả hội chẩn.",
-  "council.result.medicationSafety.unavailableNotice": "Chưa thể xác nhận đầy đủ an toàn thuốc từ nguồn bắt buộc. Đây không phải kết luận không có tương tác; hãy rà soát với bác sĩ hoặc dược sĩ.",
-  "council.result.medicationSafety.clarificationNotice": "Cần xác nhận tên hoặc hoạt chất thuốc trước khi có thể kiểm tra đầy đủ an toàn thuốc. Hãy rà soát với bác sĩ hoặc dược sĩ.",
+  "council.result.medicationSafety.noVersion":
+    "Phiên bản nguồn chưa được ghi nhận",
+  "council.result.medicationSafety.reviewNotice":
+    "Kiểm tra an toàn thuốc cần được bác sĩ hoặc dược sĩ rà soát trước khi dùng kết quả hội chẩn.",
+  "council.result.medicationSafety.unavailableNotice":
+    "Chưa thể xác nhận đầy đủ an toàn thuốc từ nguồn bắt buộc. Đây không phải kết luận không có tương tác; hãy rà soát với bác sĩ hoặc dược sĩ.",
+  "council.result.medicationSafety.clarificationNotice":
+    "Cần xác nhận tên hoặc hoạt chất thuốc trước khi có thể kiểm tra đầy đủ an toàn thuốc. Hãy rà soát với bác sĩ hoặc dược sĩ.",
   "council.result.escalationReason": "Lý do leo thang: {reason}",
   "council.result.finalRecommendation": "Khuyến nghị tổng hợp",
-  "council.result.noRecommendation": "Chưa có khuyến nghị tổng hợp trong kết quả này.",
+  "council.result.noRecommendation":
+    "Chưa có khuyến nghị tổng hợp trong kết quả này.",
   "council.result.noConsensus": "Chưa có nội dung đồng thuận.",
   "council.result.processing": "Trạng thái xử lý",
   "council.result.processingTitle": "Các bước hệ thống đã thực hiện",
@@ -2511,37 +3488,52 @@ const VI_MESSAGES = {
     " Đây là kết quả ở chế độ dự phòng (degraded) — hãy cân nhắc thận trọng hơn.",
   "council.guard.overrideTitle": "Ghi đè quyết định",
   "council.guard.pauseTitle": "Tạm dừng quy trình",
-  "council.guard.overrideDescription": "Bạn đang ghi đè đề xuất của hệ thống. Vui lòng nhập lý do lâm sàng.",
-  "council.guard.pauseDescription": "Bạn đang tạm dừng quy trình hội chẩn. Vui lòng nhập lý do lâm sàng.",
+  "council.guard.overrideDescription":
+    "Bạn đang ghi đè đề xuất của hệ thống. Vui lòng nhập lý do lâm sàng.",
+  "council.guard.pauseDescription":
+    "Bạn đang tạm dừng quy trình hội chẩn. Vui lòng nhập lý do lâm sàng.",
   "council.guard.reasonLabel": "Lý do lâm sàng *",
-  "council.guard.reasonPlaceholder": "Ví dụ: Dữ liệu lâm sàng mới cho thấy cần ưu tiên xử trí khác...",
+  "council.guard.reasonPlaceholder":
+    "Ví dụ: Dữ liệu lâm sàng mới cho thấy cần ưu tiên xử trí khác...",
   "council.guard.cancel": "Hủy",
   "council.guard.confirm": "Xác nhận",
   "council.overview.empty.title": "Chưa có dữ liệu phân tích",
-  "council.overview.empty.description": "Ca hiện tại chưa chạy phân tích. Hãy vào Nhập ca bệnh, hoàn tất thông tin và chạy hội chẩn.",
+  "council.overview.empty.description":
+    "Ca hiện tại chưa chạy phân tích. Hãy vào Nhập ca bệnh, hoàn tất thông tin và chạy hội chẩn.",
   "council.overview.empty.openCase": "Mở trang nhập ca bệnh",
   "council.overview.close": "Đóng",
   "council.overview.handoff.action": "Mời bác sĩ phụ trách xem lại",
-  "council.overview.handoff.actionHint": "Gửi tóm tắt ca và điểm bất đồng cho người trực.",
+  "council.overview.handoff.actionHint":
+    "Gửi tóm tắt ca và điểm bất đồng cho người trực.",
   "council.overview.handoff.dialogTitle": "Mời chuyên khoa hội chẩn",
-  "council.overview.handoff.dialogDescription": "Chọn chuyên khoa phù hợp để gửi tóm tắt ca và điểm bất đồng.",
+  "council.overview.handoff.dialogDescription":
+    "Chọn chuyên khoa phù hợp để gửi tóm tắt ca và điểm bất đồng.",
   "council.overview.handoff.send": "Gửi yêu cầu hội chẩn",
-  "council.overview.handoff.prepared": "Đã chuẩn bị yêu cầu mời {specialty}. {reason}",
+  "council.overview.handoff.prepared":
+    "Đã chuẩn bị yêu cầu mời {specialty}. {reason}",
   "council.overview.handoff.sent": "Đã gửi yêu cầu mời {specialty}. {reason}",
   "council.overview.guard.overrideAction": "Ghi đè quyết định",
   "council.overview.guard.pauseAction": "Tạm dừng quy trình",
-  "council.overview.guard.requestRecorded": "Đã ghi nhận yêu cầu {action}. Lý do: {reason}",
-  "council.overview.guard.pauseRecorded": "Đã tạm dừng quy trình. Khuyến nghị cuối cùng đang ở trạng thái chưa được xác nhận, chờ bác sĩ phụ trách xem lại.",
+  "council.overview.guard.requestRecorded":
+    "Đã ghi nhận yêu cầu {action}. Lý do: {reason}",
+  "council.overview.guard.pauseRecorded":
+    "Đã tạm dừng quy trình. Khuyến nghị cuối cùng đang ở trạng thái chưa được xác nhận, chờ bác sĩ phụ trách xem lại.",
   "council.overview.summary.title": "Tóm tắt hội chẩn",
   "council.overview.summary.unconfirmed": "Chưa được xác nhận",
-  "council.overview.summary.pausedNotice": "Quy trình đang tạm dừng. Khuyến nghị cuối cùng chưa được xác nhận, chờ bác sĩ phụ trách xem lại.",
-  "council.overview.summary.noConsensus": "Hệ thống chưa ghi nhận đồng thuận chắc chắn giữa các chuyên khoa.",
-  "council.overview.summary.conflictSignal": "Có tín hiệu cần xem lại liên quan đến {first} và {second}.",
+  "council.overview.summary.pausedNotice":
+    "Quy trình đang tạm dừng. Khuyến nghị cuối cùng chưa được xác nhận, chờ bác sĩ phụ trách xem lại.",
+  "council.overview.summary.noConsensus":
+    "Hệ thống chưa ghi nhận đồng thuận chắc chắn giữa các chuyên khoa.",
+  "council.overview.summary.conflictSignal":
+    "Có tín hiệu cần xem lại liên quan đến {first} và {second}.",
   "council.overview.summary.missingData": "Dữ liệu còn thiếu:",
   "council.overview.summary.nextStep": "Đề xuất tiếp theo:",
-  "council.overview.summary.nextStep.renal": "Bổ sung xét nghiệm chức năng thận nếu có thuốc cần chỉnh liều theo eGFR.",
-  "council.overview.summary.nextStep.pharmacy": "Mời Dược lâm sàng hoặc Thận học khi có tín hiệu nguy cơ thuốc.",
-  "council.overview.summary.nextStep.review": "Bác sĩ phụ trách cần xác nhận trước khi đưa ra khuyến nghị cuối cùng.",
+  "council.overview.summary.nextStep.renal":
+    "Bổ sung xét nghiệm chức năng thận nếu có thuốc cần chỉnh liều theo eGFR.",
+  "council.overview.summary.nextStep.pharmacy":
+    "Mời Dược lâm sàng hoặc Thận học khi có tín hiệu nguy cơ thuốc.",
+  "council.overview.summary.nextStep.review":
+    "Bác sĩ phụ trách cần xác nhận trước khi đưa ra khuyến nghị cuối cùng.",
   "council.overview.summary.noMaterialConflict": "Chưa thấy bất đồng trọng yếu",
   "council.overview.summary.routine": "Mức xử trí: theo dõi thường quy.",
   "council.overview.summary.recorded": "Ghi nhận: {consensus}",
@@ -2556,17 +3548,23 @@ const VI_MESSAGES = {
   "council.overview.listJoin": " và ",
   "council.overview.elapsed": "Thời gian từ lúc chạy",
   "council.overview.banner.safety.title": "Cần xử trí khẩn / cần xác nhận",
-  "council.overview.banner.safety.detail": "Có tín hiệu an toàn hoặc yêu cầu bàn giao cho bác sĩ phụ trách trước khi đưa ra khuyến nghị cuối cùng.",
+  "council.overview.banner.safety.detail":
+    "Có tín hiệu an toàn hoặc yêu cầu bàn giao cho bác sĩ phụ trách trước khi đưa ra khuyến nghị cuối cùng.",
   "council.overview.banner.conflict.title": "Có bất đồng chuyên khoa",
-  "council.overview.banner.conflict.detail": "Phát hiện tín hiệu khác nhau giữa các chuyên khoa. Cần bác sĩ phụ trách xác nhận trước khi kết luận.",
+  "council.overview.banner.conflict.detail":
+    "Phát hiện tín hiệu khác nhau giữa các chuyên khoa. Cần bác sĩ phụ trách xác nhận trước khi kết luận.",
   "council.overview.banner.review.title": "Cần bác sĩ xem lại",
-  "council.overview.banner.review.detail": "Có điểm cần kiểm tra thêm trước khi chốt khuyến nghị.",
+  "council.overview.banner.review.detail":
+    "Có điểm cần kiểm tra thêm trước khi chốt khuyến nghị.",
   "council.overview.banner.incomplete.title": "Chưa đủ dữ liệu kết luận",
-  "council.overview.banner.incomplete.detail": "Thiếu dữ liệu quan trọng nên hệ thống chưa thể đánh giá mức đồng thuận đáng tin cậy.",
+  "council.overview.banner.incomplete.detail":
+    "Thiếu dữ liệu quan trọng nên hệ thống chưa thể đánh giá mức đồng thuận đáng tin cậy.",
   "council.overview.banner.stable.title": "Hội chẩn ổn định",
-  "council.overview.banner.stable.detail": "Không phát hiện bất đồng quan trọng giữa các chuyên khoa trong dữ liệu hiện tại.",
+  "council.overview.banner.stable.detail":
+    "Không phát hiện bất đồng quan trọng giữa các chuyên khoa trong dữ liệu hiện tại.",
   "council.overview.conflictMap.title": "Sơ đồ bất đồng chuyên khoa",
-  "council.overview.conflictMap.noAutomaticConsensus": "Hệ thống chưa đạt đồng thuận tự động",
+  "council.overview.conflictMap.noAutomaticConsensus":
+    "Hệ thống chưa đạt đồng thuận tự động",
   "council.overview.conflictMap.cardiologyPrompt": "Tim mạch đề xuất gì?",
   "council.overview.conflictMap.criticalConflict": "Xung đột quan trọng",
   "council.overview.conflictMap.renalPrompt": "Nội tiết/Thận cảnh báo gì?",
@@ -2579,9 +3577,12 @@ const VI_MESSAGES = {
   "council.overview.assessment.missingInformation": "Thiếu thông tin",
   "council.overview.assessment.draft": "Bản nháp, chưa là kết luận",
   "council.overview.assessment.requiresConfirmation": "Cần xác nhận",
-  "council.overview.assessment.mapHint": "Dùng để đánh giá huyết động trước khi kết luận.",
-  "council.overview.assessment.renalHint": "Cần cho các thuốc phải chỉnh liều theo chức năng thận.",
-  "council.overview.assessment.disclaimer": "Đây là trạng thái kiểm tra thông tin, không phải xác suất hay độ tin cậy lâm sàng.",
+  "council.overview.assessment.mapHint":
+    "Dùng để đánh giá huyết động trước khi kết luận.",
+  "council.overview.assessment.renalHint":
+    "Cần cho các thuốc phải chỉnh liều theo chức năng thận.",
+  "council.overview.assessment.disclaimer":
+    "Đây là trạng thái kiểm tra thông tin, không phải xác suất hay độ tin cậy lâm sàng.",
   "council.overview.assessment.missingReason": "Lý do: Thiếu {items}.",
   "council.overview.timeline.title": "Timeline hội chẩn",
   "council.overview.timeline.step": "Bước {sequence}",
@@ -2595,37 +3596,46 @@ const VI_MESSAGES = {
   "council.overview.timeline.status.review": "Cần xem lại",
   "council.overview.timeline.status.pending": "Chờ bác sĩ xác nhận",
   "council.overview.timeline.status.done": "Hoàn tất",
-  "council.overview.timeline.empty": "Chưa có timeline hội chẩn từ lần chạy gần nhất.",
+  "council.overview.timeline.empty":
+    "Chưa có timeline hội chẩn từ lần chạy gần nhất.",
   "council.overview.timeline.liveProgress": "Tiến trình trực tiếp",
   "council.overview.rerun.live": "Đang hội chẩn trực tiếp...",
   "council.overview.rerun.running": "Đang chạy lại...",
   "council.overview.rerun.action": "Chạy lại hội chẩn",
   "council.workspace.analyze.title": "Phân tích hội chẩn",
-  "council.workspace.analyze.description": "Các tín hiệu chính, yếu tố nguy cơ và việc cần lưu ý từ kết quả hội chẩn.",
+  "council.workspace.analyze.description":
+    "Các tín hiệu chính, yếu tố nguy cơ và việc cần lưu ý từ kết quả hội chẩn.",
   "council.workspace.analyze.eyebrow": "Phân tích",
   "council.workspace.details.title": "Chi tiết hội chẩn",
-  "council.workspace.details.description": "Tín hiệu và khuyến nghị có cấu trúc theo từng chuyên khoa.",
+  "council.workspace.details.description":
+    "Tín hiệu và khuyến nghị có cấu trúc theo từng chuyên khoa.",
   "council.workspace.details.eyebrow": "Chi tiết",
   "council.workspace.citations.title": "Nguồn hội chẩn",
-  "council.workspace.citations.description": "Nguồn chứng cứ và dấu hiệu chất lượng cho từng trích dẫn.",
+  "council.workspace.citations.description":
+    "Nguồn chứng cứ và dấu hiệu chất lượng cho từng trích dẫn.",
   "council.workspace.citations.eyebrow": "Nguồn",
   "council.workspace.research.title": "Nghiên cứu hội chẩn",
-  "council.workspace.research.description": "Điểm nổi bật, câu hỏi còn mở và bước tiếp theo cho vòng phân tích tiếp theo.",
+  "council.workspace.research.description":
+    "Điểm nổi bật, câu hỏi còn mở và bước tiếp theo cho vòng phân tích tiếp theo.",
   "council.workspace.research.eyebrow": "Nghiên cứu",
   "council.workspace.deepdive.title": "Phân tích sâu hội chẩn",
-  "council.workspace.deepdive.description": "Tổng hợp sâu theo các phần chuyên môn có thể rà soát.",
+  "council.workspace.deepdive.description":
+    "Tổng hợp sâu theo các phần chuyên môn có thể rà soát.",
   "council.workspace.deepdive.eyebrow": "Phân tích sâu",
   "council.workspace.empty.title": "Chưa có dữ liệu hội chẩn",
-  "council.workspace.empty.description": "Hãy tạo ca mới để mở các phần thông tin hội chẩn.",
+  "council.workspace.empty.description":
+    "Hãy tạo ca mới để mở các phần thông tin hội chẩn.",
   "council.workspace.analyze.heading": "Phân tích tín hiệu hội chẩn",
   "council.workspace.analyze.keySignals": "Tín hiệu chính",
   "council.workspace.analyze.keySignalsEmpty": "Chưa có tín hiệu chính.",
   "council.workspace.analyze.riskDrivers": "Yếu tố nguy cơ",
-  "council.workspace.analyze.riskDriversEmpty": "Chưa có yếu tố nguy cơ nổi bật.",
+  "council.workspace.analyze.riskDriversEmpty":
+    "Chưa có yếu tố nguy cơ nổi bật.",
   "council.workspace.analyze.actionItems": "Việc cần lưu ý",
   "council.workspace.analyze.actionItemsEmpty": "Chưa có việc cần lưu ý.",
   "council.workspace.details.heading": "Chi tiết theo chuyên khoa",
-  "council.workspace.details.empty": "Chưa có tín hiệu có cấu trúc để hiển thị.",
+  "council.workspace.details.empty":
+    "Chưa có tín hiệu có cấu trúc để hiển thị.",
   "council.workspace.citations.heading": "Nguồn chứng cứ",
   "council.workspace.citations.sourceFallback": "Nguồn lâm sàng",
   "council.workspace.citations.openSource": "Mở nguồn",
@@ -2640,7 +3650,8 @@ const VI_MESSAGES = {
   "council.workspace.deepdive.heading": "Các phần phân tích sâu",
   "council.workspace.deepdive.empty": "Chưa có dữ liệu cho phần này.",
   "council.flow.eyebrow": "Luồng hội chẩn",
-  "council.flow.title": "Quy trình hội chẩn trực quan, phù hợp giao diện sáng và tối",
+  "council.flow.title":
+    "Quy trình hội chẩn trực quan, phù hợp giao diện sáng và tối",
   "council.flow.review": "Rà soát: {state}",
   "council.flow.review.needsMoreInfo": "cần bổ sung thông tin",
   "council.flow.review.professionalReview": "cần người có chuyên môn rà soát",
@@ -2673,7 +3684,8 @@ const VI_MESSAGES = {
   "council.flow.node.workspace.title": "Không gian hội chẩn",
   "council.flow.node.workspace.subtitle": "Phân tích / chi tiết / chuyên sâu",
   "markdownAnswer.chart.preview": "Xem trước biểu đồ",
-  "markdownAnswer.chartSpec.notice": "Đây là đặc tả dữ liệu biểu đồ. CLARA sẽ hiển thị bản xem trước khi có thể đọc được dữ liệu.",
+  "markdownAnswer.chartSpec.notice":
+    "Đây là đặc tả dữ liệu biểu đồ. CLARA sẽ hiển thị bản xem trước khi có thể đọc được dữ liệu.",
   "markdownAnswer.code.chartSpec": "Đặc tả biểu đồ",
   "markdownAnswer.code.block": "Khối mã",
   "markdownAnswer.code.copyAria": "Sao chép khối mã",
@@ -2684,7 +3696,8 @@ const VI_MESSAGES = {
   "markdownAnswer.mermaid.loading": "Đang dựng sơ đồ Mermaid…",
   "markdownAnswer.mermaid.diagram": "Sơ đồ Mermaid",
   "markdownAnswer.mermaid.safe": "an toàn",
-  "markdownAnswer.mermaid.hidden": "Sơ đồ Mermaid đã được rút gọn để tập trung vào phần phân tích chính.",
+  "markdownAnswer.mermaid.hidden":
+    "Sơ đồ Mermaid đã được rút gọn để tập trung vào phần phân tích chính.",
   "markdownAnswer.citationRegistry.title": "Danh mục trích dẫn",
   "markdownAnswer.citationRegistry.trustTier": "Cấp độ {tier}",
   "markdownAnswer.actions.more": "Thêm lựa chọn cho câu trả lời",
@@ -2704,7 +3717,8 @@ const VI_MESSAGES = {
   "markdownAnswer.export.pngFailed": "Xuất PNG thất bại.",
   "ecosystem.pageTitle": "Trung tâm theo dõi kỹ thuật",
   "ecosystem.eyebrow": "Điều phối hệ sinh thái",
-  "ecosystem.description": "Theo dõi sức khỏe liên thông toàn hệ thống qua tổng quan vận hành, trạng thái đối tác, độ tin cậy dữ liệu và các cảnh báo cần xử lý.",
+  "ecosystem.description":
+    "Theo dõi sức khỏe liên thông toàn hệ thống qua tổng quan vận hành, trạng thái đối tác, độ tin cậy dữ liệu và các cảnh báo cần xử lý.",
   "ecosystem.backToDashboard": "Về bảng điều khiển",
   "ecosystem.refresh": "Làm mới ảnh chụp",
   "ecosystem.refreshing": "Đang làm mới…",
@@ -2713,10 +3727,13 @@ const VI_MESSAGES = {
   "ecosystem.unacknowledgedAlerts": "Cảnh báo chưa xác nhận: {count}",
   "ecosystem.noData": "chưa có dữ liệu",
   "ecosystem.loading": "Đang tải dữ liệu trung tâm theo dõi…",
-  "ecosystem.accessDenied": "Bạn không có quyền truy cập Trung tâm hệ sinh thái.",
-  "ecosystem.error.load": "Không thể tải Trung tâm hệ sinh thái. Vui lòng thử lại.",
+  "ecosystem.accessDenied":
+    "Bạn không có quyền truy cập Trung tâm hệ sinh thái.",
+  "ecosystem.error.load":
+    "Không thể tải Trung tâm hệ sinh thái. Vui lòng thử lại.",
   "ecosystem.summary.partnersTotal": "Tổng đối tác",
-  "ecosystem.summary.partnersTotal.helper": "Điểm kết nối được theo dõi liên tục",
+  "ecosystem.summary.partnersTotal.helper":
+    "Điểm kết nối được theo dõi liên tục",
   "ecosystem.summary.partnersDown": "Đối tác đang lỗi",
   "ecosystem.summary.partnersDown.action": "Cần xử lý ngay",
   "ecosystem.summary.partnersDown.clear": "Không phát hiện gián đoạn",
@@ -2731,7 +3748,8 @@ const VI_MESSAGES = {
   "ecosystem.partnerHealth.empty": "Chưa có dữ liệu tình trạng đối tác.",
   "ecosystem.dataTrust.eyebrow": "Điểm tin cậy dữ liệu",
   "ecosystem.dataTrust.title": "Độ tin cậy nguồn dữ liệu",
-  "ecosystem.dataTrust.description": "Theo dõi điểm tin cậy, độ mới và nguy cơ lệch để phát hiện dữ liệu bất thường sớm.",
+  "ecosystem.dataTrust.description":
+    "Theo dõi điểm tin cậy, độ mới và nguy cơ lệch để phát hiện dữ liệu bất thường sớm.",
   "ecosystem.dataTrust.empty": "Chưa có dữ liệu điểm tin cậy.",
   "ecosystem.alerts.eyebrow": "Cảnh báo liên thông",
   "ecosystem.alerts.title": "Hàng đợi cảnh báo theo mức ưu tiên",
@@ -2771,16 +3789,22 @@ const VI_MESSAGES = {
   "ecosystem.driftRisk.critical": "Nghiêm trọng",
   "compliance.transparency.badge": "Minh bạch AI · Luật 134/2025",
   "compliance.transparency.fallbackTitle": "Thông báo minh bạch về hệ thống AI",
-  "compliance.transparency.fallbackBody.assistant": "Bạn đang tương tác với CLARA — một hệ thống trí tuệ nhân tạo hỗ trợ thông tin y tế.",
-  "compliance.transparency.fallbackBody.scope": "CLARA cung cấp thông tin tham khảo và hỗ trợ ra quyết định; CLARA KHÔNG thay thế bác sĩ hoặc nhân viên y tế có giấy phép, không kê đơn và không đưa ra chẩn đoán xác định.",
-  "compliance.transparency.fallbackBody.limitations": "Câu trả lời có thể chưa đầy đủ hoặc chưa chính xác. Hãy luôn tham vấn chuyên môn y tế trước khi hành động.",
-  "compliance.transparency.fallbackBody.oversight": "Theo Luật Trí tuệ nhân tạo số 134/2025/QH15, CLARA được phân loại là hệ thống AI rủi ro cao trong lĩnh vực y tế và luôn duy trì sự giám sát của con người.",
+  "compliance.transparency.fallbackBody.assistant":
+    "Bạn đang tương tác với CLARA — một hệ thống trí tuệ nhân tạo hỗ trợ thông tin y tế.",
+  "compliance.transparency.fallbackBody.scope":
+    "CLARA cung cấp thông tin tham khảo và hỗ trợ ra quyết định; CLARA KHÔNG thay thế bác sĩ hoặc nhân viên y tế có giấy phép, không kê đơn và không đưa ra chẩn đoán xác định.",
+  "compliance.transparency.fallbackBody.limitations":
+    "Câu trả lời có thể chưa đầy đủ hoặc chưa chính xác. Hãy luôn tham vấn chuyên môn y tế trước khi hành động.",
+  "compliance.transparency.fallbackBody.oversight":
+    "Theo Luật Trí tuệ nhân tạo số 134/2025/QH15, CLARA được phân loại là hệ thống AI rủi ro cao trong lĩnh vực y tế và luôn duy trì sự giám sát của con người.",
   "compliance.transparency.version": "Phiên bản thông báo",
   "compliance.transparency.acknowledging": "Đang ghi nhận...",
   "compliance.transparency.acknowledge": "Tôi đã hiểu và tiếp tục",
-  "compliance.transparency.acknowledgeError": "Không thể ghi nhận xác nhận. Vui lòng thử lại.",
+  "compliance.transparency.acknowledgeError":
+    "Không thể ghi nhận xác nhận. Vui lòng thử lại.",
   "phr.title": "Hồ sơ sức khỏe cá nhân",
-  "phr.description": "Quản lý từng phần thông tin sức khỏe của bạn, theo từng bước ngắn.",
+  "phr.description":
+    "Quản lý từng phần thông tin sức khỏe của bạn, theo từng bước ngắn.",
   "phr.action.save": "Lưu hồ sơ",
   "phr.action.saving": "Đang lưu…",
   "phr.loading": "Đang tải hồ sơ…",
@@ -2791,6 +3815,15 @@ const VI_MESSAGES = {
   "phr.allergies": "Dị ứng",
   "phr.conditions": "Bệnh nền",
   "phr.medications": "Thuốc đang dùng",
+  "phr.allergy.empty.unknown": "Bạn chưa thêm thông tin dị ứng",
+  "phr.allergy.empty.noneKnown": "Bạn chưa từng ghi nhận dị ứng",
+  "phr.allergy.action.noneKnown": "Tôi chưa từng ghi nhận dị ứng",
+  "phr.medication.past": "Thuốc đã ngừng dùng",
+  "phr.medication.action.resume": "Đánh dấu đang dùng",
+  "phr.mobile.history": "Tiền sử bệnh lý",
+  "phr.mobile.progress": "Hoàn thiện hồ sơ để trải nghiệm cá nhân hóa tốt hơn.",
+  "phr.body.trend": "Xu hướng BMI theo lần đo",
+  "phr.body.trendNeedMore": "Cần ít nhất hai lần đo để hiển thị xu hướng BMI.",
   "phr.action.add": "Thêm",
   "phr.action.remove": "Xóa",
   "phr.field.fullName": "Họ và tên",
@@ -2819,7 +3852,8 @@ const VI_MESSAGES = {
   "phr.field.itemNote": "Ghi chú",
   "phr.updatedAt": "Cập nhật lần cuối",
   "phr.unknown": "Chưa rõ",
-  "phr.disclaimer": "Hồ sơ này do bạn tự khai báo, chỉ để hỗ trợ quyết định. Đây không phải hồ sơ bệnh án điện tử, không thay thế chẩn đoán của bác sĩ và không có giá trị pháp lý. Hãy trao đổi với nhân viên y tế trước khi hành động.",
+  "phr.disclaimer":
+    "Hồ sơ này do bạn tự khai báo, chỉ để hỗ trợ quyết định. Đây không phải hồ sơ bệnh án điện tử, không thay thế chẩn đoán của bác sĩ và không có giá trị pháp lý. Hãy trao đổi với nhân viên y tế trước khi hành động.",
   "phr.source.label": "Nguồn",
   "phr.source.selfDeclared": "Tự khai báo",
   "phr.source.ocr": "Nhập từ quét tài liệu",
@@ -2831,10 +3865,12 @@ const VI_MESSAGES = {
   "phr.verification.refuted": "Đã bác bỏ",
   "phr.verification.enteredInError": "Nhập sai",
   "phr.consent.title": "Đồng thuận dữ liệu",
-  "phr.consent.body": "Việc dùng hồ sơ để cá nhân hóa và chia sẻ được quản lý tại Trung tâm đồng thuận.",
+  "phr.consent.body":
+    "Việc dùng hồ sơ để cá nhân hóa và chia sẻ được quản lý tại Trung tâm đồng thuận.",
   "phr.consent.link": "Mở Trung tâm đồng thuận",
   "phr.completeness.title": "Mức độ hoàn thiện hồ sơ",
-  "phr.completeness.description": "Điểm dựa trên các nhóm dữ liệu có trong hồ sơ. Bổ sung nhóm còn thiếu có thể giúp kiểm tra an toàn thuốc và cá nhân hóa tốt hơn.",
+  "phr.completeness.description":
+    "Điểm dựa trên các nhóm dữ liệu có trong hồ sơ. Bổ sung nhóm còn thiếu có thể giúp kiểm tra an toàn thuốc và cá nhân hóa tốt hơn.",
   "phr.completeness.loading": "Đang tính mức độ hoàn thiện…",
   "phr.completeness.error": "Chưa thể tải mức độ hoàn thiện hồ sơ.",
   "phr.completeness.complete": "Hồ sơ đã có các nhóm dữ liệu chính.",
@@ -2852,11 +3888,15 @@ const VI_MESSAGES = {
   "phr.hub.body.title": "Chỉ số cơ thể",
   "phr.hub.body.description": "Chiều cao và cân nặng, trong một bước ngắn.",
   "phr.hub.contact.title": "Liên hệ & bảo hiểm",
-  "phr.hub.contact.description": "Thông tin liên lạc, người liên hệ khẩn cấp và bảo hiểm.",
-  "phr.hub.allergies.description": "Khai báo từng dị ứng và phản ứng tương ứng.",
+  "phr.hub.contact.description":
+    "Thông tin liên lạc, người liên hệ khẩn cấp và bảo hiểm.",
+  "phr.hub.allergies.description":
+    "Khai báo từng dị ứng và phản ứng tương ứng.",
   "phr.hub.conditions.description": "Theo dõi từng bệnh nền riêng biệt.",
-  "phr.hub.medications.description": "Ghi nhận từng thuốc bạn đang hoặc đã dùng.",
-  "phr.hub.status.description": "Xem nhóm thông tin còn thiếu trước khi bổ sung.",
+  "phr.hub.medications.description":
+    "Ghi nhận từng thuốc bạn đang hoặc đã dùng.",
+  "phr.hub.status.description":
+    "Xem nhóm thông tin còn thiếu trước khi bổ sung.",
   "phr.hub.ocr.title": "Quét tài liệu",
   "phr.hub.ocr.description": "Xem lại dữ liệu trước khi đưa vào hồ sơ.",
   "phr.hub.export.title": "Xuất dữ liệu",
@@ -2864,24 +3904,45 @@ const VI_MESSAGES = {
   "phr.hub.sharing.title": "Chia sẻ có kiểm soát",
   "phr.hub.sharing.description": "Tạo hoặc thu hồi từng liên kết chia sẻ.",
   "phr.hub.emergencyCard.title": "Thẻ khẩn cấp",
-  "phr.hub.emergencyCard.description": "Chọn thông tin tối thiểu dùng khi cần khẩn cấp.",
+  "phr.hub.emergencyCard.description":
+    "Chọn thông tin tối thiểu dùng khi cần khẩn cấp.",
   "phr.hub.reminders.title": "Nhắc nhở",
   "phr.hub.reminders.description": "Quản lý từng nhắc nhở thuốc.",
   "phr.hub.sections.record": "Thông tin hồ sơ",
   "phr.hub.sections.tools": "Công cụ hồ sơ",
+  "phr.hub.sections.personal": "Thông tin cá nhân",
+  "phr.hub.sections.important": "Thông tin sức khỏe quan trọng",
+  "phr.hub.progress.label": "Tiến độ hoàn thiện hồ sơ",
+  "phr.hub.progress.eyebrow": "Hồ sơ sức khỏe cá nhân",
+  "phr.hub.progress.title": "Đã hoàn thiện {completed}/{total} mục",
+  "phr.hub.progress.description": "Hoàn thiện từng phần khi bạn có thông tin; các mục trống vẫn có thể cập nhật sau.",
+  "phr.hub.progress.continue": "Tiếp tục hoàn thiện",
+  "phr.hub.status.complete": "Đã có",
+  "phr.hub.status.incomplete": "Chưa thêm",
+  "phr.body.bmi": "BMI hiện tại",
+  "phr.body.history": "Lịch sử đo",
+  "phr.body.historyEmpty": "Chưa có lần đo nào được lưu.",
+  "phr.body.historySave": "Lưu lần đo hôm nay",
+  "phr.body.historySaving": "Đang lưu lần đo…",
+  "phr.empty.allergies": "Chưa có dị ứng nào trong hồ sơ. Chỉ thêm thông tin bạn biết hoặc đã được chuyên gia xác nhận.",
+  "phr.empty.conditions": "Chưa có bệnh nền nào trong hồ sơ. Bạn có thể thêm thông tin đã được ghi nhận để tiện theo dõi.",
+  "phr.empty.medications": "Chưa có thuốc nào trong hồ sơ. Chỉ ghi thuốc bạn đang dùng hoặc đã dùng gần đây.",
   "phr.error.sectionNotFound.title": "Không tìm thấy mục hồ sơ",
-  "phr.error.sectionNotFound.description": "Hãy trở về trung tâm hồ sơ để chọn một mục.",
+  "phr.error.sectionNotFound.description":
+    "Hãy trở về trung tâm hồ sơ để chọn một mục.",
   "phr.action.backToRecord": "Về hồ sơ sức khỏe",
   "phr.action.recordHome": "Hồ sơ sức khỏe",
   "phr.section.identity.description": "Chỉ thông tin nhận diện và nhóm máu.",
   "phr.section.body.description": "Cập nhật chiều cao và cân nặng.",
-  "phr.section.contact.description": "Cập nhật liên hệ, liên hệ khẩn cấp và bảo hiểm.",
+  "phr.section.contact.description":
+    "Cập nhật liên hệ, liên hệ khẩn cấp và bảo hiểm.",
   "phr.section.allergies.description": "Thêm và xem lại từng dị ứng.",
   "phr.section.conditions.description": "Thêm và xem lại từng bệnh nền.",
   "phr.section.medications.description": "Thêm và xem lại từng thuốc.",
   "phr.section.ocr.description": "Xem lại trước khi xác nhận nhập hồ sơ.",
   "phr.section.sharing.description": "Tạo hoặc thu hồi từng liên kết chia sẻ.",
-  "phr.section.emergencyCard.description": "Chọn thông tin tối thiểu khi cần khẩn cấp.",
+  "phr.section.emergencyCard.description":
+    "Chọn thông tin tối thiểu khi cần khẩn cấp.",
   "phr.section.reminders.description": "Quản lý từng nhắc nhở thuốc.",
 } as const;
 
@@ -2907,16 +3968,23 @@ const EN_MESSAGES: MessageCatalog = {
   "navigation.clinical": "Clinical",
   "navigation.admin": "Operations",
   "navigation.support": "Support",
-  "admin.controlTower.error.load": "Could not load the control configuration. Please try again.",
-  "admin.controlTower.error.save": "Could not save the control configuration. Please try again.",
-  "admin.observability.error.load": "Could not load the system status snapshot. Please try again.",
-  "admin.observability.error.acknowledge": "Could not acknowledge the alert. Please try again.",
-  "admin.flowRuntime.error.load": "Could not load runtime events. Please try again.",
-  "admin.flowRuntime.error.refresh": "Could not refresh runtime events. Please try again.",
+  "admin.controlTower.error.load":
+    "Could not load the control configuration. Please try again.",
+  "admin.controlTower.error.save":
+    "Could not save the control configuration. Please try again.",
+  "admin.observability.error.load":
+    "Could not load the system status snapshot. Please try again.",
+  "admin.observability.error.acknowledge":
+    "Could not acknowledge the alert. Please try again.",
+  "admin.flowRuntime.error.load":
+    "Could not load runtime events. Please try again.",
+  "admin.flowRuntime.error.refresh":
+    "Could not refresh runtime events. Please try again.",
   "navigation.item.chat.label": "Ask CLARA",
   "navigation.item.chat.desc": "Health questions with safety guidance",
   "navigation.item.chat.title": "Ask CLARA",
-  "navigation.item.chat.subtitle": "Ask what concerns you; CLARA will guide the safest next step.",
+  "navigation.item.chat.subtitle":
+    "Ask what concerns you; CLARA will guide the safest next step.",
   "navigation.item.today.label": "Today",
   "navigation.item.today.desc": "Care tasks you accepted",
   "navigation.item.today.title": "Today",
@@ -2924,35 +3992,444 @@ const EN_MESSAGES: MessageCatalog = {
   "navigation.item.lifemap.label": "Health journey",
   "navigation.item.lifemap.desc": "Things you want to keep track of",
   "navigation.item.lifemap.title": "Health journey",
-  "navigation.item.lifemap.subtitle": "Organise what you want to track into small journeys.",
+  "navigation.item.lifemap.subtitle":
+    "Organise what you want to track into small journeys.",
   "navigation.item.visits.label": "Prepare for a visit",
   "navigation.item.visits.desc": "Questions and information for your visit",
   "navigation.item.visits.title": "Prepare for a visit",
-  "navigation.item.visits.subtitle": "Bring together the information you want for your visit.",
+  "navigation.item.visits.subtitle":
+    "Bring together the information you want for your visit.",
   "navigation.item.family.label": "Family support",
   "navigation.item.family.desc": "Share only what a supporter needs",
   "navigation.item.family.title": "Family support",
-  "navigation.item.family.subtitle": "Control who can see or help with one specific thing.",
+  "navigation.item.family.subtitle":
+    "Control who can see or help with one specific thing.",
   "navigation.item.phr.label": "Health record",
   "navigation.item.phr.desc": "Health information you manage",
   "navigation.item.phr.title": "Personal health record",
-  "navigation.item.phr.subtitle": "Store and bring together your personal health information.",
+  "navigation.item.phr.subtitle":
+    "Store and bring together your personal health information.",
   "navigation.item.medicines.label": "Medicines & safety",
-  "navigation.item.medicines.desc": "Medicines, medicine cabinet, and interaction checks",
+  "navigation.item.medicines.desc":
+    "Medicines, medicine cabinet, and interaction checks",
   "navigation.item.medicines.title": "Medicines & safety",
-  "navigation.item.medicines.subtitle": "Confirmed medicines, your medicine cabinet, and interaction checks in one place.",
+  "navigation.item.medicines.subtitle":
+    "Confirmed medicines, your medicine cabinet, and interaction checks in one place.",
+  "navigation.item.dashboard.label": "Overview",
+  "navigation.item.dashboard.desc": "A quick picture of today",
+  "navigation.item.dashboard.title": "Work overview",
+  "navigation.item.dashboard.subtitle":
+    "Quickly follow care and operational tasks for the day.",
+  "navigation.item.research.label": "Medical research",
+  "navigation.item.research.desc": "Synthesis and evidence verification",
+  "navigation.item.research.title": "Medical research",
+  "navigation.item.research.subtitle":
+    "In-depth analysis with sources, uncertainty, and a claim trail.",
+  "navigation.item.evidence.label": "Living evidence",
+  "navigation.item.evidence.desc": "LifeMap questions with verified sources",
+  "navigation.item.evidence.title": "Living evidence",
+  "navigation.item.evidence.subtitle":
+    "Connect a question to your journey, sources, and what remains uncertain.",
+  "navigation.item.selfmed.label": "Medicine cabinet",
+  "navigation.item.selfmed.desc": "Moved into Medicines & safety",
+  "navigation.item.selfmed.title": "My medicine cabinet",
+  "navigation.item.selfmed.subtitle":
+    "Manage current medicines and scan prescriptions from an image.",
+  "navigation.item.careguard.label": "Check interactions",
+  "navigation.item.careguard.desc": "Moved into Medicines & safety",
+  "navigation.item.careguard.title": "Medicine interaction check",
+  "navigation.item.careguard.subtitle":
+    "Compare medicines, allergies, and symptoms to spot risks early.",
+  "navigation.item.sourceHub.label": "Research sources",
+  "navigation.item.sourceHub.desc": "PubMed, medicine, and medical sources",
+  "navigation.item.sourceHub.title": "Research sources",
+  "navigation.item.sourceHub.subtitle":
+    "Synchronise and search medical sources for evidence analysis.",
+  "navigation.item.council.label": "Multi-specialty consultation",
+  "navigation.item.council.desc": "Multiple specialty perspectives",
+  "navigation.item.council.title": "Multi-specialty consultation",
+  "navigation.item.council.subtitle":
+    "Bring together multiple specialty perspectives for complex cases.",
+  "navigation.item.scribe.label": "Visit notes",
+  "navigation.item.scribe.desc": "Clinical note taking",
+  "navigation.item.scribe.title": "Clinical notes",
+  "navigation.item.scribe.subtitle":
+    "Draft visit notes in a clear, consistent format.",
+  "navigation.item.adminOverview.label": "System administration",
+  "navigation.item.adminOverview.desc":
+    "Coordinate configuration and operations",
+  "navigation.item.adminOverview.title": "System administration",
+  "navigation.item.adminOverview.subtitle":
+    "Central coordination for configuration, response quality, and operations.",
+  "navigation.item.adminKnowledgeSources.label": "Knowledge sources",
+  "navigation.item.adminKnowledgeSources.desc": "Unified data sources",
+  "navigation.item.adminKnowledgeSources.title": "Knowledge sources",
+  "navigation.item.adminKnowledgeSources.subtitle":
+    "A central place for retrieval connectors, documents, and medical-source synchronisation.",
+  "navigation.item.adminAnswerFlow.label": "Answer flow",
+  "navigation.item.adminAnswerFlow.desc": "Coordinate analysis and responses",
+  "navigation.item.adminAnswerFlow.title": "Answer flow",
+  "navigation.item.adminAnswerFlow.subtitle":
+    "Coordinate analysis, verification, and the final response.",
+  "navigation.item.adminObservability.label": "Operational monitoring",
+  "navigation.item.adminObservability.desc": "Monitor runtime alerts",
+  "navigation.item.adminObservability.title": "Operational monitoring",
+  "navigation.item.adminObservability.subtitle":
+    "Monitor system health, alerts, and runtime signals.",
+  "navigation.item.adminModeration.label": "Community moderation",
+  "navigation.item.adminModeration.desc": "Handle community-content reports",
+  "navigation.item.adminModeration.title": "Community moderation",
+  "navigation.item.adminModeration.subtitle":
+    "Review and handle reports about community content.",
+  "navigation.item.adminAnalytics.label": "Product analytics",
+  "navigation.item.adminAnalytics.desc": "People, areas, and retention",
+  "navigation.item.adminAnalytics.title": "Product analytics",
+  "navigation.item.adminAnalytics.subtitle":
+    "Usage trends, activity by area, conversion funnels, and retention.",
+  "navigation.item.adminClinicalAnalytics.label": "Clinical analytics",
+  "navigation.item.adminClinicalAnalytics.desc":
+    "Verification, DDI, and latency",
+  "navigation.item.adminClinicalAnalytics.title": "Clinical analytics",
+  "navigation.item.adminClinicalAnalytics.subtitle":
+    "FIDES verification decisions, medicine-interaction distribution, and latency by tier.",
+  "navigation.item.help.label": "Help",
+  "navigation.item.help.desc": "Get started in five minutes",
+  "navigation.item.help.title": "Help centre",
+  "navigation.item.help.subtitle": "Quick start steps for new users.",
+  "guide.eyebrow": "Start here",
+  "guide.title": "How to use CLARA",
+  "guide.description":
+    "Choose what you want to do, follow three short steps, then open the right screen. CLARA provides decision support only; seek medical care when warning signs are present.",
+  "guide.tasks.chat.title": "I want to ask CLARA about a symptom or medicine",
+  "guide.tasks.chat.detail":
+    "Use this when you need a quick, readable answer with safety guidance.",
+  "guide.tasks.chat.step1": "Ask your question in everyday language.",
+  "guide.tasks.chat.step2": "Choose Quick when you only need a short answer.",
+  "guide.tasks.chat.step3":
+    "Read the safety guidance before acting on the answer.",
+  "guide.tasks.chat.action": "Ask CLARA",
+  "guide.tasks.thinking.title": "I want a more detailed answer",
+  "guide.tasks.thinking.detail":
+    "Use Thinking or Pro for longer analysis and broader sourcing.",
+  "guide.tasks.thinking.step1": "Open the mode control beside the message box.",
+  "guide.tasks.thinking.step2":
+    "Choose Thinking for deeper analysis or Pro for a longer report.",
+  "guide.tasks.thinking.step3":
+    "Choose Full sources when you want CLARA to check a broader source set.",
+  "guide.tasks.thinking.action": "Open Thinking mode",
+  "guide.tasks.cabinet.title": "I want to save the medicines I take",
+  "guide.tasks.cabinet.detail":
+    "The medicine cabinet keeps your list ready for interaction checks.",
+  "guide.tasks.cabinet.step1":
+    "Add each medicine or scan a prescription image.",
+  "guide.tasks.cabinet.step2": "Add the dose if you know it.",
+  "guide.tasks.cabinet.step3":
+    "When at least two medicines are present, run an interaction check.",
+  "guide.tasks.cabinet.action": "Open medicine cabinet",
+  "guide.tasks.interactions.title":
+    "I want to know whether two medicines interact",
+  "guide.tasks.interactions.detail":
+    "Use the interaction check before combining multiple medicines.",
+  "guide.tasks.interactions.step1":
+    "Make sure the cabinet contains at least two medicines.",
+  "guide.tasks.interactions.step2": "Select Check medicine interactions.",
+  "guide.tasks.interactions.step3":
+    "Review each flagged pair and the What to do next section.",
+  "guide.tasks.interactions.action": "Check interactions",
+  "guide.tasks.council.title":
+    "I am a clinician and need input on a complex case",
+  "guide.tasks.council.detail":
+    "Multi-specialty input can help when a case has several management paths or specialties.",
+  "guide.tasks.council.step1": "Enter the clinical context clearly.",
+  "guide.tasks.council.step2": "Add relevant test results or notes.",
+  "guide.tasks.council.step3":
+    "Use the result as supporting information, not as a replacement for clinical judgment.",
+  "guide.tasks.council.action": "Open multi-specialty review",
+  "guide.tasks.scribe.title": "I want to document a consultation",
+  "guide.tasks.scribe.detail":
+    "Consultation notes can be turned into a structured summary for review.",
+  "guide.tasks.scribe.step1": "Enter or paste the consultation notes.",
+  "guide.tasks.scribe.step2": "Review the structured note before using it.",
+  "guide.tasks.scribe.step3":
+    "Do not include sensitive information without the appropriate consent.",
+  "guide.tasks.scribe.action": "Open consultation notes",
+  "guide.labels.title": "What do the labels in chat mean?",
+  "guide.labels.quick.term": "Quick",
+  "guide.labels.quick.meaning":
+    "A shorter answer with less waiting, suitable for simple questions.",
+  "guide.labels.thinking.term": "Thinking",
+  "guide.labels.thinking.meaning":
+    "Deeper analysis for questions that need an explanation.",
+  "guide.labels.pro.term": "Pro",
+  "guide.labels.pro.meaning":
+    "A longer, more complete report for in-depth research.",
+  "guide.labels.autoSources.term": "Automatic sources",
+  "guide.labels.autoSources.meaning":
+    "CLARA chooses an appropriate source scope to save time.",
+  "guide.labels.fullSources.term": "Full sources",
+  "guide.labels.fullSources.meaning":
+    "CLARA checks a broader source set, which may take longer.",
+  "phr.ocr.open": "Scan prescription (OCR)",
+  "phr.ocr.title": "Review OCR results",
+  "phr.ocr.intro":
+    "Upload a prescription image or file. Nothing is saved until you confirm.",
+  "phr.ocr.disclosure":
+    "I agree to send this file for reviewable medication extraction. CLARA does not save medicines automatically from OCR.",
+  "phr.ocr.consentNotice":
+    "Appropriate medical consent is required before CLARA sends a file to the configured OCR service.",
+  "phr.ocr.processingNotice":
+    "CLARA does not persist the uploaded file; review every item before saving it to your record.",
+  "phr.ocr.pick": "Choose file",
+  "phr.ocr.scanning": "Scanning...",
+  "phr.ocr.scanError": "Failed to scan the document.",
+  "phr.ocr.noCandidates": "No candidates found. Try a clearer file.",
+  "phr.ocr.name": "Medication",
+  "phr.ocr.dose": "Dose",
+  "phr.ocr.frequency": "Frequency",
+  "phr.ocr.needsReview": "Needs review",
+  "phr.ocr.accept": "Accept",
+  "phr.ocr.accepted": "Accepted",
+  "phr.ocr.discard": "Discard",
+  "phr.ocr.confirm": "Confirm & save",
+  "phr.ocr.confirming": "Saving...",
+  "phr.ocr.confirmError": "Failed to save OCR entries.",
+  "phr.ocr.confirmed": "Saved the accepted entries.",
+  "phr.ocr.nothingAccepted": "Accept at least one entry to save.",
+  "phr.ocr.close": "Close",
+  "phr.ocr.sourceDetails": "OCR source reference",
+  "phr.ocr.sourceOffset": "Location in normalized OCR text: {start}–{end}",
+  "phr.share.title": "Share record (read-only)",
+  "phr.share.description":
+    "Create read-only links to share your record. You can revoke them anytime.",
+  "phr.share.scope": "Scope",
+  "phr.share.scopeFull": "Full record",
+  "phr.share.scopeEmergency": "Emergency card only",
+  "phr.share.expiry": "Expires in (days)",
+  "phr.share.noExpiry": "No expiry",
+  "phr.share.create": "Create link",
+  "phr.share.creating": "Creating...",
+  "phr.share.createError": "Failed to create share link.",
+  "phr.share.activeLinks": "Created links",
+  "phr.share.noLinks": "No links created in this session yet.",
+  "phr.share.copy": "Copy",
+  "phr.share.copied": "Copied",
+  "phr.share.revoke": "Revoke",
+  "phr.share.revoking": "Revoking...",
+  "phr.share.revokeError": "Failed to revoke link.",
+  "phr.share.expiresAt": "Expires",
+  "phr.share.never": "no expiry",
+  "phr.shared.eyebrow": "Read-only shared link",
+  "phr.shared.fullTitle": "Shared health record",
+  "phr.shared.emergencyTitle": "Shared emergency card",
+  "phr.shared.loading": "Opening shared content...",
+  "phr.shared.unavailable":
+    "This shared link is invalid, expired, or has been revoked.",
+  "phr.shared.readOnly": "Read only",
+  "phr.shared.empty": "This link has no information that can be displayed.",
+  "phr.shared.profile": "Basic information",
+  "phr.shared.allergies": "Allergies",
+  "phr.shared.conditions": "Health conditions",
+  "phr.shared.medications": "Current medicines",
+  "phr.shared.emergencyContact": "Emergency contact",
+  "phr.shared.safety":
+    "If there are danger signs or you need urgent help, contact the nearest medical facility.",
+  "phr.shared.value.mild": "mild",
+  "phr.shared.value.moderate": "moderate",
+  "phr.shared.value.severe": "severe",
+  "phr.shared.value.unknown": "unknown",
+  "phr.shared.value.active": "active",
+  "phr.shared.value.resolved": "resolved",
+  "phr.shared.value.monitoring": "monitoring",
+  "phr.shared.value.male": "male",
+  "phr.shared.value.female": "female",
+  "phr.shared.value.other": "other",
+  "workspace.shared.eyebrow": "Read-only conversation link",
+  "workspace.shared.title": "Shared conversation",
+  "workspace.shared.loading": "Opening shared conversation...",
+  "workspace.shared.unavailable":
+    "This shared link is invalid, expired, or has been revoked.",
+  "workspace.shared.readOnly": "Read only",
+  "workspace.shared.expires": "Link expires",
+  "workspace.shared.question": "Question",
+  "workspace.shared.empty": "This link has no content that can be displayed.",
+  "phr.export.title": "Export record (FHIR)",
+  "phr.export.description":
+    "Download your record as a FHIR R4 bundle (application/fhir+json) to share with a clinic.",
+  "phr.export.scope": "Scope",
+  "phr.export.download": "Download",
+  "phr.export.downloading": "Exporting...",
+  "phr.export.error": "Export failed.",
+  "phr.export.resource.all": "All",
+  "phr.export.resource.patient": "Patient",
+  "phr.export.resource.allergy": "Allergies",
+  "phr.export.resource.condition": "Conditions",
+  "phr.export.resource.medication": "Medications",
+  "phr.export.resource.observation": "Observations",
+  "phr.emergencyCard.title": "Emergency card",
+  "phr.emergencyCard.description":
+    "Choose which sections appear on your emergency card. The preview updates below.",
+  "phr.emergencyCard.loading": "Loading emergency card...",
+  "phr.emergencyCard.error": "Unable to load the emergency card.",
+  "phr.emergencyCard.none": "No data",
+  "phr.emergencyCard.preview": "Card preview",
+  "phr.emergencyCard.field.allergies": "Allergies",
+  "phr.emergencyCard.field.currentMedications": "Current medications",
+  "phr.emergencyCard.field.conditions": "Conditions",
+  "phr.emergencyCard.field.bloodType": "Blood type",
+  "phr.emergencyCard.field.emergencyContact": "Emergency contact",
+  "phr.reminders.title": "Medication reminders",
+  "phr.reminders.description":
+    "Set reminders for current medications with a frequency, track remaining supply, and nudge a caregiver.",
+  "phr.reminders.medication": "Medication",
+  "phr.reminders.chooseMed": "Choose medication",
+  "phr.reminders.noEligible":
+    "No current medication with a frequency yet. Add a frequency to a medication first.",
+  "phr.reminders.remaining": "Remaining supply",
+  "phr.reminders.threshold": "Refill threshold",
+  "phr.reminders.caregiver": "Nudge caregiver on missed dose",
+  "phr.reminders.add": "Create reminder",
+  "phr.reminders.adding": "Creating...",
+  "phr.reminders.addError": "Failed to create reminder.",
+  "phr.reminders.loading": "Loading reminders...",
+  "phr.reminders.listError": "Unable to load reminders.",
+  "phr.reminders.empty": "No reminders configured yet.",
+  "phr.reminders.configured": "Configured reminders",
+  "phr.reminders.due": "Dose due",
+  "phr.reminders.refill": "Refill due",
+  "phr.reminders.nudgeOn": "Caregiver nudge: on",
+  "account.dataDelete.step.review": "Consequences",
+  "account.dataDelete.step.confirm": "Confirm",
+  "account.dataDelete.step.status": "Receipt",
+  "account.dataDelete.title": "Delete personal data",
+  "account.dataDelete.reviewTitle": "Before you request deletion",
+  "account.dataDelete.reviewDescription":
+    "Read the consequences first. You can still return to My data without sending a request.",
+  "account.dataDelete.confirmTitle": "Confirm your deletion request",
+  "account.dataDelete.confirmDescription":
+    "Only submit when you understand this request cannot be undone.",
+  "account.dataDelete.statusTitle": "Deletion request receipt",
+  "account.dataDelete.statusDescription":
+    "You can follow progress from My data.",
+  "account.dataDelete.consequenceTitle": "What will happen",
+  "account.dataDelete.consequence":
+    "CLARA will process a request to delete or anonymize your personal data within the statutory window.",
+  "account.dataDelete.retentionTitle": "Data retained",
+  "account.dataDelete.retention":
+    "Some audit or compliance records without identifying data may still be retained under legal obligations.",
+  "account.dataDelete.confirmation":
+    "I understand this request may delete or anonymize my personal data and cannot be undone.",
+  "account.dataDelete.continue": "Continue",
+  "account.dataDelete.confirm": "Submit deletion request",
+  "account.dataDelete.sending": "Submitting request…",
+  "account.dataDelete.back": "Back",
+  "account.dataDelete.cancel": "Cancel and return to My data",
+  "account.dataDelete.receipt": "Your request has been recorded.",
+  "account.dataDelete.unknownReceipt":
+    "This receipt could not be found. You can review your request history.",
+  "account.dataDelete.unavailable":
+    "Data-subject requests are not enabled for this environment yet.",
+  "account.dataDelete.loading": "Loading receipt…",
+  "account.dataDelete.loadError":
+    "Could not load the receipt. Please try again.",
+  "account.dataDelete.submitError":
+    "Could not submit your request. Please try again.",
+  "account.dataDelete.requestId": "Request ID",
+  "account.dataDelete.submittedAt": "Submitted",
+  "account.dataDelete.dueAt": "Due",
+  "account.dataDelete.status": "Status",
+  "account.dataDelete.status.received": "Received",
+  "account.dataDelete.status.inProgress": "In progress",
+  "account.dataDelete.status.fulfilled": "Fulfilled",
+  "account.dataDelete.status.rejected": "Rejected",
+  "admin.dsar.title": "DSAR queue (Admin)",
+  "admin.dsar.description":
+    "Monitor and resolve data-subject requests under Decree 13/2023/NĐ-CP, tracked against the statutory response window.",
+  "admin.dsar.disabled":
+    "Data-subject requests (DSAR) are not enabled for this environment yet.",
+  "admin.dsar.forbidden":
+    "You do not have permission to access this admin page.",
+  "admin.dsar.loading": "Loading queue...",
+  "admin.dsar.loadError":
+    "Could not load or update the DSAR queue. Please try again.",
+  "admin.dsar.empty": "No requests in the queue yet.",
+  "admin.dsar.overdueBadge": "Overdue",
+  "admin.dsar.overdueSummary": "Overdue requests: {count}",
+  "admin.dsar.none": "No overdue requests",
+  "admin.dsar.submittedAt": "Received",
+  "admin.dsar.dueAt": "Due",
+  "admin.dsar.resolvedAt": "Resolved",
+  "admin.dsar.statusLabel": "Update status",
+  "admin.dsar.refId": "Request ID",
+  "admin.dsar.saving": "Saving...",
+  "admin.dsar.kind.export": "Export",
+  "admin.dsar.kind.correct": "Correction",
+  "admin.dsar.kind.delete": "Deletion",
+  "admin.dsar.kind.restrict": "Restriction",
+  "admin.dsar.kind.withdraw": "Withdraw consent",
+  "admin.dsar.status.received": "Received",
+  "admin.dsar.status.inProgress": "In progress",
+  "admin.dsar.status.fulfilled": "Fulfilled",
+  "admin.dsar.status.rejected": "Rejected",
+  "navigation.item.consent.label": "Consent centre",
+  "navigation.item.consent.desc": "Manage consent by purpose",
+  "navigation.item.consent.title": "Consent centre",
+  "navigation.item.consent.subtitle":
+    "Give or withdraw consent for each personal-data processing purpose.",
+  "navigation.item.dataRights.label": "My data",
+  "navigation.item.dataRights.desc": "Access, export, and deletion rights",
+  "navigation.item.dataRights.title": "My data",
+  "navigation.item.dataRights.subtitle":
+    "Exercise data-subject rights to export, correct, delete, restrict, or withdraw consent.",
+  "navigation.item.dsar.label": "DSAR queue",
+  "navigation.item.dsar.desc": "Handle data-rights requests",
+  "navigation.item.dsar.title": "DSAR queue (Administration)",
+  "navigation.item.dsar.subtitle":
+    "Track and handle data-subject requests within the applicable legal deadline.",
+  "navigation.item.community.label": "Community",
+  "navigation.item.community.desc": "CLARA health community",
+  "navigation.item.community.title": "Health community",
+  "navigation.item.community.subtitle":
+    "Share experiences and support one another. This is not medical advice; content is moderated.",
+  "navigation.page.researchRedirect.title": "Medical questions",
+  "navigation.page.researchRedirect.subtitle":
+    "The question-and-answer flow is now unified in CLARA Chat.",
+  "navigation.page.controlTower.title": "Knowledge control",
+  "navigation.page.controlTower.subtitle":
+    "Configure data sources and response flows for the question-and-answer system.",
+  "navigation.page.ecosystem.title": "Partner ecosystem",
+  "navigation.page.ecosystem.subtitle":
+    "Monitor connection status and trust in interoperable data.",
+  "navigation.page.default.title": "Workspace",
+  "navigation.page.default.subtitle":
+    "A health-assistant platform that helps you work more clearly and quickly.",
   "action.signOut": "Sign out",
   "action.signingOut": "Signing out…",
   "action.collapse": "Collapse",
   "action.expand": "Expand",
+  "action.closeMenu": "Close menu",
+  "navigation.closeMobile": "Close mobile navigation",
+  "navigation.skipToContent": "Skip to main content",
+  "navigation.openMobile": "Open mobile navigation",
+  "navigation.mobileDialog": "Mobile navigation",
+  "navigation.workspace.label": "Workspace",
+  "navigation.workspace.choose": "Choose workspace",
+  "navigation.workspace.personal": "Personal",
+  "navigation.workspace.clinical": "Clinical",
+  "navigation.workspace.research": "Research",
+  "navigation.workspace.admin": "Administration",
+  "navigation.more": "More",
+  "navigation.item.chatShares": "Shared links",
+  "navigation.item.auditLog": "Audit log",
+  "navigation.item.ragEval": "Retrieval evaluation",
+  "navigation.item.ragIngestion": "Retrieval ingestion",
+  "preferences.title": "Preferences",
+  "theme.preference": "Theme preferences",
   "help.open": "Open help centre",
   "help.title": "Help",
   "family.title": "Family Circle",
   "profile.active": "Active profile",
   "profile.account": "Account",
-  "profile.yourAccount": "Your account",
   "profile.shared": "Shared · ",
-  "profile.sharedAccess": "Shared access",
   "profile.currentRole": "Current role: {role}",
   "role.normal": "Personal",
   "role.researcher": "Researcher",
@@ -2963,17 +4440,27 @@ const EN_MESSAGES: MessageCatalog = {
     "Your account confirms your role so CLARA can protect the right access.",
   "family.pendingTasks": "{count} shared care task(s) pending",
   "familyCircle.title": "Family Circle",
-  "familyCircle.description": "Share one journey or visit with the right person for the right purpose — never your whole record.",
+  "familyCircle.description":
+    "Share one journey or visit with the right person for the right purpose — never your whole record.",
+  "familyCircle.tabs.label": "Family support sections",
+  "familyCircle.tabs.shared": "Shared by me",
+  "familyCircle.tabs.received": "Shared with me",
+  "familyCircle.tabs.log": "Access log",
   "familyCircle.loadError": "Family Circle could not be loaded.",
   "familyCircle.revokeError": "Access could not be revoked.",
   "familyCircle.renewError": "A renewal invitation could not be created.",
   "familyCircle.grants.title": "Access you granted",
-  "familyCircle.grants.description": "Revocation takes effect on the next access attempt.",
+  "familyCircle.grants.description":
+    "Revocation takes effect on the next access attempt.",
   "familyCircle.grants.emptyTitle": "You have not shared any data",
-  "familyCircle.grants.emptyDescription": "When needed, grant the minimum access to someone with a CLARA account.",
+  "familyCircle.grants.emptyDescription":
+    "When needed, grant the minimum access to someone with a CLARA account.",
   "familyCircle.relationships.title": "People you support",
+  "familyCircle.relationships.description":
+    "Only items you explicitly accepted supporting appear here.",
   "familyCircle.relationships.emptyTitle": "No invitations received",
-  "familyCircle.relationships.emptyDescription": "Paste an invitation code in the right panel to accept only the shared scope.",
+  "familyCircle.relationships.emptyDescription":
+    "Paste an invitation code in the right panel to accept only the shared scope.",
   "familyCircle.accessLog.title": "Access log",
   "familyCircle.accessLog.empty": "No access events yet.",
   "familyCircle.accessLog.actor.owner": "You",
@@ -2985,16 +4472,20 @@ const EN_MESSAGES: MessageCatalog = {
   "familyCircle.accessLog.action.completeTask": "completed a care task",
   "familyCircle.accessLog.action.invitationAccept": "accepted an invitation",
   "familyCircle.accessLog.action.grantRevoke": "revoked access",
-  "familyCircle.accessLog.action.grantRenewalInvited": "created a renewal invitation",
-  "familyCircle.accessLog.action.notificationAcknowledged": "acknowledged a notification",
+  "familyCircle.accessLog.action.grantRenewalInvited":
+    "created a renewal invitation",
+  "familyCircle.accessLog.action.notificationAcknowledged":
+    "acknowledged a notification",
   "familyCircle.accessLog.action.other": "recorded an access action",
   "familyCircle.accessLog.outcome.allowed": "allowed",
   "familyCircle.accessLog.outcome.denied": "denied",
   "familyCircle.accessLog.outcome.failed": "not completed",
   "familyCircle.accessLog.outcome.unknown": "unknown",
   "familyCircle.invite.title": "Invite a supporter",
-  "familyCircle.invite.description": "The recipient must use the email on their CLARA account. The code expires after 7 days.",
-  "familyCircle.invite.createdNotice": "This code is shown only once; CLARA has not sent an email automatically.",
+  "familyCircle.invite.description":
+    "The recipient must use the email on their CLARA account. The code expires after 7 days.",
+  "familyCircle.invite.createdNotice":
+    "This code is shown only once; CLARA has not sent an email automatically.",
   "familyCircle.invite.start": "Create invitation step by step",
   "familyInvite.eyebrow": "Minimum sharing",
   "familyInvite.step.recipient": "Recipient",
@@ -3005,10 +4496,14 @@ const EN_MESSAGES: MessageCatalog = {
   "familyInvite.title.scope": "Choose only one item to share",
   "familyInvite.title.purpose": "What will this person help with?",
   "familyInvite.title.review": "Review before creating the invitation",
-  "familyInvite.description.recipient": "Use the email connected to the recipient's CLARA account.",
-  "familyInvite.description.scope": "They will not receive access to your entire record.",
-  "familyInvite.description.purpose": "The purpose helps CLARA keep access to the minimum necessary scope.",
-  "familyInvite.description.review": "CLARA creates an invitation only when you confirm on this step.",
+  "familyInvite.description.recipient":
+    "Use the email connected to the recipient's CLARA account.",
+  "familyInvite.description.scope":
+    "They will not receive access to your entire record.",
+  "familyInvite.description.purpose":
+    "The purpose helps CLARA keep access to the minimum necessary scope.",
+  "familyInvite.description.review":
+    "CLARA creates an invitation only when you confirm on this step.",
   "familyInvite.field.email": "Recipient email",
   "familyInvite.field.scope": "Item type",
   "familyInvite.field.item": "Shared item",
@@ -3019,37 +4514,48 @@ const EN_MESSAGES: MessageCatalog = {
   "familyInvite.purpose.visit": "Visit support",
   "familyInvite.chooseItem": "Choose an item",
   "familyInvite.loading": "Loading items you can share…",
-  "familyInvite.noItems": "There is no suitable item to share yet. Create a journey or visit first.",
+  "familyInvite.noItems":
+    "There is no suitable item to share yet. Create a journey or visit first.",
   "familyInvite.validation.email": "Enter a valid email address to continue.",
-  "familyInvite.validation.scope": "Choose an item from your own record to continue.",
+  "familyInvite.validation.scope":
+    "Choose an item from your own record to continue.",
   "familyInvite.cancel": "Cancel",
   "familyInvite.back": "Back",
   "familyInvite.create": "Create invitation code",
   "familyInvite.saving": "Creating invitation code…",
   "familyInvite.saved": "Invitation code created.",
-  "familyInvite.saveFailed": "The invitation could not be created. No access was granted; please try again.",
-  "familyInvite.loadFailed": "Items allowed for sharing could not be loaded. Please try again later.",
+  "familyInvite.saveFailed":
+    "The invitation could not be created. No access was granted; please try again.",
+  "familyInvite.loadFailed":
+    "Items allowed for sharing could not be loaded. Please try again later.",
   "familyInvite.review.title": "What will be shared",
-  "familyInvite.review.description": "CLARA grants the minimum access only for this item.",
+  "familyInvite.review.description":
+    "CLARA grants the minimum access only for this item.",
   "familyInvite.review.edit": "Edit",
   "familyInvite.review.empty": "Not selected",
   "familyInvite.review.expiry": "Invitation expiry",
   "familyInvite.review.sevenDays": "7 days",
-  "familyInvite.safetyNote": "You can revoke access later. CLARA keeps an access log for the shared scope.",
+  "familyInvite.safetyNote":
+    "You can revoke access later. CLARA keeps an access log for the shared scope.",
   "familyInvite.created.title": "Invitation code is ready",
-  "familyInvite.created.description": "Send this code to the intended recipient through a channel you trust.",
-  "familyInvite.created.notice": "The code is displayed once only. CLARA has not sent an email or granted access yet.",
+  "familyInvite.created.description":
+    "Send this code to the intended recipient through a channel you trust.",
+  "familyInvite.created.notice":
+    "The code is displayed once only. CLARA has not sent an email or granted access yet.",
   "familyInvite.created.done": "Back to family support",
   "familyCircle.accept.title": "Accept an invitation",
-  "familyCircle.accept.description": "Review the exact shared scope before you grant access.",
+  "familyCircle.accept.description":
+    "Review the exact shared scope before you grant access.",
   "familyCircle.accept.start": "Review invitation code",
   "familyAccept.eyebrow": "Family invitation",
   "familyAccept.step.code": "Invitation code",
   "familyAccept.step.review": "Review access",
   "familyAccept.title.code": "Review an invitation before accepting",
   "familyAccept.title.review": "This is the access you are about to receive",
-  "familyAccept.description.code": "Enter the invitation code. CLARA does not grant access on this step.",
-  "familyAccept.description.review": "Confirm only if this scope suits the support you will provide.",
+  "familyAccept.description.code":
+    "Enter the invitation code. CLARA does not grant access on this step.",
+  "familyAccept.description.review":
+    "Confirm only if this scope suits the support you will provide.",
   "familyAccept.field.code": "Invitation code",
   "familyAccept.field.scope": "Shared item",
   "familyAccept.field.actions": "You can",
@@ -3065,20 +4571,26 @@ const EN_MESSAGES: MessageCatalog = {
   "familyAccept.action.other": "Limited access",
   "familyAccept.purpose.care": "Care coordination",
   "familyAccept.purpose.visit": "Visit support",
-  "familyAccept.validation.code": "Enter the complete invitation code to continue.",
+  "familyAccept.validation.code":
+    "Enter the complete invitation code to continue.",
   "familyAccept.preview": "Review scope",
   "familyAccept.previewing": "Checking invitation code…",
-  "familyAccept.previewFailed": "The invitation is invalid, expired, or not for this account.",
+  "familyAccept.previewFailed":
+    "The invitation is invalid, expired, or not for this account.",
   "familyAccept.accept": "Accept this scope",
   "familyAccept.accepting": "Granting access…",
-  "familyAccept.accepted": "You received support access for the reviewed scope.",
-  "familyAccept.acceptFailed": "Access could not be granted. Review the invitation code and try again.",
+  "familyAccept.accepted":
+    "You received support access for the reviewed scope.",
+  "familyAccept.acceptFailed":
+    "Access could not be granted. Review the invitation code and try again.",
   "familyAccept.review.title": "The invitation's limited scope",
-  "familyAccept.review.description": "No whole record or data outside this scope is shared.",
+  "familyAccept.review.description":
+    "No whole record or data outside this scope is shared.",
   "familyAccept.review.edit": "Use a different code",
   "familyAccept.cancel": "Cancel",
   "familyAccept.back": "Back",
-  "familyAccept.safetyNote": "The invitation code never goes into a link. You can review the scope before choosing to grant access.",
+  "familyAccept.safetyNote":
+    "The invitation code never goes into a link. You can review the scope before choosing to grant access.",
   "familyCircle.action.renew": "Renew",
   "familyCircle.action.revoke": "Revoke",
   "familyCircle.action.revoked": "Revoked",
@@ -3094,10 +4606,6 @@ const EN_MESSAGES: MessageCatalog = {
   "familyCircle.permission.addObservation": "add an observation",
   "familyCircle.permission.completeTask": "complete a care task",
   "familyCircle.permission.other": "an allowed action",
-  "familyCircle.outcome.allowed": "allowed",
-  "familyCircle.outcome.denied": "denied",
-  "familyCircle.outcome.unknown": "unknown",
-  "familyCircle.outcome.other": "recorded",
   "today.description":
     "A clear care rhythm: only tasks you accepted appear here.",
   "today.following": "Tracking with you",
@@ -3107,9 +4615,7 @@ const EN_MESSAGES: MessageCatalog = {
   "today.viewTask": "View task",
   "today.createEpisode": "Create journey",
   "today.connectionError": "Check your connection and try again.",
-  "today.startHere": "What would you like to do?",
-  "today.startHereDescription":
-    "Choose one task to start. You can return at any time.",
+  "today.startHere": "What else would you like to do?",
   "today.askTitle": "Ask about your health",
   "today.askDescription":
     "Share what concerns you; CLARA will help identify a safe next step.",
@@ -3122,7 +4628,28 @@ const EN_MESSAGES: MessageCatalog = {
   "today.visitTitle": "Prepare for a visit",
   "today.visitDescription":
     "Prepare your questions and important information for a visit.",
-  "today.openAction": "Open",
+  "today.statusTitle": "Today’s care rhythm",
+  "today.openTaskCount": "{count} open tasks",
+  "today.completedTaskCount": "{count} tasks completed today",
+  "today.noOpenTasks": "There are no open tasks right now",
+  "today.noDueDate": "No specific due date",
+  "today.upcoming": "Upcoming",
+  "today.otherActions": "Other actions",
+  "today.pendingConfirmations": "{count} records are waiting for your confirmation",
+  "today.completedTitle": "You completed today’s tasks",
+  "today.completedDescription":
+    "Completed tasks have been recorded. You can rest or add an update if something changes.",
+  "today.updateChange": "Add an update",
+  "today.weeklyProgress": "Seven-day activity",
+  "today.activeDays": "{count}/7 days with a completed task",
+  "today.viewJourney": "View journey",
+  "today.firstTitle": "You have no tasks for today yet",
+  "today.caughtUpTitle": "There are no open tasks right now",
+  "today.caughtUpDescription":
+    "Your journey is still being tracked. Open LifeMap to review or adjust the next step.",
+  "today.stepGoal": "Choose what to track",
+  "today.stepTask": "Add an appropriate task",
+  "today.stepToday": "See tasks in Today",
   "today.taskDetail.pageTitle": "Today’s task",
   "today.taskDetail.pageDescription":
     "Review one task, understand when it is due, then confirm it is done.",
@@ -3153,36 +4680,42 @@ const EN_MESSAGES: MessageCatalog = {
   "chatShares.loadError": "We could not load the shared links.",
   "chatShares.revokeError": "We could not revoke this shared link.",
   "chatShares.revokeSuccess": "The link for conversation #{id} was revoked.",
-  "chatShares.copySuccess": "Public link copied.",
   "chatShares.copyPrompt": "Copy public link",
   "chatShares.table.conversation": "Conversation",
   "chatShares.table.messages": "Messages",
   "chatShares.table.status": "Status",
   "chatShares.table.expires": "Expires",
   "chatShares.table.publicUrl": "Public link",
+  "chatShares.linkReissueRequired": "Rotate the link in the conversation to receive a new URL.",
+  "chatShares.reissue": "Reissue and copy",
+  "chatShares.reissueSuccess": "A new link was issued and copied to the clipboard.",
+  "chatShares.reissueError": "We could not issue a new link. Please try again.",
   "chatShares.table.actions": "Actions",
   "chatShares.status.active": "Active",
   "chatShares.status.revoked": "Revoked",
   "chatShares.noExpiry": "No expiry",
-  "chatShares.copy": "Copy",
-  "chatShares.open": "Open",
   "chatShares.revoke": "Revoke",
   "chatShares.empty": "There are no shared links yet.",
   "lifemap.title": "LifeMap",
-  "lifemap.description": "Organise what you want to track into small journeys that you can review and change at any time.",
+  "lifemap.description":
+    "Organise what you want to track into small journeys that you can review and change at any time.",
   "lifemap.priority.routine": "When convenient",
   "lifemap.priority.soon": "Soon",
   "lifemap.priority.urgent": "Needs attention",
   "lifemap.ask.badge": "AI with sources",
   "lifemap.ask.title": "Ask about my LifeMap",
-  "lifemap.ask.description": "Only searches data you are allowed to see. CLARA does not diagnose, prescribe, or change LifeMap on its own.",
+  "lifemap.ask.description":
+    "Only searches data you are allowed to see. CLARA does not diagnose, prescribe, or change LifeMap on its own.",
   "lifemap.ask.label": "What would you like to find?",
-  "lifemap.ask.placeholder": "Example: What headache records do I have recently?",
-  "lifemap.ask.hint": "The answer will point to the exact records and versions it used.",
+  "lifemap.ask.placeholder":
+    "Example: What headache records do I have recently?",
+  "lifemap.ask.hint":
+    "The answer will point to the exact records and versions it used.",
   "lifemap.ask.suggestions": "You can start with a question such as:",
   "lifemap.ask.suggestion.timeline": "What have I recorded recently?",
   "lifemap.ask.suggestion.change": "Has anything changed over time?",
-  "lifemap.ask.suggestion.missing": "What information might I still be missing to track this?",
+  "lifemap.ask.suggestion.missing":
+    "What information might I still be missing to track this?",
   "lifemap.ask.suggestion.visit": "Which records should I take to my visit?",
   "lifemap.ask.submit": "Search",
   "lifemap.ask.loading": "Searching…",
@@ -3192,40 +4725,53 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.ask.intent.visitPreparation": "information to prepare for a visit",
   "lifemap.ask.intent.missingness": "information that may still be missing",
   "lifemap.ask.intent.explanation": "the meaning of existing records",
-  "lifemap.ask.uncertain": "CLARA does not have enough matching records to answer with certainty in this scope.",
+  "lifemap.ask.uncertain":
+    "CLARA does not have enough matching records to answer with certainty in this scope.",
   "lifemap.ask.source": "Source: {attribution} · {date} · version {revision}",
-  "lifemap.ask.caution": "Some information is disputed, conflicting, or stale; CLARA will not resolve it for you.",
+  "lifemap.ask.caution":
+    "Some information is disputed, conflicting, or stale; CLARA will not resolve it for you.",
   "lifemap.ask.disclosure": "Mode: {mode}. Not medical advice.",
   "lifemap.visitPrep.badge": "Source-cited draft",
   "lifemap.visitPrep.title": "Prepare for a visit",
-  "lifemap.visitPrep.description": "Create a draft for you to review before speaking with a health professional. The draft does not change LifeMap.",
-  "lifemap.visitPrep.selectedEpisode": "The draft will only use records from the selected journey.",
-  "lifemap.visitPrep.allRecords": "Choose a journey to narrow the scope; otherwise the draft uses LifeMap records you are allowed to view.",
+  "lifemap.visitPrep.description":
+    "Create a draft for you to review before speaking with a health professional. The draft does not change LifeMap.",
+  "lifemap.visitPrep.selectedEpisode":
+    "The draft will only use records from the selected journey.",
+  "lifemap.visitPrep.allRecords":
+    "Choose a journey to narrow the scope; otherwise the draft uses LifeMap records you are allowed to view.",
   "lifemap.visitPrep.create": "Create draft",
   "lifemap.visitPrep.loading": "Creating draft…",
   "lifemap.visitPrep.error": "We could not create the visit-preparation draft.",
-  "lifemap.visitPrep.reviewOnly": "Review and edit this yourself before using it. CLARA does not send or save this draft to your record.",
+  "lifemap.visitPrep.reviewOnly":
+    "Review and edit this yourself before using it. CLARA does not send or save this draft to your record.",
   "lifemap.visitPrep.importantNow": "What matters now",
   "lifemap.visitPrep.basedOn": "Based on",
   "lifemap.visitPrep.source": "Date {date} · source {revision}",
   "lifemap.visitPrep.revisionSource": "Source: {revision}",
-  "lifemap.visitPrep.noSources": "There are no matching records in this scope yet.",
+  "lifemap.visitPrep.noSources":
+    "There are no matching records in this scope yet.",
   "lifemap.visitPrep.questions": "Questions you may want to consider",
-  "lifemap.visitPrep.uncertainty": "Some records are stale, conflicting, or need review. CLARA does not decide which information is correct.",
+  "lifemap.visitPrep.uncertainty":
+    "Some records are stale, conflicting, or need review. CLARA does not decide which information is correct.",
   "lifemap.visitPrep.nextStep": "What you can do next:",
   "lifemap.visitPrep.urgentHelp": "When to get emergency help:",
-  "lifemap.visitPrep.provenance": "This draft references {count} source revisions; it does not create or confirm LifeMap data.",
+  "lifemap.visitPrep.provenance":
+    "This draft references {count} source revisions; it does not create or confirm LifeMap data.",
   "lifemap.guided.eyebrow": "LifeMap",
   "lifemap.guided.start.title": "Create a health journey",
   "lifemap.guided.start.description": "Opening your safe draft…",
-  "lifemap.guided.start.loadError": "We could not open the draft. Reload the page to try again.",
+  "lifemap.guided.start.loadError":
+    "We could not open the draft. Reload the page to try again.",
   "lifemap.guided.start.preparing": "Preparing…",
   "lifemap.guided.start.preparingAria": "Preparing your journey",
-  "lifemap.guided.loadError": "This draft is no longer available or has changed. Go back to LifeMap and try again.",
+  "lifemap.guided.loadError":
+    "This draft is no longer available or has changed. Go back to LifeMap and try again.",
   "lifemap.guided.title.requiredLabel": "Journey name",
   "lifemap.guided.title.required": "Enter at least 2 characters.",
-  "lifemap.guided.saveConflict": "We could not save because the draft changed or the connection was interrupted. Reload before trying again.",
-  "lifemap.guided.commitError": "We could not create the journey. Your draft remains safe so you can try again.",
+  "lifemap.guided.saveConflict":
+    "We could not save because the draft changed or the connection was interrupted. Reload before trying again.",
+  "lifemap.guided.commitError":
+    "We could not create the journey. Your draft remains safe so you can try again.",
   "lifemap.guided.back": "Back",
   "lifemap.guided.exit": "Exit",
   "lifemap.guided.backToLifeMap": "Back to LifeMap",
@@ -3238,9 +4784,11 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.guided.priority.routine": "Routine tracking",
   "lifemap.guided.priority.soon": "Needs attention soon",
   "lifemap.guided.priority.urgent": "High priority",
-  "lifemap.guided.priority.hint": "Priority helps order your plan; it is not an assessment of medical urgency.",
+  "lifemap.guided.priority.hint":
+    "Priority helps order your plan; it is not an assessment of medical urgency.",
   "lifemap.guided.review.title": "Journey information",
-  "lifemap.guided.review.description": "Check it before creating. You can still edit it later.",
+  "lifemap.guided.review.description":
+    "Check it before creating. You can still edit it later.",
   "lifemap.guided.review.name": "Name",
   "lifemap.guided.review.goal": "Goal",
   "lifemap.guided.review.priority": "Priority",
@@ -3251,19 +4799,24 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.guided.page.goal": "Choose a goal",
   "lifemap.guided.page.priority": "Set a priority",
   "lifemap.guided.page.review": "Review your journey",
-  "lifemap.guided.page.description": "Each step asks for one group of information. The draft is stored on the server and health content is never put in the URL.",
-  "lifemap.guided.page.aside": "LifeMap supports self-tracking and preparing conversations with health professionals; it does not replace diagnosis or emergency care.",
+  "lifemap.guided.page.description":
+    "Each step asks for one group of information. The draft is stored on the server and health content is never put in the URL.",
+  "lifemap.guided.page.aside":
+    "LifeMap supports self-tracking and preparing conversations with health professionals; it does not replace diagnosis or emergency care.",
   "lifemap.summary.badge": "Summary with sources",
   "lifemap.summary.title": "Review LifeMap",
-  "lifemap.summary.description": "Groups existing records without changing what is confirmed, disputed, or conflicting.",
+  "lifemap.summary.description":
+    "Groups existing records without changing what is confirmed, disputed, or conflicting.",
   "lifemap.summary.scope": "Scope",
   "lifemap.summary.day": "By day",
   "lifemap.summary.week": "By week",
   "lifemap.summary.episode": "Selected journey",
   "lifemap.summary.create": "Create summary",
   "lifemap.summary.citation": "{attribution} · {date} · source {sources}",
-  "lifemap.summary.empty": "There are not enough records to create a summary yet.",
-  "lifemap.summary.notice": "This summary is rule-based, not medical advice. Every item remains linked to its source record.",
+  "lifemap.summary.empty":
+    "There are not enough records to create a summary yet.",
+  "lifemap.summary.notice":
+    "This summary is rule-based, not medical advice. Every item remains linked to its source record.",
   "lifemap.truth.draft": "Draft",
   "lifemap.truth.userReported": "You recorded this",
   "lifemap.truth.confirmed": "Confirmed",
@@ -3297,11 +4850,13 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.audit.questionDoNotAsk": "User does not want to be asked again",
   "lifemap.audit.questionLater": "Later",
   "lifemap.audit.replayCorrection": "User corrected information in Replay",
-  "lifemap.audit.disputeResolved": "Reviewed sources and confirmed this version",
+  "lifemap.audit.disputeResolved":
+    "Reviewed sources and confirmed this version",
   "lifemap.audit.reviewResolved": "User reviewed source records",
   "lifemap.audit.reviewDismissed": "User confirmed no action is needed",
   "lifemap.review.title": "Information for you to check",
-  "lifemap.review.description": "Rules only identify possible duplicates or conflicts; CLARA does not choose which record is correct.",
+  "lifemap.review.description":
+    "Rules only identify possible duplicates or conflicts; CLARA does not choose which record is correct.",
   "lifemap.review.scan": "Check",
   "lifemap.review.kind.contradiction": "Possible conflict",
   "lifemap.review.kind.duplicate": "Possible duplicate",
@@ -3317,30 +4872,36 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.episodes.replay": "Review",
   "lifemap.episodes.question": "One question",
   "lifemap.episodes.emptyTitle": "No journeys yet",
-  "lifemap.episodes.emptyDescription": "Start with one simple goal, such as tracking a symptom or preparing questions for a visit.",
+  "lifemap.episodes.emptyDescription":
+    "Start with one simple goal, such as tracking a symptom or preparing questions for a visit.",
   "lifemap.question.badge": "A helpful question",
   "lifemap.question.why": "Why CLARA asks: {reason}",
   "lifemap.question.answerLabel": "Your answer",
-  "lifemap.question.answerHint": "Your answer becomes a draft for you to review before confirming.",
+  "lifemap.question.answerHint":
+    "Your answer becomes a draft for you to review before confirming.",
   "lifemap.question.createDraft": "Create draft",
   "lifemap.question.later": "Later",
   "lifemap.question.never": "Do not ask again",
   "lifemap.baseline.title": "Change compared with you",
-  "lifemap.baseline.description": "This is not a clinical normal range or a diagnosis.",
+  "lifemap.baseline.description":
+    "This is not a clinical normal range or a diagnosis.",
   "lifemap.baseline.insufficient": "Not enough data",
   "lifemap.baseline.sampleDays": "{count} days of data · {version}",
   "lifemap.replay.eyebrow": "Health Replay",
-  "lifemap.replay.description": "Each item shows the exact version, source, and rule used.",
+  "lifemap.replay.description":
+    "Each item shows the exact version, source, and rule used.",
   "lifemap.replay.confirmed": "Confirmed",
   "lifemap.replay.version": "Version {revision} · {policy}",
   "lifemap.replay.legacyPolicy": "legacy rule",
   "lifemap.replay.why": "Why this appears: {reason}",
   "lifemap.replay.correctionLabel": "Correct information",
-  "lifemap.replay.correctionHint": "A correction creates a new version; the old history remains available for you to review.",
+  "lifemap.replay.correctionHint":
+    "A correction creates a new version; the old history remains available for you to review.",
   "lifemap.replay.saveCorrection": "Save new version",
   "lifemap.replay.cancel": "Cancel",
   "lifemap.replay.disputeLabel": "Why do you not trust this information?",
-  "lifemap.replay.disputeHint": "A dispute does not delete data. CLARA keeps the source and creates a review queue.",
+  "lifemap.replay.disputeHint":
+    "A dispute does not delete data. CLARA keeps the source and creates a review queue.",
   "lifemap.replay.submitDispute": "Send for review",
   "lifemap.replay.edit": "Edit information",
   "lifemap.replay.dispute": "Incorrect / needs review",
@@ -3348,8 +4909,10 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.replay.compareLoading": "Comparing…",
   "lifemap.replay.compareTitle": "Changes between versions",
   "lifemap.replay.compareSource": "Location in source",
-  "lifemap.replay.compareNoSource": "No source location was saved for this version.",
-  "lifemap.replay.compareNotice": "This is a read-only comparison. It does not change health information or confirmation state.",
+  "lifemap.replay.compareNoSource":
+    "No source location was saved for this version.",
+  "lifemap.replay.compareNotice":
+    "This is a read-only comparison. It does not change health information or confirmation state.",
   "lifemap.replay.compareBefore": "Before",
   "lifemap.replay.compareAfter": "After",
   "lifemap.replay.compareEmpty": "There were no changes in the main fields.",
@@ -3359,20 +4922,24 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.replay.compareTruthState": "Record status",
   "lifemap.replay.compareReason": "Update reason",
   "lifemap.replay.empty": "This journey has no records yet.",
-  "lifemap.replay.stale": "Some earlier results are being recalculated because source information changed.",
+  "lifemap.replay.stale":
+    "Some earlier results are being recalculated because source information changed.",
   "lifemap.disputes.eyebrow": "Dispute queue",
   "lifemap.disputes.title": "Information under review",
-  "lifemap.disputes.description": "CLARA does not choose which side is right. Each decision creates a new version and retains source history.",
+  "lifemap.disputes.description":
+    "CLARA does not choose which side is right. Each decision creates a new version and retains source history.",
   "lifemap.disputes.resolved": "Resolved",
   "lifemap.disputes.open": "Open",
   "lifemap.disputes.version": "{eventType} · version {revision}",
-  "lifemap.disputes.clinicalReview": "This type of information needs someone with clinical authority to review the source before it is confirmed again.",
+  "lifemap.disputes.clinicalReview":
+    "This type of information needs someone with clinical authority to review the source before it is confirmed again.",
   "lifemap.disputes.resolve": "Confirm after reviewing the source",
   "lifemap.capture.title": "Quick record",
   "lifemap.capture.uploading": "Uploading file…",
   "lifemap.capture.reading": "Reading file…",
   "lifemap.capture.processing": "Creating draft…",
-  "lifemap.capture.description": "CLARA creates a draft for you to review. No information is confirmed automatically.",
+  "lifemap.capture.description":
+    "CLARA creates a draft for you to review. No information is confirmed automatically.",
   "lifemap.capture.deleteUpload": "Delete uploaded file",
   "lifemap.capture.provenance": "Source",
   "lifemap.capture.viewFile": "View {filename}",
@@ -3381,22 +4948,28 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.capture.draft": "Draft to review",
   "lifemap.capture.rejected": "Rejected",
   "lifemap.capture.unconfirmed": "Not confirmed",
-  "lifemap.capture.lowConfidence": "Some parts are unclear from the source. Compare them before saving.",
+  "lifemap.capture.lowConfidence":
+    "Some parts are unclear from the source. Compare them before saving.",
   "lifemap.capture.required": "Needs more information: {fields}",
-  "lifemap.capture.unsafe": "The source contains unsafe content; this draft can only be rejected.",
+  "lifemap.capture.unsafe":
+    "The source contains unsafe content; this draft can only be rejected.",
   "lifemap.capture.normalizeTitle": "Standardize medicine name",
   "lifemap.capture.normalizeProposal": "CLARA suggests {name} · RxNorm {code}",
-  "lifemap.capture.normalizeAccept": "Use this standard code for the medication record. A record is created only after you confirm below.",
+  "lifemap.capture.normalizeAccept":
+    "Use this standard code for the medication record. A record is created only after you confirm below.",
   "lifemap.capture.normalizeLoading": "Checking the medicine dictionary…",
-  "lifemap.capture.normalizeEmpty": "No suitable standard code was found. The original name is kept and is not standardized.",
+  "lifemap.capture.normalizeEmpty":
+    "No suitable standard code was found. The original name is kept and is not standardized.",
   "lifemap.capture.saveEdit": "Save changes",
   "lifemap.capture.reject": "Reject",
   "lifemap.capture.confirm": "Confirm after comparing",
   "lifemap.capture.cancelDelete": "Discard and delete draft",
-  "lifemap.capture.pending": "Draft saved. Waiting for the file-reading result.",
+  "lifemap.capture.pending":
+    "Draft saved. Waiting for the file-reading result.",
   "lifemap.capture.cancel": "Discard draft",
   "lifemap.capture.textLabel": "What would you like to record?",
-  "lifemap.capture.textPlaceholder": "Example: I slept for about 7 hours last night",
+  "lifemap.capture.textPlaceholder":
+    "Example: I slept for about 7 hours last night",
   "lifemap.capture.createText": "Create text draft",
   "lifemap.capture.field.text": "What you recorded",
   "lifemap.capture.field.category": "Record type",
@@ -3409,14 +4982,16 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.capture.medicationLabel": "Medicine label",
   "lifemap.capture.visitDocument": "Visit document",
   "lifemap.capture.sourceFile": "Source file",
-  "lifemap.capture.networkHint": "An internet connection is needed. CLARA only creates a draft and keeps the source for you to compare.",
+  "lifemap.capture.networkHint":
+    "An internet connection is needed. CLARA only creates a draft and keeps the source for you to compare.",
   "lifemap.capture.upload": "Upload and create draft",
   "lifemap.tasks.title": "Accepted tasks",
   "lifemap.tasks.description": "Only tasks you agree to are added to Today.",
   "lifemap.tasks.openToday": "Open Today",
   "lifemap.tasks.empty": "There are no accepted tasks yet.",
   "lifemap.create.title": "Create journey",
-  "lifemap.create.description": "Complete one piece of information per page, then review before creating it.",
+  "lifemap.create.description":
+    "Complete one piece of information per page, then review before creating it.",
   "lifemap.create.start": "Start step by step",
   "lifemap.taskCreate.title": "Add a task for today",
   "lifemap.taskCreate.episode": "For journey",
@@ -3425,15 +5000,19 @@ const EN_MESSAGES: MessageCatalog = {
   "lifemap.taskCreate.placeholder": "Example: Record when it starts",
   "lifemap.taskCreate.submit": "Add to Today",
   "visitPrep.title": "Prepare for your visit",
-  "visitPrep.description": "Create a source-cited draft to review, then add your own private notes before your visit.",
+  "visitPrep.description":
+    "Create a source-cited draft to review, then add your own private notes before your visit.",
   "visitPrep.goalLabel": "What would you like to discuss at your visit?",
-  "visitPrep.goalHint": "Optional. CLARA only uses this to select relevant LifeMap records.",
+  "visitPrep.goalHint":
+    "Optional. CLARA only uses this to select relevant LifeMap records.",
   "visitPrep.step.scope": "Choose scope",
   "visitPrep.step.review": "Review and prepare",
   "visitPrep.build": "Create draft",
   "visitPrep.building": "Creating draft…",
-  "visitPrep.unavailable": "Visit preparation is not enabled for this profile yet.",
-  "visitPrep.reviewNotice": "The generated draft and source records are read-only. The notes below only exist in this page session and do not change your health record.",
+  "visitPrep.unavailable":
+    "Visit preparation is not enabled for this profile yet.",
+  "visitPrep.reviewNotice":
+    "The generated draft and source records are read-only. The notes below only exist in this page session and do not change your health record.",
   "visitPrep.importantNow": "What matters now",
   "visitPrep.basedOn": "CLARA based this on these records",
   "visitPrep.uncertainty": "What needs checking",
@@ -3443,47 +5022,66 @@ const EN_MESSAGES: MessageCatalog = {
   "visitPrep.copy": "Copy draft",
   "visitPrep.copied": "Draft copied",
   "visitPrep.noDraft": "No draft yet. Create one when you are ready.",
-  "visitPrep.error": "We could not create the draft. Check your connection and try again.",
+  "visitPrep.error":
+    "We could not create the draft. Check your connection and try again.",
   "visitPrep.back": "Back to visits",
-  "visitPrep.noQuestions": "There are no suggested questions from records in this scope.",
+  "visitPrep.noQuestions":
+    "There are no suggested questions from records in this scope.",
   "visitPrep.localNotes.label": "Your notes or questions",
-  "visitPrep.localNotes.hint": "They are only here for you to prepare. CLARA does not send, save, or add them to LifeMap.",
-  "visitPrep.localNotes.placeholder": "Example: Ask when the symptom began and which results to bring.",
+  "visitPrep.localNotes.hint":
+    "They are only here for you to prepare. CLARA does not send, save, or add them to LifeMap.",
+  "visitPrep.localNotes.placeholder":
+    "Example: Ask when the symptom began and which results to bring.",
   "visitPrep.localNotes.copyHeading": "My notes or questions",
   "visitPrep.adjustScope": "Adjust scope",
   "chat.welcome.normal.eyebrow": "Ask in your own words",
   "chat.welcome.normal.title": "What would you like to understand?",
-  "chat.welcome.normal.description": "Describe a symptom, medicine, or lab result. CLARA gives a clear answer and tells you when professional care may be needed.",
+  "chat.welcome.normal.description":
+    "Describe a symptom, medicine, or lab result. CLARA gives a clear answer and tells you when professional care may be needed.",
   "chat.welcome.normal.symptoms.label": "Understand symptoms",
-  "chat.welcome.normal.symptoms.prompt": "What warning signs should I watch for with a persistent headache?",
+  "chat.welcome.normal.symptoms.prompt":
+    "What warning signs should I watch for with a persistent headache?",
   "chat.welcome.normal.medicine.label": "Ask about medicine",
-  "chat.welcome.normal.medicine.prompt": "Explain how to take this medicine and which side effects matter.",
+  "chat.welcome.normal.medicine.prompt":
+    "Explain how to take this medicine and which side effects matter.",
   "chat.welcome.normal.lab.label": "Read lab results",
-  "chat.welcome.normal.lab.prompt": "Help me understand these lab results in plain language.",
+  "chat.welcome.normal.lab.prompt":
+    "Help me understand these lab results in plain language.",
   "chat.welcome.normal.safety.label": "Check safety",
-  "chat.welcome.normal.safety.prompt": "Could my medicines and supplements interact?",
+  "chat.welcome.normal.safety.prompt":
+    "Could my medicines and supplements interact?",
   "chat.welcome.researcher.eyebrow": "Evidence with traceable sources",
   "chat.welcome.researcher.title": "Start with a research question",
-  "chat.welcome.researcher.description": "Ask CLARA to synthesize evidence, compare findings, and state the limits of the available data.",
+  "chat.welcome.researcher.description":
+    "Ask CLARA to synthesize evidence, compare findings, and state the limits of the available data.",
   "chat.welcome.researcher.overview.label": "Evidence overview",
-  "chat.welcome.researcher.overview.prompt": "Synthesize recent evidence on this topic, state the sources used, and explain remaining limitations.",
+  "chat.welcome.researcher.overview.prompt":
+    "Synthesize recent evidence on this topic, state the sources used, and explain remaining limitations.",
   "chat.welcome.researcher.compare.label": "Compare studies",
-  "chat.welcome.researcher.compare.prompt": "Compare the design, population, and main findings of relevant studies.",
+  "chat.welcome.researcher.compare.prompt":
+    "Compare the design, population, and main findings of relevant studies.",
   "chat.welcome.researcher.claim.label": "Check a claim",
-  "chat.welcome.researcher.claim.prompt": "Check this claim and find both supporting and conflicting evidence.",
+  "chat.welcome.researcher.claim.prompt":
+    "Check this claim and find both supporting and conflicting evidence.",
   "chat.welcome.researcher.gaps.label": "Find evidence gaps",
-  "chat.welcome.researcher.gaps.prompt": "What evidence gaps and next research questions remain?",
+  "chat.welcome.researcher.gaps.prompt":
+    "What evidence gaps and next research questions remain?",
   "chat.welcome.doctor.eyebrow": "Clinical decision support",
   "chat.welcome.doctor.title": "What do you need to clarify?",
-  "chat.welcome.doctor.description": "Add the case context for a structured summary, differential, safety flags, and relevant evidence.",
+  "chat.welcome.doctor.description":
+    "Add the case context for a structured summary, differential, safety flags, and relevant evidence.",
   "chat.welcome.doctor.summary.label": "Summarize a case",
-  "chat.welcome.doctor.summary.prompt": "Summarize this case, highlight key facts, and identify missing information.",
+  "chat.welcome.doctor.summary.prompt":
+    "Summarize this case, highlight key facts, and identify missing information.",
   "chat.welcome.doctor.differential.label": "Build a differential",
-  "chat.welcome.doctor.differential.prompt": "Build a prioritized differential with supporting and opposing findings.",
+  "chat.welcome.doctor.differential.prompt":
+    "Build a prioritized differential with supporting and opposing findings.",
   "chat.welcome.doctor.medicines.label": "Review medicines",
-  "chat.welcome.doctor.medicines.prompt": "Review this medication list for interactions, contraindications, and monitoring.",
+  "chat.welcome.doctor.medicines.prompt":
+    "Review this medication list for interactions, contraindications, and monitoring.",
   "chat.welcome.doctor.risk.label": "Assess risk",
-  "chat.welcome.doctor.risk.prompt": "Identify red flags and the appropriate escalation level for this case.",
+  "chat.welcome.doctor.risk.prompt":
+    "Identify red flags and the appropriate escalation level for this case.",
   "chat.composer.aria": "Message composer",
   "chat.composer.questionLabel": "Your medical question",
   "chat.composer.placeholder": "Ask a health question…",
@@ -3501,23 +5099,29 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.composer.allSources": "Search all sources",
   "chat.composer.cancel": "Cancel run",
   "chat.composer.send": "Send",
-  "chat.composer.safetyNote": "Check important medical decisions with a qualified clinician.",
+  "chat.composer.safetyNote":
+    "Check important medical decisions with a qualified clinician.",
   "chat.legacyComposer.modeLabel": "Response mode",
   "chat.legacyComposer.retrievalLabel": "Sources",
   "chat.legacyComposer.promptTray": "Prompts",
   "chat.legacyComposer.advanced": "Options",
   "chat.legacyComposer.personal": "Personal",
-  "chat.legacyComposer.liveStatusFallback": "CLARA is analyzing your question...",
+  "chat.legacyComposer.liveStatusFallback":
+    "CLARA is analyzing your question...",
   "chat.legacyComposer.mode.fast": "Quick",
   "chat.legacyComposer.mode.deep": "Reason",
   "chat.legacyComposer.mode.deepBeta": "Pro",
   "chat.legacyComposer.retrieval.auto": "Auto",
   "chat.legacyComposer.retrieval.full": "Full",
-  "chat.legacyWorkspace.quickPrompt.metformin": "I take metformin. What should I watch for?",
-  "chat.legacyWorkspace.quickPrompt.interactions": "Which medicines can this interact with?",
-  "chat.legacyWorkspace.quickPrompt.labResult": "Help me understand this lab result.",
+  "chat.legacyWorkspace.quickPrompt.metformin":
+    "I take metformin. What should I watch for?",
+  "chat.legacyWorkspace.quickPrompt.interactions":
+    "Which medicines can this interact with?",
+  "chat.legacyWorkspace.quickPrompt.labResult":
+    "Help me understand this lab result.",
   "chat.legacyWorkspace.quickPrompt.seeDoctor": "When should I see a doctor?",
-  "chat.legacyWorkspace.quickPrompt.sideEffects": "What common side effects can this medicine cause?",
+  "chat.legacyWorkspace.quickPrompt.sideEffects":
+    "What common side effects can this medicine cause?",
   "chat.sidebar.aria": "Conversations",
   "chat.sidebar.new": "New",
   "chat.sidebar.searchLabel": "Search conversations",
@@ -3539,7 +5143,8 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.advanced": "Advanced",
   "chat.legacyWorkspace.folder.all": "Folder: All",
   "chat.legacyWorkspace.folder.openManager": "Open folder manager",
-  "chat.legacyWorkspace.conversationCount": "{visible}/{total} chats · {messages} msg",
+  "chat.legacyWorkspace.conversationCount":
+    "{visible}/{total} chats · {messages} msg",
   "chat.legacyWorkspace.conversation.untitled": "Untitled conversation",
   "chat.legacyWorkspace.conversation.day.today": "Today",
   "chat.legacyWorkspace.conversation.day.yesterday": "Yesterday",
@@ -3548,17 +5153,22 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.conversation.day.unknown": "Unknown date",
   "chat.legacyWorkspace.conversation.selectAria": "Select conversation {id}",
   "chat.legacyWorkspace.conversation.openAria": "Open conversation: {title}",
-  "chat.legacyWorkspace.conversation.metadata": "#{id} · {messages} messages · {time}{favorite}{local}",
+  "chat.legacyWorkspace.conversation.metadata":
+    "#{id} · {messages} messages · {time}{favorite}{local}",
   "chat.legacyWorkspace.conversation.favoriteSuffix": " · pinned",
   "chat.legacyWorkspace.conversation.localSuffix": " · saved on this device",
-  "chat.legacyWorkspace.conversation.loadingMore": "Loading more conversations…",
-  "chat.legacyWorkspace.conversation.emptyFiltered": "No conversations match the current filters.",
+  "chat.legacyWorkspace.conversation.loadingMore":
+    "Loading more conversations…",
+  "chat.legacyWorkspace.conversation.emptyFiltered":
+    "No conversations match the current filters.",
   "chat.legacyWorkspace.conversation.startNew": "Start a new chat",
   "chat.legacyWorkspace.notes.title": "Notes",
+  "chat.legacyWorkspace.error.noteTitleRequired": "A note title is required.",
   "chat.legacyWorkspace.notes.draft": "Draft",
   "chat.legacyWorkspace.notes.titlePlaceholder": "Note title",
   "chat.legacyWorkspace.notes.contentPlaceholder": "Markdown content",
-  "chat.legacyWorkspace.notes.tagsPlaceholder": "Tags: warfarin, drug interaction,…",
+  "chat.legacyWorkspace.notes.tagsPlaceholder":
+    "Tags: warfarin, drug interaction,…",
   "chat.legacyWorkspace.notes.clear": "Clear",
   "chat.legacyWorkspace.notes.save": "Save note",
   "chat.legacyWorkspace.notes.emptyContent": "(Empty)",
@@ -3583,67 +5193,106 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.folder.delete": "Delete",
   "chat.legacyWorkspace.folder.empty": "No matching folders.",
   "chat.legacyWorkspace.folder.renamePrompt": "Rename folder",
-  "chat.legacyWorkspace.folder.deleteConfirm": "Delete folder \"{name}\"?",
+  "chat.legacyWorkspace.folder.deleteConfirm": 'Delete folder "{name}"?',
   "chat.legacyWorkspace.action.copyPrompt": "Copy",
-  "chat.legacyWorkspace.confirm.bulkDelete": "Delete {count} selected conversations?",
-  "chat.legacyWorkspace.confirm.deleteNote": "Delete note \"{name}\"?",
-  "chat.legacyWorkspace.confirm.deleteActiveConversation": "Delete the active conversation?",
-  "chat.legacyWorkspace.notice.researchHistoryFallback": "The chat workspace is not ready, so research history is being used as the conversation source.",
-  "chat.legacyWorkspace.notice.partialData": "The chat workspace loaded only partially ({sources}).",
-  "chat.legacyWorkspace.notice.noDetailedMessages": "Conversation #{id} has no detailed messages yet.",
-  "chat.legacyWorkspace.notice.localCache": "Showing the on-device saved copy of conversation #{id}.",
-  "chat.legacyWorkspace.notice.currentConversationSavedLocally": "Saved the current conversation on this device. Sync will retry later.",
+  "chat.legacyWorkspace.confirm.bulkDelete":
+    "Delete {count} selected conversations?",
+  "chat.legacyWorkspace.confirm.deleteNote": 'Delete note "{name}"?',
+  "chat.legacyWorkspace.confirm.deleteActiveConversation":
+    "Delete the active conversation?",
+  "chat.legacyWorkspace.notice.researchHistoryFallback":
+    "The chat workspace is not ready, so research history is being used as the conversation source.",
+  "chat.legacyWorkspace.notice.partialData":
+    "The chat workspace loaded only partially ({sources}).",
+  "chat.legacyWorkspace.notice.noDetailedMessages":
+    "Conversation #{id} has no detailed messages yet.",
+  "chat.legacyWorkspace.notice.localCache":
+    "Showing the on-device saved copy of conversation #{id}.",
+  "chat.legacyWorkspace.notice.currentConversationSavedLocally":
+    "Saved the current conversation on this device. Sync will retry later.",
   "chat.legacyWorkspace.notice.copySuccess": "Copied.",
-  "chat.legacyWorkspace.notice.bulkMetadataUnavailable": "The chat workspace is not ready, so multiple conversations cannot be updated yet.",
-  "chat.legacyWorkspace.notice.selectForBulkAction": "Select conversations before applying a bulk update.",
+  "chat.legacyWorkspace.notice.bulkMetadataUnavailable":
+    "The chat workspace is not ready, so multiple conversations cannot be updated yet.",
+  "chat.legacyWorkspace.notice.selectForBulkAction":
+    "Select conversations before applying a bulk update.",
   "chat.legacyWorkspace.notice.bulkUpdated": "Updated {count} conversations.",
-  "chat.legacyWorkspace.notice.selectForDelete": "Select conversations before deleting them.",
-  "chat.legacyWorkspace.notice.bulkDeleted": "Deleted {deleted}/{total} conversations.",
-  "chat.legacyWorkspace.notice.selectForExport": "Select conversations before exporting them.",
-  "chat.legacyWorkspace.notice.bulkExported": "Exported {success}/{total} conversations ({format}).",
-  "chat.legacyWorkspace.notice.metadataUnavailable": "The chat workspace is not ready, so conversation details cannot be updated yet.",
-  "chat.legacyWorkspace.notice.folderCreated": "Created folder \"{name}\".",
-  "chat.legacyWorkspace.notice.folderRenamed": "Renamed the folder to \"{name}\".",
+  "chat.legacyWorkspace.notice.selectForDelete":
+    "Select conversations before deleting them.",
+  "chat.legacyWorkspace.notice.bulkDeleted":
+    "Deleted {deleted}/{total} conversations.",
+  "chat.legacyWorkspace.notice.selectForExport":
+    "Select conversations before exporting them.",
+  "chat.legacyWorkspace.notice.bulkExported":
+    "Exported {success}/{total} conversations ({format}).",
+  "chat.legacyWorkspace.notice.metadataUnavailable":
+    "The chat workspace is not ready, so conversation details cannot be updated yet.",
+  "chat.legacyWorkspace.notice.folderCreated": 'Created folder "{name}".',
+  "chat.legacyWorkspace.notice.folderRenamed":
+    'Renamed the folder to "{name}".',
   "chat.legacyWorkspace.notice.folderDeleted": "Deleted the folder.",
-  "chat.legacyWorkspace.notice.noAnswerForNote": "There is no answer to save as a note yet.",
+  "chat.legacyWorkspace.notice.noAnswerForNote":
+    "There is no answer to save as a note yet.",
   "chat.legacyWorkspace.notes.answerTitle": "Note from the latest answer",
   "chat.legacyWorkspace.notes.newTitle": "New note",
   "chat.legacyWorkspace.notice.noteUpdated": "Updated the note.",
   "chat.legacyWorkspace.notice.noteSaved": "Saved the note.",
   "chat.legacyWorkspace.notice.noteDeleted": "Deleted the note.",
-  "chat.legacyWorkspace.notice.shareUnavailable": "The chat workspace is not ready, so a share link cannot be created yet.",
+  "chat.legacyWorkspace.notice.shareUnavailable":
+    "The chat workspace is not ready, so a share link cannot be created yet.",
   "chat.legacyWorkspace.notice.shareCopied": "Copied the share link.",
-  "chat.legacyWorkspace.notice.revokeShareUnavailable": "The chat workspace is not ready, so the share link cannot be revoked yet.",
+  "chat.legacyWorkspace.notice.revokeShareUnavailable":
+    "The chat workspace is not ready, so the share link cannot be revoked yet.",
   "chat.legacyWorkspace.notice.shareRevoked": "Revoked the share link.",
-  "chat.legacyWorkspace.notice.sharedConversationMissing": "Conversation #{id} was not found in the current chat workspace.",
-  "chat.legacyWorkspace.notice.conversationExported": "Exported conversation #{id} ({format}).",
-  "chat.legacyWorkspace.notice.conversationExportedLocal": "Exported the on-device saved copy of conversation #{id} (Markdown).",
-  "chat.legacyWorkspace.notice.docxExportedFromCurrent": "Exported DOCX from the current content.",
-  "chat.legacyWorkspace.notice.docxFallbackToMarkdown": "DOCX is not ready, so CLARA exported Markdown to preserve the content.",
-  "chat.legacyWorkspace.notice.conversationRenamedLocal": "Renamed the conversation on this device.",
-  "chat.legacyWorkspace.notice.conversationRenamed": "Renamed the conversation.",
-  "chat.legacyWorkspace.notice.conversationDeleted": "Deleted the conversation.",
-  "chat.legacyWorkspace.error.loadConversations": "We couldn't load the conversation list.",
-  "chat.legacyWorkspace.error.loadWorkspace": "We couldn't load the chat workspace.",
-  "chat.legacyWorkspace.error.loadMessages": "We couldn't load this conversation's messages.",
+  "chat.legacyWorkspace.notice.sharedConversationMissing":
+    "Conversation #{id} was not found in the current chat workspace.",
+  "chat.legacyWorkspace.notice.conversationExported":
+    "Exported conversation #{id} ({format}).",
+  "chat.legacyWorkspace.notice.conversationExportedLocal":
+    "Exported the on-device saved copy of conversation #{id} (Markdown).",
+  "chat.legacyWorkspace.notice.docxExportedFromCurrent":
+    "Exported DOCX from the current content.",
+  "chat.legacyWorkspace.notice.docxFallbackToMarkdown":
+    "DOCX is not ready, so CLARA exported Markdown to preserve the content.",
+  "chat.legacyWorkspace.notice.conversationRenamedLocal":
+    "Renamed the conversation on this device.",
+  "chat.legacyWorkspace.notice.conversationRenamed":
+    "Renamed the conversation.",
+  "chat.legacyWorkspace.notice.conversationDeleted":
+    "Deleted the conversation.",
+  "chat.legacyWorkspace.error.loadConversations":
+    "We couldn't load the conversation list.",
+  "chat.legacyWorkspace.error.loadWorkspace":
+    "We couldn't load the chat workspace.",
+  "chat.legacyWorkspace.error.loadMessages":
+    "We couldn't load this conversation's messages.",
   "chat.legacyWorkspace.error.search": "We couldn't search the chat workspace.",
-  "chat.legacyWorkspace.error.bulkUpdate": "We couldn't update the selected conversations.",
-  "chat.legacyWorkspace.error.answerPersist": "CLARA answered, but this conversation could not be saved.",
+  "chat.legacyWorkspace.error.bulkUpdate":
+    "We couldn't update the selected conversations.",
+  "chat.legacyWorkspace.error.answerPersist":
+    "CLARA answered, but this conversation could not be saved.",
   "chat.legacyWorkspace.error.submit": "CLARA couldn't process this question.",
-  "chat.legacyWorkspace.error.updateMetadata": "We couldn't update the conversation details.",
+  "chat.legacyWorkspace.error.updateMetadata":
+    "We couldn't update the conversation details.",
   "chat.legacyWorkspace.error.createFolder": "We couldn't create the folder.",
   "chat.legacyWorkspace.error.renameFolder": "We couldn't rename the folder.",
   "chat.legacyWorkspace.error.deleteFolder": "We couldn't delete the folder.",
   "chat.legacyWorkspace.error.saveNote": "We couldn't save the note.",
   "chat.legacyWorkspace.error.deleteNote": "We couldn't delete the note.",
   "chat.legacyWorkspace.error.createShare": "We couldn't create a share link.",
-  "chat.legacyWorkspace.error.revokeShare": "We couldn't revoke the share link.",
-  "chat.legacyWorkspace.error.exportConversation": "We couldn't export this conversation.",
-  "chat.legacyWorkspace.error.renameConversation": "We couldn't rename the conversation.",
-  "chat.legacyWorkspace.error.deleteConversation": "We couldn't delete the conversation.",
-  "chat.legacyWorkspace.error.noValidChatResponse": "CLARA did not receive a valid chat response.",
-  "chat.legacyWorkspace.error.noValidResearchResponse": "CLARA did not receive a valid research result.",
-  "chat.legacyWorkspace.error.chatStream": "The chat response stream had a problem.",
+  "chat.legacyWorkspace.error.revokeShare":
+    "We couldn't revoke the share link.",
+  "chat.legacyWorkspace.error.exportConversation":
+    "We couldn't export this conversation.",
+  "chat.legacyWorkspace.error.renameConversation":
+    "We couldn't rename the conversation.",
+  "chat.legacyWorkspace.error.deleteConversation":
+    "We couldn't delete the conversation.",
+  "chat.legacyWorkspace.error.noValidChatResponse":
+    "CLARA did not receive a valid chat response.",
+  "chat.legacyWorkspace.error.noValidResearchResponse":
+    "CLARA did not receive a valid research result.",
+  "chat.legacyWorkspace.error.chatStream":
+    "The chat response stream had a problem.",
   "chat.legacyWorkspace.command.newChat": "New chat",
   "chat.legacyWorkspace.command.focusSearch": "Search workspace",
   "chat.legacyWorkspace.command.focusComposer": "Enter a question",
@@ -3653,7 +5302,8 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.command.sourcesAuto": "Sources: Auto",
   "chat.legacyWorkspace.command.sourcesFull": "Sources: Full",
   "chat.legacyWorkspace.command.exportDocx": "Export report (DOCX)",
-  "chat.legacyWorkspace.command.exportMarkdown": "Export conversation to Markdown",
+  "chat.legacyWorkspace.command.exportMarkdown":
+    "Export conversation to Markdown",
   "chat.legacyWorkspace.command.share": "Create public share link",
   "chat.legacyWorkspace.command.revokeShare": "Revoke active share link",
   "chat.legacyWorkspace.command.saveNote": "Save latest answer as a note draft",
@@ -3680,7 +5330,8 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.active.delete": "Delete chat",
   "chat.legacyWorkspace.clarify.aria": "Clarifying questions",
   "chat.legacyWorkspace.clarify.title": "Clarify before starting",
-  "chat.legacyWorkspace.clarify.description": "Your query is a bit broad. Answer a few questions so the deep run targets your intent, or skip to run as-is.",
+  "chat.legacyWorkspace.clarify.description":
+    "Your query is a bit broad. Answer a few questions so the deep run targets your intent, or skip to run as-is.",
   "chat.legacyWorkspace.clarify.dismiss": "Dismiss",
   "chat.legacyWorkspace.clarify.answerPlaceholder": "Your answer (optional)",
   "chat.legacyWorkspace.clarify.submit": "Answer and start research",
@@ -3688,11 +5339,13 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.filter.summaryAria": "Filter folders",
   "chat.legacyWorkspace.filter.selected": "Folder: {name}",
   "chat.legacyWorkspace.filter.placeholder": "Filter by folder",
-  "chat.legacyWorkspace.filter.selectAria": "Choose a folder to filter conversations",
+  "chat.legacyWorkspace.filter.selectAria":
+    "Choose a folder to filter conversations",
   "chat.legacyWorkspace.filter.allFolders": "All folders",
   "chat.legacyWorkspace.filter.clear": "Clear",
   "chat.legacyWorkspace.bulk.title": "Bulk actions",
-  "chat.legacyWorkspace.bulk.folderSelectAria": "Choose a folder for selected conversations",
+  "chat.legacyWorkspace.bulk.folderSelectAria":
+    "Choose a folder for selected conversations",
   "chat.legacyWorkspace.bulk.folderSkip": "Folder: Keep current",
   "chat.legacyWorkspace.bulk.folderNone": "Folder: None",
   "chat.legacyWorkspace.bulk.folderNamed": "Folder: {name}",
@@ -3709,7 +5362,8 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.canvas.analyzing": "CLARA is analyzing your question…",
   "chat.legacyWorkspace.welcome.title": "How can CLARA help you today?",
   "chat.legacyWorkspace.welcome.askLead": "Ask about",
-  "chat.legacyWorkspace.welcome.askTopics": "medicine, symptoms, or lab results",
+  "chat.legacyWorkspace.welcome.askTopics":
+    "medicine, symptoms, or lab results",
   "chat.legacyWorkspace.welcome.askConnector": "or",
   "chat.legacyWorkspace.welcome.askInteractions": "check drug interactions",
   "chat.legacyWorkspace.welcome.answerLead": "CLARA answers with",
@@ -3717,7 +5371,8 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.welcome.answerConnector": "and",
   "chat.legacyWorkspace.welcome.answerSources": "references",
   "chat.legacyWorkspace.welcome.answerSuffix": "when available.",
-  "chat.legacyWorkspace.welcome.disclaimer": "CLARA is an AI health information assistant, not a replacement for a clinician.",
+  "chat.legacyWorkspace.welcome.disclaimer":
+    "CLARA is an AI health information assistant, not a replacement for a clinician.",
   "chat.legacyWorkspace.welcome.medication": "Medication",
   "chat.legacyWorkspace.welcome.symptoms": "Symptoms",
   "chat.legacyWorkspace.welcome.labTests": "Lab tests",
@@ -3729,22 +5384,23 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.legacyWorkspace.suggestions.empty": "No suggestions yet.",
   "chat.legacyWorkspace.shares.title": "Shares",
   "chat.legacyWorkspace.shares.manage": "Manage",
-  "chat.legacyWorkspace.shares.unavailable": "The Workspace API is not available, so public share links are temporarily disabled.",
+  "chat.legacyWorkspace.shares.unavailable":
+    "The Workspace API is not available, so public share links are temporarily disabled.",
   "chat.legacyWorkspace.shares.active": "Active",
   "chat.legacyWorkspace.shares.revoked": "Revoked",
   "chat.legacyWorkspace.shares.metadata": "{status} · {count} messages",
   "chat.legacyWorkspace.shares.open": "Open",
-  "chat.legacyWorkspace.shares.copy": "Copy",
-  "chat.legacyWorkspace.shares.copySuccess": "Public link copied.",
-  "chat.legacyWorkspace.shares.visit": "Visit",
   "chat.legacyWorkspace.shares.empty": "No public share links yet.",
   "chat.legacyWorkspace.resize.aria": "Resize conversation panel",
   "chat.legacyWorkspace.resize.title": "Drag to resize. Double-click to reset.",
   "chat.legacyWorkspace.followUp.checkInteractions": "Check drug interactions",
   "chat.legacyWorkspace.followUp.askSideEffects": "Ask about side effects",
-  "chat.legacyWorkspace.followUp.enterMedicationList": "Enter my medication list",
-  "chat.legacyWorkspace.followUp.createConsultReport": "Create a consult report",
-  "chat.legacyWorkspace.telemetry.emptySignal": "A signal will appear after the next research answer.",
+  "chat.legacyWorkspace.followUp.enterMedicationList":
+    "Enter my medication list",
+  "chat.legacyWorkspace.followUp.createConsultReport":
+    "Create a consult report",
+  "chat.legacyWorkspace.telemetry.emptySignal":
+    "A signal will appear after the next research answer.",
   "chat.commandPalette.closeAria": "Close command palette",
   "chat.commandPalette.title": "Command palette",
   "chat.commandPalette.searchLabel": "Search commands",
@@ -3754,7 +5410,8 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.answerCanvas.aria": "Medical answer canvas",
   "chat.answerCanvas.eyebrow.clinical": "Clinical decision canvas",
   "chat.answerCanvas.eyebrow.personal": "Your health action plan",
-  "chat.answerCanvas.description": "Urgency, actions, evidence and uncertainty—kept separate.",
+  "chat.answerCanvas.description":
+    "Urgency, actions, evidence and uncertainty—kept separate.",
   "chat.answerCanvas.urgency.title": "Urgency",
   "chat.answerCanvas.urgency.empty": "No escalation instruction returned.",
   "chat.answerCanvas.nextActions.title": "What to do next",
@@ -3764,32 +5421,45 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.answerCanvas.evidence.support": "support",
   "chat.answerCanvas.evidence.inspectLedger": "Inspect evidence ledger",
   "chat.answerCanvas.evidence.trustTier": "Tier {tier}",
-  "chat.answerCanvas.evidence.empty": "No retrievable evidence; do not treat this as decision-ready.",
+  "chat.answerCanvas.evidence.empty":
+    "No retrievable evidence; do not treat this as decision-ready.",
   "chat.answerCanvas.uncertainty.title": "Uncertainty & missing context",
   "chat.answerCanvas.uncertainty.label": "uncertainty",
   "chat.answerCanvas.uncertainty.missingCount": "{count} details to add",
   "chat.answerCanvas.medicineSafety.title": "Medicine safety",
-  "chat.answerCanvas.medicineSafety.description": "This answer is not a medication reconciliation or interaction screen. Include every medicine, supplement, dose and allergy before acting; do not start or stop prescriptions without a clinician or pharmacist.",
+  "chat.answerCanvas.medicineSafety.description":
+    "This answer is not a medication reconciliation or interaction screen. Include every medicine, supplement, dose and allergy before acting; do not start or stop prescriptions without a clinician or pharmacist.",
   "chat.answerRenderer.degraded": "Degraded · local fallback",
   "chat.answerRenderer.emptyAnswer": "(No answer text)",
   "chat.answerRenderer.integrity.aria": "Research integrity",
   "chat.answerRenderer.integrity.title": "Research integrity",
-  "chat.answerRenderer.integrity.description": "Inspect what supports the answer—not only the prose.",
+  "chat.answerRenderer.integrity.description":
+    "Inspect what supports the answer—not only the prose.",
   "chat.answerRenderer.integrity.sources": "Sources",
   "chat.answerRenderer.integrity.tracedClaims": "Traced claims",
   "chat.answerRenderer.integrity.deepPasses": "Deep passes",
   "chat.answerRenderer.integrity.verification": "Verification",
   "chat.answerRenderer.integrity.notReported": "Not reported",
   "chat.answerRenderer.releaseBoundary.aria": "Evidence release boundary",
-  "chat.answerRenderer.releaseBoundary.title": "No clinical conclusion was released",
-  "chat.answerRenderer.releaseBoundary.description": "CLARA withheld the conclusion because the evidence did not pass the required checks. Narrow the question or inspect the sources before trying again.",
-  "chat.answerRenderer.releaseBoundary.reason.noCitations": "There are no resolvable sources to inspect.",
-  "chat.answerRenderer.releaseBoundary.reason.noRetrievedEvidence": "No relevant evidence was retrieved for this question.",
-  "chat.answerRenderer.releaseBoundary.reason.verificationUnavailable": "The evidence check could not be completed.",
-  "chat.answerRenderer.releaseBoundary.reason.verificationSkipped": "The evidence check was not run for this request.",
-  "chat.answerRenderer.releaseBoundary.reason.verificationInvalid": "The evidence-check result was not structured enough for a safe release.",
-  "chat.answerRenderer.releaseBoundary.reason.unsupportedClaims": "At least one claim was not supported by retrieved evidence.",
-  "chat.answerRenderer.releaseBoundary.reason.zeroClaimSupport": "No claim was supported by retrieved evidence.",
+  "chat.answerRenderer.releaseBoundary.title":
+    "There is not enough evidence for a confident answer",
+  "chat.answerRenderer.releaseBoundary.description":
+    "CLARA withheld the conclusion because the evidence did not pass the required checks. Narrow the question, inspect the sources, or prepare information to discuss with a clinician.",
+  "chat.answerRenderer.releaseBoundary.prepareVisit": "Prepare for a visit",
+  "chat.answerRenderer.releaseBoundary.reason.noCitations":
+    "There are no resolvable sources to inspect.",
+  "chat.answerRenderer.releaseBoundary.reason.noRetrievedEvidence":
+    "No relevant evidence was retrieved for this question.",
+  "chat.answerRenderer.releaseBoundary.reason.verificationUnavailable":
+    "The evidence check could not be completed.",
+  "chat.answerRenderer.releaseBoundary.reason.verificationSkipped":
+    "The evidence check was not run for this request.",
+  "chat.answerRenderer.releaseBoundary.reason.verificationInvalid":
+    "The evidence-check result was not structured enough for a safe release.",
+  "chat.answerRenderer.releaseBoundary.reason.unsupportedClaims":
+    "At least one claim was not supported by retrieved evidence.",
+  "chat.answerRenderer.releaseBoundary.reason.zeroClaimSupport":
+    "No claim was supported by retrieved evidence.",
   "chat.answerRenderer.citationRegistry": "Citation Registry",
   "chat.answerRenderer.trustTier": "Tier {tier}",
   "chat.answerRenderer.references": "References ({count})",
@@ -3799,12 +5469,15 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.turnView.displayFailed": "This answer could not be displayed.",
   "chat.turnView.refineEvidence": "Refine with a new evidence run",
   "chat.turnView.investigate": "Investigate with Medical Research",
+  "chat.turnView.explain": "Why did CLARA give this answer?",
   "chat.telemetryPanel.aria": "System telemetry",
   "chat.telemetryPanel.title": "Telemetry",
   "chat.telemetryPanel.sourceIntel": "Source intel",
   "chat.telemetryPanel.empty": "No source signal yet.",
-  "chat.shell.notice.researchReady": "Research mode is ready. Refine the question or run it now.",
-  "chat.shell.notice.localFallback": "Answer saved locally; backend sync will recover later.",
+  "chat.shell.notice.researchReady":
+    "Research mode is ready. Refine the question or run it now.",
+  "chat.shell.notice.localFallback":
+    "Answer saved locally; backend sync will recover later.",
   "chat.shell.notice.cancelled": "Run cancelled.",
   "chat.shell.notice.processFailed": "Could not process the question.",
   "chat.shell.notice.copied": "Copied.",
@@ -3833,14 +5506,14 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.shell.conversationCanvas": "Conversation canvas",
   "chat.shell.openSidebar": "Open sidebar",
   "chat.shell.dashboard": "Dashboard",
-  "chat.shell.research": "Research",
   "chat.shell.openAllTools": "Open all tools",
   "chat.shell.allTools": "All tools",
   "chat.shell.tools": "Tools",
   "chat.shell.commandPalette": "Command palette",
   "chat.shell.claraTools": "CLARA tools",
   "chat.shell.close": "Close",
-  "chat.shell.disclaimer": "CLARA is an AI health information assistant, not a replacement for a clinician.",
+  "chat.shell.disclaimer":
+    "CLARA is an AI health information assistant, not a replacement for a clinician.",
   "chat.workspace.expiry.oneDay": "24 hours",
   "chat.workspace.expiry.sevenDays": "7 days",
   "chat.workspace.expiry.thirtyDays": "30 days",
@@ -3865,7 +5538,8 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.workspace.format.docx": "DOCX",
   "chat.workspace.markdownFile": "Markdown (.md)",
   "chat.workspace.docxFile": "Word (.docx)",
-  "chat.workspace.openConversationToExport": "Open a conversation to export it.",
+  "chat.workspace.openConversationToExport":
+    "Open a conversation to export it.",
   "chat.workspace.sections": "Workspace sections",
   "chat.workspace.notes": "Notes",
   "chat.workspace.shares": "Shares",
@@ -3889,7 +5563,6 @@ const EN_MESSAGES: MessageCatalog = {
   "chat.workspace.status.active": "Active",
   "chat.workspace.status.revoked": "Revoked",
   "chat.workspace.expiresAt": "expires {date}",
-  "chat.workspace.copy": "Copy",
   "chat.workspace.rotate": "Rotate",
   "chat.workspace.revoke": "Revoke",
   "chat.workspace.noShares": "No shares yet.",
@@ -3901,10 +5574,10 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.tab.cabinet": "Medicine cabinet",
   "medicines.tab.safety": "Interaction safety",
   "medicines.list.trackedTitle": "Medication you are tracking",
-  "medicines.list.trackedDescription": "Only information you confirmed appears here.",
+  "medicines.list.trackedDescription":
+    "Only information you confirmed appears here.",
   "medicines.list.addStepByStep": "Add medication step by step",
-  "medicines.list.checkDrugbank": "Check DrugBank interactions",
-  "medicines.list.checkingDrugbank": "Checking DrugBank…",
+  "medicines.list.openSafety": "Check interaction safety",
   "medicines.list.noDoseOrSchedule": "No dose or schedule yet",
   "medicines.list.active": "Tracking",
   "medicines.list.ended": "Ended",
@@ -3913,14 +5586,14 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.list.edit": "Edit",
   "medicines.list.end": "End",
   "medicines.list.emptyTitle": "No medication yet",
-  "medicines.list.emptyDescription": "Add medication you are taking to track it. Do not use this list instead of a prescription or your clinician's instructions.",
-  "medicines.list.verifiedResult": "DrugBank-checked result",
-  "medicines.list.sourceVersion": "Source version: {version}",
-  "medicines.list.alert": "Alert",
-  "medicines.list.alertFallback": "A pharmacist or clinician needs to review this possible interaction.",
-  "medicines.list.noAlerts": "DrugBank did not identify a DDI alert for the selected medicines in this check. This does not replace personalised advice from a pharmacist or clinician.",
+  "medicines.list.emptyDescription":
+    "Add medication you are taking to track it. Do not use this list instead of a prescription or your clinician's instructions.",
+  "medicines.list.firstRun.add": "Add medication from your label or prescription",
+  "medicines.list.firstRun.confirm": "Confirm the details before tracking",
+  "medicines.list.firstRun.safety": "Check safety when enough information is available",
   "medicines.list.editTitle": "Edit medication record",
-  "medicines.list.formDescription": "Enter it from your label or prescription; CLARA does not guess medication.",
+  "medicines.list.formDescription":
+    "Enter it from your label or prescription; CLARA does not guess medication.",
   "medicines.list.medicationName": "Medication name",
   "medicines.list.dose": "Dose",
   "medicines.list.schedule": "Schedule",
@@ -3934,13 +5607,16 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.list.saving": "Saving…",
   "medicines.list.cancelEdit": "Cancel editing",
   "medicines.list.cabinetTitle": "Medicine cabinet",
-  "medicines.list.cabinetDescription": "Scan labels, track expiry and manage items in your medicine cabinet on its own tab.",
+  "medicines.list.cabinetDescription":
+    "Scan labels, track expiry and manage items in your medicine cabinet on its own tab.",
   "medicines.list.openCabinet": "Open medicine cabinet",
   "medicines.list.loadError": "Check your connection and try again.",
   "medicines.list.saveError": "We could not save the medication.",
   "medicines.list.checkError": "We could not complete the interaction check.",
-  "medicines.list.endConfirm": "Confirm that this medication record has ended? This only updates your record; it is not advice to stop medication.",
-  "medicines.list.correctionReason": "User corrected the record from their available source",
+  "medicines.list.endConfirm":
+    "Confirm that this medication record has ended? This only updates your record; it is not advice to stop medication.",
+  "medicines.list.correctionReason":
+    "User corrected the record from their available source",
   "medicines.list.endReason": "User updated the record status",
   "medicines.list.endError": "We could not update the medication.",
   "medicines.cabinet.defaultLabel": "Personal medicine cabinet",
@@ -3953,10 +5629,12 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.cabinet.normalization.review": "Needs review",
   "medicines.cabinet.normalization.manual": "Entered manually",
   "medicines.cabinet.normalization.unknown": "Unknown",
-  "medicines.cabinet.description": "Add medicines you are taking so CLARA can check interactions and help you follow your schedule.",
+  "medicines.cabinet.description":
+    "Add medicines you are taking so CLARA can check interactions and help you follow your schedule.",
   "medicines.cabinet.add": "Add medication",
   "medicines.cabinet.checkInteractions": "Check medication interactions",
-  "medicines.cabinet.needsTwo": "Add at least 2 medicines to check interactions.",
+  "medicines.cabinet.needsTwo":
+    "Add at least 2 medicines to check interactions.",
   "medicines.cabinet.refresh": "Refresh",
   "medicines.cabinet.verifiedSource": "Safety checks use a verified source",
   "medicines.cabinet.accountData": "Data is stored in your account",
@@ -3965,10 +5643,12 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.cabinet.noMedicines": "NO MEDICINES",
   "medicines.cabinet.needsMore": "NEEDS MORE INFORMATION",
   "medicines.cabinet.ready": "BASIC DATA READY",
-  "medicines.cabinet.readinessDescription": "This checks data completeness and expiry, not medical risk. Interaction alerts appear only after you choose to check against a verified DrugBank source.",
+  "medicines.cabinet.readinessDescription":
+    "This checks data completeness and expiry, not medical risk. Interaction alerts appear only after you choose to check against a verified DrugBank source.",
   "medicines.cabinet.interactionData": "Data for interaction checks",
   "medicines.cabinet.atLeastTwo": "At least 2 medicines are needed",
-  "medicines.cabinet.medicinesInCabinet": "{count} active ingredients in the cabinet",
+  "medicines.cabinet.medicinesInCabinet":
+    "{count} active ingredients in the cabinet",
   "medicines.cabinet.completeness": "Data completeness",
   "medicines.cabinet.missingDose": "{count} medicines missing a dose",
   "medicines.cabinet.basicDataReady": "Basic data is complete",
@@ -3985,9 +5665,11 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.cabinet.deleted": "Medication removed from the cabinet.",
   "medicines.cabinet.deleteError": "We could not remove the medication.",
   "medicines.cabinet.emptyTitle": "Your medicine cabinet is empty.",
-  "medicines.cabinet.emptyDescription": "Start by using “Add medication” to enter one manually or scan it with OCR.",
+  "medicines.cabinet.emptyDescription":
+    "Start by using “Add medication” to enter one manually or scan it with OCR.",
   "medicines.cabinet.doseValue": "Dose: {dose} · Quantity: {quantity}",
-  "medicines.cabinet.brandValue": "Brand: {brand} · Manufacturer: {manufacturer}",
+  "medicines.cabinet.brandValue":
+    "Brand: {brand} · Manufacturer: {manufacturer}",
   "medicines.cabinet.notAvailable": "Not available",
   "medicines.cabinet.expiryValue": "Expiry: {date}",
   "medicines.cabinet.quantity": "Quantity",
@@ -3995,7 +5677,8 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.cabinet.saved": "Saved to medicine cabinet",
   "medicines.cabinet.updated": "Updated: {date}",
   "medicines.cabinet.timeline": "Medication schedule",
-  "medicines.cabinet.timelineEmpty": "There is no schedule information from your medicine cabinet yet. Add medication or update its dose to create a timeline.",
+  "medicines.cabinet.timelineEmpty":
+    "There is no schedule information from your medicine cabinet yet. Add medication or update its dose to create a timeline.",
   "medicines.cabinet.next": "Next",
   "medicines.cabinet.morning": "Morning",
   "medicines.cabinet.noon": "Noon",
@@ -4004,10 +5687,12 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.cabinet.following": "Follow-up",
   "medicines.cabinet.addDose": "Add dose information",
   "medicines.cabinet.verifiedTitle": "Verified safety check",
-  "medicines.cabinet.verifiedDescription": "CLARA does not infer alerts from medicine names in your cabinet. Open the interaction check to send selected medicines through DrugBank/FIDES; if its verified source is unavailable, the result is safely blocked.",
+  "medicines.cabinet.verifiedDescription":
+    "CLARA does not infer alerts from medicine names in your cabinet. Open the interaction check to send selected medicines through DrugBank/FIDES; if its verified source is unavailable, the result is safely blocked.",
   "medicines.cabinet.openSafety": "Open interaction check",
   "medicines.cabinet.guided.page.title": "Add medication",
-  "medicines.cabinet.guided.page.description": "Upload a prescription image, paste medication text, or add each medicine manually to your personal cabinet.",
+  "medicines.cabinet.guided.page.description":
+    "Upload a prescription image, paste medication text, or add each medicine manually to your personal cabinet.",
   "medicines.cabinet.guided.step.number": "Step {number}",
   "medicines.cabinet.guided.optional": "Optional",
   "medicines.cabinet.guided.step.upload.title": "Upload prescription",
@@ -4018,60 +5703,88 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.cabinet.guided.step.paste.entering": "Entering content",
   "medicines.cabinet.guided.step.paste.pending": "No data yet",
   "medicines.cabinet.guided.step.manual.title": "Add manually",
-  "medicines.cabinet.guided.step.manual.status": "Use this if OCR is not correct",
+  "medicines.cabinet.guided.step.manual.status":
+    "Use this if OCR is not correct",
   "medicines.cabinet.guided.file.title": "Upload prescription or receipt image",
-  "medicines.cabinet.guided.file.description": "Drop a prescription image/PDF here or choose a file.",
+  "medicines.cabinet.guided.file.description":
+    "Drop a prescription image/PDF here or choose a file.",
   "medicines.cabinet.guided.file.back": "Back to medicine cabinet",
   "medicines.cabinet.guided.file.openSafety": "Go to interaction check",
-  "medicines.cabinet.guided.file.dropTitle": "Drop a prescription image/PDF here",
-  "medicines.cabinet.guided.file.fileTypes": "Prescription images, medication receipts, and PDF files are supported.",
+  "medicines.cabinet.guided.file.dropTitle":
+    "Drop a prescription image/PDF here",
+  "medicines.cabinet.guided.file.fileTypes":
+    "Prescription images, medication receipts, and PDF files are supported.",
   "medicines.cabinet.guided.file.selected": "Selected: {filename}",
-  "medicines.cabinet.guided.file.required": "Choose an image/PDF before scanning with OCR.",
+  "medicines.cabinet.guided.file.required":
+    "Choose an image/PDF before scanning with OCR.",
   "medicines.cabinet.guided.file.choose": "Choose file",
   "medicines.cabinet.guided.file.scan": "Identify medicines from file",
   "medicines.cabinet.guided.scanning": "Identifying…",
   "medicines.cabinet.guided.paste.title": "Enter or paste medication text",
-  "medicines.cabinet.guided.paste.description": "If another OCR tool has already produced text, paste it here for a quicker identification.",
-  "medicines.cabinet.guided.paste.placeholder": "For example:\\naspirin 81mg\\nmetformin 500mg\\namlodipine 5mg",
+  "medicines.cabinet.guided.paste.description":
+    "If another OCR tool has already produced text, paste it here for a quicker identification.",
+  "medicines.cabinet.guided.paste.placeholder":
+    "For example:\\naspirin 81mg\\nmetformin 500mg\\namlodipine 5mg",
   "medicines.cabinet.guided.paste.scan": "Identify from pasted text",
-  "medicines.cabinet.guided.paste.required": "Paste or enter content before continuing.",
-  "medicines.cabinet.guided.notice.fileRequired": "Choose a prescription image/PDF before scanning.",
-  "medicines.cabinet.guided.notice.fileDetected": "Identified {count} medicines from the file.",
-  "medicines.cabinet.guided.notice.fileNotDetected": "No medicines were identified from the file.",
-  "medicines.cabinet.guided.notice.fileScanError": "We could not identify medicines from the file.",
-  "medicines.cabinet.guided.notice.textRequired": "Paste or enter medication text before identifying it.",
-  "medicines.cabinet.guided.notice.textDetected": "Identified {count} medicines from the pasted text.",
-  "medicines.cabinet.guided.notice.textNotDetected": "No medicines were identified from the pasted text.",
-  "medicines.cabinet.guided.notice.textScanError": "We could not identify medicines from the pasted text.",
-  "medicines.cabinet.guided.notice.confirmBeforeImport": "Confirm uncertain medication identifications before adding them.",
-  "medicines.cabinet.guided.notice.imported": "Added {count} medicines to your cabinet.",
-  "medicines.cabinet.guided.notice.importError": "We could not add the data to your medicine cabinet.",
+  "medicines.cabinet.guided.paste.required":
+    "Paste or enter content before continuing.",
+  "medicines.cabinet.guided.notice.fileRequired":
+    "Choose a prescription image/PDF before scanning.",
+  "medicines.cabinet.guided.notice.fileDetected":
+    "Identified {count} medicines from the file.",
+  "medicines.cabinet.guided.notice.fileNotDetected":
+    "No medicines were identified from the file.",
+  "medicines.cabinet.guided.notice.fileScanError":
+    "We could not identify medicines from the file.",
+  "medicines.cabinet.guided.notice.textRequired":
+    "Paste or enter medication text before identifying it.",
+  "medicines.cabinet.guided.notice.textDetected":
+    "Identified {count} medicines from the pasted text.",
+  "medicines.cabinet.guided.notice.textNotDetected":
+    "No medicines were identified from the pasted text.",
+  "medicines.cabinet.guided.notice.textScanError":
+    "We could not identify medicines from the pasted text.",
+  "medicines.cabinet.guided.notice.confirmBeforeImport":
+    "Confirm uncertain medication identifications before adding them.",
+  "medicines.cabinet.guided.notice.imported":
+    "Added {count} medicines to your cabinet.",
+  "medicines.cabinet.guided.notice.importError":
+    "We could not add the data to your medicine cabinet.",
   "medicines.cabinet.guided.detections.title": "Identified medicines",
   "medicines.cabinet.guided.detections.selected": "Selected {selected}/{total}",
   "medicines.cabinet.guided.detections.selectAll": "Select all",
   "medicines.cabinet.guided.detections.clearAll": "Clear all",
-  "medicines.cabinet.guided.detections.confirmAll": "Confirm medicines needing review",
-  "medicines.cabinet.guided.detections.noReview": "There are no uncertain medicine identifications needing an extra review.",
-  "medicines.cabinet.guided.detections.reviewRemaining": "{pending}/{total} medicines still need review before adding.",
+  "medicines.cabinet.guided.detections.confirmAll":
+    "Confirm medicines needing review",
+  "medicines.cabinet.guided.detections.noReview":
+    "There are no uncertain medicine identifications needing an extra review.",
+  "medicines.cabinet.guided.detections.reviewRemaining":
+    "{pending}/{total} medicines still need review before adding.",
   "medicines.cabinet.guided.notAvailable": "Not available",
   "medicines.cabinet.guided.detections.dose": "Dose: {dose}",
   "medicines.cabinet.guided.detections.brand": "Brand: {brand}",
-  "medicines.cabinet.guided.detections.manufacturer": "Manufacturer: {manufacturer}",
+  "medicines.cabinet.guided.detections.manufacturer":
+    "Manufacturer: {manufacturer}",
   "medicines.cabinet.guided.detections.evidence": "Evidence: {evidence}",
   "medicines.cabinet.guided.detections.ocr": "OCR result",
   "medicines.cabinet.guided.normalization.matched": "Matched",
   "medicines.cabinet.guided.normalization.candidate": "Check again",
   "medicines.cabinet.guided.normalization.fallback": "Manual match: low",
   "medicines.cabinet.guided.normalization.unknown": "Unknown",
-  "medicines.cabinet.guided.detections.confirmOne": "I confirm this OCR medication is correct before adding it.",
+  "medicines.cabinet.guided.detections.confirmOne":
+    "I confirm this OCR medication is correct before adding it.",
   "medicines.cabinet.guided.detections.importing": "Adding to cabinet…",
-  "medicines.cabinet.guided.detections.import": "Add {count} medicines to cabinet",
-  "medicines.cabinet.guided.detections.selectRequired": "Select at least 1 identified medicine to add to your cabinet.",
-  "medicines.cabinet.guided.detections.confirmRequired": "Confirm medicines needing review before adding them to your cabinet.",
+  "medicines.cabinet.guided.detections.import":
+    "Add {count} medicines to cabinet",
+  "medicines.cabinet.guided.detections.selectRequired":
+    "Select at least 1 identified medicine to add to your cabinet.",
+  "medicines.cabinet.guided.detections.confirmRequired":
+    "Confirm medicines needing review before adding them to your cabinet.",
   "medicines.cabinet.guided.detections.processing": "Processing, please wait.",
   "medicines.cabinet.addManual.step": "Step 3",
   "medicines.cabinet.addManual.title": "Enter a medicine manually",
-  "medicines.cabinet.addManual.description": "Use this if the prescription is hard to scan or you want to add one medicine at a time.",
+  "medicines.cabinet.addManual.description":
+    "Use this if the prescription is hard to scan or you want to add one medicine at a time.",
   "medicines.cabinet.addManual.optional": "Optional",
   "medicines.cabinet.addManual.name": "Medicine name *",
   "medicines.cabinet.addManual.brand": "Brand name",
@@ -4087,30 +5800,43 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.cabinet.addManual.quantityInput": "Medicine quantity",
   "medicines.cabinet.addManual.submit": "Add one medicine to cabinet",
   "medicines.cabinet.addManual.saving": "Adding…",
-  "medicines.cabinet.addManual.requirements": "Enter at least the medicine name and dose to add it to your cabinet.",
+  "medicines.cabinet.addManual.requirements":
+    "Enter at least the medicine name and dose to add it to your cabinet.",
   "medicines.safety.module": "Medication safety module",
   "medicines.safety.title": "Check interactions in your medicine cabinet",
   "medicines.safety.back": "Back to medicine cabinet",
   "medicines.safety.inCabinet": "Medication in your cabinet",
   "medicines.safety.count": "{count} medicines",
   "medicines.safety.loading": "Loading medication list…",
-  "medicines.safety.loadError": "We could not load your medicine cabinet right now. Please try again.",
-  "medicines.safety.empty": "Your medicine cabinet has no data. Add medication before checking interactions.",
+  "medicines.safety.loadError":
+    "We could not load your medicine cabinet right now. Please try again.",
+  "medicines.safety.empty":
+    "Your medicine cabinet has no data. Add medication before checking interactions.",
   "medicines.safety.noDose": "No dose yet",
   "medicines.safety.setup": "Check settings",
-  "medicines.safety.setupDescription": "You can add allergies to make alerts more relevant.",
+  "medicines.safety.setupDescription":
+    "You can add allergies to make alerts more relevant.",
   "medicines.safety.freeText": "Or paste a one-time medicine list",
-  "medicines.safety.freeTextPlaceholder": "One medicine per line, for example:\nWarfarin 5 mg\nIbuprofen 400 mg",
-  "medicines.safety.freeTextHint": "This list is used only for this check and is not saved to your record. CLARA will ask you to correct a name it cannot identify safely.",
-  "medicines.safety.freeTextNeedsTwo": "Enter at least {count} medicines, one per line or separated with commas.",
-  "medicines.safety.freeTextClarificationTitle": "Clarify the medicine name before checking",
-  "medicines.safety.freeTextClarificationDescription": "CLARA has not provided an interaction conclusion. Check the medicine or ingredient name on the label, revise the list, then try again.",
+  "medicines.safety.freeTextPlaceholder":
+    "One medicine per line, for example:\nWarfarin 5 mg\nIbuprofen 400 mg",
+  "medicines.safety.freeTextHint":
+    "This list is used only for this check and is not saved to your record. CLARA will ask you to correct a name it cannot identify safely.",
+  "medicines.safety.freeTextNeedsTwo":
+    "Enter at least {count} medicines, one per line or separated with commas.",
+  "medicines.safety.freeTextClarificationTitle":
+    "Clarify the medicine name before checking",
+  "medicines.safety.freeTextClarificationDescription":
+    "CLARA has not provided an interaction conclusion. Check the medicine or ingredient name on the label, revise the list, then try again.",
   "medicines.safety.allergies": "Allergies",
-  "medicines.safety.allergyPlaceholder": "One allergy per line, or separate with commas",
+  "medicines.safety.allergyPlaceholder":
+    "One allergy per line, or separate with commas",
   "medicines.safety.checking": "Checking interactions…",
-  "medicines.safety.needsTwo": "At least {count} medicines in your cabinet are needed to check interactions. Please add medication.",
-  "medicines.safety.cachedResult": "Showing the most recent saved result ({date}). It may be out of date.",
-  "medicines.safety.cachedResultNoDate": "Showing the most recent saved result. It may be out of date.",
+  "medicines.safety.needsTwo":
+    "At least {count} medicines in your cabinet are needed to check interactions. Please add medication.",
+  "medicines.safety.cachedResult":
+    "Showing the most recent saved result ({date}). It may be out of date.",
+  "medicines.safety.cachedResultNoDate":
+    "Showing the most recent saved result. It may be out of date.",
   "medicines.safety.offline": "Offline / not real-time",
   "medicines.safety.overview": "Overview",
   "medicines.safety.risk": "Risk level: {risk}",
@@ -4125,16 +5851,22 @@ const EN_MESSAGES: MessageCatalog = {
   "medicines.safety.nextSteps": "What to do next",
   "medicines.safety.uncertainty": "What remains uncertain",
   "medicines.safety.safetyNote": "Safety note",
-  "medicines.safety.drugbankVerified": "Checked against verified DrugBank{version}.",
+  "medicines.safety.drugbankVerified":
+    "Checked against verified DrugBank{version}.",
   "medicines.safety.drugbankVersion": " (version {version})",
-  "medicines.safety.checkUnavailable": "The required source could not complete this interaction conclusion. This is not a finding of no interaction.",
-  "medicines.safety.nameAmbiguity": "One or more medicine names were not identified well enough to compare every pair. Check the medicine or ingredient name, then try again.",
+  "medicines.safety.checkUnavailable":
+    "The required source could not complete this interaction conclusion. This is not a finding of no interaction.",
+  "medicines.safety.nameAmbiguity":
+    "One or more medicine names were not identified well enough to compare every pair. Check the medicine or ingredient name, then try again.",
   "medicines.safety.clarification.title": "Confirm medicines before checking",
-  "medicines.safety.clarification.description": "CLARA has not checked interactions because the exact medicine must be confirmed from DrugBank. Choose the matching medicine or correct its cabinet name.",
+  "medicines.safety.clarification.description":
+    "CLARA has not checked interactions because the exact medicine must be confirmed from DrugBank. Choose the matching medicine or correct its cabinet name.",
   "medicines.safety.clarification.choose": "Which medicine is this?",
-  "medicines.safety.clarification.noCandidate": "No reliable option was found. Check or correct the medicine or ingredient name on its label.",
+  "medicines.safety.clarification.noCandidate":
+    "No reliable option was found. Check or correct the medicine or ingredient name on its label.",
   "medicines.safety.clarification.editCabinet": "Edit medicine cabinet",
-  "medicines.safety.clarification.selectRequired": "Choose or correct every medicine that needs confirmation before continuing the check.",
+  "medicines.safety.clarification.selectRequired":
+    "Choose or correct every medicine that needs confirmation before continuing the check.",
   "medicines.safety.clarification.continue": "Continue interaction check",
   "medicines.safety.sources": "References",
   "medicines.safety.noSources": "No reference data is available.",
@@ -4163,10 +5895,14 @@ const EN_MESSAGES: MessageCatalog = {
   "medicineAdd.title.details": "Record what is on the label",
   "medicineAdd.title.schedule": "When is the medicine used?",
   "medicineAdd.title.review": "Check before saving",
-  "medicineAdd.description.identity": "Enter the name exactly as it appears on your label or prescription.",
-  "medicineAdd.description.details": "You can leave the dose, route, and form blank if you are not sure.",
-  "medicineAdd.description.schedule": "Record the schedule from the label or prescription; CLARA does not suggest doses or schedules.",
-  "medicineAdd.description.review": "Confirm what you entered. You can edit this record later.",
+  "medicineAdd.description.identity":
+    "Enter the name exactly as it appears on your label or prescription.",
+  "medicineAdd.description.details":
+    "You can leave the dose, route, and form blank if you are not sure.",
+  "medicineAdd.description.schedule":
+    "Record the schedule from the label or prescription; CLARA does not suggest doses or schedules.",
+  "medicineAdd.description.review":
+    "Confirm what you entered. You can edit this record later.",
   "medicineAdd.field.name": "Medicine name on the label or prescription",
   "medicineAdd.field.dose": "Dose on the label",
   "medicineAdd.field.route": "Route of use",
@@ -4179,45 +5915,59 @@ const EN_MESSAGES: MessageCatalog = {
   "medicineAdd.placeholder.form": "For example: tablet",
   "medicineAdd.placeholder.schedule": "For example: in the evening",
   "medicineAdd.placeholder.drugbankId": "If you already have one",
-  "medicineAdd.validation.name": "Enter at least 2 characters from your label or prescription.",
+  "medicineAdd.validation.name":
+    "Enter at least 2 characters from your label or prescription.",
   "medicineAdd.backToList": "Back to my medicines",
   "medicineAdd.back": "Back",
   "medicineAdd.saving": "Saving the confirmed medicine…",
-  "medicineAdd.saveFailed": "We could not save this medicine right now. Your information remains on this page so you can try again.",
+  "medicineAdd.saveFailed":
+    "We could not save this medicine right now. Your information remains on this page so you can try again.",
   "medicineAdd.review.title": "Confirmed medicine",
-  "medicineAdd.review.description": "CLARA saves only what you confirm. It does not guess the medicine or tell you how to use it.",
+  "medicineAdd.review.description":
+    "CLARA saves only what you confirm. It does not guess the medicine or tell you how to use it.",
   "medicineAdd.review.editName": "Edit name",
   "medicineAdd.review.empty": "Not entered",
   "medicineAdd.save": "Save confirmed medicine",
-  "medicineAdd.safetyNote": "This is a personal record. It does not replace a prescription, pharmacist or clinician advice, or emergency care. It remains only in this session until you confirm saving.",
+  "medicineAdd.safetyNote":
+    "This is a personal record. It does not replace a prescription, pharmacist or clinician advice, or emergency care. It remains only in this session until you confirm saving.",
   "medicines.consent.loading": "Checking the medical terms of use…",
   "medicines.consent.checkError": "We could not check your medical consent.",
-  "medicines.consent.acknowledgementRequired": "Please acknowledge this before continuing.",
-  "medicines.consent.saveIncomplete": "Your acknowledgement was saved, but we could not refresh its status. Please check again.",
-  "medicines.consent.saveError": "We could not save your consent acknowledgement.",
+  "medicines.consent.acknowledgementRequired":
+    "Please acknowledge this before continuing.",
+  "medicines.consent.saveIncomplete":
+    "Your acknowledgement was saved, but we could not refresh its status. Please check again.",
+  "medicines.consent.saveError":
+    "We could not save your consent acknowledgement.",
   "medicines.consent.requiredStep": "Required before use",
   "medicines.consent.title": "Medical disclaimer",
-  "medicines.consent.description": "CLARA supports medication-safety alerts and does not replace a clinician. Do not use it to self-diagnose, prescribe for yourself, or change a dose.",
+  "medicines.consent.description":
+    "CLARA supports medication-safety alerts and does not replace a clinician. Do not use it to self-diagnose, prescribe for yourself, or change a dose.",
   "medicines.consent.readFull": "Read the full",
   "medicines.consent.consentLink": "medical consent",
   "medicines.consent.and": "and the",
   "medicines.consent.privacyLink": "privacy policy",
   "medicines.consent.version": "Current terms version",
-  "medicines.consent.acknowledgement": "I have read, understood, and agree to CLARA's medical disclaimer.",
+  "medicines.consent.acknowledgement":
+    "I have read, understood, and agree to CLARA's medical disclaimer.",
   "medicines.consent.saving": "Saving acknowledgement…",
   "medicines.consent.accept": "Agree and continue",
-  "medicines.consent.retryNotice": "If your network or sign-in session changed, please check your consent status again.",
+  "medicines.consent.retryNotice":
+    "If your network or sign-in session changed, please check your consent status again.",
   "medicines.consent.retry": "Check consent status again",
-  "medicines.consent.acceptedTitle": "You have agreed to CLARA's medical terms of use",
+  "medicines.consent.acceptedTitle":
+    "You have agreed to CLARA's medical terms of use",
   "medicines.consent.acceptedAt": "Confirmed at {date}",
-  "medicines.consent.acceptedReady": "You can start using your medicine cabinet.",
+  "medicines.consent.acceptedReady":
+    "You can start using your medicine cabinet.",
   "visits.loadError": "We couldn't load your visit list.",
   "visits.loadVisitDataError": "We couldn't load data for this visit.",
-  "visits.createError": "We couldn't create the visit.",
-  "visits.answerRequired": "Write a short answer, or choose “Skip” / “Not sure”.",
+  "visits.answerRequired":
+    "Write a short answer, or choose “Skip” / “Not sure”.",
   "visits.answerError": "We couldn't save your answer.",
-  "visits.documentRequired": "Choose a file, paste a link, or give the note a name.",
-  "visits.documentSaveError": "We couldn't save the document. CLARA only saves content you choose.",
+  "visits.documentRequired":
+    "Choose a file, paste a link, or give the note a name.",
+  "visits.documentSaveError":
+    "We couldn't save the document. CLARA only saves content you choose.",
   "visits.documentPermissionError": "We couldn't update document permission.",
   "visits.extractError": "We couldn't review the document.",
   "visits.confirmError": "We couldn't confirm the selected items.",
@@ -4227,34 +5977,50 @@ const EN_MESSAGES: MessageCatalog = {
   "visits.shareCreateError": "We couldn't create the share link.",
   "visits.shareRevokeError": "We couldn't revoke the share link.",
   "visits.scribeConsentError": "We couldn't update recording consent.",
-  "visits.initialQuestionWithGoal": "What is the main thing you would like help with at this visit?",
-  "visits.initialQuestionWithGoalReason": "This helps you and your clinician start with what matters most.",
-  "visits.initialQuestionWithoutGoal": "What would make this visit most useful for you?",
-  "visits.initialQuestionWithoutGoalReason": "This keeps the visit focused on what matters to you.",
+  "visits.initialQuestionWithGoal":
+    "What is the main thing you would like help with at this visit?",
+  "visits.initialQuestionWithGoalReason":
+    "This helps you and your clinician start with what matters most.",
+  "visits.initialQuestionWithoutGoal":
+    "What would make this visit most useful for you?",
+  "visits.initialQuestionWithoutGoalReason":
+    "This keeps the visit focused on what matters to you.",
   "visits.extractedItem": "Extracted item {index}",
   "visits.title": "Prepare for a visit",
-  "visits.description": "Prepare step by step; only add and share what you choose.",
+  "visits.description":
+    "Prepare step by step; only add and share what you choose.",
+  "visits.stepsLabel": "Visit preparation steps",
+  "visits.step.concerns": "Symptoms",
+  "visits.step.records": "Medicines and documents",
+  "visits.step.questions": "Questions",
+  "visits.step.review": "Review and share",
   "visits.listEyebrow": "Visits",
   "visits.choose": "Choose a visit",
   "visits.noScheduledTime": "No time scheduled",
   "visits.emptyTitle": "No visits yet",
-  "visits.emptyDescription": "Create a visit through a few short steps to get started.",
+  "visits.emptyDescription":
+    "Create a visit through a few short steps to get started.",
   "visits.controlTitle": "You stay in control",
-  "visits.controlDescription": "No document, answer or plan enters your record or is shared automatically.",
+  "visits.controlDescription":
+    "No document, answer or plan enters your record or is shared automatically.",
   "visits.startTitle": "Create a visit to get started",
-  "visits.startDescription": "CLARA asks one short question at a time and saves only what you choose.",
+  "visits.startDescription":
+    "CLARA asks one short question at a time and saves only what you choose.",
   "visits.stepOne": "Step 1 · Quick preparation",
-  "visits.oneQuestionAtATime": "One question at a time. You can skip it or say “not sure”.",
+  "visits.oneQuestionAtATime":
+    "One question at a time. You can skip it or say “not sure”.",
   "visits.questionCount": "{answered}/{total} questions",
   "visits.startShortQuestions": "Start 3–4 short questions",
   "visits.answerPlaceholder": "Write it in your own words",
   "visits.saveAndContinue": "Save and continue",
   "visits.skip": "Skip",
   "visits.unknown": "Not sure",
-  "visits.quickPrepComplete": "Quick preparation is done. You can add questions or documents below.",
+  "visits.quickPrepComplete":
+    "Quick preparation is done. You can add questions or documents below.",
   "visits.stepTwo": "Step 2 · Documents you choose",
   "visits.addDocument": "Add a document or link",
-  "visits.documentPrivacy": "CLARA only saves text content you choose. Links are not opened, read or shared automatically.",
+  "visits.documentPrivacy":
+    "CLARA only saves text content you choose. Links are not opened, read or shared automatically.",
   "visits.documentName": "A name you will recognise",
   "visits.textFileOptional": "Text file (optional)",
   "visits.pasteContent": "Or paste content",
@@ -4271,9 +6037,12 @@ const EN_MESSAGES: MessageCatalog = {
   "visits.stepThree": "Step 3 · Evidence-based review",
   "visits.confirmBeforeTasks": "Confirm before creating tasks",
   "visits.noPlanTitle": "CLARA did not create a plan from this document.",
-  "visits.noPlanReason": "There are no sufficiently supported items to suggest. Review this with your clinician.",
-  "visits.draftGuidance": "Only choose clinician instructions with a clearly shown source passage. AI interpretation is for reference and cannot create a task.",
-  "visits.clinicianInstruction": "Extracted clinician instruction · needs your confirmation",
+  "visits.noPlanReason":
+    "There are no sufficiently supported items to suggest. Review this with your clinician.",
+  "visits.draftGuidance":
+    "Only choose clinician instructions with a clearly shown source passage. AI interpretation is for reference and cannot create a task.",
+  "visits.clinicianInstruction":
+    "Extracted clinician instruction · needs your confirmation",
   "visits.aiInterpretation": "AI interpretation · cannot create a task",
   "visits.source": "Source: “{source}”",
   "visits.noSource": "No source passage — this item cannot be confirmed.",
@@ -4282,7 +6051,8 @@ const EN_MESSAGES: MessageCatalog = {
   "visits.withdrawDraft": "Withdraw draft",
   "visits.stepFour": "Step 4 · Visit Pack",
   "visits.selectAndApprove": "Choose and approve before sharing",
-  "visits.packPrivacy": "Only items you tick are captured in the pack version; nothing is shared implicitly.",
+  "visits.packPrivacy":
+    "Only items you tick are captured in the pack version; nothing is shared implicitly.",
   "visits.createNewVersion": "Create new version",
   "visits.createAndApprove": "Create and approve {count} items",
   "visits.groupConcerns": "Questions to ask",
@@ -4295,11 +6065,6 @@ const EN_MESSAGES: MessageCatalog = {
   "visits.createShare": "Create 7-day link",
   "visits.revokeShare": "Revoke link",
   "visits.createVisit": "Create a visit",
-  "visits.visitName": "Visit name",
-  "visits.visitNameExample": "Example: cardiology follow-up",
-  "visits.goalOptional": "Goal (optional)",
-  "visits.scheduledTime": "Planned time",
-  "visits.saveVisit": "Save visit",
   "visits.concernTitle": "Questions for your clinician",
   "visits.concernPlaceholder": "What worries you most?",
   "visits.priorityRoutine": "When convenient",
@@ -4307,11 +6072,13 @@ const EN_MESSAGES: MessageCatalog = {
   "visits.priorityUrgent": "Prioritise discussion",
   "visits.saveQuestion": "Save question",
   "visits.scribeTitle": "Scribe recording",
-  "visits.scribeDescription": "Consent applies only to the selected visit and can be withdrawn immediately.",
+  "visits.scribeDescription":
+    "Consent applies only to the selected visit and can be withdrawn immediately.",
   "visits.revokeScribeConsent": "Withdraw recording consent",
   "visits.grantScribeConsent": "Consent to record this visit",
   "visits.newVisitTitle": "Start with what matters most",
-  "visits.newVisitDescription": "Create a visit in four short steps. You review everything before saving.",
+  "visits.newVisitDescription":
+    "Create a visit in four short steps. You review everything before saving.",
   "visits.startNewVisit": "Create a new visit",
   "visitCreate.eyebrow": "Prepare for a visit",
   "visitCreate.step.name": "Visit name",
@@ -4322,53 +6089,74 @@ const EN_MESSAGES: MessageCatalog = {
   "visitCreate.title.purpose": "What matters most for this visit?",
   "visitCreate.title.time": "When is the visit planned?",
   "visitCreate.title.review": "Check before saving",
-  "visitCreate.description.name": "Use a short name that will help you find this visit later.",
-  "visitCreate.description.purpose": "Optional. Write it in your own words; CLARA uses this to start quick preparation.",
-  "visitCreate.description.time": "Optional. You can add or change the time later.",
-  "visitCreate.description.review": "CLARA saves only the information you confirm. Nothing is shared.",
+  "visitCreate.description.name":
+    "Use a short name that will help you find this visit later.",
+  "visitCreate.description.purpose":
+    "Optional. Write it in your own words; CLARA uses this to start quick preparation.",
+  "visitCreate.description.time":
+    "Optional. You can add or change the time later.",
+  "visitCreate.description.review":
+    "CLARA saves only the information you confirm. Nothing is shared.",
   "visitCreate.field.name": "Visit name",
   "visitCreate.field.purpose": "What you want to prepare",
   "visitCreate.field.time": "Planned time",
   "visitCreate.placeholder.name": "For example: cardiology follow-up",
-  "visitCreate.placeholder.purpose": "For example: ask about test results and current medicines",
-  "visitCreate.validation.name": "Enter at least 2 characters so you can recognise this visit.",
+  "visitCreate.placeholder.purpose":
+    "For example: ask about test results and current medicines",
+  "visitCreate.validation.name":
+    "Enter at least 2 characters so you can recognise this visit.",
   "visitCreate.cancel": "Back to visits",
   "visitCreate.back": "Back",
   "visitCreate.skip": "Skip for now",
   "visitCreate.saving": "Saving visit…",
-  "visitCreate.saveFailed": "We could not save this visit. Your information remains on this page so you can try again.",
+  "visitCreate.saveFailed":
+    "We could not save this visit. Your information remains on this page so you can try again.",
   "visitCreate.review.title": "Your visit",
-  "visitCreate.review.description": "You can edit this before saving. After saving, CLARA asks one short question at a time to help you prepare.",
+  "visitCreate.review.description":
+    "You can edit this before saving. After saving, CLARA asks one short question at a time to help you prepare.",
   "visitCreate.review.edit": "Edit information",
   "visitCreate.review.empty": "Not entered",
   "visitCreate.save": "Save and start preparing",
-  "visitCreate.safetyNote": "Creating a visit does not schedule medical care. CLARA does not replace a clinician or emergency services.",
+  "visitCreate.safetyNote":
+    "Creating a visit does not schedule medical care. CLARA does not replace a clinician or emergency services.",
   "consent.title": "Consent Center",
-  "consent.description": "Grant or withdraw consent for each purpose your personal data is processed for. Withdrawal is as easy as granting.",
+  "consent.description":
+    "Grant or withdraw consent for each purpose your personal data is processed for. Withdrawal is as easy as granting.",
   "consent.loading": "Loading consent status...",
   "consent.loadError": "Could not load consent status. Please try again.",
-  "consent.disabled": "Purpose-based consent management is not enabled for this environment yet.",
+  "consent.disabled":
+    "Purpose-based consent management is not enabled for this environment yet.",
   "consent.granted": "Granted",
   "consent.notGranted": "Not granted",
   "consent.locked": "Required",
   "consent.saving": "Saving...",
-  "consent.sensitiveNote": "Health data, clinical queries, PHR, medicine cabinet, allergies, and conditions are treated as sensitive personal data under Decree 13/2023/NĐ-CP and are processed only per your consent.",
+  "consent.sensitiveNote":
+    "Health data, clinical queries, PHR, medicine cabinet, allergies, and conditions are treated as sensitive personal data under Decree 13/2023/NĐ-CP and are processed only per your consent.",
   "consent.updatedAt": "Updated",
   "consent.purpose.coreService.label": "Core service",
-  "consent.purpose.coreService.description": "Processing necessary to provide CLARA's core functionality. This is the lawful basis for the service and cannot be turned off while in use.",
+  "consent.purpose.coreService.description":
+    "Processing necessary to provide CLARA's core functionality. This is the lawful basis for the service and cannot be turned off while in use.",
   "consent.purpose.personalization.label": "Personalization",
-  "consent.purpose.personalization.description": "Use your personal health record (PHR), medicine cabinet, and allergies to personalize answers and interaction checks.",
+  "consent.purpose.personalization.description":
+    "Use your personal health record (PHR), medicine cabinet, and allergies to personalize answers and interaction checks.",
   "consent.purpose.research.label": "Research use",
-  "consent.purpose.research.description": "Allow de-identified data to be used to improve retrieval quality and evidence verification.",
-  "consent.purpose.crossBorder.label": "Third-party / cross-border model processing",
-  "consent.purpose.crossBorder.description": "Allow necessary data to be sent to a language model outside Vietnam. When off, the system uses an in-country path or a local fallback answer.",
+  "consent.purpose.research.description":
+    "Allow de-identified data to be used to improve retrieval quality and evidence verification.",
+  "consent.purpose.crossBorder.label":
+    "Third-party / cross-border model processing",
+  "consent.purpose.crossBorder.description":
+    "Allow necessary data to be sent to a language model outside Vietnam. When off, the system uses an in-country path or a local fallback answer.",
   "consent.purpose.sharing.label": "Sharing",
-  "consent.purpose.sharing.description": "Allow creating read-only share links for your records and conversations (e.g. sharing your PHR with a caregiver or clinician).",
+  "consent.purpose.sharing.description":
+    "Allow creating read-only share links for your records and conversations (e.g. sharing your PHR with a caregiver or clinician).",
   "consent.purpose.aiTransparency.label": "AI transparency",
-  "consent.purpose.aiTransparency.description": "Acknowledgement of the AI system transparency notice.",
+  "consent.purpose.aiTransparency.description":
+    "Acknowledgement of the AI system transparency notice.",
   "dataRights.title": "My data",
-  "dataRights.description": "Exercise your data-subject rights under Decree 13/2023/NĐ-CP: access, correction, deletion, restriction of processing, and consent withdrawal.",
-  "dataRights.disabled": "Data-subject requests (DSAR) are not enabled for this environment yet.",
+  "dataRights.description":
+    "Exercise your data-subject rights under Decree 13/2023/NĐ-CP: access, correction, deletion, restriction of processing, and consent withdrawal.",
+  "dataRights.disabled":
+    "Data-subject requests (DSAR) are not enabled for this environment yet.",
   "dataRights.loading": "Loading your requests...",
   "dataRights.loadError": "Could not load your requests. Please try again.",
   "dataRights.submit": "Submit request",
@@ -4377,20 +6165,27 @@ const EN_MESSAGES: MessageCatalog = {
   "dataRights.download": "Download",
   "dataRights.historyTitle": "Request history",
   "dataRights.noHistory": "You have not submitted any requests yet.",
-  "dataRights.retentionNote": "Note: certain audit/compliance records that contain no identifying data are retained under legal obligations even after deletion.",
-  "dataRights.acknowledged": "Your request has been recorded. We will process it within the statutory window.",
+  "dataRights.retentionNote":
+    "Note: certain audit/compliance records that contain no identifying data are retained under legal obligations even after deletion.",
+  "dataRights.acknowledged":
+    "Your request has been recorded. We will process it within the statutory window.",
   "dataRights.submittedAt": "Submitted",
   "dataRights.dueAt": "Due",
   "dataRights.action.export.label": "Export my data",
-  "dataRights.action.export.description": "Download a machine-readable copy of all personal data CLARA holds about you (profile, PHR, medicine cabinet, consents).",
+  "dataRights.action.export.description":
+    "Download a machine-readable copy of all personal data CLARA holds about you (profile, PHR, medicine cabinet, consents).",
   "dataRights.action.correct.label": "Request correction",
-  "dataRights.action.correct.description": "Request correction of inaccurate personal data.",
+  "dataRights.action.correct.description":
+    "Request correction of inaccurate personal data.",
   "dataRights.action.restrict.label": "Restrict processing",
-  "dataRights.action.restrict.description": "Request that processing of your personal data be paused or restricted.",
+  "dataRights.action.restrict.description":
+    "Request that processing of your personal data be paused or restricted.",
   "dataRights.action.withdraw.label": "Withdraw consent",
-  "dataRights.action.withdraw.description": "Withdraw processing consent. You can also manage this per-purpose in the Consent Center.",
+  "dataRights.action.withdraw.description":
+    "Withdraw processing consent. You can also manage this per-purpose in the Consent Center.",
   "dataRights.action.delete.label": "Delete my data",
-  "dataRights.action.delete.description": "Request deletion or anonymization of your personal data, except data retained under disclosed legal obligations.",
+  "dataRights.action.delete.description":
+    "Request deletion or anonymization of your personal data, except data retained under disclosed legal obligations.",
   "dataRights.action.unknown": "Data-subject request",
   "dataRights.status.received": "Received",
   "dataRights.status.inProgress": "In progress",
@@ -4399,15 +6194,20 @@ const EN_MESSAGES: MessageCatalog = {
   "dataRights.status.unknown": "Unknown",
   "community.title": "Community",
   "community.description": "Connect and share with the CLARA health community.",
-  "community.disclaimer": "CLARA Community is a place to share experiences and support one another. It is NOT medical advice: no prescribing, diagnosis, or dose instructions. Content is moderated to help keep the community safe. In an emergency, call 115.",
+  "community.disclaimer":
+    "CLARA Community is a place to share experiences and support one another. It is NOT medical advice: no prescribing, diagnosis, or dose instructions. Content is moderated to help keep the community safe. In an emergency, call 115.",
   "community.loading": "Loading…",
-  "community.loadError": "Community cannot be loaded right now. Please try again.",
-  "community.consentError": "Your agreement could not be recorded. Please try again.",
+  "community.loadError":
+    "Community cannot be loaded right now. Please try again.",
+  "community.consentError":
+    "Your agreement could not be recorded. Please try again.",
   "community.joinError": "You could not join this community. Please try again.",
   "community.unavailable.title": "Community is coming soon",
-  "community.unavailable.description": "The health community is being prepared and will be available soon.",
+  "community.unavailable.description":
+    "The health community is being prepared and will be available soon.",
   "community.consent.title": "Join to post and comment",
-  "community.consent.description": "You can still read posts. Agree to the community rules before you share.",
+  "community.consent.description":
+    "You can still read posts. Agree to the community rules before you share.",
   "community.consent.action": "I agree to join",
   "community.communities.heading": "Communities",
   "community.members": "{count} members",
@@ -4423,28 +6223,34 @@ const EN_MESSAGES: MessageCatalog = {
   "community.compose.cancel": "Cancel",
   "community.compose.submitting": "Posting…",
   "community.compose.chooseCommunity": "Choose a community first.",
-  "community.compose.moderationBlocked": "This content does not meet the community rules (no prescribing, diagnosis, or personal dose instructions) or may indicate an emergency. Please revise it.",
-  "community.compose.createError": "Your post could not be published. Please try again.",
+  "community.compose.moderationBlocked":
+    "This content does not meet the community rules (no prescribing, diagnosis, or personal dose instructions) or may indicate an emergency. Please revise it.",
+  "community.compose.createError":
+    "Your post could not be published. Please try again.",
   "community.compose.communityLabel": "Community",
   "community.compose.titleLabel": "Title",
   "community.compose.bodyLabel": "Content",
   "community.dialog.close": "Close",
-  "community.reaction.helpful": "Helpful",
-  "community.reaction.relate": "I relate",
-  "community.reaction.thanks": "Thank you",
   "community.reaction.joinToReact": "Join the community to react",
   "community.reaction.sent": "Your supportive reaction was sent.",
-  "community.reaction.error": "Your reaction could not be sent. Please try again.",
+  "community.reaction.error":
+    "Your reaction could not be sent. Please try again.",
   "community.report.post": "Report post",
   "community.report.comment": "Report",
-  "community.report.sent": "Your report was sent. The moderation team will review it.",
+  "community.report.sent":
+    "Your report was sent. The moderation team will review it.",
   "community.report.error": "Your report could not be sent. Please try again.",
   "community.comment.loading": "Loading comments…",
-  "community.comment.loadError": "Comments could not be loaded. Please try again.",
-  "community.comment.empty": "There are no comments yet. Be the first to share.",
-  "community.comment.placeholder": "Share your thoughts (no prescribing, diagnosis, or dose instructions)…",
-  "community.comment.moderationBlocked": "This comment does not meet the community rules (no prescribing, diagnosis, or dose instructions) or may indicate an emergency.",
-  "community.comment.submitError": "Your comment could not be sent. Please try again.",
+  "community.comment.loadError":
+    "Comments could not be loaded. Please try again.",
+  "community.comment.empty":
+    "There are no comments yet. Be the first to share.",
+  "community.comment.placeholder":
+    "Share your thoughts (no prescribing, diagnosis, or dose instructions)…",
+  "community.comment.moderationBlocked":
+    "This comment does not meet the community rules (no prescribing, diagnosis, or dose instructions) or may indicate an emergency.",
+  "community.comment.submitError":
+    "Your comment could not be sent. Please try again.",
   "community.comment.submitting": "Sending…",
   "community.comment.submit": "Post comment",
   "community.comment.joinToComment": "Join the community to comment.",
@@ -4464,7 +6270,6 @@ const EN_MESSAGES: MessageCatalog = {
   "auth.login.submit": "Sign in",
   "auth.login.submitting": "Signing in…",
   "auth.login.failure": "Sign-in failed. Please check your details.",
-  "auth.login.missingToken": "The sign-in response was invalid. Please try again.",
   "auth.login.createAccount": "Create an account",
   "auth.login.forgotPassword": "Forgot password?",
   "auth.login.unverified": "Account not verified? Go to email verification",
@@ -4480,15 +6285,18 @@ const EN_MESSAGES: MessageCatalog = {
   "auth.otp.verify": "Verify OTP",
   "auth.otp.verifying": "Verifying…",
   "auth.register.title": "Create an account",
-  "auth.register.description": "Set up your CLARA account and choose the role that fits your needs.",
+  "auth.register.description":
+    "Set up your CLARA account and choose the role that fits your needs.",
   "auth.register.fullName": "Full name",
   "auth.register.fullNamePlaceholder": "Nguyen Van A",
   "auth.register.password": "Password",
   "auth.register.passwordPlaceholder": "At least 8 characters",
-  "auth.register.passwordHint": "Use at least 8 characters, including one letter and one number, with no leading or trailing spaces.",
+  "auth.register.passwordHint":
+    "Use at least 8 characters, including one letter and one number, with no leading or trailing spaces.",
   "auth.register.confirmPassword": "Confirm password",
   "auth.register.confirmPasswordPlaceholder": "Enter your password again",
-  "auth.register.confirmPasswordHint": "Enter it again to avoid a typing mistake.",
+  "auth.register.confirmPasswordHint":
+    "Enter it again to avoid a typing mistake.",
   "auth.register.role": "How you will use CLARA",
   "auth.register.role.normal": "Personal user",
   "auth.register.role.researcher": "Researcher",
@@ -4501,40 +6309,55 @@ const EN_MESSAGES: MessageCatalog = {
   "auth.register.submitting": "Working…",
   "auth.register.hasAccount": "Already have an account?",
   "auth.register.success": "Registration succeeded. You can sign in now.",
-  "auth.register.successPreview": "Registration succeeded. Verification code (development): {token}",
-  "auth.register.successSent": "Registration succeeded. We sent a verification email; please check your inbox.",
-  "auth.register.successVerify": "Registration succeeded. Verify your email before signing in.",
+  "auth.register.successPreview":
+    "Registration succeeded. Verification code (development): {token}",
+  "auth.register.successSent":
+    "Registration succeeded. We sent a verification email; please check your inbox.",
+  "auth.register.successVerify":
+    "Registration succeeded. Verify your email before signing in.",
   "auth.register.goToVerify": "Go to email verification",
-  "auth.register.failure": "We could not create your account. Please try again shortly.",
-  "auth.register.failureConnection": "We could not create your account right now. Please try again shortly or check your connection.",
-  "auth.register.acceptRequired": "Confirm that you have read the Terms, Privacy policy, and Medical consent before creating an account.",
+  "auth.register.failure":
+    "We could not create your account. Please try again shortly.",
+  "auth.register.failureConnection":
+    "We could not create your account right now. Please try again shortly or check your connection.",
+  "auth.register.acceptRequired":
+    "Confirm that you have read the Terms, Privacy policy, and Medical consent before creating an account.",
   "auth.register.passwordTooShort": "Password must be at least 8 characters.",
-  "auth.register.passwordWhitespace": "Password must not have leading or trailing spaces.",
-  "auth.register.passwordRequirements": "Password must include at least one letter and one number.",
+  "auth.register.passwordWhitespace":
+    "Password must not have leading or trailing spaces.",
+  "auth.register.passwordRequirements":
+    "Password must include at least one letter and one number.",
   "auth.register.passwordMismatch": "Password confirmation does not match.",
   "auth.passwordRecovery.title": "Forgot password",
-  "auth.passwordRecovery.description": "Enter your account email to receive reset instructions.",
+  "auth.passwordRecovery.description":
+    "Enter your account email to receive reset instructions.",
   "auth.passwordRecovery.submit": "Send request",
   "auth.passwordRecovery.submitting": "Sending…",
   "auth.passwordRecovery.back": "Back to sign in",
-  "auth.passwordRecovery.previewNotice": "A password-reset request was created (development environment).",
-  "auth.passwordRecovery.sentNotice": "We sent a password-reset email. Please check your inbox.",
-  "auth.passwordRecovery.genericNotice": "If that email exists, we sent password-reset instructions.",
+  "auth.passwordRecovery.previewNotice":
+    "A password-reset request was created (development environment).",
+  "auth.passwordRecovery.sentNotice":
+    "We sent a password-reset email. Please check your inbox.",
+  "auth.passwordRecovery.genericNotice":
+    "If that email exists, we sent password-reset instructions.",
   "auth.passwordRecovery.error": "We could not process this request.",
   "auth.passwordRecovery.previewToken": "Reset code (development):",
   "auth.passwordRecovery.openReset": "Open reset page",
   "auth.passwordReset.title": "Reset password",
-  "auth.passwordReset.description": "Enter the reset code and a new password to continue using your account.",
+  "auth.passwordReset.description":
+    "Enter the reset code and a new password to continue using your account.",
   "auth.passwordReset.token": "Password reset code",
   "auth.passwordReset.tokenPlaceholder": "Paste the reset code here",
   "auth.passwordReset.newPassword": "New password",
-  "auth.passwordReset.success": "Password reset succeeded. You can sign in again.",
+  "auth.passwordReset.success":
+    "Password reset succeeded. You can sign in again.",
   "auth.passwordReset.error": "We could not reset your password.",
   "auth.passwordReset.submit": "Reset password",
   "auth.passwordReset.submitting": "Working…",
   "auth.passwordReset.goToLogin": "Go to sign in",
   "auth.verify.title": "Verify email",
-  "auth.verify.description": "Enter your verification code or request a new one to activate your account.",
+  "auth.verify.description":
+    "Enter your verification code or request a new one to activate your account.",
   "auth.verify.token": "Verification code",
   "auth.verify.tokenPlaceholder": "Paste the verification code here",
   "auth.verify.success": "Email verified.",
@@ -4545,19 +6368,28 @@ const EN_MESSAGES: MessageCatalog = {
   "auth.verify.resendEmail": "Account email",
   "auth.verify.resend": "Send verification code again",
   "auth.verify.resending": "Sending again…",
-  "auth.verify.resendPreview": "A new verification code was created (development environment). Verify it now.",
-  "auth.verify.resendSent": "We sent the verification email again. Please check your inbox.",
-  "auth.verify.resendGeneric": "If the account is not verified, we processed the resend request.",
+  "auth.verify.resendPreview":
+    "A new verification code was created (development environment). Verify it now.",
+  "auth.verify.resendSent":
+    "We sent the verification email again. Please check your inbox.",
+  "auth.verify.resendGeneric":
+    "If the account is not verified, we processed the resend request.",
   "auth.verify.resendError": "We could not resend the verification email.",
   "welcome.eyebrow": "Set up CLARA",
   "welcome.description.start": "Start gently. You stay in control.",
-  "welcome.description.step": "This step is optional. You can skip it and update it later.",
+  "welcome.description.step":
+    "This step is optional. You can skip it and update it later.",
   "welcome.loading": "Loading setup",
-  "welcome.loadError": "We could not load setup. You can try again or return later.",
-  "welcome.saveError": "We could not save your changes right now. Please try again.",
-  "welcome.completeError": "We could not finish setup right now. Please try again.",
-  "welcome.privacy": "Your data is saved in your profile, not in the URL or behavioural analytics.",
-  "welcome.start.intro": "Setup has short steps and all health information is optional. Each choice is saved securely so you can return later.",
+  "welcome.loadError":
+    "We could not load setup. You can try again or return later.",
+  "welcome.saveError":
+    "We could not save your changes right now. Please try again.",
+  "welcome.completeError":
+    "We could not finish setup right now. Please try again.",
+  "welcome.privacy":
+    "Your data is saved in your profile, not in the URL or behavioural analytics.",
+  "welcome.start.intro":
+    "Setup has short steps and all health information is optional. Each choice is saved securely so you can return later.",
   "welcome.start.itemOne": "One group of information per step.",
   "welcome.start.itemTwo": "Review before you finish.",
   "welcome.start.itemThree": "Edit or delete it later in Profile.",
@@ -4579,8 +6411,10 @@ const EN_MESSAGES: MessageCatalog = {
   "welcome.weight.label": "Weight",
   "welcome.measurementError": "Enter a number from 0 to {maximum}.",
   "welcome.personalization.label": "Allow personalisation",
-  "welcome.personalization.description": "Use your health profile for more relevant guidance. It is optional and you can withdraw it.",
-  "welcome.medicalDisclaimer": "CLARA is a reference assistant. It does not diagnose or replace a clinician.",
+  "welcome.personalization.description":
+    "Use your health profile for more relevant guidance. It is optional and you can withdraw it.",
+  "welcome.medicalDisclaimer":
+    "CLARA is a reference assistant. It does not diagnose or replace a clinician.",
   "welcome.review.title": "Self-reported information",
   "welcome.review.description": "You can add blank information later.",
   "welcome.review.name": "Name",
@@ -4593,28 +6427,104 @@ const EN_MESSAGES: MessageCatalog = {
   "welcome.review.notProvided": "Not provided",
   "welcome.review.allowed": "Allowed",
   "welcome.review.notAllowed": "Not allowed",
-  "welcome.review.editAfter": "You can still edit or delete this information in Profile.",
-  "welcome.review.confirm": "I confirm that I reported the information above myself.",
+  "welcome.review.editAfter":
+    "You can still edit or delete this information in Profile.",
+  "welcome.review.confirm":
+    "I confirm that I reported the information above myself.",
   "welcome.review.complete": "Finish setup",
   "welcome.continue": "Continue",
   "welcome.saving": "Saving…",
   "research.workspace.knowledgeSources.title": "Knowledge sources",
-  "research.workspace.knowledgeSources.createPlaceholder": "Create a new source…",
+  "research.workspace.knowledgeSources.createPlaceholder":
+    "Create a new source…",
   "research.workspace.knowledgeSources.loading": "Loading sources…",
   "research.workspace.knowledgeSources.documents": "{count} documents",
-  "research.workspace.knowledgeSources.empty": "There are no knowledge sources yet.",
+  "research.workspace.knowledgeSources.empty":
+    "There are no knowledge sources yet.",
+  "research.workspace.files.title": "Attached files",
+  "research.workspace.files.clearAll": "Clear all",
+  "research.workspace.files.dropzone": "Drag and drop a document here",
+  "research.workspace.files.sizeUnknown": "Size unavailable",
+  "research.workspace.files.remove": "Remove file {name}",
+  "research.workspace.files.empty": "There are no attached files.",
+  "research.workspace.evidence.title": "Evidence sources",
+  "research.workspace.evidence.tier": "Tier {tier}",
+  "research.workspace.evidence.openSource": "Open source",
+  "research.workspace.evidence.internalSource":
+    "Internal source or attached document.",
+  "research.workspace.evidence.empty":
+    "There are no evidence sources for this answer yet.",
+  "research.workspace.timeline.title": "Processing timeline",
+  "research.workspace.timeline.totalDuration": "Total duration",
+  "research.workspace.timeline.processing": "Processing",
+  "research.workspace.timeline.liveEngine": "Live analysis engine",
+  "research.workspace.timeline.active": "Active",
+  "research.workspace.timeline.progress": "Processing progress",
+  "research.workspace.timeline.eventLog": "Event log",
+  "research.workspace.timeline.started": "Started",
+  "research.workspace.timeline.ended": "Ended",
+  "research.workspace.timeline.duration": "Duration",
+  "research.workspace.timeline.events": "Events",
+  "research.workspace.timeline.sources": "Sources",
+  "research.workspace.timeline.components": "Components",
+  "research.workspace.timeline.waiting":
+    "The server is processing. Progress appears when real events are available.",
+  "research.workspace.timeline.empty":
+    "There is no server-provided progress for this session yet.",
+  "research.workspace.timeline.mode.idle": "Waiting",
+  "research.workspace.timeline.mode.flowEvents": "Live flow events",
+  "research.workspace.timeline.mode.serverStages": "Server stage summary",
+  "research.workspace.timeline.mode.localFallback": "Local fallback",
+  "research.workspace.timeline.mode.serverAwait":
+    "Server reasoning in progress",
+  "research.workspace.timeline.status.pending": "Pending",
+  "research.workspace.timeline.status.in_progress": "In progress",
+  "research.workspace.timeline.status.completed": "Completed",
+  "research.workspace.timeline.status.warning": "Needs attention",
+  "research.workspace.timeline.status.failed": "Could not finish",
+  "research.workspace.timeline.status.skipped": "Skipped",
+  "research.workspace.timeline.count.completed": "Completed: {count}",
+  "research.workspace.timeline.count.inProgress": "In progress: {count}",
+  "research.workspace.timeline.count.warning": "Needs attention: {count}",
+  "research.workspace.timeline.count.failed": "Could not finish: {count}",
+  "research.workspace.timeline.count.pending": "Pending: {count}",
+  "research.workspace.timeline.payload.elapsed": "Elapsed",
+  "research.workspace.timeline.payload.progress": "Progress",
+  "research.workspace.timeline.payload.tick": "Tick",
+  "research.workspace.timeline.payload.topK": "Top results",
+  "research.workspace.timeline.payload.sources": "Sources",
+  "research.workspace.timeline.payload.candidates": "Candidates",
+  "research.workspace.timeline.payload.selected": "Selected",
+  "research.workspace.timeline.payload.pass": "Pass",
+  "research.workspace.timeline.payload.phase": "Phase",
+  "research.workspace.timeline.payload.topDocuments": "Top documents",
+  "research.workspace.timeline.payload.confidence": "Uncalibrated signal",
+  "research.workspace.timeline.payload.severity": "Severity",
+  "research.workspace.timeline.payload.supportedClaims": "Supported claims",
+  "research.workspace.timeline.payload.totalClaims": "Total claims",
+  "research.workspace.timeline.payload.evidenceCount": "Evidence count",
+  "research.workspace.timeline.payload.empty": "Empty",
+  "research.workspace.timeline.payload.notANumber": "Not a number",
+  "research.workspace.timeline.payload.array": "List ({count})",
+  "research.workspace.timeline.payload.object": "Object",
+  "research.workspace.timeline.payload.mode": "Mode",
+  "research.workspace.timeline.payload.details": "Technical details",
   "research.workspace.mode.fast": "Fast",
   "research.workspace.mode.deep": "Thoughtful",
   "research.workspace.mode.pro": "Pro",
   "research.workspace.retrieval.auto": "Auto-select sources",
   "research.workspace.retrieval.full": "All sources",
   "research.workspace.header.eyebrow": "CLARA Research Workspace",
-  "research.workspace.header.title": "A medical assistant with a transparent workflow",
-  "research.workspace.header.description": "Conversation, question composer, evidence, and progress are kept separate so you can follow answer quality in real time.",
+  "research.workspace.header.title":
+    "A medical assistant with a transparent workflow",
+  "research.workspace.header.description":
+    "Conversation, question composer, evidence, and progress are kept separate so you can follow answer quality in real time.",
   "research.workspace.header.role": "Role: {role}",
-  "research.workspace.header.sourcesAndFiles": "Sources: {sources} · Files: {files}",
+  "research.workspace.header.sourcesAndFiles":
+    "Sources: {sources} · Files: {files}",
   "research.workspace.composer.label": "Question composer",
-  "research.workspace.composer.placeholder": "Ask a health question you need clarified…",
+  "research.workspace.composer.placeholder":
+    "Ask a health question you need clarified…",
   "research.workspace.composer.attach": "Attach",
   "research.workspace.composer.uploading": "Uploading…",
   "research.workspace.tier.legend": "Choose answer depth",
@@ -4622,12 +6532,15 @@ const EN_MESSAGES: MessageCatalog = {
   "research.workspace.tier.deep": "In depth",
   "research.workspace.mode.legend": "Choose research mode",
   "research.workspace.retrieval.legend": "Choose source scope",
-  "research.workspace.retrieval.fastModeTitle": "Fast mode uses an automatically selected source scope to answer sooner.",
-  "research.workspace.retrieval.fastModeHint": "Fast mode uses an automatically selected source scope to reduce waiting time.",
+  "research.workspace.retrieval.fastModeTitle":
+    "Fast mode uses an automatically selected source scope to answer sooner.",
+  "research.workspace.retrieval.fastModeHint":
+    "Fast mode uses an automatically selected source scope to reduce waiting time.",
   "research.workspace.action.submit": "Send",
   "research.workspace.action.submitting": "Working…",
   "research.workspace.lastQuestion": "Question",
-  "research.workspace.processing.deep": "CLARA is working in {mode} mode · {retrieval}. Progress will update when results are available.",
+  "research.workspace.processing.deep":
+    "CLARA is working in {mode} mode · {retrieval}. Progress will update when results are available.",
   "research.workspace.processing.fast": "CLARA is preparing a quick answer…",
   "research.workspace.answer.fast": "Quick answer",
   "research.workspace.answer.deep": "In-depth answer",
@@ -4637,7 +6550,8 @@ const EN_MESSAGES: MessageCatalog = {
   "research.workspace.fallback.limited": "Limited sources",
   "research.workspace.fallback.compared": "Sources compared",
   "research.workspace.verification.pass": "Compared with available sources",
-  "research.workspace.verification.needsReview": "Further source and professional review is needed",
+  "research.workspace.verification.needsReview":
+    "Further source and professional review is needed",
   "research.workspace.verification.evidenceCount": "evidence records: {count}",
   "research.workspace.debug.title": "Intent debug",
   "research.workspace.debug.role": "role: {value}",
@@ -4650,17 +6564,23 @@ const EN_MESSAGES: MessageCatalog = {
   "research.role.researcher": "Researcher",
   "research.role.doctor": "Doctor",
   "research.role.admin": "Administrator",
-  "research.result.complete": "The result is ready. Open Details to see the complete data and evidence.",
+  "research.result.complete":
+    "The result is ready. Open Details to see the complete data and evidence.",
   "research.status.ready": "Ready",
   "research.status.uploading": "Uploading {file}…",
   "research.status.fileReady": "The file is ready for analysis",
-  "research.status.reviewingQuestion": "Reviewing the question and missing details…",
-  "research.status.needsClarification": "We need your confirmation before searching",
-  "research.status.synthesizing": "Finding sources, comparing evidence, and checking citations…",
-  "research.status.complete": "Ready — review each conclusion and source before using it.",
+  "research.status.reviewingQuestion":
+    "Reviewing the question and missing details…",
+  "research.status.needsClarification":
+    "We need your confirmation before searching",
+  "research.status.synthesizing":
+    "Finding sources, comparing evidence, and checking citations…",
+  "research.status.complete":
+    "Ready — review each conclusion and source before using it.",
   "research.status.incomplete": "The research run did not finish",
   "research.error.upload": "We could not upload the research file.",
-  "research.error.questionRequired": "Enter a research question before starting.",
+  "research.error.questionRequired":
+    "Enter a research question before starting.",
   "research.error.run": "The research run did not finish.",
   "research.tab.frame": "1 · Frame the question",
   "research.tab.search": "2 · Sources & files",
@@ -4669,10 +6589,12 @@ const EN_MESSAGES: MessageCatalog = {
   "research.stageLabel": "Research stages",
   "research.eyebrow": "CLARA Research",
   "research.title": "From question to checkable evidence",
-  "research.description": "More than an answer. CLARA keeps the question, sources, search method, uncertainties, and conclusion so you can check, share, and update it.",
+  "research.description":
+    "More than an answer. CLARA keeps the question, sources, search method, uncertainties, and conclusion so you can check, share, and update it.",
   "research.frame.eyebrow": "PICO / PECO frame",
   "research.frame.title": "What would you like to know?",
-  "research.frame.placeholder": "For example: In adults with type 2 diabetes, metformin compared with…",
+  "research.frame.placeholder":
+    "For example: In adults with type 2 diabetes, metformin compared with…",
   "research.field.population": "People being considered",
   "research.field.intervention": "Intervention / exposure",
   "research.field.comparator": "What to compare",
@@ -4680,25 +6602,32 @@ const EN_MESSAGES: MessageCatalog = {
   "research.clarify.title": "Clarify before starting",
   "research.search.eyebrow": "Search plan",
   "research.search.title": "Which sources should be compared?",
-  "research.search.description": "Choose source groups or let CLARA route by question type. Records and retrieval times stay with this run.",
+  "research.search.description":
+    "Choose source groups or let CLARA route by question type. Records and retrieval times stay with this run.",
   "research.search.defaultSource": "Connected medical source",
-  "research.search.attach": "＋ Attach an article, protocol, or internal document",
+  "research.search.attach":
+    "＋ Attach an article, protocol, or internal document",
   "research.search.uploaded": "Added: {files}",
   "research.synthesis.eyebrow": "Evidence synthesis",
   "research.synthesis.title": "A sourced conclusion with uncertainties",
   "research.synthesis.details": "Open run data and evidence",
-  "research.synthesis.empty": "There is no run yet. Frame a question, choose sources, then start the synthesis.",
+  "research.synthesis.empty":
+    "There is no run yet. Frame a question, choose sources, then start the synthesis.",
   "chat.composer.outputMode": "Presentation",
   "chat.composer.outputMode.plainLanguage": "Plain language",
   "chat.composer.outputMode.professional": "Professional",
-  "chat.answerRenderer.presentation.professionalAria": "Professional presentation mode",
+  "chat.answerRenderer.presentation.professionalAria":
+    "Professional presentation mode",
   "chat.answerRenderer.presentation.professionalTitle": "Professional view",
-  "chat.answerRenderer.presentation.professionalDescription": "Shows the released source list in full; it does not change the conclusion.",
+  "chat.answerRenderer.presentation.professionalDescription":
+    "Shows the released source list in full; it does not change the conclusion.",
   "chat.answerRenderer.presentation.sources": "Released sources",
   "research.watch.eyebrow": "Living evidence",
   "research.watch.title": "Monitor changes",
-  "research.watch.description": "Monitoring finds new papers, trial results, corrections, retractions, and guideline changes that affect the conclusion. Review each update before it replaces the current conclusion.",
-  "research.watch.note": "Monitoring uses the protocol and snapshot from the most recent run{job}.",
+  "research.watch.description":
+    "Monitoring finds new papers, trial results, corrections, retractions, and guideline changes that affect the conclusion. Review each update before it replaces the current conclusion.",
+  "research.watch.note":
+    "Monitoring uses the protocol and snapshot from the most recent run{job}.",
   "research.action.start": "Start research",
   "research.action.running": "Synthesizing…",
   "research.manifest.eyebrow": "Run information",
@@ -4710,33 +6639,41 @@ const EN_MESSAGES: MessageCatalog = {
   "research.manifest.files": "Files",
   "research.manifest.job": "Run",
   "research.guard.title": "What does CLARA check?",
-  "research.guard.description": "Sources, timing, population, study design, conflicts, and uncertainty. This is evidence synthesis, not a substitute for medical decisions.",
+  "research.guard.description":
+    "Sources, timing, population, study design, conflicts, and uncertainty. This is evidence synthesis, not a substitute for medical decisions.",
   "research.sourceHub.eyebrow": "Research Source Hub",
   "research.sourceHub.title": "Research sources",
-  "research.sourceHub.description": "Sync PubMed, medication data, and medical sources to support evidence-based analysis. This area is only available to researchers, clinicians, and administrators.",
-  "research.sourceHub.availableSummary": "{sources} sources available · {records} saved records",
+  "research.sourceHub.description":
+    "Sync PubMed, medication data, and medical sources to support evidence-based analysis. This area is only available to researchers, clinicians, and administrators.",
+  "research.sourceHub.availableSummary":
+    "{sources} sources available · {records} saved records",
   "research.sourceHub.sync.eyebrow": "Source sync",
   "research.sourceHub.sync.title": "Get new research records",
   "research.sourceHub.sync.docs": "View source documentation",
   "research.sourceHub.sync.source": "Source",
   "research.sourceHub.sync.query": "Search topic",
-  "research.sourceHub.sync.queryPlaceholder": "For example: metformin interaction",
+  "research.sourceHub.sync.queryPlaceholder":
+    "For example: metformin interaction",
   "research.sourceHub.sync.limit": "Amount",
   "research.sourceHub.sync.submit": "Sync",
   "research.sourceHub.sync.running": "Syncing…",
   "research.sourceHub.sync.queryRequired": "Enter a topic to sync.",
-  "research.sourceHub.error.loadRecords": "We could not load research source data.",
+  "research.sourceHub.error.loadRecords":
+    "We could not load research source data.",
   "research.sourceHub.error.loadHub": "We could not load Source Hub.",
   "research.sourceHub.error.sync": "We could not sync the research source.",
-  "research.sourceHub.sync.success": "Synced {source}: fetched {fetched}, saved {stored} records.",
+  "research.sourceHub.sync.success":
+    "Synced {source}: fetched {fetched}, saved {stored} records.",
   "research.sourceHub.distribution.eyebrow": "Data distribution",
   "research.sourceHub.distribution.title": "Records by source",
-  "research.sourceHub.distribution.empty": "There are no records yet. Sync a source to get started.",
+  "research.sourceHub.distribution.empty":
+    "There are no records yet. Sync a source to get started.",
   "research.sourceHub.records.eyebrow": "Saved records",
   "research.sourceHub.records.title": "Research source results",
   "research.sourceHub.records.filterPlaceholder": "Filter by title or query…",
   "research.sourceHub.records.filter": "Filter",
-  "research.sourceHub.warning.summary": "Some sources responded slowly, so the displayed data may be incomplete.",
+  "research.sourceHub.warning.summary":
+    "Some sources responded slowly, so the displayed data may be incomplete.",
   "research.sourceHub.warning.admin": "Sync warnings (administrators only)",
   "research.sourceHub.table.source": "Source",
   "research.sourceHub.table.title": "Title",
@@ -4744,7 +6681,8 @@ const EN_MESSAGES: MessageCatalog = {
   "research.sourceHub.table.published": "Published",
   "research.sourceHub.table.synced": "Synced",
   "research.sourceHub.table.loading": "Loading records…",
-  "research.sourceHub.table.empty": "There is no data yet. Sync a source or change the filter.",
+  "research.sourceHub.table.empty":
+    "There is no data yet. Sync a source or change the filter.",
   "research.sourceHub.source.pubmed": "PubMed",
   "research.sourceHub.source.rxnorm": "RxNorm",
   "research.sourceHub.source.openfda": "openFDA",
@@ -4753,60 +6691,80 @@ const EN_MESSAGES: MessageCatalog = {
   "research.sourceHub.source.europepmc": "Europe PMC",
   "research.sourceHub.source.semanticScholar": "Semantic Scholar",
   "research.sourceHub.source.vnMoh": "Vietnam Ministry of Health",
-  "research.sourceHub.source.vnKcb": "Vietnam Administration of Medical Services",
-  "research.sourceHub.source.vnCanhGiacDuoc": "Vietnam National Pharmacovigilance Centre",
+  "research.sourceHub.source.vnKcb":
+    "Vietnam Administration of Medical Services",
+  "research.sourceHub.source.vnCanhGiacDuoc":
+    "Vietnam National Pharmacovigilance Centre",
   "research.sourceHub.source.vnVbplByt": "Ministry of Health legal documents",
   "research.sourceHub.source.vnDav": "Drug Administration of Vietnam",
   "research.sourceHub.source.davidrug": "DAVIDrug",
   "admin.ragEval.title": "RAG evaluation",
-  "admin.ragEval.description": "Run the Vietnamese question-answer evaluation and monitor retrieval, answer and citation quality. Administrators only.",
+  "admin.ragEval.description":
+    "Run the Vietnamese question-answer evaluation and monitor retrieval, answer and citation quality. Administrators only.",
   "admin.ragEval.k": "k threshold",
   "admin.ragEval.run": "Run evaluation",
   "admin.ragEval.running": "Running evaluation…",
   "admin.ragEval.reload": "Reload results",
   "admin.ragEval.latestRun": "Most recent run ID: {runId}",
-  "admin.ragEval.unavailable": "The evaluation service is temporarily unavailable. Results may not be ready; please try again shortly.",
-  "admin.ragEval.startUnavailable": "The evaluation cannot start right now. It may be busy or the service is temporarily unavailable — please try again.",
+  "admin.ragEval.unavailable":
+    "The evaluation service is temporarily unavailable. Results may not be ready; please try again shortly.",
+  "admin.ragEval.startUnavailable":
+    "The evaluation cannot start right now. It may be busy or the service is temporarily unavailable — please try again.",
   "admin.ragEval.loadError": "We could not load evaluation results.",
   "admin.ragEval.startError": "We could not start the evaluation.",
   "admin.ragEval.loading": "Loading evaluation results…",
   "admin.ragEval.emptyTitle": "No evaluation results yet",
-  "admin.ragEval.emptyDescription": "Select “Run evaluation” to start the golden Vietnamese Q&A suite and view quality metrics.",
-  "admin.ragEval.recallHint": "Share of relevant documents retrieved in the top k",
+  "admin.ragEval.emptyDescription":
+    "Select “Run evaluation” to start the golden Vietnamese Q&A suite and view quality metrics.",
+  "admin.ragEval.recallHint":
+    "Share of relevant documents retrieved in the top k",
   "admin.ragEval.ndcgHint": "Ranking quality accounting for position",
   "admin.ragEval.faithfulness": "Faithfulness",
-  "admin.ragEval.faithfulnessHint": "Share of answer claims supported by the context",
+  "admin.ragEval.faithfulnessHint":
+    "Share of answer claims supported by the context",
   "admin.ragEval.citationAccuracy": "Citation accuracy",
-  "admin.ragEval.citationHint": "Share of citations matching the required source",
+  "admin.ragEval.citationHint":
+    "Share of citations matching the required source",
   "admin.ragEval.trends": "Trends across runs",
-  "admin.ragEval.trendsDescription": "Compare quality metrics across the latest {count} runs (percent scale).",
+  "admin.ragEval.trendsDescription":
+    "Compare quality metrics across the latest {count} runs (percent scale).",
   "admin.ragEval.runLabel": "Run {index}",
   "admin.ragEval.questionResults": "Results by question",
-  "admin.ragEval.questionResultsDescription": "Detailed metrics for each question in the evaluation suite.",
+  "admin.ragEval.questionResultsDescription":
+    "Detailed metrics for each question in the evaluation suite.",
   "admin.ragEval.questionId": "Question ID",
   "admin.ragEval.latency": "Latency",
   "admin.ragEval.noRows": "There are no question-level result rows yet.",
   "admin.ragIngestion.title": "Knowledge ingestion (RAG)",
-  "admin.ragIngestion.description": "Trigger and monitor the offline knowledge-ingestion pipeline.",
+  "admin.ragIngestion.description":
+    "Trigger and monitor the offline knowledge-ingestion pipeline.",
   "admin.ragIngestion.checkAccess": "Checking access…",
   "admin.ragIngestion.accessDenied": "You do not have access",
-  "admin.ragIngestion.accessDeniedDescription": "The knowledge-ingestion administration page is only for administrators.",
-  "admin.ragIngestion.intro": "Manage sources, trigger ingestion for each source, and monitor status and degraded-mode warnings.",
+  "admin.ragIngestion.accessDeniedDescription":
+    "The knowledge-ingestion administration page is only for administrators.",
+  "admin.ragIngestion.intro":
+    "Manage sources, trigger ingestion for each source, and monitor status and degraded-mode warnings.",
   "admin.ragIngestion.refresh": "Refresh",
   "admin.ragIngestion.refreshing": "Refreshing…",
   "admin.ragIngestion.statsLoading": "Loading knowledge-base statistics…",
   "admin.ragIngestion.statsEmptyTitle": "No knowledge-base statistics yet",
-  "admin.ragIngestion.statsEmptyDescription": "There are no knowledge-base statistics to display yet.",
+  "admin.ragIngestion.statsEmptyDescription":
+    "There are no knowledge-base statistics to display yet.",
   "admin.ragIngestion.sources": "Knowledge sources",
-  "admin.ragIngestion.sourcesDescription": "Trust tier, ingestion mode, latest watermark and enabled state for every source.",
-  "admin.ragIngestion.degradedSources": "The processing service is temporarily unavailable — the source list may be incomplete. Please try again shortly.",
+  "admin.ragIngestion.sourcesDescription":
+    "Trust tier, ingestion mode, latest watermark and enabled state for every source.",
+  "admin.ragIngestion.degradedSources":
+    "The processing service is temporarily unavailable — the source list may be incomplete. Please try again shortly.",
   "admin.ragIngestion.sourcesLoading": "Loading source list…",
   "admin.ragIngestion.sourcesEmptyTitle": "No sources yet",
-  "admin.ragIngestion.sourcesEmptyDescription": "There are no knowledge sources registered in the system yet.",
+  "admin.ragIngestion.sourcesEmptyDescription":
+    "There are no knowledge sources registered in the system yet.",
   "admin.ragIngestion.statsTitle": "Knowledge-base statistics",
-  "admin.ragIngestion.statsDescription": "An overview of documents, text chunks and coverage in the current knowledge base.",
+  "admin.ragIngestion.statsDescription":
+    "An overview of documents, text chunks and coverage in the current knowledge base.",
   "admin.ragIngestion.degradedTitle": "Degraded-mode warning",
-  "admin.ragIngestion.degradedDescription": "{count} chunks were stored in degraded mode. Check the embedding service and ingest affected sources again.",
+  "admin.ragIngestion.degradedDescription":
+    "{count} chunks were stored in degraded mode. Check the embedding service and ingest affected sources again.",
   "admin.ragIngestion.documents": "Documents",
   "admin.ragIngestion.documentsHint": "Number of collected documents",
   "admin.ragIngestion.chunks": "Text chunks",
@@ -4818,7 +6776,8 @@ const EN_MESSAGES: MessageCatalog = {
   "admin.ragIngestion.coverageHint": "Knowledge-base coverage ratio",
   "admin.ragIngestion.enabledSources": "Enabled sources: {enabled} / {total}",
   "admin.ragIngestion.jobTitle": "Ingestion status",
-  "admin.ragIngestion.jobEmptyDescription": "Choose a source below and select “Run ingestion” to start.",
+  "admin.ragIngestion.jobEmptyDescription":
+    "Choose a source below and select “Run ingestion” to start.",
   "admin.ragIngestion.noJob": "No ingestion task is running.",
   "admin.ragIngestion.jobError": "We could not run ingestion",
   "admin.ragIngestion.jobSource": "Source: {source}",
@@ -4828,7 +6787,8 @@ const EN_MESSAGES: MessageCatalog = {
   "admin.ragIngestion.updated": "Updated",
   "admin.ragIngestion.skipped": "Skipped",
   "admin.ragIngestion.degraded": "Degraded",
-  "admin.ragIngestion.jobDegraded": "Warning: this job created {count} chunks in degraded mode.",
+  "admin.ragIngestion.jobDegraded":
+    "Warning: this job created {count} chunks in degraded mode.",
   "admin.ragIngestion.jobErrors": "There were {count} errors during ingestion.",
   "admin.ragIngestion.source": "Source",
   "admin.ragIngestion.trustTier": "Trust tier",
@@ -4840,7 +6800,8 @@ const EN_MESSAGES: MessageCatalog = {
   "admin.ragIngestion.noData": "None yet",
   "admin.ragIngestion.enabled": "Enabled",
   "admin.ragIngestion.disabled": "Disabled",
-  "admin.ragIngestion.disabledTitle": "This source is disabled — ingestion cannot run",
+  "admin.ragIngestion.disabledTitle":
+    "This source is disabled — ingestion cannot run",
   "admin.ragIngestion.runTitle": "Run ingestion for this source",
   "admin.ragIngestion.run": "Run ingestion",
   "admin.ragIngestion.running": "Running…",
@@ -4872,6 +6833,11 @@ const EN_MESSAGES: MessageCatalog = {
   "scribe.action.saving": "Saving…",
   "scribe.action.saveToRecord": "Save to record",
   "scribe.status.finalized": "Complete",
+  "scribe.workflow.aria": "Clinical documentation steps",
+  "scribe.workflow.capture": "Record",
+  "scribe.workflow.transcript": "Review transcript",
+  "scribe.workflow.soap": "Review SOAP",
+  "scribe.workflow.complete": "Complete",
   "scribe.status.ready": "Ready",
   "scribe.status.processing": "Processing",
   "scribe.status.error": "Error",
@@ -4906,15 +6872,18 @@ const EN_MESSAGES: MessageCatalog = {
   "scribe.liveAnalysis.title": "Live analysis",
   "scribe.liveAnalysis.empty": "There are no suggestions yet.",
   "scribe.review.statusTitle": "Review status",
-  "scribe.review.statusDescription": "CLARA does not display uncalibrated confidence percentages. Review the source transcript, warnings, and SOAP content before use.",
+  "scribe.review.statusDescription":
+    "CLARA does not display uncalibrated confidence percentages. Review the source transcript, warnings, and SOAP content before use.",
   "scribe.review.signalStability": "Signal stability",
   "scribe.review.summaryTitle": "Clinical note summary",
   "scribe.review.sessionCode": "Session code: {code}",
   "scribe.review.specialistCoding": "Specialist coding",
-  "scribe.review.codingDescription": "CLARA does not assign diagnostic or procedure codes from a transcript. An authorised professional must select and confirm codes in the appropriate system.",
+  "scribe.review.codingDescription":
+    "CLARA does not assign diagnostic or procedure codes from a transcript. An authorised professional must select and confirm codes in the appropriate system.",
   "scribe.review.council": "AI council handoff",
   "scribe.review.keySummary": "Key summary",
-  "scribe.review.noSummary": "There is no summary data to hand off for council review yet.",
+  "scribe.review.noSummary":
+    "There is no summary data to hand off for council review yet.",
   "scribe.review.wordCount": "Transcript words: {count}",
   "scribe.processingSpeed": "Processing speed",
   "scribe.processingPerSegment": "/ segment",
@@ -4926,7 +6895,8 @@ const EN_MESSAGES: MessageCatalog = {
   "scribe.insight.plan": "Draft plan",
   "scribe.insight.warning": "Safety warning",
   "scribe.insight.transcript": "Transcript captured",
-  "scribe.insight.transcriptDetail": "{count} words were captured for further analysis.",
+  "scribe.insight.transcriptDetail":
+    "{count} words were captured for further analysis.",
   "scribe.speaker.audio": "Audio",
   "scribe.speaker.clinician": "Clinician",
   "scribe.speaker.patient": "Patient",
@@ -4935,37 +6905,70 @@ const EN_MESSAGES: MessageCatalog = {
   "scribe.error.liveAnalysis": "Live analysis failed.",
   "scribe.error.transcribe": "We could not transcribe live audio.",
   "scribe.error.transcribeNotice": "Audio transcription failed.",
-  "scribe.error.browserRecording": "This browser does not support live recording.",
+  "scribe.error.browserRecording":
+    "This browser does not support live recording.",
   "scribe.error.createSession": "We could not create a session for recording.",
   "scribe.error.startRecording": "We could not start live recording.",
+  "scribe.error.consentRequired": "Record encounter consent before enabling the microphone.",
+  "scribe.error.consent": "We could not record consent for this session.",
   "scribe.error.openSession": "We could not open the session.",
   "scribe.error.create": "We could not create the session.",
   "scribe.error.emptyTranscript": "The transcript is empty.",
   "scribe.error.regenerate": "We could not regenerate the SOAP note.",
   "scribe.error.finalize": "We could not complete the note.",
   "scribe.notice.started": "Live recording started.",
+  "scribe.notice.consentCaptured": "Encounter consent recorded for this session.",
   "scribe.notice.stopped": "Recording stopped.",
   "scribe.notice.created": "New session created.",
   "scribe.notice.saved": "Transcript saved.",
   "scribe.notice.regenerated": "SOAP note regenerated.",
-  "scribe.notice.finalized": "Note completed.",
+  "scribe.notice.draftCompleted": "Draft completed for continued review or signing.",
+  "scribe.consent.checkbox": "I have confirmed that the patient agreed to recording",
+  "scribe.recordingData.title": "Delete this session's transcription data",
+  "scribe.recordingData.description":
+    "Use this only when you want to delete data derived from recording the selected session.",
+  "scribe.recordingData.deletes":
+    "Deletes the stored transcript and ASR/diarization segment metadata.",
+  "scribe.recordingData.audioNotStored":
+    "CLARA does not store the original audio file.",
+  "scribe.recordingData.retained":
+    "Any signed clinical note and the audit trail remain intact.",
+  "scribe.recordingData.deleteAction": "Delete transcription data",
+  "scribe.recordingData.deleting": "Deleting…",
+  "scribe.recordingData.confirmTitle": "Delete transcription data?",
+  "scribe.recordingData.confirmDescription":
+    "This deletes the transcript and transcription-segment metadata for the selected session. It cannot be undone.",
+  "scribe.recordingData.confirmRetained":
+    "CLARA does not store the original audio file. Signed notes and the audit trail are not deleted.",
+  "scribe.recordingData.confirmAction": "Confirm transcription-data deletion",
+  "scribe.recordingData.cancel": "Cancel",
+  "scribe.recordingData.notice.deleted":
+    "The session's transcription data was deleted.",
+  "scribe.recordingData.error.delete":
+    "We could not delete the transcription data. Please try again.",
   "scribe.sessionTitle.recording": "Recording session {date}",
   "scribe.sessionTitle.default": "Session {date}",
   "scribe.enterprise.consent.title": "Record consent",
-  "scribe.enterprise.consent.description": "Record the patient's consent before recording or transcribing the consultation.",
+  "scribe.enterprise.consent.description":
+    "Record the patient's consent before recording or transcribing the consultation.",
   "scribe.enterprise.consent.capturing": "Recording consent…",
   "scribe.enterprise.consent.capture": "Record consent",
   "scribe.enterprise.transcript.uploadAudio": "Upload audio file",
-  "scribe.enterprise.transcript.signedReadOnly": "The note is signed — read only.",
+  "scribe.enterprise.transcript.signedReadOnly":
+    "The note is signed — read only.",
   "scribe.enterprise.transcript.empty": "There is no transcribed content yet.",
   "scribe.enterprise.transcript.weakSignal": "weak signal",
-  "scribe.enterprise.transcript.streamingFallback": "Live transcription encountered a problem. CLARA has switched to batch transcription.",
-  "scribe.enterprise.transcript.placeholder": "The transcript will appear here; you can edit it before drafting the note.",
+  "scribe.enterprise.transcript.streamingFallback":
+    "Live transcription encountered a problem. CLARA has switched to batch transcription.",
+  "scribe.enterprise.transcript.placeholder":
+    "The transcript will appear here; you can edit it before drafting the note.",
   "scribe.enterprise.transcript.sourceBatch": "Source: batch transcription",
   "scribe.enterprise.transcript.sourceLive": "Source: live transcription",
   "scribe.enterprise.transcript.degradedCount": "{count} weak-signal segments",
-  "scribe.enterprise.corrections.title": "Suggested terms requiring clinician review",
-  "scribe.enterprise.corrections.description": "CLARA never edits the transcript. Compare each suggestion with the audio or source record, then edit the transcript yourself if appropriate.",
+  "scribe.enterprise.corrections.title":
+    "Suggested terms requiring clinician review",
+  "scribe.enterprise.corrections.description":
+    "CLARA never edits the transcript. Compare each suggestion with the audio or source record, then edit the transcript yourself if appropriate.",
   "scribe.enterprise.speaker.other": "Other",
   "scribe.enterprise.speaker.unknown": "Unknown",
   "scribe.enterprise.note.templateTitle": "Note template",
@@ -4973,13 +6976,15 @@ const EN_MESSAGES: MessageCatalog = {
   "scribe.enterprise.note.template.historyPhysical": "History & Physical (H&P)",
   "scribe.enterprise.note.template.progressNote": "Progress note",
   "scribe.enterprise.note.template.referralLetter": "Referral letter",
-  "scribe.enterprise.note.template.vnMedicalRecord": "Vietnamese medical record",
+  "scribe.enterprise.note.template.vnMedicalRecord":
+    "Vietnamese medical record",
   "scribe.enterprise.note.generating": "Drafting…",
   "scribe.enterprise.note.generate": "Draft note",
   "scribe.enterprise.note.title": "Clinical note",
   "scribe.enterprise.note.exported": "Published",
   "scribe.enterprise.note.signed": "Signed",
-  "scribe.enterprise.note.empty": "There is no note yet. Choose a template and select “Draft note”.",
+  "scribe.enterprise.note.empty":
+    "There is no note yet. Choose a template and select “Draft note”.",
   "scribe.enterprise.note.saveEdits": "Save edits",
   "scribe.enterprise.note.signing": "Signing…",
   "scribe.enterprise.note.sign": "Sign note",
@@ -4990,33 +6995,45 @@ const EN_MESSAGES: MessageCatalog = {
   "scribe.enterprise.note.error.generate": "We could not draft the note.",
   "scribe.enterprise.note.error.save": "We could not save the note.",
   "scribe.enterprise.note.error.sign": "We could not sign the note.",
-  "scribe.enterprise.note.error.amend": "We could not create an amended version.",
-  "scribe.enterprise.note.error.exportUnavailable": "Export is not enabled for this session.",
+  "scribe.enterprise.note.error.amend":
+    "We could not create an amended version.",
+  "scribe.enterprise.note.error.exportUnavailable":
+    "Export is not enabled for this session.",
   "scribe.enterprise.note.error.export": "We could not export the note.",
-  "scribe.enterprise.note.notice.generated": "Note drafted from the selected template.",
-  "scribe.enterprise.note.notice.generatedFallback": "SOAP note created in standard mode.",
+  "scribe.enterprise.note.notice.generated":
+    "Note drafted from the selected template.",
+  "scribe.enterprise.note.notice.generatedFallback":
+    "SOAP note created in standard mode.",
   "scribe.enterprise.note.notice.saved": "Note edits saved.",
   "scribe.enterprise.note.notice.signed": "Clinical note signed.",
-  "scribe.enterprise.note.notice.signedFallback": "Note completed in standard mode.",
+  "scribe.enterprise.note.notice.signedFallback":
+    "Note completed in standard mode.",
   "scribe.enterprise.note.notice.amended": "New amended version created.",
   "scribe.enterprise.note.notice.exported": "Note exported ({format}).",
   "scribe.enterprise.grounding.title": "Transcript verification",
   "scribe.enterprise.grounding.rate": "{rate} supported",
-  "scribe.enterprise.grounding.summary": "{grounded} supported statements · {unverified} unverified statements",
+  "scribe.enterprise.grounding.summary":
+    "{grounded} supported statements · {unverified} unverified statements",
   "scribe.enterprise.grounding.status.grounded": "Supported",
   "scribe.enterprise.grounding.status.unverified": "Unverified",
   "scribe.enterprise.grounding.critical": "safety",
   "scribe.enterprise.grounding.spanCount": "{count} segments",
-  "scribe.enterprise.grounding.expandStatement": "Show evidence for: {statement}",
-  "scribe.enterprise.grounding.collapseStatement": "Hide evidence for: {statement}",
-  "scribe.enterprise.grounding.noSupportingSpans": "No transcript segments support this statement.",
+  "scribe.enterprise.grounding.expandStatement":
+    "Show evidence for: {statement}",
+  "scribe.enterprise.grounding.collapseStatement":
+    "Hide evidence for: {statement}",
+  "scribe.enterprise.grounding.noSupportingSpans":
+    "No transcript segments support this statement.",
   "scribe.enterprise.grounding.unresolved": "unresolved",
   "scribe.enterprise.grounding.noContent": "(content not found)",
-  "scribe.enterprise.grounding.candidatesTitle": "Requires clinician confirmation ({count})",
-  "scribe.enterprise.grounding.candidatesDescription": "The important safety statements below are not supported by the transcript and therefore are not asserted in the note.",
+  "scribe.enterprise.grounding.candidatesTitle":
+    "Requires clinician confirmation ({count})",
+  "scribe.enterprise.grounding.candidatesDescription":
+    "The important safety statements below are not supported by the transcript and therefore are not asserted in the note.",
   "scribe.enterprise.coding.title": "E/M · CPT suggestions",
   "scribe.enterprise.coding.confirmedCount": "{confirmed}/{total} confirmed",
-  "scribe.enterprise.coding.description": "The codes below are advisory only. No code is preselected — the clinician must explicitly confirm each code before use.",
+  "scribe.enterprise.coding.description":
+    "The codes below are advisory only. No code is preselected — the clinician must explicitly confirm each code before use.",
   "scribe.enterprise.coding.emTitle": "Visit level (E/M)",
   "scribe.enterprise.coding.cptTitle": "Procedure (CPT)",
   "scribe.enterprise.coding.confirmCode": "Confirm code {code}",
@@ -5026,12 +7043,14 @@ const EN_MESSAGES: MessageCatalog = {
   "scribe.enterprise.coding.evidence": "Evidence",
   "scribe.enterprise.addendum.title": "Note addendum",
   "scribe.enterprise.addendum.count": "{count} addenda",
-  "scribe.enterprise.addendum.description": "An addendum is time-stamped, does not change the signed content, and does not create a new amended version.",
+  "scribe.enterprise.addendum.description":
+    "An addendum is time-stamped, does not change the signed content, and does not create a new amended version.",
   "scribe.enterprise.addendum.timestamp": "{date} UTC · {author}",
   "scribe.enterprise.addendum.author": "Clinician #{id}",
   "scribe.enterprise.addendum.authorFallback": "Clinician",
   "scribe.enterprise.addendum.empty": "There are no addenda yet.",
-  "scribe.enterprise.addendum.placeholder": "Add information after signing (without changing the signed content)…",
+  "scribe.enterprise.addendum.placeholder":
+    "Add information after signing (without changing the signed content)…",
   "scribe.enterprise.addendum.inputLabel": "Note addendum content",
   "scribe.enterprise.addendum.saving": "Saving…",
   "scribe.enterprise.addendum.submit": "Add addendum",
@@ -5049,17 +7068,21 @@ const EN_MESSAGES: MessageCatalog = {
   "scribe.enterprise.process.status.failed": "failed",
   "scribe.enterprise.process.status.warning": "warning",
   "admin.knowledgeSources.title": "Knowledge sources",
-  "admin.knowledgeSources.description": "A unified knowledge store and retrieval-source prioritisation.",
+  "admin.knowledgeSources.description":
+    "A unified knowledge store and retrieval-source prioritisation.",
   "admin.knowledgeSources.connectionMap": "Knowledge-source connection map",
   "admin.knowledgeSources.live": "Live",
   "admin.knowledgeSources.recordsBySource": "Records by source",
-  "admin.knowledgeSources.noSyncedRecords": "No records have been synchronised yet.",
+  "admin.knowledgeSources.noSyncedRecords":
+    "No records have been synchronised yet.",
   "admin.knowledgeSources.kpi.activeConnectors": "Active connectors",
-  "admin.knowledgeSources.kpi.activeConnectorsHint": "Enabled retrieval connectors",
+  "admin.knowledgeSources.kpi.activeConnectorsHint":
+    "Enabled retrieval connectors",
   "admin.knowledgeSources.kpi.sources": "Knowledge sources",
   "admin.knowledgeSources.kpi.sourcesHint": "Knowledge stores created",
   "admin.knowledgeSources.kpi.federatedRecords": "Federated records",
-  "admin.knowledgeSources.kpi.federatedRecordsHint": "Records from medical sources",
+  "admin.knowledgeSources.kpi.federatedRecordsHint":
+    "Records from medical sources",
   "admin.knowledgeSources.kpi.activeDocuments": "Active documents",
   "admin.knowledgeSources.kpi.activeDocumentsHint": "In the selected source",
   "admin.knowledgeSources.orchestration": "Knowledge-source orchestration",
@@ -5094,10 +7117,12 @@ const EN_MESSAGES: MessageCatalog = {
   "admin.knowledgeSources.uploading": "Uploading…",
   "admin.knowledgeSources.loadingDocuments": "Loading documents…",
   "admin.knowledgeSources.ready": "Ready",
-  "admin.knowledgeSources.noDocuments": "There are no documents in this source.",
+  "admin.knowledgeSources.noDocuments":
+    "There are no documents in this source.",
   "admin.knowledgeSources.documents": "Documents",
   "admin.knowledgeSources.federatedTitle": "Federated clinical sources",
-  "admin.knowledgeSources.federatedDescription": "Synchronise data from PubMed, RxNorm, openFDA, DAVIDrug, and other standard sources.",
+  "admin.knowledgeSources.federatedDescription":
+    "Synchronise data from PubMed, RxNorm, openFDA, DAVIDrug, and other standard sources.",
   "admin.knowledgeSources.filterPlaceholder": "Filter by query or title…",
   "admin.knowledgeSources.filter": "Filter",
   "admin.knowledgeSources.source": "Source",
@@ -5115,20 +7140,31 @@ const EN_MESSAGES: MessageCatalog = {
   "admin.knowledgeSources.table.title": "Title",
   "admin.knowledgeSources.table.published": "Published",
   "admin.knowledgeSources.table.synced": "Synchronised",
-  "admin.knowledgeSources.error.loadSources": "We could not load knowledge sources.",
-  "admin.knowledgeSources.error.loadDocuments": "We could not load documents for this source.",
+  "admin.knowledgeSources.error.loadSources":
+    "We could not load knowledge sources.",
+  "admin.knowledgeSources.error.loadDocuments":
+    "We could not load documents for this source.",
   "admin.knowledgeSources.error.create": "We could not create the source.",
-  "admin.knowledgeSources.error.upload": "We could not upload the file to this source.",
-  "admin.knowledgeSources.error.updateDocument": "We could not update the document status.",
-  "admin.knowledgeSources.error.loadCatalog": "We could not load the federated-source catalogue.",
-  "admin.knowledgeSources.error.loadRecords": "We could not load federated records.",
-  "admin.knowledgeSources.error.syncQueryRequired": "Enter a query to synchronise.",
-  "admin.knowledgeSources.error.sync": "We could not synchronise the federated source.",
-  "admin.knowledgeSources.error.loadRegistry": "We could not load the RAG source registry.",
-  "admin.knowledgeSources.error.updateRegistry": "We could not update the RAG source.",
+  "admin.knowledgeSources.error.upload":
+    "We could not upload the file to this source.",
+  "admin.knowledgeSources.error.updateDocument":
+    "We could not update the document status.",
+  "admin.knowledgeSources.error.loadCatalog":
+    "We could not load the federated-source catalogue.",
+  "admin.knowledgeSources.error.loadRecords":
+    "We could not load federated records.",
+  "admin.knowledgeSources.error.syncQueryRequired":
+    "Enter a query to synchronise.",
+  "admin.knowledgeSources.error.sync":
+    "We could not synchronise the federated source.",
+  "admin.knowledgeSources.error.loadRegistry":
+    "We could not load the RAG source registry.",
+  "admin.knowledgeSources.error.updateRegistry":
+    "We could not update the RAG source.",
   "admin.knowledgeSources.notice.created": "Knowledge source created.",
   "admin.knowledgeSources.notice.uploaded": "Document uploaded.",
-  "admin.knowledgeSources.notice.synced": "Synchronised {source}: fetched {fetched}, stored {stored}.",
+  "admin.knowledgeSources.notice.synced":
+    "Synchronised {source}: fetched {fetched}, stored {stored}.",
   "admin.knowledgeSources.notice.warning": "Warning:",
   "admin.knowledgeSources.tier.one": "Tier 1 · Regulators / medication labels",
   "admin.knowledgeSources.tier.two": "Tier 2 · Clinical guidance",
@@ -5137,30 +7173,39 @@ const EN_MESSAGES: MessageCatalog = {
   "admin.knowledgeSources.tier.unassigned": "Unassigned",
   "admin.knowledgeSources.fetchMode.crawl": "Web crawl",
   "admin.knowledgeSources.registry.title": "RAG source registry",
-  "admin.knowledgeSources.registry.description": "Manage the durable RAG knowledge store: source authority, licensing, attribution, and activation status.",
-  "admin.knowledgeSources.registry.guidance": "Enable or disable sources and adjust their authority tier. The License and Attribution columns show required copyright acknowledgement (UMLS/SNOMED/RxNorm).",
-  "admin.knowledgeSources.registry.unavailableTitle": "The processing service is temporarily unavailable",
-  "admin.knowledgeSources.registry.unavailableDescription": "The RAG source list may be incomplete and changes have not been applied. Please retry.",
+  "admin.knowledgeSources.registry.description":
+    "Manage the durable RAG knowledge store: source authority, licensing, attribution, and activation status.",
+  "admin.knowledgeSources.registry.guidance":
+    "Enable or disable sources and adjust their authority tier. The License and Attribution columns show required copyright acknowledgement (UMLS/SNOMED/RxNorm).",
+  "admin.knowledgeSources.registry.unavailableTitle":
+    "The processing service is temporarily unavailable",
+  "admin.knowledgeSources.registry.unavailableDescription":
+    "The RAG source list may be incomplete and changes have not been applied. Please retry.",
   "admin.knowledgeSources.registry.loading": "Loading RAG source registry…",
   "admin.knowledgeSources.registry.emptyTitle": "No RAG sources",
-  "admin.knowledgeSources.registry.emptyDescription": "No sources are registered in the RAG knowledge store.",
+  "admin.knowledgeSources.registry.emptyDescription":
+    "No sources are registered in the RAG knowledge store.",
   "admin.knowledgeSources.registry.trustTier": "Trust tier",
   "admin.knowledgeSources.registry.trustTierFor": "Trust tier for {source}",
   "admin.knowledgeSources.registry.license": "License",
   "admin.knowledgeSources.registry.attribution": "Attribution",
   "admin.knowledgeSources.registry.fetchMode": "Collection mode",
-  "admin.knowledgeSources.registry.missingId": "Source identifier is missing — it cannot be updated",
+  "admin.knowledgeSources.registry.missingId":
+    "Source identifier is missing — it cannot be updated",
   "admin.knowledgeSources.registry.disableSource": "Disable this source",
   "admin.knowledgeSources.registry.enableSource": "Enable this source",
-  "admin.knowledgeSources.registry.updateUnavailable": "The processing service is temporarily unavailable — the change was not applied. Please retry shortly.",
+  "admin.knowledgeSources.registry.updateUnavailable":
+    "The processing service is temporarily unavailable — the change was not applied. Please retry shortly.",
   "admin.knowledgeSources.registry.updated": "Updated source {source}.",
   "evidence.page.title": "Living evidence",
-  "evidence.page.description": "Ask a question connected to your journey. CLARA shows only verified sources and is clear when evidence is insufficient.",
+  "evidence.page.description":
+    "Ask a question connected to your journey. CLARA shows only verified sources and is clear when evidence is insufficient.",
   "evidence.error.loadEpisodes": "We could not load your LifeMap journeys.",
   "evidence.error.saveQuestion": "We could not save the evidence question.",
   "evidence.error.confirmQuestion": "We could not confirm the question.",
   "evidence.error.run": "We could not retrieve verified evidence.",
-  "evidence.error.runIncomplete": "Evidence retrieval did not complete. No medical conclusion was released.",
+  "evidence.error.runIncomplete":
+    "Evidence retrieval did not complete. No medical conclusion was released.",
   "evidence.error.subscription": "We could not update evidence monitoring.",
   "evidence.error.interval": "We could not update the monitoring frequency.",
   "evidence.error.notification": "We could not mark the notification as read.",
@@ -5176,72 +7221,91 @@ const EN_MESSAGES: MessageCatalog = {
   "evidence.missing.outcomes": "the outcomes you want to know about",
   "evidence.missing.timeHorizon": "the time period you are interested in",
   "evidence.missing.eligibility": "validated study eligibility rules",
-  "evidence.matrix.empty": "There are no verified evidence records for this run yet.",
+  "evidence.matrix.empty":
+    "There are no verified evidence records for this run yet.",
   "evidence.matrix.provenance": "{count} sources stored with provenance",
   "evidence.matrix.openSource": "Open source",
   "evidence.interpretation.applicability": "Could this apply to you?",
   "evidence.interpretation.missing": "Still missing: {item}.",
   "evidence.interpretation.contradictions": "Where evidence differs",
-  "evidence.interpretation.defaultContradiction": "Sources have findings that need further comparison.",
+  "evidence.interpretation.defaultContradiction":
+    "Sources have findings that need further comparison.",
   "evidence.interpretation.relatedSources": "Related sources: {sources}",
   "evidence.run.processing": "Working in depth",
-  "evidence.run.starting": "Starting the run and sending your question to the retrieval system.",
-  "evidence.run.retrieving": "Finding and classifying guidelines, primary studies, reviews, and commentaries.",
-  "evidence.run.verifying": "Checking provenance, source quality, and points of disagreement.",
-  "evidence.run.finishing": "Finishing the evidence matrix and calibrating uncertainty.",
+  "evidence.run.starting":
+    "Starting the run and sending your question to the retrieval system.",
+  "evidence.run.retrieving":
+    "Finding and classifying guidelines, primary studies, reviews, and commentaries.",
+  "evidence.run.verifying":
+    "Checking provenance, source quality, and points of disagreement.",
+  "evidence.run.finishing":
+    "Finishing the evidence matrix and calibrating uncertainty.",
   "evidence.run.updated": "Progress updated {count} times. ",
-  "evidence.run.wait": "This may take a few minutes. You do not need to submit the question again.",
+  "evidence.run.wait":
+    "This may take a few minutes. You do not need to submit the question again.",
   "evidence.result.title": "Evidence result",
   "evidence.result.verifiedSources": "{count} verified sources",
   "evidence.result.notReleased": "No conclusion released",
   "evidence.result.safeStopTitle": "CLARA stops here for safety.",
-  "evidence.result.safeStopBody": "No medical answer is generated when provenance is incomplete. You can add context or discuss this question with a healthcare professional.",
+  "evidence.result.safeStopBody":
+    "No medical answer is generated when provenance is incomplete. You can add context or discuss this question with a healthcare professional.",
   "evidence.result.uncertainty": "Uncertainty in this run",
   "evidence.intro.title": "Not a guessed answer",
-  "evidence.intro.body": "The question is linked to your LifeMap before CLARA retrieves guidelines, primary studies, reviews, and commentary by source group. If reliable sources are missing, CLARA will say that no conclusion is available.",
+  "evidence.intro.body":
+    "The question is linked to your LifeMap before CLARA retrieves guidelines, primary studies, reviews, and commentary by source group. If reliable sources are missing, CLARA will say that no conclusion is available.",
   "evidence.notifications.title": "Reviewed changes",
   "evidence.notifications.markRead": "Mark as read",
   "evidence.notifications.read": "Read",
   "evidence.step.question": "Step 1 · Your question",
   "evidence.question.title": "Ask through a journey",
-  "evidence.question.description": "You always review and confirm the question before in-depth retrieval.",
+  "evidence.question.description":
+    "You always review and confirm the question before in-depth retrieval.",
   "evidence.question.emptyTitle": "A journey is needed",
-  "evidence.question.emptyDescription": "Create a LifeMap journey first, then return to ask a question with context.",
+  "evidence.question.emptyDescription":
+    "Create a LifeMap journey first, then return to ask a question with context.",
   "evidence.question.openLifeMap": "Open LifeMap",
   "evidence.question.episode": "Journey",
   "evidence.question.text": "What would you like to know?",
-  "evidence.question.textPlaceholder": "For example: Is there evidence that can help me prepare for my blood-pressure appointment?",
+  "evidence.question.textPlaceholder":
+    "For example: Is there evidence that can help me prepare for my blood-pressure appointment?",
   "evidence.question.population": "Context you have confirmed",
-  "evidence.question.populationPlaceholder": "For example: an adult who has been told by a doctor they have high blood pressure",
+  "evidence.question.populationPlaceholder":
+    "For example: an adult who has been told by a doctor they have high blood pressure",
   "evidence.question.outcomes": "What would you like to follow?",
   "evidence.question.outcomesHint": "(one item per line)",
-  "evidence.question.outcomesPlaceholder": "For example:\nLower blood pressure\nSide effects",
+  "evidence.question.outcomesPlaceholder":
+    "For example:\nLower blood pressure\nSide effects",
   "evidence.question.horizon": "Time period",
   "evidence.question.horizonPlaceholder": "For example: the next 3 months",
   "evidence.question.save": "Save for review",
   "evidence.question.saving": "Saving…",
   "evidence.step.confirm": "Step 2 · Confirm",
   "evidence.confirm.confirmed": "You have confirmed this question.",
-  "evidence.confirm.pending": "Review the question and context before CLARA looks for sources.",
+  "evidence.confirm.pending":
+    "Review the question and context before CLARA looks for sources.",
   "evidence.confirm.missing": "You may still need: {items}.",
   "evidence.confirm.action": "I have reviewed the question",
   "evidence.confirm.search": "Find evidence",
   "evidence.confirm.searching": "Finding verified sources…",
   "evidence.subscription.title": "Follow important changes",
-  "evidence.subscription.description": "New search results do not create notifications automatically. Only material changes accepted by a professional appear here.",
+  "evidence.subscription.description":
+    "New search results do not create notifications automatically. Only material changes accepted by a professional appear here.",
   "evidence.subscription.interval": "Check frequency",
   "evidence.subscription.daily": "Every day",
   "evidence.subscription.weekly": "Every week",
   "evidence.subscription.monthly": "Every 30 days",
   "evidence.subscription.stop": "Stop following updates",
   "evidence.subscription.start": "Follow important updates",
-  "evidence.subscription.disabled": "Your monitoring choice is saved. An administrator has not enabled the periodic checking task yet.",
+  "evidence.subscription.disabled":
+    "Your monitoring choice is saved. An administrator has not enabled the periodic checking task yet.",
   "evidence.subscription.attached": "Attached to: {title}",
   "council.new.title": "New council case",
-  "council.new.description": "Create a case, add the needed information, choose specialist perspectives, then ask CLARA to analyse it.",
+  "council.new.description":
+    "Create a case, add the needed information, choose specialist perspectives, then ask CLARA to analyse it.",
   "council.new.flow": "Step-by-step flow",
   "council.new.heading": "Create a case before analysis",
-  "council.new.intro": "CLARA does not generate analysis from made-up data. Create a case, review its information, choose specialties, then begin the council review.",
+  "council.new.intro":
+    "CLARA does not generate analysis from made-up data. Create a case, review its information, choose specialties, then begin the council review.",
   "council.new.create": "Create new case",
   "council.new.creating": "Creating case…",
   "council.new.recent": "Recent cases",
@@ -5252,36 +7316,48 @@ const EN_MESSAGES: MessageCatalog = {
   "council.error.loadCases": "We could not load the case list.",
   "council.error.createCase": "We could not create a new case.",
   "council.error.loadCase": "We could not load this case.",
-  "council.error.extractIntake": "We could not normalize the case information right now.",
+  "council.error.extractIntake":
+    "We could not normalize the case information right now.",
   "council.error.saveIntake": "We could not save the case information.",
-  "council.error.saveSpecialists": "We could not save the selected specialties.",
+  "council.error.saveSpecialists":
+    "We could not save the selected specialties.",
   "council.error.run": "We could not run the council review right now.",
   "council.evidence.title": "Research sources for review",
-  "council.evidence.description": "Attach only a verified source list for an experimental review path. This never changes the Council conclusion, urgency, or decision.",
+  "council.evidence.description":
+    "Attach only a verified source list for an experimental review path. This never changes the Council conclusion, urgency, or decision.",
   "council.evidence.noneAttached": "No research source snapshot is attached.",
-  "council.evidence.current": "Newest source snapshot: {count} sources, attached {date}.",
+  "council.evidence.current":
+    "Newest source snapshot: {count} sources, attached {date}.",
   "council.evidence.selectorLabel": "Choose a completed source snapshot",
   "council.evidence.selectorPlaceholder": "Choose a source snapshot…",
   "council.evidence.option": "{count} verified sources · completed {date}",
-  "council.evidence.noEligible": "No completed source snapshot with compatible provenance is available.",
+  "council.evidence.noEligible":
+    "No completed source snapshot with compatible provenance is available.",
   "council.evidence.attach": "Attach for review",
   "council.evidence.attaching": "Attaching…",
-  "council.evidence.attached": "The source snapshot is attached for review. Re-run Council to use it in the experimental path when that feature is enabled.",
-  "council.evidence.attachError": "We could not attach the source snapshot right now.",
+  "council.evidence.attached":
+    "The source snapshot is attached for review. Re-run Council to use it in the experimental path when that feature is enabled.",
+  "council.evidence.attachError":
+    "We could not attach the source snapshot right now.",
   "council.intake.title": "Add case information",
-  "council.intake.description": "Step 1 of 3: add and review case information before analysis.",
+  "council.intake.description":
+    "Step 1 of 3: add and review case information before analysis.",
   "council.step": "Step {step} of 3 · Case #{id}",
   "council.intake.heading": "Initial information",
   "council.intake.mode.transcript": "Transcript",
   "council.intake.mode.audio": "Audio file",
   "council.intake.fileSelected": "Selected: {name}",
   "council.intake.transcriptPlaceholder": "Paste a transcript here…",
-  "council.intake.audioTranscriptPlaceholder": "(Optional) Paste a supporting transcript…",
-  "council.intake.transcriptRequired": "Paste a transcript before normalizing it.",
-  "council.intake.audioRequired": "Upload an audio file or paste a supporting transcript.",
+  "council.intake.audioTranscriptPlaceholder":
+    "(Optional) Paste a supporting transcript…",
+  "council.intake.transcriptRequired":
+    "Paste a transcript before normalizing it.",
+  "council.intake.audioRequired":
+    "Upload an audio file or paste a supporting transcript.",
   "council.intake.normalize": "Normalize information",
   "council.intake.processing": "Processing…",
-  "council.intake.normalized": "The information was normalized into this case. You can edit it before step 2.",
+  "council.intake.normalized":
+    "The information was normalized into this case. You can edit it before step 2.",
   "council.intake.symptoms": "Symptoms",
   "council.intake.labs": "Tests",
   "council.intake.medicines": "Medicines",
@@ -5291,7 +7367,8 @@ const EN_MESSAGES: MessageCatalog = {
   "council.action.nextStep": "Continue to step {step}",
   "council.action.saving": "Saving…",
   "council.specialists.title": "Choose specialties",
-  "council.specialists.description": "Step 2 of 3: choose professional perspectives to review the case.",
+  "council.specialists.description":
+    "Step 2 of 3: choose professional perspectives to review the case.",
   "council.specialists.heading": "Choose specialties",
   "council.specialists.count": "Number of specialties (2–5)",
   "council.specialists.selected": "Selected {selected}/{total} specialties.",
@@ -5302,9 +7379,11 @@ const EN_MESSAGES: MessageCatalog = {
   "council.specialist.pharmacology": "Clinical pharmacy",
   "council.specialist.nephrology": "Nephrology",
   "council.review.title": "Review before council analysis",
-  "council.review.description": "Step 3 of 3: check the case and specialties before analysis runs.",
+  "council.review.description":
+    "Step 3 of 3: check the case and specialties before analysis runs.",
   "council.review.heading": "Review before running",
-  "council.review.dataRequired": "Add case information before running the council review.",
+  "council.review.dataRequired":
+    "Add case information before running the council review.",
   "council.review.symptoms": "Symptoms: {count}",
   "council.review.labs": "Tests: {count}",
   "council.review.medicines": "Medicines: {count}",
@@ -5325,7 +7404,8 @@ const EN_MESSAGES: MessageCatalog = {
   "council.empty.create": "Create new case",
   "council.empty.landing": "Back to Council",
   "council.result.title": "Council result",
-  "council.result.description": "The latest council result in a compact, readable format.",
+  "council.result.description":
+    "The latest council result in a compact, readable format.",
   "council.result.emptyDescription": "Create a new case to see a result here.",
   "council.result.summary": "Summary",
   "council.result.summaryTitle": "Result summary",
@@ -5336,7 +7416,8 @@ const EN_MESSAGES: MessageCatalog = {
   "council.result.consensus": "Specialist agreement",
   "council.result.consensusReview": "Needs review",
   "council.result.consensusClear": "No material disagreement found",
-  "council.result.consensusHint": "Not a probability or clinical confidence value",
+  "council.result.consensusHint":
+    "Not a probability or clinical confidence value",
   "council.result.professionalReview": "Professional review",
   "council.result.reviewRequired": "Required",
   "council.result.reviewBeforeUse": "Needed before use",
@@ -5350,24 +7431,32 @@ const EN_MESSAGES: MessageCatalog = {
   "council.result.ruleRisk": "Rule-based risk signal (monitoring only)",
   "council.result.ruleRiskPresent": "signal present",
   "council.result.ruleRiskDisabled": "not enabled",
-  "council.result.ruleRiskHint": "This is an uncalibrated heuristic signal; it does not replace safety routing or professional judgment.",
+  "council.result.ruleRiskHint":
+    "This is an uncalibrated heuristic signal; it does not replace safety routing or professional judgment.",
   "council.result.medicationSafety.label": "Medication safety check",
   "council.result.medicationSafety.checked": "Checked",
   "council.result.medicationSafety.unavailable": "Could not verify",
-  "council.result.medicationSafety.clarification": "Medicine confirmation needed",
+  "council.result.medicationSafety.clarification":
+    "Medicine confirmation needed",
   "council.result.medicationSafety.version": "DrugBank source: {version}",
-  "council.result.medicationSafety.noVersion": "Source version was not recorded",
-  "council.result.medicationSafety.reviewNotice": "Medication safety needs review by a clinician or pharmacist before using this Council result.",
-  "council.result.medicationSafety.unavailableNotice": "Medication safety could not be fully verified from the required source. This is not a no-interaction conclusion; review with a clinician or pharmacist.",
-  "council.result.medicationSafety.clarificationNotice": "Confirm the medicine name or ingredient before medication safety can be checked completely. Review with a clinician or pharmacist.",
+  "council.result.medicationSafety.noVersion":
+    "Source version was not recorded",
+  "council.result.medicationSafety.reviewNotice":
+    "Medication safety needs review by a clinician or pharmacist before using this Council result.",
+  "council.result.medicationSafety.unavailableNotice":
+    "Medication safety could not be fully verified from the required source. This is not a no-interaction conclusion; review with a clinician or pharmacist.",
+  "council.result.medicationSafety.clarificationNotice":
+    "Confirm the medicine name or ingredient before medication safety can be checked completely. Review with a clinician or pharmacist.",
   "council.result.escalationReason": "Reason for escalation: {reason}",
   "council.result.finalRecommendation": "Combined recommendation",
-  "council.result.noRecommendation": "There is no combined recommendation in this result.",
+  "council.result.noRecommendation":
+    "There is no combined recommendation in this result.",
   "council.result.noConsensus": "There is no agreement summary yet.",
   "council.result.processing": "Processing status",
   "council.result.processingTitle": "System steps completed",
   "council.result.step": "Step {sequence}: {step}",
-  "council.result.noProcessing": "There is no processing status in this result yet.",
+  "council.result.noProcessing":
+    "There is no processing status in this result yet.",
   "council.result.riskNotes": "Points to note",
   "council.result.conflictList": "Points of disagreement",
   "council.result.noConflicts": "There are no notable points of disagreement.",
@@ -5395,77 +7484,111 @@ const EN_MESSAGES: MessageCatalog = {
     " This result used fallback (degraded) mode — review it with extra care.",
   "council.guard.overrideTitle": "Override decision",
   "council.guard.pauseTitle": "Pause workflow",
-  "council.guard.overrideDescription": "You are overriding the system recommendation. Enter the clinical reason.",
-  "council.guard.pauseDescription": "You are pausing the council workflow. Enter the clinical reason.",
+  "council.guard.overrideDescription":
+    "You are overriding the system recommendation. Enter the clinical reason.",
+  "council.guard.pauseDescription":
+    "You are pausing the council workflow. Enter the clinical reason.",
   "council.guard.reasonLabel": "Clinical reason *",
-  "council.guard.reasonPlaceholder": "For example: New clinical information indicates a different action should take priority…",
+  "council.guard.reasonPlaceholder":
+    "For example: New clinical information indicates a different action should take priority…",
   "council.guard.cancel": "Cancel",
   "council.guard.confirm": "Confirm",
   "council.overview.empty.title": "There is no analysis data yet",
-  "council.overview.empty.description": "The current case has not been analyzed yet. Go to Case intake, complete the information, and run the council review.",
+  "council.overview.empty.description":
+    "The current case has not been analyzed yet. Go to Case intake, complete the information, and run the council review.",
   "council.overview.empty.openCase": "Open case intake",
   "council.overview.close": "Close",
   "council.overview.handoff.action": "Ask the responsible clinician to review",
-  "council.overview.handoff.actionHint": "Send the case summary and points of disagreement to the clinician on duty.",
-  "council.overview.handoff.dialogTitle": "Invite a specialty for council review",
-  "council.overview.handoff.dialogDescription": "Choose the appropriate specialty to receive the case summary and points of disagreement.",
+  "council.overview.handoff.actionHint":
+    "Send the case summary and points of disagreement to the clinician on duty.",
+  "council.overview.handoff.dialogTitle":
+    "Invite a specialty for council review",
+  "council.overview.handoff.dialogDescription":
+    "Choose the appropriate specialty to receive the case summary and points of disagreement.",
   "council.overview.handoff.send": "Send council request",
-  "council.overview.handoff.prepared": "Prepared an invitation request for {specialty}. {reason}",
-  "council.overview.handoff.sent": "Sent an invitation request for {specialty}. {reason}",
+  "council.overview.handoff.prepared":
+    "Prepared an invitation request for {specialty}. {reason}",
+  "council.overview.handoff.sent":
+    "Sent an invitation request for {specialty}. {reason}",
   "council.overview.guard.overrideAction": "Override decision",
   "council.overview.guard.pauseAction": "Pause workflow",
-  "council.overview.guard.requestRecorded": "Recorded the request to {action}. Reason: {reason}",
-  "council.overview.guard.pauseRecorded": "The workflow is paused. The final recommendation is not confirmed and awaits review by the responsible clinician.",
+  "council.overview.guard.requestRecorded":
+    "Recorded the request to {action}. Reason: {reason}",
+  "council.overview.guard.pauseRecorded":
+    "The workflow is paused. The final recommendation is not confirmed and awaits review by the responsible clinician.",
   "council.overview.summary.title": "Council summary",
   "council.overview.summary.unconfirmed": "Not confirmed",
-  "council.overview.summary.pausedNotice": "The workflow is paused. The final recommendation is not confirmed and awaits review by the responsible clinician.",
-  "council.overview.summary.noConsensus": "The system has not recorded reliable agreement across the specialties.",
-  "council.overview.summary.conflictSignal": "There is a signal to review involving {first} and {second}.",
+  "council.overview.summary.pausedNotice":
+    "The workflow is paused. The final recommendation is not confirmed and awaits review by the responsible clinician.",
+  "council.overview.summary.noConsensus":
+    "The system has not recorded reliable agreement across the specialties.",
+  "council.overview.summary.conflictSignal":
+    "There is a signal to review involving {first} and {second}.",
   "council.overview.summary.missingData": "Missing data:",
   "council.overview.summary.nextStep": "Suggested next steps:",
-  "council.overview.summary.nextStep.renal": "Add kidney-function testing if any medication needs dose adjustment by eGFR.",
-  "council.overview.summary.nextStep.pharmacy": "Invite Clinical Pharmacy or Nephrology when there is a medication-risk signal.",
-  "council.overview.summary.nextStep.review": "The responsible clinician must confirm before a final recommendation is made.",
-  "council.overview.summary.noMaterialConflict": "No material disagreement found",
+  "council.overview.summary.nextStep.renal":
+    "Add kidney-function testing if any medication needs dose adjustment by eGFR.",
+  "council.overview.summary.nextStep.pharmacy":
+    "Invite Clinical Pharmacy or Nephrology when there is a medication-risk signal.",
+  "council.overview.summary.nextStep.review":
+    "The responsible clinician must confirm before a final recommendation is made.",
+  "council.overview.summary.noMaterialConflict":
+    "No material disagreement found",
   "council.overview.summary.routine": "Management level: routine follow-up.",
   "council.overview.summary.recorded": "Recorded: {consensus}",
   "council.overview.summary.systemNote": "System note:",
-  "council.overview.summary.professionalReview": "A clinician needs to review this.",
+  "council.overview.summary.professionalReview":
+    "A clinician needs to review this.",
   "council.overview.summary.specialtyConsensus": "Specialty agreement",
   "council.overview.summary.needsReview": "Needs review",
   "council.overview.summary.finalDecision": "Final decision",
-  "council.overview.summary.waitForProfessional": "Awaiting a qualified professional",
+  "council.overview.summary.waitForProfessional":
+    "Awaiting a qualified professional",
   "council.overview.summary.checkBeforeUse": "Check before use",
   "council.overview.dataUnavailable": "No data available yet",
   "council.overview.listJoin": " and ",
   "council.overview.elapsed": "Time since the run",
-  "council.overview.banner.safety.title": "Urgent action or confirmation needed",
-  "council.overview.banner.safety.detail": "There is a safety signal or a handoff is needed to the responsible clinician before a final recommendation is made.",
+  "council.overview.banner.safety.title":
+    "Urgent action or confirmation needed",
+  "council.overview.banner.safety.detail":
+    "There is a safety signal or a handoff is needed to the responsible clinician before a final recommendation is made.",
   "council.overview.banner.conflict.title": "Specialty disagreement found",
-  "council.overview.banner.conflict.detail": "The specialties produced different signals. The responsible clinician needs to confirm before a conclusion is made.",
+  "council.overview.banner.conflict.detail":
+    "The specialties produced different signals. The responsible clinician needs to confirm before a conclusion is made.",
   "council.overview.banner.review.title": "A clinician needs to review this",
-  "council.overview.banner.review.detail": "There is an item to check before the recommendation is finalized.",
-  "council.overview.banner.incomplete.title": "There is not enough data for a conclusion",
-  "council.overview.banner.incomplete.detail": "Important data is missing, so the system cannot assess agreement reliably yet.",
+  "council.overview.banner.review.detail":
+    "There is an item to check before the recommendation is finalized.",
+  "council.overview.banner.incomplete.title":
+    "There is not enough data for a conclusion",
+  "council.overview.banner.incomplete.detail":
+    "Important data is missing, so the system cannot assess agreement reliably yet.",
   "council.overview.banner.stable.title": "Council review is stable",
-  "council.overview.banner.stable.detail": "No material disagreement was found between the specialties in the current data.",
+  "council.overview.banner.stable.detail":
+    "No material disagreement was found between the specialties in the current data.",
   "council.overview.conflictMap.title": "Specialty-disagreement map",
-  "council.overview.conflictMap.noAutomaticConsensus": "The system did not reach automatic agreement",
-  "council.overview.conflictMap.cardiologyPrompt": "What does Cardiology suggest?",
+  "council.overview.conflictMap.noAutomaticConsensus":
+    "The system did not reach automatic agreement",
+  "council.overview.conflictMap.cardiologyPrompt":
+    "What does Cardiology suggest?",
   "council.overview.conflictMap.criticalConflict": "Material conflict",
-  "council.overview.conflictMap.renalPrompt": "What does Endocrinology/Nephrology flag?",
+  "council.overview.conflictMap.renalPrompt":
+    "What does Endocrinology/Nephrology flag?",
   "council.overview.conflictMap.question": "What is the point of conflict?",
   "council.overview.assessment.title": "Assessment status",
   "council.overview.assessment.insufficientData": "Not enough data",
-  "council.overview.assessment.clinicianReview": "A clinician needs to check this",
+  "council.overview.assessment.clinicianReview":
+    "A clinician needs to check this",
   "council.overview.assessment.reviewDifferences": "Review the differences",
   "council.overview.assessment.continueDiscussion": "Discussion can continue",
   "council.overview.assessment.missingInformation": "Information missing",
   "council.overview.assessment.draft": "Draft, not a conclusion",
   "council.overview.assessment.requiresConfirmation": "Confirmation needed",
-  "council.overview.assessment.mapHint": "Used to assess hemodynamics before drawing a conclusion.",
-  "council.overview.assessment.renalHint": "Needed for medicines whose dose must be adjusted for kidney function.",
-  "council.overview.assessment.disclaimer": "This is an information-check status, not a probability or clinical-confidence value.",
+  "council.overview.assessment.mapHint":
+    "Used to assess hemodynamics before drawing a conclusion.",
+  "council.overview.assessment.renalHint":
+    "Needed for medicines whose dose must be adjusted for kidney function.",
+  "council.overview.assessment.disclaimer":
+    "This is an information-check status, not a probability or clinical-confidence value.",
   "council.overview.assessment.missingReason": "Reason: {items} missing.",
   "council.overview.timeline.title": "Council timeline",
   "council.overview.timeline.step": "Step {sequence}",
@@ -5479,37 +7602,47 @@ const EN_MESSAGES: MessageCatalog = {
   "council.overview.timeline.status.review": "Needs review",
   "council.overview.timeline.status.pending": "Awaiting clinician confirmation",
   "council.overview.timeline.status.done": "Complete",
-  "council.overview.timeline.empty": "There is no timeline from the most recent council run.",
+  "council.overview.timeline.empty":
+    "There is no timeline from the most recent council run.",
   "council.overview.timeline.liveProgress": "Live progress",
   "council.overview.rerun.live": "Council review is running live...",
   "council.overview.rerun.running": "Running again...",
   "council.overview.rerun.action": "Run council review again",
   "council.workspace.analyze.title": "Council analysis",
-  "council.workspace.analyze.description": "The key signals, risk factors, and follow-up items from the council result.",
+  "council.workspace.analyze.description":
+    "The key signals, risk factors, and follow-up items from the council result.",
   "council.workspace.analyze.eyebrow": "Analysis",
   "council.workspace.details.title": "Council details",
-  "council.workspace.details.description": "Structured signals and recommendations from each specialty.",
+  "council.workspace.details.description":
+    "Structured signals and recommendations from each specialty.",
   "council.workspace.details.eyebrow": "Details",
   "council.workspace.citations.title": "Council sources",
-  "council.workspace.citations.description": "Evidence sources and quality signals for each citation.",
+  "council.workspace.citations.description":
+    "Evidence sources and quality signals for each citation.",
   "council.workspace.citations.eyebrow": "Sources",
   "council.workspace.research.title": "Council research",
-  "council.workspace.research.description": "Highlights, open questions, and next steps for the next analysis cycle.",
+  "council.workspace.research.description":
+    "Highlights, open questions, and next steps for the next analysis cycle.",
   "council.workspace.research.eyebrow": "Research",
   "council.workspace.deepdive.title": "Council deep dive",
-  "council.workspace.deepdive.description": "A detailed synthesis organized into reviewable professional sections.",
+  "council.workspace.deepdive.description":
+    "A detailed synthesis organized into reviewable professional sections.",
   "council.workspace.deepdive.eyebrow": "Deep dive",
   "council.workspace.empty.title": "There is no council data yet",
-  "council.workspace.empty.description": "Create a case to open the council information sections.",
+  "council.workspace.empty.description":
+    "Create a case to open the council information sections.",
   "council.workspace.analyze.heading": "Council signal analysis",
   "council.workspace.analyze.keySignals": "Key signals",
   "council.workspace.analyze.keySignalsEmpty": "There are no key signals yet.",
   "council.workspace.analyze.riskDrivers": "Risk factors",
-  "council.workspace.analyze.riskDriversEmpty": "There are no notable risk factors yet.",
+  "council.workspace.analyze.riskDriversEmpty":
+    "There are no notable risk factors yet.",
   "council.workspace.analyze.actionItems": "Follow-up items",
-  "council.workspace.analyze.actionItemsEmpty": "There are no follow-up items yet.",
+  "council.workspace.analyze.actionItemsEmpty":
+    "There are no follow-up items yet.",
   "council.workspace.details.heading": "Details by specialty",
-  "council.workspace.details.empty": "There are no structured signals to show yet.",
+  "council.workspace.details.empty":
+    "There are no structured signals to show yet.",
   "council.workspace.citations.heading": "Evidence sources",
   "council.workspace.citations.sourceFallback": "Clinical source",
   "council.workspace.citations.openSource": "Open source",
@@ -5518,7 +7651,8 @@ const EN_MESSAGES: MessageCatalog = {
   "council.workspace.research.highlights": "Highlights",
   "council.workspace.research.highlightsEmpty": "There are no highlights yet.",
   "council.workspace.research.openQuestions": "Open questions",
-  "council.workspace.research.openQuestionsEmpty": "There are no open questions yet.",
+  "council.workspace.research.openQuestionsEmpty":
+    "There are no open questions yet.",
   "council.workspace.research.nextSteps": "Next steps",
   "council.workspace.research.nextStepsEmpty": "There are no next steps yet.",
   "council.workspace.deepdive.heading": "Deep-dive sections",
@@ -5557,7 +7691,8 @@ const EN_MESSAGES: MessageCatalog = {
   "council.flow.node.workspace.title": "Council workspace",
   "council.flow.node.workspace.subtitle": "Analysis / details / deep dive",
   "markdownAnswer.chart.preview": "Chart preview",
-  "markdownAnswer.chartSpec.notice": "This is a chart data specification. CLARA shows a preview when the data can be read.",
+  "markdownAnswer.chartSpec.notice":
+    "This is a chart data specification. CLARA shows a preview when the data can be read.",
   "markdownAnswer.code.chartSpec": "Chart specification",
   "markdownAnswer.code.block": "Code block",
   "markdownAnswer.code.copyAria": "Copy code block",
@@ -5568,7 +7703,8 @@ const EN_MESSAGES: MessageCatalog = {
   "markdownAnswer.mermaid.loading": "Building Mermaid diagram…",
   "markdownAnswer.mermaid.diagram": "Mermaid diagram",
   "markdownAnswer.mermaid.safe": "safe",
-  "markdownAnswer.mermaid.hidden": "The Mermaid diagram was condensed to keep the focus on the main analysis.",
+  "markdownAnswer.mermaid.hidden":
+    "The Mermaid diagram was condensed to keep the focus on the main analysis.",
   "markdownAnswer.citationRegistry.title": "Citation registry",
   "markdownAnswer.citationRegistry.trustTier": "Tier {tier}",
   "markdownAnswer.actions.more": "More answer options",
@@ -5583,12 +7719,14 @@ const EN_MESSAGES: MessageCatalog = {
   "markdownAnswer.export.clipboardUnavailable": "Clipboard is unavailable.",
   "markdownAnswer.export.copySuccess": "Markdown copied.",
   "markdownAnswer.export.copyFailed": "Unable to copy Markdown.",
-  "markdownAnswer.export.pngNoContent": "There is no content available for PNG export.",
+  "markdownAnswer.export.pngNoContent":
+    "There is no content available for PNG export.",
   "markdownAnswer.export.pngSuccess": "PNG exported.",
   "markdownAnswer.export.pngFailed": "PNG export failed.",
   "ecosystem.pageTitle": "Technical monitoring center",
   "ecosystem.eyebrow": "Ecosystem control plane",
-  "ecosystem.description": "Monitor system-wide connectivity through an operations summary, partner health, data trust, and alerts that need attention.",
+  "ecosystem.description":
+    "Monitor system-wide connectivity through an operations summary, partner health, data trust, and alerts that need attention.",
   "ecosystem.backToDashboard": "Back to dashboard",
   "ecosystem.refresh": "Refresh snapshot",
   "ecosystem.refreshing": "Refreshing…",
@@ -5598,9 +7736,11 @@ const EN_MESSAGES: MessageCatalog = {
   "ecosystem.noData": "no data yet",
   "ecosystem.loading": "Loading monitoring-center data…",
   "ecosystem.accessDenied": "You do not have access to the Ecosystem Center.",
-  "ecosystem.error.load": "Unable to load the Ecosystem Center. Please try again.",
+  "ecosystem.error.load":
+    "Unable to load the Ecosystem Center. Please try again.",
   "ecosystem.summary.partnersTotal": "Total partners",
-  "ecosystem.summary.partnersTotal.helper": "Connection points are continuously monitored",
+  "ecosystem.summary.partnersTotal.helper":
+    "Connection points are continuously monitored",
   "ecosystem.summary.partnersDown": "Partners with incidents",
   "ecosystem.summary.partnersDown.action": "Needs attention now",
   "ecosystem.summary.partnersDown.clear": "No interruption detected",
@@ -5615,7 +7755,8 @@ const EN_MESSAGES: MessageCatalog = {
   "ecosystem.partnerHealth.empty": "There is no partner-status data yet.",
   "ecosystem.dataTrust.eyebrow": "Data trust scores",
   "ecosystem.dataTrust.title": "Data-source trust",
-  "ecosystem.dataTrust.description": "Monitor trust score, freshness, and drift risk to identify unusual data early.",
+  "ecosystem.dataTrust.description":
+    "Monitor trust score, freshness, and drift risk to identify unusual data early.",
   "ecosystem.dataTrust.empty": "There is no trust-score data yet.",
   "ecosystem.alerts.eyebrow": "Federation alerts",
   "ecosystem.alerts.title": "Alert queue by priority",
@@ -5655,26 +7796,42 @@ const EN_MESSAGES: MessageCatalog = {
   "ecosystem.driftRisk.critical": "Critical",
   "compliance.transparency.badge": "AI transparency · Law 134/2025",
   "compliance.transparency.fallbackTitle": "AI System Transparency Notice",
-  "compliance.transparency.fallbackBody.assistant": "You are interacting with CLARA — an artificial-intelligence medical information assistant.",
-  "compliance.transparency.fallbackBody.scope": "CLARA provides reference information and decision support; it does NOT replace a licensed clinician, does not prescribe, and does not give a definitive diagnosis.",
-  "compliance.transparency.fallbackBody.limitations": "Answers may be incomplete or inaccurate. Always review with a qualified clinician before acting.",
-  "compliance.transparency.fallbackBody.oversight": "Under the Law on Artificial Intelligence No. 134/2025/QH15, CLARA is classified as a high-risk AI system in the health domain and keeps a human in oversight.",
+  "compliance.transparency.fallbackBody.assistant":
+    "You are interacting with CLARA — an artificial-intelligence medical information assistant.",
+  "compliance.transparency.fallbackBody.scope":
+    "CLARA provides reference information and decision support; it does NOT replace a licensed clinician, does not prescribe, and does not give a definitive diagnosis.",
+  "compliance.transparency.fallbackBody.limitations":
+    "Answers may be incomplete or inaccurate. Always review with a qualified clinician before acting.",
+  "compliance.transparency.fallbackBody.oversight":
+    "Under the Law on Artificial Intelligence No. 134/2025/QH15, CLARA is classified as a high-risk AI system in the health domain and keeps a human in oversight.",
   "compliance.transparency.version": "Notice version",
   "compliance.transparency.acknowledging": "Recording...",
   "compliance.transparency.acknowledge": "I understand and continue",
-  "compliance.transparency.acknowledgeError": "Could not record acknowledgement. Please try again.",
+  "compliance.transparency.acknowledgeError":
+    "Could not record acknowledgement. Please try again.",
   "phr.title": "Personal health record",
-  "phr.description": "Manage each part of your health information in short, focused steps.",
+  "phr.description":
+    "Manage each part of your health information in short, focused steps.",
   "phr.action.save": "Save record",
   "phr.action.saving": "Saving…",
   "phr.loading": "Loading your record…",
-  "phr.error.load": "We could not load your health record. Please try again later.",
+  "phr.error.load":
+    "We could not load your health record. Please try again later.",
   "phr.notice.saved": "Your health record was saved.",
   "phr.error.save": "We could not save your health record.",
   "phr.profile": "Record information",
   "phr.allergies": "Allergies",
   "phr.conditions": "Health conditions",
   "phr.medications": "Current medicines",
+  "phr.allergy.empty.unknown": "You have not added allergy information",
+  "phr.allergy.empty.noneKnown": "No known allergies have been recorded",
+  "phr.allergy.action.noneKnown": "I have no known allergies",
+  "phr.medication.past": "Medicines no longer taken",
+  "phr.medication.action.resume": "Mark as currently taking",
+  "phr.mobile.history": "Medical history",
+  "phr.mobile.progress": "Complete your record for a more personalized experience.",
+  "phr.body.trend": "BMI trend by measurement",
+  "phr.body.trendNeedMore": "At least two measurements are needed to show a BMI trend.",
   "phr.action.add": "Add",
   "phr.action.remove": "Remove",
   "phr.field.fullName": "Full name",
@@ -5703,7 +7860,8 @@ const EN_MESSAGES: MessageCatalog = {
   "phr.field.itemNote": "Note",
   "phr.updatedAt": "Last updated",
   "phr.unknown": "Unknown",
-  "phr.disclaimer": "This record is self-declared and only supports decisions. It is not an electronic medical record, does not replace a clinician's diagnosis, and has no legal effect. Discuss it with a healthcare professional before acting.",
+  "phr.disclaimer":
+    "This record is self-declared and only supports decisions. It is not an electronic medical record, does not replace a clinician's diagnosis, and has no legal effect. Discuss it with a healthcare professional before acting.",
   "phr.source.label": "Source",
   "phr.source.selfDeclared": "Self-declared",
   "phr.source.ocr": "Document scan import",
@@ -5715,10 +7873,12 @@ const EN_MESSAGES: MessageCatalog = {
   "phr.verification.refuted": "Refuted",
   "phr.verification.enteredInError": "Entered in error",
   "phr.consent.title": "Data consent",
-  "phr.consent.body": "Use of this record for personalization and sharing is managed in the Consent Center.",
+  "phr.consent.body":
+    "Use of this record for personalization and sharing is managed in the Consent Center.",
   "phr.consent.link": "Open Consent Center",
   "phr.completeness.title": "Record completeness",
-  "phr.completeness.description": "This score reflects the data groups already in your record. Completing missing groups may improve medication-safety checks and personalization.",
+  "phr.completeness.description":
+    "This score reflects the data groups already in your record. Completing missing groups may improve medication-safety checks and personalization.",
   "phr.completeness.loading": "Calculating record completeness…",
   "phr.completeness.error": "We could not load record completeness.",
   "phr.completeness.complete": "Your record has the core data groups.",
@@ -5732,41 +7892,71 @@ const EN_MESSAGES: MessageCatalog = {
   "phr.completeness.class.procedures": "Procedures",
   "phr.completeness.class.labs": "Lab results",
   "phr.hub.identity.title": "Basic information",
-  "phr.hub.identity.description": "Name, date of birth, gender, and blood type.",
+  "phr.hub.identity.description":
+    "Name, date of birth, gender, and blood type.",
   "phr.hub.body.title": "Body measurements",
   "phr.hub.body.description": "Height and weight in one short step.",
   "phr.hub.contact.title": "Contact & insurance",
-  "phr.hub.contact.description": "Contact details, emergency contact, and insurance.",
+  "phr.hub.contact.description":
+    "Contact details, emergency contact, and insurance.",
   "phr.hub.allergies.description": "Add each allergy and its reaction.",
   "phr.hub.conditions.description": "Track each health condition separately.",
-  "phr.hub.medications.description": "Record each medicine you take now or took before.",
-  "phr.hub.status.description": "See which information groups are still missing.",
+  "phr.hub.medications.description":
+    "Record each medicine you take now or took before.",
+  "phr.hub.status.description":
+    "See which information groups are still missing.",
   "phr.hub.ocr.title": "Scan a document",
-  "phr.hub.ocr.description": "Review imported information before it enters your record.",
+  "phr.hub.ocr.description":
+    "Review imported information before it enters your record.",
   "phr.hub.export.title": "Export data",
   "phr.hub.export.description": "Create a copy of the record you control.",
   "phr.hub.sharing.title": "Controlled sharing",
   "phr.hub.sharing.description": "Create or revoke individual share links.",
   "phr.hub.emergencyCard.title": "Emergency card",
-  "phr.hub.emergencyCard.description": "Choose the minimum information to use in an emergency.",
+  "phr.hub.emergencyCard.description":
+    "Choose the minimum information to use in an emergency.",
   "phr.hub.reminders.title": "Reminders",
   "phr.hub.reminders.description": "Manage one medication reminder at a time.",
   "phr.hub.sections.record": "Record information",
   "phr.hub.sections.tools": "Record tools",
+  "phr.hub.sections.personal": "Personal information",
+  "phr.hub.sections.important": "Important health information",
+  "phr.hub.progress.label": "Record completion progress",
+  "phr.hub.progress.eyebrow": "Personal health record",
+  "phr.hub.progress.title": "{completed}/{total} sections completed",
+  "phr.hub.progress.description": "Complete each section when you have the information; you can update empty sections later.",
+  "phr.hub.progress.continue": "Continue completing",
+  "phr.hub.status.complete": "Added",
+  "phr.hub.status.incomplete": "Not added",
+  "phr.body.bmi": "Current BMI",
+  "phr.body.history": "Measurement history",
+  "phr.body.historyEmpty": "No measurements have been saved yet.",
+  "phr.body.historySave": "Save today’s measurement",
+  "phr.body.historySaving": "Saving measurement…",
+  "phr.empty.allergies": "No allergies are in this record. Only add information you know or that a clinician has confirmed.",
+  "phr.empty.conditions": "No health conditions are in this record. You can add recorded information for easier follow-up.",
+  "phr.empty.medications": "No medicines are in this record. Only list medicines you currently use or used recently.",
   "phr.error.sectionNotFound.title": "Record section not found",
-  "phr.error.sectionNotFound.description": "Return to the record hub to choose a section.",
+  "phr.error.sectionNotFound.description":
+    "Return to the record hub to choose a section.",
   "phr.action.backToRecord": "Back to health record",
   "phr.action.recordHome": "Health record",
-  "phr.section.identity.description": "Only identity information and blood type.",
+  "phr.section.identity.description":
+    "Only identity information and blood type.",
   "phr.section.body.description": "Update height and weight.",
-  "phr.section.contact.description": "Update contact details, emergency contact, and insurance.",
+  "phr.section.contact.description":
+    "Update contact details, emergency contact, and insurance.",
   "phr.section.allergies.description": "Add and review one allergy at a time.",
-  "phr.section.conditions.description": "Add and review one health condition at a time.",
-  "phr.section.medications.description": "Add and review one medicine at a time.",
+  "phr.section.conditions.description":
+    "Add and review one health condition at a time.",
+  "phr.section.medications.description":
+    "Add and review one medicine at a time.",
   "phr.section.ocr.description": "Review before confirming the record import.",
   "phr.section.sharing.description": "Create or revoke each share link.",
-  "phr.section.emergencyCard.description": "Choose the minimum information for an emergency.",
-  "phr.section.reminders.description": "Manage one medication reminder at a time.",
+  "phr.section.emergencyCard.description":
+    "Choose the minimum information for an emergency.",
+  "phr.section.reminders.description":
+    "Manage one medication reminder at a time.",
 };
 
 export const UI_MESSAGES: Record<UILanguage, MessageCatalog> = {

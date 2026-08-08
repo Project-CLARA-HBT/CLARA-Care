@@ -1,16 +1,8 @@
-// Feature: clara-mobile-feature-parity — Task 10.2 (Req 8.3, 8.5).
+// Feature: clara-mobile-feature-parity — canonical DSAR transport contract.
 //
-// Widget tests for the self-service DSAR surface:
-//   * Submitting a request (export / delete) shows a PII-free acknowledgement
-//     (Req 8.3).
-//   * With the `consent_center_mobile_enabled` gate off, the surface is inert:
-//     no controls and no submit is possible (Req 8.6 / 15.1).
-//   * NO PII is collected client-side: the surface exposes no text input
-//     fields, and only the coarse request *kind* crosses the submit seam and
-//     reaches analytics (Req 8.5).
-//
-// A fake [DsarSubmitter] is injected directly, so the tests run without
-// platform channels or a live server.
+// The screen sends only a closed request kind through ApiClient. Deletion is a
+// separate confirmed call to the server's transactional delete endpoint; it is
+// never downgraded to a generic request.
 
 import 'package:clara_mobile/core/analytics.dart';
 import 'package:clara_mobile/core/feature_flags.dart';
@@ -39,28 +31,28 @@ Analytics _analytics(RecordingAnalyticsTransport transport) {
     );
 }
 
-DsarAcknowledgement _ack(DsarRequestKind kind) => DsarAcknowledgement(
-      requestId: 42,
-      kind: kind.wireValue,
-      status: 'received',
-      createdAt: '2026-04-01T00:00:00Z',
-      dueAt: '2026-05-01T00:00:00Z',
-      statutoryWindowDays: 30,
-    );
+Map<String, dynamic> _ack(DsarRequestKind kind) => <String, dynamic>{
+      'enabled': true,
+      'request_id': 42,
+      'kind': kind.wireValue,
+      'status': 'received',
+      'created_at': '2026-04-01T00:00:00Z',
+      'due_at': '2026-05-01T00:00:00Z',
+      'statutory_window_days': 30,
+    };
 
 void main() {
-  testWidgets('submitting an export request shows an acknowledgement (Req 8.3)',
+  testWidgets('submitting export uses canonical API request and acknowledges',
       (tester) async {
-    final kinds = <DsarRequestKind>[];
-    Future<DsarAcknowledgement> submitter(DsarRequestKind kind) async {
-      kinds.add(kind);
-      return _ack(kind);
-    }
+    final api = FakeApiClient()
+      ..stub('submitDsarRequest', response: _ack(DsarRequestKind.export));
+    final session = await FakeSessionStore.authenticated();
 
     await tester.pumpWidget(MaterialApp(
       home: DsarScreen(
+        apiClient: api,
         resolver: _resolver(dsarEnabled: true),
-        submitter: submitter,
+        sessionStore: session,
       ),
     ));
     await tester.pumpAndSettle();
@@ -68,100 +60,84 @@ void main() {
     await tester.tap(find.byKey(const Key('dsar-submit-export')));
     await tester.pumpAndSettle();
 
-    expect(kinds, [DsarRequestKind.export]);
-    // Acknowledgement is shown with non-PII fields only (Req 8.3).
+    expect(api.callsTo('submitDsarRequest').single.args['kind'], 'export');
     expect(find.byKey(const Key('dsar-acknowledgement')), findsOneWidget);
     expect(find.textContaining('Đã tiếp nhận yêu cầu'), findsOneWidget);
     expect(find.textContaining('#42'), findsOneWidget);
-    expect(find.textContaining('export'), findsOneWidget);
   });
 
-  testWidgets('deleting requires confirmation then acknowledges (Req 8.3)',
+  testWidgets('deletion needs confirmation then calls transactional endpoint',
       (tester) async {
-    final kinds = <DsarRequestKind>[];
-    Future<DsarAcknowledgement> submitter(DsarRequestKind kind) async {
-      kinds.add(kind);
-      return _ack(kind);
-    }
+    final api = FakeApiClient()
+      ..stub('deleteDsarData', response: _ack(DsarRequestKind.delete));
+    final session = await FakeSessionStore.authenticated();
 
     await tester.pumpWidget(MaterialApp(
       home: DsarScreen(
+        apiClient: api,
         resolver: _resolver(dsarEnabled: true),
-        submitter: submitter,
+        sessionStore: session,
       ),
     ));
     await tester.pumpAndSettle();
 
-    // Tapping delete opens a confirm dialog; nothing is submitted yet.
     await tester.tap(find.byKey(const Key('dsar-submit-delete')));
     await tester.pumpAndSettle();
-    expect(kinds, isEmpty);
+    expect(api.wasCalled('deleteDsarData'), isFalse);
     expect(find.byKey(const Key('dsar-confirm-delete')), findsOneWidget);
 
-    // Confirm → the delete request is submitted and acknowledged.
     await tester.tap(find.byKey(const Key('dsar-confirm-delete')));
     await tester.pumpAndSettle();
-    expect(kinds, [DsarRequestKind.delete]);
+    expect(api.wasCalled('deleteDsarData'), isTrue);
+    expect(api.wasCalled('submitDsarRequest'), isFalse);
     expect(find.byKey(const Key('dsar-acknowledgement')), findsOneWidget);
   });
 
-  testWidgets('gate off: surface is inert with no controls (Req 8.6)',
-      (tester) async {
-    var called = 0;
-    Future<DsarAcknowledgement> submitter(DsarRequestKind kind) async {
-      called += 1;
-      return _ack(kind);
-    }
+  testWidgets('gate off is inert with no DSAR request', (tester) async {
+    final api = FakeApiClient();
+    final session = await FakeSessionStore.authenticated();
 
     await tester.pumpWidget(MaterialApp(
       home: DsarScreen(
+        apiClient: api,
         resolver: _resolver(dsarEnabled: false),
-        submitter: submitter,
+        sessionStore: session,
       ),
     ));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('dsar-disabled')), findsOneWidget);
     expect(find.byKey(const Key('dsar-submit-export')), findsNothing);
-    expect(find.byType(FilledButton), findsNothing);
-    expect(called, 0);
+    expect(api.invocations, isEmpty);
   });
 
-  testWidgets(
-      'collects NO PII: no text fields, only the kind is transmitted '
-      '(Req 8.5)', (tester) async {
+  testWidgets('collects no PII: no text fields, only a closed request kind',
+      (tester) async {
     final transport = RecordingAnalyticsTransport();
-    final analytics = _analytics(transport);
-    final kinds = <DsarRequestKind>[];
-    Future<DsarAcknowledgement> submitter(DsarRequestKind kind) async {
-      kinds.add(kind);
-      return _ack(kind);
-    }
+    final api = FakeApiClient()
+      ..stub('submitDsarRequest', response: _ack(DsarRequestKind.export));
+    final session = await FakeSessionStore.authenticated();
 
     await tester.pumpWidget(MaterialApp(
       home: DsarScreen(
+        apiClient: api,
         resolver: _resolver(dsarEnabled: true),
-        submitter: submitter,
-        analytics: analytics,
+        sessionStore: session,
+        analytics: _analytics(transport),
       ),
     ));
     await tester.pumpAndSettle();
 
-    // No free-text identifier inputs exist anywhere on the surface (Req 8.5).
     expect(find.byType(TextField), findsNothing);
     expect(find.byType(TextFormField), findsNothing);
 
     await tester.tap(find.byKey(const Key('dsar-submit-export')));
     await tester.pumpAndSettle();
 
-    // The submit seam received only the coarse kind enum — no PII.
-    expect(kinds, [DsarRequestKind.export]);
-
-    // The single analytics event carries only the non-PII kind label.
-    expect(transport.captured, isNotEmpty);
-    final submitted =
-        transport.captured.where((e) => e.name == 'mobile_dsar_submitted');
+    expect(api.callsTo('submitDsarRequest').single.args, {'kind': 'export'});
+    final submitted = transport.captured
+        .where((event) => event.name == 'mobile_dsar_submitted');
     expect(submitted.length, 1);
-    expect(submitted.first.props, <String, Object?>{'kind': 'export'});
+    expect(submitted.single.props, <String, Object?>{'kind': 'export'});
   });
 }

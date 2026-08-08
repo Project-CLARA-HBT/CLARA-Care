@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { useFocusTrap } from "@/app/chat/_v2/lib/useFocusTrap";
+import { Icon, type IconName } from "@/components/ui/icon";
 
 /**
  * Shared, accessible design-system primitives for the rebuilt CLARA Chat
@@ -84,6 +85,17 @@ export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
 };
 
+const ICON_BUTTON_NAMES: Record<string, IconName> = {
+  menu: "menu",
+  stop: "stop",
+  arrow_upward: "send",
+  light_mode: "theme",
+  dark_mode: "theme",
+  notifications: "notifications",
+  more_horiz: "more",
+  arrow_forward: "arrow-right",
+};
+
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   function IconButton(
     {
@@ -110,12 +122,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         ].join(" ")}
         {...rest}
       >
-        <span
-          className="material-symbols-outlined text-[18px]"
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
+        <Icon name={ICON_BUTTON_NAMES[icon] ?? "fallback"} size={18} />
       </button>
     );
   },

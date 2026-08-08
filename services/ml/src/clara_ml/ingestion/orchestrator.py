@@ -525,6 +525,40 @@ class IngestionOrchestrator:
         report.assert_accounting()
         return report
 
+    def ingest_records(
+        self,
+        source_key: str,
+        records: Sequence[RawRecord],
+    ) -> IngestionReport:
+        """Persist already-fetched, provenance-checked records without fetching.
+
+        This is the narrow write boundary for trusted live retrieval gap-fill.
+        It deliberately does **not** create a connector, advance a source
+        watermark, or retain the triggering user query.  Each record still
+        takes the same cleaner → chunker → embedding → atomic-store path as
+        offline ingestion, including fail-loud handling for degraded vectors.
+
+        Callers must group records by their registry ``source_key``.  Records
+        claiming a different source are rejected rather than allowing a live
+        provider to smuggle content under another source's authority tier.
+        """
+
+        resolution = self._resolve_source(source_key)
+        if not resolution.enabled:
+            raise SourceDisabledError(f"source_key {source_key!r} is not enabled for ingestion")
+
+        report = IngestionReport(source_key=source_key)
+        for record in records:
+            if record.source_key != source_key:
+                raise ValueError(
+                    "live ingestion record source_key does not match the resolved source"
+                )
+            report.fetched += 1
+            self._process_record(resolution, record, report)
+
+        report.assert_accounting()
+        return report
+
     # ------------------------------------------------------------------
     # Per-record processing
     # ------------------------------------------------------------------

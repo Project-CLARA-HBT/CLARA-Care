@@ -16,6 +16,7 @@ from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import MedicationCourse, MedicationCourseChange
 from clara_api.db.session import get_db
+from clara_api.glhs.adapters import ingest_medication_course
 from clara_api.lifemap.commands import (
     add_outbox,
     replay_command,
@@ -82,9 +83,7 @@ def _selector(public_or_legacy_id: str):
     return or_(*clauses)
 
 
-def _course(
-    db: Session, scope: ProfileScope, course_id: str
-) -> MedicationCourse:
+def _course(db: Session, scope: ProfileScope, course_id: str) -> MedicationCourse:
     row = db.execute(
         select(MedicationCourse).where(
             _selector(course_id),
@@ -261,9 +260,7 @@ def course_history(
                 "action": change.action,
                 "snapshot": change.snapshot_json,
                 "reason": change.reason_code,
-                "created_at": (
-                    change.created_at.isoformat() if change.created_at else None
-                ),
+                "created_at": (change.created_at.isoformat() if change.created_at else None),
             }
             for change in changes
         ],
@@ -320,6 +317,15 @@ def create_course(
             reason_code="explicit_user_confirmation",
             actor_user_id=scope.actor.id,
         )
+    )
+    # Explicit entry is a user report in GLHS.  Courses lacking a deterministic
+    # DrugBank identity remain unresolved candidates and cannot enter a
+    # medication THSS/automated DDI context through this adapter.
+    ingest_medication_course(
+        db,
+        scope=scope,
+        course=row,
+        idempotency_key=key,
     )
     return _finish(
         db,
@@ -395,6 +401,12 @@ def correct_course(
             actor_user_id=scope.actor.id,
         )
     )
+    ingest_medication_course(
+        db,
+        scope=scope,
+        course=row,
+        idempotency_key=key,
+    )
     return _finish(
         db,
         scope,
@@ -452,6 +464,12 @@ def end_course(
             reason_code=payload.reason.strip(),
             actor_user_id=scope.actor.id,
         )
+    )
+    ingest_medication_course(
+        db,
+        scope=scope,
+        course=row,
+        idempotency_key=key,
     )
     return _finish(
         db,

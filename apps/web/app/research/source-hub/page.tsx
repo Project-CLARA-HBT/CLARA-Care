@@ -16,6 +16,7 @@ import { trackResearchSourcesSynced, trackResearchViewed } from "@/lib/analytics
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
+import PageShell from "@/components/ui/page-shell";
 
 const SOURCE_LABEL_KEYS: Record<SourceHubSourceKey, UITranslationKey> = {
   pubmed: "research.sourceHub.source.pubmed",
@@ -112,7 +113,7 @@ export default function ResearchSourceHubPage() {
       }
     };
     void initialize();
-  }, [loadCatalog, loadRecords]);
+  }, [language, loadCatalog, loadRecords]);
 
   const activeCatalogEntry = useMemo(
     () => catalog.find((item) => item.key === activeSource) ?? null,
@@ -183,9 +184,13 @@ export default function ResearchSourceHubPage() {
   };
 
   return (
-    <main className="min-h-[100dvh] bg-[var(--bg-canvas)] px-4 py-6 text-[var(--text-primary)] sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm sm:p-6">
+    <PageShell
+      variant="plain"
+      title={t(language, "research.sourceHub.title")}
+      description={t(language, "research.sourceHub.description")}
+    >
+      <div className="mx-auto max-w-[1120px] space-y-6 text-[var(--text-primary)]">
+        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-brand)]">{t(language, "research.sourceHub.eyebrow")}</p>
@@ -196,14 +201,14 @@ export default function ResearchSourceHubPage() {
                 {t(language, "research.sourceHub.description")}
               </p>
             </div>
-            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-950/35 dark:text-blue-200">
+            <div className="rounded-xl border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-4 py-3 text-sm font-semibold text-[var(--text-brand)]">
               {t(language, "research.sourceHub.availableSummary", { sources: catalog.length, records: records.length })}
             </div>
           </div>
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
+          <article className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.sync.eyebrow")}</p>
@@ -227,7 +232,7 @@ export default function ResearchSourceHubPage() {
                 <select
                   value={activeSource}
                   onChange={(event) => setActiveSource(event.target.value as SourceHubSourceKey)}
-                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                 >
                   {catalog.map((item) => (
                     <option key={item.key} value={item.key}>
@@ -242,7 +247,7 @@ export default function ResearchSourceHubPage() {
                   value={syncQuery}
                   onChange={(event) => setSyncQuery(event.target.value)}
                   placeholder={activeCatalogEntry?.default_query || t(language, "research.sourceHub.sync.queryPlaceholder")}
-                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                 />
               </label>
               <label className="space-y-1">
@@ -251,14 +256,14 @@ export default function ResearchSourceHubPage() {
                   value={syncLimit}
                   onChange={(event) => setSyncLimit(event.target.value)}
                   inputMode="numeric"
-                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                 />
               </label>
               <div className="flex items-end">
                 <button
                   type="submit"
                   disabled={isSyncing || !catalog.length}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--brand-600)] px-4 text-sm font-bold text-white transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:bg-blue-200 disabled:text-slate-700"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--brand-600)] px-4 text-sm font-bold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-secondary)]"
                 >
                   {isSyncing ? t(language, "research.sourceHub.sync.running") : t(language, "research.sourceHub.sync.submit")}
                 </button>
@@ -270,7 +275,7 @@ export default function ResearchSourceHubPage() {
             ) : null}
           </article>
 
-          <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
+          <article className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.distribution.eyebrow")}</p>
             <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">{t(language, "research.sourceHub.distribution.title")}</h2>
             <div className="mt-4 space-y-3">
@@ -298,7 +303,7 @@ export default function ResearchSourceHubPage() {
           </article>
         </section>
 
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
+        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.records.eyebrow")}</p>
@@ -309,7 +314,7 @@ export default function ResearchSourceHubPage() {
                 value={filterText}
                 onChange={(event) => setFilterText(event.target.value)}
                 placeholder={t(language, "research.sourceHub.records.filterPlaceholder")}
-                className="min-h-10 w-72 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                className="min-h-10 w-72 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
               />
               <button
                 type="submit"
@@ -321,12 +326,12 @@ export default function ResearchSourceHubPage() {
           </div>
 
           {error ? (
-            <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
+            <p className="mb-3 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-sm font-semibold text-[var(--status-danger-text)]">
               {error}
             </p>
           ) : null}
           {message ? (
-            <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+            <p className="mb-3 rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2 text-sm font-semibold text-[var(--text-brand)]">
               {message}
             </p>
           ) : null}
@@ -337,7 +342,7 @@ export default function ResearchSourceHubPage() {
               className="mb-3"
               summaryText={t(language, "research.sourceHub.warning.summary")}
             >
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <div className="rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-sm text-[var(--status-warn-text)]">
                 <p className="text-xs font-bold uppercase tracking-[0.12em]">{t(language, "research.sourceHub.warning.admin")}</p>
                 <ul className="mt-1 list-disc space-y-1 pl-5 font-mono text-xs">
                   {syncWarnings.map((warning, index) => (
@@ -370,7 +375,7 @@ export default function ResearchSourceHubPage() {
                   records.map((record) => (
                     <tr key={record.id} className="border-b border-[color:var(--shell-border)] align-top last:border-0">
                       <td className="px-3 py-3">
-                        <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-bold text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
+                        <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-1 text-xs font-bold text-[var(--text-brand)]">
                           {sourceLabel(language, record.source)}
                         </span>
                       </td>
@@ -403,6 +408,6 @@ export default function ResearchSourceHubPage() {
           </div>
         </section>
       </div>
-    </main>
+    </PageShell>
   );
 }

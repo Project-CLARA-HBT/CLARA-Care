@@ -5,9 +5,12 @@ import { describe, expect, it } from "vitest";
 describe("Council heuristic-risk presentation", () => {
   it("does not present an uncalibrated heuristic score as a percentage or neural clinical model", () => {
     const source = readFileSync(resolve(__dirname, "../app/council/result/page.tsx"), "utf8");
+    const catalog = readFileSync(resolve(__dirname, "i18n/catalog.ts"), "utf8");
 
-    expect(source).toContain("Tín hiệu nguy cơ theo quy tắc");
-    expect(source).toContain("heuristic chưa hiệu chuẩn");
+    expect(source).toContain('t(language, "council.result.ruleRisk")');
+    expect(source).toContain('t(language, "council.result.ruleRiskHint")');
+    expect(catalog).toContain("Tín hiệu nguy cơ theo quy tắc");
+    expect(catalog).toContain("heuristic chưa hiệu chuẩn");
     expect(source).not.toContain('label="Neural Risk (Shadow)"');
     expect(source).not.toContain("fmtPercent(view.quality.ruleShadowProbability)");
   });

@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { beginLogout } from "@/lib/logout";
 import NavItem from "@/components/navigation/nav-item";
 import {
-  getGroupedNavItems,
-  getRoleHomePath,
   isActiveRoute,
   type UserRole,
 } from "@/lib/navigation.config";
-import { t, type UITranslationKey } from "@/lib/i18n/catalog";
+import {
+  getAvailableWorkspaces,
+  getWorkspaceNavigation,
+  type WorkspaceId,
+} from "@/lib/navigation.workspaces";
+import { t } from "@/lib/i18n/catalog";
 import type { ThemePreference } from "@/lib/theme";
 import type { UILanguage } from "@/lib/ui-language";
 import type { ProfileContextProfile } from "@/lib/profile-context";
@@ -25,22 +26,8 @@ type SidebarNavProps = {
   uiLanguage: UILanguage;
   onLanguageChange: (value: UILanguage) => void;
   activeProfile?: ProfileContextProfile | null;
-};
-
-const GROUP_KEYS: Record<string, UITranslationKey> = {
-  care: "navigation.care",
-  medicines: "navigation.medicines",
-  explore: "navigation.explore",
-  clinical: "navigation.clinical",
-  admin: "navigation.admin",
-  support: "navigation.support",
-};
-
-const ROLE_LABEL_KEYS: Record<UserRole, UITranslationKey> = {
-  normal: "role.normal",
-  researcher: "role.researcher",
-  doctor: "role.doctor",
-  admin: "role.admin",
+  workspace: WorkspaceId;
+  onWorkspaceChange: (workspace: WorkspaceId) => void;
 };
 
 export default function SidebarNav({
@@ -48,27 +35,20 @@ export default function SidebarNav({
   collapsed = false,
   onToggleCollapse,
   uiLanguage,
-  activeProfile = null,
+  workspace,
+  onWorkspaceChange,
 }: SidebarNavProps) {
   const pathname = usePathname();
-  const groups = getGroupedNavItems(role, uiLanguage);
-  const homeHref = getRoleHomePath(role);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const roleLabel = t(uiLanguage, ROLE_LABEL_KEYS[role]);
-  const groupLabel = (key: string, fallback: string) =>
-    GROUP_KEYS[key] ? t(uiLanguage, GROUP_KEYS[key]) : fallback;
-
-  const handleLogout = () => {
-    if (isLoggingOut) return;
-    setIsLoggingOut(true);
-    beginLogout();
-  };
+  const workspaces = getAvailableWorkspaces(role, uiLanguage);
+  const navigation = getWorkspaceNavigation(role, workspace, uiLanguage);
+  const homeHref = navigation.workspace.homeHref;
+  const moreLabel = t(uiLanguage, "navigation.more");
 
   return (
     <aside
       className={[
         "app-navigation sticky top-0 hidden h-screen shrink-0 border-r border-[color:var(--shell-border)] lg:flex lg:flex-col",
-        collapsed ? "w-[5rem] px-2" : "w-[17.5rem] px-3",
+        collapsed ? "w-[4.25rem] px-2" : "w-64 px-3",
       ].join(" ")}
       aria-label={t(uiLanguage, "navigation.primary")}
     >
@@ -99,37 +79,75 @@ export default function SidebarNav({
         ) : null}
       </div>
 
-      <div className="py-4">
-        <Link
-          href="/chat"
-          className={collapsed ? "app-new-chat !px-0" : "app-new-chat"}
-          title={t(uiLanguage, "action.askClara")}
-        >
-          <span
-            className="material-symbols-outlined text-[19px]"
-            aria-hidden="true"
+      {workspace !== "personal" ? <div className="py-3">
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={() => {
+              const index = workspaces.findIndex((entry) => entry.id === workspace);
+              const next = workspaces[(index + 1) % workspaces.length];
+              if (next) onWorkspaceChange(next.id);
+            }}
+            className="app-sidebar-action mx-auto !h-11 !w-11 justify-center"
+            aria-label={`${t(uiLanguage, "navigation.workspace.label")}: ${navigation.workspace.label}`}
+            title={navigation.workspace.label}
           >
-            auto_awesome
-          </span>
-          {!collapsed ? <span>{t(uiLanguage, "action.askClara")}</span> : null}
-        </Link>
-      </div>
+            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
+              {navigation.workspace.icon}
+            </span>
+          </button>
+        ) : (
+          <label className="block px-1">
+            <span className="mb-1.5 block px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              {t(uiLanguage, "navigation.workspace.label")}
+            </span>
+            <span className="flex min-h-11 items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5">
+              <span className="material-symbols-outlined text-[19px] text-[var(--text-brand)]" aria-hidden="true">
+                {navigation.workspace.icon}
+              </span>
+              <select
+                value={workspace}
+                onChange={(event) => onWorkspaceChange(event.target.value as WorkspaceId)}
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[var(--text-primary)] outline-none"
+                aria-label={t(uiLanguage, "navigation.workspace.choose")}
+              >
+                {workspaces.map((entry) => (
+                  <option key={entry.id} value={entry.id}>{entry.label}</option>
+                ))}
+              </select>
+            </span>
+          </label>
+        )}
+      </div> : null}
 
-      <div className="clara-scrollbar flex-1 space-y-5 overflow-y-auto pb-4">
-        {groups.map((group) => (
-          <section key={group.key}>
-            {!collapsed ? (
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                {groupLabel(group.key, group.label)}
-              </p>
-            ) : null}
-            <nav
-              className="space-y-1"
-              aria-label={
-                groupLabel(group.key, group.label)
-              }
+      <div className="clara-scrollbar flex-1 overflow-y-auto pb-4">
+        <nav className="space-y-1" aria-label={navigation.workspace.label}>
+          {navigation.primary.map((item) => (
+            <NavItem
+              key={item.href}
+              item={item}
+              active={isActiveRoute(pathname, item.href)}
+              variant="sidebar"
+              collapsed={collapsed}
+            />
+          ))}
+        </nav>
+
+        {navigation.secondary.length > 0 ? (
+          <details className="group mt-3" open={!collapsed && navigation.secondary.some((item) => isActiveRoute(pathname, item.href))}>
+            <summary
+              className={[
+                "app-nav-item cursor-pointer list-none",
+                collapsed ? "justify-center px-0" : "gap-3 px-3",
+              ].join(" ")}
+              title={moreLabel}
             >
-              {group.items.map((item) => (
+              <span className="material-symbols-outlined text-[20px]" aria-hidden="true">more_horiz</span>
+              {!collapsed ? <span>{moreLabel}</span> : null}
+              {!collapsed ? <span className="material-symbols-outlined ml-auto text-[17px] transition group-open:rotate-180" aria-hidden="true">expand_more</span> : null}
+            </summary>
+            <nav className={collapsed ? "mt-1 space-y-1" : "mt-1 space-y-1 pl-2"} aria-label={moreLabel}>
+              {navigation.secondary.map((item) => (
                 <NavItem
                   key={item.href}
                   item={item}
@@ -139,40 +157,12 @@ export default function SidebarNav({
                 />
               ))}
             </nav>
-          </section>
-        ))}
+          </details>
+        ) : null}
       </div>
 
       <div className="border-t border-[color:var(--shell-border)] py-3">
         <div className={collapsed ? "flex justify-center" : "px-1"}>
-          <div
-            className={[
-              "flex items-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
-              collapsed ? "h-11 w-11 justify-center" : "gap-3 p-2.5",
-            ].join(" ")}
-          >
-            <span className="app-profile-avatar shrink-0" aria-hidden="true">
-              {roleLabel.slice(0, 1)}
-            </span>
-            {!collapsed ? (
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold text-[var(--text-primary)]">
-                  {activeProfile?.display_name ?? t(uiLanguage, "profile.yourAccount")}
-                </span>
-                <span className="block truncate text-[11px] text-[var(--text-muted)]">
-                  {activeProfile?.kind === "shared" ? t(uiLanguage, "profile.sharedAccess") : roleLabel}
-                </span>
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <div
-          className={[
-            "mt-2 flex items-center",
-            collapsed ? "flex-col gap-1" : "justify-between px-1",
-          ].join(" ")}
-        >
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -192,26 +182,6 @@ export default function SidebarNav({
             </span>
             {!collapsed ? (
               <span>{t(uiLanguage, "action.collapse")}</span>
-            ) : null}
-          </button>
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="app-sidebar-action hover:!text-[var(--status-danger-text)]"
-            aria-label={t(uiLanguage, "action.signOut")}
-            title={t(uiLanguage, "action.signOut")}
-          >
-            <span
-              className="material-symbols-outlined text-[18px]"
-              aria-hidden="true"
-            >
-              logout
-            </span>
-            {!collapsed ? (
-              <span>
-                {isLoggingOut ? t(uiLanguage, "action.signingOut") : t(uiLanguage, "action.signOut")}
-              </span>
             ) : null}
           </button>
         </div>

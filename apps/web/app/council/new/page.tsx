@@ -77,7 +77,7 @@ export default function CouncilNewPage() {
       <div className="space-y-5">
         <CouncilWorkspaceNav />
 
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        <section className="rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{t(language, "council.new.flow")}</p>
           <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{t(language, "council.new.heading")}</h2>
           <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
@@ -88,16 +88,16 @@ export default function CouncilNewPage() {
             type="button"
             onClick={() => void onCreateCase()}
             disabled={isCreating}
-            className="mt-5 inline-flex min-h-[46px] items-center rounded-xl border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-5 text-sm font-semibold text-white disabled:opacity-60"
+            className="mt-5 inline-flex min-h-[46px] items-center rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
             {isCreating ? t(language, "council.new.creating") : t(language, "council.new.create")}
           </button>
         </section>
 
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        <section className="rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "council.new.recent")}</h3>
-            <Link href="/council" className="text-xs font-semibold text-cyan-300">
+            <Link href="/council" className="text-xs font-semibold text-[var(--text-brand)] hover:underline">
               {t(language, "council.new.openLanding")}
             </Link>
           </div>
@@ -116,7 +116,7 @@ export default function CouncilNewPage() {
                   setActiveCouncilCaseId(item.id);
                   router.push(`/council/new/intake?caseId=${item.id}`);
                 }}
-                className="flex w-full items-center justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-left transition hover:border-cyan-400/40"
+                className="flex w-full items-center justify-between rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-left transition-colors hover:border-[color:var(--brand-primary)]/40"
               >
                 <span>
                   <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title || t(language, "council.new.caseFallback", { id: item.id })}</p>
@@ -130,7 +130,7 @@ export default function CouncilNewPage() {
           </div>
         </section>
 
-        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+        {error ? <p className="text-sm text-[var(--status-danger-text)]">{error}</p> : null}
       </div>
     </PageShell>
   );

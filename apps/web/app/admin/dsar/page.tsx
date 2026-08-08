@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import PageShell from "@/components/ui/page-shell";
 import { getRole, type UserRole } from "@/lib/auth-store";
@@ -17,6 +17,7 @@ import {
   onUILanguageChange,
   type UILanguage,
 } from "@/lib/ui-language";
+import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 
 /**
  * Admin DSAR queue (regulatory-compliance Requirement 3.6, design §C, Property
@@ -34,19 +35,19 @@ import {
  * preserved (Requirement 8.1, 8.2).
  */
 
-const KIND_LABELS: Record<DsarKind, Record<UILanguage, string>> = {
-  export: { vi: "Xuất dữ liệu", en: "Export" },
-  correct: { vi: "Chỉnh sửa", en: "Correction" },
-  delete: { vi: "Xóa", en: "Deletion" },
-  restrict: { vi: "Hạn chế xử lý", en: "Restriction" },
-  withdraw: { vi: "Rút đồng thuận", en: "Withdraw consent" },
+const KIND_LABEL_KEYS: Record<DsarKind, UITranslationKey> = {
+  export: "admin.dsar.kind.export",
+  correct: "admin.dsar.kind.correct",
+  delete: "admin.dsar.kind.delete",
+  restrict: "admin.dsar.kind.restrict",
+  withdraw: "admin.dsar.kind.withdraw",
 };
 
-const STATUS_LABELS: Record<DsarStatus, Record<UILanguage, string>> = {
-  received: { vi: "Đã tiếp nhận", en: "Received" },
-  in_progress: { vi: "Đang xử lý", en: "In progress" },
-  fulfilled: { vi: "Đã hoàn tất", en: "Fulfilled" },
-  rejected: { vi: "Đã từ chối", en: "Rejected" },
+const STATUS_LABEL_KEYS: Record<DsarStatus, UITranslationKey> = {
+  received: "admin.dsar.status.received",
+  in_progress: "admin.dsar.status.inProgress",
+  fulfilled: "admin.dsar.status.fulfilled",
+  rejected: "admin.dsar.status.rejected",
 };
 
 const STATUS_ORDER: DsarStatus[] = [
@@ -55,48 +56,6 @@ const STATUS_ORDER: DsarStatus[] = [
   "fulfilled",
   "rejected",
 ];
-
-const COPY = {
-  vi: {
-    title: "Hàng đợi DSAR (Quản trị)",
-    description:
-      "Theo dõi và xử lý các yêu cầu của chủ thể dữ liệu theo Nghị định 13/2023/NĐ-CP, đối chiếu với thời hạn luật định.",
-    disabled:
-      "Tính năng yêu cầu quyền dữ liệu (DSAR) hiện chưa được bật cho môi trường này.",
-    forbidden: "Bạn không có quyền truy cập trang quản trị này.",
-    loading: "Đang tải hàng đợi...",
-    loadError: "Không thể tải hàng đợi DSAR. Vui lòng thử lại.",
-    empty: "Chưa có yêu cầu nào trong hàng đợi.",
-    overdueBadge: "Quá hạn",
-    overdueSummary: (n: number) => `${n} yêu cầu quá hạn`,
-    none: "Không có yêu cầu quá hạn",
-    submittedAt: "Tiếp nhận",
-    dueAt: "Hạn xử lý",
-    resolvedAt: "Hoàn tất",
-    statusLabel: "Cập nhật trạng thái",
-    refId: "Mã yêu cầu",
-    saving: "Đang lưu...",
-  },
-  en: {
-    title: "DSAR queue (Admin)",
-    description:
-      "Monitor and resolve data-subject requests under Decree 13/2023/NĐ-CP, tracked against the statutory response window.",
-    disabled: "Data-subject requests (DSAR) are not enabled for this environment yet.",
-    forbidden: "You do not have permission to access this admin page.",
-    loading: "Loading queue...",
-    loadError: "Could not load the DSAR queue. Please try again.",
-    empty: "No requests in the queue yet.",
-    overdueBadge: "Overdue",
-    overdueSummary: (n: number) => `${n} overdue request${n === 1 ? "" : "s"}`,
-    none: "No overdue requests",
-    submittedAt: "Received",
-    dueAt: "Due",
-    resolvedAt: "Resolved",
-    statusLabel: "Update status",
-    refId: "Request ID",
-    saving: "Saving...",
-  },
-} as const;
 
 export default function AdminDsarQueuePage() {
   const [uiLanguage, setUiLanguage] = useState<UILanguage>("vi");
@@ -108,7 +67,9 @@ export default function AdminDsarQueuePage() {
   const [requests, setRequests] = useState<DsarRequestRecord[]>([]);
   const [overdueCount, setOverdueCount] = useState(0);
 
-  const text = useMemo(() => COPY[uiLanguage], [uiLanguage]);
+  const copy = (key: UITranslationKey, values?: Record<string, number>) =>
+    t(uiLanguage, key, values);
+  const queueErrorText = copy("admin.dsar.loadError");
   const flagOn = isDsarEnabled();
 
   useEffect(() => {
@@ -132,11 +93,11 @@ export default function AdminDsarQueuePage() {
       setRequests(data.requests ?? []);
       setOverdueCount(data.overdue_count ?? 0);
     } catch {
-      setError(text.loadError);
+      setError(queueErrorText);
     } finally {
       setLoading(false);
     }
-  }, [flagOn, isAdmin, text.loadError]);
+  }, [flagOn, isAdmin, queueErrorText]);
 
   useEffect(() => {
     void refresh();
@@ -149,13 +110,16 @@ export default function AdminDsarQueuePage() {
       try {
         await updateDsarStatus(id, status);
         await refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : text.loadError);
+      } catch {
+        // The administrator can inspect authorized audit data in the queue,
+        // but a transport or upstream error is neither an audit fact nor safe
+        // user-facing operational copy.
+        setError(queueErrorText);
       } finally {
         setPendingId(null);
       }
     },
-    [refresh, text.loadError],
+    [queueErrorText, refresh],
   );
 
   // Role is resolved on mount; treat the brief null state as still loading.
@@ -164,21 +128,25 @@ export default function AdminDsarQueuePage() {
   const showDisabled = !flagOn || (!loading && roleResolved && isAdmin && !enabled);
 
   return (
-    <PageShell variant="plain" title={text.title} description={text.description}>
+    <PageShell
+      variant="plain"
+      title={copy("admin.dsar.title")}
+      description={copy("admin.dsar.description")}
+    >
       <div className="space-y-4">
         {showForbidden ? (
           <p
             role="alert"
             className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm font-medium text-[var(--status-danger-text)]"
           >
-            {text.forbidden}
+            {copy("admin.dsar.forbidden")}
           </p>
         ) : showDisabled ? (
           <p
             role="status"
             className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-sm text-[var(--text-secondary)]"
           >
-            {text.disabled}
+            {copy("admin.dsar.disabled")}
           </p>
         ) : (
           <>
@@ -191,7 +159,9 @@ export default function AdminDsarQueuePage() {
                     : "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]",
                 ].join(" ")}
               >
-                {overdueCount > 0 ? text.overdueSummary(overdueCount) : text.none}
+                {overdueCount > 0
+                  ? copy("admin.dsar.overdueSummary", { count: overdueCount })
+                  : copy("admin.dsar.none")}
               </span>
             </div>
 
@@ -205,7 +175,9 @@ export default function AdminDsarQueuePage() {
             ) : null}
 
             {loading ? (
-              <p className="text-sm text-[var(--text-secondary)]">{text.loading}</p>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {copy("admin.dsar.loading")}
+              </p>
             ) : requests.length ? (
               <ul className="space-y-2">
                 {requests.map((request) => (
@@ -222,31 +194,31 @@ export default function AdminDsarQueuePage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-[var(--text-primary)]">
-                            {KIND_LABELS[request.kind]?.[uiLanguage] ?? request.kind}
+                            {copy(KIND_LABEL_KEYS[request.kind])}
                           </p>
                           {request.overdue ? (
                             <span className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--status-danger-text)]">
-                              {text.overdueBadge}
+                              {copy("admin.dsar.overdueBadge")}
                             </span>
                           ) : null}
                         </div>
                         <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                          {text.refId}: {request.id}
+                          {copy("admin.dsar.refId")}: {request.id}
                           {request.created_at
-                            ? ` · ${text.submittedAt}: ${new Date(request.created_at).toLocaleString()}`
+                            ? ` · ${copy("admin.dsar.submittedAt")}: ${formatLocaleDate(uiLanguage, request.created_at, { dateStyle: "medium", timeStyle: "short" })}`
                             : ""}
                           {request.due_at
-                            ? ` · ${text.dueAt}: ${new Date(request.due_at).toLocaleDateString()}`
+                            ? ` · ${copy("admin.dsar.dueAt")}: ${formatLocaleDate(uiLanguage, request.due_at)}`
                             : ""}
                           {request.resolved_at
-                            ? ` · ${text.resolvedAt}: ${new Date(request.resolved_at).toLocaleDateString()}`
+                            ? ` · ${copy("admin.dsar.resolvedAt")}: ${formatLocaleDate(uiLanguage, request.resolved_at)}`
                             : ""}
                         </p>
                       </div>
                       <label className="flex shrink-0 items-center gap-2 text-[12px] text-[var(--text-secondary)]">
-                        <span className="sr-only">{text.statusLabel}</span>
+                        <span className="sr-only">{copy("admin.dsar.statusLabel")}</span>
                         <select
-                          aria-label={text.statusLabel}
+                          aria-label={copy("admin.dsar.statusLabel")}
                           disabled={pendingId === request.id}
                           value={request.status}
                           onChange={(e) =>
@@ -259,13 +231,13 @@ export default function AdminDsarQueuePage() {
                         >
                           {STATUS_ORDER.map((status) => (
                             <option key={status} value={status}>
-                              {STATUS_LABELS[status][uiLanguage]}
+                              {copy(STATUS_LABEL_KEYS[status])}
                             </option>
                           ))}
                         </select>
                         {pendingId === request.id ? (
                           <span className="text-[10px] text-[var(--text-muted)]">
-                            {text.saving}
+                            {copy("admin.dsar.saving")}
                           </span>
                         ) : null}
                       </label>
@@ -274,7 +246,9 @@ export default function AdminDsarQueuePage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">{text.empty}</p>
+              <p className="text-sm text-[var(--text-muted)]">
+                {copy("admin.dsar.empty")}
+              </p>
             )}
           </>
         )}

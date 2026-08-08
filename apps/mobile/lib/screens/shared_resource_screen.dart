@@ -1,8 +1,4 @@
-import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../core/api_client.dart';
 import '../core/feature_flags.dart';
@@ -25,30 +21,11 @@ import '../widgets/error_retry_view.dart';
 //     [MobileFeatureFlagResolver]. When the gate is closed the screen renders a
 //     disabled state and performs NO network call.
 //
-// ----------------------------------------------------------------------------
-// api_client.dart is owned by another writer this wave, and it currently has no
-// shared-resource GET-by-token method. To stay additive and testable NOW, this
-// screen takes an injectable [SharedResourceFetcher] callback. Production wires
-// [createHttpSharedResourceFetcher] (a thin GET using the same patterns as
-// ApiClient: bounded timeout, ApiException, Vietnamese-first PII-free copy);
-// once ApiClient grows a `getSharedResource(token:)` method, the default
-// fetcher is the single seam to swap over — no screen changes required.
-//
 // End-user-safe content: the merged [endUserSafeProjection] (Task 3.3) is
 // applied to the raw payload before this screen's whitelist parse, so internal
 // runtime fields are stripped at every nesting depth, exactly as on the chat
 // surface — then the whitelist below renders only the known PHR fields.
 // =============================================================================
-
-/// Fetches the raw shared-resource payload for [token] from CLARA_API.
-///
-/// Implementations MUST throw an [ApiException] (with a Vietnamese-first,
-/// PII-free [ApiException.message]) on any failure — invalid/expired/revoked
-/// token, transport error, or timeout — so the screen can render a clean error
-/// state. The returned map is the raw server envelope; the screen applies the
-/// end-user-safe projection itself.
-typedef SharedResourceFetcher = Future<Map<String, dynamic>> Function(
-    String token);
 
 /// Vietnamese-first, PII-free copy for a token that cannot be opened. The same
 /// message is used for not-found / revoked / expired so the screen never leaks
@@ -59,68 +36,6 @@ const String kSharedResourceUnavailableMessage =
 /// Copy shown when the sharing feature gate is closed (Req 12.4).
 const String kSharingDisabledMessage =
     'Tính năng chia sẻ hiện chưa được bật cho tài khoản của bạn.';
-
-/// Maps a failed HTTP status from the public share endpoint onto a non-PII,
-/// Vietnamese-first message. 404 (not found / sharing disabled / record
-/// missing) and 410 (revoked / expired) intentionally collapse to one message
-/// so the screen does not disclose token existence (Req 12.2).
-String shareErrorMessageForStatus(int statusCode) {
-  switch (statusCode) {
-    case 404:
-    case 410:
-      return kSharedResourceUnavailableMessage;
-    default:
-      return 'Không thể mở nội dung được chia sẻ. Vui lòng thử lại.';
-  }
-}
-
-/// Builds the production [SharedResourceFetcher]: a bounded, read-only GET to
-/// `/{baseUrl}/api/v1/phr/shared/{token}`. No credentials are sent — the
-/// endpoint is intentionally public and read-only. Error mapping mirrors
-/// [ApiClient]: timeout/transport/HTTP errors all surface as [ApiException]
-/// with Vietnamese-first, PII-free messages.
-SharedResourceFetcher createHttpSharedResourceFetcher({
-  required String baseUrl,
-  http.Client? client,
-  Duration requestTimeout = const Duration(seconds: 30),
-}) {
-  final httpClient = client ?? http.Client();
-  final base =
-      baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
-  return (String token) async {
-    final uri =
-        Uri.parse('$base/api/v1/phr/shared/${Uri.encodeComponent(token)}');
-    final http.Response response;
-    try {
-      response = await httpClient.get(
-        uri,
-        headers: const {'Accept': 'application/json'},
-      ).timeout(requestTimeout);
-    } on TimeoutException {
-      throw ApiException(message: 'Hết thời gian chờ phản hồi từ server.');
-    } catch (_) {
-      throw ApiException(message: 'Không thể kết nối tới server.');
-    }
-
-    if (response.statusCode >= 400) {
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: shareErrorMessageForStatus(response.statusCode),
-      );
-    }
-
-    Object? decoded;
-    try {
-      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
-    } catch (_) {
-      decoded = null;
-    }
-    if (decoded is! Map<String, dynamic>) {
-      throw ApiException(message: 'Phản hồi không hợp lệ từ server.');
-    }
-    return decoded;
-  };
-}
 
 String _str(Object? value) => value == null ? '' : value.toString().trim();
 
@@ -189,14 +104,15 @@ class SharedResourceView {
     final scope = _str(payload['scope']);
 
     if (scope == 'emergency_card' || payload['emergency_card'] is Map) {
-      final card = (payload['emergency_card'] as Map?)?.cast<String, dynamic>() ??
-          const <String, dynamic>{};
+      final card =
+          (payload['emergency_card'] as Map?)?.cast<String, dynamic>() ??
+              const <String, dynamic>{};
       return SharedResourceView(
         scope: 'emergency_card',
         heading: 'Thẻ khẩn cấp được chia sẻ',
         sections: _emergencyCardSections(card),
-        disclaimer: _disclaimerFrom(card['disclaimer']) ??
-            _selfDeclaredDisclaimer,
+        disclaimer:
+            _disclaimerFrom(card['disclaimer']) ?? _selfDeclaredDisclaimer,
       );
     }
 
@@ -338,9 +254,8 @@ class SharedResourceView {
     return _objectList(value)
         .map((m) {
           final name = _str(m['name']);
-          final dose = _str(m['dose']).isNotEmpty
-              ? _str(m['dose'])
-              : _str(m['dosage']);
+          final dose =
+              _str(m['dose']).isNotEmpty ? _str(m['dose']) : _str(m['dosage']);
           if (name.isEmpty) return '';
           return dose.isEmpty ? name : '$name — $dose';
         })
@@ -353,19 +268,23 @@ class SharedResourceView {
 class SharedResourceScreen extends StatefulWidget {
   const SharedResourceScreen({
     super.key,
+    required this.apiClient,
     required this.token,
-    required this.fetcher,
     required this.flags,
+    this.onClose,
   });
+
+  final ApiClient apiClient;
 
   /// The opaque share token from the deep link.
   final String token;
 
-  /// Injectable fetch seam (see [createHttpSharedResourceFetcher]).
-  final SharedResourceFetcher fetcher;
-
   /// Resolved mobile feature gates; sharing must be enabled to render content.
   final MobileFeatureFlagResolver flags;
+
+  /// Clears an in-memory public capability instead of retaining it in history.
+  /// Supplied only by the app-level deep-link host.
+  final VoidCallback? onClose;
 
   @override
   State<SharedResourceScreen> createState() => _SharedResourceScreenState();
@@ -391,13 +310,16 @@ class _SharedResourceScreenState extends State<SharedResourceScreen> {
       _view = null;
     });
     try {
-      final payload = await widget.fetcher(widget.token);
+      final payload = await widget.apiClient.getPublicSharedResource(
+        token: widget.token,
+      );
       if (!mounted) return;
       setState(() => _view = SharedResourceView.fromPayload(payload));
-    } on ApiException catch (error) {
-      // ApiException messages are Vietnamese-first and PII-free by contract.
+    } on ApiException {
+      // A public-link error must not expose gateway, provider, or token-state
+      // detail. All failure modes collapse to the same safe message.
       if (!mounted) return;
-      setState(() => _error = error.message);
+      setState(() => _error = kSharedResourceUnavailableMessage);
     } catch (_) {
       // Contain any unexpected error within the screen; never leak a stack
       // trace to the user (Req 11.4).
@@ -412,9 +334,26 @@ class _SharedResourceScreenState extends State<SharedResourceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nội dung được chia sẻ')),
-      body: _buildBody(context),
+    return WillPopScope(
+      onWillPop: () async {
+        final onClose = widget.onClose;
+        if (onClose == null) return true;
+        onClose();
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Nội dung được chia sẻ'),
+          leading: widget.onClose == null
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Đóng',
+                  onPressed: widget.onClose,
+                ),
+        ),
+        body: _buildBody(context),
+      ),
     );
   }
 
