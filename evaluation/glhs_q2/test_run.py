@@ -64,7 +64,7 @@ def test_writer_emits_pre_execution_contracts_and_all_required_tables(tmp_path) 
     write(result, tmp_path, frozen_input_sha256=frozen)
 
     expected = {
-        "summary.json", "environment.json", "cases.csv", "outcomes.csv", "external_cases.csv", "external_outcomes.csv", "external_stratified_metrics.csv", "external_baseline_comparison.csv", "operational_metrics.csv", "per_run.csv",
+        "summary.json", "environment.json", "cases.csv", "outcomes.csv", "external_cases.csv", "external_outcomes.csv", "external_stratified_metrics.csv", "external_baseline_comparison.csv", "operational_metrics.csv", "cost_of_success.csv", "per_run.csv",
         "conformance.csv", "baseline_comparison.csv", "ablation.csv", "thss_ablation.csv",
         "error_analysis.csv", "stratified_metrics.csv", "scalability.csv", "policy.json", "task_relevance_manifest.json",
         "oracle_manifest.json", "holdout_manifest.json", "mechanism_evidence.json", "report.md",
@@ -104,6 +104,22 @@ def test_thss_ablation_keeps_authorization_fixed() -> None:
     assert tuple(rows) == THSS_PROFILES
     assert all(row["authorization_fixed"] is True for row in rows.values())
     assert all(row["unauthorized_disclosure_numerator"] == 0 for row in rows.values())
+
+
+def test_cost_of_success_reports_only_declared_measurement_scopes() -> None:
+    rows = {row["comparison"]: row for row in run(20260808, 400)["cost_of_success"]}
+    assert tuple(rows) == (
+        "glhs_full_vs_glhs_no_gst",
+        "glhs_full_vs_glhs_no_thss",
+        "glhs_full_vs_temporal_provenance_resolver",
+    )
+    assert rows["glhs_full_vs_glhs_no_gst"]["failure_reduction_numerator"] == 267
+    assert rows["glhs_full_vs_glhs_no_thss"]["failure_reduction_numerator"] == 0
+    assert rows["glhs_full_vs_temporal_provenance_resolver"]["failure_reduction_numerator"] == 66
+    assert rows["glhs_full_vs_glhs_no_gst"]["context_tokens_proxy_delta"] == 0
+    assert rows["glhs_full_vs_glhs_no_thss"]["context_tokens_proxy_delta"] == -60
+    assert rows["glhs_full_vs_temporal_provenance_resolver"]["context_tokens_proxy_delta"] is None
+    assert rows["glhs_full_vs_temporal_provenance_resolver"]["context_scope"] == "not_measured_tpr_has_no_thss_compiler_in_protocol"
 
 
 def test_model_arm_integrator_requires_full_frozen_grid(tmp_path) -> None:
