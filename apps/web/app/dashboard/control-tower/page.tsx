@@ -320,9 +320,9 @@ export default function ControlTowerPage() {
     return (
       <PageShell title="Control Tower" description="Đang nạp cấu hình control plane.">
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="h-36 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
-          <div className="h-36 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
-          <div className="h-56 animate-pulse rounded-2xl border border-slate-200 bg-slate-100 lg:col-span-2" />
+          <div className="h-36 animate-pulse rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]" />
+          <div className="h-36 animate-pulse rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]" />
+          <div className="h-56 animate-pulse rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] lg:col-span-2" />
         </div>
       </PageShell>
     );
@@ -334,33 +334,33 @@ export default function ControlTowerPage() {
       description="Điều phối nguồn RAG và answer flow theo mô hình control plane, tối ưu cho theo dõi và vận hành."
     >
       <div className="space-y-4">
-        <section className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-4 text-slate-100 shadow-sm sm:p-5">
+        <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-[var(--text-primary)] sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">Mission Control</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-brand)]">Điều phối vận hành</p>
               <h2 className="text-lg font-semibold sm:text-xl">RAG Source & Flow Orchestration Plane</h2>
-              <p className="max-w-2xl text-sm text-slate-300">
-                Chỉnh trực tiếp nguồn tri thức, độ ưu tiên, và các cờ route/verification/fallback trước khi phát hành.
+              <p className="max-w-2xl text-sm text-[var(--text-secondary)]">
+                Chỉnh trực tiếp nguồn tri thức, độ ưu tiên và các cờ route/xác minh trước khi phát hành.
               </p>
             </div>
             <button
               type="button"
               disabled={isSaving || !config}
               onClick={onSave}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-400/90 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[#cdd7ff] transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? "Đang lưu..." : "Lưu cấu hình"}
             </button>
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-slate-300">Sources</p>
-              <p className="mt-1 text-xl font-semibold text-white">{stats.total}</p>
+            <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Sources</p>
+              <p className="mt-1 text-xl font-semibold text-[var(--text-primary)]">{stats.total}</p>
             </div>
-            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-emerald-200">Enabled</p>
-              <p className="mt-1 text-xl font-semibold text-emerald-100">{stats.enabled}</p>
+            <div className="rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-[var(--text-brand)]">Enabled</p>
+              <p className="mt-1 text-xl font-semibold text-[var(--text-brand)]">{stats.enabled}</p>
             </div>
             <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2">
               <p className="text-[11px] uppercase tracking-wider text-amber-200">Disabled</p>
