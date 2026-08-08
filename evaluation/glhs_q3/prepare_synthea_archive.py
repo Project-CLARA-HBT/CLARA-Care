@@ -1,4 +1,4 @@
-"""Stream a Synthea FHIR archive into a minimised structural Q2 cohort.
+"""Stream a Synthea FHIR archive into a minimised structural Q3 cohort.
 
 The input may be a large nested ``.tar.gz`` distribution.  The reader scans
 every FHIR patient bundle in a single pass, never extracts it to disk, and
@@ -22,7 +22,7 @@ from collections import Counter
 from pathlib import Path
 from typing import BinaryIO
 
-from evaluation.glhs_q2.run import SCENARIOS
+from evaluation.glhs_q3.run import SCENARIOS
 
 
 class _HashingReader:
@@ -111,11 +111,8 @@ def prepare(
         raise ValueError("token_salt_must_be_at_least_16_bytes")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    # A full Synthea archive can contain >1M patients.  Persist only the
-    # pseudonymous token and bounded episode count in a local temporary SQLite
-    # table instead of retaining every selection in RAM.  This makes
-    # ``--selection-modulus 1`` a genuine supported execution mode while still
-    # never materialising source identifiers or clinical payloads.
+    # Persist only pseudonymous structural selectors. This keeps full-archive
+    # preparation memory-bounded without writing source identifiers/payloads.
     selection_db = output_dir / ".synthea-selection.sqlite3"
     if selection_db.exists():
         raise FileExistsError(f"selection_temp_already_exists:{selection_db}")
@@ -211,10 +208,9 @@ def prepare(
             }
             handle.write(json.dumps(row, sort_keys=True) + "\n")
     connection.close()
-    # Exact, scoped cleanup of the ephemeral pseudonym-only selection index.
     selection_db.unlink(missing_ok=True)
     manifest = {
-        "schema_version": "glhs-q2-external-structural-v2",
+        "schema_version": "glhs-q3-external-structural-v2",
         "cohort": "synthea_fhir_stu3",
         "partition": "development",
         "lawful_access_attestation": lawful_access_attestation,
