@@ -773,8 +773,23 @@ def _reproducibility_manifest(mimic_demo: dict[str, object]) -> dict[str, object
         revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         revision = "unavailable"
+    try:
+        status = subprocess.run(
+            ["git", "status", "--porcelain=v1"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        dirty = bool(status.strip())
+        status_sha256 = hashlib.sha256(status.encode("utf-8")).hexdigest()
+    except (OSError, subprocess.CalledProcessError):
+        dirty = None
+        status_sha256 = "unavailable"
     return {
         "code_revision": revision,
+        "git_worktree_dirty": dirty,
+        "git_status_sha256": status_sha256,
         "runner_sha256": _sha256_file(Path(__file__).resolve()),
         "source_sha256": {name: _sha256_file(root / name) for name in tracked if (root / name).is_file()},
         "clinical_data": False,
