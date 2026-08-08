@@ -104,14 +104,18 @@ lint:
 		if [ -d "$$d" ]; then targets="$$targets $$d"; fi; \
 	done; \
 	if [ -n "$$targets" ]; then \
-		ruff check $$targets; \
+		if [ -x services/api/.venv/bin/ruff ]; then services/api/.venv/bin/ruff check $$targets; \
+		elif command -v ruff >/dev/null 2>&1; then ruff check $$targets; \
+		else echo "No ruff runner available (need services/api/.venv or PATH)." >&2; exit 127; fi; \
 	else \
 		echo "No Python source directories found."; \
 	fi
 
 type-check:
 	@if [ -d services/api/src ] || [ -d services/ml/src ]; then \
-		mypy services/api/src services/ml/src --ignore-missing-imports; \
+		if [ -x services/api/.venv/bin/mypy ]; then services/api/.venv/bin/mypy services/api/src services/ml/src --ignore-missing-imports; \
+		elif command -v mypy >/dev/null 2>&1; then mypy services/api/src services/ml/src --ignore-missing-imports; \
+		else echo "No mypy runner available (need services/api/.venv or PATH)." >&2; exit 127; fi; \
 	else \
 		echo "No type-check targets found."; \
 	fi
