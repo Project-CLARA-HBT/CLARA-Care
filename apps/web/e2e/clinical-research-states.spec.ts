@@ -45,6 +45,73 @@ async function mockWorkspaceApi(page: Page) {
   });
 }
 
+async function mockEvidenceResultApi(page: Page) {
+  await page.route("**/api/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const method = route.request().method();
+    let payload: unknown;
+
+    if (path.endsWith("/episodes/episode-e2e/evidence-questions") && method === "POST") {
+      payload = {
+        id: "question-e2e",
+        episode_id: "episode-e2e",
+        question: "Public evidence interface verification question",
+        confirmed: false,
+        requires_confirmation: true,
+        compiled: { missing_dimensions: [] },
+      };
+    } else if (path.endsWith("/evidence-questions/question-e2e") && method === "PATCH") {
+      payload = {
+        id: "question-e2e",
+        episode_id: "episode-e2e",
+        question: "Public evidence interface verification question",
+        confirmed: true,
+        requires_confirmation: false,
+        compiled: { missing_dimensions: [] },
+      };
+    } else if (path.endsWith("/evidence-questions/question-e2e/run") && method === "POST") {
+      payload = {
+        id: "run-e2e",
+        evidence_question_id: "question-e2e",
+        status: "completed",
+        release_status: "evidence_available",
+        evidence_count: 1,
+        source_class_counts: { guideline: 1 },
+        uncertainty: [{ dimension: "scope", status: "review", reason: "Interface fixture; not a clinical conclusion." }],
+        safe_message: "Public-source fixture available for interface verification.",
+        completed_at: "2026-08-08T00:00:00Z",
+      };
+    } else if (path.endsWith("/evidence-runs/run-e2e/matrix")) {
+      payload = {
+        run_id: "run-e2e",
+        release_status: "evidence_available",
+        unavailable_reason: null,
+        source_classes: {
+          guideline: [{
+            evidence_id: "public-source-fixture-1",
+            title: "Public source fixture for interface verification",
+            source_class: "guideline",
+            study_design: "guideline",
+            identifiers: { fixture: "public-source" },
+            provider: "Public source fixture",
+            url: "https://example.invalid/public-source-fixture",
+            published_at: "2025-01-01T00:00:00Z",
+            excerpt: "Static public-source metadata used only to verify the evidence matrix interface.",
+          }],
+        },
+      };
+    } else if (path.endsWith("/evidence-runs/run-e2e/applicability")) {
+      payload = { status: "review", matches: [], unknowns: ["Interface fixture"], mismatches: [], critical_exclusions: [], safe_message: "Review applicability with a qualified professional." };
+    } else if (path.endsWith("/evidence-runs/run-e2e/contradictions")) {
+      payload = { status: "none_known", items: [], safe_message: "No contradiction is represented by this interface fixture." };
+    } else {
+      return route.fallback();
+    }
+
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+  });
+}
+
 test.describe("Evidence, Source Hub, Council and Scribe states", () => {
   test.beforeEach(async ({ page }) => {
     await mockWorkspaceApi(page);
@@ -84,5 +151,40 @@ test.describe("Evidence, Source Hub, Council and Scribe states", () => {
     await page.goto("/research/source-hub", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Kết quả nguồn nghiên cứu", { exact: true })).toBeVisible();
     await expect(page.getByText("Public source fixture for interface verification", { exact: true })).toBeVisible();
+  });
+
+  test("renders the evidence matrix only after the explicit question-review flow", async ({ page }) => {
+    await mockEvidenceResultApi(page);
+    await page.route("**/api/v1/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/lifemap/today")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            generated_at: "2026-08-08T00:00:00Z",
+            tasks: [],
+            episodes: [{ id: "episode-e2e", title: "Interface verification episode", priority: "routine" }],
+            pending_confirmation_count: 0,
+          }),
+        });
+      }
+      return route.fallback();
+    });
+
+    await page.goto("/evidence", { waitUntil: "domcontentloaded" });
+    await page.getByLabel("Điều bạn muốn biết").fill("Public evidence interface verification question");
+    await page.getByRole("button", { name: "Lưu để xem lại" }).click();
+    await page.getByRole("button", { name: "Tôi đã kiểm tra câu hỏi" }).click();
+    await page.getByRole("button", { name: "Tìm bằng chứng" }).click();
+
+    await expect(page.getByText("Kết quả bằng chứng", { exact: true })).toBeVisible();
+    await expect(page.getByText("Public source fixture for interface verification", { exact: true })).toBeVisible();
+    await page.getByText("Độ không chắc chắn của lần chạy này", { exact: true }).click();
+    await expect(page.getByText(/Interface fixture; not a clinical conclusion\./)).toBeVisible();
+    const horizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(horizontalOverflow).toBeLessThanOrEqual(1);
   });
 });
