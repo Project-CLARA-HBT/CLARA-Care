@@ -11,6 +11,7 @@ import pytest
 
 from evaluation.glhs_q2.integrate_model_arm import integrate
 from evaluation.glhs_q2.run import SYSTEMS, THSS_PROFILES, _case, run, write
+from evaluation.glhs_q2.run_external_stream import run_stream
 from evaluation.glhs_q2.run_model_arm import PROMPT_VERSION, SEEDS
 
 
@@ -120,6 +121,39 @@ def test_cost_of_success_reports_only_declared_measurement_scopes() -> None:
     assert rows["glhs_full_vs_glhs_no_thss"]["context_tokens_proxy_delta"] == -60
     assert rows["glhs_full_vs_temporal_provenance_resolver"]["context_tokens_proxy_delta"] is None
     assert rows["glhs_full_vs_temporal_provenance_resolver"]["context_scope"] == "not_measured_tpr_has_no_thss_compiler_in_protocol"
+
+
+def test_external_stream_writes_full_raw_csv_without_loading_raw_source_fields(tmp_path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    perturbations = source / "perturbations.jsonl"
+    with perturbations.open("w", encoding="utf-8") as handle:
+        for index in range(1, 101):
+            case = _case(index)
+            handle.write(json.dumps({
+                "case_id": f"stream-{index:03d}",
+                "subject_token": f"token-{index:03d}",
+                "scenario": case.scenario,
+                "expected_state": case.expected_state,
+                "expected_error": case.expected_error,
+                "critical_fact_count": case.critical_fact_count,
+                "nonessential_authorized_fact_count": case.nonessential_authorized_fact_count,
+                "authorized": case.authorized,
+                "episode_count": case.episode_count,
+            }, sort_keys=True) + "\n")
+    manifest = source / "manifest.json"
+    manifest.write_text(json.dumps({
+        "schema_version": "glhs-q2-external-structural-v2",
+        "cohort": "synthea_fhir_stu3",
+        "partition": "development",
+        "perturbations_file": perturbations.name,
+        "perturbations_sha256": hashlib.sha256(perturbations.read_bytes()).hexdigest(),
+    }), encoding="utf-8")
+    result = run_stream(manifest_path=manifest, output=tmp_path / "output")
+    assert result["cases"] == result["subjects"] == 100
+    assert result["metrics"]["glhs_full"]["state_correct"]["numerator"] == 100
+    with (tmp_path / "output" / "external_outcomes.csv").open(encoding="utf-8", newline="") as handle:
+        assert len(list(csv.DictReader(handle))) == 100 * len(SYSTEMS)
 
 
 def test_model_arm_integrator_requires_full_frozen_grid(tmp_path) -> None:
