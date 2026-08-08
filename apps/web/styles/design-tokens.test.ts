@@ -113,6 +113,14 @@ describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => 
     expect(combined).toMatch(/var\(--shell-border\)/);
   });
 
+  it("keeps Source Hub status, chips and focus states on the CLARA palette", () => {
+    const sourceHub = readFileSync(resolve(appDir, "research/source-hub/page.tsx"), "utf8");
+    expect(sourceHub).toMatch(/var\(--surface-brand-soft\)/);
+    expect(sourceHub).toMatch(/var\(--brand-primary\)/);
+    expect(sourceHub).toMatch(/var\(--text-brand\)/);
+    expect(sourceHub).not.toMatch(/(?:bg|text|border|ring)-blue-/);
+  });
+
   it("keeps public landing and authentication surfaces on semantic palette families", () => {
     const combined = PUBLIC_SURFACE_FILES.map((path) => readFileSync(path, "utf8")).join("\n");
     expect(combined).toMatch(/var\(--bg-canvas\)/);

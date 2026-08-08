@@ -201,7 +201,7 @@ export default function ResearchSourceHubPage() {
                 {t(language, "research.sourceHub.description")}
               </p>
             </div>
-            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-950/35 dark:text-blue-200">
+            <div className="rounded-xl border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-4 py-3 text-sm font-semibold text-[var(--text-brand)]">
               {t(language, "research.sourceHub.availableSummary", { sources: catalog.length, records: records.length })}
             </div>
           </div>
@@ -232,7 +232,7 @@ export default function ResearchSourceHubPage() {
                 <select
                   value={activeSource}
                   onChange={(event) => setActiveSource(event.target.value as SourceHubSourceKey)}
-                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                 >
                   {catalog.map((item) => (
                     <option key={item.key} value={item.key}>
@@ -247,7 +247,7 @@ export default function ResearchSourceHubPage() {
                   value={syncQuery}
                   onChange={(event) => setSyncQuery(event.target.value)}
                   placeholder={activeCatalogEntry?.default_query || t(language, "research.sourceHub.sync.queryPlaceholder")}
-                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                 />
               </label>
               <label className="space-y-1">
@@ -256,7 +256,7 @@ export default function ResearchSourceHubPage() {
                   value={syncLimit}
                   onChange={(event) => setSyncLimit(event.target.value)}
                   inputMode="numeric"
-                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                  className="min-h-11 w-full rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                 />
               </label>
               <div className="flex items-end">
@@ -314,7 +314,7 @@ export default function ResearchSourceHubPage() {
                 value={filterText}
                 onChange={(event) => setFilterText(event.target.value)}
                 placeholder={t(language, "research.sourceHub.records.filterPlaceholder")}
-                className="min-h-10 w-72 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-blue-500/15"
+                className="min-h-10 w-72 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[var(--brand-600)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
               />
               <button
                 type="submit"
@@ -375,7 +375,7 @@ export default function ResearchSourceHubPage() {
                   records.map((record) => (
                     <tr key={record.id} className="border-b border-[color:var(--shell-border)] align-top last:border-0">
                       <td className="px-3 py-3">
-                        <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-bold text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
+                        <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-1 text-xs font-bold text-[var(--text-brand)]">
                           {sourceLabel(language, record.source)}
                         </span>
                       </td>
