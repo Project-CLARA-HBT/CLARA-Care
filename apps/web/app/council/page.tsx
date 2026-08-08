@@ -921,22 +921,22 @@ export default function CouncilPage() {
                   <span className="h-4 w-1 rounded-full bg-[color:var(--brand-600)]" />
                   {t(language, "council.overview.conflictMap.title")}
                 </h3>
-                <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
+                <span className="rounded-full border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-3 py-1 text-xs font-bold text-[var(--text-warning)]">
                   {t(language, "council.overview.conflictMap.noAutomaticConsensus")}
                 </span>
               </div>
 
               <div className={`${SOFT_PANEL_CLASS} p-5`}>
                 <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-white p-4 dark:border-sky-700 dark:bg-slate-950/40">
+                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[color:var(--surface-brand-soft)] text-[color:var(--brand-700)] dark:bg-sky-500/20 dark:text-sky-100">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[color:var(--surface-brand-soft)] text-[var(--text-brand)]">
                         <span className="material-symbols-outlined">
                           cardiology
                         </span>
                       </div>
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
                           {cardiologyNode}
                         </p>
                         <p
@@ -954,7 +954,7 @@ export default function CouncilPage() {
                   </div>
 
                   <div className="flex items-center justify-center">
-                    <div className="flex min-h-[116px] w-full flex-col items-center justify-center rounded-lg border border-orange-300 bg-orange-50 px-4 text-center text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100 md:w-[150px]">
+                    <div className="flex min-h-[116px] w-full flex-col items-center justify-center rounded-lg border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-4 text-center text-[var(--text-warning)] md:w-[150px]">
                       <span className="material-symbols-outlined text-3xl">
                         sync_problem
                       </span>
@@ -964,15 +964,15 @@ export default function CouncilPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-white p-4 dark:border-sky-700 dark:bg-slate-950/40">
+                  <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-100">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--surface-danger-soft)] text-[var(--text-danger)]">
                         <span className="material-symbols-outlined">
                           medication
                         </span>
                       </div>
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-rose-700 dark:text-rose-200">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-danger)]">
                           {renalEndoNode}
                         </p>
                         <p
@@ -990,8 +990,8 @@ export default function CouncilPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-lg border border-orange-200 bg-white p-4 dark:border-orange-500/60 dark:bg-slate-950/40">
-                  <p className="text-sm font-bold text-orange-800 dark:text-orange-100">
+                <div className="mt-4 rounded-lg border border-[color:var(--status-warning-border)] bg-[var(--surface-panel)] p-4">
+                  <p className="text-sm font-bold text-[var(--text-warning)]">
                     {t(language, "council.overview.conflictMap.question")}
                   </p>
                   <p
@@ -1006,10 +1006,10 @@ export default function CouncilPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
                     MAP
                   </p>
-                  <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">
+                  <span className="material-symbols-outlined text-sm text-[var(--text-brand)]">
                     show_chart
                   </span>
                 </div>
@@ -1029,10 +1029,10 @@ export default function CouncilPage() {
 
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
                     Creatinine/eGFR
                   </p>
-                  <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">
+                  <span className="material-symbols-outlined text-sm text-[var(--text-brand)]">
                     science
                   </span>
                 </div>
@@ -1050,10 +1050,10 @@ export default function CouncilPage() {
 
               <article className={`${PANEL_CLASS} p-4`}>
                 <div className="mb-2 flex items-start justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--brand-600)] dark:text-sky-200">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
                     {t(language, "council.overview.assessment.title")}
                   </p>
-                  <span className="material-symbols-outlined text-sm text-[color:var(--brand-600)] dark:text-sky-200">
+                  <span className="material-symbols-outlined text-sm text-[var(--text-brand)]">
                     bolt
                   </span>
                 </div>
@@ -1090,7 +1090,7 @@ export default function CouncilPage() {
               <h3
                 className={`mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
               >
-                <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">
+                <span className="material-symbols-outlined text-[var(--text-brand)]">
                   history
                 </span>
                 {t(language, "council.overview.timeline.title")}
@@ -1098,12 +1098,12 @@ export default function CouncilPage() {
 
               {timeline.length ? (
                 <div className="relative space-y-6">
-                  <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[color:var(--shell-border)] dark:bg-sky-800" />
+                  <div className="absolute bottom-2 left-2.5 top-2 w-px bg-[color:var(--shell-border)]" />
                   {timeline.map((step) => {
                     const meta = timelineStatusMeta(language, step.status);
                     const dotClass =
                       step.status === "missing"
-                        ? "border-sky-400 bg-sky-100"
+                        ? "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)]"
                         : step.status === "review"
                           ? "border-amber-400 bg-amber-100"
                           : step.status === "pending"
@@ -1111,7 +1111,7 @@ export default function CouncilPage() {
                             : "border-emerald-400 bg-emerald-100";
                     const innerDotClass =
                       step.status === "missing"
-                        ? "bg-sky-600"
+                        ? "bg-[var(--brand-600)]"
                         : step.status === "review"
                           ? "bg-amber-600"
                           : step.status === "pending"
@@ -1155,8 +1155,8 @@ export default function CouncilPage() {
               )}
 
               {streamingEnabled && streamStages.length > 0 ? (
-                <div className="mt-6 rounded-lg border border-sky-200 bg-sky-50 p-4 dark:border-sky-500/60 dark:bg-sky-500/10">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-200">
+                <div className="mt-6 rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
                     {t(language, "council.overview.timeline.liveProgress")}
                   </p>
                   <ul className="mt-2 space-y-2">
@@ -1165,7 +1165,7 @@ export default function CouncilPage() {
                         key={`${stage.sequence}-${stage.step}`}
                         className="flex items-start gap-2"
                       >
-                        <span className="material-symbols-outlined text-base text-sky-600 dark:text-sky-200">
+                        <span className="material-symbols-outlined text-base text-[var(--text-brand)]">
                           bolt
                         </span>
                         <div>
@@ -1186,7 +1186,7 @@ export default function CouncilPage() {
                   type="button"
                   onClick={() => void handleRerun()}
                   disabled={isRunning}
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[color:var(--brand-600)] bg-white px-4 text-sm font-bold text-[color:var(--text-brand)] transition hover:bg-[color:var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-600 dark:bg-slate-900 dark:text-sky-100 dark:hover:bg-slate-800"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[color:var(--brand-600)] bg-[var(--surface-panel)] px-4 text-sm font-bold text-[var(--text-brand)] transition hover:bg-[color:var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span
                     className={`material-symbols-outlined text-[20px] ${isRunning ? "animate-spin" : ""}`}
@@ -1209,9 +1209,9 @@ export default function CouncilPage() {
               </div>
 
               {evidenceShadowAvailable ? (
-              <div className="mt-6 border-t border-[color:var(--shell-border)] pt-5 dark:border-sky-700/60">
+              <div className="mt-6 border-t border-[color:var(--shell-border)] pt-5">
                 <div className="flex items-start gap-2">
-                  <span className="material-symbols-outlined mt-0.5 text-lg text-[color:var(--brand-600)] dark:text-sky-200">
+                  <span className="material-symbols-outlined mt-0.5 text-lg text-[var(--text-brand)]">
                     verified
                   </span>
                   <div>
@@ -1246,7 +1246,7 @@ export default function CouncilPage() {
                       id="council-evidence-snapshot"
                       value={selectedEvidenceJobId}
                       onChange={(event) => setSelectedEvidenceJobId(event.target.value)}
-                      className="min-h-[44px] w-full rounded-lg border border-[color:var(--shell-border)] bg-white px-3 text-sm text-[color:var(--text-primary)] dark:border-sky-700 dark:bg-slate-950 dark:text-slate-100"
+                      className="min-h-[44px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-sm text-[color:var(--text-primary)]"
                     >
                       <option value="">{t(language, "council.evidence.selectorPlaceholder")}</option>
                       {evidenceOptions.map((option) => (
@@ -1264,7 +1264,7 @@ export default function CouncilPage() {
                       type="button"
                       onClick={() => void handleAttachEvidence()}
                       disabled={!selectedEvidenceJobId || isAttachingEvidence}
-                      className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 text-sm font-bold text-[color:var(--text-primary)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                      className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 text-sm font-bold text-[color:var(--text-primary)] transition hover:bg-[var(--surface-panel)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <span className={`material-symbols-outlined text-[18px] ${isAttachingEvidence ? "animate-spin" : ""}`}>
                         {isAttachingEvidence ? "progress_activity" : "attach_file"}
