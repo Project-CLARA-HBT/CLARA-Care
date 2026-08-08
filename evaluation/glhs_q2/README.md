@@ -23,7 +23,8 @@ Before each comparator executes, the command writes and hashes:
 The resulting artifact directory contains the required raw CSV and JSON files:
 `summary.json`, `environment.json`, `cases.csv`, `outcomes.csv`, `per_run.csv`,
 `conformance.csv`, `baseline_comparison.csv`, `ablation.csv`,
-`thss_ablation.csv`, `error_analysis.csv`, `scalability.csv`, the frozen
+`thss_ablation.csv`, `error_analysis.csv`, `operational_metrics.csv`,
+`cost_of_success.csv`, `scalability.csv`, the frozen
 contracts, `evidence-manifest.json`, `report.md`, and publication-ready SVGs.
 
 `glhs_full` is a transparent reference-policy conformance model in the
@@ -52,3 +53,27 @@ structural-perturbation manifests with checksums. Their outcomes are reported
 separately. A sealed external holdout requires a documented freeze and curator
 independence attestation before the result can be labelled eligible for final
 score release.
+
+### Prepare the full supplied Synthea STU3 archive
+
+The archive may contain more than one million FHIR patient bundles. The
+preparer scans it once without extraction and keeps only salted subject tokens,
+bounded episode counts and predeclared structural oracle fields. It uses a
+temporary token-only SQLite index, then removes it after emitting the checksum
+locked JSONL; source identifiers, free text, codes and clinical values are
+never persisted.
+
+For the complete archive (rather than a deterministic sample), use
+`--selection-modulus 1` in a persistent job shell:
+
+```bash
+python3 -m evaluation.glhs_q2.prepare_synthea_archive \
+  --archive synthea_1m_fhir_3_0_May_24.tar.gz \
+  --token-salt-file /secure/local/q2-token-salt.bin \
+  --output /secure/local/q2-derived/synthea-stu3-full-development \
+  --selection-modulus 1 \
+  --lawful-access-attestation 'Local Synthea archive, non-clinical structural evaluation.'
+```
+
+This still produces a **synthetic development** structural cohort. It is not
+clinical ground truth, independent validation, or a final score release.
