@@ -20,7 +20,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-12 | FR-PHR-001/003 | PHR ProgressList, detailed record sections, body-measurement history/BMI, conflict-safe presentation and per-screen deep-well visual parity. | Personal | UI-03/UI-04 | phr routes/components, PHR observations API | form/provenance/a11y/API tests, responsive mobile overview | done |
 | UI-13 | FR-MED-001–004 | Medicines first-run/CTA hierarchy and distinct model copy. | Personal | UI-03/UI-04 | medicines pages/components | flow/safety E2E | done |
 | UI-14 | FR-CHAT-001–005 | Chat two-column answer-first disclosure and role-gated diagnostics. | Chat | UI-04/UI-06 | `app/chat/_v2/*` | parity/privacy/citation/E2E | done |
-| UI-15 | FR-EVID-001, FR-RES-001 | Evidence step disclosure and Source Hub browse/sync split. | Chat | UI-14 | evidence/research routes | release-gate/citation tests | pending |
+| UI-15 | FR-EVID-001, FR-RES-001 | Evidence step disclosure and Source Hub browse/sync split. | Chat | UI-14 | evidence/research routes | release-gate/citation tests; four-viewport empty/result E2E | in_progress |
 | UI-16 | FR-COUNCIL-001–003 | Council case context, result hierarchy, canonical deep-well flow canvas and first-use empty state without false API failure. | Clinical | UI-04/UI-06 | council routes/components | safety/role/E2E | in_progress |
 | UI-17 | FR-SCRIBE-001–003 | Canonical Scribe stages, consent and sign semantics. | Clinical | UI-04/UI-06 | scribe page/components/libs | workflow/safety/E2E | in_progress |
 | UI-18 | NFR-PERF-001/002 | Add bundle budget, console/hydration, visual and axe E2E. | Test | UI-03/UI-07 | scripts, `e2e/*`, config | four viewport matrix | done |
