@@ -180,7 +180,7 @@ export default function CouncilNewReviewPage() {
             <button
               type="submit"
               disabled={isSubmitting || !caseItem}
-              className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
+              className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
             >
               {isSubmitting ? t(language, "council.review.running") : t(language, "council.review.run")}
             </button>

@@ -37,6 +37,14 @@ const SURFACE_FILES = [
   "admin/knowledge-sources/page.tsx"
 ];
 
+const COUNCIL_FLOW_FILES = [
+  "council/new/page.tsx",
+  "council/new/intake/page.tsx",
+  "council/new/specialists/page.tsx",
+  "council/new/review/page.tsx",
+  "council/result/page.tsx",
+];
+
 const PUBLIC_SURFACE_FILES = [
   resolve(here, "..", "components", "landing", "clara-kp3-landing.tsx"),
   resolve(here, "..", "components", "landing", "landing-faq-accordion.tsx"),
@@ -120,6 +128,15 @@ describe("design tokens on primary surfaces (Task 8.5, Requirement 5.1)", () => 
     expect(sourceHub).toMatch(/var\(--text-brand\)/);
     expect(sourceHub).not.toMatch(/(?:bg|text|border|ring)-blue-/);
   });
+
+  it.each(COUNCIL_FLOW_FILES)(
+    "%s keeps its card edge and action colors tokenized",
+    (relativePath) => {
+      const source = readFileSync(resolve(appDir, relativePath), "utf8");
+      expect(findHardcodedHex(source), `Hardcoded color utilities found in ${relativePath}`).toEqual([]);
+      expect(source).toMatch(/var\(--(card-top-border|on-secondary-container|status-danger-bg)\)/);
+    },
+  );
 
   it("keeps public landing and authentication surfaces on semantic palette families", () => {
     const combined = PUBLIC_SURFACE_FILES.map((path) => readFileSync(path, "utf8")).join("\n");

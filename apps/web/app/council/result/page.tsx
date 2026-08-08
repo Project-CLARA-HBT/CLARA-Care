@@ -254,7 +254,7 @@ export default function CouncilResultPage() {
               </Link>
               <Link
                 href="/council/new"
-                className="inline-flex min-h-[44px] items-center rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)]"
+                className="inline-flex min-h-[44px] items-center rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)]"
               >
                 {t(language, "council.result.newCase")}
               </Link>
@@ -263,7 +263,7 @@ export default function CouncilResultPage() {
                 onClick={() => {
                   router.push("/council/new");
                 }}
-                className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 text-sm font-semibold text-[var(--status-danger-text)] transition-colors hover:bg-[#93000a]/25"
+                className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 text-sm font-semibold text-[var(--status-danger-text)] transition-colors hover:opacity-90"
               >
                 {t(language, "council.result.openNewCase")}
               </button>

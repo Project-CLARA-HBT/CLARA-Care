@@ -216,7 +216,7 @@ export default function CouncilNewIntakePage() {
       <div className="space-y-5">
         <CouncilWorkspaceNav />
 
-        <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             {t(language, "council.step", { step: 1, id: caseItem?.id ?? "--" })}
           </p>
@@ -270,7 +270,7 @@ export default function CouncilNewIntakePage() {
             type="button"
             onClick={() => void onExtractIntake()}
             disabled={isExtracting || !caseItem}
-            className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
+            className="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
             {isExtracting ? t(language, "council.intake.processing") : t(language, "council.intake.normalize")}
           </button>
@@ -286,7 +286,7 @@ export default function CouncilNewIntakePage() {
         </section>
 
         <section className="grid gap-3 md:grid-cols-2">
-          <label className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <span className="text-sm font-semibold">{t(language, "council.intake.symptoms")}</span>
             <textarea
               value={draft.symptomsInput}
@@ -294,7 +294,7 @@ export default function CouncilNewIntakePage() {
               className="mt-2 min-h-[130px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm"
             />
           </label>
-          <label className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <span className="text-sm font-semibold">{t(language, "council.intake.labs")}</span>
             <textarea
               value={draft.labsInput}
@@ -302,7 +302,7 @@ export default function CouncilNewIntakePage() {
               className="mt-2 min-h-[130px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm"
             />
           </label>
-          <label className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <span className="text-sm font-semibold">{t(language, "council.intake.medicines")}</span>
             <textarea
               value={draft.medicationsInput}
@@ -310,7 +310,7 @@ export default function CouncilNewIntakePage() {
               className="mt-2 min-h-[130px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-sm"
             />
           </label>
-          <label className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+          <label className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
             <span className="text-sm font-semibold">{t(language, "council.intake.history")}</span>
             <textarea
               value={draft.historyInput}
@@ -330,7 +330,7 @@ export default function CouncilNewIntakePage() {
             type="button"
             onClick={() => void onSaveAndNext()}
             disabled={isSaving || !caseItem}
-            className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
+            className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
             {isSaving ? t(language, "council.action.saving") : t(language, "council.action.nextStep", { step: 2 })}
           </button>

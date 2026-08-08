@@ -77,7 +77,7 @@ export default function CouncilNewPage() {
       <div className="space-y-5">
         <CouncilWorkspaceNav />
 
-        <section className="rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        <section className="rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{t(language, "council.new.flow")}</p>
           <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{t(language, "council.new.heading")}</h2>
           <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
@@ -88,13 +88,13 @@ export default function CouncilNewPage() {
             type="button"
             onClick={() => void onCreateCase()}
             disabled={isCreating}
-            className="mt-5 inline-flex min-h-[46px] items-center rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
+            className="mt-5 inline-flex min-h-[46px] items-center rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-5 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:opacity-60"
           >
             {isCreating ? t(language, "council.new.creating") : t(language, "council.new.create")}
           </button>
         </section>
 
-        <section className="rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
+        <section className="rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "council.new.recent")}</h3>
             <Link href="/council" className="text-xs font-semibold text-[var(--text-brand)] hover:underline">

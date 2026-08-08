@@ -85,7 +85,7 @@ function EvidenceMatrixView({ matrix, language }: { matrix: EvidenceMatrix; lang
       {groups.map(([sourceClass, records]) => (
         <section
           key={sourceClass}
-          className="overflow-hidden rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
+          className="overflow-hidden rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-4">
             <div className="flex min-w-0 items-center gap-3">
