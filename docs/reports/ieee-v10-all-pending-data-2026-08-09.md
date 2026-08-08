@@ -178,8 +178,29 @@ gate không chạy lại hay tune policy.
 protocol and pre-derived de-identified/synthetic structural perturbations. The
 reference-policy result is a development conformance check, not clinical
 validation or an independently released benchmark score. A model-backed opaque
-label stress arm completed 360/360 requests without fallback, with 249/360
+label stress arm completed 360/360 requests without fallback, with 176/360
 state matches; it does not establish clinical model performance.”
+
+## Clean model-backed arm — Gemini 3.6 Flash High
+
+Artifact: `artifacts/glhs-q2/2026-08-09-q2-clean-03f67117-model-integrated-gemini36high/`.
+The frozen source revision was `03f671171078603bae51b88d98620f6d2dec074a`.
+
+| Measure | Result |
+|---|---:|
+| Frozen grid | 120 synthetic cases × 3 seeds = 360 runs |
+| Completion / errors | 360 / 360; 0 errors |
+| Valid JSON | 360 / 360 |
+| State correct | 176 / 360 (48.9%) |
+| p50 / p95 latency | 2,223.6505 / 4,473.77715 ms |
+| Fallback or degraded indication | 0 / 360 |
+
+All 360 responses reported `gemini-3.6-flash-high`; the contract fixes
+temperature at 0, records an empty fallback model and has rollback disabled.
+This is an opaque-label synthetic structural prompt-following experiment only.
+The low state-correct count is reported as a failure-to-meet target requiring
+prompt/decoder evaluation; it must not be presented as medical safety,
+clinical performance, or model superiority.
 
 <!-- FULL_SYNTHEA_MACHINE_RESULTS:START -->
 ## Full Synthea FHIR STU3 result (machine-rendered)
