@@ -369,11 +369,11 @@ function CompletenessMeter({
 }
 
 const phrPanelClass =
-  "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-[var(--shadow-sm)] sm:p-6";
+  "rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6";
 const phrColumnClass =
-  "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-[var(--shadow-sm)]";
+  "rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4";
 const phrItemClass =
-  "rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-sm)]";
+  "rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3";
 
 type PhrSection =
   | "identity"

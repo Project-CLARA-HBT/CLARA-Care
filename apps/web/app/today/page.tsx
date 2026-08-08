@@ -163,7 +163,7 @@ function ActiveToday({
   return (
     <div className="grid gap-6 lg:grid-cols-12">
       <div className="space-y-6 lg:col-span-8">
-        <section className="relative overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-[var(--shadow-soft)] sm:p-7">
+        <section className="relative overflow-hidden rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 sm:p-7">
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[var(--surface-brand-soft)] blur-3xl" />
           <div className="relative">
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -229,7 +229,7 @@ function CompletedToday({
   return (
     <div className="grid gap-6 lg:grid-cols-12">
       <div className="space-y-6 lg:col-span-8">
-        <section className="flex min-h-72 flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[color:var(--status-ok-border)] bg-[var(--surface-panel)] p-7 text-center shadow-[var(--shadow-soft)]">
+        <section className="flex min-h-72 flex-col items-center justify-center rounded-[14px] border border-t-[#2A3950] border-[color:var(--status-ok-border)] bg-[var(--surface-panel)] p-7 text-center">
           <span className="grid h-20 w-20 place-items-center rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"><Icon name="check" size={38} /></span>
           <h2 className="mt-5 text-2xl font-semibold text-[var(--text-primary)]">{t(language, "today.completedTitle")}</h2>
           <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">{t(language, "today.completedDescription")}</p>
