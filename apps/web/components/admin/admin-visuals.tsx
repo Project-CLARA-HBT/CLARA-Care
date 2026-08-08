@@ -5,9 +5,9 @@ type SparklineProps = {
   stroke?: string;
 };
 
-export function Sparkline({ points, stroke = "#2563eb" }: SparklineProps) {
+export function Sparkline({ points, stroke = "#a4c9ff" }: SparklineProps) {
   if (points.length === 0) {
-    return <div className="h-14 rounded-xl border border-dashed border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800" />;
+    return <div className="h-14 rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)]" />;
   }
 
   const width = 220;
@@ -27,23 +27,18 @@ export function Sparkline({ points, stroke = "#2563eb" }: SparklineProps) {
   const area = `${padding},${height - padding} ${line} ${width - padding},${height - padding}`;
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-14 w-full rounded-lg border border-slate-200/80 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-800">
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-14 w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)]">
       <defs>
-        <linearGradient id="sparkArea" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={stroke} stopOpacity="0.26" />
-          <stop offset="100%" stopColor={stroke} stopOpacity="0.02" />
-        </linearGradient>
       </defs>
       <line
         x1={padding}
         y1={height - padding}
         x2={width - padding}
         y2={height - padding}
-        className="text-slate-300 dark:text-slate-700"
-        stroke="currentColor"
+        stroke="#414751"
         strokeDasharray="2 3"
       />
-      <polygon points={area} fill="url(#sparkArea)" />
+      <polygon points={area} fill={stroke} fillOpacity="0.12" />
       <polyline points={line} fill="none" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -59,33 +54,30 @@ type BarBlocksProps = {
 export function BarBlocks({
   values,
   maxHeight = 62,
-  activeColor = "#3b82f6",
-  mutedColor = "#cbd5e1"
+  activeColor = "#60a5fa",
+  mutedColor = "#414751"
 }: BarBlocksProps) {
   if (values.length === 0) {
-    return <div className="h-16 rounded-xl border border-dashed border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800" />;
+    return <div className="h-16 rounded-xl border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)]" />;
   }
 
   const max = Math.max(...values, 1);
 
   return (
-    <div className="flex h-16 items-end gap-1.5 rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 px-2 py-1 dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
+    <div className="flex h-16 items-end gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1">
       {values.map((value, index) => {
         const ratio = Math.max(0.12, value / max);
         const isPeak = value === max;
         const style: CSSProperties = {
           height: `${Math.round(maxHeight * ratio)}px`,
-          background: isPeak
-            ? `linear-gradient(180deg, ${activeColor} 0%, #1d4ed8 100%)`
-            : `linear-gradient(180deg, ${mutedColor} 0%, #94a3b8 100%)`
+          background: isPeak ? activeColor : mutedColor
         };
         return (
           <div
             key={`${index}-${value}`}
             style={style}
             className={[
-              "w-3 rounded-t-md border border-slate-200/60 dark:border-slate-700/80",
-              isPeak ? "shadow-[0_2px_8px_rgba(59,130,246,0.35)]" : ""
+              "w-3 rounded-t-md border border-[color:var(--shell-border)]",
             ].join(" ")}
           />
         );

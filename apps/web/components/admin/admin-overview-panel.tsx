@@ -126,24 +126,24 @@ export default function AdminOverviewPanel() {
   return (
     <div className="space-y-4">
       {error ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--danger-border)] bg-[var(--surface-danger-soft)] px-3 py-2 text-sm text-[var(--text-danger)]">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => void reload()}
-            className="rounded-lg border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 dark:border-rose-800 dark:bg-slate-900 dark:text-rose-300"
+            className="rounded-lg border border-[color:var(--danger-border)] bg-[var(--surface-panel)] px-2 py-1 text-xs font-medium text-[var(--text-danger)]"
           >
             Retry
           </button>
         </div>
       ) : null}
       {inventoryError ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-3 py-2 text-sm text-[var(--text-warning)]">
           <span>{inventoryError}</span>
           <button
             type="button"
             onClick={() => setInventoryReloadTick((prev) => prev + 1)}
-            className="rounded-lg border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-200"
+            className="rounded-lg border border-[color:var(--status-warning-border)] bg-[var(--surface-panel)] px-2 py-1 text-xs font-medium text-[var(--text-warning)]"
           >
             Reload
           </button>
@@ -177,7 +177,7 @@ export default function AdminOverviewPanel() {
             </div>
           </div>
           <div className="mt-3 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
-            <div className="h-2 rounded-full bg-gradient-to-r from-sky-500 to-cyan-400" style={{ width: `${Math.round(sourceCoverage * 100)}%` }} />
+            <div className="h-2 rounded-full bg-[#60a5fa]" style={{ width: `${Math.round(sourceCoverage * 100)}%` }} />
           </div>
         </article>
 
@@ -209,7 +209,7 @@ export default function AdminOverviewPanel() {
             </div>
           </div>
           <div className="mt-3 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
-            <div className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-sky-500" style={{ width: `${Math.round(flowCoverage * 100)}%` }} />
+            <div className="h-2 rounded-full bg-[#60a5fa]" style={{ width: `${Math.round(flowCoverage * 100)}%` }} />
           </div>
         </article>
       </section>
@@ -232,7 +232,7 @@ export default function AdminOverviewPanel() {
           <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">
             {flowEnabledCount}/{flowTotal}
           </p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Router, verification, fallback</p>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Router, verification, fail-closed generation</p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
@@ -278,7 +278,7 @@ export default function AdminOverviewPanel() {
             {isLoading ? (
               <div className="h-14 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
             ) : (
-              <Sparkline points={prioritySeries} stroke="#2563eb" />
+              <Sparkline points={prioritySeries} stroke="#a4c9ff" />
             )}
           </div>
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Điểm cao hơn thể hiện ưu tiên cao hơn (priority gần 1).</p>

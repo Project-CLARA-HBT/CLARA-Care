@@ -263,7 +263,7 @@ export default function ResearchSourceHubPage() {
                 <button
                   type="submit"
                   disabled={isSyncing || !catalog.length}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--brand-600)] px-4 text-sm font-bold text-white transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:bg-blue-200 disabled:text-slate-700"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--brand-600)] px-4 text-sm font-bold text-[#cdd7ff] transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-secondary)]"
                 >
                   {isSyncing ? t(language, "research.sourceHub.sync.running") : t(language, "research.sourceHub.sync.submit")}
                 </button>

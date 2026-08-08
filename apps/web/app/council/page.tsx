@@ -1293,7 +1293,7 @@ export default function CouncilPage() {
                 <h3
                   className={`mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
                 >
-                  <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">
+                  <span className="material-symbols-outlined text-[var(--text-brand)]">
                     manage_history
                   </span>
                   {t(language, "council.history.title")}
@@ -1370,12 +1370,12 @@ export default function CouncilPage() {
                       setGuardAction("override");
                       setGuardReason("");
                     }}
-                    className={`${PANEL_CLASS} flex flex-col items-center gap-2 p-4 text-center transition hover:bg-[color:var(--surface-muted)] dark:hover:bg-slate-800`}
+                    className={`${PANEL_CLASS} flex flex-col items-center gap-2 p-4 text-center transition hover:bg-[color:var(--surface-muted)]`}
                   >
-                    <span className="material-symbols-outlined text-[color:var(--brand-600)] dark:text-sky-200">
+                    <span className="material-symbols-outlined text-[var(--text-brand)]">
                       touch_app
                     </span>
-                    <p className="text-xs font-bold text-[color:var(--text-brand)] dark:text-sky-100">
+                    <p className="text-xs font-bold text-[var(--text-brand)]">
                       {t(language, "council.overview.guard.overrideAction")}
                     </p>
                   </button>
@@ -1510,7 +1510,7 @@ export default function CouncilPage() {
                   </span>
                 </div>
                 {disclosure ? (
-                  <div className="mt-4 border-t border-[color:var(--shell-border)] pt-3 dark:border-sky-700/60">
+                  <div className="mt-4 border-t border-[color:var(--shell-border)] pt-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`text-[10px] font-bold uppercase tracking-[0.14em] ${MUTED_TEXT_CLASS}`}
@@ -1552,7 +1552,7 @@ export default function CouncilPage() {
 
         {handoffOpen ? (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e13]/70 px-4 py-6"
             role="dialog"
             aria-modal="true"
           >
@@ -1594,7 +1594,7 @@ export default function CouncilPage() {
                       ].join(" ")}
                     >
                       <p className="font-bold">{item.name}</p>
-                      <p className="mt-1 text-xs font-medium leading-relaxed text-[color:var(--text-muted)] dark:text-slate-300">
+                      <p className="mt-1 text-xs font-medium leading-relaxed text-[color:var(--text-muted)]">
                         {item.reason}
                       </p>
                     </button>
@@ -1624,7 +1624,7 @@ export default function CouncilPage() {
 
         {guardAction ? (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e13]/70 px-4 py-6"
             role="dialog"
             aria-modal="true"
           >
