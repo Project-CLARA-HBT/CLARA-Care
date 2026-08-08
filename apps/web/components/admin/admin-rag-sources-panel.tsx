@@ -35,12 +35,12 @@ export default function AdminRagSourcesPanel() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">RAG Configuration Block</p>
-            <h3 className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Data Source Control</h3>
-            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">RAG Configuration Block</p>
+            <h3 className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Data Source Control</h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
               Quản lý `enabled`, `priority`, `weight`, `category` cho từng nguồn tri thức.
             </p>
           </div>
@@ -48,7 +48,7 @@ export default function AdminRagSourcesPanel() {
             <button
               type="button"
               onClick={() => void reload()}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500"
+              className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition hover:border-[color:var(--brand-primary)]"
             >
               Reload
             </button>
@@ -56,7 +56,7 @@ export default function AdminRagSourcesPanel() {
               type="button"
               disabled={!isDirty || isSaving || isLoading || !config}
               onClick={() => void save()}
-              className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
+              className="rounded-lg bg-[var(--brand-600)] px-3 py-1.5 text-xs font-medium text-[#cdd7ff] transition hover:bg-[var(--brand-700)] disabled:opacity-50"
             >
               {isSaving ? "Saving..." : "Save Sources"}
             </button>
@@ -64,43 +64,43 @@ export default function AdminRagSourcesPanel() {
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Sources</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{totalSources}</p>
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Sources</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{totalSources}</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Enabled Ratio</p>
-            <p className="mt-1 text-lg font-semibold text-emerald-600">
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Enabled Ratio</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-brand)]">
               {enabledSources}/{totalSources}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Priority Band</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Priority Band</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
               {totalSources === 0 ? "n/a" : `${minPriority}-${maxPriority}`}
             </p>
           </div>
         </div>
 
         {error ? (
-          <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+          <p className="mt-3 rounded-lg border border-[color:var(--danger-border)] bg-[var(--surface-danger-soft)] px-3 py-2 text-sm text-[var(--text-danger)]">
             {error}
           </p>
         ) : null}
         {message ? (
-          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <p className="mt-3 rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2 text-sm text-[var(--text-brand)]">
             {message}
           </p>
         ) : null}
 
         <div className="mt-4">
           {isLoading ? (
-            <div className="h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+            <div className="h-24 animate-pulse rounded-xl bg-[var(--surface-muted)]" />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="overflow-x-auto rounded-xl border border-[color:var(--shell-border)]">
               <table className="min-w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                  <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs uppercase tracking-wider text-[var(--text-muted)]">
                     <th className="px-3 py-2">Source</th>
                     <th className="px-3 py-2">Category</th>
                     <th className="px-3 py-2">Priority</th>
@@ -110,16 +110,16 @@ export default function AdminRagSourcesPanel() {
                 </thead>
                 <tbody>
                   {(config?.rag_sources ?? []).map((source) => (
-                    <tr key={source.id} className="border-b border-slate-100 bg-white last:border-0 hover:bg-slate-50/60 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:bg-slate-800/70">
+                    <tr key={source.id} className="border-b border-[color:var(--shell-border)] bg-[var(--surface-panel)] last:border-0 hover:bg-[var(--surface-muted)]">
                       <td className="px-3 py-2">
-                        <p className="font-medium text-slate-800 dark:text-slate-100">{source.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{source.id}</p>
+                        <p className="font-medium text-[var(--text-primary)]">{source.name}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{source.id}</p>
                       </td>
                       <td className="px-3 py-2">
                         <select
                           value={source.category}
                           onChange={(event) => setSourceCategory(source.id, event.target.value)}
-                          className="w-40 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                          className="w-40 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-sm text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-primary)]"
                         >
                           {categoryOptions.map((category) => (
                             <option key={category} value={category}>
@@ -135,7 +135,7 @@ export default function AdminRagSourcesPanel() {
                           max={100}
                           value={source.priority}
                           onChange={(event) => setSourcePriority(source.id, Number(event.target.value))}
-                          className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                          className="w-24 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-sm text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-primary)]"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -147,7 +147,7 @@ export default function AdminRagSourcesPanel() {
                             step={0.05}
                             value={source.weight}
                             onChange={(event) => setSourceWeight(source.id, Number(event.target.value))}
-                            className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                            className="w-20 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-sm text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-primary)]"
                           />
                           <input
                             type="range"
@@ -156,7 +156,7 @@ export default function AdminRagSourcesPanel() {
                             step={0.05}
                             value={source.weight}
                             onChange={(event) => setSourceWeight(source.id, Number(event.target.value))}
-                            className="w-24 accent-sky-600"
+                            className="w-24 accent-[#60a5fa]"
                             aria-label={`Weight for ${source.name}`}
                           />
                         </div>
@@ -168,8 +168,8 @@ export default function AdminRagSourcesPanel() {
                           className={[
                             "rounded-full px-3 py-1 text-xs font-semibold transition",
                             source.enabled
-                              ? "border border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                              : "border border-slate-300 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                              ? "border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                              : "border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:bg-[var(--surface-high)]"
                           ].join(" ")}
                         >
                           {source.enabled ? "Enabled" : "Disabled"}
@@ -184,15 +184,15 @@ export default function AdminRagSourcesPanel() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Priority Distribution</h3>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Lower number = higher priority</span>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Priority Distribution</h3>
+          <span className="text-xs text-[var(--text-muted)]">Lower number = higher priority</span>
         </div>
         <div className="mt-3">
-          {isLoading ? <div className="h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" /> : <BarBlocks values={priorityVisualData} />}
+          {isLoading ? <div className="h-16 animate-pulse rounded-lg bg-[var(--surface-muted)]" /> : <BarBlocks values={priorityVisualData} />}
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Bar cao hơn tương ứng nguồn có priority cao hơn trong pipeline retrieval.</p>
+        <p className="mt-2 text-xs text-[var(--text-muted)]">Bar cao hơn tương ứng nguồn có priority cao hơn trong pipeline retrieval.</p>
       </section>
     </div>
   );
