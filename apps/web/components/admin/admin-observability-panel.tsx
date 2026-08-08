@@ -598,7 +598,7 @@ export default function AdminObservabilityPanel() {
       </section>
 
       {state.error && state.loaded ? (
-        <p className="rounded-lg border border-amber-700/50 bg-amber-950/25 px-3 py-2 text-xs text-amber-200">
+        <p className="rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-xs text-[var(--status-warn-text)]">
           {state.error}
         </p>
       ) : null}
@@ -612,7 +612,7 @@ export default function AdminObservabilityPanel() {
       >
         {() => (
           <div className="grid grid-cols-12 gap-6">
-        <section className="col-span-12 lg:col-span-8 grid grid-cols-2 gap-4 xl:grid-cols-3">
+        <section className="col-span-12 lg:col-span-8 grid grid-cols-2 gap-4 xl:grid-cols-3 [&>article]:rounded-[14px] [&>article]:border [&>article]:border-t-[#2A3950] [&>article]:border-[color:var(--shell-border)] [&>article]:bg-[var(--surface-panel)]">
           <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Sức khỏe API</p>
             <p className="mt-2 text-2xl font-black text-cyan-300">{state.apiStatus || "UNKNOWN"}</p>
@@ -656,7 +656,7 @@ export default function AdminObservabilityPanel() {
           </article>
         </section>
 
-        <section className="col-span-12 lg:col-span-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <section className="col-span-12 lg:col-span-4 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <RadarPulseChart
             title="Radar điều khiển"
             description="Vận hành, kiểm chứng, độ phủ, flow, API"
@@ -681,7 +681,7 @@ export default function AdminObservabilityPanel() {
           </div>
         </section>
 
-        <section className="col-span-12 lg:col-span-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <section className="col-span-12 lg:col-span-6 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <NeonAreaChart
             title="Áp lực lưu lượng"
             description="Request và lỗi theo thời gian"
@@ -691,7 +691,7 @@ export default function AdminObservabilityPanel() {
           />
         </section>
 
-        <section className="col-span-12 lg:col-span-6 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+        <section className="col-span-12 lg:col-span-6 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
           <div className="grid grid-cols-2 gap-3">
             <SegmentRingGauge label="Độ trễ" value={clamp(100 - latencyMs / 5)} tone="cyan" />
             <SegmentRingGauge label="Độ phủ" value={Math.round(sourceCoverage)} tone="violet" />
@@ -710,7 +710,7 @@ export default function AdminObservabilityPanel() {
           </div>
         </section>
 
-        <section className="col-span-12 lg:col-span-7 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+        <section className="col-span-12 lg:col-span-7 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-100">Luồng Xử Lý (Processing Pipeline)</h3>
             <div className="flex gap-2">
@@ -739,7 +739,7 @@ export default function AdminObservabilityPanel() {
           </div>
         </section>
 
-        <section className="col-span-12 lg:col-span-5 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+        <section className="col-span-12 lg:col-span-5 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <MatrixHeatmapMini
             title="Ma Trận Áp Lực Rủi Ro"
             description="Lỗi, độ trễ, độ phủ, flow"
@@ -796,7 +796,7 @@ export default function AdminObservabilityPanel() {
           </div>
         </section>
 
-        <section className="col-span-12 rounded-xl border border-slate-800 bg-slate-900/70 p-5">
+        <section className="col-span-12 rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-bold text-slate-100">Độ trễ theo tuyến (p50 / p90 / p99)</h3>
