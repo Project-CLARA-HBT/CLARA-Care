@@ -1,8 +1,8 @@
 # IEEE v10 — số liệu đã chạy và các mục còn thiếu
 
-Ngày chạy: 2026-08-09. Revision evaluator: `f612962d90c818fd1a4bbb78f711016d9e60c284`.
+Ngày chạy: 2026-08-09. Revision evaluator: `c406c813d6f53caa10f87e3189da1c622a2cd223`.
 Worktree tại thời điểm chạy là **dirty** (`git_status_sha256`
-`ceb15e4c5bc3bc3cebe9bba6bd005647ca9eccd67dc93ff8abca9f7847c86445`),
+`04f1fac15e30ca03cca5bfdd108e3a5720bf3db443756191feeb99746074d2d3`),
 vì vậy đây là evidence có provenance rõ ràng nhưng chưa phải submission build
 clean. Tất cả kết quả là **structural conformance**; không phải clinical
 validation, clinical safety, diagnostic accuracy, hay hiệu quả trên bệnh nhân.
@@ -11,11 +11,11 @@ validation, clinical safety, diagnostic accuracy, hay hiệu quả trên bệnh 
 
 | Cohort/run | Artifact cuối | CSV/JSON gốc |
 |---|---|---|
-| Q2 synthetic | `artifacts/glhs-q2/2026-08-09-q2-frozen-f612962d-synthetic/` | `cases.csv`, `outcomes.csv`, `per_run.csv`, `baseline_comparison.csv`, `summary.json` |
-| MIMIC-IV Demo-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-f612962d-mimic-iv-demo/` | `external_cases.csv`, `external_outcomes.csv`, `external_baseline_comparison.csv`, `summary.json` |
-| MIMIC-IV-ED Demo-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-f612962d-mimic-iv-ed-demo/` | cùng cấu trúc artifact |
-| Synthea FHIR STU3-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-f612962d-synthea-stu3/` | cùng cấu trúc artifact |
-| Model arm | `artifacts/glhs-q2/2026-08-09-q2-model-arm-f612962d/` | `model_per_run.csv`, `model_arm_contract.json`, `integrated/model_arm_by_experiment.csv`, `integrated/model_arm_summary.json` |
+| Q2 synthetic | `artifacts/glhs-q2/2026-08-09-q2-frozen-c406c813-synthetic/` | `cases.csv`, `outcomes.csv`, `per_run.csv`, `baseline_comparison.csv`, `cost_of_success.csv`, `summary.json` |
+| MIMIC-IV Demo-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c406c813-mimic-iv-demo/` | `external_cases.csv`, `external_outcomes.csv`, `external_baseline_comparison.csv`, `summary.json` |
+| MIMIC-IV-ED Demo-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c406c813-mimic-iv-ed-demo/` | cùng cấu trúc artifact |
+| Synthea FHIR STU3-derived | `artifacts/glhs-q2/2026-08-09-q2-frozen-c406c813-synthea-stu3/` | cùng cấu trúc artifact |
+| Model arm | `artifacts/glhs-q2/2026-08-09-q2-model-arm-6c8a22d8/` | `model_per_run.csv`, `model_arm_contract.json`, `integrated/model_arm_by_experiment.csv`, `integrated/model_arm_summary.json` |
 
 Mỗi artifact Q2 có `evidence-manifest.json`, policy/oracle/relevance/holdout
 manifest, environment và figures SVG. Chạy lại bằng `make eval-glhs-q2`; model
@@ -57,6 +57,20 @@ development conformance chứ không phải một superiority claim độc lập
 | Full vs no-THSS | 0.0000 [0.0000, 0.0000] | 0; 1.0 |
 | Full vs TPR | +0.1650 [0.1325, 0.1975] | 66; 5.421e-20 |
 
+## Cost of success (synthetic development, n=400)
+
+`cost_of_success.csv` được xuất trực tiếp từ cùng outcomes. P95 là
+pure-Python state-layer simulation, context là proxy của profile THSS đóng
+băng; review burden là số safe escalation, **không phải** số giờ review.
+
+| Comparison | Failure reduction | P95 delta (µs) | Context-proxy delta | Safe-escalation delta |
+|---|---:|---:|---:|---:|
+| Full vs no-GST | 267/400 | -0.06985 | 0 | +133 (199 vs 66) |
+| Full vs no-THSS | 0/400 | -0.21600 | -60 (60 vs 120) | 0 (199 vs 199) |
+| Full vs TPR | 66/400 | -0.07115 | NR | 0 (199 vs 199) |
+
+Không diễn giải các delta này thành production latency hoặc human-review cost.
+
 ## Cohort derived: báo cáo tách riêng, không gộp headline
 
 Các manifest external chỉ đưa perturbation structural đã tiền xử lý, tokenized;
@@ -84,7 +98,7 @@ contract ghi `fallback_model=""` và `rollback_applied=false`.
 | State correct | 249/360 (69.17%) |
 | Direct / compositional / ambiguity | 60/90; 149/216; 40/54 |
 | Seed 20260808 / 20260809 / 20260810 | 83/120; 81/120; 85/120 |
-| Latency P50 / P95 | 203.90 / 404.04 ms |
+| Latency P50 / P95 | 199.38 / 332.21 ms |
 | Degraded/fallback indication | 0/360 |
 
 Không có token usage/cost trong provider response contract, vì vậy không được
@@ -95,7 +109,7 @@ phải End_User E2E latency.
 
 `baseline-comparison.svg`, `thss-privacy-utility.svg`, `error-breakdown.svg`,
 `latency.svg`, `scalability.svg`, cùng các CSV `thss_ablation.csv`,
-`error_analysis.csv`, `operational_metrics.csv`, `scalability.csv` đã được tạo
+`error_analysis.csv`, `operational_metrics.csv`, `cost_of_success.csv`, `scalability.csv` đã được tạo
 trong từng artifact. State-layer latency (microseconds) chỉ là simulation,
 không được ghi thành database/production latency.
 
