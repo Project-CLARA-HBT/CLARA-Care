@@ -198,7 +198,7 @@ const NODES: FlowNodeDef[] = [
     id: "planner",
     title: "Research Planner",
     subtitle: "budget + source policy + pass plan",
-    description: "Lập kế hoạch pass, fan-out nguồn, top-k, fallback policy và ngưỡng low-context cho phiên.",
+    description: "Lập kế hoạch pass, fan-out nguồn, top-k, policy fail-closed và ngưỡng low-context cho phiên.",
     riskNote: "Planner không kiểm soát budget sẽ gây timeout hoặc chi phí cao nhưng hiệu quả thấp.",
     x: 920,
     y: 520,
@@ -385,7 +385,7 @@ const NODES: FlowNodeDef[] = [
     description:
       "Dedupe + evidence search + hybrid ranking, sau đó đi qua evidence reranker và GraphRAG sidecar (khi bật) để chọn evidence chất lượng cao.",
     riskNote:
-      "Nếu reranker không có timeout-safe fallback thì một connector chậm có thể làm gãy toàn bộ flow.",
+      "Nếu reranker không có timeout rõ ràng thì một connector chậm có thể làm gãy toàn bộ flow.",
     x: 1640,
     y: 700,
     tone: "teal",
@@ -409,7 +409,7 @@ const NODES: FlowNodeDef[] = [
     description:
       "Gọi `llm_generation` (kèm retry khi cần), sau đó chuẩn hóa về `answer_synthesis` để render thống nhất trên UI.",
     riskNote:
-      "Nếu generation và synthesis không tách rõ, lỗi fallback/timeout sẽ khó truy vết trong flow events.",
+      "Nếu generation và synthesis không tách rõ, lỗi timeout sẽ khó truy vết trong flow events.",
     x: 2000,
     y: 760,
     tone: "amber",
@@ -477,8 +477,8 @@ const NODES: FlowNodeDef[] = [
   {
     id: "policy_gate",
     title: "Policy Gate",
-    subtitle: "allow, warn, block, fallback",
-    description: "Áp runtime policy để quyết định cho qua, cảnh báo, chặn hay degrade an toàn.",
+    subtitle: "allow, warn, block",
+    description: "Áp runtime policy để quyết định cho qua, cảnh báo hoặc chặn phát hành an toàn.",
     riskNote: "Policy gate phải phản ánh đúng trạng thái strict-mode, không được mềm hóa ngầm.",
     x: 2360,
     y: 760,
@@ -499,7 +499,7 @@ const NODES: FlowNodeDef[] = [
     title: "Flow Event Stream",
     subtitle: "research events + source-errors metadata",
     description:
-      "Ghi flow events runtime thật vào stream store: stage/status, source_errors, fallback_reason, degraded_path, retrieval_route, router_confidence, verification_matrix.",
+      "Ghi flow events runtime thật vào stream store: stage/status, source_errors, degraded_path, retrieval_route, router_confidence, verification_matrix.",
     riskNote:
       "Thiếu event stream thì hard-negative mining từ production sẽ mù dữ liệu và không phản ánh runtime thực tế.",
     x: 3000,
@@ -1019,14 +1019,12 @@ export default function AdminFlowVisualizer({
       isDarkMode
         ? {
             live: "#60a5fa",
-            muted: "#64748b",
-            fallback: "#fb923c",
+            muted: "#414751",
             label: "#a5b4fc",
           }
         : {
             live: "#2563eb",
-            muted: "#94a3b8",
-            fallback: "#f97316",
+            muted: "#414751",
             label: "#334155",
           },
     [isDarkMode],
@@ -1174,9 +1172,6 @@ export default function AdminFlowVisualizer({
               </marker>
               <marker id="flow-arrow-muted" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
                 <path d="M0,0 L10,5 L0,10 z" fill={edgePalette.muted} />
-              </marker>
-              <marker id="flow-arrow-fallback" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-                <path d="M0,0 L10,5 L0,10 z" fill={edgePalette.fallback} />
               </marker>
               <filter id="flow-glow" x="-30%" y="-30%" width="160%" height="160%">
                 <feGaussianBlur stdDeviation="6" result="blur" />
