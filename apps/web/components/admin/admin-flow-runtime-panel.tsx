@@ -148,16 +148,16 @@ export default function AdminFlowRuntimePanel() {
   }, [items]);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+    <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             Runtime Monitor
           </p>
-          <h3 className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h3 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
             Realtime Flow Events
           </h3>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
             Theo dõi sequence/stage/status/note từ API `/system/flow-events` để kiểm soát pipeline đang chạy.
           </p>
         </div>
@@ -166,7 +166,7 @@ export default function AdminFlowRuntimePanel() {
           <select
             value={sourceFilter}
             onChange={(event) => setSourceFilter(event.target.value as SourceFilter)}
-            className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+            className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--text-primary)]"
           >
             <option value="chat">source: chat</option>
             <option value="all">source: all</option>
@@ -178,8 +178,8 @@ export default function AdminFlowRuntimePanel() {
             className={cx(
               "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
               isAutoRefresh
-                ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                : "border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                ? "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]"
             )}
           >
             {isAutoRefresh ? "Auto refresh: ON" : "Auto refresh: OFF"}
@@ -188,7 +188,7 @@ export default function AdminFlowRuntimePanel() {
           <button
             type="button"
             onClick={() => void loadInitial()}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+            className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition hover:border-[color:var(--brand-primary)]"
           >
             Reload
           </button>
@@ -196,30 +196,30 @@ export default function AdminFlowRuntimePanel() {
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-5">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">latest sequence</p>
           <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{latestSequence}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/40">
+        <div className="rounded-xl border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-emerald-700 dark:text-emerald-300">ok</p>
           <p className="mt-1 text-sm font-semibold text-emerald-700 dark:text-emerald-300">{statusSummary.ok}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/40">
+        <div className="rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">warn</p>
           <p className="mt-1 text-sm font-semibold text-amber-700 dark:text-amber-300">{statusSummary.warn}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-rose-50 px-3 py-2 dark:border-rose-900 dark:bg-rose-950/40">
+        <div className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-rose-700 dark:text-rose-300">error</p>
           <p className="mt-1 text-sm font-semibold text-rose-700 dark:text-rose-300">{statusSummary.error}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">pending</p>
           <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{statusSummary.pending}</p>
         </div>
       </div>
 
       {error ? (
-        <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+        <p className="mt-3 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-xs text-[var(--status-danger-text)]">
           {error}
         </p>
       ) : null}
