@@ -47,6 +47,10 @@ def integrate(source: Path, output: Path) -> dict[str, object]:
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
     if contract.get("version") != PROMPT_VERSION or tuple(contract.get("seeds", ())) != SEEDS:
         raise ValueError("unexpected_frozen_model_arm_contract")
+    if not isinstance(contract.get("code_revision"), str) or len(contract["code_revision"]) < 7:
+        raise ValueError("model_arm_code_revision_missing")
+    if not isinstance(contract.get("runner_sha256"), str) or len(contract["runner_sha256"]) != 64:
+        raise ValueError("model_arm_runner_sha256_missing")
     if contract.get("no_fallback") is not True or contract.get("synthetic_only") is not True:
         raise ValueError("model_arm_safety_contract_invalid")
     if contract.get("transport") == "direct":

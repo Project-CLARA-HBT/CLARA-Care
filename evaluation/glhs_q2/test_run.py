@@ -113,6 +113,8 @@ def test_model_arm_integrator_requires_full_frozen_grid(tmp_path) -> None:
         json.dumps(
             {
                 "version": PROMPT_VERSION,
+                "code_revision": "abcdef1",
+                "runner_sha256": "b" * 64,
                 "seeds": list(SEEDS),
                 "case_count": 1,
                 "no_fallback": True,

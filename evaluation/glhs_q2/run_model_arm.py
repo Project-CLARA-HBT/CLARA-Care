@@ -122,12 +122,15 @@ def _request_direct(row: dict[str, str], seed: int) -> tuple[dict, float]:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--cases", type=Path, required=True); p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--code-revision", required=True, help="Frozen git commit that owns this runner and protocol.")
     p.add_argument("--transport", choices=("direct", "http"), default="direct")
     p.add_argument("--url", default="http://127.0.0.1:8010/v1/chat/routed"); p.add_argument("--timeout", type=float, default=90.0)
     args = p.parse_args(); key = os.environ.get("ML_INTERNAL_API_KEY", "")
     rows = _selected(list(csv.DictReader(args.cases.open(encoding="utf-8"))))
     args.output.mkdir(parents=True, exist_ok=True)
-    contract = {"version": PROMPT_VERSION, "seeds": list(SEEDS), "case_count": len(rows), "case_ids_sha256": hashlib.sha256("\n".join(r["case_id"] for r in rows).encode()).hexdigest(), "transport": args.transport, "endpoint": args.url if args.transport == "http" else "governed_direct_task_client", "no_fallback": True, "synthetic_only": True}
+    if len(args.code_revision) < 7:
+        raise ValueError("model_arm_code_revision_invalid")
+    contract = {"version": PROMPT_VERSION, "code_revision": args.code_revision, "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "seeds": list(SEEDS), "case_count": len(rows), "case_ids_sha256": hashlib.sha256("\n".join(r["case_id"] for r in rows).encode()).hexdigest(), "transport": args.transport, "endpoint": args.url if args.transport == "http" else "governed_direct_task_client", "no_fallback": True, "synthetic_only": True}
     if args.transport == "direct":
         contract["runtime_selection"] = _direct_selection_contract()
     (args.output / "model_arm_contract.json").write_text(json.dumps(contract, indent=2) + "\n")

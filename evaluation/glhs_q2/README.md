@@ -35,7 +35,8 @@ provider/config snapshot:
 
 ```bash
 /app/.venv/bin/python /tmp/run_model_arm.py \
-  --cases /path/to/q2/cases.csv --output /path/to/model-arm --transport direct
+  --cases /path/to/q2/cases.csv --output /path/to/model-arm \
+  --code-revision "$(git rev-parse HEAD)" --transport direct
 make eval-glhs-q2-model-integrate \
   MODEL_ARM_SOURCE=/path/to/model-arm MODEL_ARM_OUTPUT=/path/to/summary
 ```
