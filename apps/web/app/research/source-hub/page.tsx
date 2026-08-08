@@ -190,7 +190,7 @@ export default function ResearchSourceHubPage() {
       description={t(language, "research.sourceHub.description")}
     >
       <div className="mx-auto max-w-[1120px] space-y-6 text-[var(--text-primary)]">
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm sm:p-6">
+        <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-brand)]">{t(language, "research.sourceHub.eyebrow")}</p>
@@ -208,7 +208,7 @@ export default function ResearchSourceHubPage() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
+          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.sync.eyebrow")}</p>
@@ -275,7 +275,7 @@ export default function ResearchSourceHubPage() {
             ) : null}
           </article>
 
-          <article className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
+          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.distribution.eyebrow")}</p>
             <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">{t(language, "research.sourceHub.distribution.title")}</h2>
             <div className="mt-4 space-y-3">
@@ -303,7 +303,7 @@ export default function ResearchSourceHubPage() {
           </article>
         </section>
 
-        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm">
+        <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.records.eyebrow")}</p>
@@ -331,7 +331,7 @@ export default function ResearchSourceHubPage() {
             </p>
           ) : null}
           {message ? (
-            <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+            <p className="mb-3 rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2 text-sm font-semibold text-[var(--text-brand)]">
               {message}
             </p>
           ) : null}
@@ -342,7 +342,7 @@ export default function ResearchSourceHubPage() {
               className="mb-3"
               summaryText={t(language, "research.sourceHub.warning.summary")}
             >
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <div className="rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-sm text-[var(--status-warn-text)]">
                 <p className="text-xs font-bold uppercase tracking-[0.12em]">{t(language, "research.sourceHub.warning.admin")}</p>
                 <ul className="mt-1 list-disc space-y-1 pl-5 font-mono text-xs">
                   {syncWarnings.map((warning, index) => (
