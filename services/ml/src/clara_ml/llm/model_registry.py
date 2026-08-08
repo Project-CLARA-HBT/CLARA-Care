@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import lru_cache
@@ -143,9 +144,33 @@ class AsrProviderSelection:
     contract_schema_version: str
 
 
-TASK_CONTRACTS_PATH = (
-    Path(__file__).resolve().parents[3] / "config" / "task_contracts" / "contracts.json"
-)
+_TASK_CONTRACTS_RELATIVE = Path("config") / "task_contracts" / "contracts.json"
+
+
+def _task_contracts_path() -> Path:
+    """Resolve the checked-in contract in source and installed-container layouts.
+
+    The former path assumed ``clara_ml`` always lived beneath ``services/ml/src``.
+    That is true in a checkout but false after installation into site-packages,
+    where the deploy image deliberately stores the manifest at ``/app/config``.
+    We only accept an explicit readable local file and otherwise fail closed;
+    there is no in-code default contract or routing fallback.
+    """
+
+    configured = os.getenv("CLARA_ML_TASK_CONTRACTS_PATH", "").strip()
+    candidates = ([Path(configured)] if configured else []) + [
+        Path(__file__).resolve().parents[3] / _TASK_CONTRACTS_RELATIVE,
+        Path.cwd() / _TASK_CONTRACTS_RELATIVE,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate.resolve()
+    # Keep an informative deterministic path in the raised load error without
+    # silently accepting an unversioned fallback manifest.
+    return candidates[0]
+
+
+TASK_CONTRACTS_PATH = _task_contracts_path()
 _RISK_LEVELS = frozenset({"low", "medium", "high", "critical"})
 _MODEL_TIERS = frozenset(
     {"deterministic", "encoder_slm", "generative_slm", "medium_llm", "large_llm"}
