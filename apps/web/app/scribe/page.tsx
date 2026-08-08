@@ -1181,7 +1181,7 @@ export default function ScribePage() {
                     ) : (
                       liveInsights.map((item) => (
                         <article key={item.id} className={`${softPanelClass} p-3`}>
-                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</p>
+                          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-brand)]">{item.title}</p>
                           <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>{item.detail}</p>
                         </article>
                       ))
@@ -1215,7 +1215,7 @@ export default function ScribePage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6 shadow-sm dark:border-sky-700/70 dark:bg-slate-800/90">
+                <div className="rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-6">
                   <div className="mb-5 flex items-center justify-between">
                     <div>
                       <h2 className={`text-2xl font-black tracking-tight ${bodyTextClass}`}>{copy("scribe.review.summaryTitle")}</h2>
@@ -1223,7 +1223,7 @@ export default function ScribePage() {
                         {copy("scribe.review.sessionCode", { code: selectedSession ? `#${selectedSession.id}` : "--" })}
                       </p>
                     </div>
-                    <span className="rounded-full border border-[color:var(--shell-border)] bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--brand-700)] dark:border-sky-600 dark:bg-slate-900 dark:text-sky-100">
+                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-brand)]">
                       {scribeStatusLabel(selectedSession?.status, copy)}
                     </span>
                   </div>
@@ -1231,8 +1231,8 @@ export default function ScribePage() {
                   <div className="space-y-5">
                     {soapSectionLabels.map((item) => (
                       <section key={item.key}>
-                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--brand-600)] dark:text-sky-100">{item.title}</h5>
-                        <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-white p-4 dark:border-sky-800 dark:bg-slate-900/90">
+                        <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-brand)]">{item.title}</h5>
+                        <div className="mt-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
                           <p className={`whitespace-pre-wrap text-sm leading-6 ${secondaryTextClass}`}>
                             {stripTelemetryLabels(safeText(selectedSoap[item.valueKey])) || copy("scribe.noData")}
                           </p>
@@ -1254,7 +1254,7 @@ export default function ScribePage() {
                 <div className={panelPaddedClass}>
                   <h3 className={accentTitleClass}>{copy("scribe.review.council")}</h3>
                   <div className={`mt-3 ${softPanelClass} p-3`}>
-                    <p className="text-[10px] font-black uppercase text-[color:var(--brand-600)] dark:text-sky-100">{copy("scribe.review.keySummary")}</p>
+                    <p className="text-[10px] font-black uppercase text-[var(--text-brand)]">{copy("scribe.review.keySummary")}</p>
                     <p className={`mt-2 text-xs leading-5 ${secondaryTextClass}`}>
                       {liveInsights[0]?.detail || copy("scribe.review.noSummary")}
                     </p>
@@ -1274,7 +1274,7 @@ export default function ScribePage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`text-[8px] font-bold uppercase tracking-[0.15em] ${mutedTextClass}`}>{copy("scribe.processingSpeed")}</p>
-                      <div className="text-sm font-black text-[color:var(--brand-700)] dark:text-sky-100">
+                      <div className="text-sm font-black text-[var(--text-brand)]">
                         {/* Raw per-segment pipeline latency is internal telemetry — admin only (Req 4.3). */}
                         <TelemetryPanel role={role} summaryText="--" className="inline">
                           <span>
@@ -1285,7 +1285,7 @@ export default function ScribePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+                      <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[var(--brand-primary)] animate-pulse" : "bg-[var(--surface-high)]"}`} />
                       <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">{isRecording ? copy("scribe.status.recording") : copy("scribe.status.waiting")}</span>
                     </div>
                   </div>
@@ -1333,7 +1333,7 @@ export default function ScribePage() {
           </div>
           <div className={`${softPanelClass} p-3`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.completedSessions")}</p>
-            <p className="mt-2 text-xl font-black text-[color:var(--brand-700)] dark:text-sky-100">{analytics?.completed_sessions ?? 0}</p>
+            <p className="mt-2 text-xl font-black text-[var(--text-brand)]">{analytics?.completed_sessions ?? 0}</p>
           </div>
           <div className={`${softPanelClass} p-3`}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${mutedTextClass}`}>{copy("scribe.metrics.today")}</p>
@@ -1364,13 +1364,13 @@ export default function ScribePage() {
       ) : null}
       {showRecordingDataDeleteConfirmation && canDeleteSelectedRecordingData ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e13]/70 p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="scribe-recording-data-confirm-title"
           aria-describedby="scribe-recording-data-confirm-description"
         >
-          <div className="w-full max-w-lg rounded-xl border border-rose-300 bg-white p-6 shadow-xl dark:border-rose-500/70 dark:bg-slate-900">
+          <div className="w-full max-w-lg rounded-[14px] border border-t-[#2A3950] border-[color:var(--danger-border)] bg-[var(--surface-panel)] p-6">
             <h2 id="scribe-recording-data-confirm-title" className={`text-lg font-bold ${bodyTextClass}`}>
               {copy("scribe.recordingData.confirmTitle")}
             </h2>
