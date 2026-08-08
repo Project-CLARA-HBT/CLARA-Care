@@ -13,15 +13,14 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_get, proxy_ml_post
 from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
-from clara_api.db.models import MedicationCourse
 from clara_api.db.session import get_db
+from clara_api.glhs.gateway import compile_thss
 from clara_api.lifemap.profile_scope import resolve_profile_scope
 
 router = APIRouter()
@@ -121,22 +120,44 @@ def check_confirmed_courses_against_drugbank(
             detail={"code": "mixed_real_and_hypothetical_inputs"},
         )
 
-    query = select(MedicationCourse).where(
-        MedicationCourse.profile_id == scope.profile.id,
-        MedicationCourse.status == "active",
-        MedicationCourse.truth_state == "confirmed",
+    # Trusted medication state is selected from GLHS, not from the mutable
+    # course projection.  Only the ``medications`` class can appear here; the
+    # gateway deliberately excludes unresolved labels, OCR guesses, and free
+    # text without a deterministic DrugBank identity.
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="drugbank_ddi",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        selection_policy="strict",
     )
+    courses = []
+    for assertion in snapshot.assertions:
+        value = assertion.get("value")
+        if not isinstance(value, dict):
+            continue
+        course_id = str(value.get("course_id") or "").strip()
+        medication_name = str(value.get("medication_name") or "").strip()
+        drugbank_id = str(value.get("drugbank_id") or "").strip()
+        if not course_id or not medication_name or not drugbank_id:
+            # This must be unreachable for the adapter's ``medications``
+            # assertion type.  Ignore malformed historical rows rather than
+            # treating them as an authoritative identity.
+            continue
+        courses.append(
+            {
+                "id": course_id,
+                "medication_name": medication_name,
+                "drugbank_id": drugbank_id,
+            }
+        )
     if payload.course_ids is not None:
         requested = list(dict.fromkeys(str(item) for item in payload.course_ids))
         if not requested:
             raise HTTPException(status_code=422, detail="Select at least two confirmed medications")
-        selectors = []
-        for item in requested:
-            selectors.append(MedicationCourse.public_id == item)
-            if item.isdecimal():
-                selectors.append(MedicationCourse.id == int(item))
-        query = query.where(or_(*selectors))
-    courses = list(db.execute(query.order_by(MedicationCourse.id)).scalars())
+        selected_by_id = {str(course["id"]): course for course in courses}
+        courses = [selected_by_id[item] for item in requested if item in selected_by_id]
     if payload.course_ids is not None and len(courses) != len(requested):
         # Do not disclose whether another user's course id exists.
         raise HTTPException(
@@ -162,7 +183,7 @@ def check_confirmed_courses_against_drugbank(
     medications = (
         hypothetical
         if payload.hypothetical_medications is not None
-        else [course.medication_name for course in courses]
+        else [str(course["medication_name"]) for course in courses]
     )
     result = proxy_ml_post(
         "/v1/careguard/analyze",
@@ -170,9 +191,22 @@ def check_confirmed_courses_against_drugbank(
             "medications": medications,
             "medications_with_meta": [
                 {
-                    "course_id": course.public_id,
-                    "drugbank_id": course.drugbank_id,
+                    "course_id": course["id"],
+                    "drugbank_id": course["drugbank_id"],
                     "source": "user_confirmed_medication_course",
+                }
+                for course in courses
+            ],
+            # The API does not trust the stored string as a DrugBank identity.
+            # ML's deterministic licensed dictionary must bind this exact
+            # display alias to the requested ID at the currently verified
+            # artifact version; otherwise the required-source postcondition
+            # below rejects the result rather than guessing a medication.
+            "medication_resolutions": [
+                {
+                    "input_alias": course["medication_name"],
+                    "drugbank_id": course["drugbank_id"],
+                    "drugbank_version": readiness["version"],
                 }
                 for course in courses
             ],
@@ -197,9 +231,9 @@ def check_confirmed_courses_against_drugbank(
         "hypothetical": payload.hypothetical_medications is not None,
         "courses": [
             {
-                "id": course.public_id,
-                "medication_name": course.medication_name,
-                "drugbank_id": course.drugbank_id,
+                "id": course["id"],
+                "medication_name": course["medication_name"],
+                "drugbank_id": course["drugbank_id"],
             }
             for course in courses
         ],

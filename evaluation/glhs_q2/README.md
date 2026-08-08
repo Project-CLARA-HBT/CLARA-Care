@@ -61,7 +61,8 @@ preparer scans it once without extraction and keeps only salted subject tokens,
 bounded episode counts and predeclared structural oracle fields. It uses a
 temporary token-only SQLite index, then removes it after emitting the checksum
 locked JSONL; source identifiers, free text, codes and clinical values are
-never persisted.
+never persisted. The selection index uses WAL plus periodic durable commits;
+`--resume` can safely reuse a token-only checkpoint after interruption.
 
 For the complete archive (rather than a deterministic sample), use
 `--selection-modulus 1` in a persistent job shell:
@@ -79,5 +80,22 @@ make eval-glhs-q2-external-stream \
   OUTPUT=artifacts/glhs-q2/synthea-stu3-full-development
 ```
 
+The full evaluator writes one raw outcome row for every comparator × case, so
+the operator must reserve several GiB of local artifact storage. It validates
+case/subject uniqueness in an ephemeral SQLite index (not unbounded Python
+memory) and removes that index only after `summary.json` is written.
+
 This still produces a **synthetic development** structural cohort. It is not
 clinical ground truth, independent validation, or a final score release.
+If a persistent job is interrupted, rerun the same command with `--resume` and
+the same output directory; only its token-only SQLite checkpoint is reused.
+
+Before using any completed Q2 artifact in the manuscript, run the read-only
+accounting/release validator:
+
+```bash
+make eval-glhs-q2-validate ARTIFACT=artifacts/glhs-q2/synthea-stu3-full-development
+```
+
+It rejects missing comparator rows, mismatched case counts, missing summary
+hashes and any attempt to mark a development cohort as a final score release.

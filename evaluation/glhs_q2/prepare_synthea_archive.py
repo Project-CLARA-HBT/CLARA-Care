@@ -99,6 +99,7 @@ def prepare(
     lawful_access_attestation: str,
     selection_modulus: int = 100,
     progress_every_bundles: int = 10_000,
+    resume: bool = False,
 ) -> dict[str, object]:
     if not lawful_access_attestation.strip():
         raise ValueError("lawful_access_attestation_required")
@@ -117,13 +118,22 @@ def prepare(
     # ``--selection-modulus 1`` a genuine supported execution mode while still
     # never materialising source identifiers or clinical payloads.
     selection_db = output_dir / ".synthea-selection.sqlite3"
-    if selection_db.exists():
+    if selection_db.exists() and not resume:
         raise FileExistsError(f"selection_temp_already_exists:{selection_db}")
     connection = sqlite3.connect(selection_db)
+    # WAL lets a status probe read the last durable checkpoint while the
+    # long-running archive scan is still active.  More importantly, the
+    # explicit commits below mean an interrupted one-million-patient scan can
+    # resume from its token-only selection state rather than losing an entire
+    # uncommitted transaction.  This is a temporary, local index: it is
+    # removed only after the manifest and minimised perturbation file are
+    # written successfully.
+    connection.execute("PRAGMA journal_mode=WAL")
+    connection.execute("PRAGMA synchronous=FULL")
     connection.execute(
-        "CREATE TABLE selected (token TEXT PRIMARY KEY NOT NULL, episodes INTEGER NOT NULL)"
+        "CREATE TABLE IF NOT EXISTS selected (token TEXT PRIMARY KEY NOT NULL, episodes INTEGER NOT NULL)"
     )
-    selected_count = 0
+    selected_count = int(connection.execute("SELECT COUNT(*) FROM selected").fetchone()[0])
     scanned_bundles = 0
     scanned_patients = 0
     skipped_invalid_bundles = 0
@@ -164,6 +174,10 @@ def prepare(
                         scanned_bundles += 1
                         scanned_patients += 1
                         if scanned_bundles % progress_every_bundles == 0:
+                            connection.commit()
+                            selected_count = int(
+                                connection.execute("SELECT COUNT(*) FROM selected").fetchone()[0]
+                            )
                             print(
                                 "synthea_scan "
                                 f"bundles={scanned_bundles} selected={selected_count} "
@@ -179,11 +193,15 @@ def prepare(
                                     resource_kinds[kind] += 1
                         token = _token(patient_id, salt)
                         if int(hashlib.sha256(token.encode("ascii")).hexdigest(), 16) % selection_modulus == 0:
-                            connection.execute(
+                            inserted = connection.execute(
                                 "INSERT OR REPLACE INTO selected (token, episodes) VALUES (?, ?)",
                                 (token, episodes),
-                            )
-                            selected_count += 1
+                            ).rowcount
+                            # INSERT OR REPLACE returns one changed row for a
+                            # duplicate too, so this counter is only a
+                            # progress estimate.  The checkpoint count above
+                            # and final count are canonical.
+                            selected_count += int(inserted > 0)
 
     connection.commit()
 
@@ -250,6 +268,7 @@ def main() -> None:
     parser.add_argument("--lawful-access-attestation", required=True)
     parser.add_argument("--selection-modulus", type=int, default=100)
     parser.add_argument("--progress-every-bundles", type=int, default=10_000)
+    parser.add_argument("--resume", action="store_true", help="Reuse an interrupted token-only selection checkpoint.")
     args = parser.parse_args()
     prepare(
         archive_path=args.archive,
@@ -258,6 +277,7 @@ def main() -> None:
         lawful_access_attestation=args.lawful_access_attestation,
         selection_modulus=args.selection_modulus,
         progress_every_bundles=args.progress_every_bundles,
+        resume=args.resume,
     )
 
 

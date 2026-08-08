@@ -45,6 +45,7 @@ from clara_api.db.models import (
     VisitDocument,
 )
 from clara_api.db.session import get_db
+from clara_api.glhs.adapters import ingest_lifemap_event, retire_lifemap_source_assertions
 from clara_api.lifemap.capture_domain import CAPTURE_SCHEMA_VERSION
 from clara_api.lifemap.client_contract import build_client_contract
 from clara_api.lifemap.commands import (
@@ -175,16 +176,13 @@ def _source_span_view(
         "source_kind": source.source_kind,
         "original_language": source.original_language,
         "source_span": source.source_span_json,
-        "observed_at": source.observed_at.isoformat()
-        if source.observed_at is not None
-        else None,
+        "observed_at": source.observed_at.isoformat() if source.observed_at is not None else None,
     }
 
 
 FHIR_IMPORT_SESSION_LIFETIME = timedelta(days=7)
 FHIR_DEFAULT_INCLUDE = (
-    "observations,allergies,conditions,medications,care_plan,answers,"
-    "documents,consent,audit"
+    "observations,allergies,conditions,medications,care_plan,answers,documents,consent,audit"
 )
 CLINICAL_REVIEW_EVENT_TYPES = frozenset(
     {
@@ -345,9 +343,7 @@ def _audit_read(
     db.commit()
 
 
-def _event(
-    db: Session, scope: ProfileScope, event_id: str
-) -> LifeMapEvent:
+def _event(db: Session, scope: ProfileScope, event_id: str) -> LifeMapEvent:
     event = db.execute(
         select(LifeMapEvent).where(
             _selector(LifeMapEvent, event_id),
@@ -445,9 +441,7 @@ def _record_dispute_transition(
                 event_id=event.id,
                 disputed_revision_id=replacement.id,
                 opened_by_user_id=scope.actor.id,
-                requires_clinical_review=(
-                    event.event_type in CLINICAL_REVIEW_EVENT_TYPES
-                ),
+                requires_clinical_review=(event.event_type in CLINICAL_REVIEW_EVENT_TYPES),
                 reason=reason or "user_dispute",
             )
         )
@@ -462,9 +456,7 @@ def _record_dispute_transition(
     if case is None:
         return
     existing = db.execute(
-        select(LifeMapDisputeAction.id).where(
-            LifeMapDisputeAction.case_id == case.id
-        )
+        select(LifeMapDisputeAction.id).where(LifeMapDisputeAction.case_id == case.id)
     ).scalar_one_or_none()
     if existing is None:
         db.add(
@@ -582,9 +574,7 @@ def create_event(
         return replay
 
     episode = (
-        _episode(db, scope, payload.episode_id, open_only=True)
-        if payload.episode_id
-        else None
+        _episode(db, scope, payload.episode_id, open_only=True) if payload.episode_id else None
     )
 
     provenance = {
@@ -619,6 +609,16 @@ def create_event(
     db.add(revision)
     db.flush()
     _link_event_revision(db, scope, event=event, revision=revision, episode=episode)
+    # New LifeMap writes enter the canonical GLHS boundary in the same database
+    # transaction.  Draft extraction stays a candidate; a user report is the
+    # only initial state transition this public endpoint is allowed to trigger.
+    ingest_lifemap_event(
+        db,
+        scope=scope,
+        event=event,
+        revision=revision,
+        idempotency_key=idempotency_key,
+    )
     occurred_at = payload.occurred_at
     if occurred_at.tzinfo is None:
         occurred_at = occurred_at.replace(tzinfo=UTC)
@@ -669,9 +669,7 @@ def _truth_command(
         profile_id=scope.profile.id,
         revision_id=current.id,
     )
-    if current.truth_state == "disputed" and not _dispute_resolution_allowed(
-        scope, dispute_case
-    ):
+    if current.truth_state == "disputed" and not _dispute_resolution_allowed(scope, dispute_case):
         raise HTTPException(
             status_code=403,
             detail={"code": "clinical_dispute_review_required"},
@@ -732,6 +730,13 @@ def _truth_command(
         source_kind="event",
         source_public_id=event.public_id,
         reason=f"event_{destination}",
+    )
+    ingest_lifemap_event(
+        db,
+        scope=scope,
+        event=event,
+        revision=next_revision,
+        idempotency_key=idempotency_key,
     )
     return _finish(
         db,
@@ -878,9 +883,7 @@ def correct_event(
         profile_id=scope.profile.id,
         revision_id=current.id,
     )
-    if current.truth_state == "disputed" and not _dispute_resolution_allowed(
-        scope, dispute_case
-    ):
+    if current.truth_state == "disputed" and not _dispute_resolution_allowed(scope, dispute_case):
         raise HTTPException(
             status_code=403,
             detail={"code": "clinical_dispute_review_required"},
@@ -946,6 +949,13 @@ def correct_event(
         source_kind="event",
         source_public_id=event.public_id,
         reason="event_corrected",
+    )
+    ingest_lifemap_event(
+        db,
+        scope=scope,
+        event=event,
+        revision=next_revision,
+        idempotency_key=idempotency_key,
     )
     return _finish(
         db,
@@ -1230,9 +1240,7 @@ def start_task(
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
-    return _task_action(
-        task_id, "start", payload, idempotency_key, if_match, x_profile, db, token
-    )
+    return _task_action(task_id, "start", payload, idempotency_key, if_match, x_profile, db, token)
 
 
 @router.post("/tasks/{task_id}/reject")
@@ -1245,9 +1253,7 @@ def reject_task(
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
-    return _task_action(
-        task_id, "reject", payload, idempotency_key, if_match, x_profile, db, token
-    )
+    return _task_action(task_id, "reject", payload, idempotency_key, if_match, x_profile, db, token)
 
 
 @router.post("/tasks/{task_id}/cancel")
@@ -1260,9 +1266,7 @@ def cancel_task(
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
-    return _task_action(
-        task_id, "cancel", payload, idempotency_key, if_match, x_profile, db, token
-    )
+    return _task_action(task_id, "cancel", payload, idempotency_key, if_match, x_profile, db, token)
 
 
 @router.post("/tasks/{task_id}/complete")
@@ -1348,27 +1352,19 @@ def event_revision_comparison(
     if not revisions:
         raise HTTPException(status_code=409, detail={"code": "revision_missing"})
     latest = revisions[-1]
-    requested_after = (
-        after_revision if after_revision is not None else latest.revision_no
-    )
+    requested_after = after_revision if after_revision is not None else latest.revision_no
     selected_after = next(
         (item for item in revisions if item.revision_no == requested_after),
         None,
     )
     if selected_after is None:
-        raise HTTPException(
-            status_code=404, detail={"code": "after_revision_not_found"}
-        )
+        raise HTTPException(status_code=404, detail={"code": "after_revision_not_found"})
     selected_before = next(
         (
             item
             for item in revisions
             if item.revision_no
-            == (
-                before_revision
-                if before_revision is not None
-                else selected_after.revision_no - 1
-            )
+            == (before_revision if before_revision is not None else selected_after.revision_no - 1)
         ),
         None,
     )
@@ -1415,19 +1411,13 @@ def event_revision_comparison(
             },
         }
     if selected_before.revision_no >= selected_after.revision_no:
-        raise HTTPException(
-            status_code=422, detail={"code": "revision_order_invalid"}
-        )
+        raise HTTPException(status_code=422, detail={"code": "revision_order_invalid"})
 
     before_payload = (
-        selected_before.payload_json
-        if isinstance(selected_before.payload_json, dict)
-        else {}
+        selected_before.payload_json if isinstance(selected_before.payload_json, dict) else {}
     )
     after_payload = (
-        selected_after.payload_json
-        if isinstance(selected_after.payload_json, dict)
-        else {}
+        selected_after.payload_json if isinstance(selected_after.payload_json, dict) else {}
     )
     changes: list[dict[str, object]] = []
     if selected_before.truth_state != selected_after.truth_state:
@@ -1682,22 +1672,22 @@ def list_dispute_cases(
     actions = {
         row.case_id: row
         for row in db.execute(
-            select(LifeMapDisputeAction).where(
-                LifeMapDisputeAction.profile_id == scope.profile.id
-            )
+            select(LifeMapDisputeAction).where(LifeMapDisputeAction.profile_id == scope.profile.id)
         ).scalars()
     }
-    resolution_revision_ids = {
-        action.resolution_revision_id for action in actions.values()
-    }
-    resolution_public_ids = {
-        revision.id: revision.public_id
-        for revision in db.execute(
-            select(LifeMapEventRevision).where(
-                LifeMapEventRevision.id.in_(resolution_revision_ids)
-            )
-        ).scalars()
-    } if resolution_revision_ids else {}
+    resolution_revision_ids = {action.resolution_revision_id for action in actions.values()}
+    resolution_public_ids = (
+        {
+            revision.id: revision.public_id
+            for revision in db.execute(
+                select(LifeMapEventRevision).where(
+                    LifeMapEventRevision.id.in_(resolution_revision_ids)
+                )
+            ).scalars()
+        }
+        if resolution_revision_ids
+        else {}
+    )
     result = [
         {
             "id": case.public_id,
@@ -1762,9 +1752,7 @@ def revoke_source(
         )
     ).scalar_one_or_none()
     if existing is not None:
-        raise HTTPException(
-            status_code=409, detail={"code": "source_already_revoked"}
-        )
+        raise HTTPException(status_code=409, detail={"code": "source_already_revoked"})
     revocation = LifeMapSourceRevocation(
         profile_id=scope.profile.id,
         source_reference_id=source.id,
@@ -1781,12 +1769,22 @@ def revoke_source(
             )
         ).scalars()
     )
-    invalidated = invalidate_projection_graph(
+    invalidated = (
+        invalidate_projection_graph(
+            db,
+            profile_id=scope.profile.id,
+            revision_ids=revision_ids,
+            reason="source_revoked",
+        )
+        if revision_ids
+        else ()
+    )
+    retired_assertion_count = retire_lifemap_source_assertions(
         db,
-        profile_id=scope.profile.id,
-        revision_ids=revision_ids,
-        reason="source_revoked",
-    ) if revision_ids else ()
+        scope=scope,
+        source_reference_id=source.id,
+        idempotency_key=idempotency_key,
+    )
     return _finish(
         db,
         scope,
@@ -1797,6 +1795,7 @@ def revoke_source(
             "id": revocation.public_id,
             "source_id": source.public_id,
             "invalidated_projection_count": len(invalidated),
+            "retired_glhs_assertion_count": retired_assertion_count,
         },
         status_code=200,
         aggregate_type="source",
@@ -1869,8 +1868,9 @@ def outbox_health(
     rows: dict[str, int] = {
         outbox_status: count
         for outbox_status, count in db.execute(
-            select(LifeMapOutboxEvent.status, func.count(LifeMapOutboxEvent.id))
-            .group_by(LifeMapOutboxEvent.status)
+            select(LifeMapOutboxEvent.status, func.count(LifeMapOutboxEvent.id)).group_by(
+                LifeMapOutboxEvent.status
+            )
         ).all()
     }
     oldest = db.execute(
@@ -1908,9 +1908,7 @@ def outbox_health(
         "retry_attempts": int(retry_attempts),
         "stale_projection_dependencies": int(stale_dependencies),
         "oldest_unpublished_age_seconds": (
-            max(0, int((now - oldest).total_seconds()))
-            if oldest is not None
-            else 0
+            max(0, int((now - oldest).total_seconds())) if oldest is not None else 0
         ),
         "generated_at": now,
     }
@@ -2054,9 +2052,7 @@ def _fhir_scope(
         "clinician_handoff",
         "care_coordination",
     }:
-        raise HTTPException(
-            status_code=422, detail={"code": "unsupported_export_purpose"}
-        )
+        raise HTTPException(status_code=422, detail={"code": "unsupported_export_purpose"})
     return resolve_profile_scope(
         db,
         token,
@@ -2082,9 +2078,7 @@ def _fhir_snapshot(
         if "demographics" in include:
             required_classes.add("profile")
         if not required_classes.issubset(scope.allowed_data_classes):
-            raise HTTPException(
-                status_code=404, detail={"code": "scope_forbidden"}
-            )
+            raise HTTPException(status_code=404, detail={"code": "scope_forbidden"})
     profile = scope.profile
     events = list(
         db.execute(
@@ -2095,28 +2089,20 @@ def _fhir_snapshot(
         ).scalars()
     )
     episodes = list(
-        db.execute(
-            select(LifeMapEpisode).where(LifeMapEpisode.profile_id == profile.id)
-        ).scalars()
+        db.execute(select(LifeMapEpisode).where(LifeMapEpisode.profile_id == profile.id)).scalars()
     )
     tasks = list(
         db.execute(
-            select(LifeMapCareTask).where(
-                LifeMapCareTask.profile_id == profile.id
-            )
+            select(LifeMapCareTask).where(LifeMapCareTask.profile_id == profile.id)
         ).scalars()
     )
     medications = list(
         db.execute(
-            select(MedicationCourse).where(
-                MedicationCourse.profile_id == profile.id
-            )
+            select(MedicationCourse).where(MedicationCourse.profile_id == profile.id)
         ).scalars()
     )
     documents = list(
-        db.execute(
-            select(VisitDocument).where(VisitDocument.profile_id == profile.id)
-        ).scalars()
+        db.execute(select(VisitDocument).where(VisitDocument.profile_id == profile.id)).scalars()
     )
     return {
         "profile": {
@@ -2125,14 +2111,10 @@ def _fhir_snapshot(
             "date_of_birth": profile.date_of_birth,
             "gender": profile.gender,
             "allergies": (
-                profile.allergies_json
-                if isinstance(profile.allergies_json, list)
-                else []
+                profile.allergies_json if isinstance(profile.allergies_json, list) else []
             ),
             "conditions": (
-                profile.conditions_json
-                if isinstance(profile.conditions_json, list)
-                else []
+                profile.conditions_json if isinstance(profile.conditions_json, list) else []
             ),
         },
         "actor_role": scope.actor_role,
@@ -2215,9 +2197,7 @@ def _fhir_snapshot(
 def export_fhir_r4_summary(
     purpose: str = "self_download",
     include: str = FHIR_DEFAULT_INCLUDE,
-    x_profile: str | None = Header(
-        default=None, alias="X-CLARA-Profile-Context"
-    ),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> Response:
@@ -2232,9 +2212,7 @@ def export_fhir_r4_summary(
         purpose=purpose,
     )
     ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
-    include_set = frozenset(
-        item.strip() for item in include.split(",") if item.strip()
-    )
+    include_set = frozenset(item.strip() for item in include.split(",") if item.strip())
     try:
         bundle = build_summary_bundle(
             _fhir_snapshot(db, scope, include=include_set),
@@ -2350,12 +2328,8 @@ def export_ips_requires_certification(
 async def import_fhir_r4_as_capture_drafts(
     request: Request,
     purpose: str = "self_care",
-    idempotency_key: str = Header(
-        alias="Idempotency-Key", min_length=8, max_length=128
-    ),
-    x_profile: str | None = Header(
-        default=None, alias="X-CLARA-Profile-Context"
-    ),
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=128),
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     db: Session = Depends(get_db),
     token: TokenPayload = USER_ROLE_DEP,
 ) -> dict:
@@ -2452,9 +2426,7 @@ async def import_fhir_r4_as_capture_drafts(
     )
 
 
-def _legacy_pending_outbox_replay(
-    db: Session, event_id: str
-) -> dict | None:
+def _legacy_pending_outbox_replay(db: Session, event_id: str) -> dict | None:
     """Kept only for old rows created before command records existed."""
 
     event = db.execute(

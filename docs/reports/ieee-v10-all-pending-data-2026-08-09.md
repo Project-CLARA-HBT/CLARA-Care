@@ -117,19 +117,41 @@ không được ghi thành database/production latency.
 
 | Gate | Evidence | Trạng thái |
 |---|---|---|
-| Q2 evaluator/unit | `evaluation/glhs_q2/test_run.py` | 9 passed |
-| Q2/Q3 preparer regression | `evaluation/glhs_q2/test_run.py` + `evaluation/glhs_q3/test_run.py` | 16 passed |
+| Q2 evaluator/unit | `evaluation/glhs_q2/test_run.py` | 10 passed (gồm resume checkpoint và external stream uniqueness) |
+| Q2/Q3 preparer regression | `evaluation/glhs_q2/test_run.py` + `evaluation/glhs_q3/test_run.py` | 18 passed |
 | GLHS API focused | gateway, migration, connected/visit adapter tests | 5 passed (2 FastAPI deprecation warnings) |
 | Web lint | `npm run lint` | exit 0; 6 Hook-dependency warnings |
 | Web production build | `npm run build` | exit 0 |
 | Mobile full suite | `flutter test` | 476 passed, 11 failed; failures ở consent/DSAR/Today finder/locale contracts, chưa được che giấu |
 | Root Python lint | `make lint` | fail: 647 existing violations across repo; Q2/Q3 scope lint sạch |
 | Root Python type check | `make type-check` | fail: 336 existing mypy errors/43 files; không diễn giải thành GLHS/Q2 green |
-| Full API suite | `services/api/.venv/bin/python -m pytest -q` | đang chạy khi report được cập nhật |
+| Full API/ML suite | `make test` (mỗi service chạy từ working directory riêng) | chưa có kết quả hoàn chỉnh sau thay đổi Q2 mới nhất. Không dùng `pytest` từ repo root với API venv: nó tạo 20 import-collision khi collect ML tests và không phải quality gate hợp lệ. |
 
 `Makefile` đã được sửa để `make lint` và `make type-check` dùng venv dự án khi
 có, nên các failure trên là kết quả công cụ thật chứ không phải `command not
 found`.
+
+## Full Synthea run status
+
+Full-archive preparation với `selection_modulus=1` đã hoàn tất tại
+`artifacts/glhs-q2/2026-08-09-synthea-stu3-full-preparation/`, sau đó external
+stream đã hoàn tất tại `artifacts/glhs-q2/2026-08-09-synthea-stu3-full/`.
+Manifest ghi nhận 1.594.095 FHIR patient bundle, 1.594.095 tokenized structural
+case và 0 invalid/non-patient bundle. Raw artifact có `external_cases.csv`
+(251.120.772 byte), `external_outcomes.csv` (2.060.096.606 byte),
+`summary.json`, `source-manifest.json` và `publication-validation.json`.
+Không được diễn giải dữ liệu này ngoài **synthetic development structural
+conformance**; nó không là final score, holdout độc lập hay clinical result.
+Preparer dùng checkpoint SQLite chỉ chứa salted token và episode count, WAL và
+commit định kỳ; evaluator dùng uniqueness index tạm trên đĩa thay vì giữ toàn
+bộ token trong RAM.
+
+Trước khi lấy số liệu từ artifact hoàn chỉnh vào manuscript, chạy
+`make eval-glhs-q2-validate ARTIFACT=<artifact-dir>`. Publication gate này
+đọc CSV/JSON theo streaming, kiểm tra đủ comparator row/mẫu số, summary hash
+và release boundary development. External-stream artifact tự chứa
+`source-manifest.json` (chỉ checksum/count/token policy), được hash-verified;
+gate không chạy lại hay tune policy.
 
 ## Các số vẫn chưa thể điền trung thực — và việc cần làm
 
@@ -158,3 +180,21 @@ reference-policy result is a development conformance check, not clinical
 validation or an independently released benchmark score. A model-backed opaque
 label stress arm completed 360/360 requests without fallback, with 249/360
 state matches; it does not establish clinical model performance.”
+
+<!-- FULL_SYNTHEA_MACHINE_RESULTS:START -->
+## Full Synthea FHIR STU3 result (machine-rendered)
+
+Artifact: `artifacts/glhs-q2/2026-08-09-synthea-stu3-full/`; validation: `publication-validation.json`.
+
+- Source FHIR patient bundles scanned: **1,594,095**
+- Selected tokenized structural cases / evaluated subjects: **1,594,095 / 1,594,095**
+- Partition: **development**; synthetic structural conformance only; no final score or clinical-validation claim.
+
+| Comparator | State correct |
+|---|---:|
+| LWW | 531,365/1,594,095 |
+| Temporal/provenance resolver | 1,328,413/1,594,095 |
+| GLHS-full reference policy | 1,594,095/1,594,095 |
+
+The values above are rendered directly from checksum-validated machine artifacts. They are not pooled with MIMIC, are not a sealed external holdout, and do not establish clinical effectiveness or safety.
+<!-- FULL_SYNTHEA_MACHINE_RESULTS:END -->

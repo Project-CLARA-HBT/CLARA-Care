@@ -14,6 +14,7 @@ import argparse
 import csv
 import hashlib
 import json
+import sqlite3
 import statistics
 from array import array
 from collections import defaultdict
@@ -157,7 +158,8 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
 
     if output.exists():
         raise FileExistsError(f"output_already_exists:{output}")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_bytes = manifest_path.read_bytes()
+    manifest = json.loads(manifest_bytes)
     if not isinstance(manifest, dict) or manifest.get("schema_version") not in {
         "glhs-q2-external-structural-v2",
         "glhs-q3-external-structural-v2",
@@ -176,12 +178,25 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
         raise ValueError("external_stream_checksum_mismatch")
 
     output.mkdir(parents=True)
+    # Copy the already-minimised manifest into the result directory so the
+    # CSV/summary artifact remains reviewable after its preparation workspace
+    # moves.  It carries checksums/counts only, never raw FHIR resources.
+    (output / "source-manifest.json").write_bytes(manifest_bytes)
     case_fields = list(asdict(Case("", "", 0, "", "", None, 0, 0, False, "", "")).keys())
     outcome_fields = list(asdict(Outcome("", "", "", "", False, False, False, False, False, False, 0.0, 0, False, False, "", None, 0.0, "", "")).keys())
     counts = {system: _new_counts() for system in SYSTEMS}
     latencies = {system: array("d") for system in SYSTEMS}
-    seen_case_ids: set[str] = set()
-    seen_subjects: set[str] = set()
+    # A full Synthea run can contain more than one million rows.  Keep the
+    # uniqueness invariant on disk instead of holding every pseudonymous
+    # identifier in two Python sets.  The index is ephemeral and contains only
+    # identifiers already permitted in the minimised perturbation manifest.
+    uniqueness_db = output / ".external-stream-unique.sqlite3"
+    uniqueness = sqlite3.connect(uniqueness_db)
+    uniqueness.execute("PRAGMA journal_mode=WAL")
+    uniqueness.execute(
+        "CREATE TABLE identifiers (case_id TEXT PRIMARY KEY NOT NULL, subject_id TEXT UNIQUE NOT NULL)"
+    )
+    case_count = 0
     with (output / "external_cases.csv").open("w", encoding="utf-8", newline="") as cases_handle, (
         output / "external_outcomes.csv"
     ).open("w", encoding="utf-8", newline="") as outcomes_handle, perturbations.open(encoding="utf-8") as source:
@@ -199,10 +214,14 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
             if not isinstance(raw, dict):
                 raise TypeError(f"external_stream_row_invalid:{line_number}")
             case = _case_from_raw(raw, partition="development")
-            if case.case_id in seen_case_ids:
-                raise ValueError(f"external_stream_duplicate_case:{case.case_id}")
-            seen_case_ids.add(case.case_id)
-            seen_subjects.add(case.subject_id)
+            try:
+                uniqueness.execute(
+                    "INSERT INTO identifiers (case_id, subject_id) VALUES (?, ?)",
+                    (case.case_id, case.subject_id),
+                )
+            except sqlite3.IntegrityError as error:
+                raise ValueError(f"external_stream_duplicate_case_or_subject:{case.case_id}") from error
+            case_count += 1
             case_writer.writerow(asdict(case))
             for system in SYSTEMS:
                 outcome = _evaluate(case, system)
@@ -210,9 +229,13 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
                 _record(counts[system], outcome)
                 latencies[system].append(outcome.latency_us)
             if line_number % 10_000 == 0:
+                uniqueness.commit()
                 print(f"external_stream cases={line_number}", flush=True)
 
-    if not seen_case_ids or len(seen_case_ids) != len(seen_subjects):
+    uniqueness.commit()
+    subjects = int(uniqueness.execute("SELECT COUNT(*) FROM identifiers").fetchone()[0])
+    uniqueness.close()
+    if not case_count or case_count != subjects:
         raise ValueError("external_stream_requires_one_case_per_unique_subject")
     result = {
         "schema_version": "glhs-q2-external-stream-v1",
@@ -222,9 +245,11 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
         "clinical_validation": False,
         "clinical_data_loaded": False,
         "source_manifest": str(manifest_path.resolve()),
+        "source_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "source_manifest_copy": "source-manifest.json",
         "perturbations_sha256": expected_hash,
-        "cases": len(seen_case_ids),
-        "subjects": len(seen_subjects),
+        "cases": case_count,
+        "subjects": subjects,
         "metrics": {system: _metrics(counts[system], latencies[system]) for system in SYSTEMS},
         "limitations": [
             "Pre-derived structural perturbations only; no raw clinical resources were loaded.",
@@ -233,6 +258,7 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
         ],
     }
     (output / "summary.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    uniqueness_db.unlink(missing_ok=True)
     return result
 
 

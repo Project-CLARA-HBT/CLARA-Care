@@ -4,15 +4,23 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import json
+import sqlite3
+import tarfile
 from xml.etree import ElementTree
 
 import pytest
 
 from evaluation.glhs_q2.integrate_model_arm import integrate
+from evaluation.glhs_q2.prepare_synthea_archive import prepare as prepare_synthea
 from evaluation.glhs_q2.run import SYSTEMS, THSS_PROFILES, _case, run, write
 from evaluation.glhs_q2.run_external_stream import run_stream
 from evaluation.glhs_q2.run_model_arm import PROMPT_VERSION, SEEDS
+from evaluation.glhs_q2.validate_artifact import validate
+from scripts.evaluation.render_glhs_q2_full_synthea_report import (
+    render as render_full_synthea_report,
+)
 
 
 def test_exact_q2_cohort_shape_and_holdout_partition() -> None:
@@ -145,15 +153,75 @@ def test_external_stream_writes_full_raw_csv_without_loading_raw_source_fields(t
     manifest.write_text(json.dumps({
         "schema_version": "glhs-q2-external-structural-v2",
         "cohort": "synthea_fhir_stu3",
-        "partition": "development",
-        "perturbations_file": perturbations.name,
-        "perturbations_sha256": hashlib.sha256(perturbations.read_bytes()).hexdigest(),
-    }), encoding="utf-8")
-    result = run_stream(manifest_path=manifest, output=tmp_path / "output")
+            "partition": "development",
+            "perturbations_file": perturbations.name,
+            "perturbations_sha256": hashlib.sha256(perturbations.read_bytes()).hexdigest(),
+            "source_scan": {"fhir_patient_bundles": 100, "selected_cases": 100},
+        }), encoding="utf-8")
+    output = tmp_path / "output"
+    result = run_stream(manifest_path=manifest, output=output)
     assert result["cases"] == result["subjects"] == 100
     assert result["metrics"]["glhs_full"]["state_correct"]["numerator"] == 100
-    with (tmp_path / "output" / "external_outcomes.csv").open(encoding="utf-8", newline="") as handle:
+    assert validate(output)["valid"] is True
+    report = tmp_path / "report.md"
+    report.write_text("# Evidence report\n", encoding="utf-8")
+    render_full_synthea_report(artifact=output, report=report)
+    assert "FULL_SYNTHEA_MACHINE_RESULTS:START" in report.read_text(encoding="utf-8")
+    assert not (output / ".external-stream-unique.sqlite3").exists()
+    with (output / "external_outcomes.csv").open(encoding="utf-8", newline="") as handle:
         assert len(list(csv.DictReader(handle))) == 100 * len(SYSTEMS)
+
+
+def test_synthea_preparer_resumes_from_durable_token_only_checkpoint(tmp_path) -> None:
+    """A restarted full scan accepts a prior local token checkpoint.
+
+    The fixture has no clinical values beyond the minimum FHIR structural
+    fields.  Its purpose is to prevent regressions where an interrupted
+    million-patient run is rejected or leaks source identifiers into the
+    checkpoint/output.
+    """
+    nested = tmp_path / "nested.tar.gz"
+    with tarfile.open(nested, "w:gz") as archive:
+        for index in range(100):
+            payload = json.dumps(
+                {
+                    "entry": [
+                        {"resource": {"resourceType": "Patient", "id": f"raw-patient-{index}"}},
+                        {"resource": {"resourceType": "Encounter"}},
+                    ]
+                }
+            ).encode()
+            member = tarfile.TarInfo(f"output/fhir/patient-{index}.json")
+            member.size = len(payload)
+            archive.addfile(member, io.BytesIO(payload))
+    outer = tmp_path / "synthea.tar.gz"
+    with tarfile.open(outer, "w:gz") as archive:
+        archive.add(nested, arcname="synthea/nested.tar.gz")
+    salt = tmp_path / "salt.bin"
+    salt.write_bytes(b"s" * 32)
+    output = tmp_path / "output"
+    output.mkdir()
+    checkpoint = output / ".synthea-selection.sqlite3"
+    connection = sqlite3.connect(checkpoint)
+    connection.execute("CREATE TABLE selected (token TEXT PRIMARY KEY NOT NULL, episodes INTEGER NOT NULL)")
+    connection.execute("INSERT INTO selected (token, episodes) VALUES (?, ?)", ("checkpoint-only-token", 1))
+    connection.commit()
+    connection.close()
+
+    manifest = prepare_synthea(
+        archive_path=outer,
+        token_salt_file=salt,
+        output_dir=output,
+        lawful_access_attestation="Synthetic structural data is lawful for testing.",
+        selection_modulus=1,
+        progress_every_bundles=10,
+        resume=True,
+    )
+
+    emitted = (output / "perturbations.jsonl").read_text(encoding="utf-8")
+    assert manifest["source_scan"]["selected_cases"] == 101
+    assert not checkpoint.exists()
+    assert "raw-patient" not in emitted
 
 
 def test_model_arm_integrator_requires_full_frozen_grid(tmp_path) -> None:

@@ -3,11 +3,12 @@ import re
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.compliance.consent import PURPOSE_PERSONALIZATION
 from clara_api.compliance.service import ComplianceService
 from clara_api.compliance.transfer import LLM_PROCESSOR, LLM_PURPOSE
 from clara_api.core.attribution import (
@@ -17,12 +18,16 @@ from clara_api.core.attribution import (
     normalize_source_used,
 )
 from clara_api.core.config import get_settings
+from clara_api.core.consent import PhrConsentService
 from clara_api.core.control_tower import get_control_tower_config_service
 from clara_api.core.flow import get_chat_flow_event_persister
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import User
 from clara_api.db.session import get_db
+from clara_api.glhs.gateway import compile_thss
+from clara_api.lifemap.profile_scope import resolve_profile_scope
+from clara_api.phr.features import phr_features
 from clara_api.schemas import ChatRequest, ChatResponse, RagFlowConfig
 
 router = APIRouter()
@@ -194,6 +199,89 @@ def _resolve_user_id(db: Session, token: TokenPayload) -> int | None:
 
     user_id = db.execute(select(User.id).where(User.email == token.sub)).scalar_one_or_none()
     return int(user_id) if user_id is not None else None
+
+
+def _build_chat_context(
+    db: Session,
+    *,
+    token: TokenPayload,
+    settings: Any,
+    requested_profile: str | None,
+    user_context: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Attach personal facts only through a consented, task-bounded snapshot.
+
+    ``clinical_context`` is a user-provided adjunct to the turn, not a trusted
+    profile projection.  It remains available to the model under an explicit
+    untrusted label.  Canonical personal health state is compiled only after
+    server-side profile/family scope resolution and both applicable
+    personalization-consent checks.  A missing default profile intentionally
+    leaves chat usable without personalisation; an explicit forbidden profile
+    selection remains a 404/403-equivalent scope failure from the resolver.
+    """
+
+    merged: dict[str, Any] = {}
+    if user_context:
+        merged["untrusted_user_context"] = user_context
+        merged["context_provenance"] = "user_supplied_untrusted"
+
+    try:
+        scope = resolve_profile_scope(
+            db,
+            token,
+            requested_profile=requested_profile,
+            action="view",
+            data_class="lifemap",
+            purpose="self_care",
+        )
+    except HTTPException as exc:
+        # Existing chat does not require a PHR. Preserve that availability for
+        # the implicit default only; a caller cannot turn a denied profile into
+        # a silent unscoped turn by supplying its identifier.
+        if requested_profile is None and exc.status_code == status.HTTP_409_CONFLICT:
+            return merged or None
+        raise
+
+    flags = phr_features(settings)
+    owner_user_id = scope.profile.user_id
+    personalization_granted = (
+        not flags.consent_enforcement
+        or PhrConsentService.is_granted(
+            db,
+            user_id=owner_user_id,
+            purpose="personalization",
+        )
+    )
+    personalization_granted = personalization_granted and ComplianceService(
+        db, settings=settings
+    ).has_consent(user_id=owner_user_id, purpose=PURPOSE_PERSONALIZATION)
+    if not personalization_granted:
+        return merged or None
+
+    requested_classes = frozenset(
+        {"lifemap", "medications", "allergies", "conditions", "observations"}
+    ).intersection(scope.allowed_data_classes)
+    if not requested_classes:
+        return merged or None
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="chat_personalization",
+        purpose="self_care",
+        allowed_data_classes=requested_classes,
+        selection_policy="strict",
+    )
+    merged["task_bounded_health_state"] = {
+        "snapshot_id": snapshot.snapshot_id,
+        "state_version": snapshot.state_version,
+        "expires_at": snapshot.expires_at.isoformat(),
+        "assertions": list(snapshot.assertions),
+        "conflicts": list(snapshot.conflicts),
+    }
+    merged["context_provenance"] = (
+        "thss_plus_user_supplied_untrusted" if user_context else "thss"
+    )
+    return merged
 
 
 def _cross_border_degraded_payload(message: str, role: str, reason: str) -> dict[str, Any]:
@@ -425,6 +513,7 @@ def _build_cross_border_degraded_response(
 @router.post("", response_model=ChatResponse, response_model_exclude_none=True)
 def chat_completion(
     payload: ChatRequest,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor", "admin")),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
@@ -459,6 +548,14 @@ def chat_completion(
                 payload, token.role, rag_sources, db, settings, transfer.reason
             )
 
+    clinical_context = _build_chat_context(
+        db,
+        token=token,
+        settings=settings,
+        requested_profile=x_profile,
+        user_context=payload.clinical_context,
+    )
+
     try:
         ml_response = _call_ml_service(
             payload.message,
@@ -467,7 +564,7 @@ def chat_completion(
             rag_sources,
             ui_language=payload.ui_language,
             protocol=payload.protocol,
-            clinical_context=payload.clinical_context,
+            clinical_context=clinical_context,
         )
         model_used = ml_response.get("model_used")
         if isinstance(model_used, str) and model_used.startswith("local-synth"):
@@ -546,6 +643,7 @@ def chat_completion(
 @router.post("/stream")
 def chat_completion_stream(
     payload: ChatRequest,
+    x_profile: str | None = Header(default=None, alias="X-CLARA-Profile-Context"),
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor", "admin")),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
@@ -568,7 +666,7 @@ def chat_completion_stream(
         "rag_flow": rag_flow.model_dump(),
         "rag_sources": rag_sources,
         "protocol": payload.protocol,
-        "clinical_context": payload.clinical_context,
+        "clinical_context": None,
     }
     headers: dict[str, str] = {"Accept": "text/event-stream"}
     if settings.ml_internal_api_key.strip():
@@ -613,6 +711,14 @@ def chat_completion_stream(
                     "Connection": "keep-alive",
                 },
             )
+
+    request_payload["clinical_context"] = _build_chat_context(
+        db,
+        token=token,
+        settings=settings,
+        requested_profile=x_profile,
+        user_context=payload.clinical_context,
+    )
 
     def relay():  # noqa: ANN202 - generator of SSE byte chunks
         try:

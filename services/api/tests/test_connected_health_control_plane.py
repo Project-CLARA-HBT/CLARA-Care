@@ -8,6 +8,7 @@ from clara_api.db.models import (
     ConnectorAuditEvent,
     ConnectorConsent,
     ConnectorSyncCursor,
+    GlhsAssertion,
     User,
     WearableAggregateContribution,
     WearableDailyAggregate,
@@ -271,6 +272,13 @@ def test_import_is_atomic_idempotent_and_versions_changed_records() -> None:
         cursor = db.execute(select(ConnectorSyncCursor)).scalar_one()
         aggregate = db.execute(select(WearableDailyAggregate)).scalar_one()
         contribution = db.execute(select(WearableAggregateContribution)).scalar_one()
+        assertions = list(
+            db.execute(
+                select(GlhsAssertion)
+                .where(GlhsAssertion.profile_id == observation.profile_id)
+                .order_by(GlhsAssertion.id)
+            ).scalars()
+        )
     assert observation.value_json == {"scalar": 1400.0, "components": None, "unit": "count"}
     assert observation.version_no == 2
     assert version.version_no == 1
@@ -278,6 +286,10 @@ def test_import_is_atomic_idempotent_and_versions_changed_records() -> None:
     assert aggregate.value_json == {"scalar": 1400.0, "unit": "count"}
     assert aggregate.primary_origin == "com.example.health"
     assert contribution.observation_id == observation.id
+    assert [item.lifecycle_status for item in assertions] == ["superseded", "active"]
+    assert assertions[-1].epistemic_state == "documented"
+    assert assertions[-1].value_json["record_type"] == "steps"
+    assert assertions[-1].value_json["value"]["scalar"] == 1400.0
 
     changed["idempotency_key"] = "batch_import_1"
     conflict = client.post(

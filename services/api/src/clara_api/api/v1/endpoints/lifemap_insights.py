@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
 from clara_api.core.config import get_settings
 from clara_api.core.consent import ensure_medical_disclaimer_consent
 from clara_api.core.rbac import require_roles
@@ -33,7 +34,7 @@ from clara_api.db.models import (
     WearableDailyAggregate,
 )
 from clara_api.db.session import get_db
-from clara_api.api.v1.endpoints.ml_proxy import proxy_ml_post
+from clara_api.glhs.gateway import compile_thss
 from clara_api.lifemap.baselines import recompute_baseline, serialize_snapshot
 from clara_api.lifemap.commands import (
     add_outbox,
@@ -125,6 +126,42 @@ def _episode_for_profile(
     if episode is None:
         raise HTTPException(status_code=404, detail="Episode not found")
     return episode
+
+
+def _governed_lifemap_event_ids(
+    db: Session,
+    *,
+    scope: ProfileScope,
+    task: str,
+) -> tuple[str, frozenset[str]]:
+    """Compile LifeMap THSS then return only its event projection keys.
+
+    The ledger holds canonical state while LifeMap revisions hold the exact
+    wording/citation projection.  Keep the two layers joined by the opaque
+    event ID; never perform retrieval first and use governance only as a
+    presentation label afterwards.
+    """
+
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task=task,
+        purpose=scope.purpose,
+        allowed_data_classes=frozenset({"lifemap"}),
+        selection_policy="strict",
+    )
+    prefix = "lifemap_event:"
+    return (
+        snapshot.snapshot_id,
+        frozenset(
+            semantic_key[len(prefix) :]
+            for assertion in snapshot.assertions
+            if assertion.get("type") == "lifemap"
+            and isinstance((semantic_key := assertion.get("semantic_key")), str)
+            and semantic_key.startswith(prefix)
+            and semantic_key[len(prefix) :]
+        ),
+    )
 
 
 _ASK_LIFEMAP_USE_CASE = {
@@ -382,6 +419,11 @@ def ask_lifemap_v2(
         if payload.episode_id
         else None
     )
+    glhs_snapshot_id, allowed_event_ids = _governed_lifemap_event_ids(
+        db,
+        scope=scope,
+        task="lifemap_ask",
+    )
     evidence = retrieve_revision_evidence(
         db,
         profile_id=scope.profile.id,
@@ -389,6 +431,7 @@ def ask_lifemap_v2(
         episode_id=episode.id if episode else None,
         start_at=payload.start_at,
         end_at=payload.end_at,
+        allowed_event_ids=allowed_event_ids,
         limit=payload.limit,
     )
     answer = deterministic_answer(
@@ -465,6 +508,10 @@ def ask_lifemap_v2(
         context_id = context_manifest.public_id
         inference_id = inference.public_id
         db.commit()
+    else:
+        # The THSS manifest is audit evidence even when governed selection
+        # produces no retrievable revision and the answer abstains.
+        db.commit()
 
     return {
         **answer,
@@ -485,6 +532,7 @@ def ask_lifemap_v2(
             },
         },
         "context_manifest_id": context_id,
+        "glhs_snapshot_id": glhs_snapshot_id,
         "inference_manifest_id": inference_id,
         "model": str(semantic_route["model_ref"]),
         "template": "ask-lifemap-v1",
@@ -532,6 +580,11 @@ def create_visit_preparation_draft_v2(
         if payload.episode_id
         else None
     )
+    glhs_snapshot_id, allowed_event_ids = _governed_lifemap_event_ids(
+        db,
+        scope=scope,
+        task="lifemap_visit_preparation",
+    )
     evidence = retrieve_revision_evidence(
         db,
         profile_id=scope.profile.id,
@@ -539,12 +592,15 @@ def create_visit_preparation_draft_v2(
         episode_id=episode.id if episode else None,
         start_at=payload.start_at,
         end_at=payload.end_at,
+        allowed_event_ids=allowed_event_ids,
         limit=payload.limit,
     )
     draft = visit_preparation_draft(evidence, locale=payload.locale)
+    db.commit()
     return {
         **draft,
         "evidence": [row.public_dict() for row in evidence],
+        "glhs_snapshot_id": glhs_snapshot_id,
         "disclosure": {
             "mode": "deterministic_provenance_bound_draft_v1",
             "medical_advice": False,
@@ -577,6 +633,11 @@ def lifemap_summary_v2(
     episode = (
         _episode_for_profile(db, scope.profile.id, episode_id) if episode_id else None
     )
+    glhs_snapshot_id, allowed_event_ids = _governed_lifemap_event_ids(
+        db,
+        scope=scope,
+        task=f"lifemap_summary:{level}",
+    )
     evidence = retrieve_revision_evidence(
         db,
         profile_id=scope.profile.id,
@@ -584,6 +645,7 @@ def lifemap_summary_v2(
         episode_id=episode.id if episode else None,
         start_at=start_at,
         end_at=end_at,
+        allowed_event_ids=allowed_event_ids,
         limit=50,
     )
     summary = hierarchical_summary(
@@ -621,9 +683,11 @@ def lifemap_summary_v2(
                         rule_version=str(summary["rule_version"]),
                     )
                 )
-        db.commit()
+    # Persist the THSS manifest even for an empty/abstained summary.
+    db.commit()
     return {
         **summary,
+        "glhs_snapshot_id": glhs_snapshot_id,
         "disclosure": {
             "deterministic_fallback": True,
             "medical_advice": False,
@@ -660,11 +724,17 @@ def delegated_lifemap_digest_v2(
         purpose=purpose,
     )
     ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    glhs_snapshot_id, allowed_event_ids = _governed_lifemap_event_ids(
+        db,
+        scope=scope,
+        task=f"lifemap_delegated_digest:{level}",
+    )
     evidence = retrieve_revision_evidence(
         db,
         profile_id=scope.profile.id,
         query="",
         event_types=requested_types or None,
+        allowed_event_ids=allowed_event_ids,
         limit=50,
     )
     digest = hierarchical_summary(
@@ -672,11 +742,13 @@ def delegated_lifemap_digest_v2(
         level=level,  # type: ignore[arg-type]
         locale=locale,
     )
+    db.commit()
     return {
         **digest,
         "audience": scope.actor_role,
         "purpose": scope.purpose,
         "grant_id": scope.grant_id,
+        "glhs_snapshot_id": glhs_snapshot_id,
         "visible_data_classes": sorted(scope.allowed_data_classes & {"lifemap"}),
         "withheld_event_types": sorted(
             set(event_types) - {row.event_type for row in evidence}

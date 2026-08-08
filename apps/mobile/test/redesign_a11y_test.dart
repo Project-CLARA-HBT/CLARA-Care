@@ -168,14 +168,14 @@ void main() {
       expect(find.textContaining('Chào'), findsWidgets);
 
       // The PHR quick-action is ALWAYS present regardless of the summary.
-      expect(find.text('Hồ sơ sức khỏe'), findsOneWidget);
+      expect(find.text('Lưu thông tin sức khỏe'), findsOneWidget);
 
       // Cards render (greeting header + quick-action cards), and the tappable
       // PHR card's InkWell hit area meets the ≥48dp minimum. The redesign now
       // renders quick-action cards on GlassSurface chrome (opaque fallback when
       // the glass scope is off), so we assert on the tappable InkWell directly.
       final phrInkWell = find.ancestor(
-        of: find.text('Hồ sơ sức khỏe'),
+        of: find.text('Lưu thông tin sức khỏe'),
         matching: find.byType(InkWell),
       );
       expect(phrInkWell, findsWidgets);
@@ -207,7 +207,7 @@ void main() {
 
       // Renders cleanly at the large text scale — no layout/build exception.
       expect(tester.takeException(), isNull);
-      expect(find.text('Hồ sơ sức khỏe'), findsOneWidget);
+      expect(find.text('Lưu thông tin sức khỏe'), findsOneWidget);
     });
   });
 }

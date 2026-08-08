@@ -223,3 +223,21 @@ Validation: API LifeMap foundation contracts 4/4; Ruff; web type-check; i18n con
 - [x] Migrated high-frequency Chat welcome/sidebar/shared-button icons to bundled SVG output to prevent raw icon-name flashes.
 
 Validation: token/contrast tests, Chat canvas/welcome/composer/shell tests, i18n and TypeScript checks. Rollback: `NEXT_PUBLIC_CHAT_V2=false` selects the preserved legacy Chat, or revert this web-only checkpoint. No schema/API contract changed.
+
+## Mobile compile and terminology-regression checkpoint — 2026-08-08
+
+- [x] Repaired two mobile Dart syntax regressions in the LifeMap capture/source
+  preview and Living Evidence interval menu. These were missing widget
+  closers/interpolation boundaries, not product-flow changes.
+- [x] Made Cabinet OCR default to the documented Vietnamese consumer locale
+  when no app-level preference is supplied, while passing the existing shared
+  `LanguageController` preference from the Cabinet screen when available.
+- [x] Updated Home redesign expectations to current consumer terminology and
+  preserve the fail-closed assertion: duplicated Chat wording represents two
+  intentional reachable actions rather than a privileged-card leak.
+
+Validation: focused Home/a11y tests 8/8 and Cabinet OCR safety tests 4/4 pass.
+`flutter analyze` has no errors; it reports four pre-existing informational
+deprecations/dangling-doc notices outside these surfaces. Rollback: revert the
+mobile component/test checkpoint; no server contract, consent, RBAC, OCR
+manual-confirmation gate or medication write behavior changed.

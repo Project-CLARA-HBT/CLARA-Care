@@ -647,6 +647,7 @@ class _CabinetScreenV3State extends State<CabinetScreenV3> {
         apiClient: widget.apiClient,
         accessToken: token,
         connectivity: _connectivity,
+        locale: widget.languageController?.languageCode,
       ),
     );
     if (imported == true) {

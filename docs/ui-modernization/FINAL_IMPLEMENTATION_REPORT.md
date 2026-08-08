@@ -6,7 +6,9 @@ The web application now has a documented, workspace-based navigation model, a ta
 
 ## Delivered
 
-- Planning gate and full UI modernization specification in `docs/ui-modernization/00...11`.
+- Planning gate and full UI modernization specification in
+  `docs/ui-modernization/00-current-state-audit.md` through
+  `docs/ui-modernization/11-decisions-and-progress.md`.
 - Personal, clinical, research, and admin workspace navigation with a seven-item primary limit.
 - AppShell focus trap/restore, mobile drawer, workspace switcher, profile selector, and consolidated profile/logout controls.
 - PHR SVG icon abstraction and Button icon fallback; no raw icon names in the PHR hub.

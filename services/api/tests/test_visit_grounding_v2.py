@@ -5,8 +5,11 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from clara_api.api.v1.endpoints import visits
+from clara_api.db.models import GlhsAssertion, LifeMapEvent
+from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
 client = TestClient(app)
@@ -51,6 +54,19 @@ def test_grounded_instruction_requires_exact_span_and_explicit_confirmation(
 ) -> None:
     headers = _account("grounded")
     visit_id = _visit(headers)
+    episode = client.post(
+        "/api/v1/lifemap/episodes",
+        headers={**headers, "Idempotency-Key": uuid4().hex},
+        json={"title": "Theo dõi sau khám", "goal": "Tái khám"},
+    )
+    assert episode.status_code == 201, episode.text
+    episode_id = episode.json()["id"]
+    linked = client.post(
+        f"/api/v1/visits/{visit_id}/episodes",
+        headers=headers,
+        json={"episode_id": episode_id},
+    )
+    assert linked.status_code == 201, linked.text
     source = "Bác sĩ dặn tái khám sau 2 tuần."
     document = client.post(
         f"/api/v1/visits/{visit_id}/documents",
@@ -65,6 +81,18 @@ def test_grounded_instruction_requires_exact_span_and_explicit_confirmation(
     assert document.status_code == 201, document.text
     document_id = document.json()["id"]
     UUID(document_id)
+    # The E2E document path writes evidence availability to GLHS but must not
+    # interpret free text into a medical assertion before grounded review.
+    with SessionLocal() as db:
+        document_assertion = db.execute(
+            select(GlhsAssertion).where(
+                GlhsAssertion.semantic_key == f"visit_document:{document_id}"
+            )
+        ).scalar_one()
+        assert document_assertion.assertion_type == "evidence"
+        assert document_assertion.predicate == "visit_document_available"
+        assert document_assertion.value_json["contains_interpreted_clinical_facts"] is False
+        assert source not in str(document_assertion.value_json)
     quote = "tái khám sau 2 tuần"
     start = source.index(quote)
     monkeypatch.setattr(
@@ -118,12 +146,28 @@ def test_grounded_instruction_requires_exact_span_and_explicit_confirmation(
             "draft_id": draft["id"],
             "candidate_ids": ["candidate-1"],
             "task_status": "proposed",
+            "episode_id": episode_id,
         },
     )
     assert confirmed.status_code == 200, confirmed.text
     assert confirmed.json()["status"] == "confirmed"
     assert len(confirmed.json()["task_ids"]) == 1
     UUID(confirmed.json()["task_ids"][0])
+    assert len(confirmed.json()["episode_event_ids"]) == 1
+    with SessionLocal() as db:
+        event = db.execute(
+            select(LifeMapEvent).where(
+                LifeMapEvent.public_id == confirmed.json()["episode_event_ids"][0]
+            )
+        ).scalar_one()
+        assertion = db.execute(
+            select(GlhsAssertion).where(
+                GlhsAssertion.profile_id == event.profile_id,
+                GlhsAssertion.semantic_key == f"lifemap_event:{event.public_id}",
+            )
+        ).scalar_one()
+        assert assertion.epistemic_state == "documented"
+        assert assertion.lifecycle_status == "active"
 
     options = client.get(
         f"/api/v1/visits/{visit_id}/pack-options",
@@ -172,6 +216,13 @@ def test_grounded_instruction_requires_exact_span_and_explicit_confirmation(
         json={"reason": "owner_withdrew"},
     )
     assert withdrawn.status_code == 200, withdrawn.text
+    with SessionLocal() as db:
+        document_assertion = db.execute(
+            select(GlhsAssertion).where(
+                GlhsAssertion.semantic_key == f"visit_document:{document_id}"
+            )
+        ).scalar_one()
+        assert document_assertion.lifecycle_status == "superseded"
     assert (
         client.get(f"/api/v1/visit-packs/shared/{shared.json()['token']}").status_code
         == 404

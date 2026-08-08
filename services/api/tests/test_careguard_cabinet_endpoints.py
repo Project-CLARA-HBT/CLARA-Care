@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from clara_api.core.config import get_settings
 from clara_api.core.security import create_access_token
-from clara_api.db.models import LifeMapCaptureCandidate, MedicationCourse
+from clara_api.db.models import GlhsAssertion, LifeMapCaptureCandidate, MedicationCourse
 from clara_api.db.session import SessionLocal
 from clara_api.main import app
 
@@ -290,6 +290,17 @@ def test_scan_and_import_converges_through_capture_draft(monkeypatch) -> None:
             )
         ).scalar_one()
         assert course.truth_state == "confirmed"
+        # OCR confirmation is not an exact DrugBank match.  It is retained in
+        # GLHS with source provenance but must remain a candidate, so it cannot
+        # silently enter task-scoped medication state or DDI.
+        assertion = db.execute(
+            select(GlhsAssertion).where(
+                GlhsAssertion.profile_id == candidate.profile_id,
+                GlhsAssertion.semantic_key == f"medication_course:{course.public_id}",
+            )
+        ).scalar_one()
+        assert assertion.assertion_type == "medications_unresolved"
+        assert assertion.lifecycle_status == "candidate"
 
 
 def test_scan_text_applies_ocr_post_correction() -> None:

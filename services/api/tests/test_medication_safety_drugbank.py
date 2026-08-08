@@ -94,6 +94,18 @@ def test_medication_course_ddi_is_drugbank_only(monkeypatch) -> None:
     assert captured["path"] == "/v1/careguard/analyze"
     assert captured["payload"]["external_ddi_enabled"] is False
     assert captured["payload"]["medications"] == ["Warfarin", "Ibuprofen"]
+    assert captured["payload"]["medication_resolutions"] == [
+        {
+            "input_alias": "Warfarin",
+            "drugbank_id": "DB00682",
+            "drugbank_version": _ready()["version"],
+        },
+        {
+            "input_alias": "Ibuprofen",
+            "drugbank_id": "DB01050",
+            "drugbank_version": _ready()["version"],
+        },
+    ]
 
 
 def test_medication_course_ddi_fails_closed_when_drugbank_is_not_ready(monkeypatch) -> None:
@@ -143,3 +155,41 @@ def test_medication_course_ddi_rejects_local_or_fallback_result(monkeypatch) -> 
 
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "drugbank_required_unavailable"
+
+
+def test_drugbank_ddi_excludes_unresolved_medication_candidates(monkeypatch) -> None:
+    """A free-text course cannot make a two-drug DDI request eligible."""
+    _, headers = _login("drugbank-unresolved-excluded@example.com")
+    assert client.put(
+        "/api/v1/phr/record",
+        headers=headers,
+        json={"full_name": "Safety User"},
+    ).status_code == 200
+    consent = client.get("/api/v1/auth/consent-status", headers=headers).json()
+    assert client.post(
+        "/api/v1/auth/consent",
+        headers=headers,
+        json={"accepted": True, "consent_version": consent["required_version"]},
+    ).status_code == 200
+    for name, drugbank_id in (("Warfarin", "DB00682"), ("Unknown label", None)):
+        created = client.post(
+            "/api/v1/medication-courses",
+            headers={**headers, "Idempotency-Key": f"unresolved-{name}"},
+            json={"medication_name": name, "drugbank_id": drugbank_id},
+        )
+        assert created.status_code == 201, created.text
+    monkeypatch.setattr(
+        medication_safety,
+        "proxy_ml_get",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("must not check source")),
+    )
+    monkeypatch.setattr(
+        medication_safety,
+        "proxy_ml_post",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("must not call ML")),
+    )
+
+    response = client.post("/api/v1/medication-courses/safety/ddi", headers=headers, json={})
+
+    assert response.status_code == 422
+    assert "at least two" in response.json()["detail"]

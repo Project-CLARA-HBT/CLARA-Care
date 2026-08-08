@@ -61,8 +61,6 @@ from clara_api.db.models import (
     FederatedSourceRecord,
     KnowledgeDocument,
     KnowledgeSource,
-    MedicineCabinet,
-    MedicineItem,
     PhrProfile,
     ResearchJob,
     SessionModel,
@@ -74,6 +72,8 @@ from clara_api.db.models import (
     Query as QueryModel,
 )
 from clara_api.db.session import SessionLocal, get_db
+from clara_api.glhs.adapters import owner_profile_scope
+from clara_api.glhs.gateway import compile_thss
 from clara_api.observability.admin_audit import (
     ACTION_KB_DOCUMENT_STATUS,
     ACTION_KB_SOURCE_CREATE,
@@ -1856,8 +1856,10 @@ def _age_band(date_of_birth: Any) -> str:
         return ""
     try:
         today = datetime.now(tz=UTC).date()
-        age = today.year - date_of_birth.year - (
-            (today.month, today.day) < (date_of_birth.month, date_of_birth.day)
+        age = (
+            today.year
+            - date_of_birth.year
+            - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
         )
     except (AttributeError, TypeError, ValueError):
         return ""
@@ -1875,130 +1877,106 @@ def _age_band(date_of_birth: Any) -> str:
 def _build_personal_context_payload(
     db: Session,
     *,
-    user_id: int,
+    user: User,
     answer_language: str,
 ) -> dict[str, Any]:
+    """Compile model context from THSS, never from direct PHR/cabinet reads."""
+
     profile = db.execute(
-        select(PhrProfile).where(PhrProfile.user_id == user_id)
+        select(PhrProfile).where(PhrProfile.user_id == user.id)
     ).scalar_one_or_none()
+    if profile is None:
+        return {
+            "snapshot_id": None,
+            "profile": {},
+            "allergies": [],
+            "conditions": [],
+            "medications": [],
+            "observations": [],
+            "lifemap": [],
+            "conflicts": [],
+            "summary_markdown": "",
+        }
+    snapshot = compile_thss(
+        db,
+        scope=owner_profile_scope(profile=profile, actor=user, purpose="research"),
+        task="research_personalization",
+        purpose="research",
+        allowed_data_classes=frozenset(
+            {"lifemap", "medications", "allergies", "conditions", "observations"}
+        ),
+        selection_policy="strict",
+    )
+    medications: list[dict[str, Any]] = []
     allergies: list[dict[str, Any]] = []
     conditions: list[dict[str, Any]] = []
-    profile_medications: list[dict[str, Any]] = []
-    profile_payload: dict[str, Any] = {}
-
-    if profile is not None:
-        allergies = _as_dict_list(profile.allergies_json)
-        conditions = _as_dict_list(profile.conditions_json)
-        profile_medications = _as_dict_list(profile.medications_json)
-        profile_payload = {
-            # Data minimisation: personal-mode synthesis receives only the
-            # life-stage and clinical fields it can legitimately use. Never
-            # relay direct identifiers, free-text notes, or an exact DOB.
-            "age_band": _age_band(profile.date_of_birth),
-            "gender": profile.gender or "",
+    observations: list[dict[str, Any]] = []
+    lifemap: list[dict[str, Any]] = []
+    for assertion in snapshot.assertions:
+        value = assertion.get("value")
+        if not isinstance(value, dict):
+            continue
+        item = {
+            "assertion_id": assertion["id"],
+            "predicate": assertion["semantic_key"],
+            "value": value,
+            "epistemic_state": assertion["epistemic_state"],
         }
-
-    cabinet = db.execute(
-        select(MedicineCabinet).where(MedicineCabinet.user_id == user_id)
-    ).scalar_one_or_none()
-    cabinet_items: list[dict[str, Any]] = []
-    if cabinet is not None:
-        rows = (
-            db.execute(
-                select(MedicineItem)
-                .where(MedicineItem.cabinet_id == cabinet.id)
-                .order_by(MedicineItem.updated_at.desc(), MedicineItem.id.desc())
-                .limit(120)
-            )
-            .scalars()
-            .all()
-        )
-        cabinet_items = [
-            {
-                "name": item.drug_name or item.normalized_name or "",
-                "normalized_name": item.normalized_name or "",
-                "dose": item.dosage or "",
-                "dosage_form": item.dosage_form or "",
-                "quantity": item.quantity,
-                "source": item.source or "",
-                "expires_on": item.expires_on.isoformat() if item.expires_on else None,
-                "note": item.note or "",
-            }
-            for item in rows
-        ]
-
-    merged_medications: list[dict[str, Any]] = []
-    seen_medication_keys: set[str] = set()
-    for item in profile_medications:
-        name = _compact_text(item.get("name"), limit=120)
-        if not name:
-            continue
-        key = name.lower()
-        if key in seen_medication_keys:
-            continue
-        seen_medication_keys.add(key)
-        merged_medications.append(
-            {
-                "name": name,
-                "dose": _compact_text(item.get("dose"), limit=80),
-                "frequency": _compact_text(item.get("frequency"), limit=80),
-                "note": _compact_text(item.get("note"), limit=140),
-                "source": "phr",
-            }
-        )
-    for item in cabinet_items:
-        name = _compact_text(item.get("name"), limit=120)
-        if not name:
-            continue
-        key = name.lower()
-        if key in seen_medication_keys:
-            continue
-        seen_medication_keys.add(key)
-        merged_medications.append(
-            {
-                "name": name,
-                "dose": _compact_text(item.get("dose"), limit=80),
-                "frequency": "",
-                "note": _compact_text(item.get("note"), limit=140),
-                "source": "cabinet",
-            }
-        )
+        if assertion["type"] == "medications":
+            medications.append(item)
+        elif assertion["type"] == "allergies":
+            allergies.append(item)
+        elif assertion["type"] == "conditions":
+            conditions.append(item)
+        elif assertion["type"] == "observations":
+            observations.append(item)
+        elif assertion["type"] == "lifemap":
+            lifemap.append(item)
 
     if answer_language == "en":
-        header = "Personal health context (PHR + medicine cabinet):"
-        allergies_label = "Allergies"
-        conditions_label = "Conditions"
-        meds_label = "Current meds"
+        header = "Task-bounded personal health context:"
+        meds_label = "Governed medication reports"
+        allergies_label = "Self-reported allergies"
+        conditions_label = "Self-reported conditions"
     else:
-        header = "Bối cảnh sức khỏe cá nhân (PHR + tủ thuốc):"
-        allergies_label = "Dị ứng"
-        conditions_label = "Bệnh nền"
-        meds_label = "Thuốc hiện có"
+        header = "Bối cảnh sức khỏe cá nhân theo tác vụ:"
+        meds_label = "Báo cáo thuốc đã được quản trị"
+        allergies_label = "Dị ứng do người dùng khai báo"
+        conditions_label = "Tình trạng do người dùng khai báo"
 
-    allergy_names = [str(item.get("name") or "").strip() for item in allergies][:12]
-    condition_names = [str(item.get("name") or "").strip() for item in conditions][:12]
-    med_names = [str(item.get("name") or "").strip() for item in merged_medications][:16]
+    med_names = [
+        _compact_text(item["value"].get("medication_name"), limit=120) for item in medications
+    ][:16]
     summary_lines = [f"- {header}"]
-    if allergy_names:
-        allergy_str = ", ".join(name for name in allergy_names if name)
-        summary_lines.append(f"- {allergies_label}: {allergy_str}.")
-    if condition_names:
-        condition_str = ", ".join(name for name in condition_names if name)
-        summary_lines.append(f"- {conditions_label}: {condition_str}.")
     if med_names:
         summary_lines.append(f"- {meds_label}: {', '.join([name for name in med_names if name])}.")
-    summary_markdown = "\n".join(summary_lines)
+    allergy_names = [_compact_text(item["value"].get("name"), limit=120) for item in allergies][:16]
+    if allergy_names:
+        summary_lines.append(
+            f"- {allergies_label}: {', '.join([name for name in allergy_names if name])}."
+        )
+    condition_names = [
+        _compact_text(item["value"].get("name"), limit=120) for item in conditions
+    ][:16]
+    if condition_names:
+        summary_lines.append(
+            f"- {conditions_label}: {', '.join([name for name in condition_names if name])}."
+        )
+    summary_markdown = (
+        "\n".join(summary_lines)
+        if medications or allergies or conditions or observations or lifemap
+        else ""
+    )
 
     return {
-        "profile": profile_payload,
+        "snapshot_id": snapshot.snapshot_id,
+        "profile": {},
         "allergies": allergies,
         "conditions": conditions,
-        "medications": merged_medications,
-        "medicine_cabinet": {
-            "exists": cabinet is not None,
-            "label": cabinet.label if cabinet is not None else "",
-            "items": cabinet_items,
-        },
+        "medications": medications,
+        "observations": observations,
+        "lifemap": lifemap,
+        "conflicts": list(snapshot.conflicts),
         "summary_markdown": summary_markdown,
     }
 
@@ -2028,9 +2006,7 @@ def _clamp_gap_fill_request_keys(container: dict[str, Any], *, ceiling: int) -> 
         container[key] = max(0, min(requested, ceiling))
 
 
-def _enforce_api_gap_fill_ceiling(
-    payload: dict[str, Any], *, hard_max: int
-) -> dict[str, Any]:
+def _enforce_api_gap_fill_ceiling(payload: dict[str, Any], *, hard_max: int) -> dict[str, Any]:
     """Clamp any requested gap-fill pass count to the API hard ceiling (clara-research R5.5).
 
     The Research_API enforces ``RESEARCH_API_GAP_FILL_HARD_MAX`` externally so a
@@ -2154,7 +2130,7 @@ def _build_tier2_upstream_payload(
         if include_personal:
             personal_context = _build_personal_context_payload(
                 db,
-                user_id=user.id,
+                user=user,
                 answer_language=answer_language,
             )
             upstream_payload["personal_context"] = personal_context
@@ -2219,9 +2195,11 @@ def _enforce_request_execution_contract(
             request_payload.get("output_mode"),
             role=str(request_payload.get("role") or ""),
         )
-        candidate_output_mode = str(
-            response.get("output_mode") or metadata_obj.get("output_mode") or ""
-        ).strip().lower()
+        candidate_output_mode = (
+            str(response.get("output_mode") or metadata_obj.get("output_mode") or "")
+            .strip()
+            .lower()
+        )
         if candidate_output_mode == expected_output_mode:
             response["output_mode"] = expected_output_mode
             metadata_obj["output_mode"] = expected_output_mode
@@ -2483,13 +2461,9 @@ def _serialize_research_job(
         progress=progress,
         result=result,
         error=job.error_text or None,
-        run_manifest=(
-            job.run_manifest_json if isinstance(job.run_manifest_json, dict) else None
-        ),
+        run_manifest=(job.run_manifest_json if isinstance(job.run_manifest_json, dict) else None),
         evidence_snapshot=(
-            job.evidence_snapshot_json
-            if isinstance(job.evidence_snapshot_json, dict)
-            else None
+            job.evidence_snapshot_json if isinstance(job.evidence_snapshot_json, dict) else None
         ),
         attempt_count=int(job.attempt_count or 0),
         recovery_count=int(job.recovery_count or 0),
@@ -2539,6 +2513,7 @@ def _apply_research_quality_gates(
     citations = gated.get("citations")
     if not isinstance(citations, list):
         citations = gated.get("sources") if isinstance(gated.get("sources"), list) else []
+
     def is_resolvable_citation(item: Any) -> bool:
         if not isinstance(item, dict):
             return False
@@ -2585,9 +2560,7 @@ def _apply_research_quality_gates(
     unsupported = gated.get("unsupported_claims")
     unsupported_count = len(unsupported) if isinstance(unsupported, list) else 0
     citation_count = len(real_citations)
-    answer_present = bool(
-        str(gated.get("answer_markdown") or gated.get("answer") or "").strip()
-    )
+    answer_present = bool(str(gated.get("answer_markdown") or gated.get("answer") or "").strip())
     mode = _coerce_research_mode(request_payload)
     raw_verification_matrix = gated.get("verification_matrix")
     verification_matrix = (
@@ -2599,20 +2572,15 @@ def _apply_research_quality_gates(
         else {}
     )
     verification_rows = (
-        verification_matrix.get("rows")
-        if isinstance(verification_matrix.get("rows"), list)
-        else []
+        verification_matrix.get("rows") if isinstance(verification_matrix.get("rows"), list) else []
     )
     verification_state = str(verification_matrix.get("state") or "").strip().lower()
     verification_version = str(verification_matrix.get("version") or "").strip()
-    verifier_counts_well_formed = (
-        is_nonnegative_integral_number(verification_summary.get("total_claims"))
-        and is_nonnegative_integral_number(verification_summary.get("supported_claims"))
-    )
+    verifier_counts_well_formed = is_nonnegative_integral_number(
+        verification_summary.get("total_claims")
+    ) and is_nonnegative_integral_number(verification_summary.get("supported_claims"))
     verifier_total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
-    verifier_supported_claims = safe_nonnegative_int(
-        verification_summary.get("supported_claims")
-    )
+    verifier_supported_claims = safe_nonnegative_int(verification_summary.get("supported_claims"))
     verifier_support_ratio = verification_summary.get("support_ratio")
     verifier_ratio_matches_counts = False
     if is_unit_interval_number(verifier_support_ratio) and verifier_counts_well_formed:
@@ -2650,9 +2618,7 @@ def _apply_research_quality_gates(
         1
         for row in verification_rows
         if isinstance(row, dict)
-        and str(
-            row.get("support_status") or row.get("status") or row.get("verdict") or ""
-        )
+        and str(row.get("support_status") or row.get("status") or row.get("verdict") or "")
         .strip()
         .lower()
         in {"unsupported", "insufficient", "contradicted", "failed", "error"}
@@ -2674,11 +2640,7 @@ def _apply_research_quality_gates(
         or real_citations
     )
     support_ratio_raw = verification_summary.get("support_ratio")
-    support_ratio = (
-        float(support_ratio_raw)
-        if isinstance(support_ratio_raw, int | float)
-        else None
-    )
+    support_ratio = float(support_ratio_raw) if isinstance(support_ratio_raw, int | float) else None
     total_claims = safe_nonnegative_int(verification_summary.get("total_claims"))
     gate_reasons: list[str] = []
     if answer_present and citation_count == 0:
@@ -2689,12 +2651,7 @@ def _apply_research_quality_gates(
         gate_reasons.append(verifier_contract_reason)
     if unsupported_count:
         gate_reasons.append("unsupported_claims")
-    if (
-        answer_present
-        and support_ratio is not None
-        and support_ratio <= 0.0
-        and total_claims > 0
-    ):
+    if answer_present and support_ratio is not None and support_ratio <= 0.0 and total_claims > 0:
         gate_reasons.append("zero_claim_support")
     quality_gate = {
         "schema_version": "1.0",
@@ -2731,9 +2688,7 @@ def _apply_research_quality_gates(
         # Keep the evidence and verifier diagnostics so the UI can explain the
         # abstention and a researcher can refine the request.
         language = str(
-            request_payload.get("ui_language")
-            or request_payload.get("answer_language")
-            or "vi"
+            request_payload.get("ui_language") or request_payload.get("answer_language") or "vi"
         ).lower()
         safe_answer = (
             "CLARA could not retrieve enough verifiable evidence for this research "
@@ -2756,9 +2711,7 @@ def _apply_research_quality_gates(
         # part of the API safety boundary rather than presentation metadata.
         existing_policy_action = str(gated.get("policy_action") or "").strip().lower()
         gated["policy_action"] = (
-            existing_policy_action
-            if existing_policy_action in {"block", "escalate"}
-            else "warn"
+            existing_policy_action if existing_policy_action in {"block", "escalate"} else "warn"
         )
     return gated
 
@@ -2835,13 +2788,9 @@ def _build_research_run_manifest(
         "input_sha256": _canonical_sha256(request_payload),
         "research_mode": _coerce_research_mode(request_payload),
         "source_mode": str(request_payload.get("source_mode") or "hybrid"),
-        "retrieval_stack_mode": str(
-            request_payload.get("retrieval_stack_mode") or "auto"
-        ),
+        "retrieval_stack_mode": str(request_payload.get("retrieval_stack_mode") or "auto"),
         "answer_language": str(
-            request_payload.get("ui_language")
-            or request_payload.get("answer_language")
-            or "vi"
+            request_payload.get("ui_language") or request_payload.get("answer_language") or "vi"
         ),
         "selected_sources": {
             "knowledge_source_ids": list(request_payload.get("source_ids") or []),
@@ -4775,9 +4724,7 @@ async def upload_file_to_knowledge_source(
 
         file_name = file.filename or "uploaded-file"
         content_type = file.content_type or "application/octet-stream"
-        file_bytes = await read_upload_bytes_with_limit(
-            file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES
-        )
+        file_bytes = await read_upload_bytes_with_limit(file, max_bytes=_MAX_RESEARCH_UPLOAD_BYTES)
         if not file_bytes:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File upload rỗng")
         verified = _validate_upload_safety(
@@ -5039,14 +4986,10 @@ def research_clarify(
         and research_mode in _CLARIFY_DEEP_MODES
     )
     if not gate_open or not query_text:
-        return ResearchClarifyResponse(
-            ambiguous=False, research_mode=research_mode, questions=[]
-        )
+        return ResearchClarifyResponse(ambiguous=False, research_mode=research_mode, questions=[])
 
     ambiguous = _detect_query_ambiguity(query_text)
-    questions = (
-        _build_clarifying_questions(ui_language=payload.ui_language) if ambiguous else []
-    )
+    questions = _build_clarifying_questions(ui_language=payload.ui_language) if ambiguous else []
     return ResearchClarifyResponse(
         ambiguous=ambiguous,
         research_mode=research_mode,
@@ -5165,9 +5108,7 @@ def get_research_tier2_job(
 _RESEARCH_EXPORT_FORMATS = ("md", "docx", "pdf")
 _RESEARCH_EXPORT_MEDIA_TYPES = {
     "md": "text/markdown; charset=utf-8",
-    "docx": (
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ),
+    "docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
     "pdf": "application/pdf",
 }
 
@@ -5436,12 +5377,11 @@ def _render_export_pdf(*, query_text: str, result: dict[str, Any]) -> bytes:
 
     kids = " ".join(f"{number} 0 R" for number in page_object_numbers)
     objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
-    objects[2] = (
-        f"<< /Type /Pages /Kids [{kids}] /Count {len(page_object_numbers)} >>"
-    ).encode("latin-1")
+    objects[2] = (f"<< /Type /Pages /Kids [{kids}] /Count {len(page_object_numbers)} >>").encode(
+        "latin-1"
+    )
     objects[3] = (
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica "
-        b"/Encoding /WinAnsiEncoding >>"
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
     )
 
     pdf = bytearray(b"%PDF-1.4\n")
@@ -5459,8 +5399,7 @@ def _render_export_pdf(*, query_text: str, result: dict[str, Any]) -> bytes:
     for number in sorted(objects):
         pdf += f"{offsets[number]:010d} 00000 n \n".encode("latin-1")
     pdf += (
-        f"trailer\n<< /Size {total_objects} /Root 1 0 R >>\n"
-        f"startxref\n{xref_offset}\n%%EOF"
+        f"trailer\n<< /Size {total_objects} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF"
     ).encode("latin-1")
     return bytes(pdf)
 

@@ -147,9 +147,19 @@ def retrieve_revision_evidence(
     start_at: datetime | None = None,
     end_at: datetime | None = None,
     event_types: frozenset[str] | None = None,
+    allowed_event_ids: frozenset[str] | None = None,
     limit: int = 20,
 ) -> list[EvidenceRow]:
-    """Retrieve only current revisions from one pre-authorized profile."""
+    """Retrieve current revision projections for an authorized governed set.
+
+    ``allowed_event_ids`` is optional for legacy non-AI projection callers.
+    AI consumers pass the set compiled by THSS, so temporal retrieval cannot
+    surface a revision that is absent, superseded, invalidated, or otherwise
+    withheld by governed state selection.
+    """
+
+    if allowed_event_ids is not None and not allowed_event_ids:
+        return []
 
     statement = (
         select(LifeMapEvent, LifeMapEventRevision)
@@ -188,6 +198,8 @@ def retrieve_revision_evidence(
         if not event_types:
             return []
         statement = statement.where(LifeMapEvent.event_type.in_(event_types))
+    if allowed_event_ids is not None:
+        statement = statement.where(LifeMapEvent.public_id.in_(allowed_event_ids))
 
     rows: list[tuple[LifeMapEvent, LifeMapEventRevision]] = [
         (event, revision)

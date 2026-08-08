@@ -49,3 +49,10 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | NFR-THEME/I18N/RESP | UI-02/UI-19 | tokens/catalog/pages | token/i18n/terminology/screenshots | in_progress |
 | NFR-SEC/SAFE/PRIV/AUDIT | UI-08–17, UI-21 | UI only; server contracts preserved | API safety suites + UI regression | pending |
 | NFR-COMPAT/MAINT | UI-01/UI-05/UI-20 | registries, aliases, CSS/docs | route/build/import/architecture review | pending |
+
+### UI-19 mobile checkpoint (2026-08-08)
+
+- The active shared terminology was checked in the Flutter redesign surfaces: health-record save, health-question, and medication-interaction labels use the canonical Vietnamese copy rather than stale shell labels.
+- `flutter test test/redesign_home_screen_test.dart test/redesign_a11y_test.dart` passed 8/8; `flutter test test/cabinet_ocr_sheet_test.dart` passed 4/4.
+- `flutter analyze` completed with no errors. Four existing informational notices remain (a dangling library doc and three deprecated Flutter APIs); they are tracked outside this terminology checkpoint.
+- UI-19 remains `in_progress`: this focused mobile evidence does not replace the full browser CSRF, responsive, visual, and accessibility release matrix.

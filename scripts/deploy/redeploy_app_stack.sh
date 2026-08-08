@@ -124,7 +124,10 @@ smoke_research_mode() {
   local last_reason="no successful attempt"
 
   for attempt in 1 2 3; do
-    if curl_with_ml_internal_key -fsS -m 120 -X POST "${ml_url}/v1/research/tier2" \
+    # Deep research can use the full governed research budget. Keep a small
+    # margin over the ML/API contract so this deploy gate does not cancel a
+    # still-healthy evidence synthesis.
+    if curl_with_ml_internal_key -fsS -m "${SMOKE_RESEARCH_TIMEOUT_SECONDS:-360}" -X POST "${ml_url}/v1/research/tier2" \
       -H 'Content-Type: application/json' \
       -d "{\"query\":\"aspirin and ibuprofen interaction risk\",\"research_mode\":\"${research_mode}\",\"source_mode\":\"hybrid\"}" > "${output_file}"; then
       :
@@ -195,7 +198,10 @@ smoke_ml() {
   deep_research_json="${tmp_dir}/research.deep.json"
   deep_beta_research_json="${tmp_dir}/research.deep_beta.json"
 
-  curl_with_ml_internal_key -fsS -m 30 -X POST "${ml_url}/v1/chat/routed" \
+  # The governed V4 Pro route can legitimately take longer than the historic
+  # 30-second smoke budget. Keep this aligned with the runtime contract while
+  # still allowing a stricter operator override when needed.
+  curl_with_ml_internal_key -fsS -m "${SMOKE_CHAT_TIMEOUT_SECONDS:-120}" -X POST "${ml_url}/v1/chat/routed" \
     -H 'Content-Type: application/json' \
     -d '{"query":"hi","role":"admin"}' > "${tmp_dir}/chat.json"
 

@@ -184,8 +184,7 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
       }
       if (_text(run['status']) != 'completed') {
         throw ApiException(
-          message:
-              _copy[ConsumerTerm.livingEvidenceRunIncomplete],
+          message: _copy[ConsumerTerm.livingEvidenceRunIncomplete],
         );
       }
       await widget.apiClient.subscribeToEvidenceRun(
@@ -241,10 +240,9 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
       await _load();
     } catch (error) {
       if (mounted) {
-        setState(() => _error =
-            error is ApiException
-                ? error.message
-                : _copy[ConsumerTerm.livingEvidenceStopFailed]);
+        setState(() => _error = error is ApiException
+            ? error.message
+            : _copy[ConsumerTerm.livingEvidenceStopFailed]);
       }
     } finally {
       if (mounted) setState(() => _working = false);
@@ -310,9 +308,8 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                               padding: const EdgeInsets.only(
                                   bottom: ClaraTokens.spaceSm),
                               child: ClaraCard(
-                                semanticLabel:
-                                    _copy[ConsumerTerm
-                                        .livingEvidenceNotificationSemanticLabel],
+                                semanticLabel: _copy[ConsumerTerm
+                                    .livingEvidenceNotificationSemanticLabel],
                                 onTap: () => _read(item),
                                 child: ListTile(
                                   contentPadding: EdgeInsets.zero,
@@ -332,7 +329,8 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                             ),
                         ],
                         SectionHeader(
-                          title: _copy[ConsumerTerm.livingEvidenceSubscriptions],
+                          title:
+                              _copy[ConsumerTerm.livingEvidenceSubscriptions],
                         ),
                         if (_subscriptions
                             .where((item) => _text(item['status']) == 'active')
@@ -360,8 +358,8 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                                 DropdownButtonFormField<String>(
                                   initialValue: _episodeId,
                                   decoration: InputDecoration(
-                                    labelText: _copy[
-                                        ConsumerTerm.livingEvidenceJourneyLabel],
+                                    labelText: _copy[ConsumerTerm
+                                        .livingEvidenceJourneyLabel],
                                   ),
                                   items: _episodes.map((episode) {
                                     return DropdownMenuItem<String>(
@@ -464,6 +462,7 @@ class _LivingEvidenceSurfaceState extends State<LivingEvidenceSurface> {
                   child: Text(
                     _copy[ConsumerTerm.livingEvidenceEveryThirtyDays],
                   ),
+                ),
               ],
               onChanged: _working
                   ? null

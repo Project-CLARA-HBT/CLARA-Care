@@ -189,5 +189,11 @@ eval-glhs-q2-external-stream:
 	@test -n "$(OUTPUT)" || (echo "OUTPUT is required" >&2; exit 2)
 	@python3 -m evaluation.glhs_q2.run_external_stream --manifest "$(MANIFEST)" --output "$(OUTPUT)"
 
+# Read-only publication gate for a completed Q2 artifact. This verifies the
+# output accounting/release boundary without re-running or tuning any policy.
+eval-glhs-q2-validate:
+	@test -n "$(ARTIFACT)" || (echo "ARTIFACT is required" >&2; exit 2)
+	@python3 -m evaluation.glhs_q2.validate_artifact --artifact "$(ARTIFACT)"
+
 precommit-install:
 	pre-commit install

@@ -85,9 +85,17 @@ def test_search_allowed_for_doctor(monkeypatch) -> None:
 
 
 def test_invalid_token_is_rejected() -> None:
-    response = client.post(
-        "/api/v1/chat/",
-        headers={"Authorization": "Bearer invalid-token"},
-        json={"message": "xin chao"},
-    )
+    # This is the bearer-only authentication vector.  The module client is
+    # deliberately shared by the legacy test suite, so a previous login can
+    # leave an HttpOnly cookie in its jar.  Keeping that cookie would exercise
+    # the separate mixed-credential CSRF policy instead of this auth invariant.
+    client.cookies.clear()
+    try:
+        response = client.post(
+            "/api/v1/chat/",
+            headers={"Authorization": "Bearer invalid-token"},
+            json={"message": "xin chao"},
+        )
+    finally:
+        client.cookies.clear()
     assert response.status_code == 401

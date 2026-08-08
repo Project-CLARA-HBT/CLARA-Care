@@ -1301,9 +1301,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                               if (open && clinical) ...[
                                 const SizedBox(height: ClaraTokens.spaceSm),
                                 Text(
-                                  _copy[
-                                    ConsumerTerm.lifeMapDisputeQueueClinicalReview
-                                  ],
+                                  _copy[ConsumerTerm
+                                      .lifeMapDisputeQueueClinicalReview],
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.error,
                                   ),
@@ -1313,8 +1312,7 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                                 const SizedBox(height: ClaraTokens.spaceSm),
                                 ClaraButton.secondary(
                                   label: _copy[
-                                    ConsumerTerm.lifeMapDisputeQueueResolve
-                                  ],
+                                      ConsumerTerm.lifeMapDisputeQueueResolve],
                                   icon: Icons.verified_outlined,
                                   onPressed: () => _resolveDispute(item),
                                 ),
@@ -1382,7 +1380,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                       trailing: Text(
                         item['status'] == 'ready'
                             ? '${_str(item['personal_median'])} ${_str(item['unit'])}'
-                            : _copy[ConsumerTerm.lifeMapBaselineInsufficientData],
+                            : _copy[
+                                ConsumerTerm.lifeMapBaselineInsufficientData],
                         style: theme.textTheme.labelLarge,
                       ),
                     ),
@@ -1654,7 +1653,8 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                         )
                       else if (proposalMap == null)
                         Text(
-                          _copy[ConsumerTerm.lifeMapCaptureNormalizeUnavailable],
+                          _copy[
+                              ConsumerTerm.lifeMapCaptureNormalizeUnavailable],
                           style: theme.textTheme.bodySmall,
                         )
                       else ...[
@@ -1917,8 +1917,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
             _copy.format(
               ConsumerTerm.lifeMapCaptureSourcePreview,
               <String, Object?>{
-                'name': _captureSourceName ?? _copy[ConsumerTerm.lifeMapCaptureChoosePhoto],
+                'name': _captureSourceName ??
+                    _copy[ConsumerTerm.lifeMapCaptureChoosePhoto],
               },
+            ),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -2181,10 +2183,10 @@ class _LifeMapSurfaceState extends State<LifeMapSurface> {
                                 Text(
                                   '${_str(rawClaim['attribution'])} · '
                                   '${_str(rawClaim['occurred_at'])} · '
-                                  _copy.format(
+                                  '${_copy.format(
                                     ConsumerTerm.lifeMapSummaryCitation,
                                     <String, Object?>{'citations': citations},
-                                  ),
+                                  )}',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
