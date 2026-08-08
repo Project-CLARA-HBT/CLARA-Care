@@ -112,6 +112,42 @@ async function mockEvidenceResultApi(page: Page) {
   });
 }
 
+async function mockActiveScribeApi(page: Page) {
+  const session = {
+    id: 101,
+    title: "Interface review session",
+    status: "draft",
+    transcript: "Public workflow fixture transcript. No patient data is represented.",
+    soap: {
+      subjective: "Interface fixture.",
+      objective: "No clinical observation represented.",
+      assessment: "Review-only fixture.",
+      plan: "No action generated.",
+    },
+    insights: {},
+    metadata: {},
+    last_processed_at: "2026-08-08T00:00:00Z",
+    created_at: "2026-08-08T00:00:00Z",
+    updated_at: "2026-08-08T00:00:00Z",
+  };
+  await page.route("**/api/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/scribe/sessions/101/recording-data/capability")) {
+      return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ detail: "Not enabled" }) });
+    }
+    if (path.endsWith("/scribe/sessions/101")) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session) });
+    }
+    if (path.endsWith("/scribe/sessions")) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ items: [session], total: 1 }) });
+    }
+    if (path.endsWith("/scribe/analytics/summary")) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ total_sessions: 1, completed_sessions: 0, draft_sessions: 1, sessions_today: 1, avg_transcript_chars: 62 }) });
+    }
+    return route.fallback();
+  });
+}
+
 test.describe("Evidence, Source Hub, Council and Scribe states", () => {
   test.beforeEach(async ({ page }) => {
     await mockWorkspaceApi(page);
@@ -182,6 +218,21 @@ test.describe("Evidence, Source Hub, Council and Scribe states", () => {
     await expect(page.getByText("Public source fixture for interface verification", { exact: true })).toBeVisible();
     await page.getByText("Độ không chắc chắn của lần chạy này", { exact: true }).click();
     await expect(page.getByText(/Interface fixture; not a clinical conclusion\./)).toBeVisible();
+    const horizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(horizontalOverflow).toBeLessThanOrEqual(1);
+  });
+
+  test("renders an active Scribe session while keeping unavailable deletion controls fail-closed", async ({ page }) => {
+    await mockActiveScribeApi(page);
+    await page.goto("/scribe", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByText("Interface review session", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bản ghi thời gian thực", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bản nháp SOAP", exact: true })).toBeVisible();
+    await expect(page.getByText("Public workflow fixture transcript. No patient data is represented.", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Xóa dữ liệu ghi âm|Delete recording data/ })).toHaveCount(0);
     const horizontalOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
