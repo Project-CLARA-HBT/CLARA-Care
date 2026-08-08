@@ -148,6 +148,54 @@ async function mockActiveScribeApi(page: Page) {
   });
 }
 
+async function mockCouncilResultApi(page: Page) {
+  const councilCase = {
+    id: 202,
+    title: "Interface-only Council result",
+    status: "completed",
+    intake_mode: "text",
+    transcript: "No patient data is represented by this interface fixture.",
+    request: {
+      symptoms: [],
+      labs: {},
+      medications: [],
+      history: "Interface-only fixture.",
+      specialist_count: 2,
+      specialists: ["Review A", "Review B"],
+    },
+    result: {
+      final_recommendation: "Interface-only output; not a clinical conclusion.",
+      consensus: "Review the display hierarchy before use.",
+      conflicts: ["Human review remains required for this fixture."],
+      divergence: [],
+      reasoning_timeline: [
+        { sequence: 1, step: "intake" },
+        { sequence: 2, step: "review" },
+      ],
+      citation_quality: { total_citations: 0, average_evidence_strength: null },
+      medication_safety: {
+        state: "unavailable",
+        drugbank_state: "unavailable",
+        drugbank_version: "",
+        alert_ids: [],
+        triage_floor: null,
+        review_required: true,
+      },
+    },
+    raw_result: null,
+    last_run_at: "2026-08-08T00:00:00Z",
+    created_at: "2026-08-08T00:00:00Z",
+    updated_at: "2026-08-08T00:00:00Z",
+  };
+  await page.route("**/api/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/council/cases/202")) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(councilCase) });
+    }
+    return route.fallback();
+  });
+}
+
 test.describe("Evidence, Source Hub, Council and Scribe states", () => {
   test.beforeEach(async ({ page }) => {
     await mockWorkspaceApi(page);
@@ -233,6 +281,21 @@ test.describe("Evidence, Source Hub, Council and Scribe states", () => {
     await expect(page.getByRole("heading", { name: "Bản nháp SOAP", exact: true })).toBeVisible();
     await expect(page.getByText("Public workflow fixture transcript. No patient data is represented.", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Xóa dữ liệu ghi âm|Delete recording data/ })).toHaveCount(0);
+    const horizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(horizontalOverflow).toBeLessThanOrEqual(1);
+  });
+
+  test("renders a review-only Council result without representing it as a clinical conclusion", async ({ page }) => {
+    await mockCouncilResultApi(page);
+    await page.goto("/council/result?caseId=202", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("heading", { name: "Kết quả hội chẩn", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tóm tắt kết quả", exact: true })).toBeVisible();
+    await expect(page.getByText(/Interface-only output; not a clinical conclusion/)).toBeVisible();
+    await expect(page.getByText(/Chưa thể xác nhận đầy đủ an toàn thuốc từ nguồn bắt buộc/)).toBeVisible();
+    await expect(page.getByText(/Human review remains required for this fixture/)).toBeVisible();
     const horizontalOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
