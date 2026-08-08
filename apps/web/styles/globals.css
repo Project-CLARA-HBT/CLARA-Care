@@ -35,6 +35,7 @@
   /* Brand + status — indigo-leaning blue for a warmer, more modern feel */
   --brand-400: #d4e3ff;
   --brand-500: #a4c9ff;
+  --brand-primary: #a4c9ff;
   --brand-600: #0053db;
   --brand-700: #003ea8;
   --brand-800: #002a78;
@@ -53,6 +54,13 @@
   --status-danger-bg: rgba(255, 180, 171, 0.12);
   --status-danger-border: rgba(255, 180, 171, 0.30);
   --status-danger-text: #ffb4ab;
+  /* Compatibility aliases kept on the canonical status tokens. */
+  --surface-warning-soft: var(--status-warn-bg);
+  --status-warning-border: var(--status-warn-border);
+  --text-warning: var(--status-warn-text);
+  --surface-danger-soft: var(--status-danger-bg);
+  --danger-border: var(--status-danger-border);
+  --text-danger: var(--status-danger-text);
   --status-neutral-bg: rgba(139, 145, 157, 0.16);
   --status-neutral-border: rgba(139, 145, 157, 0.30);
   --status-neutral-text: #c1c7d3;
@@ -545,6 +553,7 @@ html[data-theme="dark"] {
    * the lighter primary shades remain reserved for emphasis and focus. */
   --brand-400: #d4e3ff;
   --brand-500: #a4c9ff;
+  --brand-primary: #a4c9ff;
   --brand-600: #0053db;
   --brand-700: #003ea8;
   --brand-800: #002a78;
@@ -565,6 +574,12 @@ html[data-theme="dark"] {
   --status-danger-bg: rgba(255, 180, 171, 0.12);
   --status-danger-border: rgba(255, 180, 171, 0.3);
   --status-danger-text: #ffb4ab;
+  --surface-warning-soft: var(--status-warn-bg);
+  --status-warning-border: var(--status-warn-border);
+  --text-warning: var(--status-warn-text);
+  --surface-danger-soft: var(--status-danger-bg);
+  --danger-border: var(--status-danger-border);
+  --text-danger: var(--status-danger-text);
   --status-neutral-bg: rgba(148, 163, 184, 0.2);
   --status-neutral-border: rgba(148, 163, 184, 0.38);
   --status-neutral-text: #cbd5e1;

@@ -1286,7 +1286,7 @@ export default function ScribePage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`h-2 w-2 rounded-full ${isRecording ? "bg-[var(--brand-primary)] animate-pulse" : "bg-[var(--surface-high)]"}`} />
-                      <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">{isRecording ? copy("scribe.status.recording") : copy("scribe.status.waiting")}</span>
+                      <span className="text-[10px] font-black uppercase text-[var(--status-ok-text)]">{isRecording ? copy("scribe.status.recording") : copy("scribe.status.waiting")}</span>
                     </div>
                   </div>
                 </div>
@@ -1296,7 +1296,7 @@ export default function ScribePage() {
         </section>
 
         {canDeleteSelectedRecordingData ? (
-          <section className={`${panelPaddedLgClass} border-rose-300 dark:border-rose-500/70`} data-testid="scribe-recording-data-controls">
+          <section className={`${panelPaddedLgClass} border-[color:var(--status-danger-border)]`} data-testid="scribe-recording-data-controls">
             <h2 className={sectionTitleClass}>{copy("scribe.recordingData.title")}</h2>
             <p className={`mt-2 text-sm leading-6 ${secondaryTextClass}`}>
               {copy("scribe.recordingData.description")}
@@ -1349,14 +1349,14 @@ export default function ScribePage() {
       </section>
 
       {error ? (
-        <p className="mt-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100">{error}</p>
+        <p className="mt-4 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-2 text-sm font-semibold text-[var(--status-danger-text)]">{error}</p>
       ) : null}
       {notice ? (
         <p
           className={`mt-4 rounded-lg border px-4 py-2 text-sm font-semibold ${
             notice.tone === "success"
-              ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/70 dark:bg-emerald-500/20 dark:text-emerald-100"
-              : "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100"
+              ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+              : "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
           }`}
         >
           {notice.message}

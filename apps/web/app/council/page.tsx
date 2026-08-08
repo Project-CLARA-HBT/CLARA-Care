@@ -1073,7 +1073,7 @@ export default function CouncilPage() {
                   {t(language, "council.overview.assessment.disclaimer")}
                 </p>
                 {missingCriticalData ? (
-                  <p className="mt-3 text-xs font-semibold text-amber-800 dark:text-amber-200">
+                  <p className="mt-3 text-xs font-semibold text-[var(--status-warn-text)]">
                     {t(language, "council.overview.assessment.missingReason", {
                       items: missingDataLabels.join(
                         t(language, "council.overview.listJoin"),
@@ -1105,18 +1105,18 @@ export default function CouncilPage() {
                       step.status === "missing"
                         ? "border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)]"
                         : step.status === "review"
-                          ? "border-amber-400 bg-amber-100"
+                          ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)]"
                           : step.status === "pending"
-                            ? "border-orange-400 bg-orange-100"
-                            : "border-emerald-400 bg-emerald-100";
+                            ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)]"
+                            : "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)]";
                     const innerDotClass =
                       step.status === "missing"
                         ? "bg-[var(--brand-600)]"
                         : step.status === "review"
-                          ? "bg-amber-600"
+                          ? "bg-[#fabd34]"
                           : step.status === "pending"
-                            ? "bg-orange-600"
-                            : "bg-emerald-600";
+                            ? "bg-[#fabd34]"
+                            : "bg-[#a4c9ff]";
                     return (
                       <div className="relative pl-8" key={step.id}>
                         <div
@@ -1316,7 +1316,7 @@ export default function CouncilPage() {
                                 })}
                           </span>
                           {run.emergencyTriggered ? (
-                            <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:border-rose-500/70 dark:bg-rose-500/20 dark:text-rose-100">
+                            <span className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--status-danger-text)]">
                               {t(language, "council.history.emergencyBadge")}
                             </span>
                           ) : null}
@@ -1347,13 +1347,13 @@ export default function CouncilPage() {
               <button
                 type="button"
                 onClick={() => setHandoffOpen(true)}
-                className="group flex w-full items-center justify-between rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] p-4 text-white shadow-sm transition hover:bg-[color:var(--brand-700)]"
+                className="group flex w-full items-center justify-between rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] p-4 text-[#cdd7ff] transition hover:bg-[color:var(--brand-700)]"
               >
                 <div className="text-left">
                   <p className="text-base font-black leading-tight">
                     {t(language, "council.overview.handoff.action")}
                   </p>
-                  <p className="mt-1 text-xs font-semibold text-blue-100">
+                  <p className="mt-1 text-xs font-semibold text-[#cdd7ff]">
                     {t(language, "council.overview.handoff.actionHint")}
                   </p>
                 </div>
@@ -1385,12 +1385,12 @@ export default function CouncilPage() {
                       setGuardAction("pause");
                       setGuardReason("");
                     }}
-                    className="flex flex-col items-center gap-2 rounded-lg border border-rose-300 bg-rose-50 p-4 text-center transition hover:bg-rose-100 dark:border-rose-500/70 dark:bg-rose-500/20 dark:hover:bg-rose-500/30"
+                    className="flex flex-col items-center gap-2 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-center transition hover:bg-[var(--surface-panel)]"
                   >
-                    <span className="material-symbols-outlined text-rose-700 dark:text-rose-100">
+                    <span className="material-symbols-outlined text-[var(--status-danger-text)]">
                       pause_circle
                     </span>
-                    <p className="text-xs font-bold text-rose-800 dark:text-rose-100">
+                    <p className="text-xs font-bold text-[var(--status-danger-text)]">
                       {t(language, "council.overview.guard.pauseAction")}
                     </p>
                   </button>
@@ -1398,7 +1398,7 @@ export default function CouncilPage() {
               ) : null}
 
               {actionNotice ? (
-                <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:border-emerald-500/70 dark:bg-emerald-500/20 dark:text-emerald-100">
+                <div className="rounded-lg border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-3 text-sm font-semibold text-[var(--status-ok-text)]">
                   {actionNotice}
                 </div>
               ) : null}
@@ -1409,13 +1409,13 @@ export default function CouncilPage() {
                     {t(language, "council.overview.summary.title")}
                   </p>
                   {oversightPaused ? (
-                    <span className="rounded-full border border-orange-300 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100">
+                    <span className="rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-1 text-xs font-bold text-[var(--status-warn-text)]">
                       {t(language, "council.overview.summary.unconfirmed")}
                     </span>
                   ) : null}
                 </div>
                 {oversightPaused ? (
-                  <p className="mt-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs font-semibold text-orange-800 dark:border-orange-500/70 dark:bg-orange-500/20 dark:text-orange-100">
+                  <p className="mt-2 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-xs font-semibold text-[var(--status-warn-text)]">
                     {t(language, "council.overview.summary.pausedNotice")}
                   </p>
                 ) : null}
@@ -1481,7 +1481,7 @@ export default function CouncilPage() {
                   </div>
                 )}
                 {escalationText && finalDecisionBlocked ? (
-                  <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
+                  <p className="mt-3 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] p-3 text-xs font-semibold text-[var(--status-warn-text)]">
                     {t(language, "council.overview.summary.systemNote")}{" "}
                     {summarizeClinicalText(
                       escalationText,
@@ -1518,7 +1518,7 @@ export default function CouncilPage() {
                         {t(language, "council.model.basisLabel")}
                       </span>
                       {disclosure.isFallback ? (
-                        <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
+                        <span className="rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--status-warn-text)]">
                           {t(language, "council.model.degradedBadge")}
                         </span>
                       ) : null}

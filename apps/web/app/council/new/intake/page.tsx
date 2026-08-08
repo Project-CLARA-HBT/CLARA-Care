@@ -320,7 +320,7 @@ export default function CouncilNewIntakePage() {
           </label>
         </section>
 
-        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+        {error ? <p className="text-sm text-[var(--status-danger-text)]">{error}</p> : null}
 
         <div className="flex flex-wrap justify-between gap-2">
           <Link href="/council/new" className="inline-flex min-h-[42px] items-center rounded-lg border border-[color:var(--shell-border)] px-4 text-sm font-semibold">

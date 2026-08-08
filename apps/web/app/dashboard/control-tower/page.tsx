@@ -92,7 +92,7 @@ const FLOW_GROUP_META: Record<FlowGroupKey, { label: string; description: string
   },
   verification: {
     label: "Verification",
-    description: "Kiểm chứng và cơ chế fallback"
+    description: "Kiểm chứng trước khi phát hành"
   },
   retrieval: {
     label: "Retrieval",
@@ -356,13 +356,13 @@ export default function ControlTowerPage() {
               <p className="text-[11px] uppercase tracking-wider text-[var(--text-brand)]">Enabled</p>
               <p className="mt-1 text-xl font-semibold text-[var(--text-brand)]">{stats.enabled}</p>
             </div>
-            <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-amber-200">Disabled</p>
-              <p className="mt-1 text-xl font-semibold text-amber-100">{stats.disabled}</p>
+            <div className="rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-[var(--status-warn-text)]">Disabled</p>
+              <p className="mt-1 text-xl font-semibold text-[var(--status-warn-text)]">{stats.disabled}</p>
             </div>
-            <div className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-cyan-200">Active Flow</p>
-              <p className="mt-1 text-xl font-semibold text-cyan-100">
+            <div className="rounded-lg border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-[var(--text-brand)]">Active Flow</p>
+              <p className="mt-1 text-xl font-semibold text-[var(--text-brand)]">
                 {stats.activeFlows}/{FLOW_FLAGS.length}
               </p>
             </div>
@@ -370,21 +370,21 @@ export default function ControlTowerPage() {
         </section>
 
         {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          <p className="rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-sm text-[var(--status-danger-text)]">{error}</p>
         ) : null}
         {message ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>
+          <p className="rounded-lg border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-2 text-sm text-[var(--status-ok-text)]">{message}</p>
         ) : null}
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-4 py-3 sm:px-5">
+          <section className="overflow-hidden rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
+            <div className="border-b border-[color:var(--shell-border)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Source Registry</p>
-                  <h3 className="mt-1 text-sm font-semibold text-slate-900">Data Sources</h3>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Source Registry</p>
+                  <h3 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Data Sources</h3>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
+                <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
                   {stats.uniqueCategories} category | top priority #{stats.topPriority || "-"}
                 </div>
               </div>
@@ -393,7 +393,7 @@ export default function ControlTowerPage() {
             {config?.rag_sources?.length ? (
               <div className="overflow-x-auto">
                 <table className="min-w-[760px] w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="bg-[var(--surface-muted)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
                     <tr>
                       <th className="px-4 py-2.5 font-semibold sm:px-5">Source</th>
                       <th className="px-4 py-2.5 font-semibold">Category</th>
@@ -401,15 +401,15 @@ export default function ControlTowerPage() {
                       <th className="px-4 py-2.5 font-semibold">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-[color:var(--shell-border)]">
                     {config.rag_sources.map((source) => (
-                      <tr key={source.id} className="align-top hover:bg-slate-50/80">
+                      <tr key={source.id} className="align-top transition-colors hover:bg-[var(--surface-muted)]">
                         <td className="px-4 py-3 sm:px-5">
-                          <p className="font-semibold text-slate-900">{source.name}</p>
-                          <p className="mt-1 font-mono text-xs text-slate-500">{source.id}</p>
+                          <p className="font-semibold text-[var(--text-primary)]">{source.name}</p>
+                          <p className="mt-1 font-mono text-xs text-[var(--text-muted)]">{source.id}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                          <span className="inline-flex rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)]">
                             {source.category}
                           </span>
                         </td>
@@ -423,21 +423,21 @@ export default function ControlTowerPage() {
                             min={1}
                             max={100}
                             value={source.priority}
-                            className="h-10 w-24 rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                            className="h-10 w-24 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-sm text-[var(--text-primary)] outline-none transition focus:border-[color:var(--brand-primary)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                             onChange={(event) => onPriorityChange(source.id, event.target.value)}
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5">
+                          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1.5">
                             <input
                               type="checkbox"
                               checked={source.enabled}
                               onChange={() => onToggleSource(source.id)}
-                              className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                              className="h-4 w-4 rounded border-[color:var(--shell-border-strong)] accent-[var(--brand-600)]"
                             />
                             <span
                               className={`text-xs font-semibold uppercase tracking-wide ${
-                                source.enabled ? "text-emerald-700" : "text-slate-500"
+                                source.enabled ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)]"
                               }`}
                             >
                               {source.enabled ? "Enabled" : "Disabled"}
@@ -450,18 +450,18 @@ export default function ControlTowerPage() {
                 </table>
               </div>
             ) : (
-              <p className="px-4 py-4 text-sm text-slate-600 sm:px-5">Chưa có nguồn nào.</p>
+              <p className="px-4 py-4 text-sm text-[var(--text-secondary)] sm:px-5">Chưa có nguồn nào.</p>
             )}
           </section>
 
           <section className="space-y-4">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Flow Threshold</p>
-                  <h3 className="mt-1 text-sm font-semibold text-slate-900">Low-context guardrail</h3>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Flow Threshold</p>
+                  <h3 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">Low-context guardrail</h3>
                 </div>
-                <p className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-sm text-slate-700">
+                <p className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 font-mono text-sm text-[var(--text-secondary)]">
                   {config?.rag_flow.low_context_threshold.toFixed(2) ?? "0.00"}
                 </p>
               </div>
@@ -473,10 +473,10 @@ export default function ControlTowerPage() {
                   step={0.05}
                   value={config?.rag_flow.low_context_threshold ?? 0}
                   onChange={(event) => onThresholdChange(event.target.value)}
-                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-cyan-600"
+                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-[var(--surface-muted)] accent-[var(--brand-600)]"
                 />
                 <div className="flex items-center gap-2">
-                  <label htmlFor="low-context-threshold" className="text-xs font-medium text-slate-600">
+                  <label htmlFor="low-context-threshold" className="text-xs font-medium text-[var(--text-secondary)]">
                     Threshold (0 - 1)
                   </label>
                   <input
@@ -486,25 +486,25 @@ export default function ControlTowerPage() {
                     max={1}
                     step={0.05}
                     value={config?.rag_flow.low_context_threshold ?? 0}
-                    className="h-10 w-24 rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                    className="h-10 w-24 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-sm text-[var(--text-primary)] outline-none transition focus:border-[color:var(--brand-primary)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                     onChange={(event) => onThresholdChange(event.target.value)}
                   />
                 </div>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5">
               <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Retrieval Metrics</p>
-                <h3 className="text-sm font-semibold text-slate-900">Evaluation @K</h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Retrieval Metrics</p>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Evaluation @K</h3>
+                <p className="text-xs text-[var(--text-muted)]">
                   Cấu hình K cho precision/recall/nDCG khi đánh giá chất lượng retrieval (1 - 50).
                 </p>
               </div>
 
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 <label className="space-y-1.5">
-                  <span className="text-xs font-medium text-slate-600">Precision@K</span>
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">Precision@K</span>
                   <input
                     type="number"
                     min={RETRIEVAL_METRIC_K_MIN}
@@ -512,12 +512,12 @@ export default function ControlTowerPage() {
                     step={1}
                     value={config?.rag_flow.precision_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
                     onChange={(event) => onRetrievalMetricChange("precision_at_k", event.target.value)}
-                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                    className="h-10 w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-sm text-[var(--text-primary)] outline-none transition focus:border-[color:var(--brand-primary)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                   />
                 </label>
 
                 <label className="space-y-1.5">
-                  <span className="text-xs font-medium text-slate-600">Recall@K</span>
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">Recall@K</span>
                   <input
                     type="number"
                     min={RETRIEVAL_METRIC_K_MIN}
@@ -525,12 +525,12 @@ export default function ControlTowerPage() {
                     step={1}
                     value={config?.rag_flow.recall_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
                     onChange={(event) => onRetrievalMetricChange("recall_at_k", event.target.value)}
-                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                    className="h-10 w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-sm text-[var(--text-primary)] outline-none transition focus:border-[color:var(--brand-primary)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                   />
                 </label>
 
                 <label className="space-y-1.5">
-                  <span className="text-xs font-medium text-slate-600">nDCG@K</span>
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">nDCG@K</span>
                   <input
                     type="number"
                     min={RETRIEVAL_METRIC_K_MIN}
@@ -538,32 +538,32 @@ export default function ControlTowerPage() {
                     step={1}
                     value={config?.rag_flow.ndcg_at_k ?? DEFAULT_RETRIEVAL_METRIC_K}
                     onChange={(event) => onRetrievalMetricChange("ndcg_at_k", event.target.value)}
-                    className="h-10 w-full rounded-lg border border-slate-300 px-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                    className="h-10 w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-sm text-[var(--text-primary)] outline-none transition focus:border-[color:var(--brand-primary)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                   />
                 </label>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-violet-200 bg-violet-50 p-4 shadow-sm sm:p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-700">Governed model runtime</p>
-              <h3 className="mt-1 text-sm font-semibold text-slate-900">DeepSeek V4 Pro / Flash</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-600">
+            <section className="rounded-[14px] border border-[color:var(--brand-primary)]/30 border-t-[#2A3950] bg-[var(--surface-brand-soft)] p-4 sm:p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-brand)]">Governed model runtime</p>
+              <h3 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">DeepSeek V4 Pro / Flash</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
                 Task contracts chọn Pro cho safety và reasoning, Flash cho tác vụ giới hạn độ trễ. Provider, model, endpoint và API key chỉ thay đổi qua cấu hình triển khai có kiểm soát, không phải từ Control Tower.
               </p>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5">
               <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">CareGuard Runtime</p>
-                <h3 className="text-sm font-semibold text-slate-900">External DDI Source</h3>
-                <p className="text-xs text-slate-500">Bật/tắt gọi RxNav + openFDA ngay tại runtime, không cần restart service.</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">CareGuard Runtime</p>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">External DDI Source</h3>
+                <p className="text-xs text-[var(--text-muted)]">Bật/tắt gọi RxNav + openFDA ngay tại runtime, không cần restart service.</p>
               </div>
-              <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <span className="text-sm font-medium text-slate-900">External DDI enabled</span>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-between rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+                <span className="text-sm font-medium text-[var(--text-primary)]">External DDI enabled</span>
                 <span className="inline-flex items-center gap-2">
                   <span
                     className={`text-[11px] font-semibold uppercase tracking-wide ${
-                      config?.careguard_runtime.external_ddi_enabled ? "text-emerald-700" : "text-slate-500"
+                      config?.careguard_runtime.external_ddi_enabled ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)]"
                     }`}
                   >
                     {config?.careguard_runtime.external_ddi_enabled ? "On" : "Off"}
@@ -572,26 +572,26 @@ export default function ControlTowerPage() {
                     type="checkbox"
                     checked={Boolean(config?.careguard_runtime.external_ddi_enabled)}
                     onChange={onToggleExternalDdi}
-                    className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                    className="h-4 w-4 rounded border-[color:var(--shell-border-strong)] accent-[var(--brand-600)]"
                   />
                 </span>
               </label>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5">
               <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Flow Orchestration</p>
-                <h3 className="text-sm font-semibold text-slate-900">Toggle runtime features</h3>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Flow Orchestration</p>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Toggle runtime features</h3>
               </div>
 
               <div className="mt-4 space-y-3">
                 {(["routing", "verification", "retrieval"] as const).map((groupKey) => (
-                  <section key={groupKey} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <section key={groupKey} className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
                     <div className="mb-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                         {FLOW_GROUP_META[groupKey].label}
                       </p>
-                      <p className="text-xs text-slate-500">{FLOW_GROUP_META[groupKey].description}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{FLOW_GROUP_META[groupKey].description}</p>
                     </div>
 
                     <div className="space-y-2">
@@ -602,13 +602,13 @@ export default function ControlTowerPage() {
                           <label
                             key={flag.key}
                             className={[
-                              "flex min-h-11 items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5",
-                              forcedOn ? "cursor-not-allowed border-cyan-200 bg-cyan-50/30" : "cursor-pointer",
+                              "flex min-h-11 items-start justify-between gap-3 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2.5",
+                              forcedOn ? "cursor-not-allowed border-[color:var(--brand-primary)]/40 bg-[var(--surface-brand-soft)]" : "cursor-pointer",
                             ].join(" ")}
                           >
                             <span>
-                              <span className="block text-sm font-medium text-slate-900">{flag.label}</span>
-                              <span className="mt-0.5 block text-xs text-slate-500">
+                              <span className="block text-sm font-medium text-[var(--text-primary)]">{flag.label}</span>
+                              <span className="mt-0.5 block text-xs text-[var(--text-muted)]">
                                 {flag.hint}
                                 {forcedOn ? " (Bắt buộc bật)" : ""}
                               </span>
@@ -616,7 +616,7 @@ export default function ControlTowerPage() {
                             <span className="inline-flex items-center gap-2 pt-0.5">
                               <span
                                 className={`text-[11px] font-semibold uppercase tracking-wide ${
-                                  checked ? "text-emerald-700" : "text-slate-500"
+                                  checked ? "text-[var(--status-ok-text)]" : "text-[var(--text-muted)]"
                                 }`}
                               >
                                 {forcedOn ? "Locked On" : checked ? "On" : "Off"}
@@ -626,7 +626,7 @@ export default function ControlTowerPage() {
                                 checked={checked}
                                 disabled={forcedOn}
                                 onChange={() => onToggleFlow(flag.key)}
-                                className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                                className="h-4 w-4 rounded border-[color:var(--shell-border-strong)] accent-[var(--brand-600)]"
                               />
                             </span>
                           </label>

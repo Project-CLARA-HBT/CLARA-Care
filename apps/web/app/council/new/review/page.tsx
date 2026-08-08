@@ -167,7 +167,7 @@ export default function CouncilNewReviewPage() {
             </ul>
           </section>
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? <p className="text-sm text-[var(--status-danger-text)]">{error}</p> : null}
 
           <div className="flex flex-wrap justify-between gap-2">
             <Link

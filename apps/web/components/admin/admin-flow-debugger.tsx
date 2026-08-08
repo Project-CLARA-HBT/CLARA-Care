@@ -292,7 +292,7 @@ export default function AdminFlowDebugger({
               {!isLast ? (
                 <span
                   aria-hidden
-                  className="absolute left-[11px] top-7 h-[calc(100%-0.35rem)] w-px bg-slate-300 dark:bg-slate-700"
+                  className="absolute left-[11px] top-7 h-[calc(100%-0.35rem)] w-px bg-[var(--shell-border)]"
                 />
               ) : null}
 
@@ -301,8 +301,8 @@ export default function AdminFlowDebugger({
                 className={[
                   "absolute left-0 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold",
                   step.active
-                    ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                    : "border-slate-300 bg-slate-100 text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                    ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+                    : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)]"
                 ].join(" ")}
               >
                 {index + 1}
@@ -312,26 +312,26 @@ export default function AdminFlowDebugger({
                 className={[
                   "rounded-xl border px-3 py-2",
                   step.active
-                    ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/30"
-                    : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/70"
+                    ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)]"
+                    : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
                 ].join(" ")}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-800 dark:text-slate-100">
+                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-primary)]">
                     {step.title}
                   </p>
                   <span
                     className={[
                       "rounded-full px-2 py-0.5 text-[11px] font-semibold",
                       step.active
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                        ? "bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+                        : "bg-[var(--surface-muted)] text-[var(--text-muted)]"
                     ].join(" ")}
                   >
                     {step.active ? "active" : "inactive"}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{step.detail}</p>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">{step.detail}</p>
               </div>
             </div>
           );
@@ -351,12 +351,12 @@ export default function AdminFlowDebugger({
         </span>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className="bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+      <div className="mt-4 overflow-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
+        <div className="bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
           Run History (mô phỏng)
         </div>
         <table className="min-w-full text-left text-xs">
-          <thead className="bg-white text-slate-500 dark:bg-slate-900/80 dark:text-slate-400">
+          <thead className="bg-[var(--surface-panel)] text-[var(--text-muted)]">
             <tr>
               <th className="px-3 py-2 font-medium">Run ID</th>
               <th className="px-3 py-2 font-medium">Scenario</th>
@@ -365,18 +365,18 @@ export default function AdminFlowDebugger({
               <th className="px-3 py-2 font-medium">Duration</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-900">
+          <tbody className="bg-[var(--surface-panel)]">
             {simulatedRuns.map((run) => (
-              <tr key={run.id} className="border-t border-slate-100 dark:border-slate-800">
-                <td className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200">{run.id}</td>
-                <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{run.scenario}</td>
+              <tr key={run.id} className="border-t border-[color:var(--shell-border)]">
+                <td className="px-3 py-2 font-medium text-[var(--text-primary)]">{run.id}</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">{run.scenario}</td>
                 <td className="px-3 py-2">
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${runStatusClass(run.status)}`}>
                     {run.status}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{run.policyAction}</td>
-                <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{run.durationMs} ms</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">{run.policyAction}</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)]">{run.durationMs} ms</td>
               </tr>
             ))}
           </tbody>
