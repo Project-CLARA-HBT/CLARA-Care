@@ -25,12 +25,21 @@
 
   /* Shell surfaces */
   --surface-sidebar: #0b0e13;
+  --surface-lowest: #0b0e13;
   --surface-header: rgba(16, 20, 25, 0.88);
   --surface-panel: #1d2025;
   --surface-muted: #272a30;
   --surface-brand-soft: rgba(164, 201, 255, 0.12);
   --shell-border: #414751;
   --shell-border-strong: #8b919d;
+  --card-top-border: #2A3950;
+  --on-secondary-container: #cdd7ff;
+  --primary: #a4c9ff;
+  --tertiary: #fabd34;
+  --on-tertiary: #412d00;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
+  --on-error: #690005;
 
   /* Brand + status — indigo-leaning blue for a warmer, more modern feel */
   --brand-400: #d4e3ff;
@@ -559,12 +568,21 @@ html[data-theme="dark"] {
   --brand-800: #002a78;
   --button-primary-text: #cdd7ff;
   --surface-sidebar: #0b0e13;
+  --surface-lowest: #0b0e13;
   --surface-header: rgba(16, 20, 25, 0.92);
   --surface-panel: #1d2025;
   --surface-muted: #272a30;
   --surface-brand-soft: rgba(164, 201, 255, 0.12);
   --shell-border: #414751;
   --shell-border-strong: #8b919d;
+  --card-top-border: #2A3950;
+  --on-secondary-container: #cdd7ff;
+  --primary: #a4c9ff;
+  --tertiary: #fabd34;
+  --on-tertiary: #412d00;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
+  --on-error: #690005;
   --status-ok-bg: rgba(164, 201, 255, 0.12);
   --status-ok-border: rgba(164, 201, 255, 0.28);
   --status-ok-text: #a4c9ff;

@@ -190,7 +190,7 @@ export default function ResearchSourceHubPage() {
       description={t(language, "research.sourceHub.description")}
     >
       <div className="mx-auto max-w-[1120px] space-y-6 text-[var(--text-primary)]">
-        <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6">
+        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-brand)]">{t(language, "research.sourceHub.eyebrow")}</p>
@@ -208,7 +208,7 @@ export default function ResearchSourceHubPage() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+          <article className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.sync.eyebrow")}</p>
@@ -263,7 +263,7 @@ export default function ResearchSourceHubPage() {
                 <button
                   type="submit"
                   disabled={isSyncing || !catalog.length}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--brand-600)] px-4 text-sm font-bold text-[#cdd7ff] transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-secondary)]"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--brand-600)] px-4 text-sm font-bold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-secondary)]"
                 >
                   {isSyncing ? t(language, "research.sourceHub.sync.running") : t(language, "research.sourceHub.sync.submit")}
                 </button>
@@ -275,7 +275,7 @@ export default function ResearchSourceHubPage() {
             ) : null}
           </article>
 
-          <article className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+          <article className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.distribution.eyebrow")}</p>
             <h2 className="mt-1 text-xl font-bold text-[var(--text-primary)]">{t(language, "research.sourceHub.distribution.title")}</h2>
             <div className="mt-4 space-y-3">
@@ -303,7 +303,7 @@ export default function ResearchSourceHubPage() {
           </article>
         </section>
 
-        <section className="rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+        <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "research.sourceHub.records.eyebrow")}</p>

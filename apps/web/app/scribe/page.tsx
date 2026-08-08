@@ -50,7 +50,7 @@ type ScribeCopy = (
 // An idle recorder has no audio signal.  Keep the visual baseline flat; real
 // amplitude is populated only by the Web Audio analyser while recording.
 const DEFAULT_WAVE_BARS = Array.from({ length: 32 }, () => 8);
-const panelClass = "rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
+const panelClass = "rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
 const panelPaddedClass = `${panelClass} p-4`;
 const panelPaddedLgClass = `${panelClass} p-5`;
 const softPanelClass = "rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)]";
@@ -60,11 +60,11 @@ const bodyTextClass = "text-[color:var(--text-primary)]";
 const secondaryTextClass = "text-[color:var(--text-secondary)]";
 const mutedTextClass = "text-[color:var(--text-muted)]";
 const primaryButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-primary)]";
+  "min-h-11 rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:border-[color:var(--shell-border)] disabled:bg-[var(--surface-brand-soft)] disabled:text-[var(--text-primary)]";
 const secondaryButtonClass =
   "min-h-11 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:opacity-60";
 const dangerButtonClass =
-  "min-h-11 rounded-lg border border-[color:var(--status-danger-border)] bg-[#93000a] px-4 py-2 text-sm font-semibold text-[#ffdad6] transition hover:opacity-90";
+  "min-h-11 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--error-container)] px-4 py-2 text-sm font-semibold text-[var(--on-error-container)] transition hover:opacity-90";
 const transcriptInputClass =
   "min-h-[120px] w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition focus:border-[color:var(--brand-primary)] focus:bg-[var(--surface-panel)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15";
 
@@ -893,7 +893,7 @@ export default function ScribePage() {
             );
           })}
         </ol>
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] px-4 py-3">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[color:var(--surface-panel)] px-4 py-3">
           <div className="flex items-center gap-6">
             <span className="text-sm font-semibold text-[color:var(--text-secondary)]">{copy("scribe.tab.workspace")}</span>
             <nav className="inline-flex items-center gap-1 rounded-xl border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] p-1">
@@ -902,7 +902,7 @@ export default function ScribePage() {
                 onClick={() => setMode("workspace")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
                   mode === "workspace"
-                    ? "bg-[color:var(--brand-600)] text-[#cdd7ff]"
+                    ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]"
                     : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
@@ -912,7 +912,7 @@ export default function ScribePage() {
                 type="button"
                 onClick={() => setMode("review")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "review" ? "bg-[color:var(--brand-600)] text-[#cdd7ff]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
+                  mode === "review" ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
                 {copy("scribe.tab.review")}
@@ -921,7 +921,7 @@ export default function ScribePage() {
                 type="button"
                 onClick={() => setMode("enterprise")}
                 className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                  mode === "enterprise" ? "bg-[color:var(--brand-600)] text-[#cdd7ff]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
+                  mode === "enterprise" ? "bg-[color:var(--brand-600)] text-[var(--on-secondary-container)]" : "text-[color:var(--text-primary)] hover:bg-[color:var(--surface-brand-soft)]"
                 }`}
               >
                 {copy("scribe.tab.enterprise")}
@@ -1364,13 +1364,13 @@ export default function ScribePage() {
       ) : null}
       {showRecordingDataDeleteConfirmation && canDeleteSelectedRecordingData ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e13]/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-lowest)]/70 p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="scribe-recording-data-confirm-title"
           aria-describedby="scribe-recording-data-confirm-description"
         >
-          <div className="w-full max-w-lg rounded-[14px] border border-t-[#2A3950] border-[color:var(--danger-border)] bg-[var(--surface-panel)] p-6">
+          <div className="w-full max-w-lg rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--danger-border)] bg-[var(--surface-panel)] p-6">
             <h2 id="scribe-recording-data-confirm-title" className={`text-lg font-bold ${bodyTextClass}`}>
               {copy("scribe.recordingData.confirmTitle")}
             </h2>

@@ -45,7 +45,7 @@ type CouncilBannerState =
 type GuardAction = "override" | "pause";
 
 const PANEL_CLASS =
-  "rounded-[var(--radius-xl)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
+  "rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]";
 const SOFT_PANEL_CLASS =
   "rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]";
 const BODY_TEXT_CLASS = "text-[color:var(--text-primary)]";
@@ -288,7 +288,7 @@ function bannerMeta(language: UILanguage, state: CouncilBannerState) {
       detail: t(language, "council.overview.banner.safety.detail"),
       className:
         "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]",
-      iconClassName: "bg-[var(--status-danger-text)] text-[#690005]",
+      iconClassName: "bg-[var(--status-danger-text)] text-[var(--on-error)]",
     };
   }
   if (state === "conflict") {
@@ -298,7 +298,7 @@ function bannerMeta(language: UILanguage, state: CouncilBannerState) {
       detail: t(language, "council.overview.banner.conflict.detail"),
       className:
         "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
-      iconClassName: "bg-[var(--status-warn-text)] text-[#412d00]",
+      iconClassName: "bg-[var(--status-warn-text)] text-[var(--on-tertiary)]",
     };
   }
   if (state === "review") {
@@ -308,7 +308,7 @@ function bannerMeta(language: UILanguage, state: CouncilBannerState) {
       detail: t(language, "council.overview.banner.review.detail"),
       className:
         "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
-      iconClassName: "bg-[var(--status-warn-text)] text-[#412d00]",
+      iconClassName: "bg-[var(--status-warn-text)] text-[var(--on-tertiary)]",
     };
   }
   if (state === "incomplete") {
@@ -318,7 +318,7 @@ function bannerMeta(language: UILanguage, state: CouncilBannerState) {
       detail: t(language, "council.overview.banner.incomplete.detail"),
       className:
         "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
-      iconClassName: "bg-[var(--brand-600)] text-[#cdd7ff]",
+      iconClassName: "bg-[var(--brand-600)] text-[var(--on-secondary-container)]",
     };
   }
   return {
@@ -327,7 +327,7 @@ function bannerMeta(language: UILanguage, state: CouncilBannerState) {
     detail: t(language, "council.overview.banner.stable.detail"),
     className:
       "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
-    iconClassName: "bg-[var(--brand-600)] text-[#cdd7ff]",
+    iconClassName: "bg-[var(--brand-600)] text-[var(--on-secondary-container)]",
   };
 }
 
@@ -857,7 +857,7 @@ export default function CouncilPage() {
           <div className="flex">
             <Link
               href="/council/new"
-              className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[#cdd7ff] transition-colors hover:bg-[var(--brand-700)]"
+              className="inline-flex min-h-[44px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition-colors hover:bg-[var(--brand-700)]"
             >
               {t(language, "council.overview.empty.openCase")}
             </Link>
@@ -877,7 +877,7 @@ export default function CouncilPage() {
         <CouncilWorkspaceNav />
 
         <section
-          className={`rounded-[14px] border border-t-[#2A3950] p-4 ${banner.className}`}
+          className={`rounded-[14px] border border-t-[color:var(--card-top-border)] p-4 ${banner.className}`}
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
@@ -1113,10 +1113,10 @@ export default function CouncilPage() {
                       step.status === "missing"
                         ? "bg-[var(--brand-600)]"
                         : step.status === "review"
-                          ? "bg-[#fabd34]"
+                          ? "bg-[var(--tertiary)]"
                           : step.status === "pending"
-                            ? "bg-[#fabd34]"
-                            : "bg-[#a4c9ff]";
+                            ? "bg-[var(--tertiary)]"
+                            : "bg-[var(--primary)]";
                     return (
                       <div className="relative pl-8" key={step.id}>
                         <div
@@ -1347,13 +1347,13 @@ export default function CouncilPage() {
               <button
                 type="button"
                 onClick={() => setHandoffOpen(true)}
-                className="group flex w-full items-center justify-between rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] p-4 text-[#cdd7ff] transition hover:bg-[color:var(--brand-700)]"
+                className="group flex w-full items-center justify-between rounded-lg border border-[color:var(--brand-600)] bg-[color:var(--brand-600)] p-4 text-[var(--on-secondary-container)] transition hover:bg-[color:var(--brand-700)]"
               >
                 <div className="text-left">
                   <p className="text-base font-black leading-tight">
                     {t(language, "council.overview.handoff.action")}
                   </p>
-                  <p className="mt-1 text-xs font-semibold text-[#cdd7ff]">
+                  <p className="mt-1 text-xs font-semibold text-[var(--on-secondary-container)]">
                     {t(language, "council.overview.handoff.actionHint")}
                   </p>
                 </div>
@@ -1552,11 +1552,11 @@ export default function CouncilPage() {
 
         {handoffOpen ? (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e13]/70 px-4 py-6"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-lowest)]/70 px-4 py-6"
             role="dialog"
             aria-modal="true"
           >
-            <div className="w-full max-w-2xl rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+            <div className="w-full max-w-2xl rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
@@ -1613,7 +1613,7 @@ export default function CouncilPage() {
                 <button
                   type="button"
                   onClick={confirmHandoff}
-                  className="min-h-[44px] rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-bold text-[#cdd7ff] hover:bg-[var(--brand-700)]"
+                  className="min-h-[44px] rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-bold text-[var(--on-secondary-container)] hover:bg-[var(--brand-700)]"
                 >
                   {t(language, "council.overview.handoff.send")}
                 </button>
@@ -1624,11 +1624,11 @@ export default function CouncilPage() {
 
         {guardAction ? (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0e13]/70 px-4 py-6"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-lowest)]/70 px-4 py-6"
             role="dialog"
             aria-modal="true"
           >
-            <div className="w-full max-w-xl rounded-[14px] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
+            <div className="w-full max-w-xl rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
               <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
                 {guardAction === "override"
                   ? t(language, "council.guard.overrideTitle")
@@ -1666,7 +1666,7 @@ export default function CouncilPage() {
                   type="button"
                   onClick={confirmGuardAction}
                   disabled={!guardReason.trim()}
-                  className="min-h-[44px] rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-text)] px-4 text-sm font-bold text-[#690005] transition hover:opacity-90 disabled:bg-[var(--status-danger-bg)] disabled:text-[var(--status-danger-text)] disabled:opacity-60"
+                  className="min-h-[44px] rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-text)] px-4 text-sm font-bold text-[var(--on-error)] transition hover:opacity-90 disabled:bg-[var(--status-danger-bg)] disabled:text-[var(--status-danger-text)] disabled:opacity-60"
                 >
                   {t(language, "council.guard.confirm")}
                 </button>
