@@ -113,6 +113,24 @@ phải End_User E2E latency.
 trong từng artifact. State-layer latency (microseconds) chỉ là simulation,
 không được ghi thành database/production latency.
 
+## Quality-gate audit tại thời điểm report
+
+| Gate | Evidence | Trạng thái |
+|---|---|---|
+| Q2 evaluator/unit | `evaluation/glhs_q2/test_run.py` | 9 passed |
+| Q2/Q3 preparer regression | `evaluation/glhs_q2/test_run.py` + `evaluation/glhs_q3/test_run.py` | 16 passed |
+| GLHS API focused | gateway, migration, connected/visit adapter tests | 5 passed (2 FastAPI deprecation warnings) |
+| Web lint | `npm run lint` | exit 0; 6 Hook-dependency warnings |
+| Web production build | `npm run build` | exit 0 |
+| Mobile full suite | `flutter test` | 476 passed, 11 failed; failures ở consent/DSAR/Today finder/locale contracts, chưa được che giấu |
+| Root Python lint | `make lint` | fail: 647 existing violations across repo; Q2/Q3 scope lint sạch |
+| Root Python type check | `make type-check` | fail: 336 existing mypy errors/43 files; không diễn giải thành GLHS/Q2 green |
+| Full API suite | `services/api/.venv/bin/python -m pytest -q` | đang chạy khi report được cập nhật |
+
+`Makefile` đã được sửa để `make lint` và `make type-check` dùng venv dự án khi
+có, nên các failure trên là kết quả công cụ thật chứ không phải `command not
+found`.
+
 ## Các số vẫn chưa thể điền trung thực — và việc cần làm
 
 1. **Final score / external holdout:** cần curator độc lập tạo external manifest
@@ -128,6 +146,9 @@ không được ghi thành database/production latency.
    frozen selection/perturbation/oracle protocol và tách cohort khỏi headline.
 6. **DDI independent benchmark:** strict DrugBank source-conformance không phải
    independent DDI accuracy benchmark; cần dataset/reference standard độc lập.
+7. **Repository/mobile quality gates:** sửa hoặc cập nhật contract đúng các 11
+   mobile test fail và 647 lint/336 mypy debt trước khi mô tả full repository
+   gate là passed.
 
 ## Câu chữ có thể dùng trong manuscript
 
