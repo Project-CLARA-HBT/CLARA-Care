@@ -1181,7 +1181,10 @@ def routed_chat_infer(payload: dict) -> dict:
         else legacy_verification_enabled
     )
     verification_enabled = rule_verification_enabled
-    deepseek_fallback_enabled = _as_bool(rag_flow.get("deepseek_fallback_enabled"), True)
+    # The production policy is fail-closed for generation.  A transient model,
+    # retrieval, or provider failure must remain visible to the caller rather
+    # than silently substituting a lower-evidence response path.
+    deepseek_fallback_enabled = False
     low_context_threshold = _as_threshold(rag_flow.get("low_context_threshold"), 0.15)
     scientific_retrieval_enabled = _as_bool(rag_flow.get("scientific_retrieval_enabled"), False)
     web_retrieval_enabled = _as_bool(rag_flow.get("web_retrieval_enabled"), False)

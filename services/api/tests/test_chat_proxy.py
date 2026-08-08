@@ -79,7 +79,7 @@ def test_chat_success_proxies_request_and_role(monkeypatch) -> None:
     assert rag_flow["rag_reranker_enabled"] is True
     assert rag_flow["rag_nli_enabled"] is True
     assert rag_flow["rag_graphrag_enabled"] is True
-    assert rag_flow["deepseek_fallback_enabled"] is True
+    assert rag_flow["deepseek_fallback_enabled"] is False
     assert rag_flow["low_context_threshold"] == 0.2
     assert rag_flow["scientific_retrieval_enabled"] is True
     assert rag_flow["web_retrieval_enabled"] is True
@@ -142,7 +142,7 @@ def test_chat_sanitizes_matrix_noise_from_reply(monkeypatch) -> None:
     assert "fallback local" not in body["reply"].lower()
 
 
-def test_chat_uses_safe_fallback_when_reply_blank_after_sanitize(monkeypatch) -> None:
+def test_chat_rejects_reply_blank_after_sanitize(monkeypatch) -> None:
     token = _login("dr@doctor.clara")
 
     class _MockResponse:
@@ -173,12 +173,11 @@ def test_chat_uses_safe_fallback_when_reply_blank_after_sanitize(monkeypatch) ->
         json={"message": "help"},
     )
 
-    assert response.status_code == 200
-    body = response.json()
-    assert "không kết nối được nguồn RAG" in body["reply"]
+    assert response.status_code == 502
+    assert response.json()["detail"] == "deepseek_required_unavailable:blank_after_sanitize"
 
 
-def test_chat_returns_safe_fallback_when_ml_unavailable(monkeypatch) -> None:
+def test_chat_returns_503_when_ml_unavailable(monkeypatch) -> None:
     token = _login("dr@doctor.clara")
 
     def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> object:
@@ -192,20 +191,8 @@ def test_chat_returns_safe_fallback_when_ml_unavailable(monkeypatch) -> None:
         json={"message": "test"},
     )
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["role"] == "doctor"
-    assert body["model_used"] == "api-safe-fallback-v1"
-    assert "không kết nối được nguồn RAG" in body["reply"]
-    assert body["ml"]["fallback_reason"].startswith("ml_unavailable:")
-    assert body["fallback"] is True
-    assert body["fallback_reason"].startswith("ml_unavailable:")
-    assert body["attribution"]["channel"] == "chat"
-    assert body["attribution"]["mode"] == "safe_mode"
-    assert body["attribution"]["citation_count"] == 0
-    assert body["attribution"]["fallback_used"] is True
-    assert isinstance(body["attributions"], list)
-    assert body["attributions"][0]["channel"] == "chat"
+    assert response.status_code == 503
+    assert response.json()["detail"] == "deepseek_required_unavailable:ml_unavailable:ConnectError"
 
 
 def test_chat_attribution_reads_nested_retrieval_source_errors(monkeypatch) -> None:
@@ -252,7 +239,7 @@ def test_chat_attribution_reads_nested_retrieval_source_errors(monkeypatch) -> N
     assert "openfda" in body["attribution"]["source_used"]
 
 
-def test_chat_returns_smalltalk_safe_fallback_for_greeting(monkeypatch) -> None:
+def test_chat_returns_503_for_greeting_when_ml_is_unavailable(monkeypatch) -> None:
     token = _login("dr@doctor.clara")
 
     def _fake_post(_url: str, *, json: dict[str, object], timeout: float) -> object:
@@ -266,14 +253,8 @@ def test_chat_returns_smalltalk_safe_fallback_for_greeting(monkeypatch) -> None:
         json={"message": "hi"},
     )
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["role"] == "doctor"
-    assert body["model_used"] == "api-safe-smalltalk-v1"
-    assert "chào" in body["reply"].lower()
-    assert body["ml"]["fallback_reason"].startswith("ml_unavailable:")
-    assert body["fallback"] is True
-    assert body["fallback_reason"].startswith("ml_unavailable:")
+    assert response.status_code == 503
+    assert response.json()["detail"] == "deepseek_required_unavailable:ml_unavailable:ConnectError"
 
 
 def test_chat_returns_503_when_control_tower_config_unavailable(monkeypatch) -> None:
@@ -299,7 +280,7 @@ def test_chat_returns_503_when_control_tower_config_unavailable(monkeypatch) -> 
     assert response.json()["detail"] == "control_tower_config_unavailable:RuntimeError"
 
 
-def test_chat_recovers_with_safe_mode_retry_when_primary_5xx(monkeypatch) -> None:
+def test_chat_does_not_retry_with_safe_mode_after_primary_5xx(monkeypatch) -> None:
     token = _login("dr@doctor.clara")
     captured_payloads: list[dict[str, object]] = []
     call_count = {"count": 0}
@@ -342,30 +323,13 @@ def test_chat_recovers_with_safe_mode_retry_when_primary_5xx(monkeypatch) -> Non
         json={"message": "toi dang uong warfarin va bi dau da day"},
     )
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["reply"].startswith("Hệ thống truy xuất chuyên sâu đang bận")
-    assert body["model_used"] == "deepseek-v3.2"
-    assert body["ml"]["safe_mode_used"] is True
-    assert body["ml"]["fallback_reason"].startswith("ml_upstream_5xx:")
-    assert body["fallback"] is True
-    assert "safe_mode_recovered" in body["fallback_reason"]
-    assert call_count["count"] == 2
-    assert len(captured_payloads) == 2
-
-    second_payload = captured_payloads[1]
-    second_flow = second_payload["rag_flow"]
-    assert second_flow["rule_verification_enabled"] is False
-    assert second_flow["nli_model_enabled"] is False
-    assert second_flow["rag_reranker_enabled"] is False
-    assert second_flow["rag_nli_enabled"] is False
-    assert second_flow["rag_graphrag_enabled"] is False
-    assert second_flow["scientific_retrieval_enabled"] is False
-    assert second_flow["web_retrieval_enabled"] is False
-    assert second_flow["file_retrieval_enabled"] is True
+    assert response.status_code == 503
+    assert response.json()["detail"] == "deepseek_required_unavailable:ml_upstream_5xx:503"
+    assert call_count["count"] == 1
+    assert len(captured_payloads) == 1
 
 
-def test_chat_uses_safe_mode_when_primary_ml_path_times_out(monkeypatch) -> None:
+def test_chat_does_not_retry_with_safe_mode_after_ml_timeout(monkeypatch) -> None:
     token = _login("ops@admin.clara")
     calls: list[dict[str, object]] = []
 
@@ -404,25 +368,6 @@ def test_chat_uses_safe_mode_when_primary_ml_path_times_out(monkeypatch) -> None
         json={"message": "warfarin và aspirin có rủi ro gì"},
     )
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["model_used"] == "deepseek-v3.2"
-    assert "truy xuất chuyên sâu đang bận" in body["reply"].lower()
-    assert "safe_mode_recovered" in str(body["ml"].get("fallback_reason", ""))
-    assert body["ml"].get("safe_mode_used") is True
-    assert body["fallback"] is True
-    assert "safe_mode_recovered" in str(body.get("fallback_reason", ""))
-
-    assert len(calls) == 2
-    safe_mode_payload = calls[1]["json"]
-    assert isinstance(safe_mode_payload, dict)
-    rag_flow = safe_mode_payload["rag_flow"]
-    assert isinstance(rag_flow, dict)
-    assert rag_flow["rule_verification_enabled"] is False
-    assert rag_flow["nli_model_enabled"] is False
-    assert rag_flow["rag_reranker_enabled"] is False
-    assert rag_flow["rag_nli_enabled"] is False
-    assert rag_flow["rag_graphrag_enabled"] is False
-    assert rag_flow["scientific_retrieval_enabled"] is False
-    assert rag_flow["web_retrieval_enabled"] is False
-    assert rag_flow["file_retrieval_enabled"] is True
+    assert response.status_code == 503
+    assert response.json()["detail"] == "deepseek_required_unavailable:ml_unavailable:TimeoutException"
+    assert len(calls) == 1

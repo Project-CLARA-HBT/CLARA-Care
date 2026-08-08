@@ -303,7 +303,7 @@ def _safe_mode_payload(
             "rag_reranker_enabled": False,
             "rag_nli_enabled": False,
             "rag_graphrag_enabled": False,
-            "deepseek_fallback_enabled": True,
+            "deepseek_fallback_enabled": False,
             "scientific_retrieval_enabled": False,
             "web_retrieval_enabled": False,
             "file_retrieval_enabled": True,
@@ -340,8 +340,6 @@ def _call_ml_service(
         "protocol": protocol,
         "clinical_context": clinical_context,
     }
-    safe_mode_timeout = max(3.0, min(settings.ml_service_timeout_seconds, 12.0))
-
     primary_reason = ""
     try:
         data = _post_to_ml(url, request_payload, settings.ml_service_timeout_seconds)
@@ -361,55 +359,13 @@ def _call_ml_service(
     except Exception as exc:  # pragma: no cover - defensive fallback
         primary_reason = f"ml_unexpected_exception:{exc.__class__.__name__}"
 
-    if settings.deepseek_strict_mode:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"deepseek_required_unavailable:{primary_reason}",
-        )
-
-    safe_mode_reason = ""
-    try:
-        safe_mode_data = _post_to_ml(
-            url,
-            {
-                **_safe_mode_payload(message, role, rag_flow, rag_sources),
-                "protocol": protocol,
-                "clinical_context": clinical_context,
-            },
-            safe_mode_timeout,
-        )
-        answer = safe_mode_data.get("answer")
-        if isinstance(answer, str):
-            safe_mode_data["answer"] = _decorate_safe_mode_answer(answer)
-        safe_mode_data["safe_mode_used"] = True
-        safe_mode_data["fallback_reason"] = f"{primary_reason};safe_mode_recovered"
-        model_used = safe_mode_data.get("model_used")
-        if not isinstance(model_used, str) or not model_used.strip():
-            # Do not fabricate a concrete model version if the safe-mode ML
-            # response omitted it. The governed V4 registry remains the source
-            # of truth for a concrete Pro/Flash identifier.
-            safe_mode_data["model_used"] = "deepseek-safe-mode"
-        return safe_mode_data
-    except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
-        safe_mode_reason = f"safe_mode_unavailable:{exc.__class__.__name__}"
-    except httpx.HTTPError as exc:
-        upstream_status = exc.response.status_code if exc.response is not None else None
-        if upstream_status is None:
-            safe_mode_reason = f"safe_mode_http_error:{exc.__class__.__name__}"
-        elif upstream_status >= 500:
-            safe_mode_reason = f"safe_mode_upstream_5xx:{upstream_status}"
-        else:
-            safe_mode_reason = f"safe_mode_upstream_4xx:{upstream_status}"
-    except ValueError as exc:
-        safe_mode_reason = f"safe_mode_invalid_json:{exc.__class__.__name__}"
-    except Exception as exc:  # pragma: no cover - defensive fallback
-        safe_mode_reason = f"safe_mode_unexpected_exception:{exc.__class__.__name__}"
-
-    composed_reason = primary_reason
-    if safe_mode_reason:
-        composed_reason = f"{primary_reason};{safe_mode_reason}"
-    return _safe_chat_fallback(message, role, reason=composed_reason)
-
+    # Never synthesize a second, degraded answer after an ML failure.  The
+    # caller receives an explicit availability boundary and can retry once the
+    # governed runtime is healthy again.
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=f"deepseek_required_unavailable:{primary_reason}",
+    )
 
 def _load_rag_runtime(db: Session) -> tuple[RagFlowConfig, list[dict[str, Any]]]:
     try:
@@ -514,69 +470,27 @@ def chat_completion(
             clinical_context=payload.clinical_context,
         )
         model_used = ml_response.get("model_used")
-        if (
-            settings.deepseek_strict_mode
-            and isinstance(model_used, str)
-            and model_used.startswith("local-synth")
-        ):
+        if isinstance(model_used, str) and model_used.startswith("local-synth"):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="deepseek_required_unavailable:local_synthesis_blocked",
-            )
-
-        if (
-            not settings.deepseek_strict_mode
-            and isinstance(model_used, str)
-            and model_used.startswith("local-synth")
-        ):
-            ml_response["upstream_model_used"] = model_used
-            if _is_general_greeting(payload.message):
-                ml_response["answer"] = (
-                    "Chào bạn, CLARA đang sẵn sàng. "
-                    "Bạn có thể gửi danh sách thuốc hoặc câu hỏi về tương tác thuốc để mình hỗ trợ."
-                )
-                ml_response["model_used"] = "api-safe-smalltalk-v1"
-            else:
-                ml_response["answer"] = (
-                    "Hệ thống đang ưu tiên chế độ an toàn do phản hồi từ mô hình nền chưa ổn định. "
-                    "Bạn vui lòng thử lại sau ít phút. Nếu có dấu hiệu nặng hoặc bệnh nền, "
-                    "hãy liên hệ bác sĩ/duợc sĩ ngay."
-                )
-                ml_response["model_used"] = "api-local-synth-guard-v1"
-            ml_response["safe_mode_used"] = True
-            ml_response["fallback_reason"] = str(
-                ml_response.get("fallback_reason") or "ml_local_synthesis_guard"
             )
 
         if not isinstance(ml_response.get("citations"), list):
             ml_response["citations"] = []
 
         reply = ml_response.get("answer")
-        if settings.deepseek_strict_mode and (not isinstance(reply, str) or not reply.strip()):
+        if not isinstance(reply, str) or not reply.strip():
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="deepseek_required_unavailable:missing_answer",
             )
-
-        if not isinstance(reply, str):
-            reply = _safe_chat_fallback(
-                payload.message,
-                token.role,
-                reason="ml_unexpected_payload:missing_answer",
-            )["answer"]
-        elif not reply.strip():
-            reply = _safe_chat_fallback(
-                payload.message,
-                token.role,
-                reason="ml_unexpected_payload:blank_answer",
-            )["answer"]
         reply = _sanitize_chat_reply(reply)
         if not reply:
-            reply = _safe_chat_fallback(
-                payload.message,
-                token.role,
-                reason="ml_unexpected_payload:blank_after_sanitize",
-            )["answer"]
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="deepseek_required_unavailable:blank_after_sanitize",
+            )
         ml_response["answer"] = reply
 
         resolved_role = ml_response.get("role")
@@ -623,39 +537,10 @@ def chat_completion(
         raise
     except Exception as exc:  # pragma: no cover - final defensive guard
         logger.exception("Chat endpoint failed unexpectedly")
-        if settings.deepseek_strict_mode:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"deepseek_required_unavailable:chat_internal_error:{exc.__class__.__name__}",
-            ) from exc
-
-        fallback_ml = _safe_chat_fallback(
-            payload.message,
-            token.role,
-            reason=f"chat_internal_error:{exc.__class__.__name__}",
-        )
-        fallback_reason = fallback_ml.get("fallback_reason")
-        response_payload = {
-            "message": payload.message,
-            "reply": str(fallback_ml.get("answer", "")).strip() or _SAFE_MODE_NOTICE,
-            "role": token.role,
-            "intent": fallback_ml.get("intent"),
-            "confidence": fallback_ml.get("confidence"),
-            "emergency": fallback_ml.get("emergency"),
-            "model_used": fallback_ml.get("model_used"),
-            "retrieved_ids": fallback_ml.get("retrieved_ids", []),
-            "ml": fallback_ml,
-            "fallback": True,
-        }
-        if isinstance(fallback_reason, str) and fallback_reason.strip():
-            response_payload["fallback_reason"] = fallback_reason.strip()
-        attribution = _build_chat_attribution(fallback_ml, rag_sources)
-        disclosure = ComplianceService(db, settings=settings).model_disclosure(
-            fallback_ml.get("model_used")
-        )
-        if disclosure is not None:
-            response_payload["ai_disclosure"] = disclosure
-        return attach_attribution(response_payload, attribution=attribution)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"deepseek_required_unavailable:chat_internal_error:{exc.__class__.__name__}",
+        ) from exc
 
 
 @router.post("/stream")

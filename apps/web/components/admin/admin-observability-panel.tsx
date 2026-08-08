@@ -36,7 +36,6 @@ type FlowFlags = {
   ragReranker: boolean;
   ragNli: boolean;
   ragGraphRag: boolean;
-  deepseekFallback: boolean;
   scientificRetrieval: boolean;
   webRetrieval: boolean;
   fileRetrieval: boolean;
@@ -118,7 +117,6 @@ const INITIAL_STATE: ObservabilityState = {
     ragReranker: true,
     ragNli: false,
     ragGraphRag: true,
-    deepseekFallback: false,
     scientificRetrieval: false,
     webRetrieval: false,
     fileRetrieval: false
@@ -197,7 +195,7 @@ function computeFlowHealth(flow: FlowFlags): number {
     "scientificRetrieval"
   ];
   const requiredOn = requiredKeys.filter((key) => flow[key]).length;
-  const optionalOn = [flow.deepseekFallback, flow.webRetrieval, flow.fileRetrieval, flow.ragGraphRag].filter(Boolean).length;
+  const optionalOn = [flow.webRetrieval, flow.fileRetrieval, flow.ragGraphRag].filter(Boolean).length;
   return clamp(requiredOn * 11 + optionalOn * 6);
 }
 
@@ -255,7 +253,6 @@ export default function AdminObservabilityPanel() {
         ragReranker: Boolean(config.rag_flow.rag_reranker_enabled),
         ragNli: Boolean(config.rag_flow.rag_nli_enabled),
         ragGraphRag: Boolean(config.rag_flow.rag_graphrag_enabled),
-        deepseekFallback: Boolean(config.rag_flow.deepseek_fallback_enabled),
         scientificRetrieval: Boolean(config.rag_flow.scientific_retrieval_enabled),
         webRetrieval: Boolean(config.rag_flow.web_retrieval_enabled),
         fileRetrieval: Boolean(config.rag_flow.file_retrieval_enabled)
@@ -561,7 +558,6 @@ export default function AdminObservabilityPanel() {
     { label: "RAG NLI", enabled: state.flow.ragNli, detail: "Bật bước NLI trong pipeline RAG." },
     { label: "Neural Reranker", enabled: state.flow.ragReranker, detail: "Rerank evidence bằng mô hình neural." },
     { label: "GraphRAG", enabled: state.flow.ragGraphRag, detail: "Nhánh truy xuất theo đồ thị tri thức." },
-    { label: "DeepSeek Fallback", enabled: state.flow.deepseekFallback, detail: "Dự phòng đường suy luận khi degrade." },
     { label: "Scientific Retrieval", enabled: state.flow.scientificRetrieval, detail: "Ưu tiên nguồn y khoa chuẩn." },
     { label: "Web Retrieval", enabled: state.flow.webRetrieval, detail: "Bổ sung khi nguồn nội bộ thiếu ngữ cảnh." },
     { label: "File Retrieval", enabled: state.flow.fileRetrieval, detail: "Truy xuất dữ liệu tài liệu đã upload." }

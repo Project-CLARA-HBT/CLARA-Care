@@ -561,7 +561,7 @@ class RagFlowConfig(BaseModel):
     rag_reranker_enabled: bool = True
     rag_nli_enabled: bool = True
     rag_graphrag_enabled: bool = True
-    deepseek_fallback_enabled: bool = True
+    deepseek_fallback_enabled: bool = False
     low_context_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
     precision_at_k: int = Field(default=10, ge=1, le=50)
     recall_at_k: int = Field(default=10, ge=1, le=50)
@@ -574,12 +574,13 @@ class RagFlowConfig(BaseModel):
     def _normalize_legacy_verification_enabled(cls, value: Any) -> Any:
         if not isinstance(value, dict):
             return value
-        if "rule_verification_enabled" in value:
-            return value
-        if "verification_enabled" not in value:
-            return value
         normalized = dict(value)
-        normalized["rule_verification_enabled"] = normalized.get("verification_enabled")
+        if "rule_verification_enabled" not in normalized and "verification_enabled" in normalized:
+            normalized["rule_verification_enabled"] = normalized.get("verification_enabled")
+        # Generation never has a lower-evidence recovery model.  Preserve the
+        # historical field for backward-compatible reads, but fail closed even
+        # if an older admin payload tries to re-enable it.
+        normalized["deepseek_fallback_enabled"] = False
         return normalized
 
 

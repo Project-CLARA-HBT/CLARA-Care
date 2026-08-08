@@ -54,12 +54,6 @@ const FLOW_FLAGS: Array<{ key: FlowFlagKey; label: string; hint: string; group: 
     group: "verification"
   },
   {
-    key: "deepseek_fallback_enabled",
-    label: "DeepSeek Fallback",
-    hint: "Fallback khi RAG confidence thấp hoặc context không đủ.",
-    group: "verification"
-  },
-  {
     key: "scientific_retrieval_enabled",
     label: "Scientific Retrieval",
     hint: "Truy xuất từ PubMed/EuropePMC cho câu hỏi cần chứng cứ.",
@@ -147,7 +141,7 @@ function normalizeFlow(flow?: Partial<ControlTowerConfig["rag_flow"]> | null): C
     rag_nli_enabled: ragNliEnabled,
     rag_graphrag_enabled: flow?.rag_graphrag_enabled ?? true,
     verification_enabled: flow?.verification_enabled ?? ruleVerificationEnabled,
-    deepseek_fallback_enabled: flow?.deepseek_fallback_enabled ?? true,
+    deepseek_fallback_enabled: false,
     low_context_threshold: clamp(Number(flow?.low_context_threshold ?? 0.2), 0, 1),
     precision_at_k: clamp(precisionAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),
     recall_at_k: clamp(recallAtK, RETRIEVAL_METRIC_K_MIN, RETRIEVAL_METRIC_K_MAX),

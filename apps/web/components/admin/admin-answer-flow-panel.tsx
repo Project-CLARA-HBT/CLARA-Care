@@ -105,7 +105,7 @@ export default function AdminAnswerFlowPanel() {
               Low Context {config?.rag_flow.low_context_threshold.toFixed(2) ?? "0.00"}
             </span>
             <span className="rounded-lg border border-cyan-200/70 bg-white/70 px-2.5 py-1 font-medium text-slate-700 dark:border-cyan-700/40 dark:bg-slate-900/70 dark:text-slate-200">
-              Fallback {config?.rag_flow.deepseek_fallback_enabled ? "enabled" : "disabled"}
+              Generation fail-closed
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -143,9 +143,9 @@ export default function AdminAnswerFlowPanel() {
             <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{config?.rag_flow.low_context_threshold.toFixed(2) ?? "0.00"}</p>
           </div>
           <div className="rounded-xl border border-cyan-200/70 bg-white/70 px-3 py-2 backdrop-blur dark:border-cyan-700/40 dark:bg-slate-900/70">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Fallback</p>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Generation policy</p>
             <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
-              {config?.rag_flow.deepseek_fallback_enabled ? "enabled" : "disabled"}
+              Fail closed
             </p>
           </div>
         </div>
@@ -212,11 +212,11 @@ export default function AdminAnswerFlowPanel() {
                   </div>
                 ) : null}
 
-                {selectedNode === "deepseek_fallback" || selectedNode === "verification" ? (
+                {selectedNode === "verification" ? (
                   <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Threshold Tuning</p>
                     <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                      Điều chỉnh ngưỡng để quyết định khi nào kích hoạt fallback low-context.
+                      Điều chỉnh ngưỡng để xác định khi nào cần chặn phát hành do thiếu ngữ cảnh.
                     </p>
                     <div className="mt-3 grid gap-2">
                       <input

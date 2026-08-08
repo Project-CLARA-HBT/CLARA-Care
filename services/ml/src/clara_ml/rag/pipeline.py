@@ -2367,7 +2367,7 @@ class RagPipelineP1:
         query: str,
         *,
         low_context_threshold: float = 0.15,
-        deepseek_fallback_enabled: bool = True,
+        deepseek_fallback_enabled: bool = False,
         scientific_retrieval_enabled: bool = False,
         web_retrieval_enabled: bool = False,
         file_retrieval_enabled: bool = True,

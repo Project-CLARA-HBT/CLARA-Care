@@ -29,10 +29,6 @@ export const FLOW_FLAG_META: Record<FlowToggleKey, { label: string; hint: string
     label: "GraphRAG",
     hint: "Bật nhánh GraphRAG cho truy xuất theo quan hệ/đồ thị tri thức."
   },
-  deepseek_fallback_enabled: {
-    label: "DeepSeek Fallback",
-    hint: "Fallback khi RAG confidence thấp hoặc context không đủ."
-  },
   scientific_retrieval_enabled: {
     label: "Scientific Retrieval",
     hint: "Bật truy xuất từ PubMed/EuropePMC cho câu hỏi cần chứng cứ."

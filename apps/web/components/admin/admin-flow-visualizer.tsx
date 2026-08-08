@@ -39,7 +39,6 @@ export type FlowNodeId =
   | "research_ui_telemetry"
   | "citation_selection"
   | "policy_gate"
-  | "deepseek_fallback"
   | "responder"
   | "flow_event_stream"
   | "active_eval_scheduler"
@@ -74,7 +73,6 @@ type FlowEdgeDef = {
   from: FlowNodeId;
   to: FlowNodeId;
   bend?: number;
-  fallback?: boolean;
   label?: string;
   fromAnchor?: FlowAnchor;
   toAnchor?: FlowAnchor;
@@ -487,17 +485,6 @@ const NODES: FlowNodeDef[] = [
     tone: "rose",
   },
   {
-    id: "deepseek_fallback",
-    title: "DeepSeek Fallback",
-    subtitle: "Low-context or upstream degraded path",
-    description: "Nhánh dự phòng khi low-context hoặc upstream lỗi, chỉ được phép khi runtime cho phép.",
-    riskNote: "Lạm dụng fallback sẽ phá toàn bộ lời hứa research grounded của sản phẩm.",
-    x: 2540,
-    y: 1440,
-    tone: "rose",
-    toggleKey: "deepseek_fallback_enabled",
-  },
-  {
     id: "responder",
     title: "Responder",
     subtitle: "UI payload, logs, telemetry, DB",
@@ -663,7 +650,6 @@ const NODE_GRID_LAYOUT: Record<FlowNodeId, { col: number; row: number }> = {
   research_ui_telemetry: { col: 7, row: 3 },
   responder: { col: 6, row: 4 },
   policy_gate: { col: 6, row: 5 },
-  deepseek_fallback: { col: 6, row: 6 },
   flow_event_stream: { col: 7, row: 4 },
   active_eval_scheduler: { col: 8, row: 4 },
   active_eval_baseline: { col: 8, row: 5 },
@@ -862,28 +848,6 @@ const EDGES: FlowEdgeDef[] = [
     bend: 100,
     label: "surface verdict",
     labelOffsetY: 6,
-  },
-  {
-    from: "planner",
-    to: "deepseek_fallback",
-    fallback: true,
-    fromAnchor: "bottom",
-    toAnchor: "left",
-    bend: 188,
-    label: "degraded path",
-    labelOffsetX: 10,
-  },
-  { from: "evidence_index", to: "deepseek_fallback", fallback: true, fromAnchor: "bottom", toAnchor: "top", bend: 136 },
-  { from: "policy_gate", to: "deepseek_fallback", fallback: true, fromAnchor: "bottom", toAnchor: "top", bend: 44 },
-  {
-    from: "deepseek_fallback",
-    to: "responder",
-    fallback: true,
-    fromAnchor: "top",
-    toAnchor: "bottom",
-    bend: -80,
-    label: "fallback response",
-    labelOffsetY: -6,
   },
 ];
 
@@ -1229,27 +1193,14 @@ export default function AdminFlowVisualizer({
               const fromStatus = statusByNode[edge.from];
               const toStatus = statusByNode[edge.to];
               const edgeActive = isActive(fromStatus) && isActive(toStatus);
-              const fallbackEnabled = edge.fallback ? Boolean(ragFlow?.deepseek_fallback_enabled) : false;
               const pathDef = buildPath(edge, from, to);
-              const stroke = edge.fallback
-                ? fallbackEnabled
-                  ? edgePalette.fallback
-                  : edgePalette.muted
-                : edgeActive
-                  ? edgePalette.live
-                  : edgePalette.muted;
-              const marker = edge.fallback
-                ? fallbackEnabled
-                  ? "url(#flow-arrow-fallback)"
-                  : "url(#flow-arrow-muted)"
-                : edgeActive
-                  ? "url(#flow-arrow-live)"
-                  : "url(#flow-arrow-muted)";
+              const stroke = edgeActive ? edgePalette.live : edgePalette.muted;
+              const marker = edgeActive ? "url(#flow-arrow-live)" : "url(#flow-arrow-muted)";
               const labelPoint = quadraticPointAt(pathDef.start, pathDef.control, pathDef.end, 0.5);
               const labelX = labelPoint.x + (edge.labelOffsetX ?? 0);
               const labelY = labelPoint.y - 12 + (edge.labelOffsetY ?? 0);
 
-              const showGlow = !isExporting && (edgeActive || fallbackEnabled);
+              const showGlow = !isExporting && edgeActive;
               const labelWidth = edge.label ? Math.round(edge.label.length * 6.1 + 16) : 0;
               return (
                 <g key={`${edge.from}-${edge.to}`}>
@@ -1257,11 +1208,11 @@ export default function AdminFlowVisualizer({
                     d={pathDef.d}
                     fill="none"
                     stroke={stroke}
-                    strokeWidth={edge.fallback ? 3 : 2.4}
+                    strokeWidth={2.4}
                     strokeLinecap="round"
-                    strokeDasharray={edge.fallback ? "10 8" : undefined}
+                    strokeDasharray={undefined}
                     markerEnd={marker}
-                    opacity={edgeActive || fallbackEnabled ? 0.95 : 0.6}
+                    opacity={edgeActive ? 0.95 : 0.6}
                     filter={showGlow ? "url(#flow-glow)" : undefined}
                   />
                   {edge.label ? (

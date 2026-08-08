@@ -43,7 +43,6 @@ const NODES: NeuralNode[] = [
 
   { id: "matrix", label: "Claim Matrix", layer: 3, row: 0, kind: "toggle", toggleKey: "rule_verification_enabled" },
   { id: "cite", label: "Citation Selector", layer: 3, row: 1, kind: "required" },
-  { id: "recovery", label: "Recovery Branch", layer: 3, row: 2, kind: "toggle", toggleKey: "deepseek_fallback_enabled" },
 
   { id: "answer", label: "Answer Synthesizer", layer: 4, row: 0, kind: "required" },
   { id: "telemetry", label: "Telemetry Stream", layer: 4, row: 1, kind: "required" },
@@ -62,10 +61,8 @@ const EDGES: NeuralEdge[] = [
   { from: "index", to: "verify" },
   { from: "verify", to: "matrix" },
   { from: "index", to: "cite" },
-  { from: "verify", to: "recovery" },
   { from: "matrix", to: "answer" },
   { from: "cite", to: "answer" },
-  { from: "recovery", to: "answer" },
   { from: "answer", to: "telemetry" },
   { from: "telemetry", to: "store" },
 ];
