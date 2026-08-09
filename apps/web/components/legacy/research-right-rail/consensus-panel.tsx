@@ -22,12 +22,12 @@ export default function ConsensusPanel({ consensus }: ConsensusPanelProps) {
   if (!consensus.length) return null;
 
   return (
-    <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+    <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
           Đồng thuận bằng chứng
         </p>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
           {consensus.length}
         </span>
       </div>
@@ -36,24 +36,24 @@ export default function ConsensusPanel({ consensus }: ConsensusPanelProps) {
         {consensus.map((entry, index) => (
           <li
             key={`${entry.claim}-${index}`}
-            className="rounded-2xl border border-slate-200 bg-slate-50/90 p-3 dark:border-slate-700 dark:bg-slate-800/75"
+            className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3"
           >
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{entry.claim}</p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">{entry.claim}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span
-                className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--status-ok-text)]"
                 title="Số nguồn ủng hộ"
               >
                 Ủng hộ {entry.support}
               </span>
               <span
-                className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--status-danger-text)]"
                 title="Số nguồn phản bác"
               >
                 Phản bác {entry.contrast}
               </span>
               <span
-                className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
                 title="Số nguồn trung lập"
               >
                 Trung lập {entry.neutral}

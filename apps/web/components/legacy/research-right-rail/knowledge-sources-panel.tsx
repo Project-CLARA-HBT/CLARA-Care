@@ -31,12 +31,12 @@ export default function KnowledgeSourcesPanel({
   const language = useUILanguage();
 
   return (
-    <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+    <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
           {t(language, "research.workspace.knowledgeSources.title")}
         </p>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
           {selectedSourceIds.length}/{sources.length}
         </span>
       </div>
@@ -45,27 +45,27 @@ export default function KnowledgeSourcesPanel({
         <input
           value={newSourceName}
           onChange={(event) => onSourceNameChange(event.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+          className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
           placeholder={t(language, "research.workspace.knowledgeSources.createPlaceholder")}
         />
         <button
           type="submit"
           disabled={isCreating || !newSourceName.trim()}
-          className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900"
+          className="rounded-lg bg-[var(--brand-600)] px-3 py-2 text-xs font-semibold text-[var(--on-secondary-container)] disabled:opacity-60"
         >
           +
         </button>
       </form>
 
       {sourceError ? (
-        <p className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
+        <p className="mt-2 rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-xs text-[var(--status-danger-text)]">
           {sourceError}
         </p>
       ) : null}
 
       <div className="mt-3 space-y-2">
         {isLoading ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-[var(--text-muted)]">
             {t(language, "research.workspace.knowledgeSources.loading")}
           </p>
         ) : sources.length ? (
@@ -77,19 +77,19 @@ export default function KnowledgeSourcesPanel({
                 className={[
                   "flex cursor-pointer items-start gap-2 rounded-2xl border px-3 py-2 text-xs transition",
                   selected
-                    ? "border-sky-300 bg-sky-50 dark:border-sky-600 dark:bg-sky-950/40"
-                    : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/75"
+                    ? "border-[color:var(--status-ok-border)] bg-[var(--surface-brand-soft)]"
+                    : "border-[color:var(--shell-border)] bg-[var(--surface-muted)]"
                 ].join(" ")}
               >
                 <input
                   type="checkbox"
                   checked={selected}
                   onChange={() => onToggleSource(source.id)}
-                  className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 accent-sky-600"
+                  className="mt-0.5 h-3.5 w-3.5 rounded border-[color:var(--shell-border)] accent-[var(--brand-600)]"
                 />
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold text-slate-800 dark:text-slate-100">{source.name}</span>
-                  <span className="text-slate-500 dark:text-slate-400">
+                  <span className="block truncate font-semibold text-[var(--text-primary)]">{source.name}</span>
+                  <span className="text-[var(--text-muted)]">
                     {t(language, "research.workspace.knowledgeSources.documents", {
                       count: source.documents_count
                     })}
@@ -99,7 +99,7 @@ export default function KnowledgeSourcesPanel({
             );
           })
         ) : (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-[var(--text-muted)]">
             {t(language, "research.workspace.knowledgeSources.empty")}
           </p>
         )}

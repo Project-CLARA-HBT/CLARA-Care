@@ -59,9 +59,9 @@ export default function DebugHintsPanel({
   if (!enabled) return null;
 
   return (
-    <section className="rounded-3xl border border-dashed border-slate-300 bg-white/90 p-4 shadow-sm dark:border-slate-600 dark:bg-slate-900/85">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Admin Runtime Hints</p>
-      <div className="mt-2 grid gap-2 text-xs text-slate-700 dark:text-slate-300">
+    <section className="rounded-[14px] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Admin Runtime Hints</p>
+      <div className="mt-2 grid gap-2 text-xs text-[var(--text-secondary)]">
         <p>role_label: {roleLabel}</p>
         <p>tier_mode: {selectedTier}</p>
         <p>history_count: {conversationCount}</p>

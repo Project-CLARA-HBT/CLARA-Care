@@ -212,7 +212,7 @@ export default function ResearchRightRail({
   return (
     <aside className="space-y-4">
       <div className="xl:hidden">
-        <div className="rounded-2xl border border-slate-200 bg-white/85 p-1 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1">
           <div className="grid grid-cols-4 gap-1 sm:grid-cols-5">
             {tabs.map((tab) => (
               <button
@@ -222,8 +222,8 @@ export default function ResearchRightRail({
                 className={[
                   "rounded-xl px-2 py-2 text-xs font-semibold transition",
                   mobileTab === tab
-                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
                 ].join(" ")}
               >
                 {TAB_LABELS[tab]}

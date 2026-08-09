@@ -48,9 +48,9 @@ export default function UploadedFilesPanel({
   const language = useUILanguage();
 
   return (
-    <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+    <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
           {t(language, "research.workspace.files.title")}
         </p>
         {files.length ? (
@@ -58,7 +58,7 @@ export default function UploadedFilesPanel({
             type="button"
             onClick={onClearAll}
             disabled={isUploading}
-            className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--surface-brand-soft)]"
           >
             {t(language, "research.workspace.files.clearAll")}
           </button>
@@ -73,17 +73,17 @@ export default function UploadedFilesPanel({
         className={[
           "mt-3 rounded-2xl border-2 border-dashed p-3 text-center transition",
           isDragActive
-            ? "border-sky-400 bg-sky-50 dark:border-sky-500 dark:bg-sky-950/40"
-            : "border-slate-300 bg-slate-50/80 dark:border-slate-600 dark:bg-slate-800/65",
+            ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)]"
+            : "border-[color:var(--shell-border)] bg-[var(--surface-muted)]",
         ].join(" ")}
       >
-        <p className="text-xs text-slate-600 dark:text-slate-300">
+        <p className="text-xs text-[var(--text-secondary)]">
           {t(language, "research.workspace.files.dropzone")}
         </p>
       </div>
 
       {uploadError ? (
-        <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
+        <p className="mt-3 rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-xs text-[var(--status-danger-text)]">
           {uploadError}
         </p>
       ) : null}
@@ -93,16 +93,16 @@ export default function UploadedFilesPanel({
           {files.map((file) => (
             <div
               key={file.id}
-              className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800/75"
+              className="flex items-center justify-between gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs"
             >
               <div className="min-w-0">
                 <p
-                  className="truncate font-semibold text-slate-800 dark:text-slate-100"
+                  className="truncate font-semibold text-[var(--text-primary)]"
                   title={file.name}
                 >
                   {file.name}
                 </p>
-                <p className="text-slate-500 dark:text-slate-400">
+                <p className="text-[var(--text-muted)]">
                   {formatFileSize(
                     file.size,
                     t(language, "research.workspace.files.sizeUnknown"),
@@ -112,7 +112,7 @@ export default function UploadedFilesPanel({
               </div>
               <button
                 type="button"
-                className="rounded-full px-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                className="rounded-full px-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-panel)] hover:text-[var(--text-primary)]"
                 onClick={() => onRemoveFile(file.id)}
                 aria-label={t(language, "research.workspace.files.remove", {
                   name: file.name,
@@ -124,7 +124,7 @@ export default function UploadedFilesPanel({
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-3 text-sm text-[var(--text-muted)]">
           {t(language, "research.workspace.files.empty")}
         </p>
       )}
