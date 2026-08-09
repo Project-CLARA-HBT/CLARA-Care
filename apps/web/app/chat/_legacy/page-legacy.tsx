@@ -23,6 +23,7 @@ import { ConversationItem, ResearchResult } from "@/components/research/lib/rese
 import ChatComposer from "@/components/chat-workspace/chat-composer";
 import ChatTurn from "@/components/chat-workspace/chat-turn";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
+import Modal from "@/components/ui/modal";
 import PageShell from "@/components/ui/page-shell";
 import { Icon, resolveIconName } from "@/components/ui/icon";
 import { getRole, type UserRole } from "@/lib/auth-store";
@@ -773,41 +774,41 @@ function logicFlowStatusMeta(status: LogicFlowNodeStatus): {
 } {
   if (status === "completed") {
     return {
-      dotClass: "bg-emerald-500 ring-4 ring-emerald-500/25",
+      dotClass: "bg-[var(--brand-primary)] ring-4 ring-[var(--surface-brand-soft)]",
       labelClass: "text-[var(--text-primary)]",
-      detailClass: "text-emerald-700 dark:text-emerald-300",
+      detailClass: "text-[var(--status-ok-text)]",
     };
   }
   if (status === "in_progress") {
     return {
-      dotClass: "bg-cyan-500 ring-4 ring-cyan-500/25",
+      dotClass: "bg-[var(--brand-primary)] ring-4 ring-[var(--surface-brand-soft)]",
       labelClass: "text-[var(--text-primary)]",
-      detailClass: "text-cyan-700 dark:text-cyan-300",
+      detailClass: "text-[var(--text-brand)]",
     };
   }
   if (status === "warning") {
     return {
-      dotClass: "bg-amber-500 ring-4 ring-amber-500/25",
+      dotClass: "bg-[var(--status-warn-text)] ring-4 ring-[var(--status-warn-bg)]",
       labelClass: "text-[var(--text-primary)]",
-      detailClass: "text-amber-700 dark:text-amber-300",
+      detailClass: "text-[var(--status-warn-text)]",
     };
   }
   if (status === "failed") {
     return {
-      dotClass: "bg-rose-500 ring-4 ring-rose-500/25",
+      dotClass: "bg-[var(--status-danger-text)] ring-4 ring-[var(--status-danger-bg)]",
       labelClass: "text-[var(--text-primary)]",
-      detailClass: "text-rose-700 dark:text-rose-300",
+      detailClass: "text-[var(--status-danger-text)]",
     };
   }
   if (status === "skipped") {
     return {
-      dotClass: "bg-slate-400 ring-4 ring-slate-400/20",
+      dotClass: "bg-[var(--shell-border)] ring-4 ring-[var(--surface-muted)]",
       labelClass: "text-[var(--text-secondary)]",
       detailClass: "text-[var(--text-muted)]",
     };
   }
   return {
-    dotClass: "bg-slate-300 ring-4 ring-slate-300/20 dark:bg-slate-600 dark:ring-slate-600/20",
+    dotClass: "bg-[var(--shell-border)] ring-4 ring-[var(--surface-muted)]",
     labelClass: "text-[var(--text-muted)]",
     detailClass: "text-[var(--text-muted)]",
   };
@@ -2904,7 +2905,7 @@ export default function ChatWorkspacePage() {
             type="button"
             aria-label={t(uiLanguage, "chat.shell.closeSidebar")}
             onClick={() => setIsMobileSidebarOpen(false)}
-            className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] lg:hidden"
+            className="fixed inset-0 z-40 bg-[color:var(--surface-deep)]/88 lg:hidden"
           />
         ) : null}
 
@@ -2925,7 +2926,7 @@ export default function ChatWorkspacePage() {
               <button
                 type="button"
                 onClick={() => setIsWorkspacePanelCollapsed(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-[color:var(--border-brand-subtle)] hover:text-[var(--text-brand)]"
                 aria-label={t(uiLanguage, "chat.legacyWorkspace.openPanel")}
                 title={t(uiLanguage, "chat.legacyWorkspace.openPanel")}
               >
@@ -2935,7 +2936,7 @@ export default function ChatWorkspacePage() {
               <button
                 type="button"
                 onClick={createNewConversation}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-500/10 text-cyan-700 transition hover:bg-cyan-500/15 dark:text-cyan-300"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)] transition hover:bg-[var(--surface-muted)]"
                 aria-label={t(uiLanguage, "chat.sidebar.newChat")}
                 title={t(uiLanguage, "chat.sidebar.newChat")}
               >
@@ -2948,8 +2949,8 @@ export default function ChatWorkspacePage() {
                 className={[
                   "inline-flex h-8 w-8 items-center justify-center rounded-xl border transition",
                   isTelemetryPanelOpen
-                    ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
-                    : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300",
+                    ? "border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                    : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:border-[color:var(--border-brand-subtle)] hover:text-[var(--text-brand)]",
                 ].join(" ")}
                 aria-label={isTelemetryPanelOpen
                   ? t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")
@@ -2974,7 +2975,7 @@ export default function ChatWorkspacePage() {
           >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.17em] text-cyan-300/95">
+              <p className="text-[10px] font-black uppercase tracking-[0.17em] text-[var(--text-brand)]">
                 CLARA CHAT
               </p>
               <h2 className="mt-0.5 text-[1.4rem] leading-none font-semibold text-[var(--text-primary)]">
@@ -2985,7 +2986,7 @@ export default function ChatWorkspacePage() {
               <button
                 type="button"
                 onClick={() => setIsWorkspacePanelCollapsed(true)}
-                className="hidden h-8 min-w-[32px] items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300 lg:inline-flex"
+                className="hidden h-8 min-w-[32px] items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-[color:var(--border-brand-subtle)] hover:text-[var(--text-brand)] lg:inline-flex"
                 aria-label={t(uiLanguage, "chat.legacyWorkspace.collapsePanel")}
                 title={t(uiLanguage, "chat.legacyWorkspace.collapsePanel")}
               >
@@ -3003,19 +3004,19 @@ export default function ChatWorkspacePage() {
             </div>
           </div>
 
-          <div className="mt-2.5 overflow-hidden rounded-full border border-blue-300/70 bg-[linear-gradient(90deg,rgba(59,130,246,0.95),rgba(37,99,235,0.92))] shadow-[0_10px_24px_-20px_rgba(37,99,235,0.6)]">
+          <div className="mt-2.5 overflow-hidden rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)]">
             <div className="flex items-stretch">
               <button
                 type="button"
                 onClick={createNewConversation}
-                className="inline-flex min-h-[34px] flex-1 items-center justify-center px-3 text-[12px] font-semibold text-white transition hover:brightness-105"
+                className="inline-flex min-h-[34px] flex-1 items-center justify-center px-3 text-[12px] font-semibold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)]"
               >
                 + {t(uiLanguage, "chat.sidebar.newChat")}
               </button>
               <button
                 type="button"
                 onClick={() => setIsSelectionMode((prev) => !prev)}
-                className="inline-flex min-h-[34px] w-9 items-center justify-center border-l border-blue-200/50 bg-blue-700/25 text-white transition hover:bg-blue-700/35"
+                className="inline-flex min-h-[34px] w-9 items-center justify-center border-l border-[color:var(--on-secondary-container)]/25 bg-[var(--brand-700)]/35 text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)]/55"
                 aria-label={t(
                   uiLanguage,
                   isSelectionMode ? "chat.legacyWorkspace.done" : "chat.legacyWorkspace.select"
@@ -3072,7 +3073,7 @@ export default function ChatWorkspacePage() {
                   className={[
                     "inline-flex min-h-[27px] items-center rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition",
                     workspaceLeftView === "chat"
-                      ? "border-cyan-300/75 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                      ? "border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                   ].join(" ")}
                 >
@@ -3088,7 +3089,7 @@ export default function ChatWorkspacePage() {
                       className={[
                         "inline-flex min-h-[27px] items-center rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.04em] transition",
                         active
-                          ? "border-cyan-300/75 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                          ? "border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                       ].join(" ")}
                       title={t(uiLanguage, option.titleKey)}
@@ -3256,7 +3257,7 @@ export default function ChatWorkspacePage() {
                       type="button"
                       disabled={workspaceApiUnavailable}
                       onClick={() => void applyBulkMetaUpdate({ isFavorite: true })}
-                      className="rounded border border-amber-300/70 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2 py-1 text-[10px] font-semibold text-[var(--status-warn-text)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.bulk.favorite")}
                     </button>
@@ -3280,21 +3281,21 @@ export default function ChatWorkspacePage() {
                       type="button"
                       disabled={workspaceApiUnavailable}
                       onClick={() => void bulkExportSelectedConversations("markdown")}
-                      className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-700"
+                      className="rounded border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-2 py-1 text-[10px] font-semibold text-[var(--text-brand)]"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.bulk.exportMarkdown")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void bulkExportSelectedConversations("docx")}
-                      className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-700"
+                      className="rounded border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-2 py-1 text-[10px] font-semibold text-[var(--text-brand)]"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.bulk.exportDocx")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void bulkDeleteSelectedConversations()}
-                      className="rounded border border-rose-300/70 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold text-rose-700"
+                      className="rounded border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-1 text-[10px] font-semibold text-[var(--status-danger-text)]"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.bulk.deleteSelected")}
                     </button>
@@ -3360,7 +3361,7 @@ export default function ChatWorkspacePage() {
                             className={[
                               "w-full cursor-pointer rounded-[0.95rem] border px-2.5 py-2 text-left",
                               isActive
-                                ? "border-cyan-300/70 bg-cyan-500/10 shadow-[inset_3px_0_0_0_rgba(96,165,250,0.9)]"
+                                ? "border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] shadow-[inset_3px_0_0_0_var(--brand-primary)]"
                                 : "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
                               draggingConversationId === item.conversation_id
                                 ? "opacity-70"
@@ -3430,7 +3431,7 @@ export default function ChatWorkspacePage() {
                   <button
                     type="button"
                     onClick={createNewConversation}
-                    className="mt-3 inline-flex min-h-[28px] items-center rounded-lg border border-blue-200/50 bg-blue-50 px-3 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300"
+                    className="mt-3 inline-flex min-h-[28px] items-center rounded-lg border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-3 text-[11px] font-semibold text-[var(--text-brand)] transition hover:bg-[var(--surface-brand-soft)]"
                   >
                     + {t(uiLanguage, "chat.legacyWorkspace.conversation.startNew")}
                   </button>
@@ -3448,7 +3449,7 @@ export default function ChatWorkspacePage() {
                 <button
                   type="button"
                   onClick={() => void onCreateInlineNote(false)}
-                  className="text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
+                  className="text-[11px] font-semibold text-[var(--text-brand)]"
                 >
                   + {t(uiLanguage, "chat.legacyWorkspace.notes.draft")}
                 </button>
@@ -3492,7 +3493,7 @@ export default function ChatWorkspacePage() {
                     <button
                       type="button"
                       onClick={() => void onSaveNoteDraft()}
-                      className="rounded border border-cyan-300/70 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
+                      className="rounded border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-2 py-1 text-[11px] font-semibold text-[var(--text-brand)]"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.notes.save")}
                     </button>
@@ -3523,7 +3524,7 @@ export default function ChatWorkspacePage() {
                         <button
                           type="button"
                           onClick={() => void onDeleteNote(note)}
-                          className="rounded border border-rose-300/70 px-1.5 py-0.5 text-[10px] text-rose-600"
+                          className="rounded border border-[color:var(--status-danger-border)] px-1.5 py-0.5 text-[10px] text-[var(--status-danger-text)]"
                         >
                           {t(uiLanguage, "chat.legacyWorkspace.notes.delete")}
                         </button>
@@ -3573,7 +3574,7 @@ export default function ChatWorkspacePage() {
                 </p>
                 <Link
                   href="/chat/shares"
-                  className="text-[11px] font-semibold text-cyan-700 dark:text-cyan-300"
+                  className="text-[11px] font-semibold text-[var(--text-brand)]"
                 >
                   {t(uiLanguage, "chat.legacyWorkspace.shares.manage")}
                 </Link>
@@ -3640,8 +3641,8 @@ export default function ChatWorkspacePage() {
               className={[
                 "h-16 w-1 rounded-full transition",
                 isWorkspacePanelResizing
-                  ? "bg-cyan-400 shadow-[0_0_0_4px_rgba(96,165,250,0.18)]"
-                  : "bg-[color:var(--shell-border)]/70 hover:bg-cyan-300/70",
+                  ? "bg-[var(--brand-primary)] shadow-[0_0_0_4px_var(--surface-brand-soft)]"
+                  : "bg-[color:var(--shell-border)]/70 hover:bg-[var(--brand-primary)]/70",
               ].join(" ")}
               aria-hidden="true"
             />
@@ -3649,7 +3650,7 @@ export default function ChatWorkspacePage() {
         </aside>
 
         <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-canvas)]">
-          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)]/70 bg-[var(--surface-panel)]/95 px-2.5 py-1.5 backdrop-blur-lg sm:px-3">
+          <header className="sticky top-0 z-10 border-b border-[color:var(--shell-border)]/70 bg-[var(--surface-panel)] px-2.5 py-1.5 sm:px-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -3665,7 +3666,7 @@ export default function ChatWorkspacePage() {
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
                     {t(uiLanguage, "chat.legacyWorkspace.active.eyebrow")}
                   </p>
-                  <span className="inline-flex items-center rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-semibold text-cyan-700 dark:text-cyan-300">
+                  <span className="inline-flex items-center rounded-full border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[9px] font-semibold text-[var(--text-brand)]">
                     {activeModeLabel}
                   </span>
                 </div>
@@ -3681,7 +3682,7 @@ export default function ChatWorkspacePage() {
                 <button
                   type="button"
                   onClick={createNewConversation}
-                  className="inline-flex min-h-[34px] items-center gap-1 rounded-full bg-blue-600 px-3.5 text-[11px] font-semibold text-white shadow-[0_10px_22px_-14px_rgba(37,99,235,0.8)] transition hover:bg-blue-700"
+                  className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-3.5 text-[11px] font-semibold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)]"
                 >
                   + {t(uiLanguage, "chat.legacyWorkspace.active.newChat")}
                 </button>
@@ -3697,13 +3698,13 @@ export default function ChatWorkspacePage() {
 
                 <details className="group relative">
                   <summary
-                    className="inline-flex h-[34px] w-[34px] cursor-pointer list-none items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-blue-400 hover:text-[var(--text-brand)]"
+                    className="inline-flex h-[34px] w-[34px] cursor-pointer list-none items-center justify-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] transition hover:border-[color:var(--border-brand-subtle)] hover:text-[var(--text-brand)]"
                     aria-label={t(uiLanguage, "chat.legacyWorkspace.active.moreActions")}
                     title={t(uiLanguage, "chat.legacyWorkspace.active.moreActions")}
                   >
                     <LegacyIcon name="more_horiz" className="text-[18px]" size="18px" />
                   </summary>
-                  <div className="absolute right-0 z-20 mt-2 w-[16rem] space-y-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-xl">
+                  <div className="absolute right-0 z-20 mt-2 w-[16rem] space-y-1.5 rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5">
                     {canViewTelemetry ? (
                     <button
                       type="button"
@@ -3711,7 +3712,7 @@ export default function ChatWorkspacePage() {
                       className={[
                         "inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border px-3 text-[11px] font-semibold transition",
                         isTelemetryPanelOpen
-                          ? "border-cyan-300/70 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                          ? "border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
                       ].join(" ")}
                     >
@@ -3746,7 +3747,7 @@ export default function ChatWorkspacePage() {
                       className={[
                         "inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border px-3 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60",
                         activeConversationMeta?.is_favorite
-                          ? "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
                           : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
                       ].join(" ")}
                     >
@@ -3758,7 +3759,7 @@ export default function ChatWorkspacePage() {
                       type="button"
                       onClick={() => void onExportActiveConversation("docx")}
                       disabled={!activeConversationId}
-                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-emerald-300/75 bg-emerald-500/15 px-3 text-[11px] font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-700/70 dark:text-emerald-300"
+                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 text-[11px] font-semibold text-[var(--status-ok-text)] disabled:cursor-not-allowed disabled:opacity-60"
                       title={t(uiLanguage, "chat.legacyWorkspace.active.exportReportTitle")}
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.active.exportReport")}
@@ -3775,7 +3776,7 @@ export default function ChatWorkspacePage() {
                       type="button"
                       onClick={() => void onShareActiveConversation()}
                       disabled={!activeConversationId || workspaceApiUnavailable}
-                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-[11px] font-semibold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-700/70 dark:text-cyan-300"
+                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-3 text-[11px] font-semibold text-[var(--text-brand)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.active.share")}
                     </button>
@@ -3791,13 +3792,13 @@ export default function ChatWorkspacePage() {
                       type="button"
                       onClick={() => void onRevokeShareActiveConversation()}
                       disabled={!activeConversationId || !shareInfo || workspaceApiUnavailable}
-                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-rose-300/70 bg-rose-500/10 px-3 text-[11px] font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-700/70 dark:text-rose-300"
+                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 text-[11px] font-semibold text-[var(--status-danger-text)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.active.revokeShare")}
                     </button>
                     <Link
                       href="/chat/shares"
-                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-[11px] font-semibold text-cyan-700 dark:border-cyan-700/70 dark:text-cyan-300"
+                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-3 text-[11px] font-semibold text-[var(--text-brand)]"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.active.manageShares")}
                     </Link>
@@ -3805,7 +3806,7 @@ export default function ChatWorkspacePage() {
                       type="button"
                       onClick={() => void onDeleteActiveConversation()}
                       disabled={!activeConversationId}
-                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-rose-300/70 bg-rose-500/10 px-3 text-[11px] font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-700/70 dark:text-rose-300"
+                      className="inline-flex min-h-[32px] w-full items-center justify-center rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 text-[11px] font-semibold text-[var(--status-danger-text)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.active.delete")}
                     </button>
@@ -3824,12 +3825,12 @@ export default function ChatWorkspacePage() {
               ) : null}
 
               {error && !isSubmitting ? (
-                <article className="rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm font-semibold leading-6 text-rose-800 shadow-[0_10px_24px_-28px_rgba(190,18,60,0.35)] dark:border-rose-700/70 dark:bg-rose-950/35 dark:text-rose-100">
+                <article className="rounded-[14px] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 py-3 text-sm font-semibold leading-6 text-[var(--status-danger-text)]">
                   <div className="flex items-start gap-2">
                     <LegacyIcon name="error" className="mt-0.5 text-[18px]" size="18px" />
                     <div>
                       <p>{t(uiLanguage, "chat.legacyWorkspace.canvas.error")}</p>
-                      <p className="mt-1 text-xs font-medium text-rose-700 dark:text-rose-200">{error}</p>
+                      <p className="mt-1 text-xs font-medium text-[var(--status-danger-text)]">{error}</p>
                     </div>
                   </div>
                 </article>
@@ -3837,7 +3838,7 @@ export default function ChatWorkspacePage() {
 
               {!conversationTurns.length && !isLoadingTurns && !isSubmitting ? (
                 <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-6 text-center sm:py-10">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_18px_40px_-22px_rgba(37,99,235,0.7)]">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
                     <LegacyIcon name="stethoscope" className="text-[30px]" size="30px" />
                   </div>
                   <h2 className="mt-5 text-xl font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-2xl">
@@ -3858,7 +3859,7 @@ export default function ChatWorkspacePage() {
                       {t(uiLanguage, "chat.legacyWorkspace.welcome.answerSuffix")}
                     </p>
                   </div>
-                  <p className="mt-4 max-w-lg rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium leading-5 text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+                  <p className="mt-4 max-w-lg rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-1.5 text-xs font-medium leading-5 text-[var(--status-warn-text)]">
                     {t(uiLanguage, "chat.legacyWorkspace.welcome.disclaimer")}
                   </p>
                   <div className="mt-8 w-full">
@@ -3875,7 +3876,7 @@ export default function ChatWorkspacePage() {
                           key={prompt}
                           type="button"
                           onClick={() => setQuery(prompt)}
-                          className="group flex items-start gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3.5 text-left transition hover:border-blue-400 hover:bg-blue-50 hover:shadow-[0_12px_28px_-22px_rgba(37,99,235,0.6)] dark:hover:bg-[var(--surface-muted)]"
+                          className="group flex items-start gap-3 rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3.5 text-left transition hover:border-[color:var(--border-brand-subtle)] hover:bg-[var(--surface-brand-soft)]"
                         >
                           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-medical/10 text-medical transition group-hover:scale-105 group-hover:bg-medical/15">
                             <LegacyIcon name="prompt_suggestion" className="text-[18px]" size="18px" />
@@ -3905,7 +3906,7 @@ export default function ChatWorkspacePage() {
                         key={suggestion}
                         type="button"
                         onClick={() => setQuery(suggestion)}
-                        className="inline-flex items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:border-blue-400 hover:bg-blue-50 hover:text-[var(--text-brand)] dark:hover:bg-[var(--surface-muted)]"
+                        className="inline-flex items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:border-[color:var(--border-brand-subtle)] hover:bg-[var(--surface-brand-soft)] hover:text-[var(--text-brand)]"
                       >
                         {suggestion}
                       </button>
@@ -3915,9 +3916,9 @@ export default function ChatWorkspacePage() {
               ) : null}
 
               {isSubmitting ? (
-                <article className="rounded-[0.8rem] border border-cyan-300/70 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900 shadow-[0_10px_24px_-28px_rgba(14,116,144,0.42)] dark:border-cyan-600/55 dark:bg-cyan-950/35 dark:text-cyan-100">
+                <article className="rounded-[14px] border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-4 py-3 text-sm font-semibold text-[var(--text-brand)]">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-600 dark:bg-cyan-300" />
+                    <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--brand-primary)]" />
                     <span>{t(uiLanguage, "chat.legacyWorkspace.canvas.analyzing")}</span>
                   </div>
                 </article>
@@ -3930,7 +3931,7 @@ export default function ChatWorkspacePage() {
               <article
                 role="group"
                 aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.aria")}
-                className="rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_-28px_rgba(180,83,9,0.4)] dark:border-amber-600/55 dark:bg-amber-950/35 dark:text-amber-100"
+                className="rounded-[14px] border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-4 py-3 text-sm text-[var(--status-warn-text)]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -3945,7 +3946,7 @@ export default function ChatWorkspacePage() {
                     type="button"
                     onClick={onDismissClarify}
                     disabled={isSubmitting}
-                    className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-200 dark:hover:bg-amber-900/40"
+                    className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold text-[var(--status-warn-text)] transition hover:bg-[var(--status-warn-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                     aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.dismiss")}
                   >
                     ✕
@@ -3966,7 +3967,7 @@ export default function ChatWorkspacePage() {
                         disabled={isSubmitting}
                         aria-label={t(uiLanguage, "chat.legacyWorkspace.clarify.answerPlaceholder")}
                         placeholder={t(uiLanguage, "chat.legacyWorkspace.clarify.answerPlaceholder")}
-                        className="min-h-[34px] w-full rounded-lg border border-amber-300/80 bg-white/80 px-2.5 text-[13px] text-amber-950 outline-none focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-600/60 dark:bg-amber-950/40 dark:text-amber-50"
+                        className="min-h-[34px] w-full rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--surface-panel)] px-2.5 text-[13px] text-[var(--text-primary)] outline-none focus:border-[color:var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                       />
                     </label>
                   ))}
@@ -3977,7 +3978,7 @@ export default function ChatWorkspacePage() {
                     type="button"
                     onClick={onSubmitClarifyAnswers}
                     disabled={isSubmitting}
-                    className="inline-flex items-center rounded-full bg-amber-600 px-3.5 py-1.5 text-[13px] font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {t(uiLanguage, "chat.legacyWorkspace.clarify.submit")}
                   </button>
@@ -3985,7 +3986,7 @@ export default function ChatWorkspacePage() {
                     type="button"
                     onClick={onSkipClarify}
                     disabled={isSubmitting}
-                    className="inline-flex items-center rounded-full border border-amber-400/80 px-3.5 py-1.5 text-[13px] font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-100 dark:hover:bg-amber-900/40"
+                    className="inline-flex items-center rounded-lg border border-[color:var(--status-warn-border)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--status-warn-text)] transition hover:bg-[var(--status-warn-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {t(uiLanguage, "chat.legacyWorkspace.clarify.skip")}
                   </button>
@@ -4028,7 +4029,7 @@ export default function ChatWorkspacePage() {
             <button
               type="button"
               onClick={() => setIsTelemetryPanelOpen(true)}
-              className="pointer-events-auto inline-flex h-6 items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/96 px-2 text-left shadow-[0_12px_24px_-24px_rgba(15,23,42,0.36)] backdrop-blur-lg transition hover:border-cyan-300/70"
+              className="pointer-events-auto inline-flex h-6 items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 text-left transition hover:border-[color:var(--border-brand-subtle)]"
               aria-label={t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
               title={t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
             >
@@ -4048,7 +4049,7 @@ export default function ChatWorkspacePage() {
 
           {isTelemetryPanelOpen ? (
             <aside className="pointer-events-auto w-[8rem]">
-              <div className="rounded-[0.75rem] border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/97 p-1.5 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.4)] backdrop-blur-lg">
+              <div className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-[8px] font-black uppercase tracking-[0.14em] text-[var(--text-muted)]">
@@ -4061,7 +4062,7 @@ export default function ChatWorkspacePage() {
                   <button
                     type="button"
                     onClick={() => setIsTelemetryPanelOpen(false)}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] transition hover:border-[color:var(--border-brand-subtle)] hover:text-[var(--text-brand)]"
                     aria-label={t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")}
                     title={t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")}
                   >
@@ -4139,28 +4140,13 @@ export default function ChatWorkspacePage() {
         </TelemetryPanel>
       </div>
         {isScopeManagerOpen ? (
-          <div className="fixed inset-0 z-[68] flex items-start justify-center bg-slate-950/40 px-4 pt-[8vh] backdrop-blur-sm">
-            <button
-              type="button"
-              aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.closeManager")}
-              onClick={() => setIsScopeManagerOpen(false)}
-              className="absolute inset-0"
-            />
-            <div className="relative w-full max-w-3xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-2xl">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  {t(uiLanguage, "chat.legacyWorkspace.folder.managerTitle")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setIsScopeManagerOpen(false)}
-                  className="inline-flex min-h-[30px] min-w-[30px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)]"
-                  aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.closeManager")}
-                >
-                  ✕
-                </button>
-              </div>
-
+          <Modal
+            open
+            onClose={() => setIsScopeManagerOpen(false)}
+            title={t(uiLanguage, "chat.legacyWorkspace.folder.managerTitle")}
+            closeLabel={t(uiLanguage, "chat.legacyWorkspace.folder.closeManager")}
+            size="lg"
+          >
               <div className="mb-3 grid gap-2 sm:grid-cols-3">
                 <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
                   <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
@@ -4198,7 +4184,7 @@ export default function ChatWorkspacePage() {
                   <button
                     type="button"
                     onClick={() => void onCreateFolder()}
-                    className="inline-flex min-h-[38px] items-center rounded-lg border border-cyan-300/70 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-700 dark:text-cyan-300"
+                    className="inline-flex min-h-[38px] items-center rounded-lg border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-3 text-xs font-semibold text-[var(--text-brand)]"
                   >
                     + {t(uiLanguage, "chat.legacyWorkspace.folder.create")}
                   </button>
@@ -4224,7 +4210,7 @@ export default function ChatWorkspacePage() {
                     <button
                       type="button"
                       onClick={() => setSelectedFolderFilterId(null)}
-                      className="line-clamp-1 text-left text-sm font-semibold text-[var(--text-primary)] hover:text-cyan-700"
+                      className="line-clamp-1 text-left text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--text-brand)]"
                     >
                       {t(uiLanguage, "chat.legacyWorkspace.folder.allOption")}
                     </button>
@@ -4239,14 +4225,14 @@ export default function ChatWorkspacePage() {
                       className={[
                         "flex items-center justify-between rounded-lg border bg-[var(--surface-muted)] px-2.5 py-2",
                         selectedFolderFilterId === folder.id
-                          ? "border-cyan-300/70"
+                          ? "border-[color:var(--border-brand-subtle)]"
                           : "border-[color:var(--shell-border)]",
                       ].join(" ")}
                     >
                       <button
                         type="button"
                         onClick={() => setSelectedFolderFilterId(folder.id)}
-                        className="line-clamp-1 text-left text-sm text-[var(--text-primary)] hover:text-cyan-700"
+                        className="line-clamp-1 text-left text-sm text-[var(--text-primary)] hover:text-[var(--text-brand)]"
                       >
                         {folder.name}
                       </button>
@@ -4284,7 +4270,7 @@ export default function ChatWorkspacePage() {
                         <button
                           type="button"
                           onClick={() => void onDeleteFolder(folder)}
-                          className="rounded border border-rose-300/70 px-2 py-1 text-[11px] text-rose-600"
+                          className="rounded border border-[color:var(--status-danger-border)] px-2 py-1 text-[11px] text-[var(--status-danger-text)]"
                         >
                           {t(uiLanguage, "chat.legacyWorkspace.folder.delete")}
                         </button>
@@ -4298,37 +4284,19 @@ export default function ChatWorkspacePage() {
                   ) : null}
                 </div>
               </div>
-            </div>
-          </div>
+          </Modal>
         ) : null}
         {isCommandPaletteOpen ? (
-          <div className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-950/45 px-4 pt-[10vh] backdrop-blur-sm">
-            <button
-              type="button"
-              aria-label={t(uiLanguage, "chat.commandPalette.closeAria")}
-              onClick={() => {
-                setIsCommandPaletteOpen(false);
-                setCommandPaletteQuery("");
-              }}
-              className="absolute inset-0"
-            />
-            <div className="relative w-full max-w-2xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-2xl">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  {t(uiLanguage, "chat.commandPalette.title")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCommandPaletteOpen(false);
-                    setCommandPaletteQuery("");
-                  }}
-                  className="inline-flex min-h-[30px] min-w-[30px] items-center justify-center rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-xs font-semibold text-[var(--text-secondary)]"
-                  aria-label={t(uiLanguage, "chat.commandPalette.closeAria")}
-                >
-                  ✕
-                </button>
-              </div>
+          <Modal
+            open
+            onClose={() => {
+              setIsCommandPaletteOpen(false);
+              setCommandPaletteQuery("");
+            }}
+            title={t(uiLanguage, "chat.commandPalette.title")}
+            closeLabel={t(uiLanguage, "chat.commandPalette.closeAria")}
+            size="lg"
+          >
               <input
                 id="chat-command-palette-input"
                 value={commandPaletteQuery}
@@ -4359,7 +4327,7 @@ export default function ChatWorkspacePage() {
                       type="button"
                       disabled={action.disabled}
                       onClick={() => executeCommandAction(action)}
-                      className="flex min-h-[42px] w-full items-center justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-left text-sm text-[var(--text-primary)] transition hover:border-cyan-300/70 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex min-h-[42px] w-full items-center justify-between rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-left text-sm text-[var(--text-primary)] transition hover:border-[color:var(--border-brand-subtle)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <span>{action.label}</span>
                       {action.hint ? (
@@ -4375,8 +4343,7 @@ export default function ChatWorkspacePage() {
                   </p>
                 )}
               </div>
-            </div>
-          </div>
+          </Modal>
         ) : null}
       </div>
     </PageShell>
