@@ -163,13 +163,13 @@ export default function TelemetryDetailsPanel({
           <span className="research-chip rounded-full px-2 py-0.5">
             docs:{telemetry.docs.length}
           </span>
-          <span className="research-chip rounded-full border-amber-300/60 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300">
+          <span className="rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2 py-0.5 text-[var(--status-warn-text)]">
             vm:{telemetry.verificationMatrix.length}
           </span>
           <span className="research-chip rounded-full px-2 py-0.5">
             trace:{traceEntries.length}
           </span>
-          <span className="research-chip rounded-full border-rose-300/60 bg-rose-500/10 px-2 py-0.5 text-rose-700 dark:text-rose-300">
+          <span className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-0.5 text-[var(--status-danger-text)]">
             err:{telemetry.errors.length}
           </span>
         </div>
@@ -177,10 +177,10 @@ export default function TelemetryDetailsPanel({
 
       <div className="research-live-engine mt-3 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-cyan-200/95 dark:text-cyan-100">
+          <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[var(--text-brand)]">
             Neural Reasoning
           </p>
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cyan-200 dark:text-cyan-100">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-brand)]">
             <span className="research-pulse-dot" />
             Runtime
           </span>
@@ -202,7 +202,7 @@ export default function TelemetryDetailsPanel({
       </div>
 
       {!hasData ? (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-3 text-sm text-[var(--text-secondary)]">
           {isProcessing
             ? "Đang đợi telemetry runtime từ backend..."
             : "Chưa có telemetry chi tiết cho phiên này."}
@@ -211,14 +211,14 @@ export default function TelemetryDetailsPanel({
 
       {telemetry.keywords.length ? (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Keywords
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {telemetry.keywords.slice(0, 20).map((keyword) => (
               <span
                 key={keyword}
-                className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
+                className="rounded-full border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-brand)]"
               >
                 {keyword}
               </span>
@@ -231,26 +231,26 @@ export default function TelemetryDetailsPanel({
         telemetry.searchPlan.subqueries.length > 0 ||
         telemetry.searchPlan.connectors.length > 0) ? (
         <div className="mt-3 space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Search Plan
           </p>
           {telemetry.searchPlan.query ? (
-            <p className="text-xs text-slate-700 dark:text-slate-200">
+            <p className="text-xs text-[var(--text-primary)]">
               query: <span className="font-medium">{telemetry.searchPlan.query}</span>
             </p>
           ) : null}
           {telemetry.searchPlan.researchMode ? (
-            <p className="text-xs text-slate-700 dark:text-slate-200">
+            <p className="text-xs text-[var(--text-primary)]">
               mode: <span className="font-medium">{telemetry.searchPlan.researchMode}</span>
             </p>
           ) : null}
           {telemetry.searchPlan.topK !== undefined ? (
-            <p className="text-xs text-slate-700 dark:text-slate-200">
+            <p className="text-xs text-[var(--text-primary)]">
               top_k: <span className="font-medium">{formatScore(telemetry.searchPlan.topK)}</span>
             </p>
           ) : null}
           {telemetry.searchPlan.totalCandidates !== undefined ? (
-            <p className="text-xs text-slate-700 dark:text-slate-200">
+            <p className="text-xs text-[var(--text-primary)]">
               total_candidates:{" "}
               <span className="font-medium">
                 {formatScore(telemetry.searchPlan.totalCandidates)}
@@ -258,13 +258,13 @@ export default function TelemetryDetailsPanel({
             </p>
           ) : null}
           {telemetry.searchPlan.durationMs !== undefined ? (
-            <p className="text-xs text-slate-700 dark:text-slate-200">
+            <p className="text-xs text-[var(--text-primary)]">
               duration_ms:{" "}
               <span className="font-medium">{formatScore(telemetry.searchPlan.durationMs)}</span>
             </p>
           ) : null}
           {telemetry.searchPlan.subqueries.length ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
+            <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-2 text-xs text-[var(--text-secondary)]">
               <p className="font-semibold">subqueries:</p>
               <ul className="mt-1 space-y-0.5">
                 {telemetry.searchPlan.subqueries.slice(0, 8).map((subquery, index) => (
@@ -278,7 +278,7 @@ export default function TelemetryDetailsPanel({
               {telemetry.searchPlan.connectors.map((connector) => (
                 <span
                   key={connector}
-                  className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
+                  className="rounded-full border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-brand)]"
                 >
                   {connector}
                 </span>
@@ -290,11 +290,11 @@ export default function TelemetryDetailsPanel({
 
       {(telemetry.verificationMatrix.length || hasContradictionSummary || hasSafetyOverride) ? (
         <div className="mt-3 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Verification
           </p>
           {hasSafetyOverride && safetyOverride ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-2 py-2 text-xs text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200">
+            <div className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-2 text-xs text-[var(--status-danger-text)]">
               <p className="font-semibold">Safety Override</p>
               <p className="mt-1">
                 applied: {String(Boolean(safetyOverride.applied))}
@@ -316,7 +316,7 @@ export default function TelemetryDetailsPanel({
               {telemetry.verificationMatrix.slice(0, 8).map((item, index) => (
                 <li
                   key={`${item.claim}-${item.supportStatus ?? item.verdict ?? "na"}-${index}`}
-                  className="rounded-xl border border-amber-200 bg-amber-50/70 px-2 py-2 text-xs text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+                  className="rounded-xl border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2 py-2 text-xs text-[var(--status-warn-text)]"
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="font-semibold">{item.claim}</p>
@@ -331,12 +331,12 @@ export default function TelemetryDetailsPanel({
                       </span>
                     ) : null}
                     {item.claimType ? (
-                      <span className="rounded-full border border-indigo-300 bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                      <span className="rounded-full border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--text-brand)]">
                         {item.claimType}
                       </span>
                     ) : null}
                     {item.severity ? (
-                      <span className="rounded-full border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+                      <span className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--status-danger-text)]">
                         {item.severity}
                       </span>
                     ) : null}
@@ -356,7 +356,7 @@ export default function TelemetryDetailsPanel({
           ) : null}
 
           {hasContradictionSummary && contradictionSummary ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-2 py-2 text-xs text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200">
+            <div className="rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-2 text-xs text-[var(--status-danger-text)]">
               <p className="font-semibold">Contradiction Summary</p>
               <p className="mt-1">
                 {contradictionSummary.hasContradiction !== undefined
@@ -378,14 +378,14 @@ export default function TelemetryDetailsPanel({
 
       {telemetry.sourceAttempts.length ? (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Source Attempts
           </p>
           <ul className="mt-2 space-y-1.5">
             {telemetry.sourceAttempts.slice(0, 12).map((attempt, index) => (
               <li
                 key={`${attempt.source}-${attempt.status ?? "status"}-${index}`}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200"
+                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5 text-xs text-[var(--text-secondary)]"
               >
                 <span className="font-semibold">{attempt.source}</span>
                 {attempt.status ? ` · ${attempt.status}` : ""}
@@ -412,7 +412,7 @@ export default function TelemetryDetailsPanel({
         telemetry.crawlSummary.success !== undefined ||
         telemetry.crawlSummary.domains.length > 0) ? (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-2 text-xs text-[var(--text-secondary)]">
             <p className="font-semibold">Index Summary</p>
             {telemetry.indexSummary.retrievedCount !== undefined ? (
               <p>retrieved_count: {formatScore(telemetry.indexSummary.retrievedCount)}</p>
@@ -457,7 +457,7 @@ export default function TelemetryDetailsPanel({
               </p>
             ) : null}
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
+          <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-2 text-xs text-[var(--text-secondary)]">
             <p className="font-semibold">Crawl Summary</p>
             {telemetry.crawlSummary.enabled !== undefined ? (
               <p>enabled: {String(telemetry.crawlSummary.enabled)}</p>
@@ -480,14 +480,14 @@ export default function TelemetryDetailsPanel({
 
       {telemetry.scores.length ? (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Scores
           </p>
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
             {telemetry.scores.slice(0, 12).map((score) => (
               <p
                 key={`${score.label}-${String(score.value)}`}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200"
+                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-xs text-[var(--text-secondary)]"
               >
                 <span className="font-semibold">{score.label}</span>: {formatScore(score.value)}
               </p>
@@ -498,35 +498,35 @@ export default function TelemetryDetailsPanel({
 
       {telemetry.docs.length ? (
         <div className="mt-3 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Docs
           </p>
           {telemetry.docs.slice(0, 6).map((doc, index) => (
             <article
               key={`${doc.id ?? doc.title}-${index}`}
-              className="rounded-2xl border border-slate-200 bg-slate-50/90 p-3 dark:border-slate-700 dark:bg-slate-800/70"
+              className="rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-container)] p-3"
             >
               <div className="flex flex-wrap items-center gap-1.5">
-                <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">{doc.title}</p>
+                <p className="text-xs font-semibold text-[var(--text-primary)]">{doc.title}</p>
                 {doc.source ? (
-                  <span className="rounded-full border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                  <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
                     {doc.source}
                   </span>
                 ) : null}
                 {doc.score !== undefined ? (
-                  <span className="rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <span className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-1.5 py-0.5 text-[10px] text-[var(--status-ok-text)]">
                     score: {formatScore(doc.score)}
                   </span>
                 ) : null}
               </div>
               {doc.reasoning ? (
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">reasoning: {doc.reasoning}</p>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">reasoning: {doc.reasoning}</p>
               ) : null}
               {doc.snippet ? (
-                <p className="mt-1 line-clamp-3 text-xs text-slate-500 dark:text-slate-400">{doc.snippet}</p>
+                <p className="mt-1 line-clamp-3 text-xs text-[var(--text-secondary)]">{doc.snippet}</p>
               ) : null}
               {doc.error ? (
-                <p className="mt-1 text-xs font-medium text-rose-700 dark:text-rose-300">error: {doc.error}</p>
+                <p className="mt-1 text-xs font-medium text-[var(--status-danger-text)]">error: {doc.error}</p>
               ) : null}
             </article>
           ))}
@@ -535,14 +535,14 @@ export default function TelemetryDetailsPanel({
 
       {telemetry.sourceReasoning.length ? (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Source Reasoning
           </p>
           <ul className="mt-2 space-y-1.5">
             {telemetry.sourceReasoning.slice(0, 8).map((item, index) => (
               <li
                 key={`${item.source}-${index}`}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200"
+                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5 text-xs text-[var(--text-secondary)]"
               >
                 <span className="font-semibold">{item.source}</span>
                 {item.score !== undefined ? ` · score ${formatScore(item.score)}` : ""}
@@ -556,10 +556,10 @@ export default function TelemetryDetailsPanel({
 
       {hasTraceRuntime ? (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Trace Runtime
           </p>
-          <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200">
+          <div className="mt-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-2 text-xs text-[var(--text-secondary)]">
             {traceRuntime.traceId !== undefined ? (
               <p>
                 trace_id: <span className="font-medium">{formatTraceValue(traceRuntime.traceId)}</span>
@@ -586,24 +586,24 @@ export default function TelemetryDetailsPanel({
 
       {stageSpans.length ? (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Stage Spans
           </p>
           <ul className="mt-2 space-y-1.5">
             {stageSpans.slice(0, 20).map((span, index) => (
               <li
                 key={`${span.stage}-${span.start ?? "na"}-${span.end ?? "na"}-${index}`}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200"
+                className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1.5 text-xs text-[var(--text-secondary)]"
               >
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="font-semibold">{span.stage}</span>
                   {span.status ? (
-                    <span className="rounded-full border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
                       {span.status}
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">
+                <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
                   duration_ms:{" "}
                   <span className="font-medium">
                     {span.durationMs !== undefined ? formatScore(span.durationMs) : "n/a"}
@@ -626,14 +626,14 @@ export default function TelemetryDetailsPanel({
 
       {traceEntries.length ? (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Trace Metadata
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {traceEntries.slice(0, 12).map(([key, value]) => (
               <span
                 key={`${key}-${String(value)}`}
-                className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800/75 dark:text-slate-200"
+                className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]"
               >
                 {key}: {formatTraceValue(value)}
               </span>
@@ -643,13 +643,13 @@ export default function TelemetryDetailsPanel({
       ) : null}
 
       {telemetry.errors.length ? (
-        <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50/90 p-3 dark:border-rose-800 dark:bg-rose-950/40">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-rose-700 dark:text-rose-300">
+        <div className="mt-3 rounded-[14px] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--status-danger-text)]">
             Errors
           </p>
           <ul className="mt-1.5 space-y-1">
             {telemetry.errors.slice(0, 10).map((error, index) => (
-              <li key={`${error}-${index}`} className="text-xs text-rose-700 dark:text-rose-200">
+              <li key={`${error}-${index}`} className="text-xs text-[var(--status-danger-text)]">
                 {error}
               </li>
             ))}

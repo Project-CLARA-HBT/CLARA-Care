@@ -407,7 +407,7 @@ export default function FlowTimelinePanel({
           {resolveModeLabel(language, mode)}
         </span>
         {durationText ? (
-          <span className="research-chip rounded-full border-cyan-300/60 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-medium text-cyan-700 dark:text-cyan-200">
+          <span className="rounded-full border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-brand)]">
             {t(language, "research.workspace.timeline.totalDuration")}:{" "}
             {durationText}
           </span>
@@ -422,10 +422,10 @@ export default function FlowTimelinePanel({
 
       <div className="research-live-engine mt-3 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-cyan-200/95 dark:text-cyan-100">
+          <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[var(--text-brand)]">
             {t(language, "research.workspace.timeline.liveEngine")}
           </p>
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cyan-200 dark:text-cyan-100">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-brand)]">
             <span className="research-pulse-dot" />
             {t(language, "research.workspace.timeline.active")}
           </span>
@@ -447,48 +447,48 @@ export default function FlowTimelinePanel({
       </div>
 
       {stages.length ? (
-        <div className="mt-3 rounded-xl border border-cyan-200/30 bg-cyan-500/5 p-3 dark:border-cyan-900/60 dark:bg-cyan-950/20">
+        <div className="mt-3 rounded-[14px] border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] p-3">
           <div className="flex items-center justify-between gap-2 text-xs">
             <p className="font-semibold text-[var(--text-primary)]">
               {t(language, "research.workspace.timeline.progress")}
             </p>
             <p className="text-[var(--text-secondary)]">{progressPercent}%</p>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80">
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]">
             <div
               className={[
                 "h-full transition-all",
                 summary.failed
-                  ? "bg-rose-500"
+                  ? "bg-[var(--status-danger-text)]"
                   : summary.warning
-                    ? "bg-amber-500"
-                    : "bg-emerald-500",
+                    ? "bg-[var(--status-warn-text)]"
+                    : "bg-[var(--brand-primary)]",
               ].join(" ")}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <span className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-2 py-0.5 text-[var(--status-ok-text)]">
               {t(language, "research.workspace.timeline.count.completed", {
                 count: summary.completed,
               })}
             </span>
-            <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+            <span className="rounded-full border border-[color:var(--border-brand-subtle)] bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[var(--text-brand)]">
               {t(language, "research.workspace.timeline.count.inProgress", {
                 count: summary.inProgress,
               })}
             </span>
-            <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+            <span className="rounded-full border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-2 py-0.5 text-[var(--status-warn-text)]">
               {t(language, "research.workspace.timeline.count.warning", {
                 count: summary.warning,
               })}
             </span>
-            <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-0.5 text-rose-700 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+            <span className="rounded-full border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-2 py-0.5 text-[var(--status-danger-text)]">
               {t(language, "research.workspace.timeline.count.failed", {
                 count: summary.failed,
               })}
             </span>
-            <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[var(--text-secondary)]">
               {t(language, "research.workspace.timeline.count.pending", {
                 count: summary.pending,
               })}
@@ -505,7 +505,7 @@ export default function FlowTimelinePanel({
             return (
               <li
                 key={`${stage.id}-${index}`}
-                className="relative rounded-2xl border border-cyan-200/30 bg-white/55 p-3 dark:border-cyan-900/40 dark:bg-slate-900/45"
+                className="relative rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-container)] p-3"
               >
                 <div className="flex items-start gap-3">
                   <div className="relative mt-0.5 flex w-4 justify-center">
@@ -526,7 +526,7 @@ export default function FlowTimelinePanel({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
                         {stage.label}
                       </p>
                       <span
@@ -539,7 +539,7 @@ export default function FlowTimelinePanel({
                       </span>
                     </div>
                     {stage.detail ? (
-                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
                         {stage.detail}
                       </p>
                     ) : null}
@@ -549,19 +549,19 @@ export default function FlowTimelinePanel({
                     stage.eventCount !== undefined ? (
                       <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
                         {stage.start ? (
-                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[var(--text-secondary)]">
                             {t(language, "research.workspace.timeline.started")}
                             : {formatEventTime(language, stage.start)}
                           </span>
                         ) : null}
                         {stage.end ? (
-                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[var(--text-secondary)]">
                             {t(language, "research.workspace.timeline.ended")}:{" "}
                             {formatEventTime(language, stage.end)}
                           </span>
                         ) : null}
                         {formatDuration(language, stage.durationMs) ? (
-                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[var(--text-secondary)]">
                             {t(
                               language,
                               "research.workspace.timeline.duration",
@@ -570,19 +570,19 @@ export default function FlowTimelinePanel({
                           </span>
                         ) : null}
                         {stage.eventCount !== undefined ? (
-                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[var(--text-secondary)]">
                             {t(language, "research.workspace.timeline.events")}:{" "}
                             {formatLocaleNumber(language, stage.eventCount)}
                           </span>
                         ) : null}
                         {stage.sourceCount !== undefined ? (
-                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[var(--text-secondary)]">
                             {t(language, "research.workspace.timeline.sources")}
                             : {formatLocaleNumber(language, stage.sourceCount)}
                           </span>
                         ) : null}
                         {stage.componentCount !== undefined ? (
-                          <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          <span className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[var(--text-secondary)]">
                             {t(
                               language,
                               "research.workspace.timeline.components",
@@ -600,7 +600,7 @@ export default function FlowTimelinePanel({
           })}
         </ol>
       ) : (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-3 text-sm text-[var(--text-secondary)]">
           {isProcessing
             ? t(language, "research.workspace.timeline.waiting")
             : t(language, "research.workspace.timeline.empty")}
@@ -608,7 +608,7 @@ export default function FlowTimelinePanel({
       )}
 
       {events.length ? (
-        <div className="mt-4 rounded-2xl border border-cyan-200/30 bg-cyan-500/5 p-3 dark:border-cyan-900/55 dark:bg-cyan-950/18">
+        <div className="mt-4 rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
             {t(language, "research.workspace.timeline.eventLog")}
           </p>
@@ -623,14 +623,14 @@ export default function FlowTimelinePanel({
               return (
                 <li
                   key={event.id}
-                  className="rounded-lg border border-cyan-200/35 bg-white/80 p-2 text-xs text-slate-600 dark:border-cyan-900/45 dark:bg-slate-900/55 dark:text-slate-300"
+                  className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-container)] p-2 text-xs text-[var(--text-secondary)]"
                 >
                   <div className="flex flex-wrap items-center gap-1">
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    <span className="font-semibold text-[var(--text-primary)]">
                       {event.label}
                     </span>
                     {event.component ? (
-                      <span className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                      <span className="rounded-md border border-[color:var(--shell-border)] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
                         {event.component}
                       </span>
                     ) : null}
@@ -653,15 +653,15 @@ export default function FlowTimelinePanel({
                       className={[
                         "mt-0.5 text-[11px]",
                         isErrorDetail(event.detail)
-                          ? "font-medium text-rose-700 dark:text-rose-300"
-                          : "text-slate-500 dark:text-slate-400",
+                          ? "font-medium text-[var(--status-danger-text)]"
+                          : "text-[var(--text-secondary)]",
                       ].join(" ")}
                     >
                       {event.detail}
                     </p>
                   ) : null}
                   {payloadPreview ? (
-                    <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
                       {payloadPreview}
                     </p>
                   ) : null}
@@ -670,7 +670,7 @@ export default function FlowTimelinePanel({
                       {payloadChips.map((chip) => (
                         <span
                           key={`${event.id}-${chip.key}`}
-                          className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                          className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]"
                         >
                           {chip.key}: {chip.value}
                         </span>
@@ -679,13 +679,13 @@ export default function FlowTimelinePanel({
                   ) : null}
                   {event.payload ? (
                     <details className="mt-1">
-                      <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                         {t(
                           language,
                           "research.workspace.timeline.payload.details",
                         )}
                       </summary>
-                      <pre className="mt-1 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-2 text-[10px] text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      <pre className="mt-1 overflow-x-auto rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-base)] p-2 text-[10px] text-[var(--text-secondary)]">
                         {safeStringifyPayload(event.payload)}
                       </pre>
                     </details>

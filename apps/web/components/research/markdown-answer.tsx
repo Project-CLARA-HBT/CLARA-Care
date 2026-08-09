@@ -1148,7 +1148,7 @@ export default function MarkdownAnswer({
           >
             <Icon name="more" size="14px" />
           </summary>
-          <div className="absolute right-0 z-10 mt-2 w-40 space-y-1 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl">
+          <div className="absolute right-0 z-10 mt-2 w-40 space-y-1 rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
             <button
               type="button"
               onClick={onCopyMarkdown}
