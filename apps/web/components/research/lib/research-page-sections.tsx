@@ -38,26 +38,24 @@ export function ResearchWorkspaceHeader({
   const language = useUILanguage();
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/70 to-cyan-50/45 p-4 shadow-sm dark:border-slate-700 dark:from-slate-900/90 dark:via-slate-900/75 dark:to-cyan-950/35 sm:p-5">
-      <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-sky-200/55 blur-2xl dark:bg-sky-800/35" />
-      <div className="pointer-events-none absolute -bottom-12 -left-6 h-32 w-40 rounded-full bg-cyan-100/60 blur-2xl dark:bg-cyan-900/25" />
+    <section className="relative overflow-hidden rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5">
       <div className="relative flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-brand)]">
             {t(language, "research.workspace.header.eyebrow")}
           </p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
             {t(language, "research.workspace.header.title")}
           </h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
             {t(language, "research.workspace.header.description")}
           </p>
         </div>
         <div className="space-y-2 text-right">
-          <span className="inline-flex rounded-full border border-slate-300 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-900/80 dark:text-slate-200">
+          <span className="inline-flex rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
             {t(language, "research.workspace.header.role", { role: roleLabel })}
           </span>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-[var(--text-muted)]">
             {t(language, "research.workspace.header.sourcesAndFiles", {
               sources: selectedSourceCount,
               files: uploadedFileCount
@@ -119,35 +117,35 @@ export function ResearchMainCard({
   };
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85 sm:p-5 lg:p-6">
+    <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 sm:p-5 lg:p-6">
       <form onSubmit={onSubmit} className="space-y-3">
-        <div className="rounded-3xl border border-slate-200 bg-slate-50/90 p-3 dark:border-slate-700 dark:bg-slate-800/70 sm:p-4">
-          <label htmlFor="research-query" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+        <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3 sm:p-4">
+          <label htmlFor="research-query" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             {t(language, "research.workspace.composer.label")}
           </label>
           <textarea
             id="research-query"
-            className="mt-2 min-h-[140px] w-full resize-none border-0 bg-transparent p-0 text-sm leading-7 text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-0 dark:text-slate-100 dark:placeholder:text-slate-400"
+            className="mt-2 min-h-[140px] w-full resize-none border-0 bg-transparent p-0 text-sm leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-0"
             placeholder={t(language, "research.workspace.composer.placeholder")}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             disabled={isSubmitting}
           />
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 dark:border-slate-700">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--shell-border)] pt-3">
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading || isSubmitting}
-                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-brand-soft)] hover:text-[var(--text-primary)] disabled:opacity-60"
               >
                 {isUploading
                   ? t(language, "research.workspace.composer.uploading")
                   : t(language, "research.workspace.composer.attach")}
               </button>
 
-              <fieldset className="inline-flex rounded-full border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
+              <fieldset className="inline-flex rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1">
                 <legend className="sr-only">{t(language, "research.workspace.tier.legend")}</legend>
                 <button
                   type="button"
@@ -156,8 +154,8 @@ export function ResearchMainCard({
                   className={[
                     "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                     selectedTier === "tier1"
-                      ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                      : "text-slate-600 dark:text-slate-300"
+                      ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)]"
+                      : "text-[var(--text-secondary)]"
                   ].join(" ")}
                 >
                   {t(language, "research.workspace.tier.fast")}
@@ -169,8 +167,8 @@ export function ResearchMainCard({
                   className={[
                     "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                     selectedTier === "tier2"
-                      ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                      : "text-slate-600 dark:text-slate-300"
+                      ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)]"
+                      : "text-[var(--text-secondary)]"
                   ].join(" ")}
                 >
                   {t(language, "research.workspace.tier.deep")}
@@ -179,7 +177,7 @@ export function ResearchMainCard({
 
               {selectedTier === "tier2" ? (
                 <>
-                  <fieldset className="inline-flex rounded-full border border-sky-300 bg-sky-50 p-1 dark:border-sky-700 dark:bg-sky-950/30">
+                  <fieldset className="inline-flex rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-1">
                     <legend className="sr-only">{t(language, "research.workspace.mode.legend")}</legend>
                     <button
                       type="button"
@@ -188,8 +186,8 @@ export function ResearchMainCard({
                       className={[
                         "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                         selectedResearchMode === "fast"
-                          ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
-                          : "text-sky-700 dark:text-sky-300"
+                          ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)]"
+                          : "text-[var(--text-brand)]"
                       ].join(" ")}
                     >
                       {t(language, "research.workspace.mode.fast")}
@@ -201,8 +199,8 @@ export function ResearchMainCard({
                       className={[
                         "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                         selectedResearchMode === "deep"
-                          ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
-                          : "text-sky-700 dark:text-sky-300"
+                          ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)]"
+                          : "text-[var(--text-brand)]"
                       ].join(" ")}
                     >
                       {t(language, "research.workspace.mode.deep")}
@@ -214,15 +212,15 @@ export function ResearchMainCard({
                       className={[
                         "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                         selectedResearchMode === "deep_beta"
-                          ? "bg-sky-700 text-white dark:bg-sky-300 dark:text-slate-900"
-                          : "text-sky-700 dark:text-sky-300"
+                          ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)]"
+                          : "text-[var(--text-brand)]"
                       ].join(" ")}
                     >
                       {t(language, "research.workspace.mode.pro")}
                     </button>
                   </fieldset>
 
-                  <fieldset className="inline-flex rounded-full border border-cyan-300 bg-cyan-50 p-1 dark:border-cyan-700 dark:bg-cyan-950/30">
+                  <fieldset className="inline-flex rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-1">
                     <legend className="sr-only">{t(language, "research.workspace.retrieval.legend")}</legend>
                     <button
                       type="button"
@@ -231,8 +229,8 @@ export function ResearchMainCard({
                       className={[
                         "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                         selectedRetrievalStackMode === "auto"
-                          ? "bg-cyan-700 text-white dark:bg-cyan-300 dark:text-slate-900"
-                          : "text-cyan-700 dark:text-cyan-300"
+                          ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)]"
+                          : "text-[var(--text-brand)]"
                       ].join(" ")}
                     >
                       {t(language, "research.workspace.retrieval.auto")}
@@ -249,8 +247,8 @@ export function ResearchMainCard({
                       className={[
                         "rounded-full px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
                         selectedRetrievalStackMode === "full"
-                          ? "bg-cyan-700 text-white dark:bg-cyan-300 dark:text-slate-900"
-                          : "text-cyan-700 dark:text-cyan-300"
+                          ? "bg-[var(--brand-600)] text-[var(--on-secondary-container)]"
+                          : "text-[var(--text-brand)]"
                       ].join(" ")}
                     >
                       {t(language, "research.workspace.retrieval.full")}
@@ -258,7 +256,7 @@ export function ResearchMainCard({
                   </fieldset>
 
                   {isFastResearchMode ? (
-                    <p className="text-xs text-cyan-700 dark:text-cyan-300">
+                    <p className="text-xs text-[var(--text-brand)]">
                       {t(language, "research.workspace.retrieval.fastModeHint")}
                     </p>
                   ) : null}
@@ -269,7 +267,7 @@ export function ResearchMainCard({
             <button
               type="submit"
               disabled={isSubmitting || !query.trim()}
-              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              className="rounded-lg bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)] disabled:opacity-60"
             >
               {isSubmitting
                 ? t(language, "research.workspace.action.submitting")
@@ -290,18 +288,18 @@ export function ResearchMainCard({
 
       <div className="mt-4 space-y-3">
         {lastQuery ? (
-          <article className="rounded-3xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <article className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
               {t(language, "research.workspace.lastQuestion")}
             </p>
-            <p className="mt-1 whitespace-pre-wrap text-sm leading-7 text-slate-800 dark:text-slate-100">{lastQuery}</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-7 text-[var(--text-primary)]">{lastQuery}</p>
           </article>
         ) : null}
 
         {isSubmitting ? (
-          <article className="rounded-3xl border border-sky-200 bg-sky-50/70 px-4 py-3 text-sm text-sky-800 dark:border-sky-700 dark:bg-sky-950/30 dark:text-sky-200">
+          <article className="rounded-[14px] border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-4 py-3 text-sm text-[var(--status-ok-text)]">
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-sky-500" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--brand-primary)]" />
               {selectedTier === "tier2"
                 ? t(language, "research.workspace.processing.deep", {
                     mode: researchModeLabel(language, selectedResearchMode),
@@ -313,8 +311,8 @@ export function ResearchMainCard({
         ) : null}
 
         {result?.tier === "tier1" ? (
-          <article className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+          <article className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-brand)]">
               {t(language, "research.workspace.answer.fast")}
             </p>
             <div className="mt-2">
@@ -334,9 +332,9 @@ export function ResearchMainCard({
         ) : null}
 
         {result?.tier === "tier2" ? (
-          <article className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+          <article className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-5 py-4">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-brand)]">
                 {t(language, "research.workspace.answer.deep")}
               </p>
               {result.policyAction ? (
@@ -344,8 +342,8 @@ export function ResearchMainCard({
                   className={[
                     "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                     result.policyAction === "warn"
-                      ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                      : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
+                      : "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
                   ].join(" ")}
                 >
                   {result.policyAction === "warn"
@@ -354,7 +352,7 @@ export function ResearchMainCard({
                 </span>
               ) : null}
               {typeof result.fallbackUsed === "boolean" ? (
-                <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
                   {result.fallbackUsed
                     ? t(language, "research.workspace.fallback.limited")
                     : t(language, "research.workspace.fallback.compared")}
@@ -384,7 +382,7 @@ export function ResearchMainCard({
                     href={citation.url || `#citation-${index + 1}`}
                     target={citation.url ? "_blank" : undefined}
                     rel={citation.url ? "noreferrer" : undefined}
-                    className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:border-sky-600 dark:hover:bg-sky-900/40"
+                    className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-2.5 py-1 text-[11px] font-semibold text-[var(--status-ok-text)] transition hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-brand-soft)]"
                   >
                     [{index + 1}] {citation.source ?? citation.title}
                   </a>
@@ -393,7 +391,7 @@ export function ResearchMainCard({
             ) : null}
 
             {result.verificationStatus ? (
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
+              <div className="mt-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)]">
                 <p className="font-semibold">
                   {result.verificationStatus.verdict === "pass"
                     ? t(language, "research.workspace.verification.pass")
@@ -405,7 +403,7 @@ export function ResearchMainCard({
                     : ""}
                 </p>
                 {result.verificationStatus.note ? (
-                  <p className="mt-1 text-slate-600 dark:text-slate-300">{result.verificationStatus.note}</p>
+                  <p className="mt-1 text-[var(--text-secondary)]">{result.verificationStatus.note}</p>
                 ) : null}
               </div>
             ) : null}
@@ -413,11 +411,11 @@ export function ResearchMainCard({
         ) : null}
 
         {showDebugHints && result?.tier === "tier1" ? (
-          <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-4 dark:border-slate-600 dark:bg-slate-900/85">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <section className="rounded-[14px] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
               {t(language, "research.workspace.debug.title")}
             </p>
-            <div className="mt-2 grid gap-1 text-sm text-slate-700 dark:text-slate-300">
+            <div className="mt-2 grid gap-1 text-sm text-[var(--text-secondary)]">
               <p>{t(language, "research.workspace.debug.role", { value: result.debug?.role ?? t(language, "research.workspace.debug.notAvailable") })}</p>
               <p>{t(language, "research.workspace.debug.intent", { value: result.debug?.intent ?? t(language, "research.workspace.debug.notAvailable") })}</p>
               <p>{t(language, "research.workspace.debug.confidence", { value: result.debug?.confidence ?? t(language, "research.workspace.debug.notAvailable") })}</p>
@@ -427,15 +425,15 @@ export function ResearchMainCard({
         ) : null}
 
         {result?.tier === "tier2" && evidenceSteps.length ? (
-          <section className="rounded-3xl border border-slate-200 bg-white/90 p-4 dark:border-slate-700 dark:bg-slate-900/85">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+          <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
               {t(language, "research.workspace.analysisSteps")}
             </p>
             <ol className="mt-3 space-y-2">
               {evidenceSteps.map((step, index) => (
-                <li key={`${step.title}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/75">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{index + 1}. {step.title}</p>
-                  {step.detail ? <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{step.detail}</p> : null}
+                <li key={`${step.title}-${index}`} className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{index + 1}. {step.title}</p>
+                  {step.detail ? <p className="mt-1 text-xs text-[var(--text-secondary)]">{step.detail}</p> : null}
                 </li>
               ))}
             </ol>
