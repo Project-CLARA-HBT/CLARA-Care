@@ -24,6 +24,7 @@ import ChatComposer from "@/components/chat-workspace/chat-composer";
 import ChatTurn from "@/components/chat-workspace/chat-turn";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import PageShell from "@/components/ui/page-shell";
+import { Icon, resolveIconName } from "@/components/ui/icon";
 import { getRole, type UserRole } from "@/lib/auth-store";
 import { getChatIntentDebug, getChatReply, sendChatMessage, streamChatMessage } from "@/lib/chat";
 import { trackChatMessageSent } from "@/lib/analytics/events";
@@ -40,6 +41,10 @@ import {
   onUILanguageChange,
   type UILanguage,
 } from "@/lib/ui-language";
+
+function LegacyIcon({ name, className = "", size }: { name: string; className?: string; size?: string }) {
+  return <Icon name={resolveIconName(name)} size={size ?? "1em"} className={className} />;
+}
 import {
   ResearchExecutionMode,
   ResearchRetrievalStackMode,
@@ -2924,7 +2929,7 @@ export default function ChatWorkspacePage() {
                 aria-label={t(uiLanguage, "chat.legacyWorkspace.openPanel")}
                 title={t(uiLanguage, "chat.legacyWorkspace.openPanel")}
               >
-                <span className="material-symbols-outlined text-[18px]">left_panel_open</span>
+                <LegacyIcon name="left_panel_open" className="text-[18px]" size="18px" />
               </button>
 
               <button
@@ -2934,7 +2939,7 @@ export default function ChatWorkspacePage() {
                 aria-label={t(uiLanguage, "chat.sidebar.newChat")}
                 title={t(uiLanguage, "chat.sidebar.newChat")}
               >
-                <span className="material-symbols-outlined text-[18px]">add</span>
+                <LegacyIcon name="add" className="text-[18px]" size="18px" />
               </button>
               {canViewTelemetry ? (
               <button
@@ -2951,7 +2956,7 @@ export default function ChatWorkspacePage() {
                   : t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
                 title={t(uiLanguage, "chat.legacyWorkspace.telemetry.title")}
               >
-                <span className="material-symbols-outlined text-[18px]">monitoring</span>
+                <LegacyIcon name="monitoring" className="text-[18px]" size="18px" />
               </button>
               ) : null}
             </div>
@@ -2984,7 +2989,7 @@ export default function ChatWorkspacePage() {
                 aria-label={t(uiLanguage, "chat.legacyWorkspace.collapsePanel")}
                 title={t(uiLanguage, "chat.legacyWorkspace.collapsePanel")}
               >
-                <span className="material-symbols-outlined text-[16px]">left_panel_close</span>
+                <LegacyIcon name="left_panel_close" className="text-[16px]" size="16px" />
               </button>
               <button
                 type="button"
@@ -2993,7 +2998,7 @@ export default function ChatWorkspacePage() {
                 aria-label={t(uiLanguage, "chat.workspace.close")}
                 title={t(uiLanguage, "chat.workspace.close")}
               >
-                <span className="material-symbols-outlined text-[15px]">close</span>
+                <LegacyIcon name="close" className="text-[15px]" size="15px" />
               </button>
             </div>
           </div>
@@ -3020,7 +3025,7 @@ export default function ChatWorkspacePage() {
                   isSelectionMode ? "chat.legacyWorkspace.done" : "chat.legacyWorkspace.select"
                 )}
               >
-                <span className="material-symbols-outlined text-[15px]">edit_square</span>
+                <LegacyIcon name="edit_square" className="text-[15px]" size="15px" />
               </button>
             </div>
           </div>
@@ -3029,7 +3034,7 @@ export default function ChatWorkspacePage() {
           <div className="mt-2.5 rounded-[1rem] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-1.5 py-2">
             <div className="grid grid-cols-2">
               <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
-                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">chat_bubble</span>
+                <LegacyIcon name="chat_bubble" className="text-[16px] text-[var(--text-muted)]" size="16px" />
                 <div>
                   <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
                     {effectiveSummary.conversations}
@@ -3040,7 +3045,7 @@ export default function ChatWorkspacePage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 border-r border-[color:var(--shell-border)] px-1.5">
-                <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">forum</span>
+                <LegacyIcon name="forum" className="text-[16px] text-[var(--text-muted)]" size="16px" />
                 <div>
                   <p className="text-[1.05rem] leading-none font-semibold text-[var(--text-primary)]">
                     {effectiveSummary.messages}
@@ -3057,7 +3062,7 @@ export default function ChatWorkspacePage() {
           <div className="mt-2.5">
             <details className="group">
               <summary className="inline-flex min-h-[28px] cursor-pointer list-none items-center gap-1 rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 text-[10px] font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
-                <span className="material-symbols-outlined text-[14px]">more_horiz</span>
+                <LegacyIcon name="more_horiz" className="text-[14px]" size="14px" />
                 {t(uiLanguage, "chat.legacyWorkspace.advanced")}
               </summary>
               <div className="mt-1.5 flex flex-wrap gap-1">
@@ -3106,9 +3111,7 @@ export default function ChatWorkspacePage() {
                 placeholder={t(uiLanguage, "chat.sidebar.searchPlaceholder")}
                 className="min-h-[35px] w-full rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2.5 pr-9 text-[13px] text-[var(--text-primary)] outline-none focus:border-[color:var(--shell-border-strong)]"
               />
-              <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]">
-                search
-              </span>
+              <LegacyIcon name="search" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]" size="18px" />
             </div>
           </div>
 
@@ -3128,7 +3131,7 @@ export default function ChatWorkspacePage() {
               aria-label={t(uiLanguage, "chat.legacyWorkspace.folder.openManager")}
               title={t(uiLanguage, "chat.legacyWorkspace.folder.openManager")}
             >
-              <span className="material-symbols-outlined text-[16px]">expand_more</span>
+              <LegacyIcon name="expand_more" className="text-[16px]" size="16px" />
             </button>
           </div>
           ) : null}
@@ -3175,7 +3178,7 @@ export default function ChatWorkspacePage() {
                           })
                         : t(uiLanguage, "chat.legacyWorkspace.filter.placeholder")}
                     </span>
-                    <span className="material-symbols-outlined text-[16px] transition group-open:rotate-180">expand_more</span>
+                    <LegacyIcon name="expand_more" className="text-[16px] transition group-open:rotate-180" size="16px" />
                   </summary>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-1.5">
                     <select
@@ -3420,7 +3423,7 @@ export default function ChatWorkspacePage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <span className="material-symbols-outlined mb-2 text-[24px] text-[var(--text-muted)]">chat_bubble_outline</span>
+                  <LegacyIcon name="chat_bubble_outline" className="mb-2 text-[24px] text-[var(--text-muted)]" size="24px" />
                   <p className="text-xs text-[var(--text-secondary)]">
                     {t(uiLanguage, "chat.legacyWorkspace.conversation.emptyFiltered")}
                   </p>
@@ -3657,7 +3660,7 @@ export default function ChatWorkspacePage() {
                     aria-label={t(uiLanguage, "chat.legacyWorkspace.active.openPanel")}
                     title={t(uiLanguage, "chat.legacyWorkspace.active.openPanel")}
                   >
-                    <span className="material-symbols-outlined text-[16px]">menu</span>
+                    <LegacyIcon name="menu" className="text-[16px]" size="16px" />
                   </button>
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
                     {t(uiLanguage, "chat.legacyWorkspace.active.eyebrow")}
@@ -3698,7 +3701,7 @@ export default function ChatWorkspacePage() {
                     aria-label={t(uiLanguage, "chat.legacyWorkspace.active.moreActions")}
                     title={t(uiLanguage, "chat.legacyWorkspace.active.moreActions")}
                   >
-                    <span className="material-symbols-outlined text-[18px]">more_horiz</span>
+                    <LegacyIcon name="more_horiz" className="text-[18px]" size="18px" />
                   </summary>
                   <div className="absolute right-0 z-20 mt-2 w-[16rem] space-y-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2.5 shadow-xl">
                     {canViewTelemetry ? (
@@ -3823,7 +3826,7 @@ export default function ChatWorkspacePage() {
               {error && !isSubmitting ? (
                 <article className="rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm font-semibold leading-6 text-rose-800 shadow-[0_10px_24px_-28px_rgba(190,18,60,0.35)] dark:border-rose-700/70 dark:bg-rose-950/35 dark:text-rose-100">
                   <div className="flex items-start gap-2">
-                    <span className="material-symbols-outlined mt-0.5 text-[18px]">error</span>
+                    <LegacyIcon name="error" className="mt-0.5 text-[18px]" size="18px" />
                     <div>
                       <p>{t(uiLanguage, "chat.legacyWorkspace.canvas.error")}</p>
                       <p className="mt-1 text-xs font-medium text-rose-700 dark:text-rose-200">{error}</p>
@@ -3835,9 +3838,7 @@ export default function ChatWorkspacePage() {
               {!conversationTurns.length && !isLoadingTurns && !isSubmitting ? (
                 <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-6 text-center sm:py-10">
                   <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_18px_40px_-22px_rgba(37,99,235,0.7)]">
-                    <span className="material-symbols-outlined text-[30px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                      stethoscope
-                    </span>
+                    <LegacyIcon name="stethoscope" className="text-[30px]" size="30px" />
                   </div>
                   <h2 className="mt-5 text-xl font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-2xl">
                     {t(uiLanguage, "chat.legacyWorkspace.welcome.title")}
@@ -3862,11 +3863,11 @@ export default function ChatWorkspacePage() {
                   </p>
                   <div className="mt-8 w-full">
                     <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">medication</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.medication")}</span>
+                      <span className="flex items-center gap-1"><LegacyIcon name="medication" className="text-[14px]" size="14px" /> {t(uiLanguage, "chat.legacyWorkspace.welcome.medication")}</span>
                       <span>·</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">coronavirus</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.symptoms")}</span>
+                      <span className="flex items-center gap-1"><LegacyIcon name="coronavirus" className="text-[14px]" size="14px" /> {t(uiLanguage, "chat.legacyWorkspace.welcome.symptoms")}</span>
                       <span>·</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">science</span> {t(uiLanguage, "chat.legacyWorkspace.welcome.labTests")}</span>
+                      <span className="flex items-center gap-1"><LegacyIcon name="science" className="text-[14px]" size="14px" /> {t(uiLanguage, "chat.legacyWorkspace.welcome.labTests")}</span>
                     </div>
                     <div className="grid w-full gap-3 sm:grid-cols-2">
                       {quickPrompts.map((prompt) => (
@@ -3877,7 +3878,7 @@ export default function ChatWorkspacePage() {
                           className="group flex items-start gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3.5 text-left transition hover:border-blue-400 hover:bg-blue-50 hover:shadow-[0_12px_28px_-22px_rgba(37,99,235,0.6)] dark:hover:bg-[var(--surface-muted)]"
                         >
                           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-medical/10 text-medical transition group-hover:scale-105 group-hover:bg-medical/15">
-                            <span className="material-symbols-outlined text-[18px]">prompt_suggestion</span>
+                            <LegacyIcon name="prompt_suggestion" className="text-[18px]" size="18px" />
                           </span>
                           <span className="text-sm font-medium leading-relaxed text-[var(--text-secondary)] group-hover:text-[var(--text-brand)]">
                             {prompt}
@@ -4031,7 +4032,7 @@ export default function ChatWorkspacePage() {
               aria-label={t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
               title={t(uiLanguage, "chat.legacyWorkspace.telemetry.show")}
             >
-              <span className="material-symbols-outlined text-[14px] text-[var(--text-secondary)]">monitoring</span>
+              <LegacyIcon name="monitoring" className="text-[14px] text-[var(--text-secondary)]" size="14px" />
               <span className="text-[9px] font-semibold text-[var(--text-primary)]">
                 {telemetryCopy.systemTelemetry}
               </span>
@@ -4064,7 +4065,7 @@ export default function ChatWorkspacePage() {
                     aria-label={t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")}
                     title={t(uiLanguage, "chat.legacyWorkspace.telemetry.hide")}
                   >
-                    <span className="material-symbols-outlined text-[14px]">right_panel_close</span>
+                    <LegacyIcon name="right_panel_close" className="text-[14px]" size="14px" />
                   </button>
                 </div>
 
