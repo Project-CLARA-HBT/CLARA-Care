@@ -207,7 +207,7 @@ export default function AdminRagEvalPage() {
               type="button"
               onClick={() => void onRunEval()}
               disabled={isRunning}
-              className="rounded-[var(--radius-md)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-600)] focus-visible:ring-offset-2 disabled:opacity-60"
+              className="rounded-[var(--radius-md)] bg-[var(--brand-600)] px-4 py-2 text-sm font-semibold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-600)] focus-visible:ring-offset-2 disabled:opacity-60"
             >
               {isRunning ? t(language, "admin.ragEval.running") : t(language, "admin.ragEval.run")}
             </button>

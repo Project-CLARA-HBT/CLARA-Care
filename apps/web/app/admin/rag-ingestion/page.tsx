@@ -707,7 +707,7 @@ function SourcesTable({
                         ? t(language, "admin.ragIngestion.disabledTitle")
                         : t(language, "admin.ragIngestion.runTitle")
                     }
-                    className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--brand-600)] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--brand-600)] px-3 py-2 text-xs font-semibold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isRunning ? (
                       <span

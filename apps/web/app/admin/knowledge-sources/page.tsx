@@ -606,7 +606,7 @@ export default function AdminKnowledgeSourcesPage() {
                 <button
                   type="submit"
                   disabled={isCreatingSource || !newSourceName.trim()}
-                  className="rounded-lg bg-[color:var(--brand-700)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[color:var(--brand-600)] disabled:opacity-60"
+                  className="rounded-lg bg-[color:var(--brand-700)] px-3 py-2 text-sm font-semibold text-[var(--on-secondary-container)] transition hover:bg-[color:var(--brand-600)] disabled:opacity-60"
                 >
                   +
                 </button>
@@ -628,7 +628,7 @@ export default function AdminKnowledgeSourcesPage() {
                     type="button"
                     disabled={!isDirtyRag || isSavingRag || isLoadingRag || !config}
                     onClick={() => void saveRag()}
-                    className="rounded-md bg-[color:var(--brand-700)] px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-[color:var(--brand-600)] disabled:opacity-60"
+                    className="rounded-md bg-[color:var(--brand-700)] px-2 py-1 text-[11px] font-semibold text-[var(--on-secondary-container)] transition hover:bg-[color:var(--brand-600)] disabled:opacity-60"
                   >
                     {isSavingRag ? t(language, "admin.knowledgeSources.saving") : t(language, "admin.knowledgeSources.save")}
                   </button>
@@ -761,7 +761,7 @@ export default function AdminKnowledgeSourcesPage() {
                   {activeSource ? t(language, "admin.knowledgeSources.activeSource", { source: activeSource.name }) : t(language, "admin.knowledgeSources.noSelectedSource")}
                 </p>
               </div>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-[color:var(--brand-700)] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-[color:var(--brand-600)]">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-[color:var(--brand-700)] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--on-secondary-container)] transition hover:bg-[color:var(--brand-600)]">
                 {isUploading ? t(language, "admin.knowledgeSources.uploading") : t(language, "admin.knowledgeSources.uploadFile")}
                 <input
                   type="file"
@@ -917,7 +917,7 @@ export default function AdminKnowledgeSourcesPage() {
               <button
                 type="submit"
                 disabled={isSyncingSourceHub}
-                className="min-h-[42px] rounded-xl bg-[color:var(--brand-700)] px-4 text-sm font-semibold text-white transition hover:bg-[color:var(--brand-600)] disabled:opacity-60"
+                className="min-h-[42px] rounded-[var(--radius-md)] bg-[color:var(--brand-700)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition hover:bg-[color:var(--brand-600)] disabled:opacity-60"
               >
                 {isSyncingSourceHub ? t(language, "admin.knowledgeSources.syncing") : t(language, "admin.knowledgeSources.sync")}
               </button>
