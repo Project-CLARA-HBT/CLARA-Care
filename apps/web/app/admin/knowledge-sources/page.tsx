@@ -584,24 +584,24 @@ export default function AdminKnowledgeSourcesPage() {
         <div className="grid grid-cols-12 gap-6">
           <section className="col-span-12 space-y-4 lg:col-span-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{t(language, "admin.knowledgeSources.orchestration")}</h3>
+              <h3 className="text-lg font-bold text-[color:var(--text-brand)]">{t(language, "admin.knowledgeSources.orchestration")}</h3>
               <button
                 type="button"
                 onClick={() => void loadSources()}
-                className="text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--text-brand)] hover:underline dark:text-cyan-300"
+                className="text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--text-brand)] hover:underline"
               >
                 {t(language, "admin.knowledgeSources.refresh")}
               </button>
             </div>
 
-            <form onSubmit={onCreateSource} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.createLabel")}</label>
+            <form onSubmit={onCreateSource} className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 ">
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.createLabel")}</label>
               <div className="mt-2 flex gap-2">
                 <input
                   value={newSourceName}
                   onChange={(event) => setNewSourceName(event.target.value)}
                   placeholder={t(language, "admin.knowledgeSources.createPlaceholder")}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-500)]/30"
                 />
                 <button
                   type="submit"
@@ -613,14 +613,14 @@ export default function AdminKnowledgeSourcesPage() {
               </div>
             </form>
 
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+            <div className="space-y-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.priorityConnectors")}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.priorityConnectors")}</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => void reloadRag()}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className="rounded-md border border-[color:var(--shell-border)] px-2 py-1 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
                   >
                     {t(language, "admin.knowledgeSources.reload")}
                   </button>
@@ -636,25 +636,25 @@ export default function AdminKnowledgeSourcesPage() {
               </div>
 
               {ragError ? (
-                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
+                <p className="rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-xs text-[var(--status-danger-text)]">
                   {ragError}
                 </p>
               ) : null}
               {ragMessage ? (
-                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+                <p className="rounded-lg border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-2 text-xs text-[var(--status-ok-text)]">
                   {ragMessage}
                 </p>
               ) : null}
 
               {isLoadingRag ? (
-                <p className="text-sm text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.loadingConnectors")}</p>
+                <p className="text-sm text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.loadingConnectors")}</p>
               ) : ragPriorityRows.length ? (
                 ragPriorityRows.map((source) => (
-                  <div key={source.id} className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition dark:border-slate-700 dark:bg-slate-900">
+                  <div key={source.id} className="w-full rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-left  transition">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-[color:var(--text-brand)] dark:text-cyan-300">{source.name}</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">id: {source.id}</p>
+                        <p className="text-sm font-semibold text-[color:var(--text-brand)]">{source.name}</p>
+                        <p className="text-[11px] text-[var(--text-muted)]">id: {source.id}</p>
                       </div>
                       <button
                         type="button"
@@ -662,8 +662,8 @@ export default function AdminKnowledgeSourcesPage() {
                         className={[
                           "rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide",
                           source.enabled
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-                            : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                            ? "bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+                            : "bg-[var(--surface-muted)] text-[var(--text-secondary)]"
                         ].join(" ")}
                       >
                         {source.enabled ? t(language, "admin.knowledgeSources.enabled") : t(language, "admin.knowledgeSources.disabled")}
@@ -671,19 +671,19 @@ export default function AdminKnowledgeSourcesPage() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{t(language, "admin.knowledgeSources.priority")}</span>
+                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.priority")}</span>
                         <input
                           type="range"
                           min={1}
                           max={100}
                           value={source.priority}
                           onChange={(event) => setSourcePriority(source.id, Number(event.target.value))}
-                          className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-[color:var(--brand-700)] dark:bg-slate-700"
+                          className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-[var(--surface-muted)] accent-[color:var(--brand-700)]"
                         />
-                        <span className="w-8 text-right text-xs font-mono font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{source.priority}</span>
+                        <span className="w-8 text-right text-xs font-mono font-bold text-[color:var(--text-brand)]">{source.priority}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{t(language, "admin.knowledgeSources.weight")}</span>
+                        <span className="min-w-16 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.weight")}</span>
                         <input
                           type="range"
                           min={0}
@@ -691,21 +691,21 @@ export default function AdminKnowledgeSourcesPage() {
                           step={0.05}
                           value={source.weight}
                           onChange={(event) => setSourceWeight(source.id, Number(event.target.value))}
-                          className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-[color:var(--brand-700)] dark:bg-slate-700"
+                          className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-[var(--surface-muted)] accent-[color:var(--brand-700)]"
                         />
-                        <span className="w-8 text-right text-xs font-mono font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{source.weight.toFixed(2)}</span>
+                        <span className="w-8 text-right text-xs font-mono font-bold text-[color:var(--text-brand)]">{source.weight.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.noConnectors")}</p>
+                <p className="text-sm text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.noConnectors")}</p>
               )}
 
-              <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.sourceAllocation")}</p>
+              <div className="mt-3 border-t border-[color:var(--shell-border)] pt-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.sourceAllocation")}</p>
                 {isLoadingSources ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.loadingSources")}</p>
+                  <p className="text-sm text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.loadingSources")}</p>
                 ) : knowledgePriorityRows.length ? (
                   knowledgePriorityRows.map((source) => {
                     const active = source.id === activeSourceId;
@@ -715,18 +715,18 @@ export default function AdminKnowledgeSourcesPage() {
                         type="button"
                       onClick={() => setActiveSourceId(source.id)}
                       className={[
-                        "w-full rounded-xl border bg-white p-4 text-left shadow-sm transition dark:bg-slate-900",
+                        "w-full rounded-xl border bg-[var(--surface-panel)] p-4 text-left  transition",
                         active
-                          ? "border-sky-300 ring-2 ring-sky-200 dark:border-sky-600 dark:ring-sky-900/50"
-                          : "border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600"
+                          ? "border-[color:var(--brand-200)] ring-2 ring-[var(--brand-500)]/30"
+                          : "border-[color:var(--shell-border)] hover:border-[color:var(--shell-border-strong)]"
                       ].join(" ")}
                     >
                       <div className="mb-3 flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-[color:var(--text-brand)] dark:text-cyan-300">{source.name}</p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.documentCount", { count: source.documents_count })}</p>
+                          <p className="text-sm font-semibold text-[color:var(--text-brand)]">{source.name}</p>
+                          <p className="text-[11px] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.documentCount", { count: source.documents_count })}</p>
                         </div>
-                        <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                        <span className="rounded-full bg-[var(--status-ok-bg)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--status-ok-text)]">
                           {source.is_active ? t(language, "admin.knowledgeSources.active") : t(language, "admin.knowledgeSources.paused")}
                         </span>
                       </div>
@@ -737,9 +737,9 @@ export default function AdminKnowledgeSourcesPage() {
                           max={100}
                           value={source.weightPercent}
                           readOnly
-                          className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-[color:var(--brand-700)] dark:bg-slate-700"
+                          className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-[var(--surface-muted)] accent-[color:var(--brand-700)]"
                         />
-                        <span className="w-10 text-right text-xs font-mono font-bold text-[color:var(--text-brand)] dark:text-cyan-300">
+                        <span className="w-10 text-right text-xs font-mono font-bold text-[color:var(--text-brand)]">
                           {source.weightPercent}%
                         </span>
                       </div>
@@ -747,7 +747,7 @@ export default function AdminKnowledgeSourcesPage() {
                   );
                 })
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">{t(language, "admin.knowledgeSources.noSources")}</p>
+                <p className="text-sm text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.noSources")}</p>
               )}
             </div>
             </div>
@@ -756,8 +756,8 @@ export default function AdminKnowledgeSourcesPage() {
           <section className="col-span-12 space-y-4 lg:col-span-7">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{t(language, "admin.knowledgeSources.assets")}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <h3 className="text-lg font-bold text-[color:var(--text-brand)]">{t(language, "admin.knowledgeSources.assets")}</h3>
+                <p className="text-xs text-[var(--text-muted)]">
                   {activeSource ? t(language, "admin.knowledgeSources.activeSource", { source: activeSource.name }) : t(language, "admin.knowledgeSources.noSelectedSource")}
                 </p>
               </div>
@@ -778,10 +778,10 @@ export default function AdminKnowledgeSourcesPage() {
               </label>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60 dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
+            <div className="overflow-x-auto rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
               <table className="min-w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                     <th className="px-4 py-3">{t(language, "admin.knowledgeSources.table.documentName")}</th>
                     <th className="px-4 py-3 text-right">{t(language, "admin.knowledgeSources.table.size")}</th>
                     <th className="px-4 py-3 text-right">{t(language, "admin.knowledgeSources.table.tokens")}</th>
@@ -792,19 +792,19 @@ export default function AdminKnowledgeSourcesPage() {
                 <tbody>
                   {isLoadingDocs ? (
                     <tr>
-                      <td className="px-4 py-4 text-slate-500 dark:text-slate-400" colSpan={5}>
+                      <td className="px-4 py-4 text-[var(--text-muted)]" colSpan={5}>
                         {t(language, "admin.knowledgeSources.loadingDocuments")}
                       </td>
                     </tr>
                   ) : documents.length ? (
                     documents.map((document) => (
-                      <tr key={document.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 dark:border-slate-800 dark:hover:bg-slate-800/40">
+                      <tr key={document.id} className="border-b border-[color:var(--shell-border)] last:border-0 hover:bg-[var(--surface-muted)]">
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-[color:var(--text-brand)] dark:text-cyan-300">{document.filename}</p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">ID: {document.id}</p>
+                          <p className="font-semibold text-[color:var(--text-brand)]">{document.filename}</p>
+                          <p className="text-[11px] text-[var(--text-muted)]">ID: {document.id}</p>
                         </td>
-                        <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">{formatSize(document.size)}</td>
-                        <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-200">
+                        <td className="px-4 py-3 text-right text-[var(--text-secondary)]">{formatSize(document.size)}</td>
+                        <td className="px-4 py-3 text-right text-[var(--text-secondary)]">
                           {new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US").format(document.token_count)}
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -812,8 +812,8 @@ export default function AdminKnowledgeSourcesPage() {
                             className={[
                               "inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em]",
                               document.is_active
-                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
-                                : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                ? "bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+                                : "bg-[var(--surface-muted)] text-[var(--text-secondary)]"
                             ].join(" ")}
                           >
                             {document.is_active ? t(language, "admin.knowledgeSources.ready") : t(language, "admin.knowledgeSources.paused")}
@@ -823,7 +823,7 @@ export default function AdminKnowledgeSourcesPage() {
                           <button
                             type="button"
                             onClick={() => onToggleDocument(document)}
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                            className="rounded-md border border-[color:var(--shell-border)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)]"
                           >
                             {document.is_active ? t(language, "admin.knowledgeSources.disable") : t(language, "admin.knowledgeSources.enable")}
                           </button>
@@ -832,7 +832,7 @@ export default function AdminKnowledgeSourcesPage() {
                     ))
                   ) : (
                     <tr>
-                      <td className="px-4 py-4 text-slate-500 dark:text-slate-400" colSpan={5}>
+                      <td className="px-4 py-4 text-[var(--text-muted)]" colSpan={5}>
                         {t(language, "admin.knowledgeSources.noDocuments")}
                       </td>
                     </tr>
@@ -842,27 +842,27 @@ export default function AdminKnowledgeSourcesPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.sources")}</p>
-                <p className="mt-1 text-xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{sources.length}</p>
+              <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 ">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.kpi.sources")}</p>
+                <p className="mt-1 text-xl font-black text-[color:var(--text-brand)]">{sources.length}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.documents")}</p>
-                <p className="mt-1 text-xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{totalDocuments}</p>
+              <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 ">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.documents")}</p>
+                <p className="mt-1 text-xl font-black text-[color:var(--text-brand)]">{totalDocuments}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t(language, "admin.knowledgeSources.kpi.activeDocuments")}</p>
-                <p className="mt-1 text-xl font-black text-[color:var(--text-brand)] dark:text-cyan-300">{documents.filter((doc) => doc.is_active).length}</p>
+              <div className="rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 ">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.kpi.activeDocuments")}</p>
+                <p className="mt-1 text-xl font-black text-[color:var(--text-brand)]">{documents.filter((doc) => doc.is_active).length}</p>
               </div>
             </div>
           </section>
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+        <section className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 ">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-[color:var(--text-brand)] dark:text-cyan-300">{t(language, "admin.knowledgeSources.federatedTitle")}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <h3 className="text-lg font-bold text-[color:var(--text-brand)]">{t(language, "admin.knowledgeSources.federatedTitle")}</h3>
+              <p className="text-xs text-[var(--text-muted)]">
                 {t(language, "admin.knowledgeSources.federatedDescription")}
               </p>
             </div>
@@ -871,24 +871,24 @@ export default function AdminKnowledgeSourcesPage() {
                 value={sourceHubSearchText}
                 onChange={(event) => setSourceHubSearchText(event.target.value)}
                 placeholder={t(language, "admin.knowledgeSources.filterPlaceholder")}
-                className="min-h-[42px] w-72 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                className="min-h-[42px] w-72 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm text-[var(--text-primary)]"
               />
               <button
                 type="submit"
-                className="min-h-[42px] rounded-xl border border-slate-300 bg-slate-50 px-4 text-sm font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                className="min-h-[42px] rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-semibold text-[var(--text-secondary)]"
               >
                 {t(language, "admin.knowledgeSources.filter")}
               </button>
             </form>
           </div>
 
-          <form onSubmit={onSyncSourceHub} className="mb-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70 md:grid-cols-4">
+          <form onSubmit={onSyncSourceHub} className="mb-4 grid gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 md:grid-cols-4">
             <label className="space-y-1">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t(language, "admin.knowledgeSources.source")}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.source")}</span>
               <select
                 value={activeHubSource}
                 onChange={(event) => setActiveHubSource(event.target.value as SourceHubSourceKey)}
-                className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                className="min-h-[40px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 text-sm text-[var(--text-primary)]"
               >
                 {sourceHubCatalog.map((item) => (
                   <option key={item.key} value={item.key}>
@@ -898,19 +898,19 @@ export default function AdminKnowledgeSourcesPage() {
               </select>
             </label>
             <label className="space-y-1 md:col-span-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t(language, "admin.knowledgeSources.query")}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.query")}</span>
               <input
                 value={sourceHubSyncQuery}
                 onChange={(event) => setSourceHubSyncQuery(event.target.value)}
-                className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                className="min-h-[40px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm text-[var(--text-primary)]"
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t(language, "admin.knowledgeSources.limit")}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(language, "admin.knowledgeSources.limit")}</span>
               <input
                 value={sourceHubSyncLimit}
                 onChange={(event) => setSourceHubSyncLimit(event.target.value)}
-                className="min-h-[40px] w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                className="min-h-[40px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 text-sm text-[var(--text-primary)]"
               />
             </label>
             <div className="md:col-span-4">
@@ -925,20 +925,20 @@ export default function AdminKnowledgeSourcesPage() {
           </form>
 
           {sourceHubError ? (
-            <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300">
+            <p className="mb-3 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-sm text-[var(--status-danger-text)]">
               {sourceHubError}
             </p>
           ) : null}
           {sourceHubMessage ? (
-            <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">
+            <p className="mb-3 rounded-lg border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-2 text-sm text-[var(--status-ok-text)]">
               {sourceHubMessage}
             </p>
           ) : null}
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+          <div className="overflow-x-auto rounded-xl border border-[color:var(--shell-border)]">
             <table className="min-w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <tr className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   <th className="px-3 py-2">{t(language, "admin.knowledgeSources.source")}</th>
                   <th className="px-3 py-2">{t(language, "admin.knowledgeSources.table.title")}</th>
                   <th className="px-3 py-2">{t(language, "admin.knowledgeSources.query")}</th>
@@ -949,32 +949,32 @@ export default function AdminKnowledgeSourcesPage() {
               <tbody>
                 {isLoadingSourceHubRecords ? (
                   <tr>
-                    <td className="px-3 py-3 text-slate-500 dark:text-slate-400" colSpan={5}>
+                    <td className="px-3 py-3 text-[var(--text-muted)]" colSpan={5}>
                       {t(language, "admin.knowledgeSources.loadingRecords")}
                     </td>
                   </tr>
                 ) : sourceHubRecords.length ? (
                   sourceHubRecords.map((record) => (
-                    <tr key={record.id} className="border-b border-slate-100 align-top last:border-0 dark:border-slate-800">
+                    <tr key={record.id} className="border-b border-[color:var(--shell-border)] align-top last:border-0">
                       <td className="px-3 py-2">
-                        <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                        <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
                           {SOURCE_LABELS[record.source]}
                         </span>
                       </td>
                       <td className="px-3 py-2">
-                        <p className="font-medium text-slate-800 dark:text-slate-100">{record.title}</p>
+                        <p className="font-medium text-[var(--text-primary)]">{record.title}</p>
                         {record.snippet ? (
-                          <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-300">{record.snippet}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-[var(--text-muted)]">{record.snippet}</p>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{record.query || "-"}</td>
-                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{formatDate(record.published_at, language)}</td>
-                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{formatDate(record.synced_at, language)}</td>
+                      <td className="px-3 py-2 text-[var(--text-secondary)]">{record.query || "-"}</td>
+                      <td className="px-3 py-2 text-[var(--text-secondary)]">{formatDate(record.published_at, language)}</td>
+                      <td className="px-3 py-2 text-[var(--text-secondary)]">{formatDate(record.synced_at, language)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td className="px-3 py-3 text-slate-500 dark:text-slate-400" colSpan={5}>
+                    <td className="px-3 py-3 text-[var(--text-muted)]" colSpan={5}>
                       {t(language, "admin.knowledgeSources.noCrawledRecords")}
                     </td>
                   </tr>
