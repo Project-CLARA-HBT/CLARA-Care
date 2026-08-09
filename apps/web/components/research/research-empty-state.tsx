@@ -24,7 +24,7 @@ export default function ResearchEmptyState({
         <p className="mt-1 text-sm text-[var(--text-secondary)]">{description}</p>
         <Link
           href="/chat"
-          className="mt-4 inline-flex min-h-[46px] items-center rounded-xl border border-cyan-300/65 bg-gradient-to-r from-sky-600 to-cyan-500 px-5 text-sm font-semibold text-white"
+          className="mt-4 inline-flex min-h-[46px] items-center rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-5 text-sm font-semibold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)]"
         >
           {actionLabel}
         </Link>

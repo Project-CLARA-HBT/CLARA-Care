@@ -21,12 +21,12 @@ export default function HistoryPanel({
 }: HistoryPanelProps) {
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+      <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Conversations
           </p>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
             {items.length}
           </span>
         </div>
@@ -41,8 +41,8 @@ export default function HistoryPanel({
                 className={[
                   "w-full rounded-2xl border px-3 py-2.5 text-left transition",
                   item.active
-                    ? "border-sky-300 bg-gradient-to-r from-sky-50 to-cyan-50 text-sky-900 shadow-[inset_0_0_0_1px_rgba(96,165,250,0.25)] dark:border-sky-600 dark:from-sky-950/35 dark:to-cyan-950/35 dark:text-sky-200"
-                    : "border-slate-200 bg-slate-50/80 text-slate-700 hover:border-slate-300 hover:bg-white dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-slate-600"
+                    ? "border-[color:var(--status-ok-border)] bg-[var(--surface-brand-soft)] text-[var(--text-primary)]"
+                    : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-panel)]"
                 ].join(" ")}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -51,8 +51,8 @@ export default function HistoryPanel({
                     className={[
                       "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                       item.tier === "tier2"
-                        ? "border-cyan-300 bg-cyan-100 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300"
-                        : "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                        ? "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
+                        : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
                     ].join(" ")}
                   >
                     {item.tier}
@@ -62,22 +62,22 @@ export default function HistoryPanel({
               </button>
             ))
           ) : (
-            <p className="rounded-2xl border border-dashed border-slate-300 px-3 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <p className="rounded-xl border border-dashed border-[color:var(--shell-border)] px-3 py-3 text-xs text-[var(--text-muted)]">
               Chưa có hội thoại. Gửi câu hỏi đầu tiên để bắt đầu.
             </p>
           )}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200/85 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Starter Prompts</p>
+      <section className="rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Starter Prompts</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {suggestions.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => onPickSuggestion(item)}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-400 dark:hover:text-sky-300"
+              className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1.5 text-xs text-[var(--text-secondary)] transition hover:border-[color:var(--status-ok-border)] hover:text-[var(--text-brand)]"
             >
               {item}
             </button>

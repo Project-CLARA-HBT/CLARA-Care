@@ -43,28 +43,28 @@ function friendlyPolicySummary(action?: "allow" | "warn" | "block" | "escalate")
     return {
       label: "Cần đọc lưu ý",
       className:
-        "border-amber-300/55 bg-amber-100/80 text-amber-800 dark:border-amber-700/45 dark:bg-amber-950/45 dark:text-amber-200"
+        "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
     };
   }
   if (action === "allow") {
     return {
       label: "Có thể tham khảo",
       className:
-        "border-emerald-300/55 bg-emerald-100/80 text-emerald-800 dark:border-emerald-700/45 dark:bg-emerald-950/45 dark:text-emerald-200"
+        "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
     };
   }
   if (action === "block") {
     return {
       label: "Nội dung bị giới hạn",
       className:
-        "border-rose-300/55 bg-rose-100/80 text-rose-800 dark:border-rose-700/45 dark:bg-rose-950/45 dark:text-rose-200"
+        "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
     };
   }
   if (action === "escalate") {
     return {
       label: "Cần hỗ trợ chuyên môn",
       className:
-        "border-indigo-300/55 bg-indigo-100/80 text-indigo-800 dark:border-indigo-700/45 dark:bg-indigo-950/45 dark:text-indigo-200"
+        "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
     };
   }
   return null;
@@ -78,28 +78,28 @@ function policyBadge(action?: "allow" | "warn" | "block" | "escalate"): {
     return {
       label: "Policy: warn",
       className:
-        "border-amber-300/55 bg-amber-100/80 text-amber-800 dark:border-amber-700/45 dark:bg-amber-950/45 dark:text-amber-200"
+        "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
     };
   }
   if (action === "allow") {
     return {
       label: "Policy: allow",
       className:
-        "border-emerald-300/55 bg-emerald-100/80 text-emerald-800 dark:border-emerald-700/45 dark:bg-emerald-950/45 dark:text-emerald-200"
+        "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]"
     };
   }
   if (action === "block") {
     return {
       label: "Policy: block",
       className:
-        "border-rose-300/55 bg-rose-100/80 text-rose-800 dark:border-rose-700/45 dark:bg-rose-950/45 dark:text-rose-200"
+        "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]"
     };
   }
   if (action === "escalate") {
     return {
       label: "Policy: escalate",
       className:
-        "border-indigo-300/55 bg-indigo-100/80 text-indigo-800 dark:border-indigo-700/45 dark:bg-indigo-950/45 dark:text-indigo-200"
+        "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
     };
   }
   return {
@@ -140,7 +140,7 @@ export default function ResearchLatestTier2({
   const policy = policyBadge(result.policyAction);
   const friendlyPolicy = friendlyPolicySummary(result.policyAction);
   const fallbackBadgeClass = result.fallbackUsed
-    ? "border-amber-300/55 bg-amber-100/80 text-amber-800 dark:border-amber-700/45 dark:bg-amber-950/45 dark:text-amber-200"
+    ? "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]"
     : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
   // Internal mode strings (e.g. `deep_beta`) are never shown directly; map to a
   // friendly Vietnamese End_User label (Requirement 4.4).
