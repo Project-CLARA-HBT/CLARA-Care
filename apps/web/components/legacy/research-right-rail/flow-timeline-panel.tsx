@@ -46,41 +46,34 @@ const STATUS_META: Record<
   }
 > = {
   pending: {
-    markerClass:
-      "border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900",
-    badgeClass:
-      "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
-    lineClass: "bg-slate-200 dark:bg-slate-700",
+    markerClass: "border-[color:var(--shell-border)] bg-[var(--surface-panel)]",
+    badgeClass: "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
+    lineClass: "bg-[var(--shell-border)]",
   },
   in_progress: {
-    markerClass: "border-sky-500 bg-sky-500",
-    badgeClass:
-      "border-sky-300 bg-sky-100 text-sky-700 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
-    lineClass: "bg-sky-400 dark:bg-sky-600",
+    markerClass: "border-[color:var(--brand-primary)] bg-[var(--brand-primary)]",
+    badgeClass: "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]",
+    lineClass: "bg-[var(--brand-primary)]",
   },
   completed: {
-    markerClass: "border-emerald-500 bg-emerald-500",
-    badgeClass:
-      "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-    lineClass: "bg-emerald-400 dark:bg-emerald-600",
+    markerClass: "border-[color:var(--brand-primary)] bg-[var(--brand-primary)]",
+    badgeClass: "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]",
+    lineClass: "bg-[var(--brand-primary)]",
   },
   warning: {
-    markerClass: "border-amber-500 bg-amber-500",
-    badgeClass:
-      "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-    lineClass: "bg-amber-400 dark:bg-amber-600",
+    markerClass: "border-[color:var(--status-warn-border)] bg-[var(--status-warn-text)]",
+    badgeClass: "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
+    lineClass: "bg-[var(--status-warn-text)]",
   },
   failed: {
-    markerClass: "border-rose-500 bg-rose-500",
-    badgeClass:
-      "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-    lineClass: "bg-rose-400 dark:bg-rose-600",
+    markerClass: "border-[color:var(--status-danger-border)] bg-[var(--status-danger-text)]",
+    badgeClass: "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]",
+    lineClass: "bg-[var(--status-danger-text)]",
   },
   skipped: {
-    markerClass: "border-slate-400 bg-slate-400",
-    badgeClass:
-      "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
-    lineClass: "bg-slate-200 dark:bg-slate-700",
+    markerClass: "border-[color:var(--shell-border)] bg-[var(--shell-border)]",
+    badgeClass: "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
+    lineClass: "bg-[var(--shell-border)]",
   },
 };
 

@@ -50,15 +50,15 @@ function parseTimestampForSort(value?: string): number | undefined {
 function supportStatusBadgeClass(status?: string): string {
   const normalized = (status ?? "").trim().toLowerCase();
   if (normalized === "supported") {
-    return "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300";
+    return "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]";
   }
   if (normalized === "contradicted") {
-    return "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-300";
+    return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
   }
   if (normalized === "insufficient" || normalized === "unsupported") {
-    return "border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300";
+    return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
   }
-  return "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300";
+  return "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]";
 }
 
 function clampTelemetryBar(value: number): number {
