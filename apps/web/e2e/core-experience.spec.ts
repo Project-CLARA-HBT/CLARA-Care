@@ -61,7 +61,14 @@ async function mockAuthenticatedApi(page: Page) {
     } else if (path.endsWith("/lifemap/today")) {
       payload = {
         generated_at: "2026-07-28T00:00:00Z",
-        tasks: [{ id: "task-1", title: "Ghi lại giờ đi ngủ", due_at: null }],
+        tasks: [
+          {
+            id: "task-1",
+            title: "Ghi lại giờ đi ngủ",
+            due_at: null,
+            episode_id: "episode-1",
+          },
+        ],
         episodes: [
           {
             id: "episode-1",
@@ -159,6 +166,13 @@ test.describe("authenticated care workspace", () => {
 
     await expect(page.getByRole("heading", { name: "LifeMap", exact: true })).toBeVisible();
     await expect(page.getByRole("main")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Bạn đang theo dõi điều gì?", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Việc đã được chấp nhận", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("Ghi lại giờ đi ngủ", { exact: true })).toBeVisible();
     await expect(page.getByLabel("Bạn muốn tìm điều gì?")).toBeVisible();
     await expect(page.getByLabel("Điều bạn muốn ghi lại")).toBeVisible();
 

@@ -778,27 +778,30 @@ export default function LifeMapPage() {
           ) : (
             <>
               <SurfaceCard className="overflow-hidden">
-                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--shell-border)] px-5 py-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                      {copy("lifemap.episodes.eyebrow")}
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                      {copy("lifemap.episodes.title")}
-                    </h2>
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--shell-border)] px-5 py-5">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
+                      aria-hidden="true"
+                    >
+                      <Icon name="progress" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                        {copy("lifemap.episodes.eyebrow")}
+                      </p>
+                      <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                        {copy("lifemap.episodes.title")}
+                      </h2>
+                    </div>
                   </div>
-                  <Button
-                    as="link"
-                    href="/lifemap/new"
-                    size="sm"
-                    icon="add"
-                  >
+                  <Button as="link" href="/lifemap/new" size="sm" icon="add">
                     {copy("lifemap.create.start")}
                   </Button>
                 </div>
                 {data?.episodes.length ? (
-                  <div className="grid divide-y divide-[color:var(--shell-border)] lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.72fr)] lg:divide-x lg:divide-y-0">
-                    <ul className="divide-y divide-[color:var(--shell-border)]">
+                  <div className="p-4 sm:p-5">
+                    <ul className="space-y-3">
                       {data.episodes.map((episode) => {
                         const taskCount = data.tasks.filter(
                           (task) => task.episode_id === episode.id,
@@ -806,7 +809,7 @@ export default function LifeMapPage() {
                         return (
                           <li
                             key={episode.id}
-                            className="flex items-center gap-3 px-5 py-4"
+                            className="group flex flex-wrap items-start gap-3 rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-container)] p-4 transition-colors hover:border-[color:var(--border-brand-subtle)] hover:bg-[var(--surface-container-high)] sm:flex-nowrap"
                           >
                             <span
                               className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
@@ -825,7 +828,11 @@ export default function LifeMapPage() {
                                   : ""}
                               </p>
                             </div>
-                            <div className="flex shrink-0 items-center gap-1">
+                            <div className="order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:ml-auto sm:w-auto sm:justify-end">
+                              <Badge tone={priorityTone(episode.priority)}>
+                                {priorityLabel(episode.priority, copy)}
+                              </Badge>
+                              <div className="flex shrink-0 items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -852,44 +859,17 @@ export default function LifeMapPage() {
                                   </span>
                                 </Button>
                               ) : null}
+                              </div>
                             </div>
-                            <Badge tone={priorityTone(episode.priority)}>
-                              {priorityLabel(episode.priority, copy)}
-                            </Badge>
                           </li>
                         );
                       })}
                     </ul>
-                    <div className="bg-[var(--surface-muted)] p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                        {copy("lifemap.tasks.title")}
-                      </p>
-                      {data.tasks.length ? (
-                        <ul className="mt-3 space-y-2">
-                          {data.tasks.slice(0, 3).map((task) => (
-                            <li key={task.id} className="flex gap-2 text-sm text-[var(--text-primary)]">
-                              <Icon name="check" size="18px" className="text-[var(--text-brand)]" />
-                              <span>{task.title}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                          {copy("lifemap.tasks.empty")}
-                        </p>
-                      )}
-                      <Link
-                        href="/today"
-                        className="focus-ring mt-4 inline-flex rounded-lg text-sm font-semibold text-[var(--text-brand)] hover:underline"
-                      >
-                        {copy("lifemap.tasks.openToday")}
-                      </Link>
-                    </div>
                   </div>
                 ) : (
                   <div className="p-5">
                     <EmptyState
-                      icon="route"
+                      icon="progress"
                       title={copy("lifemap.episodes.emptyTitle")}
                       description={copy("lifemap.episodes.emptyDescription")}
                     >
@@ -899,6 +879,67 @@ export default function LifeMapPage() {
                     </EmptyState>
                   </div>
                 )}
+              </SurfaceCard>
+
+              <SurfaceCard className="overflow-hidden">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--shell-border)] px-5 py-5">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-muted)] text-[var(--text-brand)]"
+                      aria-hidden="true"
+                    >
+                      <Icon name="check" />
+                    </span>
+                    <div>
+                      <h2 className="font-semibold text-[var(--text-primary)]">
+                        {copy("lifemap.tasks.title")}
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {copy("lifemap.tasks.description")}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/today"
+                    className="focus-ring shrink-0 rounded-lg text-sm font-semibold text-[var(--text-brand)] hover:underline"
+                  >
+                    {copy("lifemap.tasks.openToday")}
+                  </Link>
+                </div>
+                <div className="space-y-2 p-4 sm:p-5">
+                  {data?.tasks.length ? (
+                    data.tasks.map((task) => {
+                      const episodeTitle = data.episodes.find(
+                        (episode) => episode.id === task.episode_id,
+                      )?.title;
+                      return (
+                        <div
+                          key={task.id}
+                          className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3.5"
+                        >
+                          <span
+                            className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-[color:var(--border-brand-subtle)] text-[var(--text-brand)]"
+                            aria-hidden="true"
+                          >
+                            <Icon name="check" size="13px" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-[var(--text-primary)]">{task.title}</p>
+                            {episodeTitle ? (
+                              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                {episodeTitle}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
+                      {copy("lifemap.tasks.empty")}
+                    </p>
+                  )}
+                </div>
               </SurfaceCard>
 
               {askEnabled ? (
@@ -1696,41 +1737,6 @@ export default function LifeMapPage() {
                 </SurfaceCard>
               ) : null}
 
-              <SurfaceCard className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="font-semibold text-[var(--text-primary)]">
-                      {copy("lifemap.tasks.title")}
-                    </h2>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {copy("lifemap.tasks.description")}
-                    </p>
-                  </div>
-                  <Link
-                    href="/today"
-                    className="focus-ring shrink-0 rounded-lg text-sm font-semibold text-[var(--text-brand)] hover:underline"
-                  >
-                    {copy("lifemap.tasks.openToday")}
-                  </Link>
-                </div>
-                <div className="mt-4 space-y-2">
-                  {data?.tasks.length ? (
-                    data.tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3"
-                      >
-                        <Icon name="check" className="text-[var(--text-muted)]" />
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{task.title}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-secondary)]">
-                      {copy("lifemap.tasks.empty")}
-                    </p>
-                  )}
-                </div>
-              </SurfaceCard>
             </>
           )}
         </div>
