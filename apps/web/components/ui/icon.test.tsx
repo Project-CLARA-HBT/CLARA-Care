@@ -21,10 +21,10 @@ describe("Icon", () => {
     expect(screen.getByRole("img", { name: "Cảnh báo" })).toBeInTheDocument();
   });
 
-  it("uses the bundled fallback for an unexpected runtime name", () => {
+  it("resolves an unexpected runtime name to a bundled semantic icon", () => {
     const { container } = render(<Icon name={"unknown-provider-glyph" as IconName} />);
 
-    expect(container.querySelector("svg")).toHaveAttribute("data-icon", "fallback");
+    expect(container.querySelector("svg")).toHaveAttribute("data-icon", "clinical-notes");
     expect(container).not.toHaveTextContent("unknown-provider-glyph");
   });
 });

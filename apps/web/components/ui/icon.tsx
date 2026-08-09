@@ -26,6 +26,7 @@ export const ICON_NAMES = [
   "more",
   "chevron-down",
   "arrow-right",
+  "arrow-left",
   "chat",
   "search",
   "folder",
@@ -37,7 +38,8 @@ export const ICON_NAMES = [
   "eye",
   "eye-off",
   "stop",
-  "fallback",
+  "plus",
+  "trash",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
@@ -61,6 +63,7 @@ const ICON_PATHS: Record<IconName, string> = {
   more: "M5 12h.01M12 12h.01M19 12h.01",
   "chevron-down": "m6 9 6 6 6-6",
   "arrow-right": "M5 12h14m-5-5 5 5-5 5",
+  "arrow-left": "M19 12H5m5 5-5-5 5-5",
   chat: "M4 5h16v11H8l-4 4V5Zm4 4h8m-8 3h5",
   search: "m20 20-4.4-4.4M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z",
   folder: "M3 6h7l2 2h9v11H3V6Zm0 3h18",
@@ -72,7 +75,8 @@ const ICON_PATHS: Record<IconName, string> = {
   eye: "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
   "eye-off": "m3 3 18 18M10.6 5.7A9.7 9.7 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17.8 17.8 0 0 1-3.1 3.8M6.2 6.2A17.3 17.3 0 0 0 2.5 12S6 18.5 12 18.5c1.3 0 2.5-.3 3.5-.8M9.9 9.9a3 3 0 0 0 4.2 4.2",
   stop: "M6 6h12v12H6z",
-  fallback: "M4 4h16v16H4zM9.5 9a2.5 2.5 0 1 1 3.2 2.4c-.7.3-.7.9-.7 1.6m0 3h.01",
+  plus: "M12 5v14m-7-7h14",
+  trash: "M4 7h16m-10 4v5m4-5v5M9 7l1-3h4l1 3m-8 0 1 14h8l1-14",
 };
 
 export type IconProps = Omit<SVGAttributes<SVGSVGElement>, "children" | "name"> & {
@@ -83,7 +87,10 @@ export type IconProps = Omit<SVGAttributes<SVGSVGElement>, "children" | "name"> 
 };
 
 export function Icon({ name, label, size = "1.25em", className = "", ...props }: IconProps) {
-  const path = ICON_PATHS[name] ?? ICON_PATHS.fallback;
+  // Runtime content can still carry a stale glyph identifier. Resolve it to a
+  // calm semantic icon rather than exposing a question-mark fallback or text.
+  const resolvedName = ICON_PATHS[name] ? name : "clinical-notes";
+  const path = ICON_PATHS[resolvedName];
   const accessible = Boolean(label?.trim());
 
   return (
@@ -101,7 +108,7 @@ export function Icon({ name, label, size = "1.25em", className = "", ...props }:
       aria-label={accessible ? label : undefined}
       role={accessible ? "img" : undefined}
       focusable="false"
-      data-icon={ICON_PATHS[name] ? name : "fallback"}
+      data-icon={resolvedName}
       {...props}
     >
       {accessible ? <title>{label}</title> : null}

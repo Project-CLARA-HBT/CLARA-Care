@@ -35,12 +35,12 @@ function classesFor(variant: Variant, size: Size, block: boolean, className: str
 const ICON_ALIASES: Record<string, IconName> = {
   badge: "user-card", accessibility_new: "body", contact_phone: "contact",
   clinical_notes: "clinical-notes", medication: "medication", warning: "warning",
-  save: "clinical-notes", add: "progress", delete: "warning", arrow_back: "fallback",
+  save: "clinical-notes", add: "plus", delete: "trash", arrow_back: "arrow-left",
   arrow_forward: "arrow-right",
 };
 
 function Glyph({ glyph, spin }: { glyph: string; spin: boolean }) {
-  return <Icon name={ICON_ALIASES[glyph] ?? "fallback"} size="1.15em" className={spin ? "animate-spin" : ""} />;
+  return <Icon name={ICON_ALIASES[glyph] ?? "clinical-notes"} size="1.15em" className={spin ? "animate-spin" : ""} />;
 }
 
 type CommonProps = {

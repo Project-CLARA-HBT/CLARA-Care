@@ -9,8 +9,48 @@ import {
   LANDING_MODULE_ICONS,
 } from "@/components/landing/clara-kp3-copy";
 import { SPONSORS } from "@/components/landing/clara-kp3-data";
+import Icon, { type IconName } from "@/components/ui/icon";
 import { saveUILanguage, type UILanguage } from "@/lib/ui-language";
 import { useUILanguage } from "@/lib/use-ui-language";
+
+const LANDING_ICONS: Record<string, IconName> = {
+  account_tree: "progress",
+  arrow_forward: "arrow-right",
+  barcode_scanner: "scan",
+  category: "more",
+  check_circle: "check",
+  clinical_notes: "clinical-notes",
+  contact_support: "contact",
+  edit_note: "clinical-notes",
+  expand_more: "chevron-down",
+  fact_check: "check",
+  flight_takeoff: "progress",
+  gavel: "warning",
+  groups: "contact",
+  handshake: "contact",
+  health_and_safety: "warning",
+  help: "help",
+  medication: "medication",
+  menu_book: "clinical-notes",
+  monitoring: "progress",
+  neurology: "body",
+  person_add: "user-card",
+  play_circle: "progress",
+  psychology: "clinical-notes",
+  school: "clinical-notes",
+  security: "warning",
+  shield: "warning",
+  stethoscope: "clinical-notes",
+  task_alt: "check",
+  timer: "progress",
+  verified: "check",
+  widgets: "more",
+  biotech: "search",
+};
+
+function LandingIcon({ glyph, className = "", size = 20 }: { glyph: string; className?: string; size?: number }) {
+  return <Icon name={LANDING_ICONS[glyph] ?? "clinical-notes"} size={size} className={className} aria-hidden="true" />;
+}
 
 export default function ClaraKp3Landing() {
   const language = useUILanguage();
@@ -25,64 +65,32 @@ export default function ClaraKp3Landing() {
   return (
     <>
       <style>{`
-        .material-symbols-outlined {
-          font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
-        }
-
         .glass-panel {
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          background: color-mix(in srgb, var(--surface-panel) 84%, transparent);
-          border: 1px solid color-mix(in srgb, var(--shell-border) 82%, transparent);
-          box-shadow: var(--shadow-soft);
-        }
-
-        .dark .glass-panel {
-          background: color-mix(in srgb, var(--surface-panel) 88%, transparent);
-          border-color: color-mix(in srgb, var(--shell-border-strong) 48%, transparent);
+          background: var(--surface-panel);
+          border: 1px solid var(--shell-border);
+          border-top-color: var(--card-top-border);
         }
 
         .cyber-grid {
           background-color: var(--bg-canvas);
-          background-image: linear-gradient(color-mix(in srgb, var(--brand-500) 7%, transparent) 1px, transparent 1px),
-            linear-gradient(90deg, color-mix(in srgb, var(--brand-500) 7%, transparent) 1px, transparent 1px);
-          background-size: 40px 40px;
         }
 
         .data-stream {
-          position: absolute;
-          background: linear-gradient(to bottom, transparent, var(--brand-400), transparent);
-          width: 1px;
-          height: 100px;
-          animation: flow 3s linear infinite;
-        }
-
-        @keyframes flow {
-          from {
-            top: -100px;
-            opacity: 0;
-          }
-          50% {
-            opacity: 1;
-          }
-          to {
-            top: 100%;
-            opacity: 0;
-          }
+          display: none;
         }
 
         .neural-pulse {
-          animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          display: none;
         }
 
         .glow-cyan {
-          filter: drop-shadow(0 0 8px color-mix(in srgb, var(--brand-500) 38%, transparent));
+          color: var(--text-brand);
         }
 
         .module-blade {
           position: relative;
           overflow: hidden;
-          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          transition: background-color 150ms ease, border-color 150ms ease;
         }
 
         .module-blade::after {
@@ -100,24 +108,12 @@ export default function ClaraKp3Landing() {
         .module-blade:hover::after {
           transform: scaleY(1);
         }
-
-        @keyframes pulse {
-          0%,
-          100% {
-            opacity: 0.3;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.7;
-            transform: scale(1.05);
-          }
-        }
       `}</style>
 
       <main className="cyber-grid overflow-x-hidden text-[var(--text-primary)]">
         <nav className="glass-panel fixed top-0 z-[100] flex w-full items-center justify-between border-b border-[color:var(--shell-border)] px-4 py-4 min-[1024px]:px-8">
           <div className="flex items-center gap-3">
-            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-[var(--brand-600)] text-lg font-bold text-white">
+            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-[var(--brand-600)] text-lg font-bold text-[var(--button-primary-text)]">
               C
             </div>
             <div className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">
@@ -127,19 +123,19 @@ export default function ClaraKp3Landing() {
 
           <div className="hidden items-center gap-8 min-[900px]:flex">
             <a className="glow-cyan inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-brand)]" href="#engine">
-              <span className="material-symbols-outlined text-sm">play_circle</span>
+              <LandingIcon glyph="play_circle" className="text-sm" />
               {copy.nav.engine}
             </a>
             <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#modules">
-              <span className="material-symbols-outlined text-sm">widgets</span>
+              <LandingIcon glyph="widgets" className="text-sm" />
               {copy.nav.modules}
             </a>
             <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#workflow">
-              <span className="material-symbols-outlined text-sm">account_tree</span>
+              <LandingIcon glyph="account_tree" className="text-sm" />
               {copy.nav.workflow}
             </a>
             <a className="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]" href="#faq">
-              <span className="material-symbols-outlined text-sm">help</span>
+              <LandingIcon glyph="help" className="text-sm" />
               {copy.nav.faq}
             </a>
           </div>
@@ -165,7 +161,7 @@ export default function ClaraKp3Landing() {
             </Link>
             <Link
               href="/register"
-              className="focus-ring rounded-lg border border-[var(--brand-700)] bg-[var(--brand-600)] px-4 py-2 text-sm font-bold text-white transition-all hover:bg-[var(--brand-700)]"
+              className="focus-ring rounded-lg border border-[var(--brand-700)] bg-[var(--brand-600)] px-4 py-2 text-sm font-bold text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)]"
             >
               {copy.nav.register}
             </Link>
@@ -203,102 +199,100 @@ export default function ClaraKp3Landing() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/chat"
-                  className="focus-ring group inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 py-4 text-base font-black text-white transition-all hover:bg-[var(--brand-700)] min-[480px]:flex-none min-[480px]:px-8"
+                  className="focus-ring group inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 py-4 text-base font-black text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)] min-[480px]:flex-none min-[480px]:px-8"
                 >
                   {copy.hero.primaryCta}
-                  <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+                  <LandingIcon glyph="arrow_forward" className="transition-transform group-hover:translate-x-1" />
                 </Link>
                 <a
                   href="#engine"
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-4 text-base font-black text-slate-900 transition-colors hover:bg-slate-100 min-[480px]:flex-none min-[480px]:px-8 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-6 py-4 text-base font-black text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-muted)] min-[480px]:flex-none min-[480px]:px-8"
                 >
-                  <span className="material-symbols-outlined text-base">play_circle</span>
+                  <LandingIcon glyph="play_circle" className="text-base" />
                   {copy.hero.secondaryCta}
                 </a>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 border-t border-slate-300/45 pt-8 dark:border-slate-700/45">
+              <div className="grid grid-cols-3 gap-3 border-t border-[color:var(--shell-border)] pt-8">
                 <div className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">verified</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">{copy.hero.sourceWhenAvailable}</span>
+                  <LandingIcon glyph="verified" className="mt-0.5 text-base text-[var(--text-brand)]" />
+                  <span className="text-xs font-black leading-tight text-[var(--text-secondary)]">{copy.hero.sourceWhenAvailable}</span>
                 </div>
                 <div className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">timer</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">{copy.hero.uncertainty}</span>
+                  <LandingIcon glyph="timer" className="mt-0.5 text-base text-[var(--text-brand)]" />
+                  <span className="text-xs font-black leading-tight text-[var(--text-secondary)]">{copy.hero.uncertainty}</span>
                 </div>
                 <div className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined mt-0.5 text-base text-cyan-600 dark:text-cyan-400">fact_check</span>
-                  <span className="text-xs font-black leading-tight text-slate-700 dark:text-slate-200">{copy.hero.safetyGuard}</span>
+                  <LandingIcon glyph="fact_check" className="mt-0.5 text-base text-[var(--text-brand)]" />
+                  <span className="text-xs font-black leading-tight text-[var(--text-secondary)]">{copy.hero.safetyGuard}</span>
                 </div>
               </div>
             </div>
 
             <div className="relative mx-auto w-full max-w-xl self-center min-[1120px]:mx-0 min-[1120px]:w-[46%] min-[1280px]:w-[44%]">
-              <div className="absolute -inset-10 rounded-full bg-cyan-300/15 blur-[100px] dark:bg-cyan-700/20" />
-
-              <div className="glass-panel relative overflow-hidden rounded-2xl border border-white/40 p-5 shadow-[0_32px_64px_-12px_rgba(0,218,243,0.15)] dark:border-cyan-500/30">
-                <div className="mb-4 flex items-center justify-between border-b border-slate-300/35 pb-3 dark:border-slate-700/45">
+              <div className="glass-panel relative overflow-hidden rounded-2xl p-5">
+                <div className="mb-4 flex items-center justify-between border-b border-[color:var(--shell-border)] pb-3">
                   <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
-                      <div className="h-2.5 w-2.5 rounded-full bg-red-300/70" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-amber-300/70" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-emerald-300/70" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-[var(--status-danger-bg)]" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-[var(--status-warn-bg)]" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-[var(--surface-brand-soft)]" />
                     </div>
-                    <div className="h-4 w-px bg-slate-300 dark:bg-slate-700" />
-                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    <div className="h-4 w-px bg-[var(--surface-muted)]" />
+                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
                       {copy.hero.preview.systemCore}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300">{copy.hero.preview.activeSession}</span>
-                    <span className="h-2 w-2 rounded-full bg-cyan-500 dark:bg-cyan-300" />
+                    <span className="text-[10px] font-bold text-[var(--text-brand)]">{copy.hero.preview.activeSession}</span>
+                    <span className="h-2 w-2 rounded-full bg-[var(--surface-brand-soft)]" />
                   </div>
                 </div>
 
                 <div className="space-y-5">
                   <div className="flex justify-between">
                     <div>
-                      <div className="text-sm font-black text-slate-900 dark:text-slate-100">{copy.hero.preview.engineTitle}</div>
-                      <div className="mt-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 dark:bg-cyan-300" />
+                      <div className="text-sm font-black text-[var(--text-primary)]">{copy.hero.preview.engineTitle}</div>
+                      <div className="mt-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--surface-brand-soft)]" />
                         {copy.hero.preview.clinicalContext}
                       </div>
                     </div>
                     <div className="flex h-8 items-end gap-1">
-                      <div className="h-4 w-1 rounded-full bg-cyan-300" />
-                      <div className="h-6 w-1 animate-bounce rounded-full bg-cyan-500" style={{ animationDelay: "0.1s" }} />
-                      <div className="h-8 w-1 rounded-full bg-slate-900 dark:bg-cyan-200" />
+                      <div className="h-4 w-1 rounded-full bg-[var(--surface-brand-soft)]" />
+                      <div className="h-6 w-1 animate-bounce rounded-full bg-[var(--surface-brand-soft)]" style={{ animationDelay: "0.1s" }} />
+                      <div className="h-8 w-1 rounded-full bg-[var(--surface-container-high)]" />
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     <div className="flex justify-end">
-                      <div className="max-w-[82%] rounded-xl rounded-tr-none border border-slate-300/45 bg-slate-100 px-4 py-3 text-base font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      <div className="max-w-[82%] rounded-xl rounded-tr-none border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-base font-medium text-[var(--text-secondary)]">
                         {copy.hero.preview.question}
                       </div>
                     </div>
 
                     <div className="flex justify-start gap-3">
-                      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950">
-                        <div className="neural-pulse absolute inset-0 rounded-full bg-cyan-300/20 dark:bg-cyan-700/30" />
-                        <span className="material-symbols-outlined relative z-10 text-lg">psychology</span>
+                      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-container-high)] text-[var(--text-primary)]">
+                        <div className="neural-pulse absolute inset-0 rounded-full bg-[var(--surface-brand-soft)]/20" />
+                        <LandingIcon glyph="psychology" className="relative z-10 text-lg" />
                       </div>
 
                       <div className="max-w-[86%] space-y-3">
-                        <div className="relative overflow-hidden rounded-2xl rounded-tl-none bg-slate-900 p-4 text-white dark:bg-cyan-700">
+                        <div className="relative overflow-hidden rounded-2xl rounded-tl-none bg-[var(--surface-container-high)] p-4 text-[var(--text-primary)]">
                           <div className="absolute right-2 top-1 opacity-20">
-                            <span className="material-symbols-outlined text-4xl">neurology</span>
+                            <LandingIcon glyph="neurology" className="text-4xl" />
                           </div>
                           <p className="relative z-10 text-base leading-relaxed">
                             {copy.hero.preview.answer}
                           </p>
-                          <div className="relative z-10 mt-3 flex flex-wrap gap-2 border-t border-white/15 pt-3">
-                            <span className="rounded border border-white/20 bg-white/10 px-2 py-1 text-[10px] font-bold">{copy.hero.preview.sourceWhenAvailable}</span>
+                          <div className="relative z-10 mt-3 flex flex-wrap gap-2 border-t border-[color:var(--shell-border)] pt-3">
+                            <span className="rounded border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 py-1 text-[10px] font-bold">{copy.hero.preview.sourceWhenAvailable}</span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-brand)]">
                             {copy.hero.preview.reviewSource}
                           </span>
                         </div>
@@ -306,35 +300,35 @@ export default function ClaraKp3Landing() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 rounded-xl border border-slate-300/45 bg-slate-100 p-3 dark:border-slate-700 dark:bg-slate-900">
-                    <span className="material-symbols-outlined text-cyan-700 dark:text-cyan-300">barcode_scanner</span>
-                    <div className="flex-1 text-xs font-bold italic text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-3 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-3">
+                    <LandingIcon glyph="barcode_scanner" className="text-[var(--text-brand)]" />
+                    <div className="flex-1 text-xs font-bold italic text-[var(--text-muted)]">
                       {copy.hero.preview.analysing}
                     </div>
                     <div className="flex gap-1">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-500 dark:bg-cyan-300" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-500 dark:bg-cyan-300" style={{ animationDelay: "0.2s" }} />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-500 dark:bg-cyan-300" style={{ animationDelay: "0.4s" }} />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--surface-brand-soft)]" />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--surface-brand-soft)]" style={{ animationDelay: "0.2s" }} />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--surface-brand-soft)]" style={{ animationDelay: "0.4s" }} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="glass-panel absolute -right-6 -top-6 hidden w-36 flex-col items-center justify-center rounded-2xl border border-cyan-300/35 p-4 shadow-2xl shadow-cyan-900/20 min-[1200px]:flex">
-                <span className="material-symbols-outlined mb-2 text-3xl text-cyan-600 dark:text-cyan-400">verified</span>
-                <div className="text-center text-xs font-black uppercase text-slate-800 dark:text-slate-200">{copy.hero.preview.sourceWhenAvailable}</div>
+              <div className="glass-panel absolute -right-6 -top-6 hidden w-36 flex-col items-center justify-center rounded-2xl border border-[color:var(--shell-border)] p-4  min-[1200px]:flex">
+                <LandingIcon glyph="verified" className="mb-2 text-3xl text-[var(--text-brand)]" />
+                <div className="text-center text-xs font-black uppercase text-[var(--text-secondary)]">{copy.hero.preview.sourceWhenAvailable}</div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="border-y border-slate-200/50 bg-white/75 py-8 dark:border-slate-800/50 dark:bg-slate-900/55">
+        <section className="border-y border-[color:var(--shell-border)] bg-[var(--surface-panel)] py-8">
           <div className="mx-auto max-w-7xl px-4 min-[1024px]:px-8">
-            <div className="mb-2 text-center text-xs font-black uppercase tracking-[0.28em] text-slate-600 dark:text-slate-400">
-              <span className="material-symbols-outlined mr-1 align-[-3px] text-sm">handshake</span>
+            <div className="mb-2 text-center text-xs font-black uppercase tracking-[0.28em] text-[var(--text-secondary)]">
+              <LandingIcon glyph="handshake" className="mr-1 align-[-3px] text-sm" />
               {copy.sponsors.heading}
             </div>
-            <div className="mb-8 text-center text-sm font-medium text-slate-600 dark:text-slate-300">
+            <div className="mb-8 text-center text-sm font-medium text-[var(--text-secondary)]">
               {copy.sponsors.description}
             </div>
             <div className="flex flex-wrap justify-center gap-4">
@@ -344,7 +338,7 @@ export default function ClaraKp3Landing() {
                   href={sponsor.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex min-h-[120px] w-full max-w-xs items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-900 p-6 shadow-lg shadow-slate-900/10 transition-all hover:-translate-y-0.5 dark:bg-slate-950"
+                  className="flex min-h-[120px] w-full max-w-xs items-center justify-center rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-container-high)] p-6  transition-all hover:-translate-y-0.5"
                 >
                   <Image
                     src={sponsor.logo}
@@ -356,7 +350,7 @@ export default function ClaraKp3Landing() {
                 </a>
               ))}
             </div>
-            <p className="mt-6 text-center text-base font-medium text-slate-500 dark:text-slate-400">
+            <p className="mt-6 text-center text-base font-medium text-[var(--text-muted)]">
               {copy.sponsors.network}
             </p>
           </div>
@@ -365,12 +359,12 @@ export default function ClaraKp3Landing() {
         <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8" id="engine">
           <div className="mb-16 text-center">
             <h2
-              className="mb-4 font-black tracking-tight text-slate-900 dark:text-slate-100"
+              className="mb-4 font-black tracking-tight text-[var(--text-primary)]"
               style={{ fontSize: "clamp(1.75rem, 5vw, 3rem)" }}
             >
               {copy.engine.title}
             </h2>
-            <p className="mx-auto max-w-3xl text-base font-medium text-slate-600 dark:text-slate-300">
+            <p className="mx-auto max-w-3xl text-base font-medium text-[var(--text-secondary)]">
               {copy.engine.description}
             </p>
           </div>
@@ -381,60 +375,60 @@ export default function ClaraKp3Landing() {
                 key={step.title}
                 className={
                   step.solid
-                    ? "relative z-10 flex-1 rounded-2xl bg-slate-900 p-7 text-white shadow-2xl dark:bg-cyan-800"
+                    ? "relative z-10 flex-1 rounded-2xl border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-container-high)] p-7 text-[var(--text-primary)]"
                     : "glass-panel relative z-10 flex-1 rounded-2xl p-7"
                 }
               >
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800/60">
-                  <span className={`material-symbols-outlined text-2xl ${step.tone}`}>{step.icon}</span>
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--surface-muted)]">
+                  <LandingIcon glyph={step.icon} size={24} className="text-[var(--text-brand)]" />
                 </div>
-                <p className={`mb-1 text-xs font-black uppercase tracking-[0.15em] ${step.tone}`}>{step.layer}</p>
+                <p className="mb-1 text-xs font-black uppercase tracking-[0.15em] text-[var(--text-brand)]">{step.layer}</p>
                 <h3 className="mb-3 text-xl font-black">{step.title}</h3>
-                <p className={`text-base leading-relaxed ${step.solid ? "text-slate-200" : "text-slate-600 dark:text-slate-300"}`}>{step.description}</p>
+                <p className={`text-base leading-relaxed ${step.solid ? "text-[var(--text-secondary)]" : "text-[var(--text-secondary)]"}`}>{step.description}</p>
               </article>,
               idx < arr.length - 1 ? (
-                <div key={`arrow-${idx}`} className="hidden shrink-0 items-center justify-center text-cyan-400/50 min-[900px]:flex">
-                  <span className="material-symbols-outlined text-2xl">arrow_forward</span>
+                <div key={`arrow-${idx}`} className="hidden shrink-0 items-center justify-center text-[var(--text-brand)]/50 min-[900px]:flex">
+                  <LandingIcon glyph="arrow_forward" className="text-2xl" />
                 </div>
               ) : null,
             ])}
           </div>
         </section>
 
-        <section className="border-y border-slate-200/50 bg-white py-20 dark:border-slate-800/50 dark:bg-slate-900/55" id="modules">
+        <section className="border-y border-[color:var(--shell-border)] bg-[var(--surface-panel)] py-20" id="modules">
           <div className="mx-auto grid max-w-7xl gap-12 px-4 min-[1120px]:grid-cols-12 min-[1024px]:px-8">
             <div className="space-y-8 min-[1120px]:col-span-5">
-              <div className="inline-flex rounded-full bg-slate-900 px-4 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-white dark:bg-cyan-400 dark:text-slate-950">
+              <div className="inline-flex rounded-full bg-[var(--surface-container-high)] px-4 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
                 {copy.moduleSection.eyebrow}
               </div>
               <h2
-                className="font-black leading-tight tracking-tight text-slate-900 dark:text-slate-100"
+                className="font-black leading-tight tracking-tight text-[var(--text-primary)]"
                 style={{ fontSize: "clamp(1.75rem, 5vw, 3rem)" }}
               >
                 {copy.moduleSection.title}
                 <br />
-                <span className="text-cyan-600 dark:text-cyan-300">{copy.moduleSection.coreEngine}</span>
+                <span className="text-[var(--text-brand)]">{copy.moduleSection.coreEngine}</span>
               </h2>
-              <p className="text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+              <p className="text-lg font-medium leading-relaxed text-[var(--text-secondary)]">
                 {copy.moduleSection.description}
               </p>
               <div className="grid grid-cols-2 gap-8">
                 <div>
-                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">{copy.moduleSection.source}</p>
-                  <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300">
+                  <p className="text-5xl font-light tracking-tight text-[var(--text-brand)]">{copy.moduleSection.source}</p>
+                  <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--text-secondary)]">
                     {copy.moduleSection.sourceDetail}
                   </p>
                 </div>
                 <div>
-                  <p className="text-5xl font-light tracking-tight text-cyan-600 dark:text-cyan-300">{copy.moduleSection.limits}</p>
-                  <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300">
+                  <p className="text-5xl font-light tracking-tight text-[var(--text-brand)]">{copy.moduleSection.limits}</p>
+                  <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--text-secondary)]">
                     {copy.moduleSection.limitsDetail}
                   </p>
                 </div>
               </div>
               <Link
                 href="/chat"
-                className="inline-flex rounded-xl bg-slate-900 px-8 py-4 text-base font-black text-white transition-colors hover:bg-slate-800 dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
+                className="inline-flex rounded-xl bg-[var(--surface-container-high)] px-8 py-4 text-base font-black text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-panel)]"
               >
                 {copy.moduleSection.cta}
               </Link>
@@ -444,27 +438,23 @@ export default function ClaraKp3Landing() {
               {modules.map((module) => (
                 <article
                   key={module.title}
-                  className="glass-panel module-blade rounded-2xl p-7 transition-all hover:-translate-y-1 hover:shadow-2xl"
+                  className="glass-panel module-blade rounded-2xl p-7 hover:bg-[var(--surface-container-high)]"
                 >
                   <div className="mb-6 flex items-center justify-between">
-                    <div className="rounded-xl bg-cyan-100/60 p-3 dark:bg-cyan-900/35">
-                      {module.icon.startsWith("fa ") ? (
-                        <i className={`${module.icon} text-2xl text-cyan-700 dark:text-cyan-300`} aria-hidden="true" />
-                      ) : (
-                        <span className="material-symbols-outlined text-2xl text-cyan-700 dark:text-cyan-300">{module.icon}</span>
-                      )}
+                    <div className="rounded-xl bg-[var(--surface-brand-soft)] p-3">
+                      <LandingIcon glyph={module.icon} size={24} className="text-[var(--text-brand)]" />
                     </div>
-                    <span className="rounded-full border border-cyan-300/40 bg-cyan-100/50 px-2.5 py-1 text-xs font-bold text-cyan-800 dark:border-cyan-700/40 dark:bg-cyan-900/30 dark:text-cyan-300">
+                    <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-2.5 py-1 text-xs font-bold text-[var(--text-brand)]">
                       {module.audience}
                     </span>
                   </div>
-                  <h3 className="mb-2 text-xl font-black text-slate-900 dark:text-slate-100">{module.title}</h3>
-                  <p className="mb-6 text-base font-medium leading-relaxed text-slate-700 dark:text-slate-300">
+                  <h3 className="mb-2 text-xl font-black text-[var(--text-primary)]">{module.title}</h3>
+                  <p className="mb-6 text-base font-medium leading-relaxed text-[var(--text-secondary)]">
                     {module.description}
                   </p>
                   <Link
                     href={module.href}
-                    className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-[0.12em] text-cyan-700 dark:text-cyan-300"
+                    className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-[0.12em] text-[var(--text-brand)]"
                   >
                     {module.cta}
                     <i className="fa fa-chevron-right text-base" aria-hidden="true" />
@@ -477,24 +467,24 @@ export default function ClaraKp3Landing() {
 
         <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8" id="workflow">
           <h2
-            className="mb-16 text-center font-black leading-tight tracking-tight text-slate-900 dark:text-slate-100"
+            className="mb-16 text-center font-black leading-tight tracking-tight text-[var(--text-primary)]"
             style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
           >
             {copy.workflow.titleStart}
             <br />
-            <span className="text-cyan-600 dark:text-cyan-300">{copy.workflow.titleAccent}</span>
+            <span className="text-[var(--text-brand)]">{copy.workflow.titleAccent}</span>
           </h2>
 
           <div className="grid grid-cols-1 gap-12 min-[900px]:grid-cols-3">
             {copy.workflow.steps.map((step) => (
               <article key={step.number} className="space-y-4">
-                <div className="text-7xl font-black text-cyan-600/60 dark:text-cyan-400/50">{step.number}</div>
-                <h3 className="flex items-center gap-2 text-2xl font-black text-slate-900 dark:text-slate-100">
-                  <span className="material-symbols-outlined text-cyan-700 dark:text-cyan-300">{step.icon}</span>
+                <div className="text-7xl font-black text-[var(--text-brand)]/60">{step.number}</div>
+                <h3 className="flex items-center gap-2 text-2xl font-black text-[var(--text-primary)]">
+                  <LandingIcon glyph={step.icon} className="text-[var(--text-brand)]" />
                   {step.title}
                 </h3>
-                <p className="text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300">{step.description}</p>
-                <p className="text-xs font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-400">
+                <p className="text-base font-medium leading-relaxed text-[var(--text-secondary)]">{step.description}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-[var(--text-brand)]">
                   → {step.outcome}
                 </p>
               </article>
@@ -502,7 +492,7 @@ export default function ClaraKp3Landing() {
           </div>
         </section>
 
-        <section className="relative overflow-hidden bg-slate-900 py-20 text-white dark:bg-slate-950">
+        <section className="relative overflow-hidden bg-[var(--surface-container-high)] py-20 text-[var(--text-primary)]">
           <div className="cyber-grid absolute inset-0 opacity-10" />
           <div className="relative z-10 mx-auto max-w-7xl px-4 min-[1024px]:px-8">
             <div className="mb-14 flex flex-col gap-6 min-[1024px]:flex-row min-[1024px]:items-end min-[1024px]:justify-between">
@@ -512,24 +502,24 @@ export default function ClaraKp3Landing() {
               >
                 {copy.principles.title}
                 <br />
-                <span className="text-cyan-300">{copy.principles.titleAccent}</span>
+                <span className="text-[var(--text-brand)]">{copy.principles.titleAccent}</span>
               </h2>
-              <p className="max-w-sm text-base font-bold text-slate-200">
+              <p className="max-w-sm text-base font-bold text-[var(--text-secondary)]">
                 {copy.principles.description}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-5 min-[900px]:grid-cols-3">
             {copy.principles.items.map((item) => (
-                <article key={item.title} className="rounded-2xl border border-white/25 bg-white/10 p-8">
-                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-cyan-400/15">
-                    <span className="material-symbols-outlined text-3xl text-cyan-300">{item.icon}</span>
+                <article key={item.title} className="rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-8">
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--surface-brand-soft)]/15">
+                    <LandingIcon glyph={item.icon} size={30} className="text-[var(--text-brand)]" />
                   </div>
-                  <h3 className="mb-3 text-2xl font-black text-white">{item.title}</h3>
-                  <p className="mb-4 text-base font-medium leading-relaxed text-slate-200">{item.description}</p>
-                  <div className="flex items-start gap-2 border-t border-white/15 pt-3">
-                    <span className="material-symbols-outlined mt-0.5 text-sm text-cyan-400">check_circle</span>
-                    <p className="text-sm font-bold leading-snug text-slate-300">{copy.principles.outcomeLabel}: {item.outcome}</p>
+                  <h3 className="mb-3 text-2xl font-black text-[var(--text-primary)]">{item.title}</h3>
+                  <p className="mb-4 text-base font-medium leading-relaxed text-[var(--text-secondary)]">{item.description}</p>
+                  <div className="flex items-start gap-2 border-t border-[color:var(--shell-border)] pt-3">
+                    <LandingIcon glyph="check_circle" className="mt-0.5 text-sm text-[var(--text-brand)]" />
+                    <p className="text-sm font-bold leading-snug text-[var(--text-secondary)]">{copy.principles.outcomeLabel}: {item.outcome}</p>
                   </div>
                 </article>
               ))}
@@ -539,30 +529,30 @@ export default function ClaraKp3Landing() {
 
         <section className="mx-auto max-w-7xl px-4 py-20 min-[1024px]:px-8">
           <h2
-            className="mb-4 text-center font-black tracking-tight text-slate-900 dark:text-slate-100"
+            className="mb-4 text-center font-black tracking-tight text-[var(--text-primary)]"
             style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
           >
             {copy.useCaseSection.title}
           </h2>
-          <p className="mb-14 text-center text-base font-medium text-slate-600 dark:text-slate-300">
+          <p className="mb-14 text-center text-base font-medium text-[var(--text-secondary)]">
             {copy.useCaseSection.description}
           </p>
           <div className="grid grid-cols-1 gap-6 min-[1000px]:grid-cols-3">
             {copy.useCases.map((item, index) => (
-              <article key={item.role} className="glass-panel rounded-2xl border-l-4 border-cyan-500 p-8">
+              <article key={item.role} className="glass-panel rounded-2xl border-l-4 border-[color:var(--shell-border)] p-8">
                 <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100/60 dark:bg-cyan-900/35">
-                    <span className="material-symbols-outlined text-xl text-cyan-700 dark:text-cyan-300">{useCaseIcons[index]}</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--surface-brand-soft)]">
+                    <LandingIcon glyph={useCaseIcons[index]} className="text-[var(--text-brand)]" />
                   </div>
-                  <span className="rounded-full border border-cyan-300/40 bg-cyan-100/50 px-2.5 py-0.5 text-xs font-black text-cyan-800 dark:border-cyan-700/50 dark:bg-cyan-900/35 dark:text-cyan-200">
+                  <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-2.5 py-0.5 text-xs font-black text-[var(--text-brand)]">
                     {item.tag}
                   </span>
                 </div>
-                <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-slate-600 dark:text-slate-400">{item.role}</p>
-                <p className="mb-4 text-base font-medium leading-relaxed text-slate-700 dark:text-slate-200">
+                <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-secondary)]">{item.role}</p>
+                <p className="mb-4 text-base font-medium leading-relaxed text-[var(--text-secondary)]">
                   {item.scenario}
                 </p>
-                <p className="border-t border-slate-300/35 pt-4 text-sm font-bold text-slate-600 dark:border-slate-700/45 dark:text-slate-300">
+                <p className="border-t border-[color:var(--shell-border)] pt-4 text-sm font-bold text-[var(--text-secondary)]">
                   ✓ {item.benefit}
                 </p>
               </article>
@@ -571,35 +561,31 @@ export default function ClaraKp3Landing() {
         </section>
 
         {/* CTA giữa trang */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16">
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute left-1/4 top-0 h-64 w-64 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-3xl" />
-            <div className="absolute right-1/4 bottom-0 h-64 w-64 translate-y-1/2 rounded-full bg-cyan-400/8 blur-3xl" />
-          </div>
+        <section className="relative overflow-hidden bg-[var(--surface-container-high)] py-16">
           <div className="relative z-10 mx-auto max-w-3xl px-4 text-center min-[1024px]:px-8">
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-cyan-400">{copy.primaryCta.eyebrow}</p>
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[var(--text-brand)]">{copy.primaryCta.eyebrow}</p>
             <h2
-              className="mb-4 font-black leading-tight tracking-tight text-white"
+              className="mb-4 font-black leading-tight tracking-tight text-[var(--text-primary)]"
               style={{ fontSize: "clamp(1.7rem, 5vw, 2.6rem)" }}
             >
               {copy.primaryCta.title}
             </h2>
-            <p className="mb-8 text-base font-medium leading-relaxed text-slate-300">
+            <p className="mb-8 text-base font-medium leading-relaxed text-[var(--text-secondary)]">
               {copy.primaryCta.description}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
                 href="/chat"
-                className="group inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-8 py-4 text-base font-black text-slate-950 transition-all hover:bg-cyan-300"
+                className="group inline-flex items-center gap-2 rounded-xl bg-[var(--brand-600)] px-8 py-4 text-base font-black text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)]"
               >
                 {copy.primaryCta.chat}
-                <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+                <LandingIcon glyph="arrow_forward" className="transition-transform group-hover:translate-x-1" />
               </Link>
               <a
                 href="#workflow"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-white/5 px-8 py-4 text-base font-black text-slate-200 transition-all hover:border-slate-400 hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-8 py-4 text-base font-black text-[var(--text-secondary)] transition-all hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-muted)]"
               >
-                <span className="material-symbols-outlined text-base">fact_check</span>
+                <LandingIcon glyph="fact_check" className="text-base" />
                 {copy.primaryCta.workflow}
               </a>
             </div>
@@ -608,105 +594,105 @@ export default function ClaraKp3Landing() {
 
         <section className="mx-auto max-w-3xl px-4 py-20 min-[1024px]:px-8" id="faq">
           <h2
-            className="mb-10 text-center font-black tracking-tight text-slate-900 dark:text-slate-100"
+            className="mb-10 text-center font-black tracking-tight text-[var(--text-primary)]"
             style={{ fontSize: "clamp(1.9rem, 5vw, 3rem)" }}
           >
             {copy.faqTitle}
           </h2>
           <div className="space-y-4">
             {copy.faqs.map((faq) => (
-              <details key={faq.q} className="glass-panel overflow-hidden rounded-2xl border border-slate-300/35 dark:border-slate-700/45">
+              <details key={faq.q} className="glass-panel overflow-hidden rounded-2xl border border-[color:var(--shell-border)]">
                 <summary className="flex cursor-pointer list-none items-center justify-between p-5 text-left">
-                  <span className="font-black text-slate-900 dark:text-slate-100">{faq.q}</span>
-                  <span className="material-symbols-outlined text-slate-400">expand_more</span>
+                  <span className="font-black text-[var(--text-primary)]">{faq.q}</span>
+                  <LandingIcon glyph="expand_more" className="text-[var(--text-muted)]" />
                 </summary>
-                <div className="px-5 pb-5 text-base font-medium leading-relaxed text-slate-700 dark:text-slate-300">{faq.a}</div>
+                <div className="px-5 pb-5 text-base font-medium leading-relaxed text-[var(--text-secondary)]">{faq.a}</div>
               </details>
             ))}
           </div>
         </section>
 
-        <footer className="relative overflow-hidden bg-slate-900 py-14 dark:bg-slate-950">
+        <footer className="relative overflow-hidden bg-[var(--surface-container-high)] py-14">
           <div className="cyber-grid absolute inset-0 opacity-5" />
-          <div className="relative z-10 mx-auto max-w-7xl px-4 text-slate-300 min-[1024px]:px-8">
+          <div className="relative z-10 mx-auto max-w-7xl px-4 text-[var(--text-secondary)] min-[1024px]:px-8">
 
             {/* CTA đầu footer */}
-            <div className="mb-10 flex flex-col items-center justify-between gap-6 rounded-2xl border border-cyan-500/20 bg-slate-800/80 px-8 py-8 shadow-2xl shadow-cyan-900/20 min-[900px]:flex-row">
+            <div className="mb-10 flex flex-col items-center justify-between gap-6 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)]/80 px-8 py-8  min-[900px]:flex-row">
               <div>
-                <p className="mb-1 text-lg font-black text-white">{copy.footer.ctaTitle}</p>
-                <p className="text-sm font-medium text-slate-400">{copy.footer.ctaDetail}</p>
+                <p className="mb-1 text-lg font-black text-[var(--text-primary)]">{copy.footer.ctaTitle}</p>
+                <p className="text-sm font-medium text-[var(--text-muted)]">{copy.footer.ctaDetail}</p>
               </div>
               <Link
                 href="/register"
-                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 transition-all hover:bg-cyan-300"
+                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[var(--brand-600)] px-6 py-3 text-sm font-black text-[var(--button-primary-text)] transition-colors hover:bg-[var(--brand-700)]"
               >
-                <span className="material-symbols-outlined text-base">person_add</span>
+                <LandingIcon glyph="person_add" className="text-base" />
                 {copy.footer.register}
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 gap-10 border-b border-slate-800/80 pb-10 md:grid-cols-12 md:gap-8">
+            <div className="grid grid-cols-1 gap-10 border-b border-[color:var(--shell-border)] pb-10 md:grid-cols-12 md:gap-8">
               <div className="space-y-4 md:col-span-5">
-                <p className="text-2xl font-black text-white">
-                  The <span className="text-cyan-300">Clara Care</span>
+                <p className="text-2xl font-black text-[var(--text-primary)]">
+                  The <span className="text-[var(--text-brand)]">Clara Care</span>
                 </p>
-                <p className="max-w-md text-base font-medium leading-relaxed text-slate-300">
+                <p className="max-w-md text-base font-medium leading-relaxed text-[var(--text-secondary)]">
                   {copy.footer.description}
                 </p>
-                <p className="text-xs font-black uppercase tracking-[0.15em] text-cyan-300">© 2026 The Clara Care</p>
+                <p className="text-xs font-black uppercase tracking-[0.15em] text-[var(--text-brand)]">© 2026 The Clara Care</p>
               </div>
 
               <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 md:col-span-7">
                 <div className="space-y-3">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
-                    <span className="material-symbols-outlined text-sm">category</span>
+                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
+                    <LandingIcon glyph="category" className="text-sm" />
                     {copy.footer.product}
                   </p>
-                  <a className="block text-sm font-bold hover:text-cyan-300" href="#engine">
+                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="#engine">
                     {copy.nav.engine}
                   </a>
-                  <a className="block text-sm font-bold hover:text-cyan-300" href="#modules">
+                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="#modules">
                     {copy.nav.modules}
                   </a>
-                  <a className="block text-sm font-bold hover:text-cyan-300" href="#workflow">
+                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="#workflow">
                     {copy.nav.workflow}
                   </a>
                 </div>
 
                 <div className="space-y-3">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
-                    <span className="material-symbols-outlined text-sm">gavel</span>
+                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
+                    <LandingIcon glyph="gavel" className="text-sm" />
                     {copy.footer.legal}
                   </p>
-                  <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/privacy">
+                  <Link className="block text-sm font-bold hover:text-[var(--text-brand)]" href="/legal/privacy">
                     {copy.footer.privacy}
                   </Link>
-                  <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/terms">
+                  <Link className="block text-sm font-bold hover:text-[var(--text-brand)]" href="/legal/terms">
                     {copy.footer.terms}
                   </Link>
-                  <Link className="block text-sm font-bold hover:text-cyan-300" href="/legal/consent">
+                  <Link className="block text-sm font-bold hover:text-[var(--text-brand)]" href="/legal/consent">
                     {copy.footer.consent}
                   </Link>
                 </div>
 
                 <div className="space-y-3">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-white">
-                    <span className="material-symbols-outlined text-sm">contact_support</span>
+                  <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-primary)]">
+                    <LandingIcon glyph="contact_support" className="text-sm" />
                     {copy.footer.contact}
                   </p>
-                  <a className="block text-sm font-bold hover:text-cyan-300" href="mailto:clara@thiennn.icu">
+                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="mailto:clara@thiennn.icu">
                     clara@thiennn.icu
                   </a>
-                  <a className="block text-sm font-bold hover:text-cyan-300" href="tel:0853374247">
+                  <a className="block text-sm font-bold hover:text-[var(--text-brand)]" href="tel:0853374247">
                     0853374247
                   </a>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col items-start justify-between gap-2 pt-4 text-xs text-slate-300 sm:flex-row sm:items-center">
+            <div className="flex flex-col items-start justify-between gap-2 pt-4 text-xs text-[var(--text-secondary)] sm:flex-row sm:items-center">
               <p>{copy.footer.madeFor}</p>
-              <p className="text-xs uppercase tracking-[0.12em] text-slate-400">{copy.footer.productLine}</p>
+              <p className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy.footer.productLine}</p>
             </div>
           </div>
         </footer>
