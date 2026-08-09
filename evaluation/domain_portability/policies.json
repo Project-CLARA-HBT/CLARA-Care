@@ -1,0 +1,42 @@
+{
+  "version": "domain-policy-v1-draft",
+  "status": "draft_not_run",
+  "domains": {
+    "medication": {
+      "semantic_slots": ["ingredient", "route", "dose_form", "regimen"],
+      "evidence_classes": ["medication_order", "dispense", "reconciled_report"],
+      "authority_rule": "clinician_order_or_reconciled_source",
+      "valid_time": "order_start_to_stop_or_explicit_unknown",
+      "lifecycle": ["candidate", "active", "superseded", "entered_in_error"],
+      "protected_conflict": "same_ingredient_overlapping_incompatible_regimen",
+      "escalation": "incompatible_authoritative_regimens"
+    },
+    "allergy_adverse_reaction": {
+      "semantic_slots": ["agent", "reaction", "severity", "certainty"],
+      "evidence_classes": ["clinician_documentation", "patient_report", "challenge_test"],
+      "authority_rule": "do_not_supersede_patient_report_without_review",
+      "valid_time": "onset_and_resolution_when_documented",
+      "lifecycle": ["candidate", "active", "resolved", "entered_in_error"],
+      "protected_conflict": "agent_or_reaction_disagreement",
+      "escalation": "severe_reaction_or_conflicting_agent"
+    },
+    "diagnosis_problem": {
+      "semantic_slots": ["concept", "status", "certainty", "onset"],
+      "evidence_classes": ["assessment", "problem_list", "test_result"],
+      "authority_rule": "assessment_does_not_erase_historical_problem",
+      "valid_time": "onset_to_resolution_or_ongoing",
+      "lifecycle": ["candidate", "active", "resolved", "superseded", "entered_in_error"],
+      "protected_conflict": "active_vs_resolved_or_incompatible_certainty",
+      "escalation": "contemporaneous_conflicting_assessments"
+    },
+    "lab_state": {
+      "semantic_slots": ["analyte", "specimen", "unit", "effective_time"],
+      "evidence_classes": ["final_lab_observation", "corrected_lab_observation"],
+      "authority_rule": "corrected_result_supersedes_only_same_test_identity; otherwise preserve series",
+      "valid_time": "observation_effective_time; issued_time_is_knowledge_time",
+      "lifecycle": ["candidate", "active", "superseded", "entered_in_error"],
+      "protected_conflict": "same_test_and_effective_time_with_different_value",
+      "escalation": "ambiguous_same-time_result_or_unit_mismatch"
+    }
+  }
+}

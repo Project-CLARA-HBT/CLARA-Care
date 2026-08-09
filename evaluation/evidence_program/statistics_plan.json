@@ -1,0 +1,34 @@
+{
+  "version": "statistics-plan-v1-draft",
+  "status": "draft_not_run",
+  "primary_cluster": "subject_token",
+  "external_primary_endpoints": [
+    "state_correctness",
+    "critical_omission",
+    "conflict_handling_correctness",
+    "unsupported_assertion"
+  ],
+  "secondary_endpoints": [
+    "evidence_fidelity",
+    "authorized_disclosure",
+    "prohibited_disclosure",
+    "input_tokens",
+    "output_tokens",
+    "latency_ms",
+    "provider_cost",
+    "completion_error_rate"
+  ],
+  "comparisons": "paired_on_identical_subject_task_instances",
+  "uncertainty": [
+    "subject_cluster_bootstrap_absolute_difference",
+    "wilson_interval_for_exact_structural_counts"
+  ],
+  "agreement": [
+    "cohen_kappa_for_two_categorical_annotators",
+    "krippendorff_alpha_only_when_assumptions_and_raters_allow"
+  ],
+  "multiplicity": "predeclare_primary_comparisons_and_holm_adjustment",
+  "stratification": ["domain", "task", "model_family"],
+  "negative_results_visible": true,
+  "clinical_inference": false
+}
