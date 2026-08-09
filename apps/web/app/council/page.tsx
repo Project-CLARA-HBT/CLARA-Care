@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
 import { Icon, resolveIconName } from "@/components/ui/icon";
+import Modal from "@/components/ui/modal";
 import PageShell from "@/components/ui/page-shell";
 import { getRole } from "@/lib/auth-store";
 import { trackCouncilViewed } from "@/lib/analytics/events";
@@ -1526,32 +1527,33 @@ export default function CouncilPage() {
         </section>
 
         {handoffOpen ? (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-lowest)]/70 px-4 py-6"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="w-full max-w-2xl rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
-                    {t(language, "council.overview.handoff.dialogTitle")}
-                  </h3>
-                  <p className={`mt-1 text-sm ${SECONDARY_TEXT_CLASS}`}>
-                    {t(language, "council.overview.handoff.dialogDescription")}
-                  </p>
-                </div>
+          <Modal
+            open
+            onClose={() => setHandoffOpen(false)}
+            title={t(language, "council.overview.handoff.dialogTitle")}
+            description={t(language, "council.overview.handoff.dialogDescription")}
+            closeLabel={t(language, "council.overview.close")}
+            size="lg"
+            footer={
+              <>
                 <button
                   type="button"
                   onClick={() => setHandoffOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
-                  aria-label={t(language, "council.overview.close")}
+                  className="min-h-[44px] rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
                 >
-                  <Icon name="close" size="20px" />
+                  {t(language, "council.guard.cancel")}
                 </button>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={confirmHandoff}
+                  className="min-h-[44px] rounded-[var(--radius-md)] border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-bold text-[var(--on-secondary-container)] hover:bg-[var(--brand-700)]"
+                >
+                  {t(language, "council.overview.handoff.send")}
+                </button>
+              </>
+            }
+          >
+              <div className="grid gap-3 sm:grid-cols-2">
                 {HANDOFF_SPECIALTIES.map((item) => {
                   const active = selectedSpecialty === item.name;
                   return (
@@ -1575,47 +1577,29 @@ export default function CouncilPage() {
                 })}
               </div>
 
-              <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setHandoffOpen(false)}
-                  className="min-h-[44px] rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
-                >
-                  {t(language, "council.guard.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmHandoff}
-                  className="min-h-[44px] rounded-lg border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-bold text-[var(--on-secondary-container)] hover:bg-[var(--brand-700)]"
-                >
-                  {t(language, "council.overview.handoff.send")}
-                </button>
-              </div>
-            </div>
-          </div>
+          </Modal>
         ) : null}
 
         {guardAction ? (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-lowest)]/70 px-4 py-6"
-            role="dialog"
-            aria-modal="true"
+          <Modal
+            open
+            onClose={closeGuardDialog}
+            title={guardAction === "override" ? t(language, "council.guard.overrideTitle") : t(language, "council.guard.pauseTitle")}
+            description={guardAction === "override" ? t(language, "council.guard.overrideDescription") : t(language, "council.guard.pauseDescription")}
+            closeLabel={t(language, "council.overview.close")}
+            footer={
+              <>
+                <button type="button" onClick={closeGuardDialog} className="min-h-[44px] rounded-[var(--radius-md)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]">
+                  {t(language, "council.guard.cancel")}
+                </button>
+                <button type="button" onClick={confirmGuardAction} disabled={!guardReason.trim()} className="min-h-[44px] rounded-[var(--radius-md)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-text)] px-4 text-sm font-bold text-[var(--on-error)] transition hover:opacity-90 disabled:bg-[var(--status-danger-bg)] disabled:text-[var(--status-danger-text)] disabled:opacity-60">
+                  {t(language, "council.guard.confirm")}
+                </button>
+              </>
+            }
           >
-            <div className="w-full max-w-xl rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5">
-              <h3 className={`text-xl font-black ${BODY_TEXT_CLASS}`}>
-                {guardAction === "override"
-                  ? t(language, "council.guard.overrideTitle")
-                  : t(language, "council.guard.pauseTitle")}
-              </h3>
-              <p
-                className={`mt-2 text-sm leading-relaxed ${SECONDARY_TEXT_CLASS}`}
-              >
-                {guardAction === "override"
-                  ? t(language, "council.guard.overrideDescription")
-                  : t(language, "council.guard.pauseDescription")}
-              </p>
               <label
-                className={`mt-4 block text-sm font-bold ${BODY_TEXT_CLASS}`}
+                className={`block text-sm font-bold ${BODY_TEXT_CLASS}`}
                 htmlFor="guard-reason"
               >
                 {t(language, "council.guard.reasonLabel")}
@@ -1627,25 +1611,7 @@ export default function CouncilPage() {
                 className="mt-2 min-h-[120px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[color:var(--brand-primary)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/15"
                 placeholder={t(language, "council.guard.reasonPlaceholder")}
               />
-              <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeGuardDialog}
-                  className="min-h-[44px] rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-panel)]"
-                >
-                  {t(language, "council.guard.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmGuardAction}
-                  disabled={!guardReason.trim()}
-                  className="min-h-[44px] rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-text)] px-4 text-sm font-bold text-[var(--on-error)] transition hover:opacity-90 disabled:bg-[var(--status-danger-bg)] disabled:text-[var(--status-danger-text)] disabled:opacity-60"
-                >
-                  {t(language, "council.guard.confirm")}
-                </button>
-              </div>
-            </div>
-          </div>
+          </Modal>
         ) : null}
       </div>
     </PageShell>
