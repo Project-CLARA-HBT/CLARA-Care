@@ -179,6 +179,73 @@
   -webkit-text-fill-color: currentColor;
 }
 
+/* Final compatibility overrides: preserve old class contracts without the
+ * former light/cyan/glass visual system. Kept last so old declarations cannot
+ * regain precedence. */
+.clara-chat-workspace,
+html.dark .clara-chat-workspace,
+html[data-theme="dark"] .clara-chat-workspace,
+.clara-chat-v2,
+html.dark .clara-chat-v2,
+html[data-theme="dark"] .clara-chat-v2 {
+  --bg-canvas: #101419;
+  --surface-panel: #1d2025;
+  --surface-muted: #272a30;
+  --shell-border: #414751;
+  --shell-border-strong: #8b919d;
+  --text-primary: #e1e2e9;
+  --text-secondary: #c1c7d3;
+  --text-muted: #c1c7d3;
+  background: var(--bg-canvas);
+}
+
+.research-chip,
+.research-chip-cyan,
+html.dark .research-chip,
+html[data-theme="dark"] .research-chip,
+html.dark .research-chip-cyan,
+html[data-theme="dark"] .research-chip-cyan {
+  border-color: var(--shell-border);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.research-chip-cyan {
+  border-color: var(--status-warn-border);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-text);
+}
+
+.clara-glow-cyan,
+.glow-cyan {
+  box-shadow: none;
+}
+
+.clinical-gradient {
+  background: var(--brand-600);
+  box-shadow: none;
+}
+
+.research-live-engine {
+  border-color: var(--shell-border);
+  background: var(--surface-muted);
+}
+
+.research-live-engine::before {
+  display: none;
+}
+
+.research-live-bar {
+  background: var(--brand-primary);
+  box-shadow: none;
+}
+
+.research-pulse-dot {
+  background: var(--brand-primary);
+  box-shadow: none;
+  animation: none;
+}
+
 /* Modern application shell ---------------------------------------------------- */
 .app-navigation {
   background: var(--surface-sidebar);
@@ -606,11 +673,13 @@ html[data-theme="dark"] {
   --glass-fill: rgba(29, 32, 37, 0.88);
   --glass-stroke: rgba(65, 71, 81, 0.88);
   --glass-highlight: rgba(39, 42, 48, 0.86);
-  --shadow-soft: 0 18px 36px -30px rgba(2, 6, 23, 0.82);
-  --shadow-float: 0 26px 62px -42px rgba(2, 6, 23, 0.88);
-  --shadow-hero: 0 32px 94px -54px rgba(2, 6, 23, 0.92);
-  --shadow-focus: 0 0 0 3px rgba(99, 155, 255, 0.35);
-  --shadow-chrome: 0 22px 56px -34px rgba(2, 6, 23, 0.9);
+  /* Depth comes from the canonical tonal stack and borders, not drop shadows. */
+  --shadow-sm: none;
+  --shadow-soft: none;
+  --shadow-float: none;
+  --shadow-hero: none;
+  --shadow-focus: 0 0 0 2px rgb(164 201 255 / 15%);
+  --shadow-chrome: none;
   --focus-ring-color: #a4c9ff;
 }
 
