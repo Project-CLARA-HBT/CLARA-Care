@@ -32,7 +32,7 @@ const BASE_BUTTON =
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    "border border-[color:var(--brand-600)] bg-[var(--brand-600)] text-white hover:bg-[var(--brand-700)] active:bg-[var(--brand-700)]",
+    "border border-[color:var(--brand-600)] bg-[var(--brand-600)] text-[var(--on-secondary-container)] hover:bg-[var(--brand-700)] active:bg-[var(--brand-700)]",
   secondary:
     "border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:border-[color:var(--shell-border-strong)] hover:text-[var(--text-primary)]",
   ghost:

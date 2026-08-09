@@ -175,7 +175,7 @@ export default function TransparencyNoticeGate() {
             type="button"
             onClick={onAcknowledge}
             disabled={acknowledging}
-            className="inline-flex min-h-[42px] items-center rounded-xl border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--brand-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-[42px] items-center rounded-[var(--radius-md)] border border-[color:var(--brand-600)] bg-[var(--brand-600)] px-4 text-sm font-semibold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shell-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {acknowledging
               ? t(uiLanguage, "compliance.transparency.acknowledging")

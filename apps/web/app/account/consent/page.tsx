@@ -243,7 +243,7 @@ export default function ConsentCenterPage() {
                             <span
                               aria-hidden="true"
                               className={[
-                                "ml-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none",
+                                "ml-0.5 h-5 w-5 rounded-full bg-[var(--text-primary)] transition-transform motion-reduce:transition-none",
                                 granted ? "translate-x-5" : "translate-x-0",
                               ].join(" ")}
                             />

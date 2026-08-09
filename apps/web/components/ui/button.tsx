@@ -19,7 +19,7 @@ const VARIANTS: Record<Variant, string> = {
   ghost:
     "border border-transparent bg-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]",
   danger:
-    "border border-[color:var(--danger-500)] bg-[var(--danger-500)] text-white hover:brightness-95 active:translate-y-px",
+    "border border-[color:var(--danger-500)] bg-[var(--danger-500)] text-[var(--on-error-container)] hover:brightness-95 active:translate-y-px",
 };
 
 const SIZES: Record<Size, string> = {

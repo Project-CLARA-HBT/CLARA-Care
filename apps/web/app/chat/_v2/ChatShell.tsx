@@ -638,7 +638,7 @@ export default function ChatShell() {
     >
       <a
         href="#chat-v2-main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[80] focus:rounded-lg focus:bg-[var(--brand-600)] focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[80] focus:rounded-lg focus:bg-[var(--brand-600)] focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--on-secondary-container)]"
       >
         {t(uiLanguage, "chat.shell.skipToConversation")}
       </a>

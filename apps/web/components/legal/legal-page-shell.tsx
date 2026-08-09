@@ -102,13 +102,13 @@ export default function LegalPageShell({
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-700 dark:text-cyan-300">
+            <span className="rounded-full border border-[color:var(--brand-primary)]/35 bg-[var(--surface-brand-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-brand)]">
               Branding: The Clara Care
             </span>
             <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Cập nhật: {updatedAt}
             </span>
-            <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
+            <span className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--status-ok-text)]">
               Hiệu lực toàn hệ thống
             </span>
           </div>
@@ -136,7 +136,7 @@ export default function LegalPageShell({
                   className={[
                     "rounded-xl border px-3 py-3 transition",
                     active
-                      ? "border-cyan-400/45 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                      ? "border-[color:var(--brand-primary)]/45 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]",
                   ].join(" ")}
                 >

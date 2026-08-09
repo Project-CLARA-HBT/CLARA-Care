@@ -77,13 +77,13 @@ export default function LegalHubPage() {
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-700 dark:text-cyan-300">
+            <span className="rounded-full border border-[color:var(--brand-primary)]/35 bg-[var(--surface-brand-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-brand)]">
               Branding: The Clara Care
             </span>
             <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Policy version: {LEGAL_POLICY_VERSION}
             </span>
-            <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
+            <span className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--status-ok-text)]">
               Cập nhật: {LEGAL_UPDATED_AT}
             </span>
           </div>
@@ -95,7 +95,7 @@ export default function LegalHubPage() {
               <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--text-brand)]">{item.shortLabel}</p>
               <h2 className="mt-2 text-lg font-extrabold tracking-tight text-[var(--text-primary)] sm:text-xl">{item.title}</h2>
               <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">{item.detail}</p>
-              <Link href={item.href} className="mt-4 inline-flex min-h-[44px] items-center rounded-xl bg-[var(--text-brand)] px-4 py-2 text-sm font-bold text-white transition hover:opacity-90">
+              <Link href={item.href} className="mt-4 inline-flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--brand-600)] px-4 py-2 text-sm font-bold text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)]">
                 Xem chính sách
               </Link>
             </article>

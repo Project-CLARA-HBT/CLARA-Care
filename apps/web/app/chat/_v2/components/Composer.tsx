@@ -260,7 +260,7 @@ function Composer(props: ComposerProps) {
                 variant="primary"
                 type="submit"
                 disabled={!query.trim()}
-                className="shrink-0 !h-10 !w-10 !text-white"
+                className="shrink-0 !h-10 !w-10 !text-[var(--on-secondary-container)]"
               />
             )}
           </div>

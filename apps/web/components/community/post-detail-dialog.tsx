@@ -241,7 +241,7 @@ export default function PostDetailDialog({
                 type="button"
                 onClick={submitComment}
                 disabled={submitting || !commentBody.trim()}
-                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-[var(--radius-md)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-secondary-container)] disabled:opacity-50"
               >
                 {submitting ? copy("community.comment.submitting") : copy("community.comment.submit")}
               </button>

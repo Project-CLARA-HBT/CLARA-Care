@@ -153,7 +153,7 @@ export default function ChatWelcome({
   return (
     <div className="clara-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-7 sm:py-12">
       <section className="mx-auto flex w-full max-w-3xl flex-col justify-center">
-        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-600)] text-white">
+        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-600)] text-[var(--on-secondary-container)]">
           <Icon name="clinical-notes" size={25} />
         </div>
         <p className="text-xs font-semibold text-[var(--text-brand)]">

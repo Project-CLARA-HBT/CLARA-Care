@@ -95,7 +95,7 @@ function ConversationSidebar(props: ConversationSidebarProps) {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--brand-600)] text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--brand-600)] text-[var(--on-secondary-container)]">
             <Icon name="chat" size={17} />
           </span>
           <p className="text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
