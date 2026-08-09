@@ -144,13 +144,6 @@ function edgeStroke(edge: FlowEdge, props: CouncilFlowCanvasProps): string {
   return "var(--c-edge-core)";
 }
 
-function isNodeHighlighted(node: FlowNode, props: CouncilFlowCanvasProps): boolean {
-  if (node.id === "followup") return props.needsMoreInfo;
-  if (node.id === "emergency") return props.isEmergency;
-  if (node.id === "citations") return props.hasCitations;
-  return node.kind === "core";
-}
-
 export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
   const language = useUILanguage();
   const reviewState = props.needsMoreInfo
@@ -159,8 +152,6 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
 
   return (
     <section className="relative overflow-hidden rounded-[14px] border border-[color:var(--shell-border)] border-t-[#2A3950] bg-[var(--surface-panel)] p-4 sm:p-5 [--c-node-inactive-fill:#272a30] [--c-node-inactive-stroke:#414751] [--c-node-inactive-title:#c1c7d3] [--c-node-inactive-subtitle:#8b919d] [--c-node-core-fill:#1d2025] [--c-node-core-stroke:#60a5fa] [--c-node-core-title:#e1e2e9] [--c-node-core-subtitle:#a4c9ff] [--c-node-branch-fill:#272a30] [--c-node-branch-stroke:#414751] [--c-node-branch-title:#c1c7d3] [--c-node-branch-subtitle:#8b919d] [--c-node-followup-fill:#4b3500] [--c-node-followup-stroke:#fabd34] [--c-node-followup-title:#ffdea4] [--c-node-followup-subtitle:#fabd34] [--c-node-emergency-fill:#93000a] [--c-node-emergency-stroke:#ffb4ab] [--c-node-emergency-title:#ffdad6] [--c-node-emergency-subtitle:#ffb4ab] [--c-node-citations-fill:#272a30] [--c-node-citations-stroke:#a4c9ff] [--c-node-citations-title:#e1e2e9] [--c-node-citations-subtitle:#a4c9ff] [--c-edge-core:#a4c9ff] [--c-edge-muted:#8b919d] [--c-edge-warning:#fabd34] [--c-edge-danger:#ffb4ab]">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(65,71,81,0.28)_1px,transparent_1px),linear-gradient(to_bottom,rgba(65,71,81,0.28)_1px,transparent_1px)] bg-[size:26px_26px]" />
-
       <div className="relative flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{t(language, "council.flow.eyebrow")}</p>
@@ -223,13 +214,6 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
             <marker id="council-flow-arrow-danger" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
               <path d="M0,0 L10,5 L0,10 z" fill="var(--c-edge-danger)" />
             </marker>
-            <filter id="council-flow-glow" x="-45%" y="-45%" width="190%" height="190%">
-              <feGaussianBlur stdDeviation="3.5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
           </defs>
 
           {EDGES.map((edge, index) => {
@@ -261,14 +245,12 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
                 strokeDasharray={edge.dashed ? "8 7" : undefined}
                 markerEnd={marker}
                 opacity={branchActive ? 1 : 0.54}
-                filter={branchActive ? "url(#council-flow-glow)" : undefined}
               />
             );
           })}
 
           {NODES.map((node) => {
             const palette = nodePalette(node, props);
-            const highlighted = isNodeHighlighted(node, props);
             return (
               <g key={node.id}>
                 <rect
@@ -280,7 +262,6 @@ export default function CouncilFlowCanvas(props: CouncilFlowCanvasProps) {
                   fill={palette.fill}
                   stroke={palette.stroke}
                   strokeWidth={2}
-                  filter={highlighted ? "url(#council-flow-glow)" : undefined}
                 />
                 <text x={node.x + 12} y={node.y + 26} fontSize={14} fontWeight={700} fill={palette.title}>
                   {t(language, node.titleKey)}
