@@ -19,6 +19,7 @@ export function Modal({
   children,
   footer,
   size = "md",
+  closeLabel = "Đóng",
 }: {
   open: boolean;
   onClose: () => void;
@@ -27,6 +28,7 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
+  closeLabel?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -116,7 +118,7 @@ export function Modal({
             variant="ghost"
             size="sm"
             icon="close"
-            aria-label="Đóng"
+            aria-label={closeLabel}
             onClick={onClose}
             className="!min-h-9 shrink-0"
           />
