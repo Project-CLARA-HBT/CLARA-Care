@@ -4,6 +4,7 @@ import { useId, type ReactNode } from "react";
 
 import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import { Icon } from "@/components/ui/icon";
 
 import { StepProgress, type GuidedFlowStep } from "./step-progress";
 
@@ -35,9 +36,7 @@ function SaveState({ state }: { state: GuidedFlowSaveState }) {
       aria-live="polite"
       className="flex min-h-6 items-center gap-2 text-sm text-[var(--text-secondary)]"
     >
-      <span className="material-symbols-outlined text-base" aria-hidden="true">
-        {state.kind === "saving" ? "progress_activity" : "check_circle"}
-      </span>
+      <Icon name={state.kind === "saving" ? "progress" : "check"} size="1rem" />
       {state.message ??
         t(
           language,

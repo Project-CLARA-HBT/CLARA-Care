@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Icon, resolveIconName } from "@/components/ui/icon";
 
 export type BadgeTone = "neutral" | "brand" | "ok" | "warn" | "danger";
 
@@ -29,9 +30,7 @@ export function Badge({
       className={`inline-flex items-center gap-1 rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold ${TONES[tone]} ${className}`}
     >
       {icon ? (
-        <span className="material-symbols-outlined text-[0.95rem] leading-none" aria-hidden="true">
-          {icon}
-        </span>
+        <Icon name={resolveIconName(icon)} size="0.95rem" className="leading-none" />
       ) : null}
       {children}
     </span>

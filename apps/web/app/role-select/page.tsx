@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/http-client";
 import { SurfaceCard } from "@/components/ui/surface";
+import { Icon } from "@/components/ui/icon";
 import {
   getRoleHomePath,
   type UserRole,
@@ -45,12 +46,7 @@ export default function LegacyRoleSelectionRedirect() {
     <main className="mx-auto flex min-h-[100dvh] max-w-lg items-center justify-center px-4 py-12 sm:px-6">
       <SurfaceCard className="w-full p-7 text-center sm:p-9">
         <div role="status">
-          <span
-            className="material-symbols-outlined animate-pulse text-3xl text-[var(--brand-600)]"
-            aria-hidden="true"
-          >
-            shield_person
-          </span>
+          <Icon name="warning" size="1.875rem" className="animate-pulse text-[var(--brand-600)]" />
           <h1 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
             {t(language, "roleRedirect.title")}
           </h1>

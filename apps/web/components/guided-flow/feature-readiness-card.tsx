@@ -4,6 +4,7 @@ import type { MouseEventHandler } from "react";
 import { useId } from "react";
 
 import Button from "@/components/ui/button";
+import { Icon, resolveIconName } from "@/components/ui/icon";
 
 type ReadinessAction = {
   label: string;
@@ -75,9 +76,7 @@ export function FeatureReadinessCard({
         <p
           className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold ${status.className}`}
         >
-          <span className="material-symbols-outlined text-base" aria-hidden="true">
-            {status.icon}
-          </span>
+          <Icon name={resolveIconName(status.icon)} size="1rem" />
           {status.label}
         </p>
       </div>

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/surface";
 import Button from "@/components/ui/button";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
+import { Icon } from "@/components/ui/icon";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import type { UILanguage } from "@/lib/ui-language";
@@ -44,13 +45,13 @@ function FamilyAccessLogRow({
   const allowed = outcomeCode === "allowed";
   return (
     <div className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3">
-      <span
-        className={`material-symbols-outlined text-base ${
+      <Icon
+        name={allowed ? "check" : "warning"}
+        size="1rem"
+        className={`${
           allowed ? "text-[var(--status-ok-text)]" : "text-[var(--status-danger-text)]"
         }`}
-      >
-        {allowed ? "verified_user" : "gpp_bad"}
-      </span>
+      />
       <div>
         <p className="text-sm font-medium text-[var(--text-primary)]">
           {actorLabel} · {actionLabel} · {outcomeLabel}

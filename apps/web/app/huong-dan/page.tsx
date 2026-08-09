@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import Button from "@/components/ui/button";
+import { Icon, resolveIconName } from "@/components/ui/icon";
 import { SurfaceCard } from "@/components/ui/surface";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { PRIMARY_ACTIONS, type PrimarySurface } from "@/lib/primary-actions";
@@ -131,9 +132,7 @@ export default function GuidePage() {
           return (
             <SurfaceCard key={task.title} className="p-4">
               <div className="flex items-start gap-3">
-                <span className="material-symbols-outlined mt-0.5 text-[22px] text-[var(--brand-600)]">
-                  {task.icon}
-                </span>
+                <Icon name={resolveIconName(task.icon)} size="22px" className="mt-0.5 text-[var(--brand-600)]" />
                 <div className="min-w-0 flex-1">
                   <h2 className="text-base font-semibold text-[var(--text-primary)]">
                     {t(uiLanguage, task.title)}

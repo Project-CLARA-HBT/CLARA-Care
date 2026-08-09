@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { Icon, resolveIconName } from "@/components/ui/icon";
 
 export type TabItem = {
   key: string;
@@ -96,9 +97,7 @@ export function Tabs({
             }`}
           >
             {item.icon ? (
-              <span className="material-symbols-outlined text-[1.15em]" aria-hidden="true">
-                {item.icon}
-              </span>
+              <Icon name={resolveIconName(item.icon)} size="1.15em" />
             ) : null}
             {item.label}
           </button>

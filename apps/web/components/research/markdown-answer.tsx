@@ -8,6 +8,7 @@ import type { UILanguage } from "@/lib/ui-language";
 import { formatLocaleNumber, t } from "@/lib/i18n/catalog";
 import { safeUserFacingError } from "@/lib/user-facing-text";
 import { exportWorkspaceDocxFromMarkdown } from "@/lib/workspace";
+import { Icon } from "@/components/ui/icon";
 import {
   citationRegistryAnchorId,
   injectTracedClaimAnchors,
@@ -121,15 +122,15 @@ function resolveSectionTone(title: string): SectionTone {
 function sectionHeadingClasses(tone: SectionTone): string {
   switch (tone) {
     case "brand":
-      return "mt-6 text-[1rem] font-semibold tracking-tight text-slate-950 first:mt-0 dark:text-slate-100";
+      return "mt-6 text-[1rem] font-semibold tracking-tight text-[var(--text-primary)] first:mt-0";
     case "evidence":
-      return "mt-6 border-t border-slate-200/80 pt-2.5 text-[0.96rem] font-semibold tracking-tight text-slate-900 first:mt-0 first:border-t-0 first:pt-0 dark:border-slate-800 dark:text-slate-100";
+      return "mt-6 border-t border-[color:var(--shell-border)] pt-2.5 text-[0.96rem] font-semibold tracking-tight text-[var(--text-primary)] first:mt-0 first:border-t-0 first:pt-0";
     case "safety":
-      return "mt-6 border-t border-emerald-200/70 pt-2.5 text-[0.96rem] font-semibold tracking-tight text-slate-900 first:mt-0 first:border-t-0 first:pt-0 dark:border-emerald-900/50 dark:text-slate-100";
+      return "mt-6 border-t border-[color:var(--status-ok-border)] pt-2.5 text-[0.96rem] font-semibold tracking-tight text-[var(--text-primary)] first:mt-0 first:border-t-0 first:pt-0";
     case "warning":
-      return "mt-6 border-t border-amber-200/70 pt-2.5 text-[0.96rem] font-semibold tracking-tight text-slate-900 first:mt-0 first:border-t-0 first:pt-0 dark:border-amber-900/50 dark:text-slate-100";
+      return "mt-6 border-t border-[color:var(--status-warn-border)] pt-2.5 text-[0.96rem] font-semibold tracking-tight text-[var(--text-primary)] first:mt-0 first:border-t-0 first:pt-0";
     default:
-      return "mt-6 border-t border-slate-200/80 pt-2.5 text-[0.96rem] font-semibold tracking-tight text-slate-900 first:mt-0 first:border-t-0 first:pt-0 dark:border-slate-800 dark:text-slate-100";
+      return "mt-6 border-t border-[color:var(--shell-border)] pt-2.5 text-[0.96rem] font-semibold tracking-tight text-[var(--text-primary)] first:mt-0 first:border-t-0 first:pt-0";
   }
 }
 
@@ -195,7 +196,7 @@ function sanitizeMermaidSvg(svg: string): string {
     parsed.querySelectorAll("text, tspan").forEach((node) => {
       const current = node.getAttribute("fill")?.trim().toLowerCase() ?? "";
       if (!current || current === "none" || current === "transparent") {
-        node.setAttribute("fill", "#0f172a");
+        node.setAttribute("fill", "#e1e2e9");
       }
       if (!node.getAttribute("font-family")) {
         node.setAttribute("font-family", "Inter, Segoe UI, Arial, sans-serif");
@@ -205,7 +206,7 @@ function sanitizeMermaidSvg(svg: string): string {
     const svgEl = parsed.documentElement;
     const styleEl = parsed.createElementNS("http://www.w3.org/2000/svg", "style");
     styleEl.textContent = `
-      text, tspan, .label, .nodeLabel { fill: #0f172a !important; color: #0f172a !important; }
+      text, tspan, .label, .nodeLabel { fill: #e1e2e9 !important; color: #e1e2e9 !important; }
     `;
     svgEl.insertBefore(styleEl, svgEl.firstChild);
 
@@ -321,11 +322,11 @@ function ChartSpecPreview({ spec, uiLanguage }: { spec: ChartSpecData; uiLanguag
   const total = spec.values.reduce((sum, item) => sum + Math.max(item, 0), 0);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900/60">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">
+    <section className="rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
         {t(uiLanguage, "markdownAnswer.chart.preview")} · {spec.type.toUpperCase()}
       </p>
-      <h4 className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{spec.title}</h4>
+      <h4 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{spec.title}</h4>
       {spec.type === "pie" ? (
         <div className="mt-3 space-y-2">
           {spec.labels.map((label, index) => {
@@ -333,13 +334,13 @@ function ChartSpecPreview({ spec, uiLanguage }: { spec: ChartSpecData; uiLanguag
             const pct = total > 0 ? (Math.max(value, 0) / total) * 100 : 0;
             return (
               <div key={`${label}-${index}`} className="space-y-1">
-                <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
                   <span>{label}</span>
                   <span>{formatChartValue(uiLanguage, value)} ({pct.toFixed(1)}%)</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-highest)]">
                   <div
-                    className="h-full rounded-full bg-cyan-500"
+                    className="h-full rounded-full bg-[var(--brand-primary)]"
                     style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
                   />
                 </div>
@@ -354,14 +355,14 @@ function ChartSpecPreview({ spec, uiLanguage }: { spec: ChartSpecData; uiLanguag
             const ratio = Math.max(0, value) / max;
             return (
               <div key={`${label}-${index}`} className="grid grid-cols-[minmax(120px,1fr)_4fr_auto] items-center gap-2 text-xs">
-                <span className="truncate text-slate-600 dark:text-slate-300" title={label}>{label}</span>
-                <div className="h-2 overflow-hidden rounded bg-slate-200 dark:bg-slate-700">
+                <span className="truncate text-[var(--text-secondary)]" title={label}>{label}</span>
+                <div className="h-2 overflow-hidden rounded bg-[var(--surface-highest)]">
                   <div
-                    className="h-full rounded bg-indigo-500"
+                    className="h-full rounded bg-[var(--brand-600)]"
                     style={{ width: `${Math.min(Math.max(ratio * 100, 0), 100)}%` }}
                   />
                 </div>
-                <span className="font-medium text-slate-700 dark:text-slate-200">{formatChartValue(uiLanguage, value)}</span>
+                <span className="font-medium text-[var(--text-primary)]">{formatChartValue(uiLanguage, value)}</span>
               </div>
             );
           })}
@@ -501,7 +502,7 @@ function MermaidBlock({ code, uiLanguage }: MermaidBlockProps) {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+      <div className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-xs text-[var(--status-danger-text)]">
         {t(uiLanguage, "markdownAnswer.mermaid.error")}: {error}
       </div>
     );
@@ -509,17 +510,17 @@ function MermaidBlock({ code, uiLanguage }: MermaidBlockProps) {
 
   if (!svg) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+      <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)]">
         {t(uiLanguage, "markdownAnswer.mermaid.loading")}
       </div>
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-white">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+    <section className="overflow-hidden rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
+      <div className="flex items-center justify-between gap-2 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">
         <span>{t(uiLanguage, "markdownAnswer.mermaid.diagram")}</span>
-        <span className="rounded-full border border-cyan-300/60 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-700 dark:text-cyan-200">
+        <span className="rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[10px] text-[var(--text-brand)]">
           {t(uiLanguage, "markdownAnswer.mermaid.safe")}
         </span>
       </div>
@@ -887,20 +888,20 @@ function CodeFence({ code, language, isChartSpec, uiLanguage }: CodeFenceProps) 
   };
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-slate-900 text-slate-100 dark:border-slate-700">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/80 bg-slate-950/50 px-3 py-2">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-slate-300">
+    <section className="overflow-hidden rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-lowest)] text-[var(--text-primary)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-[var(--text-secondary)]">
           <span className="font-semibold">
             {isChartSpec
               ? t(uiLanguage, "markdownAnswer.code.chartSpec")
               : t(uiLanguage, "markdownAnswer.code.block")}
           </span>
-          <span className="rounded-full border border-slate-600 px-2 py-0.5">{label}</span>
+          <span className="rounded-full border border-[color:var(--shell-border)] px-2 py-0.5">{label}</span>
         </div>
         <button
           type="button"
           onClick={() => void onCopy()}
-          className="rounded-md border border-slate-600 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+          className="rounded-[var(--radius-sm)] border border-[color:var(--shell-border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-primary)] transition hover:border-[color:var(--brand-primary)]/30 hover:bg-[var(--surface-highest)]"
           aria-label={t(uiLanguage, "markdownAnswer.code.copyAria")}
         >
           {notice === "success"
@@ -914,12 +915,12 @@ function CodeFence({ code, language, isChartSpec, uiLanguage }: CodeFenceProps) 
         <code className={language ? `language-${language}` : undefined}>{code}</code>
       </pre>
       {chartSpec ? (
-        <div className="border-t border-slate-700/80 bg-slate-950/40 p-3">
+        <div className="border-t border-[color:var(--shell-border)] bg-[var(--surface-low)] p-3">
           <ChartSpecPreview spec={chartSpec} uiLanguage={uiLanguage} />
         </div>
       ) : null}
       {isChartSpec ? (
-        <p className="border-t border-slate-700/80 bg-slate-950/40 px-3 py-2 text-[11px] text-slate-300">
+        <p className="border-t border-[color:var(--shell-border)] bg-[var(--surface-low)] px-3 py-2 text-[11px] text-[var(--text-secondary)]">
           {t(uiLanguage, "markdownAnswer.chartSpec.notice")}
         </p>
       ) : null}
@@ -950,8 +951,8 @@ function CitationRegistryAppendix({
   if (!entries.length) return null;
 
   return (
-    <section className="mt-6 border-t border-slate-200 pt-3 dark:border-slate-700">
-      <h2 className="text-[0.96rem] font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+    <section className="mt-6 border-t border-[color:var(--shell-border)] pt-3">
+      <h2 className="text-[0.96rem] font-semibold tracking-tight text-[var(--text-primary)]">
         {t(uiLanguage, "markdownAnswer.citationRegistry.title")}
       </h2>
       <ol className="mt-2.5 space-y-2">
@@ -964,23 +965,23 @@ function CitationRegistryAppendix({
             <li
               key={`${entry.citationId}-${index}`}
               id={anchorId}
-              className="scroll-mt-24 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] leading-6 text-slate-800 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100"
+              className="scroll-mt-24 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-[13px] leading-6 text-[var(--text-primary)]"
             >
               <div className="flex items-start gap-2">
-                <span className="mt-0.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-cyan-500/10 px-1.5 text-[10px] font-semibold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
+                <span className="mt-0.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--surface-brand-soft)] px-1.5 text-[10px] font-semibold text-[var(--text-brand)]">
                   {index + 1}
                 </span>
                 <div className="min-w-0">
                   {entry.title ? (
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{entry.title}</p>
+                    <p className="font-medium text-[var(--text-primary)]">{entry.title}</p>
                   ) : null}
                   {entry.studyId ? (
-                    <p className="font-mono text-[12px] text-slate-600 dark:text-slate-300">
+                    <p className="font-mono text-[12px] text-[var(--text-secondary)]">
                       {entry.studyId}
                     </p>
                   ) : null}
                   {meta.length ? (
-                    <p className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
                       {meta.join(" · ")}
                     </p>
                   ) : null}
@@ -989,7 +990,7 @@ function CitationRegistryAppendix({
                       href={href}
                       target="_blank"
                       rel="noreferrer noopener nofollow"
-                      className="break-all text-[12px] font-medium text-cyan-700 underline decoration-cyan-500/50 underline-offset-2 transition hover:text-cyan-900 dark:text-cyan-300 dark:hover:text-cyan-100"
+                      className="break-all text-[12px] font-medium text-[var(--text-brand)] underline decoration-[color:var(--brand-primary)]/50 underline-offset-2 transition hover:text-[var(--text-primary)]"
                     >
                       {href}
                     </a>
@@ -1121,7 +1122,7 @@ export default function MarkdownAnswer({
       const dataUrl = await toPng(node, {
         cacheBust: true,
         pixelRatio: Math.max(2, Math.min(window.devicePixelRatio || 1, 3)),
-        backgroundColor: "#ffffff",
+        backgroundColor: "#101419",
       });
       const response = await fetch(dataUrl);
       const blob = await response.blob();
@@ -1138,14 +1139,14 @@ export default function MarkdownAnswer({
   let pendingLeadSummary = false;
 
   return (
-    <div className="medical-markdown prose prose-slate max-w-none text-slate-950 dark:prose-invert dark:text-slate-100 prose-p:my-2 prose-p:leading-[1.75] prose-li:leading-[1.68] prose-headings:tracking-tight">
+    <div className="medical-markdown prose max-w-none text-[var(--text-primary)] prose-p:my-2 prose-p:leading-[1.75] prose-li:leading-[1.68] prose-headings:tracking-tight">
       <div className="mb-1 flex items-center justify-end gap-1">
         <details className="group relative">
           <summary
             aria-label={t(uiLanguage, "markdownAnswer.actions.more")}
-            className="list-none rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1 text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-cyan-700 dark:hover:text-cyan-300"
+            className="list-none rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-1 text-[var(--text-secondary)] transition hover:border-[color:var(--brand-primary)]/30 hover:text-[var(--text-brand)]"
           >
-            <span className="material-symbols-outlined text-[14px]">more_horiz</span>
+            <Icon name="more" size="14px" />
           </summary>
           <div className="absolute right-0 z-10 mt-2 w-40 space-y-1 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl">
             <button
@@ -1179,7 +1180,7 @@ export default function MarkdownAnswer({
           </div>
         </details>
       </div>
-      {exportNotice ? <p className="mb-2 text-[10px] text-cyan-700 dark:text-cyan-300">{exportNotice}</p> : null}
+      {exportNotice ? <p className="mb-2 text-[10px] text-[var(--text-brand)]">{exportNotice}</p> : null}
       <div id={contentId}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -1195,7 +1196,7 @@ export default function MarkdownAnswer({
             return <h2 className={sectionHeadingClasses(tone)}>{children}</h2>;
           },
           h3: ({ children }) => (
-            <h3 className="mt-5 text-[0.97rem] font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            <h3 className="mt-5 text-[0.97rem] font-semibold tracking-tight text-[var(--text-primary)]">
               {children}
             </h3>
           ),
@@ -1206,7 +1207,7 @@ export default function MarkdownAnswer({
             pendingLeadSummary = false;
             if (isLeadSummary) {
               return (
-                <p className="mt-2.5 rounded-[0.85rem] border border-slate-300/90 bg-slate-50 px-4 py-3 text-[15px] font-semibold leading-7 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-slate-700 dark:bg-slate-900/68 dark:text-slate-50">
+                <p className="mt-2.5 rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-4 py-3 text-[15px] font-semibold leading-7 text-[var(--text-primary)]">
                   {children}
                 </p>
               );
@@ -1214,9 +1215,9 @@ export default function MarkdownAnswer({
             return (
               <p
                 className={[
-                  "mt-2.5 text-[14.5px] leading-7 text-slate-900 dark:text-slate-100",
-                  tone === "safety" ? "text-emerald-900 dark:text-emerald-100" : "",
-                  tone === "warning" ? "text-amber-950 dark:text-amber-50" : "",
+                  "mt-2.5 text-[14.5px] leading-7 text-[var(--text-primary)]",
+                  tone === "safety" ? "text-[var(--status-ok-text)]" : "",
+                  tone === "warning" ? "text-[var(--status-warn-text)]" : "",
                 ].join(" ").trim()}
               >
                 {children}
@@ -1252,8 +1253,8 @@ export default function MarkdownAnswer({
                 title={registryTitle ?? citation?.title}
                 className={
                   isCitationLink
-                    ? "ml-0.5 inline-flex min-w-[1rem] -translate-y-[0.28rem] items-center justify-center rounded-full bg-cyan-500/10 px-1.5 text-[9px] font-semibold text-cyan-700 no-underline transition hover:bg-cyan-500/16 hover:text-cyan-900 dark:bg-cyan-500/12 dark:text-cyan-300 dark:hover:text-cyan-100"
-                    : "font-medium text-cyan-700 underline decoration-cyan-500/50 underline-offset-2 transition hover:text-cyan-900 dark:text-cyan-300 dark:hover:text-cyan-100"
+                    ? "ml-0.5 inline-flex min-w-[1rem] -translate-y-[0.28rem] items-center justify-center rounded-full bg-[var(--surface-brand-soft)] px-1.5 text-[9px] font-semibold text-[var(--text-brand)] no-underline transition hover:bg-[var(--surface-highest)] hover:text-[var(--text-primary)]"
+                    : "font-medium text-[var(--text-brand)] underline decoration-[color:var(--brand-primary)]/50 underline-offset-2 transition hover:text-[var(--text-primary)]"
                 }
               >
                 {children}
@@ -1275,7 +1276,7 @@ export default function MarkdownAnswer({
             if (!isInline && language === "mermaid") {
               if (!enableMermaid) {
                 return (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)]">
                     {t(uiLanguage, "markdownAnswer.mermaid.hidden")}
                   </div>
                 );
@@ -1287,7 +1288,7 @@ export default function MarkdownAnswer({
               return (
                 <code
                   {...props}
-                  className="rounded bg-slate-900/90 px-1.5 py-0.5 font-mono text-[0.82em] text-slate-100"
+                  className="rounded-[var(--radius-sm)] bg-[var(--surface-lowest)] px-1.5 py-0.5 font-mono text-[0.82em] text-[var(--text-primary)]"
                 >
                   {rawCode}
                 </code>
@@ -1298,41 +1299,41 @@ export default function MarkdownAnswer({
             return <CodeFence code={code} language={language} isChartSpec={isChartSpec} uiLanguage={uiLanguage} />;
           },
           table: ({ children }) => (
-            <div className="mt-3 overflow-x-auto rounded-[0.85rem] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/40">
+            <div className="mt-3 overflow-x-auto rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
               <table className="w-full border-collapse text-sm leading-6">{children}</table>
             </div>
           ),
           th: ({ children }) => (
-            <th className="border border-slate-300 bg-slate-100 px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+            <th className="border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-primary)]">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="border border-slate-300 px-3 py-2 align-top text-sm text-slate-900 dark:border-slate-700 dark:text-slate-100">
+            <td className="border border-[color:var(--shell-border)] px-3 py-2 align-top text-sm text-[var(--text-primary)]">
               {children}
             </td>
           ),
           ul: ({ children }) => (
-            <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-[14.4px] text-slate-900 dark:text-slate-100">
+            <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-[14.4px] text-[var(--text-primary)]">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="mt-2.5 list-decimal space-y-1.5 pl-5 text-[14.4px] text-slate-900 dark:text-slate-100">
+            <ol className="mt-2.5 list-decimal space-y-1.5 pl-5 text-[14.4px] text-[var(--text-primary)]">
               {children}
             </ol>
           ),
           li: ({ children }) => (
-            <li className="ml-2 text-[14.4px] leading-7 text-slate-900 marker:text-slate-500 dark:text-slate-100">
+            <li className="ml-2 text-[14.4px] leading-7 text-[var(--text-primary)] marker:text-[var(--text-muted)]">
               {children}
             </li>
           ),
           blockquote: ({ children }) => (
-            <blockquote className="mt-3 rounded-r-xl border-l-4 border-sky-400 bg-sky-50/80 px-3 py-2 text-[14px] leading-7 text-slate-900 dark:bg-sky-950/35 dark:text-slate-100">
+            <blockquote className="mt-3 rounded-r-[var(--radius-lg)] border-l-4 border-[color:var(--brand-primary)] bg-[var(--surface-brand-soft)] px-3 py-2 text-[14px] leading-7 text-[var(--text-primary)]">
               {children}
             </blockquote>
           ),
-          hr: () => <hr className="my-6 border-slate-200 dark:border-slate-700" />,
+          hr: () => <hr className="my-6 border-[color:var(--shell-border)]" />,
         }}
       >
         {renderedMarkdown}

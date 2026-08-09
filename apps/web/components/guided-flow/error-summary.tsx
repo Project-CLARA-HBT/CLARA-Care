@@ -4,6 +4,7 @@ import { useId } from "react";
 
 import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
+import { Icon } from "@/components/ui/icon";
 
 export type GuidedFlowError = {
   id: string;
@@ -35,12 +36,7 @@ export function ErrorSummary({
       className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-[var(--status-danger-text)]"
     >
       <div className="flex items-start gap-3">
-        <span
-          className="material-symbols-outlined mt-0.5 shrink-0 text-xl"
-          aria-hidden="true"
-        >
-          error
-        </span>
+        <Icon name="warning" size="1.25rem" className="mt-0.5" />
         <div className="min-w-0">
           <h2 id={headingId} className="text-sm font-semibold">
             {title ?? t(language, "flow.checkInformation")}

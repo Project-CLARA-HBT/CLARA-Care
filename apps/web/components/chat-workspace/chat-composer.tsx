@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { ResearchExecutionMode, ResearchRetrievalStackMode } from "@/lib/research";
 import type { UILanguage } from "@/lib/ui-language";
+import { Icon } from "@/components/ui/icon";
 
 type ChatComposerProps = {
   query: string;
@@ -82,14 +83,14 @@ export default function ChatComposer(props: ChatComposerProps) {
       disabled
         ? "cursor-not-allowed border border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-muted)] opacity-55"
         : active
-          ? "border border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+          ? "border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
           : "border border-transparent text-[var(--text-secondary)] hover:border-[color:var(--shell-border)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]",
     ].join(" ");
 
   return (
     <footer className="sticky bottom-0 z-20 border-t border-[color:var(--shell-border)]/60 bg-[var(--bg-canvas)]/92 px-0.5 pb-0.5 pt-0.5 backdrop-blur-xl sm:px-1">
       <div className="mx-auto w-full max-w-none">
-        <div className="rounded-2xl border-2 border-[color:var(--shell-border)] bg-[var(--surface-panel)]/98 px-1.5 py-1 shadow-lg focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20">
+        <div className="rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-1.5 py-1 focus-within:border-[color:var(--brand-primary)] focus-within:ring-2 focus-within:ring-[color:var(--brand-primary)]/15">
           <form onSubmit={onSubmit} className="space-y-0.5">
             <div className="flex items-center justify-between gap-1.5">
               <div className="flex min-w-0 items-center gap-1">
@@ -99,11 +100,11 @@ export default function ChatComposer(props: ChatComposerProps) {
                   className={[
                     "inline-flex min-h-[24px] shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold transition",
                     isControlsOpen
-                      ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                      ? "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                       : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                   ].join(" ")}
                   >
-                    <span className="material-symbols-outlined text-[13px]">tune</span>
+                    <Icon name="settings" size="13px" />
                   <span className="truncate">
                     {isControlsOpen ? controlsSummary : t(uiLanguage, "chat.legacyComposer.advanced")}
                   </span>
@@ -116,18 +117,18 @@ export default function ChatComposer(props: ChatComposerProps) {
                     className={[
                       "inline-flex min-h-[24px] shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold transition",
                       isPromptTrayOpen
-                        ? "border-cyan-300/70 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300"
+                        ? "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                         : "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                     ].join(" ")}
                   >
-                    <span className="material-symbols-outlined text-[12px]">history</span>
+                    <Icon name="progress" size="12px" />
                     {t(uiLanguage, "chat.legacyComposer.promptTray")}
                   </button>
                 ) : null}
               </div>
 
               {isSubmitting || liveJobId || liveStatusNote ? (
-                <span className="inline-flex min-h-[24px] max-w-[16rem] shrink-0 items-center rounded-full border border-cyan-300/65 bg-cyan-500/12 px-2 text-[9px] font-semibold text-cyan-800 dark:text-cyan-200">
+              <span className="inline-flex min-h-[24px] max-w-[16rem] shrink-0 items-center rounded-full border border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] px-2 text-[9px] font-semibold text-[var(--text-brand)]">
                   <span className="truncate">
                     {liveStatusNote || t(uiLanguage, "chat.legacyComposer.liveStatusFallback")}
                   </span>
@@ -210,11 +211,11 @@ export default function ChatComposer(props: ChatComposerProps) {
                 <button
                   type="submit"
                   disabled={isSubmitting || !query.trim()}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:scale-[1.02] hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-600)] text-[var(--on-secondary-container)] transition hover:bg-[var(--brand-700)] active:scale-95 disabled:cursor-not-allowed disabled:bg-[var(--surface-muted)] disabled:text-[var(--text-muted)]"
                   aria-label={t(uiLanguage, "chat.composer.send")}
                   title={t(uiLanguage, "chat.composer.send")}
                 >
-                  <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
+                  <Icon name="send" size="18px" />
                 </button>
               </div>
             </div>
@@ -229,7 +230,7 @@ export default function ChatComposer(props: ChatComposerProps) {
                   key={prompt}
                   type="button"
                   onClick={() => onChangeQuery(prompt)}
-                  className="inline-flex min-h-[24px] shrink-0 items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[9px] font-medium text-[var(--text-secondary)] transition hover:border-cyan-300/70 hover:text-[var(--text-primary)]"
+                  className="inline-flex min-h-[24px] shrink-0 items-center rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-2 text-[9px] font-medium text-[var(--text-secondary)] transition hover:border-[color:var(--brand-primary)]/30 hover:text-[var(--text-primary)]"
                   title={prompt}
                 >
                   <span className="max-w-[18rem] truncate">{prompt}</span>
@@ -242,18 +243,18 @@ export default function ChatComposer(props: ChatComposerProps) {
         {liveJobId || liveStatusNote || showRawError || notice ? (
           <div className="mt-0.5 text-[10px]">
             {isSubmitting && !liveJobId && !liveStatusNote ? (
-              <p className="font-semibold text-cyan-800 dark:text-cyan-200">
+              <p className="font-semibold text-[var(--text-brand)]">
                 {t(uiLanguage, "chat.legacyComposer.liveStatusFallback")}
               </p>
             ) : null}
             {liveJobId && !liveStatusNote ? (
-              <p className="text-cyan-700 dark:text-cyan-300">
+              <p className="text-[var(--text-brand)]">
                 {t(uiLanguage, "chat.legacyComposer.liveStatusFallback")}
               </p>
             ) : null}
-            {liveStatusNote ? <p className="text-cyan-700 dark:text-cyan-300">{liveStatusNote}</p> : null}
-            {showRawError ? <p className="text-rose-500">{error}</p> : null}
-            {!showRawError && notice ? <p className="text-emerald-600 dark:text-emerald-300">{notice}</p> : null}
+            {liveStatusNote ? <p className="text-[var(--text-brand)]">{liveStatusNote}</p> : null}
+            {showRawError ? <p className="text-[var(--status-danger-text)]">{error}</p> : null}
+            {!showRawError && notice ? <p className="text-[var(--status-ok-text)]">{notice}</p> : null}
           </div>
         ) : null}
       </div>

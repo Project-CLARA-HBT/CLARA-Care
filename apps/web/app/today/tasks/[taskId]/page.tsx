@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { completeLifeMapTask, getLifeMapToday, type LifeMapTask } from "@/lib/lifemap";
@@ -85,9 +86,7 @@ export default function TodayTaskDetailPage() {
           <LoadingCards count={1} />
         ) : completed ? (
           <SurfaceCard className="p-6 text-center">
-            <span className="material-symbols-outlined text-4xl text-[var(--text-success)]" aria-hidden="true">
-              task_alt
-            </span>
+            <Icon name="check" size="2.25rem" className="text-[var(--text-success)]" />
             <h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
               {t(language, "today.taskDetail.completedTitle")}
             </h2>
@@ -101,9 +100,7 @@ export default function TodayTaskDetailPage() {
         ) : task ? (
           <SurfaceCard className="p-6">
             <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined mt-0.5 text-[var(--text-brand)]" aria-hidden="true">
-                task_alt
-              </span>
+              <Icon name="check" className="mt-0.5 text-[var(--text-brand)]" />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-[var(--text-secondary)]">
                   {t(language, "today.taskDetail.acceptedTask")}

@@ -44,6 +44,44 @@ export const ICON_NAMES = [
 
 export type IconName = (typeof ICON_NAMES)[number];
 
+/**
+ * Transitional mapping for persisted configuration that still stores Material
+ * Symbols names. Keep this at the UI boundary so an unavailable icon font can
+ * never render the literal glyph name (or a question-mark fallback) to people.
+ */
+const LEGACY_ICON_NAMES: Record<string, IconName> = {
+  account_tree: "progress",
+  add: "plus",
+  arrow_back: "arrow-left",
+  arrow_forward: "arrow-right",
+  calendar_today: "calendar",
+  check_circle: "check",
+  clinical_notes: "clinical-notes",
+  diversity_1: "contact",
+  emergency_home: "emergency",
+  error: "warning",
+  fact_check: "check",
+  folder_open: "folder",
+  gpp_bad: "warning",
+  health_and_safety: "warning",
+  history: "progress",
+  info: "clinical-notes",
+  inventory_2: "medication",
+  labs: "scan",
+  lock: "warning",
+  medication: "medication",
+  schedule: "progress",
+  share: "share",
+  spa: "body",
+  symptoms: "body",
+  verified_user: "check",
+};
+
+export function resolveIconName(name: string): IconName {
+  if ((ICON_NAMES as readonly string[]).includes(name)) return name as IconName;
+  return LEGACY_ICON_NAMES[name] ?? "clinical-notes";
+}
+
 const ICON_PATHS: Record<IconName, string> = {
   "user-card": "M15 19a6 6 0 0 0-12 0m12 0h6V5H3v14m12 0H9m3-7a3 3 0 1 0 0-6 3 3 0 0 0 0 6m5-3h2m-2 4h2",
   body: "M12 5.5a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5ZM7 8.5l3-1h4l3 1m-8 1.5v4l-1.5 8m7.5-12v4l1.5 8M10 14h4",
@@ -89,7 +127,7 @@ export type IconProps = Omit<SVGAttributes<SVGSVGElement>, "children" | "name"> 
 export function Icon({ name, label, size = "1.25em", className = "", ...props }: IconProps) {
   // Runtime content can still carry a stale glyph identifier. Resolve it to a
   // calm semantic icon rather than exposing a question-mark fallback or text.
-  const resolvedName = ICON_PATHS[name] ? name : "clinical-notes";
+  const resolvedName = resolveIconName(name);
   const path = ICON_PATHS[resolvedName];
   const accessible = Boolean(label?.trim());
 

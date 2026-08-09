@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
+import { Icon } from "@/components/ui/icon";
 import PageShell from "@/components/ui/page-shell";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { safeUserFacingError } from "@/lib/user-facing-text";
@@ -124,7 +125,7 @@ export default function CouncilNewPage() {
                     #{item.id} · {item.status} · {formatTime(language, item.updated_at)}
                   </p>
                 </span>
-                <span className="material-symbols-outlined text-[var(--text-secondary)]">chevron_right</span>
+                <Icon name="arrow-right" className="text-[var(--text-secondary)]" />
               </button>
             ))}
           </div>

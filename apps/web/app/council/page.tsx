@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import CouncilEmptyState from "@/components/council/council-empty-state";
 import CouncilWorkspaceNav from "@/components/council/council-workspace-nav";
+import { Icon, resolveIconName } from "@/components/ui/icon";
 import PageShell from "@/components/ui/page-shell";
 import { getRole } from "@/lib/auth-store";
 import { trackCouncilViewed } from "@/lib/analytics/events";
@@ -884,9 +885,7 @@ export default function CouncilPage() {
               <div
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${banner.iconClassName}`}
               >
-                <span className="material-symbols-outlined text-[22px]">
-                  {banner.icon}
-                </span>
+                <Icon name={resolveIconName(banner.icon)} size="22px" />
               </div>
               <div>
                 <h2 className="text-lg font-extrabold tracking-tight">
@@ -931,9 +930,7 @@ export default function CouncilPage() {
                   <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[color:var(--surface-brand-soft)] text-[var(--text-brand)]">
-                        <span className="material-symbols-outlined">
-                          cardiology
-                        </span>
+                        <Icon name="clinical-notes" />
                       </div>
                       <div>
                         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
@@ -955,9 +952,7 @@ export default function CouncilPage() {
 
                   <div className="flex items-center justify-center">
                     <div className="flex min-h-[116px] w-full flex-col items-center justify-center rounded-lg border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-4 text-center text-[var(--text-warning)] md:w-[150px]">
-                      <span className="material-symbols-outlined text-3xl">
-                        sync_problem
-                      </span>
+                      <Icon name="warning" size="1.875rem" />
                       <p className="mt-2 text-xs font-black uppercase tracking-[0.12em]">
                         {t(language, "council.overview.conflictMap.criticalConflict")}
                       </p>
@@ -967,9 +962,7 @@ export default function CouncilPage() {
                   <div className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--surface-danger-soft)] text-[var(--text-danger)]">
-                        <span className="material-symbols-outlined">
-                          medication
-                        </span>
+                        <Icon name="medication" />
                       </div>
                       <div>
                         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-danger)]">
@@ -1009,9 +1002,7 @@ export default function CouncilPage() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
                     MAP
                   </p>
-                  <span className="material-symbols-outlined text-sm text-[var(--text-brand)]">
-                    show_chart
-                  </span>
+                  <Icon name="progress" size="0.875rem" className="text-[var(--text-brand)]" />
                 </div>
                 <div className="flex items-end gap-2">
                   <span
@@ -1032,9 +1023,7 @@ export default function CouncilPage() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
                     Creatinine/eGFR
                   </p>
-                  <span className="material-symbols-outlined text-sm text-[var(--text-brand)]">
-                    science
-                  </span>
+                  <Icon name="scan" size="0.875rem" className="text-[var(--text-brand)]" />
                 </div>
                 <div className="flex items-end gap-2">
                   <span
@@ -1053,9 +1042,7 @@ export default function CouncilPage() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-brand)]">
                     {t(language, "council.overview.assessment.title")}
                   </p>
-                  <span className="material-symbols-outlined text-sm text-[var(--text-brand)]">
-                    bolt
-                  </span>
+                  <Icon name="progress" size="0.875rem" className="text-[var(--text-brand)]" />
                 </div>
                 <div className="flex items-end gap-2">
                   <span
@@ -1090,9 +1077,7 @@ export default function CouncilPage() {
               <h3
                 className={`mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
               >
-                <span className="material-symbols-outlined text-[var(--text-brand)]">
-                  history
-                </span>
+                <Icon name="progress" className="text-[var(--text-brand)]" />
                 {t(language, "council.overview.timeline.title")}
               </h3>
 
@@ -1165,9 +1150,7 @@ export default function CouncilPage() {
                         key={`${stage.sequence}-${stage.step}`}
                         className="flex items-start gap-2"
                       >
-                        <span className="material-symbols-outlined text-base text-[var(--text-brand)]">
-                          bolt
-                        </span>
+                        <Icon name="progress" size="1rem" className="text-[var(--text-brand)]" />
                         <div>
                           <p
                             className={`text-sm font-semibold ${BODY_TEXT_CLASS}`}
@@ -1188,11 +1171,11 @@ export default function CouncilPage() {
                   disabled={isRunning}
                   className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[color:var(--brand-600)] bg-[var(--surface-panel)] px-4 text-sm font-bold text-[var(--text-brand)] transition hover:bg-[color:var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <span
-                    className={`material-symbols-outlined text-[20px] ${isRunning ? "animate-spin" : ""}`}
-                  >
-                    {isRunning ? "progress_activity" : "refresh"}
-                  </span>
+                  <Icon
+                    name="progress"
+                    size="20px"
+                    className={isRunning ? "animate-spin" : ""}
+                  />
                   {isRunning
                     ? streamingEnabled
                       ? t(language, "council.overview.rerun.live")
@@ -1211,9 +1194,7 @@ export default function CouncilPage() {
               {evidenceShadowAvailable ? (
               <div className="mt-6 border-t border-[color:var(--shell-border)] pt-5">
                 <div className="flex items-start gap-2">
-                  <span className="material-symbols-outlined mt-0.5 text-lg text-[var(--text-brand)]">
-                    verified
-                  </span>
+                  <Icon name="check" size="1.125rem" className="mt-0.5 text-[var(--text-brand)]" />
                   <div>
                     <h4 className={`text-sm font-bold ${BODY_TEXT_CLASS}`}>
                       {t(language, "council.evidence.title")}
@@ -1266,9 +1247,11 @@ export default function CouncilPage() {
                       disabled={!selectedEvidenceJobId || isAttachingEvidence}
                       className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-4 text-sm font-bold text-[color:var(--text-primary)] transition hover:bg-[var(--surface-panel)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <span className={`material-symbols-outlined text-[18px] ${isAttachingEvidence ? "animate-spin" : ""}`}>
-                        {isAttachingEvidence ? "progress_activity" : "attach_file"}
-                      </span>
+                      <Icon
+                        name={isAttachingEvidence ? "progress" : "folder"}
+                        size="18px"
+                        className={isAttachingEvidence ? "animate-spin" : ""}
+                      />
                       {isAttachingEvidence
                         ? t(language, "council.evidence.attaching")
                         : t(language, "council.evidence.attach")}
@@ -1293,9 +1276,7 @@ export default function CouncilPage() {
                 <h3
                   className={`mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.14em] ${SECONDARY_TEXT_CLASS}`}
                 >
-                  <span className="material-symbols-outlined text-[var(--text-brand)]">
-                    manage_history
-                  </span>
+                  <Icon name="progress" className="text-[var(--text-brand)]" />
                   {t(language, "council.history.title")}
                 </h3>
                 <ol className="space-y-3">
@@ -1357,9 +1338,7 @@ export default function CouncilPage() {
                     {t(language, "council.overview.handoff.actionHint")}
                   </p>
                 </div>
-                <span className="material-symbols-outlined text-3xl transition-transform group-hover:translate-x-1">
-                  call
-                </span>
+                <Icon name="contact" size="1.875rem" className="transition-transform group-hover:translate-x-1" />
               </button>
 
               {canUseDoctorActions ? (
@@ -1372,9 +1351,7 @@ export default function CouncilPage() {
                     }}
                     className={`${PANEL_CLASS} flex flex-col items-center gap-2 p-4 text-center transition hover:bg-[color:var(--surface-muted)]`}
                   >
-                    <span className="material-symbols-outlined text-[var(--text-brand)]">
-                      touch_app
-                    </span>
+                    <Icon name="user-card" className="text-[var(--text-brand)]" />
                     <p className="text-xs font-bold text-[var(--text-brand)]">
                       {t(language, "council.overview.guard.overrideAction")}
                     </p>
@@ -1387,9 +1364,7 @@ export default function CouncilPage() {
                     }}
                     className="flex flex-col items-center gap-2 rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-center transition hover:bg-[var(--surface-panel)]"
                   >
-                    <span className="material-symbols-outlined text-[var(--status-danger-text)]">
-                      pause_circle
-                    </span>
+                    <Icon name="stop" className="text-[var(--status-danger-text)]" />
                     <p className="text-xs font-bold text-[var(--status-danger-text)]">
                       {t(language, "council.overview.guard.pauseAction")}
                     </p>
@@ -1572,9 +1547,7 @@ export default function CouncilPage() {
                   className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--shell-border)] text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
                   aria-label={t(language, "council.overview.close")}
                 >
-                  <span className="material-symbols-outlined text-[20px]">
-                    close
-                  </span>
+                  <Icon name="close" size="20px" />
                 </button>
               </div>
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Field, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
+import { Icon } from "@/components/ui/icon";
 import { formatLocaleDate, t, type UITranslationKey } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import {
@@ -811,7 +812,7 @@ export default function LifeMapPage() {
                               className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                               aria-hidden="true"
                             >
-                              <span className="material-symbols-outlined">route</span>
+                              <Icon name="progress" />
                             </span>
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-[var(--text-primary)]">
@@ -867,9 +868,7 @@ export default function LifeMapPage() {
                         <ul className="mt-3 space-y-2">
                           {data.tasks.slice(0, 3).map((task) => (
                             <li key={task.id} className="flex gap-2 text-sm text-[var(--text-primary)]">
-                              <span className="material-symbols-outlined text-[18px] text-[var(--text-brand)]" aria-hidden="true">
-                                task_alt
-                              </span>
+                              <Icon name="check" size="18px" className="text-[var(--text-brand)]" />
                               <span>{task.title}</span>
                             </li>
                           ))}
@@ -1721,12 +1720,7 @@ export default function LifeMapPage() {
                         key={task.id}
                         className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-3"
                       >
-                        <span
-                          className="material-symbols-outlined text-[var(--text-muted)]"
-                          aria-hidden="true"
-                        >
-                          task_alt
-                        </span>
+                        <Icon name="check" className="text-[var(--text-muted)]" />
                         <p className="text-sm font-medium text-[var(--text-primary)]">{task.title}</p>
                       </div>
                     ))
@@ -1745,12 +1739,7 @@ export default function LifeMapPage() {
           {captureEnabled ? (
             <SurfaceCard className="p-5">
               <div className="flex items-start gap-3">
-                <span
-                  className="material-symbols-outlined mt-0.5 text-[var(--text-brand)]"
-                  aria-hidden="true"
-                >
-                  add_notes
-                </span>
+                <Icon name="clinical-notes" className="mt-0.5 text-[var(--text-brand)]" />
                 <div>
                   <h2 className="font-semibold text-[var(--text-primary)]">
                     {copy("lifemap.capture.title")}
