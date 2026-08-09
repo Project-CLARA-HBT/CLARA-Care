@@ -239,4 +239,54 @@ test.describe("authenticated care workspace", () => {
     });
     expect(contrast).toBeGreaterThanOrEqual(4.5);
   });
+
+  test("LifeMap creates a journey progressively with a versioned draft", async ({ page }) => {
+    const draft = {
+      id: "journey-ui-fixture",
+      flow_type: "lifemap_episode",
+      current_step: "title",
+      payload: {},
+      status: "active",
+      revision: 1,
+      expires_at: "2026-08-12T00:00:00Z",
+      committed_resource: null,
+    };
+    let ifMatch = "";
+
+    await page.route("**/api/v1/guided-flows/journey-ui-fixture", async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(draft) });
+        return;
+      }
+      if (route.request().method() === "PATCH") {
+        ifMatch = route.request().headers()["if-match"] ?? "";
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ...draft,
+            current_step: "goal",
+            revision: 2,
+            payload: { title: "Theo dõi giấc ngủ", goal: "", priority: "routine" },
+          }),
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    await page.goto("/lifemap/new/journey-ui-fixture/title", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("region", { name: "Đặt tên cho hành trình" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Tiến trình" })).toContainText("Bước 1 / 4");
+    await page.getByLabel("Bạn muốn gọi hành trình này là gì?").fill("Theo dõi giấc ngủ");
+    await page.getByRole("button", { name: "Tiếp tục" }).click();
+
+    await expect(page).toHaveURL(/\/lifemap\/new\/journey-ui-fixture\/goal$/);
+    await expect(page.getByLabel("Bạn muốn đạt được điều gì?")).toBeVisible();
+    expect(ifMatch).toBe('"1"');
+    const horizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(horizontalOverflow).toBeLessThanOrEqual(1);
+  });
 });
