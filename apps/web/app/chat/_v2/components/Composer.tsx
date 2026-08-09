@@ -11,6 +11,7 @@ import type {
   ResearchRetrievalStackMode,
 } from "@/lib/research";
 import { IconButton } from "@/app/chat/_v2/components/primitives";
+import Icon from "@/components/ui/icon";
 
 /**
  * Answer-first composer for the rebuilt CLARA Chat (CHAT_V2).
@@ -168,12 +169,7 @@ function Composer(props: ComposerProps) {
                       : "border-[color:var(--shell-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]",
                   ].join(" ")}
                 >
-                  <span
-                    className="material-symbols-outlined text-[15px]"
-                    aria-hidden="true"
-                  >
-                    folder_shared
-                  </span>
+                  <Icon name="folder" size={15} aria-hidden="true" />
                   {contextLabel}
                 </button>
               ) : null}
@@ -181,17 +177,12 @@ function Composer(props: ComposerProps) {
               {!isFast ? (
                 <details className="relative">
                   <summary className="flex min-h-[31px] cursor-pointer list-none items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]">
-                    <span
-                      className="material-symbols-outlined text-[16px]"
-                      aria-hidden="true"
-                    >
-                      tune
-                    </span>
+                    <Icon name="settings" size={16} aria-hidden="true" />
                     <span className="hidden sm:inline">
                       {t(uiLanguage, "chat.composer.sources")}
                     </span>
                   </summary>
-                  <div className="absolute bottom-10 left-0 z-20 min-w-48 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl">
+                  <div className="absolute bottom-10 left-0 z-20 min-w-48 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2">
                     <button
                       type="button"
                       aria-pressed={personalMode}
@@ -204,12 +195,7 @@ function Composer(props: ComposerProps) {
                           : "border-[color:var(--shell-border)] text-[var(--text-secondary)]",
                       ].join(" ")}
                     >
-                      <span
-                        className="material-symbols-outlined text-[16px]"
-                        aria-hidden="true"
-                      >
-                        folder_shared
-                      </span>
+                      <Icon name="folder" size={16} aria-hidden="true" />
                       {contextLabel}
                     </button>
                     <label

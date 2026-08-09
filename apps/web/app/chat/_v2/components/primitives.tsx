@@ -78,14 +78,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   },
 );
 
-export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  /** Accessible label is required — icon-only buttons must be named (Req 5.2). */
-  label: string;
-  icon: string;
-  variant?: ButtonVariant;
-};
-
 const ICON_BUTTON_NAMES: Record<string, IconName> = {
+  add: "medication",
+  close: "close",
   menu: "menu",
   stop: "stop",
   arrow_upward: "send",
@@ -94,6 +89,19 @@ const ICON_BUTTON_NAMES: Record<string, IconName> = {
   notifications: "notifications",
   more_horiz: "more",
   arrow_forward: "arrow-right",
+  bolt: "progress",
+  dock_to_left: "folder",
+};
+
+export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  /** Accessible label is required — icon-only buttons must be named (Req 5.2). */
+  label: string;
+  /**
+   * Legacy call-sites use Material glyph identifiers; resolve each supported
+   * identifier at compile time so a missing webfont can never render its name.
+   */
+  icon: keyof typeof ICON_BUTTON_NAMES;
+  variant?: ButtonVariant;
 };
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
@@ -122,7 +130,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         ].join(" ")}
         {...rest}
       >
-        <Icon name={ICON_BUTTON_NAMES[icon] ?? "fallback"} size={18} />
+        <Icon name={ICON_BUTTON_NAMES[icon]} size={18} />
       </button>
     );
   },
@@ -392,7 +400,7 @@ export function Drawer({
         aria-label={label}
         tabIndex={-1}
         className={[
-          "relative flex h-full w-[min(92vw,24rem)] flex-col bg-[var(--surface-panel)] p-4 shadow-2xl outline-none",
+          "relative flex h-full w-[min(92vw,24rem)] flex-col bg-[var(--surface-panel)] p-4 outline-none",
           side === "right"
             ? "border-l border-[color:var(--shell-border)]"
             : "border-r border-[color:var(--shell-border)]",

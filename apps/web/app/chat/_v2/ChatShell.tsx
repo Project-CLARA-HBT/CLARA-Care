@@ -64,6 +64,8 @@ import CommandPaletteLazy from "@/app/chat/_v2/components/CommandPaletteLazy";
 import WorkspaceDrawerLazy from "@/app/chat/_v2/components/WorkspaceDrawerLazy";
 import TelemetryPanelLazy from "@/app/chat/_v2/components/TelemetryPanelLazy";
 import { Badge, IconButton } from "@/app/chat/_v2/components/primitives";
+import Icon from "@/components/ui/icon";
+import { resolveNavigationIcon } from "@/components/navigation/nav-item";
 import { usePrefersReducedMotion } from "@/app/chat/_v2/theme/usePrefersReducedMotion";
 import { useResolvedTheme } from "@/app/chat/_v2/theme/useResolvedTheme";
 import { useFocusTrap } from "@/app/chat/_v2/lib/useFocusTrap";
@@ -723,12 +725,7 @@ export default function ChatShell() {
                 onClick={() => setIsAppMenuOpen((open) => !open)}
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] px-2.5 text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
               >
-                <span
-                  className="material-symbols-outlined text-[19px]"
-                  aria-hidden="true"
-                >
-                  apps
-                </span>
+                <Icon name="more" size={19} aria-hidden="true" />
                 <span className="hidden text-xs font-semibold sm:inline">
                   {t(uiLanguage, "chat.shell.tools")}
                 </span>
@@ -749,7 +746,7 @@ export default function ChatShell() {
           {isAppMenuOpen ? (
             <div
               ref={appToolsMenuRef}
-              className="absolute right-3 top-[3.35rem] z-30 w-[min(92vw,22rem)] rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2 shadow-xl shadow-slate-950/10"
+              className="absolute right-3 top-[3.35rem] z-30 w-[min(92vw,22rem)] rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2"
               role="dialog"
               aria-modal="true"
               tabIndex={-1}
@@ -775,12 +772,12 @@ export default function ChatShell() {
                     onClick={() => setIsAppMenuOpen(false)}
                     className="flex items-start gap-2 rounded-xl px-2.5 py-2 text-left hover:bg-[var(--surface-muted)]"
                   >
-                    <span
-                      className="material-symbols-outlined mt-0.5 text-[18px] text-[var(--text-brand)]"
+                    <Icon
+                      name={resolveNavigationIcon(item.icon)}
+                      size={18}
+                      className="mt-0.5 text-[var(--text-brand)]"
                       aria-hidden="true"
-                    >
-                      {item.icon}
-                    </span>
+                    />
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold text-[var(--text-primary)]">
                         {item.label}
@@ -816,12 +813,7 @@ export default function ChatShell() {
             role="note"
             className="flex items-center justify-center gap-1.5 border-b border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-center text-[11px] text-[var(--text-muted)]"
           >
-            <span
-              className="material-symbols-outlined text-[14px]"
-              aria-hidden="true"
-            >
-              info
-            </span>
+            <Icon name="help" size={14} aria-hidden="true" />
             {t(uiLanguage, "chat.shell.disclaimer")}
           </p>
 

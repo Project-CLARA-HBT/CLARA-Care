@@ -238,7 +238,7 @@ export default function WorkspaceDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={copy("chat.workspace.title")}
-        className="relative flex h-full w-[min(92vw,26rem)] flex-col border-l border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-2xl"
+        className="relative flex h-full w-[min(92vw,26rem)] flex-col border-l border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-[var(--text-primary)]">

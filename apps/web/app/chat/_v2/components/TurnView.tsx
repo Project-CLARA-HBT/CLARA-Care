@@ -8,6 +8,7 @@ import type { UserRole } from "@/lib/auth-store";
 import type { ConversationItem } from "@/components/research/lib/research-page-types";
 import AnswerRenderer from "@/app/chat/_v2/components/AnswerRenderer";
 import FlowTimeline from "@/app/chat/_v2/components/FlowTimeline";
+import Icon from "@/components/ui/icon";
 
 /**
  * A single conversation turn (user query + CLARA answer) for the rebuilt chat.
@@ -113,12 +114,7 @@ function TurnView({
               onClick={() => onLaunchResearch(turn.query)}
               className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 text-[11px] font-semibold text-[var(--text-brand)] transition hover:border-[color:var(--brand-500)] hover:bg-[var(--surface-brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)]"
             >
-              <span
-                className="material-symbols-outlined text-[16px]"
-                aria-hidden="true"
-              >
-                biotech
-              </span>
+              <Icon name="clinical-notes" size={16} aria-hidden="true" />
               {t(
                 uiLanguage,
                 tier2Result

@@ -40,6 +40,19 @@ describe("Button / IconButton", () => {
     render(<IconButton label="Close" icon="close" />);
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
+
+  it("maps every ChatShell control to a concrete bundled SVG", () => {
+    const { container } = render(
+      <>
+        <IconButton label="Command" icon="bolt" />
+        <IconButton label="Workspace" icon="dock_to_left" />
+      </>,
+    );
+
+    expect(container.querySelectorAll("[data-icon='fallback']")).toHaveLength(0);
+    expect(container.querySelector("[data-icon='progress']")).toBeInTheDocument();
+    expect(container.querySelector("[data-icon='folder']")).toBeInTheDocument();
+  });
 });
 
 describe("StatusDot / Badge", () => {

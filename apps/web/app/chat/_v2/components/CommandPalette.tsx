@@ -83,7 +83,7 @@ export default function CommandPalette({ palette, uiLanguage }: CommandPalettePr
         role="dialog"
         aria-modal="true"
         aria-label={copy("chat.commandPalette.title")}
-        className="relative w-full max-w-2xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-2xl"
+        className="relative w-full max-w-2xl rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3"
       >
         <label className="sr-only" htmlFor="chat-v2-command-input">
           {copy("chat.commandPalette.searchLabel")}

@@ -172,10 +172,10 @@ export default function ChatWelcome({
               key={item.label}
               type="button"
               onClick={() => onChoosePrompt(item.prompt)}
-              className="group flex min-h-[64px] items-center gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-left shadow-[0_8px_24px_-24px_rgba(15,23,42,.55)] transition hover:-translate-y-0.5 hover:border-[color:var(--shell-border-strong)] hover:shadow-[0_14px_30px_-24px_rgba(37,99,235,.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)] motion-reduce:transform-none"
+              className="group flex min-h-[64px] items-center gap-3 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-[color:var(--shell-border-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-500)] motion-reduce:transform-none"
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-                <Icon name="fallback" size={19} />
+                <Icon name="clinical-notes" size={19} />
               </span>
               <span className="min-w-0 flex-1 text-[13px] font-semibold text-[var(--text-primary)]">
                 {item.label}

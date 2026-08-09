@@ -625,7 +625,7 @@ function PhrHub({
             <section className="space-y-2"><h2 className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{copy("phr.hub.sections.important")}</h2>{renderSectionRows(sections.slice(3))}</section>
           </div>
           <aside className="space-y-4">
-            <section className="chrome-panel rounded-[var(--radius-xl)] p-5"><span className="material-symbols-outlined text-[var(--text-brand)]" aria-hidden="true">shield_lock</span><h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">{text.consentTitle}</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{text.consentBody}</p><Button as="link" href="/account/consent" variant="secondary" size="sm" className="mt-4">{text.consentLink}</Button></section>
+            <section className="chrome-panel rounded-[var(--radius-xl)] p-5"><Icon name="warning" className="text-[var(--text-brand)]" aria-hidden="true" /><h2 className="mt-3 text-lg font-semibold text-[var(--text-primary)]">{text.consentTitle}</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{text.consentBody}</p><Button as="link" href="/account/consent" variant="secondary" size="sm" className="mt-4">{text.consentLink}</Button></section>
             <p role="note" className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-4 text-[13px] leading-6 text-[var(--text-secondary)]">{text.disclaimer}</p>
           </aside>
         </div>
@@ -1284,7 +1284,7 @@ export default function PhrPage() {
             <div className="space-y-3">
               {record.allergies.length === 0 ? (
                 <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6 text-center">
-                  <span className="material-symbols-outlined text-4xl text-[var(--text-brand)]" aria-hidden="true">medical_information</span>
+                  <Icon name="clinical-notes" size={36} className="text-[var(--text-brand)]" aria-hidden="true" />
                   <p className="mt-3 text-base font-semibold text-[var(--text-primary)]">
                     {record.allergy_status === "none_known" ? text.allergyEmptyNoneKnown : text.allergyEmptyUnknown}
                   </p>

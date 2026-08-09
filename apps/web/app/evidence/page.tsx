@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import { Field, Select, Textarea } from "@/components/ui/field";
+import Icon from "@/components/ui/icon";
 import {
   confirmEvidenceQuestion,
   createEvidenceQuestion,
@@ -89,9 +90,11 @@ function EvidenceMatrixView({ matrix, language }: { matrix: EvidenceMatrix; lang
         >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-4">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="material-symbols-outlined text-[var(--text-brand)]" aria-hidden="true">
-                {sourceClass === "guideline" ? "menu_book" : "science"}
-              </span>
+              <Icon
+                name={sourceClass === "guideline" ? "clinical-notes" : "search"}
+                className="text-[var(--text-brand)]"
+                aria-hidden="true"
+              />
               <h3 className="font-semibold text-[var(--text-primary)]">{labelForSourceClass(language, sourceClass)}</h3>
             </div>
             <Badge tone="neutral">{t(language, "evidence.matrix.provenance", { count: records.length })}</Badge>
@@ -113,7 +116,7 @@ function EvidenceMatrixView({ matrix, language }: { matrix: EvidenceMatrix; lang
                       rel="noreferrer"
                       className="focus-ring inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[color:var(--shell-border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-brand-soft)]"
                     >
-                      {t(language, "evidence.matrix.openSource")} <span className="material-symbols-outlined text-sm" aria-hidden="true">open_in_new</span>
+                      {t(language, "evidence.matrix.openSource")} <Icon name="arrow-right" size={14} aria-hidden="true" />
                     </a>
                   ) : null}
                 </div>
@@ -149,7 +152,7 @@ function InterpretationView({
     <div className="grid gap-4 lg:grid-cols-2">
       <section className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] p-4">
         <div className="flex items-start gap-3">
-          <span className="material-symbols-outlined mt-0.5 text-[var(--text-brand)]" aria-hidden="true">person_search</span>
+          <Icon name="user-card" size={18} className="mt-0.5 text-[var(--text-brand)]" aria-hidden="true" />
           <div>
             <h3 className="font-semibold text-[var(--text-primary)]">{t(language, "evidence.interpretation.applicability")}</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{applicability.safe_message}</p>
@@ -157,13 +160,13 @@ function InterpretationView({
         </div>
         {applicability.unknowns.length ? (
           <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
-            {applicability.unknowns.map((item) => <li key={item} className="flex gap-2"><span className="material-symbols-outlined text-base text-[var(--status-warn-text)]" aria-hidden="true">help</span><span>{t(language, "evidence.interpretation.missing", { item: labelForUnknown(language, item) })}</span></li>)}
+            {applicability.unknowns.map((item) => <li key={item} className="flex gap-2"><Icon name="help" size={16} className="text-[var(--status-warn-text)]" aria-hidden="true" /><span>{t(language, "evidence.interpretation.missing", { item: labelForUnknown(language, item) })}</span></li>)}
           </ul>
         ) : null}
       </section>
       <section className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] p-4">
         <div className="flex items-start gap-3">
-          <span className="material-symbols-outlined mt-0.5 text-[var(--text-brand)]" aria-hidden="true">compare_arrows</span>
+          <Icon name="progress" size={18} className="mt-0.5 text-[var(--text-brand)]" aria-hidden="true" />
           <div>
             <h3 className="font-semibold text-[var(--text-primary)]">{t(language, "evidence.interpretation.contradictions")}</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{contradictions.safe_message}</p>
@@ -398,7 +401,7 @@ export default function LivingEvidencePage() {
               <div role="status" aria-live="polite">
                 <div className="border-b border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)]/55 px-5 py-4">
                   <div className="flex items-start gap-3">
-                    <span className="material-symbols-outlined mt-0.5 animate-spin text-[var(--text-brand)]" aria-hidden="true">progress_activity</span>
+                    <Icon name="progress" size={20} className="mt-0.5 animate-spin text-[var(--text-brand)]" aria-hidden="true" />
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{t(language, "evidence.run.processing")}</p>
                       <h2 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{question?.question}</h2>
@@ -453,7 +456,7 @@ export default function LivingEvidencePage() {
           ) : (
             <SurfaceCard className="p-5">
               <div className="flex items-start gap-3">
-                <span className="material-symbols-outlined inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]" aria-hidden="true">fact_check</span>
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"><Icon name="check" size={20} aria-hidden="true" /></span>
                 <div>
                   <h2 className="font-semibold text-[var(--text-primary)]">{t(language, "evidence.intro.title")}</h2>
                   <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">{t(language, "evidence.intro.body")}</p>
@@ -476,12 +479,7 @@ export default function LivingEvidencePage() {
                     className="rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] p-3"
                   >
                     <div className="flex items-start gap-2">
-                      <span
-                        className="material-symbols-outlined text-lg text-[var(--text-brand)]"
-                        aria-hidden="true"
-                      >
-                        verified
-                      </span>
+                      <Icon name="check" size={18} className="text-[var(--text-brand)]" aria-hidden="true" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm leading-6 text-[var(--text-secondary)]">
                           {item.payload.message}

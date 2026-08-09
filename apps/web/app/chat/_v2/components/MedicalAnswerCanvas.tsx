@@ -3,6 +3,7 @@ import type { ClinicalAnswerPackage } from "@/lib/chat";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { UILanguage } from "@/lib/ui-language";
 import type { ReactNode } from "react";
+import Icon, { type IconName } from "@/components/ui/icon";
 
 type MedicalAnswerCanvasProps = {
   answer: ClinicalAnswerPackage;
@@ -188,6 +189,14 @@ export default function MedicalAnswerCanvas({
   );
 }
 
+const CANVAS_SECTION_ICONS: Record<string, IconName> = {
+  emergency_home: "emergency",
+  checklist: "clinical-notes",
+  verified: "check",
+  uncertainty: "help",
+  medication: "medication",
+};
+
 function CanvasSection({
   icon,
   title,
@@ -204,12 +213,12 @@ function CanvasSection({
       className={`rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 ${className}`}
     >
       <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-primary)]">
-        <span
-          className="material-symbols-outlined text-[16px] text-[var(--text-brand)]"
+        <Icon
+          name={CANVAS_SECTION_ICONS[icon] ?? "clinical-notes"}
+          size={16}
+          className="text-[var(--text-brand)]"
           aria-hidden="true"
-        >
-          {icon}
-        </span>
+        />
         {title}
       </h3>
       <div className="text-xs leading-5 text-[var(--text-secondary)]">
