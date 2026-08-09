@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, type ReactNode } from "react";
 import Button from "@/components/ui/button";
 
 const FOCUSABLE =
@@ -30,6 +30,9 @@ export function Modal({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const modalId = useId();
+  const titleId = `${modalId}-title`;
+  const descriptionId = `${modalId}-description`;
 
   const widths: Record<string, string> = {
     sm: "max-w-sm",
@@ -89,7 +92,7 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
-        className="absolute inset-0 bg-[rgba(15,23,42,0.45)] backdrop-blur-sm"
+        className="absolute inset-0 bg-[rgba(16,20,25,0.72)]"
         aria-hidden="true"
         onClick={onClose}
       />
@@ -97,15 +100,16 @@ export function Modal({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`relative z-[1] w-full ${widths[size]} rounded-t-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-[var(--shadow-hero)] sm:rounded-[var(--radius-2xl)]`}
+        className={`relative z-[1] w-full ${widths[size]} rounded-t-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)] sm:rounded-[var(--radius-xl)]`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-[color:var(--shell-border)] px-6 py-4">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">{title}</h2>
+            <h2 id={titleId} className="text-base font-semibold text-[var(--text-primary)]">{title}</h2>
             {description ? (
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">{description}</p>
+              <p id={descriptionId} className="mt-1 text-sm text-[var(--text-secondary)]">{description}</p>
             ) : null}
           </div>
           <Button
