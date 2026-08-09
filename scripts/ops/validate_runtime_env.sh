@@ -49,6 +49,31 @@ must_be_positive_number() {
   fi
 }
 
+must_be_model_identifier() {
+  local var_name="$1"
+  local value="${ENV_VALUES[${var_name}]:-}"
+  # OpenAI-compatible gateways commonly namespace model IDs (for example
+  # ``provider/model-name``).  The deployment must still supply an explicit,
+  # bounded identifier; never accept a URL, whitespace, or a request-selected
+  # model value here.
+  if [[ ! "${value}" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]{0,191}$ ]]; then
+    echo "[env-guard] ${var_name} must be an explicit safe model identifier" >&2
+    errors=$((errors + 1))
+  fi
+}
+
+must_be_openai_compatible_https_url() {
+  local var_name="$1"
+  local value="${ENV_VALUES[${var_name}]:-}"
+  # The ML client consumes an OpenAI-compatible HTTPS base endpoint.  Keeping
+  # this structural check makes a provider swap explicit without pinning a
+  # retired provider/model name in deployment code.
+  if [[ ! "${value}" =~ ^https://[^[:space:]/]+(/[^[:space:]]*)?/v1/?$ ]]; then
+    echo "[env-guard] ${var_name} must be an HTTPS OpenAI-compatible /v1 endpoint" >&2
+    errors=$((errors + 1))
+  fi
+}
+
 warn_if_equals() {
   local var_name="$1"
   local bad_value="$2"
@@ -83,20 +108,20 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
   must_set_non_empty "DEEPSEEK_AUDIO_MODEL"
   must_set_non_empty "DEEPSEEK_TIMEOUT_SECONDS"
   must_set_non_empty "ML_SERVICE_TIMEOUT_SECONDS"
+  must_be_openai_compatible_https_url "DEEPSEEK_BASE_URL"
+  must_be_model_identifier "DEEPSEEK_MODEL"
+  must_be_model_identifier "DEEPSEEK_PRO_MODEL"
+  must_be_model_identifier "DEEPSEEK_FLASH_MODEL"
   if [[ "${ENV_VALUES[DEEPSEEK_MODEL]:-}" != "${ENV_VALUES[DEEPSEEK_PRO_MODEL]:-}" ]]; then
-    echo "[env-guard] DEEPSEEK_MODEL must equal DEEPSEEK_PRO_MODEL for the governed V4 default route" >&2
+    echo "[env-guard] DEEPSEEK_MODEL must equal DEEPSEEK_PRO_MODEL for the governed default route" >&2
     errors=$((errors + 1))
   fi
   if [[ "${ENV_VALUES[DEEPSEEK_PRO_MODEL]:-}" == "${ENV_VALUES[DEEPSEEK_FLASH_MODEL]:-}" ]]; then
     echo "[env-guard] DEEPSEEK_PRO_MODEL and DEEPSEEK_FLASH_MODEL must be distinct" >&2
     errors=$((errors + 1))
   fi
-  if [[ "${ENV_VALUES[DEEPSEEK_PRO_MODEL]:-}" != "deepseek-v4-pro" ]]; then
-    echo "[env-guard] DEEPSEEK_PRO_MODEL must be deepseek-v4-pro for the governed V4 route" >&2
-    errors=$((errors + 1))
-  fi
-  if [[ "${ENV_VALUES[DEEPSEEK_FLASH_MODEL]:-}" != "deepseek-v4-flash" ]]; then
-    echo "[env-guard] DEEPSEEK_FLASH_MODEL must be deepseek-v4-flash for the governed V4 route" >&2
+  if [[ -n "${ENV_VALUES[DEEPSEEK_FALLBACK_MODEL]:-}" ]]; then
+    echo "[env-guard] DEEPSEEK_FALLBACK_MODEL must be empty; model substitution is prohibited" >&2
     errors=$((errors + 1))
   fi
   if [[ "${ENV_VALUES[LLM_DEEPSEEK_ONLY]:-}" != "true" ]]; then
@@ -104,7 +129,7 @@ if [[ "${require_deepseek_normalized}" == "true" ]] || [[ "${REQUIRE_DEEPSEEK}" 
     errors=$((errors + 1))
   fi
   if [[ "${ENV_VALUES[MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED]:-}" != "true" ]]; then
-    echo "[env-guard] MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=true is required for V4 Pro/Flash task routing" >&2
+    echo "[env-guard] MODEL_REGISTRY_TASK_MODEL_ROUTING_ENABLED=true is required for governed task routing" >&2
     errors=$((errors + 1))
   fi
   if [[ "${ENV_VALUES[MODEL_REGISTRY_ENABLED]:-}" != "true" ]]; then
