@@ -82,7 +82,7 @@ export default function AppTopbar({
         >
           <Icon name="notifications" size={20} aria-hidden="true" />
           {familyNotificationCount > 0 ? (
-            <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[var(--danger-500)] px-1 text-center text-[10px] font-bold leading-4 text-white" aria-hidden="true">
+            <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[var(--danger-500)] px-1 text-center text-[10px] font-bold leading-4 text-[var(--on-error-container)]" aria-hidden="true">
               {familyNotificationCount > 9 ? "9+" : familyNotificationCount}
             </span>
           ) : null}

@@ -209,7 +209,7 @@ export default function EmergencyCardEditor({
               {disclaimer ? (
                 <p
                   role="note"
-                  className="rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
+                  className="rounded-xl border border-[color:var(--status-warning-border)] bg-[var(--surface-warning-soft)] px-3 py-2 text-[12px] leading-5 text-[var(--text-warning)]"
                 >
                   {disclaimer}
                 </p>

@@ -611,8 +611,8 @@ export function ConduitFlowLine({ title, description, stages }: ConduitFlowLineP
                 {stage.note || stage.detail ? <p className="mt-0.5 text-[10px] opacity-85">{stage.note ?? stage.detail}</p> : null}
               </div>
               {index < stages.length - 1 ? (
-                <div className="relative h-[2px] w-7 overflow-hidden rounded bg-cyan-400/30">
-                  <span className="absolute inset-y-0 left-0 w-1/2 animate-pulse bg-cyan-300/90" />
+                <div className="relative h-[2px] w-7 overflow-hidden rounded bg-[var(--surface-brand-soft)]">
+                  <span className="absolute inset-y-0 left-0 w-1/2 animate-pulse bg-[var(--brand-primary)]" />
                 </div>
               ) : null}
             </div>

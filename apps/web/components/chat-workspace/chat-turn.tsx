@@ -43,7 +43,7 @@ export default function ChatTurn({ turn, uiLanguage }: ChatTurnProps) {
   return (
     <div className="space-y-1.5">
       <div className="flex justify-end pr-2 sm:pr-6">
-        <article className="max-w-[88%] rounded-[0.78rem] rounded-tr-sm border border-cyan-200/70 bg-cyan-50/96 px-3.5 py-2 text-[13px] leading-6 text-slate-800 shadow-[0_10px_24px_-28px_rgba(14,116,144,0.34)] dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-slate-100 sm:max-w-[58%]">
+        <article className="max-w-[88%] rounded-[0.78rem] rounded-tr-sm border border-[color:var(--status-ok-border)] bg-[var(--surface-brand-soft)] px-3.5 py-2 text-[13px] leading-6 text-[var(--text-primary)] sm:max-w-[58%]">
           <p className="whitespace-pre-wrap">{turn.query}</p>
         </article>
       </div>
@@ -56,7 +56,7 @@ export default function ChatTurn({ turn, uiLanguage }: ChatTurnProps) {
             <span>{formatHistoryTime(turn.createdAt)}</span>
           </div>
 
-          <section className="rounded-[0.68rem] border border-[color:var(--shell-border-strong)] bg-[var(--surface-panel)] p-3.5 shadow-[0_12px_28px_-26px_rgba(15,23,42,0.28)] sm:p-4">
+          <section className="rounded-[0.68rem] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border-strong)] bg-[var(--surface-panel)] p-3.5 sm:p-4">
             <MarkdownAnswer
               answer={answer}
               citations={citations}
