@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
@@ -135,6 +135,20 @@ describe("AppShell authenticated Chat navigation", () => {
       });
     });
     expect(mocks.routerReplace).not.toHaveBeenCalled();
+  });
+
+  it("uses bundled SVG controls in the mobile shell when the icon font is unavailable", async () => {
+    render(
+      <AppShell>
+        <div>Chat content</div>
+      </AppShell>,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Mở điều hướng trên điện thoại" });
+    expect(trigger.querySelector('[data-icon="menu"]')).toBeTruthy();
+    fireEvent.click(trigger);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Đóng menu" }).querySelector('[data-icon="close"]')).toBeTruthy();
   });
 
   it("keeps nested welcome steps inside the focused authenticated utility shell", async () => {

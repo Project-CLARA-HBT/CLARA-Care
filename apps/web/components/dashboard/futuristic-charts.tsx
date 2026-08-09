@@ -120,13 +120,6 @@ function toneLabel(tone: TelemetryBarItem["tone"]): string {
   return "Normal";
 }
 
-function toneTexture(tone: TelemetryBarItem["tone"], color: string): string {
-  if (tone === "warn" || tone === "danger" || tone === "error") {
-    return `repeating-linear-gradient(135deg, ${color}, ${color} 8px, rgba(255,255,255,0.22) 8px, rgba(255,255,255,0.22) 12px)`;
-  }
-  return `linear-gradient(90deg, ${color}, ${color})`;
-}
-
 function stageTone(stage: ConduitStage["status"]): string {
   if (stage === "ok") return "border-[color:var(--brand-primary)]/30 bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
   if (stage === "warn") return "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]";
@@ -164,7 +157,7 @@ function ChartFrame({ title, description, children, footer }: ChartFrameProps) {
 }
 
 export function NeonAreaChart({ title, description, labels, series, height = 220, className }: NeonAreaChartProps) {
-  const gradientId = useId().replace(/:/g, "");
+  const clipId = useId().replace(/:/g, "");
 
   const prepared = useMemo(() => {
     const width = 760;
@@ -260,7 +253,7 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
           aria-label={title || "area chart"}
         >
           <defs>
-            <clipPath id={`${gradientId}-plot`}>
+            <clipPath id={`${clipId}-plot`}>
               <rect
                 x={prepared.leftPadding}
                 y={prepared.topPadding}
@@ -268,19 +261,6 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
                 height={prepared.chartHeight - prepared.topPadding - prepared.bottomPadding}
               />
             </clipPath>
-            <filter id={`${gradientId}-line-glow`} x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="2.1" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            {prepared.mapped.map((item) => (
-              <linearGradient key={`${item.id}-gradient`} id={`${gradientId}-${item.id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={item.color} stopOpacity="0.34" />
-                <stop offset="100%" stopColor={item.color} stopOpacity="0.01" />
-              </linearGradient>
-            ))}
           </defs>
 
           {prepared.axisY.map((tick) => (
@@ -290,7 +270,8 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
                 y1={tick.y}
                 x2={prepared.width - prepared.rightPadding}
                 y2={tick.y}
-                stroke="rgba(100,116,139,0.34)"
+                stroke="var(--shell-border-strong)"
+                strokeOpacity="0.58"
                 strokeDasharray="4 6"
               />
               <text x={10} y={tick.y + 4} fontSize="10" fill="var(--text-muted)">
@@ -299,10 +280,10 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
             </g>
           ))}
 
-          <g clipPath={`url(#${gradientId}-plot)`}>
+          <g clipPath={`url(#${clipId}-plot)`}>
             {prepared.mapped.map((item) => (
               <g key={item.id}>
-                <polygon points={item.area} fill={`url(#${gradientId}-${item.id})`} />
+                <polygon points={item.area} fill={item.color} fillOpacity="0.12" />
                 <polyline
                   points={item.points}
                   fill="none"
@@ -310,7 +291,6 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
                   strokeWidth="2.35"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  filter={`url(#${gradientId}-line-glow)`}
                 />
               </g>
             ))}
@@ -322,7 +302,7 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
             return (
               <g key={`${item.id}-latest`}>
                 <circle cx={x} cy={y} r="5" fill={item.color} fillOpacity="0.22" />
-                <circle cx={x} cy={y} r="3" fill={item.color} stroke="white" strokeOpacity="0.8" strokeWidth="1" />
+                <circle cx={x} cy={y} r="3" fill={item.color} stroke="var(--on-surface)" strokeOpacity="0.8" strokeWidth="1" />
               </g>
             );
           })}
@@ -336,7 +316,7 @@ export function NeonAreaChart({ title, description, labels, series, height = 220
                 return (
                   <g key={`${label}-${index}`}>
                     <title>{label}</title>
-                    <line x1={x} y1={prepared.topPadding} x2={x} y2={prepared.chartHeight - prepared.bottomPadding} stroke="rgba(100,116,139,0.12)" />
+                    <line x1={x} y1={prepared.topPadding} x2={x} y2={prepared.chartHeight - prepared.bottomPadding} stroke="var(--shell-border)" strokeOpacity="0.35" />
                     <text x={x} y={prepared.chartHeight - 8} fontSize="10" textAnchor="middle" fill="var(--text-muted)">
                       {label.length > 10 ? `${label.slice(0, 9)}...` : label}
                     </text>
@@ -361,7 +341,6 @@ export function SegmentRingGauge({
   color,
   size = 132
 }: SegmentRingGaugeProps) {
-  const gaugeId = useId().replace(/:/g, "");
   const safeValue = clamp(value, 0, max);
   const ratio = max > 0 ? safeValue / max : 0;
   const radius = size * 0.33;
@@ -372,14 +351,14 @@ export function SegmentRingGauge({
   const toneColor =
     color ??
     (tone === "emerald"
-      ? "#34d399"
+      ? "#a4c9ff"
       : tone === "amber"
-        ? "#f59e0b"
+        ? "#fabd34"
         : tone === "violet"
-          ? "#a78bfa"
+          ? "#b4c5ff"
           : tone === "rose"
-            ? "#fb7185"
-            : "#60a5fa");
+            ? "#ffb4ab"
+            : "#a4c9ff");
 
   return (
     <div
@@ -391,32 +370,18 @@ export function SegmentRingGauge({
       aria-valuenow={Math.round(safeValue)}
     >
       <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto h-[110px] w-[110px]">
-        <defs>
-          <linearGradient id={`${gaugeId}-ring`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={toneColor} stopOpacity="0.5" />
-            <stop offset="100%" stopColor={toneColor} stopOpacity="1" />
-          </linearGradient>
-          <filter id={`${gaugeId}-glow`} x="-35%" y="-35%" width="170%" height="170%">
-            <feGaussianBlur stdDeviation="2.8" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        <circle cx={center} cy={center} r={radius} stroke="rgba(100,116,139,0.28)" strokeWidth="12" fill="none" />
-        <circle cx={center} cy={center} r={radius} stroke="rgba(100,116,139,0.22)" strokeWidth="1.5" strokeDasharray="3 8" fill="none" />
+        <circle cx={center} cy={center} r={radius} stroke="var(--shell-border)" strokeWidth="12" fill="none" />
+        <circle cx={center} cy={center} r={radius} stroke="var(--shell-border-strong)" strokeOpacity="0.55" strokeWidth="1.5" strokeDasharray="3 8" fill="none" />
         <circle
           cx={center}
           cy={center}
           r={radius}
-          stroke={`url(#${gaugeId}-ring)`}
+          stroke={toneColor}
           strokeWidth="12"
           strokeDasharray={dash}
           strokeLinecap="round"
           fill="none"
           transform={`rotate(-90 ${center} ${center})`}
-          filter={`url(#${gaugeId}-glow)`}
         />
         <circle cx={center} cy={center} r={size * 0.2} fill="rgba(15,23,42,0.06)" />
       </svg>
@@ -432,7 +397,6 @@ export function SegmentRingGauge({
 }
 
 export function RadarPulseChart({ title, description, axes, size = 280 }: RadarPulseChartProps) {
-  const radarId = useId().replace(/:/g, "");
   const canvasPadding = 26;
   const canvas = size + canvasPadding * 2;
   const count = Math.max(axes.length, 3);
@@ -456,15 +420,6 @@ export function RadarPulseChart({ title, description, axes, size = 280 }: RadarP
     <ChartFrame title={title} description={description}>
       <div className="rounded-[var(--radius-lg)] border border-t-[#2A3950] border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-2">
         <svg viewBox={`0 0 ${canvas} ${canvas}`} className="h-[260px] w-full" role="img" aria-label={title || "radar chart"}>
-          <defs>
-            <filter id={`${radarId}-glow`} x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="2" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
           {[1, 0.75, 0.5, 0.25].map((step) => {
             const ring = axes
               .map((_, index) => {
@@ -474,17 +429,17 @@ export function RadarPulseChart({ title, description, axes, size = 280 }: RadarP
                 return `${x},${y}`;
               })
               .join(" ");
-            return <polygon key={step} points={ring} fill="none" stroke="rgba(100,116,139,0.28)" strokeWidth="1" />;
+            return <polygon key={step} points={ring} fill="none" stroke="var(--shell-border-strong)" strokeOpacity="0.48" strokeWidth="1" />;
           })}
 
           {points.map((point, index) => (
-            <line key={`axis-${index}`} x1={center} y1={center} x2={point.labelX} y2={point.labelY} stroke="rgba(100,116,139,0.24)" />
+            <line key={`axis-${index}`} x1={center} y1={center} x2={point.labelX} y2={point.labelY} stroke="var(--shell-border)" strokeOpacity="0.6" />
           ))}
 
-          <polygon points={polygon} fill="rgba(96, 165, 250,0.24)" stroke="#60a5fa" strokeWidth="2.1" filter={`url(#${radarId}-glow)`} />
+          <polygon points={polygon} fill="#a4c9ff" fillOpacity="0.18" stroke="#a4c9ff" strokeWidth="2.1" />
           {points.map((point, index) => (
             <g key={`point-${index}`}>
-              <circle cx={point.x} cy={point.y} r="4.2" fill="#60a5fa" />
+              <circle cx={point.x} cy={point.y} r="4.2" fill="#a4c9ff" />
               <text x={point.labelX} y={point.labelY} textAnchor="middle" fontSize="11" fill="var(--text-secondary)">
                 {point.label.length > 11 ? `${point.label.slice(0, 10)}...` : point.label}
                 <title>{`${point.label}: ${Math.round(point.value)}`}</title>
@@ -492,7 +447,7 @@ export function RadarPulseChart({ title, description, axes, size = 280 }: RadarP
             </g>
           ))}
 
-          <circle cx={center} cy={center} r="5" fill="#60a5fa" className="animate-pulse" />
+          <circle cx={center} cy={center} r="5" fill="#a4c9ff" />
         </svg>
       </div>
     </ChartFrame>
@@ -552,7 +507,7 @@ export function MatrixHeatmapMini({
                   return (
                     <td key={`${row}-${column}`}>
                       <div
-                        className="rounded-md border border-white/15 px-2 py-1 text-right font-mono text-[var(--text-primary)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]"
+                        className="rounded-md border border-[color:var(--shell-border-strong)]/50 px-2 py-1 text-right font-mono text-[var(--text-primary)]"
                         style={{ backgroundColor: colorForHeat(value) }}
                         aria-label={`${row} ${column} ${Math.round(value)}`}
                       >
@@ -606,19 +561,19 @@ export function TelemetryBars({ title, description, items }: TelemetryBarsProps)
                   {item.target !== undefined ? <span className="text-[var(--text-muted)]"> / {Math.round(item.target)}</span> : null}
                 </span>
               </div>
-              <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-200/55 dark:bg-slate-700/40">
+              <div className="relative h-2.5 overflow-hidden rounded-full bg-[var(--surface-container-highest)]">
                 {item.target !== undefined ? (
                   <span
-                    className="absolute inset-y-0 w-px bg-white/75 dark:bg-slate-100/80"
+                    className="absolute inset-y-0 w-px bg-[var(--on-surface)]/75"
                     style={{ left: `${targetRatio * 100}%` }}
                     aria-hidden="true"
                   />
                 ) : null}
                 <div
-                  className="h-full rounded-full shadow-[0_0_12px_rgba(96,165,250,0.25)]"
+                  className="h-full rounded-full"
                   style={{
                     width: `${ratio * 100}%`,
-                    background: toneTexture(item.tone, color)
+                    background: color
                   }}
                 />
               </div>

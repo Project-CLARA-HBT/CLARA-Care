@@ -1,9 +1,53 @@
 "use client";
 
 import Link from "next/link";
+import Icon, { type IconName } from "@/components/ui/icon";
 import type { NavigationItem } from "@/lib/navigation.config";
 
 type Variant = "sidebar" | "drawer" | "bottom";
+
+const NAVIGATION_ICON_NAMES: Record<string, IconName> = {
+  account_tree: "progress",
+  admin_panel_settings: "settings",
+  alt_route: "progress",
+  chat_paste_go: "chat",
+  clinical_notes: "clinical-notes",
+  dashboard: "progress",
+  database: "folder",
+  database_search: "search",
+  description: "clinical-notes",
+  event_available: "calendar",
+  fact_check: "check",
+  family_restroom: "contact",
+  favorite: "progress",
+  forum: "chat",
+  gavel: "warning",
+  groups: "contact",
+  help: "warning",
+  history: "progress",
+  hub: "progress",
+  insights: "progress",
+  medication: "medication",
+  monitoring: "progress",
+  person: "user-card",
+  pill: "medication",
+  privacy_tip: "warning",
+  route: "progress",
+  science: "search",
+  security: "warning",
+  settings_input_component: "settings",
+  shield_person: "warning",
+  share: "share",
+  stethoscope: "clinical-notes",
+  today: "calendar",
+  upload_file: "folder",
+  vital_signs: "body",
+  widgets: "more",
+};
+
+export function resolveNavigationIcon(icon: string): IconName {
+  return NAVIGATION_ICON_NAMES[icon] ?? "clinical-notes";
+}
 
 /**
  * Single source of truth for a navigation entry across every renderer
@@ -24,7 +68,7 @@ export function NavItem({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
-  const filled = active ? { fontVariationSettings: "'FILL' 1" } : undefined;
+  const iconName = resolveNavigationIcon(item.icon);
 
   if (variant === "bottom") {
     return (
@@ -38,9 +82,7 @@ export function NavItem({
             : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
         }`}
       >
-        <span className="material-symbols-outlined text-[19px]" style={filled} aria-hidden="true">
-          {item.icon}
-        </span>
+        <Icon name={iconName} size={19} aria-hidden="true" />
         <span className="max-w-full truncate text-[11px] font-semibold leading-tight">
           {item.shortLabel ?? item.label}
         </span>
@@ -60,15 +102,12 @@ export function NavItem({
             : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
         }`}
       >
-        <span
-          className={`material-symbols-outlined mt-0.5 shrink-0 text-[20px] ${
-            active ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]"
-          }`}
-          style={filled}
+        <Icon
+          name={iconName}
+          size={20}
+          className={`mt-0.5 ${active ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]"}`}
           aria-hidden="true"
-        >
-          {item.icon}
-        </span>
+        />
         <span className="min-w-0">
           <span className="block text-sm font-semibold text-[var(--text-primary)]">
             {item.label}
@@ -94,13 +133,7 @@ export function NavItem({
         active ? "app-nav-item-active" : "",
       ].join(" ")}
     >
-      <span
-        className="material-symbols-outlined shrink-0 text-[20px]"
-        style={filled}
-        aria-hidden="true"
-      >
-        {item.icon}
-      </span>
+      <Icon name={iconName} size={20} aria-hidden="true" />
       {!collapsed ? <span className="truncate">{item.label}</span> : null}
       {!collapsed && active ? (
         <span

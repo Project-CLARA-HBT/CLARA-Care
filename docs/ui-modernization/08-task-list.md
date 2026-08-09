@@ -9,7 +9,7 @@ Status values: `pending`, `in_progress`, `blocked`, `done`. Owners are bounded i
 | UI-01 | NFR-MAINT-001 | Pin Node/npm metadata and add explicit web type-check script. | Foundation | baseline | `.nvmrc`, `apps/web/package.json`, CI | npm ci, type-check, build | done |
 | UI-02 | NFR-THEME-001, NFR-A11Y-001 | Add semantic token aliases and update contrast/focus guards. | Foundation | UI-01 | `styles/*`, `tailwind.config.ts` | token/contrast tests, light/dark visual | done |
 | UI-03 | FR-PHR-002 | Implement typed SVG Icon/fallback and migrate PHR/shared primitives. | Foundation | UI-02 | `components/ui/icon.tsx`, `app/phr/page.tsx` | icon unit/E2E with fonts blocked | done |
-| UI-04 | NFR-A11Y-002, NFR-A11Y-003 | Harden Field, Alert, SideSheet, ConfirmDialog and 44px targets. | Foundation | UI-02 | `components/ui/*`, dialogs | component focus/semantics tests | pending |
+| UI-04 | NFR-A11Y-002, NFR-A11Y-003 | Harden Field, Alert, SideSheet, ConfirmDialog and 44px targets. | Foundation | UI-02 | `components/ui/*`, dialogs | component focus/semantics tests | in_progress |
 | UI-05 | FR-NAV-001–006 | Create exhaustive route capability manifest, then split route/access/navigation/legacy registries and add workspace model. | Shell | UI-01 | `lib/navigation*`, `route-capability-matrix.md`, new registry files | route classification, role/flag/property/redirect tests | done |
 | UI-06 | FR-SHELL-001–006 | Extract shell presentation and profile/workspace providers. | Shell | UI-04/UI-05 | `components/app-shell.tsx`, navigation | shell unit/E2E, public/401 tests | done |
 | UI-07 | FR-SHELL-005 | Replace mobile drawer with SideSheet and add More/bottom nav. | Shell | UI-04/UI-06 | `app-shell.tsx`, navigation | focus/restore/mobile E2E | done |

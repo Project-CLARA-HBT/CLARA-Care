@@ -8,7 +8,7 @@ import SidebarNav from "@/components/sidebar-nav";
 import MobileBottomNav from "@/components/navigation/mobile-bottom-nav";
 import AppTopbar from "@/components/navigation/app-topbar";
 import NavItem from "@/components/navigation/nav-item";
-import Icon from "@/components/ui/icon";
+import Icon, { type IconName } from "@/components/ui/icon";
 import TransparencyNoticeGate from "@/components/compliance/transparency-notice-gate";
 import {
   clearTokens,
@@ -63,11 +63,11 @@ type Props = {
 const THEME_OPTIONS: Array<{
   value: ThemePreference;
   labelKey: UITranslationKey;
-  icon: "light_mode" | "dark_mode" | "desktop_windows";
+  icon: IconName;
 }> = [
-  { value: "light", labelKey: "theme.light", icon: "light_mode" },
-  { value: "dark", labelKey: "theme.dark", icon: "dark_mode" },
-  { value: "system", labelKey: "theme.system", icon: "desktop_windows" },
+  { value: "light", labelKey: "theme.light", icon: "theme" },
+  { value: "dark", labelKey: "theme.dark", icon: "theme" },
+  { value: "system", labelKey: "theme.system", icon: "theme" },
 ];
 
 const LANGUAGE_OPTIONS: Array<{
@@ -515,7 +515,7 @@ export default function AppShell({ children }: Props) {
               aria-expanded={isMobileNavOpen}
               className="app-topbar-icon shrink-0"
             >
-              <span className="material-symbols-outlined text-lg">menu</span>
+              <Icon name="menu" size={18} />
             </button>
 
             <Link
@@ -523,12 +523,7 @@ export default function AppShell({ children }: Props) {
               className="flex min-w-0 items-center gap-2.5"
             >
               <span className="app-brand-mark !h-9 !w-9">
-                <span
-                  className="material-symbols-outlined text-[16px]"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  clinical_notes
-                </span>
+                <Icon name="clinical-notes" size={16} />
               </span>
               <span className="truncate text-[15px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
                 {activeProfile?.display_name ?? "CLARA"}
@@ -586,19 +581,13 @@ export default function AppShell({ children }: Props) {
             onClick={closeMobileNavigation}
             aria-label={t(uiLanguage, "navigation.closeMobile")}
             data-mobile-backdrop="true"
-            className="absolute inset-0 bg-[rgba(15,23,42,0.45)] backdrop-blur-sm"
+            className="absolute inset-0 bg-[rgba(16,20,25,0.72)]"
           />
-          <aside className="absolute left-0 top-0 h-full w-[min(90vw,390px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4 shadow-2xl">
+          <aside className="absolute left-0 top-0 h-full w-[min(90vw,390px)] border-r border-[color:var(--shell-border)] bg-[var(--surface-sidebar)] px-4 pb-5 pt-4">
             <div className="flex items-start justify-between gap-3 border-b border-[color:var(--shell-border)] pb-4">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="app-brand-mark shrink-0">
-                  <span
-                    className="material-symbols-outlined text-[18px]"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                    aria-hidden="true"
-                  >
-                    clinical_notes
-                  </span>
+                  <Icon name="clinical-notes" size={18} aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
@@ -615,9 +604,7 @@ export default function AppShell({ children }: Props) {
                 aria-label={t(uiLanguage, "action.closeMenu")}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"
               >
-                <span className="material-symbols-outlined text-base">
-                  close
-                </span>
+                <Icon name="close" size={16} />
               </button>
             </div>
 
@@ -699,14 +686,14 @@ export default function AppShell({ children }: Props) {
                           className={[
                             "inline-flex h-7 w-7 items-center justify-center rounded-[6px] text-[11px] transition",
                             active
-                              ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                              ? "bg-[var(--surface-panel)] text-[var(--text-brand)]"
                               : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                           ].join(" ")}
                           aria-label={optionLabel}
                           aria-pressed={active}
                           title={optionLabel}
                         >
-                          <span className="material-symbols-outlined text-[15px]" aria-hidden="true">{option.icon}</span>
+                          <Icon name={option.icon} size={15} aria-hidden="true" />
                           <span className="sr-only">{optionLabel}</span>
                         </button>
                       );
@@ -731,7 +718,7 @@ export default function AppShell({ children }: Props) {
                           className={[
                             "inline-flex min-h-[28px] min-w-[38px] items-center justify-center rounded-[6px] px-2 text-[11px] font-semibold transition",
                             active
-                              ? "bg-[var(--surface-panel)] text-sky-700 shadow-sm dark:text-sky-300"
+                              ? "bg-[var(--surface-panel)] text-[var(--text-brand)]"
                               : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                           ].join(" ")}
                           aria-label={t(uiLanguage, option.labelKey)}
@@ -750,11 +737,9 @@ export default function AppShell({ children }: Props) {
                 type="button"
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-rose-300/70 bg-rose-500/10 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-70 dark:border-rose-700/70 dark:text-rose-300"
+                className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-4 text-sm font-semibold text-[var(--status-danger-text)] transition hover:bg-[var(--status-danger-bg)]/80 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  logout
-                </span>
+                <Icon name="arrow-right" size={18} />
                 <span>
                   {isLoggingOut
                     ? t(uiLanguage, "action.signingOut")

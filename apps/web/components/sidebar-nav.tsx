@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NavItem from "@/components/navigation/nav-item";
+import { resolveNavigationIcon } from "@/components/navigation/nav-item";
+import Icon from "@/components/ui/icon";
 import {
   isActiveRoute,
   type UserRole,
@@ -59,13 +61,7 @@ export default function SidebarNav({
         ].join(" ")}
       >
         <Link href={homeHref} className="app-brand-mark" aria-label="CLARA">
-          <span
-            className="material-symbols-outlined text-[21px]"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-            aria-hidden="true"
-          >
-            health_and_safety
-          </span>
+          <Icon name="clinical-notes" size={21} aria-hidden="true" />
         </Link>
         {!collapsed ? (
           <Link href={homeHref} className="min-w-0">
@@ -92,9 +88,7 @@ export default function SidebarNav({
             aria-label={`${t(uiLanguage, "navigation.workspace.label")}: ${navigation.workspace.label}`}
             title={navigation.workspace.label}
           >
-            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
-              {navigation.workspace.icon}
-            </span>
+            <Icon name={resolveNavigationIcon(navigation.workspace.icon)} size={20} aria-hidden="true" />
           </button>
         ) : (
           <label className="block px-1">
@@ -102,9 +96,7 @@ export default function SidebarNav({
               {t(uiLanguage, "navigation.workspace.label")}
             </span>
             <span className="flex min-h-11 items-center gap-2 rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2.5">
-              <span className="material-symbols-outlined text-[19px] text-[var(--text-brand)]" aria-hidden="true">
-                {navigation.workspace.icon}
-              </span>
+              <Icon name={resolveNavigationIcon(navigation.workspace.icon)} size={19} className="text-[var(--text-brand)]" aria-hidden="true" />
               <select
                 value={workspace}
                 onChange={(event) => onWorkspaceChange(event.target.value as WorkspaceId)}
@@ -142,9 +134,9 @@ export default function SidebarNav({
               ].join(" ")}
               title={moreLabel}
             >
-              <span className="material-symbols-outlined text-[20px]" aria-hidden="true">more_horiz</span>
+              <Icon name="more" size={20} aria-hidden="true" />
               {!collapsed ? <span>{moreLabel}</span> : null}
-              {!collapsed ? <span className="material-symbols-outlined ml-auto text-[17px] transition group-open:rotate-180" aria-hidden="true">expand_more</span> : null}
+              {!collapsed ? <Icon name="chevron-down" size={17} className="ml-auto transition group-open:rotate-180" aria-hidden="true" /> : null}
             </summary>
             <nav className={collapsed ? "mt-1 space-y-1" : "mt-1 space-y-1 pl-2"} aria-label={moreLabel}>
               {navigation.secondary.map((item) => (
@@ -174,12 +166,7 @@ export default function SidebarNav({
             }
             title={collapsed ? t(uiLanguage, "action.expand") : t(uiLanguage, "action.collapse")}
           >
-            <span
-              className="material-symbols-outlined text-[18px]"
-              aria-hidden="true"
-            >
-              {collapsed ? "right_panel_open" : "left_panel_close"}
-            </span>
+            <Icon name={collapsed ? "arrow-right" : "menu"} size={18} aria-hidden="true" />
             {!collapsed ? (
               <span>{t(uiLanguage, "action.collapse")}</span>
             ) : null}

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { t } from "@/lib/i18n/catalog";
 import {
   getStoredUILanguage,
@@ -16,6 +17,30 @@ function useSurfaceLanguage(): UILanguage {
     return onUILanguageChange(setLanguage);
   }, []);
   return language;
+}
+
+/**
+ * Surface primitives are used by many routes. Resolve the legacy Material
+ * Symbol names at this boundary so a late or missing icon font can never
+ * render its raw glyph name (the historic source of visible "?" icons).
+ */
+function resolveSurfaceIcon(name: string): IconName {
+  const icons: Record<string, IconName> = {
+    add: "arrow-right",
+    assignment: "clinical-notes",
+    calendar_today: "calendar",
+    description: "clinical-notes",
+    diversity_1: "contact",
+    event_available: "calendar",
+    family_restroom: "contact",
+    groups: "contact",
+    lock: "warning",
+    medication: "medication",
+    route: "progress",
+    task_alt: "check",
+    warning: "warning",
+  };
+  return icons[name] ?? "clinical-notes";
 }
 
 export function SurfaceCard({
@@ -75,7 +100,7 @@ export function StatCard({
             className={`grid h-11 w-11 shrink-0 place-items-center rounded-[var(--radius-lg)] ${toneRing[tone]}`}
             aria-hidden="true"
           >
-            <span className="material-symbols-outlined text-xl">{icon}</span>
+            <Icon name={resolveSurfaceIcon(icon)} size={20} />
           </span>
         ) : null}
       </div>
@@ -91,9 +116,7 @@ export function InlineError({ message, onRetry }: { message: string; onRetry?: (
       className="rounded-[var(--radius-lg)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-4 text-sm text-[var(--status-danger-text)]"
     >
       <div className="flex items-start gap-3">
-        <span className="material-symbols-outlined mt-0.5 text-lg" aria-hidden="true">
-          error
-        </span>
+        <Icon name="warning" className="mt-0.5" size={18} aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{t(language, "surface.loadFailed")}</p>
           <p className="mt-1 leading-5">{message}</p>
@@ -139,11 +162,8 @@ export function EmptyState({
 }) {
   return (
     <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--shell-border-strong)]/50 bg-[var(--surface-muted)]/50 px-5 py-12 text-center">
-      <span
-        className="material-symbols-outlined inline-flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-2xl text-[var(--text-brand)]"
-        aria-hidden="true"
-      >
-        {icon}
+      <span className="inline-flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+        <Icon name={resolveSurfaceIcon(icon)} size={26} aria-hidden="true" />
       </span>
       <h2 className="mt-4 text-base font-semibold text-[var(--text-primary)]">{title}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)]">

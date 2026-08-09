@@ -2,14 +2,14 @@ import { ReactNode } from "react";
 
 function toneClass(tone: "success" | "error" | "info"): string {
   if (tone === "success") {
-    return "border-emerald-300/80 bg-emerald-50/90 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200";
+    return "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]";
   }
 
   if (tone === "error") {
-    return "border-red-300/80 bg-red-50/90 text-red-800 dark:border-red-500/40 dark:bg-red-950/40 dark:text-red-200";
+    return "border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]";
   }
 
-  return "border-sky-300/80 bg-sky-50/90 text-sky-800 dark:border-sky-500/40 dark:bg-sky-950/40 dark:text-sky-200";
+  return "border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]";
 }
 
 export function AuthMessage({ tone, children }: { tone: "success" | "error" | "info"; children: ReactNode }) {
@@ -18,7 +18,7 @@ export function AuthMessage({ tone, children }: { tone: "success" | "error" | "i
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm leading-6 sm:text-base ${toneClass(tone)}`}
+      className={`flex items-start gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-sm leading-6 sm:text-base ${toneClass(tone)}`}
       role={role}
       aria-live={liveMode}
       aria-atomic="true"
