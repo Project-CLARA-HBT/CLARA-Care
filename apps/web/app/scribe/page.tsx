@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
+import Modal from "@/components/ui/modal";
 import EnterpriseReview from "@/components/scribe/enterprise-review";
 import TelemetryPanel from "@/components/telemetry/telemetry-panel";
 import { getRole, type UserRole } from "@/lib/auth-store";
@@ -1363,24 +1364,15 @@ export default function ScribePage() {
         </p>
       ) : null}
       {showRecordingDataDeleteConfirmation && canDeleteSelectedRecordingData ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-lowest)]/70 p-4"
+        <Modal
+          open
           role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="scribe-recording-data-confirm-title"
-          aria-describedby="scribe-recording-data-confirm-description"
-        >
-          <div className="w-full max-w-lg rounded-[14px] border border-t-[color:var(--card-top-border)] border-[color:var(--danger-border)] bg-[var(--surface-panel)] p-6">
-            <h2 id="scribe-recording-data-confirm-title" className={`text-lg font-bold ${bodyTextClass}`}>
-              {copy("scribe.recordingData.confirmTitle")}
-            </h2>
-            <p id="scribe-recording-data-confirm-description" className={`mt-3 text-sm leading-6 ${secondaryTextClass}`}>
-              {copy("scribe.recordingData.confirmDescription")}
-            </p>
-            <p className={`mt-3 text-sm leading-6 ${secondaryTextClass}`}>
-              {copy("scribe.recordingData.confirmRetained")}
-            </p>
-            <div className="mt-5 flex flex-wrap justify-end gap-3">
+          onClose={() => setShowRecordingDataDeleteConfirmation(false)}
+          title={copy("scribe.recordingData.confirmTitle")}
+          description={copy("scribe.recordingData.confirmDescription")}
+          closeLabel={copy("scribe.recordingData.cancel")}
+          footer={
+            <>
               <button
                 type="button"
                 onClick={() => setShowRecordingDataDeleteConfirmation(false)}
@@ -1399,9 +1391,13 @@ export default function ScribePage() {
                   ? copy("scribe.recordingData.deleting")
                   : copy("scribe.recordingData.confirmAction")}
               </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p className={`text-sm leading-6 ${secondaryTextClass}`}>
+            {copy("scribe.recordingData.confirmRetained")}
+          </p>
+        </Modal>
       ) : null}
     </PageShell>
   );

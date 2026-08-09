@@ -20,6 +20,7 @@ export function Modal({
   footer,
   size = "md",
   closeLabel = "Đóng",
+  role = "dialog",
 }: {
   open: boolean;
   onClose: () => void;
@@ -29,6 +30,8 @@ export function Modal({
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
   closeLabel?: string;
+  /** Use `alertdialog` for destructive confirmations that require an explicit decision. */
+  role?: "dialog" | "alertdialog";
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -100,7 +103,7 @@ export function Modal({
       />
       <div
         ref={panelRef}
-        role="dialog"
+        role={role}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}

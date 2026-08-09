@@ -34,4 +34,17 @@ describe("Modal", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("supports alertdialog semantics for destructive confirmations", () => {
+    render(
+      <Modal open role="alertdialog" onClose={vi.fn()} title="Xóa dữ liệu ghi âm">
+        <button type="button">Xóa</button>
+      </Modal>,
+    );
+
+    expect(screen.getByRole("alertdialog", { name: "Xóa dữ liệu ghi âm" })).toHaveAttribute(
+      "aria-modal",
+      "true",
+    );
+  });
 });
