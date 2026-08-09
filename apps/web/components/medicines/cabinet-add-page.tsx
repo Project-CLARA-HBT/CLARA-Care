@@ -5,6 +5,7 @@ import PageShell from "@/components/ui/page-shell";
 import Button from "@/components/ui/button";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Field, Textarea } from "@/components/ui/field";
+import Icon from "@/components/ui/icon";
 import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
 import { t } from "@/lib/i18n/catalog";
 import {
@@ -323,7 +324,7 @@ export default function CabinetAddPage() {
                           : "border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]",
                     ].join(" ")}
                   >
-                    {step.completed ? <span className="material-symbols-outlined text-[16px]">check</span> : step.optional ? t(language, "medicines.cabinet.guided.optional") : index + 1}
+                    {step.completed ? <Icon name="check" size={16} aria-hidden="true" /> : step.optional ? t(language, "medicines.cabinet.guided.optional") : index + 1}
                   </span>
                 </div>
                 <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">{step.status}</p>
@@ -374,7 +375,7 @@ export default function CabinetAddPage() {
                 </div>
                 <label
                   htmlFor="scan-file-input"
-                  className="inline-flex min-h-[var(--touch-target-min)] cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-sm)] transition hover:bg-[var(--brand-700)]"
+                  className="inline-flex min-h-[var(--touch-target-min)] cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[var(--brand-600)] px-4 py-2.5 text-sm font-semibold text-[var(--button-primary-text)] transition hover:bg-[var(--brand-700)]"
                 >
                   {t(language, "medicines.cabinet.guided.file.choose")}
                 </label>

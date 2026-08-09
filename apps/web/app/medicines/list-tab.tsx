@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
 import { EmptyState, InlineError, LoadingCards, SurfaceCard } from "@/components/ui/surface";
+import Icon, { type IconName } from "@/components/ui/icon";
 import { t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
@@ -15,6 +16,12 @@ import {
   getMedicationCourses,
   type MedicationCourse,
 } from "@/lib/medication-courses";
+
+const FIRST_RUN_ICON: Record<string, IconName> = {
+  add_circle: "plus",
+  fact_check: "check",
+  health_and_safety: "warning",
+};
 
 export default function MedicinesListTab() {
   const language = useUILanguage();
@@ -147,7 +154,7 @@ export default function MedicinesListTab() {
                         className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]"
                         aria-hidden="true"
                       >
-                        <span className="material-symbols-outlined">medication</span>
+                        <Icon name="medication" aria-hidden="true" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-[var(--text-primary)]">
@@ -228,7 +235,7 @@ export default function MedicinesListTab() {
                     ].map(([icon, label], index) => (
                       <li key={String(icon)} className="flex items-center gap-3 text-left sm:flex-col sm:text-center">
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-muted)] text-[var(--text-brand)]">
-                          <span className="material-symbols-outlined text-lg" aria-hidden="true">{icon}</span>
+                          <Icon name={FIRST_RUN_ICON[String(icon)] ?? "clinical-notes"} size={18} aria-hidden="true" />
                         </span>
                         <span className="text-sm text-[var(--text-secondary)]">
                           <span className="mr-1 font-semibold text-[var(--text-primary)]">{index + 1}.</span>{label}
@@ -315,9 +322,7 @@ export default function MedicinesListTab() {
             className="focus-ring mt-4 inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-[var(--text-brand)] hover:underline"
           >
             {t(language, "medicines.list.openCabinet")}
-            <span className="material-symbols-outlined text-base" aria-hidden="true">
-              arrow_forward
-            </span>
+            <Icon name="arrow-right" size={16} aria-hidden="true" />
           </Link>
         </SurfaceCard>
       </aside>

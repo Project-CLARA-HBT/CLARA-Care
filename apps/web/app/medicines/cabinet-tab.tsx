@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Button from "@/components/ui/button";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { SurfaceCard, EmptyState, InlineError } from "@/components/ui/surface";
+import Icon from "@/components/ui/icon";
 import MedicalConsentGate from "@/components/medicines/medical-consent-gate";
 import { CabinetItem, deleteCabinetItem, getCabinet } from "@/lib/selfmed";
 import { trackCareguardViewed } from "@/lib/analytics/events";
@@ -217,9 +218,9 @@ export default function MedicinesCabinetTab() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-            <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">verified_user</span> {t(language, "medicines.cabinet.verifiedSource")}</span>
-            <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">database</span> {t(language, "medicines.cabinet.accountData")}</span>
-            <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">update</span> {t(language, "medicines.cabinet.updateAnytime")}</span>
+            <span className="inline-flex items-center gap-1"><Icon name="warning" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.verifiedSource")}</span>
+            <span className="inline-flex items-center gap-1"><Icon name="folder" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.accountData")}</span>
+            <span className="inline-flex items-center gap-1"><Icon name="progress" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.updateAnytime")}</span>
           </div>
         </SurfaceCard>
 
@@ -286,7 +287,7 @@ export default function MedicinesCabinetTab() {
                 <SurfaceCard key={item.id} className="group overflow-hidden" interactive>
                   <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:gap-6">
                     <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[var(--surface-brand-soft)]">
-                      <span className="material-symbols-outlined text-[var(--text-brand)] text-3xl">medication_liquid</span>
+                      <Icon name="medication" size={30} className="text-[var(--text-brand)]" aria-hidden="true" />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -309,11 +310,11 @@ export default function MedicinesCabinetTab() {
 
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-[var(--text-muted)]">
                         <span className="inline-flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm" aria-hidden="true">event</span> {t(language, "medicines.cabinet.expiryValue", { date: formatDate(language, item.expires_on) })}
+                          <Icon name="calendar" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.expiryValue", { date: formatDate(language, item.expires_on) })}
                         </span>
                         {item.ocr_confidence !== null ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-[var(--status-ok-text)]">
-                            <span className="material-symbols-outlined text-sm" aria-hidden="true">check_circle</span> OCR {Math.round(item.ocr_confidence * 100)}%
+                            <Icon name="check" size={14} aria-hidden="true" /> OCR {Math.round(item.ocr_confidence * 100)}%
                           </span>
                         ) : null}
                       </div>
@@ -335,8 +336,8 @@ export default function MedicinesCabinetTab() {
 
                   <div className="border-t border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-5 py-3">
                     <div className="flex flex-wrap items-center gap-4 text-[10px] text-[var(--text-muted)]">
-                      <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">shield</span> {t(language, "medicines.cabinet.saved")}</span>
-                      <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">history</span> {t(language, "medicines.cabinet.updated", { date: formatDate(language, item.updated_at) })}</span>
+                      <span className="inline-flex items-center gap-1"><Icon name="warning" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.saved")}</span>
+                      <span className="inline-flex items-center gap-1"><Icon name="progress" size={14} aria-hidden="true" /> {t(language, "medicines.cabinet.updated", { date: formatDate(language, item.updated_at) })}</span>
                     </div>
                   </div>
                 </SurfaceCard>
@@ -372,7 +373,7 @@ export default function MedicinesCabinetTab() {
 
             <section className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] p-6">
               <div className="mb-4 flex items-center gap-3">
-                <span className="material-symbols-outlined text-[var(--text-brand)]">verified_user</span>
+                <Icon name="warning" className="text-[var(--text-brand)]" aria-hidden="true" />
                 <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--text-primary)]">{t(language, "medicines.cabinet.verifiedTitle")}</h3>
               </div>
               <p className="text-xs leading-5 text-[var(--text-secondary)]">

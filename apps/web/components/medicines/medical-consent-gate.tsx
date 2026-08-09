@@ -6,6 +6,7 @@ import { acceptConsent, getConsentStatus } from "@/lib/consent";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
 import { useUILanguage } from "@/lib/use-ui-language";
 import { safeUserFacingError } from "@/lib/user-facing-text";
+import Icon from "@/components/ui/icon";
 
 type MedicalConsentGateProps = {
   children: ReactNode;
@@ -157,16 +158,14 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
 
   return (
     <div className="space-y-4">
-      <section className="chrome-panel rounded-2xl border border-emerald-400/60 bg-emerald-500/10 p-4">
+      <section className="chrome-panel rounded-2xl border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-300" aria-hidden="true">
-            verified_user
-          </span>
+          <Icon name="check" className="text-[var(--status-ok-text)]" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-100">
+            <p className="text-sm font-semibold text-[var(--status-ok-text)]">
               {t(language, "medicines.consent.acceptedTitle")}
             </p>
-            <p className="text-xs text-emerald-700 dark:text-emerald-100/85">
+            <p className="text-xs text-[var(--status-ok-text)]">
               {acceptedAtDisplay
                 ? t(language, "medicines.consent.acceptedAt", { date: acceptedAtDisplay })
                 : t(language, "medicines.consent.acceptedReady")}
