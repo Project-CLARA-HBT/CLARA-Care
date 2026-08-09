@@ -66,6 +66,22 @@ describe("TransparencyNoticeGate", () => {
     expect(screen.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
   });
 
+  it("keeps keyboard focus on the acknowledgement action while the gate is open", async () => {
+    flagState.enabled = true;
+    mockGetNotice.mockResolvedValue({
+      enabled: true,
+      version: "2026-01-v1",
+      acknowledged: false,
+    });
+    render(<TransparencyNoticeGate />);
+    const button = await screen.findByRole("button", {
+      name: /understand and continue/i,
+    });
+    await waitFor(() => expect(button).toHaveFocus());
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(button).toHaveFocus();
+  });
+
   it("records acknowledgement and dismisses the dialog", async () => {
     flagState.enabled = true;
     mockGetNotice.mockResolvedValue({

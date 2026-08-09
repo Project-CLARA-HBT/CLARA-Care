@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import {
@@ -65,6 +65,7 @@ export default function TransparencyNoticeGate() {
   const [notice, setNotice] = useState<TransparencyNotice | null>(null);
   const [acknowledging, setAcknowledging] = useState(false);
   const [error, setError] = useState("");
+  const acknowledgementButtonRef = useRef<HTMLButtonElement>(null);
 
   const enabled = isTransparencyNoticeEnabled();
   const onMedicalSurface = isMedicalSurface(pathname);
@@ -111,6 +112,33 @@ export default function TransparencyNoticeGate() {
     }
   }, [notice, uiLanguage]);
 
+  const acknowledgementRequired = Boolean(
+    enabled && onMedicalSurface && notice?.enabled && !notice.acknowledged,
+  );
+
+  // This is an acknowledgement-only regulatory gate: it deliberately has no
+  // dismiss/Escape path. Keep focus in the one actionable control and lock the
+  // document behind it while acknowledgement is required.
+  useEffect(() => {
+    if (!acknowledgementRequired) return;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    const focusButton = () => acknowledgementButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Tab") {
+        event.preventDefault();
+        focusButton();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const timer = window.setTimeout(focusButton, 0);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(timer);
+    };
+  }, [acknowledgementRequired]);
+
   // Nothing to render: flag off, off a medical surface, no notice, feature
   // disabled server-side, or already acknowledged.
   if (!enabled || !onMedicalSurface) return null;
@@ -135,7 +163,7 @@ export default function TransparencyNoticeGate() {
         aria-modal="true"
         aria-labelledby="transparency-notice-title"
         aria-describedby="transparency-notice-body"
-        className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-2xl"
+        className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-[var(--radius-xl)] border border-t-[color:var(--card-top-border)] border-[color:var(--shell-border)] bg-[var(--surface-panel)]"
       >
         <div className="border-b border-[color:var(--shell-border)] px-5 py-4">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--text-brand)]">
@@ -172,6 +200,7 @@ export default function TransparencyNoticeGate() {
 
         <div className="flex items-center justify-end gap-2 border-t border-[color:var(--shell-border)] px-5 py-3">
           <button
+            ref={acknowledgementButtonRef}
             type="button"
             onClick={onAcknowledge}
             disabled={acknowledging}
