@@ -383,7 +383,7 @@ export function Drawer({
         aria-label={`${label} — overlay`}
         tabIndex={-1}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[rgba(16,20,25,0.72)]"
       />
       <div
         ref={panelRef}

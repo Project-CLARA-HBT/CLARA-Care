@@ -231,7 +231,7 @@ export default function WorkspaceDrawer({
         type="button"
         aria-label={copy("chat.workspace.closeAria")}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[rgba(16,20,25,0.72)]"
       />
       <aside
         ref={dialogRef}

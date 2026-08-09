@@ -94,27 +94,27 @@ const primaryButtonClass =
 const secondaryButtonClass =
   "rounded-lg border border-[color:var(--shell-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-brand)] transition hover:bg-[color:var(--surface-brand-soft)] disabled:cursor-not-allowed disabled:bg-[color:var(--surface-muted)] disabled:text-[color:var(--text-primary)] disabled:opacity-100";
 const dangerButtonClass =
-  "rounded-lg border border-rose-700 bg-rose-600 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-rose-700";
+  "rounded-[var(--radius-md)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--status-danger-text)] transition hover:bg-[var(--status-danger-bg)]/80";
 const sectionTextareaClass =
-  "min-h-[88px] w-full rounded-lg border border-[#93C5FD] bg-[#F8FBFF] px-3 py-2 text-sm leading-6 text-[#1F2937] outline-none transition focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-[#EEF2F7] dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100";
+  "min-h-[88px] w-full rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm leading-6 text-[var(--text-primary)] outline-none transition focus:border-[color:var(--brand-500)] focus:shadow-[var(--shadow-focus)] disabled:cursor-not-allowed disabled:bg-[var(--surface-muted)]";
 
 const SPEAKER_CHIP_CLASSES: Record<string, string> = {
   clinician:
-    "border-[#2563EB] bg-[#DBEAFE] text-[#1D4ED8] dark:border-sky-400 dark:bg-sky-500/20 dark:text-sky-100",
+    "border-[color:var(--brand-200)] bg-[var(--surface-brand-soft)] text-[var(--text-brand)]",
   patient:
-    "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100",
+    "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]",
   other:
-    "border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-400 dark:bg-amber-500/20 dark:text-amber-100",
+    "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
   unknown:
-    "border-slate-400 bg-slate-100 text-slate-600 dark:border-slate-500 dark:bg-slate-700/40 dark:text-slate-200",
+    "border-[color:var(--shell-border)] bg-[var(--surface-muted)] text-[var(--text-secondary)]",
 };
 
 const STAGE_DOT_CLASSES: Record<ScribeStageStatus, string> = {
-  pending: "bg-slate-300 dark:bg-slate-600",
-  in_progress: "bg-[#2563EB] animate-pulse",
-  completed: "bg-emerald-500",
-  failed: "bg-rose-500",
-  warning: "bg-amber-500",
+  pending: "bg-[var(--surface-muted)]",
+  in_progress: "bg-[var(--brand-500)] animate-pulse",
+  completed: "bg-[var(--status-ok-text)]",
+  failed: "bg-[var(--status-danger-text)]",
+  warning: "bg-[var(--status-warn-text)]",
 };
 
 // Grounding chip tones (Req 12.7): grounded statements are evidenced, unverified
@@ -122,18 +122,18 @@ const STAGE_DOT_CLASSES: Record<ScribeStageStatus, string> = {
 // speaker chips so the editor reads consistently.
 const GROUNDING_CHIP_CLASSES: Record<GroundingStatus, string> = {
   grounded:
-    "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100",
+    "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]",
   unverified:
-    "border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-400 dark:bg-amber-500/20 dark:text-amber-100",
+    "border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] text-[var(--status-warn-text)]",
 };
 
 // E/M + CPT coding rows (Req 14.3/14.5). A confirmed (clinician-selected) row is
 // tinted to make the explicit confirmation visible; an unconfirmed suggestion is
 // neutral — nothing is auto-selected.
 const CODING_ROW_CLASS =
-  "border-[#93C5FD] bg-[#F8FBFF] text-[#1F2937] dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100";
+  "border-[color:var(--shell-border)] bg-[var(--surface-panel)] text-[var(--text-primary)]";
 const CODING_ROW_SELECTED_CLASS =
-  "border-emerald-500 bg-emerald-50 text-emerald-800 dark:border-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-100";
+  "border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]";
 
 const SIGNED_STATUSES = new Set(["signed", "exported"]);
 
@@ -951,7 +951,7 @@ function renderProcessPanel({
       <div className={panelPaddedClass} data-testid="scribe-process-panel">
         <div className="flex items-center justify-between">
           <h2 className={sectionTitleClass}>{t(language, "scribe.enterprise.process.title")}</h2>
-          <span className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-bold text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100">
+          <span className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-brand)]">
             {sessionStatus || t(language, "scribe.enterprise.process.sessionDraft")}
           </span>
         </div>
@@ -961,7 +961,7 @@ function renderProcessPanel({
               <div className="flex flex-col items-center">
                 <span className={`mt-1 h-3 w-3 rounded-full ${STAGE_DOT_CLASSES[stage.status]}`} />
                 {index < stages.length - 1 ? (
-                  <span className="mt-1 h-7 w-px bg-[#B6D4FE] dark:bg-sky-800" />
+                  <span className="mt-1 h-7 w-px bg-[var(--shell-border)]" />
                 ) : null}
               </div>
               <div>
@@ -1041,8 +1041,8 @@ function renderTranscriptColumn(props: {
   return (
     <article className="col-span-12 xl:col-span-5 space-y-4">
       {consentGateOpen ? (
-        <div className={`${panelPaddedClass} border-amber-300`} data-testid="scribe-consent-gate">
-          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
+        <div className={`${panelPaddedClass} border-[color:var(--status-warn-border)]`} data-testid="scribe-consent-gate">
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-[var(--status-warn-text)]">
             {t(props.language, "scribe.enterprise.consent.title")}
           </h3>
           <p className={`mt-2 text-sm leading-6 ${secondaryTextClass}`}>
@@ -1063,10 +1063,10 @@ function renderTranscriptColumn(props: {
       ) : null}
 
       <div className={panelClass}>
-        <div className="flex items-center justify-between border-b border-[#B6D4FE] px-5 py-3 dark:border-sky-800">
+        <div className="flex items-center justify-between border-b border-[color:var(--shell-border)] px-5 py-3">
           <h3 className={sectionTitleClass}>{t(props.language, "scribe.transcript.liveTitle")}</h3>
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#1D4ED8] dark:text-sky-100">
-            <span className={`h-2 w-2 rounded-full ${props.recording ? "bg-rose-500 animate-pulse" : props.transcribing ? "bg-[#2563EB] animate-pulse" : "bg-slate-500"}`} />
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-brand)]">
+            <span className={`h-2 w-2 rounded-full ${props.recording ? "bg-[var(--status-danger-text)] animate-pulse" : props.transcribing ? "bg-[var(--brand-500)] animate-pulse" : "bg-[var(--text-muted)]"}`} />
             {props.recording
               ? t(props.language, "scribe.status.recording")
               : props.transcribing
@@ -1075,7 +1075,7 @@ function renderTranscriptColumn(props: {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#B6D4FE] px-5 py-3 dark:border-sky-800">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--shell-border)] px-5 py-3">
           {props.recording ? (
             <button type="button" onClick={props.onStopRecording} className={dangerButtonClass}>
               {t(props.language, "scribe.action.stopRecording")}
@@ -1140,14 +1140,14 @@ function renderTranscriptColumn(props: {
         </div>
 
         {props.transcriptionError ? (
-          <p className="mx-5 mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/70 dark:bg-amber-500/20 dark:text-amber-100">
+          <p className="mx-5 mb-3 rounded-lg border border-[color:var(--status-warn-border)] bg-[var(--status-warn-bg)] px-3 py-2 text-xs font-semibold text-[var(--status-warn-text)]">
             {t(props.language, "scribe.enterprise.transcript.streamingFallback")}
           </p>
         ) : null}
 
         {props.medicalCorrections.length ? (
-          <section className="mx-5 mb-3 rounded-lg border border-sky-300 bg-sky-50 px-3 py-3 text-sm dark:border-sky-700 dark:bg-sky-950/30">
-            <h4 className="font-semibold text-sky-950 dark:text-sky-100">
+          <section className="mx-5 mb-3 rounded-lg border border-[color:var(--brand-200)] bg-[var(--surface-brand-soft)] px-3 py-3 text-sm">
+            <h4 className="font-semibold text-[var(--text-primary)]">
               {t(props.language, "scribe.enterprise.corrections.title")}
             </h4>
             <p className={`mt-1 text-xs leading-5 ${secondaryTextClass}`}>
@@ -1157,7 +1157,7 @@ function renderTranscriptColumn(props: {
               {props.medicalCorrections.map((suggestion) => (
                 <li
                   key={`${suggestion.start}-${suggestion.end}-${suggestion.source_text}`}
-                  className="rounded-md border border-sky-200 bg-white p-2 dark:border-sky-800 dark:bg-slate-950/50"
+                  className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-2"
                 >
                   <p className={`text-xs ${bodyTextClass}`}>
                     <span className="font-semibold">“{suggestion.source_text}”</span>
@@ -1171,7 +1171,7 @@ function renderTranscriptColumn(props: {
           </section>
         ) : null}
 
-        <div className="border-t border-[#B6D4FE] p-4 dark:border-sky-800">
+        <div className="border-t border-[color:var(--shell-border)] p-4">
           <textarea
             value={props.transcriptDraft}
             onChange={(event) => props.onTranscriptChange(event.target.value)}
@@ -1251,7 +1251,7 @@ function renderNoteColumn(props: {
             value={props.templateId}
             onChange={(event) => props.onTemplateChange(event.target.value)}
             disabled={editorLocked}
-            className="flex-1 rounded-lg border border-[#93C5FD] bg-white px-3 py-2 text-sm font-semibold text-[#1F2937] outline-none focus:border-[#2563EB] disabled:cursor-not-allowed disabled:bg-[#EEF2F7] dark:border-sky-700/70 dark:bg-slate-950/60 dark:text-slate-100"
+            className="flex-1 rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[color:var(--brand-500)] disabled:cursor-not-allowed disabled:bg-[var(--surface-muted)]"
             data-testid="scribe-template-picker"
           >
             {SCRIBE_REVIEW_TEMPLATES.map((template) => (
@@ -1278,7 +1278,7 @@ function renderNoteColumn(props: {
         <div className="flex items-center justify-between">
           <h3 className={sectionTitleClass}>{t(props.language, "scribe.enterprise.note.title")}</h3>
           {editorLocked ? (
-            <span className="rounded-full border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100">
+            <span className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-2 py-0.5 text-[10px] font-black uppercase text-[var(--status-ok-text)]">
               {props.exported
                 ? t(props.language, "scribe.enterprise.note.exported")
                 : t(props.language, "scribe.enterprise.note.signed")}
@@ -1294,7 +1294,7 @@ function renderNoteColumn(props: {
           ) : (
             props.noteSections.map((section) => (
               <div key={section.key}>
-                <label className="text-[10px] font-black uppercase tracking-[0.14em] text-[#2563EB] dark:text-sky-100">
+                <label className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-brand)]">
                   {section.label}
                 </label>
                 <textarea
@@ -1434,11 +1434,11 @@ function renderGroundingPanel({
   const candidates = grounding.unverified_candidates;
 
   return (
-    <div className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800" data-testid="scribe-grounding">
+    <div className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4" data-testid="scribe-grounding">
       <div className="flex items-center justify-between gap-2">
         <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.grounding.title")}</h4>
         <span
-          className="rounded-full border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100"
+          className="rounded-full border border-[color:var(--status-ok-border)] bg-[var(--status-ok-bg)] px-2 py-0.5 text-[10px] font-black uppercase text-[var(--status-ok-text)]"
           data-testid="scribe-grounding-rate"
         >
           {t(language, "scribe.enterprise.grounding.rate", {
@@ -1487,7 +1487,7 @@ function renderGroundingPanel({
                   <span className={`flex-1 text-sm leading-5 ${bodyTextClass}`}>
                     {statement.statement}
                     {chip.critical ? (
-                      <span className="ml-1 text-[10px] font-black uppercase text-rose-600 dark:text-rose-300">
+                      <span className="ml-1 text-[10px] font-black uppercase text-[var(--status-danger-text)]">
                         · {t(language, "scribe.enterprise.grounding.critical")}
                       </span>
                     ) : null}
@@ -1512,7 +1512,7 @@ function renderGroundingPanel({
                       spans.map((span, spanIndex) => (
                         <div
                           key={`${span.spanId}-${spanIndex}`}
-                          className="rounded-md border border-[#B6D4FE] bg-white/70 px-2 py-1 dark:border-sky-800 dark:bg-slate-950/50"
+                          className="rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1"
                         >
                           <p className={`text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
                             {span.spanId}
@@ -1536,10 +1536,10 @@ function renderGroundingPanel({
 
       {candidates.length > 0 ? (
         <div
-          className="rounded-lg border border-rose-300 bg-rose-50 p-3 dark:border-rose-500/70 dark:bg-rose-500/15"
+          className="rounded-lg border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-3"
           data-testid="scribe-unverified-candidates"
         >
-          <h5 className="text-[11px] font-black uppercase tracking-[0.14em] text-rose-700 dark:text-rose-200">
+          <h5 className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--status-danger-text)]">
             {t(language, "scribe.enterprise.grounding.candidatesTitle", {
               count: formatLocaleNumber(language, candidates.length),
             })}
@@ -1551,9 +1551,9 @@ function renderGroundingPanel({
             {candidates.map((candidate, index) => (
               <li
                 key={`${index}-${candidate}`}
-                className="flex gap-2 text-sm leading-5 text-rose-800 dark:text-rose-100"
+                className="flex gap-2 text-sm leading-5 text-[var(--status-danger-text)]"
               >
-                <span aria-hidden className="mt-0.5 text-rose-500">
+                <span aria-hidden className="mt-0.5 text-[var(--status-danger-text)]">
                   ⚠
                 </span>
                 <span>{candidate}</span>
@@ -1605,7 +1605,7 @@ function renderEmCptRow(
           type="checkbox"
           checked={selected}
           onChange={() => onToggleEmCpt(suggestion)}
-          className="mt-1 h-4 w-4 shrink-0 accent-[#2563EB]"
+          className="mt-1 h-4 w-4 shrink-0 accent-[var(--brand-500)]"
           data-testid={`scribe-coding-confirm-${key}`}
           aria-label={t(language, "scribe.enterprise.coding.confirmCode", { code: suggestion.code })}
         />
@@ -1624,7 +1624,7 @@ function renderEmCptRow(
             ) : null}
             <span
               className={`text-[10px] font-black uppercase tracking-[0.1em] ${
-                selected ? "text-emerald-700 dark:text-emerald-200" : mutedTextClass
+                selected ? "text-[var(--status-ok-text)]" : mutedTextClass
               }`}
             >
               {selected
@@ -1643,7 +1643,7 @@ function renderEmCptRow(
           ) : null}
           {spans.length > 0 ? (
             <span
-              className="mt-1 block rounded-md border border-[#B6D4FE] bg-white/70 px-2 py-1 text-[11px] leading-4 text-[#1F2937] dark:border-sky-800 dark:bg-slate-950/50 dark:text-slate-100"
+              className="mt-1 block rounded-md border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-2 py-1 text-[11px] leading-4 text-[var(--text-primary)]"
               data-testid="scribe-coding-spans"
             >
               <span className={`block text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>
@@ -1677,11 +1677,11 @@ function renderCodingPanel({
   const confirmed = countConfirmedEmCpt(selections);
 
   return (
-    <div className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800" data-testid="scribe-coding">
+    <div className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4" data-testid="scribe-coding">
       <div className="flex items-center justify-between gap-2">
         <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.coding.title")}</h4>
         <span
-          className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100"
+          className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[10px] font-black uppercase text-[var(--text-brand)]"
           data-testid="scribe-coding-confirmed-count"
         >
           {t(language, "scribe.enterprise.coding.confirmedCount", {
@@ -1757,13 +1757,13 @@ function renderAddendumPanel({
   const hasAddenda = addendaHaveData(addenda);
   return (
     <div
-      className="mt-4 space-y-3 border-t border-[#B6D4FE] pt-4 dark:border-sky-800"
+      className="mt-4 space-y-3 border-t border-[color:var(--shell-border)] pt-4"
       data-testid="scribe-addendum"
     >
       <div className="flex items-center justify-between gap-2">
         <h4 className={sectionTitleClass}>{t(language, "scribe.enterprise.addendum.title")}</h4>
         <span
-          className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-black uppercase text-[#1D4ED8] dark:border-sky-600 dark:bg-sky-500/20 dark:text-sky-100"
+          className="rounded-full border border-[color:var(--shell-border)] bg-[var(--surface-brand-soft)] px-2 py-0.5 text-[10px] font-black uppercase text-[var(--text-brand)]"
           data-testid="scribe-addendum-count"
         >
           {t(language, "scribe.enterprise.addendum.count", {
@@ -1780,7 +1780,7 @@ function renderAddendumPanel({
           {addenda.map((entry) => (
             <li
               key={entry.addendum_id}
-              className="rounded-lg border border-[#B6D4FE] bg-[#F8FBFF] px-3 py-2 dark:border-sky-800 dark:bg-slate-950/50"
+              className="rounded-lg border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-2"
               data-testid="scribe-addendum-item"
             >
               <p className={`text-[10px] font-bold uppercase tracking-[0.1em] ${mutedTextClass}`}>

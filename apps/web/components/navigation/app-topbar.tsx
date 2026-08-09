@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Icon from "@/components/ui/icon";
 import { type UserRole } from "@/lib/navigation.config";
 import { t, type UITranslationKey } from "@/lib/i18n/catalog";
 import type { ThemePreference } from "@/lib/theme";
@@ -66,12 +67,7 @@ export default function AppTopbar({
           aria-label={t(uiLanguage, "help.open")}
           title={t(uiLanguage, "help.title")}
         >
-          <span
-            className="material-symbols-outlined text-[20px]"
-            aria-hidden="true"
-          >
-            help
-          </span>
+          <Icon name="help" size={20} aria-hidden="true" />
         </Link>
 
         <Link
@@ -84,9 +80,7 @@ export default function AppTopbar({
           }
           title={t(uiLanguage, "family.title")}
         >
-          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
-            notifications
-          </span>
+          <Icon name="notifications" size={20} aria-hidden="true" />
           {familyNotificationCount > 0 ? (
             <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[var(--danger-500)] px-1 text-center text-[10px] font-bold leading-4 text-white" aria-hidden="true">
               {familyNotificationCount > 9 ? "9+" : familyNotificationCount}
@@ -101,12 +95,7 @@ export default function AppTopbar({
           aria-label={themeLabel}
           title={themeLabel}
         >
-          <span
-            className="material-symbols-outlined text-[20px]"
-            aria-hidden="true"
-          >
-            {themePreference === "dark" ? "light_mode" : "dark_mode"}
-          </span>
+          <Icon name="theme" size={20} aria-hidden="true" />
         </button>
 
         <button
@@ -133,9 +122,9 @@ export default function AppTopbar({
               </span>
               <span className="block text-[11px] text-[var(--text-muted)]">{roleLabel}</span>
             </span>
-            <span className="material-symbols-outlined hidden text-[16px] text-[var(--text-muted)] transition group-open:rotate-180 xl:block" aria-hidden="true">expand_more</span>
+            <Icon name="chevron-down" size={16} className="hidden text-[var(--text-muted)] transition group-open:rotate-180 xl:block" aria-hidden="true" />
           </summary>
-          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3 shadow-xl">
+          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-3">
             <p className="px-1 text-xs font-semibold text-[var(--text-primary)]">{t(uiLanguage, "profile.account")}</p>
             <p className="mt-0.5 px-1 text-[11px] text-[var(--text-muted)]">{roleLabel}</p>
             {profiles.length > 0 ? (
@@ -162,7 +151,7 @@ export default function AppTopbar({
               disabled={!onLogout || isLoggingOut}
               className="mt-3 flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[var(--status-danger-text)] transition hover:bg-[var(--status-danger-soft)] disabled:opacity-60"
             >
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>
+              <Icon name="arrow-right" size={18} aria-hidden="true" />
               {isLoggingOut ? t(uiLanguage, "action.signingOut") : t(uiLanguage, "action.signOut")}
             </button>
           </div>

@@ -648,7 +648,7 @@ export default function ChatShell() {
             type="button"
             aria-label={t(uiLanguage, "chat.shell.closeSidebar")}
             onClick={() => setIsMobileSidebarOpen(false)}
-            className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] xl:hidden"
+            className="fixed inset-0 z-40 bg-[rgba(16,20,25,0.72)] xl:hidden"
           />
         ) : null}
         <aside

@@ -190,7 +190,7 @@ export default function CouncilWorkspaceScreen({ tab }: { tab: WorkspaceTab }) {
                         href={item.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-2 inline-flex text-xs font-semibold text-cyan-600 hover:underline dark:text-cyan-300"
+                        className="mt-2 inline-flex text-xs font-semibold text-[var(--text-brand)] hover:underline"
                       >
                         {t(language, "council.workspace.citations.openSource")}
                       </a>

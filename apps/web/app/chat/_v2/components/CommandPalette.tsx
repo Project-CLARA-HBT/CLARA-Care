@@ -71,7 +71,7 @@ export default function CommandPalette({ palette, uiLanguage }: CommandPalettePr
   const activeOption = filtered[activeIndex];
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-950/45 px-4 pt-[10vh] backdrop-blur-sm">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-[rgba(16,20,25,0.72)] px-4 pt-[10vh]">
       <button
         type="button"
         aria-label={copy("chat.commandPalette.closeAria")}
