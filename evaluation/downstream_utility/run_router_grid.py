@@ -39,10 +39,10 @@ def call(base: str, key: str, model: str, prompt: str) -> tuple[dict, float, str
         with urllib.request.urlopen(request, timeout=90) as response:
             payload = json.loads(response.read())
         return payload, (time.perf_counter() - started) * 1000, None
-    except (OSError, TimeoutError, json.JSONDecodeError) as exc:
-        return {}, (time.perf_counter() - started) * 1000, type(exc).__name__
     except urllib.error.HTTPError as exc:
         return {}, (time.perf_counter() - started) * 1000, f"HTTP_{exc.code}"
+    except (OSError, TimeoutError, json.JSONDecodeError) as exc:
+        return {}, (time.perf_counter() - started) * 1000, type(exc).__name__
 
 
 def main() -> None:
