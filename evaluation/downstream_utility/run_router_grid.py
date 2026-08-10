@@ -29,7 +29,12 @@ COLUMNS = (
 
 
 def call(base: str, key: str, model: str, prompt: str) -> tuple[dict, float, str | None]:
-    body = json.dumps({"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0}).encode()
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,
+        "stream": False,
+    }).encode()
     request = urllib.request.Request(
         base.rstrip("/") + "/chat/completions", data=body, method="POST",
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
