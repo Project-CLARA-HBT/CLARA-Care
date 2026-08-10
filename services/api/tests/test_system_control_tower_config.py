@@ -37,17 +37,17 @@ def test_control_tower_config_get_and_put() -> None:
     assert "rag_reranker_enabled" in payload["rag_flow"]
     assert "rag_nli_enabled" in payload["rag_flow"]
     assert "rag_graphrag_enabled" in payload["rag_flow"]
-    assert "llm_provider" in payload["rag_flow"]
-    assert "llm_base_url" in payload["rag_flow"]
-    assert "llm_model" in payload["rag_flow"]
-    assert "llm_api_key" in payload["rag_flow"]
+    assert "llm_provider" not in payload["rag_flow"]
+    assert "llm_base_url" not in payload["rag_flow"]
+    assert "llm_model" not in payload["rag_flow"]
+    assert "llm_api_key" not in payload["rag_flow"]
 
     payload["rag_flow"]["deepseek_fallback_enabled"] = True
     payload["rag_flow"]["rule_verification_enabled"] = False
-    payload["rag_flow"]["llm_provider"] = "hitechcloud_gpt53_codex_high"
-    payload["rag_flow"]["llm_base_url"] = "https://platform.hitechcloud.one/v1"
-    payload["rag_flow"]["llm_model"] = "gpt-5.3-codex-high"
-    payload["rag_flow"]["llm_api_key"] = "masked-test-key"
+    payload["rag_flow"]["llm_provider"] = "undeclared-provider"
+    payload["rag_flow"]["llm_base_url"] = "https://provider.invalid/v1"
+    payload["rag_flow"]["llm_model"] = "undeclared-model"
+    payload["rag_flow"]["llm_api_key"] = "fixture-placeholder"
     put_response = client.put(
         "/api/v1/system/control-tower/config",
         headers={"Authorization": f"Bearer {token}"},
@@ -57,10 +57,10 @@ def test_control_tower_config_get_and_put() -> None:
     updated = put_response.json()
     assert updated["rag_flow"]["deepseek_fallback_enabled"] is False
     assert updated["rag_flow"]["rule_verification_enabled"] is False
-    assert updated["rag_flow"]["llm_provider"] == "hitechcloud_gpt53_codex_high"
-    assert updated["rag_flow"]["llm_base_url"] == "https://platform.hitechcloud.one/v1"
-    assert updated["rag_flow"]["llm_model"] == "gpt-5.3-codex-high"
-    assert updated["rag_flow"]["llm_api_key"] == "masked-test-key"
+    assert "llm_provider" not in updated["rag_flow"]
+    assert "llm_base_url" not in updated["rag_flow"]
+    assert "llm_model" not in updated["rag_flow"]
+    assert "llm_api_key" not in updated["rag_flow"]
 
 
 def test_control_tower_config_put_maps_legacy_verification_enabled() -> None:

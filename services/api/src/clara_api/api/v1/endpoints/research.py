@@ -1970,6 +1970,9 @@ def _build_personal_context_payload(
 
     return {
         "snapshot_id": snapshot.snapshot_id,
+        "state_version": snapshot.state_version,
+        "policy_version": snapshot.policy_version,
+        "consent_version": snapshot.consent_version,
         "profile": {},
         "allergies": allergies,
         "conditions": conditions,
@@ -1977,6 +1980,7 @@ def _build_personal_context_payload(
         "observations": observations,
         "lifemap": lifemap,
         "conflicts": list(snapshot.conflicts),
+        "risk": snapshot.risk,
         "summary_markdown": summary_markdown,
     }
 

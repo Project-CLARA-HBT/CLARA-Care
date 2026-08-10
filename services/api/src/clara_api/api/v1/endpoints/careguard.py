@@ -2559,6 +2559,7 @@ def run_auto_ddi_check(
     flags = phr_features(settings=None)
     phr_derived = False
     allergy_conflicts: list[dict[str, Any]] = []
+    thss_metadata: dict[str, Any] | None = None
     if flags.reconciliation:
         profile = db.execute(
             select(PhrProfile).where(PhrProfile.user_id == user.id)
@@ -2580,6 +2581,13 @@ def run_auto_ddi_check(
                 allowed_data_classes=frozenset({"medications", "allergies"}),
                 selection_policy="strict",
             )
+            thss_metadata = {
+                "snapshot_id": snapshot.snapshot_id,
+                "state_version": snapshot.state_version,
+                "policy_version": snapshot.policy_version,
+                "consent_version": snapshot.consent_version,
+                "risk": snapshot.risk,
+            }
             for assertion in snapshot.assertions:
                 value = assertion.get("value")
                 if not isinstance(value, dict):
@@ -2631,6 +2639,11 @@ def run_auto_ddi_check(
                 request_payload["coded_allergies"] = phr_allergies
                 allergy_conflicts = find_allergy_conflicts(reconciled, phr_allergies)
                 phr_derived = True
+        if thss_metadata is not None:
+            # Metadata is non-clinical governance context; it tells the model
+            # whether the bounded state is usable without exposing ledger rows
+            # or allowing model output to change the selection.
+            request_payload["thss_governance"] = thss_metadata
 
     # --- Cross-border guard (Req 19.4) --------------------------------------
     # When cross-border gating is on and the user has not granted cross-border

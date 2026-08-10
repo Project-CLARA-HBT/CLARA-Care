@@ -1,0 +1,1 @@
+CommitLoop candidate generation v1. Repeat only source-grounded anchor fields and exact references supplied by deterministic code. Do not invent a code, date, reference, clinician, diagnosis, prescription, dosage, or outcome.

@@ -1,0 +1,37 @@
+{
+  "schema_version": "commitloop-sap.v1",
+  "primary_unit": "subject",
+  "primary_metrics": [
+    "lifecycle_state_accuracy",
+    "evidence_state_accuracy",
+    "timeliness_state_accuracy",
+    "escalation_state_accuracy"
+  ],
+  "secondary_metrics": [
+    "candidate_slot_precision",
+    "candidate_slot_recall",
+    "candidate_slot_f1",
+    "temporal_window_exact_accuracy",
+    "all_axes_exact_match",
+    "per_variant_all_axes_exact_match",
+    "false_alert_rate",
+    "missed_loop_rate",
+    "missed_conflict_rate"
+  ],
+  "variant_metrics": {
+    "join_stage": "after_solver_inference",
+    "false_alert": "gold SATISFIED predicted OPEN",
+    "missed_loop": "gold OPEN predicted non-OPEN",
+    "missed_conflict": "gold CONFLICTED predicted non-CONFLICTED",
+    "transition_sequence_accuracy": "both snapshots exact across lifecycle/evidence/timeliness/escalation for source versus a minimal late-ingestion or post-cutoff pair",
+    "transition_sequence_scope": "two_snapshot_minimal_boundary_pair; longer longitudinal replay remains NOT_MEASURED",
+    "known_time_boundary_accuracy": "source and late-ingestion variant pair exact",
+    "valid_time_boundary_accuracy": "source and post-cutoff-evidence variant pair exact",
+    "escalation_accuracy": "exact_match_on_frozen_deterministic_escalation_rule"
+  },
+  "paired_comparisons": true,
+  "missing_outputs": "count_as_error_and_report_separately",
+  "multiplicity_control": "holm",
+  "confidence_interval": "subject_clustered_bootstrap_95_percent",
+  "clinical_claims_without_adjudication": "prohibited"
+}

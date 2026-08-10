@@ -1,0 +1,12 @@
+{
+  "schema_version": "commitloop-comparator-capabilities.v1",
+  "valid_time_cutoff": true,
+  "knowledge_time_cutoff": true,
+  "explicit_relations": ["SUPPORT", "REFINE", "SUPERSEDE", "BRANCH-CONFLICT"],
+  "non_destructive_history": true,
+  "governance": "UNSUPPORTED_BY_METHOD",
+  "consent": "UNSUPPORTED_BY_METHOD",
+  "purpose_limitation": "UNSUPPORTED_BY_METHOD",
+  "optimistic_concurrency": "UNSUPPORTED_BY_METHOD",
+  "fidelity": "mechanism_only_not_faithful"
+}

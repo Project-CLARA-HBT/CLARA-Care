@@ -8,6 +8,7 @@ from clara_api.api.v1.endpoints import (
     careguard,
     chat,
     clinical_workbench,
+    commitments,
     connected_health,
     council,
     evidence_questions,
@@ -52,6 +53,7 @@ api_router.include_router(family.task_router, prefix="/care-tasks", tags=["care-
 api_router.include_router(medications.router, prefix="/medication-courses", tags=["medications"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(mobile.router, prefix="/mobile", tags=["mobile"])
+api_router.include_router(commitments.router, prefix="/commitments", tags=["commitments"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(
     clinical_workbench.router, prefix="/clinical-workbench", tags=["clinical-workbench"]

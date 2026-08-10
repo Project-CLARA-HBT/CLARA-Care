@@ -1,0 +1,1 @@
+{"method":"naive_rag","version":"exact-code-top5-v1","temporal_ordering":false,"retrieval":"exact_code_top5","conflict_arbitration":false,"governance":"UNSUPPORTED_BY_METHOD"}

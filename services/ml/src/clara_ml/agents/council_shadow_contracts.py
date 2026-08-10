@@ -21,7 +21,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, field_validator
 
-
 COUNCIL_SHADOW_CONTRACT_VERSION = "council-specialist-shadow.v5"
 COUNCIL_SHADOW_PROMPT_FAMILY_VERSION = "council-specialist-profiles.vi.v1"
 
@@ -76,6 +75,9 @@ class CouncilShadowSpecialistProfile:
 _REQUIRED_STRUCTURED_FIELDS = (
     "contract_version",
     "specialty",
+    "prompt_version",
+    "source_class",
+    "tool",
     "supported_findings",
     "missing_information",
     "uncertainties",
@@ -148,7 +150,9 @@ class CouncilShadowFinding(BaseModel):
     @field_validator("evidence_case_fact_ids")
     @classmethod
     def _case_fact_ids_are_stable(cls, value: list[str]) -> list[str]:
-        if len(set(value)) != len(value) or any(not _STABLE_ID_RE.fullmatch(item) for item in value):
+        if len(set(value)) != len(value) or any(
+            not _STABLE_ID_RE.fullmatch(item) for item in value
+        ):
             raise ValueError("invalid or duplicate case fact ID")
         return value
 
@@ -250,7 +254,9 @@ def _validate_profile_bound_opinion(
             rejection_codes.append("tool_not_allowed")
 
     for finding in opinion.supported_findings:
-        if all(case_fact_id in valid_case_fact_ids for case_fact_id in finding.evidence_case_fact_ids):
+        if all(
+            case_fact_id in valid_case_fact_ids for case_fact_id in finding.evidence_case_fact_ids
+        ):
             accepted += 1
         else:
             rejected += 1
@@ -448,13 +454,9 @@ def run_specialist_shadow_workflow(
         except Exception:  # noqa: BLE001 - never expose parser/provider details
             failures.append({"stage": "specialist_output", "code": "invalid_schema"})
             continue
-        checked = verify_council_shadow_specialist_opinion(
-            opinion, valid_case_fact_ids=fact_ids
-        )
+        checked = verify_council_shadow_specialist_opinion(opinion, valid_case_fact_ids=fact_ids)
         if checked is None:
-            failures.append(
-                {"stage": "deterministic_verifier", "code": "rejected_contract"}
-            )
+            failures.append({"stage": "deterministic_verifier", "code": "rejected_contract"})
             continue
         verified.append(checked)
         # Only the closed contract is retained: never raw provider metadata or

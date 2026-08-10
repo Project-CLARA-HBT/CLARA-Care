@@ -6,9 +6,12 @@ import argparse
 import json
 from pathlib import Path
 
+from evaluation.evidence_program.freeze import FreezeError
+from evaluation.evidence_program.release_gate import validate as validate_release_gate
+
 WORKSTREAMS = {
     "comparator": (
-        "evaluation/comparators/bitemporal_state_arbitration/comparator_manifest.json",
+        "evaluation/comparator_studies/bitemporal_state_arbitration/comparator_manifest.json",
         "mechanism comparator metadata present",
     ),
     "external_validation": (
@@ -16,7 +19,7 @@ WORKSTREAMS = {
         "NOT RUN unless curator-owned sealed cohort artifact exists",
     ),
     "independent_adjudication": (
-        "evaluation/independent_adjudication/README.md",
+        "evaluation/clinical_adjudication/README.md",
         "NOT RUN unless qualified human labels and adjudication exist",
     ),
     "domain_portability": (
@@ -24,7 +27,7 @@ WORKSTREAMS = {
         "PROTOCOL_ONLY until domain results are frozen",
     ),
     "downstream_utility": (
-        "evaluation/downstream_utility/README.md",
+        "evaluation/clinical_utility/README.md",
         "NOT RUN unless two model-family output grid exists",
     ),
     "human_review": (
@@ -34,6 +37,10 @@ WORKSTREAMS = {
     "governance_adversarial": (
         "evaluation/governance_adversarial/README.md",
         "NOT RUN unless real-boundary classified attack results exist",
+    ),
+    "audit_reconstruction": (
+        "evaluation/audit_reconstruction/README.md",
+        "IMPLEMENTED_NOT_HEADLINE; independent audit usability remains NOT RUN",
     ),
     "fullstack_benchmark": (
         "evaluation/fullstack_benchmark/README.md",
@@ -62,14 +69,31 @@ def audit(repository_root: Path, artifact_root: Path) -> dict[str, object]:
             for path in artifact_root.glob("*/artifact-sha256.json")
             if path.is_file()
         )
-    headline_ready = bool(sealed_runs) and all(
+    protocol_inventory_complete = bool(sealed_runs) and all(
         result["status"] == "PRESENT_PROTOCOL"
         for result in results.values()
     )
+    release_attestation = artifact_root / "headline-release-attestation.json"
+    release_gate_passed = False
+    if release_attestation.is_file():
+        try:
+            validate_release_gate(release_attestation)
+        except FreezeError:
+            pass
+        else:
+            release_gate_passed = True
     return {
         "schema_version": "evidence-program-readiness-audit-v1",
-        "headline_ready": headline_ready,
-        "headline_claims_permitted": False,
+        # File presence and artifact seals alone do not establish lawful access,
+        # independence, clinical correctness, or predeclared evaluation.
+        "headline_ready": release_gate_passed,
+        "headline_claims_permitted": release_gate_passed,
+        "protocol_inventory_complete": protocol_inventory_complete,
+        "release_attestation": (
+            str(release_attestation.relative_to(artifact_root))
+            if release_attestation.is_file()
+            else None
+        ),
         "sealed_runs": sealed_runs,
         "workstreams": results,
         "limitations": [

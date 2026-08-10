@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "commitloop-prediction.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["lifecycle_state", "evidence_state", "timeliness_state", "escalation_state"],
+  "properties": {
+    "lifecycle_state": {
+      "enum": ["OPEN", "PARTIALLY_SATISFIED", "SATISFIED", "SUPERSEDED", "CANCELLED"]
+    },
+    "evidence_state": {
+      "enum": ["CLEAR", "CONFLICTED", "INSUFFICIENT_EVIDENCE"]
+    },
+    "timeliness_state": {
+      "enum": ["NOT_APPLICABLE", "BEFORE_DUE", "IN_GRACE", "OVERDUE", "UNKNOWN"]
+    },
+    "escalation_state": {
+      "enum": ["ESCALATE", "NO_ESCALATION"]
+    }
+  }
+}

@@ -358,6 +358,7 @@ class RagPipelineP1:
         del deepseek_api_key, deepseek_base_url, deepseek_model, deepseek_timeout_seconds
         self._deepseek_api_key = settings.deepseek_api_key
         self._llm_client = llm_client
+        self._llm_client_injected = llm_client is not None
         if self._llm_client is None and self._deepseek_api_key:
             self._llm_client, _ = build_task_client(ModelTask.RAG_SYNTHESIS, settings)
         self._graphrag = GraphRagSidecar()
@@ -3441,6 +3442,9 @@ class RagPipelineP1:
         del llm_runtime
         runtime_llm_client = self._llm_client
         runtime_llm_api_key = (self._deepseek_api_key or "").strip()
+        runtime_llm_configured = bool(
+            runtime_llm_client and (runtime_llm_api_key or self._llm_client_injected)
+        )
 
         if not generation_enabled:
             used_stages.append("retrieval_only")
@@ -3463,11 +3467,11 @@ class RagPipelineP1:
                 },
             )
 
-        if strict_deepseek_required and (not runtime_llm_client or not runtime_llm_api_key):
+        if strict_deepseek_required and not runtime_llm_configured:
             raise RuntimeError("deepseek_required_but_not_configured")
 
         llm_failure_reason = "llm_unavailable_or_failed"
-        if runtime_llm_client and runtime_llm_api_key:
+        if runtime_llm_configured and runtime_llm_client:
             try:
                 if (
                     not has_relevant_context

@@ -49,6 +49,23 @@ def _fingerprint(value: object) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _rebase_same_transaction_proposal(
+    db: Session, *, scope: ProfileScope, assertion: GlhsAssertion
+) -> None:
+    """Rebase an adapter candidate after its own serialized replacement writes.
+
+    The candidate was created against the state version that existed before the
+    adapter retired the prior assertion(s).  Those deliberate transitions are
+    part of this same trusted transaction, so activation must use the resulting
+    version.  External callers never receive this escape hatch; their stale
+    proposals remain rejected by ``apply_transition``.
+    """
+
+    assertion.base_state_version = current_state_version(db, profile_id=scope.profile.id)
+    db.add(assertion)
+    db.flush()
+
+
 def _event_source(
     db: Session,
     *,
@@ -280,6 +297,7 @@ def ingest_lifemap_event(
             reason_code="lifemap_revision_replaced",
             effective_at=occurred_at,
         )
+    _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
     transition = apply_transition(
         db,
         scope=scope,
@@ -441,6 +459,7 @@ def ingest_medication_course(
             transition_kind="medication_course_corrected",
             reason_code="explicit_medication_correction",
         )
+    _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
     transition = apply_transition(
         db,
         scope=scope,
@@ -591,6 +610,7 @@ def ingest_connected_health_observation(
             reason_code="provider_record_updated",
             effective_at=observed_at,
         )
+    _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
     transition = apply_transition(
         db,
         scope=scope,
@@ -993,6 +1013,7 @@ def ingest_phr_record_entries(
                     effective_at=occurred_at,
                 )
                 transition_ids.append(transition.public_id)
+            _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
             transition = apply_transition(
                 db,
                 scope=scope,

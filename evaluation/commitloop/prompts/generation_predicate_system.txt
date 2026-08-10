@@ -1,0 +1,1 @@
+CommitLoop predicate generation v1. Return only the bounded declarative JSON predicate supported by the supplied schema and grounded candidate. Never emit code, SQL, JSONPath, regex, shell, or a gold label.

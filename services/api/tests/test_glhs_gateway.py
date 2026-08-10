@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
@@ -9,7 +10,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from clara_api.db.base import Base
-from clara_api.db.models import HealthSourceReference, PhrProfile, User
+from clara_api.db.models import (
+    GlhsSnapshotManifest,
+    GlhsTransition,
+    HealthSourceReference,
+    PhrProfile,
+    User,
+    UserConsent,
+)
 from clara_api.glhs.domain import GlhsInvariantError
 from clara_api.glhs.gateway import (
     AssertionInput,
@@ -18,6 +26,7 @@ from clara_api.glhs.gateway import (
     compile_thss,
     current_state_version,
     propose_assertion,
+    reconstruct_governed_decision,
     reconstruct_state,
     record_evidence,
 )
@@ -51,7 +60,9 @@ def _scope(db: Session, *, clinician: bool = False) -> ProfileScope:
         profile=profile,
         actor_role="clinician" if clinician else "owner",
         purpose="self_care",
-        allowed_actions=frozenset({"create", "confirm", "resolve", "view"}),
+        allowed_actions=frozenset(
+            {"create", "confirm", "correct", "invalidate", "resolve", "view"}
+        ),
         allowed_data_classes=frozenset({"medications", "lifemap", "visits", "evidence"}),
     )
 
@@ -81,7 +92,14 @@ def _evidence(db: Session, *, scope: ProfileScope, at: datetime, fingerprint: st
 
 
 def _assertion(
-    db: Session, *, scope: ProfileScope, evidence, dose: str, at: datetime, epistemic: str
+    db: Session,
+    *,
+    scope: ProfileScope,
+    evidence,
+    dose: str,
+    at: datetime,
+    epistemic: str,
+    source_snapshot_id: str | None = None,
 ):
     return propose_assertion(
         db,
@@ -95,9 +113,284 @@ def _assertion(
             epistemic_state=epistemic,
             valid_from=at,
             process_kind="clinician" if scope.actor_role == "clinician" else "user",
+            source_snapshot_id=source_snapshot_id,
         ),
         evidence=((evidence, "supports"),),
     )
+
+
+def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
+    scope = _scope(db)
+    db.add(
+        UserConsent(
+            user_id=scope.profile.user_id,
+            consent_type="medical_disclaimer",
+            consent_version="test-consent-v1",
+        )
+    )
+    db.flush()
+    at = _at("2026-08-10T09:00:00")
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="co-versioned"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+    assert assertion.base_state_version == 0
+    assert assertion.consent_version == "medical_disclaimer:test-consent-v1"
+    transition = apply_transition(
+        db,
+        scope=scope,
+        assertion=assertion,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key="co-versioned-activate",
+        transition_kind="user_report",
+        reason_code="test",
+    )
+    assert transition.consent_version == "medical_disclaimer:test-consent-v1"
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    assert snapshot.state_version == 1
+    assert snapshot.policy_version == "glhs.v1"
+    assert snapshot.consent_version == "medical_disclaimer:test-consent-v1"
+    manifest = (
+        db.query(GlhsSnapshotManifest)
+        .filter(GlhsSnapshotManifest.public_id == snapshot.snapshot_id)
+        .one_or_none()
+    )
+    assert manifest is not None
+    assert manifest.consent_version == snapshot.consent_version
+    assert db.get(GlhsTransition, transition.id).consent_version == snapshot.consent_version
+    reconstructed = reconstruct_governed_decision(
+        db,
+        profile_id=scope.profile.id,
+        snapshot_id=snapshot.snapshot_id,
+    )
+    assert reconstructed["snapshot"]["state_version"] == snapshot.state_version
+    assert reconstructed["snapshot"]["consent_version"] == snapshot.consent_version
+    assert reconstructed["reconstruction_cutoffs"]["valid_at"]
+    assert reconstructed["known_state"][0]["id"] == assertion.public_id
+    # This transition predates the snapshot and did not consume it, so it must
+    # not be presented as a decision made from this AI context.
+    assert reconstructed["decisions"] == []
+
+
+def test_stale_persisted_proposal_cannot_activate_after_state_advances(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    stale = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="stale-proposal"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+    advancing = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="advancing-proposal"),
+        dose="1000",
+        at=at,
+        epistemic="documented",
+    )
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=advancing,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key="advance-state",
+        transition_kind="user_report",
+        reason_code="test",
+    )
+    with pytest.raises(GlhsInvariantError, match="stale_proposal_state_version"):
+        apply_transition(
+            db,
+            scope=scope,
+            assertion=stale,
+            action="activate",
+            expected_state_version=1,
+            idempotency_key="stale-proposal-activate",
+            transition_kind="user_report",
+            reason_code="test",
+        )
+    assert current_state_version(db, profile_id=scope.profile.id) == 1
+
+
+def test_gateway_rejects_transition_when_scope_lacks_required_action(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="unauthorized-transition"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+    read_only_scope = replace(scope, allowed_actions=frozenset({"view"}))
+    with pytest.raises(GlhsInvariantError, match="transition_action_forbidden"):
+        apply_transition(
+            db,
+            scope=read_only_scope,
+            assertion=assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key="unauthorized-transition",
+            transition_kind="user_report",
+            reason_code="test",
+        )
+    assert current_state_version(db, profile_id=scope.profile.id) == 0
+
+
+def test_risk_aware_thss_abstains_on_missing_task_critical_coverage(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="risk-aware-medication"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=assertion,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key="risk-aware-activate",
+        transition_kind="user_report",
+        reason_code="test",
+    )
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=at,
+        selection_policy="risk_aware",
+    )
+    assert snapshot.risk["coverage"] == {
+        "present": ["medications"],
+        "missing": ["allergies"],
+    }
+    assert snapshot.risk["decision"] == "ABSTAIN_ESCALATE"
+    assert snapshot.risk["escalation_required"] is True
+    assert snapshot.risk["escalation_reasons"] == [
+        {
+            "code": "missing_task_critical_coverage",
+            "data_class": "allergies",
+            "required_review": "allergy verification",
+        }
+    ]
+
+
+def test_proposal_snapshot_link_requires_current_untampered_thss(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    initial = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="link-initial"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=initial,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key="link-initial",
+        transition_kind="user_report",
+        reason_code="test",
+    )
+    source_snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=at,
+    )
+    derived = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="link-derived"),
+        dose="750",
+        at=at,
+        epistemic="documented",
+        source_snapshot_id=source_snapshot.snapshot_id,
+    )
+    assert derived.source_snapshot_id == source_snapshot.snapshot_id
+    transition = apply_transition(
+        db,
+        scope=scope,
+        assertion=derived,
+        action="activate",
+        expected_state_version=1,
+        idempotency_key="link-derived",
+        transition_kind="reviewed_proposal",
+        reason_code="test",
+    )
+    reconstructed = reconstruct_governed_decision(
+        db,
+        profile_id=scope.profile.id,
+        snapshot_id=source_snapshot.snapshot_id,
+        transition_id=transition.public_id,
+    )
+    proposal = reconstructed["decisions"][0]["proposals"][0]
+    assert proposal["source_snapshot_id"] == source_snapshot.snapshot_id
+
+
+def test_reconstruction_rejects_transition_not_linked_to_snapshot(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="unlinked-decision"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+    transition = apply_transition(
+        db,
+        scope=scope,
+        assertion=assertion,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key="unlinked-decision",
+        transition_kind="user_report",
+        reason_code="test",
+    )
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    with pytest.raises(GlhsInvariantError, match="transition_snapshot_mismatch"):
+        reconstruct_governed_decision(
+            db,
+            profile_id=scope.profile.id,
+            snapshot_id=snapshot.snapshot_id,
+            transition_id=transition.public_id,
+        )
 
 
 def test_reference_case_late_evidence_conflict_and_reviewed_resolution(db: Session) -> None:

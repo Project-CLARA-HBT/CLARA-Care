@@ -29,7 +29,7 @@ def _graphrag_flags(*, enabled: bool, max_neighbors: int = 8, expansion_docs: in
 
 def test_rag_pipeline_returns_sources_and_answer():
     pipe = RagPipelineP0(deepseek_api_key="")
-    result = pipe.run("canh bao tuong tac thuoc")
+    result = pipe.run("canh bao tuong tac thuoc", deepseek_fallback_enabled=True)
     assert len(result.retrieved_ids) > 0
     assert "LOCAL_FALLBACK_V1" in result.answer
     assert result.model_used == "local-synth-v1"
@@ -208,17 +208,14 @@ class _ExternalFailureRetriever:
         raise TimeoutError("external connectors busy")
 
 
-def test_rag_pipeline_uses_provider_when_key_exists():
-    pipe = RagPipelineP0(
-        deepseek_api_key="test-key",
-        llm_client=_SuccessfulClient(),
-    )
+def test_rag_pipeline_uses_injected_provider_client_without_network():
+    pipe = RagPipelineP0(llm_client=_SuccessfulClient())
     result = pipe.run("canh bao nsaid")
     assert result.answer == "provider-answer"
     assert result.model_used == "deepseek-v3.2"
 
 
-def test_rag_pipeline_explicit_connection_values_use_registered_task_client(monkeypatch):
+def test_rag_pipeline_ignores_legacy_connection_override_constructor_values(monkeypatch):
     calls: list[dict[str, object]] = []
 
     def _registered_client(task, task_settings, *, timeout_seconds, retries_per_base):
@@ -242,16 +239,7 @@ def test_rag_pipeline_explicit_connection_values_use_registered_task_client(monk
         deepseek_timeout_seconds=31,
     )
 
-    assert calls == [
-        {
-            "task": ModelTask.RAG_SYNTHESIS,
-            "api_key": "explicit-key",
-            "base_url": "https://internal.example/v1",
-            "model": "explicit-model",
-            "timeout_seconds": 31,
-            "retries_per_base": settings.deepseek_retries_per_base,
-        }
-    ]
+    assert calls == []
 
 
 def test_rag_pipeline_fallback_when_deepseek_fails():
@@ -259,7 +247,7 @@ def test_rag_pipeline_fallback_when_deepseek_fails():
         deepseek_api_key="test-key",
         llm_client=_FailingClient(),
     )
-    result = pipe.run("canh bao tuong tac nsaid")
+    result = pipe.run("canh bao tuong tac nsaid", deepseek_fallback_enabled=True)
     assert result.model_used == "local-synth-v1"
     assert "LOCAL_FALLBACK_V1" in result.answer
     assert "## Kết luận nhanh" in result.answer
@@ -338,8 +326,13 @@ def test_local_synthesis_avoids_source_dump_in_main_body() -> None:
 
 
 def test_build_no_rag_prompt_uses_reader_facing_section_contract() -> None:
-    prompt = RagPipelineP0._build_no_rag_prompt("compare DASH and Mediterranean", answer_language="en")
-    assert "## Quick conclusion, ## Key points, ## Practical application, ## Important caveats" in prompt
+    prompt = RagPipelineP0._build_no_rag_prompt(
+        "compare DASH and Mediterranean", answer_language="en"
+    )
+    assert (
+        "## Quick conclusion, ## Key points, ## Practical application, ## Important caveats"
+        in prompt
+    )
     assert "## Detailed analysis" not in prompt
 
 
@@ -375,6 +368,7 @@ def test_rag_pipeline_reuses_default_deepseek_client_for_deepseek_only_runtime()
 
         result = pipe.run(
             "khi bi so mui toi nen lam gi",
+            low_context_threshold=0.0,
             llm_runtime={
                 "provider": "deepseek",
                 "api_key": "deepseek-only-key",
@@ -391,7 +385,7 @@ def test_rag_pipeline_reuses_default_deepseek_client_for_deepseek_only_runtime()
     assert _RecordingRuntimeClient.calls == []
 
 
-def test_rag_pipeline_caps_timeout_for_runtime_override_client(monkeypatch):
+def test_rag_pipeline_ignores_per_request_runtime_override(monkeypatch):
     pipe = RagPipelineP0(
         deepseek_api_key="default-key",
         llm_client=_SuccessfulClient(),
@@ -431,9 +425,8 @@ def test_rag_pipeline_caps_timeout_for_runtime_override_client(monkeypatch):
         settings.deepseek_timeout_seconds = previous_timeout
         settings.llm_deepseek_only = previous_deepseek_only
 
-    assert result.answer == "runtime-answer"
-    assert len(_RecordingRuntimeClient.calls) == 1
-    assert _RecordingRuntimeClient.calls[0]["timeout_seconds"] == 18.0
+    assert result.answer == "provider-answer"
+    assert _RecordingRuntimeClient.calls == []
 
 
 def test_rag_pipeline_survives_external_retrieval_exception():
@@ -460,7 +453,7 @@ def test_rag_pipeline_survives_external_retrieval_exception():
 
 def test_rag_pipeline_context_debug_includes_retrieval_trace():
     pipe = RagPipelineP0(deepseek_api_key="")
-    result = pipe.run("tuong tac warfarin va nsaid")
+    result = pipe.run("tuong tac warfarin va nsaid", deepseek_fallback_enabled=True)
 
     retrieval_trace = result.context_debug.get("retrieval_trace")
     assert isinstance(retrieval_trace, dict)
@@ -477,7 +470,7 @@ def test_rag_pipeline_context_debug_includes_retrieval_trace():
 
 def test_rag_pipeline_exposes_reasoning_event_summary_for_api_consumers():
     pipe = RagPipelineP0(deepseek_api_key="")
-    result = pipe.run("tuong tac warfarin va ibuprofen")
+    result = pipe.run("tuong tac warfarin va ibuprofen", deepseek_fallback_enabled=True)
 
     reasoning_events = result.context_debug.get("reasoning_events")
     assert isinstance(reasoning_events, list)
@@ -505,12 +498,11 @@ def test_rag_pipeline_emits_retrieval_orchestrator_events():
         },
         scientific_retrieval_enabled=True,
         web_retrieval_enabled=True,
+        deepseek_fallback_enabled=True,
     )
 
     orchestrator_events = [
-        event
-        for event in result.flow_events
-        if event.get("stage") == "retrieval_orchestrator"
+        event for event in result.flow_events if event.get("stage") == "retrieval_orchestrator"
     ]
     assert len(orchestrator_events) >= 2
     assert any(event.get("status") == "started" for event in orchestrator_events)
@@ -545,6 +537,7 @@ def test_rag_pipeline_orchestrator_adjusts_top_k_and_connector_toggles():
         },
         scientific_retrieval_enabled=False,
         web_retrieval_enabled=True,
+        deepseek_fallback_enabled=True,
     )
 
     retrieval_trace = result.context_debug.get("retrieval_trace", {})
@@ -560,9 +553,7 @@ def test_rag_pipeline_orchestrator_adjusts_top_k_and_connector_toggles():
     assert connector_toggles.get("requested", {}).get("web") is True
     assert connector_toggles.get("requested", {}).get("scientific") is False
     assert connector_toggles.get("resolved", {}).get("web") is False
-    assert "web_requires_scientific_connectors" in connector_toggles.get(
-        "disabled_reasons", []
-    )
+    assert "web_requires_scientific_connectors" in connector_toggles.get("disabled_reasons", [])
 
 
 def test_rag_pipeline_orchestrator_applies_retrieval_budget_override():
@@ -582,6 +573,7 @@ def test_rag_pipeline_orchestrator_applies_retrieval_budget_override():
         },
         scientific_retrieval_enabled=True,
         web_retrieval_enabled=True,
+        deepseek_fallback_enabled=True,
     )
 
     retrieval_trace = result.context_debug.get("retrieval_trace", {})
@@ -613,7 +605,11 @@ def test_rag_pipeline_supports_retrieval_only_mode():
 
 def test_rag_pipeline_emits_search_and_index_events():
     pipe = RagPipelineP0(deepseek_api_key="")
-    result = pipe.run("ddi warfarin ibuprofen", scientific_retrieval_enabled=False)
+    result = pipe.run(
+        "ddi warfarin ibuprofen",
+        scientific_retrieval_enabled=False,
+        deepseek_fallback_enabled=True,
+    )
 
     retrieval_trace = result.context_debug.get("retrieval_trace")
     assert isinstance(retrieval_trace, dict)
@@ -638,7 +634,7 @@ def test_rag_pipeline_emits_search_and_index_events():
 
 def test_rag_pipeline_retrieval_events_precede_answer_synthesis():
     pipe = RagPipelineP0(deepseek_api_key="")
-    result = pipe.run("warfarin ibuprofen bleeding risk")
+    result = pipe.run("warfarin ibuprofen bleeding risk", deepseek_fallback_enabled=True)
     assert isinstance(result.flow_events, list)
     assert len(result.flow_events) > 0
 
@@ -665,7 +661,10 @@ def test_rag_pipeline_retrieval_events_precede_answer_synthesis():
 def test_rag_pipeline_graphrag_sidecar_enabled_emits_events_and_summary():
     with _graphrag_flags(enabled=True, max_neighbors=5, expansion_docs=3):
         pipe = RagPipelineP0(deepseek_api_key="")
-        result = pipe.run("warfarin ibuprofen interaction bleeding risk")
+        result = pipe.run(
+            "warfarin ibuprofen interaction bleeding risk",
+            deepseek_fallback_enabled=True,
+        )
 
     graphrag_events = [
         event for event in result.flow_events if event.get("stage") == "graphrag_sidecar"
@@ -687,7 +686,10 @@ def test_rag_pipeline_graphrag_sidecar_enabled_emits_events_and_summary():
 def test_rag_pipeline_graphrag_sidecar_domain_graph_emits_hits():
     with _graphrag_flags(enabled=True, max_neighbors=6, expansion_docs=4):
         pipe = RagPipelineP0(deepseek_api_key="")
-        result = pipe.run("warfarin ibuprofen contraindication bleeding")
+        result = pipe.run(
+            "warfarin ibuprofen contraindication bleeding",
+            deepseek_fallback_enabled=True,
+        )
 
     retrieval_trace = result.context_debug.get("retrieval_trace", {})
     graphrag = retrieval_trace.get("graphrag", {})
@@ -696,17 +698,18 @@ def test_rag_pipeline_graphrag_sidecar_domain_graph_emits_hits():
     assert graphrag.get("domain_graph_loaded") is True
     assert int(graphrag.get("domain_entity_match_count") or 0) >= 2
     assert int(graphrag.get("domain_edge_hit_count") or 0) >= 1
-    assert any(doc_id.startswith("graphrag-domain-") for doc_id in (graphrag.get("expansion_doc_ids") or []))
+    assert any(
+        doc_id.startswith("graphrag-domain-")
+        for doc_id in (graphrag.get("expansion_doc_ids") or [])
+    )
 
 
 def test_rag_pipeline_graphrag_sidecar_disabled_keeps_default_trace():
     with _graphrag_flags(enabled=False):
         pipe = RagPipelineP0(deepseek_api_key="")
-        result = pipe.run("aspirin ibuprofen warning")
+        result = pipe.run("aspirin ibuprofen warning", deepseek_fallback_enabled=True)
 
-    assert not any(
-        event.get("stage") == "graphrag_sidecar" for event in result.flow_events
-    )
+    assert not any(event.get("stage") == "graphrag_sidecar" for event in result.flow_events)
     retrieval_trace = result.context_debug.get("retrieval_trace", {})
     graphrag = retrieval_trace.get("graphrag", {})
     assert graphrag.get("enabled") is False
@@ -723,6 +726,7 @@ def test_rag_pipeline_full_stack_request_does_not_override_runtime_disable_flags
         planner_hints={"retrieval_stack_mode": "full"},
         scientific_retrieval_enabled=True,
         web_retrieval_enabled=True,
+        deepseek_fallback_enabled=True,
     )
 
     retrieval_trace = result.context_debug.get("retrieval_trace", {})
@@ -790,8 +794,7 @@ def test_deep_scientific_plan_runs_external_connectors_after_persistent_candidat
                 },
                 "provider_queries": {
                     "scientific": {
-                        "pubmed": '("DAPA-CKD"[Title/Abstract] OR '
-                        '"EMPA-KIDNEY"[Title/Abstract])'
+                        "pubmed": '("DAPA-CKD"[Title/Abstract] OR "EMPA-KIDNEY"[Title/Abstract])'
                     }
                 },
                 "decomposition": {},
@@ -799,6 +802,7 @@ def test_deep_scientific_plan_runs_external_connectors_after_persistent_candidat
         },
         scientific_retrieval_enabled=True,
         web_retrieval_enabled=False,
+        deepseek_fallback_enabled=True,
     )
 
     trace = result.context_debug["retrieval_trace"]

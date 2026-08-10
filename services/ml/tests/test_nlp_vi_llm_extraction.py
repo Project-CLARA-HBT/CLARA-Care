@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from clara_ml.nlp_vi import enrich_clinical_utterance_with_llm
-from clara_ml.nlp_vi import llm_extraction
+from clara_ml.nlp_vi import enrich_clinical_utterance_with_llm, llm_extraction
 
 
 def _settings(*, enabled: bool) -> SimpleNamespace:
@@ -19,7 +18,9 @@ def _settings(*, enabled: bool) -> SimpleNamespace:
 
 
 def test_clinical_llm_packet_is_disabled_by_default() -> None:
-    packet = enrich_clinical_utterance("Tôi đang uống Panadol", settings=_settings(enabled=False))
+    packet = enrich_clinical_utterance_with_llm(
+        "Tôi đang uống Panadol", settings=_settings(enabled=False)
+    )
 
     assert packet.implementation == "deterministic_fallback_v1"
     assert packet.source_spans == []
@@ -52,7 +53,7 @@ def test_clinical_llm_packet_accepts_only_exact_source_spans(monkeypatch) -> Non
     )
     monkeypatch.setattr(llm_extraction, "build_task_client", lambda *_args: (Client(), selection))
 
-    packet = enrich_clinical_utterance(text, settings=_settings(enabled=True))
+    packet = enrich_clinical_utterance_with_llm(text, settings=_settings(enabled=True))
 
     assert packet.implementation == "hybrid_source_spans_v1"
     assert packet.source_spans[0].category == "medication"
@@ -74,7 +75,7 @@ def test_clinical_llm_packet_fails_soft_for_hallucinated_offsets(monkeypatch) ->
     selection = SimpleNamespace(model_version="v4", prompt_version="v1")
     monkeypatch.setattr(llm_extraction, "build_task_client", lambda *_args: (Client(), selection))
 
-    packet = enrich_clinical_utterance("Tôi uống para", settings=_settings(enabled=True))
+    packet = enrich_clinical_utterance_with_llm("Tôi uống para", settings=_settings(enabled=True))
 
     assert packet.implementation == "deterministic_fallback_v1"
     assert packet.source_spans == []

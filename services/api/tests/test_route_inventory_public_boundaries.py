@@ -20,6 +20,10 @@ from clara_api.main import app
 def test_known_public_liveness_and_capability_readers_are_allowlisted() -> None:
     inventory = {(entry.method, entry.path): entry for entry in build_route_inventory(app)}
     expected = {
+        ("GET", "/docs"),
+        ("GET", "/docs/oauth2-redirect"),
+        ("GET", "/openapi.json"),
+        ("GET", "/redoc"),
         ("GET", "/health/ready"),
         ("GET", "/api/v1/health/ready"),
         ("GET", "/api/v1/phr/shared/{token_value}"),

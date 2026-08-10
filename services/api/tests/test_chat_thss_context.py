@@ -111,6 +111,9 @@ def test_chat_personal_context_uses_thss_and_labels_user_context_untrusted(monke
             assert context["untrusted_user_context"] == {"free_text": "nguoi dung tu mo ta"}
             snapshot = context["task_bounded_health_state"]
             assert snapshot["snapshot_id"]
+            assert snapshot["policy_version"] == "glhs.v1"
+            assert "consent_version" in snapshot
+            assert snapshot["risk"]["decision"] == "USABLE"
             assert snapshot["state_version"] == 1
             assert snapshot["assertions"][0]["value"]["drugbank_id"] == "DB00331"
             assert "full_name" not in snapshot

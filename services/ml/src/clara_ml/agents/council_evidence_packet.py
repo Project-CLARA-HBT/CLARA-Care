@@ -28,7 +28,7 @@ from pydantic import (
 )
 
 _PACKET_VERSION = "council-evidence-packet.v1"
-_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
 
 # This is a tool allowlist, not a caller-provided capability.  Adding a new
 # retrieval provider requires a code review here and a matching task-contract

@@ -110,6 +110,13 @@ INTENTIONAL_PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/health/ready"),
         ("GET", "/api/v1/health"),
         ("GET", "/api/v1/health/ready"),
+        # FastAPI's read-only interactive documentation/schema surface. These
+        # are framework bootstrap routes rather than clinical data handlers;
+        # listing them explicitly keeps the public inventory deny-by-default.
+        ("GET", "/docs"),
+        ("GET", "/docs/oauth2-redirect"),
+        ("GET", "/openapi.json"),
+        ("GET", "/redoc"),
         # Operator-token-gated Prometheus scrape. Not RBAC-gated via a
         # dependency; it enforces a static metrics token inside the handler, so
         # it is intentionally outside the role system.

@@ -46,7 +46,9 @@ def _force_llm(monkeypatch: pytest.MonkeyPatch, model: str = "deepseek-v3.2") ->
     def _ok(_client: object, _transcript: str) -> dict[str, object]:
         return {
             "symptoms": ["đau ngực"],
-            "labs": [{"name": "glucose", "value": "110", "unit": "mg/dL", "raw": "glucose=110 mg/dL"}],
+            "labs": [
+                {"name": "glucose", "value": "110", "unit": "mg/dL", "raw": "glucose=110 mg/dL"}
+            ],
             "medications": ["aspirin"],
             "history": [],
             "_model_used": model,
@@ -78,17 +80,15 @@ class TestHeuristicFallbackLabeling:
         # The technical fallback reason is retained alongside the friendly notice.
         assert any(w.startswith("deepseek_extract_fallback:") for w in result["warnings"])
 
-    def test_confidence_math_is_byte_identical(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The user-visible notice is appended AFTER confidence, so the penalty is unchanged.
-
-        Only the single technical warning counts toward the confidence
-        warning-penalty (0.08), proving the labeling did not perturb the
-        existing confidence computation (back-compatibility).
-        """
+    def test_fallback_does_not_expose_uncalibrated_confidence(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A degraded extraction exposes review state, never a pseudo-probability."""
         _force_fallback(monkeypatch)
         result = ci.run_council_intake(transcript=_TRANSCRIPT)
 
-        assert result["analyze"]["confidence"]["components"]["warning_penalty"] == 0.08
+        assert "confidence" not in result["analyze"]
+        assert result["needs_more_info"] is True
 
     def test_consistent_with_ai_disclosure_when_enabled(
         self, monkeypatch: pytest.MonkeyPatch
@@ -122,9 +122,7 @@ class TestLlmBackedIntakeNotFlagged:
 
         assert ci._INTAKE_FALLBACK_NOTICE not in result["warnings"]
 
-    def test_disclosure_not_fallback_on_llm_path(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_disclosure_not_fallback_on_llm_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """With disclosure on, an LLM-backed intake discloses is_fallback False."""
         _force_llm(monkeypatch)
         with council_flags(council_model_disclosure_enabled=True):

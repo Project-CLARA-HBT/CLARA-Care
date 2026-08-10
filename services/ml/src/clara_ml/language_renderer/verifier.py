@@ -15,7 +15,7 @@ _PRESCRIBING = re.compile(
     r"\b(?:uống|dùng|ngừng|tăng liều|giảm liều|take|stop|increase dose)\b", re.IGNORECASE
 )
 _MODEL_DRAFT_FORBIDDEN = re.compile(
-    r"(?:\d|%|\b(?:mg|mcg|μg|ml|iu|g|tablet|capsule|viên)\b|"
+    r"(?:\d|%|\b(?:mg|mcg|μg|ml|iu|g|tablet|capsule)\b|"
     r"\b(?:an toàn|safe|không có tương tác|no interaction|không cần hỏi|no need to ask)\b)",
     re.IGNORECASE,
 )

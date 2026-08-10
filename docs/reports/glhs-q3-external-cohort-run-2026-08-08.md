@@ -103,8 +103,8 @@ and SVG.  The relevant source table SHA-256 values are:
 | MIMIC-IV-ED Demo | ED stays `fc185cb111a70e9dfd8457c6e1da4f9366dee729e072282995dcd7045a5a3c52`; medication reconciliation `efdab040cede0ef19997d6c5f55f3e8cbaccdfdf7b502fc779420ddcbf47804c` |
 
 The exact commands are documented in
-[`evaluation/glhs_q3/README.md`](../../evaluation/glhs_q3/README.md).  The
-preparer is [`prepare_external_cohort.py`](../../evaluation/glhs_q3/prepare_external_cohort.py).
+[`evaluation/structural_conformance/README.md`](../../evaluation/structural_conformance/README.md).
+The preparer is [`prepare_external_cohort.py`](../../evaluation/structural_conformance/prepare_external_cohort.py).
 
 ## Still required before a final score
 

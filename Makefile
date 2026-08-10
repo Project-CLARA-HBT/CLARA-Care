@@ -2,7 +2,7 @@ SHELL := /bin/bash
 COMPOSE_FILE := deploy/docker/docker-compose.yml
 APP_COMPOSE_FILE := deploy/docker/docker-compose.app.yml
 
-.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-down docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report eval-glhs-q3 eval-glhs-q2 eval-glhs-q2-model-integrate
+.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report eval-structural-conformance eval-commitloop-local eval-commitloop-validate eval-commitloop-secret-scan eval-commitloop-freeze eval-commitloop-provider-probe eval-commitloop-phase-b
 
 help:
 	@echo "CLARA P0 Make targets"
@@ -30,9 +30,13 @@ help:
 	@echo "  eval-nightly      Emit nightly CLARA-Eval VN evidence artifacts (live metrics require approved dependencies)"
 	@echo "  eval-release      Run release-locked CLARA-Eval VN gate (fails closed without approved live evidence)"
 	@echo "  eval-judge-report Generate artifacts/judge-report with honest measurement status"
-	@echo "  eval-glhs-q3      Run the non-clinical GLHS structural comparison"
-	@echo "  eval-glhs-q2      Run the frozen 400-case GLHS Q2 structural protocol"
-	@echo "  eval-glhs-q2-model-integrate  Validate and summarise a completed frozen model arm"
+	@echo "  eval-structural-conformance  Run the non-clinical state-layer conformance protocol"
+	@echo "  eval-commitloop-local  Run the sealed two-subject CommitLoop fake-provider grid"
+	@echo "  eval-commitloop-validate  Validate COMMITLOOP_RUN_DIR and its SHA-256 inventory"
+	@echo "  eval-commitloop-secret-scan  Fail if tracked CommitLoop content contains credentials"
+	@echo "  eval-commitloop-freeze  Seal a clean Phase-A run with local validation evidence"
+	@echo "  eval-commitloop-provider-probe  Phase-B-only exact-model router probe"
+	@echo "  eval-commitloop-phase-b  Run the freeze/probe-gated bounded synthetic benchmark"
 
 setup-env:
 	@test -f .env || cp .env.example .env
@@ -164,36 +168,32 @@ eval-release:
 eval-judge-report:
 	@python3 -m evaluation.clara_eval.run --config evaluation/configs/judge_demo.yaml --output artifacts/judge-report
 
-# GLHS Q3 is structural and synthetic by design. It never reads a patient
+# This protocol is structural and synthetic by design. It never reads a patient
 # record or auto-downloads credentialed MIMIC data.
-eval-glhs-q3:
-	@python3 -m evaluation.glhs_q3.run --output artifacts/glhs-q3/latest
+eval-structural-conformance:
+	@python3 -m evaluation.structural_conformance.run --output artifacts/structural-conformance/latest
 
-# Q2 freezes policy/relevance/oracle/holdout artifacts before comparator
-# execution. It is structural conformance only, never clinical validation.
-eval-glhs-q2:
-	@python3 -m evaluation.glhs_q2.run --output artifacts/glhs-q2/latest
+eval-commitloop-local:
+	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.cli local-fixture --output artifacts/commitloop/local-phase-a
 
-# The model arm is executed against an explicitly configured ML endpoint by an
-# operator.  This target deliberately only accepts a completed raw artifact and
-# fails closed for partial grids; it does not retry with another model.
-eval-glhs-q2-model-integrate:
-	@test -n "$(MODEL_ARM_SOURCE)" || (echo "MODEL_ARM_SOURCE is required" >&2; exit 2)
-	@python3 -m evaluation.glhs_q2.integrate_model_arm --source "$(MODEL_ARM_SOURCE)" --output "$(or $(MODEL_ARM_OUTPUT),artifacts/glhs-q2/model-arm-latest)"
+eval-commitloop-validate:
+	@test -n "$(COMMITLOOP_RUN_DIR)" || (echo "COMMITLOOP_RUN_DIR is required" >&2; exit 2)
+	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.cli validate --run-dir "$(COMMITLOOP_RUN_DIR)"
 
-# Memory-bounded evaluator for a lawful, already privacy-minimised external
-# structural manifest. It rejects anything other than a development partition
-# and never loads raw clinical source data.
-eval-glhs-q2-external-stream:
-	@test -n "$(MANIFEST)" || (echo "MANIFEST is required" >&2; exit 2)
-	@test -n "$(OUTPUT)" || (echo "OUTPUT is required" >&2; exit 2)
-	@python3 -m evaluation.glhs_q2.run_external_stream --manifest "$(MANIFEST)" --output "$(OUTPUT)"
+eval-commitloop-secret-scan:
+	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.secret_scan --repo-root . --path evaluation/commitloop --path protocols/commitloop --path services/api/src/clara_api/glhs --path services/api/tests/test_commitloop_gateway.py --path services/api/tests/test_commitloop_predicate_dsl.py --path services/api/tests/test_commitloop_reconciliation.py --path services/api/tests/test_commitment_policies.py
 
-# Read-only publication gate for a completed Q2 artifact. This verifies the
-# output accounting/release boundary without re-running or tuning any policy.
-eval-glhs-q2-validate:
-	@test -n "$(ARTIFACT)" || (echo "ARTIFACT is required" >&2; exit 2)
-	@python3 -m evaluation.glhs_q2.validate_artifact --artifact "$(ARTIFACT)"
+eval-commitloop-freeze:
+	@test -n "$(COMMITLOOP_RUN_DIR)" && test -n "$(COMMITLOOP_VALIDATION_EVIDENCE)" || (echo "COMMITLOOP_RUN_DIR and COMMITLOOP_VALIDATION_EVIDENCE are required" >&2; exit 2)
+	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.freeze --run-dir "$(COMMITLOOP_RUN_DIR)" --validation-evidence "$(COMMITLOOP_VALIDATION_EVIDENCE)"
+
+eval-commitloop-provider-probe:
+	@test -n "$(COMMITLOOP_FREEZE)" && test -n "$(COMMITLOOP_PROBE_OUTPUT)" || (echo "COMMITLOOP_FREEZE and COMMITLOOP_PROBE_OUTPUT are required" >&2; exit 2)
+	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.provider_probe --freeze "$(COMMITLOOP_FREEZE)" --output "$(COMMITLOOP_PROBE_OUTPUT)"
+
+eval-commitloop-phase-b:
+	@test -n "$(COMMITLOOP_FREEZE)" && test -n "$(COMMITLOOP_PROBE)" && test -n "$(COMMITLOOP_PHASE_B_OUTPUT)" && test -n "$(COMMITLOOP_BUNDLE_DIR)" && test -n "$(COMMITLOOP_FHIR_VERSION)" && test -n "$(COMMITLOOP_VALID_CUTOFF)" && test -n "$(COMMITLOOP_KNOWN_CUTOFF)" || (echo "COMMITLOOP_FREEZE, COMMITLOOP_PROBE, COMMITLOOP_PHASE_B_OUTPUT, COMMITLOOP_BUNDLE_DIR, COMMITLOOP_FHIR_VERSION, COMMITLOOP_VALID_CUTOFF and COMMITLOOP_KNOWN_CUTOFF are required" >&2; exit 2)
+	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.run_benchmark --freeze "$(COMMITLOOP_FREEZE)" --probe "$(COMMITLOOP_PROBE)" --output "$(COMMITLOOP_PHASE_B_OUTPUT)" --bundle-dir "$(COMMITLOOP_BUNDLE_DIR)" --fhir-version "$(COMMITLOOP_FHIR_VERSION)" --valid-cutoff "$(COMMITLOOP_VALID_CUTOFF)" --known-cutoff "$(COMMITLOOP_KNOWN_CUTOFF)"
 
 precommit-install:
 	pre-commit install

@@ -1,0 +1,18 @@
+schema_version: commitloop-comparator-registry.v1
+methods:
+  long_context:
+    version: chronological-v1
+    adapter: evaluation.comparator_studies.commitloop_baselines:long_context
+    fidelity: frozen_local_baseline
+  naive_rag:
+    version: exact-code-top5-v1
+    adapter: evaluation.comparator_studies.commitloop_baselines:naive_rag
+    fidelity: frozen_local_baseline
+  lww:
+    version: resource-code-lww-v1
+    adapter: evaluation.comparator_studies.commitloop_baselines:last_write_wins
+    fidelity: frozen_local_baseline
+  btsa:
+    version: btsa-mechanism-mapped-v1
+    adapter: evaluation.comparator_studies.bitemporal_state_arbitration.adapter:btsa_context
+    fidelity: mechanism_only_not_faithful

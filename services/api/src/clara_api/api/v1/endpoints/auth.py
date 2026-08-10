@@ -6,6 +6,7 @@ import time
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 from threading import Lock
+from typing import Literal, cast
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from sqlalchemy import and_, delete, or_, select
@@ -47,6 +48,7 @@ from clara_api.schemas import (
     ResendVerificationRequest,
     ResendVerificationResponse,
     ResetPasswordRequest,
+    Role,
     VerifyEmailRequest,
 )
 
@@ -55,7 +57,7 @@ _auth_action_attempts: dict[str, deque[float]] = defaultdict(deque)
 _auth_action_attempts_lock = Lock()
 
 
-def _infer_role_from_email(email: str) -> str:
+def _infer_role_from_email(email: str) -> Role:
     if email.endswith("@admin.clara") or email.startswith("admin@"):
         return "admin"
     if email.endswith("@research.clara"):
@@ -149,9 +151,7 @@ def _consume_action_token(
     ]
     if user_id is not None:
         conditions.append(AuthToken.user_id == user_id)
-    record = db.execute(
-        select(AuthToken).where(*conditions)
-    ).scalar_one_or_none()
+    record = db.execute(select(AuthToken).where(*conditions)).scalar_one_or_none()
     if not record:
         return None
     record.used_at = now
@@ -161,9 +161,7 @@ def _consume_action_token(
     return record
 
 
-def _issue_refresh_session_token(
-    db: Session, *, user: User, raw_token: str | None = None
-) -> str:
+def _issue_refresh_session_token(db: Session, *, user: User, raw_token: str | None = None) -> str:
     settings = get_settings()
     token_value = raw_token or create_refresh_token(subject=user.email, role=user.role)
     expires_at = datetime.now(tz=UTC) + timedelta(minutes=settings.jwt_refresh_minutes)
@@ -192,6 +190,8 @@ def _revoke_token_jti(token_payload: TokenPayload | dict[str, object]) -> None:
     exp = token_payload.get("exp")
     if not jti or exp is None:
         return
+    if not isinstance(exp, str | int | float):
+        return
     try:
         remaining_seconds = int(exp) - int(time.time())
     except (TypeError, ValueError):
@@ -201,7 +201,7 @@ def _revoke_token_jti(token_payload: TokenPayload | dict[str, object]) -> None:
     session_security.revoke(jti, remaining_seconds)
 
 
-def _resolve_auto_provision_role(email: str) -> str:
+def _resolve_auto_provision_role(email: str) -> Role:
     inferred = _infer_role_from_email(email)
     if inferred == "admin":
         return "normal"
@@ -272,10 +272,10 @@ def _cleanup_auth_tokens(db: Session) -> None:
     db.commit()
 
 
-def _resolve_cookie_samesite(raw_value: str) -> str:
+def _resolve_cookie_samesite(raw_value: str) -> Literal["lax", "strict", "none"]:
     normalized = raw_value.strip().lower()
     if normalized in {"lax", "strict", "none"}:
-        return normalized
+        return cast(Literal["lax", "strict", "none"], normalized)
     return "lax"
 
 
@@ -654,7 +654,10 @@ def verify_login_otp(
             detail="Mã OTP không hợp lệ hoặc đã hết hạn",
         )
 
-    role = user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal"
+    role = cast(
+        Role,
+        user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal",
+    )
     access_token = create_access_token(subject=user.email, role=role)
     refresh_token = _issue_refresh_session_token(db, user=user)
     user.last_login_at = datetime.now(tz=UTC)
@@ -738,7 +741,10 @@ def refresh_token(
             detail="Email chưa được xác thực",
         )
 
-    role = user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal"
+    role = cast(
+        Role,
+        user.role if user.role in {"normal", "researcher", "doctor", "admin"} else "normal",
+    )
     access_token = create_access_token(subject=user.email, role=role)
     if settings.hardening_refresh_rotation_enabled:
         # Rotate: mint a new refresh token and invalidate the presented jti so a
@@ -953,7 +959,9 @@ def get_consent_status(
 
     required_version = required_medical_disclaimer_version()
     latest = get_latest_user_consent(db, user_id=user.id, consent_type=MEDICAL_CONSENT_TYPE)
-    accepted = bool(latest and latest.consent_version == required_version)
+    accepted = bool(
+        latest and latest.consent_version == required_version and latest.revoked_at is None
+    )
     return ConsentStatusResponse(
         consent_type=MEDICAL_CONSENT_TYPE,
         required_version=required_version,
@@ -991,7 +999,7 @@ def accept_consent(
         )
 
     latest = get_latest_user_consent(db, user_id=user.id, consent_type=MEDICAL_CONSENT_TYPE)
-    if latest and latest.consent_version == required_version:
+    if latest and latest.consent_version == required_version and latest.revoked_at is None:
         return ConsentAcceptResponse(
             consent_type=MEDICAL_CONSENT_TYPE,
             user_id=user.id,

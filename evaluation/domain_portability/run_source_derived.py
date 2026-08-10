@@ -13,7 +13,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from evaluation.comparators.bitemporal_state_arbitration import (
+from evaluation.comparator_studies.bitemporal_state_arbitration import (
     ArbitrationEvent,
     arbitrate,
 )

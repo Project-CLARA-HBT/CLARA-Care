@@ -79,7 +79,24 @@ def test_health_details_returns_dependency_and_config_flags():
     assert body["prompt_loader_ready"] is True
 
 
-def test_metrics_increment_after_tracked_requests():
+def test_metrics_increment_after_tracked_requests(monkeypatch: pytest.MonkeyPatch):
+    from clara_ml.main import rag_pipeline
+    from clara_ml.rag.pipeline import RagResult
+
+    monkeypatch.setattr(
+        rag_pipeline,
+        "run",
+        lambda *args, **kwargs: RagResult(
+            query=str(args[0]),
+            retrieved_ids=["doc-1"],
+            answer="Grounded test answer.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[{"id": "doc-1", "text": "Test evidence."}],
+            context_debug={},
+            flow_events=[],
+        ),
+    )
+
     response_chat = client.post(
         "/v1/chat/routed", json={"query": "Toi can tu van an uong khi dung thuoc."}
     )
@@ -139,7 +156,24 @@ def test_metrics_increment_after_tracked_requests():
     assert metrics["by_path"]["/v1/council/run"] == 1
 
 
-def test_routed_chat_infer_returns_routing_and_answer():
+def test_routed_chat_infer_returns_routing_and_answer(monkeypatch: pytest.MonkeyPatch):
+    from clara_ml.main import rag_pipeline
+    from clara_ml.rag.pipeline import RagResult
+
+    monkeypatch.setattr(
+        rag_pipeline,
+        "run",
+        lambda *args, **kwargs: RagResult(
+            query=str(args[0]),
+            retrieved_ids=["doc-1"],
+            answer="Grounded test answer.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[{"id": "doc-1", "text": "Test evidence."}],
+            context_debug={},
+            flow_events=[],
+        ),
+    )
+
     response = client.post(
         "/v1/chat/routed", json={"query": "Toi can tu van an uong khi dung thuoc."}
     )
@@ -158,9 +192,9 @@ def test_routed_chat_passes_english_ui_language_to_structured_renderer(
 ):
     """The normal path must not silently render the v2 guidance in Vietnamese."""
 
+    import clara_ml.main as main_module
     from clara_ml.main import rag_pipeline
     from clara_ml.rag.pipeline import RagResult
-    import clara_ml.main as main_module
 
     original_build = main_module.build_medical_answer_v2
 
@@ -317,10 +351,10 @@ def test_routed_chat_infer_propagates_rag_runtime_flags_to_pipeline_and_verifier
     assert body["flow_applied"]["rag_graphrag_enabled"] is False
 
 
-def test_routed_chat_infer_propagates_hitechcloud_runtime_to_pipeline(
+def test_routed_chat_infer_ignores_request_runtime_overrides(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from clara_ml.main import rag_pipeline
+    from clara_ml.main import rag_pipeline, settings
     from clara_ml.rag.pipeline import RagResult
 
     original_run = rag_pipeline.run
@@ -338,6 +372,9 @@ def test_routed_chat_infer_propagates_hitechcloud_runtime_to_pipeline(
             flow_events=[],
         )
 
+    monkeypatch.setattr(settings, "deepseek_api_key", "test-deployment-key")
+    monkeypatch.setattr(settings, "deepseek_base_url", "https://deepseek.invalid/v1")
+    monkeypatch.setattr(settings, "deepseek_model", "deepseek-test")
     monkeypatch.setattr(rag_pipeline, "run", _fake_run)
     try:
         response = client.post(
@@ -361,12 +398,17 @@ def test_routed_chat_infer_propagates_hitechcloud_runtime_to_pipeline(
     assert isinstance(pipeline_kwargs, dict)
     llm_runtime = pipeline_kwargs.get("llm_runtime")
     assert isinstance(llm_runtime, dict)
-    assert llm_runtime.get("provider") == "hitechcloud_gpt53_codex_high"
-    assert llm_runtime.get("base_url") == "https://platform.hitechcloud.one/v1"
-    assert llm_runtime.get("model") == "gpt-5.3-codex-high"
-    assert body["flow_applied"]["llm_provider"] == "hitechcloud_gpt53_codex_high"
-    assert body["flow_applied"]["llm_base_url"] == "https://platform.hitechcloud.one/v1"
-    assert body["flow_applied"]["llm_model"] == "gpt-5.3-codex-high"
+    assert llm_runtime == {
+        "provider": "deepseek",
+        "api_key": "test-deployment-key",
+        "base_url": "https://deepseek.invalid/v1",
+        "model": "deepseek-test",
+    }
+    assert body["flow_applied"]["model_routing"] == "governed_deepseek_v4"
+    assert "llm_provider" not in body["flow_applied"]
+    assert "llm_base_url" not in body["flow_applied"]
+    assert "llm_model" not in body["flow_applied"]
+    assert "test-deployment-key" not in response.text
 
 
 def test_routed_chat_infer_deepseek_only_ignores_hitechcloud_runtime_override(
@@ -420,23 +462,30 @@ def test_routed_chat_infer_deepseek_only_ignores_hitechcloud_runtime_override(
     assert llm_runtime.get("provider") == "deepseek"
     assert llm_runtime.get("base_url") == "https://api.yescale.vip/v1"
     assert llm_runtime.get("model") == "deepseek-v3.2"
-    assert body["flow_applied"]["llm_provider"] == "deepseek"
-    assert body["flow_applied"]["llm_base_url"] == "https://api.yescale.vip/v1"
-    assert body["flow_applied"]["llm_model"] == "deepseek-v3.2"
+    assert body["flow_applied"]["model_routing"] == "governed_deepseek_v4"
+    assert "llm_provider" not in body["flow_applied"]
+    assert "llm_base_url" not in body["flow_applied"]
+    assert "llm_model" not in body["flow_applied"]
+    assert "deepseek-only-key" not in response.text
 
 
-def test_routed_chat_infer_uses_smalltalk_fastpath_for_greeting():
+def test_routed_chat_greeting_fails_closed_when_generation_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from clara_ml.main import rag_pipeline
+
+    calls = 0
+
+    def _unavailable(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("generation unavailable")
+
+    monkeypatch.setattr(rag_pipeline, "run", _unavailable)
     response = client.post("/v1/chat/routed", json={"query": "hi"})
-    assert response.status_code == 200
-    body = response.json()
-    assert body["intent"] == "general_guidance"
-    assert body["model_used"] == "smalltalk-fastpath-v1"
-    assert body["retrieved_ids"] == []
-    assert "chào" in body["answer"].lower()
-    assert any(
-        event.get("stage") == "smalltalk_fastpath" and event.get("status") == "completed"
-        for event in body["flow_events"]
-    )
+    assert response.status_code == 503
+    assert response.json()["detail"] == "deepseek_required_unavailable:RuntimeError"
+    assert calls == 1
 
 
 def test_routed_chat_infer_emergency_fast_path():
@@ -508,7 +557,26 @@ def test_routed_chat_infer_blocks_prescription_and_dosage_requests():
     assert "không có thẩm quyền kê đơn" in body["answer"].lower()
 
 
-def test_routed_chat_existing_dose_context_does_not_bypass_triage():
+def test_routed_chat_existing_dose_context_does_not_bypass_triage(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from clara_ml.main import rag_pipeline
+    from clara_ml.rag.pipeline import RagResult
+
+    monkeypatch.setattr(
+        rag_pipeline,
+        "run",
+        lambda *args, **kwargs: RagResult(
+            query=str(args[0]),
+            retrieved_ids=["doc-1"],
+            answer="Seek clinician review for exertional chest pain.",
+            model_used="deepseek-v3.2",
+            retrieved_context=[{"id": "doc-1", "text": "Exertional chest-pain evidence."}],
+            context_debug={},
+            flow_events=[],
+        ),
+    )
+
     response = client.post(
         "/v1/chat/routed",
         json={
@@ -619,44 +687,26 @@ def test_research_allows_educational_differential_diagnosis():
     )
 
 
-def test_routed_chat_infer_recovers_with_degraded_mode(monkeypatch: pytest.MonkeyPatch):
+def test_routed_chat_infer_fails_closed_without_degraded_retry(
+    monkeypatch: pytest.MonkeyPatch,
+):
     from clara_ml.main import rag_pipeline
-    from clara_ml.rag.pipeline import RagResult
 
-    original_run = rag_pipeline.run
     state = {"calls": 0}
 
     def _flaky_run(*args, **kwargs):
         state["calls"] += 1
-        if state["calls"] == 1:
-            raise TimeoutError("external retrieval timeout")
-        return RagResult(
-            query=str(args[0]) if args else "query",
-            retrieved_ids=["internal-1"],
-            answer="degraded-answer",
-            model_used="deepseek-v3.2",
-            retrieved_context=[],
-            context_debug={},
-            flow_events=[],
-        )
+        raise TimeoutError("external retrieval timeout")
 
     monkeypatch.setattr(rag_pipeline, "run", _flaky_run)
-    try:
-        response = client.post(
-            "/v1/chat/routed",
-            json={"query": "toi bi dau da day khi dung warfarin"},
-        )
-    finally:
-        monkeypatch.setattr(rag_pipeline, "run", original_run)
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["answer"] == "degraded-answer"
-    assert body["model_used"] == "deepseek-v3.2"
-    assert any(
-        event.get("stage") == "degraded_recovery" and event.get("status") == "completed"
-        for event in body["flow_events"]
+    response = client.post(
+        "/v1/chat/routed",
+        json={"query": "toi bi dau da day khi dung warfarin"},
     )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "deepseek_required_unavailable:TimeoutError"
+    assert state["calls"] == 1
 
 
 def test_research_tier2_returns_progressive_schema():

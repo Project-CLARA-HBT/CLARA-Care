@@ -1,0 +1,11 @@
+{
+  "schema_version": "commitloop-model-manifest.v1",
+  "requested_models": [
+    "antigravity/gemini-3.6-flash-high",
+    "antigravity/claude-sonnet-4-6"
+  ],
+  "reported_model_must_equal_requested": true,
+  "fallback": false,
+  "temperature": 0,
+  "provider_probe_status": "NOT_RUN_BEFORE_PHASE_A_FREEZE"
+}

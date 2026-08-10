@@ -2068,7 +2068,12 @@ class GlhsEvidence(Base):
 
 
 class GlhsAssertion(Base):
-    """A provenance-bound health proposition, independent from lifecycle."""
+    """A provenance-bound health proposition, independent from lifecycle.
+
+    ``base_state_version`` binds even a review-only proposal to the exact
+    governed state it was prepared against.  A candidate is therefore not an
+    unversioned side channel around GST optimistic concurrency.
+    """
 
     __tablename__ = "glhs_assertions"
 
@@ -2077,6 +2082,7 @@ class GlhsAssertion(Base):
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
     )
+    base_state_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     semantic_key: Mapped[str] = mapped_column(String(255), index=True)
     assertion_type: Mapped[str] = mapped_column(String(64), index=True)
     subject_kind: Mapped[str] = mapped_column(String(64), default="profile")
@@ -2099,6 +2105,8 @@ class GlhsAssertion(Base):
     )
     process_kind: Mapped[str] = mapped_column(String(32), default="user")
     policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
+    consent_version: Mapped[str] = mapped_column(String(96), default="not_required")
+    source_snapshot_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
@@ -2187,6 +2195,7 @@ class GlhsTransition(Base):
     review_state: Mapped[str] = mapped_column(String(24), default="not_required")
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
+    consent_version: Mapped[str] = mapped_column(String(96), default="not_required")
     idempotency_key_hash: Mapped[str] = mapped_column(String(128))
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
@@ -2252,7 +2261,7 @@ class GlhsConflict(Base):
 
 
 class GlhsSnapshotManifest(Base):
-    """Auditable THSS manifest containing opaque assertion/provenance identifiers."""
+    """Auditable THSS manifest including the exact compiled context payload."""
 
     __tablename__ = "glhs_snapshot_manifests"
 
@@ -2274,8 +2283,148 @@ class GlhsSnapshotManifest(Base):
     conflict_ids_json: Mapped[list | dict] = mapped_column(JSON)
     selection_policy: Mapped[str] = mapped_column(String(64), default="strict")
     policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
+    consent_version: Mapped[str] = mapped_column(String(96), default="not_required")
+    snapshot_payload_json: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")
+    snapshot_digest: Mapped[str] = mapped_column(String(64), default="", index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GlhsClinicalCommitment(Base):
+    """Stable identity for an append-only, evidence-linked clinical commitment."""
+
+    __tablename__ = "glhs_clinical_commitments"
+    __table_args__ = (
+        UniqueConstraint("profile_id", "semantic_key", name="uq_glhs_commitment_semantic_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    semantic_key: Mapped[str] = mapped_column(String(255), index=True)
+    domain: Mapped[str] = mapped_column(String(64), index=True)
+    supersession_key: Mapped[str] = mapped_column(String(255), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GlhsClinicalCommitmentVersion(Base):
+    """Immutable commitment product state and its bounded predicate definitions."""
+
+    __tablename__ = "glhs_clinical_commitment_versions"
+    __table_args__ = (
+        UniqueConstraint("commitment_id", "version_no", name="uq_glhs_commitment_version"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    commitment_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_clinical_commitments.id", ondelete="CASCADE"), index=True
+    )
+    base_state_version: Mapped[int] = mapped_column(Integer)
+    version_no: Mapped[int] = mapped_column(Integer)
+    lifecycle_state: Mapped[str] = mapped_column(String(32), index=True)
+    evidence_state: Mapped[str] = mapped_column(String(32), index=True)
+    timeliness_state: Mapped[str] = mapped_column(String(32), index=True)
+    action: Mapped[str] = mapped_column(String(96))
+    target_json: Mapped[dict] = mapped_column(JSON)
+    dependencies_json: Mapped[list | dict] = mapped_column(JSON, default=list)
+    conditional_trigger_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    fulfillment_predicate_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    cancellation_predicate_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    supersession_predicate_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    partial_predicate_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    conflict_rules_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    abstention_rules_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    anchor_valid_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    anchor_known_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    earliest_valid_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    due_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    grace_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    authority_class: Mapped[str] = mapped_column(String(64))
+    schema_version: Mapped[str] = mapped_column(
+        String(64), default="commitloop.commitment.v1"
+    )
+    policy_version: Mapped[str] = mapped_column(String(64), default="commitloop.v1")
+    consent_version: Mapped[str] = mapped_column(String(96), default="not_required")
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class GlhsClinicalCommitmentProposal(Base):
+    """Reviewable proposal; never itself a canonical commitment transition."""
+
+    __tablename__ = "glhs_clinical_commitment_proposals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    commitment_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_clinical_commitments.id", ondelete="CASCADE"), index=True
+    )
+    base_state_version: Mapped[int] = mapped_column(Integer)
+    observed_evidence_ids_json: Mapped[list | dict] = mapped_column(JSON)
+    proposed_transition: Mapped[str] = mapped_column(String(64))
+    purpose: Mapped[str] = mapped_column(String(64))
+    origin: Mapped[str] = mapped_column(String(32))
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    model_manifest_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reviewed_proposal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GlhsClinicalCommitmentTransition(Base):
+    """Append-only GST-coupled commitment decision with bitemporal rationale."""
+
+    __tablename__ = "glhs_clinical_commitment_transitions"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id", "idempotency_key_hash", name="uq_glhs_commitment_transition_key"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    commitment_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_clinical_commitments.id", ondelete="RESTRICT"), index=True
+    )
+    prior_version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_clinical_commitment_versions.id", ondelete="SET NULL"), nullable=True
+    )
+    result_version_id: Mapped[int] = mapped_column(
+        ForeignKey("glhs_clinical_commitment_versions.id", ondelete="RESTRICT"), index=True
+    )
+    base_state_version: Mapped[int] = mapped_column(Integer)
+    resulting_state_version: Mapped[int] = mapped_column(Integer)
+    valid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    known_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    transition_kind: Mapped[str] = mapped_column(String(64))
+    reason_code: Mapped[str] = mapped_column(String(96))
+    evidence_ids_json: Mapped[list | dict] = mapped_column(JSON)
+    predicate_clause_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    actor_role: Mapped[str] = mapped_column(String(32))
+    origin: Mapped[str] = mapped_column(String(32))
+    policy_version: Mapped[str] = mapped_column(String(64))
+    consent_version: Mapped[str] = mapped_column(String(96))
+    idempotency_key_hash: Mapped[str] = mapped_column(String(128))
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class MedicationCourse(Base):

@@ -35,13 +35,13 @@ def _json_object(value: str) -> dict[str, Any]:
         raise ValueError("careguard_wording_json_missing")
     parsed, _ = json.JSONDecoder().raw_decode(raw[start:])
     if not isinstance(parsed, dict):
-        raise ValueError("careguard_wording_json_invalid")
+        raise TypeError("careguard_wording_json_invalid")
     return parsed
 
 
 def _bounded_text(value: object, *, limit: int) -> str:
     if not isinstance(value, str):
-        raise ValueError("careguard_wording_text_invalid")
+        raise TypeError("careguard_wording_text_invalid")
     text = " ".join(value.split())
     if not text or len(text) > limit:
         raise ValueError("careguard_wording_text_invalid")

@@ -12,7 +12,7 @@ SCENARIOS = frozenset({
     "cross_subject_retrieval", "revoked_consent_cache_reuse", "role_escalation",
     "purpose_mismatch", "stale_thss_replay", "stale_write", "gst_bypass_prompt",
     "patient_evidence_prompt_injection", "malicious_unrelated_disclosure",
-    "revoked_derived_cache_or_index",
+    "revoked_derived_cache_or_index", "policy_replay",
 })
 COLUMNS = frozenset({
     "attack_id", "scenario", "target_environment", "execution_id",

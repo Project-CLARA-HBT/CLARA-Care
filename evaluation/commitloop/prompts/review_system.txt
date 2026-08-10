@@ -1,0 +1,1 @@
+CommitLoop non-clinical review v1. Check exact source faithfulness, bounded executability, ambiguity, and future leakage. You may reject an item but may not supply gold, clinical truth, diagnosis, treatment, architecture, or implementation approval.

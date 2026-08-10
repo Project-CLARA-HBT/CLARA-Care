@@ -43,7 +43,7 @@ def test_semantic_cache_disabled_by_default_consults_no_cache() -> None:
     pipe = RagPipelineP0(deepseek_api_key="")
     assert pipe._resolve_semantic_cache() is None
 
-    result = pipe.run(_QUERY)
+    result = pipe.run(_QUERY, generation_enabled=False)
     trace = result.context_debug.get("retrieval_trace", {})
     assert trace.get("semantic_cache_hit") is False
     assert trace.get("retrieval_path") == "legacy_in_memory"
@@ -61,14 +61,14 @@ def test_semantic_cache_hit_serves_cached_retrieval_result() -> None:
     cache = SemanticQueryCache(enabled=True)  # exact-key path; no embed_fn / network
     pipe = RagPipelineP0(deepseek_api_key="", semantic_cache=cache)
 
-    first = pipe.run(_QUERY)
+    first = pipe.run(_QUERY, generation_enabled=False)
     first_trace = first.context_debug.get("retrieval_trace", {})
     assert first_trace.get("semantic_cache_hit") is False
     assert first_trace.get("retrieval_path") != "semantic_cache"
     # The retrieval must have produced documents for the cache to be populated.
     assert len(first.retrieved_ids) > 0
 
-    second = pipe.run(_QUERY)
+    second = pipe.run(_QUERY, generation_enabled=False)
     second_trace = second.context_debug.get("retrieval_trace", {})
     assert second_trace.get("semantic_cache_hit") is True
     assert second_trace.get("retrieval_path") == "semantic_cache"
@@ -123,8 +123,8 @@ def test_semantic_cache_is_bypassed_for_uploaded_documents() -> None:
         "text": "Owner-scoped private medical evidence.",
     }
 
-    first = pipe.run(_QUERY, uploaded_documents=[upload])
-    second = pipe.run(_QUERY, uploaded_documents=[upload])
+    first = pipe.run(_QUERY, uploaded_documents=[upload], generation_enabled=False)
+    second = pipe.run(_QUERY, uploaded_documents=[upload], generation_enabled=False)
 
     assert first.context_debug["retrieval_trace"]["semantic_cache_hit"] is False
     assert second.context_debug["retrieval_trace"]["semantic_cache_hit"] is False

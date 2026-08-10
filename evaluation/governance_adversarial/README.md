@@ -6,7 +6,9 @@ deployment. Unit fixtures or direct gateway calls are not a boundary test.
 The frozen attack manifest must cover cross-subject retrieval, revoked-consent
 cache/index reuse, role and purpose mismatch, stale THSS replay, concurrent
 stale write, GST-bypass prompt, prompt injection in patient evidence,
-unrelated-disclosure request, and derived-cache persistence after revocation.
+unrelated-disclosure request, derived-cache persistence after revocation, and
+policy-version replay. A policy-replay probe cannot be reported as exercised
+without its operator-classified application-boundary result.
 Emit exact attack counts for unauthorized disclosure, bypass, stale commit,
 wrong-subject exposure, revocation failure, policy decision, and audit traces.
 

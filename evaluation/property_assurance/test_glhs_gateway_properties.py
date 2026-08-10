@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
 from clara_api.db.base import Base
 from clara_api.db.models import (
+    GlhsAssertion,
     GlhsAssertionEvidence,
     GlhsSnapshotManifest,
     HealthSourceReference,
@@ -22,6 +24,7 @@ from clara_api.glhs.gateway import (
     compile_thss,
     current_state_version,
     propose_assertion,
+    reconstruct_governed_decision,
     reconstruct_state,
     record_evidence,
 )
@@ -51,7 +54,7 @@ def _scope(db: Session) -> ProfileScope:
         profile=db.query(PhrProfile).one(),
         actor_role="owner",
         purpose="self_care",
-        allowed_actions=frozenset({"create", "view"}),
+        allowed_actions=frozenset({"create", "correct", "resolve", "view"}),
         allowed_data_classes=frozenset({"medications"}),
     )
 
@@ -277,3 +280,149 @@ def test_superseded_assertion_is_excluded_from_following_snapshot(db: Session) -
         as_of=evidence.valid_from,
     )
     assert after.assertions == ()
+
+
+def test_expired_or_stale_snapshot_cannot_be_reused_for_a_persistent_proposal(db: Session) -> None:
+    scope = _scope(db)
+    initial_evidence = _evidence(db, scope, f"snapshot-initial:{uuid4()}")
+    initial = propose_assertion(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        data=AssertionInput(
+            semantic_key=f"medication:snapshot:{uuid4()}",
+            assertion_type="medications",
+            predicate="dose",
+            value={"dose": "100"},
+            epistemic_state="reported",
+            valid_from=initial_evidence.valid_from,
+        ),
+        evidence=((initial_evidence, "supports"),),
+    )
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=initial,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key=f"snapshot-initial:{uuid4()}",
+        transition_kind="property-test",
+        reason_code="test",
+    )
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="property-test",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=initial,
+        action="supersede",
+        expected_state_version=1,
+        idempotency_key=f"snapshot-advance:{uuid4()}",
+        transition_kind="property-test",
+        reason_code="test",
+    )
+    count_before = db.query(GlhsAssertion).count()
+    evidence = _evidence(db, scope, f"snapshot-stale:{uuid4()}")
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_stale_state_version"):
+        propose_assertion(
+            db,
+            profile_id=scope.profile.id,
+            actor_user_id=scope.actor.id,
+            data=AssertionInput(
+                semantic_key=f"medication:snapshot-stale:{uuid4()}",
+                assertion_type="medications",
+                predicate="dose",
+                value={"dose": "200"},
+                epistemic_state="reported",
+                valid_from=evidence.valid_from,
+                source_snapshot_id=snapshot.snapshot_id,
+            ),
+            evidence=((evidence, "supports"),),
+        )
+    assert db.query(GlhsAssertion).count() == count_before
+
+
+def test_unauthorized_scope_never_commits_and_governed_decision_reconstructs(db: Session) -> None:
+    scope = _scope(db)
+    evidence = _evidence(db, scope, f"reconstruction:{uuid4()}")
+    assertion = propose_assertion(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        data=AssertionInput(
+            semantic_key=f"medication:reconstruction:{uuid4()}",
+            assertion_type="medications",
+            predicate="dose",
+            value={"dose": "300"},
+            epistemic_state="reported",
+            valid_from=evidence.valid_from,
+        ),
+        evidence=((evidence, "supports"),),
+    )
+    with pytest.raises(GlhsInvariantError, match="transition_action_forbidden"):
+        apply_transition(
+            db,
+            scope=replace(scope, allowed_actions=frozenset({"view"})),
+            assertion=assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key=f"forbidden:{uuid4()}",
+            transition_kind="property-test",
+            reason_code="test",
+        )
+    assert current_state_version(db, profile_id=scope.profile.id) == 0
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=assertion,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key=f"authorized:{uuid4()}",
+        transition_kind="property-test",
+        reason_code="test",
+    )
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="property-test",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    derived = propose_assertion(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        data=AssertionInput(
+            semantic_key=f"medication:reconstruction-derived:{uuid4()}",
+            assertion_type="medications",
+            predicate="dose",
+            value={"dose": "325"},
+            epistemic_state="reported",
+            valid_from=evidence.valid_from,
+            source_snapshot_id=snapshot.snapshot_id,
+        ),
+        evidence=((evidence, "supports"),),
+    )
+    transition = apply_transition(
+        db,
+        scope=scope,
+        assertion=derived,
+        action="activate",
+        expected_state_version=1,
+        idempotency_key=f"snapshot-linked:{uuid4()}",
+        transition_kind="property-test",
+        reason_code="test",
+    )
+    reconstruction = reconstruct_governed_decision(
+        db,
+        profile_id=scope.profile.id,
+        snapshot_id=snapshot.snapshot_id,
+        transition_id=transition.public_id,
+    )
+    assert reconstruction["snapshot_digest"]
+    assert reconstruction["decisions"][0]["proposals"][0]["assertion_id"] == derived.public_id

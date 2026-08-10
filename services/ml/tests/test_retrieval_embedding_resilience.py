@@ -374,12 +374,23 @@ class _FastRescueRetriever:
 def test_fast_zero_internal_results_get_one_bounded_external_rescue(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    class _OfflineAnswerClient:
+        @property
+        def model(self) -> str:
+            return "deepseek-offline-test"
+
+        def generate(self, **_kwargs: Any) -> SimpleNamespace:
+            return SimpleNamespace(
+                content="Source-grounded offline test answer.",
+                model=self.model,
+            )
+
     original_query = "Compare DAPA-CKD and EMPA-KIDNEY in non-diabetic CKD"
     scientific_fetch_query = "renal cardiovascular outcomes limitations safety"
     retriever = _FastRescueRetriever()
     pipe = RagPipelineP1(
         retriever=retriever,  # type: ignore[arg-type]
-        deepseek_api_key="",
+        llm_client=_OfflineAnswerClient(),  # type: ignore[arg-type]
     )
     monkeypatch.setattr(pipe, "_persistent_retrieval_active", lambda: False)
     monkeypatch.setattr(settings, "rag_external_connectors_enabled", True)

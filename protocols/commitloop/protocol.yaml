@@ -1,0 +1,40 @@
+schema_version: commitloop-protocol.v1
+phase_a_external_model_calls: prohibited
+commitment_schema_version: commitloop.commitment.v1
+predicate_dsl_version: commitloop-predicate.v1
+policy_version: commitloop.v1
+split:
+  unit: subject
+  seed: commitloop-v1
+  development_percent: 70
+  validation_percent: 15
+  sealed_test_percent: 15
+models:
+  - antigravity/gemini-3.6-flash-high
+  - antigravity/claude-sonnet-4-6
+decoding:
+  temperature: 0
+  fallback: false
+conditions:
+  - full_authorized_history
+  - long_context_chronological
+  - naive_rag
+  - lww
+  - btsa
+  - glhs_no_predicate_engine
+  - glhs_no_bitemporal_knowledge_time
+  - glhs_hybrid
+  - glhs_hybrid_thss_strict
+gold:
+  source: deterministic_construction_predicate
+  evidence_class: synthetic_protocol_oracle
+  clinical_adjudication: NOT_RUN
+adversarial_variants:
+  materialization: deterministic_fulfillment_evidence_edit
+  solver_case_ids: opaque_sha256_prefix
+  label_join: after_solver_inference
+  labels_forbidden_in_packets_and_ordering: true
+axes:
+  lifecycle_state: [OPEN, PARTIALLY_SATISFIED, SATISFIED, SUPERSEDED, CANCELLED]
+  evidence_state: [CLEAR, CONFLICTED, INSUFFICIENT_EVIDENCE]
+  timeliness_state: [NOT_APPLICABLE, BEFORE_DUE, IN_GRACE, OVERDUE, UNKNOWN]

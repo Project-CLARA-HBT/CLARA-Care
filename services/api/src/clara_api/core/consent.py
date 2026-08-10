@@ -36,14 +36,18 @@ def get_latest_user_consent(
     user_id: int,
     consent_type: str = MEDICAL_CONSENT_TYPE,
 ) -> UserConsent | None:
-    return db.execute(
-        select(UserConsent)
-        .where(
-            UserConsent.user_id == user_id,
-            UserConsent.consent_type == consent_type,
+    return (
+        db.execute(
+            select(UserConsent)
+            .where(
+                UserConsent.user_id == user_id,
+                UserConsent.consent_type == consent_type,
+            )
+            .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
         )
-        .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
-    ).scalar_one_or_none()
+        .scalars()
+        .first()
+    )
 
 
 def required_medical_disclaimer_version() -> str:
@@ -57,7 +61,7 @@ def ensure_medical_disclaimer_consent(db: Session, *, user_id: int) -> UserConse
         user_id=user_id,
         consent_type=MEDICAL_CONSENT_TYPE,
     )
-    if latest and latest.consent_version == required_version:
+    if latest and latest.consent_version == required_version and latest.revoked_at is None:
         return latest
 
     raise HTTPException(

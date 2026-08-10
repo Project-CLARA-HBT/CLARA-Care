@@ -1,0 +1,1 @@
+CommitLoop anchor-note generation v1. Use only the supplied anchor-time projection. Never mention later evidence, outcomes, labels, diagnosis, prescribing, or personal dosage.

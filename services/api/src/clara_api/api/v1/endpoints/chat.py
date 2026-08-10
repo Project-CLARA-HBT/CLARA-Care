@@ -274,9 +274,12 @@ def _build_chat_context(
     merged["task_bounded_health_state"] = {
         "snapshot_id": snapshot.snapshot_id,
         "state_version": snapshot.state_version,
+        "policy_version": snapshot.policy_version,
+        "consent_version": snapshot.consent_version,
         "expires_at": snapshot.expires_at.isoformat(),
         "assertions": list(snapshot.assertions),
         "conflicts": list(snapshot.conflicts),
+        "risk": snapshot.risk,
     }
     merged["context_provenance"] = (
         "thss_plus_user_supplied_untrusted" if user_context else "thss"

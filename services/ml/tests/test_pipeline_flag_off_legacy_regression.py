@@ -26,13 +26,13 @@ These tests complement (and do not modify) the existing legacy suite in
 from __future__ import annotations
 
 import contextlib
-from typing import Any, List
+from typing import Any
 
-import clara_ml.rag.store.health as health
 import clara_ml.rag.store.hybrid_retriever as hybrid_retriever_mod
 from clara_ml.config import settings
 from clara_ml.rag.pipeline import RagPipelineP0
 from clara_ml.rag.retriever import Document
+from clara_ml.rag.store import health
 
 # A query that resolves entirely against the static seed corpus (no live
 # connectors), mirroring the offline determinism the legacy suite relies on.
@@ -69,7 +69,7 @@ class _TrackingHybridRetriever:
     def __init__(self) -> None:
         self.retrieve_calls: list[tuple[Any, ...]] = []
 
-    def retrieve(self, query: str, *args: Any, **kwargs: Any) -> List[Document]:
+    def retrieve(self, query: str, *args: Any, **kwargs: Any) -> list[Document]:
         self.retrieve_calls.append((query, args, kwargs))
         return [
             Document(
@@ -99,7 +99,7 @@ def test_flag_off_retrieval_path_is_legacy_in_memory(monkeypatch):
 
     with _persistent_flags_off(monkeypatch):
         pipe = RagPipelineP0(deepseek_api_key="")
-        result = pipe.run(_LEGACY_QUERY)
+        result = pipe.run(_LEGACY_QUERY, deepseek_fallback_enabled=True)
 
     trace = result.context_debug.get("retrieval_trace", {})
     assert trace.get("retrieval_path") == "legacy_in_memory"
@@ -127,9 +127,7 @@ def test_flag_off_never_builds_persistent_retriever(monkeypatch):
         probes["from_engine"] += 1
         raise AssertionError("HybridRetriever.from_engine must not run with flag off")
 
-    monkeypatch.setattr(
-        hybrid_retriever_mod.HybridRetriever, "from_engine", _record_from_engine
-    )
+    monkeypatch.setattr(hybrid_retriever_mod.HybridRetriever, "from_engine", _record_from_engine)
 
     with _persistent_flags_off(monkeypatch):
         pipe = RagPipelineP0(deepseek_api_key="")
@@ -148,7 +146,7 @@ def test_flag_off_never_builds_persistent_retriever(monkeypatch):
         monkeypatch.setattr(pipe, "_get_hybrid_retriever", _get_wrapper)
         monkeypatch.setattr(pipe, "_persistent_retrieve", _persistent_wrapper)
 
-        result = pipe.run(_LEGACY_QUERY)
+        result = pipe.run(_LEGACY_QUERY, deepseek_fallback_enabled=True)
 
     assert probes["persistent_calls"] == 0
     assert probes["hybrid_calls"] == 0
@@ -168,7 +166,7 @@ def test_flag_off_does_not_consult_injected_persistent_retriever(monkeypatch):
 
     with _persistent_flags_off(monkeypatch):
         pipe = RagPipelineP0(deepseek_api_key="", hybrid_retriever=tracker)
-        result = pipe.run(_LEGACY_QUERY)
+        result = pipe.run(_LEGACY_QUERY, deepseek_fallback_enabled=True)
 
     assert tracker.retrieve_calls == []
     assert _retrieval_path(result) == "legacy_in_memory"
@@ -202,7 +200,7 @@ def test_flag_off_runs_single_legacy_embed_all_path(monkeypatch):
 
         monkeypatch.setattr(pipe.retriever, "retrieve_internal", _internal_wrapper)
 
-        result = pipe.run(_LEGACY_QUERY)
+        result = pipe.run(_LEGACY_QUERY, deepseek_fallback_enabled=True)
 
     # Legacy embed-all path consulted exactly once for primary retrieval.
     assert calls["internal"] == 1
@@ -221,8 +219,8 @@ def test_flag_off_is_deterministic_and_reproduces_legacy_results(monkeypatch):
 
     with _persistent_flags_off(monkeypatch):
         pipe = RagPipelineP0(deepseek_api_key="")
-        first = pipe.run(_LEGACY_QUERY)
-        second = pipe.run(_LEGACY_QUERY)
+        first = pipe.run(_LEGACY_QUERY, deepseek_fallback_enabled=True)
+        second = pipe.run(_LEGACY_QUERY, deepseek_fallback_enabled=True)
 
     assert _retrieval_path(first) == "legacy_in_memory"
     assert _retrieval_path(second) == "legacy_in_memory"
