@@ -867,7 +867,28 @@ def compile_thss(
         ),
         "escalation_required": selection_policy == "risk_aware" and critical_issue,
     }
-    snapshot_payload = {
+    assertion_payloads: list[dict[str, object]] = [
+        {
+            "id": row.public_id,
+            "type": row.assertion_type,
+            "semantic_key": row.semantic_key,
+            "value": row.value_json,
+            "epistemic_state": row.epistemic_state,
+            "valid_from": row.valid_from.isoformat(),
+            "valid_to": row.valid_to.isoformat() if row.valid_to else None,
+            "evidence_ids": evidence_map[row.id],
+        }
+        for row in selected
+    ]
+    conflict_payloads: list[dict[str, object]] = [
+        {
+            "id": row.public_id,
+            "semantic_key": row.semantic_key,
+            "reason_code": row.reason_code,
+        }
+        for row in conflicts
+    ]
+    snapshot_payload: dict[str, object] = {
         "as_of": _as_utc(as_of).isoformat(),
         "state_version": state_version,
         "policy_version": POLICY_VERSION,
@@ -875,27 +896,8 @@ def compile_thss(
         "task": task,
         "purpose": purpose,
         "expires_at": expires_at.isoformat(),
-        "assertions": [
-            {
-                "id": row.public_id,
-                "type": row.assertion_type,
-                "semantic_key": row.semantic_key,
-                "value": row.value_json,
-                "epistemic_state": row.epistemic_state,
-                "valid_from": row.valid_from.isoformat(),
-                "valid_to": row.valid_to.isoformat() if row.valid_to else None,
-                "evidence_ids": evidence_map[row.id],
-            }
-            for row in selected
-        ],
-        "conflicts": [
-            {
-                "id": row.public_id,
-                "semantic_key": row.semantic_key,
-                "reason_code": row.reason_code,
-            }
-            for row in conflicts
-        ],
+        "assertions": assertion_payloads,
+        "conflicts": conflict_payloads,
         "risk": risk,
     }
     manifest = GlhsSnapshotManifest(
@@ -934,7 +936,7 @@ def compile_thss(
         task=task,
         purpose=purpose,
         expires_at=expires_at,
-        assertions=tuple(snapshot_payload["assertions"]),
-        conflicts=tuple(snapshot_payload["conflicts"]),
+        assertions=tuple(assertion_payloads),
+        conflicts=tuple(conflict_payloads),
         risk=risk,
     )
