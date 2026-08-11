@@ -139,9 +139,11 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
         call["response_format"]["type"] == "json_schema"
         and call["messages"][0]["role"] == "system"
         and "three product-state axes plus escalation" in call["messages"][0]["content"]
-        and "Evaluate lifecycle, evidence, and timeliness independently"
+        and "keep the axes independent"
         in call["messages"][0]["content"]
-        and "null, absent, or any other status does not match"
+        and "Null, absent, unknown, or approximate statuses do not match"
+        in call["messages"][0]["content"]
+        and "valid_cutoff only for OPEN"
         in call["messages"][0]["content"]
         for call in first_transport.calls
     )

@@ -37,10 +37,10 @@ REVIEW_SCHEMA = {
 
 _PROMPTS = {
     "construction_review": (
-        "commitloop-review-deterministic-construction.v2",
+        "commitloop-review-deterministic-construction.v3",
         "review_system.txt",
     ),
-    "note_review": ("commitloop-review-deterministic-note.v2", "review_system.txt"),
+    "note_review": ("commitloop-review-deterministic-note.v3", "review_system.txt"),
 }
 REQUESTS_PER_ACCEPTED_CASE = len(_PROMPTS)
 
@@ -157,8 +157,10 @@ def construct_with_model_review(
             "clinical_adjudication": "NOT_RUN",
             "stages": [],
         }
-    event_ids = {item.evidence_id for item in events}
-    if case.anchor_evidence_id not in event_ids:
+    anchor_events = tuple(
+        item for item in events if item.evidence_id == case.anchor_evidence_id
+    )
+    if len(anchor_events) != 1:
         raise ValueError("candidate_anchor_not_in_source")
     candidate = _expected_candidate(case)
     predicate = validate_predicate(case.fulfillment_predicate)
@@ -166,8 +168,9 @@ def construct_with_model_review(
     source_packet = {
         "case_id": case.case_id,
         "anchor": candidate,
-        "source_event_ids": sorted(event_ids),
-        "source_events": [_review_event(item) for item in events],
+        "source_scope": "anchor_event_only",
+        "source_event_ids": [anchor_events[0].evidence_id],
+        "source_events": [_review_event(anchor_events[0])],
         "instruction": "review_only_do_not_rewrite_source_owned_projection",
     }
     stages = []
@@ -179,6 +182,12 @@ def construct_with_model_review(
             "source": source_packet,
             "deterministic_candidate": candidate,
             "deterministic_predicate": predicate,
+            "frozen_projection_rule": {
+                "action": "complete_service_request",
+                "fulfillment_resource_type": "Observation",
+                "fulfillment_status": "final",
+                "target_system_and_code": "copy_exactly_from_anchor",
+            },
         },
         schema=REVIEW_SCHEMA,
     )
@@ -192,6 +201,7 @@ def construct_with_model_review(
             "source": source_packet,
             "deterministic_candidate": candidate,
             "deterministic_note": deterministic_note,
+            "frozen_projection_rule": "serialize_anchor_fields_only",
         },
         schema=REVIEW_SCHEMA,
     )

@@ -27,7 +27,7 @@ class GenerationFakeTransport:
         self.calls.append(payload)
         stage = payload["messages"][0]["content"]
         reject = self.reject_note and stage.startswith(
-            "commitloop-review-deterministic-note.v2"
+            "commitloop-review-deterministic-note.v3"
         )
         content = {
             "faithful": not reject,
@@ -80,6 +80,15 @@ def test_typed_generation_is_source_bound_reviewed_and_gold_free() -> None:
     first_payload = json.loads(transport.calls[0]["messages"][1]["content"])
     assert first_payload["deterministic_predicate"] == case.fulfillment_predicate
     assert first_payload["deterministic_candidate"] == result["candidate"]
+    assert first_payload["source"]["source_scope"] == "anchor_event_only"
+    assert first_payload["source"]["source_event_ids"] == [case.anchor_evidence_id]
+    assert [item["resource_type"] for item in first_payload["source"]["source_events"]] == [
+        "ServiceRequest"
+    ]
+    assert all(
+        item["evidence_id"] == case.anchor_evidence_id
+        for item in first_payload["source"]["source_events"]
+    )
     assert all(
         call["response_format"]["json_schema"]["name"]
         == "commitloop_nonclinical_review_v1"
