@@ -86,7 +86,19 @@ def test_typed_generation_is_source_bound_reviewed_and_gold_free() -> None:
     assert len(result["stages"]) == len(transport.calls) == 5
     assert "gold" not in json.dumps(result).lower()
     predicate_payload = json.loads(transport.calls[1]["messages"][1]["content"])
-    assert predicate_payload["allowed_predicate_projection"] == case.fulfillment_predicate
+    assert (
+        predicate_payload["allowed_predicate_projection"] == case.fulfillment_predicate
+    )
+    assert (
+        transport.calls[0]["response_format"]["json_schema"]["schema"]["const"]
+        == (result["candidate"])
+    )
+    assert transport.calls[1]["response_format"]["json_schema"]["schema"]["const"] == {
+        "predicate": case.fulfillment_predicate
+    }
+    assert transport.calls[3]["response_format"]["json_schema"]["schema"]["const"] == {
+        "note": render_anchor_note(case)
+    }
     assert all(
         item["reported_model_id"]
         == REPORTED_MODEL_ID_BY_REQUESTED[item["requested_model_id"]]
@@ -94,7 +106,9 @@ def test_typed_generation_is_source_bound_reviewed_and_gold_free() -> None:
     )
 
 
-def test_deterministic_validator_rejects_future_note_even_after_positive_review() -> None:
+def test_deterministic_validator_rejects_future_note_even_after_positive_review() -> (
+    None
+):
     transport = GenerationFakeTransport(leak_note=True)
     case, events = _case_and_events()
     with pytest.raises(ValueError, match="generated_note_not_anchor_projection"):

@@ -600,6 +600,8 @@ def run_local_e2e(
                     subject_by_case={
                         case.case_id: case.subject_token for case in cases
                     },
+                    models=sorted(clients),
+                    conditions=list(CONDITIONS),
                 )
             ),
             "status": "DESCRIPTIVE_SYNTHETIC_ONLY",

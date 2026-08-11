@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -32,7 +33,10 @@ CANDIDATE_SCHEMA = {
                 "type": "object",
                 "additionalProperties": False,
                 "required": ["system", "code"],
-                "properties": {"system": {"type": "string"}, "code": {"type": "string"}},
+                "properties": {
+                    "system": {"type": "string"},
+                    "code": {"type": "string"},
+                },
             },
             "due_time": {"type": ["string", "null"]},
         },
@@ -79,8 +83,14 @@ NOTE_SCHEMA = {
 }
 
 _PROMPTS = {
-    "candidate": ("commitloop-generation-candidate.v1", "generation_candidate_system.txt"),
-    "predicate": ("commitloop-generation-predicate.v2", "generation_predicate_system.txt"),
+    "candidate": (
+        "commitloop-generation-candidate.v1",
+        "generation_candidate_system.txt",
+    ),
+    "predicate": (
+        "commitloop-generation-predicate.v2",
+        "generation_predicate_system.txt",
+    ),
     "candidate_review": ("commitloop-review-candidate.v1", "review_system.txt"),
     "note": ("commitloop-generation-anchor-note.v1", "generation_note_system.txt"),
     "note_review": ("commitloop-review-anchor-note.v1", "review_system.txt"),
@@ -94,12 +104,26 @@ def _canonical(value: object) -> str:
 
 def _prompt_text(stage: str) -> str:
     stage_id, filename = _PROMPTS[stage]
-    template = (Path(__file__).parent / "prompts" / filename).read_text(encoding="utf-8").strip()
+    template = (
+        (Path(__file__).parent / "prompts" / filename)
+        .read_text(encoding="utf-8")
+        .strip()
+    )
     return f"{stage_id}\n{template}"
 
 
 def _prompt_hash(stage: str) -> str:
     return hashlib.sha256(_prompt_text(stage).encode()).hexdigest()
+
+
+def _exact_projection_schema(
+    template: dict[str, Any], expected: dict[str, Any]
+) -> dict[str, Any]:
+    """Bind an advisory projection to the deterministic source-owned value."""
+
+    schema = deepcopy(template)
+    schema["schema"]["const"] = expected
+    return schema
 
 
 def _record(stage: str, result: ProviderResult) -> dict[str, object]:
@@ -194,15 +218,16 @@ def construct_with_model_review(
         "instruction": "repeat_only_source_grounded_fields",
     }
     stages = []
+    expected_candidate = _expected_candidate(case)
     candidate, record = _call(
         generator,
         model=GENERATOR_MODEL,
         stage="candidate",
         payload=source_packet,
-        schema=CANDIDATE_SCHEMA,
+        schema=_exact_projection_schema(CANDIDATE_SCHEMA, expected_candidate),
     )
     stages.append(record)
-    if candidate != _expected_candidate(case):
+    if candidate != expected_candidate:
         raise ValueError("generated_candidate_not_source_grounded")
     predicate_output, record = _call(
         generator,
@@ -213,7 +238,9 @@ def construct_with_model_review(
             "allowed_source_event_ids": sorted(event_ids),
             "allowed_predicate_projection": case.fulfillment_predicate,
         },
-        schema=PREDICATE_SCHEMA,
+        schema=_exact_projection_schema(
+            PREDICATE_SCHEMA, {"predicate": case.fulfillment_predicate}
+        ),
     )
     stages.append(record)
     proposed_predicate = validate_predicate(predicate_output.get("predicate"))
@@ -224,7 +251,11 @@ def construct_with_model_review(
         reviewer,
         model=REVIEWER_MODEL,
         stage="candidate_review",
-        payload={"source": source_packet, "candidate": candidate, "predicate": proposed_predicate},
+        payload={
+            "source": source_packet,
+            "candidate": candidate,
+            "predicate": proposed_predicate,
+        },
         schema=REVIEW_SCHEMA,
     )
     stages.append(record)
@@ -235,7 +266,7 @@ def construct_with_model_review(
         model=GENERATOR_MODEL,
         stage="note",
         payload={"candidate": candidate, "allowed_note_projection": deterministic_note},
-        schema=NOTE_SCHEMA,
+        schema=_exact_projection_schema(NOTE_SCHEMA, {"note": deterministic_note}),
     )
     stages.append(record)
     if note_output.get("note") != deterministic_note:
