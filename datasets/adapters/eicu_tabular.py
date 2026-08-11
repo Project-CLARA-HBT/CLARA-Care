@@ -71,7 +71,14 @@ TABLES = (
         ("allergyoffset", "allergyenteredoffset"),
         "AllergyIntolerance",
         "allergies_adverse_reactions",
-        ("drugname", "allergyname", "allergycode", "allergytype", "rxincluded"),
+        (
+            "drugname",
+            "allergyname",
+            "drughiclseqno",
+            "allergytype",
+            "rxincluded",
+            "writtenineicu",
+        ),
     ),
 )
 PATIENT_MEMBER = "patient.csv.gz"

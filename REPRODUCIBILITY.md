@@ -81,6 +81,13 @@ and creates no estimated time. Its frozen manifest payload SHA-256 is
 `0d8bdbd621e0e54a4acd15ec7461de5edcceb8376f4f413a2f2f125c64992ec8`.
 These are adapter and structural counts only.
 
+The local eICU Demo archive passed all 33 packaged provider SHA-256 entries.
+Its selected-table output contains 540,237 source-linked records for 1,841
+subjects and 2,520 stays; records SHA-256 is
+`68b25539c09e64aca75ce1010b51787c7ba179ad5d0fffb7f961b9e242310756`.
+This run predates the operational-metrics instrumentation and must be rerun
+before archive-performance claims are supported.
+
 Structural regression only:
 
 ```bash

@@ -57,7 +57,7 @@ datasets:
     provenance_fields: resourceType, id, fullUrl and Provenance resources when present
     clinical_domains: [medications, diagnoses, observations, encounters, allergies]
     known_limitations: Synthetic; related Synthea releases are not independent clinical cohorts.
-    adapter: fhir_archive
+    adapter: nested_fhir_bundle_tar
 
   - id: synthea_fhir_stu3_may_2017
     display_name: Synthea one-million FHIR STU3 archive
@@ -86,7 +86,7 @@ datasets:
     provenance_fields: resourceType, id, fullUrl and Provenance resources when present
     clinical_domains: [medications, diagnoses, observations, encounters, allergies]
     known_limitations: Synthetic; not independent from other Synthea-family archives.
-    adapter: fhir_archive
+    adapter: nested_fhir_bundle_tar
 
   - id: synthea_omop_2_8m
     display_name: Synthea OMOP large archive

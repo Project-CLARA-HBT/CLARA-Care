@@ -5,6 +5,9 @@ import gzip
 import hashlib
 import io
 import json
+import subprocess
+import sys
+import tarfile
 import zipfile
 from pathlib import Path
 from typing import Self
@@ -89,6 +92,17 @@ def test_repository_registry_is_valid_without_requiring_untracked_raw_data() -> 
     }
     assert syntheticmass_status != "VERIFIED"
     assert rows["synthea_omop_2_8m"]["local_status"] == "NOT_AVAILABLE"
+
+
+def test_data_cli_bootstrap_does_not_shadow_standard_library_inspect() -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/data/normalize.py", "--help"],
+        cwd=_registry.repository_root(),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_registry_rejects_escaping_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -442,6 +456,16 @@ def _gzip_csv(row: dict[str, str]) -> bytes:
     return gzip.compress(output.getvalue().encode())
 
 
+def _tar_gz(files: dict[str, bytes]) -> bytes:
+    output = io.BytesIO()
+    with tarfile.open(fileobj=output, mode="w:gz") as archive:
+        for name, payload in files.items():
+            member = tarfile.TarInfo(name)
+            member.size = len(payload)
+            archive.addfile(member, io.BytesIO(payload))
+    return output.getvalue()
+
+
 def test_eicu_normalization_preserves_minute_offsets_without_fabricated_datetime(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -491,3 +515,99 @@ def test_eicu_normalization_preserves_minute_offsets_without_fabricated_datetime
     assert all(record["estimated_time"] is False for record in records)
     assert all("offset" in record["temporal_precision"] for record in records)
     assert all(record["source_subject"] == "subject-1" for record in records)
+
+
+def test_nested_fhir_bundle_normalization_minimizes_patient_demographics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    patient_full_url = "urn:uuid:patient-1"
+    encounter_full_url = "urn:uuid:encounter-1"
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [
+            {
+                "fullUrl": patient_full_url,
+                "resource": {
+                    "resourceType": "Patient",
+                    "id": "patient-1",
+                    "name": [{"family": "SyntheticName"}],
+                    "address": [{"line": ["SyntheticAddress"]}],
+                },
+            },
+            {
+                "fullUrl": encounter_full_url,
+                "resource": {
+                    "resourceType": "Encounter",
+                    "id": "encounter-1",
+                    "subject": {"reference": patient_full_url},
+                    "period": {"start": "2020-01-01", "end": "2020-01-02"},
+                    "status": "finished",
+                },
+            },
+            {
+                "fullUrl": "urn:uuid:condition-1",
+                "resource": {
+                    "resourceType": "Condition",
+                    "id": "condition-1",
+                    "subject": {"reference": patient_full_url},
+                    "context": {"reference": encounter_full_url},
+                    "onsetDateTime": "2020-01-01",
+                    "code": {"coding": [{"code": "synthetic-code"}]},
+                },
+            },
+            {
+                "fullUrl": "urn:uuid:medication-1",
+                "resource": {
+                    "resourceType": "MedicationOrder",
+                    "id": "medication-1",
+                    "patient": {"reference": patient_full_url},
+                    "encounter": {"reference": encounter_full_url},
+                    "authoredOn": "2020-01-01",
+                    "medicationCodeableConcept": {
+                        "coding": [{"code": "synthetic-medication"}]
+                    },
+                    "status": "active",
+                },
+            },
+        ],
+    }
+    nested = _tar_gz(
+        {"output/fhir/00/patient-1.json": json.dumps(bundle).encode()}
+    )
+    outer = _tar_gz({"chunk-1.tar.gz": nested})
+    archive_path = tmp_path / "fixture.tar.gz"
+    archive_path.write_bytes(outer)
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(
+            adapter="nested_fhir_bundle_tar",
+            schema="FHIR STU3",
+            local_candidates=["fixture.tar.gz"],
+            expected_files=["fixture.tar.gz"],
+        ),
+    )
+
+    verification = verify_dataset("fixture_data", registry_path)
+    assert verification["archive"]["nested_archive_count"] == 1
+    assert verification["archive"]["nested_fhir_bundle_count"] == 1
+
+    output = normalize_dataset(
+        "fixture_data", output=tmp_path / "normalized", registry_path=registry_path
+    )
+    with gzip.open(output / "records.jsonl.gz", "rt", encoding="utf-8") as stream:
+        rendered = stream.read()
+    records = [json.loads(line) for line in rendered.splitlines()]
+
+    assert len(records) == 3
+    assert all(record["evidence_type"] != "Patient" for record in records)
+    assert all(record["source_subject"] == "Patient/patient-1" for record in records)
+    assert all("chunk-1.tar.gz" in record["original_payload_pointer"] for record in records)
+    assert "SyntheticName" not in rendered
+    assert "SyntheticAddress" not in rendered
+    manifest = json.loads(
+        (output / "normalization_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["records_file"] == "records.jsonl.gz"
+    assert manifest["metrics"]["subject_count"] == 1

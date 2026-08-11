@@ -126,6 +126,19 @@ absolute datetimes or knowledge timestamps. Full archive verification and
 adapter execution remain `IN_PROGRESS` until the throttled official transfer
 finishes; no partial counts are reported as evidence.
 
+The transfer subsequently completed at the expected 136,773,541 bytes. The
+outer ZIP and all 33 provider SHA-256 entries passed. Full selected-table
+normalization produced 540,237 records across 1,841 subjects and 2,520 ICU
+stays, with zero estimated timestamps. A clean-SHA freeze and rerun with the new
+operational-metrics instrumentation remain pending, so this stays `PARTIAL`.
+
+SyntheticMass v1 outer SHA-256/gzip/tar verification passed for the local
+30,878,003,109-byte archive. The source is twelve outer members containing
+nested tar.gz chunks; an adapter and verifier now stream those chunks, minimize
+away Patient demographics, reject links/traversal, and write deterministic
+gzip common records. Full nested verification and normalization have not yet
+run, so the outer-only result cannot be frozen as complete source acceptance.
+
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
 content copy apart from the final newline. The operator-provided root copy

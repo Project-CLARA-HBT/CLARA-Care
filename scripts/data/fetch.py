@@ -11,6 +11,10 @@ import urllib.request
 from pathlib import Path
 
 if __package__ in {None, ""}:
+    script_directory = Path(__file__).resolve().parent
+    sys.path = [
+        entry for entry in sys.path if Path(entry or ".").resolve() != script_directory
+    ]
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.data._registry import (

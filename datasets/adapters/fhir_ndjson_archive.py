@@ -105,6 +105,9 @@ def _original_value(resource: Mapping[str, Any]) -> dict[str, object]:
         "valueQuantity",
         "valueCodeableConcept",
         "valueString",
+        "medicationCodeableConcept",
+        "medicationReference",
+        "dosageInstruction",
         "issued",
         "clinicalStatus",
         "verificationStatus",
@@ -119,10 +122,14 @@ def resource_to_common(
     archive_member: str,
     line_number: int,
     source_schema: str,
+    subject_override: str | None = None,
+    encounter_override: str | None = None,
+    original_payload_pointer: str | None = None,
+    source_provenance: Mapping[str, object] | None = None,
 ) -> dict[str, Any] | None:
     resource_type = resource.get("resourceType")
     resource_id = resource.get("id")
-    subject = _subject(resource)
+    subject = subject_override or _subject(resource)
     if not isinstance(resource_type, str) or not isinstance(resource_id, str) or not subject:
         return None
     valid_time, valid_field, precision = _valid_time(resource)
@@ -133,7 +140,7 @@ def resource_to_common(
         missingness.append("valid_time")
     if knowledge_time is None:
         missingness.append("knowledge_time")
-    encounter = _encounter(resource)
+    encounter = encounter_override or _encounter(resource)
     if encounter is None:
         missingness.append("encounter_id")
     record = {
@@ -152,14 +159,17 @@ def resource_to_common(
         "knowledge_time_field": knowledge_field,
         "temporal_precision": precision,
         "estimated_time": False,
-        "source_provenance": {
+        "source_provenance": dict(source_provenance)
+        if source_provenance is not None
+        else {
             "archive_member": archive_member,
             "line_number": line_number,
             "resource_type": resource_type,
             "resource_id": resource_id,
         },
         "source_schema": source_schema,
-        "original_payload_pointer": f"zip://{archive_member}#L{line_number}",
+        "original_payload_pointer": original_payload_pointer
+        or f"zip://{archive_member}#L{line_number}",
         "original_payload_sha256": payload_digest,
         "uncertainty": ["knowledge_time_unknown"] if knowledge_time is None else [],
         "missingness": missingness,

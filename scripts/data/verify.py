@@ -10,9 +10,13 @@ import sys
 import tarfile
 import zipfile
 from pathlib import Path
-from typing import cast
+from typing import IO, cast
 
 if __package__ in {None, ""}:
+    script_directory = Path(__file__).resolve().parent
+    sys.path = [
+        entry for entry in sys.path if Path(entry or ".").resolve() != script_directory
+    ]
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.data._registry import (
@@ -27,7 +31,39 @@ from scripts.data._registry import (
 )
 
 
-def _archive_probe(path: Path) -> tuple[dict[str, object], set[str]]:
+def _nested_tar_probe(stream: IO[bytes]) -> dict[str, int]:
+    count = 0
+    files = 0
+    unsafe = 0
+    fhir_bundles = 0
+    try:
+        with tarfile.open(fileobj=stream, mode="r|gz") as archive:
+            for item in archive:
+                count += 1
+                files += int(item.isfile())
+                member = Path(item.name)
+                unsafe += int(
+                    member.is_absolute()
+                    or ".." in member.parts
+                    or item.issym()
+                    or item.islnk()
+                )
+                fhir_bundles += int(
+                    item.isfile() and "/fhir/" in item.name and item.name.endswith(".json")
+                )
+    except (tarfile.TarError, OSError) as exc:
+        raise DatasetRegistryError("nested_archive_invalid") from exc
+    return {
+        "member_count": count,
+        "file_count": files,
+        "unsafe_member_count": unsafe,
+        "fhir_bundle_count": fhir_bundles,
+    }
+
+
+def _archive_probe(
+    path: Path, *, probe_nested_tar_gz: bool = False
+) -> tuple[dict[str, object], set[str]]:
     lower = path.name.lower()
     if lower.endswith(".zip"):
         try:
@@ -57,26 +93,58 @@ def _archive_probe(path: Path) -> tuple[dict[str, object], set[str]]:
             raise DatasetRegistryError("archive_invalid") from exc
     if lower.endswith((".tar.gz", ".tgz", ".tar")):
         try:
-            with tarfile.open(path, "r:*") as archive:
+            with tarfile.open(path, "r|*") as archive:
                 count = 0
                 total = 0
                 unsafe = 0
                 observed: set[str] = set()
+                nested_archive_count = 0
+                nested_member_count = 0
+                nested_file_count = 0
+                nested_unsafe_member_count = 0
+                nested_fhir_bundle_count = 0
                 for item in archive:
                     count += 1
                     total += max(0, item.size)
                     member = Path(item.name)
-                    unsafe += int(member.is_absolute() or ".." in member.parts)
+                    unsafe += int(
+                        member.is_absolute()
+                        or ".." in member.parts
+                        or item.issym()
+                        or item.islnk()
+                    )
                     observed.update((item.name, member.name))
-                return (
-                    {
-                        "format": "tar",
-                        "member_count": count,
-                        "uncompressed_bytes": total,
-                        "unsafe_member_count": unsafe,
-                    },
-                    observed,
-                )
+                    if (
+                        probe_nested_tar_gz
+                        and item.isfile()
+                        and item.name.endswith((".tar.gz", ".tgz"))
+                    ):
+                        extracted = archive.extractfile(item)
+                        if extracted is None:
+                            raise DatasetRegistryError("nested_archive_unreadable")
+                        nested = _nested_tar_probe(extracted)
+                        nested_archive_count += 1
+                        nested_member_count += nested["member_count"]
+                        nested_file_count += nested["file_count"]
+                        nested_unsafe_member_count += nested["unsafe_member_count"]
+                        nested_fhir_bundle_count += nested["fhir_bundle_count"]
+                report = {
+                    "format": "tar",
+                    "member_count": count,
+                    "uncompressed_bytes": total,
+                    "unsafe_member_count": unsafe,
+                }
+                if probe_nested_tar_gz:
+                    report["nested_archive_count"] = nested_archive_count
+                    report["nested_member_count"] = nested_member_count
+                    report["nested_file_count"] = nested_file_count
+                    report["nested_unsafe_member_count"] = nested_unsafe_member_count
+                    report["nested_fhir_bundle_count"] = nested_fhir_bundle_count
+                    if not nested_archive_count:
+                        raise DatasetRegistryError("nested_archives_missing")
+                    if nested_unsafe_member_count:
+                        raise DatasetRegistryError("nested_archive_unsafe_members")
+                return report, observed
         except (tarfile.TarError, OSError) as exc:
             raise DatasetRegistryError("archive_invalid") from exc
     return ({"format": "directory_or_unrecognized_file", "member_count": None}, set())
@@ -163,14 +231,19 @@ def verify_dataset(dataset_id: str, registry_path: Path | None = None) -> dict[s
     dataset = get_dataset(load_registry(registry_path), dataset_id)
     source = resolve_local_source(dataset)
     inventory = source_inventory(source)
+    probe_nested = dataset.get("adapter") == "nested_fhir_bundle_tar"
     if source.is_file():
-        archive, archive_members = _archive_probe(source)
+        archive, archive_members = _archive_probe(
+            source, probe_nested_tar_gz=probe_nested
+        )
     else:
         archive_members = set()
         nested_archives = []
         unsafe_member_count = 0
         for candidate in iter_source_files(source):
-            probe, members = _archive_probe(candidate)
+            probe, members = _archive_probe(
+                candidate, probe_nested_tar_gz=probe_nested
+            )
             if probe.get("format") not in {"zip", "tar"}:
                 continue
             relative = str(candidate.relative_to(source))
