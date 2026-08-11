@@ -851,7 +851,7 @@ def compile_thss(
         escalation_reasons.append(
             {"code": "open_conflict", "conflict_id": conflict_id}
         )
-    risk = {
+    risk: dict[str, object] = {
         "policy_version": "thss-risk.v1",
         "task_critical_classes": sorted(critical_classes),
         "coverage": {
