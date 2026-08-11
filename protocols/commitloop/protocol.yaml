@@ -43,7 +43,7 @@ axes:
   evidence_state: [CLEAR, CONFLICTED, INSUFFICIENT_EVIDENCE]
   timeliness_state: [NOT_APPLICABLE, BEFORE_DUE, IN_GRACE, OVERDUE, UNKNOWN]
 solver_contract:
-  version: commitloop-solver.v3
+  version: commitloop-solver.v4
   common_observability: [domain, action, target, anchor_valid_time, due_time, grace_end, valid_cutoff, known_cutoff]
   event_observability: [resource_type, status, codes, valid_at, known_at, relation, provenance_reference]
   labels_in_packets: prohibited

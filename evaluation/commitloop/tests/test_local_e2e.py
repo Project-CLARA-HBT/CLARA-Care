@@ -138,7 +138,10 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
     assert all(
         call["response_format"]["type"] == "json_schema"
         and call["messages"][0]["role"] == "system"
-        and "three product-state axes plus escalation"
+        and "three product-state axes plus escalation" in call["messages"][0]["content"]
+        and "Evaluate lifecycle, evidence, and timeliness independently"
+        in call["messages"][0]["content"]
+        and "null, absent, or any other status does not match"
         in call["messages"][0]["content"]
         for call in first_transport.calls
     )
@@ -225,7 +228,7 @@ def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(
     assert manifest["source_case_count"] == 8
     assert manifest["variant_case_count"] == 36
     assert manifest["case_count"] == 44
-    assert manifest["request_count"] == 832
+    assert manifest["request_count"] == 808
     assert json.loads((tmp_path / "source_manifest.json").read_text())["source"] == (
         "controlled_r4_mechanism_cohort.v1"
     )
@@ -335,8 +338,8 @@ def test_total_request_budget_includes_generation_and_review(tmp_path) -> None:
         limits=limits,
     )
     assert first["request_count"] == 10
-    assert first["generation_request_count"] == 10
-    assert first["solver_request_count"] == 0
+    assert first["generation_request_count"] == 4
+    assert first["solver_request_count"] == 6
     assert first["generation_case_count"] == 2
     assert first["run_status"] == "BOUNDED_INCOMPLETE"
     assert transport.call_count == 10

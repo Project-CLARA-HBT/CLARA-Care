@@ -68,6 +68,8 @@ def test_generation_metrics_keep_acceptance_denominators_explicit() -> None:
         [{"case_id": "b", "error": "ValueError"}],
         expected_cases=3,
     )
+    assert result["projection_authority"] == "deterministic_code"
+    assert result["model_role"] == "nonclinical_review_only"
     assert result["accepted_case_count"] == 1
     assert result["error_case_count"] == 1
     assert result["missing_case_count"] == 1

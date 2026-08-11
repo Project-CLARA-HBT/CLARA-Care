@@ -104,8 +104,8 @@ def test_phase_b_runner_is_freeze_and_probe_bound_with_fake_transport(
     )
     assert manifest["source_case_count"] == 2
     assert manifest["variant_case_count"] == 18
-    assert manifest["request_count"] == 370
-    assert transport.call_count == 370
+    assert manifest["request_count"] == 364
+    assert transport.call_count == 364
     assert (
         json.loads((output / "validation_report.json").read_text())["external_calls"]
         == "ROUTER_PHASE_B"

@@ -167,7 +167,7 @@ def validate_run(root: Path) -> None:
     ).hexdigest()
     if (
         protocol_payload.get("schema_version") != "commitloop-protocol.v2"
-        or protocol_payload.get("solver_contract") != "commitloop-solver.v3"
+        or protocol_payload.get("solver_contract") != "commitloop-solver.v4"
         or protocol_payload.get("timeliness_oracle")
         != "decisive_event_else_cutoff_with_domain_default_grace"
         or protocol_manifest.get("protocol_sha256") != protocol_hash

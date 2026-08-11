@@ -289,6 +289,16 @@ def score_generation(
             "denominator": expected_cases,
         },
         "clinical_adjudication": "NOT_RUN",
+        "projection_authority": "deterministic_code",
+        "model_role": "nonclinical_review_only",
+        "construction_modes": sorted(
+            {
+                str(item["construction_mode"])
+                for item in outputs
+                if item.get("status") == "ACCEPTED"
+                and isinstance(item.get("construction_mode"), str)
+            }
+        ),
     }
     if expected_candidates:
         metrics["candidate_slot"] = {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -46,13 +47,14 @@ def test_generation_probe_is_bounded_source_safe_and_freeze_gated(
         repository_root=tmp_path,
     )
     assert result["status"] == "ACCEPTED"
-    assert result["request_count"] == result["max_request_count"] == 5
-    assert result["result_summary"]["stage_count"] == 5
+    assert result["request_count"] == result["max_request_count"] == 2
+    assert result["attempt_count"] == result["max_attempt_count"] == 2
+    assert result["result_summary"]["stage_count"] == 2
     assert result["result_summary"]["validator_decision"] == "DETERMINISTIC_ACCEPT"
     assert "candidate" not in result["result_summary"]
     assert "synthetic_note" not in result["result_summary"]
     assert json.loads(output.read_text()) == result
-    assert transport.call_count == 5
+    assert transport.call_count == 2
 
 
 def test_generation_probe_cannot_modify_phase_a_seal(
@@ -72,3 +74,29 @@ def test_generation_probe_cannot_modify_phase_a_seal(
             clients=_clients(DeterministicFakeTransport()),
             repository_root=tmp_path,
         )
+
+
+def test_generation_probe_cli_fails_when_review_is_rejected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        generation_probe,
+        "run_generation_probe",
+        lambda **_: {"status": "REJECTED", "request_count": 2},
+    )
+    monkeypatch.setenv("ROUTER_BASE_URL", "https://router.invalid/v1")
+    monkeypatch.setenv("ROUTER_API_KEY", "fixture-only-token")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "generation_probe",
+            "--freeze",
+            str(tmp_path / "freeze.json"),
+            "--probe",
+            str(tmp_path / "probe.json"),
+            "--output",
+            str(tmp_path / "output.json"),
+        ],
+    )
+    assert generation_probe.main() == 1

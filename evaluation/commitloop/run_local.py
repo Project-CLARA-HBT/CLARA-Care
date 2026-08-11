@@ -649,7 +649,7 @@ def run_local_e2e(
         "split_seed": "commitloop-v1",
         "construction_gold": "deterministic_predicate_oracle",
         "timeliness_oracle": "decisive_event_else_cutoff_with_domain_default_grace",
-        "solver_contract": "commitloop-solver.v3",
+        "solver_contract": "commitloop-solver.v4",
         "clinical_adjudication": "NOT_RUN",
     }
     _write_json(

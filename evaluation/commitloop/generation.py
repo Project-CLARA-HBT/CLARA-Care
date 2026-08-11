@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -19,41 +18,6 @@ from evaluation.commitloop.provider import (
     ProviderResult,
 )
 from evaluation.commitloop.schema import ConstructedCase, TimelineEvent
-
-CANDIDATE_SCHEMA = {
-    "name": "commitloop_candidate_v1",
-    "schema": {
-        "type": "object",
-        "additionalProperties": False,
-        "required": ["anchor_evidence_id", "action", "target", "due_time"],
-        "properties": {
-            "anchor_evidence_id": {"type": "string"},
-            "action": {"type": "string"},
-            "target": {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["system", "code"],
-                "properties": {
-                    "system": {"type": "string"},
-                    "code": {"type": "string"},
-                },
-            },
-            "due_time": {"type": ["string", "null"]},
-        },
-    },
-    "strict": True,
-}
-
-PREDICATE_SCHEMA = {
-    "name": "commitloop_predicate_proposal_v1",
-    "schema": {
-        "type": "object",
-        "additionalProperties": False,
-        "required": ["predicate"],
-        "properties": {"predicate": {"type": "object"}},
-    },
-    "strict": True,
-}
 
 REVIEW_SCHEMA = {
     "name": "commitloop_nonclinical_review_v1",
@@ -71,29 +35,12 @@ REVIEW_SCHEMA = {
     "strict": True,
 }
 
-NOTE_SCHEMA = {
-    "name": "commitloop_anchor_note_v1",
-    "schema": {
-        "type": "object",
-        "additionalProperties": False,
-        "required": ["note"],
-        "properties": {"note": {"type": "string", "maxLength": 4000}},
-    },
-    "strict": True,
-}
-
 _PROMPTS = {
-    "candidate": (
-        "commitloop-generation-candidate.v1",
-        "generation_candidate_system.txt",
+    "construction_review": (
+        "commitloop-review-deterministic-construction.v2",
+        "review_system.txt",
     ),
-    "predicate": (
-        "commitloop-generation-predicate.v2",
-        "generation_predicate_system.txt",
-    ),
-    "candidate_review": ("commitloop-review-candidate.v1", "review_system.txt"),
-    "note": ("commitloop-generation-anchor-note.v1", "generation_note_system.txt"),
-    "note_review": ("commitloop-review-anchor-note.v1", "review_system.txt"),
+    "note_review": ("commitloop-review-deterministic-note.v2", "review_system.txt"),
 }
 REQUESTS_PER_ACCEPTED_CASE = len(_PROMPTS)
 
@@ -114,16 +61,6 @@ def _prompt_text(stage: str) -> str:
 
 def _prompt_hash(stage: str) -> str:
     return hashlib.sha256(_prompt_text(stage).encode()).hexdigest()
-
-
-def _exact_projection_schema(
-    template: dict[str, Any], expected: dict[str, Any]
-) -> dict[str, Any]:
-    """Bind an advisory projection to the deterministic source-owned value."""
-
-    schema = deepcopy(template)
-    schema["schema"]["const"] = expected
-    return schema
 
 
 def _record(stage: str, result: ProviderResult) -> dict[str, object]:
@@ -173,6 +110,18 @@ def _expected_candidate(case: ConstructedCase) -> dict[str, object]:
     }
 
 
+def _review_event(event: TimelineEvent) -> dict[str, object]:
+    return {
+        "evidence_id": event.evidence_id,
+        "resource_type": event.resource_type,
+        "status": event.status,
+        "codes": [list(item) for item in event.codes],
+        "valid_at": event.valid_at.isoformat() if event.valid_at else None,
+        "known_at": event.known_at.isoformat(),
+        "relation": event.source.get("relation"),
+    }
+
+
 def _validate_review(review: dict[str, Any], *, note_stage: bool = False) -> None:
     required = {"faithful", "executable", "future_leakage", "issues"}
     if set(review) != required:
@@ -198,7 +147,7 @@ def construct_with_model_review(
     generator: EvaluationClient,
     reviewer: EvaluationClient,
 ) -> dict[str, Any]:
-    """Run construction stages; deterministic code remains the acceptance authority."""
+    """Review deterministic construction; models never author clinical projections."""
 
     if case.status != "ELIGIBLE" or case.fulfillment_predicate is None:
         return {
@@ -211,71 +160,39 @@ def construct_with_model_review(
     event_ids = {item.evidence_id for item in events}
     if case.anchor_evidence_id not in event_ids:
         raise ValueError("candidate_anchor_not_in_source")
+    candidate = _expected_candidate(case)
+    predicate = validate_predicate(case.fulfillment_predicate)
+    deterministic_note = render_anchor_note(case)
     source_packet = {
         "case_id": case.case_id,
-        "anchor": _expected_candidate(case),
+        "anchor": candidate,
         "source_event_ids": sorted(event_ids),
-        "instruction": "repeat_only_source_grounded_fields",
+        "source_events": [_review_event(item) for item in events],
+        "instruction": "review_only_do_not_rewrite_source_owned_projection",
     }
     stages = []
-    expected_candidate = _expected_candidate(case)
-    candidate, record = _call(
+    construction_review, record = _call(
         generator,
         model=GENERATOR_MODEL,
-        stage="candidate",
-        payload=source_packet,
-        schema=_exact_projection_schema(CANDIDATE_SCHEMA, expected_candidate),
-    )
-    stages.append(record)
-    if candidate != expected_candidate:
-        raise ValueError("generated_candidate_not_source_grounded")
-    predicate_output, record = _call(
-        generator,
-        model=GENERATOR_MODEL,
-        stage="predicate",
-        payload={
-            "candidate": candidate,
-            "allowed_source_event_ids": sorted(event_ids),
-            "allowed_predicate_projection": case.fulfillment_predicate,
-        },
-        schema=_exact_projection_schema(
-            PREDICATE_SCHEMA, {"predicate": case.fulfillment_predicate}
-        ),
-    )
-    stages.append(record)
-    proposed_predicate = validate_predicate(predicate_output.get("predicate"))
-    expected_predicate = validate_predicate(case.fulfillment_predicate)
-    if proposed_predicate != expected_predicate:
-        raise ValueError("generated_predicate_not_source_grounded")
-    review, record = _call(
-        reviewer,
-        model=REVIEWER_MODEL,
-        stage="candidate_review",
+        stage="construction_review",
         payload={
             "source": source_packet,
-            "candidate": candidate,
-            "predicate": proposed_predicate,
+            "deterministic_candidate": candidate,
+            "deterministic_predicate": predicate,
         },
         schema=REVIEW_SCHEMA,
     )
     stages.append(record)
-    _validate_review(review)
-    deterministic_note = render_anchor_note(case)
-    note_output, record = _call(
-        generator,
-        model=GENERATOR_MODEL,
-        stage="note",
-        payload={"candidate": candidate, "allowed_note_projection": deterministic_note},
-        schema=_exact_projection_schema(NOTE_SCHEMA, {"note": deterministic_note}),
-    )
-    stages.append(record)
-    if note_output.get("note") != deterministic_note:
-        raise ValueError("generated_note_not_anchor_projection")
+    _validate_review(construction_review)
     note_review, record = _call(
         reviewer,
         model=REVIEWER_MODEL,
         stage="note_review",
-        payload={"candidate": candidate, "note": deterministic_note},
+        payload={
+            "source": source_packet,
+            "deterministic_candidate": candidate,
+            "deterministic_note": deterministic_note,
+        },
         schema=REVIEW_SCHEMA,
     )
     stages.append(record)
@@ -284,9 +201,10 @@ def construct_with_model_review(
         "case_id": case.case_id,
         "status": "ACCEPTED",
         "candidate": candidate,
-        "predicate": proposed_predicate,
+        "predicate": predicate,
         "synthetic_note": deterministic_note,
         "validator_decision": "DETERMINISTIC_ACCEPT",
+        "construction_mode": "deterministic_projection_with_dual_model_review",
         "evidence_class": "synthetic_source_grounded",
         "clinical_adjudication": "NOT_RUN",
         "stages": stages,

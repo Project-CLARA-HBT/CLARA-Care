@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -54,6 +55,7 @@ def run_generation_probe(
     )
     case = mine_candidates(subject_token, events)[0]
     before = sum(client.request_count for client in clients.values())
+    attempts_before = sum(client.attempt_count for client in clients.values())
     try:
         result = construct_with_model_review(
             case=case,
@@ -75,6 +77,9 @@ def run_generation_probe(
         status = "REJECTED"
         error_type = type(exc).__name__
     request_count = sum(client.request_count for client in clients.values()) - before
+    attempt_count = (
+        sum(client.attempt_count for client in clients.values()) - attempts_before
+    )
     result_summary = None
     if result is not None:
         stages = result.get("stages")
@@ -99,12 +104,14 @@ def run_generation_probe(
         "status": status,
         "error_type": error_type,
         "request_count": request_count,
-        "max_request_count": 5,
+        "max_request_count": 2,
+        "attempt_count": attempt_count,
+        "max_attempt_count": 2,
         "result_summary": result_summary,
         "clinical_adjudication": "NOT_RUN",
         "recorded_at": datetime.now(UTC).isoformat(),
     }
-    if request_count > 5:
+    if request_count > 2 or attempt_count > 2:
         raise ValueError("generation_probe_request_budget_exceeded")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
@@ -120,7 +127,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     args = parser.parse_args()
-    limits = RunLimits.from_env()
+    limits = replace(RunLimits.from_env(), max_retries=0)
     clients = {
         model: EvaluationClient(
             base_url=os.environ.get("ROUTER_BASE_URL", ""),
@@ -146,7 +153,7 @@ def main() -> int:
             sort_keys=True,
         )
     )
-    return 0
+    return 0 if result["status"] == "ACCEPTED" else 1
 
 
 if __name__ == "__main__":
