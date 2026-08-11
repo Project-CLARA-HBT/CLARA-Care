@@ -63,10 +63,20 @@ def test_all_conditions_build_distinct_gold_free_packets() -> None:
     assert strict["evidence_sufficiency"] == "CLEAR"
     assert strict["decision"] == "DISCLOSE"
     assert len(strict["snapshot_sha256"]) == 64
+    assert strict["included_assertion_ids"] == strict["included_evidence_ids"]
+    assert len(strict["assertion_hashes"]) == len(strict["included_assertion_ids"])
+    assert "excluded_evidence" not in strict
+    assert strict["exclusion_summary"] == {"not_selected_for_task_count": 0}
     assert set(strict["included_evidence_ids"]) == {
         "ServiceRequest/r1",
         "Observation/o1",
     }
+    full = packets["full_authorized_history"]["context"]
+    assert full["representation"] == "chronological_full_authorized"
+    assert [event["evidence_id"] for event in full["events"]] == [
+        "ServiceRequest/r1",
+        "Observation/o1",
+    ]
     for packet in packets.values():
         assert packet["domain"] == "observations"
         assert packet["action"] == "complete_service_request"

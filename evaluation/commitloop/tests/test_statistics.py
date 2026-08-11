@@ -3,12 +3,98 @@ from __future__ import annotations
 import hashlib
 import json
 
+import pytest
+
 from evaluation.commitloop import reanalyze
 from evaluation.commitloop.reanalyze import create_statistical_correction
 from evaluation.commitloop.statistics import (
     paired_condition_statistics,
+    paired_primary_statistics,
     per_case_rows_with_subject,
 )
+
+
+def test_one_primary_contrast_reports_subject_wins_losses_and_ties() -> None:
+    rows = [
+        {
+            "subject_token": "s1",
+            "model": "primary",
+            "condition": "strict",
+            "all_axes_exact": 1,
+        },
+        {
+            "subject_token": "s1",
+            "model": "primary",
+            "condition": "full",
+            "all_axes_exact": 0,
+        },
+        {
+            "subject_token": "s2",
+            "model": "primary",
+            "condition": "strict",
+            "all_axes_exact": 0,
+        },
+        {
+            "subject_token": "s2",
+            "model": "primary",
+            "condition": "full",
+            "all_axes_exact": 1,
+        },
+        {
+            "subject_token": "s3",
+            "model": "primary",
+            "condition": "strict",
+            "all_axes_exact": 1,
+        },
+        {
+            "subject_token": "s3",
+            "model": "primary",
+            "condition": "full",
+            "all_axes_exact": 1,
+        },
+        {
+            "subject_token": "s1",
+            "model": "secondary",
+            "condition": "strict",
+            "all_axes_exact": 0,
+        },
+        {
+            "subject_token": "s1",
+            "model": "secondary",
+            "condition": "full",
+            "all_axes_exact": 1,
+        },
+    ]
+    result = paired_primary_statistics(
+        rows,
+        primary_model="primary",
+        reference_condition="strict",
+        comparator_condition="full",
+        bootstrap_samples=100,
+        seed=7,
+    )
+    assert result["subject_count"] == 3
+    assert (result["wins"], result["losses"], result["ties"]) == (1, 1, 1)
+    assert result["effect_mean_reference_minus_comparator"] == 0.0
+    assert result["exact_two_sided_sign_p_value"] == 1.0
+
+
+def test_primary_contrast_rejects_missing_subject_cell() -> None:
+    with pytest.raises(ValueError, match="incomplete_primary_subject_grid"):
+        paired_primary_statistics(
+            [
+                {
+                    "subject_token": "s1",
+                    "model": "primary",
+                    "condition": "strict",
+                    "all_axes_exact": 0,
+                }
+            ],
+            primary_model="primary",
+            reference_condition="strict",
+            comparator_condition="full",
+            bootstrap_samples=10,
+        )
 
 
 def test_paired_statistics_are_subject_clustered_deterministic_and_holm_adjusted() -> (

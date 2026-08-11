@@ -1,0 +1,56 @@
+{
+  "schema_version": "commitloop-sap.v3-draft",
+  "status": "DRAFT_NOT_FROZEN",
+  "primary_unit": "subject",
+  "primary_model": "antigravity/claude-sonnet-4-6",
+  "primary_reference_condition": "glhs_hybrid_thss_strict",
+  "primary_comparator_condition": "full_authorized_history",
+  "primary_endpoint": "all_axes_exact_match",
+  "subject_reduction": "one_source_case_per_subject",
+  "effect": "mean_paired_reference_minus_comparator",
+  "test": "exact_two_sided_paired_sign_test_excluding_zero_differences_from_the_sign_denominator_only",
+  "alpha": 0.05,
+  "confidence_interval": {
+    "method": "subject_bootstrap_percentile",
+    "level": 0.95,
+    "samples": 10000,
+    "seed": 20260812
+  },
+  "missing_invalid_or_failed_output": "score_as_incorrect_and_retain_subject",
+  "primary_multiplicity": "none_one_primary_contrast",
+  "success_rule": "valid_sealed_run_and_positive_effect_and_p_value_below_0.05_and_ci_lower_bound_above_0",
+  "failure_rules": [
+    "nonpositive_effect",
+    "p_value_at_or_above_0.05",
+    "confidence_interval_includes_zero"
+  ],
+  "run_invalidation_rules": [
+    "freeze_or_checksum_mismatch",
+    "benchmark_affecting_implementation_defect",
+    "cohort_or_template_leakage",
+    "provider_fallback_or_wrong_reported_model",
+    "post_unblinding_protocol_or_analysis_change"
+  ],
+  "secondary_conditions": [
+    "naive_rag",
+    "lww",
+    "bitemporal_provenance_resolver",
+    "glhs_hybrid",
+    "glhs_no_predicate_engine",
+    "glhs_no_bitemporal_knowledge_time"
+  ],
+  "secondary_model": "antigravity/gemini-3.6-flash-high",
+  "secondary_inference": "label_secondary_or_exploratory_and_report_complete_multiplicity_metadata",
+  "reporting": [
+    "subjects",
+    "wins",
+    "losses",
+    "ties",
+    "effect",
+    "confidence_interval",
+    "exact_p_value",
+    "missing_and_invalid_outputs",
+    "complete_error_taxonomy"
+  ],
+  "clinical_adjudication": "NOT_RUN"
+}

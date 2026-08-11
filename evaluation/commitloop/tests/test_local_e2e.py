@@ -39,6 +39,7 @@ class ExactModelFakeTransport:
                                 "evidence_state": "CLEAR",
                                 "timeliness_state": "OVERDUE",
                                 "escalation_state": "NO_ESCALATION",
+                                "confidence": 0.5,
                             }
                         )
                     }
@@ -398,3 +399,40 @@ def test_provider_failures_remain_in_structured_error_ledger(tmp_path) -> None:
         for item in errors
     )
     validate_run(tmp_path)
+
+
+def test_single_primary_model_grid_uses_subject_level_analysis(tmp_path) -> None:
+    limits = RunLimits(max_subjects=1, max_cases=1, max_requests=2)
+    transport = ExactModelFakeTransport()
+    client = EvaluationClient(
+        base_url="https://router.invalid/v1",
+        api_key="fixture-secret-not-real",
+        transport=transport,
+        limits=limits,
+    )
+    conditions = ("full_authorized_history", "glhs_hybrid_thss_strict")
+    manifest = run_local_e2e(
+        bundles=[(_bundle("primary-subject", "primary"), "R4")],
+        output_dir=tmp_path,
+        clients={REVIEWER_MODEL: client},
+        valid_cutoff=datetime(2026, 2, 1, tzinfo=UTC),
+        known_cutoff=datetime(2026, 2, 1, tzinfo=UTC),
+        limits=limits,
+        conditions=conditions,
+        primary_model=REVIEWER_MODEL,
+    )
+    assert manifest["expected_cell_count"] == 2
+    assert manifest["conditions"] == list(conditions)
+    assert manifest["primary_model"] == REVIEWER_MODEL
+    statistics = json.loads(
+        (tmp_path / "statistical_results.json").read_text(encoding="utf-8")
+    )
+    assert statistics["schema_version"] == "commitloop-primary-statistics.v1"
+    assert statistics["subject_count"] == 1
+    assert statistics["wins"] == 0
+    assert statistics["losses"] == 0
+    assert statistics["ties"] == 1
+    metrics = json.loads((tmp_path / "metrics.json").read_text(encoding="utf-8"))
+    assert metrics["generation"]["mode"] == "deterministic_construction_only"
+    rows = (tmp_path / "per_case_metrics.csv").read_text(encoding="utf-8").splitlines()
+    assert len(rows) == 3

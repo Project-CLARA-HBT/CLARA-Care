@@ -15,6 +15,89 @@ PRIMARY_COMPARATORS = (
 )
 
 
+def exact_two_sided_sign_p_value(*, wins: int, losses: int) -> float:
+    """Exact two-sided sign test; ties never inflate its denominator."""
+
+    if wins < 0 or losses < 0:
+        raise ValueError("negative_sign_count")
+    count = wins + losses
+    if count == 0:
+        return 1.0
+    tail = min(wins, losses)
+    return min(
+        1.0,
+        2.0 * sum(comb(count, observed) for observed in range(tail + 1)) / (2**count),
+    )
+
+
+def paired_primary_statistics(
+    rows: list[dict[str, Any]],
+    *,
+    primary_model: str,
+    reference_condition: str,
+    comparator_condition: str,
+    bootstrap_samples: int = 10000,
+    seed: int = 20260812,
+) -> dict[str, Any]:
+    """Analyze exactly one preregistered subject-level paired contrast."""
+
+    if not 1 <= bootstrap_samples <= 100000:
+        raise ValueError("invalid_bootstrap_samples")
+    cells: dict[tuple[str, str], list[float]] = {}
+    for row in rows:
+        if str(row["model"]) != primary_model:
+            continue
+        condition = str(row["condition"])
+        if condition not in {reference_condition, comparator_condition}:
+            continue
+        key = (str(row["subject_token"]), condition)
+        cells.setdefault(key, []).append(float(row["all_axes_exact"]))
+    subjects = sorted({subject for subject, _condition in cells})
+    differences: list[float] = []
+    for subject in subjects:
+        reference = cells.get((subject, reference_condition))
+        comparator = cells.get((subject, comparator_condition))
+        if reference is None or comparator is None:
+            raise ValueError("incomplete_primary_subject_grid")
+        differences.append(
+            sum(reference) / len(reference) - sum(comparator) / len(comparator)
+        )
+    if not differences:
+        raise ValueError("empty_primary_subject_grid")
+    wins = sum(value > 0 for value in differences)
+    losses = sum(value < 0 for value in differences)
+    ties = len(differences) - wins - losses
+    effect = sum(differences) / len(differences)
+    rng = random.Random(seed)
+    bootstrapped = [
+        sum(rng.choice(differences) for _ in differences) / len(differences)
+        for _ in range(bootstrap_samples)
+    ]
+    confidence_interval = [
+        _percentile(bootstrapped, 0.025),
+        _percentile(bootstrapped, 0.975),
+    ]
+    return {
+        "schema_version": "commitloop-primary-statistics.v1",
+        "primary_unit": "subject",
+        "primary_model": primary_model,
+        "reference_condition": reference_condition,
+        "comparator_condition": comparator_condition,
+        "subject_count": len(differences),
+        "wins": wins,
+        "losses": losses,
+        "ties": ties,
+        "effect_mean_reference_minus_comparator": effect,
+        "bootstrap_ci_95": confidence_interval,
+        "exact_two_sided_sign_p_value": exact_two_sided_sign_p_value(
+            wins=wins, losses=losses
+        ),
+        "bootstrap_samples": bootstrap_samples,
+        "seed": seed,
+        "primary_multiplicity": "none_one_primary_contrast",
+    }
+
+
 def _percentile(values: list[float], percentile: float) -> float | None:
     if not values:
         return None

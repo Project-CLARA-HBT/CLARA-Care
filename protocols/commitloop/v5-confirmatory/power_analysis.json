@@ -1,0 +1,28 @@
+{
+  "schema_version": "commitloop-power.v1-draft",
+  "status": "DRAFT_NOT_FROZEN",
+  "primary_test": "exact_two_sided_paired_sign_test",
+  "alpha": 0.05,
+  "target_power_floor": 0.8,
+  "assumptions": {
+    "non_tie_probability": 0.15,
+    "reference_win_probability_conditional_on_non_tie": 0.7,
+    "rationale": "More conservative than the prior independent 64-subject Claude strict-vs-full-history non-tie rate of 14/64; the observed directional effect is not reused as the planning effect."
+  },
+  "calculation": {
+    "method": "exact_unconditional_sum_over_binomial_non_tie_counts_and_exact_sign_test_rejection_regions",
+    "enrolled_subjects": 384,
+    "expected_non_ties": 57.6,
+    "calculated_power": 0.8445713130700195,
+    "subjects_per_eight_held_out_strata": 48,
+    "minimum_analyzable_subjects": 384
+  },
+  "sensitivity": [
+    {"non_tie_probability": 0.1, "conditional_win_probability": 0.7, "power": 0.6543508347095995},
+    {"non_tie_probability": 0.15, "conditional_win_probability": 0.65, "power": 0.5842966937669308},
+    {"non_tie_probability": 0.15, "conditional_win_probability": 0.75, "power": 0.9677578099000369},
+    {"non_tie_probability": 0.2, "conditional_win_probability": 0.7, "power": 0.9343067083353812}
+  ],
+  "underpower_policy": "Report achieved non-ties and realized design sensitivity; do not add subjects, tune, or reuse the cohort after unblinding.",
+  "clinical_adjudication": "NOT_RUN"
+}

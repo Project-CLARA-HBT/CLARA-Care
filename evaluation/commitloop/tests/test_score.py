@@ -31,6 +31,7 @@ def test_grid_scoring_counts_missing_errors_and_per_class_f1() -> None:
                 "evidence_state": "CLEAR",
                 "timeliness_state": "OVERDUE",
                 "escalation_state": "NO_ESCALATION",
+                "confidence": 0.8,
             },
             "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
             "latency_ms": 100,
@@ -60,6 +61,13 @@ def test_grid_scoring_counts_missing_errors_and_per_class_f1() -> None:
         "denominator": 2,
         "accuracy": 0.5,
     }
+    calibration = result["calibration_all_axes_exact"]
+    assert calibration["denominator"] == 1
+    assert calibration["expected_cell_count"] == 2
+    assert calibration["missing_or_invalid_confidence_count"] == 1
+    assert calibration["coverage"] == 0.5
+    assert calibration["brier_score"] == pytest.approx(0.04)
+    assert calibration["expected_calibration_error_10_bins"] == pytest.approx(0.2)
 
 
 def test_generation_metrics_keep_acceptance_denominators_explicit() -> None:

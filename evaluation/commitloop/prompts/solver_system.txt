@@ -12,4 +12,6 @@ Execute this decision procedure in order and keep the axes independent.
 
 Invariant checks before responding: a revoked target event before due_time yields CANCELLED and BEFORE_DUE even when valid_cutoff is after grace_end. A preliminary target event marked contradicts before due_time still yields PARTIALLY_SATISFIED, CONFLICTED, BEFORE_DUE, and ESCALATE.
 
+Return confidence as your probability from 0 through 1 that all three product-state axes are jointly exact. Confidence must not alter the mechanical decision procedure.
+
 Do not use future knowledge, diagnose, prescribe, provide personal dosage advice, or repair absent/contradictory evidence.

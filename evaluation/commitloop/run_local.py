@@ -43,6 +43,7 @@ from evaluation.commitloop.solver_packets import CONDITIONS, build_solver_packet
 from evaluation.commitloop.splits import split_subjects
 from evaluation.commitloop.statistics import (
     paired_condition_statistics,
+    paired_primary_statistics,
     per_case_rows_with_subject,
 )
 
@@ -63,6 +64,7 @@ _PREDICTION_SCHEMA_SHA256 = hashlib.sha256(_PREDICTION_SCHEMA_RAW.encode()).hexd
 _PREDICTION_ENUMS = {
     key: frozenset(value["enum"])
     for key, value in _SOLVER_RESPONSE_SCHEMA["schema"]["properties"].items()
+    if "enum" in value
 }
 
 
@@ -70,12 +72,23 @@ def _json(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
 
 
-def _validate_solver_prediction(value: object) -> dict[str, str]:
-    if not isinstance(value, dict) or set(value) != set(_PREDICTION_ENUMS):
+def _validate_solver_prediction(value: object) -> dict[str, str | float]:
+    expected_fields = {*_PREDICTION_ENUMS, "confidence"}
+    if not isinstance(value, dict) or set(value) != expected_fields:
         raise ValueError("prediction_schema_invalid")
     if any(value[key] not in allowed for key, allowed in _PREDICTION_ENUMS.items()):
         raise ValueError("prediction_schema_invalid")
-    return {key: str(value[key]) for key in _PREDICTION_ENUMS}
+    confidence = value["confidence"]
+    if (
+        not isinstance(confidence, (int, float))
+        or isinstance(confidence, bool)
+        or not 0 <= confidence <= 1
+    ):
+        raise ValueError("prediction_schema_invalid")
+    return {
+        **{key: str(value[key]) for key in _PREDICTION_ENUMS},
+        "confidence": float(confidence),
+    }
 
 
 def _read_json(path: Path, default: Any) -> Any:
@@ -226,19 +239,36 @@ def run_local_e2e(
     execution_mode: Literal["phase_a_fake", "phase_b_router"] = "phase_a_fake",
     phase_a_freeze_sha: str | None = None,
     provider_probe_sha256: str | None = None,
+    provider_approval_sha256: str | None = None,
     source_cohort: str = "injected_fhir_bundles",
+    conditions: tuple[str, ...] = CONDITIONS,
+    primary_model: str | None = None,
+    primary_reference_condition: str = "glhs_hybrid_thss_strict",
+    primary_comparator_condition: str = "full_authorized_history",
 ) -> dict[str, Any]:
+    if not conditions or len(conditions) != len(set(conditions)):
+        raise ValueError("benchmark_conditions_invalid")
+    if not set(conditions).issubset(CONDITIONS):
+        raise ValueError("benchmark_condition_undeclared")
+    if primary_model is not None and (
+        primary_model not in clients
+        or primary_reference_condition not in conditions
+        or primary_comparator_condition not in conditions
+    ):
+        raise ValueError("primary_analysis_grid_invalid")
     if execution_mode == "phase_b_router":
         if not isinstance(phase_a_freeze_sha, str) or len(phase_a_freeze_sha) not in {
             40,
             64,
         }:
             raise ValueError("phase_b_freeze_sha_required")
-        if (
-            not isinstance(provider_probe_sha256, str)
-            or len(provider_probe_sha256) != 64
-        ):
-            raise ValueError("phase_b_probe_sha_required")
+        provenance_hashes = [
+            value
+            for value in (provider_probe_sha256, provider_approval_sha256)
+            if isinstance(value, str) and len(value) == 64
+        ]
+        if len(provenance_hashes) != 1:
+            raise ValueError("phase_b_single_cost_gate_sha_required")
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_path = output_dir / "checkpoint.json"
     completed = set(_read_json(checkpoint_path, {"completed": []})["completed"])
@@ -249,7 +279,7 @@ def run_local_e2e(
     notes: list[dict[str, str]] = []
     base_case_events: dict[str, tuple[TimelineEvent, ...]] = {}
     packets_by_condition: dict[str, list[dict[str, Any]]] = {
-        condition: [] for condition in CONDITIONS
+        condition: [] for condition in conditions
     }
     subject_tokens = set()
     for bundle, version in bundles[: limits.max_subjects]:
@@ -315,6 +345,8 @@ def run_local_e2e(
         for condition, packet in build_solver_packets(
             case, events, valid_cutoff=valid_cutoff, known_cutoff=known_cutoff
         ).items():
+            if condition not in packets_by_condition:
+                continue
             validate_solver_packet(packet, known_cutoff=known_cutoff)
             packets_by_condition[condition].append(packet)
     generation_outputs = list(_read_json(output_dir / "model_generation.json", []))
@@ -403,7 +435,7 @@ def run_local_e2e(
     for model, client in clients.items():
         if budget_exhausted:
             break
-        for condition in CONDITIONS:
+        for condition in conditions:
             for packet in packets_by_condition[condition]:
                 key = f"{model}:{condition}:{packet['case_id']}"
                 if key in attempted_keys:
@@ -498,28 +530,37 @@ def run_local_e2e(
         outputs,
         errors=errors,
         models=sorted(clients),
-        conditions=list(CONDITIONS),
+        conditions=list(conditions),
     )
-    metrics["generation"] = score_generation(
-        generation_outputs,
-        generation_errors,
-        expected_cases=len(base_cases),
-        expected_candidates={
-            case.case_id: {
-                "anchor_evidence_id": case.anchor_evidence_id,
-                "action": case.action,
-                "target": case.target,
-                "due_time": case.due_time.isoformat() if case.due_time else None,
-            }
-            for case in base_cases
-        },
+    metrics["generation"] = (
+        score_generation(
+            generation_outputs,
+            generation_errors,
+            expected_cases=len(base_cases),
+            expected_candidates={
+                case.case_id: {
+                    "anchor_evidence_id": case.anchor_evidence_id,
+                    "action": case.action,
+                    "target": case.target,
+                    "due_time": case.due_time.isoformat() if case.due_time else None,
+                }
+                for case in base_cases
+            },
+        )
+        if construction_clients is not None or primary_model is None
+        else {
+            "mode": "deterministic_construction_only",
+            "expected_case_count": len(base_cases),
+            "model_review_request_count": 0,
+            "clinical_adjudication": "NOT_RUN",
+        }
     )
     metrics["adversarial_variants"] = score_adversarial_variants(
         {item["case_id"]: item for item in gold},
         outputs,
         perturbations,
         models=sorted(clients),
-        conditions=list(CONDITIONS),
+        conditions=list(conditions),
     )
     metrics["context_volume_bytes"] = {
         condition: sum(len(_json(packet).encode()) for packet in packets)
@@ -527,48 +568,81 @@ def run_local_e2e(
     }
     _write_json(output_dir / "metrics.json", metrics)
     gold_by_case = {item["case_id"]: item for item in gold}
+    outputs_by_key = {
+        (
+            str(output["case_id"]),
+            str(output["requested_model_id"]),
+            str(output["condition"]),
+        ): output
+        for output in outputs
+    }
+    errors_by_key = {
+        (
+            str(error["case_id"]),
+            str(error["requested_model_id"]),
+            str(error["condition"]),
+        ): error
+        for error in errors
+    }
+    subject_by_case = {case.case_id: case.subject_token for case in cases}
     per_case_rows = []
-    for output in outputs:
-        expected = gold_by_case.get(output["case_id"], {})
-        prediction = output["prediction"]
-        per_case_rows.append(
-            {
-                "case_id": output["case_id"],
-                "model": output["requested_model_id"],
-                "condition": output["condition"],
-                "lifecycle_correct": int(
-                    prediction.get("lifecycle_state") == expected.get("lifecycle_state")
-                ),
-                "evidence_correct": int(
-                    prediction.get("evidence_state") == expected.get("evidence_state")
-                ),
-                "timeliness_correct": int(
-                    prediction.get("timeliness_state")
-                    == expected.get("timeliness_state")
-                ),
-                "escalation_correct": int(
-                    prediction.get("escalation_state")
-                    == expected.get("escalation_state")
-                ),
-                "all_axes_exact": int(
-                    all(
-                        prediction.get(axis) == expected.get(axis)
-                        for axis in (
-                            "lifecycle_state",
-                            "evidence_state",
-                            "timeliness_state",
-                        )
-                    )
-                ),
-            }
-        )
+    for case_id in sorted(subject_by_case):
+        expected = gold_by_case.get(case_id, {})
+        for model in sorted(clients):
+            for condition in conditions:
+                output = outputs_by_key.get((case_id, model, condition))
+                error = errors_by_key.get((case_id, model, condition))
+                prediction = (
+                    output["prediction"]
+                    if output is not None and isinstance(output.get("prediction"), dict)
+                    else {}
+                )
+                per_case_rows.append(
+                    {
+                        "case_id": case_id,
+                        "subject_token": subject_by_case[case_id],
+                        "model": model,
+                        "condition": condition,
+                        "output_present": int(output is not None),
+                        "failure": str(error.get("error", "")) if error else "",
+                        "lifecycle_correct": int(
+                            prediction.get("lifecycle_state")
+                            == expected.get("lifecycle_state")
+                        ),
+                        "evidence_correct": int(
+                            prediction.get("evidence_state")
+                            == expected.get("evidence_state")
+                        ),
+                        "timeliness_correct": int(
+                            prediction.get("timeliness_state")
+                            == expected.get("timeliness_state")
+                        ),
+                        "escalation_correct": int(
+                            prediction.get("escalation_state")
+                            == expected.get("escalation_state")
+                        ),
+                        "all_axes_exact": int(
+                            all(
+                                prediction.get(axis) == expected.get(axis)
+                                for axis in (
+                                    "lifecycle_state",
+                                    "evidence_state",
+                                    "timeliness_state",
+                                )
+                            )
+                        ),
+                    }
+                )
     _write_csv(
         output_dir / "per_case_metrics.csv",
         per_case_rows,
         [
             "case_id",
+            "subject_token",
             "model",
             "condition",
+            "output_present",
+            "failure",
             "lifecycle_correct",
             "evidence_correct",
             "timeliness_correct",
@@ -590,21 +664,29 @@ def run_local_e2e(
             "usage",
         ],
     )
+    subject_rows = per_case_rows_with_subject(
+        outputs=outputs,
+        gold_by_case=gold_by_case,
+        subject_by_case=subject_by_case,
+        models=sorted(clients),
+        conditions=list(conditions),
+    )
+    statistical_results = (
+        paired_primary_statistics(
+            subject_rows,
+            primary_model=primary_model,
+            reference_condition=primary_reference_condition,
+            comparator_condition=primary_comparator_condition,
+        )
+        if primary_model is not None
+        else paired_condition_statistics(subject_rows)
+    )
     _write_json(
         output_dir / "statistical_results.json",
         {
-            **paired_condition_statistics(
-                per_case_rows_with_subject(
-                    outputs=outputs,
-                    gold_by_case=gold_by_case,
-                    subject_by_case={
-                        case.case_id: case.subject_token for case in cases
-                    },
-                    models=sorted(clients),
-                    conditions=list(CONDITIONS),
-                )
-            ),
+            **statistical_results,
             "status": "DESCRIPTIVE_SYNTHETIC_ONLY",
+            "clinical_adjudication": "NOT_RUN",
             "reason": (
                 "router_backed_synthetic_not_clinical_evidence"
                 if execution_mode == "phase_b_router"
@@ -645,11 +727,22 @@ def run_local_e2e(
     )
     protocol_payload = {
         "schema_version": "commitloop-protocol.v2",
-        "conditions": list(CONDITIONS),
+        "conditions": list(conditions),
         "split_seed": "commitloop-v1",
         "construction_gold": "deterministic_predicate_oracle",
         "timeliness_oracle": "decisive_event_else_cutoff_with_domain_default_grace",
         "solver_contract": "commitloop-solver.v5",
+        "primary_analysis": (
+            {
+                "model": primary_model,
+                "reference_condition": primary_reference_condition,
+                "comparator_condition": primary_comparator_condition,
+                "endpoint": "all_axes_exact_match",
+                "unit": "subject",
+            }
+            if primary_model is not None
+            else None
+        ),
         "clinical_adjudication": "NOT_RUN",
     }
     _write_json(
@@ -673,13 +766,15 @@ def run_local_e2e(
         "generation_case_count": len(generation_outputs) + len(generation_errors),
         "generation_error_count": len(generation_errors),
         "completed_cell_count": len(completed),
-        "expected_cell_count": len(cases) * len(CONDITIONS) * len(clients),
+        "expected_cell_count": len(cases) * len(conditions) * len(clients),
         "run_status": "BOUNDED_INCOMPLETE" if budget_exhausted else "COMPLETE",
-        "conditions": list(CONDITIONS),
+        "conditions": list(conditions),
         "models": sorted(clients),
+        "primary_model": primary_model,
         "execution_mode": execution_mode,
         "phase_a_freeze_sha": phase_a_freeze_sha,
         "provider_probe_sha256": provider_probe_sha256,
+        "provider_approval_sha256": provider_approval_sha256,
         "router_calls_before_freeze": 0,
         "clinical_adjudication": "NOT_RUN",
     }

@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "commitloop-prediction.v2",
+  "$id": "commitloop-prediction.v3",
   "type": "object",
   "additionalProperties": false,
-  "required": ["lifecycle_state", "evidence_state", "timeliness_state", "escalation_state"],
+  "required": ["lifecycle_state", "evidence_state", "timeliness_state", "escalation_state", "confidence"],
   "properties": {
     "lifecycle_state": {
       "enum": ["OPEN", "PARTIALLY_SATISFIED", "SATISFIED", "SUPERSEDED", "CANCELLED"]
@@ -16,6 +16,12 @@
     },
     "escalation_state": {
       "enum": ["ESCALATE", "NO_ESCALATION"]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Probability that all three product-state axes are jointly exact."
     }
   }
 }

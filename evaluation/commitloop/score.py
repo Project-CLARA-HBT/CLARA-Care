@@ -130,6 +130,7 @@ def score_outputs(
     predicted_by_axis: dict[str, list[object]] = {axis: [] for axis in AXES}
     exact_correct = 0
     escalation_correct = 0
+    calibration_pairs: list[tuple[float, int]] = []
     grouped: dict[str, dict[str, int]] = {}
     for case_id, model, condition, key in expected_cells:
         gold = gold_by_case[case_id]
@@ -141,6 +142,13 @@ def score_outputs(
             predicted_by_axis[axis].append(prediction.get(axis))
         correct = int(all(prediction.get(axis) == gold[axis] for axis in AXES))
         exact_correct += correct
+        confidence = prediction.get("confidence")
+        if (
+            isinstance(confidence, (int, float))
+            and not isinstance(confidence, bool)
+            and 0 <= confidence <= 1
+        ):
+            calibration_pairs.append((float(confidence), correct))
         escalation_correct += int(
             prediction.get("escalation_state") == gold.get("escalation_state")
         )
@@ -174,6 +182,48 @@ def score_outputs(
     )
     expected_count = len(expected_cells)
     observed_seconds = sum(latencies) / 1000
+    calibration_bins: list[dict[str, Any]] = []
+    for bin_index in range(10):
+        lower = bin_index / 10
+        upper = (bin_index + 1) / 10
+        members = [
+            (confidence, correct)
+            for confidence, correct in calibration_pairs
+            if lower <= confidence < upper
+            or bin_index == 9 and confidence == 1
+        ]
+        mean_confidence = (
+            sum(confidence for confidence, _correct in members) / len(members)
+            if members
+            else None
+        )
+        accuracy = (
+            sum(correct for _confidence, correct in members) / len(members)
+            if members
+            else None
+        )
+        calibration_bins.append(
+            {
+                "lower_inclusive": lower,
+                "upper_inclusive": upper if bin_index == 9 else None,
+                "upper_exclusive": upper if bin_index < 9 else None,
+                "count": len(members),
+                "mean_confidence": mean_confidence,
+                "accuracy": accuracy,
+            }
+        )
+    calibration_denominator = len(calibration_pairs)
+    expected_calibration_error = (
+        sum(
+            item["count"]
+            * abs(float(item["mean_confidence"]) - float(item["accuracy"]))
+            for item in calibration_bins
+            if item["count"]
+        )
+        / calibration_denominator
+        if calibration_denominator
+        else None
+    )
     return {
         "axes": {
             axis: _axis_metrics(expected_by_axis[axis], predicted_by_axis[axis], axis)
@@ -190,6 +240,25 @@ def score_outputs(
             "accuracy": (
                 escalation_correct / expected_count if expected_count else None
             ),
+        },
+        "calibration_all_axes_exact": {
+            "definition": "reported_probability_all_three_axes_jointly_exact",
+            "denominator": calibration_denominator,
+            "expected_cell_count": expected_count,
+            "missing_or_invalid_confidence_count": (
+                expected_count - calibration_denominator
+            ),
+            "coverage": (
+                calibration_denominator / expected_count if expected_count else None
+            ),
+            "brier_score": (
+                sum((confidence - correct) ** 2 for confidence, correct in calibration_pairs)
+                / calibration_denominator
+                if calibration_denominator
+                else None
+            ),
+            "expected_calibration_error_10_bins": expected_calibration_error,
+            "bins": calibration_bins,
         },
         "by_model_condition": {
             key: {

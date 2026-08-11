@@ -93,10 +93,10 @@ def build_solver_packets(
         for item in visible
         if item.source.get("relation") == "contradicts"
     ]
-    strict_exclusions = [
-        {"evidence_id": item.evidence_id, "reason": "not_selected_for_task"}
-        for item in visible
-        if item not in retrieved
+    serialized_retrieved = [_event(item) for item in retrieved]
+    assertion_hashes = [
+        {"assertion_id": item["evidence_id"], "sha256": _hash(item)}
+        for item in serialized_retrieved
     ]
     strict_sufficiency = (
         "CONFLICTED"
@@ -116,8 +116,12 @@ def build_solver_packets(
         "known_cutoff": known_cutoff.isoformat(),
         "included_commitment_ids": [case.case_id],
         "included_evidence_ids": [item.evidence_id for item in retrieved],
-        "events": [_event(item) for item in retrieved],
-        "excluded_evidence": strict_exclusions,
+        "included_assertion_ids": [item.evidence_id for item in retrieved],
+        "assertion_hashes": assertion_hashes,
+        "events": serialized_retrieved,
+        "exclusion_summary": {
+            "not_selected_for_task_count": len(visible) - len(retrieved)
+        },
         "conflicts": conflicts,
         "critical_fact_coverage": {
             "covered": int(bool(retrieved)),
@@ -150,8 +154,8 @@ def build_solver_packets(
     }
     contexts = {
         "full_authorized_history": {
-            "representation": "source_order_full_authorized",
-            "events": [_event(item) for item in visible],
+            "representation": "chronological_full_authorized",
+            "events": serialized_chronological,
         },
         "long_context_chronological": {
             **long_context(serialized_visible),

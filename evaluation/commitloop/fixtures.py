@@ -193,6 +193,7 @@ class DeterministicFakeTransport:
                 "evidence_state": "CLEAR",
                 "timeliness_state": "OVERDUE",
                 "escalation_state": "NO_ESCALATION",
+                "confidence": 0.5,
             }
         return {
             "model": expected_reported_model_id(payload["model"]),
