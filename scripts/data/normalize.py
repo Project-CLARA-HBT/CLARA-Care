@@ -15,6 +15,7 @@ if __package__ in {None, ""}:
 from datasets.adapters.diabetes_130_tabular import (
     normalize_archive as normalize_diabetes_130,
 )
+from datasets.adapters.eicu_tabular import normalize_archive as normalize_eicu
 from datasets.adapters.fhir_ndjson_archive import normalize_archive as normalize_fhir
 from scripts.data._registry import (
     DatasetRegistryError,
@@ -36,7 +37,11 @@ def normalize_dataset(
     registry = load_registry(registry_path)
     dataset = get_dataset(registry, dataset_id)
     adapter = dataset.get("adapter")
-    if adapter not in {"diabetes_130_tabular", "fhir_ndjson_archive"}:
+    if adapter not in {
+        "diabetes_130_tabular",
+        "eicu_tabular",
+        "fhir_ndjson_archive",
+    }:
         raise DatasetRegistryError("ADAPTER_NOT_IMPLEMENTED")
     source = resolve_local_source(dataset)
     destination = (
@@ -49,9 +54,12 @@ def normalize_dataset(
     temporary.mkdir(parents=True)
     try:
         records = temporary / "records.jsonl"
-        normalize = (
-            normalize_diabetes_130 if adapter == "diabetes_130_tabular" else normalize_fhir
-        )
+        normalizers = {
+            "diabetes_130_tabular": normalize_diabetes_130,
+            "eicu_tabular": normalize_eicu,
+            "fhir_ndjson_archive": normalize_fhir,
+        }
+        normalize = normalizers[str(adapter)]
         metrics = normalize(
             source, records, dataset_id=dataset_id, source_schema=str(dataset["schema"])
         )

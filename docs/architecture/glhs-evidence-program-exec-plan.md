@@ -117,6 +117,15 @@ was frozen from clean source SHA
 No provider-pinned archive checksum was exposed by the inspected UCI metadata,
 so canonical authenticity remains a declared limitation.
 
+The eICU Demo path now pins the official ZIP filename/endpoint, retains
+resumable atomic partial downloads, and rejects a directory containing only a
+partial as unavailable. Its verifier checks the packaged `SHA256SUMS.txt`
+entries rather than relying only on ZIP CRC. A selected-table adapter preserves
+documented minute offsets relative to ICU-unit admission without fabricating
+absolute datetimes or knowledge timestamps. Full archive verification and
+adapter execution remain `IN_PROGRESS` until the throttled official transfer
+finishes; no partial counts are reported as evidence.
+
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
 content copy apart from the final newline. The operator-provided root copy
@@ -154,3 +163,4 @@ remains untracked and untouched.
 | 2026-08-11 | Separate snapshot-bound and base-version-only proposal validation. | An optional snapshot inside one ambiguous rule could not state or test the exact admissibility contract. |
 | 2026-08-11 | Version snapshot fingerprints as `sha-256` plus `clara.canonical-json.v1`, retaining a legacy validator. | Deterministic hashing needs an explicit encoding contract; an unkeyed digest is only a trusted-store consistency check. |
 | 2026-08-11 | Keep PostgreSQL atomicity evidence `NOT_RUN` on this host. | The implementation and opt-in isolated-schema test exist, but no acknowledged PostgreSQL URL or Docker runtime is available. |
+| 2026-08-12 | Bind dataset freezes to both the registry file and the selected entry. | Adding an unrelated dataset must not invalidate immutable evidence; legacy manifests are verified from their exact historical Git registry, while any change to their own entry still fails closed. |

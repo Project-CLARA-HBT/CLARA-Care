@@ -83,6 +83,9 @@ def freeze_dataset_manifest(
         "source_git_sha": _git_sha(root),
         "tracked_worktree_clean_before_freeze": True,
         "registry_sha256": registry_sha,
+        "dataset_registry_entry_sha256": hashlib.sha256(
+            canonical_json(dataset).encode()
+        ).hexdigest(),
         "source_path_local_only": verification["source_path"],
         "verification": verification,
         "known_limitations": dataset["known_limitations"],

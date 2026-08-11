@@ -43,6 +43,7 @@ python scripts/data/list_sources.py
 python scripts/data/inspect.py --dataset <id>
 python scripts/data/verify.py --dataset <id> --output /tmp/<id>-verification.json
 python scripts/data/fetch.py --dataset <id> --accept-license
+python scripts/data/fetch.py --dataset <id> --accept-license --resume
 python scripts/data/normalize.py --dataset <id>
 python scripts/data/freeze_manifest.py --dataset <id>
 python scripts/data/verify_manifest.py --dataset <id>
@@ -55,6 +56,15 @@ under gitignored local paths. `freeze_manifest` refuses a dirty tracked
 worktree, unresolved canonical source or existing manifest; it never imports
 raw records into git. `verify_manifest` fails if the manifest self-hash,
 registry hash, source commit, or current local source inventory has changed.
+Interrupted downloads retain an atomic `.part` file and require explicit
+`--resume`; partial-only directories remain `NOT_AVAILABLE` to every inspection
+and verification command.
+
+New freezes bind both the complete registry file and the selected dataset entry.
+The manifest verifier accepts unrelated later registry additions only when the
+dataset-entry hash is unchanged. Legacy freezes are checked against the exact
+historical registry bytes at their recorded Git commit; changed dataset entries
+still fail closed.
 
 Current local MIMIC-IV Demo on FHIR adapter output contains 927,109 common
 records for 100 deidentified source subjects and explicitly preserves missing

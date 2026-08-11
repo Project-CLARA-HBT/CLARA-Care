@@ -1,17 +1,26 @@
 from __future__ import annotations
 
+import csv
 import gzip
 import hashlib
+import io
 import json
 import zipfile
 from pathlib import Path
+from typing import Self
 
 import pytest
 import yaml
 
 from datasets.adapters.diabetes_130_tabular import MEDICATION_FIELDS, SUMMARY_FIELDS
+from datasets.adapters.eicu_tabular import (
+    PATIENT_MEMBER,
+    PATIENT_REQUIRED_FIELDS,
+    TABLES,
+)
 from scripts.data import _registry
 from scripts.data._registry import DatasetRegistryError, canonical_json, load_registry
+from scripts.data.fetch import fetch_dataset
 from scripts.data.inspect import inspect_dataset
 from scripts.data.list_sources import inventory
 from scripts.data.normalize import normalize_dataset
@@ -145,6 +154,50 @@ def test_verify_probes_archives_inside_registered_raw_directory(
     assert verification["archive"]["archives"][0]["format"] == "zip"
 
 
+def test_verify_checks_provider_sha256_manifest_inside_archive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    archive_path = tmp_path / "fixture.zip"
+    data = b"subject,value\n1,synthetic\n"
+    digest = hashlib.sha256(data).hexdigest()
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("expected.csv", data)
+        archive.writestr("SHA256SUMS.txt", f"{digest} expected.csv\n")
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(
+            expected_files=["expected.csv", "SHA256SUMS.txt"],
+            provider_checksum_manifest="SHA256SUMS.txt",
+        ),
+    )
+
+    verification = verify_dataset("fixture_data", registry_path)
+
+    assert verification["canonical_checksum_status"] == "VERIFIED_PROVIDER_SHA256"
+    assert verification["provider_checksum"]["verified_file_count"] == 1
+
+
+def test_verify_rejects_provider_checksum_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    archive_path = tmp_path / "fixture.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("expected.csv", "changed")
+        archive.writestr("SHA256SUMS.txt", f"{'0' * 64} expected.csv\n")
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(
+            expected_files=["expected.csv", "SHA256SUMS.txt"],
+            provider_checksum_manifest="SHA256SUMS.txt",
+        ),
+    )
+
+    with pytest.raises(DatasetRegistryError, match="PROVIDER_CHECKSUM_MISMATCH"):
+        verify_dataset("fixture_data", registry_path)
+
+
 def test_missing_and_credentialed_sources_fail_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -159,6 +212,71 @@ def test_missing_and_credentialed_sources_fail_closed(
     )
     with pytest.raises(DatasetRegistryError, match="ACCESS_REQUIRED"):
         verify_dataset("fixture_data", credentialed)
+
+
+def test_partial_download_is_not_reported_as_available(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    raw_dir = tmp_path / "datasets" / "raw" / "fixture_data"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / ".fixture.zip.part").write_bytes(b"incomplete")
+    registry_path = _registry_file(tmp_path, _entry(local_candidates=[]))
+
+    rows = inventory(registry_path)
+
+    assert rows[0]["local_status"] == "NOT_AVAILABLE"
+    with pytest.raises(DatasetRegistryError, match="NOT_AVAILABLE"):
+        inspect_dataset("fixture_data", registry_path)
+
+
+def test_fetch_resumes_only_from_valid_https_range(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    monkeypatch.setattr("scripts.data.fetch.repository_root", lambda: tmp_path)
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(
+            download_method="https_archive",
+            download_url="https://example.invalid/archive/",
+            download_filename="fixture.zip",
+        ),
+    )
+    raw_dir = tmp_path / "datasets" / "raw" / "fixture_data"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / ".fixture.zip.part").write_bytes(b"abc")
+
+    class Response:
+        status = 206
+
+        def __init__(self) -> None:
+            self.headers = {"Content-Range": "bytes 3-5/6"}
+            self._read = False
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def geturl(self) -> str:
+            return "https://example.invalid/archive/"
+
+        def read(self, _size: int) -> bytes:
+            if self._read:
+                return b""
+            self._read = True
+            return b"def"
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_args, **_kwargs: Response())
+
+    result = fetch_dataset(
+        "fixture_data", accept_license=True, resume=True, registry_path=registry_path
+    )
+
+    assert result["resumed_from_bytes"] == 3
+    assert (raw_dir / "fixture.zip").read_bytes() == b"abcdef"
 
 
 def test_fhir_normalization_preserves_source_times_and_missing_knowledge(
@@ -231,6 +349,9 @@ def test_frozen_manifest_verifier_accepts_exact_source_and_rejects_tamper(
         "dataset_id": "fixture_data",
         "canonical_source": "https://example.invalid/data",
         "registry_sha256": hashlib.sha256(registry_path.read_bytes()).hexdigest(),
+        "dataset_registry_entry_sha256": hashlib.sha256(
+            canonical_json(_entry()).encode()
+        ).hexdigest(),
         "source_git_sha": "a" * 40,
         "verification": verification,
     }
@@ -246,6 +367,14 @@ def test_frozen_manifest_verifier_accepts_exact_source_and_rejects_tamper(
     )
     assert report["status"] == "VERIFIED_FROZEN_LOCAL_INTEGRITY_MANIFEST"
     assert report["source_git_commit_status"] == "NOT_CHECKED_NO_GIT_METADATA"
+
+    expanded_registry = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    expanded_registry["datasets"].append(_entry(id="unrelated_data"))
+    registry_path.write_text(yaml.safe_dump(expanded_registry), encoding="utf-8")
+    report = verify_frozen_manifest(
+        "fixture_data", manifest_path=manifest_path, registry_path=registry_path
+    )
+    assert report["registry_binding_status"] == "DATASET_ENTRY_UNCHANGED"
 
     payload["verification"]["total_bytes"] = 1
     manifest_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -303,3 +432,62 @@ def test_diabetes_normalization_preserves_unknown_time_and_source_row(
     )
     assert manifest["metrics"]["source_row_count"] == 1
     assert manifest["metrics"]["duplicate_encounter_id_count"] == 0
+
+
+def _gzip_csv(row: dict[str, str]) -> bytes:
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=list(row))
+    writer.writeheader()
+    writer.writerow(row)
+    return gzip.compress(output.getvalue().encode())
+
+
+def test_eicu_normalization_preserves_minute_offsets_without_fabricated_datetime(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    archive_path = tmp_path / "fixture.zip"
+    patient = {field: "value" for field in PATIENT_REQUIRED_FIELDS}
+    patient.update(
+        {
+            "patientunitstayid": "stay-1",
+            "patienthealthsystemstayid": "health-stay-1",
+            "uniquepid": "subject-1",
+            "unitdischargeoffset": "60",
+        }
+    )
+    expected_files = [PATIENT_MEMBER]
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr(PATIENT_MEMBER, _gzip_csv(patient))
+        for index, contract in enumerate(TABLES, start=1):
+            row = {
+                "patientunitstayid": "stay-1",
+                contract.primary_key: str(index),
+                **{field: "5" for field in contract.offset_fields},
+                **{field: "value" for field in contract.value_fields},
+            }
+            archive.writestr(contract.member, _gzip_csv(row))
+            expected_files.append(contract.member)
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(
+            adapter="eicu_tabular",
+            schema="relational CSV",
+            expected_files=expected_files,
+        ),
+    )
+
+    output = normalize_dataset(
+        "fixture_data", output=tmp_path / "normalized", registry_path=registry_path
+    )
+    records = [
+        json.loads(line)
+        for line in (output / "records.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+
+    assert len(records) == 1 + len(TABLES)
+    assert all(record["valid_time"] is not None for record in records)
+    assert all(record["knowledge_time"] is None for record in records)
+    assert all(record["estimated_time"] is False for record in records)
+    assert all("offset" in record["temporal_precision"] for record in records)
+    assert all(record["source_subject"] == "subject-1" for record in records)

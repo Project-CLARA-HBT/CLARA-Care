@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -81,6 +83,80 @@ def _verify_source_commit(root: Path, value: object) -> str:
     return "VERIFIED"
 
 
+def _historical_registry_entry(
+    root: Path,
+    *,
+    source_git_sha: str,
+    dataset_id: str,
+    expected_registry_sha: str,
+) -> dict[str, Any]:
+    result = subprocess.run(
+        ["git", "show", f"{source_git_sha}:datasets/registry.yaml"],
+        cwd=root,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode:
+        raise DatasetRegistryError("MANIFEST_HISTORICAL_REGISTRY_MISSING")
+    if hashlib.sha256(result.stdout).hexdigest() != expected_registry_sha:
+        raise DatasetRegistryError("MANIFEST_HISTORICAL_REGISTRY_HASH_MISMATCH")
+    try:
+        payload = yaml.safe_load(result.stdout)
+    except yaml.YAMLError as exc:
+        raise DatasetRegistryError("MANIFEST_HISTORICAL_REGISTRY_INVALID") from exc
+    if not isinstance(payload, dict) or not isinstance(payload.get("datasets"), list):
+        raise DatasetRegistryError("MANIFEST_HISTORICAL_REGISTRY_INVALID")
+    matches = [
+        item
+        for item in payload["datasets"]
+        if isinstance(item, dict) and item.get("id") == dataset_id
+    ]
+    if len(matches) != 1:
+        raise DatasetRegistryError("MANIFEST_HISTORICAL_ENTRY_NOT_UNIQUE")
+    return dict(matches[0])
+
+
+def _verify_registry_binding(
+    payload: dict[str, Any],
+    *,
+    current_dataset: dict[str, Any],
+    registry_file: Path,
+    root: Path,
+) -> str:
+    stored_registry_sha = payload.get("registry_sha256")
+    if not isinstance(stored_registry_sha, str) or not re.fullmatch(
+        r"[0-9a-f]{64}", stored_registry_sha
+    ):
+        raise DatasetRegistryError("MANIFEST_REGISTRY_HASH_INVALID")
+    current_registry_sha = hashlib.sha256(registry_file.read_bytes()).hexdigest()
+    current_entry_sha = hashlib.sha256(canonical_json(current_dataset).encode()).hexdigest()
+    stored_entry_sha = payload.get("dataset_registry_entry_sha256")
+    if stored_entry_sha is not None:
+        if not isinstance(stored_entry_sha, str) or not re.fullmatch(
+            r"[0-9a-f]{64}", stored_entry_sha
+        ):
+            raise DatasetRegistryError("MANIFEST_REGISTRY_ENTRY_HASH_INVALID")
+        if stored_entry_sha != current_entry_sha:
+            raise DatasetRegistryError("MANIFEST_REGISTRY_ENTRY_CHANGED")
+        return (
+            "EXACT_REGISTRY_HASH"
+            if stored_registry_sha == current_registry_sha
+            else "DATASET_ENTRY_UNCHANGED"
+        )
+    if stored_registry_sha == current_registry_sha:
+        return "EXACT_REGISTRY_HASH_LEGACY"
+    source_git_sha = str(payload.get("source_git_sha", ""))
+    historical_entry = _historical_registry_entry(
+        root,
+        source_git_sha=source_git_sha,
+        dataset_id=str(payload.get("dataset_id", "")),
+        expected_registry_sha=stored_registry_sha,
+    )
+    if canonical_json(historical_entry) != canonical_json(current_dataset):
+        raise DatasetRegistryError("MANIFEST_REGISTRY_ENTRY_CHANGED")
+    return "HISTORICAL_REGISTRY_DATASET_ENTRY_UNCHANGED"
+
+
 def verify_frozen_manifest(
     dataset_id: str,
     *,
@@ -101,12 +177,15 @@ def verify_frozen_manifest(
     if payload.get("dataset_id") != dataset_id:
         raise DatasetRegistryError("MANIFEST_DATASET_MISMATCH")
     manifest_payload_sha = _verify_payload_hash(payload)
-    registry_sha = hashlib.sha256(registry_file.read_bytes()).hexdigest()
-    if payload.get("registry_sha256") != registry_sha:
-        raise DatasetRegistryError("MANIFEST_REGISTRY_HASH_MISMATCH")
     if payload.get("canonical_source") != dataset.get("canonical_source"):
         raise DatasetRegistryError("MANIFEST_CANONICAL_SOURCE_MISMATCH")
     commit_status = _verify_source_commit(root, payload.get("source_git_sha"))
+    registry_binding_status = _verify_registry_binding(
+        payload,
+        current_dataset=dataset,
+        registry_file=registry_file,
+        root=root,
+    )
     frozen_verification = payload.get("verification")
     if not isinstance(frozen_verification, dict):
         raise DatasetRegistryError("MANIFEST_VERIFICATION_MISSING")
@@ -123,6 +202,7 @@ def verify_frozen_manifest(
         "source_inventory_sha256": current_verification["inventory_sha256"],
         "source_git_sha": payload["source_git_sha"],
         "source_git_commit_status": commit_status,
+        "registry_binding_status": registry_binding_status,
         "canonical_checksum_status": current_verification["canonical_checksum_status"],
         "claim_limit": "frozen_local_integrity_not_canonical_authenticity_or_clinical_validation",
     }

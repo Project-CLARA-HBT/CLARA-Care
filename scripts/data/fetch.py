@@ -6,7 +6,6 @@ import argparse
 import json
 import os
 import sys
-import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -26,6 +25,7 @@ def fetch_dataset(
     dataset_id: str,
     *,
     accept_license: bool,
+    resume: bool = False,
     registry_path: Path | None = None,
 ) -> dict[str, object]:
     dataset = get_dataset(load_registry(registry_path), dataset_id)
@@ -41,29 +41,37 @@ def fetch_dataset(
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme != "https" or not parsed.netloc:
         raise DatasetRegistryError("DOWNLOAD_URL_INVALID")
-    filename = Path(urllib.parse.unquote(parsed.path)).name
-    if not filename:
+    configured_filename = dataset.get("download_filename")
+    filename = str(configured_filename or Path(urllib.parse.unquote(parsed.path)).name)
+    if not filename or Path(filename).name != filename or filename in {".", ".."}:
         raise DatasetRegistryError("DOWNLOAD_FILENAME_INVALID")
     raw_dir = (repository_root() / dataset["raw_path"]).resolve()
     raw_dir.mkdir(parents=True, exist_ok=True)
     destination = raw_dir / filename
     temporary = raw_dir / f".{filename}.part"
-    if destination.exists() or temporary.exists():
+    if destination.exists() or (temporary.exists() and not resume):
         raise DatasetRegistryError("DOWNLOAD_TARGET_EXISTS")
-    request = urllib.request.Request(url, headers={"User-Agent": "CLARA-evidence-program/1"})
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response, temporary.open("xb") as out:
-            final = urllib.parse.urlparse(response.geturl())
-            if final.scheme != "https":
-                raise DatasetRegistryError("DOWNLOAD_REDIRECT_NOT_HTTPS")
-            while chunk := response.read(8 * 1024 * 1024):
-                out.write(chunk)
-            out.flush()
-            os.fsync(out.fileno())
-        temporary.replace(destination)
-    except (OSError, urllib.error.URLError):
-        temporary.unlink(missing_ok=True)
-        raise
+    resume_offset = temporary.stat().st_size if temporary.exists() else 0
+    headers = {"User-Agent": "CLARA-evidence-program/1"}
+    if resume_offset:
+        headers["Range"] = f"bytes={resume_offset}-"
+    request = urllib.request.Request(url, headers=headers)
+    mode = "ab" if resume_offset else "xb"
+    with urllib.request.urlopen(request, timeout=60) as response, temporary.open(mode) as out:
+        final = urllib.parse.urlparse(response.geturl())
+        if final.scheme != "https":
+            raise DatasetRegistryError("DOWNLOAD_REDIRECT_NOT_HTTPS")
+        if resume_offset:
+            content_range = response.headers.get("Content-Range", "")
+            if response.status != 206 or not content_range.startswith(
+                f"bytes {resume_offset}-"
+            ):
+                raise DatasetRegistryError("DOWNLOAD_RESUME_RANGE_REJECTED")
+        while chunk := response.read(8 * 1024 * 1024):
+            out.write(chunk)
+        out.flush()
+        os.fsync(out.fileno())
+    temporary.replace(destination)
     return {
         "schema_version": "clara-dataset-fetch.v1",
         "dataset_id": dataset_id,
@@ -71,6 +79,7 @@ def fetch_dataset(
         "source_url": url,
         "destination": str(destination),
         "bytes": destination.stat().st_size,
+        "resumed_from_bytes": resume_offset,
         "next_action": f"python scripts/data/verify.py --dataset {dataset_id}",
     }
 
@@ -80,11 +89,13 @@ def main() -> int:
     parser.add_argument("--dataset", required=True)
     parser.add_argument("--registry", type=Path)
     parser.add_argument("--accept-license", action="store_true")
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     try:
         report = fetch_dataset(
             args.dataset,
             accept_license=args.accept_license,
+            resume=args.resume,
             registry_path=args.registry,
         )
     except DatasetRegistryError as exc:

@@ -135,7 +135,7 @@ def candidate_paths(dataset: Mapping[str, Any]) -> tuple[Path, ...]:
 
 def resolve_local_source(dataset: Mapping[str, Any]) -> Path:
     for path in candidate_paths(dataset):
-        if path.is_file() or path.is_dir():
+        if path.is_file() or (path.is_dir() and next(iter_source_files(path), None)):
             return path
     if dataset.get("access_class") == "credentialed":
         raise DatasetRegistryError("ACCESS_REQUIRED")
@@ -147,7 +147,7 @@ def iter_source_files(source: Path) -> Iterator[Path]:
         yield source
         return
     for path in sorted(source.rglob("*")):
-        if path.is_file() and not path.is_symlink():
+        if path.is_file() and not path.is_symlink() and not path.name.endswith(".part"):
             yield path
 
 

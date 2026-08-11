@@ -10,14 +10,21 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from scripts.data._registry import candidate_paths, load_registry
+from scripts.data._registry import (
+    DatasetRegistryError,
+    load_registry,
+    resolve_local_source,
+)
 
 
 def inventory(registry_path: Path | None = None) -> list[dict[str, object]]:
     registry = load_registry(registry_path)
     rows = []
     for dataset in registry["datasets"]:
-        present = next((path for path in candidate_paths(dataset) if path.exists()), None)
+        try:
+            present = resolve_local_source(dataset)
+        except DatasetRegistryError:
+            present = None
         rows.append(
             {
                 "id": dataset["id"],

@@ -180,8 +180,10 @@ datasets:
     provider: MIT Laboratory for Computational Physiology / PhysioNet
     canonical_source: https://physionet.org/content/eicu-crd-demo/2.0.1/
     mirror_source: null
-    download_method: https_tree
-    download_url: https://physionet.org/files/eicu-crd-demo/2.0.1/
+    download_method: https_archive
+    download_url: https://physionet.org/content/eicu-crd-demo/get-zip/2.0.1/
+    download_filename: eicu-crd-demo-2.0.1.zip
+    provider_checksum_manifest: SHA256SUMS.txt
     license: ODbL-1.0 plus PhysioNet terms in LICENSE.txt
     access_class: open
     evidence_class: external_real_data_structural
