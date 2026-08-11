@@ -67,7 +67,9 @@ The local Diabetes-130 normalized output contains 2,768,244 records derived
 from 101,766 encounters and 71,518 source subjects. Its records SHA-256 is
 `9962c20af14eab834680aa1a3d4c2beae784752ed48b63ca0e6a567613e78760`.
 The source has no event/knowledge timestamps; the adapter leaves both unknown
-and creates no estimated time. These are adapter and structural counts only.
+and creates no estimated time. Its frozen manifest payload SHA-256 is
+`0d8bdbd621e0e54a4acd15ec7461de5edcceb8376f4f413a2f2f125c64992ec8`.
+These are adapter and structural counts only.
 
 Structural regression only:
 

@@ -12,7 +12,7 @@ mean clinical validity. External evidence remains fail-closed.
 | SyntheticMass FHIR v1 local source | IN_PROGRESS | Registered local candidate, 30,878,003,109 bytes | Presence inspection only | Root operator archive, untracked | Full hash/archive verification and normalization pending |
 | Synthea FHIR STU3 May 2017 local source | IN_PROGRESS | Registered local candidate, 22,339,056,743 bytes | Presence inspection only | Root operator archive, untracked | Full hash/archive verification and normalization pending |
 | MIMIC-IV Demo FHIR adapter execution | PARTIAL | Streaming ZIP/NDJSON/GZIP adapter emitted 927,109 records for 100 subjects without estimated time | Local integrity, frozen-manifest verifier and six data-tool/adapter tests | Tracked clean-SHA manifest; gitignored normalized output; source SHA-256 `372997394c1f94fe7a8a1d7a064b5dc75e3e5db6d29a6283515d6f330f206542` | Provider-supplied canonical checksum and source-derived evaluation rerun pending; non-headline demo only |
-| Diabetes-130 external real-data adapter execution | PARTIAL | Streaming ZIP/CSV adapter emitted 2,768,244 records from 101,766 encounters and 71,518 subjects; all unavailable temporal coordinates remain unknown | Archive-member verification plus adapter provenance/time tests | Gitignored normalized output; source SHA-256 `f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a` | Clean-SHA source manifest, cohort/task freeze and source-derived structural evaluation pending; not clinical gold |
+| Diabetes-130 external real-data adapter execution | PARTIAL | Streaming ZIP/CSV adapter emitted 2,768,244 records from 101,766 encounters and 71,518 subjects; all unavailable temporal coordinates remain unknown | Archive-member verification, frozen-manifest verification and adapter provenance/time tests | License record, clean-SHA source manifest and gitignored normalized output; source SHA-256 `f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a` | Cohort/task freeze and source-derived structural evaluation pending; not clinical gold |
 | Synthea OMOP 2.8M source | NOT_RUN | Fail-closed registry entry | `NOT_AVAILABLE` path tested | None | Canonical distribution and local archive unresolved |
 | Tracked primary master specification | COMPLETE | Exact-content tracked copy at the declared primary path | Byte/hash comparison plus docs check | `docs/architecture/glhs-evidence-hardening-master-spec.md` | None |
 | Active naming is target agnostic | PARTIAL | Legacy evaluators archived; active naming guard exists | `evaluation/property_assurance/test_naming_migration.py` | Historical archives | Existing active structural documentation still contains legacy protocol IDs; guard expansion pending |
@@ -95,3 +95,8 @@ mean clinical validity. External evidence remains fail-closed.
   `9962c20af14eab834680aa1a3d4c2beae784752ed48b63ca0e6a567613e78760`;
   the adapter created zero estimated temporal coordinates. This proves adapter
   execution and structural counts only, not a clinical oracle or outcome.
+- Diabetes-130 local-integrity metadata was frozen from clean source SHA
+  `8793df4dbebc88bf906e6b9c414e680f5503752d`; manifest payload SHA-256 is
+  `0d8bdbd621e0e54a4acd15ec7461de5edcceb8376f4f413a2f2f125c64992ec8`.
+  Registry/source/self-hash verification passes; provider checksum status
+  remains `NOT_PROVIDED`.

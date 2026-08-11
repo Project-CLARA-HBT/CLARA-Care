@@ -111,6 +111,11 @@ subjects and 2,768,244 common-interface records. Because the source supplies no
 event or recorded timestamps, every temporal coordinate remains explicitly
 unknown and `estimated_times_created` is zero. This is real external-data
 adapter/structural execution, not clinical gold or temporal-outcome validation.
+Its source/license record and local-integrity manifest are tracked; the latter
+was frozen from clean source SHA
+`8793df4dbebc88bf906e6b9c414e680f5503752d` and passes the manifest verifier.
+No provider-pinned archive checksum was exposed by the inspected UCI metadata,
+so canonical authenticity remains a declared limitation.
 
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
