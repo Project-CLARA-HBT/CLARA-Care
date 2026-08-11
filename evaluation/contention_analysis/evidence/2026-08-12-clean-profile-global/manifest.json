@@ -1,0 +1,60 @@
+{
+  "aggregation": "workload_by_concurrency_level",
+  "concurrency_levels": [
+    1,
+    2,
+    4,
+    8,
+    16
+  ],
+  "coverage_gaps": [
+    "alternative_strategy_postgresql_performance",
+    "consent_or_policy_change_workload",
+    "mixed_read_snapshot_write_workload",
+    "retry_success_study"
+  ],
+  "dependency_operationalization": "assertion_semantic_key",
+  "environment": {
+    "alembic_revision": "20260811_0055",
+    "database": "postgresql",
+    "database_image_digest": "sha256:7a396fd264a2067788b6551122b50f162bf6136312c7fc9d74381cb92c648382",
+    "database_size_bytes": 22166551,
+    "default_transaction_isolation": "read committed",
+    "platform": "Linux-6.19.10-300.fc44.x86_64-x86_64-with-glibc2.43",
+    "python": "3.11.15",
+    "server_version": "16.14",
+    "sqlalchemy": "2.0.51",
+    "synchronous_commit": "on"
+  },
+  "experimental_unit": "independently_seeded_profile_race_batch",
+  "external_calls": 0,
+  "false_stale_definition": "rejected_only_because_an_intervening_profile_transition_was_outside_the_proposals_declared_semantic_dependency",
+  "finished_at": "2026-08-11T17:22:05.263207+00:00",
+  "fixture_contains_phi": false,
+  "implementation": {
+    "files_sha256": {
+      "evaluation/contention_analysis/run_postgresql.py": "c99683ebb2b35711104ece030c188fde85f5f20ef40040c4496386911fbb7f58",
+      "evaluation/contention_analysis/strategy_model.py": "805f85a1f22ecd03cb71bd1dfe4f6c75306d71dce6f6a12b32d44b79082ef2b9",
+      "evaluation/contention_analysis/validate.py": "5ba86d3bcea6c75a3dd9700f33e91f1d768c33896186ab773d15a8407eb61cb6",
+      "evaluation/fullstack_benchmark/run_postgresql.py": "027239372e8b97710f5770d4cfcd0bab6b28dfd4bf1d2051a252f133ecc3e06b",
+      "services/api/alembic/versions/20260811_0055_glhs_manifest_binding.py": "e2f3a869ea8571c9f8efd3acbff5a4474a81e04e71c41ce6422981215b00ca37",
+      "services/api/src/clara_api/glhs/gateway.py": "7d2b6753b77f84176ba22acc8872ac521b5f04ee9e061ca28acd06bbb37580c7"
+    },
+    "implementation_paths_tracked": true,
+    "implementation_sha": "d2378178687419d6644c52b65c8bcb67d395f086",
+    "tracked_worktree_clean": true
+  },
+  "inference": "descriptive_no_hypothesis_test",
+  "missing_output_policy": "missing_or_unclassified_attempt_is_failure",
+  "observational_unit": "writer_attempt",
+  "repetitions": 5,
+  "retry_policy": "no_retry_in_primary_race",
+  "schema_version": "glhs-contention-analysis.v1",
+  "started_at": "2026-08-11T17:21:55.455663+00:00",
+  "status": "EXECUTED_PARTIAL_PRODUCTION_STRATEGY",
+  "strategy": "production_profile_global_version",
+  "workloads": [
+    "same_dependency",
+    "unrelated_slots"
+  ]
+}

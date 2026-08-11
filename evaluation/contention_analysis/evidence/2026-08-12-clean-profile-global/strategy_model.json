@@ -1,0 +1,282 @@
+{
+  "latency_measured": false,
+  "rows": [
+    {
+      "accepted": 1,
+      "attempts": 1,
+      "concurrency": 1,
+      "false_stale": 0,
+      "strategy": "profile_global",
+      "true_stale": 0,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 1,
+      "concurrency": 1,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 0,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 1,
+      "concurrency": 1,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 0,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 2,
+      "concurrency": 2,
+      "false_stale": 0,
+      "strategy": "profile_global",
+      "true_stale": 1,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 2,
+      "concurrency": 2,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 1,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 2,
+      "concurrency": 2,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 1,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 4,
+      "concurrency": 4,
+      "false_stale": 0,
+      "strategy": "profile_global",
+      "true_stale": 3,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 4,
+      "concurrency": 4,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 3,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 4,
+      "concurrency": 4,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 3,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 8,
+      "concurrency": 8,
+      "false_stale": 0,
+      "strategy": "profile_global",
+      "true_stale": 7,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 8,
+      "concurrency": 8,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 7,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 8,
+      "concurrency": 8,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 7,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 16,
+      "concurrency": 16,
+      "false_stale": 0,
+      "strategy": "profile_global",
+      "true_stale": 15,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 16,
+      "concurrency": 16,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 15,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 16,
+      "concurrency": 16,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 15,
+      "workload": "same_dependency"
+    },
+    {
+      "accepted": 1,
+      "attempts": 1,
+      "concurrency": 1,
+      "false_stale": 0,
+      "strategy": "profile_global",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 1,
+      "attempts": 1,
+      "concurrency": 1,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 1,
+      "attempts": 1,
+      "concurrency": 1,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 1,
+      "attempts": 2,
+      "concurrency": 2,
+      "false_stale": 1,
+      "strategy": "profile_global",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 2,
+      "attempts": 2,
+      "concurrency": 2,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 2,
+      "attempts": 2,
+      "concurrency": 2,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 1,
+      "attempts": 4,
+      "concurrency": 4,
+      "false_stale": 3,
+      "strategy": "profile_global",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 4,
+      "attempts": 4,
+      "concurrency": 4,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 4,
+      "attempts": 4,
+      "concurrency": 4,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 1,
+      "attempts": 8,
+      "concurrency": 8,
+      "false_stale": 7,
+      "strategy": "profile_global",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 8,
+      "attempts": 8,
+      "concurrency": 8,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 8,
+      "attempts": 8,
+      "concurrency": 8,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 1,
+      "attempts": 16,
+      "concurrency": 16,
+      "false_stale": 15,
+      "strategy": "profile_global",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 16,
+      "attempts": 16,
+      "concurrency": 16,
+      "false_stale": 0,
+      "strategy": "resource_partition",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    },
+    {
+      "accepted": 16,
+      "attempts": 16,
+      "concurrency": 16,
+      "false_stale": 0,
+      "strategy": "dependency_hybrid",
+      "true_stale": 0,
+      "workload": "unrelated_slots"
+    }
+  ],
+  "schema_version": "glhs-version-strategy-model.v1",
+  "status": "DETERMINISTIC_MECHANISM_MODEL_NOT_PRODUCTION_EXECUTION",
+  "strategies": [
+    "profile_global",
+    "resource_partition",
+    "dependency_hybrid"
+  ]
+}

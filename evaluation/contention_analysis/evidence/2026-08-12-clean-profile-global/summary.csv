@@ -1,0 +1,11 @@
+workload,concurrency,independent_profile_batches,attempts,accepted_valid_commits,true_stale_rejections,false_stale_rejections,database_errors,retry_count,successful_retries,false_stale_rate_per_attempt,p50_ms,p95_ms,p99_ms,throughput_per_second,db_reads,db_writes,writes_per_accepted_commit,peak_rss_bytes
+same_dependency,1,5,5,5,0,0,0,0,0,0.0,30.299,61.887,61.887,23.271,55,25,5.0,113995776
+same_dependency,2,5,10,5,5,0,0,0,0,0.0,33.045,36.459,36.459,42.345,100,25,5.0,113995776
+same_dependency,4,5,20,5,15,0,0,0,0,0.0,39.613,52.939,55.078,61.227,190,25,5.0,113995776
+same_dependency,8,5,40,5,35,0,0,0,0,0.0,77.016,91.078,101.556,62.076,370,25,5.0,113995776
+same_dependency,16,5,80,5,75,0,0,0,0,0.0,109.229,153.011,162.67,74.437,730,25,5.0,113995776
+unrelated_slots,1,5,5,5,0,0,0,0,0,0.0,25.442,52.614,52.614,26.522,55,25,5.0,113995776
+unrelated_slots,2,5,10,5,0,5,0,0,0,0.5,34.051,66.025,66.025,37.148,100,25,5.0,113995776
+unrelated_slots,4,5,20,5,0,15,0,0,0,0.75,40.13,49.064,54.844,64.058,190,25,5.0,113995776
+unrelated_slots,8,5,40,5,0,35,0,0,0,0.875,64.705,84.227,85.998,71.938,370,25,5.0,113995776
+unrelated_slots,16,5,80,5,0,75,0,0,0,0.9375,100.994,127.746,133.114,78.644,730,25,5.0,113995776

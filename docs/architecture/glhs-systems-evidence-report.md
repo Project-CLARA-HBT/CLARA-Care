@@ -62,9 +62,18 @@ capacity estimate.
 - The full-stack runner does not yet execute actual source-revocation
   propagation or concurrent transitions. It names `enter_in_error` accurately
   and lists all three omissions in `coverage_gaps`.
-- The N=4 race establishes atomic safety for two enumerated workloads. It does
-  not measure false-stale rate, retry behavior, alternative version strategies,
-  or levels 1/2/4/8/16.
+- The clean contention artifact at
+  `evaluation/contention_analysis/evidence/2026-08-12-clean-profile-global/`
+  extends the safety race to 1/2/4/8/16 writers, five independent profile races
+  per workload/level (50 races and 310 writer attempts). Same-dependency losses
+  were classified true stale. The unrelated-slot false-stale rate per attempt
+  was 0, 0.5, 0.75, 0.875 and 0.9375 at the five levels. It is a synthetic,
+  descriptive estimate under `semantic_key` dependency operationalization;
+  it does not itself justify changing production versioning.
+- Resource-partition and dependency-hybrid alternatives are included only as a
+  deterministic mechanism model in that artifact. Their PostgreSQL latency,
+  storage, retry and fault behavior is still unmeasured. Consent/policy-change
+  and mixed read/snapshot/write workloads are also not yet executed.
 - No deployed-boundary adversarial matrix, provider call, clinical label or
   real-world dataset was used. Workstream C therefore remains PARTIAL.
 
@@ -75,4 +84,8 @@ PYTHONPATH=. services/api/.venv/bin/python \
   -m evaluation.fullstack_benchmark.validate_metrics \
   --metrics evaluation/fullstack_benchmark/evidence/2026-08-12-clean-service-layer/fullstack_metrics.csv \
   --manifest evaluation/fullstack_benchmark/evidence/2026-08-12-clean-service-layer/fullstack_manifest.json
+
+PYTHONPATH=. services/api/.venv/bin/python \
+  -m evaluation.contention_analysis.validate \
+  --run-dir evaluation/contention_analysis/evidence/2026-08-12-clean-profile-global
 ```

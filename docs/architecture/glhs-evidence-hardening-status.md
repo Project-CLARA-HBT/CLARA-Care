@@ -25,18 +25,18 @@ mean clinical validity. External evidence remains fail-closed.
 | Independent THSS utility/minimization | BLOCKED_EXTERNAL | Utility grid validator exists | Validator tests | Protocol scaffold | Qualified independent oracle and provider outputs absent |
 | Model execution manifests | PARTIAL | Existing CommitLoop manifests/checksums | Evaluator tests | Frozen historical runs | New contract replication not frozen or executed |
 | Confirmatory replication power | PARTIAL | Conservative tied paired-design calculator exists | Power tests | Draft analysis plan | New protocol is not frozen; no provider execution authorized |
-| Concurrency/version granularity study | PARTIAL | Profile-global N=4 safety path executes on PostgreSQL | Same-slot and unrelated-slot race passed | Atomic contract output | Levels 1/2/4/8/16, alternative strategies and false-stale estimand not yet implemented/executed |
+| Concurrency/version granularity study | PARTIAL | Production profile-global path runs 1/2/4/8/16; resource/dependency alternatives are deterministic mechanism models only | 310 raw attempts, 50 independent profile races, grid/checksum/tamper validation | Clean-SHA contention artifact with raw/summary/model/checksums | No PostgreSQL performance implementation of alternatives, consent/policy/mixed workloads or retry-success study |
 | Full-stack operational evaluation | PARTIAL | Alembic-backed service-layer runner covers seven real paths and fails closed on nonempty DB/output reuse | Validator/checksum/tamper tests plus clean-SHA PostgreSQL run | Saved v2 metrics/manifest/checksum and systems report | HTTP, source-revocation and concurrent-transition paths explicitly remain gaps |
 | Governance adversarial boundary | PARTIAL | Tamper/expiry/stale/cross-context tests at service/API boundary | Focused gateway/endpoint tests | Local test evidence | Deployment/cache-boundary run and operator labels absent |
 | Audit reconstruction | COMPLETE | Exact stored payload, proposal coordinates, digest contract and snapshot-specific transition reconstruction | Tamper/legacy/unrelated-transition tests | Ledger rows | None for implementation conformance; external audit remains separate |
 | External lawful-data validation | BLOCKED_EXTERNAL | Fail-closed manifests/validators | Validator tests | Demo-only non-headline artifacts | Lawful holdout, curator attestation and independent oracle absent |
-| Statistical contract | PARTIAL | Subject-clustered paired statistics, failure handling and deterministic clause matrix | Evaluator tests | Existing analysis plans and frozen clause ablation | Contention/version-granularity estimands not frozen |
+| Statistical contract | PARTIAL | Subject-clustered paired statistics, failure handling, deterministic clause matrix and descriptive false-stale estimand | Evaluator tests and contention validator | Existing analysis plans, frozen clause ablation and contention manifest | No inferential contention plan or external confirmatory execution |
 | Unique-run artifact contract | PARTIAL | Seal/checksum/validation tooling exists | Evidence-program tests | Clean-SHA systems sub-run plus existing sealed artifacts | Program-wide hardening artifact and final evidence inventory remain pending |
 | Manuscript evidence map | COMPLETE | Claim-to-evidence register | Docs check pending | `glhs-manuscript-evidence-map.md` | None |
 | Manuscript revision guidance | NOT_RUN | No manuscript prose changed | None | None | Generate only after verified evidence stabilizes |
 | Workstream A — contract hardening | COMPLETE | Context/digest/bitemporal/immutability and atomic transition contract implemented | Focused/full API plus actual PostgreSQL concurrency pass | Migration 0055 and isolated-schema race output | Complete as engineering conformance, not clinical evidence |
 | Workstream B — novelty isolation | COMPLETE | Strong standards-composed mechanism comparator plus incremental clause engine | Ten focused tests; identical 16-case matrix across seven variants | Hash-frozen comparator/experiment manifests; validated 112-cell raw/aggregate run | Complete only as developer-authored structural evidence |
-| Workstream C — systems evidence | PARTIAL | Actual PostgreSQL atomic race plus Alembic-backed seven-operation service-layer runner | PostgreSQL race and v2 artifact validators pass | Developmental v2 metrics/checksum | False-stale/version strategies, HTTP/source revocation/concurrent full-stack and deployed adversarial matrix remain |
+| Workstream C — systems evidence | PARTIAL | PostgreSQL atomic race, seven-operation service-layer runner and clean false-stale grid | PostgreSQL race plus full-stack/contention artifact validators pass | Clean systems and contention evidence | HTTP/source revocation/concurrent full-stack, deployed adversarial matrix and alternative-strategy PostgreSQL performance remain |
 | Workstream D — independent evidence | BLOCKED_EXTERNAL | Import/validation scaffolds only | Validator tests | NOT_RUN protocols | Independent people/data/provider inputs absent |
 | Workstream E — reproducibility/release | PARTIAL | Locks, CI edits, seals and checksums | Local validators | Existing reproducibility index | Clean SHA, naming cleanup and final evidence inventory pending |
 | No clinical/publication overclaim | COMPLETE | Docs label synthetic/developer-authored limits | Release gates | This register | None |
@@ -69,4 +69,10 @@ mean clinical validity. External evidence remains fail-closed.
   `75115757d7acec428d9291c567e12a2477f909990627d3f10e8bce40a8911336`.
   HTTP, actual source revocation and concurrent transition remain declared gaps;
   failed/developmental attempts are recorded in `glhs-systems-evidence-report.md`.
+- Contention clean-SHA run: five independent profile races at each workload ×
+  concurrency level (1/2/4/8/16), yielding 310 writer attempts and no database
+  errors. In unrelated-slot races, profile-global false-stale rejection rates
+  were 0, 0.5, 0.75, 0.875 and 0.9375 respectively; same-dependency losses
+  were true stale. The saved artifact's checksum inventory SHA-256 is
+  `a98c8c8b256b12b62d82bdd2ab73e24de4ccd7765444ce4daedcbc11de5f5f94`.
 - Provider/model calls: zero for this hardening checkpoint.
