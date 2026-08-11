@@ -9,7 +9,7 @@ mean clinical validity. External evidence remains fail-closed.
 | Repository/safety constraints | COMPLETE | API-owned GST/THSS boundary; safety gates unchanged | Focused API suites | This register | None |
 | Dataset registry/data isolation | IN_PROGRESS | Registry plus gitignored raw/normalized roots; fail-closed list/inspect/verify/fetch/freeze tools | Dataset-tool tests | `datasets/registry.yaml` | Canonical checksums/acquisition timestamps remain missing for most sources |
 | Common longitudinal evidence interface | IN_PROGRESS | Noncanonical common record plus FHIR-NDJSON, Diabetes, eICU-offset and nested-FHIR adapters | Provenance/time/missingness/minimization adapter tests | Local gitignored normalized outputs | OMOP and MEPS adapters pending; full SyntheticMass execution pending |
-| SyntheticMass FHIR v1 local source | IN_PROGRESS | Nested-tar FHIR-bundle adapter and nested-integrity verifier implemented; outer archive is 30,878,003,109 bytes | Outer SHA-256/gzip/tar pass plus minimized nested-adapter fixtures | Source/license record; root operator archive remains untracked; outer SHA-256 `c913774ac42f9c68a3f18e24e579e55a8b1a380bebe403b68cc67ff7226de127` | Rerun new verifier across every nested chunk, then full compressed normalization/metrics and clean-SHA freeze |
+| SyntheticMass FHIR v1 local source | PARTIAL | Nested-tar FHIR-bundle adapter and nested-integrity verifier; outer archive is 30,878,003,109 bytes | Two full nested passes found 11 nested archives, 1,307,771 FHIR bundles, 2,711,037 nested members and zero unsafe members | Clean-SHA source manifest payload `384e9fc5669aceea0070cb6a11ee621f9e63f298a87893312bffe4073c8443cd`; root operator archive remains untracked | Provider checksum not supplied; full compressed normalization/metrics and clean-SHA normalization freeze pending |
 | Synthea FHIR STU3 May 2017 local source | IN_PROGRESS | Registered local candidate, 22,339,056,743 bytes | Presence inspection only | Root operator archive, untracked | Full hash/archive verification and normalization pending |
 | MIMIC-IV Demo FHIR adapter execution | PARTIAL | Streaming ZIP/NDJSON/GZIP adapter emitted 927,109 records for 100 subjects without estimated time | Local integrity, frozen-manifest verifier and six data-tool/adapter tests | Tracked clean-SHA manifest; gitignored normalized output; source SHA-256 `372997394c1f94fe7a8a1d7a064b5dc75e3e5db6d29a6283515d6f330f206542` | Provider-supplied canonical checksum and source-derived evaluation rerun pending; non-headline demo only |
 | Diabetes-130 external real-data adapter execution | PARTIAL | Streaming ZIP/CSV adapter emitted 2,768,244 records from 101,766 encounters and 71,518 subjects; all unavailable temporal coordinates remain unknown | Archive-member verification, frozen-manifest verification and adapter provenance/time tests | License record, clean-SHA source manifest and gitignored normalized output; source SHA-256 `f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a` | Cohort/task freeze and source-derived structural evaluation pending; not clinical gold |
@@ -125,3 +125,11 @@ mean clinical validity. External evidence remains fail-closed.
   aggregate manifest payload SHA-256 is
   `b4cd7630dcd64a8b02a08e32a2c54856c8e7e111d16074c753bfa3a7d5f21c4d`.
   Targets are source-offset-derived, not clinician-adjudicated.
+- SyntheticMass FHIR v1 source metadata was frozen from clean SHA
+  `9e40ef2e7d5a2260dea6c2398c73fec6c8478d9a`. Both the freeze pass and an
+  independent manifest-verification pass traversed all 11 nested archives,
+  1,307,771 FHIR bundles and 2,711,037 nested members with zero unsafe members.
+  Manifest payload SHA-256 is
+  `384e9fc5669aceea0070cb6a11ee621f9e63f298a87893312bffe4073c8443cd`;
+  canonical checksum status remains `NOT_PROVIDED`, and no normalization or
+  clinical claim is implied.

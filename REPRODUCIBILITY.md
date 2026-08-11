@@ -72,6 +72,16 @@ dataset-entry hash is unchanged. Legacy freezes are checked against the exact
 historical registry bytes at their recorded Git commit; changed dataset entries
 still fail closed.
 
+The local SyntheticMass FHIR v1 archive is 30,878,003,109 bytes with SHA-256
+`c913774ac42f9c68a3f18e24e579e55a8b1a380bebe403b68cc67ff7226de127`.
+The freezer and subsequent manifest verifier independently traversed 11 nested
+archives, 1,307,771 FHIR bundles and 2,711,037 nested members, rejecting links
+or traversal paths; both observed zero unsafe members. Its source-manifest
+payload SHA-256 is
+`384e9fc5669aceea0070cb6a11ee621f9e63f298a87893312bffe4073c8443cd`.
+Canonical checksum status is `NOT_PROVIDED`; normalization and systems metrics
+are not yet frozen, and the source is synthetic rather than clinical truth.
+
 Current local MIMIC-IV Demo on FHIR adapter output contains 927,109 common
 records for 100 deidentified source subjects and explicitly preserves missing
 knowledge time for every record. It is a non-headline adapter/structural source,

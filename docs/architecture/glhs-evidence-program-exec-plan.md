@@ -155,12 +155,15 @@ and rejected raw identity fields. The task SHA-256 is
 `0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4`.
 No comparator result is claimed yet; production-GLHS execution remains pending.
 
-SyntheticMass v1 outer SHA-256/gzip/tar verification passed for the local
-30,878,003,109-byte archive. The source is twelve outer members containing
-nested tar.gz chunks; an adapter and verifier now stream those chunks, minimize
-away Patient demographics, reject links/traversal, and write deterministic
-gzip common records. Full nested verification and normalization have not yet
-run, so the outer-only result cannot be frozen as complete source acceptance.
+SyntheticMass v1 full nested verification passed for the local
+30,878,003,109-byte archive. Two complete traversals each found 11 nested
+archives, 1,307,771 FHIR bundles and 2,711,037 nested members with zero unsafe
+members. The clean-SHA source manifest payload is
+`384e9fc5669aceea0070cb6a11ee621f9e63f298a87893312bffe4073c8443cd`.
+The adapter minimizes away Patient demographics and writes deterministic gzip
+common records, but full normalization and metrics remain pending. The provider
+did not supply a pinned checksum through this workflow, so this is frozen local
+integrity for a synthetic archive, not canonical authenticity or validation.
 
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
