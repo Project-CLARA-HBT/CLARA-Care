@@ -1,0 +1,66 @@
+{
+  "claim_limit": "normalization_reproducibility_and_local_systems_metrics_not_clinical_validation",
+  "dataset_id": "eicu_crd_demo_2_0_1",
+  "evidence": {
+    "dataset_id": "eicu_crd_demo_2_0_1",
+    "normalization": {
+      "adapter": "eicu_tabular",
+      "claim_limit": "source_normalization_not_clinical_oracle_or_validation",
+      "common_schema": "clara-common-longitudinal-evidence.v1",
+      "dataset_id": "eicu_crd_demo_2_0_1",
+      "estimated_times_created": 0,
+      "metrics": {
+        "domain_counts": {
+          "allergies_adverse_reactions": 2475,
+          "diagnoses_problems": 24978,
+          "encounters_utilization": 2520,
+          "medications": 75604,
+          "observations": 434660
+        },
+        "encounter_count": 2520,
+        "missing_knowledge_time": 540237,
+        "missing_valid_time": 0,
+        "operational": {
+          "normalized_records_bytes": 787134348,
+          "peak_rss_kib": 65016,
+          "process_system_seconds": 1.034966,
+          "process_user_seconds": 23.346257,
+          "records_per_second": 21814.673170050588,
+          "source_bytes": 136773541,
+          "storage_amplification": 5.755019152425103,
+          "wall_clock_seconds": 24.764845009995042
+        },
+        "record_count": 540237,
+        "source_row_count": 540237,
+        "subject_count": 1841
+      },
+      "normalized_at_utc": "2026-08-11T20:31:33.525270+00:00",
+      "raw_payloads_persisted": false,
+      "records_compression": "none",
+      "records_file": "records.jsonl",
+      "records_sha256": "68b25539c09e64aca75ce1010b51787c7ba179ad5d0fffb7f961b9e242310756",
+      "schema_version": "clara-dataset-normalization.v1",
+      "source_ids_preserved_locally": true,
+      "source_inventory_sha256": "f934f1da2a7b3da6b64e9fc4321684ea06693992e9411087616d0aa31388401c",
+      "source_schema": "relational CSV",
+      "status": "COMPLETE"
+    },
+    "normalization_manifest_path": "datasets/normalized/eicu_crd_demo_2_0_1/normalization_manifest.json",
+    "normalization_manifest_sha256": "bd1213fae971b1f1245bead09df318847c58fed5458d74c7b7256ff168eeb82e",
+    "record_line_count": 540237,
+    "records_bytes": 787134348,
+    "records_path_local_only": "datasets/normalized/eicu_crd_demo_2_0_1/records.jsonl",
+    "records_sha256": "68b25539c09e64aca75ce1010b51787c7ba179ad5d0fffb7f961b9e242310756",
+    "source_canonical_checksum_status": "VERIFIED_PROVIDER_SHA256",
+    "source_inventory_sha256": "f934f1da2a7b3da6b64e9fc4321684ea06693992e9411087616d0aa31388401c",
+    "source_manifest_file_sha256": "72e1281b65dc8f99706e16b75a32c9cdb89ce79df0efdfc11d12483f626e3036",
+    "source_manifest_path": "datasets/manifests/eicu_crd_demo_2_0_1.json",
+    "source_manifest_payload_sha256": "169411ad4edb49ac4d10c9ffcb51952403ef8ccd15a92602d06f3c7346e186e2"
+  },
+  "frozen_at_utc": "2026-08-11T20:34:47.890537+00:00",
+  "manifest_payload_sha256": "44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850",
+  "schema_version": "clara-dataset-normalization-freeze.v1",
+  "source_git_sha": "cd973c83f93e31ed472abaf16d3e46bd7a19ae34",
+  "status": "FROZEN_NORMALIZATION_AGGREGATE_EVIDENCE",
+  "tracked_worktree_clean_before_freeze": true
+}

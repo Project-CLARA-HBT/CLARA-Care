@@ -132,8 +132,15 @@ normalization produced 540,237 records across 1,841 subjects and 2,520 ICU
 stays, with zero estimated timestamps. The clean-SHA instrumented rerun was
 byte-identical and measured 24.764845 seconds, 21,814.67 records/second, peak
 RSS 65,016 KiB and 5.7550x storage amplification on this host. The source
-manifest is frozen; the normalized-metrics artifact and task protocol remain
-pending, so this stays `PARTIAL`.
+manifest is frozen; source-derived task execution remains pending, so this
+stays `PARTIAL`.
+
+The normalized aggregate was then frozen from clean SHA
+`cd973c83f93e31ed472abaf16d3e46bd7a19ae34`. Its verifier rehashed the complete
+gitignored record file, checked 540,237 physical lines against the recorded
+count, and bound it to the provider-verified source manifest. Payload SHA-256 is
+`44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850`;
+the remaining eICU gap is the frozen source-derived task execution.
 
 SyntheticMass v1 outer SHA-256/gzip/tar verification passed for the local
 30,878,003,109-byte archive. The source is twelve outer members containing

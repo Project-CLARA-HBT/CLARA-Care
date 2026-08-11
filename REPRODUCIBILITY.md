@@ -91,6 +91,9 @@ The clean-SHA instrumented rerun was byte-identical and measured 24.764845
 seconds wall-clock, 21,814.67 records/second, peak RSS 65,016 KiB and 5.7550x
 storage amplification on this host. Source-manifest payload SHA-256 is
 `169411ad4edb49ac4d10c9ffcb51952403ef8ccd15a92602d06f3c7346e186e2`.
+The tracked normalized-evidence manifest is
+`datasets/manifests/eicu_crd_demo_2_0_1.normalization.json`, with payload
+SHA-256 `44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850`.
 
 Structural regression only:
 
