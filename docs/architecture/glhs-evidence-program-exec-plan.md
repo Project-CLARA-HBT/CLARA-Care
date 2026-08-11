@@ -155,6 +155,17 @@ and rejected raw identity fields. The task SHA-256 is
 `0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4`.
 No comparator result is claimed yet; production-GLHS execution remains pending.
 
+The source-offset runner is now frozen against implementation SHA
+`87249453ae26871c99ddeac06927b3b32599d67d`, the exact cohort/task hashes, the
+strong valid-offset parity reference, input-order baseline and production
+`record_evidence -> propose_assertion -> apply_transition -> reconstruct_state`
+path. Protocol payload SHA-256 is
+`3a29d0c02357ae2cc708284f7e0aff2f76474489ae73c25f1dd0111674beea65`.
+It declares SQLite/in-process scope, a source-subject analysis unit, missing or
+invalid output as failure, and unavailable absolute/knowledge time without
+estimation. Full execution remains `NOT_RUN`; no outcome is inferred from the
+passing fixture tests.
+
 SyntheticMass v1 full nested verification passed for the local
 30,878,003,109-byte archive. Two complete traversals each found 11 nested
 archives, 1,307,771 FHIR bundles and 2,711,037 nested members with zero unsafe

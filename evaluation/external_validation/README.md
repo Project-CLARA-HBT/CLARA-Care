@@ -57,3 +57,28 @@ python3 -m evaluation.external_validation.prepare_common_offset_tasks \
   --freeze-id eicu-demo-offset-v1 \
   --dataset-id eicu_crd_demo_2_0_1 --dataset-version 2.0.1
 ```
+
+The production-primitive execution is separately frozen in
+`protocols/eicu-demo-source-offset-v1.json`. It encodes source offsets as an
+abstract relative coordinate only; it does not invent an ICU admission date or
+source knowledge time. The run must start from a clean tracked worktree:
+
+```bash
+services/api/.venv/bin/python -m evaluation.external_validation.run_common_offset_glhs \
+  --tasks datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/tasks.jsonl \
+  --cohort-manifest datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/cohort_manifest.json \
+  --protocol evaluation/external_validation/protocols/eicu-demo-source-offset-v1.json \
+  --output artifacts/evidence-program/eicu-demo-source-offset-glhs-v1
+
+services/api/.venv/bin/python -m evaluation.external_validation.validate_common_offset_glhs \
+  --output artifacts/evidence-program/eicu-demo-source-offset-glhs-v1 \
+  --tasks datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/tasks.jsonl \
+  --cohort-manifest datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/cohort_manifest.json \
+  --protocol evaluation/external_validation/protocols/eicu-demo-source-offset-v1.json
+```
+
+This invokes `record_evidence`, `propose_assertion`, `apply_transition`, and
+`reconstruct_state` from the production API code on an isolated SQLite scratch
+database. It is an in-process engineering execution, not an HTTP/PostgreSQL or
+clinical-validation claim. The strong valid-offset condition is a mandatory
+parity reference; missing or invalid outputs are failures.

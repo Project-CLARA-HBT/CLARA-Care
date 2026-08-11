@@ -1,0 +1,87 @@
+{
+  "analysis_plan": {
+    "comparison_family": "one deterministic source-derived state-selection family",
+    "inference": "descriptive finite-cohort conformance; no population or clinical inference",
+    "missing_handling": "count every missing, invalid, exception, or malformed selection as failure",
+    "primary_endpoint": "task-level exact selected-event parity, aggregated at source-subject level",
+    "reporting": [
+      "task counts",
+      "subject counts",
+      "wins losses and ties versus each comparator",
+      "domain-stratified exact rates",
+      "complete error taxonomy",
+      "wall time throughput peak RSS and scratch storage"
+    ],
+    "secondary_endpoints": [
+      "input-order exact-selection rate",
+      "domain-stratified exact-selection rate",
+      "subject-level exact-selection rate",
+      "production-path operational measurements"
+    ]
+  },
+  "analysis_unit": "source_subject",
+  "claim_limit": "source_offset_state_reconstruction_mechanics_not_clinical_correctness",
+  "clinical_oracle": false,
+  "cohort_manifest_payload_sha256": "b4cd7630dcd64a8b02a08e32a2c54856c8e7e111d16074c753bfa3a7d5f21c4d",
+  "cohort_manifest_sha256": "5e280f276172aa856c1ee0b0caa732e0f4c583c9160640ef6316d140a18092d8",
+  "comparator_definitions": {
+    "input_order_baseline": "event with greatest immutable normalized-source row index",
+    "production_glhs_reconstruction": "source-order ingestion through the exact production_path followed by reconstruction at the unique latest relative valid offset",
+    "valid_offset_resolver_strong_parity_reference": "unique event with maximum source-provided valid offset within the frozen same-stay same-slot task"
+  },
+  "dataset_id": "eicu_crd_demo_2_0_1",
+  "dataset_version": "2.0.1",
+  "domain_task_counts": {
+    "allergies_adverse_reactions": 216,
+    "diagnoses_problems": 3740,
+    "medications": 5877,
+    "observations": 49680
+  },
+  "execution_boundary": "in_process_api_owned_service_layer_sqlite",
+  "exclusions_frozen_upstream": {
+    "fewer_than_two_events": 40154,
+    "latest_offset_tie": 1410,
+    "missing_slot": 30661,
+    "missing_valid_offset": 0
+  },
+  "failure_policy": "missing_invalid_or_error_is_failure",
+  "freeze_id": "eicu-demo-source-offset-glhs-v1",
+  "frozen_at_utc": "2026-08-11T21:11:31Z",
+  "frozen_event_count": 343537,
+  "frozen_subject_count": 1413,
+  "frozen_task_count": 59513,
+  "headline_eligible": false,
+  "implementation_git_sha": "87249453ae26871c99ddeac06927b3b32599d67d",
+  "normalization_freeze_file_sha256": "1853f8cd4aa807411c6b0cabee1c9b3f2c1ef3d8b1c5fc431f9a4484c9f60e0a",
+  "normalization_manifest_payload_sha256": "44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850",
+  "post_freeze_rule": "no implementation comparator exclusion scoring or protocol change; any benchmark-affecting defect requires a new version and complete fresh rerun",
+  "primary_invariant": "production_glhs_reconstruction_exact_parity_with_unique_latest_valid_offset",
+  "production_path": [
+    "record_evidence",
+    "propose_assertion",
+    "apply_transition",
+    "reconstruct_state"
+  ],
+  "protocol_payload_sha256": "3a29d0c02357ae2cc708284f7e0aff2f76474489ae73c25f1dd0111674beea65",
+  "provider_calls_planned": 0,
+  "runner_sha256": "6171c9b75ef73006086242dd47e535b9e694b447da7b55e167b6b6f69d226ccd",
+  "schema_version": "clara-common-offset-glhs-protocol.v1",
+  "source_manifest_file_sha256": "72e1281b65dc8f99706e16b75a32c9cdb89ce79df0efdfc11d12483f626e3036",
+  "source_manifest_payload_sha256": "169411ad4edb49ac4d10c9ffcb51952403ef8ccd15a92602d06f3c7346e186e2",
+  "status": "FROZEN_DEVELOPER_PREPARED_SOURCE_DERIVED",
+  "systems": [
+    "valid_offset_resolver_strong_parity_reference",
+    "input_order_baseline",
+    "production_glhs_reconstruction"
+  ],
+  "tasks_sha256": "0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4",
+  "temporal_mapping": {
+    "absolute_clinical_time": "UNAVAILABLE_NOT_ESTIMATED",
+    "encoding_epoch": "2000-01-01T00:00:00_abstract_naive_coordinate",
+    "interval_rule": "event_valid_until_one_microsecond_before_next_distinct_offset",
+    "known_at_for_reconstruction": "post_ingest_processing_cutoff_not_source_time",
+    "source_coordinate": "minutes_relative_to_icu_unit_admission",
+    "source_knowledge_time": "UNAVAILABLE_NOT_ESTIMATED"
+  },
+  "validator_sha256": "ae863e231dd4760d620851ead22132840ebdbc79870c854beea7adfdc82a7d37"
+}

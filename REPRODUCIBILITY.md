@@ -54,6 +54,10 @@ python scripts/data/verify_normalization_manifest.py --dataset <id>
 The eICU within-stay source-derived task freeze command is documented in
 `evaluation/external_validation/README.md`. Its targets are source-offset
 mechanics only and must not be relabelled as clinical correctness.
+The same document gives the zero-provider-call production-primitive run and
+validation commands. Protocol payload SHA-256 is
+`3a29d0c02357ae2cc708284f7e0aff2f76474489ae73c25f1dd0111674beea65`;
+the full execution remains `NOT_RUN` until that command completes unchanged.
 
 `inspect` reports only presence and size. `verify` computes local SHA-256 and
 archive integrity but does not claim canonical authenticity when the provider
