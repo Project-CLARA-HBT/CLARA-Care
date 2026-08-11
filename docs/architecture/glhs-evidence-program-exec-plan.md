@@ -146,7 +146,14 @@ The eICU task preparer is implemented with a deterministic subject split before
 task selection, same-stay/same-slot offset comparisons, explicit tie/missing
 exclusions, no knowledge-time imputation, and a strong valid-offset parity
 reference. Its outputs remain local until the code is committed and the cohort
-is frozen on that clean revision.
+is frozen on that clean revision; only its aggregate manifest is tracked.
+
+The clean-revision run froze 59,513 tasks with 343,537 events across 1,413
+represented evaluation subjects. The validator rehashed all task rows, enforced
+unique latest-offset targets, verified upstream source/normalization bindings,
+and rejected raw identity fields. The task SHA-256 is
+`0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4`.
+No comparator result is claimed yet; production-GLHS execution remains pending.
 
 SyntheticMass v1 outer SHA-256/gzip/tar verification passed for the local
 30,878,003,109-byte archive. The source is twelve outer members containing

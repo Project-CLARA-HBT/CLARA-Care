@@ -98,6 +98,11 @@ storage amplification on this host. Source-manifest payload SHA-256 is
 The tracked normalized-evidence manifest is
 `datasets/manifests/eicu_crd_demo_2_0_1.normalization.json`, with payload
 SHA-256 `44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850`.
+The eICU source-offset aggregate manifest is
+`datasets/manifests/eicu_crd_demo_2_0_1.source-offset-tasks.json`; task SHA-256
+is `0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4`.
+The task rows remain gitignored and are regenerated from the frozen normalized
+output before validation.
 
 Structural regression only:
 

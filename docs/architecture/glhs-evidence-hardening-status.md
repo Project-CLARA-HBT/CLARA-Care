@@ -13,7 +13,7 @@ mean clinical validity. External evidence remains fail-closed.
 | Synthea FHIR STU3 May 2017 local source | IN_PROGRESS | Registered local candidate, 22,339,056,743 bytes | Presence inspection only | Root operator archive, untracked | Full hash/archive verification and normalization pending |
 | MIMIC-IV Demo FHIR adapter execution | PARTIAL | Streaming ZIP/NDJSON/GZIP adapter emitted 927,109 records for 100 subjects without estimated time | Local integrity, frozen-manifest verifier and six data-tool/adapter tests | Tracked clean-SHA manifest; gitignored normalized output; source SHA-256 `372997394c1f94fe7a8a1d7a064b5dc75e3e5db6d29a6283515d6f330f206542` | Provider-supplied canonical checksum and source-derived evaluation rerun pending; non-headline demo only |
 | Diabetes-130 external real-data adapter execution | PARTIAL | Streaming ZIP/CSV adapter emitted 2,768,244 records from 101,766 encounters and 71,518 subjects; all unavailable temporal coordinates remain unknown | Archive-member verification, frozen-manifest verification and adapter provenance/time tests | License record, clean-SHA source manifest and gitignored normalized output; source SHA-256 `f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a` | Cohort/task freeze and source-derived structural evaluation pending; not clinical gold |
-| eICU Demo acquisition/adapter | PARTIAL | Resumable atomic fetch, provider-SHA256 verifier and offset-preserving selected-table adapter emitted 540,237 records from 1,841 subjects/2,520 stays | All 33 packaged checksums plus resume/partial/provider-tamper/adapter/freeze tests | Clean-SHA source and normalized-metrics manifests; gitignored byte-reproduced output; archive SHA-256 `8e33a1094945d6ba07cf613b15b2fe4d98f6b3324601d026e80d445bd5b8b865` | Freeze and execute source-derived task protocol |
+| eICU Demo acquisition/adapter | PARTIAL | Resumable atomic fetch, provider-SHA256 verifier and offset-preserving selected-table adapter emitted 540,237 records from 1,841 subjects/2,520 stays | All 33 packaged checksums plus resume/partial/provider-tamper/adapter/freeze/task validators | Clean-SHA source/normalization manifests and frozen 59,513-task source-offset cohort; raw tasks/output remain gitignored | Execute strong parity/input-order/production-GLHS conditions; no clinical oracle |
 | Synthea OMOP 2.8M source | NOT_RUN | Fail-closed registry entry | `NOT_AVAILABLE` path tested | None | Canonical distribution and local archive unresolved |
 | Tracked primary master specification | COMPLETE | Exact-content tracked copy at the declared primary path | Byte/hash comparison plus docs check | `docs/architecture/glhs-evidence-hardening-master-spec.md` | None |
 | Active naming is target agnostic | PARTIAL | Legacy evaluators archived; active naming guard exists | `evaluation/property_assurance/test_naming_migration.py` | Historical archives | Existing active structural documentation still contains legacy protocol IDs; guard expansion pending |
@@ -119,3 +119,9 @@ mean clinical validity. External evidence remains fail-closed.
   `44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850`.
   Reverification rehashed all 787,134,348 output bytes and recounted 540,237
   lines without reading any patient identifier into the tracked artifact.
+- The frozen eICU source-offset cohort contains 59,513 same-stay/same-slot tasks
+  and 343,537 events from 1,413 represented evaluation subjects. Task SHA-256
+  is `0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4`;
+  aggregate manifest payload SHA-256 is
+  `b4cd7630dcd64a8b02a08e32a2c54856c8e7e111d16074c753bfa3a7d5f21c4d`.
+  Targets are source-offset-derived, not clinician-adjudicated.

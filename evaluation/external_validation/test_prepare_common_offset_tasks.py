@@ -4,10 +4,13 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from evaluation.external_validation.prepare_common_offset_tasks import (
     _partition,
     prepare,
 )
+from evaluation.external_validation.validate_common_offset_tasks import validate
 
 
 def _sha(path: Path) -> str:
@@ -77,3 +80,43 @@ def test_preparer_keeps_offsets_within_encounter_and_marks_nonclinical(tmp_path:
     task = json.loads((tmp_path / "out" / "tasks.jsonl").read_text(encoding="utf-8"))
     assert task["source_target_event_id"] == task["structured_events"][1]["event_id"]
     assert all("source_subject" not in event for event in task["structured_events"])
+    normalization_freeze_path = tmp_path / "normalization_freeze.json"
+    normalization_freeze_path.write_text(
+        json.dumps(
+            {
+                "evidence": {
+                    "normalization": normalization,
+                    "normalization_manifest_sha256": _sha(normalization_path),
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    validation = validate(
+        tmp_path / "out" / "tasks.jsonl",
+        tmp_path / "out" / "cohort_manifest.json",
+        normalization_freeze_path,
+        source_path,
+    )
+    assert validation["status"] == "VALID_FROZEN_SOURCE_OFFSET_TASKS"
+
+    task["source_target_event_id"] = task["structured_events"][0]["event_id"]
+    tasks_path = tmp_path / "out" / "tasks.jsonl"
+    tasks_path.write_text(json.dumps(task, sort_keys=True) + "\n", encoding="utf-8")
+    manifest["tasks_sha256"] = _sha(tasks_path)
+    manifest.pop("manifest_payload_sha256")
+    manifest["manifest_payload_sha256"] = hashlib.sha256(
+        json.dumps(
+            manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ).encode()
+    ).hexdigest()
+    (tmp_path / "out" / "cohort_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="offset_task_source_target_invalid"):
+        validate(
+            tasks_path,
+            tmp_path / "out" / "cohort_manifest.json",
+            normalization_freeze_path,
+            source_path,
+        )

@@ -1,0 +1,45 @@
+{
+  "claim_limit": "source_derived_within_encounter_temporal_structure_not_clinical_correctness",
+  "clinical_oracle": false,
+  "code_revision": "bc877acae6c6c73f4a846c1916704c2922fee078",
+  "comparison_scope": "within one ICU unit stay and one source-derived slot only",
+  "dataset_id": "eicu_crd_demo_2_0_1",
+  "dataset_version": "2.0.1",
+  "development_evaluation_disjoint": true,
+  "development_subject_count": 386,
+  "domain_task_counts": {
+    "allergies_adverse_reactions": 216,
+    "diagnoses_problems": 3740,
+    "medications": 5877,
+    "observations": 49680
+  },
+  "evaluation_source_subject_count": 1454,
+  "event_count": 343537,
+  "exclusions": {
+    "fewer_than_two_events": 40154,
+    "latest_offset_tie": 1410,
+    "missing_slot": 30661,
+    "missing_valid_offset": 0
+  },
+  "freeze_id": "eicu-demo-offset-v1",
+  "headline_eligible": false,
+  "independent_curator": false,
+  "knowledge_time_status": "UNAVAILABLE_NOT_ESTIMATED",
+  "manifest_payload_sha256": "b4cd7630dcd64a8b02a08e32a2c54856c8e7e111d16074c753bfa3a7d5f21c4d",
+  "normalization_manifest_sha256": "bd1213fae971b1f1245bead09df318847c58fed5458d74c7b7256ff168eeb82e",
+  "normalized_records_sha256": "68b25539c09e64aca75ce1010b51787c7ba179ad5d0fffb7f961b9e242310756",
+  "partition": "subject_disjoint_evaluation_from_deterministic_development_split",
+  "planned_systems": [
+    "valid_offset_resolver_strong_parity_reference",
+    "input_order_baseline",
+    "production_glhs_projection_pending_adapter"
+  ],
+  "processed_domain_record_count": 537717,
+  "represented_evaluation_subject_count": 1413,
+  "schema_version": "clara-common-offset-source-tasks.v1",
+  "selection_method": "sha256(dataset-local source subject) deterministic 20/80 split before task selection",
+  "source_manifest_payload_sha256": "169411ad4edb49ac4d10c9ffcb51952403ef8ccd15a92602d06f3c7346e186e2",
+  "status": "FROZEN_DEVELOPER_PREPARED_SOURCE_DERIVED",
+  "task_count": 59513,
+  "tasks_sha256": "0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4"
+}
