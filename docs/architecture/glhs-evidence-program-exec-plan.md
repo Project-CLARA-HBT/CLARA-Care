@@ -142,6 +142,12 @@ count, and bound it to the provider-verified source manifest. Payload SHA-256 is
 `44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850`;
 the remaining eICU gap is the frozen source-derived task execution.
 
+The eICU task preparer is implemented with a deterministic subject split before
+task selection, same-stay/same-slot offset comparisons, explicit tie/missing
+exclusions, no knowledge-time imputation, and a strong valid-offset parity
+reference. Its outputs remain local until the code is committed and the cohort
+is frozen on that clean revision.
+
 SyntheticMass v1 outer SHA-256/gzip/tar verification passed for the local
 30,878,003,109-byte archive. The source is twelve outer members containing
 nested tar.gz chunks; an adapter and verifier now stream those chunks, minimize

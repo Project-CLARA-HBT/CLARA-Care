@@ -6,7 +6,7 @@ subject-disjoint real-EHR cohort. Full-MIMIC independent validation remains
 as source-derived, non-headline evidence with `independent_curator=false` and
 no annotation oracle.
 
-Only a real data steward may create the source-derived manifest. The preparer
+Only a real data steward may create a headline-eligible external manifest. The preparer
 must run outside this repository's git tree and emit deidentified derived task
 records only. Synthetic governance perturbations are a separate challenge set;
 they must never be merged into real-EHR clinical ground truth.
@@ -40,3 +40,20 @@ For MIMIC Demo on FHIR, `prepare_mimic_demo_fhir.py` hashes patient/slot/value
 identifiers, freezes a 20/80 subject split, and emits medication,
 diagnosis/problem, and lab tasks. Its timestamp-derived targets are not
 clinician labels and `headline_eligible` remains false.
+
+For eICU Demo common-offset records, the developer-prepared source-derived
+protocol is deliberately non-headline and compares events only within the same
+ICU unit stay and source slot. It freezes a subject-disjoint 20/80 development/
+evaluation split before task selection, leaves knowledge time unavailable, and
+uses the source valid-offset resolver as a strong parity reference. It neither
+compares offsets across stays nor treats the latest offset as clinical truth:
+
+```bash
+python3 -m evaluation.external_validation.prepare_common_offset_tasks \
+  --records datasets/normalized/eicu_crd_demo_2_0_1/records.jsonl \
+  --normalization-manifest datasets/normalized/eicu_crd_demo_2_0_1/normalization_manifest.json \
+  --source-manifest datasets/manifests/eicu_crd_demo_2_0_1.json \
+  --output datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1 \
+  --freeze-id eicu-demo-offset-v1 \
+  --dataset-id eicu_crd_demo_2_0_1 --dataset-version 2.0.1
+```

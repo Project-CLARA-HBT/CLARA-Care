@@ -51,6 +51,10 @@ python scripts/data/freeze_normalization_manifest.py --dataset <id>
 python scripts/data/verify_normalization_manifest.py --dataset <id>
 ```
 
+The eICU within-stay source-derived task freeze command is documented in
+`evaluation/external_validation/README.md`. Its targets are source-offset
+mechanics only and must not be relabelled as clinical correctness.
+
 `inspect` reports only presence and size. `verify` computes local SHA-256 and
 archive integrity but does not claim canonical authenticity when the provider
 does not supply a pinned checksum. `normalize` writes patient-level records only
