@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import platform
 import resource
 import statistics
+import subprocess
+import sys
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -22,9 +25,10 @@ from pathlib import Path
 from typing import Any
 
 import sqlalchemy as sa
-from clara_api.db.base import Base
 from clara_api.db.models import (
     GlhsAssertion,
+    GlhsAssertionEvidence,
+    GlhsEvidence,
     GlhsSnapshotManifest,
     GlhsTransition,
     HealthSourceReference,
@@ -38,6 +42,7 @@ from clara_api.glhs.gateway import (
     compile_thss,
     current_state_version,
     propose_assertion,
+    reconstruct_governed_decision,
     reconstruct_state,
     record_evidence,
 )
@@ -49,8 +54,10 @@ OPERATIONS = (
     "transition",
     "reconstruction",
     "snapshot_compile",
+    "governed_decision_reconstruction",
+    "audit_lookup",
     "invalidation_rebuild",
-    "revocation_propagation",
+    "enter_in_error_rebuild",
 )
 FIELDNAMES = (
     "operation",
@@ -65,8 +72,10 @@ FIELDNAMES = (
     "write_amplification",
     "reconstruction_ms",
     "snapshot_compile_ms",
+    "governed_decision_reconstruction_ms",
+    "audit_lookup_ms",
     "invalidation_rebuild_ms",
-    "revocation_propagation_ms",
+    "enter_in_error_rebuild_ms",
     "cpu_percent",
     "peak_rss_bytes",
 )
@@ -87,6 +96,39 @@ class SqlCounter:
             self.reads += 1
         elif verb in {"INSERT", "UPDATE", "DELETE"}:
             self.writes += 1
+
+
+def _migrate_empty_database(database_url: str, *, repository_root: Path) -> None:
+    api_root = repository_root / "services" / "api"
+    env = dict(os.environ)
+    env["DATABASE_URL"] = database_url
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=api_root,
+        env=env,
+        check=True,
+    )
+
+
+def _git_state(repository_root: Path) -> dict[str, object]:
+    revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repository_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    tracked_status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        cwd=repository_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return {
+        "implementation_sha": revision,
+        "tracked_worktree_clean": not bool(tracked_status.strip()),
+    }
 
 
 def percentile(values: list[float], fraction: float) -> float:
@@ -111,7 +153,9 @@ def scope_for(db: Session, suffix: str) -> ProfileScope:
         profile=profile,
         actor_role="owner",
         purpose="self_care",
-        allowed_actions=frozenset({"create", "view", "resolve"}),
+        allowed_actions=frozenset(
+            {"create", "view", "correct", "invalidate", "resolve"}
+        ),
         allowed_data_classes=frozenset({"medications", "evidence"}),
     )
 
@@ -204,16 +248,20 @@ def row(
         "write_amplification": round(writes / repetitions, 3),
         "reconstruction_ms": "",
         "snapshot_compile_ms": "",
+        "governed_decision_reconstruction_ms": "",
+        "audit_lookup_ms": "",
         "invalidation_rebuild_ms": "",
-        "revocation_propagation_ms": "",
+        "enter_in_error_rebuild_ms": "",
         "cpu_percent": round(cpu_percent, 3),
         "peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
     }
     duration_field = {
         "reconstruction": "reconstruction_ms",
         "snapshot_compile": "snapshot_compile_ms",
+        "governed_decision_reconstruction": "governed_decision_reconstruction_ms",
+        "audit_lookup": "audit_lookup_ms",
         "invalidation_rebuild": "invalidation_rebuild_ms",
-        "revocation_propagation": "revocation_propagation_ms",
+        "enter_in_error_rebuild": "enter_in_error_rebuild_ms",
     }.get(operation)
     if duration_field:
         output[duration_field] = round(mean_ms, 3)
@@ -226,17 +274,27 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--history-depth", type=int, default=50)
     parser.add_argument("--repetitions", type=int, default=30)
+    parser.add_argument("--database-image-digest", default="operator_not_supplied")
+    parser.add_argument("--acknowledge-isolated-empty-database", action="store_true")
     args = parser.parse_args()
     if not args.database_url or not args.database_url.startswith("postgresql"):
         parser.error("a PostgreSQL DATABASE_URL is required")
+    if not args.acknowledge_isolated_empty_database:
+        parser.error("--acknowledge-isolated-empty-database is required")
     if args.history_depth < 5 or args.repetitions < 5:
         parser.error("history depth and repetitions must both be at least 5")
+    if args.output.exists():
+        parser.error("output path must not already exist")
 
+    repository_root = Path(__file__).resolve().parents[2]
     engine = sa.create_engine(args.database_url, pool_pre_ping=True)
-    # The database is a freshly-created benchmark database.  Creating the
-    # complete API schema here keeps the run isolated from production data;
-    # production deployments still use Alembic migrations.
-    Base.metadata.create_all(engine)
+    if engine.url.database in {None, "postgres", "template0", "template1"}:
+        parser.error("a non-default isolated database name is required")
+    if sa.inspect(engine).get_table_names():
+        parser.error("benchmark database must be empty before migration")
+    engine.dispose()
+    _migrate_empty_database(args.database_url, repository_root=repository_root)
+    engine = sa.create_engine(args.database_url, pool_pre_ping=True)
     counter = SqlCounter()
     event.listen(engine, "before_cursor_execute", counter.observe)
     rows: list[dict[str, object]] = []
@@ -336,6 +394,107 @@ def main() -> None:
             )
         )
 
+        decision_scope = scope_for(db, "decision")
+        disclosed_assertion = candidate(
+            db,
+            decision_scope,
+            index=0,
+            semantic_key="medication:decision:source",
+            valid_at=base,
+        )
+        apply_transition(
+            db,
+            scope=decision_scope,
+            assertion=disclosed_assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key="benchmark-decision-source",
+            transition_kind="benchmark_fixture",
+            reason_code="benchmark_fixture",
+        )
+        disclosed_snapshot = compile_thss(
+            db,
+            scope=decision_scope,
+            task="benchmark_decision",
+            purpose="self_care",
+            allowed_data_classes=frozenset({"medications"}),
+            as_of=as_of,
+        )
+        disclosed_evidence_id = db.scalar(
+            select(GlhsAssertionEvidence.evidence_id).where(
+                GlhsAssertionEvidence.assertion_id == disclosed_assertion.id
+            )
+        )
+        disclosed_evidence = db.get(GlhsEvidence, disclosed_evidence_id)
+        if disclosed_evidence is None:
+            raise RuntimeError("benchmark_disclosed_evidence_missing")
+        bound_assertion = propose_assertion(
+            db,
+            profile_id=decision_scope.profile.id,
+            actor_user_id=decision_scope.actor.id,
+            data=AssertionInput(
+                semantic_key="medication:decision:bound",
+                assertion_type="medications",
+                predicate="active",
+                value={"fixture": "bound-decision"},
+                epistemic_state="reported",
+                valid_from=base,
+                process_kind="user",
+                source_snapshot_id=disclosed_snapshot.snapshot_id,
+                source_snapshot_digest=disclosed_snapshot.manifest_digest,
+            ),
+            evidence=((disclosed_evidence, "supports"),),
+        )
+        bound_transition = apply_transition(
+            db,
+            scope=decision_scope,
+            assertion=bound_assertion,
+            action="activate",
+            expected_state_version=disclosed_snapshot.state_version,
+            idempotency_key="benchmark-decision-bound",
+            transition_kind="benchmark_bound_decision",
+            reason_code="benchmark_bound_decision",
+        )
+        db.commit()
+        rows.append(
+            row(
+                "governed_decision_reconstruction",
+                args.history_depth,
+                args.repetitions,
+                timed(
+                    db,
+                    counter,
+                    args.repetitions,
+                    lambda _index: reconstruct_governed_decision(
+                        db,
+                        profile_id=decision_scope.profile.id,
+                        snapshot_id=disclosed_snapshot.snapshot_id,
+                        transition_id=bound_transition.public_id,
+                    ),
+                ),
+            )
+        )
+        rows.append(
+            row(
+                "audit_lookup",
+                args.history_depth,
+                args.repetitions,
+                timed(
+                    db,
+                    counter,
+                    args.repetitions,
+                    lambda _index: db.execute(
+                        select(
+                            GlhsTransition.public_id,
+                            GlhsTransition.base_state_version,
+                            GlhsTransition.resulting_state_version,
+                            GlhsTransition.reason_code,
+                        ).where(GlhsTransition.public_id == bound_transition.public_id)
+                    ).one(),
+                ),
+            )
+        )
+
         def retire_and_rebuild(index: int, kind: str) -> None:
             assertion = assertions[index % len(assertions)]
             if assertion.lifecycle_status not in {"active", "disputed"}:
@@ -396,14 +555,14 @@ def main() -> None:
         )
         rows.append(
             row(
-                "revocation_propagation",
+                "enter_in_error_rebuild",
                 args.history_depth,
                 args.repetitions,
                 timed(
                     db,
                     counter,
                     args.repetitions,
-                    lambda index: retire_and_rebuild(index, "revocation"),
+                    lambda index: retire_and_rebuild(index, "enter_in_error"),
                 ),
             )
         )
@@ -413,6 +572,15 @@ def main() -> None:
             "assertions": db.scalar(select(func.count()).select_from(GlhsAssertion)),
             "snapshots": db.scalar(select(func.count()).select_from(GlhsSnapshotManifest)),
         }
+        database_environment = {
+            "server_version": db.scalar(sa.text("SHOW server_version")),
+            "default_transaction_isolation": db.scalar(
+                sa.text("SHOW default_transaction_isolation")
+            ),
+            "synchronous_commit": db.scalar(sa.text("SHOW synchronous_commit")),
+            "max_connections": db.scalar(sa.text("SHOW max_connections")),
+            "alembic_revision": db.scalar(sa.text("SELECT version_num FROM alembic_version")),
+        }
 
     args.output.mkdir(parents=True, exist_ok=False)
     metrics_path = args.output / "fullstack_metrics.csv"
@@ -421,10 +589,16 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(rows)
     manifest = {
-        "status": "frozen",
+        "schema_version": "glhs-fullstack-service-layer.v2",
+        "status": "EXECUTED_PARTIAL_SERVICE_LAYER",
         "architecture_path": "postgresql>gst>glhs>thss>api",
         "api_boundary": "in_process_api_owned_service_layer",
         "http_transport_measured": False,
+        "coverage_gaps": [
+            "http_transport",
+            "source_revocation_propagation",
+            "concurrent_transition",
+        ],
         "production_services_modified": False,
         "fixture_contains_phi": False,
         "started_at": started_at.isoformat(),
@@ -441,12 +615,23 @@ def main() -> None:
             "platform": platform.platform(),
             "sqlalchemy": sa.__version__,
             "database": str(engine.dialect.name),
+            "database_image_digest": args.database_image_digest,
+            **database_environment,
         },
+        "implementation": _git_state(repository_root),
         "row_counts": counts,
         "operations": list(OPERATIONS),
     }
-    (args.output / "fullstack_manifest.json").write_text(
+    manifest_path = args.output / "fullstack_manifest.json"
+    manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    checksums = [
+        f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}"
+        for path in (metrics_path, manifest_path)
+    ]
+    (args.output / "checksums.sha256").write_text(
+        "\n".join(checksums) + "\n", encoding="utf-8"
     )
 
 

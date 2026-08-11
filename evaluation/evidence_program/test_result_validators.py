@@ -8,6 +8,9 @@ import pytest
 
 from evaluation.evidence_program.freeze import FreezeError
 from evaluation.fullstack_benchmark.validate_metrics import COLUMNS as METRIC_COLUMNS
+from evaluation.fullstack_benchmark.validate_metrics import (
+    REQUIRED_OPERATION_ORDER,
+)
 from evaluation.fullstack_benchmark.validate_metrics import validate as validate_metrics
 from evaluation.governance_adversarial.validate_results import (
     validate as validate_adversarial,
@@ -55,11 +58,31 @@ def test_adversarial_rejects_incomplete_attack_suite(tmp_path: Path) -> None:
 
 def test_fullstack_rejects_incomplete_operation_suite(tmp_path: Path) -> None:
     manifest = _json(tmp_path / "fullstack.json", {
-        "status": "frozen",
+        "schema_version": "glhs-fullstack-service-layer.v2",
+        "status": "EXECUTED_PARTIAL_SERVICE_LAYER",
         "architecture_path": "postgresql>gst>glhs>thss>api",
-        "hardware": "operator-provided",
+        "hardware": {"cpu_count": 1},
         "worker_count": 1,
-        "environment": "operator-provided",
+        "fixture_contains_phi": False,
+        "production_services_modified": False,
+        "http_transport_measured": False,
+        "environment": {
+            "database": "postgresql",
+            "server_version": "16",
+            "alembic_revision": "20260811_0055",
+            "database_image_digest": "sha256:" + "b" * 64,
+        },
+        "implementation": {
+            "implementation_sha": "a" * 40,
+            "tracked_worktree_clean": True,
+        },
+        "operations": list(REQUIRED_OPERATION_ORDER),
+        "coverage_gaps": [
+            "http_transport",
+            "source_revocation_propagation",
+            "concurrent_transition",
+        ],
+        "row_counts": {},
     })
     results = _csv(tmp_path / "metrics.csv", METRIC_COLUMNS)
     with pytest.raises(FreezeError, match="fullstack_operations_incomplete"):
