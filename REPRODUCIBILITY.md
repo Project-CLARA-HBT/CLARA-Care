@@ -45,6 +45,7 @@ python scripts/data/verify.py --dataset <id> --output /tmp/<id>-verification.jso
 python scripts/data/fetch.py --dataset <id> --accept-license
 python scripts/data/normalize.py --dataset <id>
 python scripts/data/freeze_manifest.py --dataset <id>
+python scripts/data/verify_manifest.py --dataset <id>
 ```
 
 `inspect` reports only presence and size. `verify` computes local SHA-256 and
@@ -52,12 +53,15 @@ archive integrity but does not claim canonical authenticity when the provider
 does not supply a pinned checksum. `normalize` writes patient-level records only
 under gitignored local paths. `freeze_manifest` refuses a dirty tracked
 worktree, unresolved canonical source or existing manifest; it never imports
-raw records into git.
+raw records into git. `verify_manifest` fails if the manifest self-hash,
+registry hash, source commit, or current local source inventory has changed.
 
 Current local MIMIC-IV Demo on FHIR adapter output contains 927,109 common
 records for 100 deidentified source subjects and explicitly preserves missing
 knowledge time for every record. It is a non-headline adapter/structural source,
-not an independent clinical oracle.
+not an independent clinical oracle. Its tracked manifest payload SHA-256 is
+`e5257d01f07024cfc965f0f263484c49fac2c5728539de3d030db8b0eadec738`;
+canonical checksum status remains `NOT_PROVIDED`.
 
 Structural regression only:
 

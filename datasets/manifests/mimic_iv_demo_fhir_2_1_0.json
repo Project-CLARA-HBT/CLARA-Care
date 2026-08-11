@@ -1,0 +1,51 @@
+{
+  "access_class": "open",
+  "acquired_at": null,
+  "acquisition_time_status": "UNKNOWN",
+  "canonical_source": "https://physionet.org/content/mimic-iv-fhir-demo/2.1.0/",
+  "claim_limit": "local_integrity_only_not_canonical_authenticity_normalization_evaluation_or_clinical_validation",
+  "dataset_id": "mimic_iv_demo_fhir_2_1_0",
+  "evidence_class": "nonheadline_external_real_data_structural",
+  "known_limitations": "Same 100-patient lineage as other MIMIC demos; not independent clinical validation.",
+  "license": "ODbL-1.0 plus PhysioNet terms",
+  "manifest_payload_sha256": "e5257d01f07024cfc965f0f263484c49fac2c5728539de3d030db8b0eadec738",
+  "registry_sha256": "c05ada2cab89e50253e85c9316e1b55567d6c8ac99a9389dee5e9edbb2d68eef",
+  "release_date": null,
+  "schema_version": "clara-dataset-freeze.v1",
+  "source_git_sha": "1e74492f131779bcbc1af6304c3dcac036417912",
+  "source_path_local_only": "mimic-iv-clinical-database-demo-on-fhir-2.1.0.zip",
+  "source_schema": "FHIR R4 NDJSON",
+  "source_version": "2.1.0",
+  "status": "FROZEN_LOCAL_INTEGRITY_METADATA",
+  "synthetic": false,
+  "tracked_worktree_clean_before_freeze": true,
+  "verification": {
+    "access_class": "open",
+    "archive": {
+      "format": "zip",
+      "member_count": 33,
+      "uncompressed_bytes": 51885265,
+      "unsafe_member_count": 0
+    },
+    "canonical_checksum_status": "NOT_PROVIDED",
+    "canonical_source": "https://physionet.org/content/mimic-iv-fhir-demo/2.1.0/",
+    "claim_limit": "local_integrity_not_canonical_authenticity_normalization_or_evaluation",
+    "dataset_id": "mimic_iv_demo_fhir_2_1_0",
+    "expected_files_present": true,
+    "file_count": 1,
+    "files": [
+      {
+        "bytes": 51859726,
+        "path": "mimic-iv-clinical-database-demo-on-fhir-2.1.0.zip",
+        "sha256": "372997394c1f94fe7a8a1d7a064b5dc75e3e5db6d29a6283515d6f330f206542"
+      }
+    ],
+    "inventory_sha256": "95e094f634895f8fe85944da0463b414ba0d4e66d232cad7205fef12ec17fbbd",
+    "schema_version": "clara-dataset-verification.v1",
+    "source_path": "mimic-iv-clinical-database-demo-on-fhir-2.1.0.zip",
+    "status": "VERIFIED_LOCAL_INTEGRITY",
+    "synthetic": false,
+    "total_bytes": 51859726
+  },
+  "verified_at_utc": "2026-08-11T19:47:23.166658+00:00"
+}

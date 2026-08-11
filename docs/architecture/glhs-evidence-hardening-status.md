@@ -11,7 +11,7 @@ mean clinical validity. External evidence remains fail-closed.
 | Common longitudinal evidence interface | IN_PROGRESS | Noncanonical common record plus FHIR-NDJSON ZIP adapter | Provenance/time/missingness adapter test | Local gitignored normalized output | OMOP, tabular, MEPS, eICU and nested SyntheticMass adapters pending |
 | SyntheticMass FHIR v1 local source | IN_PROGRESS | Registered local candidate, 30,878,003,109 bytes | Presence inspection only | Root operator archive, untracked | Full hash/archive verification and normalization pending |
 | Synthea FHIR STU3 May 2017 local source | IN_PROGRESS | Registered local candidate, 22,339,056,743 bytes | Presence inspection only | Root operator archive, untracked | Full hash/archive verification and normalization pending |
-| MIMIC-IV Demo FHIR adapter execution | PARTIAL | Streaming ZIP/NDJSON/GZIP adapter emitted 927,109 records for 100 subjects without estimated time | Local integrity plus five data-tool/adapter tests | Gitignored normalized output; source SHA-256 `372997394c1f94fe7a8a1d7a064b5dc75e3e5db6d29a6283515d6f330f206542` | Canonical checksum provenance, clean-SHA frozen metadata and source-derived evaluation rerun pending; non-headline demo only |
+| MIMIC-IV Demo FHIR adapter execution | PARTIAL | Streaming ZIP/NDJSON/GZIP adapter emitted 927,109 records for 100 subjects without estimated time | Local integrity, frozen-manifest verifier and six data-tool/adapter tests | Tracked clean-SHA manifest; gitignored normalized output; source SHA-256 `372997394c1f94fe7a8a1d7a064b5dc75e3e5db6d29a6283515d6f330f206542` | Provider-supplied canonical checksum and source-derived evaluation rerun pending; non-headline demo only |
 | Synthea OMOP 2.8M source | NOT_RUN | Fail-closed registry entry | `NOT_AVAILABLE` path tested | None | Canonical distribution and local archive unresolved |
 | Tracked primary master specification | COMPLETE | Exact-content tracked copy at the declared primary path | Byte/hash comparison plus docs check | `docs/architecture/glhs-evidence-hardening-master-spec.md` | None |
 | Active naming is target agnostic | PARTIAL | Legacy evaluators archived; active naming guard exists | `evaluation/property_assurance/test_naming_migration.py` | Historical archives | Existing active structural documentation still contains legacy protocol IDs; guard expansion pending |
@@ -83,3 +83,8 @@ mean clinical validity. External evidence remains fail-closed.
   were true stale. The saved artifact's checksum inventory SHA-256 is
   `a98c8c8b256b12b62d82bdd2ab73e24de4ccd7765444ce4daedcbc11de5f5f94`.
 - Provider/model calls: zero for this hardening checkpoint.
+- MIMIC-IV Demo FHIR local-integrity metadata was frozen from clean source SHA
+  `1e74492f131779bcbc1af6304c3dcac036417912`; manifest payload SHA-256 is
+  `e5257d01f07024cfc965f0f263484c49fac2c5728539de3d030db8b0eadec738`.
+  The verifier rehashed the current source inventory and confirmed the source
+  commit exists. Canonical checksum status remains explicitly `NOT_PROVIDED`.

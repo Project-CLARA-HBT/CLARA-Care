@@ -97,6 +97,13 @@ with 0 estimated timestamps. All 927,109 records lack `meta.lastUpdated`, so
 knowledge time remains explicitly unknown. This is adapter execution on an
 open real-data demo, not an independent oracle or clinical validation.
 
+Its local-integrity manifest was subsequently frozen from clean source SHA
+`1e74492f131779bcbc1af6304c3dcac036417912` and verified against its self-hash,
+registry hash, extant Git commit, and current source inventory. The provider did
+not supply a pinned checksum through this workflow, so canonical authenticity
+remains unproven and the manifest says `NOT_PROVIDED` rather than upgrading the
+claim.
+
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
 content copy apart from the final newline. The operator-provided root copy

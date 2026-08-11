@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import zipfile
 from pathlib import Path
@@ -9,11 +10,12 @@ import pytest
 import yaml
 
 from scripts.data import _registry
-from scripts.data._registry import DatasetRegistryError, load_registry
+from scripts.data._registry import DatasetRegistryError, canonical_json, load_registry
 from scripts.data.inspect import inspect_dataset
 from scripts.data.list_sources import inventory
 from scripts.data.normalize import normalize_dataset
 from scripts.data.verify import verify_dataset
+from scripts.data.verify_manifest import verify_frozen_manifest
 
 
 def _entry(**overrides: object) -> dict[str, object]:
@@ -172,3 +174,43 @@ def test_fhir_normalization_preserves_source_times_and_missing_knowledge(
     )
     assert manifest["metrics"]["subject_count"] == 1
     assert manifest["estimated_times_created"] == 0
+
+
+def test_frozen_manifest_verifier_accepts_exact_source_and_rejects_tamper(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    monkeypatch.setattr("scripts.data.verify_manifest.repository_root", lambda: tmp_path)
+    archive_path = tmp_path / "fixture.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("record.json", json.dumps({"subject": "synthetic"}))
+    registry_path = _registry_file(tmp_path, _entry())
+    verification = verify_dataset("fixture_data", registry_path)
+    payload = {
+        "schema_version": "clara-dataset-freeze.v1",
+        "status": "FROZEN_LOCAL_INTEGRITY_METADATA",
+        "dataset_id": "fixture_data",
+        "canonical_source": "https://example.invalid/data",
+        "registry_sha256": hashlib.sha256(registry_path.read_bytes()).hexdigest(),
+        "source_git_sha": "a" * 40,
+        "verification": verification,
+    }
+    payload["manifest_payload_sha256"] = hashlib.sha256(
+        canonical_json(payload).encode()
+    ).hexdigest()
+    manifest_path = tmp_path / "datasets" / "manifests" / "fixture_data.json"
+    manifest_path.parent.mkdir(parents=True)
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    report = verify_frozen_manifest(
+        "fixture_data", manifest_path=manifest_path, registry_path=registry_path
+    )
+    assert report["status"] == "VERIFIED_FROZEN_LOCAL_INTEGRITY_MANIFEST"
+    assert report["source_git_commit_status"] == "NOT_CHECKED_NO_GIT_METADATA"
+
+    payload["verification"]["total_bytes"] = 1
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(DatasetRegistryError, match="MANIFEST_PAYLOAD_HASH_MISMATCH"):
+        verify_frozen_manifest(
+            "fixture_data", manifest_path=manifest_path, registry_path=registry_path
+        )
