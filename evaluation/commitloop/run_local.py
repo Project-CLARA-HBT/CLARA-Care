@@ -27,6 +27,7 @@ from evaluation.commitloop.perturbations import (
 )
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
+    REPORTED_MODEL_ID_BY_REQUESTED,
     REVIEWER_MODEL,
     EvaluationClient,
     ProviderError,
@@ -626,7 +627,8 @@ def run_local_e2e(
         output_dir / "model_manifest.json",
         {
             "requested_models": sorted(clients),
-            "reported_model_must_equal_requested": True,
+            "reported_model_policy": "must_match_declared_mapping",
+            "reported_model_mapping": REPORTED_MODEL_ID_BY_REQUESTED,
             "fallback": False,
             "temperature": 0,
             "execution_mode": execution_mode,

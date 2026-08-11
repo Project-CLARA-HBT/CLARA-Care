@@ -13,10 +13,37 @@ from typing import Any, Protocol
 GENERATOR_MODEL = "antigravity/gemini-3.6-flash-high"
 REVIEWER_MODEL = "antigravity/claude-sonnet-4-6"
 ALLOWED_MODELS = frozenset({GENERATOR_MODEL, REVIEWER_MODEL})
+REPORTED_MODEL_ID_BY_REQUESTED = {
+    GENERATOR_MODEL: "gemini-3.6-flash-high",
+    REVIEWER_MODEL: "claude-sonnet-4-6",
+}
 
 
 class ProviderError(RuntimeError):
     pass
+
+
+def expected_reported_model_id(requested_model_id: str) -> str:
+    """Return the only provider-reported ID accepted for a requested model.
+
+    The evaluation router's post-freeze diagnostic established these namespace-
+    stripped IDs.  Keeping the mapping closed and versioned prevents an
+    arbitrary fallback model from being accepted as a harmless alias.
+    """
+
+    try:
+        return REPORTED_MODEL_ID_BY_REQUESTED[requested_model_id]
+    except KeyError as exc:
+        raise ProviderError("undeclared_model") from exc
+
+
+def reported_model_matches_requested(
+    requested_model_id: str, reported_model_id: object
+) -> bool:
+    return (
+        requested_model_id in ALLOWED_MODELS
+        and reported_model_id == REPORTED_MODEL_ID_BY_REQUESTED[requested_model_id]
+    )
 
 
 class Transport(Protocol):
@@ -177,7 +204,9 @@ class EvaluationClient:
             raise ProviderError("provider_transport_exhausted")
         latency_ms = (time.perf_counter() - started) * 1000.0
         reported = response.get("model")
-        if reported != model:
+        if not isinstance(reported, str) or not reported_model_matches_requested(
+            model, reported
+        ):
             raise ProviderError("model_substitution_detected")
         choices = response.get("choices")
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):

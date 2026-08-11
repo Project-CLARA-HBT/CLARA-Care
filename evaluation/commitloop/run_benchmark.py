@@ -14,6 +14,7 @@ from typing import Any
 from evaluation.commitloop.http_transport import UrllibJsonTransport
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
+    REPORTED_MODEL_ID_BY_REQUESTED,
     REVIEWER_MODEL,
     EvaluationClient,
     RunLimits,
@@ -50,7 +51,9 @@ def _validate_probe(path: Path, *, freeze_sha: str) -> str:
     if set(payload.get("requested_models") or []) != _EXACT_MODELS:
         raise ValueError("phase_b_probe_models_invalid")
     if (
-        payload.get("exact_model_policy") != "reported_must_equal_requested"
+        payload.get("exact_model_policy")
+        != "reported_must_match_declared_mapping"
+        or payload.get("reported_model_mapping") != REPORTED_MODEL_ID_BY_REQUESTED
         or payload.get("fallback_allowed") is not False
     ):
         raise ValueError("phase_b_probe_model_policy_invalid")
@@ -64,7 +67,8 @@ def _validate_probe(path: Path, *, freeze_sha: str) -> str:
         requested = item.get("requested_model_id")
         if (
             requested not in _EXACT_MODELS
-            or item.get("reported_model_id") != requested
+            or item.get("reported_model_id")
+            != REPORTED_MODEL_ID_BY_REQUESTED[requested]
             or item.get("json_contract_supported") is not True
             or item.get("stream_requested") is not False
             or item.get("streaming_behavior") != "non_streaming_response"

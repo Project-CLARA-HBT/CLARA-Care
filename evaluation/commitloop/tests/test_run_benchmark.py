@@ -10,6 +10,7 @@ from evaluation.commitloop import run_benchmark
 from evaluation.commitloop.fixtures import DeterministicFakeTransport, synthetic_bundle
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
+    REPORTED_MODEL_ID_BY_REQUESTED,
     REVIEWER_MODEL,
     EvaluationClient,
     RunLimits,
@@ -36,7 +37,7 @@ def _probe(path, freeze_sha: str) -> None:
         results.append(
             {
                 "requested_model_id": model,
-                "reported_model_id": model,
+                "reported_model_id": REPORTED_MODEL_ID_BY_REQUESTED[model],
                 "json_contract_supported": True,
                 "stream_requested": False,
                 "streaming_behavior": "non_streaming_response",
@@ -49,7 +50,8 @@ def _probe(path, freeze_sha: str) -> None:
                 "schema_version": "commitloop-provider-probe.v2",
                 "phase_a_freeze_sha": freeze_sha,
                 "requested_models": sorted([GENERATOR_MODEL, REVIEWER_MODEL]),
-                "exact_model_policy": "reported_must_equal_requested",
+                "exact_model_policy": "reported_must_match_declared_mapping",
+                "reported_model_mapping": REPORTED_MODEL_ID_BY_REQUESTED,
                 "fallback_allowed": False,
                 "results": results,
             }

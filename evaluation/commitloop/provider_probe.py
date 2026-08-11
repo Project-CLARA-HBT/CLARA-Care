@@ -13,6 +13,7 @@ from evaluation.commitloop.freeze import verify_live_repository_matches_freeze
 from evaluation.commitloop.http_transport import UrllibJsonTransport
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
+    REPORTED_MODEL_ID_BY_REQUESTED,
     REVIEWER_MODEL,
     EvaluationClient,
     RunLimits,
@@ -38,6 +39,7 @@ def _freeze(path: Path, *, repository_root: Path) -> dict[str, Any]:
     if (
         payload.get("phase_a_status") != "COMPLETE"
         or payload.get("router_calls_before_freeze") != 0
+        or payload.get("router_calls_before_initial_freeze", 0) != 0
         or not isinstance(payload.get("git_sha"), str)
         or not payload["git_sha"]
     ):
@@ -101,7 +103,8 @@ def run_probe(
         "schema_version": "commitloop-provider-probe.v2",
         "phase_a_freeze_sha": freeze["git_sha"],
         "requested_models": sorted(clients),
-        "exact_model_policy": "reported_must_equal_requested",
+        "exact_model_policy": "reported_must_match_declared_mapping",
+        "reported_model_mapping": REPORTED_MODEL_ID_BY_REQUESTED,
         "fallback_allowed": False,
         "request_parameters": {
             "temperature": 0,

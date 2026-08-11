@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from evaluation.commitloop.provider import expected_reported_model_id
+
 
 def synthetic_bundle(patient_id: str, suffix: str) -> dict[str, Any]:
     return {
@@ -91,7 +93,7 @@ class DeterministicFakeTransport:
                 "escalation_state": "NO_ESCALATION",
             }
         return {
-            "model": payload["model"],
+            "model": expected_reported_model_id(payload["model"]),
             "choices": [
                 {
                     "message": {

@@ -106,6 +106,39 @@ def test_freeze_seals_complete_local_evidence_when_git_boundary_is_clean(
     validate_run(run_dir)
 
 
+def test_replacement_freeze_retains_initial_zero_call_proof_and_phase_b_calls(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run_dir = tmp_path / "run"
+    _local_fixture(run_dir, max_requests=500)
+
+    def fake_git(_: Path, *args: str) -> str:
+        return "" if args == ("status", "--porcelain") else "phase-a-test-sha"
+
+    monkeypatch.setattr(freeze, "_git", fake_git)
+    monkeypatch.setattr(freeze, "scan_paths", lambda _: [])
+    evidence = _evidence()
+    evidence.update(
+        {
+            "phase_b_calls_before_replacement_freeze": 3,
+            "supersedes_freeze_sha": "a" * 40,
+            "supersession_reason": "declared reported-model mapping required",
+        }
+    )
+    output = create_implementation_freeze(
+        run_dir=run_dir,
+        repository_root=Path.cwd(),
+        validation_evidence=evidence,
+    )
+    payload = json.loads(output.read_text())
+    assert payload["schema_version"] == "commitloop-implementation-freeze.v2"
+    assert payload["router_calls_before_initial_freeze"] == 0
+    assert payload["router_calls_before_freeze"] == 0
+    assert payload["phase_b_calls_before_replacement_freeze"] == 3
+    assert payload["supersedes_freeze_sha"] == "a" * 40
+    validate_run(run_dir)
+
+
 def test_freeze_fails_on_any_tracked_repository_secret_finding(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

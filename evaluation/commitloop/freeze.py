@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -26,6 +27,9 @@ FREEZE_INPUTS = (
     "services/api/src/clara_api/glhs/predicate_dsl.py",
     "services/api/src/clara_api/glhs/reconciliation.py",
     "evaluation/commitloop/schemas/prediction.schema.json",
+    "evaluation/commitloop/provider.py",
+    "evaluation/commitloop/provider_probe.py",
+    "evaluation/commitloop/run_benchmark.py",
     "evaluation/commitloop/prompts/solver_system.txt",
     "evaluation/commitloop/prompts/generation_candidate_system.txt",
     "evaluation/commitloop/prompts/generation_predicate_system.txt",
@@ -138,6 +142,28 @@ def create_implementation_freeze(
         raise FreezeError("implementation_freeze_requires_clean_worktree")
     if validation_evidence.get("router_calls_before_freeze") != 0:
         raise FreezeError("pre_freeze_router_calls_detected")
+    replacement_calls = validation_evidence.get(
+        "phase_b_calls_before_replacement_freeze", 0
+    )
+    supersedes_freeze_sha = validation_evidence.get("supersedes_freeze_sha")
+    supersession_reason = validation_evidence.get("supersession_reason")
+    if (
+        not isinstance(replacement_calls, int)
+        or isinstance(replacement_calls, bool)
+        or replacement_calls < 0
+    ):
+        raise FreezeError("replacement_phase_b_call_count_invalid")
+    if replacement_calls and (
+        not isinstance(supersedes_freeze_sha, str)
+        or not re.fullmatch(r"[0-9a-f]{40}", supersedes_freeze_sha)
+        or not isinstance(supersession_reason, str)
+        or not supersession_reason.strip()
+    ):
+        raise FreezeError("replacement_freeze_provenance_required")
+    if not replacement_calls and (
+        supersedes_freeze_sha is not None or supersession_reason is not None
+    ):
+        raise FreezeError("replacement_freeze_provenance_unexpected")
     git_sha = _git(root, "rev-parse", "HEAD")
     _validate_local_evidence(validation_evidence, expected_git_sha=git_sha)
     serialized_evidence = json.dumps(validation_evidence, sort_keys=True).encode(
@@ -155,9 +181,20 @@ def create_implementation_freeze(
     if findings:
         raise FreezeError("tracked_repository_secret_scan_failed")
     payload = {
-        "schema_version": "commitloop-implementation-freeze.v1",
+        "schema_version": (
+            "commitloop-implementation-freeze.v2"
+            if replacement_calls
+            else "commitloop-implementation-freeze.v1"
+        ),
         "phase_a_status": "COMPLETE",
+        # This legacy field is the immutable zero-call proof at the initial
+        # Phase-A boundary. Replacement freezes separately retain every
+        # post-freeze diagnostic call below instead of resetting history.
         "router_calls_before_freeze": 0,
+        "router_calls_before_initial_freeze": 0,
+        "phase_b_calls_before_replacement_freeze": replacement_calls,
+        "supersedes_freeze_sha": supersedes_freeze_sha,
+        "supersession_reason": supersession_reason,
         "git_sha": git_sha,
         "migration_head": "20260810_0054",
         "input_sha256": {name: _sha256(root / name) for name in FREEZE_INPUTS},

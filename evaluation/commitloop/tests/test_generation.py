@@ -10,7 +10,11 @@ from evaluation.commitloop.fhir_ingest import ingest_bundle
 from evaluation.commitloop.fixtures import synthetic_bundle
 from evaluation.commitloop.generation import construct_with_model_review
 from evaluation.commitloop.note_generation import render_anchor_note
-from evaluation.commitloop.provider import EvaluationClient, RunLimits
+from evaluation.commitloop.provider import (
+    REPORTED_MODEL_ID_BY_REQUESTED,
+    EvaluationClient,
+    RunLimits,
+)
 
 
 class GenerationFakeTransport:
@@ -53,7 +57,7 @@ class GenerationFakeTransport:
                 "issues": [],
             }
         return {
-            "model": payload["model"],
+            "model": REPORTED_MODEL_ID_BY_REQUESTED[payload["model"]],
             "choices": [{"message": {"content": json.dumps(content)}}],
             "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
         }
@@ -92,7 +96,8 @@ def test_typed_generation_is_source_bound_reviewed_and_gold_free() -> None:
     assert len(result["stages"]) == len(transport.calls) == 5
     assert "gold" not in json.dumps(result).lower()
     assert all(
-        item["requested_model_id"] == item["reported_model_id"]
+        item["reported_model_id"]
+        == REPORTED_MODEL_ID_BY_REQUESTED[item["requested_model_id"]]
         for item in result["stages"]
     )
 

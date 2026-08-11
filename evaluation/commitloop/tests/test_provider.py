@@ -9,18 +9,19 @@ from evaluation.commitloop.provider import (
     EvaluationClient,
     ProviderError,
     RunLimits,
+    expected_reported_model_id,
 )
 
 
 class FakeTransport:
-    def __init__(self, *, reported_model: str = GENERATOR_MODEL) -> None:
+    def __init__(self, *, reported_model: str | None = None) -> None:
         self.reported_model = reported_model
         self.calls: list[tuple] = []
 
     def __call__(self, path, headers, payload, timeout):
         self.calls.append((path, headers, payload, timeout))
         return {
-            "model": self.reported_model,
+            "model": self.reported_model or expected_reported_model_id(payload["model"]),
             "choices": [{"message": {"content": json.dumps({"ok": True})}}],
             "usage": {"prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13},
         }
@@ -51,7 +52,8 @@ def test_fake_transport_exact_model_and_secret_free_result() -> None:
         model=GENERATOR_MODEL,
         messages=[{"role": "user", "content": "synthetic probe"}],
     )
-    assert result.requested_model_id == result.reported_model_id == GENERATOR_MODEL
+    assert result.requested_model_id == GENERATOR_MODEL
+    assert result.reported_model_id == expected_reported_model_id(GENERATOR_MODEL)
     assert result.usage["total_tokens"] == 13
     assert result.attempts == 1
     assert "fixture-secret" not in repr(result)
@@ -69,6 +71,19 @@ def test_substitution_and_undeclared_models_fail_closed() -> None:
         client.complete(model=GENERATOR_MODEL, messages=[{"role": "user", "content": "fixture"}])
     with pytest.raises(ProviderError, match="undeclared_model"):
         client.complete(model="other/model", messages=[{"role": "user", "content": "fixture"}])
+
+
+def test_requested_id_echo_is_not_accepted_as_the_declared_router_mapping() -> None:
+    client = EvaluationClient(
+        base_url="https://router.invalid/v1",
+        api_key="fixture-secret-not-real",
+        transport=FakeTransport(reported_model=GENERATOR_MODEL),
+    )
+    with pytest.raises(ProviderError, match="model_substitution_detected"):
+        client.complete(
+            model=GENERATOR_MODEL,
+            messages=[{"role": "user", "content": "fixture"}],
+        )
 
 
 def test_request_shape_and_decoding_budget_fail_closed() -> None:

@@ -7,7 +7,12 @@ import json
 import re
 from pathlib import Path
 
-from evaluation.commitloop.provider import GENERATOR_MODEL, REVIEWER_MODEL
+from evaluation.commitloop.provider import (
+    GENERATOR_MODEL,
+    REPORTED_MODEL_ID_BY_REQUESTED,
+    REVIEWER_MODEL,
+    reported_model_matches_requested,
+)
 from evaluation.commitloop.run_local import (
     _PREDICTION_SCHEMA_SHA256,
     _SOLVER_PROMPT_SHA256,
@@ -123,7 +128,9 @@ def validate_run(root: Path) -> None:
         for stage in item["stages"]:
             if not isinstance(stage, dict):
                 raise TypeError("invalid_generation_stage")
-            if stage.get("requested_model_id") != stage.get("reported_model_id"):
+            if not reported_model_matches_requested(
+                str(stage.get("requested_model_id")), stage.get("reported_model_id")
+            ):
                 raise ValueError("model_substitution_detected")
             if stage.get("requested_model_id") not in expected_models:
                 raise ValueError("unexpected_model_id")
@@ -143,6 +150,18 @@ def validate_run(root: Path) -> None:
         raise ValueError("run_conditions_mismatch")
     if manifest.get("models") != expected_models:
         raise ValueError("run_models_mismatch")
+    model_manifest = json.loads(
+        (root / "model_manifest.json").read_text(encoding="utf-8")
+    )
+    if (
+        not isinstance(model_manifest, dict)
+        or model_manifest.get("reported_model_policy")
+        != "must_match_declared_mapping"
+        or model_manifest.get("reported_model_mapping")
+        != REPORTED_MODEL_ID_BY_REQUESTED
+        or model_manifest.get("fallback") is not False
+    ):
+        raise ValueError("model_manifest_mapping_invalid")
     execution_mode = manifest.get("execution_mode", "phase_a_fake")
     if execution_mode not in {"phase_a_fake", "phase_b_router"}:
         raise ValueError("invalid_execution_mode")
@@ -236,7 +255,9 @@ def validate_run(root: Path) -> None:
             raise ValueError("boundary_metrics_denominator_mismatch")
     for output in outputs:
         _validate_solver_prediction(output.get("prediction"))
-        if output.get("requested_model_id") != output.get("reported_model_id"):
+        if not reported_model_matches_requested(
+            str(output.get("requested_model_id")), output.get("reported_model_id")
+        ):
             raise ValueError("model_substitution_detected")
         if output.get("requested_model_id") not in expected_models:
             raise ValueError("unexpected_model_id")

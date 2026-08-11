@@ -9,6 +9,7 @@ import pytest
 from evaluation.commitloop.fixtures import DeterministicFakeTransport
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
+    REPORTED_MODEL_ID_BY_REQUESTED,
     REVIEWER_MODEL,
     EvaluationClient,
     RunLimits,
@@ -25,7 +26,7 @@ class ExactModelFakeTransport:
     def __call__(self, path, headers, payload, timeout):
         self.calls.append(payload)
         return {
-            "model": payload["model"],
+            "model": REPORTED_MODEL_ID_BY_REQUESTED[payload["model"]],
             "choices": [
                 {
                     "message": {

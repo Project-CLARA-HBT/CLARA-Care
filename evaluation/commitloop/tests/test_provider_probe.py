@@ -9,6 +9,7 @@ from evaluation.commitloop.cli import _local_fixture
 from evaluation.commitloop.freeze import FreezeError
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
+    REPORTED_MODEL_ID_BY_REQUESTED,
     REVIEWER_MODEL,
     EvaluationClient,
     RunLimits,
@@ -20,7 +21,7 @@ class ProbeTransport:
     def __call__(self, path, headers, payload, timeout):
         del path, headers, timeout
         return {
-            "model": payload["model"],
+            "model": REPORTED_MODEL_ID_BY_REQUESTED[payload["model"]],
             "choices": [{"message": {"content": json.dumps({"status": "ok"})}}],
             "usage": {"total_tokens": 3},
         }
@@ -63,11 +64,13 @@ def test_probe_requires_sealed_phase_a_freeze_and_records_exact_models(
     assert validated == [phase_a]
     assert result["requested_models"] == sorted([GENERATOR_MODEL, REVIEWER_MODEL])
     assert all(
-        item["requested_model_id"] == item["reported_model_id"]
+        item["reported_model_id"]
+        == REPORTED_MODEL_ID_BY_REQUESTED[item["requested_model_id"]]
         for item in result["results"]
     )
     assert result["schema_version"] == "commitloop-provider-probe.v2"
     assert result["fallback_allowed"] is False
+    assert result["reported_model_mapping"] == REPORTED_MODEL_ID_BY_REQUESTED
     assert all(item["json_contract_supported"] is True for item in result["results"])
     assert all(item["stream_requested"] is False for item in result["results"])
     assert all(len(item["base_url_sha256"]) == 64 for item in result["results"])
