@@ -8,8 +8,11 @@ import subprocess
 from pathlib import Path
 
 PATTERNS = (
-    re.compile(rb"sk-[A-Za-z0-9_-]{20,}"),
-    re.compile(rb"(?:ROUTER|OPENAI|ANTHROPIC)_API_KEY[ \t]*=[ \t]*[^\s#\\\"']+"),
+    re.compile(rb"(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{20,}"),
+    re.compile(
+        rb"(?:ROUTER|OPENAI|ANTHROPIC)_API_KEY[ \t]*=[ \t]*"
+        rb"(?!\[REDACTED\](?=$|[\s#\\\"']))[^\s#\\\"']+"
+    ),
     re.compile(rb"Authorization\s*:\s*Bearer\s+[A-Za-z0-9_.-]{12,}", re.IGNORECASE),
 )
 

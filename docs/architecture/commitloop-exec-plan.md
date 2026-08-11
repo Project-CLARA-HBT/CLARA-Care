@@ -22,7 +22,7 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | B. Commitment domain + DSL | complete | Migration `20260810_0054`, four frozen domain policies, closed/bounded predicate evaluator, GST-coupled proposal/write gateway, bitemporal reconstruction/reconciliation, commitment THSS, and consent/profile-scoped human API routes are implemented. Focused policy/gateway/migration and DSL/reconciliation suites pass, including the full migration-chain upgrade → downgrade → upgrade round trip. |
 | C. Offline evaluator | complete | Explicit STU3/R4 ingestion (including STU3 `ProcedureRequest` without provenance relabeling), source-grounded construction, deterministic oracle, leakage-checked distinct packets, exact-model injected client with bounded valid request shape/decoding budget and no fallback, candidate-slot precision/recall/F1 and temporal-window scoring, product-state scoring, subject-clustered paired statistics, manifests, checkpoints, per-cell outputs and SHA-256 sealing are implemented. Stable offline and freeze/probe-gated Phase-B CLIs/Make targets are present; Phase-B paths are tested only with injected transports before freeze. |
 | D. Assurance | in progress | The two-subject/two-model/nine-condition fake-provider grid now materializes two source cases plus 18 opaque adversarial variants, completes 10 typed construction/review calls plus 360 solver cells, resumes with zero calls, and passes strengthened sealed-artifact validation. Solver calls execute the frozen system prompt and prediction schema. The BTSA packet executes its independent mechanism-mapped arbitration adapter. The API boundary covers auth, active/revoked consent and append-only re-acceptance, cookie CSRF, cross-owner isolation, stale version rejection, decision reconstruction, and real THSS snapshot compilation. Full API and ML service suites exit 0; isolated deployed-boundary execution remains external. |
-| E. Phase-A freeze | pending | Guarded freeze/probe commands now require all named Phase-A gate categories and scan every tracked file for credential material before sealing. A clean committed SHA, complete broad validation evidence, and repository-wide credential remediation are still required. Router use remains prohibited before this point. |
+| E. Phase-A freeze | pending | Guarded freeze/probe commands require all named Phase-A gate categories and scan every tracked file for credential material before sealing. The authorized repository-wide remediation now passes: five assignment values in the tracked chat-history artifact are replaced by the explicit `[REDACTED]` marker, while six `risk-...` documentation paths falsely matched by the former unbounded `sk-` pattern were restored byte-for-byte. A clean committed SHA and final broad validation evidence are still required. Router use remains prohibited before this point. |
 
 ## Decisions
 
@@ -42,13 +42,14 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | 2026-08-11 | Keep Phase-B probe and benchmark outputs outside the sealed Phase-A artifact tree. | Adding a post-freeze file beneath the Phase-A run would invalidate its exact inventory. The probe records exact-model capability/base-URL hashes, and the benchmark binds its manifest to both the freeze SHA and probe SHA-256 before any provider request. |
 | 2026-08-11 | Materialize adversarial edits against fulfillment evidence, not the anchor request. | Cancellation, supersession, conflict, partial completion, late ingestion, duplication, missing prerequisites, fuzzy time, and post-cutoff evidence now create opaque solver cases and separate deterministic gold. Variant labels are joined only after inference; a valid-time-only ablation cannot expose evidence unknown at cutoff. |
 | 2026-08-11 | Make escalation a frozen solver output instead of an unmeasured placeholder. | Prediction schema/prompt v2 and the deterministic oracle now require `ESCALATE` for conflicting or insufficient evidence, or an unresolved overdue commitment. Scoring and artifact validation enforce explicit overall and adversarial denominators. |
+| 2026-08-11 | Treat `[REDACTED]` as the only accepted nonblank key placeholder and require a token boundary for `sk-` detection. | This preserves fail-closed credential scanning without corrupting ordinary `risk-...` paths; a marker with appended material remains a finding. The authorized history remediation changes only five assignment values. |
 
 ## Validation evidence
 
 | Command | Result |
 | --- | --- |
 | Consolidated focused GLHS/CommitLoop/comparator suite | 102 passed (including migration round trip, API contract/integration, consent revocation/CSRF/stale-write/THSS boundaries, STU3 construction, Hypothesis predicate properties, sealed-freeze/probe gates, adversarial/temporal-boundary scoring, naming, and executable BTSA adapter fidelity); three pre-existing Starlette/FastAPI deprecation warnings only |
-| `pytest evaluation/commitloop/tests -q` | 50 passed, including materialized opaque adversarial cases, crash-safe resume/error-ledger recovery, FHIR knowledge-time normalization, strict THSS packet scoping, escalation and two-snapshot temporal-boundary metrics, frozen solver prompt/schema execution, freeze-gated Phase-B benchmark, exact probe capability metadata, seal-directory isolation, and zero-call rejection paths |
+| `pytest evaluation/commitloop/tests -q` | 52 passed, including materialized opaque adversarial cases, crash-safe resume/error-ledger recovery, FHIR knowledge-time normalization, strict THSS packet scoping, escalation and two-snapshot temporal-boundary metrics, frozen solver prompt/schema execution, freeze-gated Phase-B benchmark, exact probe capability metadata, seal-directory isolation, zero-call rejection paths, exact redaction-marker handling, and embedded `risk-...` false-positive prevention |
 | CommitLoop freeze-surface Ruff | All checks passed for evaluator, migration, API/GLHS commitment modules, endpoint tests, property tests, and naming tests |
 | CommitLoop freeze-surface mypy | Success: no issues found in 39 source files |
 | `python -m evaluation.commitloop.cli local-fixture --output artifacts/commitloop/local-phase-a-v7 --max-requests 500` followed by the same command | First run 370 injected calls (10 construction/review + 360 solver); resumed run 0 calls; two subjects, two source cases, 18 opaque variants; both complete; explicit `execution_mode=phase_a_fake` |
@@ -63,6 +64,7 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | Updated local construction metrics | Candidate-slot F1 `1.0` (8/8 slots) and temporal-window accuracy `1.0` (2/2) on the deterministic fixture; synthetic software evidence only |
 | Fake-solver variant metrics | Lifecycle accuracy `108/360 = 0.30`, evidence accuracy `324/360 = 0.90`, timeliness accuracy `360/360 = 1.00`, escalation accuracy `180/360 = 0.50`, and all-axes exact `72/360 = 0.20`. Adversarial-only escalation is `144/324 = 0.4444`; known-time and valid-time two-snapshot boundary pairs are each `0/36`, combined transition-pair accuracy `0/72`. These intentionally negative fake-transport results prove denominators/variant gold paths only; they are not model-quality evidence. Longer longitudinal replay remains `NOT_MEASURED`. |
 | `make eval-commitloop-secret-scan` | Passed for CommitLoop/GLHS implementation scope |
+| Full tracked-repository secret scan | Passed after the authorized five-value history redaction and scanner boundary regression tests; no untracked user archive is modified or included in the freeze |
 | `pytest evaluation/property_assurance/test_naming_migration.py -q` | 2 passed; canonical naming/compatibility aliases remain regression-locked |
 | Protocol/property/API-contract tests plus `make docs-check` | Property+naming rerun 4 passed; documentation links valid |
 | `git diff --check` | Passed; no whitespace-error findings |
@@ -72,14 +74,9 @@ Router calls before freeze remain exactly zero.
 
 ## Current blockers
 
-- The worktree is intentionally not clean because it contains user-owned and
-  preceding GLHS-program changes; no implementation freeze can truthfully be
-  created yet.
-- The full tracked-repository secret scan currently reports seven pre-existing
-  credential-bearing files and 17 matched spans in historical/design material
-  outside CommitLoop, including a tracked chat-history artifact. The scoped gate passes, but
-  repository-wide remediation needs an explicit preservation/redaction decision
-  before a clean release freeze.
+- The primary worktree contains unrelated untracked, user-owned archives. They
+  remain untouched and will not be staged; the final validation and freeze must
+  run from a clean detached worktree at the committed implementation SHA.
 - Real-application adversarial execution, real EHR, and clinical adjudication
   remain `BLOCKED_EXTERNAL / NOT_RUN` and must not be substituted with synthetic
   success claims.

@@ -15,8 +15,26 @@ def test_secret_scan_detects_actual_key_and_authorization_material(tmp_path) -> 
 
 def test_secret_scan_permits_blank_placeholders_and_nonsecret_identifiers(tmp_path) -> None:
     placeholder = tmp_path / "placeholder.env"
-    placeholder.write_text("ROUTER_API_KEY=\nmodel=antigravity/gemini-3.6-flash-high\n")
+    placeholder.write_text(
+        "ROUTER_API_KEY=\n"
+        "model=antigravity/gemini-3.6-flash-high\n"
+        "path=research/risk-deep-dive-and-mitigation.md\n"
+    )
     assert scan_paths([placeholder]) == []
+
+
+def test_secret_scan_permits_explicit_redaction_marker(tmp_path) -> None:
+    placeholder = tmp_path / "redacted.md"
+    placeholder.write_text(
+        "ROUTER_API_KEY=[REDACTED]\nOPENAI_API_KEY = [REDACTED]\n"
+    )
+    assert scan_paths([placeholder]) == []
+
+
+def test_secret_scan_rejects_redaction_marker_with_appended_material(tmp_path) -> None:
+    malformed = tmp_path / "malformed.env"
+    malformed.write_text("ROUTER_API_KEY=" + "[REDACTED]" + "unexpected\n")
+    assert scan_paths([malformed]) == [str(malformed)]
 
 
 def test_explicit_scan_paths_stay_within_repository(tmp_path) -> None:
