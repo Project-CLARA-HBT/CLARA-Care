@@ -47,6 +47,8 @@ python scripts/data/fetch.py --dataset <id> --accept-license --resume
 python scripts/data/normalize.py --dataset <id>
 python scripts/data/freeze_manifest.py --dataset <id>
 python scripts/data/verify_manifest.py --dataset <id>
+python scripts/data/freeze_normalization_manifest.py --dataset <id>
+python scripts/data/verify_normalization_manifest.py --dataset <id>
 ```
 
 `inspect` reports only presence and size. `verify` computes local SHA-256 and
