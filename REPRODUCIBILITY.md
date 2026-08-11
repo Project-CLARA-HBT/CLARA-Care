@@ -85,8 +85,10 @@ The local eICU Demo archive passed all 33 packaged provider SHA-256 entries.
 Its selected-table output contains 540,237 source-linked records for 1,841
 subjects and 2,520 stays; records SHA-256 is
 `68b25539c09e64aca75ce1010b51787c7ba179ad5d0fffb7f961b9e242310756`.
-This run predates the operational-metrics instrumentation and must be rerun
-before archive-performance claims are supported.
+The clean-SHA instrumented rerun was byte-identical and measured 24.764845
+seconds wall-clock, 21,814.67 records/second, peak RSS 65,016 KiB and 5.7550x
+storage amplification on this host. Source-manifest payload SHA-256 is
+`169411ad4edb49ac4d10c9ffcb51952403ef8ccd15a92602d06f3c7346e186e2`.
 
 Structural regression only:
 

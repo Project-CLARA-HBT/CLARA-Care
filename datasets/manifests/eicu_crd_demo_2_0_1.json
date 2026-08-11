@@ -1,0 +1,68 @@
+{
+  "access_class": "open",
+  "acquired_at": null,
+  "acquisition_time_status": "UNKNOWN",
+  "canonical_source": "https://physionet.org/content/eicu-crd-demo/2.0.1/",
+  "claim_limit": "local_integrity_only_not_canonical_authenticity_normalization_evaluation_or_clinical_validation",
+  "dataset_id": "eicu_crd_demo_2_0_1",
+  "dataset_registry_entry_sha256": "bec76e9dad46d497228696c4e6438d3f80ace51a5829bc484c257101bec7a72f",
+  "evidence_class": "external_real_data_structural",
+  "known_limitations": "Open demo only; full eICU is credentialed and is not authorized by this entry.",
+  "license": "ODbL-1.0 plus PhysioNet terms in LICENSE.txt",
+  "manifest_payload_sha256": "169411ad4edb49ac4d10c9ffcb51952403ef8ccd15a92602d06f3c7346e186e2",
+  "registry_sha256": "fe467933d56c6b4b2b1888186582837241dbd4bad92a7b8d5483ab5ee50c2e41",
+  "release_date": "2021-05-06",
+  "schema_version": "clara-dataset-freeze.v1",
+  "source_git_sha": "18aad3988ba70ccd2cc4b50037ed18dc21ef7765",
+  "source_path_local_only": "datasets/raw/eicu_crd_demo_2_0_1",
+  "source_schema": "relational CSV",
+  "source_version": "2.0.1",
+  "status": "FROZEN_LOCAL_INTEGRITY_METADATA",
+  "synthetic": false,
+  "tracked_worktree_clean_before_freeze": true,
+  "verification": {
+    "access_class": "open",
+    "archive": {
+      "archive_count": 1,
+      "archives": [
+        {
+          "format": "zip",
+          "member_count": 34,
+          "path": "eicu-crd-demo-2.0.1.zip",
+          "uncompressed_bytes": 136979508,
+          "unsafe_member_count": 0
+        }
+      ],
+      "format": "directory",
+      "unsafe_member_count": 0
+    },
+    "canonical_checksum_status": "VERIFIED_PROVIDER_SHA256",
+    "canonical_source": "https://physionet.org/content/eicu-crd-demo/2.0.1/",
+    "claim_limit": "provider_checksum_and_local_integrity_not_normalization_evaluation_or_clinical_validation",
+    "dataset_id": "eicu_crd_demo_2_0_1",
+    "expected_files_present": true,
+    "file_count": 1,
+    "files": [
+      {
+        "bytes": 136773541,
+        "path": "eicu-crd-demo-2.0.1.zip",
+        "sha256": "8e33a1094945d6ba07cf613b15b2fe4d98f6b3324601d026e80d445bd5b8b865"
+      }
+    ],
+    "inventory_sha256": "f934f1da2a7b3da6b64e9fc4321684ea06693992e9411087616d0aa31388401c",
+    "provider_checksum": {
+      "algorithm": "sha256",
+      "entries_sha256": "51554e1d19b6ea3b7a656912b3547078da7310d27e103872c7b527634db7143e",
+      "manifest_member": "eicu-collaborative-research-database-demo-2.0.1/SHA256SUMS.txt",
+      "manifest_sha256": "eadde92e7e73248ce1c70e99fa8499c61c7239d6e7b32d1b4cf4746814870e21",
+      "status": "VERIFIED_PROVIDER_SHA256",
+      "verified_file_count": 33
+    },
+    "schema_version": "clara-dataset-verification.v1",
+    "source_path": "datasets/raw/eicu_crd_demo_2_0_1",
+    "status": "VERIFIED_LOCAL_INTEGRITY",
+    "synthetic": false,
+    "total_bytes": 136773541
+  },
+  "verified_at_utc": "2026-08-11T20:30:58.070885+00:00"
+}

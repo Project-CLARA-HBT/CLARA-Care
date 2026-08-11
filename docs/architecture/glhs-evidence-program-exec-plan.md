@@ -129,8 +129,11 @@ finishes; no partial counts are reported as evidence.
 The transfer subsequently completed at the expected 136,773,541 bytes. The
 outer ZIP and all 33 provider SHA-256 entries passed. Full selected-table
 normalization produced 540,237 records across 1,841 subjects and 2,520 ICU
-stays, with zero estimated timestamps. A clean-SHA freeze and rerun with the new
-operational-metrics instrumentation remain pending, so this stays `PARTIAL`.
+stays, with zero estimated timestamps. The clean-SHA instrumented rerun was
+byte-identical and measured 24.764845 seconds, 21,814.67 records/second, peak
+RSS 65,016 KiB and 5.7550x storage amplification on this host. The source
+manifest is frozen; the normalized-metrics artifact and task protocol remain
+pending, so this stays `PARTIAL`.
 
 SyntheticMass v1 outer SHA-256/gzip/tar verification passed for the local
 30,878,003,109-byte archive. The source is twelve outer members containing
