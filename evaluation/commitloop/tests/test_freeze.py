@@ -37,6 +37,21 @@ def _evidence(
     }
 
 
+def test_freeze_inventory_covers_transitive_benchmark_implementation() -> None:
+    critical_inputs = {
+        "evaluation/commitloop/freeze.py",
+        "evaluation/commitloop/generation.py",
+        "evaluation/commitloop/oracle.py",
+        "evaluation/commitloop/run_local.py",
+        "evaluation/commitloop/score.py",
+        "evaluation/commitloop/solver_packets.py",
+        "evaluation/commitloop/validate.py",
+        "evaluation/comparator_studies/commitloop_baselines.py",
+        "evaluation/comparator_studies/bitemporal_state_arbitration/adapter.py",
+    }
+    assert critical_inputs <= set(freeze.FREEZE_INPUTS)
+
+
 def test_freeze_requires_a_clean_worktree_before_reading_run_artifacts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

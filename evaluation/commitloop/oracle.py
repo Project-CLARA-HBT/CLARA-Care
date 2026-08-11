@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from clara_api.glhs.commitments import policy_for
 from clara_api.glhs.predicate_dsl import evaluate_predicate
 
 from evaluation.commitloop.schema import ConstructedCase, TimelineEvent
@@ -22,6 +23,42 @@ def _event(item: TimelineEvent) -> dict[str, Any]:
         "known_at": item.known_at.isoformat(),
         "relation": item.source.get("relation"),
     }
+
+
+def grace_end_for_case(case: ConstructedCase) -> datetime | None:
+    """Resolve the same domain-default grace window used by the runtime policy."""
+
+    if case.due_time is None or case.domain is None:
+        return None
+    return case.due_time + policy_for(case.domain).default_grace
+
+
+def _first_satisfied_at(
+    predicate: dict[str, Any], events: list[dict[str, Any]]
+) -> datetime | None:
+    prefix: list[dict[str, Any]] = []
+    for event in events:
+        prefix.append(event)
+        if evaluate_predicate(predicate, prefix):
+            value = event.get("valid_at")
+            return datetime.fromisoformat(value) if isinstance(value, str) else None
+    return None
+
+
+def _timeliness(
+    case: ConstructedCase, *, cutoff: datetime, decisive_at: datetime | None
+) -> str:
+    """Mirror production reconciliation: compare completion time, else cutoff."""
+
+    if case.due_time is None:
+        return "NOT_APPLICABLE"
+    point = decisive_at or cutoff
+    if point < case.due_time:
+        return "BEFORE_DUE"
+    grace_end = grace_end_for_case(case)
+    if grace_end is not None and point <= grace_end:
+        return "IN_GRACE"
+    return "OVERDUE"
 
 
 def compile_construction_gold(
@@ -45,8 +82,11 @@ def compile_construction_gold(
         and item.valid_at <= valid_cutoff
         and item.known_at <= known_cutoff
     ]
-    normalized = [_event(item) for item in visible]
-    satisfied = evaluate_predicate(case.fulfillment_predicate, normalized)
+    normalized = sorted(
+        (_event(item) for item in visible),
+        key=lambda item: (str(item["valid_at"]), str(item["evidence_id"])),
+    )
+    fulfillment_at = _first_satisfied_at(case.fulfillment_predicate, normalized)
     conflicts = [
         item["evidence_id"] for item in normalized if item["relation"] == "contradicts"
     ]
@@ -55,31 +95,45 @@ def compile_construction_gold(
         if isinstance(case.target, dict)
         else (None, None)
     )
-    target_statuses = {
-        item.status
+    target_events = [
+        item
         for item in visible
         if target_pair in item.codes and item.resource_type == "Observation"
-    }
-    if "replaced" in target_statuses:
-        lifecycle_state = "SUPERSEDED"
-    elif "revoked" in target_statuses:
+    ]
+
+    def first_status_at(status: str) -> datetime | None:
+        values = sorted(
+            item.valid_at
+            for item in target_events
+            if item.status == status and item.valid_at is not None
+        )
+        return values[0] if values else None
+
+    cancellation_at = first_status_at("revoked")
+    supersession_at = first_status_at("replaced")
+    partial_at = first_status_at("preliminary")
+    if cancellation_at is not None:
         lifecycle_state = "CANCELLED"
-    elif "preliminary" in target_statuses:
+        decisive_at = cancellation_at
+    elif supersession_at is not None:
+        lifecycle_state = "SUPERSEDED"
+        decisive_at = supersession_at
+    elif fulfillment_at is not None:
+        lifecycle_state = "SATISFIED"
+        decisive_at = fulfillment_at
+    elif partial_at is not None:
         lifecycle_state = "PARTIALLY_SATISFIED"
+        decisive_at = partial_at
     else:
-        lifecycle_state = "SATISFIED" if satisfied else "OPEN"
+        lifecycle_state = "OPEN"
+        decisive_at = None
     if conflicts:
         evidence_state = "CONFLICTED"
     elif normalized:
         evidence_state = "CLEAR"
     else:
         evidence_state = "INSUFFICIENT_EVIDENCE"
-    if case.due_time is None:
-        timeliness = "UNKNOWN"
-    elif valid_cutoff < case.due_time:
-        timeliness = "BEFORE_DUE"
-    else:
-        timeliness = "OVERDUE"
+    timeliness = _timeliness(case, cutoff=valid_cutoff, decisive_at=decisive_at)
     escalation = (
         "ESCALATE"
         if evidence_state in {"CONFLICTED", "INSUFFICIENT_EVIDENCE"}

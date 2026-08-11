@@ -6,7 +6,10 @@ from datetime import UTC, datetime
 
 import pytest
 
-from evaluation.commitloop.fixtures import DeterministicFakeTransport
+from evaluation.commitloop.fixtures import (
+    DeterministicFakeTransport,
+    controlled_benchmark_bundles,
+)
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
     REPORTED_MODEL_ID_BY_REQUESTED,
@@ -135,7 +138,7 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
     assert all(
         call["response_format"]["type"] == "json_schema"
         and call["messages"][0]["role"] == "system"
-        and "three product-state axes plus the escalation state"
+        and "three product-state axes plus escalation"
         in call["messages"][0]["content"]
         for call in first_transport.calls
     )
@@ -195,6 +198,90 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
     (tmp_path / "report.md").write_text("tampered after sealing\n")
     with pytest.raises(ValueError, match="artifact_checksum_mismatch"):
         validate_run(tmp_path)
+
+
+def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(
+    tmp_path,
+) -> None:
+    limits = RunLimits(
+        max_subjects=8,
+        max_cases=80,
+        max_requests=900,
+        checkpoint_every=17,
+    )
+    transport = DeterministicFakeTransport()
+    clients = _clients(transport, limits)
+    cutoff = datetime(2026, 2, 1, tzinfo=UTC)
+    manifest = run_local_e2e(
+        bundles=[(bundle, "R4") for bundle in controlled_benchmark_bundles()],
+        output_dir=tmp_path,
+        clients=clients,
+        construction_clients=(clients[GENERATOR_MODEL], clients[REVIEWER_MODEL]),
+        valid_cutoff=cutoff,
+        known_cutoff=cutoff,
+        limits=limits,
+        source_cohort="controlled_r4_mechanism_cohort.v1",
+    )
+    assert manifest["source_case_count"] == 8
+    assert manifest["variant_case_count"] == 36
+    assert manifest["case_count"] == 44
+    assert manifest["request_count"] == 832
+    assert json.loads((tmp_path / "source_manifest.json").read_text())["source"] == (
+        "controlled_r4_mechanism_cohort.v1"
+    )
+    gold = [
+        json.loads(line)
+        for line in (tmp_path / "construction_gold.jsonl").read_text().splitlines()
+    ]
+    assert {item["timeliness_state"] for item in gold} >= {
+        "NOT_APPLICABLE",
+        "BEFORE_DUE",
+        "IN_GRACE",
+        "OVERDUE",
+    }
+
+    def packets(condition: str) -> list[dict]:
+        return [
+            json.loads(line)
+            for line in (tmp_path / "solver_packets" / f"{condition}.jsonl")
+            .read_text()
+            .splitlines()
+        ]
+
+    naive_depth = next(
+        item for item in packets("naive_rag") if item["target"]["code"] == "test-depth"
+    )
+    hybrid_depth = next(
+        item
+        for item in packets("glhs_hybrid")
+        if item["target"]["code"] == "test-depth"
+    )
+    strict_depth = next(
+        item
+        for item in packets("glhs_hybrid_thss_strict")
+        if item["target"]["code"] == "test-depth"
+    )
+    assert "replaced" not in {e["status"] for e in naive_depth["context"]["events"]}
+    assert "replaced" in {e["status"] for e in hybrid_depth["context"]["events"]}
+    assert "replaced" in {e["status"] for e in strict_depth["context"]["events"]}
+
+    lww_history = next(
+        item for item in packets("lww") if item["target"]["code"] == "test-history"
+    )
+    hybrid_history = next(
+        item
+        for item in packets("glhs_hybrid")
+        if item["target"]["code"] == "test-history"
+    )
+    assert {e["status"] for e in lww_history["context"]["events"]} == {
+        "active",
+        "final",
+    }
+    assert {e["status"] for e in hybrid_history["context"]["events"]} >= {
+        "revoked",
+        "final",
+    }
+    validate_run(tmp_path)
 
 
 def test_request_budget_is_total_and_resume_does_not_duplicate_errors(tmp_path) -> None:

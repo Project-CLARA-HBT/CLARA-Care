@@ -20,7 +20,7 @@ from evaluation.commitloop.generation import (
 )
 from evaluation.commitloop.leakage import validate_solver_packet
 from evaluation.commitloop.note_generation import render_anchor_note
-from evaluation.commitloop.oracle import compile_construction_gold
+from evaluation.commitloop.oracle import compile_construction_gold, grace_end_for_case
 from evaluation.commitloop.perturbations import (
     generate_adversarial_perturbations,
     materialize_timeline_perturbation,
@@ -138,19 +138,19 @@ def _expand_adversarial_cases(
             continue
         target_pair = (source_case.target["system"], source_case.target["code"])
         source_events = base_events[source_case.case_id]
-        fulfillment = next(
-            (
-                event
-                for event in source_events
-                if event.evidence_id != source_case.anchor_evidence_id
-                and target_pair in event.codes
-                and event.valid_at is not None
-                and event.status is not None
-            ),
-            None,
-        )
-        if fulfillment is None:
+        fulfillment_candidates = [
+            event
+            for event in source_events
+            if event.evidence_id != source_case.anchor_evidence_id
+            and target_pair in event.codes
+            and event.valid_at is not None
+            and event.status is not None
+        ]
+        # A one-field edit is only interpretable when exactly one fulfillment
+        # event exists. Rich multi-event histories remain unmodified base cases.
+        if len(fulfillment_candidates) != 1:
             continue
+        fulfillment = fulfillment_candidates[0]
         manifests = generate_adversarial_perturbations(
             {
                 "evidence_id": fulfillment.evidence_id,
@@ -226,6 +226,7 @@ def run_local_e2e(
     execution_mode: Literal["phase_a_fake", "phase_b_router"] = "phase_a_fake",
     phase_a_freeze_sha: str | None = None,
     provider_probe_sha256: str | None = None,
+    source_cohort: str = "injected_fhir_bundles",
 ) -> dict[str, Any]:
     if execution_mode == "phase_b_router":
         if not isinstance(phase_a_freeze_sha, str) or len(phase_a_freeze_sha) not in {
@@ -293,6 +294,7 @@ def run_local_e2e(
                 "anchor_valid_time": case.anchor_valid_time,
                 "anchor_known_time": case.anchor_known_time,
                 "due_time": case.due_time,
+                "grace_end": grace_end_for_case(case),
                 "fulfillment_predicate": case.fulfillment_predicate,
             }
         )
@@ -611,7 +613,7 @@ def run_local_e2e(
     _write_json(
         output_dir / "source_manifest.json",
         {
-            "source": "injected_fhir_bundles",
+            "source": source_cohort,
             "fhir_versions": sorted(
                 {version for _, version in bundles[: limits.max_subjects]}
             ),
@@ -640,10 +642,12 @@ def run_local_e2e(
         },
     )
     protocol_payload = {
-        "schema_version": "commitloop-protocol.v1",
+        "schema_version": "commitloop-protocol.v2",
         "conditions": list(CONDITIONS),
         "split_seed": "commitloop-v1",
         "construction_gold": "deterministic_predicate_oracle",
+        "timeliness_oracle": "decisive_event_else_cutoff_with_domain_default_grace",
+        "solver_contract": "commitloop-solver.v3",
         "clinical_adjudication": "NOT_RUN",
     }
     _write_json(

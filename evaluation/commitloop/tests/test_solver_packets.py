@@ -21,6 +21,7 @@ def test_all_conditions_build_distinct_gold_free_packets() -> None:
                     "status": "active",
                     "subject": {"reference": "Patient/p1"},
                     "authoredOn": "2026-01-01T00:00:00Z",
+                    "occurrencePeriod": {"end": "2026-01-20T00:00:00Z"},
                     "code": {"coding": [{"system": "s", "code": "c"}]},
                 }
             },
@@ -66,3 +67,9 @@ def test_all_conditions_build_distinct_gold_free_packets() -> None:
         "ServiceRequest/r1",
         "Observation/o1",
     }
+    for packet in packets.values():
+        assert packet["domain"] == "observations"
+        assert packet["action"] == "complete_service_request"
+        assert packet["due_time"] == "2026-01-20T00:00:00+00:00"
+        assert packet["grace_end"] == "2026-01-27T00:00:00+00:00"
+        assert all("relation" in event for event in packet["context"].get("events", []))

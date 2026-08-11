@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -65,12 +66,49 @@ def test_anchor_note_oracle_and_packets_remain_isolated() -> None:
         case, events, valid_cutoff=cutoff, known_cutoff=cutoff
     )
     assert gold["lifecycle_state"] == "SATISFIED"
+    assert gold["timeliness_state"] == "BEFORE_DUE"
     assert gold["clinical_adjudication"] == "NOT_RUN"
     packets = build_solver_packets(
         case, events, valid_cutoff=cutoff, known_cutoff=cutoff
     )
     for packet in packets.values():
         validate_solver_packet(packet, known_cutoff=cutoff)
+        assert packet["due_time"] == "2026-02-01T00:00:00+00:00"
+        assert packet["grace_end"] == "2026-02-08T00:00:00+00:00"
+
+
+def test_oracle_timeliness_matches_runtime_completion_and_grace_semantics() -> None:
+    _, events, source_case = _construction()
+    open_events = (events[0],)
+    cutoff = datetime(2026, 1, 20, tzinfo=UTC)
+    in_grace = replace(source_case, due_time=datetime(2026, 1, 15, tzinfo=UTC))
+    assert (
+        compile_construction_gold(
+            in_grace,
+            open_events,
+            valid_cutoff=cutoff,
+            known_cutoff=cutoff,
+        )["timeliness_state"]
+        == "IN_GRACE"
+    )
+    assert (
+        compile_construction_gold(
+            replace(in_grace, due_time=None),
+            open_events,
+            valid_cutoff=cutoff,
+            known_cutoff=cutoff,
+        )["timeliness_state"]
+        == "NOT_APPLICABLE"
+    )
+    assert (
+        compile_construction_gold(
+            in_grace,
+            open_events,
+            valid_cutoff=datetime(2026, 1, 23, tzinfo=UTC),
+            known_cutoff=datetime(2026, 1, 23, tzinfo=UTC),
+        )["timeliness_state"]
+        == "OVERDUE"
+    )
 
 
 def test_minimal_edit_is_auditable_and_subject_splits_are_stable() -> None:
@@ -185,6 +223,17 @@ def test_typed_adversarial_replay_changes_oracle_visibility_at_bitemporal_cutoff
         known_cutoff=cutoff,
     )
     assert fulfillment.evidence_id not in str(late_packets)
+    conflict_packets = build_solver_packets(
+        case,
+        (events[0], conflict),
+        valid_cutoff=cutoff,
+        known_cutoff=cutoff,
+    )
+    assert any(
+        event.get("relation") == "contradicts"
+        for packet in conflict_packets.values()
+        for event in packet["context"].get("events", [])
+    )
 
 
 def test_adversarial_variants_become_opaque_scorable_solver_cases() -> None:

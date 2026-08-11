@@ -1,7 +1,17 @@
 {
-  "schema_version": "commitloop-sap.v1",
+  "schema_version": "commitloop-sap.v2",
   "primary_unit": "subject",
-  "primary_metrics": [
+  "primary_endpoint": "all_axes_exact_match",
+  "primary_condition": "glhs_hybrid_thss_strict",
+  "primary_comparators": [
+    "full_authorized_history",
+    "long_context_chronological",
+    "naive_rag",
+    "lww",
+    "btsa"
+  ],
+  "primary_superiority_margin": 0.0,
+  "component_metrics": [
     "lifecycle_state_accuracy",
     "evidence_state_accuracy",
     "timeliness_state_accuracy",
@@ -12,7 +22,6 @@
     "candidate_slot_recall",
     "candidate_slot_f1",
     "temporal_window_exact_accuracy",
-    "all_axes_exact_match",
     "per_variant_all_axes_exact_match",
     "false_alert_rate",
     "missed_loop_rate",

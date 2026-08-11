@@ -29,18 +29,8 @@ class GenerationFakeTransport:
         source = json.loads(payload["messages"][1]["content"])
         if stage.startswith("commitloop-generation-candidate.v1"):
             content = source["anchor"]
-        elif stage.startswith("commitloop-generation-predicate.v1"):
-            content = {
-                "predicate": {
-                    "op": "event",
-                    "equals": {
-                        "resource_type": "Observation",
-                        "system": source["candidate"]["target"]["system"],
-                        "code": source["candidate"]["target"]["code"],
-                        "status": "final",
-                    },
-                }
-            }
+        elif stage.startswith("commitloop-generation-predicate.v2"):
+            content = {"predicate": source["allowed_predicate_projection"]}
         elif stage.startswith("commitloop-generation-anchor-note.v1"):
             content = {
                 "note": (
@@ -95,6 +85,8 @@ def test_typed_generation_is_source_bound_reviewed_and_gold_free() -> None:
     assert result["clinical_adjudication"] == "NOT_RUN"
     assert len(result["stages"]) == len(transport.calls) == 5
     assert "gold" not in json.dumps(result).lower()
+    predicate_payload = json.loads(transport.calls[1]["messages"][1]["content"])
+    assert predicate_payload["allowed_predicate_projection"] == case.fulfillment_predicate
     assert all(
         item["reported_model_id"]
         == REPORTED_MODEL_ID_BY_REQUESTED[item["requested_model_id"]]

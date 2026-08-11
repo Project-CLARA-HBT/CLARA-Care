@@ -7,6 +7,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Any
 
+from evaluation.commitloop.oracle import grace_end_for_case
 from evaluation.commitloop.schema import ConstructedCase, TimelineEvent
 from evaluation.comparator_studies.bitemporal_state_arbitration.adapter import (
     btsa_context,
@@ -39,6 +40,7 @@ def _event(event: TimelineEvent) -> dict[str, Any]:
         "valid_at": event.valid_at.isoformat() if event.valid_at else None,
         "known_at": event.known_at.isoformat(),
         "encounter_reference": event.encounter_reference,
+        "relation": event.source.get("relation"),
     }
 
 
@@ -67,14 +69,23 @@ def build_solver_packets(
     valid_visible = [
         item
         for item in events
-        if item.valid_at is None or item.valid_at <= valid_cutoff
+        if item.valid_at is not None and item.valid_at <= valid_cutoff
     ]
     visible = [item for item in valid_visible if item.known_at <= known_cutoff]
     chronological = sorted(
         visible, key=lambda item: (item.valid_at or item.known_at, item.evidence_id)
     )
     target_pair = (case.target["system"], case.target["code"])
-    retrieved = [item for item in visible if target_pair in item.codes][:5]
+    relevant = [item for item in visible if target_pair in item.codes]
+    retrieved = sorted(
+        relevant,
+        key=lambda item: (
+            item.valid_at or item.known_at,
+            item.known_at,
+            item.evidence_id,
+        ),
+        reverse=True,
+    )[:5]
     serialized_visible = [_event(item) for item in visible]
     serialized_chronological = [_event(item) for item in chronological]
     conflicts = [
@@ -121,11 +132,19 @@ def build_solver_packets(
         "expires_at": (known_cutoff + timedelta(minutes=5)).isoformat(),
     }
     strict_thss["snapshot_sha256"] = _hash(strict_thss)
+    grace_end = grace_end_for_case(case)
     common = {
         "case_id": case.case_id,
         "task": "reconcile_future_oriented_commitment",
         "anchor_evidence_id": case.anchor_evidence_id,
+        "anchor_valid_time": (
+            case.anchor_valid_time.isoformat() if case.anchor_valid_time else None
+        ),
+        "domain": case.domain,
+        "action": case.action,
         "target": case.target,
+        "due_time": case.due_time.isoformat() if case.due_time else None,
+        "grace_end": grace_end.isoformat() if grace_end is not None else None,
         "valid_cutoff": valid_cutoff.isoformat(),
         "known_cutoff": known_cutoff.isoformat(),
     }

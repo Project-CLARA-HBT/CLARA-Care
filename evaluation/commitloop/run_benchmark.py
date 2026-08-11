@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from evaluation.commitloop.fixtures import controlled_benchmark_bundles
 from evaluation.commitloop.http_transport import UrllibJsonTransport
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
@@ -130,6 +131,7 @@ def run_phase_b_benchmark(
     known_cutoff: datetime,
     limits: RunLimits,
     repository_root: Path = Path("."),
+    source_cohort: str = "injected_fhir_bundles",
 ) -> dict[str, Any]:
     freeze_sha, probe_sha = _phase_b_preflight(
         freeze_path=freeze_path,
@@ -157,6 +159,7 @@ def run_phase_b_benchmark(
         execution_mode="phase_b_router",
         phase_a_freeze_sha=freeze_sha,
         provider_probe_sha256=probe_sha,
+        source_cohort=source_cohort,
     )
     validate_run(output_dir)
     return manifest
@@ -170,7 +173,8 @@ def main() -> int:
     bundle_source = parser.add_mutually_exclusive_group(required=True)
     bundle_source.add_argument("--bundle", type=Path, action="append")
     bundle_source.add_argument("--bundle-dir", type=Path)
-    parser.add_argument("--fhir-version", choices=sorted(_FHIR_VERSIONS), required=True)
+    bundle_source.add_argument("--controlled-fixture-cohort", action="store_true")
+    parser.add_argument("--fhir-version", choices=sorted(_FHIR_VERSIONS))
     parser.add_argument("--valid-cutoff", required=True)
     parser.add_argument("--known-cutoff", required=True)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
@@ -184,15 +188,26 @@ def main() -> int:
         repository_root=args.repo_root,
     )
     limits = RunLimits.from_env()
-    bundle_paths = (
-        list(args.bundle)
-        if args.bundle
-        else _bounded_bundle_directory(
-            args.bundle_dir,
-            max_subjects=limits.max_subjects,
+    if args.controlled_fixture_cohort:
+        if args.fhir_version is not None:
+            parser.error("--fhir-version is not used with --controlled-fixture-cohort")
+        bundles = [(bundle, "R4") for bundle in controlled_benchmark_bundles()]
+        source_cohort = "controlled_r4_mechanism_cohort.v1"
+    else:
+        if args.fhir_version is None:
+            parser.error("--fhir-version is required with --bundle or --bundle-dir")
+        bundle_paths = (
+            list(args.bundle)
+            if args.bundle
+            else _bounded_bundle_directory(
+                args.bundle_dir,
+                max_subjects=limits.max_subjects,
+            )
         )
-    )
-    bundles = _load_bundles(bundle_paths, fhir_version=args.fhir_version, limits=limits)
+        bundles = _load_bundles(
+            bundle_paths, fhir_version=args.fhir_version, limits=limits
+        )
+        source_cohort = "injected_fhir_bundles"
     base_url = os.environ.get("ROUTER_BASE_URL", "")
     api_key = os.environ.get("ROUTER_API_KEY", "")
     clients = {
@@ -214,6 +229,7 @@ def main() -> int:
         known_cutoff=_parse_cutoff(args.known_cutoff),
         limits=limits,
         repository_root=args.repo_root,
+        source_cohort=source_cohort,
     )
     print(
         json.dumps(

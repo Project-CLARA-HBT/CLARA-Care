@@ -80,7 +80,7 @@ NOTE_SCHEMA = {
 
 _PROMPTS = {
     "candidate": ("commitloop-generation-candidate.v1", "generation_candidate_system.txt"),
-    "predicate": ("commitloop-generation-predicate.v1", "generation_predicate_system.txt"),
+    "predicate": ("commitloop-generation-predicate.v2", "generation_predicate_system.txt"),
     "candidate_review": ("commitloop-review-candidate.v1", "review_system.txt"),
     "note": ("commitloop-generation-anchor-note.v1", "generation_note_system.txt"),
     "note_review": ("commitloop-review-anchor-note.v1", "review_system.txt"),
@@ -208,7 +208,11 @@ def construct_with_model_review(
         generator,
         model=GENERATOR_MODEL,
         stage="predicate",
-        payload={"candidate": candidate, "allowed_source_event_ids": sorted(event_ids)},
+        payload={
+            "candidate": candidate,
+            "allowed_source_event_ids": sorted(event_ids),
+            "allowed_predicate_projection": case.fulfillment_predicate,
+        },
         schema=PREDICATE_SCHEMA,
     )
     stages.append(record)

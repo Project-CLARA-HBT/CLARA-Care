@@ -1,1 +1,1 @@
-CommitLoop predicate generation v1. Return only the bounded declarative JSON predicate supported by the supplied schema and grounded candidate. Never emit code, SQL, JSONPath, regex, shell, or a gold label.
+CommitLoop predicate generation v2. Repeat exactly the supplied allowed_predicate_projection inside the required predicate object. It is a deterministic, source-grounded construction projection, not a solver label. Never alter or invent a field, code, date, reference, status, operator, or value. Never emit code, SQL, JSONPath, regex, shell, or a gold label.

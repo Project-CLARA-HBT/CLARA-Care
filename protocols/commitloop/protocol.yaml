@@ -1,4 +1,4 @@
-schema_version: commitloop-protocol.v1
+schema_version: commitloop-protocol.v2
 phase_a_external_model_calls: prohibited
 commitment_schema_version: commitloop.commitment.v1
 predicate_dsl_version: commitloop-predicate.v1
@@ -30,6 +30,7 @@ conditions:
   - glhs_hybrid_thss_strict
 gold:
   source: deterministic_construction_predicate
+  runtime_alignment: completion_time_else_cutoff_with_domain_default_grace
   evidence_class: synthetic_protocol_oracle
   clinical_adjudication: NOT_RUN
 adversarial_variants:
@@ -41,3 +42,8 @@ axes:
   lifecycle_state: [OPEN, PARTIALLY_SATISFIED, SATISFIED, SUPERSEDED, CANCELLED]
   evidence_state: [CLEAR, CONFLICTED, INSUFFICIENT_EVIDENCE]
   timeliness_state: [NOT_APPLICABLE, BEFORE_DUE, IN_GRACE, OVERDUE, UNKNOWN]
+solver_contract:
+  version: commitloop-solver.v3
+  common_observability: [domain, action, target, anchor_valid_time, due_time, grace_end, valid_cutoff, known_cutoff]
+  event_observability: [resource_type, status, codes, valid_at, known_at, relation, provenance_reference]
+  labels_in_packets: prohibited

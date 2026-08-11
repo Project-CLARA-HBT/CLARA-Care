@@ -150,6 +150,29 @@ def validate_run(root: Path) -> None:
         raise ValueError("run_conditions_mismatch")
     if manifest.get("models") != expected_models:
         raise ValueError("run_models_mismatch")
+    protocol_manifest = json.loads(
+        (root / "protocol_manifest.json").read_text(encoding="utf-8")
+    )
+    if not isinstance(protocol_manifest, dict):
+        raise TypeError("protocol_manifest_invalid")
+    protocol_payload = {
+        key: value
+        for key, value in protocol_manifest.items()
+        if key != "protocol_sha256"
+    }
+    protocol_hash = hashlib.sha256(
+        json.dumps(
+            protocol_payload, sort_keys=True, separators=(",", ":"), default=str
+        ).encode()
+    ).hexdigest()
+    if (
+        protocol_payload.get("schema_version") != "commitloop-protocol.v2"
+        or protocol_payload.get("solver_contract") != "commitloop-solver.v3"
+        or protocol_payload.get("timeliness_oracle")
+        != "decisive_event_else_cutoff_with_domain_default_grace"
+        or protocol_manifest.get("protocol_sha256") != protocol_hash
+    ):
+        raise ValueError("protocol_manifest_invalid")
     model_manifest = json.loads(
         (root / "model_manifest.json").read_text(encoding="utf-8")
     )
