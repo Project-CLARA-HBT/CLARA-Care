@@ -17,6 +17,12 @@ context
 context2
 .devlogs/
 
+# Evidence-program datasets: raw and normalized records stay local. Only the
+# registry, source/license notes, adapters, and frozen metadata manifests are
+# eligible for git.
+datasets/raw/
+datasets/normalized/
+
 # --- secrets / local state / scratch (never commit) ---
 .env.*
 !.env.example

@@ -1,0 +1,263 @@
+schema_version: clara-dataset-registry.v1
+raw_data_policy: local_or_external_only
+datasets:
+  - id: cms_de_synpuf_omop
+    display_name: CMS DE-SynPUF OMOP
+    provider: Centers for Medicare & Medicaid Services / OHDSI
+    canonical_source: https://www.cms.gov/data-research/statistics-trends-and-reports/medicare-claims-synthetic-public-use-files
+    mirror_source: null
+    download_method: operator_manual
+    download_url: null
+    license: CMS Data Disclaimer and Public Use Data agreement
+    access_class: open_public_use_agreement
+    evidence_class: large_scale_external_systems
+    synthetic: true
+    schema: OMOP CDM
+    version: 2008-2010 DE-SynPUF conversion, exact release unresolved
+    release_date: null
+    acquired_at: null
+    raw_path: datasets/raw/cms_de_synpuf_omop
+    normalized_path: datasets/normalized/cms_de_synpuf_omop
+    local_candidates: []
+    expected_files: []
+    checksum_manifest: datasets/manifests/cms_de_synpuf_omop.json
+    subject_identifier: person_id or DESYNPUF_ID, conversion-specific mapping required
+    encounter_identifier: visit_occurrence_id where supplied by the conversion
+    valid_time_fields: OMOP domain start/end date or datetime columns
+    knowledge_time_fields: unavailable unless explicitly supplied by the conversion
+    provenance_fields: source file, source row and OMOP source-value fields
+    clinical_domains: [claims, diagnoses, procedures, medications, utilization]
+    known_limitations: Synthetic claims; exact OMOP distribution and source mapping are not yet verified locally.
+    adapter: omop_cdm
+
+  - id: syntheticmass_fhir_v1
+    display_name: SyntheticMass Data Version 1
+    provider: MITRE Synthea
+    canonical_source: https://synthea.mitre.org/downloads
+    mirror_source: null
+    download_method: operator_manual
+    download_url: null
+    license: Public synthetic data; official site states free of cost, privacy, and security restrictions
+    access_class: open
+    evidence_class: large_scale_external_systems
+    synthetic: true
+    schema: FHIR STU3
+    version: "1"
+    release_date: "2017-02-27"
+    acquired_at: null
+    raw_path: datasets/raw/syntheticmass_fhir_v1
+    normalized_path: datasets/normalized/syntheticmass_fhir_v1
+    local_candidates: [synthea_2017_02_27.tar.gz]
+    expected_files: [synthea_2017_02_27.tar.gz]
+    checksum_manifest: datasets/manifests/syntheticmass_fhir_v1.json
+    subject_identifier: FHIR Patient resource id
+    encounter_identifier: FHIR Encounter resource id
+    valid_time_fields: resource-specific FHIR effective/issued/authored/period fields
+    knowledge_time_fields: resource meta.lastUpdated when present; otherwise unknown
+    provenance_fields: resourceType, id, fullUrl and Provenance resources when present
+    clinical_domains: [medications, diagnoses, observations, encounters, allergies]
+    known_limitations: Synthetic; related Synthea releases are not independent clinical cohorts.
+    adapter: fhir_archive
+
+  - id: synthea_fhir_stu3_may_2017
+    display_name: Synthea one-million FHIR STU3 archive
+    provider: MITRE Synthea
+    canonical_source: https://synthea.mitre.org/downloads
+    mirror_source: null
+    download_method: operator_manual
+    download_url: null
+    license: Apache-2.0 generator; archive terms must be retained from source
+    access_class: open
+    evidence_class: large_scale_external_systems
+    synthetic: true
+    schema: FHIR STU3
+    version: "2017-05"
+    release_date: "2017-05-30"
+    acquired_at: null
+    raw_path: datasets/raw/synthea_fhir_stu3_may_2017
+    normalized_path: datasets/normalized/synthea_fhir_stu3_may_2017
+    local_candidates: [synthea_1m_fhir_3_0_May_24.tar.gz]
+    expected_files: [synthea_1m_fhir_3_0_May_24.tar.gz]
+    checksum_manifest: datasets/manifests/synthea_fhir_stu3_may_2017.json
+    subject_identifier: FHIR Patient resource id
+    encounter_identifier: FHIR Encounter resource id
+    valid_time_fields: resource-specific FHIR effective/issued/authored/period fields
+    knowledge_time_fields: resource meta.lastUpdated when present; otherwise unknown
+    provenance_fields: resourceType, id, fullUrl and Provenance resources when present
+    clinical_domains: [medications, diagnoses, observations, encounters, allergies]
+    known_limitations: Synthetic; not independent from other Synthea-family archives.
+    adapter: fhir_archive
+
+  - id: synthea_omop_2_8m
+    display_name: Synthea OMOP large archive
+    provider: unresolved
+    canonical_source: null
+    mirror_source: null
+    download_method: unavailable_until_source_resolved
+    download_url: null
+    license: unresolved
+    access_class: not_available
+    evidence_class: large_scale_external_systems
+    synthetic: true
+    schema: OMOP CDM
+    version: unresolved
+    release_date: null
+    acquired_at: null
+    raw_path: datasets/raw/synthea_omop_2_8m
+    normalized_path: datasets/normalized/synthea_omop_2_8m
+    local_candidates: []
+    expected_files: []
+    checksum_manifest: datasets/manifests/synthea_omop_2_8m.json
+    subject_identifier: person_id
+    encounter_identifier: visit_occurrence_id
+    valid_time_fields: OMOP domain start/end date or datetime columns
+    knowledge_time_fields: unavailable unless explicitly supplied
+    provenance_fields: source file, source row and OMOP source-value fields
+    clinical_domains: [medications, diagnoses, observations, encounters]
+    known_limitations: The specification's approximate 2.8M target has no verified canonical archive source yet; fail closed.
+    adapter: omop_cdm
+
+  - id: diabetes_130_us_hospitals
+    display_name: Diabetes 130-US Hospitals for Years 1999-2008
+    provider: UCI Machine Learning Repository
+    canonical_source: https://archive.ics.uci.edu/dataset/296/diabetes-130-us-hospitals-for-years-1999-2008
+    mirror_source: null
+    download_method: https_archive
+    download_url: https://archive.ics.uci.edu/static/public/296/diabetes+130-us+hospitals+for+years+1999-2008.zip
+    license: CC-BY-4.0
+    access_class: open
+    evidence_class: external_real_data_structural
+    synthetic: false
+    schema: tabular encounter CSV
+    version: UCI dataset 296
+    release_date: "2014-05-02"
+    acquired_at: null
+    raw_path: datasets/raw/diabetes_130_us_hospitals
+    normalized_path: datasets/normalized/diabetes_130_us_hospitals
+    local_candidates: []
+    expected_files: [diabetic_data.csv, IDS_mapping.csv]
+    checksum_manifest: datasets/manifests/diabetes_130_us_hospitals.json
+    subject_identifier: patient_nbr
+    encounter_identifier: encounter_id
+    valid_time_fields: encounter order only; exact event timestamps unavailable
+    knowledge_time_fields: unavailable
+    provenance_fields: source archive, source CSV and source row number
+    clinical_domains: [diagnoses, medications, utilization, encounters]
+    known_limitations: Encounter-level data with sensitive attributes; no intra-encounter timestamps and no independent GLHS clinical oracle.
+    adapter: diabetes_130_tabular
+
+  - id: meps_panel_24_longitudinal
+    display_name: MEPS Panel 24 four-year longitudinal public-use data
+    provider: Agency for Healthcare Research and Quality
+    canonical_source: https://www.meps.ahrq.gov/mepsweb/data_stats/download_data/pufs/h245/h245doc.shtml
+    mirror_source: null
+    download_method: operator_manual_multi_file
+    download_url: null
+    license: AHRQ MEPS public-use data agreement
+    access_class: open_public_use_agreement
+    evidence_class: external_real_data_structural
+    synthetic: false
+    schema: longitudinal survey and linked event files
+    version: HC-245 Panel 24, 2019-2022
+    release_date: "2024-11"
+    acquired_at: null
+    raw_path: datasets/raw/meps_panel_24_longitudinal
+    normalized_path: datasets/normalized/meps_panel_24_longitudinal
+    local_candidates: []
+    expected_files: []
+    checksum_manifest: datasets/manifests/meps_panel_24_longitudinal.json
+    subject_identifier: DUPERSID
+    encounter_identifier: event-file-specific identifiers
+    valid_time_fields: survey rounds and source event dates/periods where supplied
+    knowledge_time_fields: unavailable unless explicitly supplied by a source file
+    provenance_fields: PUF id, file, variable and source row
+    clinical_domains: [conditions, inpatient, emergency, outpatient, prescribed_medicine, utilization]
+    known_limitations: Survey/event semantics, not EHR; event-file selection and agreement review are pending.
+    adapter: meps_public_use
+
+  - id: eicu_crd_demo_2_0_1
+    display_name: eICU Collaborative Research Database Demo
+    provider: MIT Laboratory for Computational Physiology / PhysioNet
+    canonical_source: https://physionet.org/content/eicu-crd-demo/2.0.1/
+    mirror_source: null
+    download_method: https_tree
+    download_url: https://physionet.org/files/eicu-crd-demo/2.0.1/
+    license: ODbL-1.0 plus PhysioNet terms in LICENSE.txt
+    access_class: open
+    evidence_class: external_real_data_structural
+    synthetic: false
+    schema: relational CSV
+    version: 2.0.1
+    release_date: "2021-05-06"
+    acquired_at: null
+    raw_path: datasets/raw/eicu_crd_demo_2_0_1
+    normalized_path: datasets/normalized/eicu_crd_demo_2_0_1
+    local_candidates: []
+    expected_files: [patient.csv.gz, diagnosis.csv.gz, medication.csv.gz, lab.csv.gz, SHA256SUMS.txt, LICENSE.txt]
+    checksum_manifest: datasets/manifests/eicu_crd_demo_2_0_1.json
+    subject_identifier: uniquepid
+    encounter_identifier: patientunitstayid
+    valid_time_fields: offset fields relative to unit admission
+    knowledge_time_fields: unavailable unless explicitly supplied
+    provenance_fields: source table, row id and hospital/unit identifiers
+    clinical_domains: [diagnoses, medications, observations, encounters, allergies]
+    known_limitations: Open demo only; full eICU is credentialed and is not authorized by this entry.
+    adapter: eicu_tabular
+
+  - id: synthea_coherent
+    display_name: Synthea Coherent Data Set
+    provider: MITRE Synthea
+    canonical_source: null
+    mirror_source: null
+    download_method: unavailable_until_source_resolved
+    download_url: null
+    license: unresolved
+    access_class: not_available
+    evidence_class: multimodal_synthetic_systems
+    synthetic: true
+    schema: FHIR plus linked modalities
+    version: unresolved
+    release_date: null
+    acquired_at: null
+    raw_path: datasets/raw/synthea_coherent
+    normalized_path: datasets/normalized/synthea_coherent
+    local_candidates: []
+    expected_files: []
+    checksum_manifest: datasets/manifests/synthea_coherent.json
+    subject_identifier: FHIR Patient resource id
+    encounter_identifier: FHIR Encounter resource id
+    valid_time_fields: modality-specific source time
+    knowledge_time_fields: unknown unless supplied
+    provenance_fields: source modality path/hash and FHIR provenance
+    clinical_domains: [multimodal, medications, diagnoses, observations, encounters]
+    known_limitations: Canonical downloadable archive and terms are not yet verified; fail closed.
+    adapter: coherent_multimodal
+
+  - id: mimic_iv_demo_fhir_2_1_0
+    display_name: MIMIC-IV Clinical Database Demo on FHIR
+    provider: PhysioNet
+    canonical_source: https://physionet.org/content/mimic-iv-fhir-demo/2.1.0/
+    mirror_source: null
+    download_method: local_operator_archive
+    download_url: https://physionet.org/files/mimic-iv-fhir-demo/2.1.0/
+    license: ODbL-1.0 plus PhysioNet terms
+    access_class: open
+    evidence_class: nonheadline_external_real_data_structural
+    synthetic: false
+    schema: FHIR R4 NDJSON
+    version: 2.1.0
+    release_date: null
+    acquired_at: null
+    raw_path: datasets/raw/mimic_iv_demo_fhir_2_1_0
+    normalized_path: datasets/normalized/mimic_iv_demo_fhir_2_1_0
+    local_candidates: [mimic-iv-clinical-database-demo-on-fhir-2.1.0.zip]
+    expected_files: [mimic-iv-clinical-database-demo-on-fhir-2.1.0.zip]
+    checksum_manifest: datasets/manifests/mimic_iv_demo_fhir_2_1_0.json
+    subject_identifier: FHIR Patient resource id
+    encounter_identifier: FHIR Encounter resource id
+    valid_time_fields: resource-specific FHIR fields
+    knowledge_time_fields: resource meta.lastUpdated when present; otherwise unknown
+    provenance_fields: resourceType, id, fullUrl and original archive member
+    clinical_domains: [medications, diagnoses, observations, encounters]
+    known_limitations: Same 100-patient lineage as other MIMIC demos; not independent clinical validation.
+    adapter: fhir_ndjson_archive

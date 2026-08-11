@@ -63,6 +63,45 @@ Not completed / cannot be inferred:
 - PostgreSQL-to-API operational measurements;
 - a clean tagged final SHA and final reruns.
 
+## Checkpoint — 2026-08-12 external-evidence specification restart
+
+The operator-supplied evidence-hardening master specification broadens the
+program beyond the earlier CommitLoop confirmatory path. Gate 1 now starts with
+a repository-owned dataset registry and a fail-closed local data layer before
+any new headline experiment.
+
+Implemented in this checkpoint:
+
+- `datasets/registry.yaml` records source, access, evidence class, schema,
+  temporal/provenance semantics, limitations, local candidates and output paths;
+- raw and normalized records are gitignored while metadata/license/manifests
+  remain eligible for review;
+- list, inspect, verify, fetch, normalize and freeze commands distinguish
+  `NOT_AVAILABLE`, `ACCESS_REQUIRED`, presence, local integrity, normalization
+  and evaluation rather than collapsing them into one availability flag;
+- a common longitudinal evidence record preserves source subject/record,
+  encounter, original value, valid time, knowledge time, precision, provenance,
+  payload pointer/hash, uncertainty and missingness;
+- the FHIR-NDJSON ZIP adapter leaves absent knowledge time unknown and creates
+  no estimated timestamp.
+
+Local read-only inspection found SyntheticMass FHIR v1 (30,878,003,109 bytes),
+Synthea FHIR STU3 May 2017 (22,339,056,743 bytes), and MIMIC-IV Demo on FHIR
+2.1.0 (51,859,726 bytes). These are presence observations, not canonical
+checksum validation. Synthea OMOP 2.8M remains `NOT_AVAILABLE` because no local
+archive or verified canonical distribution was found.
+
+The MIMIC-FHIR Demo archive passed local ZIP integrity and was normalized into
+the gitignored common interface: 927,109 records over 100 source subjects,
+with 0 estimated timestamps. All 927,109 records lack `meta.lastUpdated`, so
+knowledge time remains explicitly unknown. This is adapter execution on an
+open real-data demo, not an independent oracle or clinical validation.
+
+The specification is now tracked at its declared primary path,
+`docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
+content copy apart from the final newline. The operator-provided root copy
+remains untracked and untouched.
+
 ## Next gates
 
 1. A lawful data steward freezes an external real-EHR manifest and proves
