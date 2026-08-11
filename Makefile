@@ -2,7 +2,7 @@ SHELL := /bin/bash
 COMPOSE_FILE := deploy/docker/docker-compose.yml
 APP_COMPOSE_FILE := deploy/docker/docker-compose.app.yml
 
-.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report eval-structural-conformance eval-glhs-local-assurance eval-commitloop-local eval-commitloop-validate eval-commitloop-secret-scan eval-commitloop-freeze eval-commitloop-provider-probe eval-commitloop-phase-b
+.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report eval-structural-conformance eval-glhs-local-assurance eval-standards-comparator-validate eval-contract-clause-ablation eval-commitloop-local eval-commitloop-validate eval-commitloop-secret-scan eval-commitloop-freeze eval-commitloop-provider-probe eval-commitloop-phase-b
 
 help:
 	@echo "CLARA P0 Make targets"
@@ -32,6 +32,8 @@ help:
 	@echo "  eval-judge-report Generate artifacts/judge-report with honest measurement status"
 	@echo "  eval-structural-conformance  Run the non-clinical state-layer conformance protocol"
 	@echo "  eval-glhs-local-assurance  Measure network-free GLHS replay/governance overhead"
+	@echo "  eval-standards-comparator-validate  Validate the frozen novelty-isolation comparator"
+	@echo "  eval-contract-clause-ablation  Run and validate the frozen clause matrix"
 	@echo "  eval-commitloop-local  Run the sealed two-subject CommitLoop fake-provider grid"
 	@echo "  eval-commitloop-validate  Validate COMMITLOOP_RUN_DIR and its SHA-256 inventory"
 	@echo "  eval-commitloop-secret-scan  Fail if tracked CommitLoop content contains credentials"
@@ -177,6 +179,15 @@ eval-structural-conformance:
 eval-glhs-local-assurance:
 	@test -n "$(GLHS_ASSURANCE_OUTPUT)" || (echo "GLHS_ASSURANCE_OUTPUT is required" >&2; exit 2)
 	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.glhs_assurance.run --output "$(GLHS_ASSURANCE_OUTPUT)"
+
+eval-standards-comparator-validate:
+	@PYTHONPATH=. services/api/.venv/bin/python -m evaluation.comparator_studies.standards_composed_baseline.validate_manifest
+
+eval-contract-clause-ablation:
+	@test -n "$(CONTRACT_ABLATION_OUTPUT)" || (echo "CONTRACT_ABLATION_OUTPUT is required" >&2; exit 2)
+	@PYTHONPATH=. services/api/.venv/bin/python -m evaluation.contract_clause_ablation.validate
+	@PYTHONPATH=. services/api/.venv/bin/python -m evaluation.contract_clause_ablation.run --output "$(CONTRACT_ABLATION_OUTPUT)"
+	@PYTHONPATH=. services/api/.venv/bin/python -m evaluation.contract_clause_ablation.validate --output "$(CONTRACT_ABLATION_OUTPUT)"
 
 eval-commitloop-local:
 	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.cli local-fixture --output artifacts/commitloop/local-phase-a

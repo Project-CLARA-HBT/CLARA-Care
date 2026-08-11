@@ -12,15 +12,15 @@ mean clinical validity. External evidence remains fail-closed.
 | Snapshot-bound proposal path | COMPLETE | `propose_bound_commitment_transition`; `validate_bound_proposal_context` | Coordinate and endpoint tests | Proposal/manifest consistency fingerprints | None |
 | Base-version-only proposal path | COMPLETE | `propose_base_commitment_transition`; `validate_base_proposal_context` | Base-only commit test | Transition ledger | None |
 | Full same-context binding | COMPLETE | Manifest validation checks profile, actor, role, purpose, task, base, ID and digest | One-coordinate-at-a-time rejection test | Stable reason codes | None |
-| Atomic profile transition | PARTIAL | PostgreSQL profile-row `FOR UPDATE`; idempotency recheck after lock | SQL compilation, local rollback, opt-in PostgreSQL race contract | JUnit/local results pending final checkpoint | PostgreSQL execution environment unavailable |
+| Atomic profile transition | PARTIAL | PostgreSQL profile-row `FOR UPDATE`; idempotency recheck after lock | SQL compilation, local rollback, opt-in PostgreSQL race contract | Full local API JUnit recorded below | PostgreSQL execution environment unavailable |
 | N writers / unrelated slots | NOT_RUN | Opt-in isolated-schema test exists | `test_glhs_postgres_concurrency.py` skipped locally | None | Requires acknowledged PostgreSQL URL |
 | Snapshot canonicalization contract | COMPLETE | `canonical_json.py`; schema/profile/algorithm metadata | Canonical ordering, Unicode, dates, non-finite rejection | Migration 0055 | None |
 | Legacy snapshot reconstruction | COMPLETE | Profile-dispatched legacy fingerprint validation | Legacy v2 reconstruction test | Stored legacy payload | None |
 | Bitemporal cutoffs | COMPLETE | Explicit valid/knowledge cutoff columns and payload coordinates | THSS/reconstruction tests | Snapshot manifest v3 | None |
 | Late-evidence/conflict boundary matrix | PARTIAL | Bitemporal replay and conflict retention implemented | Existing gateway/reconciliation tests | Structural fixtures | Equality-cross-product expansion pending |
-| Standards-composed mechanism baseline | PARTIAL | Bitemporal comparator exists | Comparator operator tests | Method card/deviations | Version-aware write, current authorization and audit composition not yet complete |
-| Contract-clause ablation | NOT_RUN | Design specified only | None | None | Implementation and frozen case manifest required |
-| Structural conformance | PARTIAL | Developer-authored suites retained as conformance only | Structural/property suites | Historical structural artifacts | New context-binding clauses not yet integrated into one frozen run |
+| Standards-composed mechanism baseline | COMPLETE | Bitemporal resolution, version-aware write, current authorization, provenance and audit composition; exact disclosure binding intentionally absent | Five focused temporal/write/manifest/tamper tests | Hash-frozen manifest, method card, source mapping and deviations | None for mechanism isolation; this is not a FHIR server/product claim |
+| Contract-clause ablation | COMPLETE | Seven incremental clause variants over one identical 16-case matrix | Five runner/grid/checksum/freeze/tamper tests | Hash-frozen experiment manifest; 112-cell raw/aggregate output validates | None for developer-authored structural evidence; no external or clinical adjudication |
+| Structural conformance | COMPLETE | Developer-authored suites retained as conformance only | Structural/property suites plus frozen clause matrix | Recomputable raw and aggregate structural output | Limited to enumerated synthetic mechanisms; not clinical validity |
 | Independent annotation export/import/adjudication | PARTIAL | Evidence-program validators/scaffolds exist | Validator tests | Annotation guide | Genuine two-annotator plus independent-adjudicator inputs absent |
 | Independent THSS utility/minimization | BLOCKED_EXTERNAL | Utility grid validator exists | Validator tests | Protocol scaffold | Qualified independent oracle and provider outputs absent |
 | Model execution manifests | PARTIAL | Existing CommitLoop manifests/checksums | Evaluator tests | Frozen historical runs | New contract replication not frozen or executed |
@@ -34,8 +34,8 @@ mean clinical validity. External evidence remains fail-closed.
 | Unique-run artifact contract | PARTIAL | Seal/checksum/validation tooling exists | Evidence-program tests | Existing sealed artifacts | New hardening run not yet sealed from a clean SHA |
 | Manuscript evidence map | COMPLETE | Claim-to-evidence register | Docs check pending | `glhs-manuscript-evidence-map.md` | None |
 | Manuscript revision guidance | NOT_RUN | No manuscript prose changed | None | None | Generate only after verified evidence stabilizes |
-| Workstream A — contract hardening | PARTIAL | Core context/digest/bitemporal/immutability code implemented | Focused suites pass | Migration 0055 | PostgreSQL concurrency run and final full suite pending |
-| Workstream B — novelty isolation | PARTIAL | Existing comparator foundation | Comparator tests | Method cards | Standards-composed baseline/ablation incomplete |
+| Workstream A — contract hardening | PARTIAL | Core context/digest/bitemporal/immutability code implemented | Focused and full API suites pass | Migration 0055 | Actual PostgreSQL concurrency execution pending |
+| Workstream B — novelty isolation | COMPLETE | Strong standards-composed mechanism comparator plus incremental clause engine | Ten focused tests; identical 16-case matrix across seven variants | Hash-frozen comparator/experiment manifests; validated 112-cell raw/aggregate run | Complete only as developer-authored structural evidence |
 | Workstream C — systems evidence | NOT_RUN | Runners/scaffolds only | Validators | NOT_RUN manifests | PostgreSQL/deployed boundary absent |
 | Workstream D — independent evidence | BLOCKED_EXTERNAL | Import/validation scaffolds only | Validator tests | NOT_RUN protocols | Independent people/data/provider inputs absent |
 | Workstream E — reproducibility/release | PARTIAL | Locks, CI edits, seals and checksums | Local validators | Existing reproducibility index | Clean SHA, naming cleanup and final evidence inventory pending |
@@ -56,4 +56,8 @@ mean clinical validity. External evidence remains fail-closed.
   full-stack validators: 20 passed; release/status/seal validators: 10 passed.
 - Network-free local assurance smoke: 8 synthetic transitions, zero external
   calls, checksum verified. This is local SQLite engineering evidence only.
+- Workstream-B novelty isolation: frozen standards-composed manifest validates;
+  five comparator tests and five clause-ablation tests pass. A fresh network-free
+  run validated all 112 cells (16 identical cases x 7 variants), its aggregates
+  and its SHA-256 inventory; external calls were zero.
 - Provider/model calls: zero for this hardening checkpoint.

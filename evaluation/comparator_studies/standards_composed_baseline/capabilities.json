@@ -1,0 +1,12 @@
+{
+  "authorization_current": true,
+  "audit_recording": true,
+  "bitemporal_resolution": true,
+  "explicit_conflict_retention": true,
+  "exact_disclosure_context_binding": false,
+  "fhir_wire_implementation": false,
+  "optimistic_version_precondition": true,
+  "provenance_recording": true,
+  "snapshot_digest_validation": false,
+  "status": "semantic_mechanism_baseline"
+}

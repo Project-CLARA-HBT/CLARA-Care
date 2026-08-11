@@ -1,0 +1,40 @@
+{
+  "case_count": 16,
+  "case_ids": [
+    "valid_write",
+    "wrong_profile",
+    "stale_base",
+    "unauthorized_at_disclosure",
+    "missing_provenance",
+    "wrong_snapshot_id",
+    "wrong_actor",
+    "wrong_actor_role",
+    "wrong_purpose",
+    "wrong_task",
+    "digest_mismatch",
+    "undisclosed_evidence",
+    "expired_snapshot",
+    "revoked_before_write",
+    "policy_change",
+    "consent_change"
+  ],
+  "clinical_adjudication": "NOT_RUN",
+  "developer_authored": true,
+  "external_calls": 0,
+  "files_sha256": {
+    "engine.py": "741dba39d36b560e924ebd2dd7b10b3acb2d9f8f52f3d7cf40610f3151c1f69e",
+    "run.py": "37cc2e801b3c61a5efcd90217c275e8eb155ce7163439bdf9235a60c5f4bfc5e"
+  },
+  "schema_version": "contract-clause-ablation.v1",
+  "status": "FROZEN_STRUCTURAL_CONTRACT",
+  "variant_count": 7,
+  "variants": [
+    "temporal_provenance_resolver",
+    "base_version_write",
+    "authorization_at_disclosure",
+    "provenance_audit",
+    "snapshot_id_binding",
+    "snapshot_context_binding",
+    "complete_glhs_contract"
+  ]
+}

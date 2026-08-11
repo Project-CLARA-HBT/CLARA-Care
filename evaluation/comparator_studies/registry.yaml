@@ -16,3 +16,7 @@ methods:
     version: btsa-mechanism-mapped-v1
     adapter: evaluation.comparator_studies.bitemporal_state_arbitration.adapter:btsa_context
     fidelity: mechanism_only_not_faithful
+  standards_composed:
+    version: standards-composed-mechanism-baseline.v1
+    adapter: evaluation.comparator_studies.standards_composed_baseline.engine:StandardsComposedState
+    fidelity: semantic_mechanism_baseline_not_fhir_server

@@ -1,0 +1,17 @@
+{
+  "artifact_status": "FROZEN_MECHANISM_CONTRACT",
+  "comparator_id": "standards-composed-mechanism-baseline.v1",
+  "direct_product_fidelity_claim_allowed": false,
+  "files_sha256": {
+    "DEVIATIONS.md": "8bd8584fa2299dc582680738ad616aa6c0ea1bef403a06e76e8fb9b941a87dd2",
+    "METHOD_CARD.md": "8dd062f5ff91bdce47978236e8983fca20db5cf3ead09a3bd3d9c2bf29576045",
+    "SOURCE_MAPPING.md": "1a9f1f013ab5a2f69e3eb8b826d26adc37470d742e81e02c2b3887dfdbaa1a22",
+    "capabilities.json": "548a8d7ecfadb44fb6fadff4c213da0da53a530961795e19a3fc6de23169519d",
+    "engine.py": "29f85d21f884a6511f3bf4ac931270efd673143f6008108914b5192a918e84e1"
+  },
+  "implementation": "evaluation/comparator_studies/standards_composed_baseline/engine.py",
+  "method_card": "evaluation/comparator_studies/standards_composed_baseline/METHOD_CARD.md",
+  "schema_version": "standards-composed-manifest.v1",
+  "standards_profile": "HL7 FHIR R4 4.0.1 concepts",
+  "test": "evaluation/comparator_studies/standards_composed_baseline/test_engine.py"
+}
