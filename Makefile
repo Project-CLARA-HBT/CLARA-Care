@@ -2,7 +2,7 @@ SHELL := /bin/bash
 COMPOSE_FILE := deploy/docker/docker-compose.yml
 APP_COMPOSE_FILE := deploy/docker/docker-compose.app.yml
 
-.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report eval-structural-conformance eval-glhs-local-assurance eval-glhs-fullstack-postgres eval-standards-comparator-validate eval-contract-clause-ablation eval-commitloop-local eval-commitloop-validate eval-commitloop-secret-scan eval-commitloop-freeze eval-commitloop-provider-probe eval-commitloop-phase-b
+.PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report eval-structural-conformance eval-glhs-local-assurance eval-glhs-fullstack-postgres eval-glhs-contention-postgres eval-standards-comparator-validate eval-contract-clause-ablation eval-commitloop-local eval-commitloop-validate eval-commitloop-secret-scan eval-commitloop-freeze eval-commitloop-provider-probe eval-commitloop-phase-b
 
 help:
 	@echo "CLARA P0 Make targets"
@@ -33,6 +33,7 @@ help:
 	@echo "  eval-structural-conformance  Run the non-clinical state-layer conformance protocol"
 	@echo "  eval-glhs-local-assurance  Measure network-free GLHS replay/governance overhead"
 	@echo "  eval-glhs-fullstack-postgres  Run the acknowledged empty-DB service-layer benchmark"
+	@echo "  eval-glhs-contention-postgres  Measure profile-global true/false stale contention"
 	@echo "  eval-standards-comparator-validate  Validate the frozen novelty-isolation comparator"
 	@echo "  eval-contract-clause-ablation  Run and validate the frozen clause matrix"
 	@echo "  eval-commitloop-local  Run the sealed two-subject CommitLoop fake-provider grid"
@@ -186,6 +187,12 @@ eval-glhs-fullstack-postgres:
 	@test "$(ALLOW_GLHS_FULLSTACK_EMPTY_DATABASE)" = "true" || (echo "ALLOW_GLHS_FULLSTACK_EMPTY_DATABASE=true is required" >&2; exit 2)
 	@DATABASE_URL="$(DATABASE_URL)" PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.fullstack_benchmark.run_postgresql --output "$(GLHS_FULLSTACK_OUTPUT)" --database-image-digest "$(GLHS_POSTGRES_IMAGE_DIGEST)" --acknowledge-isolated-empty-database
 	@PYTHONPATH=. services/api/.venv/bin/python -m evaluation.fullstack_benchmark.validate_metrics --metrics "$(GLHS_FULLSTACK_OUTPUT)/fullstack_metrics.csv" --manifest "$(GLHS_FULLSTACK_OUTPUT)/fullstack_manifest.json"
+
+eval-glhs-contention-postgres:
+	@test -n "$(DATABASE_URL)" && test -n "$(GLHS_CONTENTION_OUTPUT)" && test -n "$(GLHS_POSTGRES_IMAGE_DIGEST)" || (echo "DATABASE_URL, GLHS_CONTENTION_OUTPUT and GLHS_POSTGRES_IMAGE_DIGEST are required" >&2; exit 2)
+	@test "$(ALLOW_GLHS_CONTENTION_EMPTY_DATABASE)" = "true" || (echo "ALLOW_GLHS_CONTENTION_EMPTY_DATABASE=true is required" >&2; exit 2)
+	@DATABASE_URL="$(DATABASE_URL)" PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.contention_analysis.run_postgresql --output "$(GLHS_CONTENTION_OUTPUT)" --database-image-digest "$(GLHS_POSTGRES_IMAGE_DIGEST)" --acknowledge-isolated-empty-database
+	@PYTHONPATH=. services/api/.venv/bin/python -m evaluation.contention_analysis.validate --run-dir "$(GLHS_CONTENTION_OUTPUT)"
 
 eval-standards-comparator-validate:
 	@PYTHONPATH=. services/api/.venv/bin/python -m evaluation.comparator_studies.standards_composed_baseline.validate_manifest
