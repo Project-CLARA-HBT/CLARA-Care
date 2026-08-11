@@ -47,6 +47,13 @@ mean clinical validity. External evidence remains fail-closed.
   2026-08-11; Ruff and focused mypy passed.
 - PostgreSQL concurrency contract: present but skipped locally because no
   explicitly acknowledged PostgreSQL URL is installed.
-- Full API suite: running; do not interpret this line as a pass until replaced
-  with its completed exit status and JUnit path.
+- Full API suite: 1,369 passed, 2 skipped, exit 0 on 2026-08-11; JUnit SHA-256
+  `7248d7130865e12c42ca827929d3eb3dc9a2f3756e31121bfff47775c5119f11`.
+- Validated GLHS implementation commit: `7c968673df7bb30c3fa2f7ca0d881a92f643a22f`;
+  checkpoint HEAD after evaluator/CI-only commits:
+  `503faab1fc88a5dd55fa1c6bf385c5bab644bda6`.
+- Evaluator/property assurance: 84 passed; comparator/evidence/adversarial/
+  full-stack validators: 20 passed; release/status/seal validators: 10 passed.
+- Network-free local assurance smoke: 8 synthetic transitions, zero external
+  calls, checksum verified. This is local SQLite engineering evidence only.
 - Provider/model calls: zero for this hardening checkpoint.
