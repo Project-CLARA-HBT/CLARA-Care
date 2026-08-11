@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from datasets.adapters.diabetes_130_tabular import MEDICATION_FIELDS, SUMMARY_FIELDS
 from scripts.data import _registry
 from scripts.data._registry import DatasetRegistryError, canonical_json, load_registry
 from scripts.data.inspect import inspect_dataset
@@ -104,6 +105,44 @@ def test_inspect_and_verify_hash_a_safe_local_archive(
     assert verification["archive"]["member_count"] == 1
     assert verification["archive"]["unsafe_member_count"] == 0
     assert len(verification["files"][0]["sha256"]) == 64
+
+
+def test_verify_accepts_expected_files_inside_archive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    archive_path = tmp_path / "fixture.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("nested/expected.csv", "subject,value\n1,synthetic\n")
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(expected_files=["expected.csv"]),
+    )
+
+    verification = verify_dataset("fixture_data", registry_path)
+
+    assert verification["expected_files_present"] is True
+
+
+def test_verify_probes_archives_inside_registered_raw_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    raw_dir = tmp_path / "datasets" / "raw" / "fixture_data"
+    raw_dir.mkdir(parents=True)
+    archive_path = raw_dir / "download.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("expected.csv", "subject,value\n1,synthetic\n")
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(local_candidates=[], expected_files=["expected.csv"]),
+    )
+
+    verification = verify_dataset("fixture_data", registry_path)
+
+    assert verification["expected_files_present"] is True
+    assert verification["archive"]["archive_count"] == 1
+    assert verification["archive"]["archives"][0]["format"] == "zip"
 
 
 def test_missing_and_credentialed_sources_fail_closed(
@@ -214,3 +253,53 @@ def test_frozen_manifest_verifier_accepts_exact_source_and_rejects_tamper(
         verify_frozen_manifest(
             "fixture_data", manifest_path=manifest_path, registry_path=registry_path
         )
+
+
+def test_diabetes_normalization_preserves_unknown_time_and_source_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    archive_path = tmp_path / "fixture.zip"
+    row = {
+        "encounter_id": "enc-1",
+        "patient_nbr": "subject-1",
+        "diag_1": "250.01",
+        "diag_2": "?",
+        "diag_3": "401",
+        "max_glu_serum": "None",
+        "A1Cresult": ">8",
+        **{field: "No" for field in MEDICATION_FIELDS},
+        **{field: "0" for field in SUMMARY_FIELDS},
+    }
+    row["insulin"] = "Up"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        header = list(row)
+        csv_payload = ",".join(header) + "\n" + ",".join(row[field] for field in header) + "\n"
+        archive.writestr("diabetic_data.csv", csv_payload)
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(
+            adapter="diabetes_130_tabular",
+            schema="tabular encounter CSV",
+            expected_files=["diabetic_data.csv"],
+        ),
+    )
+
+    output = normalize_dataset(
+        "fixture_data", output=tmp_path / "normalized", registry_path=registry_path
+    )
+    records = [
+        json.loads(line)
+        for line in (output / "records.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+
+    assert len(records) == 1 + 2 + len(MEDICATION_FIELDS) + 1
+    assert all(record["valid_time"] is None for record in records)
+    assert all(record["knowledge_time"] is None for record in records)
+    assert all(record["estimated_time"] is False for record in records)
+    assert all(record["original_payload_pointer"].endswith("diabetic_data.csv#L2") for record in records)
+    manifest = json.loads(
+        (output / "normalization_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["metrics"]["source_row_count"] == 1
+    assert manifest["metrics"]["duplicate_encounter_id_count"] == 0

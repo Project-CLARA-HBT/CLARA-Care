@@ -18,6 +18,7 @@ from scripts.data._registry import (
     DatasetRegistryError,
     canonical_json,
     get_dataset,
+    iter_source_files,
     load_registry,
     repository_relative_path,
     resolve_local_source,
@@ -25,7 +26,7 @@ from scripts.data._registry import (
 )
 
 
-def _archive_probe(path: Path) -> dict[str, object]:
+def _archive_probe(path: Path) -> tuple[dict[str, object], set[str]]:
     lower = path.name.lower()
     if lower.endswith(".zip"):
         try:
@@ -34,15 +35,23 @@ def _archive_probe(path: Path) -> dict[str, object]:
                 members = archive.infolist()
                 if corrupt is not None:
                     raise DatasetRegistryError("archive_crc_failed")
-                return {
-                    "format": "zip",
-                    "member_count": len(members),
-                    "uncompressed_bytes": sum(item.file_size for item in members),
-                    "unsafe_member_count": sum(
-                        Path(item.filename).is_absolute() or ".." in Path(item.filename).parts
+                return (
+                    {
+                        "format": "zip",
+                        "member_count": len(members),
+                        "uncompressed_bytes": sum(item.file_size for item in members),
+                        "unsafe_member_count": sum(
+                            Path(item.filename).is_absolute()
+                            or ".." in Path(item.filename).parts
+                            for item in members
+                        ),
+                    },
+                    {
+                        candidate
                         for item in members
-                    ),
-                }
+                        for candidate in (item.filename, Path(item.filename).name)
+                    },
+                )
         except zipfile.BadZipFile as exc:
             raise DatasetRegistryError("archive_invalid") from exc
     if lower.endswith((".tar.gz", ".tgz", ".tar")):
@@ -51,26 +60,54 @@ def _archive_probe(path: Path) -> dict[str, object]:
                 count = 0
                 total = 0
                 unsafe = 0
+                observed: set[str] = set()
                 for item in archive:
                     count += 1
                     total += max(0, item.size)
                     member = Path(item.name)
                     unsafe += int(member.is_absolute() or ".." in member.parts)
-                return {
-                    "format": "tar",
-                    "member_count": count,
-                    "uncompressed_bytes": total,
-                    "unsafe_member_count": unsafe,
-                }
+                    observed.update((item.name, member.name))
+                return (
+                    {
+                        "format": "tar",
+                        "member_count": count,
+                        "uncompressed_bytes": total,
+                        "unsafe_member_count": unsafe,
+                    },
+                    observed,
+                )
         except (tarfile.TarError, OSError) as exc:
             raise DatasetRegistryError("archive_invalid") from exc
-    return {"format": "directory_or_unrecognized_file", "member_count": None}
+    return ({"format": "directory_or_unrecognized_file", "member_count": None}, set())
 
 
 def verify_dataset(dataset_id: str, registry_path: Path | None = None) -> dict[str, object]:
     dataset = get_dataset(load_registry(registry_path), dataset_id)
     source = resolve_local_source(dataset)
     inventory = source_inventory(source)
+    if source.is_file():
+        archive, archive_members = _archive_probe(source)
+    else:
+        archive_members = set()
+        nested_archives = []
+        unsafe_member_count = 0
+        for candidate in iter_source_files(source):
+            probe, members = _archive_probe(candidate)
+            if probe.get("format") not in {"zip", "tar"}:
+                continue
+            relative = str(candidate.relative_to(source))
+            nested_archives.append({"path": relative, **probe})
+            archive_members.update(members)
+            candidate_unsafe = probe.get("unsafe_member_count", 0)
+            if not isinstance(candidate_unsafe, int):
+                raise DatasetRegistryError("archive_probe_invalid")
+            unsafe_member_count += candidate_unsafe
+        archive = {
+            "format": "directory",
+            "archive_count": len(nested_archives),
+            "unsafe_member_count": unsafe_member_count,
+            "archives": nested_archives,
+        }
     expected_files = dataset.get("expected_files", [])
     if not isinstance(expected_files, list):
         raise DatasetRegistryError("expected_files_invalid")
@@ -79,14 +116,14 @@ def verify_dataset(dataset_id: str, registry_path: Path | None = None) -> dict[s
         for item in inventory
         for candidate in (str(item["path"]), Path(str(item["path"])).name)
     }
+    observed.update(archive_members)
     missing_expected = sorted(str(item) for item in expected_files if str(item) not in observed)
     if missing_expected:
         raise DatasetRegistryError("expected_files_missing:" + ",".join(missing_expected))
-    archive = _archive_probe(source) if source.is_file() else {"format": "directory"}
-    unsafe_member_count = archive.get("unsafe_member_count", 0)
-    if not isinstance(unsafe_member_count, int):
+    reported_unsafe_member_count = archive.get("unsafe_member_count", 0)
+    if not isinstance(reported_unsafe_member_count, int):
         raise DatasetRegistryError("archive_probe_invalid")
-    if unsafe_member_count:
+    if reported_unsafe_member_count:
         raise DatasetRegistryError("archive_unsafe_members")
     report = {
         "schema_version": "clara-dataset-verification.v1",

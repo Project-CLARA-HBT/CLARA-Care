@@ -104,6 +104,14 @@ not supply a pinned checksum through this workflow, so canonical authenticity
 remains unproven and the manifest says `NOT_PROVIDED` rather than upgrading the
 claim.
 
+The open CC-BY-4.0 Diabetes-130 archive was fetched from the registered UCI
+endpoint, checked for ZIP integrity and expected members, and normalized without
+extraction. The full source yielded 101,766 unique encounters from 71,518
+subjects and 2,768,244 common-interface records. Because the source supplies no
+event or recorded timestamps, every temporal coordinate remains explicitly
+unknown and `estimated_times_created` is zero. This is real external-data
+adapter/structural execution, not clinical gold or temporal-outcome validation.
+
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
 content copy apart from the final newline. The operator-provided root copy

@@ -12,7 +12,10 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from datasets.adapters.fhir_ndjson_archive import normalize_archive
+from datasets.adapters.diabetes_130_tabular import (
+    normalize_archive as normalize_diabetes_130,
+)
+from datasets.adapters.fhir_ndjson_archive import normalize_archive as normalize_fhir
 from scripts.data._registry import (
     DatasetRegistryError,
     get_dataset,
@@ -32,7 +35,8 @@ def normalize_dataset(
 ) -> Path:
     registry = load_registry(registry_path)
     dataset = get_dataset(registry, dataset_id)
-    if dataset.get("adapter") != "fhir_ndjson_archive":
+    adapter = dataset.get("adapter")
+    if adapter not in {"diabetes_130_tabular", "fhir_ndjson_archive"}:
         raise DatasetRegistryError("ADAPTER_NOT_IMPLEMENTED")
     source = resolve_local_source(dataset)
     destination = (
@@ -45,11 +49,11 @@ def normalize_dataset(
     temporary.mkdir(parents=True)
     try:
         records = temporary / "records.jsonl"
-        metrics = normalize_archive(
-            source,
-            records,
-            dataset_id=dataset_id,
-            source_schema=str(dataset["schema"]),
+        normalize = (
+            normalize_diabetes_130 if adapter == "diabetes_130_tabular" else normalize_fhir
+        )
+        metrics = normalize(
+            source, records, dataset_id=dataset_id, source_schema=str(dataset["schema"])
         )
         records_sha = sha256_file(records)
         manifest = {

@@ -63,6 +63,12 @@ not an independent clinical oracle. Its tracked manifest payload SHA-256 is
 `e5257d01f07024cfc965f0f263484c49fac2c5728539de3d030db8b0eadec738`;
 canonical checksum status remains `NOT_PROVIDED`.
 
+The local Diabetes-130 normalized output contains 2,768,244 records derived
+from 101,766 encounters and 71,518 source subjects. Its records SHA-256 is
+`9962c20af14eab834680aa1a3d4c2beae784752ed48b63ca0e6a567613e78760`.
+The source has no event/knowledge timestamps; the adapter leaves both unknown
+and creates no estimated time. These are adapter and structural counts only.
+
 Structural regression only:
 
 ```bash
