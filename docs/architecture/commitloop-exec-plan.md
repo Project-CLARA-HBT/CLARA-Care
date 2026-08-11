@@ -22,7 +22,8 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | B. Commitment domain + DSL | complete | Migration `20260810_0054`, four frozen domain policies, closed/bounded predicate evaluator, GST-coupled proposal/write gateway, bitemporal reconstruction/reconciliation, commitment THSS, and consent/profile-scoped human API routes are implemented. Focused policy/gateway/migration and DSL/reconciliation suites pass, including the full migration-chain upgrade → downgrade → upgrade round trip. |
 | C. Offline evaluator | complete | Explicit STU3/R4 ingestion (including STU3 `ProcedureRequest` without provenance relabeling), source-grounded construction, deterministic oracle, leakage-checked distinct packets, exact-model injected client with bounded valid request shape/decoding budget and no fallback, candidate-slot precision/recall/F1 and temporal-window scoring, product-state scoring, subject-clustered paired statistics, manifests, checkpoints, per-cell outputs and SHA-256 sealing are implemented. Stable offline and freeze/probe-gated Phase-B CLIs/Make targets are present; Phase-B paths are tested only with injected transports before freeze. |
 | D. Assurance | in progress | The two-subject/two-model/nine-condition fake-provider grid now materializes two source cases plus 18 opaque adversarial variants, completes 10 typed construction/review calls plus 360 solver cells, resumes with zero calls, and passes strengthened sealed-artifact validation. Solver calls execute the frozen system prompt and prediction schema. The BTSA packet executes its independent mechanism-mapped arbitration adapter. The API boundary covers auth, active/revoked consent and append-only re-acceptance, cookie CSRF, cross-owner isolation, stale version rejection, decision reconstruction, and real THSS snapshot compilation. Full API and ML service suites exit 0; isolated deployed-boundary execution remains external. |
-| E. Phase-A freeze | replacement in progress | Initial freeze `154ee41064c936c1c599c26a70a8460840cce304` completed with zero prior router calls. Its Phase-B probe failed closed because the router reports namespace-stripped IDs; two bounded diagnostic requests established the exact declared mapping, bringing post-freeze calls to three total. The initial freeze is superseded, benchmark execution never started, and external calls are stopped until the mapping change passes all local gates and a replacement freeze records both the initial zero-call proof and the three diagnostic calls. |
+| E. Phase-A freeze | complete | Replacement freeze `20543ed6cef6d9d1f2189bbb77a1266fcf21ae8d` is `COMPLETE` and `VALID`, with 18 frozen inputs. It preserves the initial zero-call proof and records the three post-initial-freeze probe/diagnostic calls. It supersedes `154ee41064c936c1c599c26a70a8460840cce304`, whose historical v1 seal remains evidence at its original SHA but is not compatible with the stricter v2 reported-model validator. |
+| F. Phase-B synthetic benchmark | complete | The replacement canonical probe accepted both declared requested→reported mappings in one attempt each with no fallback. The bounded benchmark completed 360/360 solver cells over two controlled synthetic source fixtures, 18 adversarial variants, two models, and nine conditions; four construction requests were rejected by deterministic invariants, for 364 benchmark requests total. Resume used an injected no-call transport and made zero requests. Artifacts validate and pass secret scanning. |
 
 ## Decisions
 
@@ -44,6 +45,7 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | 2026-08-11 | Make escalation a frozen solver output instead of an unmeasured placeholder. | Prediction schema/prompt v2 and the deterministic oracle now require `ESCALATE` for conflicting or insufficient evidence, or an unresolved overdue commitment. Scoring and artifact validation enforce explicit overall and adversarial denominators. |
 | 2026-08-11 | Treat `[REDACTED]` as the only accepted nonblank key placeholder and require a token boundary for `sk-` detection. | This preserves fail-closed credential scanning without corrupting ordinary `risk-...` paths; a marker with appended material remains a finding. The authorized history remediation changes only five assignment values. |
 | 2026-08-11 | Freeze the router's observed namespace-stripped reported-model IDs as a closed requested→reported mapping. | The canonical post-freeze probe rejected both short IDs before benchmark start. Two diagnostic requests confirmed valid JSON and the exact IDs `gemini-3.6-flash-high` and `claude-sonnet-4-6`; arbitrary aliases, requested-ID echoes, and fallbacks remain rejected. Replacement-freeze provenance retains all three diagnostic calls. |
+| 2026-08-11 | Treat the Phase-B run as synthetic software evidence only. | The run contains two controlled R4 fixtures and deterministic adversarial derivatives, not the available Synthea archive, real EHR data, or clinician-adjudicated cases. Zero timeliness and all-axes exact accuracy prevent a primary-endpoint winner claim. |
 
 ## Validation evidence
 
@@ -69,29 +71,33 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | `pytest evaluation/property_assurance/test_naming_migration.py -q` | 2 passed; canonical naming/compatibility aliases remain regression-locked |
 | Protocol/property/API-contract tests plus `make docs-check` | Property+naming rerun 4 passed; documentation links valid |
 | `git diff --check` | Passed; no whitespace-error findings |
+| Replacement Phase-A freeze | `implementation_freeze.v2` at `20543ed6cef6d9d1f2189bbb77a1266fcf21ae8d`: `COMPLETE`, `VALID`, 18 frozen inputs, initial router-call count 0, three disclosed Phase-B diagnostic calls before replacement, full tracked-repository/artifact secret scan passed |
+| Replacement canonical probe | Two calls, one attempt per declared model, JSON contract and usage fields available, non-streaming responses, no retries/fallback; reported IDs exactly match the frozen closed mapping; probe SHA-256 `125cbdf9f1e8e52cd19120c9e59700e6dbec040afff6e913f6d10b4d1a1cbca8` |
+| Phase-B benchmark and resume | `COMPLETE` and `VALID`: 2 subjects, 2 controlled synthetic source cases, 18 adversarial variants, 2 models × 9 conditions × 20 cases = 360/360 solver outputs, zero solver/provider errors, 360 solver plus 4 rejected-construction requests = 364 requests; injected no-call resume made 0 requests |
+| Phase-B primary metrics | Lifecycle `231/360 = 0.6417`; evidence `215/360 = 0.5972`; timeliness `0/360`; escalation `169/360 = 0.4694`; all-axes exact `0/360`. Every arm has zero exact accuracy, so no condition wins the primary endpoint; paired exact deltas are zero. |
+| Phase-B adversarial/operational metrics | Adversarial escalation `134/324 = 0.4136`; false alerts `7/72 = 0.0972`; missed conflicts `32/36 = 0.8889`; missed loops `36/144 = 0.25`; known-time, valid-time, and combined two-snapshot transition accuracy are all zero. No retries; latency p50/p95/p99 `2881.99/5987.62/7372.60 ms`. Provider-reported usage fields: 371,823 prompt, 26,455 completion, and 649,592 total tokens. |
 
-All commands above used local deterministic fixtures or injected fake transports.
+Phase-A commands used local deterministic fixtures or injected fake transports.
 Router calls before the initial freeze remain exactly zero. Three Phase-B probe/
-diagnostic calls occurred only after that freeze; the failed probe produced no
-canonical probe artifact and the benchmark did not start. A replacement freeze
-must retain these counts explicitly before any further external call.
+diagnostic calls occurred after it and before the replacement freeze. After the
+replacement seal, the canonical probe used two calls and the benchmark used 364,
+so the disclosed lifecycle total is 369 external calls. No further router call
+was made after the completed benchmark.
 
 ## Current blockers
 
 - The primary worktree contains unrelated untracked, user-owned archives. They
-  remain untouched and will not be staged; the final validation and freeze must
-  run from a clean detached worktree at the committed implementation SHA.
+  remain untouched and unstaged. Freeze and Phase-B execution ran from a clean
+  detached worktree at the committed implementation SHA.
 - Real-application adversarial execution, real EHR, and clinical adjudication
   remain `BLOCKED_EXTERNAL / NOT_RUN` and must not be substituted with synthetic
   success claims.
-- Root `make lint` currently fails with 635 unrelated findings in pre-existing
-  scripts and ML test files. CommitLoop/GLHS-targeted Ruff and mypy commands
-  pass; the repository-wide lint debt must be cleared or separately waived
-  before a truthful clean implementation freeze.
-- Root `make type-check` currently fails with 332 mypy errors across 43 API/ML
-  files outside the CommitLoop modules. Targeted CommitLoop type checks pass;
-  this repository-wide debt must likewise be cleared or separately governed
-  before a truthful clean implementation freeze.
+- Root `make lint` reports 635 unrelated findings in pre-existing scripts and ML
+  test files. The freeze truthfully records this repository-wide debt while the
+  frozen CommitLoop/GLHS Ruff surface passes.
+- Root `make type-check` reports 332 mypy errors across 43 API/ML files outside
+  the CommitLoop modules. The freeze records this debt; targeted CommitLoop type
+  checks pass.
 - The focused Commitment endpoint integration path now passes. Isolated
   deployed-boundary adversarial execution and PostgreSQL-specific execution
   remain outstanding and are not inferred from in-process SQLite validation.
