@@ -2,6 +2,8 @@ SHELL := /bin/bash
 COMPOSE_FILE := deploy/docker/docker-compose.yml
 APP_COMPOSE_FILE := deploy/docker/docker-compose.app.yml
 
+.PHONY: eval-commitloop-v5-offline
+
 .PHONY: help setup-env check-env docker-up docker-down docker-logs docker-ps docker-app-up docker-app-logs docker-app-ps dev-api dev-web dev-ml lint type-check test docs-check precommit-install scribe-rollout-plan scribe-rollback-plan eval-smoke eval-nightly eval-release eval-judge-report eval-structural-conformance eval-glhs-local-assurance eval-glhs-fullstack-postgres eval-glhs-contention-postgres eval-standards-comparator-validate eval-contract-clause-ablation eval-commitloop-local eval-commitloop-validate eval-commitloop-secret-scan eval-commitloop-freeze eval-commitloop-provider-probe eval-commitloop-phase-b
 
 help:
@@ -39,6 +41,7 @@ help:
 	@echo "  eval-commitloop-local  Run the sealed two-subject CommitLoop fake-provider grid"
 	@echo "  eval-commitloop-validate  Validate COMMITLOOP_RUN_DIR and its SHA-256 inventory"
 	@echo "  eval-commitloop-secret-scan  Fail if tracked CommitLoop content contains credentials"
+	@echo "  eval-commitloop-v5-offline  Run the sealed 384-subject v5 zero-call dry run"
 	@echo "  eval-commitloop-freeze  Seal a clean Phase-A run with local validation evidence"
 	@echo "  eval-commitloop-provider-probe  Phase-B-only exact-model router probe"
 	@echo "  eval-commitloop-phase-b  Run the freeze/probe-gated bounded synthetic benchmark"
@@ -212,6 +215,11 @@ eval-commitloop-validate:
 
 eval-commitloop-secret-scan:
 	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.secret_scan --repo-root . --path evaluation/commitloop --path protocols/commitloop --path services/api/src/clara_api/glhs --path services/api/tests/test_commitloop_gateway.py --path services/api/tests/test_commitloop_predicate_dsl.py --path services/api/tests/test_commitloop_reconciliation.py --path services/api/tests/test_commitment_policies.py
+
+eval-commitloop-v5-offline:
+	@test -n "$(COMMITLOOP_V5_OFFLINE_OUTPUT)" && test -n "$(COMMITLOOP_V5_COHORT_OUTPUT)" || (echo "COMMITLOOP_V5_OFFLINE_OUTPUT and COMMITLOOP_V5_COHORT_OUTPUT are required" >&2; exit 2)
+	@test ! -e "$(COMMITLOOP_V5_OFFLINE_OUTPUT)" && test ! -e "$(COMMITLOOP_V5_COHORT_OUTPUT)" || (echo "v5 offline outputs must not already exist" >&2; exit 2)
+	@PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m evaluation.commitloop.v5_offline_dry_run --output "$(COMMITLOOP_V5_OFFLINE_OUTPUT)" --cohort-output "$(COMMITLOOP_V5_COHORT_OUTPUT)"
 
 eval-commitloop-freeze:
 	@test -n "$(COMMITLOOP_RUN_DIR)" && test -n "$(COMMITLOOP_VALIDATION_EVIDENCE)" || (echo "COMMITLOOP_RUN_DIR and COMMITLOOP_VALIDATION_EVIDENCE are required" >&2; exit 2)
