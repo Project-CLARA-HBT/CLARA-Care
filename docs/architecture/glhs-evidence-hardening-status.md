@@ -26,12 +26,12 @@ mean clinical validity. External evidence remains fail-closed.
 | Model execution manifests | PARTIAL | Existing CommitLoop manifests/checksums | Evaluator tests | Frozen historical runs | New contract replication not frozen or executed |
 | Confirmatory replication power | PARTIAL | Conservative tied paired-design calculator exists | Power tests | Draft analysis plan | New protocol is not frozen; no provider execution authorized |
 | Concurrency/version granularity study | PARTIAL | Profile-global N=4 safety path executes on PostgreSQL | Same-slot and unrelated-slot race passed | Atomic contract output | Levels 1/2/4/8/16, alternative strategies and false-stale estimand not yet implemented/executed |
-| Full-stack operational evaluation | PARTIAL | Alembic-backed service-layer runner covers seven real paths and fails closed on nonempty DB/output reuse | Validator/checksum/tamper tests plus developmental PostgreSQL run | v2 metrics/manifest/checksum in unique local run | HTTP, source-revocation and concurrent-transition paths explicitly remain gaps; clean-SHA rerun pending |
+| Full-stack operational evaluation | PARTIAL | Alembic-backed service-layer runner covers seven real paths and fails closed on nonempty DB/output reuse | Validator/checksum/tamper tests plus clean-SHA PostgreSQL run | Saved v2 metrics/manifest/checksum and systems report | HTTP, source-revocation and concurrent-transition paths explicitly remain gaps |
 | Governance adversarial boundary | PARTIAL | Tamper/expiry/stale/cross-context tests at service/API boundary | Focused gateway/endpoint tests | Local test evidence | Deployment/cache-boundary run and operator labels absent |
 | Audit reconstruction | COMPLETE | Exact stored payload, proposal coordinates, digest contract and snapshot-specific transition reconstruction | Tamper/legacy/unrelated-transition tests | Ledger rows | None for implementation conformance; external audit remains separate |
 | External lawful-data validation | BLOCKED_EXTERNAL | Fail-closed manifests/validators | Validator tests | Demo-only non-headline artifacts | Lawful holdout, curator attestation and independent oracle absent |
 | Statistical contract | PARTIAL | Subject-clustered paired statistics, failure handling and deterministic clause matrix | Evaluator tests | Existing analysis plans and frozen clause ablation | Contention/version-granularity estimands not frozen |
-| Unique-run artifact contract | PARTIAL | Seal/checksum/validation tooling exists | Evidence-program tests | Existing sealed artifacts | New hardening run not yet sealed from a clean SHA |
+| Unique-run artifact contract | PARTIAL | Seal/checksum/validation tooling exists | Evidence-program tests | Clean-SHA systems sub-run plus existing sealed artifacts | Program-wide hardening artifact and final evidence inventory remain pending |
 | Manuscript evidence map | COMPLETE | Claim-to-evidence register | Docs check pending | `glhs-manuscript-evidence-map.md` | None |
 | Manuscript revision guidance | NOT_RUN | No manuscript prose changed | None | None | Generate only after verified evidence stabilizes |
 | Workstream A — contract hardening | COMPLETE | Context/digest/bitemporal/immutability and atomic transition contract implemented | Focused/full API plus actual PostgreSQL concurrency pass | Migration 0055 and isolated-schema race output | Complete as engineering conformance, not clinical evidence |
@@ -62,9 +62,11 @@ mean clinical validity. External evidence remains fail-closed.
   five comparator tests and five clause-ablation tests pass. A fresh network-free
   run validated all 112 cells (16 identical cases x 7 variants), its aggregates
   and its SHA-256 inventory; external calls were zero.
-- Full-stack v2 developmental run: PostgreSQL 16.14 at Alembic revision
-  `20260811_0055`, history depth 20, ten repetitions and seven service-layer
-  operations validated with checksums. It is not final evidence because the
-  implementation worktree was intentionally dirty while repairing the runner;
-  HTTP, actual source revocation and concurrent transition remain declared gaps.
+- Full-stack v2 clean-SHA run: PostgreSQL 16.14 at Alembic revision
+  `20260811_0055`, history depth 50, 30 repetitions for each of seven
+  service-layer operations, implementation `36642787931e5ce429f73e8087c6a2ef66e71307`
+  and checksum inventory SHA-256
+  `75115757d7acec428d9291c567e12a2477f909990627d3f10e8bce40a8911336`.
+  HTTP, actual source revocation and concurrent transition remain declared gaps;
+  failed/developmental attempts are recorded in `glhs-systems-evidence-report.md`.
 - Provider/model calls: zero for this hardening checkpoint.

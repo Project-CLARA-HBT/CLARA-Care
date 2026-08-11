@@ -1,0 +1,53 @@
+{
+  "api_boundary": "in_process_api_owned_service_layer",
+  "architecture_path": "postgresql>gst>glhs>thss>api",
+  "coverage_gaps": [
+    "http_transport",
+    "source_revocation_propagation",
+    "concurrent_transition"
+  ],
+  "environment": {
+    "alembic_revision": "20260811_0055",
+    "database": "postgresql",
+    "database_image_digest": "sha256:7a396fd264a2067788b6551122b50f162bf6136312c7fc9d74381cb92c648382",
+    "default_transaction_isolation": "read committed",
+    "max_connections": "100",
+    "platform": "Linux-6.19.10-300.fc44.x86_64-x86_64-with-glibc2.43",
+    "python": "3.11.15",
+    "server_version": "16.14",
+    "sqlalchemy": "2.0.51",
+    "synchronous_commit": "on"
+  },
+  "finished_at": "2026-08-11T17:09:29.178506+00:00",
+  "fixture_contains_phi": false,
+  "hardware": {
+    "cpu_count": 8,
+    "hostname": "fedora"
+  },
+  "history_depth": 50,
+  "http_transport_measured": false,
+  "implementation": {
+    "implementation_sha": "36642787931e5ce429f73e8087c6a2ef66e71307",
+    "tracked_worktree_clean": true
+  },
+  "operations": [
+    "transition",
+    "reconstruction",
+    "snapshot_compile",
+    "governed_decision_reconstruction",
+    "audit_lookup",
+    "invalidation_rebuild",
+    "enter_in_error_rebuild"
+  ],
+  "production_services_modified": false,
+  "repetitions": 30,
+  "row_counts": {
+    "assertions": 112,
+    "snapshots": 91,
+    "transitions": 172
+  },
+  "schema_version": "glhs-fullstack-service-layer.v2",
+  "started_at": "2026-08-11T17:09:20.692357+00:00",
+  "status": "EXECUTED_PARTIAL_SERVICE_LAYER",
+  "worker_count": 1
+}
