@@ -22,10 +22,11 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | B. Commitment domain + DSL | complete | Migration `20260810_0054`, four frozen domain policies, closed/bounded predicate evaluator, GST-coupled proposal/write gateway, bitemporal reconstruction/reconciliation, commitment THSS, and consent/profile-scoped human API routes are implemented. Focused policy/gateway/migration and DSL/reconciliation suites pass, including the full migration-chain upgrade → downgrade → upgrade round trip. |
 | C. Offline evaluator | complete | Explicit STU3/R4 ingestion (including STU3 `ProcedureRequest` without provenance relabeling), source-grounded construction, deterministic oracle, leakage-checked distinct packets, exact-model injected client with bounded valid request shape/decoding budget and no fallback, candidate-slot precision/recall/F1 and temporal-window scoring, product-state scoring, subject-clustered paired statistics, manifests, checkpoints, per-cell outputs and SHA-256 sealing are implemented. Stable offline and freeze/probe-gated Phase-B CLIs/Make targets are present; Phase-B paths are tested only with injected transports before freeze. |
 | D. Assurance | complete locally | Solver-v4 fake-provider execution completes four deterministic-construction/dual-review calls plus 360 solver cells and resumes with zero calls. Focused 104 tests, migration round trip, property/adversarial/leakage gates, Ruff, mypy, docs, artifact validation, full API (1,357 passed, one skipped), and full ML (1,500 passed, two skipped) all exit 0. Isolated deployed-boundary execution remains external. |
-| E. Phase-A freeze | complete | Current replacement freeze `ac599d35d240dba83aa08ca3111575ccf23d25dd` is `COMPLETE` and `VALID`, freezes 47 transitive inputs, preserves the initial zero-call proof, and records 1,182 historical Phase-B calls before replacement. It supersedes `c57f63003123f8921321fec10527a7a45bf7f16d`, which corrected repeated-case subject clustering and the primary comparison family. |
+| E. Phase-A freeze | complete | Current replacement freeze `17dd4b8c558c2ec0cb8c2572728093d9aa3ce914` is `COMPLETE` and `VALID`, freezes 47 transitive inputs, preserves the initial zero-call proof, and records 1,990 historical Phase-B calls before replacement. It supersedes solver-v4 freeze `ac599d35d240dba83aa08ca3111575ccf23d25dd`. |
 | F. Initial Phase-B synthetic benchmark | complete | The replacement canonical probe accepted both declared requested→reported mappings in one attempt each with no fallback. The bounded benchmark completed 360/360 solver cells over two controlled synthetic source fixtures, 18 adversarial variants, two models, and nine conditions; four construction requests were rejected by deterministic invariants, for 364 benchmark requests total. Resume used an injected no-call transport and made zero requests. Artifacts validate and pass secret scanning. |
 | G. Corrective evaluation iteration | complete | Freeze `af5b2150` aligned oracle/packet semantics and ran an eight-subject/44-case mechanism cohort. A zero-call correction at `c57f6300` fixed repeated-case subject clustering, used strict THSS as the pre-registered reference, limited primary inference to five registered comparators, applied Holm over ten model×comparator tests, and counted missing outputs as errors. |
 | H. Exploratory solver-v4 iteration | complete | Deterministic construction plus bounded dual-model review removed fragile model-authored DSL projections. Solver v4 made independent-axis, exact-status, and decisive-time rules explicit. The sealed 792-cell exploratory rerun reached 94.57% all-axes exact and 98.86% timeliness, but no Holm-adjusted superiority. The n=8 design cannot mathematically achieve Holm-adjusted p<0.05 for ten two-sided sign tests. See [`commitloop-phase-b-v4-results.md`](commitloop-phase-b-v4-results.md). |
+| I. Prospective solver-v5 mechanism cohort | complete | Anchor-only construction review eliminated future-context false rejection; an ordered decision procedure made decisive-time handling explicit. A pre-registered 64-subject, 1,152-cell one-shot run completed with zero errors/retries and 64/64 accepted constructions. Strict THSS reached 63/64 for Claude and 64/64 for Gemini, with six Holm-significant primary comparisons. The planned 51-non-tie power target was not met, so the result is significant synthetic mechanism evidence but not fully powered confirmation. See [`commitloop-confirmatory-v5-results.md`](commitloop-confirmatory-v5-results.md). |
 
 ## Decisions
 
@@ -53,6 +54,8 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | 2026-08-11 | Correct paired inference before interpreting the corrective run. | Statistics v1 overwrote repeated subject/model/condition rows and used the wrong reference. Statistics v2 reduces cases to subject means, compares strict THSS only with the five pre-registered primary comparators, counts absent cells as errors, and applies Holm across all ten primary tests. |
 | 2026-08-11 | Make code own construction projections and models review only. | The router did not reliably enforce nested predicate `const` schemas. Retrying or weakening the DSL validator would be unsafe. Deterministic extraction now owns candidate, predicate, and note; both declared model families provide bounded non-clinical review. |
 | 2026-08-11 | Treat solver-v4 results as exploratory and stop tuning the eight-subject cohort for significance. | Solver v4 follows disclosed post-hoc error slicing. With eight subjects and ten Holm-controlled two-sided sign tests, the minimum attainable adjusted p-value is 0.078125. A valid superiority test requires a larger prospectively frozen independent cohort, not further reuse of this test set. |
+| 2026-08-11 | Restrict construction review to the anchor event and execute lifecycle/decisive-time/timeliness as an ordered solver-v5 procedure. | Construction projections are anchor-owned; supplying later events to a reviewer caused false future-leakage rejection. The remaining solver-v4 errors came from using cutoff instead of the selected decisive event or letting contradiction/status competition collapse independent axes. |
+| 2026-08-11 | Freeze the 64-subject mechanism cohort and analysis before the solver-v5 probe, then run it once. | The pre-execution seal binds eight balanced strata, 1,152 cells, the ten-test Holm family, missing-output error policy, and a 51-non-tie power target. Same-cohort retuning is prohibited after the two-call probe. |
 
 ## Validation evidence
 
@@ -87,15 +90,19 @@ The existing GLHS ledger and its profile state counter remain canonical.
 | Solver-v4 Phase-A gates | 104 focused tests passed with three framework warnings; migration 1, property 9, and adversarial/leakage 8 passed; Ruff and mypy (48 files) passed; local 364-call injected grid was `COMPLETE/VALID` and resumed with zero calls; full API 1,357 passed/1 skipped and full ML 1,500 passed/2 skipped. |
 | Solver-v4 freeze/probe/smoke | Freeze `ac599d35d240dba83aa08ca3111575ccf23d25dd` is `COMPLETE/VALID` with 47 inputs and 1,182 historical calls disclosed. Canonical probe used two one-attempt calls. Dual-review smoke was `ACCEPTED` in exactly two requests/two attempts. |
 | Solver-v4 Phase-B | `COMPLETE/VALID`: 792 attempted solver cells, 791 valid outputs, one fail-closed malformed Gemini long-context output, four accepted and four rejected construction reviews, 804 benchmark requests, zero-call injected resume, and artifact secret scan pass. Overall lifecycle/evidence/timeliness/escalation/all-axes exact were 777/765/783/788/749 of 792. |
+| Solver-v5 Phase-A gates | Clean SHA `17dd4b8c558c2ec0cb8c2572728093d9aa3ce914`: 104 focused tests, migration round trip, 9 property tests, 8 adversarial/leakage tests, Ruff, mypy (48 files), docs, artifact validation, full API 1,357 passed/1 skipped, and full ML 1,500 passed/2 skipped all exit 0. Local 364-call fake grid resumed with zero calls. |
+| Solver-v5 freeze/probe/cohort seal | Replacement freeze `COMPLETE/VALID`, 47 inputs, 1,990 prior calls disclosed. The exact-model probe used two one-attempt calls. The 64-subject cohort and pre-registered analysis were sealed before the probe; a 1,280-call injected dry run validated and resumed with zero calls. |
+| Solver-v5 prospective Phase-B | `COMPLETE/VALID`: 64 source cases, no variants, 1,152/1,152 solver outputs, 64/64 accepted construction reviews, zero errors/retries, 1,280 benchmark requests, secret/checksum validation pass, and zero-call resume. Strict THSS was 63/64 Claude and 64/64 Gemini; six primary comparisons were Holm-significant, while every significant comparison remained below the planned 51 non-tied pairs. |
 
 Phase-A commands used local deterministic fixtures or injected fake transports.
 Router calls before the initial freeze remain exactly zero. Three Phase-B probe/
 diagnostic calls occurred after it and before the replacement freeze. After the
 replacement seal, the canonical probe used two calls and the benchmark used 364,
 so the earlier disclosed lifecycle total was 369 calls. Corrective Phase B,
-statistical/generation diagnostics, and solver-v4 execution bring the current
-disclosed lifecycle total to 1,990 external calls. No further router call was
-made after the completed solver-v4 benchmark.
+statistical/generation diagnostics, solver-v4 execution, the solver-v5 probe,
+and prospective mechanism-cohort run bring the current disclosed lifecycle
+total to 3,272 external calls. No further router call was made after the
+completed solver-v5 benchmark.
 
 ## Current blockers
 
@@ -114,10 +121,15 @@ made after the completed solver-v4 benchmark.
 - The focused Commitment endpoint integration path now passes. Isolated
   deployed-boundary adversarial execution and PostgreSQL-specific execution
   remain outstanding and are not inferred from in-process SQLite validation.
-- The current eight-subject cohort is mathematically unable to produce a
+- The historical eight-subject solver-v4 cohort is mathematically unable to produce a
   Holm-adjusted two-sided sign-test p-value below 0.05 across ten primary tests.
   Independent prospective cohort expansion and power planning are required;
   further tuning on the current cohort is not a valid route to superiority.
+- The prospective 64-subject cohort produced six Holm-significant comparisons,
+  but only 9 to 21 non-tied pairs per significant comparison versus the
+  pre-declared target of 51. A tie-rate-adjusted independent replication is
+  required for a fully powered confirmatory label; same-cohort retuning is
+  prohibited.
 
 The requirement-by-requirement evidence and claim limits are maintained in
 [`commitloop-phase-a-audit.md`](commitloop-phase-a-audit.md).
