@@ -92,3 +92,6 @@ Not completed / cannot be inferred:
 | 2026-08-09 | Synthetic structural runs are retained only as structural evidence. | Developer authorship/oracle prevents independent clinical inference. |
 | 2026-08-10 | Risk-aware THSS is a governed abstention mechanism, not a clinical-safety claim. | Thresholds and domain policies need independent clinical review before any safety inference. |
 | 2026-08-09 | MIMIC Demo run is sealed as non-headline. | Subject split and source timestamps are measurable, but curator independence and clinician adjudication are absent by user direction. |
+| 2026-08-11 | Separate snapshot-bound and base-version-only proposal validation. | An optional snapshot inside one ambiguous rule could not state or test the exact admissibility contract. |
+| 2026-08-11 | Version snapshot fingerprints as `sha-256` plus `clara.canonical-json.v1`, retaining a legacy validator. | Deterministic hashing needs an explicit encoding contract; an unkeyed digest is only a trusted-store consistency check. |
+| 2026-08-11 | Keep PostgreSQL atomicity evidence `NOT_RUN` on this host. | The implementation and opt-in isolated-schema test exist, but no acknowledged PostgreSQL URL or Docker runtime is available. |

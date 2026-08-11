@@ -145,9 +145,11 @@ def test_generic_capture_cannot_claim_confirmation_and_ids_are_opaque() -> None:
             "reported",
             "documented",
             "documented",
+            "documented",
         ]
         assert [row.lifecycle_status for row in assertions] == [
             "superseded",
+            "rejected",
             "superseded",
             "active",
         ]

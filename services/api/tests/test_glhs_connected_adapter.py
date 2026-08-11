@@ -102,7 +102,11 @@ def test_connected_adapter_supersedes_updates_and_retires_tombstones() -> None:
                     .order_by(GlhsAssertion.id)
                 ).scalars()
             )
-            assert [item.lifecycle_status for item in assertions] == ["superseded", "active"]
+            assert [item.lifecycle_status for item in assertions] == [
+                "superseded",
+                "rejected",
+                "active",
+            ]
             assert assertions[-1].epistemic_state == "documented"
             assert assertions[-1].value_json["value"]["scalar"] == 1400
 
@@ -116,6 +120,10 @@ def test_connected_adapter_supersedes_updates_and_retires_tombstones() -> None:
                 observation=row,
                 idempotency_key="three",
             )
-            assert [item.lifecycle_status for item in assertions] == ["superseded", "superseded"]
+            assert [item.lifecycle_status for item in assertions] == [
+                "superseded",
+                "rejected",
+                "superseded",
+            ]
     finally:
         engine.dispose()

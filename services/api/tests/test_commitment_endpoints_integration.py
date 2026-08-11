@@ -74,25 +74,56 @@ def _evidence(headers: dict[str, str], *, request_client: TestClient = client) -
         return evidence.public_id
 
 
-def _proposal_payload(evidence_id: str) -> dict[str, object]:
+def _proposal_payload(
+    evidence_id: str, snapshot: dict[str, object] | None = None
+) -> dict[str, object]:
+    snapshot = snapshot or {
+        "snapshot_id": "untrusted-snapshot",
+        "manifest_digest": "0" * 64,
+        "state_version": 0,
+    }
     return {
         "domain": "observations",
         "semantic_key": "observation:integration:repeat",
         "supersession_key": "observation:integration",
         "observed_evidence_ids": [evidence_id],
         "proposed_transition": "OPEN",
+        "observed_base_state_version": snapshot["state_version"],
+        "task": "commitment_proposal",
+        "source_snapshot_id": snapshot["snapshot_id"],
+        "source_snapshot_digest": snapshot["manifest_digest"],
     }
+
+
+def _proposal_snapshot(headers: dict[str, str], evidence_id: str) -> dict[str, object]:
+    response = client.post(
+        "/api/v1/commitments/snapshots",
+        headers=headers,
+        json={
+            "domains": ["observations"],
+            "task": "commitment_proposal",
+            "valid_at": "2026-01-02T00:00:00Z",
+            "known_at": "2026-01-02T00:00:00Z",
+            "strict": True,
+            "evidence_ids": [evidence_id],
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
 
 
 def test_owner_commitment_route_is_consent_scoped_and_append_only() -> None:
     headers = _account("owner")
     evidence_id = _evidence(headers)
+    proposal_snapshot = _proposal_snapshot(headers, evidence_id)
     proposal = client.post(
         "/api/v1/commitments/proposals",
         headers=headers,
-        json=_proposal_payload(evidence_id),
+        json=_proposal_payload(evidence_id, proposal_snapshot),
     )
     assert proposal.status_code == 201, proposal.text
+    assert proposal.json()["source_snapshot_id"] == proposal_snapshot["snapshot_id"]
+    assert proposal.json()["source_snapshot_digest"] == proposal_snapshot["manifest_digest"]
     transition_payload = {
         "domain": "observations",
         "proposal_id": proposal.json()["proposal_id"],
@@ -215,7 +246,7 @@ def test_revoked_medical_consent_blocks_commitment_and_can_be_reaccepted() -> No
     allowed = client.post(
         "/api/v1/commitments/proposals",
         headers=headers,
-        json=_proposal_payload(evidence_id),
+        json=_proposal_payload(evidence_id, _proposal_snapshot(headers, evidence_id)),
     )
     assert allowed.status_code == 201, allowed.text
 

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
+from uuid import uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -17,15 +17,23 @@ from clara_api.db.models import (
     GlhsClinicalCommitmentTransition,
     GlhsClinicalCommitmentVersion,
     GlhsEvidence,
+    GlhsSnapshotManifest,
     GlhsStateVersion,
 )
+from clara_api.glhs.canonical_json import consistency_fingerprint
 from clara_api.glhs.commitments import (
     COMMITMENT_SCHEMA_VERSION,
     policy_for,
     validate_domain_version,
 )
 from clara_api.glhs.domain import GlhsInvariantError
-from clara_api.glhs.gateway import _governed_consent_version, current_state_version
+from clara_api.glhs.gateway import (
+    _governed_consent_version,
+    _lock_profile_state,
+    current_state_version,
+    reconstruct_snapshot_artifact,
+    validate_snapshot_manifest,
+)
 from clara_api.glhs.predicate_dsl import validate_predicate
 from clara_api.lifemap.commands import add_outbox
 from clara_api.lifemap.profile_scope import ProfileScope
@@ -35,9 +43,7 @@ LIFECYCLE_STATES = frozenset(
     {"OPEN", "PARTIALLY_SATISFIED", "SATISFIED", "SUPERSEDED", "CANCELLED"}
 )
 EVIDENCE_STATES = frozenset({"CLEAR", "CONFLICTED", "INSUFFICIENT_EVIDENCE"})
-TIMELINESS_STATES = frozenset(
-    {"NOT_APPLICABLE", "BEFORE_DUE", "IN_GRACE", "OVERDUE", "UNKNOWN"}
-)
+TIMELINESS_STATES = frozenset({"NOT_APPLICABLE", "BEFORE_DUE", "IN_GRACE", "OVERDUE", "UNKNOWN"})
 DOMAINS = frozenset({"medications", "allergies", "conditions", "observations"})
 PROPOSAL_ORIGINS = frozenset({"user", "clinician", "caregiver", "system", "model"})
 
@@ -49,8 +55,7 @@ def _hash(value: str) -> str:
 
 
 def _canonical_digest(value: object) -> str:
-    raw = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(raw.encode()).hexdigest()
+    return consistency_fingerprint(value)
 
 
 def _utc(value: datetime) -> datetime:
@@ -64,6 +69,140 @@ def _iso(value: datetime | None) -> str | None:
 def _require_live_scope(scope: ProfileScope) -> None:
     if scope.valid_until is not None and _utc(scope.valid_until) <= datetime.now(UTC):
         raise GlhsInvariantError("commitment_scope_expired")
+
+
+def _proposal_envelope(proposal: GlhsClinicalCommitmentProposal) -> dict[str, object]:
+    return {
+        "proposal_id": proposal.public_id,
+        "commitment_id": proposal.commitment_id,
+        "target_profile_public_id": proposal.target_profile_public_id,
+        "base_state_version": proposal.base_state_version,
+        "observed_evidence_ids": proposal.observed_evidence_ids_json,
+        "proposed_transition": proposal.proposed_transition,
+        "purpose": proposal.purpose,
+        "task": proposal.task,
+        "origin": proposal.origin,
+        "actor_user_id": proposal.actor_user_id,
+        "actor_role": proposal.actor_role,
+        "context_binding_mode": proposal.context_binding_mode,
+        "model_manifest_ref": proposal.model_manifest_ref,
+        "source_snapshot_id": proposal.source_snapshot_id,
+        "source_snapshot_digest": proposal.source_snapshot_digest,
+        "reviewed_proposal_id": proposal.reviewed_proposal_id,
+        "policy_version": proposal.policy_version,
+        "consent_version": proposal.consent_version,
+    }
+
+
+def _validate_proposal_digest(proposal: GlhsClinicalCommitmentProposal) -> None:
+    if (
+        not proposal.proposal_digest
+        or _canonical_digest(_proposal_envelope(proposal)) != proposal.proposal_digest
+    ):
+        raise GlhsInvariantError("commitment_proposal_digest_mismatch")
+
+
+def _validate_proposal_scope_coordinates(
+    *, scope: ProfileScope, proposal: GlhsClinicalCommitmentProposal
+) -> None:
+    if proposal.target_profile_public_id != scope.profile.public_id:
+        raise GlhsInvariantError("commitment_proposal_profile_mismatch")
+    if proposal.purpose != scope.purpose:
+        raise GlhsInvariantError("commitment_proposal_purpose_mismatch")
+    if proposal.actor_user_id is None:
+        raise GlhsInvariantError("commitment_proposal_actor_missing")
+    if not proposal.actor_role:
+        raise GlhsInvariantError("commitment_proposal_actor_role_missing")
+    if not proposal.task:
+        raise GlhsInvariantError("commitment_proposal_task_missing")
+
+
+def validate_bound_proposal_context(
+    db: Session,
+    *,
+    scope: ProfileScope,
+    proposal: GlhsClinicalCommitmentProposal,
+    observed_evidence_ids: tuple[str, ...] | list[str],
+    current_version: int,
+) -> None:
+    """Validate every coordinate of one snapshot-bound proposal context."""
+
+    _validate_proposal_scope_coordinates(scope=scope, proposal=proposal)
+    if proposal.context_binding_mode != "snapshot_bound":
+        raise GlhsInvariantError("commitment_proposal_binding_mode_mismatch")
+    if proposal.base_state_version != current_version:
+        raise GlhsInvariantError("stale_commitment_proposal")
+    validate_snapshot_manifest(
+        db,
+        profile_id=scope.profile.id,
+        snapshot_id=proposal.source_snapshot_id,
+        manifest_digest=proposal.source_snapshot_digest,
+        base_state_version=proposal.base_state_version,
+        policy_version=proposal.policy_version,
+        purpose=proposal.purpose,
+        consent_version=proposal.consent_version,
+        observed_evidence_ids=observed_evidence_ids,
+        actor_user_id=proposal.actor_user_id,
+        actor_role=proposal.actor_role,
+        task=proposal.task,
+    )
+
+
+def validate_base_proposal_context(
+    *,
+    scope: ProfileScope,
+    proposal: GlhsClinicalCommitmentProposal,
+    current_version: int,
+    current_consent_version: str,
+) -> None:
+    """Validate an explicit base-version-only proposal with no snapshot."""
+
+    _validate_proposal_scope_coordinates(scope=scope, proposal=proposal)
+    if proposal.context_binding_mode != "base_version_only":
+        raise GlhsInvariantError("commitment_proposal_binding_mode_mismatch")
+    if proposal.source_snapshot_id is not None:
+        raise GlhsInvariantError("commitment_base_proposal_snapshot_id_present")
+    if proposal.source_snapshot_digest is not None:
+        raise GlhsInvariantError("commitment_base_proposal_snapshot_digest_present")
+    if proposal.base_state_version != current_version:
+        raise GlhsInvariantError("stale_commitment_proposal")
+    if proposal.policy_version != COMMITMENT_POLICY_VERSION:
+        raise GlhsInvariantError("commitment_proposal_policy_mismatch")
+    if proposal.consent_version != current_consent_version:
+        raise GlhsInvariantError("commitment_proposal_consent_mismatch")
+
+
+def _validate_current_proposal_context(
+    db: Session,
+    *,
+    scope: ProfileScope,
+    proposal: GlhsClinicalCommitmentProposal,
+    evidence_ids: list[str],
+    current_version: int,
+    consent_version: str,
+) -> None:
+    if proposal.policy_version != COMMITMENT_POLICY_VERSION:
+        raise GlhsInvariantError("commitment_proposal_policy_mismatch")
+    if proposal.consent_version != consent_version:
+        raise GlhsInvariantError("commitment_proposal_consent_mismatch")
+    if proposal.context_binding_mode == "snapshot_bound":
+        validate_bound_proposal_context(
+            db,
+            scope=scope,
+            proposal=proposal,
+            observed_evidence_ids=evidence_ids,
+            current_version=current_version,
+        )
+        return
+    if proposal.context_binding_mode == "base_version_only":
+        validate_base_proposal_context(
+            scope=scope,
+            proposal=proposal,
+            current_version=current_version,
+            current_consent_version=consent_version,
+        )
+        return
+    raise GlhsInvariantError("commitment_proposal_binding_mode_invalid")
 
 
 @dataclass(frozen=True)
@@ -109,7 +248,7 @@ def get_or_create_commitment(
     if existing is not None:
         if existing.domain != domain or existing.supersession_key != supersession_key:
             raise GlhsInvariantError("commitment_identity_mismatch")
-        return existing
+        return cast(GlhsClinicalCommitment, existing)
     row = GlhsClinicalCommitment(
         profile_id=scope.profile.id,
         semantic_key=semantic_key,
@@ -121,7 +260,7 @@ def get_or_create_commitment(
     return row
 
 
-def propose_commitment_transition(
+def propose_bound_commitment_transition(
     db: Session,
     *,
     scope: ProfileScope,
@@ -129,6 +268,10 @@ def propose_commitment_transition(
     observed_evidence: tuple[GlhsEvidence, ...],
     proposed_transition: str,
     origin: str,
+    observed_base_state_version: int,
+    task: str,
+    source_snapshot_id: str,
+    source_snapshot_digest: str,
     model_manifest_ref: str | None = None,
 ) -> GlhsClinicalCommitmentProposal:
     _require_live_scope(scope)
@@ -151,16 +294,112 @@ def propose_commitment_transition(
         raise GlhsInvariantError("commitment_evidence_scope_forbidden")
     if origin == "model" and not model_manifest_ref:
         raise GlhsInvariantError("model_manifest_required")
+    base_state_version = current_state_version(db, profile_id=scope.profile.id)
+    if observed_base_state_version != base_state_version:
+        raise GlhsInvariantError("commitment_proposal_stale_state_version")
+    consent_version = _governed_consent_version(
+        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
+    )
+    evidence_ids = sorted({item.public_id for item in observed_evidence})
+    validate_snapshot_manifest(
+        db,
+        profile_id=scope.profile.id,
+        snapshot_id=source_snapshot_id,
+        manifest_digest=source_snapshot_digest,
+        base_state_version=base_state_version,
+        policy_version=COMMITMENT_POLICY_VERSION,
+        purpose=scope.purpose,
+        consent_version=consent_version,
+        observed_evidence_ids=evidence_ids,
+        actor_user_id=scope.actor.id,
+        actor_role=scope.actor_role,
+        task=task,
+    )
     row = GlhsClinicalCommitmentProposal(
+        public_id=str(uuid4()),
         commitment_id=commitment.id,
-        base_state_version=current_state_version(db, profile_id=scope.profile.id),
+        target_profile_public_id=scope.profile.public_id,
+        base_state_version=base_state_version,
+        observed_evidence_ids_json=evidence_ids,
+        proposed_transition=proposed_transition,
+        purpose=scope.purpose,
+        task=task,
+        origin=origin,
+        actor_user_id=scope.actor.id,
+        actor_role=scope.actor_role,
+        context_binding_mode="snapshot_bound",
+        model_manifest_ref=model_manifest_ref,
+        source_snapshot_id=source_snapshot_id,
+        source_snapshot_digest=source_snapshot_digest,
+        policy_version=COMMITMENT_POLICY_VERSION,
+        consent_version=consent_version,
+    )
+    row.proposal_digest = _canonical_digest(_proposal_envelope(row))
+    db.add(row)
+    db.flush()
+    return row
+
+
+def propose_base_commitment_transition(
+    db: Session,
+    *,
+    scope: ProfileScope,
+    commitment: GlhsClinicalCommitment,
+    observed_evidence: tuple[GlhsEvidence, ...],
+    proposed_transition: str,
+    origin: str,
+    observed_base_state_version: int,
+    task: str,
+    model_manifest_ref: str | None = None,
+) -> GlhsClinicalCommitmentProposal:
+    """Create an explicit base-version-only proposal without a THSS binding."""
+
+    _require_live_scope(scope)
+    if commitment.profile_id != scope.profile.id:
+        raise GlhsInvariantError("commitment_scope_forbidden")
+    if proposed_transition not in LIFECYCLE_STATES:
+        raise GlhsInvariantError("invalid_commitment_proposed_transition")
+    if origin not in PROPOSAL_ORIGINS:
+        raise GlhsInvariantError("invalid_commitment_proposal_origin")
+    expected_origin = {
+        "owner": "user",
+        "clinician": "clinician",
+        "caregiver": "caregiver",
+    }.get(scope.actor_role)
+    if origin not in {expected_origin, "model"}:
+        raise GlhsInvariantError("commitment_proposal_origin_mismatch")
+    if origin == "model" and not model_manifest_ref:
+        raise GlhsInvariantError("model_manifest_required")
+    if not observed_evidence:
+        raise GlhsInvariantError("commitment_provenance_required")
+    if any(row.profile_id != scope.profile.id for row in observed_evidence):
+        raise GlhsInvariantError("commitment_evidence_scope_forbidden")
+    current = current_state_version(db, profile_id=scope.profile.id)
+    if observed_base_state_version != current:
+        raise GlhsInvariantError("commitment_proposal_stale_state_version")
+    consent_version = _governed_consent_version(
+        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
+    )
+    row = GlhsClinicalCommitmentProposal(
+        public_id=str(uuid4()),
+        commitment_id=commitment.id,
+        target_profile_public_id=scope.profile.public_id,
+        base_state_version=observed_base_state_version,
         observed_evidence_ids_json=sorted({item.public_id for item in observed_evidence}),
         proposed_transition=proposed_transition,
         purpose=scope.purpose,
+        task=task,
         origin=origin,
         actor_user_id=scope.actor.id,
+        actor_role=scope.actor_role,
+        context_binding_mode="base_version_only",
         model_manifest_ref=model_manifest_ref,
+        source_snapshot_id=None,
+        source_snapshot_digest=None,
+        policy_version=COMMITMENT_POLICY_VERSION,
+        consent_version=consent_version,
     )
+    row.proposal_digest = _canonical_digest(_proposal_envelope(row))
     db.add(row)
     db.flush()
     return row
@@ -177,6 +416,7 @@ def review_model_commitment_proposal(
     _require_live_scope(scope)
     if proposal.origin != "model" or proposal.model_manifest_ref is None:
         raise GlhsInvariantError("model_proposal_review_required")
+    _validate_proposal_digest(proposal)
     commitment = db.get(GlhsClinicalCommitment, proposal.commitment_id)
     if commitment is None or commitment.profile_id != scope.profile.id:
         raise GlhsInvariantError("commitment_scope_forbidden")
@@ -193,22 +433,44 @@ def review_model_commitment_proposal(
     )
     if len(evidence) != len(set(proposal.observed_evidence_ids_json)):
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
+    base_state_version = current_state_version(db, profile_id=scope.profile.id)
+    consent_version = _governed_consent_version(
+        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
+    )
+    _validate_current_proposal_context(
+        db,
+        scope=scope,
+        proposal=proposal,
+        evidence_ids=[item.public_id for item in evidence],
+        current_version=base_state_version,
+        consent_version=consent_version,
+    )
     expected_origin = {"owner": "user", "clinician": "clinician", "caregiver": "caregiver"}.get(
         scope.actor_role
     )
     if expected_origin is None:
         raise GlhsInvariantError("commitment_review_authority_required")
     reviewed = GlhsClinicalCommitmentProposal(
+        public_id=str(uuid4()),
         commitment_id=commitment.id,
-        base_state_version=current_state_version(db, profile_id=scope.profile.id),
+        target_profile_public_id=proposal.target_profile_public_id,
+        base_state_version=base_state_version,
         observed_evidence_ids_json=sorted(item.public_id for item in evidence),
         proposed_transition=proposal.proposed_transition,
         purpose=scope.purpose,
+        task=proposal.task,
         origin=expected_origin,
-        actor_user_id=scope.actor.id,
+        actor_user_id=proposal.actor_user_id,
+        actor_role=proposal.actor_role,
+        context_binding_mode=proposal.context_binding_mode,
         model_manifest_ref=proposal.model_manifest_ref,
+        source_snapshot_id=proposal.source_snapshot_id,
+        source_snapshot_digest=proposal.source_snapshot_digest,
+        policy_version=COMMITMENT_POLICY_VERSION,
+        consent_version=consent_version,
         reviewed_proposal_id=proposal.id,
     )
+    reviewed.proposal_digest = _canonical_digest(_proposal_envelope(reviewed))
     db.add(reviewed)
     db.flush()
     return reviewed
@@ -256,10 +518,10 @@ def apply_commitment_transition(
     _require_live_scope(scope)
     if commitment.profile_id != scope.profile.id or proposal.commitment_id != commitment.id:
         raise GlhsInvariantError("commitment_scope_forbidden")
+    _validate_proposal_digest(proposal)
     if proposal.origin == "model":
         raise GlhsInvariantError("model_cannot_commit_commitment")
-    if proposal.purpose != scope.purpose:
-        raise GlhsInvariantError("commitment_proposal_purpose_mismatch")
+    _validate_proposal_scope_coordinates(scope=scope, proposal=proposal)
     if proposal.proposed_transition != data.lifecycle_state:
         raise GlhsInvariantError("commitment_proposal_transition_mismatch")
     required_action = "create" if data.lifecycle_state == "OPEN" else "correct"
@@ -272,6 +534,20 @@ def apply_commitment_transition(
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
     predicates = _validated_version(data)
     key_hash = _hash(idempotency_key)
+    request_digest = _canonical_digest(
+        {
+            "commitment_id": commitment.public_id,
+            "proposal_id": proposal.public_id,
+            "proposal_digest": proposal.proposal_digest,
+            "source_snapshot_id": proposal.source_snapshot_id,
+            "source_snapshot_digest": proposal.source_snapshot_digest,
+            "evidence_ids": evidence_ids,
+            "data": asdict(data),
+            "expected_state_version": expected_state_version,
+            "transition_kind": transition_kind,
+            "reason_code": reason_code,
+        }
+    )
     existing = db.execute(
         select(GlhsClinicalCommitmentTransition).where(
             GlhsClinicalCommitmentTransition.profile_id == scope.profile.id,
@@ -279,10 +555,36 @@ def apply_commitment_transition(
         )
     ).scalar_one_or_none()
     if existing is not None:
-        return existing
-    base = current_state_version(db, profile_id=scope.profile.id)
+        if existing.request_digest != request_digest:
+            raise GlhsInvariantError("commitment_idempotency_reuse_mismatch")
+        return cast(GlhsClinicalCommitmentTransition, existing)
+    base = _lock_profile_state(db, profile_id=scope.profile.id)
+    # Re-check after lock acquisition: another transaction may have committed
+    # the same key while this writer waited. This prevents a raw unique-key
+    # failure and makes an identical concurrent retry deterministic.
+    existing = db.execute(
+        select(GlhsClinicalCommitmentTransition).where(
+            GlhsClinicalCommitmentTransition.profile_id == scope.profile.id,
+            GlhsClinicalCommitmentTransition.idempotency_key_hash == key_hash,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        if existing.request_digest != request_digest:
+            raise GlhsInvariantError("commitment_idempotency_reuse_mismatch")
+        return cast(GlhsClinicalCommitmentTransition, existing)
     if base != expected_state_version or proposal.base_state_version != base:
         raise GlhsInvariantError("stale_commitment_proposal")
+    consent_version = _governed_consent_version(
+        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
+    )
+    _validate_current_proposal_context(
+        db,
+        scope=scope,
+        proposal=proposal,
+        evidence_ids=evidence_ids,
+        current_version=base,
+        consent_version=consent_version,
+    )
     prior = db.execute(
         select(GlhsClinicalCommitmentVersion)
         .where(GlhsClinicalCommitmentVersion.commitment_id == commitment.id)
@@ -306,9 +608,6 @@ def apply_commitment_transition(
         has_partial_predicate=predicates["partial_predicate"] is not None,
     )
     version_no = 1 if prior is None else prior.version_no + 1
-    consent_version = _governed_consent_version(
-        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
-    )
     version = GlhsClinicalCommitmentVersion(
         commitment_id=commitment.id,
         base_state_version=base,
@@ -340,6 +639,7 @@ def apply_commitment_transition(
     db.flush()
     now = datetime.now(UTC)
     transition = GlhsClinicalCommitmentTransition(
+        public_id=str(uuid4()),
         profile_id=scope.profile.id,
         commitment_id=commitment.id,
         prior_version_id=prior.id if prior else None,
@@ -357,6 +657,10 @@ def apply_commitment_transition(
         origin=proposal.origin,
         policy_version=COMMITMENT_POLICY_VERSION,
         consent_version=consent_version,
+        proposal_id=proposal.id,
+        source_snapshot_id=proposal.source_snapshot_id,
+        source_snapshot_digest=proposal.source_snapshot_digest,
+        request_digest=request_digest,
         idempotency_key_hash=key_hash,
     )
     db.add(transition)
@@ -461,6 +765,24 @@ def reconstruct_commitment_decision(
     version = db.get(GlhsClinicalCommitmentVersion, transition.result_version_id)
     if commitment is None or version is None:
         raise GlhsInvariantError("commitment_history_incomplete")
+    proposal = (
+        db.get(GlhsClinicalCommitmentProposal, transition.proposal_id)
+        if transition.proposal_id is not None
+        else None
+    )
+    snapshot_artifact: dict[str, object] | None = None
+    if transition.source_snapshot_id is not None:
+        manifest = db.execute(
+            select(GlhsSnapshotManifest).where(
+                GlhsSnapshotManifest.profile_id == profile_id,
+                GlhsSnapshotManifest.public_id == transition.source_snapshot_id,
+            )
+        ).scalar_one_or_none()
+        if manifest is None:
+            raise GlhsInvariantError("commitment_snapshot_history_incomplete")
+        if manifest.manifest_digest != transition.source_snapshot_digest:
+            raise GlhsInvariantError("commitment_snapshot_transition_digest_mismatch")
+        snapshot_artifact = reconstruct_snapshot_artifact(manifest)
     return {
         "decision_id": transition.public_id,
         "commitment_id": commitment.public_id,
@@ -483,6 +805,29 @@ def reconstruct_commitment_decision(
         "origin": transition.origin,
         "policy_version": transition.policy_version,
         "consent_version": transition.consent_version,
+        "proposal_id": proposal.public_id if proposal is not None else None,
+        "proposal_context": (
+            {
+                "target_profile_id": proposal.target_profile_public_id,
+                "actor_user_id": proposal.actor_user_id,
+                "actor_role": proposal.actor_role,
+                "purpose": proposal.purpose,
+                "task": proposal.task,
+                "observed_base_state_version": proposal.base_state_version,
+                "context_binding_mode": proposal.context_binding_mode,
+                "policy_version": proposal.policy_version,
+                "consent_version": proposal.consent_version,
+                "observed_evidence_ids": proposal.observed_evidence_ids_json,
+                "proposal_digest": proposal.proposal_digest,
+                "reviewed_proposal_id": proposal.reviewed_proposal_id,
+            }
+            if proposal is not None
+            else None
+        ),
+        "source_snapshot_id": transition.source_snapshot_id,
+        "source_snapshot_digest": transition.source_snapshot_digest,
+        "request_digest": transition.request_digest,
+        "snapshot_artifact": snapshot_artifact,
     }
 
 

@@ -8,10 +8,11 @@ but may not activate or confirm canonical health state.
 from __future__ import annotations
 
 import hashlib
-import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import cast
+from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -29,6 +30,13 @@ from clara_api.db.models import (
     PhrProfile,
     UserConsent,
 )
+from clara_api.glhs.canonical_json import (
+    CANONICALIZATION_PROFILE,
+    DIGEST_ALGORITHM,
+    consistency_fingerprint,
+    fingerprint_for_profile,
+    legacy_consistency_fingerprint,
+)
 from clara_api.glhs.domain import (
     ACTIVE_LIFECYCLE_STATES,
     EPISTEMIC_STATES,
@@ -45,13 +53,18 @@ from clara_api.glhs.risk import DOMAIN_POLICIES, critical_classes_for_task
 from clara_api.lifemap.commands import add_outbox
 from clara_api.lifemap.profile_scope import ProfileScope
 
-
-def _canonical(value: object) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+SNAPSHOT_SCHEMA_VERSION = "glhs.snapshot.v3"
+SNAPSHOT_PAYLOAD_SCHEMA_VERSION = "glhs.snapshot.payload.v3"
 
 
 def _digest(value: object) -> str:
-    return hashlib.sha256(_canonical(value).encode("utf-8")).hexdigest()
+    """Preserve the pre-v3 fingerprint for assertion and replay compatibility."""
+
+    return legacy_consistency_fingerprint(value)
+
+
+def _snapshot_fingerprint(value: object) -> str:
+    return consistency_fingerprint(value)
 
 
 def _idempotency_digest(value: str) -> str:
@@ -94,6 +107,7 @@ class AssertionInput:
     subject_kind: str = "profile"
     process_kind: str = "user"
     source_snapshot_id: str | None = None
+    source_snapshot_digest: str | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +119,10 @@ class Snapshot:
     task: str
     purpose: str
     expires_at: datetime
+    snapshot_digest: str
+    manifest_digest: str
+    assertion_hashes: tuple[dict[str, str], ...]
+    pipeline_trace: tuple[dict[str, object], ...]
     assertions: tuple[dict[str, object], ...]
     conflicts: tuple[dict[str, object], ...]
     risk: dict[str, object]
@@ -118,6 +136,19 @@ def current_state_version(db: Session, *, profile_id: int) -> int:
         .limit(1)
     ).scalar_one_or_none()
     return int(row or 0)
+
+
+def _profile_lock_statement(profile_id: int):
+    return select(PhrProfile.id).where(PhrProfile.id == profile_id).with_for_update()
+
+
+def _lock_profile_state(db: Session, *, profile_id: int) -> int:
+    """Serialize profile writers where the database supports row locks."""
+
+    found = db.execute(_profile_lock_statement(profile_id)).scalar_one_or_none()
+    if found is None:
+        raise GlhsInvariantError("profile_not_found")
+    return current_state_version(db, profile_id=profile_id)
 
 
 def _governed_consent_version(db: Session, *, owner_user_id: int, purpose: str) -> str:
@@ -154,18 +185,146 @@ def _proposal_consent_version(db: Session, *, profile_id: int) -> str:
     profile = db.get(PhrProfile, profile_id)
     if profile is None:
         raise GlhsInvariantError("proposal_profile_not_found")
-    return _governed_consent_version(
-        db, owner_user_id=profile.user_id, purpose="self_care"
-    )
+    return _governed_consent_version(db, owner_user_id=profile.user_id, purpose="self_care")
+
+
+def _consent_basis(*, purpose: str, consent_version: str) -> str:
+    return f"{purpose}:{consent_version}"
+
+
+def _manifest_envelope(manifest: GlhsSnapshotManifest) -> dict[str, object]:
+    """Return every security-relevant manifest field covered by its digest."""
+
+    return {
+        "manifest_schema_version": manifest.manifest_schema_version,
+        "payload_schema_version": manifest.payload_schema_version,
+        "digest_algorithm": manifest.digest_algorithm,
+        "canonicalization_profile": manifest.canonicalization_profile,
+        "manifest_id": manifest.public_id,
+        "state_version": manifest.state_version,
+        "policy_version": manifest.policy_version,
+        "actor_user_id": manifest.actor_user_id,
+        "actor_role": manifest.actor_role,
+        "task": manifest.task,
+        "purpose": manifest.purpose,
+        "consent_version": manifest.consent_version,
+        "consent_basis": manifest.consent_basis,
+        "expires_at": _as_utc(manifest.expires_at).isoformat(),
+        "valid_time_cutoff": (
+            _as_utc(manifest.valid_time_cutoff).isoformat()
+            if manifest.valid_time_cutoff is not None
+            else None
+        ),
+        "knowledge_time_cutoff": (
+            _as_utc(manifest.knowledge_time_cutoff).isoformat()
+            if manifest.knowledge_time_cutoff is not None
+            else None
+        ),
+        "data_classes": manifest.data_classes_json,
+        "assertion_ids": manifest.assertion_ids_json,
+        "assertion_hashes": manifest.assertion_hashes_json,
+        "provenance_ids": manifest.provenance_ids_json,
+        "conflict_ids": manifest.conflict_ids_json,
+        "selection_policy": manifest.selection_policy,
+        "snapshot_digest": manifest.snapshot_digest,
+    }
+
+
+def validate_snapshot_manifest(
+    db: Session,
+    *,
+    profile_id: int,
+    snapshot_id: str | None,
+    manifest_digest: str | None,
+    base_state_version: int,
+    policy_version: str,
+    purpose: str,
+    consent_version: str,
+    observed_evidence_ids: Iterable[str] = (),
+    actor_user_id: int | None = None,
+    actor_role: str | None = None,
+    task: str | None = None,
+    require_unexpired: bool = True,
+) -> GlhsSnapshotManifest:
+    """Fail closed unless a proposal consumes one exact, live THSS manifest."""
+
+    if not snapshot_id or not manifest_digest:
+        raise GlhsInvariantError("proposal_snapshot_binding_required")
+    snapshot = db.execute(
+        select(GlhsSnapshotManifest).where(
+            GlhsSnapshotManifest.profile_id == profile_id,
+            GlhsSnapshotManifest.public_id == snapshot_id,
+        )
+    ).scalar_one_or_none()
+    if snapshot is None:
+        raise GlhsInvariantError("proposal_snapshot_scope_forbidden")
+    if snapshot.manifest_schema_version != SNAPSHOT_SCHEMA_VERSION:
+        raise GlhsInvariantError("proposal_snapshot_schema_mismatch")
+    if snapshot.payload_schema_version != SNAPSHOT_PAYLOAD_SCHEMA_VERSION:
+        raise GlhsInvariantError("proposal_snapshot_payload_schema_mismatch")
+    if snapshot.digest_algorithm != DIGEST_ALGORITHM:
+        raise GlhsInvariantError("proposal_snapshot_digest_algorithm_mismatch")
+    if snapshot.canonicalization_profile != CANONICALIZATION_PROFILE:
+        raise GlhsInvariantError("proposal_snapshot_canonicalization_mismatch")
+    if require_unexpired and _as_utc(snapshot.expires_at) <= datetime.now(UTC):
+        raise GlhsInvariantError("proposal_snapshot_expired")
+    if snapshot.state_version != base_state_version:
+        raise GlhsInvariantError("proposal_snapshot_stale_state_version")
+    if snapshot.policy_version != policy_version:
+        raise GlhsInvariantError("proposal_snapshot_policy_mismatch")
+    if snapshot.purpose != purpose:
+        raise GlhsInvariantError("proposal_snapshot_purpose_mismatch")
+    if snapshot.consent_version != consent_version:
+        raise GlhsInvariantError("proposal_snapshot_consent_mismatch")
+    if actor_user_id is not None and snapshot.actor_user_id != actor_user_id:
+        raise GlhsInvariantError("proposal_snapshot_actor_mismatch")
+    if actor_role is not None and snapshot.actor_role != actor_role:
+        raise GlhsInvariantError("proposal_snapshot_actor_role_mismatch")
+    if task is not None and snapshot.task != task:
+        raise GlhsInvariantError("proposal_snapshot_task_mismatch")
+    if (
+        not snapshot.snapshot_payload_json
+        or not snapshot.snapshot_digest
+        or fingerprint_for_profile(
+            snapshot.snapshot_payload_json,
+            profile=snapshot.canonicalization_profile,
+            algorithm=snapshot.digest_algorithm,
+        )
+        != snapshot.snapshot_digest
+    ):
+        raise GlhsInvariantError("proposal_snapshot_digest_mismatch")
+    if (
+        not snapshot.manifest_digest
+        or snapshot.manifest_digest != manifest_digest
+        or fingerprint_for_profile(
+            _manifest_envelope(snapshot),
+            profile=snapshot.canonicalization_profile,
+            algorithm=snapshot.digest_algorithm,
+        )
+        != snapshot.manifest_digest
+    ):
+        raise GlhsInvariantError("proposal_manifest_digest_mismatch")
+    disclosed = {str(item) for item in snapshot.provenance_ids_json}
+    if not set(observed_evidence_ids).issubset(disclosed):
+        raise GlhsInvariantError("proposal_evidence_not_disclosed")
+    return cast(GlhsSnapshotManifest, snapshot)
 
 
 def _validate_proposal_snapshot(
-    db: Session, *, profile_id: int, source_snapshot_id: str | None, base_state_version: int
-) -> None:
+    db: Session,
+    *,
+    profile_id: int,
+    source_snapshot_id: str | None,
+    source_snapshot_digest: str | None,
+    base_state_version: int,
+    actor_user_id: int | None,
+) -> GlhsSnapshotManifest | None:
     """Ensure an AI-derived proposal is bound to a usable exact THSS payload."""
 
     if source_snapshot_id is None:
-        return
+        if source_snapshot_digest is not None:
+            raise GlhsInvariantError("proposal_snapshot_binding_required")
+        return None
     snapshot = db.execute(
         select(GlhsSnapshotManifest).where(
             GlhsSnapshotManifest.profile_id == profile_id,
@@ -174,15 +333,23 @@ def _validate_proposal_snapshot(
     ).scalar_one_or_none()
     if snapshot is None:
         raise GlhsInvariantError("proposal_snapshot_scope_forbidden")
-    if _as_utc(snapshot.expires_at) < datetime.now(UTC):
-        raise GlhsInvariantError("proposal_snapshot_expired")
-    if snapshot.state_version != base_state_version:
-        raise GlhsInvariantError("proposal_snapshot_stale_state_version")
-    if (
-        not snapshot.snapshot_payload_json
-        or _digest(snapshot.snapshot_payload_json) != snapshot.snapshot_digest
-    ):
-        raise GlhsInvariantError("proposal_snapshot_digest_mismatch")
+    profile = db.get(PhrProfile, profile_id)
+    if profile is None:
+        raise GlhsInvariantError("proposal_profile_not_found")
+    current_consent = _governed_consent_version(
+        db, owner_user_id=profile.user_id, purpose=snapshot.purpose
+    )
+    return validate_snapshot_manifest(
+        db,
+        profile_id=profile_id,
+        snapshot_id=source_snapshot_id,
+        manifest_digest=source_snapshot_digest,
+        base_state_version=base_state_version,
+        policy_version=POLICY_VERSION,
+        purpose=snapshot.purpose,
+        consent_version=current_consent,
+        actor_user_id=actor_user_id,
+    )
 
 
 def reconstruct_state(
@@ -272,11 +439,10 @@ def reconstruct_governed_decision(
     ).scalar_one_or_none()
     if manifest is None:
         raise GlhsInvariantError("snapshot_not_found")
-    if not manifest.snapshot_payload_json or not manifest.snapshot_digest:
-        raise GlhsInvariantError("snapshot_payload_unavailable")
-    if _digest(manifest.snapshot_payload_json) != manifest.snapshot_digest:
-        raise GlhsInvariantError("snapshot_payload_digest_mismatch")
-    as_of_raw = manifest.snapshot_payload_json.get("as_of")
+    snapshot_artifact = reconstruct_snapshot_artifact(manifest)
+    as_of_raw = manifest.snapshot_payload_json.get("valid_time_cutoff")
+    if not isinstance(as_of_raw, str):
+        as_of_raw = manifest.snapshot_payload_json.get("as_of")
     if isinstance(as_of_raw, str):
         try:
             valid_at = _as_utc(datetime.fromisoformat(as_of_raw))
@@ -287,7 +453,16 @@ def reconstruct_governed_decision(
         # cutoff. Their recorded timestamp is the conservative reconstruction
         # boundary, and their exact payload remains separately available.
         valid_at = _as_utc(manifest.created_at)
-    known_at = _as_utc(manifest.created_at)
+    known_at_raw = manifest.snapshot_payload_json.get("knowledge_time_cutoff")
+    if isinstance(known_at_raw, str):
+        try:
+            known_at = _as_utc(datetime.fromisoformat(known_at_raw))
+        except ValueError as exc:
+            raise GlhsInvariantError("snapshot_payload_invalid_known_at") from exc
+    elif manifest.knowledge_time_cutoff is not None:
+        known_at = _as_utc(manifest.knowledge_time_cutoff)
+    else:
+        known_at = _as_utc(manifest.created_at)
 
     # A decision is reconstructable from this AI context only when one of its
     # transition items points to a proposal that names this exact snapshot.
@@ -327,6 +502,7 @@ def reconstruct_governed_decision(
                     "policy_version": assertion.policy_version,
                     "consent_version": assertion.consent_version,
                     "source_snapshot_id": assertion.source_snapshot_id,
+                    "source_snapshot_digest": assertion.source_snapshot_digest,
                     "epistemic_state": assertion.epistemic_state,
                     "value": assertion.value_json,
                     "action": item.action,
@@ -343,6 +519,9 @@ def reconstruct_governed_decision(
                 "status": transition.status,
                 "reason_code": transition.reason_code,
                 "review_state": transition.review_state,
+                "source_snapshot_id": transition.source_snapshot_id,
+                "source_snapshot_digest": transition.source_snapshot_digest,
+                "request_digest": transition.request_digest,
                 "recorded_at": transition.recorded_at.isoformat(),
                 "proposals": proposals,
             }
@@ -350,6 +529,7 @@ def reconstruct_governed_decision(
     return {
         "snapshot": manifest.snapshot_payload_json,
         "snapshot_digest": manifest.snapshot_digest,
+        "snapshot_artifact": snapshot_artifact,
         "reconstruction_cutoffs": {
             "valid_at": valid_at.isoformat(),
             "known_at": known_at.isoformat(),
@@ -361,6 +541,56 @@ def reconstruct_governed_decision(
             known_at=known_at,
         ),
         "decisions": decisions,
+    }
+
+
+def reconstruct_snapshot_artifact(manifest: GlhsSnapshotManifest) -> dict[str, object]:
+    """Validate and expose one stored snapshot without applying current-policy checks."""
+
+    if not manifest.snapshot_payload_json or not manifest.snapshot_digest:
+        raise GlhsInvariantError("snapshot_payload_unavailable")
+    try:
+        reconstructed_digest = fingerprint_for_profile(
+            manifest.snapshot_payload_json,
+            profile=manifest.canonicalization_profile,
+            algorithm=manifest.digest_algorithm,
+        )
+    except ValueError as exc:
+        raise GlhsInvariantError("snapshot_digest_contract_unsupported") from exc
+    if reconstructed_digest != manifest.snapshot_digest:
+        raise GlhsInvariantError("snapshot_payload_digest_mismatch")
+    if manifest.manifest_digest:
+        try:
+            manifest_fingerprint = fingerprint_for_profile(
+                _manifest_envelope(manifest),
+                profile=manifest.canonicalization_profile,
+                algorithm=manifest.digest_algorithm,
+            )
+        except ValueError as exc:
+            raise GlhsInvariantError("snapshot_digest_contract_unsupported") from exc
+        if manifest_fingerprint != manifest.manifest_digest:
+            raise GlhsInvariantError("snapshot_manifest_digest_mismatch")
+    elif manifest.manifest_schema_version == SNAPSHOT_SCHEMA_VERSION:
+        raise GlhsInvariantError("snapshot_manifest_digest_missing")
+    return {
+        "snapshot_id": manifest.public_id,
+        "profile_id": manifest.profile_id,
+        "state_version": manifest.state_version,
+        "actor_user_id": manifest.actor_user_id,
+        "actor_role": manifest.actor_role,
+        "purpose": manifest.purpose,
+        "task": manifest.task,
+        "valid_time_cutoff": manifest.valid_time_cutoff,
+        "knowledge_time_cutoff": manifest.knowledge_time_cutoff,
+        "policy_version": manifest.policy_version,
+        "consent_version": manifest.consent_version,
+        "manifest_schema_version": manifest.manifest_schema_version,
+        "payload_schema_version": manifest.payload_schema_version,
+        "digest_algorithm": manifest.digest_algorithm,
+        "canonicalization_profile": manifest.canonicalization_profile,
+        "snapshot_digest": manifest.snapshot_digest,
+        "manifest_digest": manifest.manifest_digest,
+        "payload": manifest.snapshot_payload_json,
     }
 
 
@@ -379,7 +609,7 @@ def record_evidence(db: Session, *, profile_id: int, data: EvidenceInput) -> Glh
         )
     ).scalar_one_or_none()
     if existing is not None:
-        return existing
+        return cast(GlhsEvidence, existing)
     row = GlhsEvidence(
         profile_id=profile_id,
         source_reference_id=data.source_reference_id,
@@ -427,7 +657,9 @@ def propose_assertion(
         db,
         profile_id=profile_id,
         source_snapshot_id=data.source_snapshot_id,
+        source_snapshot_digest=data.source_snapshot_digest,
         base_state_version=base_state_version,
+        actor_user_id=actor_user_id,
     )
     row = GlhsAssertion(
         profile_id=profile_id,
@@ -449,6 +681,7 @@ def propose_assertion(
         policy_version=POLICY_VERSION,
         consent_version=_proposal_consent_version(db, profile_id=profile_id),
         source_snapshot_id=data.source_snapshot_id,
+        source_snapshot_digest=data.source_snapshot_digest,
     )
     db.add(row)
     db.flush()
@@ -524,11 +757,35 @@ def apply_transition(
         raise GlhsInvariantError("assertion_scope_forbidden")
     if assertion.process_kind == "model":
         raise GlhsInvariantError("model_cannot_apply_transition")
+    if _digest(assertion.value_json) != assertion.value_fingerprint:
+        raise GlhsInvariantError("assertion_value_digest_mismatch")
+    if assertion.policy_version != POLICY_VERSION:
+        raise GlhsInvariantError("assertion_policy_mismatch")
+    current_consent_version = _governed_consent_version(
+        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
+    )
+    if assertion.consent_version != current_consent_version:
+        raise GlhsInvariantError("assertion_consent_mismatch")
     if action == "activate" and assertion.epistemic_state == "confirmed" and not allow_confirmed:
         raise GlhsInvariantError("confirmed_transition_requires_review")
     if not _assertion_evidence_ids(db, assertion_id=assertion.id):
         raise GlhsInvariantError("active_assertion_requires_provenance")
     key_hash = _idempotency_digest(idempotency_key)
+    effective_at = effective_at or assertion.valid_from
+    request_digest = _digest(
+        {
+            "assertion_id": assertion.public_id,
+            "action": action,
+            "expected_state_version": expected_state_version,
+            "transition_kind": transition_kind,
+            "reason_code": reason_code,
+            "review_state": review_state,
+            "reviewed_at": reviewed_at,
+            "effective_at": effective_at,
+            "source_snapshot_id": assertion.source_snapshot_id,
+            "source_snapshot_digest": assertion.source_snapshot_digest,
+        }
+    )
     existing = db.execute(
         select(GlhsTransition).where(
             GlhsTransition.profile_id == scope.profile.id,
@@ -536,8 +793,24 @@ def apply_transition(
         )
     ).scalar_one_or_none()
     if existing is not None:
-        return existing
-    base_version = current_state_version(db, profile_id=scope.profile.id)
+        if existing.request_digest != request_digest:
+            raise GlhsInvariantError("idempotency_key_reuse_mismatch")
+        return cast(GlhsTransition, existing)
+    base_version = _lock_profile_state(db, profile_id=scope.profile.id)
+    # A concurrent request may have committed this idempotency key while this
+    # transaction waited for the profile row lock. Re-read under the serialized
+    # boundary so an exact retry returns the winner and a changed retry fails
+    # with GLHS semantics rather than a database uniqueness error.
+    existing = db.execute(
+        select(GlhsTransition).where(
+            GlhsTransition.profile_id == scope.profile.id,
+            GlhsTransition.idempotency_key_hash == key_hash,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        if existing.request_digest != request_digest:
+            raise GlhsInvariantError("idempotency_key_reuse_mismatch")
+        return cast(GlhsTransition, existing)
     if base_version != expected_state_version:
         raise GlhsInvariantError("stale_state_version")
     # The candidate itself is the persisted proposal for an activation.  Other
@@ -545,9 +818,17 @@ def apply_transition(
     # protected by the caller's expected state version.
     if action == "activate" and assertion.base_state_version != base_version:
         raise GlhsInvariantError("stale_proposal_state_version")
+    if action == "activate" and assertion.source_snapshot_id is not None:
+        _validate_proposal_snapshot(
+            db,
+            profile_id=scope.profile.id,
+            source_snapshot_id=assertion.source_snapshot_id,
+            source_snapshot_digest=assertion.source_snapshot_digest,
+            base_state_version=base_version,
+            actor_user_id=assertion.asserted_by_user_id,
+        )
     result_version = base_version + 1
     now = datetime.now(UTC)
-    effective_at = effective_at or assertion.valid_from
     transition = GlhsTransition(
         profile_id=scope.profile.id,
         base_state_version=base_version,
@@ -561,9 +842,10 @@ def apply_transition(
         review_state=review_state,
         reviewed_at=reviewed_at,
         policy_version=POLICY_VERSION,
-        consent_version=_governed_consent_version(
-            db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
-        ),
+        consent_version=current_consent_version,
+        source_snapshot_id=(assertion.source_snapshot_id if action == "activate" else None),
+        source_snapshot_digest=(assertion.source_snapshot_digest if action == "activate" else None),
+        request_digest=request_digest,
         idempotency_key_hash=key_hash,
     )
     db.add(transition)
@@ -741,6 +1023,7 @@ def compile_thss(
     purpose: str,
     allowed_data_classes: frozenset[str],
     as_of: datetime | None = None,
+    known_at: datetime | None = None,
     selection_policy: str = "strict",
     expires_in: timedelta = timedelta(minutes=5),
 ) -> Snapshot:
@@ -761,12 +1044,41 @@ def compile_thss(
     if not requested_classes or not requested_classes.issubset(scope.allowed_data_classes):
         raise GlhsInvariantError("snapshot_data_class_forbidden")
     as_of = as_of or datetime.now(UTC)
-    statement = select(GlhsAssertion).where(
-        GlhsAssertion.profile_id == scope.profile.id,
-        GlhsAssertion.lifecycle_status.in_(ACTIVE_LIFECYCLE_STATES),
-        GlhsAssertion.valid_from <= as_of,
+    known_at = known_at or datetime.now(UTC)
+
+    # Stage 2: Temporal/Lifecycle. Canonical visibility comes from replaying
+    # transition items, never from the mutable lifecycle projection column.
+    replayed = reconstruct_state(
+        db,
+        profile_id=scope.profile.id,
+        valid_at=as_of,
+        known_at=known_at,
     )
-    rows = list(db.execute(statement).scalars())
+    replayed_ids = {str(item["id"]) for item in replayed}
+    rows = (
+        list(
+            db.execute(
+                select(GlhsAssertion).where(
+                    GlhsAssertion.profile_id == scope.profile.id,
+                    GlhsAssertion.public_id.in_(replayed_ids),
+                )
+            ).scalars()
+        )
+        if replayed_ids
+        else []
+    )
+
+    # Stage 3: Conflict. Read conflicts before task relevance/minimization.
+    all_conflicts = list(
+        db.execute(
+            select(GlhsConflict).where(
+                GlhsConflict.profile_id == scope.profile.id,
+                GlhsConflict.status == "open",
+            )
+        ).scalars()
+    )
+
+    # Stage 4: Relevance/Freshness.
     selected: list[GlhsAssertion] = []
     for row in rows:
         if row.valid_to is not None and row.valid_to < as_of:
@@ -777,23 +1089,16 @@ def compile_thss(
             continue
         selected.append(row)
     selected_ids = {row.id for row in selected}
-    conflicts = list(
-        db.execute(
-            select(GlhsConflict).where(
-                GlhsConflict.profile_id == scope.profile.id,
-                GlhsConflict.status == "open",
-            )
-        ).scalars()
-    )
     conflicts = [
         row
-        for row in conflicts
+        for row in all_conflicts
         if row.left_assertion_id in selected_ids or row.right_assertion_id in selected_ids
     ]
     state_version = current_state_version(db, profile_id=scope.profile.id)
     consent_version = _governed_consent_version(
         db, owner_user_id=scope.profile.user_id, purpose=purpose
     )
+    consent_basis = _consent_basis(purpose=purpose, consent_version=consent_version)
     expires_at = datetime.now(UTC) + expires_in
     evidence_map: dict[int, list[int]] = {
         row.id: _assertion_evidence_ids(db, assertion_id=row.id) for row in selected
@@ -848,9 +1153,7 @@ def compile_thss(
             }
         )
     for conflict_id in critical_conflicts:
-        escalation_reasons.append(
-            {"code": "open_conflict", "conflict_id": conflict_id}
-        )
+        escalation_reasons.append({"code": "open_conflict", "conflict_id": conflict_id})
     risk: dict[str, object] = {
         "policy_version": "thss-risk.v1",
         "task_critical_classes": sorted(critical_classes),
@@ -880,6 +1183,40 @@ def compile_thss(
         }
         for row in selected
     ]
+    assertion_hashes = [
+        {"assertion_id": str(item["id"]), "sha256": _snapshot_fingerprint(item)}
+        for item in assertion_payloads
+    ]
+    pipeline_trace: list[dict[str, object]] = [
+        {
+            "stage": 1,
+            "name": "authorization",
+            "authorized_data_classes": sorted(requested_classes),
+        },
+        {
+            "stage": 2,
+            "name": "temporal_lifecycle",
+            "visible_count": len(rows),
+            "as_of": _as_utc(as_of).isoformat(),
+        },
+        {
+            "stage": 3,
+            "name": "conflict",
+            "open_conflict_count": len(all_conflicts),
+        },
+        {
+            "stage": 4,
+            "name": "relevance_freshness",
+            "relevant_count": len(selected),
+            "stale_count": len(stale_assertions),
+        },
+        {
+            "stage": 5,
+            "name": "minimization",
+            "disclosed_assertion_count": len(assertion_payloads),
+            "disclosed_evidence_count": sum(len(ids) for ids in evidence_map.values()),
+        },
+    ]
     conflict_payloads: list[dict[str, object]] = [
         {
             "id": row.public_id,
@@ -889,18 +1226,30 @@ def compile_thss(
         for row in conflicts
     ]
     snapshot_payload: dict[str, object] = {
+        "manifest_schema_version": SNAPSHOT_SCHEMA_VERSION,
+        "payload_schema_version": SNAPSHOT_PAYLOAD_SCHEMA_VERSION,
+        "digest_algorithm": DIGEST_ALGORITHM,
+        "canonicalization_profile": CANONICALIZATION_PROFILE,
         "as_of": _as_utc(as_of).isoformat(),
+        "valid_time_cutoff": _as_utc(as_of).isoformat(),
+        "knowledge_time_cutoff": _as_utc(known_at).isoformat(),
         "state_version": state_version,
         "policy_version": POLICY_VERSION,
         "consent_version": consent_version,
+        "consent_basis": consent_basis,
+        "actor_user_id": scope.actor.id,
+        "actor_role": scope.actor_role,
         "task": task,
         "purpose": purpose,
         "expires_at": expires_at.isoformat(),
         "assertions": assertion_payloads,
+        "assertion_hashes": assertion_hashes,
         "conflicts": conflict_payloads,
         "risk": risk,
+        "pipeline_trace": pipeline_trace,
     }
     manifest = GlhsSnapshotManifest(
+        public_id=str(uuid4()),
         profile_id=scope.profile.id,
         state_version=state_version,
         actor_user_id=scope.actor.id,
@@ -912,12 +1261,21 @@ def compile_thss(
         provenance_ids_json=[evidence_id for ids in evidence_map.values() for evidence_id in ids],
         conflict_ids_json=[row.public_id for row in conflicts],
         selection_policy=selection_policy,
+        manifest_schema_version=SNAPSHOT_SCHEMA_VERSION,
+        payload_schema_version=SNAPSHOT_PAYLOAD_SCHEMA_VERSION,
+        digest_algorithm=DIGEST_ALGORITHM,
+        canonicalization_profile=CANONICALIZATION_PROFILE,
+        valid_time_cutoff=as_of,
+        knowledge_time_cutoff=known_at,
         policy_version=POLICY_VERSION,
         consent_version=consent_version,
+        consent_basis=consent_basis,
+        assertion_hashes_json=assertion_hashes,
         snapshot_payload_json=snapshot_payload,
-        snapshot_digest=_digest(snapshot_payload),
+        snapshot_digest=_snapshot_fingerprint(snapshot_payload),
         expires_at=expires_at,
     )
+    manifest.manifest_digest = _snapshot_fingerprint(_manifest_envelope(manifest))
     db.add(manifest)
     db.flush()
     add_outbox(
@@ -936,6 +1294,10 @@ def compile_thss(
         task=task,
         purpose=purpose,
         expires_at=expires_at,
+        snapshot_digest=manifest.snapshot_digest,
+        manifest_digest=manifest.manifest_digest,
+        assertion_hashes=tuple(assertion_hashes),
+        pipeline_trace=tuple(pipeline_trace),
         assertions=tuple(assertion_payloads),
         conflicts=tuple(conflict_payloads),
         risk=risk,

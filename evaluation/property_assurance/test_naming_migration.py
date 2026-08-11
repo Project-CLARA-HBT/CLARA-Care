@@ -7,12 +7,30 @@ that it cannot mistake a prose citation for an active executable protocol.
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-FORBIDDEN_ACTIVE_MARKERS = ("glhs_q2", "glhs_q3", "round1", "round2", "round3")
+FORBIDDEN_ACTIVE_MARKERS = (
+    "glhs_q1",
+    "glhs_q2",
+    "glhs_q3",
+    "glhs_q4",
+    "major_revision",
+    "minor_revision",
+    "reviewer1",
+    "reviewer2",
+    "round1",
+    "round2",
+    "round3",
+    "camera_ready",
+    "resubmission",
+)
 ARCHIVE_PARTS = {"archives", "archive", "historical"}
 
 
 def test_active_evidence_paths_are_publication_target_agnostic() -> None:
-    roots = (ROOT / "evaluation", ROOT / "scripts" / "evaluation")
+    roots = (
+        ROOT / "evaluation",
+        ROOT / "protocols",
+        ROOT / "scripts" / "evaluation",
+    )
     violations: list[str] = []
     for root in roots:
         if not root.exists():

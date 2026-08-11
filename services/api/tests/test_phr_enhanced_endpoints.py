@@ -250,6 +250,7 @@ def test_phr_list_edits_are_provenance_bound_and_supersede_without_drug_guessing
         ("allergies", "superseded"),
         ("conditions", "superseded"),
         ("medications_unresolved", "candidate"),
+        ("conditions", "rejected"),
         ("conditions", "active"),
     ]
 
@@ -371,7 +372,10 @@ def test_property13_entry_crud_audit_and_versions() -> None:
             ).scalars()
         )
     assert allergy_assertions
-    assert {row.lifecycle_status for row in allergy_assertions} == {"superseded"}
+    assert {row.lifecycle_status for row in allergy_assertions} == {
+        "rejected",
+        "superseded",
+    }
 
     # Version monotonicity: current_version_no increased across changes.
     enhanced = client.get("/api/v1/phr/record/enhanced", headers=_auth(token))

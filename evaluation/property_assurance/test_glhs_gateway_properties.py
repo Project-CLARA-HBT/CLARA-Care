@@ -341,6 +341,7 @@ def test_expired_or_stale_snapshot_cannot_be_reused_for_a_persistent_proposal(db
                 epistemic_state="reported",
                 valid_from=evidence.valid_from,
                 source_snapshot_id=snapshot.snapshot_id,
+                source_snapshot_digest=snapshot.manifest_digest,
             ),
             evidence=((evidence, "supports"),),
         )
@@ -405,6 +406,7 @@ def test_unauthorized_scope_never_commits_and_governed_decision_reconstructs(db:
             epistemic_state="reported",
             valid_from=evidence.valid_from,
             source_snapshot_id=snapshot.snapshot_id,
+            source_snapshot_digest=snapshot.manifest_digest,
         ),
         evidence=((evidence, "supports"),),
     )

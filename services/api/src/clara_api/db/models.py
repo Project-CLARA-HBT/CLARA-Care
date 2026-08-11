@@ -2107,6 +2107,9 @@ class GlhsAssertion(Base):
     policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
     consent_version: Mapped[str] = mapped_column(String(96), default="not_required")
     source_snapshot_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    source_snapshot_digest: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
@@ -2196,6 +2199,13 @@ class GlhsTransition(Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
     consent_version: Mapped[str] = mapped_column(String(96), default="not_required")
+    source_snapshot_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    source_snapshot_digest: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    request_digest: Mapped[str] = mapped_column(String(64), default="", server_default="")
     idempotency_key_hash: Mapped[str] = mapped_column(String(128))
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
@@ -2282,10 +2292,39 @@ class GlhsSnapshotManifest(Base):
     provenance_ids_json: Mapped[list | dict] = mapped_column(JSON)
     conflict_ids_json: Mapped[list | dict] = mapped_column(JSON)
     selection_policy: Mapped[str] = mapped_column(String(64), default="strict")
+    manifest_schema_version: Mapped[str] = mapped_column(
+        String(64), default="glhs.snapshot.v3", server_default="glhs.snapshot.v3"
+    )
+    payload_schema_version: Mapped[str] = mapped_column(
+        String(64), default="glhs.snapshot.payload.v3", server_default="glhs.snapshot.payload.v3"
+    )
+    digest_algorithm: Mapped[str] = mapped_column(
+        String(32), default="sha-256", server_default="sha-256"
+    )
+    canonicalization_profile: Mapped[str] = mapped_column(
+        String(64),
+        default="clara.canonical-json.v1",
+        server_default="clara.canonical-json.v1",
+    )
+    valid_time_cutoff: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    knowledge_time_cutoff: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
     consent_version: Mapped[str] = mapped_column(String(96), default="not_required")
+    consent_basis: Mapped[str] = mapped_column(
+        String(128), default="not_required", server_default="not_required"
+    )
+    assertion_hashes_json: Mapped[list | dict] = mapped_column(
+        JSON, default=list, server_default="[]"
+    )
     snapshot_payload_json: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")
     snapshot_digest: Mapped[str] = mapped_column(String(64), default="", index=True)
+    manifest_digest: Mapped[str] = mapped_column(
+        String(64), default="", server_default="", index=True
+    )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -2368,14 +2407,35 @@ class GlhsClinicalCommitmentProposal(Base):
         ForeignKey("glhs_clinical_commitments.id", ondelete="CASCADE"), index=True
     )
     base_state_version: Mapped[int] = mapped_column(Integer)
+    target_profile_public_id: Mapped[str] = mapped_column(String(36), default="")
     observed_evidence_ids_json: Mapped[list | dict] = mapped_column(JSON)
     proposed_transition: Mapped[str] = mapped_column(String(64))
     purpose: Mapped[str] = mapped_column(String(64))
+    task: Mapped[str] = mapped_column(String(96), default="")
     origin: Mapped[str] = mapped_column(String(32))
     actor_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    actor_role: Mapped[str] = mapped_column(String(32), default="")
+    context_binding_mode: Mapped[str] = mapped_column(
+        String(32), default="snapshot_bound", server_default="snapshot_bound"
+    )
     model_manifest_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    source_snapshot_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    source_snapshot_digest: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    proposal_digest: Mapped[str] = mapped_column(
+        String(64), default="", server_default="", index=True
+    )
+    policy_version: Mapped[str] = mapped_column(
+        String(64), default="commitloop.v1", server_default="commitloop.v1"
+    )
+    consent_version: Mapped[str] = mapped_column(
+        String(96), default="not_required", server_default="not_required"
+    )
     reviewed_proposal_id: Mapped[int | None] = mapped_column(
         ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="SET NULL"), nullable=True
     )
@@ -2421,10 +2481,96 @@ class GlhsClinicalCommitmentTransition(Base):
     origin: Mapped[str] = mapped_column(String(32))
     policy_version: Mapped[str] = mapped_column(String(64))
     consent_version: Mapped[str] = mapped_column(String(96))
+    proposal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    source_snapshot_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    source_snapshot_digest: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    request_digest: Mapped[str] = mapped_column(String(64), default="", server_default="")
     idempotency_key_hash: Mapped[str] = mapped_column(String(128))
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+def _reject_glhs_ledger_mutation(*_args: object, **_kwargs: object) -> None:
+    raise ValueError("GLHS ledger rows are immutable; append a governed transition")
+
+
+def _reject_glhs_canonical_content_mutation(
+    _mapper: object,
+    _connection: object,
+    target: object,
+    *,
+    projection_fields: frozenset[str],
+) -> None:
+    """Permit compatibility projections while protecting canonical row content."""
+
+    changed = {
+        key
+        for key, attribute in sa_inspect(target).attrs.items()
+        if attribute.history.has_changes()
+    }
+    if not changed.issubset(projection_fields):
+        raise ValueError(
+            "GLHS canonical row content is immutable:"
+            + ",".join(sorted(changed - projection_fields))
+        )
+
+
+def _protect_glhs_assertion_content(
+    mapper: object, connection: object, target: object
+) -> None:
+    _reject_glhs_canonical_content_mutation(
+        mapper,
+        connection,
+        target,
+        projection_fields=frozenset(
+            {"lifecycle_status", "confirmed_at", "superseded_at"}
+        ),
+    )
+
+
+def _protect_glhs_conflict_content(
+    mapper: object, connection: object, target: object
+) -> None:
+    _reject_glhs_canonical_content_mutation(
+        mapper,
+        connection,
+        target,
+        projection_fields=frozenset(
+            {"status", "resolved_transition_id", "resolved_at"}
+        ),
+    )
+
+
+sa_event.listen(GlhsAssertion, "before_update", _protect_glhs_assertion_content)
+sa_event.listen(GlhsAssertion, "before_delete", _reject_glhs_ledger_mutation)
+sa_event.listen(GlhsConflict, "before_update", _protect_glhs_conflict_content)
+sa_event.listen(GlhsConflict, "before_delete", _reject_glhs_ledger_mutation)
+
+
+for _immutable_glhs_model in (
+    GlhsStateVersion,
+    GlhsEvidence,
+    GlhsAssertionEvidence,
+    GlhsRelation,
+    GlhsTransition,
+    GlhsTransitionItem,
+    GlhsSnapshotManifest,
+    GlhsClinicalCommitment,
+    GlhsClinicalCommitmentVersion,
+    GlhsClinicalCommitmentProposal,
+    GlhsClinicalCommitmentTransition,
+):
+    sa_event.listen(_immutable_glhs_model, "before_update", _reject_glhs_ledger_mutation)
+    sa_event.listen(_immutable_glhs_model, "before_delete", _reject_glhs_ledger_mutation)
 
 
 class MedicationCourse(Base):

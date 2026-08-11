@@ -286,7 +286,11 @@ def test_import_is_atomic_idempotent_and_versions_changed_records() -> None:
     assert aggregate.value_json == {"scalar": 1400.0, "unit": "count"}
     assert aggregate.primary_origin == "com.example.health"
     assert contribution.observation_id == observation.id
-    assert [item.lifecycle_status for item in assertions] == ["superseded", "active"]
+    assert [item.lifecycle_status for item in assertions] == [
+        "superseded",
+        "rejected",
+        "active",
+    ]
     assert assertions[-1].epistemic_state == "documented"
     assert assertions[-1].value_json["record_type"] == "steps"
     assert assertions[-1].value_json["value"]["scalar"] == 1400.0

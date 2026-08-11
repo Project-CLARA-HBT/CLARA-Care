@@ -24,7 +24,7 @@ from clara_api.glhs.commitment_gateway import (
     CommitmentVersionInput,
     apply_commitment_transition,
     get_or_create_commitment,
-    propose_commitment_transition,
+    propose_bound_commitment_transition,
     reconstruct_commitment_decision,
     review_model_commitment_proposal,
 )
@@ -54,6 +54,10 @@ class ProposalRequest(_Strict):
     supersession_key: str = Field(min_length=1, max_length=255)
     observed_evidence_ids: list[str] = Field(min_length=1, max_length=64)
     proposed_transition: str
+    observed_base_state_version: int = Field(ge=0)
+    task: str = Field(min_length=1, max_length=96)
+    source_snapshot_id: str = Field(min_length=1, max_length=64)
+    source_snapshot_digest: str = Field(min_length=64, max_length=64)
 
 
 class TransitionRequest(_Strict):
@@ -100,6 +104,7 @@ class SnapshotRequest(_Strict):
     known_at: datetime
     strict: bool = True
     expires_in_seconds: int = Field(default=300, ge=1, le=3600)
+    evidence_ids: list[str] = Field(default_factory=list, max_length=64)
 
     @field_validator("domains")
     @classmethod
@@ -173,13 +178,17 @@ def create_proposal(
             domain=request.domain,
             supersession_key=request.supersession_key,
         )
-        proposal = propose_commitment_transition(
+        proposal = propose_bound_commitment_transition(
             db,
             scope=scope,
             commitment=commitment,
             observed_evidence=_evidence(db, scope, request.observed_evidence_ids),
             proposed_transition=request.proposed_transition,
             origin="user",
+            observed_base_state_version=request.observed_base_state_version,
+            task=request.task,
+            source_snapshot_id=request.source_snapshot_id,
+            source_snapshot_digest=request.source_snapshot_digest,
         )
         db.commit()
     except GlhsInvariantError as exc:
@@ -190,6 +199,14 @@ def create_proposal(
         "commitment_id": commitment.public_id,
         "base_state_version": proposal.base_state_version,
         "origin": proposal.origin,
+        "target_profile_id": proposal.target_profile_public_id,
+        "actor_role": proposal.actor_role,
+        "task": proposal.task,
+        "purpose": proposal.purpose,
+        "context_binding_mode": proposal.context_binding_mode,
+        "source_snapshot_id": proposal.source_snapshot_id,
+        "source_snapshot_digest": proposal.source_snapshot_digest,
+        "proposal_digest": proposal.proposal_digest,
     }
 
 
@@ -223,7 +240,15 @@ def review_model_proposal(
         "proposal_id": reviewed.public_id,
         "reviewed_proposal_id": proposal.public_id,
         "origin": reviewed.origin,
+        "target_profile_id": reviewed.target_profile_public_id,
+        "actor_role": reviewed.actor_role,
+        "task": reviewed.task,
+        "purpose": reviewed.purpose,
+        "context_binding_mode": reviewed.context_binding_mode,
         "base_state_version": reviewed.base_state_version,
+        "source_snapshot_id": reviewed.source_snapshot_id,
+        "source_snapshot_digest": reviewed.source_snapshot_digest,
+        "proposal_digest": reviewed.proposal_digest,
     }
 
 
@@ -291,6 +316,8 @@ def apply_transition(
         "decision_id": transition.public_id,
         "resulting_state_version": transition.resulting_state_version,
         "origin": transition.origin,
+        "source_snapshot_id": transition.source_snapshot_id,
+        "source_snapshot_digest": transition.source_snapshot_digest,
     }
 
 
@@ -314,6 +341,7 @@ def snapshot(
             allowed_domains=domains,
             strict=request.strict,
             expires_in=timedelta(seconds=request.expires_in_seconds),
+            disclosed_evidence=_evidence(db, scope, request.evidence_ids),
         )
         db.commit()
     except GlhsInvariantError as exc:
@@ -324,6 +352,10 @@ def snapshot(
         "state_version": compiled.state_version,
         "policy_version": compiled.policy_version,
         "consent_version": compiled.consent_version,
+        "snapshot_digest": compiled.snapshot_digest,
+        "manifest_digest": compiled.manifest_digest,
+        "assertion_hashes": compiled.assertion_hashes,
+        "pipeline_trace": compiled.pipeline_trace,
         "sufficiency": compiled.sufficiency,
         "expires_at": compiled.expires_at,
     }

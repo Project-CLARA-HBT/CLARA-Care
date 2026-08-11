@@ -6,11 +6,13 @@ from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, update
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from clara_api.db.base import Base
 from clara_api.db.models import (
+    GlhsAssertion,
     GlhsSnapshotManifest,
     GlhsTransition,
     HealthSourceReference,
@@ -18,10 +20,15 @@ from clara_api.db.models import (
     User,
     UserConsent,
 )
+from clara_api.glhs.canonical_json import (
+    LEGACY_CANONICALIZATION_PROFILE,
+    legacy_consistency_fingerprint,
+)
 from clara_api.glhs.domain import GlhsInvariantError
 from clara_api.glhs.gateway import (
     AssertionInput,
     EvidenceInput,
+    _profile_lock_statement,
     apply_transition,
     compile_thss,
     current_state_version,
@@ -35,6 +42,61 @@ from clara_api.lifemap.profile_scope import ProfileScope
 
 def _at(value: str) -> datetime:
     return datetime.fromisoformat(value).replace(tzinfo=UTC)
+
+
+def test_profile_writer_lock_compiles_to_postgresql_for_update() -> None:
+    compiled = str(
+        _profile_lock_statement(7).compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "WHERE phr_profiles.id = 7" in compiled
+    assert compiled.endswith("FOR UPDATE")
+
+
+def test_legacy_snapshot_payload_remains_reconstructable(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    payload = {
+        "manifest_schema_version": "glhs.snapshot.v2",
+        "as_of": at.isoformat(),
+        "assertions": [],
+        "conflicts": [],
+    }
+    manifest = GlhsSnapshotManifest(
+        public_id="legacy-snapshot-v2",
+        profile_id=scope.profile.id,
+        state_version=0,
+        actor_user_id=scope.actor.id,
+        actor_role=scope.actor_role,
+        task="legacy_reconstruction",
+        purpose=scope.purpose,
+        data_classes_json=["medications"],
+        assertion_ids_json=[],
+        provenance_ids_json=[],
+        conflict_ids_json=[],
+        selection_policy="strict",
+        manifest_schema_version="glhs.snapshot.v2",
+        payload_schema_version="glhs.snapshot.payload.v2",
+        digest_algorithm="sha-256",
+        canonicalization_profile=LEGACY_CANONICALIZATION_PROFILE,
+        policy_version="glhs.v1",
+        consent_version="not_required",
+        consent_basis="self_care:not_required",
+        assertion_hashes_json=[],
+        snapshot_payload_json=payload,
+        snapshot_digest=legacy_consistency_fingerprint(payload),
+        manifest_digest="",
+        expires_at=datetime.now(UTC),
+    )
+    db.add(manifest)
+    db.flush()
+
+    reconstructed = reconstruct_governed_decision(
+        db, profile_id=scope.profile.id, snapshot_id=manifest.public_id
+    )
+    assert reconstructed["snapshot"]["manifest_schema_version"] == "glhs.snapshot.v2"
+    assert reconstructed["reconstruction_cutoffs"]["valid_at"] == at.isoformat()
 
 
 @pytest.fixture()
@@ -100,6 +162,7 @@ def _assertion(
     at: datetime,
     epistemic: str,
     source_snapshot_id: str | None = None,
+    source_snapshot_digest: str | None = None,
 ):
     return propose_assertion(
         db,
@@ -114,6 +177,7 @@ def _assertion(
             valid_from=at,
             process_kind="clinician" if scope.actor_role == "clinician" else "user",
             source_snapshot_id=source_snapshot_id,
+            source_snapshot_digest=source_snapshot_digest,
         ),
         evidence=((evidence, "supports"),),
     )
@@ -151,6 +215,34 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
         reason_code="test",
     )
     assert transition.consent_version == "medical_disclaimer:test-consent-v1"
+    replay = apply_transition(
+        db,
+        scope=scope,
+        assertion=assertion,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key="co-versioned-activate",
+        transition_kind="user_report",
+        reason_code="test",
+    )
+    assert replay.id == transition.id
+    with pytest.raises(GlhsInvariantError, match="idempotency_key_reuse_mismatch"):
+        apply_transition(
+            db,
+            scope=scope,
+            assertion=assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key="co-versioned-activate",
+            transition_kind="user_report",
+            reason_code="changed-replay",
+        )
+
+    # The lifecycle column is a derivative compatibility projection. THSS must
+    # reconstruct from canonical transition items even if that projection is
+    # corrupted by a direct legacy write.
+    assertion.lifecycle_status = "rejected"
+    db.flush()
     snapshot = compile_thss(
         db,
         scope=scope,
@@ -161,6 +253,17 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
     assert snapshot.state_version == 1
     assert snapshot.policy_version == "glhs.v1"
     assert snapshot.consent_version == "medical_disclaimer:test-consent-v1"
+    assert [stage["name"] for stage in snapshot.pipeline_trace] == [
+        "authorization",
+        "temporal_lifecycle",
+        "conflict",
+        "relevance_freshness",
+        "minimization",
+    ]
+    assert snapshot.assertions[0]["id"] == assertion.public_id
+    assert snapshot.assertion_hashes
+    assert snapshot.snapshot_digest
+    assert snapshot.manifest_digest
     manifest = (
         db.query(GlhsSnapshotManifest)
         .filter(GlhsSnapshotManifest.public_id == snapshot.snapshot_id)
@@ -168,6 +271,9 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
     )
     assert manifest is not None
     assert manifest.consent_version == snapshot.consent_version
+    assert manifest.consent_basis == ("self_care:medical_disclaimer:test-consent-v1")
+    assert manifest.assertion_hashes_json == list(snapshot.assertion_hashes)
+    assert manifest.manifest_digest == snapshot.manifest_digest
     assert db.get(GlhsTransition, transition.id).consent_version == snapshot.consent_version
     reconstructed = reconstruct_governed_decision(
         db,
@@ -175,6 +281,12 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
         snapshot_id=snapshot.snapshot_id,
     )
     assert reconstructed["snapshot"]["state_version"] == snapshot.state_version
+    assert reconstructed["snapshot_artifact"]["payload_schema_version"] == (
+        "glhs.snapshot.payload.v3"
+    )
+    assert reconstructed["snapshot_artifact"]["canonicalization_profile"] == (
+        "clara.canonical-json.v1"
+    )
     assert reconstructed["snapshot"]["consent_version"] == snapshot.consent_version
     assert reconstructed["reconstruction_cutoffs"]["valid_at"]
     assert reconstructed["known_state"][0]["id"] == assertion.public_id
@@ -224,6 +336,53 @@ def test_stale_persisted_proposal_cannot_activate_after_state_advances(db: Sessi
             reason_code="test",
         )
     assert current_state_version(db, profile_id=scope.profile.id) == 1
+
+
+def test_tampered_assertion_value_fails_before_gst(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="tampered-value"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+    db.execute(
+        update(GlhsAssertion)
+        .where(GlhsAssertion.id == assertion.id)
+        .values(value_json={"drugbank_id": "DB00331", "dose": "5000", "unit": "mg"})
+        .execution_options(synchronize_session=False)
+    )
+    db.expire(assertion)
+    with pytest.raises(GlhsInvariantError, match="assertion_value_digest_mismatch"):
+        apply_transition(
+            db,
+            scope=scope,
+            assertion=assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key="tampered-value",
+            transition_kind="user_report",
+            reason_code="tampered",
+        )
+
+
+def test_orm_rejects_canonical_assertion_content_mutation(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="orm-immutable"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+    assertion.semantic_key = "medication:tampered"
+    with pytest.raises(ValueError, match="canonical row content is immutable"):
+        db.flush()
 
 
 def test_gateway_rejects_transition_when_scope_lacks_required_action(db: Session) -> None:
@@ -326,6 +485,17 @@ def test_proposal_snapshot_link_requires_current_untampered_thss(db: Session) ->
         allowed_data_classes=frozenset({"medications"}),
         as_of=at,
     )
+    with pytest.raises(GlhsInvariantError, match="proposal_manifest_digest_mismatch"):
+        _assertion(
+            db,
+            scope=scope,
+            evidence=_evidence(db, scope=scope, at=at, fingerprint="link-wrong-manifest-digest"),
+            dose="700",
+            at=at,
+            epistemic="documented",
+            source_snapshot_id=source_snapshot.snapshot_id,
+            source_snapshot_digest="0" * 64,
+        )
     derived = _assertion(
         db,
         scope=scope,
@@ -334,8 +504,10 @@ def test_proposal_snapshot_link_requires_current_untampered_thss(db: Session) ->
         at=at,
         epistemic="documented",
         source_snapshot_id=source_snapshot.snapshot_id,
+        source_snapshot_digest=source_snapshot.manifest_digest,
     )
     assert derived.source_snapshot_id == source_snapshot.snapshot_id
+    assert derived.source_snapshot_digest == source_snapshot.manifest_digest
     transition = apply_transition(
         db,
         scope=scope,
@@ -354,6 +526,10 @@ def test_proposal_snapshot_link_requires_current_untampered_thss(db: Session) ->
     )
     proposal = reconstructed["decisions"][0]["proposals"][0]
     assert proposal["source_snapshot_id"] == source_snapshot.snapshot_id
+    assert proposal["source_snapshot_digest"] == source_snapshot.manifest_digest
+    assert reconstructed["decisions"][0]["source_snapshot_digest"] == (
+        source_snapshot.manifest_digest
+    )
 
 
 def test_reconstruction_rejects_transition_not_linked_to_snapshot(db: Session) -> None:

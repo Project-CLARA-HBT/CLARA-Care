@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
@@ -51,19 +52,55 @@ def _fingerprint(value: object) -> str:
 
 def _rebase_same_transaction_proposal(
     db: Session, *, scope: ProfileScope, assertion: GlhsAssertion
-) -> None:
-    """Rebase an adapter candidate after its own serialized replacement writes.
+) -> GlhsAssertion:
+    """Append a replacement candidate after serialized same-transaction writes.
 
     The candidate was created against the state version that existed before the
     adapter retired the prior assertion(s).  Those deliberate transitions are
-    part of this same trusted transaction, so activation must use the resulting
-    version.  External callers never receive this escape hatch; their stale
-    proposals remain rejected by ``apply_transition``.
+    part of this same trusted transaction. The original candidate remains an
+    immutable rejected projection and a newly appended candidate is bound to
+    the resulting version. External stale proposals remain rejected.
     """
 
-    assertion.base_state_version = current_state_version(db, profile_id=scope.profile.id)
+    current = current_state_version(db, profile_id=scope.profile.id)
+    if assertion.base_state_version == current:
+        return assertion
+    evidence = tuple(
+        (row, str(relation))
+        for row, relation in db.execute(
+            select(GlhsEvidence, GlhsAssertionEvidence.relation)
+            .join(
+                GlhsAssertionEvidence,
+                GlhsAssertionEvidence.evidence_id == GlhsEvidence.id,
+            )
+            .where(GlhsAssertionEvidence.assertion_id == assertion.id)
+        ).all()
+    )
+    replacement = propose_assertion(
+        db,
+        profile_id=assertion.profile_id,
+        actor_user_id=assertion.asserted_by_user_id,
+        data=AssertionInput(
+            semantic_key=assertion.semantic_key,
+            assertion_type=assertion.assertion_type,
+            predicate=assertion.predicate,
+            value=assertion.value_json,
+            epistemic_state=assertion.epistemic_state,
+            valid_from=assertion.valid_from,
+            valid_to=assertion.valid_to,
+            time_precision=assertion.time_precision,
+            estimated_time=assertion.estimated_time,
+            subject_kind=assertion.subject_kind,
+            process_kind=assertion.process_kind,
+            source_snapshot_id=assertion.source_snapshot_id,
+            source_snapshot_digest=assertion.source_snapshot_digest,
+        ),
+        evidence=evidence,
+    )
+    assertion.lifecycle_status = "rejected"
     db.add(assertion)
     db.flush()
+    return cast(GlhsAssertion, replacement)
 
 
 def _event_source(
@@ -81,7 +118,7 @@ def _event_source(
     if revision.source_reference_id is not None:
         referenced = db.get(HealthSourceReference, revision.source_reference_id)
         if referenced is not None and referenced.profile_id == scope.profile.id:
-            return referenced
+            return cast(HealthSourceReference, referenced)
     source_identity = f"lifemap:{event.public_id}:revision:{revision.public_id}"
     existing = db.execute(
         select(HealthSourceReference).where(
@@ -90,7 +127,7 @@ def _event_source(
         )
     ).scalar_one_or_none()
     if existing is not None:
-        return existing
+        return cast(HealthSourceReference, existing)
     source = HealthSourceReference(
         profile_id=scope.profile.id,
         source_kind=event.source_kind,
@@ -212,7 +249,7 @@ def ingest_lifemap_event(
             ).scalars()
         )
         if not active_assertions:
-            return revision.public_id
+            return cast(str, revision.public_id)
         key_prefix = (
             "glhs-lifemap:"
             + hashlib.sha256(f"{idempotency_key}:{revision.public_id}".encode()).hexdigest()
@@ -231,7 +268,7 @@ def ingest_lifemap_event(
                 effective_at=datetime.now(UTC),
             )
             last_transition_id = transition.public_id
-        return last_transition_id
+        return cast(str, last_transition_id)
 
     evidence = record_evidence(
         db,
@@ -271,7 +308,7 @@ def ingest_lifemap_event(
         evidence=((evidence, "supports"),),
     )
     if truth_state == "draft":
-        return assertion.public_id
+        return cast(str, assertion.public_id)
     active_assertions = list(
         db.execute(
             select(GlhsAssertion).where(
@@ -297,7 +334,7 @@ def ingest_lifemap_event(
             reason_code="lifemap_revision_replaced",
             effective_at=occurred_at,
         )
-    _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
+    assertion = _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
     transition = apply_transition(
         db,
         scope=scope,
@@ -311,7 +348,7 @@ def ingest_lifemap_event(
         reason_code=("lifemap_revision_replaced" if active_assertions else "lifemap_event_created"),
         allow_confirmed=epistemic_state == "confirmed" and scope.actor_role == "clinician",
     )
-    return transition.public_id
+    return cast(str, transition.public_id)
 
 
 def ingest_medication_course(
@@ -397,7 +434,7 @@ def ingest_medication_course(
         # pre-GLHS course can legitimately have no active assertion yet; in
         # that case the adapter remains a no-op rather than inventing history.
         if not active_assertions:
-            return course.public_id
+            return cast(str, course.public_id)
         effective_at = course.ended_at or datetime.now(UTC)
         if effective_at.tzinfo is None:
             effective_at = effective_at.replace(tzinfo=UTC)
@@ -415,7 +452,7 @@ def ingest_medication_course(
                 effective_at=effective_at,
             )
             last_transition_id = transition.public_id
-        return last_transition_id
+        return cast(str, last_transition_id)
 
     assertion = propose_assertion(
         db,
@@ -443,7 +480,7 @@ def ingest_medication_course(
         evidence=((evidence, "supports"),),
     )
     if not resolved:
-        return assertion.public_id
+        return cast(str, assertion.public_id)
     # Corrections are command-authorized mutations of the same course, rather
     # than competing clinical reports.  Retire its active assertion(s) before
     # activating the new evidence-bound version so THSS does not surface a
@@ -459,7 +496,7 @@ def ingest_medication_course(
             transition_kind="medication_course_corrected",
             reason_code="explicit_medication_correction",
         )
-    _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
+    assertion = _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
     transition = apply_transition(
         db,
         scope=scope,
@@ -474,7 +511,7 @@ def ingest_medication_course(
             "explicit_medication_correction" if active_assertions else "explicit_medication_entry"
         ),
     )
-    return transition.public_id
+    return cast(str, transition.public_id)
 
 
 def ingest_connected_health_observation(
@@ -610,7 +647,7 @@ def ingest_connected_health_observation(
             reason_code="provider_record_updated",
             effective_at=observed_at,
         )
-    _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
+    assertion = _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
     transition = apply_transition(
         db,
         scope=scope,
@@ -627,7 +664,7 @@ def ingest_connected_health_observation(
             "provider_record_updated" if active_assertions else "consented_connector_import"
         ),
     )
-    return transition.public_id
+    return cast(str, transition.public_id)
 
 
 def ingest_visit_document(
@@ -737,7 +774,7 @@ def ingest_visit_document(
         reason_code="user_linked_document",
         effective_at=created_at,
     )
-    return transition.public_id
+    return cast(str, transition.public_id)
 
 
 def retire_visit_document_assertions(
@@ -853,7 +890,7 @@ def _record_entry_source(
         )
     ).scalar_one_or_none()
     if existing is not None:
-        return existing
+        return cast(HealthSourceReference, existing)
     source = HealthSourceReference(
         profile_id=scope.profile.id,
         source_kind="phr_record",
@@ -1013,7 +1050,9 @@ def ingest_phr_record_entries(
                     effective_at=occurred_at,
                 )
                 transition_ids.append(transition.public_id)
-            _rebase_same_transaction_proposal(db, scope=scope, assertion=assertion)
+            assertion = _rebase_same_transaction_proposal(
+                db, scope=scope, assertion=assertion
+            )
             transition = apply_transition(
                 db,
                 scope=scope,
@@ -1140,4 +1179,4 @@ def ingest_phr_observation(
         transition_kind="phr_observation_report",
         reason_code="self_declared_observation",
     )
-    return transition.public_id
+    return cast(str, transition.public_id)

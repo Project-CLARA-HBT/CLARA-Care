@@ -165,9 +165,17 @@ def test_course_commands_are_opaque_idempotent_and_append_only() -> None:
                 .order_by(GlhsAssertion.id)
             ).scalars()
         )
-        assert len(assertions) == 2
-        assert [item.lifecycle_status for item in assertions] == ["superseded", "superseded"]
-        assert [item.value_json["dose_text"] for item in assertions] == ["500 mg", "500 mg"]
+        assert len(assertions) == 3
+        assert [item.lifecycle_status for item in assertions] == [
+            "superseded",
+            "rejected",
+            "superseded",
+        ]
+        assert [item.value_json["dose_text"] for item in assertions] == [
+            "500 mg",
+            "500 mg",
+            "500 mg",
+        ]
 
 
 def test_hypothetical_ddi_is_separate_and_explicit(monkeypatch) -> None:
