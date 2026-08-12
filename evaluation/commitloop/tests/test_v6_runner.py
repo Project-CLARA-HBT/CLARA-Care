@@ -1,0 +1,52 @@
+from pathlib import Path
+
+import pytest
+
+from evaluation.commitloop.fixtures import DeterministicFakeTransport
+from evaluation.commitloop.provider import (
+    CONFIRMATORY_MODELS,
+    EvaluationClient,
+    RunLimits,
+)
+from evaluation.commitloop.v6_cohort import build_cohort
+from evaluation.commitloop.v6_runner import run_v6_development_partition
+
+
+def _clients(limits: RunLimits) -> dict[str, EvaluationClient]:
+    transport = DeterministicFakeTransport()
+    return {
+        model: EvaluationClient(
+            base_url="https://offline.invalid/v1",
+            api_key="offline-fixture-token",
+            transport=transport,
+            limits=limits,
+        )
+        for model in CONFIRMATORY_MODELS
+    }
+
+
+def test_v6_runner_refuses_sealed_final_and_wrong_partition_limits(
+    tmp_path: Path,
+) -> None:
+    rows, _ = build_cohort()
+    limits = RunLimits(max_subjects=1, max_cases=1, max_requests=27, max_concurrency=5)
+    with pytest.raises(ValueError, match="v6_nonfinal_split_required"):
+        run_v6_development_partition(
+            rows=rows,
+            split="sealed_test",
+            output_dir=tmp_path,
+            clients=_clients(limits),
+            phase_freeze_sha="a" * 40,
+            provider_probe_sha256="b" * 64,
+            limits=limits,
+        )
+    with pytest.raises(ValueError, match="v6_partition_limits_must_match_split"):
+        run_v6_development_partition(
+            rows=rows,
+            split="development",
+            output_dir=tmp_path,
+            clients=_clients(limits),
+            phase_freeze_sha="a" * 40,
+            provider_probe_sha256="b" * 64,
+            limits=limits,
+        )
