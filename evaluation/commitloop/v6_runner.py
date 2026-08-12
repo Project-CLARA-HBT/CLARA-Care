@@ -16,7 +16,11 @@ from evaluation.commitloop.provider import (
     EvaluationClient,
     RunLimits,
 )
-from evaluation.commitloop.run_local import expected_solver_case_count, run_local_e2e
+from evaluation.commitloop.run_local import (
+    expected_solver_case_count,
+    run_local_e2e,
+    seal_artifacts,
+)
 from evaluation.commitloop.solver_packets import CONDITIONS
 from evaluation.commitloop.v6_cohort import (
     COHORT_NAME,
@@ -103,7 +107,7 @@ def run_v6_development_partition(
         or len(probe.get("results", [])) != len(CONFIRMATORY_MODELS)
     ):
         raise ValueError("v6_provider_probe_contract_invalid")
-    return run_local_e2e(
+    result = run_local_e2e(
         bundles=bundles,
         output_dir=output_dir,
         clients=clients,
@@ -119,3 +123,37 @@ def run_v6_development_partition(
         subject_splits=splits,
         include_all_adversarial_variants=True,
     )
+    # A non-final run must be reproducible from its own sealed directory while
+    # never copying the withheld cohort rows into a development/validation
+    # artifact. The original pre-provider freeze remains immutable elsewhere.
+    artifact_inputs = output_dir / "frozen_inputs"
+    artifact_inputs.mkdir(exist_ok=False)
+    selected_rows = [
+        row for row in frozen_rows if str(row.get("split")) == split
+    ]
+    selected_cohort = artifact_inputs / f"cohort_{split}.jsonl"
+    selected_cohort.write_text(
+        "".join(
+            json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
+            for row in selected_rows
+        ),
+        encoding="utf-8",
+    )
+    copied_freeze = artifact_inputs / "freeze.json"
+    copied_probe = artifact_inputs / "provider_probe.json"
+    copied_freeze.write_bytes(freeze_path.read_bytes())
+    copied_probe.write_bytes(provider_probe_path.read_bytes())
+    provenance = {
+        "schema_version": "glhs-bench-v6-run-inputs.v1",
+        "split": split,
+        "freeze_sha256": hashlib.sha256(copied_freeze.read_bytes()).hexdigest(),
+        "provider_probe_sha256": hashlib.sha256(copied_probe.read_bytes()).hexdigest(),
+        "full_cohort_sha256": hashlib.sha256(frozen_cohort_path.read_bytes()).hexdigest(),
+        "selected_cohort_sha256": hashlib.sha256(selected_cohort.read_bytes()).hexdigest(),
+        "implementation_git_sha": str(freeze["git_sha"]),
+    }
+    (artifact_inputs / "artifact_provenance.json").write_text(
+        json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    seal_artifacts(output_dir)
+    return result

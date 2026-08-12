@@ -202,6 +202,51 @@ def validate_run(root: Path) -> None:
             r"[0-9a-f]{64}", str(manifest.get("provider_probe_sha256") or "")
         ):
             raise ValueError("phase_b_provenance_missing:provider_probe_sha256")
+    if execution_mode == "glhs_bench_router" and str(manifest.get("source_cohort", "")).startswith(
+        "glhs_bench_"
+    ):
+        inputs = root / "frozen_inputs"
+        required_inputs = {
+            "freeze.json",
+            "provider_probe.json",
+            "artifact_provenance.json",
+            f"cohort_{str(manifest.get('source_cohort', '')).rsplit(':', 1)[-1]}.jsonl",
+        }
+        if not inputs.is_dir() or any(not (inputs / name).is_file() for name in required_inputs):
+            raise ValueError("glhs_bench_frozen_input_artifact_missing")
+        provenance = json.loads((inputs / "artifact_provenance.json").read_text(encoding="utf-8"))
+        split = str(manifest.get("source_cohort", "")).rsplit(":", 1)[-1]
+        selected_cohort = inputs / f"cohort_{split}.jsonl"
+        if (
+            not isinstance(provenance, dict)
+            or provenance.get("schema_version") != "glhs-bench-v6-run-inputs.v1"
+            or provenance.get("split") != split
+            or provenance.get("freeze_sha256")
+            != hashlib.sha256((inputs / "freeze.json").read_bytes()).hexdigest()
+            or provenance.get("provider_probe_sha256")
+            != hashlib.sha256((inputs / "provider_probe.json").read_bytes()).hexdigest()
+            or provenance.get("selected_cohort_sha256")
+            != hashlib.sha256(selected_cohort.read_bytes()).hexdigest()
+        ):
+            raise ValueError("glhs_bench_frozen_input_artifact_invalid")
+        selected_rows = [
+            json.loads(line)
+            for line in selected_cohort.read_text(encoding="utf-8").splitlines()
+            if line
+        ]
+        partitions = json.loads((root / "partition_manifest.json").read_text(encoding="utf-8"))
+        selected_tokens = {str(row.get("subject_token")) for row in selected_rows}
+        if (
+            not isinstance(partitions, dict)
+            or not selected_rows
+            or any(str(row.get("split")) != split for row in selected_rows)
+            or selected_tokens != {
+                str(subject)
+                for subject, assigned in partitions.items()
+                if assigned == split
+            }
+        ):
+            raise ValueError("glhs_bench_frozen_input_subject_inventory_invalid")
     expected_cells = manifest.get("expected_cell_count")
     if not isinstance(expected_cells, int) or expected_cells < 0:
         raise ValueError("invalid_expected_cell_count")
