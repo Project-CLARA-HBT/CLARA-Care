@@ -141,7 +141,7 @@ mean clinical validity. External evidence remains fail-closed.
   directory contains a corrupt temporary-suffix LZO object and is rejected
   before hashing; no deletion or repair was performed. Synthea Coherent's
   bundled README declares CC BY 4.0 and 1,278 longitudinal FHIR bundles; its
-  ZIP inventory has 24,488 files and local SHA-256 `4e94373b...`. These are
+  ZIP inventory has 2,488 entries (2,484 files) and local SHA-256 `4e94373b...`. These are
   presence/inventory facts, not frozen normalization or clinical evidence.
 - The SynPUF OMOP 100K source freeze verified 17 gzip tables (914,865,701
   bytes; inventory SHA `11fd10d7...`) with no provider-pinned checksum. The

@@ -188,7 +188,7 @@ pass a local codec check. The larger directory contains one corrupt
 temporary-suffix LZO object, so the repository verifier fails closed before a
 29GB hash pass; it is not frozen or called complete. Synthea Coherent is also
 registered from its bundled CC BY 4.0 README and local ZIP identity. Its
-central directory contains 24,488 files, but full source freeze and multimodal
+central directory contains 2,488 entries (2,484 files), but full source freeze and multimodal
 normalization remain pending. A newly supplied Diabetes-130 archive is
 byte-identical to the already used UCI ZIP and is treated only as a duplicate.
 

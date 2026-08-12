@@ -9,8 +9,8 @@
 - Copyright stated by the bundled README: 2021, The MITRE Corporation
 - MITRE public release case stated by the bundled README: 21-1917
 
-The ZIP central directory contains 24,488 files and 15,111,284,460
-uncompressed bytes. It includes 1,280 FHIR JSON files: the README's 1,278
+The ZIP central directory contains 2,488 entries (2,484 files and four
+directories) and 15,111,284,460 uncompressed bytes. It includes 1,280 FHIR JSON files: the README's 1,278
 simulated longitudinal bundles plus `organizations.json` and
 `practitioners.json`. These counts and hashes establish only local source
 identity and inventory. No provider-published checksum was supplied or
