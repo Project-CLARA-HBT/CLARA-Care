@@ -50,7 +50,7 @@ def run_v6_development_partition(
         phase_a_freeze_sha=phase_freeze_sha,
         provider_probe_sha256=provider_probe_sha256,
         source_cohort=f"{COHORT_NAME}:{split}",
-        primary_model="claude-sonnet-4-6",
+        primary_model="claude-sonnet-4.6",
         production_strict_context_builder=compile_production_commitment_context,
         subject_splits=splits,
     )

@@ -275,16 +275,15 @@ def create_v5_freeze(
             if path.is_file()
         },
         "execution_contract": {
-            "primary_model": "claude-sonnet-4-6",
+            "primary_model": "claude-sonnet-4.6",
             "secondary_models": [
-                "gemini-3.1-pro",
                 "gemini-3.6-flash-high",
             ],
             "primary_reference_condition": "glhs_hybrid_thss_strict",
             "primary_comparator_condition": "full_authorized_history",
             "subjects": 384,
             "conditions": 9,
-            "expected_provider_calls": 10368,
+            "expected_provider_calls": 6912,
             "max_concurrency": 5,
             "batch_size": 5,
             "retries": 2,

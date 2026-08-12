@@ -21,7 +21,7 @@ CONDITIONS = (
     "thss_strict",
 )
 MODELS = (
-    ("claude-sonnet-4-6", "claude"),
+    ("claude-sonnet-4.6", "claude"),
     ("gemini-3.6-flash-high", "gemini"),
 )
 COLUMNS = (

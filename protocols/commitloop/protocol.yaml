@@ -11,10 +11,10 @@ split:
   sealed_test_percent: 15
 models:
   - gemini-3.6-flash-high
-  - claude-sonnet-4-6
+  - claude-sonnet-4.6
 reported_model_mapping:
   gemini-3.6-flash-high: gemini-3.6-flash-high
-  claude-sonnet-4-6: claude-sonnet-4-6
+  claude-sonnet-4.6: claude-sonnet-4.6
 decoding:
   temperature: 0
   fallback: false

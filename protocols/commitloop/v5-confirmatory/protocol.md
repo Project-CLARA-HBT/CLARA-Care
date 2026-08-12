@@ -12,8 +12,8 @@ subject-level exact lifecycle/evidence/timeliness resolution over
 ## Design
 
 - Unit: one independently generated synthetic subject with one source case.
-- Primary model: `claude-sonnet-4-6`; frozen secondary model families are
-  `gemini-3.6-flash-high` and `gemini-3.1-pro`.
+- Primary model: `claude-sonnet-4.6`; frozen secondary model family is
+  `gemini-3.6-flash-high`.
 - Primary contrast: strict THSS minus authorization-only full history.
 - Primary endpoint: all three state axes exactly match deterministic gold.
 - Target enrollment: 384 analyzable subjects, balanced 48 per held-out stratum.

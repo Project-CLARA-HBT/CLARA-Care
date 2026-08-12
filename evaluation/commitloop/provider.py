@@ -14,17 +14,12 @@ from typing import Any, Protocol
 from evaluation.commitloop.http_transport import ProviderHttpError
 
 GENERATOR_MODEL = "gemini-3.6-flash-high"
-REVIEWER_MODEL = "claude-sonnet-4-6"
-PRO_MODEL = "gemini-3.1-pro"
-ALLOWED_MODELS = frozenset({GENERATOR_MODEL, REVIEWER_MODEL, PRO_MODEL})
+REVIEWER_MODEL = "claude-sonnet-4.6"
+ALLOWED_MODELS = frozenset({GENERATOR_MODEL, REVIEWER_MODEL})
 CONFIRMATORY_MODELS = tuple(sorted(ALLOWED_MODELS))
 REPORTED_MODEL_ID_BY_REQUESTED = {
     GENERATOR_MODEL: GENERATOR_MODEL,
     REVIEWER_MODEL: REVIEWER_MODEL,
-    # Router's capability probe resolves this requested ID to its canonical
-    # reported deployment name. This mapping is frozen and no fallback is
-    # accepted outside it.
-    PRO_MODEL: "gemini-pro-agent",
 }
 
 
@@ -94,8 +89,8 @@ class RunLimits:
             raise ValueError("invalid_max_subjects")
         if not 1 <= self.max_cases <= 5000:
             raise ValueError("invalid_max_cases")
-        # Three frozen model families × 384 subjects × nine conditions needs
-        # 10,368 solver cells.  This remains a bounded benchmark-only limit.
+        # Two frozen model families × 384 subjects × nine conditions needs
+        # 6,912 solver cells. This remains a bounded benchmark-only limit.
         if not 1 <= self.max_requests <= 20000:
             raise ValueError("invalid_max_requests")
         if not 1 <= self.max_concurrency <= 16:

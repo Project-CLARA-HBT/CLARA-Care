@@ -1,4 +1,4 @@
-"""Probe and record the exact three-model v6 router contract."""
+"""Probe and record the exact two-model v6 router contract."""
 
 from __future__ import annotations
 
@@ -42,7 +42,16 @@ def probe_v6_models(
     for model in CONFIRMATORY_MODELS:
         result = clients[model].complete(
             model=model,
-            messages=[{"role": "user", "content": "Return the probe JSON only."}],
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a JSON API. Output exactly one JSON object and no prose.",
+                },
+                {
+                    "role": "user",
+                    "content": 'Output exactly this object: {"status":"ok"}',
+                },
+            ],
             response_schema=PROBE_SCHEMA,
             max_tokens=64,
         )
