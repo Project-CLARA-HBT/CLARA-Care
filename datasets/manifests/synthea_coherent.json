@@ -1,0 +1,52 @@
+{
+  "access_class": "open",
+  "acquired_at": null,
+  "acquisition_time_status": "UNKNOWN",
+  "canonical_source": "https://synthea.mitre.org/downloads",
+  "claim_limit": "local_integrity_only_not_canonical_authenticity_normalization_evaluation_or_clinical_validation",
+  "dataset_id": "synthea_coherent",
+  "dataset_registry_entry_sha256": "dd9f55725c72be1bb86135c14c2de58c85934e8aa16da3ca544c195216d72d6b",
+  "evidence_class": "multimodal_synthetic_systems",
+  "known_limitations": "Synthetic and not independent from Synthea-family sources; local archive identity is not provider-checksum authenticated and linked modality semantics require a dedicated adapter.",
+  "license": "CC-BY-4.0 per bundled README",
+  "manifest_payload_sha256": "49fdd3a58c82f0daa7d3f79cf8024e5903ac2107e928ba17d0b76951d2f3e3da",
+  "registry_sha256": "8a4e90b5f7c9ea955803d2ef9464dceef865d6c4cedf2c43495e4316e89c4792",
+  "release_date": "2022-11-07",
+  "schema_version": "clara-dataset-freeze.v1",
+  "source_git_sha": "b1c599983cb16d44353c8227639a91ccc4eb3691",
+  "source_path_local_only": "datasets/synthea-coherent/coherent-11-07-2022.zip",
+  "source_schema": "FHIR plus linked modalities",
+  "source_version": "coherent-11-07-2022",
+  "status": "FROZEN_LOCAL_INTEGRITY_METADATA",
+  "synthetic": true,
+  "tracked_worktree_clean_before_freeze": true,
+  "verification": {
+    "access_class": "open",
+    "archive": {
+      "format": "zip",
+      "member_count": 2488,
+      "uncompressed_bytes": 15111284460,
+      "unsafe_member_count": 0
+    },
+    "canonical_checksum_status": "NOT_PROVIDED",
+    "canonical_source": "https://synthea.mitre.org/downloads",
+    "claim_limit": "local_integrity_not_canonical_authenticity_normalization_or_evaluation",
+    "dataset_id": "synthea_coherent",
+    "expected_files_present": true,
+    "file_count": 1,
+    "files": [
+      {
+        "bytes": 9228105262,
+        "path": "coherent-11-07-2022.zip",
+        "sha256": "4e94373bade1106b5482e89274af7f4d59f8c9497dc899b579cfec445035c036"
+      }
+    ],
+    "inventory_sha256": "144a6c34e426509b2d29b8fec838ed540b1c45f687134437a15dcf3ffcbd4f57",
+    "schema_version": "clara-dataset-verification.v1",
+    "source_path": "datasets/synthea-coherent/coherent-11-07-2022.zip",
+    "status": "VERIFIED_LOCAL_INTEGRITY",
+    "synthetic": true,
+    "total_bytes": 9228105262
+  },
+  "verified_at_utc": "2026-08-12T03:46:55.959261+00:00"
+}
