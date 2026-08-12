@@ -283,6 +283,36 @@ def test_solver_grid_honors_bounded_parallelism_and_seals_deterministically(
     validate_run(tmp_path)
 
 
+def test_glhs_bench_router_requires_exact_global_five_and_retry_policy(tmp_path) -> None:
+    cutoff = datetime(2026, 2, 1, tzinfo=UTC)
+    common = {
+        "bundles": [(_bundle("strict-five", "five"), "R4")],
+        "output_dir": tmp_path,
+        "clients": _clients(ExactModelFakeTransport(), RunLimits(max_requests=100)),
+        "valid_cutoff": cutoff,
+        "known_cutoff": cutoff,
+        "execution_mode": "glhs_bench_router",
+        "phase_a_freeze_sha": "a" * 40,
+        "provider_probe_sha256": "b" * 64,
+    }
+    with pytest.raises(ValueError, match="glhs_bench_requires_exact_global_concurrency_5"):
+        run_local_e2e(
+            **common,
+            limits=RunLimits(max_subjects=1, max_cases=1, max_requests=100, max_concurrency=4),
+        )
+    with pytest.raises(ValueError, match="glhs_bench_requires_retry_policy"):
+        run_local_e2e(
+            **common,
+            limits=RunLimits(
+                max_subjects=1,
+                max_cases=1,
+                max_requests=100,
+                max_concurrency=5,
+                max_retries=0,
+            ),
+        )
+
+
 def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(
     tmp_path,
 ) -> None:

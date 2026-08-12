@@ -11,12 +11,16 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import Any, Protocol
 
+from evaluation.commitloop.http_transport import ProviderHttpError
+
 GENERATOR_MODEL = "antigravity/gemini-3.6-flash-high"
 REVIEWER_MODEL = "antigravity/claude-sonnet-4-6"
-ALLOWED_MODELS = frozenset({GENERATOR_MODEL, REVIEWER_MODEL})
+PRO_MODEL = "antigravity/gemini-3.1-pro"
+ALLOWED_MODELS = frozenset({GENERATOR_MODEL, REVIEWER_MODEL, PRO_MODEL})
 REPORTED_MODEL_ID_BY_REQUESTED = {
     GENERATOR_MODEL: "gemini-3.6-flash-high",
     REVIEWER_MODEL: "claude-sonnet-4-6",
+    PRO_MODEL: "gemini-3.1-pro",
 }
 
 
@@ -122,6 +126,7 @@ class EvaluationClient:
         transport: Transport,
         limits: RunLimits | None = None,
         sleeper: Callable[[float], None] = time.sleep,
+        reported_model_mapping: dict[str, str] | None = None,
     ) -> None:
         if not base_url.startswith("https://"):
             raise ProviderError("https_router_required")
@@ -131,6 +136,19 @@ class EvaluationClient:
         self._api_key = api_key
         self._transport = transport
         self._limits = limits or RunLimits()
+        self._reported_model_mapping = dict(
+            REPORTED_MODEL_ID_BY_REQUESTED
+            if reported_model_mapping is None
+            else reported_model_mapping
+        )
+        if not self._reported_model_mapping or any(
+            not isinstance(requested, str)
+            or not requested
+            or not isinstance(reported, str)
+            or not reported
+            for requested, reported in self._reported_model_mapping.items()
+        ):
+            raise ProviderError("invalid_reported_model_mapping")
         self._request_count = 0
         self._attempt_count = 0
         self._counter_lock = Lock()
@@ -158,7 +176,7 @@ class EvaluationClient:
         response_schema: dict[str, Any] | None = None,
         max_tokens: int = 1024,
     ) -> ProviderResult:
-        if model not in ALLOWED_MODELS:
+        if model not in self._reported_model_mapping:
             raise ProviderError("undeclared_model")
         if self._request_count >= self._limits.max_requests:
             raise ProviderError("request_limit_exceeded")
@@ -206,6 +224,18 @@ class EvaluationClient:
                     self._limits.timeout_seconds,
                 )
                 break
+            except ProviderHttpError as exc:
+                retryable = exc.status_code == 429 or 500 <= exc.status_code <= 599
+                if not retryable:
+                    raise ProviderError(
+                        f"provider_http_terminal_{exc.status_code}", attempts=attempts
+                    ) from exc
+                if attempt >= self._limits.max_retries:
+                    raise ProviderError(
+                        f"provider_http_retry_exhausted_{exc.status_code}",
+                        attempts=attempts,
+                    ) from exc
+                self._sleeper(self._limits.retry_backoff_seconds * (2**attempt))
             except (OSError, TimeoutError) as exc:
                 if attempt >= self._limits.max_retries:
                     raise ProviderError(
@@ -216,9 +246,7 @@ class EvaluationClient:
             raise ProviderError("provider_transport_exhausted", attempts=attempts)
         latency_ms = (time.perf_counter() - started) * 1000.0
         reported = response.get("model")
-        if not isinstance(reported, str) or not reported_model_matches_requested(
-            model, reported
-        ):
+        if not isinstance(reported, str) or reported != self._reported_model_mapping[model]:
             raise ProviderError("model_substitution_detected", attempts=attempts)
         choices = response.get("choices")
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):

@@ -251,19 +251,27 @@ def reproduce(source: Path, output: Path) -> dict[str, Any]:
             "all_axes_exact",
         ],
     )
+    error_fields = [
+        "key",
+        "case_id",
+        "condition",
+        "requested_model_id",
+        "reported_model_id",
+        "error",
+        "attempts",
+        "usage",
+    ]
+    # Preserve byte-identical reproduction for sealed artifacts created before
+    # the sanitized error-detail taxonomy was introduced.
+    source_error_header = (source / "error_ledger.csv").read_text(
+        encoding="utf-8"
+    ).splitlines()[0].split(",")
+    if "error_detail" in source_error_header:
+        error_fields.insert(error_fields.index("attempts"), "error_detail")
     _write_csv(
         output / "error_ledger.csv",
         errors,
-        [
-            "key",
-            "case_id",
-            "condition",
-            "requested_model_id",
-            "reported_model_id",
-            "error",
-            "attempts",
-            "usage",
-        ],
+        error_fields,
     )
     subject_rows = per_case_rows_with_subject(
         outputs=outputs,

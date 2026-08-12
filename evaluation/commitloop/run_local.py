@@ -68,6 +68,7 @@ _PREDICTION_ENUMS = {
     if "enum" in value
 }
 SOLVER_BATCH_SIZE = 5
+GLHS_BENCH_GLOBAL_CONCURRENCY = 5
 
 
 def _json(value: object) -> str:
@@ -95,6 +96,22 @@ def _validate_solver_prediction(value: object) -> dict[str, str | float]:
 
 def _read_json(path: Path, default: Any) -> Any:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else default
+
+
+def _safe_error_detail(exc: Exception) -> str:
+    """Return a closed taxonomy label without retaining provider content."""
+
+    if isinstance(exc, ProviderError):
+        return str(exc)
+    if isinstance(exc, json.JSONDecodeError):
+        return "provider_json_decode_error"
+    if isinstance(exc, ValueError) and str(exc) == "prediction_schema_invalid":
+        return "prediction_schema_invalid"
+    if isinstance(exc, TimeoutError):
+        return "provider_timeout"
+    if isinstance(exc, OSError):
+        return "provider_transport_error"
+    return f"{type(exc).__name__}_terminal"
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -238,7 +255,9 @@ def run_local_e2e(
     valid_cutoff: datetime,
     known_cutoff: datetime,
     limits: RunLimits,
-    execution_mode: Literal["phase_a_fake", "phase_b_router"] = "phase_a_fake",
+    execution_mode: Literal[
+        "phase_a_fake", "phase_b_router", "glhs_bench_router"
+    ] = "phase_a_fake",
     phase_a_freeze_sha: str | None = None,
     provider_probe_sha256: str | None = None,
     provider_approval_sha256: str | None = None,
@@ -271,6 +290,18 @@ def run_local_e2e(
         ]
         if len(provenance_hashes) != 1:
             raise ValueError("phase_b_single_cost_gate_sha_required")
+    if execution_mode == "glhs_bench_router":
+        if limits.max_concurrency != GLHS_BENCH_GLOBAL_CONCURRENCY:
+            raise ValueError("glhs_bench_requires_exact_global_concurrency_5")
+        if limits.max_retries < 1:
+            raise ValueError("glhs_bench_requires_retry_policy")
+        if not isinstance(phase_a_freeze_sha, str) or len(phase_a_freeze_sha) not in {
+            40,
+            64,
+        }:
+            raise ValueError("glhs_bench_freeze_sha_required")
+        if not isinstance(provider_probe_sha256, str) or len(provider_probe_sha256) != 64:
+            raise ValueError("glhs_bench_provider_probe_required")
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_path = output_dir / "checkpoint.json"
     completed = set(_read_json(checkpoint_path, {"completed": []})["completed"])
@@ -496,6 +527,7 @@ def run_local_e2e(
                 "requested_model_id": model,
                 "reported_model_id": None,
                 "error": type(exc).__name__,
+                "error_detail": _safe_error_detail(exc),
                 "attempts": max(1, int(getattr(exc, "attempts", 1))),
                 "usage": {},
             }
@@ -507,7 +539,7 @@ def run_local_e2e(
     batch_size = min(SOLVER_BATCH_SIZE, limits.max_concurrency)
     for offset in range(0, len(pending), batch_size):
         batch = pending[offset : offset + batch_size]
-        with ThreadPoolExecutor(max_workers=limits.max_concurrency) as executor:
+        with ThreadPoolExecutor(max_workers=batch_size) as executor:
             futures = [executor.submit(solve_one, item) for item in batch]
             results = [future.result() for future in as_completed(futures)]
         for key, output, error in sorted(results, key=lambda item: item[0]):
@@ -679,6 +711,7 @@ def run_local_e2e(
             "requested_model_id",
             "reported_model_id",
             "error",
+            "error_detail",
             "attempts",
             "usage",
         ],

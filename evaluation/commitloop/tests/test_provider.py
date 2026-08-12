@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from evaluation.commitloop.http_transport import ProviderHttpError
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
     EvaluationClient,
@@ -37,6 +38,18 @@ class FlakyTransport(FakeTransport):
             self.failures -= 1
             self.calls.append((path, headers, payload, timeout))
             raise TimeoutError("synthetic timeout")
+        return super().__call__(path, headers, payload, timeout)
+
+
+class HttpStatusTransport(FakeTransport):
+    def __init__(self, statuses: list[int]) -> None:
+        super().__init__()
+        self.statuses = statuses
+
+    def __call__(self, path, headers, payload, timeout):
+        self.calls.append((path, headers, payload, timeout))
+        if self.statuses:
+            raise ProviderHttpError(self.statuses.pop(0))
         return super().__call__(path, headers, payload, timeout)
 
 
@@ -133,6 +146,37 @@ def test_transport_retries_are_bounded_without_model_fallback() -> None:
     )
     with pytest.raises(ProviderError, match="provider_transport_exhausted"):
         exhausted.complete(
+            model=GENERATOR_MODEL,
+            messages=[{"role": "user", "content": "fixture"}],
+        )
+
+
+def test_http_retry_policy_retries_only_429_and_5xx() -> None:
+    sleeps: list[float] = []
+    retryable = HttpStatusTransport([429, 503])
+    client = EvaluationClient(
+        base_url="https://router.invalid/v1",
+        api_key="fixture-secret-not-real",
+        transport=retryable,
+        limits=RunLimits(max_requests=1, max_retries=2, retry_backoff_seconds=0.1),
+        sleeper=sleeps.append,
+    )
+    result = client.complete(
+        model=GENERATOR_MODEL,
+        messages=[{"role": "user", "content": "fixture"}],
+    )
+    assert result.attempts == 3
+    assert sleeps == [0.1, 0.2]
+
+    terminal = EvaluationClient(
+        base_url="https://router.invalid/v1",
+        api_key="fixture-secret-not-real",
+        transport=HttpStatusTransport([400]),
+        limits=RunLimits(max_requests=1, max_retries=2),
+        sleeper=lambda _: None,
+    )
+    with pytest.raises(ProviderError, match="provider_http_terminal_400"):
+        terminal.complete(
             model=GENERATOR_MODEL,
             messages=[{"role": "user", "content": "fixture"}],
         )
