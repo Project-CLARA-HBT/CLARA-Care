@@ -583,3 +583,10 @@ def test_single_primary_model_grid_uses_subject_level_analysis(tmp_path) -> None
     assert metrics["generation"]["mode"] == "deterministic_construction_only"
     rows = (tmp_path / "per_case_metrics.csv").read_text(encoding="utf-8").splitlines()
     assert len(rows) == 3
+
+
+def test_solver_system_has_a_start_with_json_output_contract() -> None:
+    from evaluation.commitloop.run_local import _SOLVER_SYSTEM
+
+    assert "Your first character must be `{`" in _SOLVER_SYSTEM
+    assert "Do not include reasoning" in _SOLVER_SYSTEM

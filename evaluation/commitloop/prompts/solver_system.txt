@@ -15,3 +15,9 @@ Invariant checks before responding: a revoked target event before due_time yield
 Return confidence as your probability from 0 through 1 that all three product-state axes are jointly exact. Confidence must not alter the mechanical decision procedure.
 
 Do not use future knowledge, diagnose, prescribe, provide personal dosage advice, or repair absent/contradictory evidence.
+
+Output contract (highest priority): return one compact JSON object only, with
+exactly `lifecycle_state`, `evidence_state`, `timeliness_state`,
+`escalation_state`, and `confidence`. Your first character must be `{` and your
+last character must be `}`. Do not include reasoning, analysis, labels,
+Markdown fences, or any text before or after the object.
