@@ -1,6 +1,9 @@
+from evaluation.commitloop.run_local import expected_solver_case_count
 from evaluation.commitloop.v6_cohort import (
+    KNOWN_CUTOFF,
     SPLIT_COUNTS,
     STRATA,
+    VALID_CUTOFF,
     build_cohort,
     bundles_for_split,
 )
@@ -25,6 +28,20 @@ def test_v6_split_selection_is_exact_and_does_not_reassign_subjects() -> None:
     bundles, assignments = bundles_for_split(rows, split="development")
     assert len(bundles) == len(STRATA) * SPLIT_COUNTS["development"]
     assert set(assignments.values()) == {"development"}
+
+
+def test_v6_development_inventory_includes_every_adversarial_variant() -> None:
+    rows, _ = build_cohort()
+    bundles, _assignments = bundles_for_split(rows, split="development")
+    count = expected_solver_case_count(
+        bundles=bundles,
+        valid_cutoff=VALID_CUTOFF,
+        known_cutoff=KNOWN_CUTOFF,
+        max_subjects=len(bundles),
+        max_base_cases=len(bundles),
+    )
+    assert count == 528
+    assert count > len(bundles)
 
 
 def test_new_cohort_spec_has_no_subject_or_bundle_overlap() -> None:

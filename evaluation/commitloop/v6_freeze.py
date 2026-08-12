@@ -9,14 +9,20 @@ from pathlib import Path
 from typing import Any
 
 from evaluation.commitloop.provider import CONFIRMATORY_MODELS, REVIEWER_MODEL
-from evaluation.commitloop.run_local import GLHS_BENCH_GLOBAL_CONCURRENCY
+from evaluation.commitloop.run_local import (
+    GLHS_BENCH_GLOBAL_CONCURRENCY,
+    expected_solver_case_count,
+)
 from evaluation.commitloop.solver_packets import CONDITIONS
 from evaluation.commitloop.v5_freeze import freeze_inputs
 from evaluation.commitloop.v6_cohort import (
     COHORT_NAME,
+    KNOWN_CUTOFF,
     MASTER_SEED,
     SCHEMA_VERSION,
+    VALID_CUTOFF,
     build_cohort,
+    bundles_for_split,
     write_cohort,
 )
 
@@ -73,9 +79,21 @@ def create_v6_freeze(
         "sealed_test": 384,
     }:
         raise V6FreezeError("v6_cohort_inventory_invalid")
+    case_counts = {
+        split: expected_solver_case_count(
+            bundles=bundles_for_split(rows, split=split)[0],
+            valid_cutoff=VALID_CUTOFF,
+            known_cutoff=KNOWN_CUTOFF,
+            max_subjects=generated["split_counts"][split],
+            max_base_cases=generated["split_counts"][split],
+        )
+        for split in ("development", "validation", "sealed_test")
+    }
+    if any(count < generated["split_counts"][split] for split, count in case_counts.items()):
+        raise V6FreezeError("v6_adversarial_case_inventory_invalid")
     inputs = freeze_inputs(root)
     payload: dict[str, Any] = {
-        "schema_version": "glhs-bench-v6-preprovider-freeze.v1",
+        "schema_version": "glhs-bench-v6-preprovider-freeze.v2",
         "status": "FROZEN_PRE_PROVIDER",
         "synthetic_software_evaluation_only": True,
         "clinical_adjudication": "NOT_RUN",
@@ -102,6 +120,11 @@ def create_v6_freeze(
             "development_subjects": 96,
             "validation_subjects": 96,
             "sealed_final_subjects": 384,
+            "case_counts_including_all_adversarial_variants": case_counts,
+            "solver_request_counts": {
+                split: count * len(CONDITIONS) * len(CONFIRMATORY_MODELS)
+                for split, count in case_counts.items()
+            },
             "final_holdout_access": "PROHIBITED_UNTIL_FINAL_CANDIDATE_FREEZE",
         },
     }
@@ -115,7 +138,7 @@ def create_v6_freeze(
 def verify_v6_freeze(*, freeze_path: Path, repository_root: Path) -> dict[str, Any]:
     payload = json.loads(freeze_path.read_text(encoding="utf-8"))
     root = repository_root.resolve()
-    if payload.get("schema_version") != "glhs-bench-v6-preprovider-freeze.v1":
+    if payload.get("schema_version") != "glhs-bench-v6-preprovider-freeze.v2":
         raise V6FreezeError("v6_freeze_schema_invalid")
     if (
         payload.get("status") != "FROZEN_PRE_PROVIDER"

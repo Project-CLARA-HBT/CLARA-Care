@@ -212,6 +212,7 @@ def _expand_adversarial_cases(
     *,
     valid_cutoff: datetime,
     max_cases: int,
+    include_all_adversarial_variants: bool = False,
 ) -> tuple[
     list[ConstructedCase],
     dict[str, tuple[TimelineEvent, ...]],
@@ -291,9 +292,9 @@ def _expand_adversarial_cases(
                     },
                 )
             )
-    selected_variants = sorted(pending_variants, key=lambda item: item[0])[
-        : max(0, max_cases - len(selected_base_cases))
-    ]
+    selected_variants = sorted(pending_variants, key=lambda item: item[0])
+    if not include_all_adversarial_variants:
+        selected_variants = selected_variants[: max(0, max_cases - len(selected_base_cases))]
     for _, variant_case, variant_events, _ in selected_variants:
         events_by_case[variant_case.case_id] = variant_events
     cases = sorted(
@@ -305,6 +306,41 @@ def _expand_adversarial_cases(
         key=lambda item: str(item["case_id"]),
     )
     return cases, events_by_case, perturbations
+
+
+def expected_solver_case_count(
+    *,
+    bundles: list[tuple[dict[str, Any], str]],
+    valid_cutoff: datetime,
+    known_cutoff: datetime,
+    max_subjects: int,
+    max_base_cases: int,
+) -> int:
+    """Return the complete prespecified base-plus-adversarial case inventory.
+
+    This uses the same deterministic construction as the runner so a frozen
+    request budget cannot exclude adversarial variants by accident.
+    """
+
+    base_cases: list[ConstructedCase] = []
+    base_events: dict[str, tuple[TimelineEvent, ...]] = {}
+    for bundle, version in bundles[:max_subjects]:
+        token, events = ingest_bundle(
+            bundle, fhir_version=version, ingested_at=known_cutoff
+        )
+        for case in mine_candidates(token, events):
+            if case.status != "ELIGIBLE" or len(base_cases) >= max_base_cases:
+                continue
+            base_cases.append(case)
+            base_events[case.case_id] = events
+    cases, _events, _perturbations = _expand_adversarial_cases(
+        base_cases,
+        base_events,
+        valid_cutoff=valid_cutoff,
+        max_cases=max_base_cases,
+        include_all_adversarial_variants=True,
+    )
+    return len(cases)
 
 
 @_exclusive_output_directory
@@ -330,6 +366,7 @@ def run_local_e2e(
     primary_comparator_condition: str = "full_authorized_history",
     production_strict_context_builder: StrictContextBuilder | None = None,
     subject_splits: dict[str, str] | None = None,
+    include_all_adversarial_variants: bool = False,
 ) -> dict[str, Any]:
     if not conditions or len(conditions) != len(set(conditions)):
         raise ValueError("benchmark_conditions_invalid")
@@ -412,6 +449,7 @@ def run_local_e2e(
         base_case_events,
         valid_cutoff=valid_cutoff,
         max_cases=limits.max_cases,
+        include_all_adversarial_variants=include_all_adversarial_variants,
     )
     for case in cases:
         events = case_events[case.case_id]

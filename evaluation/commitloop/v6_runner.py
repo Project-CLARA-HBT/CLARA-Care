@@ -16,7 +16,7 @@ from evaluation.commitloop.provider import (
     EvaluationClient,
     RunLimits,
 )
-from evaluation.commitloop.run_local import run_local_e2e
+from evaluation.commitloop.run_local import expected_solver_case_count, run_local_e2e
 from evaluation.commitloop.solver_packets import CONDITIONS
 from evaluation.commitloop.v6_cohort import (
     COHORT_NAME,
@@ -44,12 +44,30 @@ def run_v6_development_partition(
     if split not in {"development", "validation"}:
         raise ValueError("v6_nonfinal_split_required")
     bundles, splits = bundles_for_split(rows, split=split)
-    expected_requests = len(bundles) * len(CONDITIONS) * len(clients)
     if limits.max_subjects != len(bundles) or limits.max_cases != len(bundles):
         raise ValueError("v6_partition_limits_must_match_split")
+    expected_cases = expected_solver_case_count(
+        bundles=bundles,
+        valid_cutoff=VALID_CUTOFF,
+        known_cutoff=KNOWN_CUTOFF,
+        max_subjects=limits.max_subjects,
+        max_base_cases=limits.max_cases,
+    )
+    expected_requests = expected_cases * len(CONDITIONS) * len(clients)
     if limits.max_requests < expected_requests:
         raise ValueError("v6_partition_request_budget_insufficient")
     freeze = verify_v6_freeze(freeze_path=freeze_path, repository_root=repository_root)
+    execution_contract = freeze.get("execution_contract")
+    if (
+        not isinstance(execution_contract, dict)
+        or execution_contract
+        .get("case_counts_including_all_adversarial_variants", {})
+        .get(split)
+        != expected_cases
+        or execution_contract.get("solver_request_counts", {}).get(split)
+        != expected_requests
+    ):
+        raise ValueError("v6_frozen_case_inventory_contract_invalid")
     probe = json.loads(provider_probe_path.read_text(encoding="utf-8"))
     probe_hash = hashlib.sha256(provider_probe_path.read_bytes()).hexdigest()
     if (
@@ -77,4 +95,5 @@ def run_v6_development_partition(
         primary_model="claude-sonnet-4.6",
         production_strict_context_builder=compile_production_commitment_context,
         subject_splits=splits,
+        include_all_adversarial_variants=True,
     )
