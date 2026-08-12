@@ -1,0 +1,102 @@
+{
+  "claim_limit": "normalization_reproducibility_and_local_systems_metrics_not_clinical_validation",
+  "dataset_id": "synthea_coherent",
+  "evidence": {
+    "dataset_id": "synthea_coherent",
+    "normalization": {
+      "adapter": "coherent_multimodal",
+      "claim_limit": "source_normalization_not_clinical_oracle_or_validation",
+      "common_schema": "clara-common-longitudinal-evidence.v1",
+      "dataset_id": "synthea_coherent",
+      "estimated_times_created": 0,
+      "metrics": {
+        "bundle_count": 1278,
+        "claim_limit": "synthetic_fhir_adapter_and_modality_inventory_not_clinical_validation",
+        "domain_counts": {
+          "allergies_adverse_reactions": 106,
+          "diagnoses_problems": 15956,
+          "encounters_utilization": 143946,
+          "medications": 210751,
+          "observations": 871050,
+          "procedures": 56092
+        },
+        "missing_knowledge_time": 1297901,
+        "missing_valid_time": 0,
+        "modality_member_counts": {
+          "README.md": 1,
+          "csv": 16,
+          "dicom": 298,
+          "dna": 889,
+          "fhir": 1280
+        },
+        "operational": {
+          "normalized_records_bytes": 162034445,
+          "peak_rss_kib": 393860,
+          "process_system_seconds": 2.7700929999999993,
+          "process_user_seconds": 147.259182,
+          "records_per_second": 8244.719226957099,
+          "source_bytes": 9228105262,
+          "storage_amplification": 0.01755879895163684,
+          "wall_clock_seconds": 157.42209822699078
+        },
+        "record_count": 1297901,
+        "resource_type_counts": {
+          "AllergyIntolerance": 106,
+          "Condition": 15956,
+          "DiagnosticReport": 201152,
+          "Encounter": 143946,
+          "MedicationAdministration": 1350,
+          "MedicationRequest": 209401,
+          "Observation": 669898,
+          "Procedure": 56092
+        },
+        "schema_version": "clara-common-longitudinal-evidence.v1",
+        "skipped_reference_bundle": 2,
+        "skipped_resource_type_counts": {
+          "CarePlan": 6135,
+          "CareTeam": 6135,
+          "Claim": 353347,
+          "Device": 416,
+          "DocumentReference": 143946,
+          "ExplanationOfBenefit": 143946,
+          "ImagingStudy": 3752,
+          "Immunization": 11900,
+          "Media": 1072,
+          "Medication": 1350,
+          "Patient": 1278,
+          "Provenance": 1278
+        },
+        "skipped_unresolved_subject": 0,
+        "skipped_without_identity": 0,
+        "subject_count": 1278
+      },
+      "normalized_at_utc": "2026-08-12T03:54:32.514838+00:00",
+      "raw_payloads_persisted": false,
+      "records_compression": "gzip-mtime-0-level-6",
+      "records_file": "records.jsonl.gz",
+      "records_sha256": "5b6b600573d20534ad4008198aaa946e8d4a2cda9be968c017cc14b6506377d8",
+      "schema_version": "clara-dataset-normalization.v1",
+      "source_ids_preserved_locally": true,
+      "source_inventory_sha256": "144a6c34e426509b2d29b8fec838ed540b1c45f687134437a15dcf3ffcbd4f57",
+      "source_schema": "FHIR plus linked modalities",
+      "status": "COMPLETE"
+    },
+    "normalization_manifest_path": "datasets/normalized/synthea_coherent/normalization_manifest.json",
+    "normalization_manifest_sha256": "c239c3fbd0940b0200298dab27a75db60b0a23a73bf5ae51de767a8185b101b9",
+    "record_line_count": 1297901,
+    "records_bytes": 162034445,
+    "records_path_local_only": "datasets/normalized/synthea_coherent/records.jsonl.gz",
+    "records_sha256": "5b6b600573d20534ad4008198aaa946e8d4a2cda9be968c017cc14b6506377d8",
+    "source_canonical_checksum_status": "NOT_PROVIDED",
+    "source_inventory_sha256": "144a6c34e426509b2d29b8fec838ed540b1c45f687134437a15dcf3ffcbd4f57",
+    "source_manifest_file_sha256": "b0498b385844174f64c5645de8ddd9fc844740d0385d1b4c1c4c757544cb95de",
+    "source_manifest_path": "datasets/manifests/synthea_coherent.json",
+    "source_manifest_payload_sha256": "49fdd3a58c82f0daa7d3f79cf8024e5903ac2107e928ba17d0b76951d2f3e3da"
+  },
+  "frozen_at_utc": "2026-08-12T03:56:46.253989+00:00",
+  "manifest_payload_sha256": "4f43cd5512121967297e198588da8c96798e28d0b74fa0a3bef8def080dec7f4",
+  "schema_version": "clara-dataset-normalization-freeze.v1",
+  "source_git_sha": "ea291cd372a3b04319153af54646ef089bb61c75",
+  "status": "FROZEN_NORMALIZATION_AGGREGATE_EVIDENCE",
+  "tracked_worktree_clean_before_freeze": true
+}
