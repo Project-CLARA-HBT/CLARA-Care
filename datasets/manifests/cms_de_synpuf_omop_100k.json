@@ -1,0 +1,132 @@
+{
+  "access_class": "open_public_use_agreement",
+  "acquired_at": null,
+  "acquisition_time_status": "UNKNOWN",
+  "canonical_source": "https://www.cms.gov/data-research/statistics-trends-and-reports/medicare-claims-synthetic-public-use-files",
+  "claim_limit": "local_integrity_only_not_canonical_authenticity_normalization_evaluation_or_clinical_validation",
+  "dataset_id": "cms_de_synpuf_omop_100k",
+  "dataset_registry_entry_sha256": "be562a8d818e0fd2b489235326079a1aa87a84b583c3cdfd6127e5d6f37e6b02",
+  "evidence_class": "development_external_systems",
+  "known_limitations": "Synthetic development sample; not independent from the larger DE-SynPUF distribution and exact conversion lineage/checksum are unresolved.",
+  "license": "CMS Data Disclaimer and Public Use Data agreement",
+  "manifest_payload_sha256": "551b8768cc2ba2b6c27adb70053718d8e0bc1e4978ee28c2d43b23f40f9d8c1a",
+  "registry_sha256": "8a4e90b5f7c9ea955803d2ef9464dceef865d6c4cedf2c43495e4316e89c4792",
+  "release_date": null,
+  "schema_version": "clara-dataset-freeze.v1",
+  "source_git_sha": "944834f472def846e6eb950b9f422b5f73b5f8d7",
+  "source_path_local_only": "datasets/synpuf-omop/cmsdesynpuf100k",
+  "source_schema": "OMOP CDM",
+  "source_version": "100K sample, exact conversion release unresolved",
+  "status": "FROZEN_LOCAL_INTEGRITY_METADATA",
+  "synthetic": true,
+  "tracked_worktree_clean_before_freeze": true,
+  "verification": {
+    "access_class": "open_public_use_agreement",
+    "archive": {
+      "archive_count": 0,
+      "archives": [],
+      "format": "directory",
+      "unsafe_member_count": 0
+    },
+    "canonical_checksum_status": "NOT_PROVIDED",
+    "canonical_source": "https://www.cms.gov/data-research/statistics-trends-and-reports/medicare-claims-synthetic-public-use-files",
+    "claim_limit": "local_integrity_not_canonical_authenticity_normalization_or_evaluation",
+    "dataset_id": "cms_de_synpuf_omop_100k",
+    "expected_files_present": true,
+    "file_count": 17,
+    "files": [
+      {
+        "bytes": 2794042,
+        "path": "care_site.csv.gz",
+        "sha256": "09caf9394b1936b456e1c9d999f9567413ab6224dbeacc51ffc1a2117ed00e39"
+      },
+      {
+        "bytes": 91873793,
+        "path": "condition_era.csv.gz",
+        "sha256": "56c1178c424fa7ec0428631597a6318848b547fee8d6631d9411695ac366792f"
+      },
+      {
+        "bytes": 224899395,
+        "path": "condition_occurrence.csv.gz",
+        "sha256": "a94cb10c9996c9a4f17bc644c6c39dcbe47fb03ce30537818103910b40280b77"
+      },
+      {
+        "bytes": 24800,
+        "path": "death.csv.gz",
+        "sha256": "47766786a9a630770ca75ae0459834cac33866278d06d6019d6b2c6312495cbc"
+      },
+      {
+        "bytes": 2451366,
+        "path": "device_exposure.csv.gz",
+        "sha256": "6d760aebca174636e26492c73efa6243467e0abb2376bc674de3f92f9bcc15ff"
+      },
+      {
+        "bytes": 57294808,
+        "path": "drug_era.csv.gz",
+        "sha256": "39a36a5df9fced3013135a3815cc058ea3bc84cd3d0e9679f7ba68e6d7c13052"
+      },
+      {
+        "bytes": 151703073,
+        "path": "drug_exposure.csv.gz",
+        "sha256": "f21e990150df0a9ed1f99a45330ee882ce773bd5bead3dc6a99a2fe09a382583"
+      },
+      {
+        "bytes": 15040682,
+        "path": "drug_strength.csv.gz",
+        "sha256": "c2eb4521e7a1028b65485b703b46903c5aac93d61c7c150cb6ff06b690060454"
+      },
+      {
+        "bytes": 26839,
+        "path": "location.csv.gz",
+        "sha256": "f3139eb84a7a4d22906bc30a6b8cb924e3dc25fd3bfbeb67c5ae6bbc2070420d"
+      },
+      {
+        "bytes": 39050893,
+        "path": "measurement.csv.gz",
+        "sha256": "235472c966a14343b25413013c5f058c01cd7b3af7f5ec5cceb6556b105fdb02"
+      },
+      {
+        "bytes": 26381018,
+        "path": "observation.csv.gz",
+        "sha256": "71bb05a4a16a457e726287e9d1c4c1b7ee2168ced24ece9ec46502e7a217947b"
+      },
+      {
+        "bytes": 945372,
+        "path": "observation_period.csv.gz",
+        "sha256": "7e36cb9dfe0c4600fcc1e536973113c571e61c67f9b1caf929022da5e0e1f3cf"
+      },
+      {
+        "bytes": 2159208,
+        "path": "payer_plan_period.csv.gz",
+        "sha256": "e2c5c801a13a5a0b56db126aa4e49b95819e7e47d3760c631c2209d8dcc571ad"
+      },
+      {
+        "bytes": 2032595,
+        "path": "person.csv.gz",
+        "sha256": "34179063c5f6397c57b16cbe6e438d13e60b18eabf0384efc3d76f1e07b61841"
+      },
+      {
+        "bytes": 167803850,
+        "path": "procedure_occurrence.csv.gz",
+        "sha256": "b51f2528e71081c2de5cf7864d3b1ea8e0b95082e9c6b62c903bedfefb37c0b6"
+      },
+      {
+        "bytes": 13455517,
+        "path": "provider.csv.gz",
+        "sha256": "43197318dd96f8cff3df3b8db57ed1130aed357a04acf996801cfe4450c79c13"
+      },
+      {
+        "bytes": 116928450,
+        "path": "visit_occurrence.csv.gz",
+        "sha256": "b045f0002ecc46e2611f129e7caf5f6178b273224c554f087496fec6353230f2"
+      }
+    ],
+    "inventory_sha256": "11fd10d71452d19a620cedb96fd043bf5ca58808ada676ebad1281b143e40f35",
+    "schema_version": "clara-dataset-verification.v1",
+    "source_path": "datasets/synpuf-omop/cmsdesynpuf100k",
+    "status": "VERIFIED_LOCAL_INTEGRITY",
+    "synthetic": true,
+    "total_bytes": 914865701
+  },
+  "verified_at_utc": "2026-08-12T01:35:26.198184+00:00"
+}
