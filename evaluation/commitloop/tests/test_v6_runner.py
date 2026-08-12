@@ -36,8 +36,9 @@ def test_v6_runner_refuses_sealed_final_and_wrong_partition_limits(
             split="sealed_test",
             output_dir=tmp_path,
             clients=_clients(limits),
-            phase_freeze_sha="a" * 40,
-            provider_probe_sha256="b" * 64,
+            freeze_path=tmp_path / "freeze.json",
+            provider_probe_path=tmp_path / "probe.json",
+            repository_root=tmp_path,
             limits=limits,
         )
     with pytest.raises(ValueError, match="v6_partition_limits_must_match_split"):
@@ -46,7 +47,8 @@ def test_v6_runner_refuses_sealed_final_and_wrong_partition_limits(
             split="development",
             output_dir=tmp_path,
             clients=_clients(limits),
-            phase_freeze_sha="a" * 40,
-            provider_probe_sha256="b" * 64,
+            freeze_path=tmp_path / "freeze.json",
+            provider_probe_path=tmp_path / "probe.json",
+            repository_root=tmp_path,
             limits=limits,
         )
