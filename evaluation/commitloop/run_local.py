@@ -6,7 +6,7 @@ import fcntl
 import hashlib
 import json
 import os
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from csv import DictWriter
 from dataclasses import replace
@@ -14,7 +14,7 @@ from datetime import datetime
 from functools import wraps
 from io import StringIO
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 from evaluation.commitloop.candidate_mining import mine_candidates
 from evaluation.commitloop.fhir_ingest import ingest_bundle
@@ -73,9 +73,17 @@ _PREDICTION_ENUMS = {
 }
 SOLVER_BATCH_SIZE = 5
 GLHS_BENCH_GLOBAL_CONCURRENCY = 5
-StrictContextBuilder = Callable[
-    [ConstructedCase, tuple[TimelineEvent, ...], datetime, datetime], dict[str, Any]
-]
+
+
+class StrictContextBuilder(Protocol):
+    def __call__(
+        self,
+        case: ConstructedCase,
+        events: tuple[TimelineEvent, ...],
+        *,
+        valid_cutoff: datetime,
+        known_cutoff: datetime,
+    ) -> dict[str, Any]: ...
 
 
 def _json(value: object) -> str:

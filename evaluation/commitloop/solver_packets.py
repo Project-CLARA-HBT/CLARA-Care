@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Protocol
 
 from evaluation.commitloop.oracle import grace_end_for_case
 from evaluation.commitloop.schema import ConstructedCase, TimelineEvent
@@ -58,13 +57,24 @@ def _hash(value: object) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
+class ProductionStrictContextBuilder(Protocol):
+    def __call__(
+        self,
+        case: ConstructedCase,
+        events: tuple[TimelineEvent, ...],
+        *,
+        valid_cutoff: datetime,
+        known_cutoff: datetime,
+    ) -> dict[str, Any]: ...
+
+
 def build_solver_packets(
     case: ConstructedCase,
     events: tuple[TimelineEvent, ...],
     *,
     valid_cutoff: datetime,
     known_cutoff: datetime,
-    production_strict_context: Callable[[ConstructedCase, tuple[TimelineEvent, ...], datetime, datetime], dict[str, Any]] | None = None,
+    production_strict_context: ProductionStrictContextBuilder | None = None,
 ) -> dict[str, dict[str, Any]]:
     if case.status != "ELIGIBLE" or case.target is None:
         return {}
@@ -155,7 +165,12 @@ def build_solver_packets(
         "known_cutoff": known_cutoff.isoformat(),
     }
     strict_context = (
-        production_strict_context(case, events, valid_cutoff, known_cutoff)
+        production_strict_context(
+            case,
+            events,
+            valid_cutoff=valid_cutoff,
+            known_cutoff=known_cutoff,
+        )
         if production_strict_context is not None
         else strict_thss
     )

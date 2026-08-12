@@ -5,6 +5,9 @@ from datetime import UTC, datetime
 
 from evaluation.commitloop.candidate_mining import mine_candidates
 from evaluation.commitloop.fhir_ingest import ingest_bundle
+from evaluation.commitloop.production_context import (
+    compile_production_commitment_context,
+)
 from evaluation.commitloop.solver_packets import CONDITIONS, build_solver_packets
 
 
@@ -83,3 +86,46 @@ def test_all_conditions_build_distinct_gold_free_packets() -> None:
         assert packet["due_time"] == "2026-01-20T00:00:00+00:00"
         assert packet["grace_end"] == "2026-01-27T00:00:00+00:00"
         assert all("relation" in event for event in packet["context"].get("events", []))
+
+
+def test_strict_packet_supports_keyword_only_production_context_builder() -> None:
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [
+            {"resource": {"resourceType": "Patient", "id": "p2"}},
+            {
+                "resource": {
+                    "resourceType": "ServiceRequest",
+                    "id": "r2",
+                    "status": "active",
+                    "subject": {"reference": "Patient/p2"},
+                    "authoredOn": "2026-01-01T00:00:00Z",
+                    "occurrencePeriod": {"end": "2026-01-20T00:00:00Z"},
+                    "code": {"coding": [{"system": "s", "code": "c"}]},
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "id": "o2",
+                    "status": "final",
+                    "subject": {"reference": "Patient/p2"},
+                    "effectiveDateTime": "2026-01-03T00:00:00Z",
+                    "code": {"coding": [{"system": "s", "code": "c"}]},
+                }
+            },
+        ],
+    }
+    cutoff = datetime(2026, 2, 1, tzinfo=UTC)
+    token, events = ingest_bundle(bundle, fhir_version="R4", ingested_at=cutoff)
+    packets = build_solver_packets(
+        mine_candidates(token, events)[0],
+        events,
+        valid_cutoff=cutoff,
+        known_cutoff=cutoff,
+        production_strict_context=compile_production_commitment_context,
+    )
+    assert packets["glhs_hybrid_thss_strict"]["context"]["production_path"][
+        "oracle_free"
+    ]
