@@ -79,7 +79,10 @@ def verify_seal(root: Path) -> None:
         ):
             raise ValueError("malformed_artifact_checksum")
         target = root / path
-        if not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != digest:
+        if (
+            not target.is_file()
+            or hashlib.sha256(target.read_bytes()).hexdigest() != digest
+        ):
             raise ValueError("artifact_checksum_mismatch")
         sealed.add(relative)
     actual = {
@@ -186,7 +189,7 @@ def reproduce(source: Path, output: Path) -> dict[str, Any]:
     models = [str(value) for value in manifest["models"]]
     conditions = [str(value) for value in manifest["conditions"]]
     primary_model = str(manifest.get("primary_model") or "")
-    if len(models) != 1 or primary_model != models[0]:
+    if primary_model not in models:
         raise ValueError("v5_primary_model_manifest_invalid")
     gold_by_case = {str(item["case_id"]): item for item in gold}
     subject_by_case = {
@@ -218,9 +221,7 @@ def reproduce(source: Path, output: Path) -> dict[str, Any]:
     metrics["context_volume_bytes"] = {
         condition: sum(
             len(_json(item).encode())
-            for item in _read_jsonl(
-                source / "solver_packets" / f"{condition}.jsonl"
-            )
+            for item in _read_jsonl(source / "solver_packets" / f"{condition}.jsonl")
         )
         for condition in conditions
     }
@@ -263,9 +264,12 @@ def reproduce(source: Path, output: Path) -> dict[str, Any]:
     ]
     # Preserve byte-identical reproduction for sealed artifacts created before
     # the sanitized error-detail taxonomy was introduced.
-    source_error_header = (source / "error_ledger.csv").read_text(
-        encoding="utf-8"
-    ).splitlines()[0].split(",")
+    source_error_header = (
+        (source / "error_ledger.csv")
+        .read_text(encoding="utf-8")
+        .splitlines()[0]
+        .split(",")
+    )
     if "error_detail" in source_error_header:
         error_fields.insert(error_fields.index("attempts"), "error_detail")
     _write_csv(

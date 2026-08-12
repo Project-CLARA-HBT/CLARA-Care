@@ -186,12 +186,10 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
         call["response_format"]["type"] == "json_schema"
         and call["messages"][0]["role"] == "system"
         and "three product-state axes plus escalation" in call["messages"][0]["content"]
-        and "keep the axes independent"
-        in call["messages"][0]["content"]
+        and "keep the axes independent" in call["messages"][0]["content"]
         and "Null, absent, unknown, or approximate statuses do not match"
         in call["messages"][0]["content"]
-        and "valid_cutoff only for OPEN"
-        in call["messages"][0]["content"]
+        and "valid_cutoff only for OPEN" in call["messages"][0]["content"]
         for call in first_transport.calls
     )
     assert json.loads((tmp_path / "error_ledger.json").read_text()) == []
@@ -266,7 +264,10 @@ def test_solver_grid_honors_bounded_parallelism_and_seals_deterministically(
     transport = ConcurrentTrackingTransport()
     cutoff = datetime(2026, 2, 1, tzinfo=UTC)
     manifest = run_local_e2e(
-        bundles=[(_bundle("parallel-a", "a"), "R4"), (_bundle("parallel-b", "b"), "R4")],
+        bundles=[
+            (_bundle("parallel-a", "a"), "R4"),
+            (_bundle("parallel-b", "b"), "R4"),
+        ],
         output_dir=tmp_path,
         clients=_clients(transport, limits),
         valid_cutoff=cutoff,
@@ -283,7 +284,9 @@ def test_solver_grid_honors_bounded_parallelism_and_seals_deterministically(
     validate_run(tmp_path)
 
 
-def test_glhs_bench_router_requires_exact_global_five_and_retry_policy(tmp_path) -> None:
+def test_glhs_bench_router_requires_exact_global_five_and_retry_policy(
+    tmp_path,
+) -> None:
     cutoff = datetime(2026, 2, 1, tzinfo=UTC)
     common = {
         "bundles": [(_bundle("strict-five", "five"), "R4")],
@@ -295,10 +298,14 @@ def test_glhs_bench_router_requires_exact_global_five_and_retry_policy(tmp_path)
         "phase_a_freeze_sha": "a" * 40,
         "provider_probe_sha256": "b" * 64,
     }
-    with pytest.raises(ValueError, match="glhs_bench_requires_exact_global_concurrency_5"):
+    with pytest.raises(
+        ValueError, match="glhs_bench_requires_exact_global_concurrency_5"
+    ):
         run_local_e2e(
             **common,
-            limits=RunLimits(max_subjects=1, max_cases=1, max_requests=100, max_concurrency=4),
+            limits=RunLimits(
+                max_subjects=1, max_cases=1, max_requests=100, max_concurrency=4
+            ),
         )
     with pytest.raises(ValueError, match="glhs_bench_requires_retry_policy"):
         run_local_e2e(
@@ -508,6 +515,12 @@ def test_provider_failures_remain_in_structured_error_ledger(tmp_path) -> None:
     assert manifest["run_status"] == "COMPLETE"
     assert manifest["solver_request_count"] == 18
     assert len(errors) == 18
+    append_errors = (
+        (tmp_path / "error_ledger.append.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    )
+    assert len(append_errors) == 18
     assert transport.calls == 36
     assert all(
         item["error"] == "ProviderError"

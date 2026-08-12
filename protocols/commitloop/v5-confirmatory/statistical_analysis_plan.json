@@ -39,7 +39,10 @@
     "glhs_no_predicate_engine",
     "glhs_no_bitemporal_knowledge_time"
   ],
-  "secondary_model": "antigravity/gemini-3.6-flash-high",
+  "secondary_models": [
+    "antigravity/gemini-3.6-flash-high",
+    "antigravity/gemini-3.1-pro"
+  ],
   "secondary_inference": "label_secondary_or_exploratory_and_report_complete_multiplicity_metadata",
   "reporting": [
     "subjects",

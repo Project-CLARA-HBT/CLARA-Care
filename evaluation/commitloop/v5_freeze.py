@@ -130,7 +130,9 @@ def _prior_registry(prior_runs: list[Path]) -> dict[str, Any]:
         verify_seal(run)
         timeline = [
             json.loads(line)
-            for line in (run / "timeline.jsonl").read_text(encoding="utf-8").splitlines()
+            for line in (run / "timeline.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
             if line
         ]
         source = json.loads((run / "source_manifest.json").read_text(encoding="utf-8"))
@@ -263,9 +265,7 @@ def create_v5_freeze(
         "cohort_sha256": _sha256(cohort_path),
         "cohort_manifest_sha256": _sha256(cohort_manifest_path),
         "prior_registry_sha256": _sha256(registry_path),
-        "offline_dry_run_checksum_sha256": _sha256(
-            dry_run_copy / "checksums.sha256"
-        ),
+        "offline_dry_run_checksum_sha256": _sha256(dry_run_copy / "checksums.sha256"),
         "offline_dry_run_validation": dry_validation,
         "validation_evidence_sha256": _sha256(evidence_path),
         "environment_manifest_sha256": _sha256(environment_path),
@@ -276,14 +276,18 @@ def create_v5_freeze(
         },
         "execution_contract": {
             "primary_model": "antigravity/claude-sonnet-4-6",
+            "secondary_models": [
+                "antigravity/gemini-3.1-pro",
+                "antigravity/gemini-3.6-flash-high",
+            ],
             "primary_reference_condition": "glhs_hybrid_thss_strict",
             "primary_comparator_condition": "full_authorized_history",
             "subjects": 384,
             "conditions": 9,
-            "expected_provider_calls": 3456,
+            "expected_provider_calls": 10368,
             "max_concurrency": 5,
             "batch_size": 5,
-            "retries": 0,
+            "retries": 2,
             "fallback": False,
             "post_unblinding_tuning": "PROHIBITED",
         },

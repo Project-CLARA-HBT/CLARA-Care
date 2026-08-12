@@ -3,7 +3,12 @@ from __future__ import annotations
 import json
 
 from evaluation.commitloop.fixtures import DeterministicFakeTransport
-from evaluation.commitloop.provider import REVIEWER_MODEL, EvaluationClient, RunLimits
+from evaluation.commitloop.provider import (
+    CONFIRMATORY_MODELS,
+    REVIEWER_MODEL,
+    EvaluationClient,
+    RunLimits,
+)
 from evaluation.commitloop.run_local import run_local_e2e
 from evaluation.commitloop.solver_packets import CONDITIONS
 from evaluation.commitloop.v5_cohort import (
@@ -36,19 +41,26 @@ def test_v5_validator_checks_complete_grid_cohort_and_reproduction(tmp_path) -> 
         json.dumps(cohort_manifest, sort_keys=True), encoding="utf-8"
     )
 
-    limits = RunLimits(max_subjects=1, max_cases=1, max_requests=len(CONDITIONS))
-    transport = DeterministicFakeTransport()
-    client = EvaluationClient(
-        base_url="https://router.invalid/v1",
-        api_key="fixture-secret-not-real",
-        transport=transport,
-        limits=limits,
+    limits = RunLimits(
+        max_subjects=1,
+        max_cases=1,
+        max_requests=len(CONDITIONS) * len(CONFIRMATORY_MODELS),
     )
+    transport = DeterministicFakeTransport()
+    clients = {
+        model: EvaluationClient(
+            base_url="https://router.invalid/v1",
+            api_key="fixture-secret-not-real",
+            transport=transport,
+            limits=limits,
+        )
+        for model in CONFIRMATORY_MODELS
+    }
     run_dir = tmp_path / "run"
     run_local_e2e(
         bundles=[(cohort[0]["bundle"], "R4")],
         output_dir=run_dir,
-        clients={REVIEWER_MODEL: client},
+        clients=clients,
         valid_cutoff=VALID_CUTOFF,
         known_cutoff=KNOWN_CUTOFF,
         limits=limits,
@@ -64,5 +76,5 @@ def test_v5_validator_checks_complete_grid_cohort_and_reproduction(tmp_path) -> 
     )
     assert report["status"] == "VALID"
     assert report["subjects"] == 1
-    assert report["solver_cells"] == len(CONDITIONS)
+    assert report["solver_cells"] == len(CONDITIONS) * len(CONFIRMATORY_MODELS)
     assert report["reproduction_status"] == "PASS"

@@ -17,6 +17,7 @@ GENERATOR_MODEL = "antigravity/gemini-3.6-flash-high"
 REVIEWER_MODEL = "antigravity/claude-sonnet-4-6"
 PRO_MODEL = "antigravity/gemini-3.1-pro"
 ALLOWED_MODELS = frozenset({GENERATOR_MODEL, REVIEWER_MODEL, PRO_MODEL})
+CONFIRMATORY_MODELS = tuple(sorted(ALLOWED_MODELS))
 REPORTED_MODEL_ID_BY_REQUESTED = {
     GENERATOR_MODEL: "gemini-3.6-flash-high",
     REVIEWER_MODEL: "claude-sonnet-4-6",
@@ -55,7 +56,11 @@ def reported_model_matches_requested(
 
 class Transport(Protocol):
     def __call__(
-        self, path: str, headers: dict[str, str], payload: dict[str, Any], timeout: float
+        self,
+        path: str,
+        headers: dict[str, str],
+        payload: dict[str, Any],
+        timeout: float,
     ) -> dict[str, Any]: ...
 
 
@@ -75,7 +80,9 @@ class RunLimits:
             raise ValueError("invalid_max_subjects")
         if not 1 <= self.max_cases <= 5000:
             raise ValueError("invalid_max_cases")
-        if not 1 <= self.max_requests <= 10000:
+        # Three frozen model families × 384 subjects × nine conditions needs
+        # 10,368 solver cells.  This remains a bounded benchmark-only limit.
+        if not 1 <= self.max_requests <= 20000:
             raise ValueError("invalid_max_requests")
         if not 1 <= self.max_concurrency <= 16:
             raise ValueError("invalid_max_concurrency")
@@ -93,10 +100,14 @@ class RunLimits:
         return cls(
             max_subjects=min(int(os.getenv("COMMITLOOP_MAX_SUBJECTS", "10")), 1000),
             max_cases=min(int(os.getenv("COMMITLOOP_MAX_CASES", "50")), 5000),
-            max_requests=min(int(os.getenv("COMMITLOOP_MAX_REQUESTS", "100")), 10000),
+            max_requests=min(int(os.getenv("COMMITLOOP_MAX_REQUESTS", "100")), 20000),
             max_concurrency=min(int(os.getenv("COMMITLOOP_MAX_CONCURRENCY", "2")), 16),
-            timeout_seconds=min(float(os.getenv("COMMITLOOP_TIMEOUT_SECONDS", "60")), 300.0),
-            checkpoint_every=max(1, int(os.getenv("COMMITLOOP_CHECKPOINT_EVERY", "10"))),
+            timeout_seconds=min(
+                float(os.getenv("COMMITLOOP_TIMEOUT_SECONDS", "60")), 300.0
+            ),
+            checkpoint_every=max(
+                1, int(os.getenv("COMMITLOOP_CHECKPOINT_EVERY", "10"))
+            ),
             max_retries=min(max(0, int(os.getenv("COMMITLOOP_MAX_RETRIES", "2"))), 5),
             retry_backoff_seconds=min(
                 max(0.0, float(os.getenv("COMMITLOOP_RETRY_BACKOFF_SECONDS", "0.25"))),
@@ -246,10 +257,17 @@ class EvaluationClient:
             raise ProviderError("provider_transport_exhausted", attempts=attempts)
         latency_ms = (time.perf_counter() - started) * 1000.0
         reported = response.get("model")
-        if not isinstance(reported, str) or reported != self._reported_model_mapping[model]:
+        if (
+            not isinstance(reported, str)
+            or reported != self._reported_model_mapping[model]
+        ):
             raise ProviderError("model_substitution_detected", attempts=attempts)
         choices = response.get("choices")
-        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+        if (
+            not isinstance(choices, list)
+            or not choices
+            or not isinstance(choices[0], dict)
+        ):
             raise ProviderError("malformed_provider_response", attempts=attempts)
         message = choices[0].get("message")
         content = message.get("content") if isinstance(message, dict) else None

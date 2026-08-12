@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from csv import DictWriter
@@ -101,6 +102,16 @@ def _read_json(path: Path, default: Any) -> Any:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else default
 
 
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        return []
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+
+
 def _safe_error_detail(exc: Exception) -> str:
     """Return a closed taxonomy label without retaining provider content."""
 
@@ -127,6 +138,18 @@ def _write_json(path: Path, value: object) -> None:
 def _write_jsonl(path: Path, values: Sequence[object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("".join(_json(item) + "\n" for item in values), encoding="utf-8")
+
+
+def _append_jsonl_durable(path: Path, values: Sequence[object]) -> None:
+    """Append one completed worker batch before its checkpoint is advanced."""
+
+    if not values:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write("".join(_json(item) + "\n" for item in values))
+        stream.flush()
+        os.fsync(stream.fileno())
 
 
 def _write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> None:
@@ -304,7 +327,10 @@ def run_local_e2e(
             64,
         }:
             raise ValueError("glhs_bench_freeze_sha_required")
-        if not isinstance(provider_probe_sha256, str) or len(provider_probe_sha256) != 64:
+        if (
+            not isinstance(provider_probe_sha256, str)
+            or len(provider_probe_sha256) != 64
+        ):
             raise ValueError("glhs_bench_provider_probe_required")
         if production_strict_context_builder is None:
             raise ValueError("glhs_bench_production_thss_context_required")
@@ -461,8 +487,31 @@ def run_local_e2e(
     _write_json(output_dir / "model_generation.json", generation_outputs)
     _write_jsonl(output_dir / "model_generation.jsonl", generation_outputs)
     _write_json(output_dir / "generation_error_ledger.json", generation_errors)
-    outputs = list(_read_json(output_dir / "solver_outputs.json", []))
-    errors = list(_read_json(output_dir / "error_ledger.json", []))
+    # The append ledgers are the crash-safe source of truth between final
+    # materializations.  Legacy JSON ledgers remain accepted for old and
+    # interrupted runs, then keys deduplicate an overlap safely.
+    output_ledger = [
+        *_read_json(output_dir / "solver_outputs.json", []),
+        *_read_jsonl(output_dir / "solver_outputs.append.jsonl"),
+    ]
+    error_ledger = [
+        *_read_json(output_dir / "error_ledger.json", []),
+        *_read_jsonl(output_dir / "error_ledger.append.jsonl"),
+    ]
+    outputs = list(
+        {
+            str(item["key"]): item
+            for item in output_ledger
+            if isinstance(item, dict) and "key" in item
+        }.values()
+    )
+    errors = list(
+        {
+            str(item["key"]): item
+            for item in error_ledger
+            if isinstance(item, dict) and "key" in item
+        }.values()
+    )
     attempted_keys = {
         str(item["key"])
         for item in [*outputs, *errors]
@@ -493,7 +542,7 @@ def run_local_e2e(
             break
 
     def solve_one(
-        item: tuple[str, str, dict[str, Any], EvaluationClient]
+        item: tuple[str, str, dict[str, Any], EvaluationClient],
     ) -> tuple[str, dict[str, Any] | None, dict[str, Any] | None]:
         key, model, packet, client = item
         try:
@@ -507,21 +556,25 @@ def run_local_e2e(
                 max_tokens=256,
             )
             prediction = _validate_solver_prediction(json.loads(result.content))
-            return key, {
-                "key": key,
-                "case_id": packet["case_id"],
-                "condition": packet["condition"],
-                "requested_model_id": result.requested_model_id,
-                "reported_model_id": result.reported_model_id,
-                "prediction": prediction,
-                "usage": result.usage,
-                "latency_ms": result.latency_ms,
-                "request_sha256": result.request_sha256,
-                "response_sha256": result.response_sha256,
-                "attempts": result.attempts,
-                "prompt_sha256": _SOLVER_PROMPT_SHA256,
-                "schema_sha256": _PREDICTION_SCHEMA_SHA256,
-            }, None
+            return (
+                key,
+                {
+                    "key": key,
+                    "case_id": packet["case_id"],
+                    "condition": packet["condition"],
+                    "requested_model_id": result.requested_model_id,
+                    "reported_model_id": result.reported_model_id,
+                    "prediction": prediction,
+                    "usage": result.usage,
+                    "latency_ms": result.latency_ms,
+                    "request_sha256": result.request_sha256,
+                    "response_sha256": result.response_sha256,
+                    "attempts": result.attempts,
+                    "prompt_sha256": _SOLVER_PROMPT_SHA256,
+                    "schema_sha256": _PREDICTION_SCHEMA_SHA256,
+                },
+                None,
+            )
         except (
             ProviderError,
             json.JSONDecodeError,
@@ -530,17 +583,21 @@ def run_local_e2e(
             TypeError,
             ValueError,
         ) as exc:
-            return key, None, {
-                "key": key,
-                "case_id": packet["case_id"],
-                "condition": packet["condition"],
-                "requested_model_id": model,
-                "reported_model_id": None,
-                "error": type(exc).__name__,
-                "error_detail": _safe_error_detail(exc),
-                "attempts": max(1, int(getattr(exc, "attempts", 1))),
-                "usage": {},
-            }
+            return (
+                key,
+                None,
+                {
+                    "key": key,
+                    "case_id": packet["case_id"],
+                    "condition": packet["condition"],
+                    "requested_model_id": model,
+                    "reported_model_id": None,
+                    "error": type(exc).__name__,
+                    "error_detail": _safe_error_detail(exc),
+                    "attempts": max(1, int(getattr(exc, "attempts", 1))),
+                    "usage": {},
+                },
+            )
 
     completed_since_checkpoint = 0
     # Submit bounded batches so durable ledgers/checkpoints are flushed after
@@ -552,17 +609,21 @@ def run_local_e2e(
         with ThreadPoolExecutor(max_workers=batch_size) as executor:
             futures = [executor.submit(solve_one, item) for item in batch]
             results = [future.result() for future in as_completed(futures)]
+        batch_outputs: list[dict[str, Any]] = []
+        batch_errors: list[dict[str, Any]] = []
         for key, output, error in sorted(results, key=lambda item: item[0]):
             if output is not None:
                 outputs.append(output)
+                batch_outputs.append(output)
             if error is not None:
                 errors.append(error)
+                batch_errors.append(error)
             completed.add(key)
             attempted_keys.add(key)
             completed_since_checkpoint += 1
+        _append_jsonl_durable(output_dir / "solver_outputs.append.jsonl", batch_outputs)
+        _append_jsonl_durable(output_dir / "error_ledger.append.jsonl", batch_errors)
         _write_json(checkpoint_path, {"completed": sorted(completed)})
-        _write_json(output_dir / "solver_outputs.json", outputs)
-        _write_json(output_dir / "error_ledger.json", errors)
         completed_since_checkpoint = 0
     _write_json(checkpoint_path, {"completed": sorted(completed)})
     _write_json(output_dir / "solver_outputs.json", outputs)

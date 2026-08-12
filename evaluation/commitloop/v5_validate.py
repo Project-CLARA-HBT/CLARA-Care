@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from evaluation.commitloop.provider import (
+    CONFIRMATORY_MODELS,
     REPORTED_MODEL_ID_BY_REQUESTED,
     REVIEWER_MODEL,
     reported_model_matches_requested,
@@ -53,7 +54,10 @@ def validate_v5_run(
     models = [str(item) for item in manifest.get("models", [])]
     if conditions != list(CONDITIONS):
         raise ValueError("v5_condition_inventory_mismatch")
-    if models != [REVIEWER_MODEL] or manifest.get("primary_model") != REVIEWER_MODEL:
+    if (
+        models != list(CONFIRMATORY_MODELS)
+        or manifest.get("primary_model") != REVIEWER_MODEL
+    ):
         raise ValueError("v5_primary_model_mismatch")
     if (
         cohort_manifest.get("cohort_name") != COHORT_NAME
@@ -88,15 +92,16 @@ def validate_v5_run(
     ):
         raise ValueError("v5_subject_case_inventory_mismatch")
     expected_keys = {
-        f"{REVIEWER_MODEL}:{condition}:{case_id}"
+        f"{model}:{condition}:{case_id}"
         for case_id in subject_by_case
         for condition in conditions
+        for model in models
     }
     ledger = [*outputs, *errors]
     actual_keys = [str(item.get("key", "")) for item in ledger]
     if len(actual_keys) != len(set(actual_keys)) or set(actual_keys) != expected_keys:
         raise ValueError("v5_solver_cell_inventory_mismatch")
-    expected_cells = expected_subject_count * len(conditions)
+    expected_cells = expected_subject_count * len(conditions) * len(models)
     if (
         manifest.get("subject_count") != expected_subject_count
         or manifest.get("case_count") != expected_subject_count
@@ -110,22 +115,21 @@ def validate_v5_run(
 
     model_manifest = _read_json(run_dir / "model_manifest.json")
     if (
-        model_manifest.get("requested_models") != [REVIEWER_MODEL]
+        model_manifest.get("requested_models") != list(CONFIRMATORY_MODELS)
         or model_manifest.get("reported_model_mapping")
         != REPORTED_MODEL_ID_BY_REQUESTED
         or model_manifest.get("fallback") is not False
         or model_manifest.get("temperature") != 0
         or model_manifest.get("solver_prompt_sha256") != _SOLVER_PROMPT_SHA256
-        or model_manifest.get("prediction_schema_sha256")
-        != _PREDICTION_SCHEMA_SHA256
+        or model_manifest.get("prediction_schema_sha256") != _PREDICTION_SCHEMA_SHA256
     ):
         raise ValueError("v5_model_manifest_invalid")
     for output in outputs:
         _validate_solver_prediction(output.get("prediction"))
         if (
-            output.get("requested_model_id") != REVIEWER_MODEL
+            output.get("requested_model_id") not in models
             or not reported_model_matches_requested(
-                REVIEWER_MODEL, output.get("reported_model_id")
+                str(output.get("requested_model_id")), output.get("reported_model_id")
             )
             or output.get("prompt_sha256") != _SOLVER_PROMPT_SHA256
             or output.get("schema_sha256") != _PREDICTION_SCHEMA_SHA256
@@ -133,7 +137,7 @@ def validate_v5_run(
             raise ValueError("v5_output_provenance_invalid")
     for error in errors:
         if (
-            error.get("requested_model_id") != REVIEWER_MODEL
+            error.get("requested_model_id") not in models
             or error.get("reported_model_id") is not None
             or not isinstance(error.get("error"), str)
             or not error["error"]
@@ -165,15 +169,16 @@ def validate_v5_run(
     metrics = _read_json(run_dir / "metrics.json")
     if (
         metrics.get("expected_cell_count") != expected_cells
-        or metrics.get("all_axes_exact_match", {}).get("denominator")
-        != expected_cells
+        or metrics.get("all_axes_exact_match", {}).get("denominator") != expected_cells
         or metrics.get("calibration_all_axes_exact", {}).get("expected_cell_count")
         != expected_cells
         or metrics.get("generation", {}).get("mode")
         != "deterministic_construction_only"
     ):
         raise ValueError("v5_metric_denominator_invalid")
-    with (run_dir / "per_case_metrics.csv").open(encoding="utf-8", newline="") as stream:
+    with (run_dir / "per_case_metrics.csv").open(
+        encoding="utf-8", newline=""
+    ) as stream:
         rows = list(csv.DictReader(stream))
     if len(rows) != expected_cells:
         raise ValueError("v5_per_case_grid_incomplete")
