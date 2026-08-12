@@ -36,6 +36,7 @@ from evaluation.commitloop.provider import (
     EvaluationClient,
     ProviderError,
     RunLimits,
+    parse_json_object_content,
 )
 from evaluation.commitloop.schema import ConstructedCase, TimelineEvent
 from evaluation.commitloop.score import (
@@ -590,7 +591,9 @@ def run_local_e2e(
                 response_schema=_SOLVER_RESPONSE_SCHEMA,
                 max_tokens=256,
             )
-            prediction = _validate_solver_prediction(json.loads(result.content))
+            prediction = _validate_solver_prediction(
+                parse_json_object_content(result.content)
+            )
             return (
                 key,
                 {
@@ -879,6 +882,7 @@ def run_local_e2e(
             "reported_model_mapping": REPORTED_MODEL_ID_BY_REQUESTED,
             "fallback": False,
             "temperature": 0,
+            "response_format": "json_object_with_frozen_local_schema_validation",
             "execution_mode": execution_mode,
             "solver_prompt_sha256": _SOLVER_PROMPT_SHA256,
             "prediction_schema_sha256": _PREDICTION_SCHEMA_SHA256,

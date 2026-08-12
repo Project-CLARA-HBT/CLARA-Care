@@ -11,6 +11,7 @@ from evaluation.commitloop.provider import (
     ProviderError,
     RunLimits,
     expected_reported_model_id,
+    parse_json_object_content,
 )
 
 
@@ -97,6 +98,14 @@ def test_canonical_requested_id_must_be_echoed_by_the_router() -> None:
         messages=[{"role": "user", "content": "fixture"}],
     )
     assert result.reported_model_id == GENERATOR_MODEL
+
+
+def test_json_object_mode_accepts_a_fenced_object_but_not_an_array() -> None:
+    assert parse_json_object_content("```json\n{\"status\": \"ok\"}\n```") == {
+        "status": "ok"
+    }
+    with pytest.raises(TypeError, match="provider_json_object_required"):
+        parse_json_object_content("[]")
 
 
 def test_request_shape_and_decoding_budget_fail_closed() -> None:

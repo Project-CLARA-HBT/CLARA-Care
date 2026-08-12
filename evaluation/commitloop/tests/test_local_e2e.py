@@ -184,7 +184,7 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
     assert manifest["run_status"] == "COMPLETE"
     assert len(first_transport.calls) == expected_cells
     assert all(
-        call["response_format"]["type"] == "json_schema"
+        call["response_format"]["type"] == "json_object"
         and call["messages"][0]["role"] == "system"
         and "three product-state axes plus escalation" in call["messages"][0]["content"]
         and "keep the axes independent" in call["messages"][0]["content"]

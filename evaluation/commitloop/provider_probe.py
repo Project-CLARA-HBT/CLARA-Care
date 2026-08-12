@@ -17,6 +17,7 @@ from evaluation.commitloop.provider import (
     REVIEWER_MODEL,
     EvaluationClient,
     RunLimits,
+    parse_json_object_content,
 )
 from evaluation.commitloop.validate import validate_run
 
@@ -72,7 +73,7 @@ def run_probe(
             response_schema=PROBE_SCHEMA,
             max_tokens=64,
         )
-        parsed = json.loads(result.content)
+        parsed = parse_json_object_content(result.content)
         if parsed != {"status": "ok"}:
             raise ValueError("probe_schema_or_content_invalid")
         results.append(

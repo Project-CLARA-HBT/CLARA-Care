@@ -12,6 +12,7 @@ from evaluation.commitloop.provider import (
     CONFIRMATORY_MODELS,
     REPORTED_MODEL_ID_BY_REQUESTED,
     EvaluationClient,
+    parse_json_object_content,
 )
 from evaluation.commitloop.v6_freeze import verify_v6_freeze
 
@@ -45,7 +46,7 @@ def probe_v6_models(
             response_schema=PROBE_SCHEMA,
             max_tokens=64,
         )
-        if json.loads(result.content) != {"status": "ok"}:
+        if parse_json_object_content(result.content) != {"status": "ok"}:
             raise ValueError("v6_probe_response_invalid")
         results.append(
             {

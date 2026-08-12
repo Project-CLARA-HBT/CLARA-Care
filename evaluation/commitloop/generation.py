@@ -16,6 +16,7 @@ from evaluation.commitloop.provider import (
     REVIEWER_MODEL,
     EvaluationClient,
     ProviderResult,
+    parse_json_object_content,
 )
 from evaluation.commitloop.schema import ConstructedCase, TimelineEvent
 
@@ -95,7 +96,7 @@ def _call(
         response_schema=schema,
         max_tokens=1024,
     )
-    parsed = json.loads(result.content)
+    parsed = parse_json_object_content(result.content)
     if not isinstance(parsed, dict):
         raise TypeError("generation_output_not_object")
     return parsed, _record(stage, result)

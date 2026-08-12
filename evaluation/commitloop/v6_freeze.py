@@ -70,6 +70,7 @@ def create_v6_freeze(*, output_dir: Path, repository_root: Path) -> Path:
             "batch_size": GLHS_BENCH_GLOBAL_CONCURRENCY,
             "max_retries": 2,
             "temperature": 0,
+            "response_format": "json_object_with_frozen_local_schema_validation",
             "fallback": False,
             "development_subjects": 96,
             "validation_subjects": 96,

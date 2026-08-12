@@ -53,6 +53,18 @@ def reported_model_matches_requested(
     )
 
 
+def parse_json_object_content(content: str) -> dict[str, Any]:
+    """Parse router JSON-object mode, accepting a harmless Markdown fence."""
+
+    normalized = content.strip()
+    if normalized.startswith("```") and normalized.endswith("```"):
+        normalized = normalized.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
+    parsed = json.loads(normalized)
+    if not isinstance(parsed, dict):
+        raise TypeError("provider_json_object_required")
+    return parsed
+
+
 class Transport(Protocol):
     def __call__(
         self,
@@ -207,9 +219,10 @@ class EvaluationClient:
             "stream": False,
         }
         if response_schema is not None:
+            # Router support is JSON-object mode; the requested schema remains
+            # frozen and enforced locally on every returned payload.
             payload["response_format"] = {
-                "type": "json_schema",
-                "json_schema": response_schema,
+                "type": "json_object",
             }
         request_raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         with self._counter_lock:
