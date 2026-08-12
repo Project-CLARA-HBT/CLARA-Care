@@ -8,6 +8,7 @@ from evaluation.commitloop.fixtures import synthetic_bundle
 from evaluation.commitloop.production_context import (
     compile_production_commitment_context,
 )
+from evaluation.commitloop.v5_cohort import KNOWN_CUTOFF, VALID_CUTOFF, build_cohort
 
 
 def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
@@ -28,3 +29,22 @@ def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
     assert context["manifest_schema_version"] == "glhs.snapshot.v3"
     assert context["state_version"] == 2
     assert context["commitments"][0]["lifecycle_state"] == "SATISFIED"
+
+
+def test_production_context_covers_each_v5_lifecycle_template_family() -> None:
+    rows, _manifest = build_cohort()
+    representatives = {}
+    for row in rows:
+        representatives.setdefault(row["stratum"], row)
+    for row in representatives.values():
+        subject, events = ingest_bundle(
+            row["bundle"], fhir_version="R4", ingested_at=KNOWN_CUTOFF
+        )
+        case = mine_candidates(subject, events)[0]
+        context = compile_production_commitment_context(
+            case,
+            events,
+            valid_cutoff=VALID_CUTOFF,
+            known_cutoff=KNOWN_CUTOFF,
+        )
+        assert context["production_path"]["state_version"] >= 1

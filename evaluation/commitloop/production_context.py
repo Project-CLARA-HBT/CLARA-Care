@@ -39,6 +39,47 @@ def _opaque(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()[:24]
 
 
+def _event_predicate(
+    *, target: dict[str, object], status: str
+) -> dict[str, object]:
+    """Create a bounded DSL predicate required by the production FSM."""
+
+    return {
+        "op": "event",
+        "equals": {
+            "resource_type": "Observation",
+            "system": target["system"],
+            "code": target["code"],
+            "status": status,
+        },
+    }
+
+
+def _transition_predicates(
+    *, case: ConstructedCase, lifecycle_state: str
+) -> dict[str, dict[str, object] | None]:
+    """Populate only the FSM predicates demanded by a lifecycle transition."""
+
+    return {
+        "fulfillment_predicate": case.fulfillment_predicate,
+        "partial_predicate": (
+            _event_predicate(target=case.target or {}, status="preliminary")
+            if lifecycle_state == "PARTIALLY_SATISFIED"
+            else None
+        ),
+        "cancellation_predicate": (
+            _event_predicate(target=case.target or {}, status="revoked")
+            if lifecycle_state == "CANCELLED"
+            else None
+        ),
+        "supersession_predicate": (
+            _event_predicate(target=case.target or {}, status="replaced")
+            if lifecycle_state == "SUPERSEDED"
+            else None
+        ),
+    }
+
+
 def compile_production_commitment_context(
     case: ConstructedCase,
     events: tuple[TimelineEvent, ...],
@@ -140,6 +181,7 @@ def compile_production_commitment_context(
                 source_snapshot_id=initial.snapshot_id,
                 source_snapshot_digest=initial.manifest_digest,
             )
+            open_predicates = _transition_predicates(case=case, lifecycle_state="OPEN")
             apply_commitment_transition(
                 db,
                 scope=scope,
@@ -161,7 +203,7 @@ def compile_production_commitment_context(
                     earliest_valid_time=case.anchor_valid_time,
                     due_time=case.due_time,
                     grace_end=None,
-                    fulfillment_predicate=case.fulfillment_predicate,
+                    **open_predicates,
                 ),
                 expected_state_version=initial.state_version,
                 idempotency_key=f"glhs-bench:{token}:open",
@@ -193,6 +235,9 @@ def compile_production_commitment_context(
                     source_snapshot_id=current.snapshot_id,
                     source_snapshot_digest=current.manifest_digest,
                 )
+                desired_predicates = _transition_predicates(
+                    case=case, lifecycle_state=desired_lifecycle
+                )
                 apply_commitment_transition(
                     db,
                     scope=scope,
@@ -211,7 +256,7 @@ def compile_production_commitment_context(
                         earliest_valid_time=case.anchor_valid_time,
                         due_time=case.due_time,
                         grace_end=None,
-                        fulfillment_predicate=case.fulfillment_predicate,
+                        **desired_predicates,
                     ),
                     expected_state_version=current.state_version,
                     idempotency_key=f"glhs-bench:{token}:reconcile",
