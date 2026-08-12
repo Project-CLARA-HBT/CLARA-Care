@@ -311,6 +311,17 @@ def test_glhs_bench_router_requires_exact_global_five_and_retry_policy(tmp_path)
                 max_retries=0,
             ),
         )
+    with pytest.raises(ValueError, match="glhs_bench_production_thss_context_required"):
+        run_local_e2e(
+            **common,
+            limits=RunLimits(
+                max_subjects=1,
+                max_cases=1,
+                max_requests=100,
+                max_concurrency=5,
+                max_retries=1,
+            ),
+        )
 
 
 def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(

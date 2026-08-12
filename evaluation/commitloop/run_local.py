@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from csv import DictWriter
 from dataclasses import replace
@@ -69,6 +69,9 @@ _PREDICTION_ENUMS = {
 }
 SOLVER_BATCH_SIZE = 5
 GLHS_BENCH_GLOBAL_CONCURRENCY = 5
+StrictContextBuilder = Callable[
+    [ConstructedCase, tuple[TimelineEvent, ...], datetime, datetime], dict[str, Any]
+]
 
 
 def _json(value: object) -> str:
@@ -266,6 +269,7 @@ def run_local_e2e(
     primary_model: str | None = None,
     primary_reference_condition: str = "glhs_hybrid_thss_strict",
     primary_comparator_condition: str = "full_authorized_history",
+    production_strict_context_builder: StrictContextBuilder | None = None,
 ) -> dict[str, Any]:
     if not conditions or len(conditions) != len(set(conditions)):
         raise ValueError("benchmark_conditions_invalid")
@@ -302,6 +306,8 @@ def run_local_e2e(
             raise ValueError("glhs_bench_freeze_sha_required")
         if not isinstance(provider_probe_sha256, str) or len(provider_probe_sha256) != 64:
             raise ValueError("glhs_bench_provider_probe_required")
+        if production_strict_context_builder is None:
+            raise ValueError("glhs_bench_production_thss_context_required")
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_path = output_dir / "checkpoint.json"
     completed = set(_read_json(checkpoint_path, {"completed": []})["completed"])
@@ -376,7 +382,11 @@ def run_local_e2e(
             )
         )
         for condition, packet in build_solver_packets(
-            case, events, valid_cutoff=valid_cutoff, known_cutoff=known_cutoff
+            case,
+            events,
+            valid_cutoff=valid_cutoff,
+            known_cutoff=known_cutoff,
+            production_strict_context=production_strict_context_builder,
         ).items():
             if condition not in packets_by_condition:
                 continue

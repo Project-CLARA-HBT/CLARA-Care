@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -63,6 +64,7 @@ def build_solver_packets(
     *,
     valid_cutoff: datetime,
     known_cutoff: datetime,
+    production_strict_context: Callable[[ConstructedCase, tuple[TimelineEvent, ...], datetime, datetime], dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     if case.status != "ELIGIBLE" or case.target is None:
         return {}
@@ -152,6 +154,15 @@ def build_solver_packets(
         "valid_cutoff": valid_cutoff.isoformat(),
         "known_cutoff": known_cutoff.isoformat(),
     }
+    strict_context = (
+        production_strict_context(case, events, valid_cutoff, known_cutoff)
+        if production_strict_context is not None
+        else strict_thss
+    )
+    if production_strict_context is not None and not isinstance(
+        strict_context.get("production_path"), dict
+    ):
+        raise ValueError("production_strict_context_provenance_required")
     contexts = {
         "full_authorized_history": {
             "representation": "chronological_full_authorized",
@@ -194,7 +205,7 @@ def build_solver_packets(
             "provenance_closed": True,
         },
         "glhs_hybrid_thss_strict": {
-            **strict_thss,
+            **strict_context,
             "predicate": case.fulfillment_predicate,
         },
     }
