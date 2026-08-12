@@ -25,3 +25,18 @@ def test_v6_split_selection_is_exact_and_does_not_reassign_subjects() -> None:
     bundles, assignments = bundles_for_split(rows, split="development")
     assert len(bundles) == len(STRATA) * SPLIT_COUNTS["development"]
     assert set(assignments.values()) == {"development"}
+
+
+def test_new_cohort_spec_has_no_subject_or_bundle_overlap() -> None:
+    original, _ = build_cohort()
+    replacement, _ = build_cohort(
+        master_seed=2026081401,
+        cohort_name="glhs_bench_replacement_cohort.v7",
+        schema_version="commitloop-v7-cohort.v1",
+    )
+    assert not {row["subject_token"] for row in original} & {
+        row["subject_token"] for row in replacement
+    }
+    assert not {row["bundle_sha256"] for row in original} & {
+        row["bundle_sha256"] for row in replacement
+    }

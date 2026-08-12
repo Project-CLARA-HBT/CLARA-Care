@@ -12,7 +12,13 @@ from evaluation.commitloop.provider import CONFIRMATORY_MODELS, REVIEWER_MODEL
 from evaluation.commitloop.run_local import GLHS_BENCH_GLOBAL_CONCURRENCY
 from evaluation.commitloop.solver_packets import CONDITIONS
 from evaluation.commitloop.v5_freeze import freeze_inputs
-from evaluation.commitloop.v6_cohort import build_cohort, write_cohort
+from evaluation.commitloop.v6_cohort import (
+    COHORT_NAME,
+    MASTER_SEED,
+    SCHEMA_VERSION,
+    build_cohort,
+    write_cohort,
+)
 
 
 class V6FreezeError(RuntimeError):
@@ -35,7 +41,14 @@ def _tracked_worktree_clean(root: Path) -> bool:
     return not _git(root, "status", "--porcelain", "--untracked-files=no")
 
 
-def create_v6_freeze(*, output_dir: Path, repository_root: Path) -> Path:
+def create_v6_freeze(
+    *,
+    output_dir: Path,
+    repository_root: Path,
+    cohort_master_seed: int = MASTER_SEED,
+    cohort_name: str = COHORT_NAME,
+    cohort_schema_version: str = SCHEMA_VERSION,
+) -> Path:
     root, output_dir = repository_root.resolve(), output_dir.resolve()
     if output_dir.exists():
         raise V6FreezeError("v6_freeze_output_must_not_exist")
@@ -43,8 +56,17 @@ def create_v6_freeze(*, output_dir: Path, repository_root: Path) -> Path:
         raise V6FreezeError("v6_freeze_requires_clean_tracked_worktree")
     git_sha = _git(root, "rev-parse", "HEAD")
     output_dir.mkdir(parents=True)
-    cohort_path, cohort_manifest_path = write_cohort(output_dir / "cohort")
-    rows, generated = build_cohort()
+    cohort_path, cohort_manifest_path = write_cohort(
+        output_dir / "cohort",
+        master_seed=cohort_master_seed,
+        cohort_name=cohort_name,
+        schema_version=cohort_schema_version,
+    )
+    rows, generated = build_cohort(
+        master_seed=cohort_master_seed,
+        cohort_name=cohort_name,
+        schema_version=cohort_schema_version,
+    )
     if len(rows) != 576 or generated["split_counts"] != {
         "development": 96,
         "validation": 96,
@@ -61,6 +83,11 @@ def create_v6_freeze(*, output_dir: Path, repository_root: Path) -> Path:
         "provider_calls_before_freeze": 0,
         "cohort_sha256": _sha256(cohort_path),
         "cohort_manifest_sha256": _sha256(cohort_manifest_path),
+        "cohort_spec": {
+            "master_seed": cohort_master_seed,
+            "cohort_name": cohort_name,
+            "schema_version": cohort_schema_version,
+        },
         "input_sha256": {path: _sha256(root / path) for path in inputs},
         "execution_contract": {
             "models": list(CONFIRMATORY_MODELS),

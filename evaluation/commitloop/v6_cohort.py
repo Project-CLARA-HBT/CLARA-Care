@@ -121,11 +121,13 @@ def _events(stratum: str) -> tuple[str, list[dict[str, str]]]:
     raise ValueError("unknown_v6_stratum")
 
 
-def _bundle(*, stratum: str, split: str, index: int, seed: int) -> dict[str, Any]:
+def _bundle(
+    *, stratum: str, split: str, index: int, seed: int, schema_version: str
+) -> dict[str, Any]:
     rng = random.Random(seed)
     opaque = _digest(
         {
-            "schema": SCHEMA_VERSION,
+            "schema": schema_version,
             "stratum": stratum,
             "split": split,
             "index": index,
@@ -180,16 +182,27 @@ def _bundle(*, stratum: str, split: str, index: int, seed: int) -> dict[str, Any
     }
 
 
-def build_cohort() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def build_cohort(
+    *,
+    master_seed: int = MASTER_SEED,
+    cohort_name: str = COHORT_NAME,
+    schema_version: str = SCHEMA_VERSION,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     tokens, bundles, outcomes = set(), set(), Counter()
     for stratum_index, stratum in enumerate(STRATA):
         for split_index, (split, count) in enumerate(SPLIT_COUNTS.items()):
             for index in range(count):
                 seed = (
-                    MASTER_SEED + stratum_index * 100_000 + split_index * 10_000 + index
+                    master_seed + stratum_index * 100_000 + split_index * 10_000 + index
                 )
-                bundle = _bundle(stratum=stratum, split=split, index=index, seed=seed)
+                bundle = _bundle(
+                    stratum=stratum,
+                    split=split,
+                    index=index,
+                    seed=seed,
+                    schema_version=schema_version,
+                )
                 token, events = ingest_bundle(
                     bundle, fhir_version="R4", ingested_at=KNOWN_CUTOFF
                 )
@@ -214,7 +227,7 @@ def build_cohort() -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 ] += 1
                 rows.append(
                     {
-                        "schema_version": SCHEMA_VERSION,
+                        "schema_version": schema_version,
                         "split": split,
                         "stratum": stratum,
                         "seed": seed,
@@ -228,12 +241,12 @@ def build_cohort() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         key=lambda item: (str(item["split"]), str(item["stratum"]), int(item["seed"]))
     )
     manifest = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": schema_version,
         "status": "GENERATED_NOT_FROZEN",
-        "cohort_name": COHORT_NAME,
+        "cohort_name": cohort_name,
         "synthetic_software_evaluation_only": True,
         "clinical_adjudication": "NOT_RUN",
-        "master_seed": MASTER_SEED,
+        "master_seed": master_seed,
         "seed_reuse_prohibited": True,
         "subject_count": len(rows),
         "split_counts": {
@@ -253,8 +266,18 @@ def build_cohort() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     return rows, manifest
 
 
-def write_cohort(output_dir: Path) -> tuple[Path, Path]:
-    rows, manifest = build_cohort()
+def write_cohort(
+    output_dir: Path,
+    *,
+    master_seed: int = MASTER_SEED,
+    cohort_name: str = COHORT_NAME,
+    schema_version: str = SCHEMA_VERSION,
+) -> tuple[Path, Path]:
+    rows, manifest = build_cohort(
+        master_seed=master_seed,
+        cohort_name=cohort_name,
+        schema_version=schema_version,
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     cohort_path, manifest_path = (
         output_dir / "cohort.jsonl",

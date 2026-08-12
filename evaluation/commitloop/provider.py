@@ -53,12 +53,18 @@ def reported_model_matches_requested(
 
 
 def parse_json_object_content(content: str) -> dict[str, Any]:
-    """Parse router JSON-object mode, accepting a harmless Markdown fence."""
+    """Parse router JSON-object mode, accepting bounded prose/fence wrappers."""
 
     normalized = content.strip()
     if normalized.startswith("```") and normalized.endswith("```"):
         normalized = normalized.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
-    parsed = json.loads(normalized)
+    try:
+        parsed = json.loads(normalized)
+    except json.JSONDecodeError:
+        start, end = normalized.find("{"), normalized.rfind("}")
+        if start < 0 or end <= start:
+            raise
+        parsed = json.loads(normalized[start : end + 1])
     if not isinstance(parsed, dict):
         raise TypeError("provider_json_object_required")
     return parsed

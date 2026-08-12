@@ -121,6 +121,12 @@ def test_json_object_mode_accepts_a_fenced_object_but_not_an_array() -> None:
         parse_json_object_content("[]")
 
 
+def test_json_object_mode_accepts_router_prose_wrapper() -> None:
+    assert parse_json_object_content(
+        'Here is the result: {"status": "ok"} Thanks.'
+    ) == {"status": "ok"}
+
+
 def test_request_shape_and_decoding_budget_fail_closed() -> None:
     client = EvaluationClient(
         base_url="https://router.invalid/v1",
