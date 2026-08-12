@@ -269,11 +269,16 @@ class EvaluationClient:
             raise ProviderError("provider_transport_exhausted", attempts=attempts)
         latency_ms = (time.perf_counter() - started) * 1000.0
         reported = response.get("model")
-        if (
-            not isinstance(reported, str)
-            or reported != self._reported_model_mapping[model]
-        ):
-            raise ProviderError("model_substitution_detected", attempts=attempts)
+        if not isinstance(reported, str):
+            raise ProviderError(
+                "model_substitution_detected:missing", attempts=attempts
+            )
+        if reported != self._reported_model_mapping[model]:
+            # This contains only a bounded model identifier, never router
+            # content or credentials, so a probe can diagnose exact-ID drift.
+            raise ProviderError(
+                f"model_substitution_detected:{reported}", attempts=attempts
+            )
         choices = response.get("choices")
         if (
             not isinstance(choices, list)
