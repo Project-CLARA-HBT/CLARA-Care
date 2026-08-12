@@ -113,7 +113,9 @@ def create_v6_freeze(
             "conditions": list(CONDITIONS),
             "max_concurrency": GLHS_BENCH_GLOBAL_CONCURRENCY,
             "batch_size": GLHS_BENCH_GLOBAL_CONCURRENCY,
-            "max_retries": 2,
+            # Bounded retry budget for declared transient 429/5xx/timeout
+            # failures. Terminal format/schema failures remain terminal.
+            "max_retries": 5,
             "temperature": 0,
             "response_format": "json_object_with_frozen_local_schema_validation",
             "fallback": False,

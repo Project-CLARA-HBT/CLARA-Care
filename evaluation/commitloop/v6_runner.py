@@ -86,6 +86,8 @@ def run_v6_development_partition(
     execution_contract = freeze.get("execution_contract")
     if (
         not isinstance(execution_contract, dict)
+        or limits.max_concurrency != execution_contract.get("max_concurrency")
+        or limits.max_retries != execution_contract.get("max_retries")
         or execution_contract
         .get("case_counts_including_all_adversarial_variants", {})
         .get(split)
