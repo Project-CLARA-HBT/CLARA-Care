@@ -33,7 +33,7 @@ def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
     assert context["manifest_schema_version"] == "glhs.snapshot.v3"
     assert context["state_version"] == 2
     assert context["commitments"][0]["lifecycle_state"] == "OPEN"
-    assert context["production_path"]["oracle_free"] is True
+    assert context["production_path"]["gold_derived"] is False
     ledger = context["governed_source_ledger"]["assertions"][0]
     assert ledger["semantic_key"].startswith("commitloop:timeline:")
     assert ledger["value"]["events"]

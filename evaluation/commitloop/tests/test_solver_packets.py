@@ -126,6 +126,9 @@ def test_strict_packet_supports_keyword_only_production_context_builder() -> Non
         known_cutoff=cutoff,
         production_strict_context=compile_production_commitment_context,
     )
-    assert packets["glhs_hybrid_thss_strict"]["context"]["production_path"][
-        "oracle_free"
-    ]
+    assert (
+        packets["glhs_hybrid_thss_strict"]["context"]["production_path"][
+            "gold_derived"
+        ]
+        is False
+    )

@@ -290,7 +290,7 @@ def compile_production_commitment_context(
                 "manifest_digest": final.manifest_digest,
                 "state_version": final.state_version,
                 "pipeline": [stage["name"] for stage in final.pipeline_trace],
-                "oracle_free": True,
+                "gold_derived": False,
             }
             db.rollback()
             return payload
