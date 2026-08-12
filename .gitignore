@@ -22,6 +22,9 @@ context2
 # eligible for git.
 datasets/raw/
 datasets/normalized/
+datasets/diabetes130/
+datasets/synpuf-omop/
+datasets/synthea-coherent/
 
 # --- secrets / local state / scratch (never commit) ---
 .env.*

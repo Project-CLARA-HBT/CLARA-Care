@@ -92,6 +92,9 @@ def test_repository_registry_is_valid_without_requiring_untracked_raw_data() -> 
     }
     assert syntheticmass_status != "VERIFIED"
     assert rows["synthea_omop_2_8m"]["local_status"] == "NOT_AVAILABLE"
+    assert rows["cms_de_synpuf_omop"]["local_status"] == "PRESENT_UNVERIFIED"
+    assert rows["cms_de_synpuf_omop_100k"]["local_status"] == "PRESENT_UNVERIFIED"
+    assert rows["synthea_coherent"]["local_status"] == "PRESENT_UNVERIFIED"
 
 
 def test_data_cli_bootstrap_does_not_shadow_standard_library_inspect() -> None:
@@ -242,6 +245,23 @@ def test_partial_download_is_not_reported_as_available(
     assert rows[0]["local_status"] == "NOT_AVAILABLE"
     with pytest.raises(DatasetRegistryError, match="NOT_AVAILABLE"):
         inspect_dataset("fixture_data", registry_path)
+
+
+def test_verify_rejects_configured_incomplete_source_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    raw_dir = tmp_path / "datasets" / "raw" / "fixture_data"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / "complete.csv.lzo").write_bytes(b"complete")
+    (raw_dir / "complete.csv.lzo.a1B2c3D4").write_bytes(b"partial")
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(local_candidates=[], reject_file_globs=["*.lzo.*"]),
+    )
+
+    with pytest.raises(DatasetRegistryError, match="SOURCE_REJECTED_FILE"):
+        verify_dataset("fixture_data", registry_path)
 
 
 def test_fetch_resumes_only_from_valid_https_range(

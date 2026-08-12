@@ -6,6 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from evaluation.external_validation.freeze_common_offset_glhs_result import (
+    freeze,
+    verify_freeze,
+)
 from evaluation.external_validation.run_common_offset_glhs import (
     PRODUCTION_PATH,
     PROTOCOL_SCHEMA_VERSION,
@@ -97,6 +101,7 @@ def _frozen_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
         {
             "schema_version": PROTOCOL_SCHEMA_VERSION,
             "status": PROTOCOL_STATUS,
+            "freeze_id": "fixture-common-offset-glhs-v1",
             "dataset_id": "eicu_crd_demo_2_0_1",
             "systems": list(SYSTEMS),
             "primary_invariant": (
@@ -190,3 +195,47 @@ def test_common_offset_runner_rejects_unbound_implementation(tmp_path: Path) -> 
             tmp_path / "run",
             enforce_repository_freeze=False,
         )
+
+
+def test_common_offset_result_freeze_is_sanitized_and_revalidates(tmp_path: Path) -> None:
+    tasks, cohort, protocol = _frozen_inputs(tmp_path)
+    output = tmp_path / "run"
+    destination = tmp_path / "result-freeze.json"
+    run(tasks, cohort, protocol, output, enforce_repository_freeze=False)
+
+    frozen = freeze(
+        output,
+        tasks,
+        cohort,
+        protocol,
+        destination,
+        enforce_repository_freeze=False,
+    )
+    verification = verify_freeze(destination)
+
+    assert frozen["status"] == "FROZEN_VALID_SOURCE_DERIVED_EXECUTION"
+    assert frozen["primary_result"]["correct"] == 2
+    assert frozen["clinical_oracle"] is False
+    assert "subject_token" not in destination.read_text(encoding="utf-8")
+    assert verification["status"] == "VALID"
+
+
+def test_common_offset_result_freeze_rejects_tampered_aggregate(tmp_path: Path) -> None:
+    tasks, cohort, protocol = _frozen_inputs(tmp_path)
+    output = tmp_path / "run"
+    destination = tmp_path / "result-freeze.json"
+    run(tasks, cohort, protocol, output, enforce_repository_freeze=False)
+    freeze(
+        output,
+        tasks,
+        cohort,
+        protocol,
+        destination,
+        enforce_repository_freeze=False,
+    )
+    payload = json.loads(destination.read_text(encoding="utf-8"))
+    payload["headline_eligible"] = True
+    destination.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="payload_hash_mismatch"):
+        verify_freeze(destination, verify_local_artifact=False)

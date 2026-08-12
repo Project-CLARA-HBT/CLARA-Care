@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import json
 import re
@@ -230,6 +231,20 @@ def _provider_checksum_verification(
 def verify_dataset(dataset_id: str, registry_path: Path | None = None) -> dict[str, object]:
     dataset = get_dataset(load_registry(registry_path), dataset_id)
     source = resolve_local_source(dataset)
+    rejected_globs = dataset.get("reject_file_globs", [])
+    if not isinstance(rejected_globs, list) or any(
+        not isinstance(pattern, str) or not pattern for pattern in rejected_globs
+    ):
+        raise DatasetRegistryError("reject_file_globs_invalid")
+    if source.is_dir():
+        for candidate in iter_source_files(source):
+            relative = str(candidate.relative_to(source))
+            if any(
+                fnmatch.fnmatch(relative, pattern)
+                or fnmatch.fnmatch(candidate.name, pattern)
+                for pattern in rejected_globs
+            ):
+                raise DatasetRegistryError(f"SOURCE_REJECTED_FILE:{relative}")
     inventory = source_inventory(source)
     probe_nested = dataset.get("adapter") == "nested_fhir_bundle_tar"
     if source.is_file():

@@ -18,8 +18,9 @@ datasets:
     acquired_at: null
     raw_path: datasets/raw/cms_de_synpuf_omop
     normalized_path: datasets/normalized/cms_de_synpuf_omop
-    local_candidates: []
-    expected_files: []
+    local_candidates: [datasets/synpuf-omop/cmsdesynpuf2.3]
+    expected_files: [care_site.5.2.csv.0.lzo, care_site.5.2.csv.1.lzo, care_site.5.2.csv.2.lzo, care_site.5.2.csv.3.lzo, condition_era.csv.1.lzo, condition_era.csv.2.lzo, condition_era.csv.3.lzo, condition_era.csv.4.lzo, condition_era.csv.5.lzo, condition_era.csv.6.lzo, condition_occurrence.5.2.csv.0.lzo, condition_occurrence.5.2.csv.1.lzo, condition_occurrence.5.2.csv.2.lzo, condition_occurrence.5.2.csv.3.lzo, death.5.2.csv.lzo, device_exposure.5.2.csv.0.lzo, device_exposure.5.2.csv.1.lzo, device_exposure.5.2.csv.2.lzo, device_exposure.5.2.csv.3.lzo, drug_era.csv.1.lzo, drug_era.csv.2.lzo, drug_era.csv.3.lzo, drug_era.csv.4.lzo, drug_era.csv.5.lzo, drug_era.csv.6.lzo, drug_exposure.5.2.csv.0.lzo, drug_exposure.5.2.csv.1.lzo, drug_exposure.5.2.csv.2.lzo, drug_exposure.5.2.csv.3.lzo, location.5.2.csv.lzo, measurement_occurrence.5.2.csv.0.lzo, measurement_occurrence.5.2.csv.1.lzo, measurement_occurrence.5.2.csv.2.lzo, measurement_occurrence.5.2.csv.3.lzo, observation.5.2.csv.0.lzo, observation.5.2.csv.1.lzo, observation.5.2.csv.2.lzo, observation.5.2.csv.3.lzo, observation_period.5.2.csv.lzo, observation_period.5.3.csv.lzo, payer_plan_period.5.2.csv.lzo, person.5.2.csv.lzo, procedure_occurrence.5.2.csv.0.lzo, procedure_occurrence.5.2.csv.1.lzo, procedure_occurrence.5.2.csv.2.lzo, procedure_occurrence.5.2.csv.3.lzo, provider.5.2.csv.lzo, visit_occurrence.5.2.csv.1.lzo, visit_occurrence.5.2.csv.2.lzo, visit_occurrence.5.2.csv.3.lzo]
+    reject_file_globs: ["*.lzo.*"]
     checksum_manifest: datasets/manifests/cms_de_synpuf_omop.json
     subject_identifier: person_id or DESYNPUF_ID, conversion-specific mapping required
     encounter_identifier: visit_occurrence_id where supplied by the conversion
@@ -27,7 +28,36 @@ datasets:
     knowledge_time_fields: unavailable unless explicitly supplied by the conversion
     provenance_fields: source file, source row and OMOP source-value fields
     clinical_domains: [claims, diagnoses, procedures, medications, utilization]
-    known_limitations: Synthetic claims; exact OMOP distribution and source mapping are not yet verified locally.
+    known_limitations: Synthetic claims; distribution lineage and source mapping are not independently authenticated. The current local directory contains a corrupt temporary-suffix LZO object and must fail verification until the operator resolves it.
+    adapter: omop_cdm
+
+  - id: cms_de_synpuf_omop_100k
+    display_name: CMS DE-SynPUF OMOP 100K sample
+    provider: Centers for Medicare & Medicaid Services / OHDSI
+    canonical_source: https://www.cms.gov/data-research/statistics-trends-and-reports/medicare-claims-synthetic-public-use-files
+    mirror_source: null
+    download_method: operator_manual
+    download_url: null
+    license: CMS Data Disclaimer and Public Use Data agreement
+    access_class: open_public_use_agreement
+    evidence_class: development_external_systems
+    synthetic: true
+    schema: OMOP CDM
+    version: 100K sample, exact conversion release unresolved
+    release_date: null
+    acquired_at: null
+    raw_path: datasets/raw/cms_de_synpuf_omop_100k
+    normalized_path: datasets/normalized/cms_de_synpuf_omop_100k
+    local_candidates: [datasets/synpuf-omop/cmsdesynpuf100k]
+    expected_files: [care_site.csv.gz, condition_era.csv.gz, condition_occurrence.csv.gz, death.csv.gz, device_exposure.csv.gz, drug_era.csv.gz, drug_exposure.csv.gz, drug_strength.csv.gz, location.csv.gz, measurement.csv.gz, observation.csv.gz, observation_period.csv.gz, payer_plan_period.csv.gz, person.csv.gz, procedure_occurrence.csv.gz, provider.csv.gz, visit_occurrence.csv.gz]
+    checksum_manifest: datasets/manifests/cms_de_synpuf_omop_100k.json
+    subject_identifier: person_id
+    encounter_identifier: visit_occurrence_id
+    valid_time_fields: OMOP domain start/end date or datetime columns
+    knowledge_time_fields: unavailable unless explicitly supplied by the conversion
+    provenance_fields: source file, source row and OMOP source-value fields
+    clinical_domains: [claims, diagnoses, procedures, medications, utilization]
+    known_limitations: Synthetic development sample; not independent from the larger DE-SynPUF distribution and exact conversion lineage/checksum are unresolved.
     adapter: omop_cdm
 
   - id: syntheticmass_fhir_v1
@@ -209,22 +239,22 @@ datasets:
   - id: synthea_coherent
     display_name: Synthea Coherent Data Set
     provider: MITRE Synthea
-    canonical_source: null
+    canonical_source: https://synthea.mitre.org/downloads
     mirror_source: null
-    download_method: unavailable_until_source_resolved
+    download_method: operator_manual
     download_url: null
-    license: unresolved
-    access_class: not_available
+    license: CC-BY-4.0 per bundled README
+    access_class: open
     evidence_class: multimodal_synthetic_systems
     synthetic: true
     schema: FHIR plus linked modalities
-    version: unresolved
-    release_date: null
+    version: coherent-11-07-2022
+    release_date: "2022-11-07"
     acquired_at: null
     raw_path: datasets/raw/synthea_coherent
     normalized_path: datasets/normalized/synthea_coherent
-    local_candidates: []
-    expected_files: []
+    local_candidates: [datasets/synthea-coherent/coherent-11-07-2022.zip]
+    expected_files: [README.md, patients.csv]
     checksum_manifest: datasets/manifests/synthea_coherent.json
     subject_identifier: FHIR Patient resource id
     encounter_identifier: FHIR Encounter resource id
@@ -232,7 +262,7 @@ datasets:
     knowledge_time_fields: unknown unless supplied
     provenance_fields: source modality path/hash and FHIR provenance
     clinical_domains: [multimodal, medications, diagnoses, observations, encounters]
-    known_limitations: Canonical downloadable archive and terms are not yet verified; fail closed.
+    known_limitations: Synthetic and not independent from Synthea-family sources; local archive identity is not provider-checksum authenticated and linked modality semantics require a dedicated adapter.
     adapter: coherent_multimodal
 
   - id: mimic_iv_demo_fhir_2_1_0
