@@ -63,6 +63,33 @@ def test_production_context_covers_each_v5_lifecycle_template_family() -> None:
         assert context["production_path"]["state_version"] >= 1
 
 
+def test_production_context_retains_documented_source_contradictions() -> None:
+    rows, _manifest = build_cohort()
+    row = next(
+        item
+        for item in rows
+        if any(
+            resource.get("relation") == "contradicts"
+            for entry in item["bundle"]["entry"]
+            if isinstance((resource := entry.get("resource")), dict)
+        )
+    )
+    subject, events = ingest_bundle(
+        row["bundle"], fhir_version="R4", ingested_at=KNOWN_CUTOFF
+    )
+    case = mine_candidates(subject, events)[0]
+    context = compile_production_commitment_context(
+        case,
+        events,
+        valid_cutoff=VALID_CUTOFF,
+        known_cutoff=KNOWN_CUTOFF,
+    )
+    ledger_events = context["governed_source_ledger"]["assertions"][0]["value"][
+        "events"
+    ]
+    assert any(event["relation"] == "contradicts" for event in ledger_events)
+
+
 def test_cached_fixture_schema_never_retains_subject_state() -> None:
     cutoff = datetime(2027, 2, 1, tzinfo=UTC)
     subject, events = ingest_bundle(

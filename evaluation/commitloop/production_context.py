@@ -76,6 +76,10 @@ def _timeline_event(event: TimelineEvent) -> dict[str, object]:
         "valid_at": event.valid_at.isoformat() if event.valid_at else None,
         "known_at": event.known_at.isoformat(),
         "encounter_reference": event.encounter_reference,
+        # ``relation`` is source provenance, not an inferred reconciliation
+        # label.  Dropping it made a governed ledger unable to represent a
+        # documented contradiction even though the source timeline carried it.
+        "relation": event.source.get("relation"),
     }
 
 
