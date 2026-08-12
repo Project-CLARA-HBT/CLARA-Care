@@ -1,0 +1,90 @@
+{
+  "claim_limit": "normalization_reproducibility_and_local_systems_metrics_not_clinical_validation",
+  "dataset_id": "cms_de_synpuf_omop_100k",
+  "evidence": {
+    "dataset_id": "cms_de_synpuf_omop_100k",
+    "normalization": {
+      "adapter": "omop_cdm",
+      "claim_limit": "source_normalization_not_clinical_oracle_or_validation",
+      "common_schema": "clara-common-longitudinal-evidence.v1",
+      "dataset_id": "cms_de_synpuf_omop_100k",
+      "estimated_times_created": 0,
+      "metrics": {
+        "domain_counts": {
+          "devices": 202805,
+          "diagnoses_problems": 12695221,
+          "encounters_utilization": 4785453,
+          "medications": 5423469,
+          "mortality": 4635,
+          "observations": 4564541,
+          "procedures": 11897410
+        },
+        "encounter_count": 4785453,
+        "missing_encounter": 4771666,
+        "missing_knowledge_time": 39573534,
+        "missing_valid_time": 0,
+        "omitted_reference_or_derived_tables": [
+          "care_site",
+          "condition_era",
+          "drug_era",
+          "drug_strength",
+          "location",
+          "observation_period",
+          "payer_plan_period",
+          "person",
+          "provider"
+        ],
+        "operational": {
+          "normalized_records_bytes": 3267982283,
+          "peak_rss_kib": 475248,
+          "process_system_seconds": 6.266361,
+          "process_user_seconds": 2129.2836310000002,
+          "records_per_second": 18325.73568312205,
+          "source_bytes": 914865701,
+          "storage_amplification": 3.572089629579413,
+          "wall_clock_seconds": 2159.451313949001
+        },
+        "record_count": 39573534,
+        "source_row_count": 39573534,
+        "subject_count": 90217,
+        "table_counts": {
+          "condition_occurrence": 12695221,
+          "death": 4635,
+          "device_exposure": 202805,
+          "drug_exposure": 5423469,
+          "measurement": 2909229,
+          "observation": 1655312,
+          "procedure_occurrence": 11897410,
+          "visit_occurrence": 4785453
+        }
+      },
+      "normalized_at_utc": "2026-08-12T02:12:02.774471+00:00",
+      "raw_payloads_persisted": false,
+      "records_compression": "gzip-mtime-0-level-6",
+      "records_file": "records.jsonl.gz",
+      "records_sha256": "69cef106cf1a64359111b910b16e39f815eb2e5fbd559eb7b3c833be5bc8cf3a",
+      "schema_version": "clara-dataset-normalization.v1",
+      "source_ids_preserved_locally": true,
+      "source_inventory_sha256": "11fd10d71452d19a620cedb96fd043bf5ca58808ada676ebad1281b143e40f35",
+      "source_schema": "OMOP CDM",
+      "status": "COMPLETE"
+    },
+    "normalization_manifest_path": "datasets/normalized/cms_de_synpuf_omop_100k/normalization_manifest.json",
+    "normalization_manifest_sha256": "2af74b1c7bdf89d7fb46adc1aaeda8fd7c880df831af414e301590bf414aee76",
+    "record_line_count": 39573534,
+    "records_bytes": 3267982283,
+    "records_path_local_only": "datasets/normalized/cms_de_synpuf_omop_100k/records.jsonl.gz",
+    "records_sha256": "69cef106cf1a64359111b910b16e39f815eb2e5fbd559eb7b3c833be5bc8cf3a",
+    "source_canonical_checksum_status": "NOT_PROVIDED",
+    "source_inventory_sha256": "11fd10d71452d19a620cedb96fd043bf5ca58808ada676ebad1281b143e40f35",
+    "source_manifest_file_sha256": "cd9cc890d40bfeeca47361d1cc6933e52b5cf4a3e18aca8bb0ac255b163e6a95",
+    "source_manifest_path": "datasets/manifests/cms_de_synpuf_omop_100k.json",
+    "source_manifest_payload_sha256": "551b8768cc2ba2b6c27adb70053718d8e0bc1e4978ee28c2d43b23f40f9d8c1a"
+  },
+  "frozen_at_utc": "2026-08-12T02:14:40.573330+00:00",
+  "manifest_payload_sha256": "40c2c0a2087918430edd1800de41acc02238a938a9d6ac338b4fcbdc29eba770",
+  "schema_version": "clara-dataset-normalization-freeze.v1",
+  "source_git_sha": "287aa46fb604074811291414b3cb5d522d5ad96b",
+  "status": "FROZEN_NORMALIZATION_AGGREGATE_EVIDENCE",
+  "tracked_worktree_clean_before_freeze": true
+}
