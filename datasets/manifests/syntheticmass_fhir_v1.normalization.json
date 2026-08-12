@@ -1,0 +1,77 @@
+{
+  "claim_limit": "normalization_reproducibility_and_local_systems_metrics_not_clinical_validation",
+  "dataset_id": "syntheticmass_fhir_v1",
+  "evidence": {
+    "dataset_id": "syntheticmass_fhir_v1",
+    "normalization": {
+      "adapter": "nested_fhir_bundle_tar",
+      "claim_limit": "source_normalization_not_clinical_oracle_or_validation",
+      "common_schema": "clara-common-longitudinal-evidence.v1",
+      "dataset_id": "syntheticmass_fhir_v1",
+      "estimated_times_created": 0,
+      "metrics": {
+        "bundle_count": 1307771,
+        "domain_counts": {
+          "diagnoses_problems": 4741887,
+          "encounters_utilization": 12165421,
+          "observations": 51152618
+        },
+        "missing_knowledge_time": 68059926,
+        "missing_valid_time": 0,
+        "nested_archive_count": 11,
+        "operational": {
+          "normalized_records_bytes": 7742593384,
+          "peak_rss_kib": 421620,
+          "process_system_seconds": 53.20874,
+          "process_user_seconds": 5928.87915,
+          "records_per_second": 11019.649754052347,
+          "source_bytes": 30878003109,
+          "storage_amplification": 0.2507478659377189,
+          "wall_clock_seconds": 6176.233139802993
+        },
+        "record_count": 68059926,
+        "resource_type_counts": {
+          "Condition": 4741887,
+          "DiagnosticReport": 3067325,
+          "Encounter": 12165421,
+          "Observation": 48085293
+        },
+        "skipped_resource_type_counts": {
+          "CarePlan": 2405392,
+          "Immunization": 8797439,
+          "Patient": 1307771
+        },
+        "skipped_unresolved_subject": 0,
+        "skipped_without_identity": 9593140,
+        "subject_count": 1307771
+      },
+      "normalized_at_utc": "2026-08-12T06:01:57.857010+00:00",
+      "raw_payloads_persisted": false,
+      "records_compression": "gzip-mtime-0-level-6",
+      "records_file": "records.jsonl.gz",
+      "records_sha256": "aef5e82c61410ea8c9e60247fc0ea292d1cea25fa643562310f3e5dec58c5442",
+      "schema_version": "clara-dataset-normalization.v1",
+      "source_ids_preserved_locally": true,
+      "source_inventory_sha256": "9b430044c8af37683ac82b3dd2e517ae3bbecc79583decb17e7163a5a6c0b37a",
+      "source_schema": "FHIR STU3",
+      "status": "COMPLETE"
+    },
+    "normalization_manifest_path": "datasets/normalized/syntheticmass_fhir_v1/normalization_manifest.json",
+    "normalization_manifest_sha256": "354b5cae227b7fe408e485fc7d4622c3b22872cb93686c59ce484de8d38c5180",
+    "record_line_count": 68059926,
+    "records_bytes": 7742593384,
+    "records_path_local_only": "datasets/normalized/syntheticmass_fhir_v1/records.jsonl.gz",
+    "records_sha256": "aef5e82c61410ea8c9e60247fc0ea292d1cea25fa643562310f3e5dec58c5442",
+    "source_canonical_checksum_status": "NOT_PROVIDED",
+    "source_inventory_sha256": "9b430044c8af37683ac82b3dd2e517ae3bbecc79583decb17e7163a5a6c0b37a",
+    "source_manifest_file_sha256": "b9d2e07bc836c6f6e801a6a2a2a08014c8960d90975091ff6a6c5cc8bfc4eeaf",
+    "source_manifest_path": "datasets/manifests/syntheticmass_fhir_v1.json",
+    "source_manifest_payload_sha256": "384e9fc5669aceea0070cb6a11ee621f9e63f298a87893312bffe4073c8443cd"
+  },
+  "frozen_at_utc": "2026-08-12T06:52:33.046391+00:00",
+  "manifest_payload_sha256": "2e7256b4d30176d1622b4c82649f445d333522e1a93dce8f9ab35739ed1faf69",
+  "schema_version": "clara-dataset-normalization-freeze.v1",
+  "source_git_sha": "9be7c614c9e7ec9302c2a9fac8b06e4764c23bb0",
+  "status": "FROZEN_NORMALIZATION_AGGREGATE_EVIDENCE",
+  "tracked_worktree_clean_before_freeze": true
+}

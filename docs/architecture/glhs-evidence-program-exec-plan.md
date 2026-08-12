@@ -207,6 +207,12 @@ Knowledge time stayed unknown and no time was estimated. The source and
 normalization aggregate manifests are tracked by SHA-256; provider checksum
 and cross-modality semantic linkage remain open gates.
 
+SyntheticMass FHIR v1 then completed minimized streaming normalization. It
+emitted 68,059,926 records from 1,307,771 bundles/subjects, with source-derived
+valid times, unknown knowledge times and zero estimated timestamps. The output
+and aggregate freeze were independently revalidated by hash and line count;
+provider checksum and clinical validation remain absent.
+
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
 content copy apart from the final newline. The operator-provided root copy

@@ -168,6 +168,16 @@ The tracked normalization aggregate is
 CSV, DICOM and DNA are inventory-only modalities; provider checksum and
 cross-modality linkage validation remain absent.
 
+SyntheticMass FHIR v1 passed the nested source freeze and an independent
+normalization verifier. The adapter emitted 68,059,926 deterministic records
+from 1,307,771 bundles/subjects; output SHA-256 is
+`aef5e82c61410ea8c9e60247fc0ea292d1cea25fa643562310f3e5dec58c5442` and the
+tracked aggregate payload SHA-256 is
+`2e7256b4d30176d1622b4c82649f445d333522e1a93dce8f9ab35739ed1faf69`.
+The run took 6,176.23 seconds, emitted 11,019.65 records/second and used
+421,620 KiB peak RSS. Provider checksum remains unavailable; this is synthetic
+adapter/reproducibility evidence only.
+
 Structural regression only:
 
 ```bash
