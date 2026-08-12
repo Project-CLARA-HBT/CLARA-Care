@@ -13,7 +13,11 @@ from evaluation.commitloop.v5_cohort import KNOWN_CUTOFF, VALID_CUTOFF, build_co
 
 def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
     cutoff = datetime(2027, 2, 1, tzinfo=UTC)
-    subject, events = ingest_bundle(synthetic_bundle("production-context", "one"), fhir_version="R4", ingested_at=cutoff)
+    subject, events = ingest_bundle(
+        synthetic_bundle("production-context", "one"),
+        fhir_version="R4",
+        ingested_at=cutoff,
+    )
     case = mine_candidates(subject, events)[0]
     context = compile_production_commitment_context(
         case, events, valid_cutoff=cutoff, known_cutoff=cutoff
@@ -28,7 +32,11 @@ def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
     ]
     assert context["manifest_schema_version"] == "glhs.snapshot.v3"
     assert context["state_version"] == 2
-    assert context["commitments"][0]["lifecycle_state"] == "SATISFIED"
+    assert context["commitments"][0]["lifecycle_state"] == "OPEN"
+    assert context["production_path"]["oracle_free"] is True
+    ledger = context["governed_source_ledger"]["assertions"][0]
+    assert ledger["semantic_key"].startswith("commitloop:timeline:")
+    assert ledger["value"]["events"]
 
 
 def test_production_context_covers_each_v5_lifecycle_template_family() -> None:
