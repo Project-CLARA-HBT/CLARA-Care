@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from csv import DictWriter
 from dataclasses import replace
 from datetime import datetime
@@ -432,9 +433,8 @@ def run_local_e2e(
         0, limits.max_requests - generation_request_count - len(attempted_keys)
     )
     budget_exhausted = generation_budget_exhausted
+    pending: list[tuple[str, str, dict[str, Any], EvaluationClient]] = []
     for model, client in clients.items():
-        if budget_exhausted:
-            break
         for condition in conditions:
             for packet in packets_by_condition[condition]:
                 key = f"{model}:{condition}:{packet['case_id']}"
@@ -444,65 +444,78 @@ def run_local_e2e(
                     budget_exhausted = True
                     break
                 request_budget -= 1
-                attempts_before = client.attempt_count
-                try:
-                    result = client.complete(
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": _SOLVER_SYSTEM},
-                            {"role": "user", "content": _json(packet)},
-                        ],
-                        response_schema=_SOLVER_RESPONSE_SCHEMA,
-                        max_tokens=256,
-                    )
-                    prediction = _validate_solver_prediction(json.loads(result.content))
-                    outputs.append(
-                        {
-                            "key": key,
-                            "case_id": packet["case_id"],
-                            "condition": condition,
-                            "requested_model_id": result.requested_model_id,
-                            "reported_model_id": result.reported_model_id,
-                            "prediction": prediction,
-                            "usage": result.usage,
-                            "latency_ms": result.latency_ms,
-                            "request_sha256": result.request_sha256,
-                            "response_sha256": result.response_sha256,
-                            "attempts": result.attempts,
-                            "prompt_sha256": _SOLVER_PROMPT_SHA256,
-                            "schema_sha256": _PREDICTION_SCHEMA_SHA256,
-                        }
-                    )
-                except (
-                    ProviderError,
-                    json.JSONDecodeError,
-                    OSError,
-                    TimeoutError,
-                    TypeError,
-                    ValueError,
-                ) as exc:
-                    errors.append(
-                        {
-                            "key": key,
-                            "case_id": packet["case_id"],
-                            "condition": condition,
-                            "requested_model_id": model,
-                            "reported_model_id": None,
-                            "error": type(exc).__name__,
-                            "attempts": client.attempt_count - attempts_before,
-                            "usage": {},
-                        }
-                    )
-                completed.add(key)
-                attempted_keys.add(key)
-                if len(completed) % limits.checkpoint_every == 0:
-                    _write_json(checkpoint_path, {"completed": sorted(completed)})
-                    _write_json(output_dir / "solver_outputs.json", outputs)
-                    _write_json(output_dir / "error_ledger.json", errors)
+                pending.append((key, model, packet, client))
             if budget_exhausted:
                 break
         if budget_exhausted:
             break
+
+    def solve_one(
+        item: tuple[str, str, dict[str, Any], EvaluationClient]
+    ) -> tuple[str, dict[str, Any] | None, dict[str, Any] | None]:
+        key, model, packet, client = item
+        try:
+            result = client.complete(
+                model=model,
+                messages=[
+                    {"role": "system", "content": _SOLVER_SYSTEM},
+                    {"role": "user", "content": _json(packet)},
+                ],
+                response_schema=_SOLVER_RESPONSE_SCHEMA,
+                max_tokens=256,
+            )
+            prediction = _validate_solver_prediction(json.loads(result.content))
+            return key, {
+                "key": key,
+                "case_id": packet["case_id"],
+                "condition": packet["condition"],
+                "requested_model_id": result.requested_model_id,
+                "reported_model_id": result.reported_model_id,
+                "prediction": prediction,
+                "usage": result.usage,
+                "latency_ms": result.latency_ms,
+                "request_sha256": result.request_sha256,
+                "response_sha256": result.response_sha256,
+                "attempts": result.attempts,
+                "prompt_sha256": _SOLVER_PROMPT_SHA256,
+                "schema_sha256": _PREDICTION_SCHEMA_SHA256,
+            }, None
+        except (
+            ProviderError,
+            json.JSONDecodeError,
+            OSError,
+            TimeoutError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            return key, None, {
+                "key": key,
+                "case_id": packet["case_id"],
+                "condition": packet["condition"],
+                "requested_model_id": model,
+                "reported_model_id": None,
+                "error": type(exc).__name__,
+                "attempts": max(1, int(getattr(exc, "attempts", 1))),
+                "usage": {},
+            }
+
+    completed_since_checkpoint = 0
+    with ThreadPoolExecutor(max_workers=limits.max_concurrency) as executor:
+        futures = [executor.submit(solve_one, item) for item in pending]
+        results = [future.result() for future in as_completed(futures)]
+    for key, output, error in sorted(results, key=lambda item: item[0]):
+        if output is not None:
+            outputs.append(output)
+        if error is not None:
+            errors.append(error)
+        completed.add(key)
+        attempted_keys.add(key)
+        completed_since_checkpoint += 1
+        if completed_since_checkpoint >= limits.checkpoint_every:
+            _write_json(checkpoint_path, {"completed": sorted(completed)})
+            _write_json(output_dir / "solver_outputs.json", outputs)
+            _write_json(output_dir / "error_ledger.json", errors)
+            completed_since_checkpoint = 0
     _write_json(checkpoint_path, {"completed": sorted(completed)})
     _write_json(output_dir / "solver_outputs.json", outputs)
     _write_json(output_dir / "error_ledger.json", errors)
@@ -744,6 +757,7 @@ def run_local_e2e(
             else None
         ),
         "clinical_adjudication": "NOT_RUN",
+        "max_concurrency": limits.max_concurrency,
     }
     _write_json(
         output_dir / "protocol_manifest.json",
@@ -777,6 +791,7 @@ def run_local_e2e(
         "provider_approval_sha256": provider_approval_sha256,
         "router_calls_before_freeze": 0,
         "clinical_adjudication": "NOT_RUN",
+        "max_concurrency": limits.max_concurrency,
     }
     _write_json(output_dir / "run_manifest.json", manifest)
     _write_json(

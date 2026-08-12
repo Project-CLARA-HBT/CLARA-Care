@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
+from threading import Lock
+from time import sleep
 
 import pytest
 
@@ -57,6 +59,50 @@ class FailingTransport:
         del path, headers, payload, timeout
         self.calls += 1
         raise TimeoutError("synthetic provider timeout")
+
+
+class ConcurrentTrackingTransport:
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self.active = 0
+        self.max_active = 0
+        self.calls = 0
+
+    def __call__(self, path, headers, payload, timeout):
+        del path, headers, timeout
+        with self._lock:
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+        try:
+            sleep(0.01)
+            with self._lock:
+                self.calls += 1
+            return {
+                "model": REPORTED_MODEL_ID_BY_REQUESTED[payload["model"]],
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "lifecycle_state": "SATISFIED",
+                                    "evidence_state": "CLEAR",
+                                    "timeliness_state": "OVERDUE",
+                                    "escalation_state": "NO_ESCALATION",
+                                    "confidence": 0.5,
+                                }
+                            )
+                        }
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 8,
+                    "completion_tokens": 4,
+                    "total_tokens": 12,
+                },
+            }
+        finally:
+            with self._lock:
+                self.active -= 1
 
 
 def _bundle(patient_id: str, suffix: str) -> dict:
@@ -204,6 +250,36 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
     (tmp_path / "report.md").write_text("tampered after sealing\n")
     with pytest.raises(ValueError, match="artifact_checksum_mismatch"):
         validate_run(tmp_path)
+
+
+def test_solver_grid_honors_bounded_parallelism_and_seals_deterministically(
+    tmp_path,
+) -> None:
+    limits = RunLimits(
+        max_subjects=2,
+        max_cases=2,
+        max_requests=100,
+        max_concurrency=4,
+        checkpoint_every=5,
+        max_retries=0,
+    )
+    transport = ConcurrentTrackingTransport()
+    cutoff = datetime(2026, 2, 1, tzinfo=UTC)
+    manifest = run_local_e2e(
+        bundles=[(_bundle("parallel-a", "a"), "R4"), (_bundle("parallel-b", "b"), "R4")],
+        output_dir=tmp_path,
+        clients=_clients(transport, limits),
+        valid_cutoff=cutoff,
+        known_cutoff=cutoff,
+        limits=limits,
+    )
+    expected_cells = 2 * len(CONDITIONS) * 2
+    assert manifest["max_concurrency"] == 4
+    assert manifest["completed_cell_count"] == expected_cells
+    assert transport.calls == expected_cells
+    assert 2 <= transport.max_active <= 4
+    assert json.loads((tmp_path / "error_ledger.json").read_text()) == []
+    validate_run(tmp_path)
 
 
 def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(

@@ -8,6 +8,7 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from threading import Lock
 from typing import Any, Protocol
 
 GENERATOR_MODEL = "antigravity/gemini-3.6-flash-high"
@@ -20,7 +21,9 @@ REPORTED_MODEL_ID_BY_REQUESTED = {
 
 
 class ProviderError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, attempts: int = 0) -> None:
+        super().__init__(message)
+        self.attempts = attempts
 
 
 def expected_reported_model_id(requested_model_id: str) -> str:
@@ -130,6 +133,7 @@ class EvaluationClient:
         self._limits = limits or RunLimits()
         self._request_count = 0
         self._attempt_count = 0
+        self._counter_lock = Lock()
         self._sleeper = sleeper
 
     @property
@@ -138,11 +142,13 @@ class EvaluationClient:
 
     @property
     def request_count(self) -> int:
-        return self._request_count
+        with self._counter_lock:
+            return self._request_count
 
     @property
     def attempt_count(self) -> int:
-        return self._attempt_count
+        with self._counter_lock:
+            return self._attempt_count
 
     def complete(
         self,
@@ -178,13 +184,17 @@ class EvaluationClient:
                 "json_schema": response_schema,
             }
         request_raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-        self._request_count += 1
+        with self._counter_lock:
+            if self._request_count >= self._limits.max_requests:
+                raise ProviderError("request_limit_exceeded")
+            self._request_count += 1
         started = time.perf_counter()
         response = None
         attempts = 0
         for attempt in range(self._limits.max_retries + 1):
             attempts += 1
-            self._attempt_count += 1
+            with self._counter_lock:
+                self._attempt_count += 1
             try:
                 response = self._transport(
                     f"{self._base_url}/chat/completions",
@@ -198,23 +208,25 @@ class EvaluationClient:
                 break
             except (OSError, TimeoutError) as exc:
                 if attempt >= self._limits.max_retries:
-                    raise ProviderError("provider_transport_exhausted") from exc
+                    raise ProviderError(
+                        "provider_transport_exhausted", attempts=attempts
+                    ) from exc
                 self._sleeper(self._limits.retry_backoff_seconds * (2**attempt))
         if response is None:
-            raise ProviderError("provider_transport_exhausted")
+            raise ProviderError("provider_transport_exhausted", attempts=attempts)
         latency_ms = (time.perf_counter() - started) * 1000.0
         reported = response.get("model")
         if not isinstance(reported, str) or not reported_model_matches_requested(
             model, reported
         ):
-            raise ProviderError("model_substitution_detected")
+            raise ProviderError("model_substitution_detected", attempts=attempts)
         choices = response.get("choices")
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-            raise ProviderError("malformed_provider_response")
+            raise ProviderError("malformed_provider_response", attempts=attempts)
         message = choices[0].get("message")
         content = message.get("content") if isinstance(message, dict) else None
         if not isinstance(content, str) or not content.strip():
-            raise ProviderError("empty_provider_content")
+            raise ProviderError("empty_provider_content", attempts=attempts)
         usage_raw = response.get("usage")
         usage = usage_raw if isinstance(usage_raw, dict) else {}
         sanitized_usage: dict[str, int | float | None] = {
