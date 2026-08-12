@@ -13,6 +13,9 @@ from evaluation.commitloop.fixtures import (
     DeterministicFakeTransport,
     controlled_benchmark_bundles,
 )
+from evaluation.commitloop.production_context import (
+    compile_production_commitment_context,
+)
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
     REPORTED_MODEL_ID_BY_REQUESTED,
@@ -345,6 +348,36 @@ def test_glhs_bench_router_requires_exact_global_five_and_retry_policy(
                 max_retries=1,
             ),
         )
+
+
+def test_glhs_bench_router_artifact_with_deterministic_construction_validates(
+    tmp_path,
+) -> None:
+    cutoff = datetime(2026, 2, 1, tzinfo=UTC)
+    limits = RunLimits(
+        max_subjects=1,
+        max_cases=1,
+        max_requests=180,
+        max_concurrency=5,
+        max_retries=1,
+    )
+    manifest = run_local_e2e(
+        bundles=[(_bundle("strict-artifact", "artifact"), "R4")],
+        output_dir=tmp_path,
+        clients=_clients(ExactModelFakeTransport(), limits),
+        valid_cutoff=cutoff,
+        known_cutoff=cutoff,
+        limits=limits,
+        execution_mode="glhs_bench_router",
+        phase_a_freeze_sha="a" * 40,
+        provider_probe_sha256="b" * 64,
+        primary_model=REVIEWER_MODEL,
+        production_strict_context_builder=compile_production_commitment_context,
+        include_all_adversarial_variants=True,
+    )
+    assert manifest["case_count"] == 10
+    assert manifest["expected_cell_count"] == 180
+    validate_run(tmp_path)
 
 
 def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(

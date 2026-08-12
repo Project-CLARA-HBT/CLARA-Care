@@ -186,9 +186,13 @@ def validate_run(root: Path) -> None:
     ):
         raise ValueError("model_manifest_mapping_invalid")
     execution_mode = manifest.get("execution_mode", "phase_a_fake")
-    if execution_mode not in {"phase_a_fake", "phase_b_router"}:
+    if execution_mode not in {
+        "phase_a_fake",
+        "phase_b_router",
+        "glhs_bench_router",
+    }:
         raise ValueError("invalid_execution_mode")
-    if execution_mode == "phase_b_router":
+    if execution_mode in {"phase_b_router", "glhs_bench_router"}:
         if not re.fullmatch(
             r"(?:[0-9a-f]{40}|[0-9a-f]{64})",
             str(manifest.get("phase_a_freeze_sha") or ""),
@@ -235,11 +239,15 @@ def validate_run(root: Path) -> None:
         "expected_case_count"
     ) != manifest.get("source_case_count", manifest.get("case_count")):
         raise ValueError("generation_metrics_case_count_mismatch")
-    candidate_slots = generation_metrics.get("candidate_slot")
-    if not isinstance(candidate_slots, dict) or candidate_slots.get("denominator") != (
-        manifest.get("source_case_count", manifest.get("case_count", 0)) * 4
-    ):
-        raise ValueError("generation_metrics_candidate_denominator_mismatch")
+    if generation_metrics.get("mode") == "deterministic_construction_only":
+        if generation_metrics.get("model_review_request_count") != 0:
+            raise ValueError("deterministic_generation_request_count_invalid")
+    else:
+        candidate_slots = generation_metrics.get("candidate_slot")
+        if not isinstance(candidate_slots, dict) or candidate_slots.get(
+            "denominator"
+        ) != (manifest.get("source_case_count", manifest.get("case_count", 0)) * 4):
+            raise ValueError("generation_metrics_candidate_denominator_mismatch")
     variant_metrics = metrics.get("adversarial_variants")
     if not isinstance(variant_metrics, dict) or variant_metrics.get(
         "variant_case_count"
@@ -276,6 +284,7 @@ def validate_run(root: Path) -> None:
         item = boundary_metrics.get(boundary)
         if not isinstance(item, dict) or item.get("denominator") != expected:
             raise ValueError("boundary_metrics_denominator_mismatch")
+    solver_cell_keys: dict[Path, set[str]] = {}
     for output in outputs:
         _validate_solver_prediction(output.get("prediction"))
         if not reported_model_matches_requested(
@@ -295,19 +304,30 @@ def validate_run(root: Path) -> None:
             / str(output["requested_model_id"]).replace("/", "__")
             / f"{output['condition']}.jsonl"
         )
-        if not (root / output_path).is_file():
+        absolute_output_path = root / output_path
+        if not absolute_output_path.is_file():
             raise ValueError("missing_solver_cell_artifact")
-        cell_keys = {
-            str(json.loads(line)["key"])
-            for line in (root / output_path).read_text(encoding="utf-8").splitlines()
-            if line
-        }
+        cell_keys = solver_cell_keys.get(output_path)
+        if cell_keys is None:
+            cell_keys = {
+                str(json.loads(line)["key"])
+                for line in absolute_output_path.read_text(encoding="utf-8").splitlines()
+                if line
+            }
+            solver_cell_keys[output_path] = cell_keys
         if str(output["key"]) not in cell_keys:
             raise ValueError("solver_cell_artifact_mismatch")
     for condition in CONDITIONS:
         if not (root / "solver_packets" / f"{condition}.jsonl").is_file():
             raise ValueError("missing_solver_packet_artifact")
-    forbidden = (b"authorization", b"bearer ", b"router_api_key", b"patient/")
+    # "authorization" is a legitimate THSS pipeline stage.  Scan for an
+    # actual credential-header pattern instead of rejecting that safety term.
+    forbidden = (
+        b"authorization: bearer ",
+        b"bearer ",
+        b"router_api_key",
+        b"patient/",
+    )
     for path in root.rglob("*"):
         if path.is_file() and path.name != "checksums.sha256":
             lowered = path.read_bytes().lower()
