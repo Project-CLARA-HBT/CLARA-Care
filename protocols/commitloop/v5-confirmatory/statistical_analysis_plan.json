@@ -2,7 +2,7 @@
   "schema_version": "commitloop-sap.v3-draft",
   "status": "DRAFT_NOT_FROZEN",
   "primary_unit": "subject",
-  "primary_model": "antigravity/claude-sonnet-4-6",
+  "primary_model": "claude-sonnet-4-6",
   "primary_reference_condition": "glhs_hybrid_thss_strict",
   "primary_comparator_condition": "full_authorized_history",
   "primary_endpoint": "all_axes_exact_match",
@@ -40,8 +40,8 @@
     "glhs_no_bitemporal_knowledge_time"
   ],
   "secondary_models": [
-    "antigravity/gemini-3.6-flash-high",
-    "antigravity/gemini-3.1-pro"
+    "gemini-3.6-flash-high",
+    "gemini-3.1-pro"
   ],
   "secondary_inference": "label_secondary_or_exploratory_and_report_complete_multiplicity_metadata",
   "reporting": [

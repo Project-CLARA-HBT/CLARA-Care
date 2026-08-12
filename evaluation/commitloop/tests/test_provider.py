@@ -86,17 +86,17 @@ def test_substitution_and_undeclared_models_fail_closed() -> None:
         client.complete(model="other/model", messages=[{"role": "user", "content": "fixture"}])
 
 
-def test_requested_id_echo_is_not_accepted_as_the_declared_router_mapping() -> None:
+def test_canonical_requested_id_must_be_echoed_by_the_router() -> None:
     client = EvaluationClient(
         base_url="https://router.invalid/v1",
         api_key="fixture-secret-not-real",
         transport=FakeTransport(reported_model=GENERATOR_MODEL),
     )
-    with pytest.raises(ProviderError, match="model_substitution_detected"):
-        client.complete(
-            model=GENERATOR_MODEL,
-            messages=[{"role": "user", "content": "fixture"}],
-        )
+    result = client.complete(
+        model=GENERATOR_MODEL,
+        messages=[{"role": "user", "content": "fixture"}],
+    )
+    assert result.reported_model_id == GENERATOR_MODEL
 
 
 def test_request_shape_and_decoding_budget_fail_closed() -> None:

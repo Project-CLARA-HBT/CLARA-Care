@@ -13,15 +13,15 @@ from typing import Any, Protocol
 
 from evaluation.commitloop.http_transport import ProviderHttpError
 
-GENERATOR_MODEL = "antigravity/gemini-3.6-flash-high"
-REVIEWER_MODEL = "antigravity/claude-sonnet-4-6"
-PRO_MODEL = "antigravity/gemini-3.1-pro"
+GENERATOR_MODEL = "gemini-3.6-flash-high"
+REVIEWER_MODEL = "claude-sonnet-4-6"
+PRO_MODEL = "gemini-3.1-pro"
 ALLOWED_MODELS = frozenset({GENERATOR_MODEL, REVIEWER_MODEL, PRO_MODEL})
 CONFIRMATORY_MODELS = tuple(sorted(ALLOWED_MODELS))
 REPORTED_MODEL_ID_BY_REQUESTED = {
-    GENERATOR_MODEL: "gemini-3.6-flash-high",
-    REVIEWER_MODEL: "claude-sonnet-4-6",
-    PRO_MODEL: "gemini-3.1-pro",
+    GENERATOR_MODEL: GENERATOR_MODEL,
+    REVIEWER_MODEL: REVIEWER_MODEL,
+    PRO_MODEL: PRO_MODEL,
 }
 
 
@@ -34,9 +34,8 @@ class ProviderError(RuntimeError):
 def expected_reported_model_id(requested_model_id: str) -> str:
     """Return the only provider-reported ID accepted for a requested model.
 
-    The evaluation router's post-freeze diagnostic established these namespace-
-    stripped IDs.  Keeping the mapping closed and versioned prevents an
-    arbitrary fallback model from being accepted as a harmless alias.
+    Router IDs are canonical and must be echoed exactly. Keeping the mapping
+    closed and versioned prevents an arbitrary fallback from being accepted.
     """
 
     try:

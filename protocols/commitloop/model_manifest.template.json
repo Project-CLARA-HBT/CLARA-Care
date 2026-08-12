@@ -1,13 +1,13 @@
 {
   "schema_version": "commitloop-model-manifest.v1",
   "requested_models": [
-    "antigravity/gemini-3.6-flash-high",
-    "antigravity/claude-sonnet-4-6"
+    "gemini-3.6-flash-high",
+    "claude-sonnet-4-6"
   ],
   "reported_model_policy": "must_match_declared_mapping",
   "reported_model_mapping": {
-    "antigravity/gemini-3.6-flash-high": "gemini-3.6-flash-high",
-    "antigravity/claude-sonnet-4-6": "claude-sonnet-4-6"
+    "gemini-3.6-flash-high": "gemini-3.6-flash-high",
+    "claude-sonnet-4-6": "claude-sonnet-4-6"
   },
   "fallback": false,
   "temperature": 0,

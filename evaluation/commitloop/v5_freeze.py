@@ -275,10 +275,10 @@ def create_v5_freeze(
             if path.is_file()
         },
         "execution_contract": {
-            "primary_model": "antigravity/claude-sonnet-4-6",
+            "primary_model": "claude-sonnet-4-6",
             "secondary_models": [
-                "antigravity/gemini-3.1-pro",
-                "antigravity/gemini-3.6-flash-high",
+                "gemini-3.1-pro",
+                "gemini-3.6-flash-high",
             ],
             "primary_reference_condition": "glhs_hybrid_thss_strict",
             "primary_comparator_condition": "full_authorized_history",

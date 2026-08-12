@@ -17,7 +17,7 @@ def test_secret_scan_permits_blank_placeholders_and_nonsecret_identifiers(tmp_pa
     placeholder = tmp_path / "placeholder.env"
     placeholder.write_text(
         "ROUTER_API_KEY=\n"
-        "model=antigravity/gemini-3.6-flash-high\n"
+        "model=gemini-3.6-flash-high\n"
         "path=research/risk-deep-dive-and-mitigation.md\n"
     )
     assert scan_paths([placeholder]) == []
