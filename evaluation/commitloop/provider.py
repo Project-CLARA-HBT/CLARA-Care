@@ -21,7 +21,10 @@ CONFIRMATORY_MODELS = tuple(sorted(ALLOWED_MODELS))
 REPORTED_MODEL_ID_BY_REQUESTED = {
     GENERATOR_MODEL: GENERATOR_MODEL,
     REVIEWER_MODEL: REVIEWER_MODEL,
-    PRO_MODEL: PRO_MODEL,
+    # Router's capability probe resolves this requested ID to its canonical
+    # reported deployment name. This mapping is frozen and no fallback is
+    # accepted outside it.
+    PRO_MODEL: "gemini-pro-agent",
 }
 
 
