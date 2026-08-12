@@ -7,6 +7,8 @@ import pytest
 from evaluation.commitloop.http_transport import ProviderHttpError
 from evaluation.commitloop.provider import (
     GENERATOR_MODEL,
+    REPORTED_MODEL_ID_BY_REQUESTED,
+    REVIEWER_MODEL,
     EvaluationClient,
     ProviderError,
     RunLimits,
@@ -105,6 +107,10 @@ def test_canonical_requested_id_must_be_echoed_by_the_router() -> None:
         messages=[{"role": "user", "content": "fixture"}],
     )
     assert result.reported_model_id == GENERATOR_MODEL
+
+
+def test_router_claude_alias_is_explicitly_frozen() -> None:
+    assert REPORTED_MODEL_ID_BY_REQUESTED[REVIEWER_MODEL] == "claude-sonnet-4-6"
 
 
 def test_json_object_mode_accepts_a_fenced_object_but_not_an_array() -> None:

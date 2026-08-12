@@ -19,7 +19,8 @@ ALLOWED_MODELS = frozenset({GENERATOR_MODEL, REVIEWER_MODEL})
 CONFIRMATORY_MODELS = tuple(sorted(ALLOWED_MODELS))
 REPORTED_MODEL_ID_BY_REQUESTED = {
     GENERATOR_MODEL: GENERATOR_MODEL,
-    REVIEWER_MODEL: REVIEWER_MODEL,
+    # Router accepts the public dotted name but reports this deployment ID.
+    REVIEWER_MODEL: "claude-sonnet-4-6",
 }
 
 
