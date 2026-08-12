@@ -141,6 +141,19 @@ Neither source has a verified provider checksum or normalized evidence freeze.
 The separately supplied Diabetes-130 ZIP is byte-identical to the already
 frozen UCI archive and is not counted as independent evidence.
 
+The registered SynPUF OMOP 100K source passed local integrity over 17 gzip
+tables (914,865,701 bytes; inventory SHA-256
+`11fd10d71452d19a620cedb96fd043bf5ca58808ada676ebad1281b143e40f35`). Its
+streaming OMOP normalization emitted 39,573,534 records for 90,217 subjects;
+the deterministic gzip output is 3,267,982,283 bytes with SHA-256
+`69cef106cf1a64359111b910b16e39f815eb2e5fbd559eb7b3c833be5bc8cf3a`.
+The run measured 2,159.45 seconds wall-clock, 18,325.74 records/second and
+475,248 KiB peak RSS on this host. The tracked normalization aggregate is
+`datasets/manifests/cms_de_synpuf_omop_100k.normalization.json`, payload
+SHA-256 `40c2c0a2087918430edd1800de41acc02238a938a9d6ac338b4fcbdc29eba770`.
+The source is synthetic and has no provider-pinned checksum; these are local
+adapter/reproducibility metrics only.
+
 Structural regression only:
 
 ```bash

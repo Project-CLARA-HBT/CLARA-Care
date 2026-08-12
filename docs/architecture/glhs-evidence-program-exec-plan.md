@@ -192,6 +192,13 @@ central directory contains 24,488 files, but full source freeze and multimodal
 normalization remain pending. A newly supplied Diabetes-130 archive is
 byte-identical to the already used UCI ZIP and is treated only as a duplicate.
 
+The SynPUF OMOP 100K source was then frozen and normalized through the new
+streaming adapter. Seventeen gzip tables (914,865,701 source bytes) produced
+39,573,534 common records over 90,217 source subjects. Valid source dates or
+datetimes were preserved, knowledge time stayed unknown, and no timestamp was
+estimated. The normalized output and aggregate freeze are tracked by hash;
+the evidence remains synthetic source/adapter execution, not clinical truth.
+
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
 content copy apart from the final newline. The operator-provided root copy
