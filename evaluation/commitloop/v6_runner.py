@@ -43,9 +43,32 @@ def run_v6_development_partition(
 
     if split not in {"development", "validation"}:
         raise ValueError("v6_nonfinal_split_required")
-    bundles, splits = bundles_for_split(rows, split=split)
-    if limits.max_subjects != len(bundles) or limits.max_cases != len(bundles):
+    unverified_bundles, _unverified_splits = bundles_for_split(rows, split=split)
+    if (
+        limits.max_subjects != len(unverified_bundles)
+        or limits.max_cases != len(unverified_bundles)
+    ):
         raise ValueError("v6_partition_limits_must_match_split")
+    freeze = verify_v6_freeze(freeze_path=freeze_path, repository_root=repository_root)
+    frozen_cohort_path = freeze_path.parent / "cohort" / "cohort.jsonl"
+    frozen_manifest_path = freeze_path.parent / "cohort" / "cohort_manifest.json"
+    if (
+        not frozen_cohort_path.is_file()
+        or not frozen_manifest_path.is_file()
+        or hashlib.sha256(frozen_cohort_path.read_bytes()).hexdigest()
+        != freeze.get("cohort_sha256")
+        or hashlib.sha256(frozen_manifest_path.read_bytes()).hexdigest()
+        != freeze.get("cohort_manifest_sha256")
+    ):
+        raise ValueError("v6_frozen_cohort_artifact_integrity_invalid")
+    frozen_rows = [
+        json.loads(line)
+        for line in frozen_cohort_path.read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+    if rows != frozen_rows:
+        raise ValueError("v6_cohort_rows_drift_from_freeze")
+    bundles, splits = bundles_for_split(frozen_rows, split=split)
     expected_cases = expected_solver_case_count(
         bundles=bundles,
         valid_cutoff=VALID_CUTOFF,
@@ -56,7 +79,6 @@ def run_v6_development_partition(
     expected_requests = expected_cases * len(CONDITIONS) * len(clients)
     if limits.max_requests < expected_requests:
         raise ValueError("v6_partition_request_budget_insufficient")
-    freeze = verify_v6_freeze(freeze_path=freeze_path, repository_root=repository_root)
     execution_contract = freeze.get("execution_contract")
     if (
         not isinstance(execution_contract, dict)

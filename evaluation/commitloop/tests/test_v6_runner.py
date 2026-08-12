@@ -52,3 +52,28 @@ def test_v6_runner_refuses_sealed_final_and_wrong_partition_limits(
             repository_root=tmp_path,
             limits=limits,
         )
+
+
+def test_v6_runner_rejects_rows_that_do_not_match_the_frozen_cohort(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rows, _ = build_cohort()
+    limits = RunLimits(max_subjects=96, max_cases=96, max_requests=9_504, max_concurrency=5)
+    monkeypatch.setattr(
+        "evaluation.commitloop.v6_runner.verify_v6_freeze",
+        lambda **_kwargs: {
+            "cohort_sha256": "0" * 64,
+            "cohort_manifest_sha256": "0" * 64,
+        },
+    )
+    with pytest.raises(ValueError, match="v6_frozen_cohort_artifact_integrity_invalid"):
+        run_v6_development_partition(
+            rows=rows,
+            split="development",
+            output_dir=tmp_path / "output",
+            clients=_clients(limits),
+            freeze_path=tmp_path / "freeze.json",
+            provider_probe_path=tmp_path / "probe.json",
+            repository_root=tmp_path,
+            limits=limits,
+        )
