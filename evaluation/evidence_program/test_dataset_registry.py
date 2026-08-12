@@ -21,6 +21,7 @@ from datasets.adapters.eicu_tabular import (
     PATIENT_REQUIRED_FIELDS,
     TABLES,
 )
+from datasets.adapters.omop_cdm import TABLES as OMOP_TABLES
 from scripts.data import _registry
 from scripts.data._registry import DatasetRegistryError, canonical_json, load_registry
 from scripts.data.fetch import fetch_dataset
@@ -466,6 +467,71 @@ def test_diabetes_normalization_preserves_unknown_time_and_source_row(
     )
     assert manifest["metrics"]["source_row_count"] == 1
     assert manifest["metrics"]["duplicate_encounter_id_count"] == 0
+
+
+def test_omop_normalization_minimizes_demographics_and_preserves_source_time(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    source = tmp_path / "omop"
+    source.mkdir()
+    person_payload = (
+        "person_id,person_source_value,gender_source_value\n"
+        "subject-1,private-source-id,Synthetic Name\n"
+    )
+    with gzip.open(source / "person.csv.gz", "wt", encoding="utf-8") as stream:
+        stream.write(person_payload)
+    condition = next(item for item in OMOP_TABLES if item.name == "condition_occurrence")
+    row = {
+        "condition_occurrence_id": "condition-1",
+        "person_id": "subject-1",
+        "visit_occurrence_id": "visit-1",
+        "condition_start_date": "2020-01-02",
+        "condition_start_datetime": "",
+        "condition_end_date": "2020-01-03",
+        "condition_end_datetime": "",
+        **{field: "synthetic" for field in condition.value_fields},
+    }
+    row["condition_concept_id"] = "0"
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=list(row))
+    writer.writeheader()
+    writer.writerow(row)
+    with gzip.open(source / "condition_occurrence.csv.gz", "wt", encoding="utf-8") as stream:
+        stream.write(output.getvalue())
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(
+            adapter="omop_cdm",
+            schema="OMOP CDM",
+            raw_path="omop",
+            local_candidates=[],
+            expected_files=["person.csv.gz", "condition_occurrence.csv.gz"],
+        ),
+    )
+
+    normalized = normalize_dataset(
+        "fixture_data", output=tmp_path / "normalized", registry_path=registry_path
+    )
+    with gzip.open(normalized / "records.jsonl.gz", "rt", encoding="utf-8") as stream:
+        rendered = stream.read()
+    records = [json.loads(line) for line in rendered.splitlines()]
+
+    assert len(records) == 1
+    assert records[0]["source_subject"] == "subject-1"
+    assert records[0]["valid_time"] == "2020-01-02"
+    assert records[0]["valid_time_field"] == "condition_start_date"
+    assert records[0]["normalized_value"]["valid_end"] == "2020-01-03"
+    assert records[0]["knowledge_time"] is None
+    assert records[0]["estimated_time"] is False
+    assert "unmapped_concept_id" in records[0]["uncertainty"]
+    assert "private-source-id" not in rendered
+    assert "Synthetic Name" not in rendered
+    manifest = json.loads(
+        (normalized / "normalization_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["metrics"]["record_count"] == 1
+    assert "person" in manifest["metrics"]["omitted_reference_or_derived_tables"]
 
 
 def _gzip_csv(row: dict[str, str]) -> bytes:

@@ -30,6 +30,8 @@ from datasets.adapters.nested_fhir_bundle_tar import NestedFhirBundleError
 from datasets.adapters.nested_fhir_bundle_tar import (
     normalize_archive as normalize_nested_fhir,
 )
+from datasets.adapters.omop_cdm import OmopCdmError
+from datasets.adapters.omop_cdm import normalize_directory as normalize_omop
 from scripts.data._registry import (
     DatasetRegistryError,
     get_dataset,
@@ -55,6 +57,7 @@ def normalize_dataset(
         "eicu_tabular",
         "fhir_ndjson_archive",
         "nested_fhir_bundle_tar",
+        "omop_cdm",
     }:
         raise DatasetRegistryError("ADAPTER_NOT_IMPLEMENTED")
     source = resolve_local_source(dataset)
@@ -70,13 +73,16 @@ def normalize_dataset(
         started = time.perf_counter()
         usage_before = resource.getrusage(resource.RUSAGE_SELF)
         records = temporary / (
-            "records.jsonl.gz" if adapter == "nested_fhir_bundle_tar" else "records.jsonl"
+            "records.jsonl.gz"
+            if adapter in {"nested_fhir_bundle_tar", "omop_cdm"}
+            else "records.jsonl"
         )
         normalizers = {
             "diabetes_130_tabular": normalize_diabetes_130,
             "eicu_tabular": normalize_eicu,
             "fhir_ndjson_archive": normalize_fhir,
             "nested_fhir_bundle_tar": normalize_nested_fhir,
+            "omop_cdm": normalize_omop,
         }
         normalize = normalizers[str(adapter)]
         metrics = normalize(
@@ -154,6 +160,7 @@ def main() -> int:
         EicuAdapterError,
         FhirArchiveError,
         NestedFhirBundleError,
+        OmopCdmError,
         OSError,
         ValueError,
     ) as exc:
