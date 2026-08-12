@@ -239,3 +239,15 @@ def test_common_offset_result_freeze_rejects_tampered_aggregate(tmp_path: Path) 
 
     with pytest.raises(ValueError, match="payload_hash_mismatch"):
         verify_freeze(destination, verify_local_artifact=False)
+
+
+def test_repository_common_offset_result_freeze_metadata_is_valid() -> None:
+    root = Path(__file__).resolve().parents[2]
+    result = verify_freeze(
+        root / "datasets/manifests/eicu_crd_demo_2_0_1.source-offset-glhs-result.json",
+        verify_local_artifact=False,
+    )
+
+    assert result["status"] == "VALID"
+    assert result["tasks"] == 59_513
+    assert result["subjects"] == 1_413

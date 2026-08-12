@@ -139,21 +139,26 @@ The normalized aggregate was then frozen from clean SHA
 `cd973c83f93e31ed472abaf16d3e46bd7a19ae34`. Its verifier rehashed the complete
 gitignored record file, checked 540,237 physical lines against the recorded
 count, and bound it to the provider-verified source manifest. Payload SHA-256 is
-`44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850`;
-the remaining eICU gap is the frozen source-derived task execution.
+`44f0e9253599d07fcf10f741c8d1f4db2325c3827b6a97eed9bae17cf5f56850`.
 
 The eICU task preparer is implemented with a deterministic subject split before
 task selection, same-stay/same-slot offset comparisons, explicit tie/missing
 exclusions, no knowledge-time imputation, and a strong valid-offset parity
-reference. Its outputs remain local until the code is committed and the cohort
-is frozen on that clean revision; only its aggregate manifest is tracked.
+reference. Task rows remain local and only their aggregate/hash manifest is
+tracked.
 
 The clean-revision run froze 59,513 tasks with 343,537 events across 1,413
 represented evaluation subjects. The validator rehashed all task rows, enforced
 unique latest-offset targets, verified upstream source/normalization bindings,
 and rejected raw identity fields. The task SHA-256 is
 `0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4`.
-No comparator result is claimed yet; production-GLHS execution remains pending.
+The subsequently frozen execution processed every task unchanged. Production
+GLHS reconstruction and the strong valid-offset parity reference each selected
+59,513/59,513 targets; input order selected 17,160/59,513, with zero missing
+outputs and an empty error taxonomy. The tracked sanitized result payload is
+`31a8cd13a2697e403bcb30c92c37ed5186049b7b854ef3caa139c5e7a21eecf1`.
+This is source-offset structural mechanics through in-process SQLite production
+primitives, not clinical correctness or deployment-boundary performance.
 
 The source-offset runner is now frozen against implementation SHA
 `87249453ae26871c99ddeac06927b3b32599d67d`, the exact cohort/task hashes, the
@@ -163,8 +168,9 @@ path. Protocol payload SHA-256 is
 `3a29d0c02357ae2cc708284f7e0aff2f76474489ae73c25f1dd0111674beea65`.
 It declares SQLite/in-process scope, a source-subject analysis unit, missing or
 invalid output as failure, and unavailable absolute/knowledge time without
-estimation. Full execution remains `NOT_RUN`; no outcome is inferred from the
-passing fixture tests.
+estimation. The full execution is complete and its local ignored raw outputs
+revalidate against their tracked aggregate/hash freeze. Provider calls remained
+zero.
 
 SyntheticMass v1 full nested verification passed for the local
 30,878,003,109-byte archive. Two complete traversals each found 11 nested
@@ -175,6 +181,16 @@ The adapter minimizes away Patient demographics and writes deterministic gzip
 common records, but full normalization and metrics remain pending. The provider
 did not supply a pinned checksum through this workflow, so this is frozen local
 integrity for a synthetic archive, not canonical authenticity or validation.
+
+The newly supplied SynPUF OMOP directories are registered as distinct 100K and
+approximately 2.3M distributions rather than pooled. The 100K gzip streams
+pass a local codec check. The larger directory contains one corrupt
+temporary-suffix LZO object, so the repository verifier fails closed before a
+29GB hash pass; it is not frozen or called complete. Synthea Coherent is also
+registered from its bundled CC BY 4.0 README and local ZIP identity. Its
+central directory contains 24,488 files, but full source freeze and multimodal
+normalization remain pending. A newly supplied Diabetes-130 archive is
+byte-identical to the already used UCI ZIP and is treated only as a duplicate.
 
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
@@ -214,3 +230,5 @@ remains untracked and untouched.
 | 2026-08-11 | Version snapshot fingerprints as `sha-256` plus `clara.canonical-json.v1`, retaining a legacy validator. | Deterministic hashing needs an explicit encoding contract; an unkeyed digest is only a trusted-store consistency check. |
 | 2026-08-11 | Keep PostgreSQL atomicity evidence `NOT_RUN` on this host. | The implementation and opt-in isolated-schema test exist, but no acknowledged PostgreSQL URL or Docker runtime is available. |
 | 2026-08-12 | Bind dataset freezes to both the registry file and the selected entry. | Adding an unrelated dataset must not invalidate immutable evidence; legacy manifests are verified from their exact historical Git registry, while any change to their own entry still fails closed. |
+| 2026-08-12 | Keep each SynPUF OMOP distribution separate and reject the corrupt temporary LZO object. | A 100K development sample cannot stand in for the full distribution, and local presence cannot override failed codec integrity. |
+| 2026-08-12 | Freeze only sanitized aggregate eICU results while hashing ignored raw outputs. | Subject/task rows remain local; the tracked evidence is independently revalidated without exposing identifiers or widening the clinical claim. |

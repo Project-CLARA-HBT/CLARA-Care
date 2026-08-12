@@ -75,6 +75,17 @@ services/api/.venv/bin/python -m evaluation.external_validation.validate_common_
   --tasks datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/tasks.jsonl \
   --cohort-manifest datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/cohort_manifest.json \
   --protocol evaluation/external_validation/protocols/eicu-demo-source-offset-v1.json
+
+services/api/.venv/bin/python -m evaluation.external_validation.freeze_common_offset_glhs_result \
+  --output artifacts/evidence-program/eicu-demo-source-offset-glhs-v1 \
+  --tasks datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/tasks.jsonl \
+  --cohort-manifest datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/cohort_manifest.json \
+  --protocol evaluation/external_validation/protocols/eicu-demo-source-offset-v1.json \
+  --destination datasets/manifests/eicu_crd_demo_2_0_1.source-offset-glhs-result.json
+
+services/api/.venv/bin/python -m evaluation.external_validation.freeze_common_offset_glhs_result \
+  --verify \
+  --destination datasets/manifests/eicu_crd_demo_2_0_1.source-offset-glhs-result.json
 ```
 
 This invokes `record_evidence`, `propose_assertion`, `apply_transition`, and
@@ -82,3 +93,9 @@ This invokes `record_evidence`, `propose_assertion`, `apply_transition`, and
 database. It is an in-process engineering execution, not an HTTP/PostgreSQL or
 clinical-validation claim. The strong valid-offset condition is a mandatory
 parity reference; missing or invalid outputs are failures.
+
+The tracked result freeze contains aggregates and hashes only; it contains no
+source subject token or task row. `--verify` rehashes and fully rescans the
+local ignored artifact. `--verify --metadata-only` verifies the self-hash and
+source Git commit when the local artifact is unavailable, but is not a
+substitute for full artifact validation.

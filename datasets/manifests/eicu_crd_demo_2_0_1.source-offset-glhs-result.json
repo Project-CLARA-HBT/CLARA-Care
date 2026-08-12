@@ -1,0 +1,198 @@
+{
+  "artifact_files": [
+    {
+      "bytes": 421,
+      "path": "checksums.sha256",
+      "sha256": "a3d647880ebf56ad7dc472d611fe76caf1efce7744b1921d9000d16a454bac1e"
+    },
+    {
+      "bytes": 882,
+      "path": "domain_results.csv",
+      "sha256": "5920495b1c4bcc950fdf8e5507edc89fba0cec11802895ba79f3ef6fd7175fa2"
+    },
+    {
+      "bytes": 370,
+      "path": "report.md",
+      "sha256": "ca0a6a629b73bdfd8c9c424b981068c7fd432d89d791ad9c315bce3910b3e5a7"
+    },
+    {
+      "bytes": 2999,
+      "path": "run_manifest.json",
+      "sha256": "7159f6a745bcf29494eb114885a970cf7a7e755352796aae14e8fa4e4e7c3cf9"
+    },
+    {
+      "bytes": 341306,
+      "path": "subject_results.csv",
+      "sha256": "29d3f257abd6fd7a95cfecc8d1ec9023dd69e586d365cc75b00a0e8b40f587b5"
+    },
+    {
+      "bytes": 3523040,
+      "path": "system_outputs.jsonl.gz",
+      "sha256": "d9de3fe1bb792106f9cacb5c11003aa4cbeab2b642b2daac30cb323b2a6fc542"
+    }
+  ],
+  "artifact_root_local_only": "artifacts/evidence-program/eicu-demo-source-offset-glhs-v1",
+  "claim_limit": "source_offset_state_reconstruction_mechanics_not_clinical_correctness",
+  "clinical_oracle": false,
+  "cohort_manifest_path_local_only": "datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/cohort_manifest.json",
+  "dataset_id": "eicu_crd_demo_2_0_1",
+  "domain_results": [
+    {
+      "correct": 73,
+      "domain": "allergies_adverse_reactions",
+      "rate": 0.33796296296296297,
+      "system": "input_order_baseline",
+      "total": 216
+    },
+    {
+      "correct": 216,
+      "domain": "allergies_adverse_reactions",
+      "rate": 1.0,
+      "system": "production_glhs_reconstruction",
+      "total": 216
+    },
+    {
+      "correct": 216,
+      "domain": "allergies_adverse_reactions",
+      "rate": 1.0,
+      "system": "valid_offset_resolver_strong_parity_reference",
+      "total": 216
+    },
+    {
+      "correct": 1167,
+      "domain": "diagnoses_problems",
+      "rate": 0.3120320855614973,
+      "system": "input_order_baseline",
+      "total": 3740
+    },
+    {
+      "correct": 3740,
+      "domain": "diagnoses_problems",
+      "rate": 1.0,
+      "system": "production_glhs_reconstruction",
+      "total": 3740
+    },
+    {
+      "correct": 3740,
+      "domain": "diagnoses_problems",
+      "rate": 1.0,
+      "system": "valid_offset_resolver_strong_parity_reference",
+      "total": 3740
+    },
+    {
+      "correct": 2298,
+      "domain": "medications",
+      "rate": 0.39101582440020416,
+      "system": "input_order_baseline",
+      "total": 5877
+    },
+    {
+      "correct": 5877,
+      "domain": "medications",
+      "rate": 1.0,
+      "system": "production_glhs_reconstruction",
+      "total": 5877
+    },
+    {
+      "correct": 5877,
+      "domain": "medications",
+      "rate": 1.0,
+      "system": "valid_offset_resolver_strong_parity_reference",
+      "total": 5877
+    },
+    {
+      "correct": 13622,
+      "domain": "observations",
+      "rate": 0.274194847020934,
+      "system": "input_order_baseline",
+      "total": 49680
+    },
+    {
+      "correct": 49680,
+      "domain": "observations",
+      "rate": 1.0,
+      "system": "production_glhs_reconstruction",
+      "total": 49680
+    },
+    {
+      "correct": 49680,
+      "domain": "observations",
+      "rate": 1.0,
+      "system": "valid_offset_resolver_strong_parity_reference",
+      "total": 49680
+    }
+  ],
+  "environment": {
+    "cpu_count": 8,
+    "platform": "Linux-6.19.10-300.fc44.x86_64-x86_64-with-glibc2.43",
+    "python": "3.11.15",
+    "sqlalchemy": "2.0.51"
+  },
+  "error_taxonomy": {},
+  "execution_boundary": "in_process_api_owned_service_layer_sqlite",
+  "freeze_id": "eicu-demo-source-offset-glhs-v1",
+  "freeze_payload_sha256": "31a8cd13a2697e403bcb30c92c37ed5186049b7b854ef3caa139c5e7a21eecf1",
+  "freezer_sha256": "9cbffd9a365af26758fdc993649fd66f2b0a64330af4f44809b6b969a2f1c578",
+  "frozen_at_utc": "2026-08-12T01:27:43.776685+00:00",
+  "headline_eligible": false,
+  "implementation_git_sha": "87249453ae26871c99ddeac06927b3b32599d67d",
+  "operational": {
+    "events_per_second": 62.01687230829942,
+    "peak_rss_kib": 161204,
+    "process_system_seconds": 476.13198400000005,
+    "process_user_seconds": 2268.986646,
+    "scratch_database_bytes_before_removal": 1332858880,
+    "tasks_per_second": 10.743559272171042,
+    "wall_clock_seconds": 5539.411892496006
+  },
+  "postgresql_or_http_measured": false,
+  "primary_result": {
+    "correct": 59513,
+    "missing": 0,
+    "pass": true,
+    "total": 59513
+  },
+  "protocol_path": "evaluation/external_validation/protocols/eicu-demo-source-offset-v1.json",
+  "protocol_payload_sha256": "3a29d0c02357ae2cc708284f7e0aff2f76474489ae73c25f1dd0111674beea65",
+  "provider_calls": 0,
+  "row_counts": {
+    "assertions": 343537,
+    "evidence": 343537,
+    "state_versions": 343537,
+    "transitions": 343537
+  },
+  "run_manifest_payload_sha256": "f13ecabfce3faaa6fa4a7e0922ddabf99660327a16c17b627054d21c3593a9aa",
+  "schema_version": "clara-common-offset-glhs-result-freeze.v1",
+  "source_git_sha": "23f30df8dd9d46b54297932db266ad8ce8c479e4",
+  "source_git_tree": "15aa66b8fda48090e5ef1dd34daf6dc4541eefd0",
+  "status": "FROZEN_VALID_SOURCE_DERIVED_EXECUTION",
+  "system_results": {
+    "input_order_baseline": {
+      "correct": 17160,
+      "missing": 0,
+      "total": 59513
+    },
+    "production_glhs_reconstruction": {
+      "correct": 59513,
+      "missing": 0,
+      "total": 59513
+    },
+    "valid_offset_resolver_strong_parity_reference": {
+      "correct": 59513,
+      "missing": 0,
+      "total": 59513
+    }
+  },
+  "tasks_path_local_only": "datasets/normalized/eicu_crd_demo_2_0_1/source-derived-v1/tasks.jsonl",
+  "validation": {
+    "claim_limit": "source_offset_state_reconstruction_mechanics_not_clinical_correctness",
+    "events": 343537,
+    "input_order_correct": 17160,
+    "production_glhs_correct": 59513,
+    "schema_version": "clara-common-offset-glhs-validation.v1",
+    "status": "VALID",
+    "strong_reference_correct": 59513,
+    "subjects": 1413,
+    "tasks": 59513
+  }
+}

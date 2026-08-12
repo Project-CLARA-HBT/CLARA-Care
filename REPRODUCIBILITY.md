@@ -118,6 +118,29 @@ is `0b125b72c9327450ad21b199b7e48482d918a1d06a1ec7a962edf6c32ddc31e4`.
 The task rows remain gitignored and are regenerated from the frozen normalized
 output before validation.
 
+The frozen production-primitive run processed all 59,513 tasks and 343,537
+events from 1,413 source subjects. Production GLHS reconstruction and the
+strong valid-offset reference each selected 59,513/59,513 source-derived
+targets; the input-order diagnostic selected 17,160/59,513. Missing outputs
+and errors were zero. The tracked sanitized result is
+`datasets/manifests/eicu_crd_demo_2_0_1.source-offset-glhs-result.json`, with
+payload SHA-256
+`31a8cd13a2697e403bcb30c92c37ed5186049b7b854ef3caa139c5e7a21eecf1`.
+It binds the ignored raw/subject aggregates by SHA-256 and revalidates them
+network-free. This establishes source-offset state-reconstruction mechanics on
+SQLite/in-process production primitives, not clinical correctness or
+HTTP/PostgreSQL performance.
+
+New operator-supplied sources are isolated under ignored dataset roots. The
+SynPUF OMOP 100K sample is registered separately from the approximately 2.3M
+distribution. The latter currently fails closed because an extra
+temporary-suffix LZO object is corrupt. Synthea Coherent is registered from its
+bundled CC BY 4.0 README; its 9,228,105,262-byte ZIP has local SHA-256
+`4e94373bade1106b5482e89274af7f4d59f8c9497dc899b579cfec445035c036`.
+Neither source has a verified provider checksum or normalized evidence freeze.
+The separately supplied Diabetes-130 ZIP is byte-identical to the already
+frozen UCI archive and is not counted as independent evidence.
+
 Structural regression only:
 
 ```bash

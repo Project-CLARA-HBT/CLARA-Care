@@ -7,13 +7,15 @@ mean clinical validity. External evidence remains fail-closed.
 | Requirement | Status | Implementation | Tests | Artifact | Blocker |
 | --- | --- | --- | --- | --- | --- |
 | Repository/safety constraints | COMPLETE | API-owned GST/THSS boundary; safety gates unchanged | Focused API suites | This register | None |
-| Dataset registry/data isolation | IN_PROGRESS | Registry plus gitignored raw/normalized roots; fail-closed list/inspect/verify/fetch/freeze tools | Dataset-tool tests | `datasets/registry.yaml` | Canonical checksums/acquisition timestamps remain missing for most sources |
-| Common longitudinal evidence interface | IN_PROGRESS | Noncanonical common record plus FHIR-NDJSON, Diabetes, eICU-offset and nested-FHIR adapters | Provenance/time/missingness/minimization adapter tests | Local gitignored normalized outputs | OMOP and MEPS adapters pending; full SyntheticMass execution pending |
+| Dataset registry/data isolation | IN_PROGRESS | Registry plus gitignored raw/normalized/operator roots; fail-closed list/inspect/verify/fetch/freeze tools and rejected-file globs | Dataset-tool tests | `datasets/registry.yaml` | Canonical checksums/acquisition timestamps remain missing for most sources |
+| Common longitudinal evidence interface | IN_PROGRESS | Noncanonical common record plus FHIR-NDJSON, Diabetes, eICU-offset and nested-FHIR adapters | Provenance/time/missingness/minimization adapter tests | Local gitignored normalized outputs | OMOP, Coherent and MEPS adapters pending; full SyntheticMass execution pending |
 | SyntheticMass FHIR v1 local source | PARTIAL | Nested-tar FHIR-bundle adapter and nested-integrity verifier; outer archive is 30,878,003,109 bytes | Two full nested passes found 11 nested archives, 1,307,771 FHIR bundles, 2,711,037 nested members and zero unsafe members | Clean-SHA source manifest payload `384e9fc5669aceea0070cb6a11ee621f9e63f298a87893312bffe4073c8443cd`; root operator archive remains untracked | Provider checksum not supplied; full compressed normalization/metrics and clean-SHA normalization freeze pending |
 | Synthea FHIR STU3 May 2017 local source | IN_PROGRESS | Registered local candidate, 22,339,056,743 bytes | Presence inspection only | Root operator archive, untracked | Full hash/archive verification and normalization pending |
 | MIMIC-IV Demo FHIR adapter execution | PARTIAL | Streaming ZIP/NDJSON/GZIP adapter emitted 927,109 records for 100 subjects without estimated time | Local integrity, frozen-manifest verifier and six data-tool/adapter tests | Tracked clean-SHA manifest; gitignored normalized output; source SHA-256 `372997394c1f94fe7a8a1d7a064b5dc75e3e5db6d29a6283515d6f330f206542` | Provider-supplied canonical checksum and source-derived evaluation rerun pending; non-headline demo only |
 | Diabetes-130 external real-data adapter execution | PARTIAL | Streaming ZIP/CSV adapter emitted 2,768,244 records from 101,766 encounters and 71,518 subjects; all unavailable temporal coordinates remain unknown | Archive-member verification, frozen-manifest verification and adapter provenance/time tests | License record, clean-SHA source manifest and gitignored normalized output; source SHA-256 `f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a` | Cohort/task freeze and source-derived structural evaluation pending; not clinical gold |
-| eICU Demo acquisition/adapter | PARTIAL | Resumable atomic fetch, provider-SHA256 verifier and offset-preserving selected-table adapter emitted 540,237 records from 1,841 subjects/2,520 stays; frozen runner reuses four production GLHS primitives | All 33 packaged checksums plus resume/partial/provider-tamper/adapter/freeze/task/runner/tamper validators | Clean-SHA source/normalization manifests, frozen 59,513-task cohort and protocol payload `3a29d0c0...`; raw tasks/output remain gitignored | Execute the frozen strong-parity/input-order/production-GLHS run unchanged; no clinical oracle |
+| eICU Demo acquisition/adapter | COMPLETE | Resumable atomic fetch, provider-SHA256 verifier and offset-preserving adapter; frozen runner reused four production GLHS primitives over 343,537 events | All 33 packaged checksums plus resume/partial/provider-tamper/adapter/freeze/task/runner/result-freeze/tamper validators | Source/normalization/task/protocol freezes plus sanitized result payload `31a8cd13...`; raw tasks/output remain gitignored | None for source-offset structural mechanics; still no clinical oracle or HTTP/PostgreSQL performance claim |
+| CMS DE-SynPUF OMOP local sources | PARTIAL | Full and 100K entries are distinct; rejected-file glob fails before hashing a known corrupt temporary object | Registry and fail-closed rejected-file test; 100K gzip streams checked locally | Local operator sources ignored; source note tracked | Full distribution has a corrupt extra LZO object; conversion lineage, canonical inventory/checksum and OMOP adapter unresolved |
+| Synthea Coherent local source | PARTIAL | Archive and bundled license registered; multimodal adapter remains unavailable | ZIP central-directory inventory only | Local ZIP SHA-256 `4e94373b...`; source/license note tracked | Provider checksum, full CRC/hash freeze, modality linkage validation and adapter pending |
 | Synthea OMOP 2.8M source | NOT_RUN | Fail-closed registry entry | `NOT_AVAILABLE` path tested | None | Canonical distribution and local archive unresolved |
 | Tracked primary master specification | COMPLETE | Exact-content tracked copy at the declared primary path | Byte/hash comparison plus docs check | `docs/architecture/glhs-evidence-hardening-master-spec.md` | None |
 | Active naming is target agnostic | PARTIAL | Legacy evaluators archived; active naming guard exists | `evaluation/property_assurance/test_naming_migration.py` | Historical archives | Existing active structural documentation still contains legacy protocol IDs; guard expansion pending |
@@ -125,6 +127,22 @@ mean clinical validity. External evidence remains fail-closed.
   aggregate manifest payload SHA-256 is
   `b4cd7630dcd64a8b02a08e32a2c54856c8e7e111d16074c753bfa3a7d5f21c4d`.
   Targets are source-offset-derived, not clinician-adjudicated.
+- The unchanged frozen eICU run completed all 59,513 tasks over 343,537 events
+  and 1,413 source subjects. Production GLHS reconstruction and the strong
+  valid-offset reference each selected 59,513/59,513 source-derived targets;
+  input order selected 17,160/59,513. Missing outputs and errors were zero.
+  The sanitized tracked result payload SHA-256 is
+  `31a8cd13a2697e403bcb30c92c37ed5186049b7b854ef3caa139c5e7a21eecf1`;
+  its full local-artifact and metadata-only validators pass. Runtime was one
+  local-host in-process SQLite measurement (5,539.41 seconds), not an
+  HTTP/PostgreSQL or clinical-performance claim.
+- Operator-supplied SynPUF OMOP sources are now isolated and registered by
+  distribution. The 100K gzip streams pass local codec checks. The 2.3M
+  directory contains a corrupt temporary-suffix LZO object and is rejected
+  before hashing; no deletion or repair was performed. Synthea Coherent's
+  bundled README declares CC BY 4.0 and 1,278 longitudinal FHIR bundles; its
+  ZIP inventory has 24,488 files and local SHA-256 `4e94373b...`. These are
+  presence/inventory facts, not frozen normalization or clinical evidence.
 - SyntheticMass FHIR v1 source metadata was frozen from clean SHA
   `9e40ef2e7d5a2260dea6c2398c73fec6c8478d9a`. Both the freeze pass and an
   independent manifest-verification pass traversed all 11 nested archives,
