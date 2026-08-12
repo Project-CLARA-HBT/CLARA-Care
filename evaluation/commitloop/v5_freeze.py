@@ -281,7 +281,7 @@ def create_v5_freeze(
             "subjects": 384,
             "conditions": 9,
             "expected_provider_calls": 3456,
-            "max_concurrency": 8,
+            "max_concurrency": 5,
             "batch_size": 5,
             "retries": 0,
             "fallback": False,
