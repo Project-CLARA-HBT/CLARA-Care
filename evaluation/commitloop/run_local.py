@@ -67,6 +67,7 @@ _PREDICTION_ENUMS = {
     for key, value in _SOLVER_RESPONSE_SCHEMA["schema"]["properties"].items()
     if "enum" in value
 }
+SOLVER_BATCH_SIZE = 5
 
 
 def _json(value: object) -> str:
@@ -503,7 +504,7 @@ def run_local_e2e(
     # Submit bounded batches so durable ledgers/checkpoints are flushed after
     # each worker batch. This preserves resumability without changing the
     # frozen request order, model mapping, retry policy or cohort.
-    batch_size = limits.max_concurrency
+    batch_size = min(SOLVER_BATCH_SIZE, limits.max_concurrency)
     for offset in range(0, len(pending), batch_size):
         batch = pending[offset : offset + batch_size]
         with ThreadPoolExecutor(max_workers=limits.max_concurrency) as executor:
@@ -763,6 +764,7 @@ def run_local_e2e(
         ),
         "clinical_adjudication": "NOT_RUN",
         "max_concurrency": limits.max_concurrency,
+        "batch_size": batch_size,
     }
     _write_json(
         output_dir / "protocol_manifest.json",
@@ -797,6 +799,7 @@ def run_local_e2e(
         "router_calls_before_freeze": 0,
         "clinical_adjudication": "NOT_RUN",
         "max_concurrency": limits.max_concurrency,
+        "batch_size": batch_size,
     }
     _write_json(output_dir / "run_manifest.json", manifest)
     _write_json(

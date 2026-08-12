@@ -16,8 +16,9 @@ subject-level exact lifecycle/evidence/timeliness resolution over
 - Primary contrast: strict THSS minus authorization-only full history.
 - Primary endpoint: all three state axes exactly match deterministic gold.
 - Target enrollment: 384 analyzable subjects, balanced 48 per held-out stratum.
-- Solver execution: eight bounded workers; concurrency is frozen before the
-  first provider call and is recorded in the run manifest.
+- Solver execution: eight bounded workers in frozen batches of five requests;
+  concurrency and batch size are frozen before the first provider call and are
+  recorded in the run manifest.
 - Missing, malformed, wrong-model or failed outputs are incorrect, not excluded.
 - Gemini, Naive RAG, LWW, bitemporal/provenance resolver and GST/THSS ablations
   are secondary or exploratory; their p-values cannot establish primary success.

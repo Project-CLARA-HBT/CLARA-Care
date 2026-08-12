@@ -282,6 +282,7 @@ def create_v5_freeze(
             "conditions": 9,
             "expected_provider_calls": 3456,
             "max_concurrency": 8,
+            "batch_size": 5,
             "retries": 0,
             "fallback": False,
             "post_unblinding_tuning": "PROHIBITED",

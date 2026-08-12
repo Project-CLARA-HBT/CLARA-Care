@@ -275,6 +275,7 @@ def test_solver_grid_honors_bounded_parallelism_and_seals_deterministically(
     )
     expected_cells = 2 * len(CONDITIONS) * 2
     assert manifest["max_concurrency"] == 4
+    assert manifest["batch_size"] == 4
     assert manifest["completed_cell_count"] == expected_cells
     assert transport.calls == expected_cells
     assert 2 <= transport.max_active <= 4
