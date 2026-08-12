@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -10,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from csv import DictWriter
 from dataclasses import replace
 from datetime import datetime
+from functools import wraps
 from io import StringIO
 from pathlib import Path
 from typing import Any, Literal
@@ -164,11 +166,35 @@ def _write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> 
 def seal_artifacts(root: Path) -> None:
     lines = []
     for path in sorted(item for item in root.rglob("*") if item.is_file()):
-        if path.name == "checksums.sha256":
+        if path.name in {"checksums.sha256", ".run.lock"}:
             continue
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         lines.append(f"{digest}  {path.relative_to(root)}")
     (root / "checksums.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _exclusive_output_directory(func):
+    """Refuse concurrent resume processes for one mutable artifact directory."""
+
+    @wraps(func)
+    def wrapped(*args: Any, **kwargs: Any):
+        output_dir = kwargs.get("output_dir")
+        if not isinstance(output_dir, Path):
+            raise TypeError("output_dir_keyword_path_required")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        lock_path = output_dir / ".run.lock"
+        with lock_path.open("a+", encoding="utf-8") as stream:
+            try:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise RuntimeError("benchmark_output_dir_in_use") from exc
+            try:
+                return func(*args, **kwargs)
+            finally:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+                lock_path.unlink(missing_ok=True)
+
+    return wrapped
 
 
 def _expand_adversarial_cases(
@@ -272,6 +298,7 @@ def _expand_adversarial_cases(
     return cases, events_by_case, perturbations
 
 
+@_exclusive_output_directory
 def run_local_e2e(
     *,
     bundles: list[tuple[dict[str, Any], str]],

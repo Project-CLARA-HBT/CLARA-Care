@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 from datetime import UTC, datetime
@@ -248,6 +249,21 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
     (tmp_path / "report.md").write_text("tampered after sealing\n")
     with pytest.raises(ValueError, match="artifact_checksum_mismatch"):
         validate_run(tmp_path)
+
+
+def test_local_runner_refuses_concurrent_output_directory(tmp_path) -> None:
+    lock_path = tmp_path / ".run.lock"
+    with lock_path.open("a+", encoding="utf-8") as stream:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(RuntimeError, match="benchmark_output_dir_in_use"):
+            run_local_e2e(
+                bundles=[(_bundle("locked", "one"), "R4")],
+                output_dir=tmp_path,
+                clients=_clients(ExactModelFakeTransport(), RunLimits(max_requests=18)),
+                valid_cutoff=datetime(2026, 2, 1, tzinfo=UTC),
+                known_cutoff=datetime(2026, 2, 1, tzinfo=UTC),
+                limits=RunLimits(max_requests=18),
+            )
 
 
 def test_solver_grid_honors_bounded_parallelism_and_seals_deterministically(
