@@ -500,22 +500,27 @@ def run_local_e2e(
             }
 
     completed_since_checkpoint = 0
-    with ThreadPoolExecutor(max_workers=limits.max_concurrency) as executor:
-        futures = [executor.submit(solve_one, item) for item in pending]
-        results = [future.result() for future in as_completed(futures)]
-    for key, output, error in sorted(results, key=lambda item: item[0]):
-        if output is not None:
-            outputs.append(output)
-        if error is not None:
-            errors.append(error)
-        completed.add(key)
-        attempted_keys.add(key)
-        completed_since_checkpoint += 1
-        if completed_since_checkpoint >= limits.checkpoint_every:
-            _write_json(checkpoint_path, {"completed": sorted(completed)})
-            _write_json(output_dir / "solver_outputs.json", outputs)
-            _write_json(output_dir / "error_ledger.json", errors)
-            completed_since_checkpoint = 0
+    # Submit bounded batches so durable ledgers/checkpoints are flushed after
+    # each worker batch. This preserves resumability without changing the
+    # frozen request order, model mapping, retry policy or cohort.
+    batch_size = limits.max_concurrency
+    for offset in range(0, len(pending), batch_size):
+        batch = pending[offset : offset + batch_size]
+        with ThreadPoolExecutor(max_workers=limits.max_concurrency) as executor:
+            futures = [executor.submit(solve_one, item) for item in batch]
+            results = [future.result() for future in as_completed(futures)]
+        for key, output, error in sorted(results, key=lambda item: item[0]):
+            if output is not None:
+                outputs.append(output)
+            if error is not None:
+                errors.append(error)
+            completed.add(key)
+            attempted_keys.add(key)
+            completed_since_checkpoint += 1
+        _write_json(checkpoint_path, {"completed": sorted(completed)})
+        _write_json(output_dir / "solver_outputs.json", outputs)
+        _write_json(output_dir / "error_ledger.json", errors)
+        completed_since_checkpoint = 0
     _write_json(checkpoint_path, {"completed": sorted(completed)})
     _write_json(output_dir / "solver_outputs.json", outputs)
     _write_json(output_dir / "error_ledger.json", errors)
