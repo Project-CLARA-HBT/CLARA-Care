@@ -75,6 +75,73 @@ SOLVER_BATCH_SIZE = 5
 GLHS_BENCH_GLOBAL_CONCURRENCY = 5
 
 
+class SolverFormatError(ValueError):
+    """A response-shape failure with a sanitized, non-content diagnostic."""
+
+    def __init__(self, detail: str, signature: dict[str, object]) -> None:
+        super().__init__(detail)
+        self.signature = signature
+
+
+def _content_shape_signature(content: str) -> dict[str, object]:
+    """Describe a failed response without retaining provider-generated text."""
+
+    length = len(content)
+    if length == 0:
+        length_bucket = "empty"
+    elif length <= 64:
+        length_bucket = "1_64"
+    elif length <= 256:
+        length_bucket = "65_256"
+    else:
+        length_bucket = "257_plus"
+    stripped = content.strip()
+    return {
+        "kind": "non_json_object",
+        "length_bucket": length_bucket,
+        "starts_object": stripped.startswith("{"),
+        "ends_object": stripped.endswith("}"),
+        "markdown_fence": stripped.startswith("```") and stripped.endswith("```"),
+    }
+
+
+def _prediction_shape_signature(value: object) -> dict[str, object]:
+    """Describe schema conformance using only closed, non-sensitive fields."""
+
+    expected_fields = {*_PREDICTION_ENUMS, "confidence"}
+    if not isinstance(value, dict):
+        return {"kind": "non_object", "python_type": type(value).__name__}
+    missing = sorted(expected_fields - set(value))
+    unexpected_count = len(set(value) - expected_fields)
+    enum_status = {
+        field: (
+            "missing"
+            if field not in value
+            else "valid"
+            if value[field] in allowed
+            else "invalid"
+        )
+        for field, allowed in sorted(_PREDICTION_ENUMS.items())
+    }
+    confidence = value.get("confidence")
+    confidence_status = (
+        "missing"
+        if "confidence" not in value
+        else "valid"
+        if isinstance(confidence, (int, float))
+        and not isinstance(confidence, bool)
+        and 0 <= confidence <= 1
+        else "invalid"
+    )
+    return {
+        "kind": "object",
+        "missing_expected_fields": missing,
+        "unexpected_field_count": unexpected_count,
+        "enum_status": enum_status,
+        "confidence_status": confidence_status,
+    }
+
+
 class StrictContextBuilder(Protocol):
     def __call__(
         self,
@@ -637,9 +704,20 @@ def run_local_e2e(
                 response_schema=_SOLVER_RESPONSE_SCHEMA,
                 max_tokens=256,
             )
-            prediction = _validate_solver_prediction(
-                parse_json_object_content(result.content)
-            )
+            try:
+                parsed = parse_json_object_content(result.content)
+            except json.JSONDecodeError as exc:
+                raise SolverFormatError(
+                    "provider_json_decode_error",
+                    _content_shape_signature(result.content),
+                ) from exc
+            try:
+                prediction = _validate_solver_prediction(parsed)
+            except (TypeError, ValueError) as exc:
+                raise SolverFormatError(
+                    "prediction_schema_invalid",
+                    _prediction_shape_signature(parsed),
+                ) from exc
             return (
                 key,
                 {
@@ -658,6 +736,26 @@ def run_local_e2e(
                     "schema_sha256": _PREDICTION_SCHEMA_SHA256,
                 },
                 None,
+            )
+        except SolverFormatError as exc:
+            return (
+                key,
+                None,
+                {
+                    "key": key,
+                    "case_id": packet["case_id"],
+                    "condition": packet["condition"],
+                    "requested_model_id": result.requested_model_id,
+                    "reported_model_id": result.reported_model_id,
+                    "error": type(exc).__name__,
+                    "error_detail": str(exc),
+                    "response_format_signature": exc.signature,
+                    "attempts": result.attempts,
+                    "usage": result.usage,
+                    "latency_ms": result.latency_ms,
+                    "request_sha256": result.request_sha256,
+                    "response_sha256": result.response_sha256,
+                },
             )
         except (
             ProviderError,
@@ -871,6 +969,7 @@ def run_local_e2e(
             "reported_model_id",
             "error",
             "error_detail",
+            "response_format_signature",
             "attempts",
             "usage",
         ],

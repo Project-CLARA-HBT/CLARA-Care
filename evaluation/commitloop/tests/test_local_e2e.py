@@ -65,6 +65,16 @@ class FailingTransport:
         raise TimeoutError("synthetic provider timeout")
 
 
+class MalformedResponseTransport:
+    def __call__(self, path, headers, payload, timeout):
+        del path, headers, timeout
+        return {
+            "model": REPORTED_MODEL_ID_BY_REQUESTED[payload["model"]],
+            "choices": [{"message": {"content": "not-json"}}],
+            "usage": {"prompt_tokens": 8, "completion_tokens": 4, "total_tokens": 12},
+        }
+
+
 class ConcurrentTrackingTransport:
     def __init__(self) -> None:
         self._lock = Lock()
@@ -578,6 +588,26 @@ def test_provider_failures_remain_in_structured_error_ledger(tmp_path) -> None:
         and item["usage"] == {}
         for item in errors
     )
+    validate_run(tmp_path)
+
+
+def test_solver_format_failures_record_only_sanitized_shape_metadata(tmp_path) -> None:
+    limits = RunLimits(max_subjects=1, max_cases=1, max_requests=18, max_retries=1)
+    cutoff = datetime(2026, 2, 1, tzinfo=UTC)
+    run_local_e2e(
+        bundles=[(_bundle("format-subject", "format"), "R4")],
+        output_dir=tmp_path,
+        clients=_clients(MalformedResponseTransport(), limits),
+        valid_cutoff=cutoff,
+        known_cutoff=cutoff,
+        limits=limits,
+    )
+    errors = json.loads((tmp_path / "error_ledger.json").read_text())
+    assert len(errors) == 18
+    assert all(item["error_detail"] == "provider_json_decode_error" for item in errors)
+    assert all(item["reported_model_id"] is not None for item in errors)
+    assert all(item["response_format_signature"]["kind"] == "non_json_object" for item in errors)
+    assert "not-json" not in (tmp_path / "error_ledger.json").read_text()
     validate_run(tmp_path)
 
 
