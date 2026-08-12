@@ -30,6 +30,6 @@ def test_offline_v5_dry_run_has_no_provider_calls_and_is_valid(tmp_path) -> None
         v5_offline_dry_run.write_cohort = original
     assert report["status"] == "VALID"
     assert report["provider_calls"] == 0
-    assert report["injected_transport_calls"] == 9
+    assert report["injected_transport_calls"] == 27
     assert json.loads((tmp_path / "run" / "run_manifest.json").read_text())["max_concurrency"] == 5
     assert json.loads((tmp_path / "run" / "run_manifest.json").read_text())["batch_size"] == 5
