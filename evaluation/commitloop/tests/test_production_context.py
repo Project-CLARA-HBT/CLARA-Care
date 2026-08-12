@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from clara_api.db.models import User
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from evaluation.commitloop.candidate_mining import mine_candidates
 from evaluation.commitloop.fhir_ingest import ingest_bundle
 from evaluation.commitloop.fixtures import synthetic_bundle
 from evaluation.commitloop.production_context import (
+    _FIXTURE_ENGINE,
     compile_production_commitment_context,
 )
 from evaluation.commitloop.v5_cohort import KNOWN_CUTOFF, VALID_CUTOFF, build_cohort
@@ -56,3 +61,22 @@ def test_production_context_covers_each_v5_lifecycle_template_family() -> None:
             known_cutoff=KNOWN_CUTOFF,
         )
         assert context["production_path"]["state_version"] >= 1
+
+
+def test_cached_fixture_schema_never_retains_subject_state() -> None:
+    cutoff = datetime(2027, 2, 1, tzinfo=UTC)
+    subject, events = ingest_bundle(
+        synthetic_bundle("production-context-isolated", "one"),
+        fhir_version="R4",
+        ingested_at=cutoff,
+    )
+    case = mine_candidates(subject, events)[0]
+    first = compile_production_commitment_context(
+        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
+    )
+    second = compile_production_commitment_context(
+        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
+    )
+    assert first["state_version"] == second["state_version"] == 2
+    with Session(_FIXTURE_ENGINE) as db:
+        assert db.scalars(select(User)).all() == []

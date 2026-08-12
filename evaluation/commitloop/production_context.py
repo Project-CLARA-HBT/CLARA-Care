@@ -42,8 +42,22 @@ from clara_api.glhs.gateway import (
 from clara_api.lifemap.profile_scope import ProfileScope
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 from evaluation.commitloop.schema import ConstructedCase, TimelineEvent
+
+# The benchmark adapter creates thousands of short-lived, isolated fixture
+# transactions.  Creating the complete production metadata on a new SQLite
+# engine for every case dominated the benchmark preparation time, while adding
+# no coverage.  Keep only the schema in a process-local in-memory store.  Each
+# invocation uses a new Session and rolls it back before returning, so source
+# evidence, assertions, snapshots and commitments never survive between cases.
+_FIXTURE_ENGINE = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+Base.metadata.create_all(_FIXTURE_ENGINE)
 
 
 def _opaque(value: str) -> str:
@@ -104,10 +118,10 @@ def compile_production_commitment_context(
     )
     if anchor is None or anchor.valid_at is None:
         raise ValueError("production_context_anchor_not_visible")
-    engine = create_engine("sqlite://")
-    Base.metadata.create_all(engine)
-    try:
-        with Session(engine) as db:
+    with Session(_FIXTURE_ENGINE) as db:
+        # Session close rolls back on exceptional paths; the normal path below
+        # rolls back explicitly before materializing its immutable payload.
+        try:
             token = _opaque(case.case_id)
             owner = User(
                 email=f"glhs-bench-{token}@example.invalid",
@@ -294,5 +308,5 @@ def compile_production_commitment_context(
             }
             db.rollback()
             return payload
-    finally:
-        engine.dispose()
+        finally:
+            db.rollback()
