@@ -26,3 +26,11 @@ bitemporal cutoff used audit ingestion time rather than semantic `known_at`.
 `IMP-001` changes that behavior and locks it with a late-arrival regression.
 The old run remains exploratory evidence and must not be relabeled as a final
 post-improvement result.
+
+The subsequent v16 development run is likewise exploratory. Its sealed
+checksum validator passed, and frozen-cohort stratification isolated conflict
+variants in the production strict arm. `IMP-003` preserves source-declared
+contradiction provenance in the production THSS ledger; `IMP-004` adds
+sanitized format-shape diagnostics for future runs. Neither change has a
+post-change outcome yet: both require a new freeze followed by development and
+validation execution before any final-candidate decision.
