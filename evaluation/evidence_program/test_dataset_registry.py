@@ -697,3 +697,85 @@ def test_nested_fhir_bundle_normalization_minimizes_patient_demographics(
     )
     assert manifest["records_file"] == "records.jsonl.gz"
     assert manifest["metrics"]["subject_count"] == 1
+
+
+def test_coherent_multimodal_normalization_minimizes_patient_and_counts_modalities(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_registry, "repository_root", lambda: tmp_path)
+    archive_path = tmp_path / "coherent.zip"
+    patient_url = "urn:uuid:patient-1"
+    encounter_url = "urn:uuid:encounter-1"
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "fullUrl": patient_url,
+                "resource": {
+                    "resourceType": "Patient",
+                    "id": "patient-1",
+                    "name": [{"family": "SyntheticName"}],
+                },
+            },
+            {
+                "fullUrl": encounter_url,
+                "resource": {
+                    "resourceType": "Encounter",
+                    "id": "encounter-1",
+                    "subject": {"reference": patient_url},
+                    "period": {"start": "2020-01-01"},
+                },
+            },
+            {
+                "fullUrl": "urn:uuid:condition-1",
+                "resource": {
+                    "resourceType": "Condition",
+                    "id": "condition-1",
+                    "subject": {"reference": patient_url},
+                    "encounter": {"reference": encounter_url},
+                    "onsetDateTime": "2020-01-01",
+                    "code": {"coding": [{"code": "synthetic"}]},
+                },
+            },
+        ],
+    }
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("fhir/patient-bundle.json", json.dumps(bundle))
+        archive.writestr("fhir/organizations.json", "{}")
+        archive.writestr("csv/patients.csv", "id,name\n1,SyntheticName\n")
+        archive.writestr("dicom/name_with_phi.dcm", b"synthetic")
+    registry_path = _registry_file(
+        tmp_path,
+        _entry(
+            adapter="coherent_multimodal",
+            schema="FHIR plus linked modalities",
+            local_candidates=["coherent.zip"],
+            expected_files=["fhir/patient-bundle.json"],
+        ),
+    )
+
+    output = normalize_dataset(
+        "fixture_data", output=tmp_path / "normalized", registry_path=registry_path
+    )
+    with gzip.open(output / "records.jsonl.gz", "rt", encoding="utf-8") as stream:
+        rendered = stream.read()
+    records = [json.loads(line) for line in rendered.splitlines()]
+
+    assert len(records) == 2
+    assert all(record["source_subject"] == "Patient/patient-1" for record in records)
+    assert "SyntheticName" not in rendered
+    assert "patient-bundle.json" not in rendered
+    assert all(
+        record["original_payload_pointer"].startswith("zip-member-sha256://")
+        for record in records
+    )
+    manifest = json.loads(
+        (output / "normalization_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["metrics"]["bundle_count"] == 1
+    assert manifest["metrics"]["modality_member_counts"] == {
+        "csv": 1,
+        "dicom": 1,
+        "fhir": 2,
+    }

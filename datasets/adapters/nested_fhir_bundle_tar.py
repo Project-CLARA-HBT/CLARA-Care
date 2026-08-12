@@ -46,7 +46,7 @@ def _reference(resource: Mapping[str, Any], field: str) -> str | None:
     return None
 
 
-def _entry_resources(bundle: object) -> list[tuple[str, dict[str, Any]]]:
+def entry_resources(bundle: object) -> list[tuple[str, dict[str, Any]]]:
     if not isinstance(bundle, dict) or not isinstance(bundle.get("entry"), list):
         raise NestedFhirBundleError("fhir_bundle_entries_missing")
     result = []
@@ -60,7 +60,7 @@ def _entry_resources(bundle: object) -> list[tuple[str, dict[str, Any]]]:
     return result
 
 
-def _patient_identity(
+def patient_identity(
     resources: list[tuple[str, dict[str, Any]]],
 ) -> tuple[str, set[str]]:
     patients = [
@@ -78,7 +78,7 @@ def _patient_identity(
     return f"Patient/{patient_id}", aliases
 
 
-def _encounter_aliases(
+def encounter_aliases(
     resources: list[tuple[str, dict[str, Any]]], patient_aliases: set[str]
 ) -> dict[str, str]:
     result: dict[str, str] = {}
@@ -115,9 +115,9 @@ def _write_bundle(
         bundle = json.loads(payload)
     except json.JSONDecodeError as exc:
         raise NestedFhirBundleError(f"fhir_bundle_json_invalid:{bundle_name}") from exc
-    resources = _entry_resources(bundle)
-    source_subject, patient_aliases = _patient_identity(resources)
-    encounters = _encounter_aliases(resources, patient_aliases)
+    resources = entry_resources(bundle)
+    source_subject, patient_aliases = patient_identity(resources)
+    encounters = encounter_aliases(resources, patient_aliases)
     for entry_index, (full_url, resource) in enumerate(resources, start=1):
         resource_type = resource.get("resourceType")
         if resource_type not in SUPPORTED_RESOURCE_TYPES:

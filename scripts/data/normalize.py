@@ -18,6 +18,10 @@ if __package__ in {None, ""}:
     ]
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from datasets.adapters.coherent_multimodal import CoherentMultimodalError
+from datasets.adapters.coherent_multimodal import (
+    normalize_archive as normalize_coherent,
+)
 from datasets.adapters.diabetes_130_tabular import Diabetes130Error
 from datasets.adapters.diabetes_130_tabular import (
     normalize_archive as normalize_diabetes_130,
@@ -58,6 +62,7 @@ def normalize_dataset(
         "fhir_ndjson_archive",
         "nested_fhir_bundle_tar",
         "omop_cdm",
+        "coherent_multimodal",
     }:
         raise DatasetRegistryError("ADAPTER_NOT_IMPLEMENTED")
     source = resolve_local_source(dataset)
@@ -74,7 +79,7 @@ def normalize_dataset(
         usage_before = resource.getrusage(resource.RUSAGE_SELF)
         records = temporary / (
             "records.jsonl.gz"
-            if adapter in {"nested_fhir_bundle_tar", "omop_cdm"}
+            if adapter in {"coherent_multimodal", "nested_fhir_bundle_tar", "omop_cdm"}
             else "records.jsonl"
         )
         normalizers = {
@@ -83,6 +88,7 @@ def normalize_dataset(
             "fhir_ndjson_archive": normalize_fhir,
             "nested_fhir_bundle_tar": normalize_nested_fhir,
             "omop_cdm": normalize_omop,
+            "coherent_multimodal": normalize_coherent,
         }
         normalize = normalizers[str(adapter)]
         metrics = normalize(
@@ -161,6 +167,7 @@ def main() -> int:
         FhirArchiveError,
         NestedFhirBundleError,
         OmopCdmError,
+        CoherentMultimodalError,
         OSError,
         ValueError,
     ) as exc:
