@@ -1,0 +1,27 @@
+from evaluation.commitloop.v6_cohort import (
+    SPLIT_COUNTS,
+    STRATA,
+    build_cohort,
+    bundles_for_split,
+)
+
+
+def test_v6_cohort_is_subject_disjoint_and_has_heldout_templates() -> None:
+    rows, manifest = build_cohort()
+    assert len(rows) == len(STRATA) * sum(SPLIT_COUNTS.values())
+    assert manifest["split_counts"] == {
+        split: len(STRATA) * count for split, count in SPLIT_COUNTS.items()
+    }
+    assert len({row["subject_token"] for row in rows}) == len(rows)
+    assert len({row["bundle_sha256"] for row in rows}) == len(rows)
+    for stratum in STRATA:
+        assert {row["split"] for row in rows if row["stratum"] == stratum} == set(
+            SPLIT_COUNTS
+        )
+
+
+def test_v6_split_selection_is_exact_and_does_not_reassign_subjects() -> None:
+    rows, _ = build_cohort()
+    bundles, assignments = bundles_for_split(rows, split="development")
+    assert len(bundles) == len(STRATA) * SPLIT_COUNTS["development"]
+    assert set(assignments.values()) == {"development"}

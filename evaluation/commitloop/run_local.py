@@ -293,6 +293,7 @@ def run_local_e2e(
     primary_reference_condition: str = "glhs_hybrid_thss_strict",
     primary_comparator_condition: str = "full_authorized_history",
     production_strict_context_builder: StrictContextBuilder | None = None,
+    subject_splits: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     if not conditions or len(conditions) != len(set(conditions)):
         raise ValueError("benchmark_conditions_invalid")
@@ -418,6 +419,13 @@ def run_local_e2e(
                 continue
             validate_solver_packet(packet, known_cutoff=known_cutoff)
             packets_by_condition[condition].append(packet)
+    if subject_splits is not None and (
+        set(subject_splits) != subject_tokens
+        or not set(subject_splits.values()).issubset(
+            {"development", "validation", "sealed_test"}
+        )
+    ):
+        raise ValueError("preassigned_subject_split_inventory_invalid")
     generation_outputs = list(_read_json(output_dir / "model_generation.json", []))
     generation_errors = list(
         _read_json(output_dir / "generation_error_ledger.json", [])
@@ -645,7 +653,11 @@ def run_local_e2e(
     _write_jsonl(output_dir / "perturbation_manifest.jsonl", perturbations)
     for condition, packets in packets_by_condition.items():
         _write_jsonl(output_dir / "solver_packets" / f"{condition}.jsonl", packets)
-    partitions = split_subjects(subject_tokens, seed="commitloop-v1")
+    partitions = (
+        dict(subject_splits)
+        if subject_splits is not None
+        else split_subjects(subject_tokens, seed="commitloop-v1")
+    )
     _write_json(output_dir / "partition_manifest.json", partitions)
     metrics = score_outputs(
         {item["case_id"]: item for item in gold},
