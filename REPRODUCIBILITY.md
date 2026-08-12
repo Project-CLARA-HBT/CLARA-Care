@@ -154,6 +154,20 @@ SHA-256 `40c2c0a2087918430edd1800de41acc02238a938a9d6ac338b4fcbdc29eba770`.
 The source is synthetic and has no provider-pinned checksum; these are local
 adapter/reproducibility metrics only.
 
+Synthea Coherent passed full ZIP CRC/inventory verification: 2,488 entries
+(2,484 files), 15,111,284,460 uncompressed bytes, source inventory SHA-256
+`144a6c34e426509b2d29b8fec838ed540b1c45f687134437a15dcf3ffcbd4f57`, and
+source archive SHA-256
+`4e94373bade1106b5482e89274af7f4d59f8c9497dc899b579cfec445035c036`.
+The minimized FHIR adapter emitted 1,297,901 records from 1,278 bundles and
+subjects; its gzip output SHA-256 is
+`5b6b600573d20534ad4008198aaa946e8d4a2cda9be968c017cc14b6506377d8`.
+The tracked normalization aggregate is
+`datasets/manifests/synthea_coherent.normalization.json`, payload SHA-256
+`4f43cd5512121967297e198588da8c96798e28d0b74fa0a3bef8def080dec7f4`.
+CSV, DICOM and DNA are inventory-only modalities; provider checksum and
+cross-modality linkage validation remain absent.
+
 Structural regression only:
 
 ```bash

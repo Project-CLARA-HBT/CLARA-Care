@@ -188,8 +188,9 @@ pass a local codec check. The larger directory contains one corrupt
 temporary-suffix LZO object, so the repository verifier fails closed before a
 29GB hash pass; it is not frozen or called complete. Synthea Coherent is also
 registered from its bundled CC BY 4.0 README and local ZIP identity. Its
-central directory contains 2,488 entries (2,484 files), but full source freeze and multimodal
-normalization remain pending. A newly supplied Diabetes-130 archive is
+central directory contains 2,488 entries (2,484 files); source freeze and
+minimized FHIR normalization now pass, while cross-modality linkage remains
+pending. A newly supplied Diabetes-130 archive is
 byte-identical to the already used UCI ZIP and is treated only as a duplicate.
 
 The SynPUF OMOP 100K source was then frozen and normalized through the new
@@ -198,6 +199,13 @@ streaming adapter. Seventeen gzip tables (914,865,701 source bytes) produced
 datetimes were preserved, knowledge time stayed unknown, and no timestamp was
 estimated. The normalized output and aggregate freeze are tracked by hash;
 the evidence remains synthetic source/adapter execution, not clinical truth.
+
+Synthea Coherent likewise passed the full local ZIP freeze and the minimized
+FHIR Bundle adapter. It emitted 1,297,901 records from 1,278 subject bundles;
+CSV/DICOM/DNA members were counted but not copied into normalized evidence.
+Knowledge time stayed unknown and no time was estimated. The source and
+normalization aggregate manifests are tracked by SHA-256; provider checksum
+and cross-modality semantic linkage remain open gates.
 
 The specification is now tracked at its declared primary path,
 `docs/architecture/glhs-evidence-hardening-master-spec.md`, as a byte-identical
