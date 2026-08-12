@@ -28,6 +28,7 @@ def run_offline_v5_dry_run(*, output_dir: Path, cohort_dir: Path) -> dict[str, o
         max_subjects=len(rows),
         max_cases=len(rows),
         max_requests=len(rows) * len(CONDITIONS),
+        max_concurrency=8,
         max_retries=0,
         checkpoint_every=64,
     )
