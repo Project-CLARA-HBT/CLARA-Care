@@ -693,7 +693,11 @@ def reconstruct_commitments(
             .where(
                 GlhsClinicalCommitmentTransition.profile_id == profile_id,
                 GlhsClinicalCommitmentTransition.valid_at <= _utc(valid_at),
-                GlhsClinicalCommitmentTransition.recorded_at <= _utc(known_at),
+                # ``known_at`` is the bitemporal observation coordinate.  The
+                # database write timestamp is audit provenance only: using it
+                # leaks late-arriving, backdated state into a historical
+                # reconstruction and makes output depend on ingestion timing.
+                GlhsClinicalCommitmentTransition.known_at <= _utc(known_at),
             )
             .order_by(GlhsClinicalCommitmentTransition.id)
         ).scalars()

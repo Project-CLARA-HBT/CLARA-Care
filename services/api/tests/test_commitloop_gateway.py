@@ -221,6 +221,74 @@ def test_commitment_transition_shares_state_counter_and_reconstructs(db: Session
         )
 
 
+def test_reconstruction_uses_semantic_knowledge_time_not_audit_write_time(db: Session) -> None:
+    """A late-arriving backdated transition is invisible before its known time."""
+
+    scope = _scope(db)
+    valid_at = datetime(2026, 1, 1, tzinfo=UTC)
+    evidence = _evidence(db, scope, valid_at, label="late-known")
+    commitment = get_or_create_commitment(
+        db,
+        scope=scope,
+        semantic_key="observation:late-known",
+        domain="observations",
+        supersession_key="observation:late-known",
+    )
+    snapshot = compile_commitment_thss(
+        db,
+        scope=scope,
+        task="late_known_test",
+        purpose=scope.purpose,
+        valid_at=valid_at,
+        known_at=datetime.now(UTC) + timedelta(days=365),
+        allowed_domains=frozenset({"observations"}),
+        disclosed_evidence=(evidence,),
+    )
+    proposal = propose_bound_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=(evidence,),
+        proposed_transition="OPEN",
+        origin="user",
+        observed_base_state_version=snapshot.state_version,
+        task=snapshot.task,
+        source_snapshot_id=snapshot.snapshot_id,
+        source_snapshot_digest=snapshot.manifest_digest,
+    )
+    transition = apply_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        proposal=proposal,
+        evidence=(evidence,),
+        data=_version(valid_at),
+        expected_state_version=0,
+        idempotency_key="late-known-transition",
+        transition_kind="commitment_opened",
+        reason_code="late_arrival_fixture",
+    )
+    db.execute(
+        update(GlhsClinicalCommitmentTransition)
+        .where(GlhsClinicalCommitmentTransition.id == transition.id)
+        .values(known_at=valid_at + timedelta(days=10))
+    )
+    db.expire_all()
+    assert reconstruct_commitments(
+        db,
+        profile_id=scope.profile.id,
+        valid_at=valid_at + timedelta(days=20),
+        known_at=valid_at + timedelta(days=5),
+    ) == ()
+    visible = reconstruct_commitments(
+        db,
+        profile_id=scope.profile.id,
+        valid_at=valid_at + timedelta(days=20),
+        known_at=valid_at + timedelta(days=11),
+    )
+    assert [item["commitment_id"] for item in visible] == [commitment.public_id]
+
+
 def test_base_version_only_proposal_is_explicit_and_can_commit(db: Session) -> None:
     scope = _scope(db)
     at = datetime(2026, 1, 1, tzinfo=UTC)
