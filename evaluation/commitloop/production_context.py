@@ -188,6 +188,49 @@ def _compact_solver_context(
             "policy_version",
         )
     } if isinstance(commitment, dict) else None
+    # ``snapshot_payload_json`` intentionally cannot contain its own public ID
+    # or manifest digest: both are assigned only after payload canonicalization
+    # and persistence.  The caller supplies those persisted manifest fields
+    # below, then this derivative exposes a compact, verifiable binding rather
+    # than the previous misleading null placeholders.
+    snapshot_manifest = {
+        "snapshot_id": payload.get("snapshot_id"),
+        "manifest_digest": payload.get("manifest_digest"),
+        "snapshot_digest": payload.get("snapshot_digest"),
+        "state_version": payload.get("state_version"),
+        "policy_version": payload.get("policy_version"),
+        "consent_version": payload.get("consent_version"),
+        "consent_basis": payload.get("consent_basis"),
+        "actor_role": payload.get("actor_role"),
+        "purpose": payload.get("purpose"),
+        "expires_at": payload.get("expires_at"),
+        "assertion_ids": payload.get("assertion_ids"),
+        "assertion_hashes": payload.get("assertion_hashes"),
+        "evidence_ids": payload.get("evidence_ids"),
+    }
+    required_manifest_fields = {
+        "snapshot_id",
+        "manifest_digest",
+        "snapshot_digest",
+        "state_version",
+        "policy_version",
+        "consent_version",
+        "consent_basis",
+        "actor_role",
+        "purpose",
+        "expires_at",
+        "assertion_ids",
+        "assertion_hashes",
+    }
+    if any(
+        snapshot_manifest.get(key) is None or snapshot_manifest.get(key) == ""
+        for key in required_manifest_fields
+    ):
+        raise ValueError("production_context_snapshot_manifest_incomplete")
+    if not isinstance(snapshot_manifest["assertion_ids"], list) or not isinstance(
+        snapshot_manifest["assertion_hashes"], list
+    ):
+        raise TypeError("production_context_snapshot_manifest_assertions_invalid")
     return {
         "representation": "glhs_thss_task_minimal_v1",
         # These are manifest-bound production query coordinates, not task
@@ -197,15 +240,18 @@ def _compact_solver_context(
             "valid_at": payload.get("valid_at"),
             "known_at": payload.get("known_at"),
         },
-        "subject_scope_token": payload.get("subject_scope_token"),
-        "state_version": payload.get("state_version"),
-        "policy_version": payload.get("policy_version"),
-        "actor_role": payload.get("actor_role"),
-        "purpose": payload.get("purpose"),
-        "consent_basis": payload.get("consent_basis"),
-        "expires_at": payload.get("expires_at"),
-        "snapshot_id": payload.get("snapshot_id"),
-        "manifest_digest": payload.get("manifest_digest"),
+        # ``profile_id`` is a generated, opaque public identifier; it is the
+        # production profile-scope identifier, not raw fixture subject data.
+        "subject_scope_token": payload.get("profile_id"),
+        "state_version": snapshot_manifest["state_version"],
+        "policy_version": snapshot_manifest["policy_version"],
+        "actor_role": snapshot_manifest["actor_role"],
+        "purpose": snapshot_manifest["purpose"],
+        "consent_basis": snapshot_manifest["consent_basis"],
+        "expires_at": snapshot_manifest["expires_at"],
+        "snapshot_id": snapshot_manifest["snapshot_id"],
+        "manifest_digest": snapshot_manifest["manifest_digest"],
+        "snapshot_manifest": snapshot_manifest,
         "commitments": [compact_commitment] if compact_commitment is not None else [],
         "events": events,
         "governed_source_ledger": {
@@ -418,6 +464,17 @@ def compile_production_commitment_context(
                 )
             ).scalar_one()
             payload = dict(manifest.snapshot_payload_json)
+            # Preserve the immutable persisted binding in the derivative
+            # benchmark disclosure.  These fields are deliberately added only
+            # after reading the persisted manifest, never fed back into its
+            # payload/digest calculation.
+            payload.update(
+                {
+                    "snapshot_id": final.snapshot_id,
+                    "manifest_digest": final.manifest_digest,
+                    "snapshot_digest": final.snapshot_digest,
+                }
+            )
             payload["governed_source_ledger"] = {
                 "snapshot_id": governed_ledger.snapshot_id,
                 "manifest_digest": governed_ledger.manifest_digest,

@@ -42,6 +42,21 @@ def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
     assert context["production_path"]["gold_derived"] is False
     assert context["governed_source_ledger"]["assertion_ids"]
     assert context["events"]
+    manifest = context["snapshot_manifest"]
+    assert manifest["snapshot_id"] == context["snapshot_id"]
+    assert manifest["manifest_digest"] == context["manifest_digest"]
+    assert manifest["snapshot_digest"]
+    assert manifest["state_version"] == context["state_version"]
+    assert manifest["policy_version"] == context["policy_version"]
+    assert manifest["consent_version"]
+    assert manifest["consent_basis"] == context["consent_basis"]
+    assert manifest["actor_role"] == context["actor_role"]
+    assert manifest["purpose"] == context["purpose"]
+    assert manifest["expires_at"] == context["expires_at"]
+    assert manifest["assertion_ids"]
+    assert manifest["assertion_hashes"]
+    assert context["subject_scope_token"]
+    assert context["snapshot_id"] == context["production_path"]["snapshot_id"]
     assert context["bitemporal_scope"] == {
         "valid_at": cutoff.isoformat(),
         "known_at": cutoff.isoformat(),
