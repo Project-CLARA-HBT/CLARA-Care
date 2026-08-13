@@ -8,6 +8,11 @@ methods:
     version: exact-code-top5-v1
     adapter: evaluation.comparator_studies.commitloop_baselines:naive_rag
     fidelity: frozen_local_baseline
+  temporal_bm25:
+    version: temporal-bm25-top5-v1
+    adapter: evaluation.comparator_studies.commitloop_baselines:temporal_bm25
+    fidelity: frozen_local_baseline
+    eligible_from_protocol: commitloop_v7_only
   lww:
     version: resource-code-lww-v1
     adapter: evaluation.comparator_studies.commitloop_baselines:last_write_wins

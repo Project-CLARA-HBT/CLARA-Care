@@ -4,6 +4,7 @@ from evaluation.comparator_studies.commitloop_baselines import (
     last_write_wins,
     long_context,
     naive_rag,
+    temporal_bm25,
 )
 
 
@@ -48,3 +49,17 @@ def test_baselines_have_frozen_distinct_mechanics_and_no_glhs_governance() -> No
         retrieved["governance_status"],
         lww["governance_status"],
     } == {"UNSUPPORTED_BY_METHOD"}
+
+
+def test_temporal_bm25_is_deterministic_and_not_an_exact_code_alias() -> None:
+    events = _events()
+    retrieved = temporal_bm25(
+        events,
+        query_terms=["loinc", "x"],
+        valid_cutoff="2026-02-02T00:00:00+00:00",
+    )
+
+    assert retrieved["representation"] == "temporal_bm25_top5_v1"
+    assert [item["evidence_id"] for item in retrieved["events"]] == ["late", "early", "other"]
+    assert retrieved["ranking"]["valid_cutoff"] == "2026-02-02T00:00:00+00:00"
+    assert retrieved["governance_status"] == "UNSUPPORTED_BY_METHOD"
