@@ -22,7 +22,9 @@ def repair_artifact_cohort_redaction(run_dir: Path) -> dict[str, object]:
 
     manifest_path = run_dir / "run_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    source = str(manifest.get("source_cohort", ""))
+    source = str(manifest.get("source_cohort") or json.loads(
+        (run_dir / "source_manifest.json").read_text(encoding="utf-8")
+    ).get("source", ""))
     if not source.startswith("glhs_bench_") or source.rsplit(":", 1)[-1] not in {
         "development",
         "validation",
@@ -62,10 +64,13 @@ def repair_artifact_cohort_redaction(run_dir: Path) -> dict[str, object]:
         "subject_reference_redactions": redactions,
     }
     provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest["source_cohort"] = source
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     deviation = {
         "schema_version": "glhs-bench-artifact-redaction-repair.v1",
         "reason": "validator_forbidden_fhir_subject_reference",
         "scope": "frozen_inputs_cohort_copy_only",
+        "provenance_manifest_backfill": "source_cohort copied from source_manifest",
         "model_outputs_modified": False,
         "scoring_modified": False,
         "provider_calls_made": False,

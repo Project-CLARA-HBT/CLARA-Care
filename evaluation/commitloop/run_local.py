@@ -1085,6 +1085,7 @@ def run_local_e2e(
         "models": sorted(clients),
         "primary_model": primary_model,
         "execution_mode": execution_mode,
+        "source_cohort": source_cohort,
         "phase_a_freeze_sha": phase_a_freeze_sha,
         "provider_probe_sha256": provider_probe_sha256,
         "provider_approval_sha256": provider_approval_sha256,

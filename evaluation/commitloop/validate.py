@@ -202,20 +202,22 @@ def validate_run(root: Path) -> None:
             r"[0-9a-f]{64}", str(manifest.get("provider_probe_sha256") or "")
         ):
             raise ValueError("phase_b_provenance_missing:provider_probe_sha256")
-    if execution_mode == "glhs_bench_router" and str(manifest.get("source_cohort", "")).startswith(
-        "glhs_bench_"
-    ):
+    source_manifest = json.loads((root / "source_manifest.json").read_text(encoding="utf-8"))
+    source_cohort = str(manifest.get("source_cohort") or source_manifest.get("source", ""))
+    if execution_mode == "glhs_bench_router" and source_cohort.startswith("glhs_bench_"):
+        if manifest.get("source_cohort") not in {None, source_cohort}:
+            raise ValueError("glhs_bench_source_cohort_manifest_mismatch")
         inputs = root / "frozen_inputs"
         required_inputs = {
             "freeze.json",
             "provider_probe.json",
             "artifact_provenance.json",
-            f"cohort_{str(manifest.get('source_cohort', '')).rsplit(':', 1)[-1]}.jsonl",
+            f"cohort_{source_cohort.rsplit(':', 1)[-1]}.jsonl",
         }
         if not inputs.is_dir() or any(not (inputs / name).is_file() for name in required_inputs):
             raise ValueError("glhs_bench_frozen_input_artifact_missing")
         provenance = json.loads((inputs / "artifact_provenance.json").read_text(encoding="utf-8"))
-        split = str(manifest.get("source_cohort", "")).rsplit(":", 1)[-1]
+        split = source_cohort.rsplit(":", 1)[-1]
         selected_cohort = inputs / f"cohort_{split}.jsonl"
         if (
             not isinstance(provenance, dict)
