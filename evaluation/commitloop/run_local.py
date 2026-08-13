@@ -44,7 +44,11 @@ from evaluation.commitloop.score import (
     score_generation,
     score_outputs,
 )
-from evaluation.commitloop.solver_packets import CONDITIONS, build_solver_packets
+from evaluation.commitloop.solver_packets import (
+    CONDITIONS,
+    EXPLORATORY_V7_CONDITIONS,
+    build_solver_packets,
+)
 from evaluation.commitloop.splits import split_subjects
 from evaluation.commitloop.statistics import (
     paired_condition_statistics,
@@ -437,7 +441,10 @@ def run_local_e2e(
 ) -> dict[str, Any]:
     if not conditions or len(conditions) != len(set(conditions)):
         raise ValueError("benchmark_conditions_invalid")
-    if not set(conditions).issubset(CONDITIONS):
+    # The default remains the legacy frozen V5/V6 inventory.  V7 must pass its
+    # own explicit inventory from a newly sealed protocol; no old run can gain
+    # a comparator by importing newer code.
+    if not set(conditions).issubset(EXPLORATORY_V7_CONDITIONS):
         raise ValueError("benchmark_condition_undeclared")
     if primary_model is not None and (
         primary_model not in clients
@@ -555,6 +562,7 @@ def run_local_e2e(
             valid_cutoff=valid_cutoff,
             known_cutoff=known_cutoff,
             production_strict_context=production_strict_context_builder,
+            conditions=conditions,
         ).items():
             if condition not in packets_by_condition:
                 continue
