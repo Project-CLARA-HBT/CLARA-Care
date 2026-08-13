@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 from clara_api.db.models import User
@@ -35,13 +36,13 @@ def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
         "relevance_freshness",
         "minimization",
     ]
-    assert context["manifest_schema_version"] == "glhs.snapshot.v3"
+    assert context["representation"] == "glhs_thss_task_minimal_v1"
     assert context["state_version"] == 2
-    assert context["commitments"][0]["lifecycle_state"] == "OPEN"
+    assert "lifecycle_state" not in context["commitments"][0]
     assert context["production_path"]["gold_derived"] is False
-    ledger = context["governed_source_ledger"]["assertions"][0]
-    assert ledger["semantic_key"].startswith("commitloop:timeline:")
-    assert ledger["value"]["events"]
+    assert context["governed_source_ledger"]["assertion_ids"]
+    assert context["events"]
+    assert len(json.dumps(context)) < 8_000
 
 
 def test_production_context_covers_each_v5_lifecycle_template_family() -> None:
@@ -84,10 +85,7 @@ def test_production_context_retains_documented_source_contradictions() -> None:
         valid_cutoff=VALID_CUTOFF,
         known_cutoff=KNOWN_CUTOFF,
     )
-    ledger_events = context["governed_source_ledger"]["assertions"][0]["value"][
-        "events"
-    ]
-    assert any(event["relation"] == "contradicts" for event in ledger_events)
+    assert any(event["relation"] == "contradicts" for event in context["events"])
 
 
 def test_cached_fixture_schema_never_retains_subject_state() -> None:

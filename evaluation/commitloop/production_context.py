@@ -97,6 +97,109 @@ def _visible_events(
     )
 
 
+def _compact_solver_context(
+    payload: dict[str, Any], *, fallback_events: tuple[TimelineEvent, ...], case: ConstructedCase
+) -> dict[str, Any]:
+    """Project a real THSS result into its task-minimal solver disclosure.
+
+    This is a derivative representation, never canonical state.  It preserves
+    the manifest binding and every fact the frozen reconciliation contract can
+    use: the commitment contract, target evidence, the anchor, and every
+    documented contradiction.  Repeated database identifiers, policy boiler-
+    plate, and irrelevant non-conflicting observations are deliberately not
+    disclosed to the model.
+    """
+
+    commitments = payload.get("commitments")
+    ledger = payload.get("governed_source_ledger")
+    if not isinstance(commitments, list) or len(commitments) > 1:
+        raise ValueError("production_context_commitment_shape_invalid")
+    if not isinstance(ledger, dict) or not isinstance(ledger.get("assertions"), list):
+        raise TypeError("production_context_ledger_shape_invalid")
+    commitment = commitments[0] if commitments else None
+    assertion = ledger["assertions"][0] if ledger["assertions"] else None
+    if (commitment is not None and not isinstance(commitment, dict)) or (
+        assertion is not None and not isinstance(assertion, dict)
+    ):
+        raise ValueError("production_context_ledger_shape_invalid")
+    value = assertion.get("value") if assertion else None
+    if not isinstance(value, dict):
+        value = {
+            "events": [_timeline_event(event) for event in fallback_events],
+            "target": commitment.get("target") if isinstance(commitment, dict) else case.target,
+            "anchor_evidence_id": case.anchor_evidence_id,
+        }
+    if not isinstance(value.get("events"), list):
+        raise TypeError("production_context_source_events_missing")
+    target = value.get("target")
+    anchor = value.get("anchor_evidence_id")
+    if anchor is None:
+        anchor = next(
+            (
+                event.get("evidence_id")
+                for event in value["events"]
+                if isinstance(event, dict) and event.get("resource_type") == "ServiceRequest"
+            ),
+            None,
+        )
+    if not isinstance(target, dict) or not isinstance(anchor, str):
+        raise TypeError("production_context_task_contract_missing")
+    target_pair = (target.get("system"), target.get("code"))
+    events = [
+        event
+        for event in value["events"]
+        if isinstance(event, dict)
+        and (
+            event.get("evidence_id") == anchor
+            or event.get("relation") == "contradicts"
+            or any(
+                isinstance(code, dict)
+                and (code.get("system"), code.get("code")) == target_pair
+                for code in event.get("codes", [])
+            )
+        )
+    ]
+    if not any(event.get("evidence_id") == anchor for event in events):
+        raise ValueError("production_context_anchor_lost_by_minimization")
+    compact_commitment = {
+        key: commitment.get(key)
+        for key in (
+            "commitment_id",
+            "action",
+            "target",
+            "anchor_valid_time",
+            "anchor_known_time",
+            "due_time",
+            "fulfillment_predicate",
+            "authority_class",
+            "base_state_version",
+            "resulting_state_version",
+            "policy_version",
+        )
+    } if isinstance(commitment, dict) else None
+    return {
+        "representation": "glhs_thss_task_minimal_v1",
+        "subject_scope_token": payload.get("subject_scope_token"),
+        "state_version": payload.get("state_version"),
+        "policy_version": payload.get("policy_version"),
+        "actor_role": payload.get("actor_role"),
+        "purpose": payload.get("purpose"),
+        "consent_basis": payload.get("consent_basis"),
+        "expires_at": payload.get("expires_at"),
+        "snapshot_id": payload.get("snapshot_id"),
+        "manifest_digest": payload.get("manifest_digest"),
+        "commitments": [compact_commitment] if compact_commitment is not None else [],
+        "events": events,
+        "governed_source_ledger": {
+            "snapshot_id": ledger.get("snapshot_id"),
+            "manifest_digest": ledger.get("manifest_digest"),
+            "assertion_ids": [assertion.get("id")] if assertion else [],
+            "disclosure_mode": "governed_assertion" if assertion else "visible_source_fallback",
+        },
+        "production_path": payload.get("production_path"),
+    }
+
+
 def compile_production_commitment_context(
     case: ConstructedCase,
     events: tuple[TimelineEvent, ...],
@@ -310,7 +413,10 @@ def compile_production_commitment_context(
                 "pipeline": [stage["name"] for stage in final.pipeline_trace],
                 "gold_derived": False,
             }
+            compact = _compact_solver_context(
+                payload, fallback_events=visible, case=case
+            )
             db.rollback()
-            return payload
+            return compact
         finally:
             db.rollback()

@@ -34,11 +34,16 @@ def validate_solver_packet(packet: dict[str, Any], *, known_cutoff: datetime) ->
             raise ValueError("production_context_provenance_invalid")
         commitments = context.get("commitments")
         if not isinstance(commitments, list) or any(
-            item.get("lifecycle_state") != "OPEN"
-            or item.get("evidence_state") != "CLEAR"
-            or item.get("timeliness_state") != "UNKNOWN"
+            not isinstance(item, dict)
+            or (
+                context.get("representation") != "glhs_thss_task_minimal_v1"
+                and (
+                    item.get("lifecycle_state") != "OPEN"
+                    or item.get("evidence_state") != "CLEAR"
+                    or item.get("timeliness_state") != "UNKNOWN"
+                )
+            )
             for item in commitments
-            if isinstance(item, dict)
         ):
             raise ValueError("production_context_initial_state_invalid")
         for item in commitments:
