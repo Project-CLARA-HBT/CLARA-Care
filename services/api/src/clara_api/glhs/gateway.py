@@ -55,6 +55,13 @@ from clara_api.lifemap.profile_scope import ProfileScope
 
 SNAPSHOT_SCHEMA_VERSION = "glhs.snapshot.v3"
 SNAPSHOT_PAYLOAD_SCHEMA_VERSION = "glhs.snapshot.payload.v3"
+THSS_PIPELINE_STAGE_NAMES = (
+    "authorization",
+    "temporal_lifecycle",
+    "conflict",
+    "relevance_freshness",
+    "minimization",
+)
 
 
 def _digest(value: object) -> str:
@@ -190,6 +197,29 @@ def _proposal_consent_version(db: Session, *, profile_id: int) -> str:
 
 def _consent_basis(*, purpose: str, consent_version: str) -> str:
     return f"{purpose}:{consent_version}"
+
+
+def validate_thss_pipeline_trace(trace: Iterable[object]) -> tuple[dict[str, object], ...]:
+    """Reject malformed or reordered disclosure pipeline traces.
+
+    Trace is a signed part of each snapshot payload.  Validating it at the
+    compiler boundary turns the documented authorization-to-minimization order
+    into an executable invariant shared by generic and commitment THSS.
+    """
+
+    stages = tuple(trace)
+    if len(stages) != len(THSS_PIPELINE_STAGE_NAMES):
+        raise GlhsInvariantError("thss_pipeline_trace_length_invalid")
+    normalized: list[dict[str, object]] = []
+    for expected_stage, (expected_name, item) in enumerate(
+        zip(THSS_PIPELINE_STAGE_NAMES, stages, strict=True), start=1
+    ):
+        if not isinstance(item, dict):
+            raise GlhsInvariantError("thss_pipeline_trace_item_invalid")
+        if item.get("stage") != expected_stage or item.get("name") != expected_name:
+            raise GlhsInvariantError("thss_pipeline_trace_order_invalid")
+        normalized.append(dict(item))
+    return tuple(normalized)
 
 
 def _manifest_envelope(manifest: GlhsSnapshotManifest) -> dict[str, object]:
@@ -719,6 +749,56 @@ def _open_conflicts(db: Session, *, profile_id: int, semantic_key: str) -> list[
     )
 
 
+def _reconstruct_visible_conflicts(
+    db: Session,
+    *,
+    profile_id: int,
+    valid_at: datetime,
+    known_at: datetime,
+) -> list[GlhsConflict]:
+    """Replay conflict existence at a bitemporal cut-off.
+
+    ``GlhsConflict.status`` is a current projection updated by resolution.  It
+    cannot decide whether a historical snapshot contained a conflict: the
+    creation and resolution transitions are the canonical temporal facts.
+    Legacy conflicts without transition lineage retain their current status
+    until a migration can backfill an equivalent event history.
+    """
+
+    conflicts = list(
+        db.execute(
+            select(GlhsConflict).where(GlhsConflict.profile_id == profile_id)
+        ).scalars()
+    )
+    visible: list[GlhsConflict] = []
+    for conflict in conflicts:
+        if conflict.created_transition_id is None:
+            if conflict.status == "open":
+                visible.append(conflict)
+            continue
+        created = db.get(GlhsTransition, conflict.created_transition_id)
+        if created is None:
+            raise GlhsInvariantError("conflict_creation_transition_missing")
+        created_visible = (
+            _as_utc(created.valid_at) <= _as_utc(valid_at)
+            and _as_utc(created.recorded_at) <= _as_utc(known_at)
+        )
+        if not created_visible:
+            continue
+        if conflict.resolved_transition_id is not None:
+            resolved = db.get(GlhsTransition, conflict.resolved_transition_id)
+            if resolved is None:
+                raise GlhsInvariantError("conflict_resolution_transition_missing")
+            resolved_visible = (
+                _as_utc(resolved.valid_at) <= _as_utc(valid_at)
+                and _as_utc(resolved.recorded_at) <= _as_utc(known_at)
+            )
+            if resolved_visible:
+                continue
+        visible.append(conflict)
+    return visible
+
+
 def apply_transition(
     db: Session,
     *,
@@ -1069,13 +1149,11 @@ def compile_thss(
     )
 
     # Stage 3: Conflict. Read conflicts before task relevance/minimization.
-    all_conflicts = list(
-        db.execute(
-            select(GlhsConflict).where(
-                GlhsConflict.profile_id == scope.profile.id,
-                GlhsConflict.status == "open",
-            )
-        ).scalars()
+    all_conflicts = _reconstruct_visible_conflicts(
+        db,
+        profile_id=scope.profile.id,
+        valid_at=as_of,
+        known_at=known_at,
     )
 
     # Stage 4: Relevance/Freshness.
@@ -1217,6 +1295,7 @@ def compile_thss(
             "disclosed_evidence_count": sum(len(ids) for ids in evidence_map.values()),
         },
     ]
+    validate_thss_pipeline_trace(pipeline_trace)
     conflict_payloads: list[dict[str, object]] = [
         {
             "id": row.public_id,

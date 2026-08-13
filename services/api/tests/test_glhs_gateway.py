@@ -36,6 +36,7 @@ from clara_api.glhs.gateway import (
     reconstruct_governed_decision,
     reconstruct_state,
     record_evidence,
+    validate_thss_pipeline_trace,
 )
 from clara_api.lifemap.profile_scope import ProfileScope
 
@@ -52,6 +53,21 @@ def test_profile_writer_lock_compiles_to_postgresql_for_update() -> None:
     )
     assert "WHERE phr_profiles.id = 7" in compiled
     assert compiled.endswith("FOR UPDATE")
+
+
+def test_thss_pipeline_trace_rejects_reordered_or_incomplete_stages() -> None:
+    trace = [
+        {"stage": 1, "name": "authorization"},
+        {"stage": 2, "name": "temporal_lifecycle"},
+        {"stage": 3, "name": "conflict"},
+        {"stage": 4, "name": "relevance_freshness"},
+        {"stage": 5, "name": "minimization"},
+    ]
+    assert validate_thss_pipeline_trace(trace) == tuple(trace)
+    with pytest.raises(GlhsInvariantError, match="trace_order_invalid"):
+        validate_thss_pipeline_trace([trace[0], trace[2], trace[1], *trace[3:]])
+    with pytest.raises(GlhsInvariantError, match="trace_length_invalid"):
+        validate_thss_pipeline_trace(trace[:-1])
 
 
 def test_legacy_snapshot_payload_remains_reconstructable(db: Session) -> None:
@@ -577,6 +593,7 @@ def test_reference_case_late_evidence_conflict_and_reviewed_resolution(db: Sessi
     march = _at("2026-03-01T09:00:00")
     may = _at("2026-05-01T09:00:00")
     july = _at("2026-07-01T09:00:00")
+    august = _at("2026-08-01T09:00:00")
 
     march_500 = _assertion(
         db,
@@ -702,7 +719,7 @@ def test_reference_case_late_evidence_conflict_and_reviewed_resolution(db: Sessi
         reason_code="reviewed_reduction",
         review_state="reviewed",
         reviewed_at=july,
-        effective_at=july,
+        effective_at=august,
         allow_confirmed=True,
     )
     apply_transition(
@@ -716,15 +733,15 @@ def test_reference_case_late_evidence_conflict_and_reviewed_resolution(db: Sessi
         reason_code="reviewed_reduction",
         review_state="reviewed",
         reviewed_at=july,
-        effective_at=july,
+        effective_at=august,
         allow_confirmed=True,
     )
     confirmed_500 = _assertion(
         db,
         scope=clinician,
-        evidence=_evidence(db, scope=clinician, at=july, fingerprint="july-clinical-500"),
+        evidence=_evidence(db, scope=clinician, at=august, fingerprint="august-clinical-500"),
         dose="500",
-        at=july,
+        at=august,
         epistemic="confirmed",
     )
     apply_transition(
@@ -737,16 +754,29 @@ def test_reference_case_late_evidence_conflict_and_reviewed_resolution(db: Sessi
         transition_kind="clinical_review",
         reason_code="reviewed_reduction",
         review_state="reviewed",
-        reviewed_at=july,
+        reviewed_at=august,
         allow_confirmed=True,
     )
-    snapshot = compile_thss(
+    # The current conflict projection is resolved, but a historical snapshot
+    # before the August resolution must replay the still-open July conflict.
+    historical = compile_thss(
         db,
         scope=owner,
         task="careguard",
         purpose="self_care",
         allowed_data_classes=frozenset({"medications"}),
         as_of=july,
+        known_at=_at("2026-09-01T09:00:00"),
+    )
+    assert len(historical.conflicts) == 1
+    assert {row["value"]["dose"] for row in historical.assertions} == {"500", "1000"}
+    snapshot = compile_thss(
+        db,
+        scope=owner,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=august,
     )
     assert snapshot.conflicts == ()
     assert len(snapshot.assertions) == 1

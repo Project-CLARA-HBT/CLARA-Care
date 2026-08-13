@@ -29,6 +29,7 @@ from clara_api.glhs.gateway import (
     _governed_consent_version,
     _manifest_envelope,
     current_state_version,
+    validate_thss_pipeline_trace,
 )
 from clara_api.lifemap.profile_scope import ProfileScope
 
@@ -232,6 +233,7 @@ def compile_commitment_thss(
             "disclosed_evidence_count": len(evidence_ids),
         },
     ]
+    validate_thss_pipeline_trace(pipeline_trace)
     payload = {
         "manifest_schema_version": SNAPSHOT_SCHEMA_VERSION,
         "payload_schema_version": SNAPSHOT_PAYLOAD_SCHEMA_VERSION,
