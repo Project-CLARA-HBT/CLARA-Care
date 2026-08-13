@@ -8,7 +8,11 @@ from evaluation.commitloop.fhir_ingest import ingest_bundle
 from evaluation.commitloop.production_context import (
     compile_production_commitment_context,
 )
-from evaluation.commitloop.solver_packets import CONDITIONS, build_solver_packets
+from evaluation.commitloop.solver_packets import (
+    CONDITIONS,
+    EXPLORATORY_V7_CONDITIONS,
+    build_solver_packets,
+)
 
 
 def test_all_conditions_build_distinct_gold_free_packets() -> None:
@@ -51,10 +55,13 @@ def test_all_conditions_build_distinct_gold_free_packets() -> None:
         known_cutoff=datetime(2026, 2, 1, tzinfo=UTC),
     )
     assert set(packets) == set(CONDITIONS)
+    assert EXPLORATORY_V7_CONDITIONS == (*CONDITIONS, "temporal_bm25")
+    assert "temporal_bm25" not in packets
     assert len({item["packet_sha256"] for item in packets.values()}) == len(CONDITIONS)
     assert len(
         {json.dumps(item["context"], sort_keys=True) for item in packets.values()}
     ) == len(CONDITIONS)
+
     serialized = json.dumps(packets, sort_keys=True).lower()
     assert "construction_gold" not in serialized
     assert "gold_label" not in serialized

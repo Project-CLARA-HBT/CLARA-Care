@@ -16,6 +16,7 @@ from evaluation.comparator_studies.commitloop_baselines import (
     last_write_wins,
     long_context,
     naive_rag,
+    temporal_bm25,
 )
 
 CONDITIONS = (
@@ -29,6 +30,11 @@ CONDITIONS = (
     "glhs_hybrid",
     "glhs_hybrid_thss_strict",
 )
+
+# V21/V22 and all V5/V6 validators intentionally retain ``CONDITIONS`` above.
+# A future exploratory protocol may opt into this stronger retrieval comparator
+# only through its own frozen inventory; it cannot silently alter past runs.
+EXPLORATORY_V7_CONDITIONS = (*CONDITIONS, "temporal_bm25")
 
 
 def _event(event: TimelineEvent) -> dict[str, Any]:
@@ -75,9 +81,14 @@ def build_solver_packets(
     valid_cutoff: datetime,
     known_cutoff: datetime,
     production_strict_context: ProductionStrictContextBuilder | None = None,
+    conditions: tuple[str, ...] = CONDITIONS,
 ) -> dict[str, dict[str, Any]]:
     if case.status != "ELIGIBLE" or case.target is None:
         return {}
+    if not conditions or len(conditions) != len(set(conditions)) or not set(conditions).issubset(
+        EXPLORATORY_V7_CONDITIONS
+    ):
+        raise ValueError("solver_packet_condition_inventory_invalid")
     valid_visible = [
         item
         for item in events
@@ -193,6 +204,13 @@ def build_solver_packets(
                 code=case.target["code"],
             ),
         },
+        "temporal_bm25": {
+            **temporal_bm25(
+                serialized_visible,
+                query_terms=[case.target["system"], case.target["code"], case.action or ""],
+                valid_cutoff=valid_cutoff.isoformat(),
+            ),
+        },
         "lww": {
             **last_write_wins(serialized_visible),
         },
@@ -225,7 +243,7 @@ def build_solver_packets(
         },
     }
     packets = {}
-    for condition in CONDITIONS:
+    for condition in conditions:
         payload = {**common, "condition": condition, "context": contexts[condition]}
         packets[condition] = {**payload, "packet_sha256": _hash(payload)}
     return packets
