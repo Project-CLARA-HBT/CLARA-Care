@@ -61,6 +61,8 @@ def test_settings_enforce_global_router_concurrency() -> None:
         completion_model="claude-sonnet-4.6", embedding_model="embedding-model"
     )
     assert settings["concurrent_requests"] == 5
+    assert settings["completion_models"]["default_completion_model"]["auth_method"] == "api_key"
+    assert settings["embedding_models"]["default_embedding_model"]["auth_method"] == "api_key"
 
 
 def test_rejects_label_or_future_like_packet_fields(tmp_path: Path) -> None:

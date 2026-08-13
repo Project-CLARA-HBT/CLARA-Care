@@ -22,3 +22,11 @@ retriever.
 The generated upstream configuration fixes `concurrent_requests: 5`. Its index
 window is exclusive with solver calls, so total router concurrency cannot exceed
 the benchmark-wide cap.
+
+Before a real run, `prepare_upstream_run_root()` invokes the upstream `init`
+command to generate its release-specific prompt assets, writes a canonical,
+secret-free frozen settings file and serializes visible evidence only.  Its
+`dry_validate_upstream_run_root()` command runs upstream `index --dry-run
+--skip-validation` with a placeholder key; that validates configuration without
+making an LLM or embedding request.  Neither preparation nor dry validation is
+evidence of an executed GraphRAG benchmark.

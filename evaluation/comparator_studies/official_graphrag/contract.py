@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -91,6 +92,7 @@ def build_settings(
             "default_completion_model": {
                 "model_provider": "openai",
                 "model": completion_model,
+                "auth_method": "api_key",
                 "api_base": api_base_env,
                 "api_key": api_key_env,
                 "retry": {"type": "exponential_backoff"},
@@ -100,6 +102,7 @@ def build_settings(
             "default_embedding_model": {
                 "model_provider": "openai",
                 "model": embedding_model,
+                "auth_method": "api_key",
                 "api_base": api_base_env,
                 "api_key": api_key_env,
                 "retry": {"type": "exponential_backoff"},
@@ -128,6 +131,121 @@ def build_settings(
             "embedding_model_id": "default_embedding_model",
         },
     }
+
+
+def _run_upstream_command(command: list[str], *, environment: dict[str, str] | None = None) -> None:
+    """Run an upstream CLI command without retaining provider output or secrets."""
+
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
+    except OSError as exc:
+        raise GraphRAGContractError("upstream_graphrag_cli_unavailable") from exc
+    if completed.returncode != 0:
+        raise GraphRAGContractError("upstream_graphrag_cli_failed")
+
+
+def prepare_upstream_run_root(
+    run_root: Path,
+    *,
+    events: list[dict[str, Any]],
+    completion_model: str,
+    embedding_model: str,
+    upstream_checkout: Path,
+    graphrag_executable: str = "graphrag",
+) -> dict[str, Any]:
+    """Initialize an official GraphRAG run root with only visible evidence.
+
+    ``graphrag init`` is executed first so the upstream release supplies every
+    prompt asset.  The generated settings are then replaced by the frozen,
+    secret-free contract settings.  The root must not pre-exist: silently
+    reusing a prior index, cache, or input is forbidden.
+    """
+
+    if run_root.exists():
+        raise GraphRAGContractError("graphrag_run_root_must_not_exist")
+    checkout = verify_upstream_checkout(upstream_checkout)
+    settings = build_settings(
+        completion_model=completion_model,
+        embedding_model=embedding_model,
+    )
+    _run_upstream_command(
+        [
+            graphrag_executable,
+            "init",
+            "--root",
+            str(run_root),
+            "--force",
+            "--model",
+            completion_model,
+            "--embedding",
+            embedding_model,
+        ]
+    )
+    settings_path = run_root / "settings.yaml"
+    if not settings_path.is_file() or not (run_root / "prompts").is_dir():
+        raise GraphRAGContractError("upstream_graphrag_init_artifacts_missing")
+    # JSON is a strict YAML subset.  Canonical JSON avoids a dependency on a
+    # second serializer and makes the frozen settings hash byte-for-byte clear.
+    settings_path.write_bytes(_canonical_json(settings))
+    input_metadata = materialize_visible_evidence(
+        events,
+        output_path=run_root / "input" / "visible_evidence.jsonl",
+    )
+    return {
+        "run_root": str(run_root),
+        "upstream": checkout,
+        "contract_sha256": GraphRAGExecutionContract().sha256(),
+        "settings_sha256": _sha256_file(settings_path),
+        "input": input_metadata,
+        "init_command": "graphrag init --root <run_root> --force --model <completion> --embedding <embedding>",
+    }
+
+
+def dry_validate_upstream_run_root(
+    run_root: Path,
+    *,
+    graphrag_executable: str = "graphrag",
+    api_base: str,
+) -> None:
+    """Exercise upstream config/index validation without an LLM request.
+
+    The indexer receives a non-secret placeholder key and ``--dry-run`` plus
+    ``--skip-validation``.  It may parse configuration and input but is not
+    allowed to make completion or embedding calls.  A real execution must run
+    its explicit probes and index/query ledger separately.
+    """
+
+    if not (run_root / "settings.yaml").is_file() or not (
+        run_root / "input" / "visible_evidence.jsonl"
+    ).is_file():
+        raise GraphRAGContractError("graphrag_dry_validation_artifacts_missing")
+    if not api_base:
+        raise GraphRAGContractError("graphrag_api_base_required")
+    environment = dict(os.environ)
+    environment.update(
+        {
+            "GRAPHRAG_API_BASE": api_base,
+            "GRAPHRAG_API_KEY": "dry-run-no-provider-call",
+        }
+    )
+    _run_upstream_command(
+        [
+            graphrag_executable,
+            "index",
+            "--root",
+            str(run_root),
+            "--dry-run",
+            "--skip-validation",
+            "--no-cache",
+        ],
+        environment=environment,
+    )
 
 
 def _visible_event_document(event: dict[str, Any]) -> dict[str, Any]:
