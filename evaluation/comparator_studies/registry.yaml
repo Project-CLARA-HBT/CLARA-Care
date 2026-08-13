@@ -20,3 +20,8 @@ methods:
     version: standards-composed-mechanism-baseline.v1
     adapter: evaluation.comparator_studies.standards_composed_baseline.engine:StandardsComposedState
     fidelity: semantic_mechanism_baseline_not_fhir_server
+  microsoft_graphrag:
+    version: upstream-v3.1.0-7fc6607
+    adapter: evaluation.comparator_studies.official_graphrag.contract
+    fidelity: upstream_execution_contract_not_run
+    direct_empirical_comparison_allowed: false

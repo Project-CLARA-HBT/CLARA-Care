@@ -1,0 +1,64 @@
+# Published-system inventory for GLHS-Bench.
+#
+# This is an eligibility registry, not a results table.  A row is selectable
+# only if `direct_empirical_comparison_allowed` is true *at freeze time* and
+# every named artifact has passed its own fidelity validator.
+schema_version: glhs-bench-published-system-registry.v1
+systems:
+  microsoft_graphrag:
+    kind: published_system
+    title: Microsoft GraphRAG
+    source_url: https://github.com/microsoft/graphrag.git
+    pinned_release: v3.1.0
+    pinned_commit: 7fc6607edda3d387d23e52ededbf8a75b6730f97
+    license: MIT
+    protocol_fit: retrieval_context_comparator
+    adapter: evaluation.comparator_studies.official_graphrag.contract
+    direct_empirical_comparison_allowed: false
+    status: UPSTREAM_EXECUTION_REQUIRED
+    blocker: >-
+      Requires a verified source checkout, router-compatible completion and
+      embedding probes, upstream index and context-export ledger, and a frozen
+      same-cohort shared-solver run.
+  medrag_mirage:
+    kind: published_system
+    title: MedRAG toolkit / MIRAGE benchmark
+    paper_url: https://aclanthology.org/2024.findings-acl.372/
+    source_url: https://github.com/gzxiong/MedRAG
+    protocol_fit: incompatible_medical_qa_corpus_and_output_task
+    direct_empirical_comparison_allowed: false
+    status: TASK_MISMATCH
+    blocker: >-
+      The official implementation evaluates medical QA over external medical
+      corpora rather than longitudinal governed-state reconciliation. It cannot
+      be transplanted into this task without changing the scientific question.
+  zhao_btsa:
+    kind: published_method
+    title: Zhao et al. KnowFM 2026 bitemporal state arbitration
+    source_url: https://aclanthology.org/2026.knowfm-1.10/
+    protocol_fit: temporal_state_comparator
+    adapter: evaluation.comparator_studies.bitemporal_state_arbitration.adapter:btsa_context
+    direct_empirical_comparison_allowed: false
+    status: MECHANISM_MAPPED_NOT_FAITHFUL
+    blocker: >-
+      No pinned official code and missing published operational details prevent
+      an end-to-end faithful reproduction. The existing mechanism mapping may
+      be used only as an explicitly labelled internal temporal baseline.
+  vista_architect:
+    kind: published_system
+    title: VISTA Architect
+    protocol_fit: candidate_longitudinal_state_system
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    blocker: >-
+      A runnable, license-compatible implementation and task mapping have not
+      been verified. Citation alone does not enable a numerical comparator.
+  longmedbench:
+    kind: published_benchmark
+    title: LongMedBench
+    protocol_fit: benchmark_reference_not_a_state_resolver
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    blocker: >-
+      It is not a drop-in resolver implementation for this synthetic governed
+      state task; a separately frozen task-compatible protocol is required.

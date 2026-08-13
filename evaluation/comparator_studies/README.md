@@ -14,3 +14,14 @@ the corresponding workstream remains **NOT RUN / asset-gated**.
 combines version-aware writes, current authorization, provenance and audit, but
 intentionally omits exact THSS disclosure-context binding. It is a semantic
 mechanism baseline and is never labelled as a faithful FHIR server.
+
+`official_graphrag/` pins Microsoft GraphRAG `v3.1.0` and verifies use of its
+upstream CLI. It is deliberately **NOT RUN** until a router-compatible embedding
+probe and source/index/query ledger are frozen. Its adapter may not be replaced
+with project-local graph or retrieval code, and it cannot appear in numerical
+comparisons until that gate passes.
+
+`published_systems.yaml` inventories published-system candidates and their
+eligibility.  It intentionally records task mismatch and missing assets rather
+than turning citations into fabricated reproductions. The registry is a freeze
+gate for future validation/final comparisons.

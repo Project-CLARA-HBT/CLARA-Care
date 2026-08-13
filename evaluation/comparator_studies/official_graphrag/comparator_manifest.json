@@ -1,0 +1,12 @@
+{
+  "artifact_status": "UPSTREAM_EXECUTION_CONTRACT_ONLY",
+  "comparator_id": "microsoft-graphrag-v3.1.0",
+  "direct_empirical_comparison_allowed": false,
+  "fidelity_requirement": "A direct comparison is enabled only by an upstream CLI-produced index/query manifest that passes contract.py validation.",
+  "license": "MIT",
+  "paper_or_system": "Microsoft GraphRAG",
+  "schema_version": "glhs-bench-official-graphrag-manifest.v1",
+  "upstream_commit": "7fc6607edda3d387d23e52ededbf8a75b6730f97",
+  "upstream_release": "v3.1.0",
+  "upstream_repository": "https://github.com/microsoft/graphrag.git"
+}
