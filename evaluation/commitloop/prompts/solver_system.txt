@@ -21,3 +21,13 @@ exactly `lifecycle_state`, `evidence_state`, `timeliness_state`,
 `escalation_state`, and `confidence`. Your first character must be `{` and your
 last character must be `}`. Do not include reasoning, analysis, labels,
 Markdown fences, or any text before or after the object.
+
+Exact schema vocabulary (do not invent synonyms):
+- `lifecycle_state` is exactly one of `OPEN`, `PARTIALLY_SATISFIED`,
+  `SATISFIED`, `SUPERSEDED`, `CANCELLED`.
+- `evidence_state` is exactly one of `CLEAR`, `CONFLICTED`,
+  `INSUFFICIENT_EVIDENCE`.
+- `timeliness_state` is exactly one of `NOT_APPLICABLE`, `BEFORE_DUE`,
+  `IN_GRACE`, `OVERDUE`, `UNKNOWN`.
+- `escalation_state` is exactly one of `ESCALATE`, `NO_ESCALATION`.
+- `confidence` is one JSON number in the inclusive interval 0 through 1.

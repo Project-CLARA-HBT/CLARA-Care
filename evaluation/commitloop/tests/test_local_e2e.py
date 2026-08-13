@@ -653,3 +653,6 @@ def test_solver_system_has_a_start_with_json_output_contract() -> None:
 
     assert "Your first character must be `{`" in _SOLVER_SYSTEM
     assert "Do not include reasoning" in _SOLVER_SYSTEM
+    assert "do not invent synonyms" in _SOLVER_SYSTEM
+    assert "`PARTIALLY_SATISFIED`" in _SOLVER_SYSTEM
+    assert "`INSUFFICIENT_EVIDENCE`" in _SOLVER_SYSTEM
