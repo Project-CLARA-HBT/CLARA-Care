@@ -134,3 +134,13 @@ input hashes. Final is run exactly once on the untouched final partition.
 Implementation order is NL-02, NL-03, NL-05, NL-01, NL-04, NL-06, NL-07,
 NL-08.  It deliberately starts with invariants and deterministic local evidence,
 not provider calls.
+
+## 7. Audit-driven change ledger
+
+`IMP-010` is the first change under this specification.  Audit showed generic
+THSS used the mutable `GlhsConflict.status` projection for historical queries;
+the implementation now reconstructs conflict visibility from creation and
+resolution transitions at both temporal cutoffs.  The regression covers a
+conflict resolved in August while a July snapshot is compiled after that
+resolution, and asserts that the July conflict remains disclosed.  This is a
+production temporal-correctness repair, not a scoring or prompt change.
