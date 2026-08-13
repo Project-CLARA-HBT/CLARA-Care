@@ -161,6 +161,28 @@ def _compact_solver_context(
     ]
     if not any(event.get("evidence_id") == anchor for event in events):
         raise ValueError("production_context_anchor_lost_by_minimization")
+    # Keep the governed ledger as the complete source of truth, but expose a
+    # small semantic index for the reconciliation consumer.  This is a
+    # serialization aid: it repeats source facts already disclosed above and
+    # never infers a lifecycle/evidence/timeliness result.  In particular it
+    # makes a later revocation/replacement visible alongside its target rather
+    # than requiring an LLM to rediscover the relevant subset from a mixed
+    # ledger of anchor, target, and unrelated conflict facts.
+    target_events = [
+        event
+        for event in events
+        if any(
+            isinstance(code, dict)
+            and (code.get("system"), code.get("code")) == target_pair
+            for code in event.get("codes", [])
+        )
+    ]
+    documented_conflicts = [
+        event for event in events if event.get("relation") == "contradicts"
+    ]
+    anchor_event = next(
+        event for event in events if event.get("evidence_id") == anchor
+    )
     compact_commitment = {
         key: commitment.get(key)
         for key in (
@@ -190,6 +212,13 @@ def _compact_solver_context(
         "manifest_digest": payload.get("manifest_digest"),
         "commitments": [compact_commitment] if compact_commitment is not None else [],
         "events": events,
+        "reconciliation_evidence": {
+            "anchor_event_id": anchor,
+            "anchor_event": anchor_event,
+            "target_events": target_events,
+            "documented_conflicts": documented_conflicts,
+            "source": "governed_events_projection",
+        },
         "governed_source_ledger": {
             "snapshot_id": ledger.get("snapshot_id"),
             "manifest_digest": ledger.get("manifest_digest"),
