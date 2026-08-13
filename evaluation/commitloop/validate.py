@@ -219,7 +219,7 @@ def validate_run(root: Path) -> None:
         selected_cohort = inputs / f"cohort_{split}.jsonl"
         if (
             not isinstance(provenance, dict)
-            or provenance.get("schema_version") != "glhs-bench-v6-run-inputs.v1"
+            or provenance.get("schema_version") != "glhs-bench-v6-run-inputs.v2"
             or provenance.get("split") != split
             or provenance.get("freeze_sha256")
             != hashlib.sha256((inputs / "freeze.json").read_bytes()).hexdigest()
@@ -227,6 +227,11 @@ def validate_run(root: Path) -> None:
             != hashlib.sha256((inputs / "provider_probe.json").read_bytes()).hexdigest()
             or provenance.get("selected_cohort_sha256")
             != hashlib.sha256(selected_cohort.read_bytes()).hexdigest()
+            or not isinstance(provenance.get("redaction"), dict)
+            or provenance["redaction"].get("algorithm")
+            != "fhir_subject_reference_v1"
+            or not isinstance(provenance["redaction"].get("subject_reference_redactions"), int)
+            or provenance["redaction"]["subject_reference_redactions"] < 1
         ):
             raise ValueError("glhs_bench_frozen_input_artifact_invalid")
         selected_rows = [

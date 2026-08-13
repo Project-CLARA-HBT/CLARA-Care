@@ -31,6 +31,38 @@ from evaluation.commitloop.v6_cohort import (
 from evaluation.commitloop.v6_freeze import verify_v6_freeze
 
 
+def sanitize_artifact_cohort(value: Any) -> tuple[Any, int]:
+    """Redact synthetic FHIR subject references from a sealed public artifact.
+
+    The frozen source cohort is retained outside the run artifact and is verified
+    before execution.  The copy placed alongside a run is evidence for split
+    membership and construction provenance, not an executable FHIR payload, so
+    it must not retain subject-reference strings.
+    """
+
+    if isinstance(value, dict):
+        redacted = 0
+        result: dict[str, Any] = {}
+        for key, item in value.items():
+            if key == "reference" and isinstance(item, str) and item.lower().startswith("patient/"):
+                result[key] = "urn:glhs-bench:redacted-subject"
+                redacted += 1
+            else:
+                sanitized, count = sanitize_artifact_cohort(item)
+                result[key] = sanitized
+                redacted += count
+        return result, redacted
+    if isinstance(value, list):
+        redacted = 0
+        result: list[Any] = []
+        for item in value:
+            sanitized, count = sanitize_artifact_cohort(item)
+            result.append(sanitized)
+            redacted += count
+        return result, redacted
+    return value, 0
+
+
 def run_v6_development_partition(
     *,
     rows: list[dict[str, Any]],
@@ -134,10 +166,18 @@ def run_v6_development_partition(
         row for row in frozen_rows if str(row.get("split")) == split
     ]
     selected_cohort = artifact_inputs / f"cohort_{split}.jsonl"
+    sanitized_rows: list[dict[str, Any]] = []
+    subject_reference_redactions = 0
+    for row in selected_rows:
+        sanitized, count = sanitize_artifact_cohort(row)
+        if not isinstance(sanitized, dict):  # pragma: no cover - cohort rows are dicts by contract
+            raise TypeError("v6_sanitized_cohort_row_invalid")
+        sanitized_rows.append(sanitized)
+        subject_reference_redactions += count
     selected_cohort.write_text(
         "".join(
             json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
-            for row in selected_rows
+            for row in sanitized_rows
         ),
         encoding="utf-8",
     )
@@ -146,13 +186,17 @@ def run_v6_development_partition(
     copied_freeze.write_bytes(freeze_path.read_bytes())
     copied_probe.write_bytes(provider_probe_path.read_bytes())
     provenance = {
-        "schema_version": "glhs-bench-v6-run-inputs.v1",
+        "schema_version": "glhs-bench-v6-run-inputs.v2",
         "split": split,
         "freeze_sha256": hashlib.sha256(copied_freeze.read_bytes()).hexdigest(),
         "provider_probe_sha256": hashlib.sha256(copied_probe.read_bytes()).hexdigest(),
         "full_cohort_sha256": hashlib.sha256(frozen_cohort_path.read_bytes()).hexdigest(),
         "selected_cohort_sha256": hashlib.sha256(selected_cohort.read_bytes()).hexdigest(),
         "implementation_git_sha": str(freeze["git_sha"]),
+        "redaction": {
+            "algorithm": "fhir_subject_reference_v1",
+            "subject_reference_redactions": subject_reference_redactions,
+        },
     }
     (artifact_inputs / "artifact_provenance.json").write_text(
         json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8"

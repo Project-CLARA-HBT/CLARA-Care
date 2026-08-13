@@ -9,7 +9,27 @@ from evaluation.commitloop.provider import (
     RunLimits,
 )
 from evaluation.commitloop.v6_cohort import build_cohort
-from evaluation.commitloop.v6_runner import run_v6_development_partition
+from evaluation.commitloop.v6_runner import (
+    run_v6_development_partition,
+    sanitize_artifact_cohort,
+)
+
+
+def test_artifact_cohort_redaction_removes_fhir_subject_references() -> None:
+    source = {
+        "reference": "Patient/synthetic-42",
+        "nested": [{"reference": "patient/synthetic-43"}],
+        "unrelated": "Patient/not-a-reference",
+    }
+
+    sanitized, count = sanitize_artifact_cohort(source)
+
+    assert count == 2
+    assert sanitized == {
+        "reference": "urn:glhs-bench:redacted-subject",
+        "nested": [{"reference": "urn:glhs-bench:redacted-subject"}],
+        "unrelated": "Patient/not-a-reference",
+    }
 
 
 def _clients(limits: RunLimits) -> dict[str, EvaluationClient]:
