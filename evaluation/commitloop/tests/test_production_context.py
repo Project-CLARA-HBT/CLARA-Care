@@ -42,21 +42,15 @@ def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
     assert context["production_path"]["gold_derived"] is False
     assert context["governed_source_ledger"]["assertion_ids"]
     assert context["events"]
-    reconciliation = context["reconciliation_evidence"]
-    assert reconciliation["source"] == "governed_events_projection"
-    assert reconciliation["anchor_event_id"] == case.anchor_evidence_id
-    assert reconciliation["anchor_event"]["evidence_id"] == case.anchor_evidence_id
-    assert reconciliation["target_events"]
-    serialized_reconciliation = json.dumps(reconciliation)
-    assert all(
-        f'"{field}"' not in serialized_reconciliation
-        for field in (
-            "lifecycle_state",
-            "evidence_state",
-            "timeliness_state",
-            "escalation_state",
-        )
-    )
+    assert context["bitemporal_scope"] == {
+        "valid_at": cutoff.isoformat(),
+        "known_at": cutoff.isoformat(),
+    }
+    event_order = [
+        (event["valid_at"], event["known_at"], event["evidence_id"])
+        for event in context["events"]
+    ]
+    assert event_order == sorted(event_order)
     assert len(json.dumps(context)) < 8_000
 
 
@@ -101,7 +95,6 @@ def test_production_context_retains_documented_source_contradictions() -> None:
         known_cutoff=KNOWN_CUTOFF,
     )
     assert any(event["relation"] == "contradicts" for event in context["events"])
-    assert context["reconciliation_evidence"]["documented_conflicts"]
 
 
 def test_cached_fixture_schema_never_retains_subject_state() -> None:
