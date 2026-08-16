@@ -12,8 +12,23 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def seal(*, run_dir: Path, expected_probe_sha256: str) -> Path:
-    probe = run_dir / "boundary_path_probe.json"
+_DEVELOPMENT_PROBE_CONTRACTS = {
+    "boundary_path_probe.json": (
+        "govred-boundary-development-probe-v1",
+        "development_boundary_probe_not_headline",
+    ),
+    "http_admission_probe.json": (
+        "govred-isolated-http-admission-development-v1",
+        "development_probe_not_headline",
+    ),
+}
+
+
+def seal(*, run_dir: Path, expected_probe_sha256: str, probe_filename: str = "boundary_path_probe.json") -> Path:
+    expected_contract = _DEVELOPMENT_PROBE_CONTRACTS.get(probe_filename)
+    if expected_contract is None:
+        raise ValueError("govred_development_probe_filename_invalid")
+    probe = run_dir / probe_filename
     if not probe.is_file():
         raise ValueError("govred_development_probe_missing")
     try:
@@ -22,8 +37,8 @@ def seal(*, run_dir: Path, expected_probe_sha256: str) -> Path:
         raise ValueError("govred_development_probe_invalid_json") from exc
     if (
         not isinstance(value, dict)
-        or value.get("schema_version") != "govred-boundary-development-probe-v1"
-        or value.get("status") != "development_boundary_probe_not_headline"
+        or value.get("schema_version") != expected_contract[0]
+        or value.get("status") != expected_contract[1]
     ):
         raise ValueError("govred_development_probe_contract_invalid")
     if _sha256(probe) != expected_probe_sha256:
@@ -40,6 +55,7 @@ def seal(*, run_dir: Path, expected_probe_sha256: str) -> Path:
                 "schema_version": "govred-development-artifact-seal-v1",
                 "status": "sealed_development_not_claim_eligible",
                 "headline_claims_permitted": False,
+                "probe_filename": probe_filename,
                 "expected_probe_sha256": expected_probe_sha256,
                 "files": files,
             },
@@ -73,12 +89,15 @@ def verify_seal(*, run_dir: Path) -> dict[str, object]:
     expected_probe_sha256 = value.get("expected_probe_sha256")
     if not isinstance(expected_probe_sha256, str):
         raise TypeError("govred_development_seal_expected_hash_invalid")
+    probe_filename = value.get("probe_filename", "boundary_path_probe.json")
+    if not isinstance(probe_filename, str) or probe_filename not in _DEVELOPMENT_PROBE_CONTRACTS:
+        raise ValueError("govred_development_seal_probe_filename_invalid")
     actual_files = {
         str(candidate.relative_to(run_dir)): _sha256(candidate)
         for candidate in sorted(run_dir.rglob("*"))
         if candidate.is_file() and candidate.name != "artifact-sha256.json"
     }
-    if files != actual_files or files.get("boundary_path_probe.json") != expected_probe_sha256:
+    if files != actual_files or files.get(probe_filename) != expected_probe_sha256:
         raise ValueError("govred_development_seal_hash_mismatch")
     return value
 
@@ -87,6 +106,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--expected-probe-sha256")
+    parser.add_argument("--probe-filename", default="boundary_path_probe.json")
     parser.add_argument("--verify", action="store_true")
     args = parser.parse_args()
     if args.verify:
@@ -94,7 +114,13 @@ def main() -> int:
     else:
         if not args.expected_probe_sha256:
             parser.error("govred_expected_probe_sha256_required")
-        print(seal(run_dir=args.run_dir, expected_probe_sha256=args.expected_probe_sha256))
+        print(
+            seal(
+                run_dir=args.run_dir,
+                expected_probe_sha256=args.expected_probe_sha256,
+                probe_filename=args.probe_filename,
+            )
+        )
     return 0
 
 

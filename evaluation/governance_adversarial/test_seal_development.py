@@ -40,3 +40,16 @@ def test_development_seal_detects_post_seal_mutation(tmp_path: Path) -> None:
     probe.write_text(json.dumps({**_probe(), "mutated": True}), encoding="utf-8")
     with pytest.raises(ValueError, match="govred_development_seal_hash_mismatch"):
         verify_seal(run_dir=tmp_path)
+
+
+def test_development_seal_accepts_isolated_http_admission_probe(tmp_path: Path) -> None:
+    probe = tmp_path / "http_admission_probe.json"
+    probe.write_text(json.dumps({
+        "schema_version": "govred-isolated-http-admission-development-v1",
+        "status": "development_probe_not_headline",
+    }), encoding="utf-8")
+    expected = hashlib.sha256(probe.read_bytes()).hexdigest()
+
+    seal(run_dir=tmp_path, expected_probe_sha256=expected, probe_filename=probe.name)
+
+    assert verify_seal(run_dir=tmp_path)["probe_filename"] == probe.name

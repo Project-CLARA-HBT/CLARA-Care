@@ -92,4 +92,15 @@ sealed sanitized artifact is retained in
 development boundary probe only: it does not exercise a cache/index route,
 research arm, governed disclosure-to-commit schedule, or complete audit matrix.
 
+Development run `2026-08-17-rivf-dev012` deployed a separate source-attested
+isolated project with the `STATE_VERSION_ONLY` arm explicitly selected. A new
+synthetic user completed the real HTTP auth and consent steps, then the
+isolated probe created synthetic THSS/evidence, revoked consent, and called
+GST admission through the synthetic HTTP route. The request committed (`201`,
+`transition_committed`) as this arm intentionally omits governance
+revalidation. The sampled PostgreSQL and namespaced Redis signatures changed;
+the PHR-audit hash remained empty and is not audit-completeness evidence. The
+sealed artifact documents one mechanism trace only: it is not a cache/index
+test, full arm comparison, frozen-manifest execution, or RIVF result.
+
 The host inspected on 2026-08-16 runs the shared `clara-app` stack, so it is explicitly excluded from this study. The isolated compose file uses a unique project, project-local network, ports, and volumes; its non-tracked environment file must contain new random credentials.
