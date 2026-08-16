@@ -1,0 +1,6 @@
+Status: NOT FOR SUBMISSION pending POLICY_CLEARANCE.md.
+Title (EN): From Longitudinal Context to Safe Action: A Co-Versioned Governance Contract for Persistent Health AI
+Title (VI): Từ bối cảnh sức khỏe dọc đến hành động an toàn: hợp đồng quản trị đồng phiên bản cho AI y tế có trạng thái
+Topic: AI and Digital Transformation in Healthcare and Medical Education
+Related-work disclosure: PENDING organizer instruction
+Authors/affiliations: PENDING author approval

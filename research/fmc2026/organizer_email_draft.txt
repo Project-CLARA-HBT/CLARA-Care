@@ -1,0 +1,12 @@
+Subject: FMC 2026 policy question — presentation of related under-review work
+
+Dear FMC 2026 organizers,
+
+We are preparing a presentation-only abstract on a governed persistent health-AI architecture. A related manuscript describing the underlying work is currently under review elsewhere.
+
+Could you please confirm whether FMC permits an abstract/oral presentation in this situation, provided that: (1) the related-under-review status is disclosed when requested; (2) no duplicate archival full paper is submitted or published through FMC; and (3) the presentation does not claim clinical effectiveness or regulatory approval?
+
+Please also indicate any required wording or declaration on the submission form.
+
+Kind regards,
+[name and affiliation]

@@ -1,0 +1,63 @@
+schema_version: clara-publication-registry-v1
+updated_at: 2026-08-17
+studies:
+  - id: govred-rivf-2026
+    title: "GovRed-Health: Benchmarking Authorization Drift Between Governed Disclosure and Persistent Commit"
+    target_venue: IEEE-RIVF 2026
+    status: protocol_implementation
+    primary_research_question: "Do explicit mutations after governed disclosure invalidate a later persistent health commit across the real boundary?"
+    primary_endpoint: unauthorized_or_stale_commit_acceptance_and_prohibited_disclosure
+    frozen_manifest: NOT_RUN
+    headline_run_id: NOT_RUN
+    related_manuscripts: [glhs-journal]
+    overlapping_code_modules: ["services/api/src/clara_api/glhs", "services/api/src/clara_api/db"]
+    overlapping_background_datasets: [synthetic_sentinel_fixtures_only]
+    novelty_boundary: "Matched governed-disclosure-to-mutation-to-commit schedules; not a generic cybersecurity, prompt-injection, or governed-memory benchmark."
+  - id: assurance-soict-2026
+    title: "GovMut-Health: A Mutation Benchmark for Sequence-Sensitive Governance Faults in Stateful Health-AI Systems"
+    target_venue: SOICT 2026
+    status: development_mutation_infrastructure_only
+    primary_research_question: "Which health-AI governance faults survive which established testing strategies under a fixed mutant corpus?"
+    primary_endpoint: mutation_score
+    frozen_manifest: NOT_RUN
+    headline_run_id: NOT_RUN
+    related_manuscripts: [glhs-journal, govred-rivf-2026]
+    overlapping_code_modules: ["services/api/src/clara_api/glhs"]
+    overlapping_background_datasets: [synthetic_governed_store_fixtures]
+    novelty_boundary: "Health-AI fault taxonomy, executable mutant corpus, and comparative adequacy evidence; not a novel testing methodology."
+  - id: careguard-vn
+    title: "CareGuard-VN: Source-Bound Medication Identity as a Safety Gate for Drug–Drug Interaction Screening"
+    target_venue: arXiv_then_tbd
+    status: partial_external_source_acquired_not_benchmark_ready
+    primary_research_question: "Does strict source-bound identity gating reduce false-clear DDI conclusions?"
+    primary_endpoint: false_clear_rate
+    frozen_manifest: NOT_RUN
+    headline_run_id: NOT_RUN
+    related_manuscripts: []
+    overlapping_code_modules: ["services/ml", "services/api/src/clara_api/glhs/adapters.py"]
+    overlapping_background_datasets: [DrugBank_historical_conformance_only]
+    novelty_boundary: "Independent Vietnam identity/DDI validation with an oracle-identity arm; no generic normalization, abstention, evidence-grounded DDI, or historical DrugBank result is headline evidence."
+  - id: glhs-journal
+    title: "GLHS: A Co-Versioned Disclosure-to-Commit Governance Contract for Longitudinal Health AI"
+    target_venue: journal_revision
+    status: revision_evidence_development_only
+    primary_research_question: "Can co-versioned disclosure-to-commit binding govern longitudinal health-AI writes?"
+    primary_endpoint: governed_read_to_proposal_to_write_correctness
+    frozen_manifest: existing_glhs_runs_background_only
+    headline_run_id: existing_glhs_runs_not_reused
+    related_manuscripts: [govred-rivf-2026, assurance-soict-2026, fmc-2026]
+    overlapping_code_modules: ["services/api/src/clara_api/glhs"]
+    overlapping_background_datasets: [GLHS_synthetic_64_subject_cohort]
+    novelty_boundary: "Disclosure-conditioned health commit binding and its health-specific governance evidence; not generic transactional memory, stale authorization, bitemporal writes, or governed-memory novelty."
+  - id: fmc-2026
+    title: "From Longitudinal Context to Safe Action: A Co-Versioned Governance Contract for Persistent Health AI"
+    target_venue: FMC 2026
+    status: policy_clearance_required
+    primary_research_question: not_an_archival_study
+    primary_endpoint: not_applicable
+    frozen_manifest: not_applicable
+    headline_run_id: not_applicable
+    related_manuscripts: [glhs-journal]
+    overlapping_code_modules: ["services/api/src/clara_api/glhs"]
+    overlapping_background_datasets: [GLHS_synthetic_64_subject_cohort]
+    novelty_boundary: "Presentation-only communication of supported GLHS evidence; no new archival claim."
