@@ -48,7 +48,7 @@ class _Strict(BaseModel):
 class SyntheticCommitProbeRequest(_Strict):
     """One deliberately narrow mutation for isolated development probes."""
 
-    mutation: Literal["none", "consent_revoke"]
+    mutation: Literal["none", "consent_revoke", "state_advance"]
     sentinel_id: str = Field(min_length=8, max_length=96, pattern=r"^[A-Za-z0-9_-]+$")
 
 
@@ -74,8 +74,10 @@ def synthetic_commit_probe(
     """Exercise authenticated synthetic disclosure → mutation → GST commit.
 
     This does not expose a generic assertion-write API: all generated values
-    are fixed synthetic metadata and only the two prespecified mutation modes
-    are accepted.
+    are fixed synthetic metadata and only the prespecified mutation modes are
+    accepted.  ``state_advance`` commits a separate synthetic transition
+    before attempting the target transition, so it exercises a real stale
+    state admission check rather than merely modifying an in-memory object.
     """
 
     arm = _require_research_arm()
@@ -90,56 +92,78 @@ def synthetic_commit_probe(
     ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
     now = datetime.now(UTC)
     probe_id = uuid4().hex
-    source = HealthSourceReference(
-        profile_id=scope.profile.id,
-        source_kind="govred-isolated-synthetic",
-        source_identity=f"sentinel:{request.sentinel_id}:{probe_id}",
-        checksum=f"sentinel:{request.sentinel_id}:{probe_id}",
-        observed_at=now,
-    )
-    db.add(source)
-    db.flush()
-    evidence = record_evidence(
-        db,
-        profile_id=scope.profile.id,
-        data=EvidenceInput(
-            source_reference_id=source.id,
-            evidence_kind="govred-isolated-synthetic",
-            artifact_type="synthetic_sentinel",
-            artifact_public_id=f"sentinel:{request.sentinel_id}:{probe_id}",
-            fingerprint=f"sentinel:{request.sentinel_id}:{probe_id}",
-            valid_from=now,
-        ),
-    )
-    snapshot_id = None
-    snapshot_digest = None
-    if arm.bind_snapshot:
-        snapshot = compile_thss(
-            db,
-            scope=scope,
-            task="govred-isolated-synthetic-probe",
-            purpose="self_care",
-            allowed_data_classes=frozenset({"medications"}),
+    def propose_synthetic_assertion(*, label: str):
+        source = HealthSourceReference(
+            profile_id=scope.profile.id,
+            source_kind="govred-isolated-synthetic",
+            source_identity=f"sentinel:{request.sentinel_id}:{probe_id}:{label}",
+            checksum=f"sentinel:{request.sentinel_id}:{probe_id}:{label}",
+            observed_at=now,
         )
-        snapshot_id = snapshot.snapshot_id
-        snapshot_digest = snapshot.manifest_digest
-    proposal = propose_assertion(
-        db,
-        profile_id=scope.profile.id,
-        actor_user_id=scope.actor.id,
-        data=AssertionInput(
-            semantic_key=f"medication:govred-sentinel:{request.sentinel_id}:{probe_id}",
-            assertion_type="medications",
-            predicate="synthetic_probe",
-            value={"sentinel_id": request.sentinel_id, "synthetic": True},
-            epistemic_state="reported",
-            valid_from=now,
-            source_snapshot_id=snapshot_id,
-            source_snapshot_digest=snapshot_digest,
-            proposal_consumed_thss=arm.bind_snapshot,
-        ),
-        evidence=((evidence, "supports"),),
-    )
+        db.add(source)
+        db.flush()
+        evidence = record_evidence(
+            db,
+            profile_id=scope.profile.id,
+            data=EvidenceInput(
+                source_reference_id=source.id,
+                evidence_kind="govred-isolated-synthetic",
+                artifact_type="synthetic_sentinel",
+                artifact_public_id=f"sentinel:{request.sentinel_id}:{probe_id}:{label}",
+                fingerprint=f"sentinel:{request.sentinel_id}:{probe_id}:{label}",
+                valid_from=now,
+            ),
+        )
+        snapshot_id = None
+        snapshot_digest = None
+        if arm.bind_snapshot:
+            snapshot = compile_thss(
+                db,
+                scope=scope,
+                task="govred-isolated-synthetic-probe",
+                purpose="self_care",
+                allowed_data_classes=frozenset({"medications"}),
+            )
+            snapshot_id = snapshot.snapshot_id
+            snapshot_digest = snapshot.manifest_digest
+        return propose_assertion(
+            db,
+            profile_id=scope.profile.id,
+            actor_user_id=scope.actor.id,
+            data=AssertionInput(
+                semantic_key=f"medication:govred-sentinel:{request.sentinel_id}:{probe_id}:{label}",
+                assertion_type="medications",
+                predicate="synthetic_probe",
+                value={"sentinel_id": request.sentinel_id, "synthetic": True, "label": label},
+                epistemic_state="reported",
+                valid_from=now,
+                source_snapshot_id=snapshot_id,
+                source_snapshot_digest=snapshot_digest,
+                proposal_consumed_thss=arm.bind_snapshot,
+            ),
+            evidence=((evidence, "supports"),),
+        )
+
+    proposal = propose_synthetic_assertion(label="target")
+    if request.mutation == "state_advance":
+        advancing_proposal = propose_synthetic_assertion(label="advance")
+        try:
+            apply_transition(
+                db,
+                scope=scope,
+                assertion=advancing_proposal,
+                action="activate",
+                expected_state_version=advancing_proposal.base_state_version,
+                idempotency_key=f"govred-synthetic:{request.sentinel_id}:{probe_id}:advance",
+                transition_kind="govred_isolated_synthetic",
+                reason_code="state_advance_precondition",
+            )
+            # Persist the preceding transition independently.  A rejection of
+            # the target must not erase the state change it is testing.
+            db.commit()
+        except GlhsInvariantError as exc:
+            db.rollback()
+            _raise_invariant(exc)
     if request.mutation == "consent_revoke":
         db.add(UserConsent(
             user_id=scope.profile.user_id,

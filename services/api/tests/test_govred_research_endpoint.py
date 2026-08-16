@@ -75,3 +75,34 @@ def test_strict_http_primitive_rejects_synthetic_consent_revoke(
 
     assert raised.value.status_code == 409
     assert raised.value.detail == {"code": "assertion_consent_mismatch"}
+
+
+def test_state_only_http_primitive_rejects_stale_synthetic_state(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "STATE_VERSION_ONLY")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            SyntheticCommitProbeRequest(mutation="state_advance", sentinel_id="sentinel03"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail == {"code": "stale_state_version"}
+
+
+def test_unbound_http_primitive_admits_stale_synthetic_state(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "UNBOUND")
+
+    result = synthetic_commit_probe(
+        SyntheticCommitProbeRequest(mutation="state_advance", sentinel_id="sentinel04"),
+        db,
+        _token(),
+    )
+
+    assert result["arm"] == "UNBOUND"
+    assert result["outcome"] == "transition_committed"
