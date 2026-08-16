@@ -1,0 +1,40 @@
+{
+  "access_terms": "DailyMed public HTTPS GET API; exact response retained only in controlled archive.",
+  "independence_role": "regulatory_confirmation",
+  "license": "DailyMed public API; source-label rights remain with the original labelers.",
+  "notes": "Regulatory positive-confirmation subset only. It contains no negative labels and cannot substitute for Vietnam identity, RxNorm terminology, or DDInter sources.",
+  "payload_sha256": "1d0d99c8b25f24ce8dbc5f22dc84d3a3f3f7a46d44c3eaec004ef0846deceef3",
+  "query_url": "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?drug_name=warfarin&pagesize=5&page=1",
+  "raw_retention_location": "/home/nguyennt/.local/share/clara-care/research/careguard-vn/dailymed-20260817",
+  "record_hash_algorithm": "sha256(canonical_record_json)",
+  "record_hash_inventory": [
+    {
+      "source_record_hash": "dac2a6b419dce7fc076011c91e3bcadbde1e3ef7e2c0234b0942f1a6d39514fa",
+      "source_record_id": "bd6ea120-5d1c-4815-94f2-81e28dc6b7a9"
+    },
+    {
+      "source_record_hash": "2ba07d657fa8ee0a9c93509799405e0e39f3180220ac7beac1baf286720e5f99",
+      "source_record_id": "541c9a70-adaf-4ef3-94ba-ad4e70dfa057"
+    },
+    {
+      "source_record_hash": "e54b83242ed03a5bc176ddde4b441230674872be189eeb9dd629f845745e31ac",
+      "source_record_id": "724b0061-f42a-4008-a078-09c800ee9785"
+    },
+    {
+      "source_record_hash": "55626d6aaab57e8d9b55f2870f5f81c14769d066b27339b07fd67f6574ef26a2",
+      "source_record_id": "d7fb4290-ed37-4ed3-ae51-c400191961dc"
+    },
+    {
+      "source_record_hash": "f168ab992f00569724f899dbcf12ef9c82d314c77e8a62c5cf951bb4bfb65670",
+      "source_record_id": "2fb8b8d5-f643-4069-8e47-5eae31a8fbc8"
+    }
+  ],
+  "redistribution_policy": "derived_only",
+  "retrieved_at_utc": "2026-08-16T18:40:06.837322+00:00",
+  "row_count": 5,
+  "schema_version": "careguard-vn.source-manifest.v1",
+  "source_name": "DailyMed current SPL regulatory-confirmation subset (warfarin query)",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/app-support-web-services.cfm",
+  "status": "FROZEN_ACQUIRED",
+  "version_or_release": "DailyMed v2 API database published Aug 14, 2026 07:49:27PM EST"
+}

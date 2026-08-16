@@ -1,0 +1,11 @@
+{
+  "schema_version": "careguard-vn.controlled-source-verification.v1",
+  "status": "ARCHIVE_MATCHES_MANIFEST_SINGLE_ROLE_NOT_BENCHMARK",
+  "verified_at_utc": "2026-08-16T18:00:36+00:00",
+  "controlled_manifest_sha256": "253cf0ab0d01e33c9cae9a953da92266ba95ed72e5a0c5934274bc15cb986c26",
+  "payload_bundle_sha256": "b49b8094065d5c063306c546b88599467ec1cd29e32a5e2abd91eccfece44bb1",
+  "row_count": 222383,
+  "verification_status": "archive_matches_manifest",
+  "verification_command": "python -m evaluation.careguard_external.acquire_ddinter --verify-manifest <controlled-manifest>",
+  "notes": "The verifier recomputes every raw-file hash and canonical row-hash inventory without persisting or printing source records. This confirms one positive-reference archive only; it does not create negative labels, a four-role source set, or CareGuard-VN outcome evidence."
+}

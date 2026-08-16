@@ -1,0 +1,23 @@
+{
+  "schema_version": "careguard-vn.source-manifest.v1",
+  "status": "METADATA_PROBE_ONLY_NOT_BENCHMARK",
+  "source_name": "DailyMed SPL public API",
+  "independence_role": "regulatory_confirmation",
+  "source_url": "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?drug_name=warfarin&pagesize=1&page=1",
+  "retrieved_at_utc": "2026-08-16T16:18:38.296986+00:00",
+  "version_or_release": "SPL version 1 for the returned setid",
+  "access_terms": "public API; benchmark-use and retention review remains required",
+  "license": "PENDING_REVIEW",
+  "redistribution_policy": "derived_metadata_only",
+  "payload_sha256": "6310d6bc24f5e6dabcd0140844aefc643e6f57e18ea1481b65e3830ff1ec3cb9",
+  "row_count": 1,
+  "record_hash_algorithm": "sha256(canonical_record_json)",
+  "record_hash_inventory": [
+    {
+      "source_record_id": "bd6ea120-5d1c-4815-94f2-81e28dc6b7a9",
+      "source_record_hash": "dac2a6b419dce7fc076011c91e3bcadbde1e3ef7e2c0234b0942f1a6d39514fa"
+    }
+  ],
+  "raw_retention_location": "not_retained; repeat acquisition into controlled archive required before freeze",
+  "notes": "One public metadata probe only. It is not a Vietnam identity frame, DDI-positive reference, regulatory confirmation subset, or evaluation case."
+}

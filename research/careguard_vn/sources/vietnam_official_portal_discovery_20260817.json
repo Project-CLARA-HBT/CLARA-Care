@@ -1,0 +1,41 @@
+{
+  "schema_version": "careguard-vn.source-discovery.v1",
+  "status": "NOT_ACQUIRED_NOT_A_SOURCE_MANIFEST",
+  "retrieved_at_utc": "2026-08-17T00:00:00Z",
+  "candidates": [
+    {
+      "authority": "Drug Administration of Vietnam",
+      "url": "https://dichvucong.dav.gov.vn/",
+      "observed_state": "maintenance notice",
+      "machine_readable_export": "not verified",
+      "reuse_terms": "not verified",
+      "decision": "Do not scrape or treat search-index metadata as an acquisition."
+    },
+    {
+      "authority": "Cục quản lý Y, Dược cổ truyền - Ministry of Health",
+      "url": "https://ydct-8dichvucong.moh.gov.vn/congbothuoc",
+      "observed_state": "official search interface exposes registration number, product name, ingredient, dosage form, strength, registrant, and manufacturer fields",
+      "public_interface_route_discovery": {
+        "evidence": "The portal's delivered frontend bundle configures a POST request to /api/services/app/soDangKy/GetAllPublicServerPaging for its public search grid.",
+        "route": "https://ydct-8dichvucong.moh.gov.vn/api/services/app/soDangKy/GetAllPublicServerPaging",
+        "method": "POST",
+        "interpretation": "This establishes only that the public UI uses a paginated search route. No request was made to the route and no records, schemas, or search results were retained.",
+        "not_established": [
+          "bulk or complete export availability",
+          "current marketing or withdrawal status",
+          "published reuse permission",
+          "suitability as a frozen Vietnam medication-identity frame"
+        ]
+      },
+      "material_limitation": "the portal states that it presents original registration-grant data and excludes corrections, changes, supplements, and withdrawals during circulation",
+      "machine_readable_export": "not verified",
+      "reuse_terms": "not verified",
+      "decision": "Not a current frozen Vietnam identity frame. No records retained and no benchmark source manifest created."
+    }
+  ],
+  "prohibited_inferences": [
+    "Portal availability or a searchable form is not permission to scrape or redistribute records.",
+    "The portal limitation prevents treating its original-grant entries as current marketing status.",
+    "This discovery receipt does not supply a zero-row identity source or any identity/DDI benchmark label."
+  ]
+}

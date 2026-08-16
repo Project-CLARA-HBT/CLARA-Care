@@ -1,0 +1,17 @@
+{
+  "schema_version": "careguard-vn.controlled-source-receipt.v1",
+  "status": "FROZEN_ACQUIRED_SINGLE_ROLE_NOT_BENCHMARK",
+  "source_name": "DDInter 2.0 category download snapshot",
+  "independence_role": "positive_ddi_reference",
+  "retrieved_at_utc": "2026-08-16T17:42:44.746172+00:00",
+  "source_url": "https://ddinter2.scbdd.com/download/",
+  "terms_url": "https://ddinter2.scbdd.com/terms/",
+  "license": "CC BY-NC-SA 4.0",
+  "redistribution_policy": "raw_prohibited",
+  "raw_payload_retained_outside_git": "/home/nguyennt/.local/share/clara-care/research/careguard-vn/ddinter-20260817",
+  "controlled_manifest_filename": "DDINTER_SOURCE_MANIFEST.json",
+  "controlled_manifest_sha256": "253cf0ab0d01e33c9cae9a953da92266ba95ed72e5a0c5934274bc15cb986c26",
+  "payload_bundle_sha256": "b49b8094065d5c063306c546b88599467ec1cd29e32a5e2abd91eccfece44bb1",
+  "row_count": 222383,
+  "notes": "The controlled manifest was validated by evaluation.careguard_external.source_manifest. This is a positive-reference source only: DDInter absence is unknown, never a negative label. It is not a complete four-role source set, locked benchmark, or CareGuard-VN outcome."
+}

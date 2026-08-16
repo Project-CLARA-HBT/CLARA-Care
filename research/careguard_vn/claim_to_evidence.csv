@@ -1,0 +1,6 @@
+claim_id,claim,evidence_artifact,status,allowed_wording
+CGVN-PROTOCOL-001,The benchmark distinguishes identity error from DDI knowledge coverage,research/careguard_vn/statistics_plan.json,supported_protocol,Protocol only; no performance result.
+CGVN-SOURCE-001,DDInter 2.0 positive-reference source was acquired in a controlled archive,research/careguard_vn/sources/ddinter_2_0_acquisition_receipt_20260816.json;research/careguard_vn/sources/ddinter_2_0_archive_verification_20260817.json,supported_source_acquisition,One independently maintained positive-reference source is archived and reverified against its full hash inventory; it is not a complete source set or a result.
+CGVN-PROTOCOL-002,Authorized RxNorm acquisition rejects login HTML and requires a published checksum plus RRF-row inventory,evaluation/careguard_external/acquire_rxnorm.py;evaluation/careguard_external/test_acquire_rxnorm.py,supported_protocol,Future-source acquisition safeguard only; no RxNorm payload or terminology manifest has been acquired.
+CGVN-RESULT-001,Strict SBMI lowers false-clear rate,NOT_RUN,NOT_RUN,No comparative result is available.
+CGVN-RESULT-002,CareGuard covers Vietnamese marketed products,NOT_RUN,NOT_RUN,No independently frozen Vietnam product frame is available.

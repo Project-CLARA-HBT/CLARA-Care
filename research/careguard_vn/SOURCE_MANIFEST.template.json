@@ -1,0 +1,19 @@
+{
+  "schema_version": "careguard-vn.source-manifest.v1",
+  "status": "NOT_ACQUIRED",
+  "source_name": "DAV_or_successor|RxNorm|DDInter_2.0|DailyMed_or_FDA",
+  "independence_role": "identity_frame|terminology|positive_ddi_reference|regulatory_confirmation",
+  "source_url": "PENDING_OFFICIAL_SOURCE_URL",
+  "retrieved_at_utc": null,
+  "version_or_release": null,
+  "access_terms": "PENDING_REVIEW",
+  "license": "PENDING_REVIEW",
+  "redistribution_policy": "raw_prohibited|derived_only|permitted",
+  "payload_sha256": null,
+  "row_count": null,
+  "record_hash_algorithm": "sha256(canonical_record_json)",
+  "record_hash_inventory": null,
+  "raw_retention_location": "outside_git",
+  "required_fields": ["source_record_id", "source_record_hash", "retrieval_version"],
+  "notes": "Do not replace unavailable data with a zero-count source or infer negative DDI labels from absence."
+}

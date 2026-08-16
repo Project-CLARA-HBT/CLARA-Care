@@ -1,0 +1,12 @@
+{
+  "schema_version": "careguard-vn-statistics-plan-v1",
+  "status": "draft_not_run",
+  "identity_unit": "external medication/product identity case",
+  "ddi_unit": "frozen logical medication pair/case",
+  "primary_endpoint": "false_clear_rate among cases where reassurance must not be released",
+  "false_clear_components": ["wrong_identity_reassurance", "ambiguous_or_unresolved_reassurance", "stale_or_invalid_identity_reassurance", "positive_reference_missed_after_admissible_identity"],
+  "oracle_decomposition": ["raw_input_to_identity_to_ddi", "oracle_external_identity_to_same_ddi_engine"],
+  "unknown_label_rule": "not-in-reference is unknown and excluded from negative/specificity denominators",
+  "paired_analysis": "Exact McNemar where valid; prespecified contrast families use Holm correction.",
+  "freeze_requirement": "Sources, mappings, development-only tuning, split, baselines, metrics and this plan must be frozen and hash-bound before locked testing."
+}
