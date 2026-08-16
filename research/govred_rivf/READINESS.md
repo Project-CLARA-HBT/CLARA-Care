@@ -110,4 +110,20 @@ the same authenticated synthetic consent-revoke schedule and returned `409`
 trace, not a frozen paired comparison: it has no complete cache/index or
 audit-reconstruction observation and cannot support an attack-rate claim.
 
+Development run `2026-08-17-rivf-dev014` used another fresh, source-attested
+isolated project with `STATE_VERSION_ONLY`. Its authenticated synthetic route
+first committed a separate synthetic state advance, then attempted the target
+proposal from the now-stale state. GST rejected the target with `409`
+`stale_state_version`, as required by that arm's state revalidation coordinate.
+The sealed artifact is one development mechanism trace only: it has no
+cache/index or audit-reconstruction observation, frozen schedule execution, or
+claim-eligible RIVF result.
+
+Development run `2026-08-17-rivf-dev015` repeated the same synthetic
+state-advance schedule on a separate fresh `UNBOUND` project. The target
+transition committed (`201`, `transition_committed`), consistent with the
+deliberately unbound arm omitting state revalidation. This sealed trace does
+not constitute a paired comparison, attack rate, cache/index observation,
+audit-reconstruction observation, or frozen RIVF result.
+
 The host inspected on 2026-08-16 runs the shared `clara-app` stack, so it is explicitly excluded from this study. The isolated compose file uses a unique project, project-local network, ports, and volumes; its non-tracked environment file must contain new random credentials.
