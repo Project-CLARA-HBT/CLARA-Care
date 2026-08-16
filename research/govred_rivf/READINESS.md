@@ -15,12 +15,13 @@ Exact blockers:
 2. A research-only commit-admission contract now implements the prespecified
    `UNBOUND`, `STATE_VERSION_ONLY`, `SNAPSHOT_BOUND_STATE_ONLY`, and
    `GLHS_STRICT` binding/state/governance distinctions behind the explicit
-   isolated-research attestation. It is not yet wired to an HTTP persistent-write
-   adapter, and the development deployment still uses only the production-default
-   strict system. Any future `EXECUTED` adapter row must attest HTTP, PostgreSQL,
-   cache, and audit observation, reference a hashed raw-observation artifact,
-   and carry a semantics-matched isolated-only arm implementation artifact/revision.
-   A config or pure decision declaration alone is rejected.
+   isolated-research attestation. A narrow authenticated synthetic HTTP-to-GST
+   primitive now exercises the selected arm, but it is not a complete-boundary
+   adapter and does not cover the whole manifest. Any future `EXECUTED` adapter
+   row must attest HTTP, PostgreSQL, cache, and audit observation, reference a
+   hashed raw-observation artifact, and carry a semantics-matched isolated-only
+   arm implementation artifact/revision. A config or pure decision declaration
+   alone is rejected.
    `boundary_adapter_capability_matrix.json` records why the currently examined
    public Commitment route may support a development HTTP commit probe but cannot
    receive a complete-boundary attestation: it has no cache/index stage, no
