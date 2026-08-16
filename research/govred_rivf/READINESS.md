@@ -103,4 +103,10 @@ the PHR-audit hash remained empty and is not audit-completeness evidence. The
 sealed artifact documents one mechanism trace only: it is not a cache/index
 test, full arm comparison, frozen-manifest execution, or RIVF result.
 
+The separately deployed `2026-08-17-rivf-dev013` strict-arm counterpart used
+the same authenticated synthetic consent-revoke schedule and returned `409`
+`assertion_consent_mismatch`. Its sealed artifact is a single strict mechanism
+trace, not a frozen paired comparison: it has no complete cache/index or
+audit-reconstruction observation and cannot support an attack-rate claim.
+
 The host inspected on 2026-08-16 runs the shared `clara-app` stack, so it is explicitly excluded from this study. The isolated compose file uses a unique project, project-local network, ports, and volumes; its non-tracked environment file must contain new random credentials.
