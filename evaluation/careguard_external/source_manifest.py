@@ -28,6 +28,12 @@ def _is_sha256(value: object) -> bool:
     )
 
 
+def _source_identity(value: str) -> str:
+    """Compare declared source identities without cosmetic name variations."""
+
+    return " ".join(value.split()).casefold()
+
+
 def _load(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -104,7 +110,7 @@ def validate_source_set(paths: list[Path]) -> list[dict[str, Any]]:
     # ostensibly independent references.  Declared source identities, URLs,
     # and retained payloads must all be distinct; aliases in any one field are
     # not enough to establish independence.
-    source_names = [str(item["source_name"]) for item in manifests]
+    source_names = [_source_identity(str(item["source_name"])) for item in manifests]
     source_urls = [str(item["source_url"]) for item in manifests]
     payload_hashes = [str(item["payload_sha256"]) for item in manifests]
     if (
