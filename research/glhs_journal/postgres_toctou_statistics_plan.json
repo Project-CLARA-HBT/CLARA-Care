@@ -1,0 +1,26 @@
+{
+  "schema_version": "glhs-postgres-governance-toctou-statistics-v1",
+  "status": "draft_not_final_not_run",
+  "study_id": "glhs-journal-revision",
+  "protocol_path": "research/glhs_journal/postgres_toctou_protocol.json",
+  "unit_of_analysis": "one frozen logical read-mutate-commit schedule; retries remain within that schedule",
+  "primary_endpoint": {
+    "name": "forbidden_commit_observed",
+    "definition": "A transition committed only when the final observer proves the relevant governance mutation committed before transition admission began.",
+    "denominator_rule": "Only executed, observer-complete frozen schedules enter a denominator; NOT_RUN, infrastructure error, missing audit, and indeterminate ordering remain separate categories."
+  },
+  "schedule_analysis": {
+    "TOCTOU-01": "Report commit outcome and transition/audit counts after consent revoke.",
+    "TOCTOU-02": "Report commit outcome and transition/audit counts after persisted role or purpose mutation.",
+    "TOCTOU-03": "Classify only observer-proven ordering; overlapping commit/revoke windows are indeterminate, never safe.",
+    "TOCTOU-04": "Report stale-policy snapshot replay outcome and transition/audit counts.",
+    "TOCTOU-05": "Report concurrent writer/proposal ordering, commit outcome, and audit reconstruction separately."
+  },
+  "secondary_outputs": {
+    "latency": "Report per-schedule descriptive latency in milliseconds; do not infer deployment throughput.",
+    "transaction_metadata": "Record PostgreSQL version, isolation level, lock strategy, retries, schema/image hashes, and source revision.",
+    "audit": "Report exact reconstruction status separately from commit outcome; an empty or hash-only audit observation is not completeness."
+  },
+  "missing_data_rule": "Missing work is NOT_RUN and is never encoded as zero forbidden commits or a successful schedule.",
+  "freeze_rule": "Before final execution, independently review and freeze this plan, the five-schedule manifest, ordered seeds, environment metadata, and observer contract; any material change requires a new run ID."
+}

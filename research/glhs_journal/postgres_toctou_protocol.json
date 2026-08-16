@@ -1,6 +1,7 @@
 {
   "schema_version": "glhs-postgres-governance-toctou-v1",
   "status": "draft_not_run",
+  "statistics_plan_path": "research/glhs_journal/postgres_toctou_statistics_plan.json",
   "backend": "isolated PostgreSQL with a random schema",
   "unit_of_analysis": "frozen logical read-mutate-commit schedule; retries are recorded within schedule",
   "required_observations": ["commit_outcome", "state_before_after", "consent_policy_versions", "snapshot_digest", "audit_row", "isolation_level", "lock_strategy", "latency_ms", "monotonic_revoke_commit_and_commit_start_complete_ordering"],

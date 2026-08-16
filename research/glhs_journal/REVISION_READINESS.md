@@ -4,6 +4,12 @@ Status: **revision packet not complete**.
 
 Existing implementation tests demonstrate portions of snapshot, policy, consent, and provenance binding, but they do not close the requested revision blockers. The required 2026 nearest-neighbor set has now been full-text scope-coded with hash-only retrieval receipts; it narrows, rather than proves, the GLHS gap or an exhaustive search result. The Methods/Results unit-of-analysis audit and a revision-ready wording patch set are now present, but the submitted manuscript was not modified. Direct gateway/API binding tests and a model-write-path audit now cover the known implementation surfaces; required next artifacts are isolated PostgreSQL governance TOCTOU schedules/results and independent-adjudication packet outcomes.
 
+The TOCTOU protocol now names a draft, non-result statistics plan. It treats one
+frozen logical schedule (not a retry) as the unit, reserves overlapping
+governance/commit ordering as indeterminate, and excludes NOT_RUN or
+observer-incomplete schedules from any denominator. Independent review and a
+final freeze remain required before it can govern a headline run.
+
 The external-adjudication tooling now refuses an annotation manifest lacking
 pseudonymous role codes and explicit eligibility/independence attestations for
 exactly two reviewers and the distinct adjudicator. It binds the reviewer codes
