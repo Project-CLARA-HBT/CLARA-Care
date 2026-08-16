@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -15,10 +16,10 @@ from evaluation.evidence_program.freeze import FreezeError
 def _manifest(role: str) -> dict[str, object]:
     return {
         "schema_version": "careguard-vn.source-manifest.v1", "status": "FROZEN_ACQUIRED",
-        "source_name": role, "independence_role": role, "source_url": "https://example.test/source",
+        "source_name": role, "independence_role": role, "source_url": f"https://example.test/{role}",
         "retrieved_at_utc": "2026-08-16T00:00:00Z", "version_or_release": "v1",
         "access_terms": "reviewed", "license": "reviewed", "redistribution_policy": "derived_only",
-        "payload_sha256": "a" * 64, "row_count": 1,
+        "payload_sha256": sha256(role.encode()).hexdigest(), "row_count": 1,
         "record_hash_algorithm": "sha256(canonical_record_json)",
         "record_hash_inventory": [{"source_record_id": "record", "source_record_hash": "b" * 64}],
         "raw_retention_location": "/controlled/archive/source-v1",
@@ -42,6 +43,19 @@ def test_final_source_set_requires_all_independent_roles(tmp_path: Path) -> None
         "identity_frame", "terminology", "positive_ddi_reference", "regulatory_confirmation",
     )]
     assert len(validate_source_set(paths)) == 4
+
+
+def test_final_source_set_rejects_one_payload_relabelled_as_multiple_roles(tmp_path: Path) -> None:
+    roles = ("identity_frame", "terminology", "positive_ddi_reference", "regulatory_confirmation")
+    values = [_manifest(role) for role in roles]
+    for index, value in enumerate(values):
+        value["source_url"] = f"https://example.test/source-{index}"
+        value["payload_sha256"] = f"{index:x}" * 64
+    values[1]["payload_sha256"] = values[0]["payload_sha256"]
+    paths = [_write(tmp_path / f"{role}.json", value) for role, value in zip(roles, values, strict=True)]
+
+    with pytest.raises(FreezeError, match="careguard_source_set_sources_not_independent"):
+        validate_source_set(paths)
 
 
 def test_final_manifest_requires_full_unique_inventory_and_retrieval_metadata(tmp_path: Path) -> None:

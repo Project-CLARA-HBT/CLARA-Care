@@ -8,7 +8,8 @@ No false-clear, automatic-coverage, accuracy, or clinical-coverage claim is perm
 
 `evaluation/careguard_external/source_manifest.py` now rejects metadata probes,
 unresolved terms, missing raw-retention locations, incomplete record-hash
-inventories, and a source set without all four independent roles. It is an
+inventories, a source set without all four independent roles, and duplicate
+source URL or payload hashes across nominal roles. It is an
 acquisition gate only; the DDInter manifest passes individual-source validation,
 but no complete four-role source set currently passes it.
 
