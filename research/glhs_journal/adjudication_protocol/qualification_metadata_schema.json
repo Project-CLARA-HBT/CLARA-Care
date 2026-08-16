@@ -1,0 +1,27 @@
+{
+  "schema_version": "glhs-adjudication-qualification.v1",
+  "status": "template_only_not_human_attestation",
+  "reviewer_qualifications": {
+    "reviewer-code-a": {
+      "role_code": "licensed_clinician",
+      "eligibility_attested": false,
+      "independence_attested": false
+    },
+    "reviewer-code-b": {
+      "role_code": "licensed_clinician",
+      "eligibility_attested": false,
+      "independence_attested": false
+    },
+    "adjudicator-code-c": {
+      "role_code": "licensed_clinician",
+      "eligibility_attested": false,
+      "independence_attested": false
+    }
+  },
+  "constraints": [
+    "Use study-assigned pseudonymous codes only; do not commit names, emails, licenses, affiliations, or contact details.",
+    "Each reviewer code must appear exactly once in the frozen annotation manifest.",
+    "The adjudicator code must differ from both reviewer codes.",
+    "A true eligibility and independence attestation is required before import; this template is not an attestation."
+  ]
+}

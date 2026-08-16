@@ -115,6 +115,9 @@ class AssertionInput:
     process_kind: str = "user"
     source_snapshot_id: str | None = None
     source_snapshot_digest: str | None = None
+    # A model or adapter that consumed THSS must declare that fact. The
+    # gateway then refuses to let it silently take the base-version-only path.
+    proposal_consumed_thss: bool = False
 
 
 @dataclass(frozen=True)
@@ -348,6 +351,9 @@ def _validate_proposal_snapshot(
     source_snapshot_digest: str | None,
     base_state_version: int,
     actor_user_id: int | None,
+    actor_role: str | None = None,
+    purpose: str | None = None,
+    task: str | None = None,
 ) -> GlhsSnapshotManifest | None:
     """Ensure an AI-derived proposal is bound to a usable exact THSS payload."""
 
@@ -376,9 +382,11 @@ def _validate_proposal_snapshot(
         manifest_digest=source_snapshot_digest,
         base_state_version=base_state_version,
         policy_version=POLICY_VERSION,
-        purpose=snapshot.purpose,
+        purpose=purpose or snapshot.purpose,
         consent_version=current_consent,
         actor_user_id=actor_user_id,
+        actor_role=actor_role,
+        task=task,
     )
 
 
@@ -683,6 +691,8 @@ def propose_assertion(
             raise GlhsInvariantError("assertion_evidence_scope_forbidden")
         require_member(relation, EVIDENCE_RELATIONS, field="evidence_relation")
     base_state_version = current_state_version(db, profile_id=profile_id)
+    if data.proposal_consumed_thss and data.source_snapshot_id is None:
+        raise GlhsInvariantError("proposal_snapshot_binding_required")
     _validate_proposal_snapshot(
         db,
         profile_id=profile_id,
@@ -905,7 +915,9 @@ def apply_transition(
             source_snapshot_id=assertion.source_snapshot_id,
             source_snapshot_digest=assertion.source_snapshot_digest,
             base_state_version=base_version,
-            actor_user_id=assertion.asserted_by_user_id,
+            actor_user_id=scope.actor.id,
+            actor_role=scope.actor_role,
+            purpose=scope.purpose,
         )
     result_version = base_version + 1
     now = datetime.now(UTC)

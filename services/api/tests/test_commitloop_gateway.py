@@ -18,6 +18,7 @@ from clara_api.db.models import (
     User,
 )
 from clara_api.glhs.commitment_gateway import (
+    COMMITMENT_POLICY_VERSION,
     CommitmentVersionInput,
     apply_commitment_transition,
     get_or_create_commitment,
@@ -26,6 +27,7 @@ from clara_api.glhs.commitment_gateway import (
     reconstruct_commitment_decision,
     reconstruct_commitments,
     review_model_commitment_proposal,
+    validate_base_proposal_context,
     validate_bound_proposal_context,
 )
 from clara_api.glhs.commitment_thss import compile_commitment_thss
@@ -328,6 +330,39 @@ def test_base_version_only_proposal_is_explicit_and_can_commit(db: Session) -> N
     )
     assert transition.source_snapshot_id is None
     assert transition.resulting_state_version == 1
+
+
+def test_base_version_only_proposal_rejects_a_stale_policy_coordinate(db: Session) -> None:
+    """A base-only proposal is state-bound but still policy-version-governed."""
+
+    scope = _scope(db)
+    at = datetime(2026, 1, 1, tzinfo=UTC)
+    evidence = _evidence(db, scope, at, label="base-policy-stale")
+    commitment = get_or_create_commitment(
+        db,
+        scope=scope,
+        semantic_key="observation:base-policy-stale",
+        domain="observations",
+        supersession_key="observation:base-policy-stale",
+    )
+    proposal = propose_base_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=(evidence,),
+        proposed_transition="OPEN",
+        origin="user",
+        observed_base_state_version=0,
+        task="ordinary_human_transition",
+    )
+    proposal.policy_version = f"{COMMITMENT_POLICY_VERSION}-stale"
+    with pytest.raises(GlhsInvariantError, match="commitment_proposal_policy_mismatch"):
+        validate_base_proposal_context(
+            scope=scope,
+            proposal=proposal,
+            current_version=0,
+            current_consent_version=proposal.consent_version,
+        )
 
 
 def test_snapshot_binding_rejects_each_changed_context_coordinate(db: Session) -> None:

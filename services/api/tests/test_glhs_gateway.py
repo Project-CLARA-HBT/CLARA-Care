@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import create_engine, update
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
+import clara_api.glhs.gateway as gateway_module
 from clara_api.db.base import Base
 from clara_api.db.models import (
     GlhsAssertion,
@@ -36,6 +37,7 @@ from clara_api.glhs.gateway import (
     reconstruct_governed_decision,
     reconstruct_state,
     record_evidence,
+    validate_snapshot_manifest,
     validate_thss_pipeline_trace,
 )
 from clara_api.lifemap.profile_scope import ProfileScope
@@ -352,6 +354,211 @@ def test_stale_persisted_proposal_cannot_activate_after_state_advances(db: Sessi
             reason_code="test",
         )
     assert current_state_version(db, profile_id=scope.profile.id) == 1
+
+
+def test_transition_rejects_assertion_from_a_foreign_profile(db: Session) -> None:
+    scope = _scope(db)
+    foreign_user = User(email="foreign-owner@example.test", hashed_password="x", role="normal")
+    db.add(foreign_user)
+    db.flush()
+    foreign_profile = PhrProfile(user_id=foreign_user.id)
+    db.add(foreign_profile)
+    db.flush()
+    foreign_scope = ProfileScope(
+        actor=foreign_user,
+        profile=foreign_profile,
+        actor_role="owner",
+        purpose="self_care",
+        allowed_actions=scope.allowed_actions,
+        allowed_data_classes=scope.allowed_data_classes,
+    )
+    at = _at("2026-08-10T09:00:00")
+    foreign_assertion = _assertion(
+        db,
+        scope=foreign_scope,
+        evidence=_evidence(db, scope=foreign_scope, at=at, fingerprint="foreign-profile"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+    )
+
+    with pytest.raises(GlhsInvariantError, match="assertion_scope_forbidden"):
+        apply_transition(
+            db,
+            scope=scope,
+            assertion=foreign_assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key="foreign-profile-activate",
+            transition_kind="user_report",
+            reason_code="test",
+        )
+
+
+def test_thss_bound_proposal_rejects_foreign_actor(db: Session) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="actor-binding-test",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    foreign_actor = User(email="foreign-actor@example.test", hashed_password="x", role="normal")
+    db.add(foreign_actor)
+    db.flush()
+    evidence = _evidence(db, scope=scope, at=at, fingerprint="foreign-actor")
+
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_actor_mismatch"):
+        propose_assertion(
+            db,
+            profile_id=scope.profile.id,
+            actor_user_id=foreign_actor.id,
+            data=AssertionInput(
+                semantic_key="medication:actor-binding",
+                assertion_type="medications",
+                predicate="dose",
+                value={"drugbank_id": "DB00331", "dose": "500", "unit": "mg"},
+                epistemic_state="documented",
+                valid_from=at,
+                source_snapshot_id=snapshot.snapshot_id,
+                source_snapshot_digest=snapshot.manifest_digest,
+                proposal_consumed_thss=True,
+            ),
+            evidence=((evidence, "supports"),),
+        )
+
+
+def test_thss_bound_snapshot_rejects_purpose_change(db: Session) -> None:
+    """A purpose coordinate change cannot reuse the original disclosure."""
+
+    scope = _scope(db)
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="purpose-binding-test",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_purpose_mismatch"):
+        validate_snapshot_manifest(
+            db,
+            profile_id=scope.profile.id,
+            snapshot_id=snapshot.snapshot_id,
+            manifest_digest=snapshot.manifest_digest,
+            base_state_version=snapshot.state_version,
+            policy_version=snapshot.policy_version,
+            purpose="care_coordination",
+            consent_version=snapshot.consent_version,
+            actor_user_id=scope.actor.id,
+            actor_role=scope.actor_role,
+            task=snapshot.task,
+        )
+
+
+def test_thss_bound_transition_revalidates_current_actor_and_purpose(db: Session) -> None:
+    """Commit admission uses the current scope, not only proposal-era coordinates."""
+
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="transition-scope-binding-test",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="transition-scope-binding"),
+        dose="500",
+        at=at,
+        epistemic="documented",
+        source_snapshot_id=snapshot.snapshot_id,
+        source_snapshot_digest=snapshot.manifest_digest,
+    )
+
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_actor_mismatch"):
+        apply_transition(
+            db,
+            scope=_scope(db, clinician=True),
+            assertion=assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key="transition-foreign-actor",
+            transition_kind="user_report",
+            reason_code="test",
+        )
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_actor_role_mismatch"):
+        apply_transition(
+            db,
+            scope=replace(scope, actor_role="clinician"),
+            assertion=assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key="transition-role-change",
+            transition_kind="user_report",
+            reason_code="test",
+        )
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_purpose_mismatch"):
+        apply_transition(
+            db,
+            scope=replace(scope, purpose="care_coordination"),
+            assertion=assertion,
+            action="activate",
+            expected_state_version=0,
+            idempotency_key="transition-purpose-change",
+            transition_kind="user_report",
+            reason_code="test",
+        )
+
+
+def test_thss_bound_proposal_rejects_expired_snapshot(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="expiry-binding-test",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    class AfterSnapshotExpiry(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return snapshot.expires_at + timedelta(seconds=1)
+
+    monkeypatch.setattr(gateway_module, "datetime", AfterSnapshotExpiry)
+    monkeypatch.setattr(
+        gateway_module,
+        "_as_utc",
+        lambda value: value if value.tzinfo is not None else value.replace(tzinfo=UTC),
+    )
+    evidence = _evidence(db, scope=scope, at=at, fingerprint="expired-snapshot")
+
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_expired"):
+        propose_assertion(
+            db,
+            profile_id=scope.profile.id,
+            actor_user_id=scope.actor.id,
+            data=AssertionInput(
+                semantic_key="medication:expiry-binding",
+                assertion_type="medications",
+                predicate="dose",
+                value={"drugbank_id": "DB00331", "dose": "500", "unit": "mg"},
+                epistemic_state="documented",
+                valid_from=at,
+                source_snapshot_id=snapshot.snapshot_id,
+                source_snapshot_digest=snapshot.manifest_digest,
+                proposal_consumed_thss=True,
+            ),
+            evidence=((evidence, "supports"),),
+        )
 
 
 def test_tampered_assertion_value_fails_before_gst(db: Session) -> None:

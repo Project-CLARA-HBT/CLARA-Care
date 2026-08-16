@@ -1,0 +1,16 @@
+{
+  "schema_version": "glhs-postgres-governance-toctou-v1",
+  "status": "draft_not_run",
+  "backend": "isolated PostgreSQL with a random schema",
+  "unit_of_analysis": "frozen logical read-mutate-commit schedule; retries are recorded within schedule",
+  "required_observations": ["commit_outcome", "state_before_after", "consent_policy_versions", "snapshot_digest", "audit_row", "isolation_level", "lock_strategy", "latency_ms", "monotonic_revoke_commit_and_commit_start_complete_ordering"],
+  "schedules": [
+    {"id":"TOCTOU-01","sequence":["authorized_read","consent_revoke","commit"],"expected":"governance_invalid_commit_rejected"},
+    {"id":"TOCTOU-02","sequence":["authorized_read","purpose_or_role_policy_change","commit"],"expected":"governance_invalid_commit_rejected"},
+    {"id":"TOCTOU-03","sequence":["authorized_read","governance_writer_races_commit","commit"],"expected":"at_most_one_admissible_transition"},
+    {"id":"TOCTOU-04","sequence":["snapshot_issued","policy_version_increment","snapshot_replay"],"expected":"stale_policy_snapshot_rejected"},
+    {"id":"TOCTOU-05","sequence":["simultaneous_consent_policy_writer","proposal_writer"],"expected":"no_forbidden_commit_and_complete_audit"}
+  ],
+  "result_rule": "An unavailable schedule is NOT_RUN, never a zero forbidden-commit count.",
+  "freeze_rule": "Freeze seeds, schema/image/version metadata, schedule manifest and statistics plan before final execution."
+}

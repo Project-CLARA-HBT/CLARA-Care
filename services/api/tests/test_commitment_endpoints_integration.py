@@ -211,6 +211,42 @@ def test_commitment_route_requires_authentication() -> None:
     assert response.status_code == 401
 
 
+def test_commitment_proposal_api_never_admits_an_unbound_thss_input() -> None:
+    """The public proposal API has no base-version-only fallback for THSS work."""
+
+    headers = _account("thss-binding")
+    evidence_id = _evidence(headers)
+    payload = _proposal_payload(evidence_id)
+    payload.pop("source_snapshot_id")
+    payload.pop("source_snapshot_digest")
+    response = client.post("/api/v1/commitments/proposals", headers=headers, json=payload)
+    assert response.status_code == 422
+    errors = response.json()["detail"]
+    assert {error["loc"][-1] for error in errors} == {
+        "source_snapshot_id",
+        "source_snapshot_digest",
+    }
+
+
+def test_commitment_proposal_api_rejects_foreign_profile_snapshot() -> None:
+    """The HTTP path must not turn another profile's THSS into local authority."""
+
+    owner_headers = _account("foreign-snapshot-owner")
+    owner_evidence = _evidence(owner_headers)
+    foreign_snapshot = _proposal_snapshot(owner_headers, owner_evidence)
+
+    target_headers = _account("foreign-snapshot-target")
+    target_evidence = _evidence(target_headers)
+    response = client.post(
+        "/api/v1/commitments/proposals",
+        headers=target_headers,
+        json=_proposal_payload(target_evidence, foreign_snapshot),
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.json() == {"detail": {"code": "proposal_snapshot_scope_forbidden"}}
+
+
 def test_revoked_medical_consent_blocks_commitment_and_can_be_reaccepted() -> None:
     headers = _account("revoked")
     status_response = client.get("/api/v1/auth/consent-status", headers=headers)
