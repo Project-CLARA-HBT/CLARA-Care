@@ -26,9 +26,12 @@ Exact blockers:
    receive a complete-boundary attestation: it has no cache/index stage, no
    public evidence writer, and no public consent-revoke mutation.
    A matching service-local gate now refuses any named arm unless the process is
-   explicitly attested, non-production, and bound to a `clara-rivf-*` project;
-   no configuration preserves ordinary strict behavior. It is a prerequisite
-   for a future endpoint, not that endpoint or a faithful persistent arm yet.
+   explicitly attested, non-production, and bound to a `clara-rivf-*` project.
+   The isolated gate now reaches the real GST persistent-admission path: the
+   four arms differ only in their prespecified snapshot, state, and governance
+   revalidation coordinates, while normal processes retain strict admission.
+   This is a tested gateway mechanism, not an HTTP endpoint, cache/index route,
+   public revoke path, complete-boundary adapter, or RIVF run.
    The frozen-manifest executor now independently verifies that any future
    `EXECUTED` observation and arm-implementation artifacts are local,
    root-contained files whose SHA-256 values match the declared values. This

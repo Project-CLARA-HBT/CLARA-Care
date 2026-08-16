@@ -17,6 +17,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from clara_api.core.govred_research import isolated_govred_arm
 from clara_api.db.models import (
     GlhsAssertion,
     GlhsAssertionEvidence,
@@ -354,6 +355,7 @@ def _validate_proposal_snapshot(
     actor_role: str | None = None,
     purpose: str | None = None,
     task: str | None = None,
+    revalidate_governance: bool = True,
 ) -> GlhsSnapshotManifest | None:
     """Ensure an AI-derived proposal is bound to a usable exact THSS payload."""
 
@@ -372,8 +374,14 @@ def _validate_proposal_snapshot(
     profile = db.get(PhrProfile, profile_id)
     if profile is None:
         raise GlhsInvariantError("proposal_profile_not_found")
-    current_consent = _governed_consent_version(
-        db, owner_user_id=profile.user_id, purpose=snapshot.purpose
+    # Isolated GovRed's snapshot/state-only arm must validate the persisted
+    # snapshot's subject, state, digest, and expiry without silently acquiring
+    # the strict arm's policy/consent/actor/purpose revalidation.  The default
+    # remains strict and every normal caller uses it unchanged.
+    current_consent = (
+        _governed_consent_version(db, owner_user_id=profile.user_id, purpose=snapshot.purpose)
+        if revalidate_governance
+        else snapshot.consent_version
     )
     return validate_snapshot_manifest(
         db,
@@ -381,12 +389,12 @@ def _validate_proposal_snapshot(
         snapshot_id=source_snapshot_id,
         manifest_digest=source_snapshot_digest,
         base_state_version=base_state_version,
-        policy_version=POLICY_VERSION,
-        purpose=purpose or snapshot.purpose,
+        policy_version=POLICY_VERSION if revalidate_governance else snapshot.policy_version,
+        purpose=(purpose or snapshot.purpose) if revalidate_governance else snapshot.purpose,
         consent_version=current_consent,
-        actor_user_id=actor_user_id,
-        actor_role=actor_role,
-        task=task,
+        actor_user_id=actor_user_id if revalidate_governance else None,
+        actor_role=actor_role if revalidate_governance else None,
+        task=task if revalidate_governance else None,
     )
 
 
@@ -832,6 +840,13 @@ def apply_transition(
     """
 
     action = require_member(action, TRANSITION_ACTIONS, field="transition_action")
+    # This gate is absent unless an explicitly attested, non-production RIVF
+    # process selected an arm.  It is intentionally read at admission time so
+    # an isolated process cannot change arm semantics mid-request.
+    research_arm = isolated_govred_arm()
+    revalidate_state = research_arm is None or research_arm.revalidate_state
+    revalidate_governance = research_arm is None or research_arm.revalidate_governance
+    bind_snapshot = research_arm is None or research_arm.bind_snapshot
     required_scope_action = {
         "activate": "create",
         "supersede": "correct",
@@ -849,12 +864,12 @@ def apply_transition(
         raise GlhsInvariantError("model_cannot_apply_transition")
     if _digest(assertion.value_json) != assertion.value_fingerprint:
         raise GlhsInvariantError("assertion_value_digest_mismatch")
-    if assertion.policy_version != POLICY_VERSION:
+    if revalidate_governance and assertion.policy_version != POLICY_VERSION:
         raise GlhsInvariantError("assertion_policy_mismatch")
     current_consent_version = _governed_consent_version(
         db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
     )
-    if assertion.consent_version != current_consent_version:
+    if revalidate_governance and assertion.consent_version != current_consent_version:
         raise GlhsInvariantError("assertion_consent_mismatch")
     if action == "activate" and assertion.epistemic_state == "confirmed" and not allow_confirmed:
         raise GlhsInvariantError("confirmed_transition_requires_review")
@@ -901,14 +916,21 @@ def apply_transition(
         if existing.request_digest != request_digest:
             raise GlhsInvariantError("idempotency_key_reuse_mismatch")
         return cast(GlhsTransition, existing)
-    if base_version != expected_state_version:
+    if revalidate_state and base_version != expected_state_version:
         raise GlhsInvariantError("stale_state_version")
     # The candidate itself is the persisted proposal for an activation.  Other
     # actions operate on an already canonical assertion and are separately
     # protected by the caller's expected state version.
-    if action == "activate" and assertion.base_state_version != base_version:
+    if action == "activate" and revalidate_state and assertion.base_state_version != base_version:
         raise GlhsInvariantError("stale_proposal_state_version")
-    if action == "activate" and assertion.source_snapshot_id is not None:
+    if (
+        action == "activate"
+        and research_arm is not None
+        and bind_snapshot
+        and assertion.source_snapshot_id is None
+    ):
+        raise GlhsInvariantError("proposal_snapshot_binding_required")
+    if action == "activate" and bind_snapshot and assertion.source_snapshot_id is not None:
         _validate_proposal_snapshot(
             db,
             profile_id=scope.profile.id,
@@ -918,6 +940,7 @@ def apply_transition(
             actor_user_id=scope.actor.id,
             actor_role=scope.actor_role,
             purpose=scope.purpose,
+            revalidate_governance=revalidate_governance,
         )
     result_version = base_version + 1
     now = datetime.now(UTC)
