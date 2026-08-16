@@ -1,0 +1,30 @@
+{
+  "schema_version": "fmc-official-guideline-receipt.v1",
+  "status": "verified_submission_format_not_policy_clearance",
+  "retrieved_at_utc": "2026-08-17",
+  "source": {
+    "submission_page_url": "https://conference.pctu.edu.vn/registration-2/topic-submission/",
+    "guideline_url": "https://conference.pctu.edu.vn/wp-content/uploads/2026/06/FMC2026_Abstract_Writing_Guidelines-1.docx",
+    "guideline_sha256": "e11d53929c73087b9f6aa2e823fcbc085f3cfad0227a83cfc08042b4ae911623"
+  },
+  "verified_requirements": {
+    "topic_area": "AI and Digital Transformation in Healthcare and Medical Education",
+    "languages": ["Vietnamese", "English"],
+    "maximum_words": 250,
+    "required_sections": ["background", "objectives", "research methods", "results", "conclusion", "keywords"],
+    "keyword_count_range": [3, 5],
+    "submission_deadline_as_stated": "2026-09-30",
+    "submission_channel": "https://conference.pctu.edu.vn/"
+  },
+  "policy_boundary": {
+    "published_work_declaration_required": true,
+    "under_review_policy_stated": false,
+    "duplicate_archival_publication_policy_stated": false,
+    "clearance_for_related_under_review_work": "not_confirmed"
+  },
+  "non_authorizations": [
+    "This receipt does not authorize an abstract submission, registration, payment, or contact with organizers.",
+    "This receipt does not establish that related under-review work is permitted or that FMC is non-archival.",
+    "An organizer's compatible written response remains required before submission."
+  ]
+}
