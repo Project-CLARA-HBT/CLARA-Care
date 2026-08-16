@@ -126,4 +126,12 @@ deliberately unbound arm omitting state revalidation. This sealed trace does
 not constitute a paired comparison, attack rate, cache/index observation,
 audit-reconstruction observation, or frozen RIVF result.
 
+Development run `2026-08-17-rivf-dev016` used a separate fresh
+`SNAPSHOT_BOUND_STATE_ONLY` project for the same synthetic state-advance
+schedule. The target was rejected (`409`, `stale_state_version`), retaining
+both snapshot binding and state revalidation while omitting governance
+revalidation by design. Its sealed development artifact is not a frozen arm
+comparison, cache/index observation, audit-reconstruction observation, or
+claim-eligible RIVF result.
+
 The host inspected on 2026-08-16 runs the shared `clara-app` stack, so it is explicitly excluded from this study. The isolated compose file uses a unique project, project-local network, ports, and volumes; its non-tracked environment file must contain new random credentials.
