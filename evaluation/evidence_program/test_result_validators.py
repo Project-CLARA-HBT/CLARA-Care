@@ -52,7 +52,7 @@ def test_adversarial_rejects_incomplete_attack_suite(tmp_path: Path) -> None:
         "wrong_subject_exposure", "cache_index_revocation_failure",
         "policy_decision_correct", "audit_trace_complete",
     })
-    with pytest.raises(FreezeError, match="adversarial_scenarios_incomplete"):
+    with pytest.raises(FreezeError, match="govred_manifest_missing"):
         validate_adversarial(results, manifest)
 
 
