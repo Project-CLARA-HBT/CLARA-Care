@@ -48,6 +48,11 @@ def isolated_govred_arm() -> GovredResearchArm | None:
         raise RuntimeError("govred_research_forbidden_in_production")
     if not isinstance(project, str) or not project.startswith("clara-rivf-"):
         raise RuntimeError("govred_research_project_attestation_invalid")
+    # An isolated deployment can intentionally retain ordinary strict admission
+    # while no arm is selected.  In that case synthetic routes stay unmounted;
+    # any non-empty arm declaration must still be one of the prespecified arms.
+    if arm_name in {None, ""}:
+        return None
     if arm_name not in _ARMS:
         raise RuntimeError("govred_research_arm_invalid")
     return _ARMS[arm_name]

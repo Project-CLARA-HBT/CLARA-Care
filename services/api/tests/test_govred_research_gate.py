@@ -33,6 +33,18 @@ def test_research_arm_requires_isolated_nonproduction_project(
         isolated_govred_arm()
 
 
+def test_isolated_project_without_selected_arm_retains_strict_admission(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CLARA_GOVRED_ISOLATED_RESEARCH", "1")
+    monkeypatch.delenv("GOVRED_RESEARCH_ARM", raising=False)
+    monkeypatch.setenv("GOVRED_RESEARCH_PROJECT", "clara-rivf-unit")
+    monkeypatch.setenv("ENV", "development")
+
+    assert isolated_govred_arm() is None
+    assert not isolated_govred_endpoint_enabled()
+
+
 def test_isolated_arm_has_prespecified_semantics(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLARA_GOVRED_ISOLATED_RESEARCH", "1")
     monkeypatch.setenv("GOVRED_RESEARCH_ARM", "SNAPSHOT_BOUND_STATE_ONLY")
