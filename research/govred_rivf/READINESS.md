@@ -30,8 +30,11 @@ Exact blockers:
    The isolated gate now reaches the real GST persistent-admission path: the
    four arms differ only in their prespecified snapshot, state, and governance
    revalidation coordinates, while normal processes retain strict admission.
-   This is a tested gateway mechanism, not an HTTP endpoint, cache/index route,
-   public revoke path, complete-boundary adapter, or RIVF run.
+   An authenticated synthetic HTTP probe route is mounted only with that same
+   gate and drives profile scope, synthetic THSS/evidence, an optional synthetic
+   consent revoke, and GST admission. This is a tested adapter primitive, not a
+   cache/index route, complete-boundary observer, frozen-manifest executor, or
+   RIVF run.
    The frozen-manifest executor now independently verifies that any future
    `EXECUTED` observation and arm-implementation artifacts are local,
    root-contained files whose SHA-256 values match the declared values. This

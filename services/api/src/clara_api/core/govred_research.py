@@ -51,3 +51,9 @@ def isolated_govred_arm() -> GovredResearchArm | None:
     if arm_name not in _ARMS:
         raise RuntimeError("govred_research_arm_invalid")
     return _ARMS[arm_name]
+
+
+def isolated_govred_endpoint_enabled() -> bool:
+    """Expose synthetic RIVF routes only for an attested isolated arm process."""
+
+    return isolated_govred_arm() is not None

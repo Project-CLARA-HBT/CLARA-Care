@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from clara_api.core.govred_research import isolated_govred_arm
+from clara_api.core.govred_research import isolated_govred_arm, isolated_govred_endpoint_enabled
 
 
 def test_absent_research_configuration_preserves_strict_default(
@@ -15,6 +15,7 @@ def test_absent_research_configuration_preserves_strict_default(
     ):
         monkeypatch.delenv(name, raising=False)
     assert isolated_govred_arm() is None
+    assert not isolated_govred_endpoint_enabled()
 
 
 def test_research_arm_requires_isolated_nonproduction_project(
@@ -44,3 +45,4 @@ def test_isolated_arm_has_prespecified_semantics(monkeypatch: pytest.MonkeyPatch
         True,
         False,
     )
+    assert isolated_govred_endpoint_enabled()

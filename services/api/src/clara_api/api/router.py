@@ -13,6 +13,7 @@ from clara_api.api.v1.endpoints import (
     council,
     evidence_questions,
     family,
+    govred_research,
     guided_flows,
     health,
     lifemap,
@@ -32,6 +33,7 @@ from clara_api.api.v1.endpoints import (
     workspace,
 )
 from clara_api.compliance.api import router as compliance_router
+from clara_api.core.govred_research import isolated_govred_endpoint_enabled
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router, tags=["health"])
@@ -74,3 +76,10 @@ api_router.include_router(
     admin_observability.router, prefix="/admin/observability", tags=["admin-observability"]
 )
 api_router.include_router(compliance_router, prefix="/compliance", tags=["compliance"])
+
+# This route is intentionally absent unless the process is an attested,
+# non-production isolated RIVF deployment with one explicit research arm.
+if isolated_govred_endpoint_enabled():
+    api_router.include_router(
+        govred_research.router, prefix="/govred-research", tags=["govred-research"]
+    )
