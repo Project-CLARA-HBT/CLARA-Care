@@ -76,4 +76,14 @@ strict-system development observation: it neither identifies the Redis change
 nor establishes cache invalidation, audit completeness, an arm comparison, or
 any frozen-benchmark result.
 
+Development run `2026-08-17-rivf-dev011` deployed the current committed source
+to a fresh remote `clara-rivf-20260817-dev011` project with distinct loopback
+port, network, volumes, and generated credentials. A synthetic foreign-profile
+request was denied (`404 scope_forbidden`); the sampled isolated PostgreSQL,
+PHR-audit, and namespaced Redis hashes were unchanged across the request. The
+sealed sanitized artifact is retained in
+`artifacts/govred/2026-08-17-rivf-dev011/`. This is one strict-system
+development boundary probe only: it does not exercise a cache/index route,
+research arm, governed disclosure-to-commit schedule, or complete audit matrix.
+
 The host inspected on 2026-08-16 runs the shared `clara-app` stack, so it is explicitly excluded from this study. The isolated compose file uses a unique project, project-local network, ports, and volumes; its non-tracked environment file must contain new random credentials.
