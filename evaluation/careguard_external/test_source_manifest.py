@@ -58,6 +58,21 @@ def test_final_source_set_rejects_one_payload_relabelled_as_multiple_roles(tmp_p
         validate_source_set(paths)
 
 
+def test_final_source_set_rejects_one_source_name_relabelled_as_multiple_roles(
+    tmp_path: Path,
+) -> None:
+    roles = ("identity_frame", "terminology", "positive_ddi_reference", "regulatory_confirmation")
+    values = [_manifest(role) for role in roles]
+    for index, value in enumerate(values):
+        value["source_url"] = f"https://example.test/source-{index}"
+        value["payload_sha256"] = f"{index:x}" * 64
+    values[1]["source_name"] = values[0]["source_name"]
+    paths = [_write(tmp_path / f"{role}.json", value) for role, value in zip(roles, values, strict=True)]
+
+    with pytest.raises(FreezeError, match="careguard_source_set_sources_not_independent"):
+        validate_source_set(paths)
+
+
 def test_final_manifest_requires_full_unique_inventory_and_retrieval_metadata(tmp_path: Path) -> None:
     value = _manifest("identity_frame")
     value["row_count"] = 2

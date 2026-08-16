@@ -101,10 +101,16 @@ def validate_source_set(paths: list[Path]) -> list[dict[str, Any]]:
     if set(roles) != REQUIRED_ROLES or len(roles) != len(set(roles)):
         raise FreezeError("careguard_source_set_roles_incomplete_or_duplicate")
     # A four-role benchmark cannot relabel the same source archive as several
-    # ostensibly independent references.  URLs and retained payloads must be
-    # distinct; source-name aliases are not enough to establish independence.
+    # ostensibly independent references.  Declared source identities, URLs,
+    # and retained payloads must all be distinct; aliases in any one field are
+    # not enough to establish independence.
+    source_names = [str(item["source_name"]) for item in manifests]
     source_urls = [str(item["source_url"]) for item in manifests]
     payload_hashes = [str(item["payload_sha256"]) for item in manifests]
-    if len(source_urls) != len(set(source_urls)) or len(payload_hashes) != len(set(payload_hashes)):
+    if (
+        len(source_names) != len(set(source_names))
+        or len(source_urls) != len(set(source_urls))
+        or len(payload_hashes) != len(set(payload_hashes))
+    ):
         raise FreezeError("careguard_source_set_sources_not_independent")
     return manifests
