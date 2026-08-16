@@ -1,0 +1,80 @@
+# Dedicated, run-scoped RIVF boundary environment.  It intentionally has no
+# fixed container names, no external network, and no production volumes.
+# Invoke only with a new RIVF_RUN_ID and a non-tracked env file.
+name: ${RIVF_COMPOSE_PROJECT:?set_a_unique_rivf_project_name}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${RIVF_POSTGRES_USER:?required}
+      POSTGRES_PASSWORD: ${RIVF_POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${RIVF_POSTGRES_DB:?required}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks: [boundary]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis:/data
+    networks: [boundary]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ../..
+      dockerfile: services/api/Dockerfile
+    command: ["sh", "-c", "alembic upgrade head && uvicorn clara_api.main:app --app-dir src --host 0.0.0.0 --port 8000"]
+    environment:
+      ENV: development
+      DATABASE_URL: postgresql+psycopg://${RIVF_POSTGRES_USER:?required}:${RIVF_POSTGRES_PASSWORD:?required}@postgres:5432/${RIVF_POSTGRES_DB:?required}
+      DATABASE_FALLBACK_ENABLED: "false"
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${RIVF_JWT_SECRET_KEY:?required}
+      ML_INTERNAL_API_KEY: ${RIVF_ML_INTERNAL_API_KEY:?required}
+      ML_SERVICE_URL: http://unavailable-ml:8010
+      AUTH_COOKIE_SECURE: "false"
+      AUTH_REQUIRE_EMAIL_VERIFICATION: "false"
+      AUTH_BOOTSTRAP_ADMIN_ENABLED: "false"
+      RATE_LIMIT_DISTRIBUTED_ENABLED: "true"
+      AUTH_LOGIN_DISTRIBUTED_ENABLED: "true"
+      SECURITY_REDIS_KEY_PREFIX: govred-${RIVF_RUN_ID:?required}
+      CLARA_GOVRED_ISOLATED_RESEARCH: "1"
+      GOVRED_RESEARCH_PROJECT: ${RIVF_COMPOSE_PROJECT:?set_a_unique_rivf_project_name}
+      API_UVICORN_WORKERS: "1"
+    ports:
+      - "127.0.0.1:${RIVF_API_PORT:?required}:8000"
+    networks: [boundary]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+networks:
+  boundary:
+    # Project-scoped and not marked external: it cannot join the shared
+    # clara-app/clara-local networks.  It remains non-internal so the API's
+    # loopback-only published port can be reached by the boundary driver.
+
+volumes:
+  postgres:
+    name: ${RIVF_COMPOSE_PROJECT:?set_a_unique_rivf_project_name}_postgres
+  redis:
+    name: ${RIVF_COMPOSE_PROJECT:?set_a_unique_rivf_project_name}_redis

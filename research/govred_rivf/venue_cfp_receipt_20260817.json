@@ -1,0 +1,29 @@
+{
+  "schema_version": "govred-rivf.venue-cfp-receipt.v1",
+  "status": "verified_for_future_formatting_not_submission_authority",
+  "retrieved_at_utc": "2026-08-16T18:22:00Z",
+  "official_cfp_url": "https://rivf2026.org/call-for-papers.html",
+  "venue": "IEEE-RIVF 2026",
+  "submission_deadline": "2026-08-31",
+  "submission_deadline_note": "The official CFP displays July 31, 2026 struck through and August 31, 2026 as the extended deadline; dates are marked tentative.",
+  "format": {
+    "language": "English",
+    "file_format": "PDF",
+    "maximum_pages_including_references_and_figures": 6,
+    "template": "IEEE standard, A4",
+    "latex_documentclass": "\\documentclass[conference,a4paper]{IEEEtran}",
+    "submission_system": "EDAS",
+    "edas_url": "https://edas.info/N35414"
+  },
+  "scope_relevance": [
+    "Responsible, trustworthy, and reliable AI",
+    "AI for healthcare",
+    "Security and privacy in AI/data systems",
+    "Software engineering for AI-enabled systems"
+  ],
+  "non_authorizations": [
+    "This receipt does not authorize manuscript generation before RIVF evidence is frozen and sealed.",
+    "This receipt does not authorize submission, registration, payment, or any external communication.",
+    "The CFP must be rechecked immediately before final formatting and submission."
+  ]
+}

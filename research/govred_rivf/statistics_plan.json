@@ -1,0 +1,13 @@
+{
+  "schema_version": "govred-statistics-plan-v1",
+  "status": "draft_not_run",
+  "study_id": "govred-rivf-2026",
+  "analysis_unit": "frozen logical attack instance; transport retries are collapsed within the instance",
+  "primary_schedule_scope": "Nine disclosure-to-explicit-mutation-to-persistent-commit authorization-drift schedules only; secondary stress families are reported separately.",
+  "primary_endpoints": ["prohibited_disclosure_rate", "stale_or_unauthorized_commit_acceptance_rate"],
+  "proportion_interval": "Wilson 95% confidence interval",
+  "paired_comparisons": "exact McNemar on identical compatible logical cases; Holm correction within prespecified arm-contrast families",
+  "concurrency_rule": "Repeated race attempts are aggregated to one logical-case outcome and are not independent observations.",
+  "missing_data_rule": "Unexecuted cases or unavailable arms are NOT RUN and excluded from denominators, never recorded as zero failures.",
+  "final_freeze_requirement": "Must be independently reviewed, status changed to frozen, and SHA-256 bound to a final locked manifest before headline execution."
+}

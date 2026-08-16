@@ -1,0 +1,56 @@
+{
+  "schema_version": "govred-boundary-adapter-capability-matrix-v1",
+  "status": "development_design_not_execution_evidence",
+  "evaluated_surface": "Clinical Commitment HTTP proposal-to-transition route",
+  "capabilities": [
+    {
+      "stage": "http_auth_consent",
+      "status": "available",
+      "evidence": "services/api/tests/test_commitment_endpoints_integration.py",
+      "notes": "Synthetic account login, PHR bootstrap, consent acceptance, snapshot, proposal, and transition requests can traverse the public HTTP API."
+    },
+    {
+      "stage": "synthetic_evidence_fixture",
+      "status": "no_public_http_writer",
+      "evidence": "services/api/tests/test_commitment_endpoints_integration.py:_evidence",
+      "notes": "The existing integration fixture writes synthetic source/evidence records through SessionLocal. A boundary adapter must declare this bootstrap exception and cannot attest evidence setup as an HTTP write."
+    },
+    {
+      "stage": "governance_mutation",
+      "status": "partial",
+      "evidence": "services/api/src/clara_api/api/v1/endpoints/auth.py:accept_consent",
+      "notes": "Consent acceptance is public HTTP, but this endpoint has no consent-revocation operation. A revoked-consent schedule currently needs a separately designed isolated mutation boundary; it must not be represented as an all-HTTP schedule."
+    },
+    {
+      "stage": "persistent_commit",
+      "status": "available",
+      "evidence": "services/api/src/clara_api/api/v1/endpoints/commitments.py:apply_transition",
+      "notes": "A synthetic proposal can reach the actual GLHS commitment persistence path through HTTP after authentication and scope/consent enforcement."
+    },
+    {
+      "stage": "cache_index",
+      "status": "not_on_commitment_route",
+      "evidence": "services/api/src/clara_api/api/v1/endpoints/commitments.py",
+      "notes": "The commitment route does not expose a cache/index read or invalidation boundary. It cannot attest the required cache/index stage and is therefore unsuitable alone for headline RIVF execution."
+    },
+    {
+      "stage": "audit_reconstruction",
+      "status": "partial",
+      "evidence": "services/api/src/clara_api/glhs/commitment_gateway.py:reconstruct_commitment_decision",
+      "notes": "Commitment-decision reconstruction exists, but a complete cross-boundary audit observer and a sanitized artifact contract still need implementation."
+    },
+    {
+      "stage": "research_arms",
+      "status": "isolated_service_gate_plus_mechanism_only",
+      "evidence": "evaluation/governance_adversarial/research_arms.py;services/api/src/clara_api/core/govred_research.py;services/api/tests/test_govred_research_gate.py",
+      "notes": "The four arm semantics have matching isolated service-local gate semantics. The gate requires explicit attestation, a clara-rivf-* project, a named arm, and non-production environment; absent configuration preserves strict behavior. No persistent HTTP adapter applies the arms yet, so none may return EXECUTED."
+    }
+  ],
+  "prohibited_attestations": [
+    "A commitment-route-only probe traversed cache/index.",
+    "A SessionLocal synthetic evidence fixture is an HTTP evidence writer.",
+    "A direct database consent mutation is a public HTTP governance mutation.",
+    "A research-arm config declaration is a faithful persistent-write implementation."
+  ],
+  "next_implementation_gate": "Build an isolated-only adapter that combines a cache/index-bearing governed disclosure route with the HTTP persistent commit route, records each stage independently, and implements each arm without importing research configuration into production code."
+}
