@@ -94,4 +94,14 @@ artifact. TOCTOU-03 committed while the monotonic trace showed that
 development inventory does not close persisted policy-writer coverage,
 audit-completeness, a repeated/frozen race design, or the final TOCTOU matrix.
 
+Development run `2026-08-17-dev-011` rebuilt another fresh isolated project
+from the reviewed source and executed all five schedules in a random PostgreSQL
+schema. TOCTOU-01, TOCTOU-02, TOCTOU-04, and TOCTOU-05 were rejected as
+recorded in the sanitized development artifact. TOCTOU-03 started before the
+observed revoke commit and completed after it, so it remains
+`indeterminate_ordering_transition_committed`, not safe. This local sealed
+development inventory is not claim-eligible and does not close the persisted
+policy-writer, audit-completeness, repeated/frozen-race, or final-matrix
+blockers.
+
 No previously reported result has been rewritten or reinterpreted by this program work.
