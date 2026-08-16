@@ -1,0 +1,27 @@
+{
+  "schema_version": "govmut-development-suite-matrix-v1",
+  "status": "development_only_not_frozen",
+  "unit_note": "A mutant is the unit of analysis. Each suite execution is one method observation, not an independent sample.",
+  "suites": {
+    "M0_regression": [
+      "services/api/tests/test_glhs_gateway.py",
+      "services/api/tests/test_glhs_mandatory_thss_binding.py",
+      "services/api/tests/test_commitment_endpoints_integration.py",
+      "services/api/tests/test_commitloop_gateway.py"
+    ],
+    "M1_stateless_property": [
+      "evaluation/property_assurance/test_glhs_gateway_properties.py"
+    ],
+    "M2_state_machine": [
+      "evaluation/property_assurance/test_state_machine.py"
+    ],
+    "M3_combined": [
+      "services/api/tests/test_glhs_gateway.py",
+      "services/api/tests/test_glhs_mandatory_thss_binding.py",
+      "services/api/tests/test_commitment_endpoints_integration.py",
+      "services/api/tests/test_commitloop_gateway.py",
+      "evaluation/property_assurance/test_glhs_gateway_properties.py",
+      "evaluation/property_assurance/test_state_machine.py"
+    ]
+  }
+}

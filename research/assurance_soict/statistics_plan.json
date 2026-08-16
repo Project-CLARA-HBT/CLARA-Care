@@ -1,0 +1,15 @@
+{
+  "schema_version": "soict-statistics-plan-v1",
+  "status": "draft_not_run",
+  "primary_endpoint": "mutation_score = killed non-equivalent executable mutants / non-equivalent executable mutants",
+  "unit_of_analysis": "controlled mutant, not generated example or state transition",
+  "methods": ["M0_regression", "M1_stateless_property", "M2_state_machine", "M3_combined"],
+  "secondary_endpoints": ["invariant_classes", "time_to_first_counterexample", "shrunk_sequence_length", "transitions", "runtime", "flakiness"],
+  "generated_method_seed_contract": {
+    "methods_requiring_explicit_seed": ["M1_stateless_property", "M2_state_machine", "M3_combined"],
+    "development_behavior": "The runner rejects a named generated-method suite without --hypothesis-seed and records the supplied seed in its raw artifact.",
+    "final_freeze_requirement": "Independently review and freeze a nonempty ordered seed list before locked execution; development seeds do not determine the final list."
+  },
+  "unexecutable_rule": "Unexecutable/equivalent mutants require prespecified documented exclusion and are never counted as killed.",
+  "freeze_rule": "Seeds, Hypothesis version, limits, mutation manifest, code revision and backend must be frozen before execution."
+}

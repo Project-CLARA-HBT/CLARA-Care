@@ -1,0 +1,26 @@
+{
+  "schema_version": "soict-governance-mutation-manifest-v1",
+  "status": "partial_anchor_catalog_development_executions_not_final",
+  "study_id": "assurance-soict-2026",
+  "unit_of_analysis": "executable non-equivalent controlled mutant",
+  "target_executable_noncosmetic_mutants": 45,
+  "inventory_note": "These 15 rows are fault-family design seeds, not 15 implemented or executed mutants. The final corpus must contain anchored, semantically distinct executable mutants or transparently report a smaller code-supported corpus.",
+  "fault_family_seeds": [
+    {"id":"M01","fault":"remove stale-base check","invariants":["P2","P15"]},
+    {"id":"M02","fault":"remove policy-version revalidation","invariants":["P3"]},
+    {"id":"M03","fault":"remove consent revalidation","invariants":["P4"]},
+    {"id":"M04","fault":"remove subject equality check","invariants":["P5"]},
+    {"id":"M05","fault":"remove actor equality check","invariants":["P6"]},
+    {"id":"M06","fault":"remove purpose equality check","invariants":["P7"]},
+    {"id":"M07","fault":"accept expired snapshot","invariants":["P8"]},
+    {"id":"M08","fault":"skip digest check","invariants":["P8"]},
+    {"id":"M09","fault":"allow THSS-bound proposal to downgrade","invariants":["P3","P7","P15"]},
+    {"id":"M10","fault":"break state/audit transaction atomicity","invariants":["P13"]},
+    {"id":"M11","fault":"drop provenance edge","invariants":["P11"]},
+    {"id":"M12","fault":"reuse stale derived snapshot/cache","invariants":["P10","P12"]},
+    {"id":"M13","fault":"select superseded assertion as current","invariants":["P9"]},
+    {"id":"M14","fault":"make idempotency key ineffective","invariants":["P1"]},
+    {"id":"M15","fault":"retry governance rejection without reauthorization","invariants":["P15"]}
+  ],
+  "execution_rule": "Each mutant is an anchored, one-change temporary source overlay in a fresh process/database. Import, setup, equivalent, and unexecutable failures are not kills."
+}
