@@ -5,9 +5,13 @@ are present in this worktree. The guide is a protocol draft, not a substitute
 for clinician labels.
 
 The curator must create deidentified labels and adjudications plus a manifest
-with controlled reviewer-role codes, blinding, guide hash, original-label
-preservation, and final-oracle hash. Fewer than two annotators plus a distinct
-adjudicator is rejected.
+with controlled reviewer-role codes, eligibility and independence attestations,
+blinding, guide hash, original-label preservation, and final-oracle hash.
+Anything other than exactly two annotators plus a distinct adjudicator is
+rejected. Before importing adjudications, the tool also binds those annotator
+codes and the annotation-guide hash to the issued packet manifest. It accepts
+only pseudonymous reviewer IDs and role codes; it cannot verify the truth of an
+external qualification attestation.
 
 After human collection, compute field-stratified paired-case disagreement and
 Cohen kappa without changing labels:

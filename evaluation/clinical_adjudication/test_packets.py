@@ -12,7 +12,7 @@ from evaluation.clinical_adjudication.packets import (
     import_adjudications,
     import_labels,
 )
-from evaluation.evidence_program.freeze import FreezeError
+from evaluation.evidence_program.freeze import FreezeError, sha256
 
 
 def _input(path: Path) -> None:
@@ -47,8 +47,13 @@ def test_blinded_export_import_and_disagreement_packets(tmp_path: Path) -> None:
     assert "secure-case-1" not in adjudication.read_text(encoding="utf-8")
     annotation_manifest = tmp_path / "annotation.json"
     annotation_manifest.write_text(json.dumps({
-        "status": "frozen", "annotation_guide_sha256": "guide-sha", "annotator_ids": ["reviewer-a", "reviewer-b"],
+        "status": "frozen", "annotation_guide_sha256": sha256(guide), "annotator_ids": ["reviewer-a", "reviewer-b"],
         "adjudicator_id": "adjudicator-c", "oracle_sha256": "oracle-sha", "blinding": "system-blinded",
+        "reviewer_qualifications": {
+            "reviewer-a": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+            "reviewer-b": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+            "adjudicator-c": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+        },
     }), encoding="utf-8")
     decisions = tmp_path / "decisions.csv"
     with decisions.open("w", encoding="utf-8", newline="") as stream:
@@ -67,3 +72,73 @@ def test_export_rejects_system_identity_in_reviewer_payload(tmp_path: Path) -> N
     guide.write_text("rubric", encoding="utf-8")
     with pytest.raises(FreezeError, match="system_identity_or_outcome"):
         export_packets(input_path=source, output_dir=tmp_path / "packets", annotation_guide=guide, reviewer_ids=("a", "b"), blinding_salt="a-long-controlled-test-salt")
+
+
+def test_adjudication_manifest_rejects_missing_qualification_attestations(tmp_path: Path) -> None:
+    source, guide, packets = tmp_path / "input.jsonl", tmp_path / "guide.md", tmp_path / "packets"
+    _input(source)
+    guide.write_text("rubric", encoding="utf-8")
+    export_packets(input_path=source, output_dir=packets, annotation_guide=guide, reviewer_ids=("reviewer-a", "reviewer-b"), blinding_salt="a-long-controlled-test-salt")
+    packet = json.loads((packets / "blinded_packets.jsonl").read_text(encoding="utf-8"))
+    labels = tmp_path / "labels.csv"
+    with labels.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=["packet_id", "annotator_id", "field", "label"])
+        writer.writeheader()
+        writer.writerows([
+            {"packet_id": packet["packet_id"], "annotator_id": "reviewer-a", "field": "current_state", "label": "active"},
+            {"packet_id": packet["packet_id"], "annotator_id": "reviewer-b", "field": "current_state", "label": "resolved"},
+        ])
+    disagreements = tmp_path / "disagreements.json"
+    disagreement_packets(labels_path=labels, packet_dir=packets, output_path=disagreements)
+    annotation_manifest = tmp_path / "annotation.json"
+    annotation_manifest.write_text(json.dumps({
+        "status": "frozen", "annotation_guide_sha256": sha256(guide), "annotator_ids": ["reviewer-a", "reviewer-b"],
+        "adjudicator_id": "adjudicator-c", "oracle_sha256": "oracle-sha", "blinding": "system-blinded",
+        "reviewer_qualifications": {
+            "reviewer-a": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+            "reviewer-b": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+            "adjudicator-c": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": False},
+        },
+    }), encoding="utf-8")
+    decisions = tmp_path / "decisions.csv"
+    with decisions.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=["packet_id", "adjudicator_id", "field", "final_label", "rationale"])
+        writer.writeheader()
+        writer.writerow({"packet_id": packet["packet_id"], "adjudicator_id": "adjudicator-c", "field": "current_state", "final_label": "active", "rationale": "documented human rationale"})
+    with pytest.raises(FreezeError, match="reviewer_independence_attestation_required"):
+        import_adjudications(adjudications_path=decisions, disagreement_path=disagreements, packet_dir=packets, annotation_manifest_path=annotation_manifest, output_path=tmp_path / "final.csv")
+
+
+def test_adjudication_rejects_annotation_manifest_from_another_packet_set(tmp_path: Path) -> None:
+    source, guide, packets = tmp_path / "input.jsonl", tmp_path / "guide.md", tmp_path / "packets"
+    _input(source)
+    guide.write_text("rubric", encoding="utf-8")
+    export_packets(input_path=source, output_dir=packets, annotation_guide=guide, reviewer_ids=("reviewer-a", "reviewer-b"), blinding_salt="a-long-controlled-test-salt")
+    packet = json.loads((packets / "blinded_packets.jsonl").read_text(encoding="utf-8"))
+    labels = tmp_path / "labels.csv"
+    with labels.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=["packet_id", "annotator_id", "field", "label"])
+        writer.writeheader()
+        writer.writerows([
+            {"packet_id": packet["packet_id"], "annotator_id": "reviewer-a", "field": "current_state", "label": "active"},
+            {"packet_id": packet["packet_id"], "annotator_id": "reviewer-b", "field": "current_state", "label": "resolved"},
+        ])
+    disagreements = tmp_path / "disagreements.json"
+    disagreement_packets(labels_path=labels, packet_dir=packets, output_path=disagreements)
+    annotation_manifest = tmp_path / "annotation.json"
+    annotation_manifest.write_text(json.dumps({
+        "status": "frozen", "annotation_guide_sha256": "wrong-packet-guide", "annotator_ids": ["reviewer-a", "reviewer-b"],
+        "adjudicator_id": "adjudicator-c", "oracle_sha256": "oracle-sha", "blinding": "system-blinded",
+        "reviewer_qualifications": {
+            "reviewer-a": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+            "reviewer-b": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+            "adjudicator-c": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+        },
+    }), encoding="utf-8")
+    decisions = tmp_path / "decisions.csv"
+    with decisions.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=["packet_id", "adjudicator_id", "field", "final_label", "rationale"])
+        writer.writeheader()
+        writer.writerow({"packet_id": packet["packet_id"], "adjudicator_id": "adjudicator-c", "field": "current_state", "final_label": "active", "rationale": "documented human rationale"})
+    with pytest.raises(FreezeError, match="annotation_manifest_packet_binding_mismatch"):
+        import_adjudications(adjudications_path=decisions, disagreement_path=disagreements, packet_dir=packets, annotation_manifest_path=annotation_manifest, output_path=tmp_path / "final.csv")

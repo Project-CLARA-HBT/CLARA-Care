@@ -204,6 +204,7 @@ def import_adjudications(
     try:
         annotation = json.loads(annotation_manifest_path.read_text(encoding="utf-8"))
         disagreements = json.loads(disagreement_path.read_text(encoding="utf-8"))
+        packet_manifest = json.loads((packet_dir / "packet_manifest.json").read_text(encoding="utf-8"))
         map_rows = list(csv.DictReader((packet_dir / "controlled_packet_map.csv").open(encoding="utf-8", newline="")))
         reader = csv.DictReader(adjudications_path.open(encoding="utf-8", newline=""))
     except (OSError, json.JSONDecodeError) as exc:
@@ -212,6 +213,16 @@ def import_adjudications(
         raise FreezeError("invalid_adjudication_csv_schema")
     if disagreements.get("schema_version") != SCHEMA_VERSION or not isinstance(disagreements.get("disagreements"), list):
         raise FreezeError("adjudication_packet_invalid")
+    if (
+        packet_manifest.get("schema_version") != SCHEMA_VERSION
+        or packet_manifest.get("controlled_packet_map_sha256") != sha256(packet_dir / "controlled_packet_map.csv")
+    ):
+        raise FreezeError("packet_map_manifest_mismatch")
+    if (
+        set(annotation["annotator_ids"]) != set(packet_manifest.get("reviewer_ids", []))
+        or annotation["annotation_guide_sha256"] != packet_manifest.get("annotation_guide_sha256")
+    ):
+        raise FreezeError("annotation_manifest_packet_binding_mismatch")
     expected = {(str(row["packet_id"]), str(row["field"])) for row in disagreements["disagreements"]}
     mapping = {str(row["packet_id"]): str(row["case_id"]) for row in map_rows}
     adjudicator = str(annotation["adjudicator_id"])
