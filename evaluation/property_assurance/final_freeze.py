@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +49,20 @@ def _catalog_ids(catalog_path: Path) -> set[str]:
     if len(set(ids)) != len(ids):
         raise FreezeError("govmut_final_freeze_catalog_duplicate_ids")
     return set(ids)
+
+
+def _current_revision(repository_root: Path) -> str:
+    """Resolve the exact reviewed source revision rather than trusting metadata."""
+
+    try:
+        return subprocess.run(
+            ["git", "-C", str(repository_root), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise FreezeError("govmut_final_freeze_repository_revision_unavailable") from exc
 
 
 def _validate_target_hashes(*, repository_root: Path, methods: object) -> None:
@@ -97,6 +112,8 @@ def validate_final_freeze(
         or not _GIT_REVISION.fullmatch(manifest["code_revision"])
     ):
         raise FreezeError("govmut_final_freeze_identity_invalid")
+    if manifest["code_revision"] != _current_revision(repository_root):
+        raise FreezeError("govmut_final_freeze_code_revision_mismatch")
     if _require_sha256(manifest["catalog_sha256"], "govmut_final_freeze_catalog_hash_invalid") != sha256(catalog_path):
         raise FreezeError("govmut_final_freeze_catalog_hash_mismatch")
     if _require_sha256(manifest["statistics_plan_sha256"], "govmut_final_freeze_statistics_hash_invalid") != sha256(statistics_plan_path):

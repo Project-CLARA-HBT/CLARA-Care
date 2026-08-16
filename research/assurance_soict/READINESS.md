@@ -179,6 +179,7 @@ are independently frozen.
 `evaluation/property_assurance/final_freeze.py` now rejects a prospective
 headline run unless its catalog, statistics plan, all method targets, ordered
 generated-method seeds, limits, and complete externally reviewed
-non-equivalence list match local frozen bytes. This is only a pre-execution
-integrity gate: no final manifest, reviewer decision, corpus execution, score,
-or comparison has been created.
+non-equivalence list match local frozen bytes and the manifest code revision
+matches the repository HEAD. This is only a pre-execution integrity gate: no
+final manifest, reviewer decision, corpus execution, score, or comparison has
+been created.

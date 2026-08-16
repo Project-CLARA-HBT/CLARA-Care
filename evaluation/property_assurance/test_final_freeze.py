@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from evaluation.evidence_program.freeze import FreezeError
+from evaluation.property_assurance import final_freeze
 from evaluation.property_assurance.final_freeze import validate_final_freeze
 
 
@@ -45,13 +46,19 @@ def _files(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
     return root, catalog, statistics, manifest
 
 
-def test_final_freeze_binds_all_reviewed_inputs(tmp_path: Path) -> None:
+def test_final_freeze_binds_all_reviewed_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root, catalog, statistics, manifest = _files(tmp_path)
+    monkeypatch.setattr(final_freeze, "_current_revision", lambda _root: "a" * 40)
     assert validate_final_freeze(manifest_path=manifest, repository_root=root, catalog_path=catalog, statistics_plan_path=statistics)["status"] == "frozen"
 
 
-def test_final_freeze_rejects_unreviewed_or_changed_inputs(tmp_path: Path) -> None:
+def test_final_freeze_rejects_unreviewed_or_changed_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root, catalog, statistics, manifest = _files(tmp_path)
+    monkeypatch.setattr(final_freeze, "_current_revision", lambda _root: "a" * 40)
     value = json.loads(manifest.read_text(encoding="utf-8"))
     value["non_equivalence_review"]["independent_reviewer_attestation"] = False
     manifest.write_text(json.dumps(value), encoding="utf-8")
@@ -61,3 +68,18 @@ def test_final_freeze_rejects_unreviewed_or_changed_inputs(tmp_path: Path) -> No
     (root / "tests/test_contract.py").write_text("def test_contract(): assert False\n", encoding="utf-8")
     with pytest.raises(FreezeError, match="govmut_final_freeze_target_hash_mismatch"):
         validate_final_freeze(manifest_path=manifest, repository_root=root, catalog_path=catalog, statistics_plan_path=statistics)
+
+
+def test_final_freeze_rejects_manifest_for_a_different_code_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, catalog, statistics, manifest = _files(tmp_path)
+    monkeypatch.setattr(final_freeze, "_current_revision", lambda _root: "b" * 40)
+
+    with pytest.raises(FreezeError, match="govmut_final_freeze_code_revision_mismatch"):
+        validate_final_freeze(
+            manifest_path=manifest,
+            repository_root=root,
+            catalog_path=catalog,
+            statistics_plan_path=statistics,
+        )
