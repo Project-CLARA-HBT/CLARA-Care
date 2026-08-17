@@ -19,6 +19,7 @@ REQUIRED_FIELDS = frozenset({
     "record_hash_inventory", "raw_retention_location",
 })
 _REDISTRIBUTION_POLICIES = frozenset({"raw_prohibited", "derived_only", "permitted"})
+_REDISTRIBUTION_REVIEW_STATUSES = frozenset({"PENDING", "RESOLVED", "NOT_APPLICABLE"})
 _RECORD_HASH_ALGORITHM = "sha256(canonical_record_json)"
 
 
@@ -70,10 +71,21 @@ def validate_source_manifest(path: Path) -> dict[str, Any]:
         raise FreezeError("careguard_source_manifest_retrieved_at_invalid")
     if not isinstance(value["version_or_release"], str) or not value["version_or_release"].strip():
         raise FreezeError("careguard_source_manifest_version_missing")
-    if value["license"] in {"", "PENDING_REVIEW", None} or value["access_terms"] in {"", "PENDING_REVIEW", None}:
+    if value["access_terms"] in {"", "PENDING_REVIEW", None}:
         raise FreezeError("careguard_source_manifest_terms_unresolved")
     if value["redistribution_policy"] not in _REDISTRIBUTION_POLICIES:
         raise FreezeError("careguard_source_manifest_redistribution_policy_invalid")
+    redistribution_review_status = value.get("redistribution_review_status")
+    if redistribution_review_status is not None:
+        if redistribution_review_status not in _REDISTRIBUTION_REVIEW_STATUSES:
+            raise FreezeError("careguard_source_manifest_redistribution_review_invalid")
+        if (
+            redistribution_review_status == "PENDING"
+            and value["redistribution_policy"] != "raw_prohibited"
+        ):
+            raise FreezeError("careguard_source_manifest_pending_redistribution_not_prohibited")
+    if value["license"] in {"", None}:
+        raise FreezeError("careguard_source_manifest_license_missing")
     if value["raw_retention_location"] in {"", "outside_git", None}:
         raise FreezeError("careguard_source_manifest_retention_unresolved")
     if not _is_sha256(value["payload_sha256"]):

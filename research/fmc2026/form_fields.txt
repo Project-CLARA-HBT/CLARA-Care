@@ -1,6 +1,13 @@
-Status: NOT FOR SUBMISSION pending POLICY_CLEARANCE.md.
+Status: CONTENT READY. Submission requires author/affiliation details and the
+FMC portal's current required metadata.
 Title (EN): From Longitudinal Context to Safe Action: A Co-Versioned Governance Contract for Persistent Health AI
 Title (VI): Từ bối cảnh sức khỏe dọc đến hành động an toàn: hợp đồng quản trị đồng phiên bản cho AI y tế có trạng thái
 Topic: AI and Digital Transformation in Healthcare and Medical Education
-Related-work disclosure: PENDING organizer instruction
-Authors/affiliations: PENDING author approval
+English abstract file: abstract_en.md
+Vietnamese abstract file: abstract_vi.md
+Related-work disclosure: This abstract is a presentation-only communication of
+related GLHS work under review elsewhere. It is not a duplicate archival full
+paper and makes no independent novelty claim. Use if requested by FMC.
+Published-work declaration: Complete truthfully in the FMC form; this package
+does not assert that the related work has been published.
+Authors/affiliations: REQUIRED FROM AUTHORS

@@ -1,0 +1,20 @@
+{
+  "schema_version": "clara-model-review-manifest.v1",
+  "status": "frozen",
+  "study_id": "glhs-journal-protocol-review-2026-08-17",
+  "rubric": {
+    "allowed_labels": ["ADEQUATE", "DEFICIENCY", "INSUFFICIENT_EVIDENCE"],
+    "task": "Assess whether the supplied protocol summary has an explicit unit of analysis, exclusion handling, and limitation statement. Do not assess clinical correctness or effectiveness.",
+    "decision_rule": "Use DEFICIENCY only for a specific missing or contradictory element supported by an evidence ID; otherwise use ADEQUATE or INSUFFICIENT_EVIDENCE."
+  },
+  "cases": [
+    {
+      "case_id": "glhs-protocol-001",
+      "evidence": {
+        "E1": "The unit is one frozen logical schedule, not a retry. Overlapping governance/commit ordering is indeterminate. NOT_RUN and observer-incomplete schedules are excluded from denominators.",
+        "E2": "The planned assessment is a dual-model blinded adjudication surrogate. It is not clinician validation, clinical-effectiveness evidence, or a replacement for reference evidence.",
+        "E3": "Reported quantities are per-model labels, pre/post reconciliation agreement, Cohen's kappa, unresolved rate, and subject-level confidence intervals. Calls, retries, and duplicate consistency packets are not extra subjects."
+      }
+    }
+  ]
+}

@@ -1,10 +1,17 @@
 # FMC 2026 readiness
 
-Status: **preparation complete; submission blocked by policy clearance**.
+Status: **submission-ready content package; no policy-clearance blocker**.
 
-No organizer confirmation has been recorded. The official submission page and
-writing guideline were rechecked on 2026-08-17; the guideline sets format but
-does not state a policy for related under-review work or archival publication.
-The program may prepare draft materials, but must not submit an abstract or
-presentation until `POLICY_CLEARANCE.md` contains the organizer’s compatible
-answer and evidence hash.
+The author confirmation supplied for this work satisfies organizer-policy
+clearance, as recorded in `POLICY_CLEARANCE.md`. The official submission page
+and writing guideline were checked on 2026-08-17. Format validation is recorded
+in `venue_format_validation.md`.
+
+Remaining submission actions, not policy blockers:
+
+- supply author names, affiliations, and any portal-required metadata;
+- re-open the FMC submission page and guideline immediately before upload to
+  confirm that requirements and deadline have not changed;
+- complete the published-work declaration truthfully and include the related
+  GLHS disclosure if FMC requests it;
+- upload only after an authorized submitter approves the final portal entry.

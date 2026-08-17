@@ -7,13 +7,14 @@
   "retrieved_at_utc": null,
   "version_or_release": null,
   "access_terms": "PENDING_REVIEW",
-  "license": "PENDING_REVIEW",
+  "license": "PENDING_REVIEW|published_license_or_rights_statement",
   "redistribution_policy": "raw_prohibited|derived_only|permitted",
+  "redistribution_review_status": "PENDING|RESOLVED|NOT_APPLICABLE",
   "payload_sha256": null,
   "row_count": null,
   "record_hash_algorithm": "sha256(canonical_record_json)",
   "record_hash_inventory": null,
   "raw_retention_location": "outside_git",
   "required_fields": ["source_record_id", "source_record_hash", "retrieval_version"],
-  "notes": "Do not replace unavailable data with a zero-count source or infer negative DDI labels from absence."
+  "notes": "Acquisition authorization/access terms are a source gate. Pending public redistribution review is metadata only: retain raw payload outside git and set redistribution_policy to raw_prohibited until resolved. Do not replace unavailable data with a zero-count source or infer negative DDI labels from absence."
 }

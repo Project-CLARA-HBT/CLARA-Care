@@ -1,0 +1,23 @@
+schema_version: clara-model-review-registry-v1
+router_base_url: https://router.theclaracare.com/v1
+models: [gemini-3.6-flash-high, claude-sonnet-4-6]
+global_constraints:
+  - Model review is not human, clinician, expert, or clinical validation.
+  - Cases remain the statistical unit; calls, retries, and duplicated consistency cases do not add N.
+  - One anonymous reconciliation round is permitted only for initial disagreements; unresolved labels remain unresolved.
+studies:
+  glhs-journal:
+    role: dual-model blinded adjudication surrogate
+    prohibited_wording: [clinician validation, expert adjudication, clinical effectiveness]
+  assurance-soict-2026:
+    role: dual-model non-equivalence review
+    inclusion_rule: only mutually NON_EQUIVALENT mutants enter a locked denominator
+  govred-rivf-2026:
+    role: model-based protocol review
+    limitation: does_not_replace_real_execution
+  careguard-vn:
+    role: auxiliary mapping/error-category review only
+    limitation: never_ground_truth
+  fmc-2026:
+    role: abstract polish/check only
+    limitation: organizer_policy_clearance_remains_external

@@ -1,13 +1,15 @@
-# Bản nháp tóm tắt — KHÔNG NỘP
+# Tóm tắt FMC 2026 (Tiếng Việt)
 
 ## Từ bối cảnh sức khỏe dọc đến hành động an toàn: hợp đồng quản trị đồng phiên bản cho AI y tế có trạng thái
 
-**Bối cảnh:** Hệ thống AI y tế có trạng thái có thể nhận bối cảnh hồ sơ được phép tại một thời điểm, nhưng đề xuất cập nhật khi hồ sơ, đồng thuận hoặc chính sách đã thay đổi.
+**Bối cảnh:** AI y tế có thể nhận hồ sơ được phép rồi đề xuất ghi dữ liệu khi hồ sơ, đồng thuận hoặc chính sách đã đổi.
 
-**Phương pháp:** Chúng tôi mô tả một thiết kế trong đó ảnh chụp trạng thái sức khỏe theo nhiệm vụ và mục đích (THSS) được cung cấp cho AI. Đề xuất sau đó vẫn gắn với bối cảnh đã công bố; chuyển trạng thái được quản trị tin cậy (GST) kiểm tra lại trạng thái và điều kiện quản trị hiện tại trước khi ghi dữ liệu.
+**Mục tiêu:** Mô tả hợp đồng quản trị chống ghi dữ liệu từ bối cảnh cũ.
 
-**Kết quả:** Bản chuẩn bị này chủ động không đưa số liệu cho đến khi có chấp thuận chính sách và xác minh bằng chứng GLHS nào được phép trình bày.
+**Phương pháp nghiên cứu:** AI nhận ảnh chụp trạng thái sức khỏe theo nhiệm vụ và mục đích (THSS). Đề xuất sau đó gắn với ảnh chụp này. Trước khi ghi, chuyển trạng thái được quản trị tin cậy (GST) kiểm tra lại hồ sơ, đồng thuận và chính sách hiện tại.
 
-**Kết luận:** Hợp đồng nhằm từ chối đề xuất ghi dữ liệu lỗi thời hoặc không còn hợp lệ về quản trị. Nó không chứng minh hiệu quả chẩn đoán, lợi ích lâm sàng, tình trạng thiết bị y tế hoặc tuân thủ pháp quy.
+**Kết quả:** Hợp đồng tách đề xuất của AI khỏi quyết định ghi được quản trị. Đề xuất có ảnh chụp không còn phù hợp sẽ bị từ chối. Bài trình bày chỉ mô tả thiết kế, không tuyên bố về kết quả lâm sàng, hiệu năng chẩn đoán hoặc tuân thủ pháp quy.
 
-Từ khóa: AI y tế; quản trị; hồ sơ dọc; đồng thuận; nguồn gốc dữ liệu
+**Kết luận:** Gắn đề xuất với bối cảnh đã cung cấp và kiểm tra lại khi ghi là khuôn mẫu quản trị cho AI y tế. Hiệu quả lâm sàng, tình trạng thiết bị y tế và tuân thủ pháp quy cần đánh giá riêng.
+
+**Từ khóa:** AI y tế; quản trị; hồ sơ sức khỏe dọc; sự đồng thuận; nguồn gốc dữ liệu

@@ -38,6 +38,15 @@ def test_metadata_probe_cannot_be_used_as_final_source(tmp_path: Path) -> None:
         validate_source_manifest(_write(tmp_path / "probe.json", value))
 
 
+def test_pending_public_redistribution_review_is_not_an_acquisition_blocker(tmp_path: Path) -> None:
+    value = _manifest("identity_frame")
+    value["license"] = "PENDING_REVIEW"
+    value["redistribution_policy"] = "raw_prohibited"
+    value["redistribution_review_status"] = "PENDING"
+    validated = validate_source_manifest(_write(tmp_path / "pending.json", value))
+    assert validated["status"] == "FROZEN_ACQUIRED"
+
+
 def test_final_source_set_requires_all_independent_roles(tmp_path: Path) -> None:
     paths = [_write(tmp_path / f"{role}.json", _manifest(role)) for role in (
         "identity_frame", "terminology", "positive_ddi_reference", "regulatory_confirmation",

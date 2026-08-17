@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CLARA blinded dual-model review manifest",
+  "type": "object",
+  "required": ["schema_version", "status", "study_id", "rubric", "cases"],
+  "properties": {
+    "schema_version": {"const": "clara-model-review-manifest.v1"},
+    "status": {"enum": ["draft", "frozen"]},
+    "study_id": {"type": "string", "minLength": 1},
+    "rubric": {"type": "object"},
+    "cases": {"type": "array", "minItems": 1}
+  }
+}

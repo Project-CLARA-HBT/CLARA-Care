@@ -2,8 +2,8 @@
 
 The development matrix deliberately cannot become a final benchmark by changing
 one status field.  This validator binds every reviewed input to its local bytes
-and refuses any missing non-equivalence decision.  It does not execute mutants
-or attest that an external reviewer is qualified or independent.
+and refuses a denominator that is not backed by dual-model non-equivalence
+results. It does not execute mutants or validate clinical claims.
 """
 
 from __future__ import annotations
@@ -136,11 +136,17 @@ def validate_final_freeze(
     expected_ids = _catalog_ids(catalog_path)
     if (
         not isinstance(review, dict)
-        or review.get("status") != "externally_reviewed"
-        or review.get("independent_reviewer_attestation") is not True
+        or review.get("status") != "dual_model_reviewed"
+        or review.get("model_ids") != ["gemini-3.6-flash-high", "claude-sonnet-4-6"]
+        or not isinstance(review.get("results_sha256"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", review["results_sha256"])
         or not isinstance(review.get("included_mutant_ids"), list)
-        or set(review["included_mutant_ids"]) != expected_ids
-        or len(review["included_mutant_ids"]) != len(expected_ids)
+        or not review["included_mutant_ids"]
+        or not set(review["included_mutant_ids"]).issubset(expected_ids)
+        or len(set(review["included_mutant_ids"])) != len(review["included_mutant_ids"])
+        or not isinstance(review.get("unresolved_mutant_ids"), list)
+        or not set(review["unresolved_mutant_ids"]).issubset(expected_ids)
+        or set(review["included_mutant_ids"]) & set(review["unresolved_mutant_ids"])
     ):
         raise FreezeError("govmut_final_freeze_non_equivalence_review_invalid")
     return manifest

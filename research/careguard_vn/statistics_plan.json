@@ -6,6 +6,9 @@
   "primary_endpoint": "false_clear_rate among cases where reassurance must not be released",
   "false_clear_components": ["wrong_identity_reassurance", "ambiguous_or_unresolved_reassurance", "stale_or_invalid_identity_reassurance", "positive_reference_missed_after_admissible_identity"],
   "oracle_decomposition": ["raw_input_to_identity_to_ddi", "oracle_external_identity_to_same_ddi_engine"],
+  "mode_a": "Frozen raw DAV product identity input through SBMI normalization/reconciliation to the DDI engine.",
+  "mode_b": "Frozen accepted external oracle identity supplied to the same DDI engine; decomposition only, not a substitute benchmark.",
+  "mode_reproducibility_constraint": "Mode A and Mode B share sealed source manifests, case IDs, eligible pairs, DDI engine/configuration, mappings, exclusions, statistics plan, and release rules; only the identity input boundary may differ.",
   "unknown_label_rule": "not-in-reference is unknown and excluded from negative/specificity denominators",
   "paired_analysis": "Exact McNemar where valid; prespecified contrast families use Holm correction.",
   "freeze_requirement": "Sources, mappings, development-only tuning, split, baselines, metrics and this plan must be frozen and hash-bound before locked testing."
