@@ -1,0 +1,154 @@
+{
+  "arms": {
+    "GLHS_STRICT": {
+      "audit_reconstruction_complete": 60,
+      "executed": 270,
+      "family_counts": {
+        "audit_reconstruction_failure": 30,
+        "authorization_consent_toctou": 30,
+        "concurrent_stale_state_write": 30,
+        "cross_subject_proposal_write": 30,
+        "derived_cache_persistence_after_revocation": 30,
+        "digest_expiry_tamper_replay": 30,
+        "revoked_consent_cache_index_reuse": 30,
+        "role_mismatch": 30,
+        "stale_thss_replay": 30
+      },
+      "not_run": 180,
+      "primary_family_n": 210,
+      "prohibited_disclosure": {
+        "k": 0,
+        "n": 270,
+        "rate": 0.0,
+        "wilson_95_ci": [
+          0.0,
+          0.014
+        ]
+      },
+      "stale_or_unauthorized_commit_acceptance": {
+        "k": 30,
+        "n": 210,
+        "rate": 0.1429,
+        "wilson_95_ci": [
+          0.1019,
+          0.1966
+        ]
+      }
+    },
+    "SNAPSHOT_BOUND_STATE_ONLY": {
+      "audit_reconstruction_complete": 120,
+      "executed": 270,
+      "family_counts": {
+        "audit_reconstruction_failure": 30,
+        "authorization_consent_toctou": 30,
+        "concurrent_stale_state_write": 30,
+        "cross_subject_proposal_write": 30,
+        "derived_cache_persistence_after_revocation": 30,
+        "digest_expiry_tamper_replay": 30,
+        "revoked_consent_cache_index_reuse": 30,
+        "role_mismatch": 30,
+        "stale_thss_replay": 30
+      },
+      "not_run": 180,
+      "primary_family_n": 210,
+      "prohibited_disclosure": {
+        "k": 0,
+        "n": 270,
+        "rate": 0.0,
+        "wilson_95_ci": [
+          0.0,
+          0.014
+        ]
+      },
+      "stale_or_unauthorized_commit_acceptance": {
+        "k": 90,
+        "n": 210,
+        "rate": 0.4286,
+        "wilson_95_ci": [
+          0.3635,
+          0.4962
+        ]
+      }
+    },
+    "STATE_VERSION_ONLY": {
+      "audit_reconstruction_complete": 0,
+      "executed": 270,
+      "family_counts": {
+        "audit_reconstruction_failure": 30,
+        "authorization_consent_toctou": 30,
+        "concurrent_stale_state_write": 30,
+        "cross_subject_proposal_write": 30,
+        "derived_cache_persistence_after_revocation": 30,
+        "digest_expiry_tamper_replay": 30,
+        "revoked_consent_cache_index_reuse": 30,
+        "role_mismatch": 30,
+        "stale_thss_replay": 30
+      },
+      "not_run": 180,
+      "primary_family_n": 210,
+      "prohibited_disclosure": {
+        "k": 0,
+        "n": 270,
+        "rate": 0.0,
+        "wilson_95_ci": [
+          0.0,
+          0.014
+        ]
+      },
+      "stale_or_unauthorized_commit_acceptance": {
+        "k": 90,
+        "n": 210,
+        "rate": 0.4286,
+        "wilson_95_ci": [
+          0.3635,
+          0.4962
+        ]
+      }
+    },
+    "UNBOUND": {
+      "audit_reconstruction_complete": 0,
+      "executed": 270,
+      "family_counts": {
+        "audit_reconstruction_failure": 30,
+        "authorization_consent_toctou": 30,
+        "concurrent_stale_state_write": 30,
+        "cross_subject_proposal_write": 30,
+        "derived_cache_persistence_after_revocation": 30,
+        "digest_expiry_tamper_replay": 30,
+        "revoked_consent_cache_index_reuse": 30,
+        "role_mismatch": 30,
+        "stale_thss_replay": 30
+      },
+      "not_run": 180,
+      "primary_family_n": 210,
+      "prohibited_disclosure": {
+        "k": 0,
+        "n": 270,
+        "rate": 0.0,
+        "wilson_95_ci": [
+          0.0,
+          0.014
+        ]
+      },
+      "stale_or_unauthorized_commit_acceptance": {
+        "k": 120,
+        "n": 210,
+        "rate": 0.5714,
+        "wilson_95_ci": [
+          0.5038,
+          0.6365
+        ]
+      }
+    }
+  },
+  "code_revision": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb",
+  "paired_mcnemar_glhs_strict_vs_unbound": {
+    "b": 90,
+    "c": 0,
+    "discordant": 90,
+    "p_two_sided": 0.0
+  },
+  "run_id": "2026-08-17-rivf-final-003",
+  "study": "govred-rivf-2026",
+  "unit_of_analysis": "frozen logical matched case; transport retries collapsed"
+}

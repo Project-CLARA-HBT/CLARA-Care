@@ -1,6 +1,6 @@
 # GovRed-Health authorization-drift RIVF readiness
 
-Status: **NOT RUN — not submission-ready**.
+Status: **FINAL FOUR-ARM EXECUTED AND ANALYZED — claim eligibility requires sealed raw store + dual-model protocol QA**. Final run `2026-08-17-rivf-final-003`, code revision `5b2c0dbf`, 450 logical cases per arm (180 NOT_RUN per protocol exclusions, 270 EXECUTED per arm). Primary stale/unauthorized-commit acceptance: UNBOUND 0.571 (95% CI 0.504-0.636), STATE_VERSION_ONLY 0.429 (0.364-0.496), SNAPSHOT_BOUND_STATE_ONLY 0.429 (0.364-0.496), GLHS_STRICT 0.143 (0.102-0.197). Paired McNemar GLHS_STRICT vs UNBOUND p<0.0001 (b=90, c=0). Prohibited disclosure 0/270 all arms. Results in `artifacts/govred/2026-08-17-rivf-final-003/` (gitignored raw store) and `research/govred_rivf/results/analysis.json`.
 
 Literature-hardened contribution lock: matched governed disclosure → explicit
 authorization/state mutation → persistent commit schedules. This is a
