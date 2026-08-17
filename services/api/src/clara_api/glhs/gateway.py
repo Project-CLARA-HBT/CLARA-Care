@@ -8,6 +8,7 @@ but may not activate or confirm canonical health state.
 from __future__ import annotations
 
 import hashlib
+import os
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -63,6 +64,22 @@ THSS_PIPELINE_STAGE_NAMES = (
     "relevance_freshness",
     "minimization",
 )
+
+
+def _effective_policy_version() -> str:
+    """Return the policy version governing admission at this moment.
+
+    A real policy update advances the deployment-time constant at deploy time.
+    An attested isolated GovRed deployment may simulate such an update by
+    overriding the version for its process; every normal process always
+    returns the constant and the override is never honored otherwise.
+    """
+
+    if isolated_govred_arm() is not None:
+        override = os.environ.get("GOVRED_RESEARCH_POLICY_VERSION")
+        if override:
+            return override
+    return POLICY_VERSION
 
 
 def _digest(value: object) -> str:
@@ -389,7 +406,9 @@ def _validate_proposal_snapshot(
         snapshot_id=source_snapshot_id,
         manifest_digest=source_snapshot_digest,
         base_state_version=base_state_version,
-        policy_version=POLICY_VERSION if revalidate_governance else snapshot.policy_version,
+        policy_version=(
+        _effective_policy_version() if revalidate_governance else snapshot.policy_version
+    ),
         purpose=(purpose or snapshot.purpose) if revalidate_governance else snapshot.purpose,
         consent_version=current_consent,
         actor_user_id=actor_user_id if revalidate_governance else None,
@@ -864,7 +883,7 @@ def apply_transition(
         raise GlhsInvariantError("model_cannot_apply_transition")
     if _digest(assertion.value_json) != assertion.value_fingerprint:
         raise GlhsInvariantError("assertion_value_digest_mismatch")
-    if revalidate_governance and assertion.policy_version != POLICY_VERSION:
+    if revalidate_governance and assertion.policy_version != _effective_policy_version():
         raise GlhsInvariantError("assertion_policy_mismatch")
     current_consent_version = _governed_consent_version(
         db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
@@ -956,7 +975,7 @@ def apply_transition(
         process_kind=assertion.process_kind,
         review_state=review_state,
         reviewed_at=reviewed_at,
-        policy_version=POLICY_VERSION,
+        policy_version=_effective_policy_version(),
         consent_version=current_consent_version,
         source_snapshot_id=(assertion.source_snapshot_id if action == "activate" else None),
         source_snapshot_digest=(assertion.source_snapshot_digest if action == "activate" else None),

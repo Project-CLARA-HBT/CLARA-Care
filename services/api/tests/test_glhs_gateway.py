@@ -57,6 +57,104 @@ def test_profile_writer_lock_compiles_to_postgresql_for_update() -> None:
     assert compiled.endswith("FOR UPDATE")
 
 
+def test_policy_override_requires_isolated_research_attestation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CLARA_GOVRED_ISOLATED_RESEARCH", raising=False)
+    monkeypatch.delenv("GOVRED_RESEARCH_ARM", raising=False)
+    monkeypatch.delenv("GOVRED_RESEARCH_PROJECT", raising=False)
+    monkeypatch.delenv("GOVRED_RESEARCH_POLICY_VERSION", raising=False)
+    # Without the attestation the override must never be honored.
+    assert gateway_module._effective_policy_version() == "glhs.v1"
+
+    monkeypatch.setenv("GOVRED_RESEARCH_POLICY_VERSION", "govred-synthetic-v2")
+    assert gateway_module._effective_policy_version() == "glhs.v1"
+
+    monkeypatch.setenv("CLARA_GOVRED_ISOLATED_RESEARCH", "1")
+    monkeypatch.setenv("GOVRED_RESEARCH_PROJECT", "clara-rivf-unit")
+    monkeypatch.delenv("GOVRED_RESEARCH_ARM", raising=False)
+    # An attested isolated project without a selected arm keeps strict behavior
+    # and does not honor the override either.
+    assert gateway_module._effective_policy_version() == "glhs.v1"
+
+    monkeypatch.setenv("GOVRED_RESEARCH_ARM", "GLHS_STRICT")
+    assert gateway_module._effective_policy_version() == "govred-synthetic-v2"
+
+
+def test_strict_admission_rejects_proposal_after_policy_update(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A proposal authored under one deployment policy must fail admission
+    after the policy version advances at deploy time (simulated by the
+    research-gated override), while non-governance arms still commit."""
+    monkeypatch.setenv("CLARA_GOVRED_ISOLATED_RESEARCH", "1")
+    monkeypatch.setenv("GOVRED_RESEARCH_ARM", "GLHS_STRICT")
+    monkeypatch.setenv("GOVRED_RESEARCH_PROJECT", "clara-rivf-unit")
+    monkeypatch.setenv("ENV", "development")
+
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="policy-update"),
+        dose="500",
+        at=at,
+        epistemic="reported",
+    )
+    assert assertion.policy_version == "glhs.v1"
+    db.commit()
+
+    # Deploy the next policy version into the same process environment.
+    monkeypatch.setenv("GOVRED_RESEARCH_POLICY_VERSION", "govred-synthetic-v2")
+
+    with pytest.raises(GlhsInvariantError, match="assertion_policy_mismatch"):
+        apply_transition(
+            db,
+            scope=scope,
+            assertion=assertion,
+            action="activate",
+            expected_state_version=assertion.base_state_version,
+            idempotency_key="policy-update-activate",
+            transition_kind="user_report",
+            reason_code="test",
+        )
+
+
+def test_state_only_arm_commits_after_policy_update(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CLARA_GOVRED_ISOLATED_RESEARCH", "1")
+    monkeypatch.setenv("GOVRED_RESEARCH_ARM", "STATE_VERSION_ONLY")
+    monkeypatch.setenv("GOVRED_RESEARCH_PROJECT", "clara-rivf-unit")
+    monkeypatch.setenv("ENV", "development")
+
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    assertion = _assertion(
+        db,
+        scope=scope,
+        evidence=_evidence(db, scope=scope, at=at, fingerprint="policy-update-svo"),
+        dose="500",
+        at=at,
+        epistemic="reported",
+    )
+    db.commit()
+    monkeypatch.setenv("GOVRED_RESEARCH_POLICY_VERSION", "govred-synthetic-v2")
+
+    transition = apply_transition(
+        db,
+        scope=scope,
+        assertion=assertion,
+        action="activate",
+        expected_state_version=assertion.base_state_version,
+        idempotency_key="policy-update-svo-activate",
+        transition_kind="user_report",
+        reason_code="test",
+    )
+    assert transition.policy_version == "govred-synthetic-v2"
+
+
 def test_thss_pipeline_trace_rejects_reordered_or_incomplete_stages() -> None:
     trace = [
         {"stage": 1, "name": "authorization"},

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import create_engine
@@ -46,13 +48,17 @@ def _token() -> TokenPayload:
     return TokenPayload({"sub": "govred-http@example.test", "role": "normal"})
 
 
+def _probe(mutation: str, sentinel: str, **kwargs) -> SyntheticCommitProbeRequest:
+    return SyntheticCommitProbeRequest(mutation=mutation, sentinel_id=sentinel, **kwargs)
+
+
 def test_state_only_http_primitive_commits_after_synthetic_consent_revoke(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _configure_arm(monkeypatch, "STATE_VERSION_ONLY")
 
     result = synthetic_commit_probe(
-        SyntheticCommitProbeRequest(mutation="consent_revoke", sentinel_id="sentinel01"),
+        _probe("consent_revoke", "sentinel01"),
         db,
         _token(),
     )
@@ -68,7 +74,7 @@ def test_strict_http_primitive_rejects_synthetic_consent_revoke(
 
     with pytest.raises(HTTPException) as raised:
         synthetic_commit_probe(
-            SyntheticCommitProbeRequest(mutation="consent_revoke", sentinel_id="sentinel02"),
+            _probe("consent_revoke", "sentinel02"),
             db,
             _token(),
         )
@@ -84,7 +90,7 @@ def test_state_only_http_primitive_rejects_stale_synthetic_state(
 
     with pytest.raises(HTTPException) as raised:
         synthetic_commit_probe(
-            SyntheticCommitProbeRequest(mutation="state_advance", sentinel_id="sentinel03"),
+            _probe("state_advance", "sentinel03"),
             db,
             _token(),
         )
@@ -99,10 +105,231 @@ def test_unbound_http_primitive_admits_stale_synthetic_state(
     _configure_arm(monkeypatch, "UNBOUND")
 
     result = synthetic_commit_probe(
-        SyntheticCommitProbeRequest(mutation="state_advance", sentinel_id="sentinel04"),
+        _probe("state_advance", "sentinel04"),
         db,
         _token(),
     )
 
     assert result["arm"] == "UNBOUND"
     assert result["outcome"] == "transition_committed"
+
+
+def test_every_arm_rejects_subject_cross_replay(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for arm in ("UNBOUND", "STATE_VERSION_ONLY", "SNAPSHOT_BOUND_STATE_ONLY", "GLHS_STRICT"):
+        _configure_arm(monkeypatch, arm)
+        with pytest.raises(HTTPException) as raised:
+            synthetic_commit_probe(
+                _probe("subject_cross_replay", "sentinel07"),
+                db,
+                _token(),
+            )
+        assert raised.value.status_code == 409
+        assert raised.value.detail == {"code": "assertion_scope_forbidden"}
+
+
+def test_digest_tamper_attempt_rejected_by_ledger_immutability(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The unit-test store has no alembic DB triggers, so the tamper reaches the
+    # storage layer and the *admission* digest revalidation rejects the commit.
+    # On the real PostgreSQL boundary the persistence trigger blocks the tamper
+    # before admission (``ledger_tampering_rejected``).
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe("snapshot_digest_invalid", "sentinel08"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail == {"code": "proposal_manifest_digest_mismatch"}
+
+
+def test_digest_mutation_rejected_for_unbound_arm(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "UNBOUND")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe("snapshot_digest_invalid", "sentinel09"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 400
+    assert raised.value.detail == {"code": "mutation_not_applicable_to_arm"}
+
+
+def test_snapshot_bound_state_only_commits_after_actor_switch(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The state/snapshot arm deliberately omits governance revalidation, so a
+    # delegate replaying the owner's bound proposal is admitted.
+    _configure_arm(monkeypatch, "SNAPSHOT_BOUND_STATE_ONLY")
+
+    result = synthetic_commit_probe(
+        _probe("actor_switch_replay", "sentinel11"),
+        db,
+        _token(),
+    )
+
+    assert result["outcome"] == "transition_committed"
+    assert result["audit_observation"]["snapshot_linked"] is True
+
+
+def test_strict_primitive_rejects_actor_switch_replay(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe("actor_switch_replay", "sentinel12"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail == {"code": "proposal_snapshot_actor_mismatch"}
+
+
+def test_unbound_primitive_commits_actor_switch_without_snapshot(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "UNBOUND")
+
+    result = synthetic_commit_probe(
+        _probe("actor_switch_replay", "sentinel13"),
+        db,
+        _token(),
+    )
+
+    assert result["outcome"] == "transition_committed"
+    assert result["audit_observation"]["snapshot_linked"] is False
+
+
+def test_concurrent_writer_requires_postgres(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe("concurrent_governance_writer", "sentinel14"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 400
+    assert raised.value.detail == {"code": "mutation_requires_postgres"}
+
+
+def test_two_phase_expiry_flow_rejects_expired_snapshot_under_strict(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    created = synthetic_commit_probe(
+        _probe("snapshot_expired", "sentinel20", phase="create", snapshot_expires_in_seconds=1),
+        db,
+        _token(),
+    )
+    assert created["phase"] == "create"
+    assert created["snapshot_public_id"] is not None
+
+    time.sleep(1.6)
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe(
+                "snapshot_expired",
+                "sentinel20",
+                phase="commit",
+                probe_id=created["probe_id"],
+            ),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail == {"code": "proposal_snapshot_expired"}
+
+
+def test_two_phase_expiry_guard_rejects_not_yet_expired_snapshot(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    created = synthetic_commit_probe(
+        _probe("snapshot_expired", "sentinel21", phase="create", snapshot_expires_in_seconds=300),
+        db,
+        _token(),
+    )
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe(
+                "snapshot_expired",
+                "sentinel21",
+                phase="commit",
+                probe_id=created["probe_id"],
+            ),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 400
+    assert raised.value.detail == {"code": "snapshot_not_yet_expired"}
+
+
+def test_full_phase_expiry_flow_requires_two_phase(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe("snapshot_expired", "sentinel22"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 400
+    assert raised.value.detail == {"code": "mutation_requires_two_phase"}
+
+
+def test_full_phase_policy_change_requires_two_phase(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe("policy_version_change", "sentinel23"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 400
+    assert raised.value.detail == {"code": "mutation_requires_two_phase"}
+
+
+def test_commit_phase_requires_existing_proposal(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe("none", "sentinel24", phase="commit", probe_id="missingprobeid"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 404
+    assert raised.value.detail == {"code": "proposal_not_found"}
