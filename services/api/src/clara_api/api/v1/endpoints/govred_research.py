@@ -187,9 +187,10 @@ def synthetic_disclosure_cache_probe(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "governance_not_revoked"},
         )
-    if arm.revalidate_governance:
-        store.delete(cache_key)
-    _require_research_cache(store)
+    # Observer-only measurement: this endpoint never deletes or repairs the cache
+    # it measures. CLARA has no production governed-content cache; GLHS snapshots
+    # are authoritative persisted PostgreSQL rows. The Redis entry here is a
+    # research-only derivative, so its lifecycle is observed, not manufactured.
     cache_present = store.get_bytes(cache_key) is not None
     return {
         "arm": arm.name,
@@ -198,6 +199,7 @@ def synthetic_disclosure_cache_probe(
         "cache_present_after_revoke": cache_present,
         "cache_key_sha256": cache_key_sha256,
         "raw_cache_value_persisted": False,
+        "measurement_note": "observer_only_no_invalidation",
     }
 
 

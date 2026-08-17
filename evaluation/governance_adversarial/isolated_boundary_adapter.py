@@ -241,7 +241,12 @@ def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, obj
         )
         cache_unavailable = cache_read_unavailable
         cache = _json_response(cache_raw) if cache_raw and not cache_unavailable else {}
-        cache_failure = cache.get("cache_present_after_revoke") is True
+        # Observer-only: the research route never invalidates the cache. A stale
+        # research-only Redis entry remaining after revocation is an observation,
+        # not a governance failure, because CLARA snapshots are authoritative
+        # persisted PostgreSQL rows and the ordinary admission path revalidates.
+        cache_stale_entry_present = cache.get("cache_present_after_revoke") is True
+        cache_failure = cache_stale_entry_present and commit_occurred
     after = _snapshot(config)
     observation = BoundaryObservation(status, raw, before["postgres_sha256"], after["postgres_sha256"], audit_complete, cache_failure, commit_occurred, latency_ms, unavailable or audit_unavailable or cache_unavailable)
     artifact_value = {

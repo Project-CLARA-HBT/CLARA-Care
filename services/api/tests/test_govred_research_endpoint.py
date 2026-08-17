@@ -390,7 +390,11 @@ def test_strict_cache_probe_invalidates_after_persisted_revoke(
         _token(),
     )
     assert observed["governance_revoked"] is True
-    assert observed["cache_present_after_revoke"] is False
+    # Observer-only measurement: the endpoint never deletes what it measures.
+    # CLARA has no production governed-content cache; the research-only Redis
+    # entry remains present after revocation and is not manufactured absent.
+    assert observed["cache_present_after_revoke"] is True
+    assert observed["measurement_note"] == "observer_only_no_invalidation"
 
 
 def test_state_only_cache_probe_retains_entry_after_revoke(
