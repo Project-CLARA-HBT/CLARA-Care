@@ -3,62 +3,492 @@
 # This is an eligibility registry, not a results table.  A row is selectable
 # only if `direct_empirical_comparison_allowed` is true *at freeze time* and
 # every named artifact has passed its own fidelity validator.
+#
+# v2 (W3 comparator registry): each row additionally carries a
+# `direct_comparison_status` from the closed set
+#   DIRECTLY_COMPARABLE | MECHANISM_REFERENCE_ONLY | TASK_MISMATCH
+#   | ASSET_GATED | NOT_COMPARABLE
+# together with citation / primary_source / code_source / pinned_version /
+# license / task_fit / read_semantics / write_semantics /
+# authorization_semantics / concurrency_semantics / reason / adapter /
+# fidelity_tests.
+#
+# Honesty rule: no nearest-neighbor system is an automatic direct GLHS/RIVF
+# baseline without a same-task mapping.  Where a primary source has not yet
+# been locally parsed, semantics fields record only the mechanism class
+# inferred for registry mapping and are marked UNVERIFIED; code_source,
+# pinned_version, license and adapter are marked UNVERIFIED/NONE_VERIFIED
+# until an artifact is actually available and license-compatible.  A citation
+# alone never licenses a numerical comparison.
 schema_version: glhs-bench-published-system-registry.v1
+revision: v2-nearest-neighbor
 systems:
   microsoft_graphrag:
     kind: published_system
     title: Microsoft GraphRAG
+    citation: Microsoft GraphRAG (2024-2026), https://github.com/microsoft/graphrag.git
+    primary_source: https://github.com/microsoft/graphrag.git
     source_url: https://github.com/microsoft/graphrag.git
+    code_source: https://github.com/microsoft/graphrag.git
     pinned_release: v3.1.0
+    pinned_version: v3.1.0
     pinned_commit: 7fc6607edda3d387d23e52ededbf8a75b6730f97
     license: MIT
     protocol_fit: retrieval_context_comparator
+    task_fit: retrieval-context comparator for GLHS narrative evidence; not a governed-state resolver
+    read_semantics: frozen v3.1.0 index/query contract (verified only after upstream execution)
+    write_semantics: upstream index + context-export ledger required before use
+    authorization_semantics: n/a for retrieval context comparator
+    concurrency_semantics: n/a for retrieval context comparator
     adapter: evaluation.comparator_studies.official_graphrag.contract
     direct_empirical_comparison_allowed: false
     status: UPSTREAM_EXECUTION_REQUIRED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      Real, runnable, license-clear upstream; potentially a DIRECTLY_COMPARABLE
+      retrieval comparator only after the source checkout, embedding probes,
+      index/context-export ledger, and a frozen same-cohort shared-solver run
+      are independently verified. Currently the execution contract has not been
+      run, so no numerical comparison is permitted.
     blocker: >-
       Requires a verified source checkout, router-compatible completion and
       embedding probes, upstream index and context-export ledger, and a frozen
       same-cohort shared-solver run.
+    fidelity_tests:
+      - upstream_source_checkout_verified
+      - embedding_probe_router_compatible
+      - index_and_context_export_ledger_frozen
+      - same_cohort_shared_solver_run_frozen
   medrag_mirage:
     kind: published_system
     title: MedRAG toolkit / MIRAGE benchmark
+    citation: Xiong et al. (2024), MedRAG / MIRAGE, ACL Findings 2024
+    primary_source: https://aclanthology.org/2024.findings-acl.372/
     paper_url: https://aclanthology.org/2024.findings-acl.372/
-    source_url: https://github.com/gzxiong/MedRAG
+    code_source: https://github.com/gzxiong/MedRAG
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
     protocol_fit: incompatible_medical_qa_corpus_and_output_task
+    task_fit: medical-QA over external corpora; not governed-state reconciliation
+    read_semantics: corpus retrieval over MIRAGE medical QA corpora
+    write_semantics: n/a (no governed persistent commit)
+    authorization_semantics: n/a
+    concurrency_semantics: n/a
+    adapter: NONE_VERIFIED
     direct_empirical_comparison_allowed: false
     status: TASK_MISMATCH
+    direct_comparison_status: TASK_MISMATCH
+    reason: >-
+      Evaluates medical QA over external medical corpora rather than
+      longitudinal governed-state reconciliation; cannot be transplanted into
+      this task without changing the scientific question.
     blocker: >-
       The official implementation evaluates medical QA over external medical
       corpora rather than longitudinal governed-state reconciliation. It cannot
       be transplanted into this task without changing the scientific question.
+    fidelity_tests:
+      - same_task_mapping_preserves_published_semantics
   zhao_btsa:
     kind: published_method
     title: Zhao et al. KnowFM 2026 bitemporal state arbitration
+    citation: Zhao et al. (2026), KnowFM, bitemporal state arbitration
+    primary_source: https://aclanthology.org/2026.knowfm-1.10/
     source_url: https://aclanthology.org/2026.knowfm-1.10/
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
     protocol_fit: temporal_state_comparator
+    task_fit: bitemporal state arbitration; nearest temporal-state mechanism
+    read_semantics: bitemporal (valid-time/transaction-time) reads (mechanism class)
+    write_semantics: bitemporal state write with arbitration (mechanism class)
+    authorization_semantics: UNVERIFIED
+    concurrency_semantics: bitemporal arbitration (mechanism class)
     adapter: evaluation.comparator_studies.bitemporal_state_arbitration.adapter:btsa_context
     direct_empirical_comparison_allowed: false
     status: MECHANISM_MAPPED_NOT_FAITHFUL
+    direct_comparison_status: MECHANISM_REFERENCE_ONLY
+    reason: >-
+      No pinned official code and missing published operational details prevent
+      an end-to-end faithful reproduction. The existing mechanism mapping may
+      be used only as an explicitly labelled internal temporal baseline.
     blocker: >-
       No pinned official code and missing published operational details prevent
       an end-to-end faithful reproduction. The existing mechanism mapping may
       be used only as an explicitly labelled internal temporal baseline.
+    fidelity_tests:
+      - mechanism_mapping_contract_frozen
+      - labelled_internal_temporal_baseline_only
   vista_architect:
     kind: published_system
     title: VISTA Architect
+    citation: VISTA Architect (2026), primary source not independently verified
+    primary_source: UNVERIFIED
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
     protocol_fit: candidate_longitudinal_state_system
+    task_fit: candidate longitudinal-state system; not verified as governed resolver
+    read_semantics: UNVERIFIED
+    write_semantics: UNVERIFIED
+    authorization_semantics: UNVERIFIED
+    concurrency_semantics: UNVERIFIED
+    adapter: NONE_VERIFIED
     direct_empirical_comparison_allowed: false
     status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      A runnable, license-compatible implementation and task mapping have not
+      been verified. Citation alone does not enable a numerical comparator.
     blocker: >-
       A runnable, license-compatible implementation and task mapping have not
       been verified. Citation alone does not enable a numerical comparator.
+    fidelity_tests:
+      - asset_availability_and_license_verified
+      - same_task_mapping_preserves_published_semantics
   longmedbench:
     kind: published_benchmark
     title: LongMedBench
+    citation: LongMedBench (2026), primary source not independently verified
+    primary_source: UNVERIFIED
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
     protocol_fit: benchmark_reference_not_a_state_resolver
+    task_fit: benchmark reference; not a drop-in governed-state resolver
+    read_semantics: n/a (benchmark corpus)
+    write_semantics: n/a (benchmark corpus)
+    authorization_semantics: n/a (benchmark corpus)
+    concurrency_semantics: n/a (benchmark corpus)
+    adapter: NONE_VERIFIED
     direct_empirical_comparison_allowed: false
     status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      It is not a drop-in resolver implementation for this synthetic governed
+      state task; a separately frozen task-compatible protocol is required.
     blocker: >-
       It is not a drop-in resolver implementation for this synthetic governed
       state task; a separately frozen task-compatible protocol is required.
+    fidelity_tests:
+      - benchmark_corpus_compatibility_protocol_frozen
+  memtx:
+    kind: published_system
+    title: MemTX
+    citation: MemTX (2026), arXiv:2607.23929
+    primary_source: https://arxiv.org/abs/2607.23929
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Memory-transaction system; nearest neighbor for atomic commit semantics in
+      the RIVF stale/unauthorized-commit endpoint. Not an automatic direct GLHS
+      baseline without a same-task mapping.
+    read_semantics: UNVERIFIED (transactional snapshot reads, mechanism-class inferred)
+    write_semantics: UNVERIFIED (atomic commit/rollback, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED
+    concurrency_semantics: UNVERIFIED (transactional isolation/versioning, mechanism-class inferred)
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      Can become DIRECTLY_COMPARABLE only if the task mapping preserves the
+      published transaction semantics AND runnable, license-compatible assets
+      are verified. Neither is established at freeze time, so it is recorded
+      ASSET_GATED (upgrade path: DIRECTLY_COMPARABLE). Mechanism reference is
+      permitted only as an explicitly labelled internal baseline.
+    blocker: >-
+      Task mapping that preserves published transaction semantics and verified
+      runnable assets are not yet established; until then no numerical
+      comparison is permitted.
+    fidelity_tests:
+      - same_task_mapping_preserves_published_transaction_semantics
+      - asset_availability_and_license_verified
+      - authorization_gate_parity
+  memtxn:
+    kind: published_system
+    title: MemTxn
+    citation: MemTxn (2026), arXiv:2607.27834
+    primary_source: https://arxiv.org/abs/2607.27834
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Transactional-memory companion to MemTX; nearest neighbor for atomic
+      multi-step commit semantics in the RIVF endpoint. Not an automatic direct
+      GLHS baseline without a same-task mapping.
+    read_semantics: UNVERIFIED (transactional snapshot reads, mechanism-class inferred)
+    write_semantics: UNVERIFIED (atomic commit/rollback, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED
+    concurrency_semantics: UNVERIFIED (transactional isolation/versioning, mechanism-class inferred)
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      Can become DIRECTLY_COMPARABLE only if the task mapping preserves the
+      published transaction semantics AND runnable, license-compatible assets
+      are verified. Neither is established at freeze time, so it is recorded
+      ASSET_GATED (upgrade path: DIRECTLY_COMPARABLE).
+    blocker: >-
+      Task mapping that preserves published transaction semantics and verified
+      runnable assets are not yet established; until then no numerical
+      comparison is permitted.
+    fidelity_tests:
+      - same_task_mapping_preserves_published_transaction_semantics
+      - asset_availability_and_license_verified
+      - authorization_gate_parity
+  stale:
+    kind: published_system
+    title: STALE
+    citation: STALE (2026), arXiv:2605.06527
+    primary_source: https://arxiv.org/abs/2605.06527
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Stale-read/staleness handling system; nearest neighbor for the RIVF
+      stale-state component of the primary endpoint. Same-task benchmark mapping
+      absent.
+    read_semantics: UNVERIFIED (bounded-freshness / stale-read detection, mechanism-class inferred)
+    write_semantics: UNVERIFIED
+    authorization_semantics: UNVERIFIED
+    concurrency_semantics: UNVERIFIED (staleness tolerance, mechanism-class inferred)
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: MECHANISM_REFERENCE_ONLY
+    direct_comparison_status: MECHANISM_REFERENCE_ONLY
+    reason: >-
+      Mechanism relevance (stale-read detection) is established as a reference
+      point, but no same-task benchmark exists and no verified assets are
+      available, so it can never appear in a numerical comparison table today.
+    blocker: >-
+      No same-task benchmark and no verified runnable assets; reference-only.
+    fidelity_tests:
+      - same_task_mapping_preserves_published_semantics
+  mem2act_bench:
+    kind: published_benchmark
+    title: Mem2ActBench
+    citation: Mem2ActBench (2026), ACL 2026 Long 370
+    primary_source: https://aclanthology.org/2026.acl-long.370/
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Benchmark corpus (memory-to-action); not a drop-in governed-state resolver.
+      Same-task benchmark mapping to GLHS/RIVF absent.
+    read_semantics: n/a (benchmark corpus)
+    write_semantics: n/a (benchmark corpus)
+    authorization_semantics: n/a (benchmark corpus)
+    concurrency_semantics: n/a (benchmark corpus)
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: TASK_MISMATCH
+    direct_comparison_status: TASK_MISMATCH
+    reason: >-
+      It is a benchmark corpus, not a resolver implementation for this synthetic
+      governed-state task; transplanting it would change the scientific question.
+    blocker: >-
+      Benchmark corpus, not a state resolver; a separately frozen task-compatible
+      protocol would be required before any use.
+    fidelity_tests:
+      - benchmark_corpus_compatibility_protocol_frozen
+  commitguard:
+    kind: published_system
+    title: CommitGuard
+    citation: CommitGuard (2026), arXiv:2606.24535
+    primary_source: https://arxiv.org/abs/2606.24535
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Commit-guard system; nearest neighbor for unauthorized-commit prevention in
+      the RIVF primary endpoint. Not an automatic direct GLHS baseline without a
+      same-task mapping.
+    read_semantics: UNVERIFIED (current-commit view, mechanism-class inferred)
+    write_semantics: UNVERIFIED (guarded commit rejecting unauthorized writes, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED (commit-time authorization check, mechanism-class inferred)
+    concurrency_semantics: UNVERIFIED (commit admission control, mechanism-class inferred)
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      Can become DIRECTLY_COMPARABLE only if the task mapping preserves the
+      published commit-guard semantics AND runnable, license-compatible assets
+      are verified. Neither is established at freeze time, so it is recorded
+      ASSET_GATED (upgrade path: DIRECTLY_COMPARABLE).
+    blocker: >-
+      Task mapping that preserves published commit-guard semantics and verified
+      runnable assets are not yet established; until then no numerical
+      comparison is permitted.
+    fidelity_tests:
+      - same_task_mapping_preserves_published_commit_semantics
+      - asset_availability_and_license_verified
+      - authorization_gate_parity
+  memclaw:
+    kind: published_system
+    title: Governed Shared Memory / MemClaw
+    citation: Governed Shared Memory / MemClaw (2026), arXiv:2607.10487
+    primary_source: https://arxiv.org/abs/2607.10487
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Governed shared-memory system; nearest neighbor for the authorization-gate
+      component of GLHS/RIVF. No verified primary source or assets.
+    read_semantics: UNVERIFIED (governed shared-memory reads, mechanism-class inferred)
+    write_semantics: UNVERIFIED (governed shared-memory writes, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED (central access gate, mechanism-class inferred)
+    concurrency_semantics: UNVERIFIED (shared-memory concurrency control, mechanism-class inferred)
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      Mechanism relevance to authorization gating is plausible but no code or
+      license-compatible assets are verified; cannot support any numerical
+      comparison at freeze time.
+    blocker: >-
+      No verified code or license-compatible assets.
+    fidelity_tests:
+      - asset_availability_and_license_verified
+      - same_task_mapping_preserves_published_semantics
+      - authorization_gate_parity
+  superlocal_memory_4:
+    kind: published_system
+    title: SuperLocalMemory 4.0
+    citation: SuperLocalMemory 4.0 (2026), arXiv:2608.08253
+    primary_source: https://arxiv.org/abs/2608.08253
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Local single-agent memory store; nearest neighbor for local memory
+      semantics only. Not a governed-commit validator; same-task mapping absent.
+    read_semantics: UNVERIFIED (local memory reads, mechanism-class inferred)
+    write_semantics: UNVERIFIED (local memory writes, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED (assumed owner-local, mechanism-class inferred)
+    concurrency_semantics: UNVERIFIED
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      Nearest-neighbor for local memory mechanics only; no verified assets and no
+      same-task benchmark, so it cannot be a direct GLHS/RIVF comparator.
+    blocker: >-
+      No verified runnable assets; no same-task benchmark; not a governed-commit
+      validator.
+    fidelity_tests:
+      - same_task_mapping_preserves_published_semantics
+      - asset_availability_and_license_verified
+  continuity_kernel:
+    kind: published_system
+    title: Continuity Kernel
+    citation: Continuity Kernel (2026), primary source not independently verified
+    primary_source: UNVERIFIED
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      State-continuity kernel; nearest neighbor for longitudinal state continuity
+      semantics. No verified primary source or assets.
+    read_semantics: UNVERIFIED (state continuity across sessions, mechanism-class inferred)
+    write_semantics: UNVERIFIED (kernel-managed state persistence, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED
+    concurrency_semantics: UNVERIFIED (kernel-managed, mechanism-class inferred)
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      Mechanism relevance to longitudinal continuity is plausible but no primary
+      source, code, or assets are verified; reference only.
+    blocker: >-
+      No verified primary source, code, or license-compatible assets.
+    fidelity_tests:
+      - asset_availability_and_license_verified
+      - same_task_mapping_preserves_published_semantics
+  gatemem:
+    kind: published_system
+    title: GateMem
+    citation: GateMem (2026), primary source not independently verified
+    primary_source: UNVERIFIED
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Gated-memory system; nearest neighbor for gated read/write authorization
+      semantics. No verified primary source or assets.
+    read_semantics: UNVERIFIED (gated reads, mechanism-class inferred)
+    write_semantics: UNVERIFIED (gated writes, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED (gate on access, mechanism-class inferred)
+    concurrency_semantics: UNVERIFIED
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: ASSET_GATED
+    direct_comparison_status: ASSET_GATED
+    reason: >-
+      Mechanism relevance to access gating is plausible but no primary source,
+      code, or assets are verified; reference only.
+    blocker: >-
+      No verified primary source, code, or license-compatible assets.
+    fidelity_tests:
+      - asset_availability_and_license_verified
+      - same_task_mapping_preserves_published_semantics
+      - authorization_gate_parity
+  cordon:
+    kind: published_system
+    title: Cordon
+    citation: Cordon (2026), primary source not independently verified
+    primary_source: UNVERIFIED
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Memory-isolation (cordon) system; nearest neighbor for isolation-boundary
+      semantics. No verified primary source or assets.
+    read_semantics: UNVERIFIED (access-cordoned read regions, mechanism-class inferred)
+    write_semantics: UNVERIFIED (access-cordoned write regions, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED (isolation boundary, mechanism-class inferred)
+    concurrency_semantics: UNVERIFIED (region isolation, mechanism-class inferred)
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: MECHANISM_REFERENCE_ONLY
+    direct_comparison_status: MECHANISM_REFERENCE_ONLY
+    reason: >-
+      Mechanism relevance (isolation/cordon boundary) is established as a
+      reference point, but no verified source, assets, or same-task benchmark
+      exist; reference only, never a numerical comparator.
+    blocker: >-
+      No verified primary source, code, or assets; no same-task benchmark.
+    fidelity_tests:
+      - same_task_mapping_preserves_published_semantics
+  toki:
+    kind: published_system
+    title: TOKI
+    citation: TOKI (2026), arXiv:2608.11632
+    primary_source: https://arxiv.org/abs/2608.11632
+    code_source: UNVERIFIED
+    pinned_version: UNVERIFIED
+    license: UNVERIFIED
+    task_fit: >-
+      Persistent memory system; nearest neighbor for persistent memory semantics.
+      Same-task benchmark mapping absent.
+    read_semantics: UNVERIFIED (persistent memory reads, mechanism-class inferred)
+    write_semantics: UNVERIFIED (persistent memory writes, mechanism-class inferred)
+    authorization_semantics: UNVERIFIED
+    concurrency_semantics: UNVERIFIED
+    adapter: NONE_VERIFIED
+    direct_empirical_comparison_allowed: false
+    status: MECHANISM_REFERENCE_ONLY
+    direct_comparison_status: MECHANISM_REFERENCE_ONLY
+    reason: >-
+      Mechanism relevance (persistent memory) is established as a reference
+      point, but no verified assets and no same-task benchmark exist; reference
+      only, never a numerical comparator.
+    blocker: >-
+      No verified runnable assets; no same-task benchmark.
+    fidelity_tests:
+      - same_task_mapping_preserves_published_semantics

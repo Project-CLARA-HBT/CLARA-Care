@@ -1,0 +1,25 @@
+{
+  "adapter": "evaluation/governance_adversarial/isolated_boundary_adapter.py",
+  "endpoint_manifest_sha256": "cd0c7a0dbf36ce6b1ca949c76d30bef7191766142c0bb1239c68271bd5ecfb54",
+  "environment": {
+    "base_url": "http://127.0.0.1:18180",
+    "production_touched": false,
+    "project": "clara-rivf-20260817-final001"
+  },
+  "manifest_sha256_current_local": "f5b20de13854a1d47f5496e4e4c3052f235c416bf4a4df6909c8091da8939378",
+  "provenance_notes": [
+    "Raw result rows are immutable and unchanged; this reconciliation never modifies them.",
+    "Manifest bytes were updated after execution to add endpoint/environment/curator attestation metadata; the executed per-arm case sets are unchanged and validated against raw rows.",
+    "Dual-model protocol QA for RIVF was NOT run (router key unavailable at execution); this is recorded, not claimed."
+  ],
+  "raw_results_sha256": {
+    "GLHS_STRICT": "289a11fa076c91dfaf0c95bc03be8957a3e16f648ac84131911f4ea4790832bc",
+    "SNAPSHOT_BOUND_STATE_ONLY": "8eae0e64a6953a33aea7c3b044858c212b4c2f34c40b983875128e14e5741859",
+    "STATE_VERSION_ONLY": "07f5123dbbcc9bf113cd711135ea7c096ce0cc8aede01c2def90f0ffe15692c1",
+    "UNBOUND": "c51c6fd59dc6c6fe403cb3ee1315e84c07b8a2129d5931864bcb43251dd5d295"
+  },
+  "run_id": "2026-08-17-rivf-final-003",
+  "schema_version": "clara-rivf-final-003-reconciliation.v1",
+  "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb",
+  "statistics_plan_sha256": "db5da691f648dc8d6c9db4a673580ed81913e8076c3a5df0052f3c414768cdbc"
+}

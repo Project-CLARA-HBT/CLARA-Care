@@ -1,0 +1,251 @@
+# CLARA evidence-upgrade estimand registry (W10).
+#
+# An estimand is the precise target quantity behind a headline metric.  Each
+# entry records unit, numerator, denominator, inclusion, exclusion, missing
+# handling, clustering, and comparison family, plus the observed value when a
+# frozen run exists.
+#
+# status values:
+#   FROZEN_MEASURED   - defined in a frozen statistics plan and measured in a
+#                       sealed run (run_id given).
+#   DEFINED_PARTIALLY_OBSERVED - defined; only a related quantity is observed.
+#   DEFINED_NOT_RUN   - defined; no eligible measurement exists.
+#
+# Honesty rule: NOT_RUN / missing work is never encoded as zero or as success;
+# missing data is excluded from denominators and kept as an explicit category.
+schema_version: clara-estimand-registry.v1
+program: evidence-upgrade-w10
+estimands:
+  rivf_primary_stale_or_unauthorized_commit_acceptance:
+    headline_metric: RIVF primary (stale/unauthorized-commit acceptance)
+    status: FROZEN_MEASURED
+    run_id: 2026-08-17-rivf-final-003
+    source: research/govred_rivf/MANUSCRIPT_RESULTS.md
+    unit: one frozen logical matched case; transport retries collapsed within the case (not independent N)
+    numerator: >-
+      primary_failures = invalid_commit_acceptance events inside the mandatory
+      primary schedule families (authorization_consent_toctou, role_mismatch,
+      concurrent_stale_state_write, stale_thss_replay).
+    denominator: >-
+      primary_endpoint_n = executed mandatory-primary-family logical cases;
+      NOT_RUN protocol exclusions excluded from the denominator.
+    inclusion: executed mandatory-primary schedule families, frozen in statistics_plan.json
+    exclusion: >-
+      NOT_RUN protocol exclusions and unsupported adapter families (180 per arm).
+    missing_handling: >-
+      NOT_RUN excluded from denominators, never recorded as zero failures.
+    clustering: >-
+      Paired on identical logical cases (arm contrast within the same frozen
+      case set); repeated race attempts aggregated to one logical-case outcome.
+    comparison_family: >-
+      Arms UNBOUND / STATE_VERSION_ONLY / SNAPSHOT_BOUND_STATE_ONLY /
+      GLHS_STRICT; exact paired McNemar on discordant pairs; Holm correction
+      within prespecified arm-contrast families; Wilson 95% CI for rates.
+    observed:
+      GLHS_STRICT: {rate: 0.143, failures: 30, n: 210, wilson_95_ci: [0.102, 0.197]}
+      SNAPSHOT_BOUND_STATE_ONLY: {rate: 0.429, failures: 90, n: 210, wilson_95_ci: [0.364, 0.496]}
+      STATE_VERSION_ONLY: {rate: 0.429, failures: 90, n: 210, wilson_95_ci: [0.364, 0.496]}
+      UNBOUND: {rate: 0.571, failures: 120, n: 210, wilson_95_ci: [0.504, 0.636]}
+    paired_contrast: >-
+      GLHS_STRICT vs UNBOUND: discordant b=90 (UNBOUND accepts, STRICT rejects),
+      c=0; exact two-sided p=1.6e-27.
+  rivf_prohibited_disclosure:
+    headline_metric: RIVF prohibited disclosure
+    status: FROZEN_MEASURED
+    run_id: 2026-08-17-rivf-final-003
+    source: research/govred_rivf/MANUSCRIPT_RESULTS.md
+    unit: one frozen logical case (transport retries collapsed)
+    numerator: >-
+      prohibited-disclosure events = unintended disclosure of a governed record
+      to a requester not authorized by current consent/policy (endpoint_split
+      bucket unintended_disclosure; wrong_subject_release tracked separately).
+    denominator: all executed logical cases (270 per arm)
+    inclusion: all executed cases
+    exclusion: NOT_RUN protocol exclusions
+    missing_handling: NOT_RUN excluded; never recorded as zero disclosure
+    clustering: paired on identical logical cases
+    comparison_family: arm contrast; Wilson CI for structural zeros
+    observed:
+      all_arms: {failures: 0, n: 270, note: "Wilson CI lower bound 0"}
+  rivf_valid_operation_completion:
+    headline_metric: RIVF valid-operation completion
+    status: DEFINED_PARTIALLY_OBSERVED
+    run_id: 2026-08-17-rivf-final-003
+    source: research/govred_rivf/MANUSCRIPT_RESULTS.md
+    unit: one frozen valid (authorized, non-stale) logical operation
+    numerator: >-
+      valid operations completing with a committed, persisted outcome (no
+      availability failure, no spurious rejection).
+    denominator: executed valid-operation logical cases
+    inclusion: operations valid under current consent/role/policy at admission
+    exclusion: >-
+      NOT_RUN cases; operations invalid at admission (handled by the primary
+      endpoint instead).
+    missing_handling: NOT_RUN excluded from denominator
+    clustering: paired on identical logical cases
+    comparison_family: arm contrast
+    observed: >-
+      Dedicated completion numerator not separately reported; nearest observed
+      quantity is availability_failure = 0/270 in every arm.
+  rivf_cache_revocation_failure:
+    headline_metric: RIVF cache/index revocation failure
+    status: FROZEN_MEASURED
+    run_id: 2026-08-17-rivf-final-003
+    source: research/govred_rivf/MANUSCRIPT_RESULTS.md
+    unit: one frozen logical case
+    numerator: >-
+      cache_revocation_failure events = post-revocation reads served from a
+      stale revoked cache/index.
+    denominator: executed logical cases (270 per arm)
+    inclusion: all executed cases
+    exclusion: NOT_RUN protocol exclusions
+    missing_handling: NOT_RUN excluded; never recorded as zero
+    clustering: paired on identical logical cases
+    comparison_family: arm contrast
+    observed: >-
+      0/270 in every arm. Caveat: the adapter never directly invalidates the
+      cache; this is a service-owned observation, not evidence about third-party
+      cache invalidation.
+  rivf_rejection_auditability:
+    headline_metric: RIVF rejection auditability
+    status: DEFINED_PARTIALLY_OBSERVED
+    run_id: 2026-08-17-rivf-final-003
+    source: research/govred_rivf/MANUSCRIPT_RESULTS.md
+    unit: one rejected (blocked) logical transition
+    numerator: >-
+      rejected transitions whose rejection reason and governing inputs are
+      reconstructable from audit/provenance records (complete reconstruction,
+      not an empty or hash-only audit observation).
+    denominator: rejected transitions eligible for audit reconstruction
+    inclusion: transitions blocked by governance/state revalidation
+    exclusion: >-
+      transitions that never reached a reject decision; NOT_RUN cases
+    missing_handling: >-
+      a missing or incomplete audit observation is not completeness and is kept
+      explicit, never recoded as success
+    clustering: paired on identical logical cases
+    comparison_family: arm contrast
+    observed: >-
+      Stratum-level (rejected-only) counts not separately reported; nearest
+      observed quantity is audit_reconstruction_complete over all executed
+      (GLHS_STRICT 60/270, SNAPSHOT_BOUND_STATE_ONLY 120/270,
+      STATE_VERSION_ONLY 0/270, UNBOUND 0/270).
+  rivf_committed_reconstructability:
+    headline_metric: RIVF committed reconstructability
+    status: DEFINED_PARTIALLY_OBSERVED
+    run_id: 2026-08-17-rivf-final-003
+    source: research/govred_rivf/MANUSCRIPT_RESULTS.md
+    unit: one committed logical transition
+    numerator: >-
+      committed transitions whose committed state can be reconstructed from
+      audit/provenance records.
+    denominator: committed transitions eligible for reconstruction
+    inclusion: transitions that committed successfully
+    exclusion: >-
+      transitions that did not commit; NOT_RUN cases
+    missing_handling: >-
+      incomplete reconstruction is kept explicit, never recoded as success
+    clustering: paired on identical logical cases
+    comparison_family: arm contrast
+    observed: >-
+      Committed-stratum counts not separately reported; nearest observed
+      quantity is audit_reconstruction_complete over all executed
+      (GLHS_STRICT 60/270, SNAPSHOT_BOUND_STATE_ONLY 120/270,
+      STATE_VERSION_ONLY 0/270, UNBOUND 0/270).
+  rivf_availability:
+    headline_metric: RIVF availability failure
+    status: FROZEN_MEASURED
+    run_id: 2026-08-17-rivf-final-003
+    source: research/govred_rivf/MANUSCRIPT_RESULTS.md
+    unit: one frozen logical case
+    numerator: availability_failure events (operation unable to complete)
+    denominator: executed logical cases (270 per arm)
+    inclusion: all executed cases
+    exclusion: NOT_RUN protocol exclusions
+    missing_handling: NOT_RUN excluded; never recorded as zero
+    clustering: paired on identical logical cases
+    comparison_family: arm contrast
+    observed: {all_arms: {failures: 0, n: 270}}
+  rivf_latency:
+    headline_metric: RIVF/GLHS latency
+    status: DEFINED_PARTIALLY_OBSERVED
+    source: research/glhs_journal/postgres_toctou_statistics_plan.json
+    unit: one operation / one frozen schedule; milliseconds
+    numerator: n/a (continuous measure, not a rate)
+    denominator: executed operations or schedules with recorded latency
+    inclusion: completed operations/schedules with valid latency records
+    exclusion: >-
+      infrastructure errors and NOT_RUN cases with no valid latency record
+    missing_handling: missing latency excluded; never imputed
+    clustering: per schedule/operation; retries remain within one schedule
+    comparison_family: descriptive per-schedule summary only; no deployment throughput inference
+    observed: >-
+      GLHS per-schedule median latency 12.3-53.8 ms across the five-schedule
+      matrix. RIVF per-operation latency not separately reported.
+  glhs_concurrency_forbidden_commit:
+    headline_metric: GLHS concurrency (forbidden commit observed)
+    status: FROZEN_MEASURED
+    run_id: GLHS-POSTGRES-TOCTOU-FINAL-20260817-01
+    source: research/glhs_journal/MANUSCRIPT_RESULTS.md
+    unit: one frozen logical read-mutate-commit schedule; retries remain within that schedule
+    numerator: >-
+      forbidden_commit_observed = a transition committed only when the final
+      observer proves the relevant governance mutation committed before
+      transition admission began.
+    denominator: >-
+      executed, observer-complete frozen schedules; NOT_RUN, infrastructure
+      error, missing audit, and INDETERMINATE ordering remain separate
+      categories.
+    inclusion: the five frozen schedules in the schedule manifest
+    exclusion: >-
+      NOT_RUN, infrastructure error, missing audit, indeterminate ordering
+    missing_handling: >-
+      missing work is NOT_RUN, never encoded as zero forbidden commits or a
+      successful schedule; indeterminate ordering is never recoded as safe.
+    clustering: one frozen schedule per outcome; retries are not additional N
+    comparison_family: >-
+      per-schedule matrix; ordering established only when observable, genuinely
+      overlapping races are INDETERMINATE; no external same-task comparator
+      exists.
+    observed: >-
+      5 schedules executed; 4 rejected by governance/state revalidation; 0
+      forbidden commits; TOCTOU-03 ordering INDETERMINATE; dual-model protocol
+      QA pre-reconciliation agreement 1.0, Cohen's kappa 1.0.
+  glhs_concurrency_ordering_determinability:
+    headline_metric: GLHS concurrency ordering determinability
+    status: FROZEN_MEASURED
+    run_id: GLHS-POSTGRES-TOCTOU-FINAL-20260817-01
+    source: research/glhs_journal/MANUSCRIPT_RESULTS.md
+    unit: one frozen logical schedule
+    numerator: >-
+      schedules whose concurrent ordering is determinable from observer records.
+    denominator: executed frozen schedules
+    inclusion: the five frozen schedules
+    exclusion: NOT_RUN and infrastructure-error schedules
+    missing_handling: >-
+      INDETERMINATE ordering is an explicit category, never recoded as safe
+    clustering: one frozen schedule per outcome
+    comparison_family: descriptive; 4/5 determinable, TOCTOU-03 INDETERMINATE
+    observed: {determinable: 4, indeterminate: 1, total: 5}
+  soict_mutation_score:
+    headline_metric: SOICT mutation score
+    status: DEFINED_NOT_RUN
+    source: "SOICT process out of scope for the W3/W10 workstream (no SOICT run executed)"
+    unit: one mutant instance applied to the system under test
+    numerator: >-
+      mutants killed (behavioural difference detected by the oracle /
+      claim-relevant assertions).
+    denominator: valid, non-equivalent mutants generated
+    inclusion: >-
+      mutants that compile/apply and are in scope of the claim being tested
+    exclusion: >-
+      invalid mutants (do not compile/apply) and equivalent mutants (no
+      behavioural difference); recorded separately, never folded into the
+      denominator silently.
+    missing_handling: >-
+      unevaluable mutants kept explicit; NOT_RUN never reported as a score
+    clustering: one outcome per mutant; no repeated independent sampling
+    comparison_family: >-
+      defined for future claim-perturbation runs; no frozen run exists, so no
+      score is reported and no comparison is permitted.
+    observed: NOT_RUN

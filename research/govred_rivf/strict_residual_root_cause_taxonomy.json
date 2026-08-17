@@ -1,0 +1,37 @@
+{
+  "arm": "GLHS_STRICT",
+  "by_design_commits_excluded": {
+    "audit_reconstruction_failure": 30
+  },
+  "by_family": {
+    "concurrent_stale_state_write": 30
+  },
+  "by_primary_root_cause": {
+    "INDETERMINATE_ORDERING": 30
+  },
+  "established_facts": {
+    "all_executed": 270,
+    "expected_strict_residuals": 30,
+    "not_run_per_arm": 180,
+    "primary_denominator": 210
+  },
+  "run_id": "2026-08-17-rivf-final-003",
+  "schema_version": "govred-strict-residual-taxonomy-v1",
+  "secondary_tags": [
+    "concurrency",
+    "concurrent_stale_state_write",
+    "ordering",
+    "toctou"
+  ],
+  "serial_drift_invalid_commits": {
+    "authorization_consent_toctou": 0,
+    "cross_subject_proposal_write": 0,
+    "derived_cache_persistence_after_revocation": 0,
+    "digest_expiry_tamper_replay": 0,
+    "policy_version_change": 0,
+    "revoked_consent_cache_index_reuse": 0,
+    "role_mismatch": 0,
+    "stale_thss_replay": 0
+  },
+  "total_residuals": 30
+}

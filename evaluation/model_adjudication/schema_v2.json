@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "clara-model-review-manifest.v2",
+  "title": "CLARA blinded dual-model review manifest v2 (strict)",
+  "description": "Strict review manifest for the W7 model-adjudication tooling. Each case references a protocol whose allowed_labels constrain the review label; every review must carry evidence_ids that reference case evidence and a confidence in [0, 1]. Unknown fields are rejected.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "study_id", "models", "protocols", "rubric", "cases"],
+  "properties": {
+    "schema_version": {"const": "clara-model-review-manifest.v2"},
+    "status": {"enum": ["draft", "frozen"]},
+    "study_id": {"type": "string", "minLength": 1},
+    "models": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {"enum": ["gemini-3.6-flash-high", "claude-sonnet-4-6"]}
+    },
+    "protocols": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z0-9_-]+$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowed_labels"],
+          "properties": {
+            "allowed_labels": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1, "maxLength": 64}
+            },
+            "description": {"type": "string"}
+          }
+        }
+      }
+    },
+    "rubric": {"type": "object", "minProperties": 1},
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case_id", "protocol", "evidence"],
+        "properties": {
+          "case_id": {"type": "string", "minLength": 1},
+          "protocol": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+          "evidence": {
+            "oneOf": [
+              {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": true,
+                "description": "Map of evidence_id -> evidence content"
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id"],
+                  "properties": {"id": {"type": "string", "minLength": 1}, "content": {}}
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "review_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "rationale", "evidence_ids", "confidence"],
+      "properties": {
+        "label": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1},
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    }
+  }
+}

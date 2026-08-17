@@ -10,12 +10,14 @@
 
 ## Primary outcome (stale/unauthorized-commit acceptance, primary schedule scope)
 
-| Arm | N (executed) | Stale-commit acceptance | Rate | Wilson 95% CI |
-| --- | --- | --- | --- | --- |
-| UNBOUND | 270 | 120 | 0.571 | 0.504-0.636 |
-| STATE_VERSION_ONLY | 270 | 90 | 0.429 | 0.364-0.496 |
-| SNAPSHOT_BOUND_STATE_ONLY | 270 | 90 | 0.429 | 0.364-0.496 |
-| GLHS_STRICT | 270 | 30 | 0.143 | 0.102-0.197 |
+| Arm | all_executed_n | primary_endpoint_n | primary_failures | rate | Wilson 95% CI |
+| --- | ---: | ---: | ---: | ---: | --- |
+| UNBOUND | 270 | 210 | 120 | 0.571 | 0.504-0.636 |
+| STATE_VERSION_ONLY | 270 | 210 | 90 | 0.429 | 0.364-0.496 |
+| SNAPSHOT_BOUND_STATE_ONLY | 270 | 210 | 90 | 0.429 | 0.364-0.496 |
+| GLHS_STRICT | 270 | 210 | 30 | 0.143 | 0.102-0.197 |
+
+`NOT_RUN = 180` per arm (protocol exclusions), explicitly excluded from all denominators.
 
 Paired McNemar (GLHS_STRICT vs UNBOUND, identical logical cases): discordant pairs b=90 (UNBOUND accepts, STRICT rejects), c=0 (STRICT accepts, UNBOUND rejects); p<0.0001 (two-sided).
 

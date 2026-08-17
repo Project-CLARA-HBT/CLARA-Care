@@ -35,6 +35,8 @@ def test_soict_final_runner_uses_only_soict_fixed_paths(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = tmp_path / "repository"
+    (root / "research/assurance_soict").mkdir(parents=True)
+    (root / "research/assurance_soict/final_freeze.json").write_text("{}", encoding="utf-8")
     calls: dict[str, Path] = {}
 
     def fake_execute_final_run(**kwargs):

@@ -1,0 +1,112 @@
+{
+  "arms": {
+    "GLHS_STRICT": {
+      "all_executed_n": 270,
+      "audit_reconstruction_complete": 60,
+      "endpoint_split": {
+        "availability_failure": 0,
+        "cache_revocation_failure": 0,
+        "invalid_commit_acceptance": 60,
+        "unintended_disclosure": 0,
+        "wrong_subject_release": 0
+      },
+      "not_run_n": 180,
+      "primary_endpoint_n": 210,
+      "primary_failures": 30,
+      "primary_family_residual": {
+        "concurrent_stale_state_write": 30
+      },
+      "primary_rate": 0.142857,
+      "wilson_95_ci": [
+        0.101935,
+        0.196612
+      ]
+    },
+    "SNAPSHOT_BOUND_STATE_ONLY": {
+      "all_executed_n": 270,
+      "audit_reconstruction_complete": 120,
+      "endpoint_split": {
+        "availability_failure": 0,
+        "cache_revocation_failure": 0,
+        "invalid_commit_acceptance": 120,
+        "unintended_disclosure": 0,
+        "wrong_subject_release": 0
+      },
+      "not_run_n": 180,
+      "primary_endpoint_n": 210,
+      "primary_failures": 90,
+      "primary_family_residual": {
+        "authorization_consent_toctou": 30,
+        "concurrent_stale_state_write": 30,
+        "role_mismatch": 30
+      },
+      "primary_rate": 0.428571,
+      "wilson_95_ci": [
+        0.363513,
+        0.496196
+      ]
+    },
+    "STATE_VERSION_ONLY": {
+      "all_executed_n": 270,
+      "audit_reconstruction_complete": 0,
+      "endpoint_split": {
+        "availability_failure": 0,
+        "cache_revocation_failure": 0,
+        "invalid_commit_acceptance": 120,
+        "unintended_disclosure": 0,
+        "wrong_subject_release": 0
+      },
+      "not_run_n": 180,
+      "primary_endpoint_n": 210,
+      "primary_failures": 90,
+      "primary_family_residual": {
+        "authorization_consent_toctou": 30,
+        "concurrent_stale_state_write": 30,
+        "role_mismatch": 30
+      },
+      "primary_rate": 0.428571,
+      "wilson_95_ci": [
+        0.363513,
+        0.496196
+      ]
+    },
+    "UNBOUND": {
+      "all_executed_n": 270,
+      "audit_reconstruction_complete": 0,
+      "endpoint_split": {
+        "availability_failure": 0,
+        "cache_revocation_failure": 0,
+        "invalid_commit_acceptance": 150,
+        "unintended_disclosure": 0,
+        "wrong_subject_release": 0
+      },
+      "not_run_n": 180,
+      "primary_endpoint_n": 210,
+      "primary_failures": 120,
+      "primary_family_residual": {
+        "authorization_consent_toctou": 30,
+        "concurrent_stale_state_write": 30,
+        "role_mismatch": 30,
+        "stale_thss_replay": 30
+      },
+      "primary_rate": 0.571429,
+      "wilson_95_ci": [
+        0.503804,
+        0.636487
+      ]
+    }
+  },
+  "generated_from": "unchanged final-003 raw rows",
+  "paired_exact_mcnemar_glhs_strict_vs_unbound": {
+    "b": 90,
+    "c": 0,
+    "discordant": 90,
+    "log10_p": -26.791669614094328,
+    "note": "exact binomial two-sided; never underflowed to zero",
+    "p_exact": 1.6155871338926322e-27
+  },
+  "primary_denominator_definition": "executed mandatory-primary families only; NOT_RUN excluded from denominators",
+  "run_id": "2026-08-17-rivf-final-003",
+  "schema_version": "govred-analysis-v2",
+  "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb"
+}

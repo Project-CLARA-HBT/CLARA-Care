@@ -1,0 +1,298 @@
+{
+  "claims": {
+    "sealed_claim_eligible_checks": [
+      {
+        "claim_id": "RIVF-RESULT-001",
+        "ledger": "research/govred_rivf/claim_to_evidence.csv",
+        "missing_artifacts": [],
+        "status": "sealed_claim_eligible"
+      },
+      {
+        "claim_id": "RIVF-RESULT-002",
+        "ledger": "research/govred_rivf/claim_to_evidence.csv",
+        "missing_artifacts": [],
+        "status": "sealed_claim_eligible"
+      },
+      {
+        "claim_id": "GLHS-TOCTOU-001",
+        "ledger": "research/glhs_journal/revision_claim_ledger.csv",
+        "missing_artifacts": [],
+        "status": "sealed_claim_eligible"
+      }
+    ]
+  },
+  "generated_by": "evaluation/evidence_program/render_status.py",
+  "generation_rule": "Machine-generated from immutable artifacts and validated results; hand-edited claims cannot override machine state.",
+  "runs": {
+    "glhs_final": {
+      "analysis": {
+        "code_revision": "2074f87550c5ee32302bde47bc0b9e6be6af36b5",
+        "path": "research/glhs_journal/results/analysis.json",
+        "sha256": "86fc839df2cd7d2c732696e5173b2ce6a9e1e500ebddd88abae401b67cfc44fb"
+      },
+      "claim_eligibility": "SEALED_CLAIM_ELIGIBLE",
+      "committed_transition": 1,
+      "dual_model_protocol_qa": {
+        "case_count": 1,
+        "cohens_kappa": 1.0,
+        "note": "Dual-model blinded protocol-review surrogate; not human/clinician adjudication.",
+        "pre_reconciliation_agreement": 1.0,
+        "status": "complete",
+        "unresolved": 0
+      },
+      "forbidden_commit_observed": 0,
+      "frozen_plan": {
+        "artifacts": {
+          "observer_contract": {
+            "bytes_exist": true,
+            "path": "research/glhs_journal/postgres_toctou_observer_contract.json",
+            "status": "FROZEN_FINAL_REVIEWED"
+          },
+          "schedule_manifest": {
+            "bytes_exist": true,
+            "path": "research/glhs_journal/postgres_toctou_schedule_manifest.json",
+            "status": "FROZEN_FINAL_REVIEWED"
+          },
+          "statistics_plan": {
+            "bytes_exist": true,
+            "path": "research/glhs_journal/postgres_toctou_statistics_plan.json",
+            "status": "FROZEN_FINAL_REVIEWED"
+          }
+        },
+        "status": "FROZEN_FINAL_REVIEWED"
+      },
+      "indeterminate_ordering": 1,
+      "rejected": 4,
+      "run_id": "GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
+      "schedule_manifest": {
+        "path": "research/glhs_journal/postgres_toctou_schedule_manifest.json",
+        "schedule_order": [
+          "TOCTOU-01",
+          "TOCTOU-02",
+          "TOCTOU-03",
+          "TOCTOU-04",
+          "TOCTOU-05"
+        ],
+        "status": "FROZEN_FINAL_REVIEWED"
+      },
+      "schedule_matrix": [
+        {
+          "audit_persisted_row": false,
+          "audit_reconstruction": "no_commit_expected",
+          "commit_outcome": "assertion_consent_mismatch",
+          "forbidden_commit_observed": false,
+          "id": "TOCTOU-01",
+          "latency_ms": 51.3,
+          "observer_complete": true,
+          "ordering": "ordered_serial_schedule"
+        },
+        {
+          "audit_persisted_row": false,
+          "audit_reconstruction": "no_commit_expected",
+          "commit_outcome": "proposal_snapshot_actor_role_mismatch",
+          "forbidden_commit_observed": false,
+          "id": "TOCTOU-02",
+          "latency_ms": 53.8,
+          "observer_complete": true,
+          "ordering": "ordered_serial_schedule"
+        },
+        {
+          "audit_persisted_row": true,
+          "audit_reconstruction": "exact_snapshot_linkage",
+          "commit_outcome": "transition_committed",
+          "forbidden_commit_observed": null,
+          "id": "TOCTOU-03",
+          "latency_ms": 40.4,
+          "observer_complete": true,
+          "ordering": "indeterminate_ordering_transition_committed"
+        },
+        {
+          "audit_persisted_row": false,
+          "audit_reconstruction": "no_commit_expected",
+          "commit_outcome": "proposal_snapshot_policy_mismatch",
+          "forbidden_commit_observed": false,
+          "id": "TOCTOU-04",
+          "latency_ms": 17.4,
+          "observer_complete": true,
+          "ordering": "ordered_serial_schedule"
+        },
+        {
+          "audit_persisted_row": false,
+          "audit_reconstruction": "no_commit_expected",
+          "commit_outcome": "proposal_snapshot_consent_mismatch",
+          "forbidden_commit_observed": false,
+          "id": "TOCTOU-05",
+          "latency_ms": 12.3,
+          "observer_complete": true,
+          "ordering": "rejected_after_or_during_governance_race"
+        }
+      ],
+      "schedules_executed": 5,
+      "seal": {
+        "entries": 3,
+        "mismatches": [],
+        "missing": [],
+        "path": "artifacts/glhs-postgres-toctou/GLHS-POSTGRES-TOCTOU-FINAL-20260817-01/artifact-sha256.json",
+        "resolved": true
+      },
+      "source_sha": "2074f87550c5ee32302bde47bc0b9e6be6af36b5",
+      "toctou03": {
+        "classification": "indeterminate_ordering_transition_committed",
+        "commit_outcome": "transition_committed",
+        "status": "INDETERMINATE"
+      },
+      "top_level_status": "SEALED"
+    },
+    "rivf_final_003": {
+      "analysis_v2": {
+        "arms": {
+          "GLHS_STRICT": {
+            "all_executed_n": 270,
+            "not_run_n": 180,
+            "primary_endpoint_n": 210,
+            "primary_failures": 30,
+            "primary_rate": 0.142857,
+            "rate_reproducible": true,
+            "wilson_95_ci": [
+              0.101935,
+              0.196612
+            ]
+          },
+          "SNAPSHOT_BOUND_STATE_ONLY": {
+            "all_executed_n": 270,
+            "not_run_n": 180,
+            "primary_endpoint_n": 210,
+            "primary_failures": 90,
+            "primary_rate": 0.428571,
+            "rate_reproducible": true,
+            "wilson_95_ci": [
+              0.363513,
+              0.496196
+            ]
+          },
+          "STATE_VERSION_ONLY": {
+            "all_executed_n": 270,
+            "not_run_n": 180,
+            "primary_endpoint_n": 210,
+            "primary_failures": 90,
+            "primary_rate": 0.428571,
+            "rate_reproducible": true,
+            "wilson_95_ci": [
+              0.363513,
+              0.496196
+            ]
+          },
+          "UNBOUND": {
+            "all_executed_n": 270,
+            "not_run_n": 180,
+            "primary_endpoint_n": 210,
+            "primary_failures": 120,
+            "primary_rate": 0.571429,
+            "rate_reproducible": true,
+            "wilson_95_ci": [
+              0.503804,
+              0.636487
+            ]
+          }
+        },
+        "generated_from": "unchanged final-003 raw rows",
+        "paired_exact_mcnemar_glhs_strict_vs_unbound": {
+          "b": 90,
+          "c": 0,
+          "discordant": 90,
+          "log10_p": -26.791669614094328,
+          "note": "exact binomial two-sided; never underflowed to zero",
+          "p_exact": 1.6155871338926322e-27
+        },
+        "path": "research/govred_rivf/results/final-003-analysis-v2.json",
+        "primary_denominator_definition": "executed mandatory-primary families only; NOT_RUN excluded from denominators",
+        "sha256": "098d4c3b14593b7a32e52c929d4cde7c3770e051063dd1c05c7ae83ef18d014c",
+        "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb"
+      },
+      "claim_eligibility": "SEALED_CLAIM_ELIGIBLE_executable_primary_schedules",
+      "dual_model_protocol_qa": {
+        "note": "Recorded, not claimed: locked dual-model protocol QA must run before claim-bearing RIVF analysis.",
+        "status": "NOT_RUN_pending_router_key"
+      },
+      "frozen_statistics_plan": {
+        "bytes_exist": true,
+        "hash_matches_reconciliation": true,
+        "path": "artifacts/govred/2026-08-17-rivf-freeze-candidate/final/final_statistics_plan.json",
+        "reconciled_sha256": "db5da691f648dc8d6c9db4a673580ed81913e8076c3a5df0052f3c414768cdbc",
+        "sha256": "db5da691f648dc8d6c9db4a673580ed81913e8076c3a5df0052f3c414768cdbc"
+      },
+      "manifest": {
+        "cases": 450,
+        "code_revision": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb",
+        "freeze_state": "frozen_ready_for_execution",
+        "path": "artifacts/govred/2026-08-17-rivf-freeze-candidate/final/final_locked_manifest.json",
+        "reconciliation_manifest_sha256": "f5b20de13854a1d47f5496e4e4c3052f235c416bf4a4df6909c8091da8939378",
+        "sha256": "f5b20de13854a1d47f5496e4e4c3052f235c416bf4a4df6909c8091da8939378",
+        "status": "frozen"
+      },
+      "provenance_findings": [
+        {
+          "detail": "final_locked_manifest.json embeds final_statistics_plan_sha256 b1420da26b720b3b31d6bd6e1f3060daef7fa5b171f714be357fbcf7461a702c, which matches no bytes on disk; the W0-T03 reconciliation (machine-generated) binds the governing frozen stats-plan bytes as db5da691f648dc8d6c9db4a673580ed81913e8076c3a5df0052f3c414768cdbc (exact file present).",
+          "id": "W0-FIND-RIVF-002",
+          "resolution": "resolved by reconciliation record + exact bytes; manifest field is stale self-referential metadata",
+          "severity": "RESOLVED_HISTORICAL_METADATA"
+        }
+      ],
+      "raw_rows": {
+        "all_match_declared": true,
+        "arms": {
+          "GLHS_STRICT": {
+            "matches_declared": true,
+            "sha256": "289a11fa076c91dfaf0c95bc03be8957a3e16f648ac84131911f4ea4790832bc"
+          },
+          "SNAPSHOT_BOUND_STATE_ONLY": {
+            "matches_declared": true,
+            "sha256": "8eae0e64a6953a33aea7c3b044858c212b4c2f34c40b983875128e14e5741859"
+          },
+          "STATE_VERSION_ONLY": {
+            "matches_declared": true,
+            "sha256": "07f5123dbbcc9bf113cd711135ea7c096ce0cc8aede01c2def90f0ffe15692c1"
+          },
+          "UNBOUND": {
+            "matches_declared": true,
+            "sha256": "c51c6fd59dc6c6fe403cb3ee1315e84c07b8a2129d5931864bcb43251dd5d295"
+          }
+        }
+      },
+      "run_id": "2026-08-17-rivf-final-003",
+      "seal": {
+        "entries": 6,
+        "mismatches": [],
+        "missing": [],
+        "path": "artifacts/govred/2026-08-17-rivf-final-003/artifact-sha256.json",
+        "resolved": true
+      },
+      "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb",
+      "top_level_status": "SEALED"
+    }
+  },
+  "schema_version": "clara-w0-machine-status.v1",
+  "sealed_run_inventory": {
+    "glhs-postgres-toctou-final-20260817-01": {
+      "evidence_class": "postgres_concurrency",
+      "immutable": true,
+      "raw_root": "artifacts/glhs-postgres-toctou/GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
+      "source_sha": "2074f87550c5ee32302bde47bc0b9e6be6af36b5"
+    },
+    "rivf-final-003": {
+      "evidence_class": "real_boundary_governance",
+      "immutable": true,
+      "raw_root": "artifacts/govred/2026-08-17-rivf-final-003",
+      "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb"
+    }
+  },
+  "top_level": {
+    "note": "RIVF dual-model protocol QA NOT_RUN_pending_router_key (recorded, not claimed); GLHS dual-model protocol QA complete (kappa 1.0, unresolved 0).",
+    "sealed": true,
+    "status": "SEALED"
+  },
+  "validation": {
+    "errors": [],
+    "passes": true
+  }
+}

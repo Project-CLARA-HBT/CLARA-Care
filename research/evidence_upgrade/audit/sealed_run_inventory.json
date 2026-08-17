@@ -1,0 +1,18 @@
+{
+  "artifacts_dir_ignored_in_git": true,
+  "schema_version": "clara-sealed-run-inventory.v1",
+  "sealed_runs": {
+    "glhs-postgres-toctou-final-20260817-01": {
+      "evidence_class": "postgres_concurrency",
+      "immutable": true,
+      "raw_root": "artifacts/glhs-postgres-toctou/GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
+      "source_sha": "2074f87550c5ee32302bde47bc0b9e6be6af36b5"
+    },
+    "rivf-final-003": {
+      "evidence_class": "real_boundary_governance",
+      "immutable": true,
+      "raw_root": "artifacts/govred/2026-08-17-rivf-final-003",
+      "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb"
+    }
+  }
+}

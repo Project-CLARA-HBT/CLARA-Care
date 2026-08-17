@@ -1,0 +1,83 @@
+{
+  "controls": {
+    "actor_change_invalid": {
+      "expected_invalid_outcome": "rejected",
+      "expected_valid_outcome": "committed",
+      "family": "role_mismatch",
+      "mutation": "change actor/role between disclosure and commit",
+      "mutation_class": "actor_role_mismatch",
+      "valid_control": "actor_stable_valid"
+    },
+    "consent_revoke_invalid": {
+      "expected_invalid_outcome": "rejected",
+      "expected_valid_outcome": "committed",
+      "family": "revoked_consent_cache_index_reuse",
+      "mutation": "revoke consent before repeat governed disclosure",
+      "mutation_class": "consent_revoke",
+      "valid_control": "consent_unchanged_valid"
+    },
+    "cross_subject_invalid": {
+      "expected_invalid_outcome": "rejected",
+      "expected_valid_outcome": "committed",
+      "family": "cross_subject_proposal_write",
+      "mutation": "propose a persistent write for a different subject",
+      "mutation_class": "cross_subject_proposal_write",
+      "valid_control": "same_subject_valid"
+    },
+    "digest_corrupt_invalid": {
+      "expected_invalid_outcome": "rejected",
+      "expected_valid_outcome": "committed",
+      "family": "digest_expiry_tamper_replay",
+      "mutation": "corrupt the proposal/snapshot digest before commit",
+      "mutation_class": "digest_corruption_replay",
+      "valid_control": "digest_intact_valid"
+    },
+    "expired_invalid": {
+      "expected_invalid_outcome": "rejected",
+      "expected_valid_outcome": "committed",
+      "family": "stale_thss_replay",
+      "mutation": "replay an expired THSS token/state before commit",
+      "mutation_class": "stale_state_replay",
+      "valid_control": "unexpired_valid"
+    },
+    "policy_change_invalid": {
+      "expected_invalid_outcome": "rejected",
+      "expected_valid_outcome": "committed",
+      "family": "policy_version_change",
+      "mutation": "advance policy version before commit admission",
+      "mutation_class": "policy_change",
+      "valid_control": "policy_unchanged_valid"
+    },
+    "state_advance_invalid": {
+      "expected_invalid_outcome": "rejected",
+      "expected_valid_outcome": "committed",
+      "family": "concurrent_stale_state_write",
+      "mutation": "advance state concurrently between disclosure and write admission",
+      "mutation_class": "concurrent_stale_state_write",
+      "valid_control": "same_state_valid"
+    }
+  },
+  "drift_axis_by_family": {
+    "concurrent_stale_state_write": "state_advance",
+    "cross_subject_proposal_write": "cross_subject",
+    "digest_expiry_tamper_replay": "digest_corrupt",
+    "policy_version_change": "policy_change",
+    "revoked_consent_cache_index_reuse": "consent_revoke",
+    "role_mismatch": "actor_change",
+    "stale_thss_replay": "expired"
+  },
+  "preserved_coordinates": [
+    "subject",
+    "actor",
+    "purpose",
+    "task_binding",
+    "evidence",
+    "consent_granted",
+    "policy_version_current",
+    "state_version_current",
+    "digest_intact",
+    "token_unexpired"
+  ],
+  "purpose": "Matched authority-preserving controls per primary drift family so valid-transition rejection is separated from invalid-transition acceptance (AUD-016).",
+  "schema_version": "govred-positive-control-schema-v1"
+}
