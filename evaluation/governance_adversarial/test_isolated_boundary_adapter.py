@@ -50,6 +50,10 @@ def test_adapter_runs_http_commit_and_writes_sanitized_hash_bound_artifacts(monk
             return 200, b"{}", False
         if path.endswith("/login"):
             return 200, b'{"access_token":"token"}', False
+        if path.endswith("/consent-status"):
+            return 200, b'{"required_version":"2026-04-v1"}', False
+        if path.endswith("/consent"):
+            return 200, b'{"consent_version":"2026-04-v1"}', False
         if "synthetic-audit-observation" in path:
             return 200, b'{"audit_reconstruction_complete":true}', False
         return 409, b'{"detail":{"code":"stale_state_version"}}', False
@@ -78,6 +82,10 @@ def test_adapter_uses_valid_synthetic_email_domain(monkeypatch: pytest.MonkeyPat
             return 200, b"{}", False
         if path.endswith("/login"):
             return 200, b'{"access_token":"token"}', False
+        if path.endswith("/consent-status"):
+            return 200, b'{"required_version":"2026-04-v1"}', False
+        if path.endswith("/consent"):
+            return 200, b'{"consent_version":"2026-04-v1"}', False
         if path.endswith("/arm"):
             return 200, json.dumps({"arm": "GLHS_STRICT", "bind_snapshot": True, "revalidate_state": True, "revalidate_governance": True}).encode(), False
         if "synthetic-audit-observation" in path:
@@ -89,6 +97,36 @@ def test_adapter_uses_valid_synthetic_email_domain(monkeypatch: pytest.MonkeyPat
     adapter.adapter(case=_case(), arm=_arm())
     email = str(registered[0]["email"])
     assert email.endswith("@example.org")
+
+
+def test_adapter_grants_medical_consent_after_login(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _configure(monkeypatch, tmp_path)
+    consent_calls: list[dict[str, object]] = []
+
+    def request(_config, path, *, method="GET", body=None, token=None):
+        if path.endswith("/register"):
+            return 200, b"{}", False
+        if path.endswith("/login"):
+            return 200, b'{"access_token":"token"}', False
+        if path.endswith("/consent-status"):
+            return 200, b'{"required_version":"2026-04-v1"}', False
+        if path.endswith("/consent"):
+            consent_calls.append({"body": body, "method": method})
+            return 200, b'{"consent_version":"2026-04-v1"}', False
+        if path.endswith("/arm"):
+            return 200, json.dumps({"arm": "GLHS_STRICT", "bind_snapshot": True, "revalidate_state": True, "revalidate_governance": True}).encode(), False
+        if "synthetic-audit-observation" in path:
+            return 200, b'{"audit_reconstruction_complete":true}', False
+        return 409, b'{"detail":{"code":"stale_state_version"}}', False
+
+    monkeypatch.setattr(adapter, "_request", request)
+    monkeypatch.setattr(adapter, "_snapshot", lambda _: {"postgres_sha256": "b" * 64, "redis_sha256": "c" * 64, "audit_sha256": "d" * 64})
+    adapter.adapter(case=_case(), arm=_arm())
+    assert consent_calls
+    assert consent_calls[0]["method"] == "POST"
+    body = consent_calls[0]["body"]
+    assert isinstance(body, dict) and body.get("accepted") is True
+    assert body.get("consent_version") == "2026-04-v1"
 
 
 def test_adapter_marks_unsupported_cross_subject_read_as_not_run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -109,6 +147,10 @@ def test_adapter_observes_service_owned_cache_reuse_around_revocation(
             return 200, b"{}", False
         if path.endswith("/login"):
             return 200, b'{"access_token":"token"}', False
+        if path.endswith("/consent-status"):
+            return 200, b'{"required_version":"2026-04-v1"}', False
+        if path.endswith("/consent"):
+            return 200, b'{"consent_version":"2026-04-v1"}', False
         if path.endswith("/arm"):
             return 200, json.dumps({"arm": "GLHS_STRICT", "bind_snapshot": True, "revalidate_state": True, "revalidate_governance": True}).encode(), False
         if "synthetic-disclosure-cache-probe" in path and phase == "seed":

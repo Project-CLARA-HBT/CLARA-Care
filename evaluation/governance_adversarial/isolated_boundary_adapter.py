@@ -127,6 +127,20 @@ def _identity(config: AdapterConfig) -> str:
     token = _json_response(raw).get("access_token") if status == 200 and not unavailable else None
     if not isinstance(token, str):
         raise TypeError("govred_adapter_synthetic_login_failed")
+    status, raw, unavailable = _request(config, "/api/v1/auth/consent-status", token=token)
+    consent = _json_response(raw) if status == 200 and not unavailable else {}
+    required_version = consent.get("required_version")
+    if not isinstance(required_version, str) or not required_version:
+        raise RuntimeError("govred_adapter_consent_version_unavailable")
+    status, _, unavailable = _request(
+        config,
+        "/api/v1/auth/consent",
+        method="POST",
+        token=token,
+        body={"consent_version": required_version, "accepted": True},
+    )
+    if unavailable or status != 200:
+        raise RuntimeError("govred_adapter_consent_grant_failed")
     return token
 
 
