@@ -10,6 +10,13 @@ governance/commit ordering as indeterminate, and excludes NOT_RUN or
 observer-incomplete schedules from any denominator. Independent review and a
 final freeze remain required before it can govern a headline run.
 
+A separate final-runner scaffold now validates a future reviewed frozen protocol
+without connecting to PostgreSQL or emitting results. It refuses the present
+draft protocol, any non-isolated environment declaration, missing persisted
+governance writers for TOCTOU-02/03/05, or an audit contract that accepts
+hash-only/missing reconstruction. This gate is preparation only and does not
+change the `NOT_RUN` status of the final TOCTOU matrix.
+
 The external-adjudication tooling now refuses an annotation manifest lacking
 pseudonymous role codes and explicit eligibility/independence attestations for
 exactly two reviewers and the distinct adjudicator. It binds the reviewer codes

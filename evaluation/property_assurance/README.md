@@ -13,8 +13,10 @@ Record Hypothesis seeds and counterexamples in any frozen run.
 
 `final_freeze.py` is the separate pre-execution gate for any headline GovMut
 run. It binds the catalog, statistics plan, every method target, ordered seeds,
-and limits to local hashes, and requires an externally reviewed complete
-non-equivalence list. It does not create that review, execute mutants, or turn
+and limits to local hashes. Its dual-model review is a SHA-256-bound JSON
+artifact, local to the manifest, with exactly one valid disposition and both
+model dispositions for every catalog mutant. It does not create that review,
+execute mutants, or turn
 the development suite matrix into a frozen protocol.
 
 This work stream is not external clinical validation.

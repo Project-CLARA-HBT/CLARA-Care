@@ -32,6 +32,47 @@ def _load(path: Path) -> dict[str, Any]:
     return value
 
 
+def _structured_content(*, payload_bytes: bytes, content_type: str) -> str:
+    """Extract OpenAI JSON or SSE completion text without accepting partial SSE."""
+
+    if content_type == "text/event-stream":
+        chunks: list[str] = []
+        complete = False
+        for line in payload_bytes.decode("utf-8").splitlines():
+            if not line.startswith("data:"):
+                continue
+            event_data = line.removeprefix("data:").strip()
+            if event_data == "[DONE]":
+                complete = True
+                continue
+            event = json.loads(event_data)
+            choices = event.get("choices")
+            if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+                raise ValueError("model_review_sse_malformed")
+            choice = choices[0]
+            content = choice.get("delta", {}).get("content") or choice.get("message", {}).get("content") or choice.get("text")
+            if isinstance(content, str):
+                chunks.append(content)
+        if not complete or not chunks:
+            raise ValueError("model_review_sse_incomplete")
+        return "".join(chunks)
+    parsed = json.loads(payload_bytes)
+    content = parsed["choices"][0]["message"]["content"]
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("model_review_response_empty")
+    return content
+
+
+def _parse_review(content: str) -> dict[str, Any]:
+    value = content.strip()
+    if value.startswith("```json") and value.endswith("```"):
+        value = value[7:-3].strip()
+    review = json.loads(value)
+    if not isinstance(review, dict) or not isinstance(review.get("label"), str) or not isinstance(review.get("rationale"), str):
+        raise TypeError("model_review_response_schema_invalid")
+    return review
+
+
 def _call(*, model: str, prompt: str, retries: int = 2) -> dict[str, Any]:
     key = os.environ.get("CLARA_ROUTER_API_KEY", "").strip()
     if not key:
@@ -48,27 +89,7 @@ def _call(*, model: str, prompt: str, retries: int = 2) -> dict[str, Any]:
             with urllib.request.urlopen(request, timeout=120) as response:
                 payload_bytes = response.read()
                 content_type = response.headers.get_content_type()
-            if content_type == "text/event-stream":
-                chunks = []
-                for line in payload_bytes.decode("utf-8").splitlines():
-                    event_data = line.removeprefix("data:").strip()
-                    if line.startswith("data:") and event_data != "[DONE]":
-                        event = json.loads(event_data)
-                        choice = event.get("choices", [{}])[0]
-                        delta = choice.get("delta", {})
-                        if isinstance(delta.get("content"), str):
-                            chunks.append(delta["content"])
-                        elif isinstance(choice.get("message", {}).get("content"), str):
-                            chunks.append(choice["message"]["content"])
-                        elif isinstance(choice.get("text"), str):
-                            chunks.append(choice["text"])
-                content = "".join(chunks)
-            else:
-                parsed = json.loads(payload_bytes)
-                content = parsed["choices"][0]["message"]["content"]
-            review = json.loads(content)
-            if not isinstance(review, dict) or not isinstance(review.get("label"), str) or not isinstance(review.get("rationale"), str):
-                raise TypeError("model_review_response_schema_invalid")
+            review = _parse_review(_structured_content(payload_bytes=payload_bytes, content_type=content_type))
             return {"model_id": model, "timestamp_utc": datetime.now(UTC).isoformat(), "attempt": attempt + 1, "latency_ms": round((time.monotonic() - started) * 1000, 3), "response_sha256": _sha(review), "review": review, "unsupported_parameters": []}
         except (urllib.error.URLError, urllib.error.HTTPError, KeyError, ValueError, json.JSONDecodeError) as exc:
             last_error = type(exc).__name__

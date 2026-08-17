@@ -19,7 +19,10 @@ from evaluation.evidence_program.freeze import FreezeError, sha256
 from evaluation.property_assurance.suite_matrix import METHOD_IDS
 
 _SCHEMA_VERSION = "govmut-final-freeze.v1"
+_REVIEW_SCHEMA_VERSION = "govmut-dual-model-review.v1"
 _GIT_REVISION = re.compile(r"^[0-9a-f]{40}$")
+_REVIEW_DISPOSITIONS = frozenset({"included", "excluded_equivalent", "excluded_unexecutable", "unresolved"})
+_REVIEW_MODEL_IDS = ("gemini-3.6-flash-high", "claude-sonnet-4-6")
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -89,6 +92,56 @@ def _validate_target_hashes(*, repository_root: Path, methods: object) -> None:
                 raise FreezeError("govmut_final_freeze_target_hash_mismatch")
 
 
+def _validate_review_artifact(*, manifest_path: Path, review: object, expected_ids: set[str]) -> None:
+    if (
+        not isinstance(review, dict)
+        or review.get("status") != "dual_model_reviewed"
+        or review.get("model_ids") != list(_REVIEW_MODEL_IDS)
+        or not isinstance(review.get("artifact"), str)
+        or not review["artifact"].strip()
+    ):
+        raise FreezeError("govmut_final_freeze_non_equivalence_review_invalid")
+    artifact = (manifest_path.parent / review["artifact"]).resolve()
+    try:
+        artifact.relative_to(manifest_path.parent.resolve())
+    except ValueError as exc:
+        raise FreezeError("govmut_final_freeze_review_artifact_outside_manifest") from exc
+    if not artifact.is_file():
+        raise FreezeError("govmut_final_freeze_review_artifact_missing")
+    if _require_sha256(review.get("results_sha256"), "govmut_final_freeze_review_artifact_hash_invalid") != sha256(artifact):
+        raise FreezeError("govmut_final_freeze_review_artifact_hash_mismatch")
+
+    artifact_review = _load_json(artifact)
+    dispositions = artifact_review.get("dispositions")
+    if (
+        artifact_review.get("schema_version") != _REVIEW_SCHEMA_VERSION
+        or artifact_review.get("model_ids") != list(_REVIEW_MODEL_IDS)
+        or not isinstance(dispositions, list)
+    ):
+        raise FreezeError("govmut_final_freeze_review_artifact_invalid")
+    reviewed_ids: list[str] = []
+    final_dispositions: list[str] = []
+    for disposition in dispositions:
+        if (
+            not isinstance(disposition, dict)
+            or not isinstance(disposition.get("mutant_id"), str)
+            or disposition["mutant_id"] not in expected_ids
+            or disposition.get("disposition") not in _REVIEW_DISPOSITIONS
+            or not isinstance(disposition.get("model_dispositions"), dict)
+            or set(disposition["model_dispositions"]) != set(_REVIEW_MODEL_IDS)
+            or not all(value in _REVIEW_DISPOSITIONS for value in disposition["model_dispositions"].values())
+        ):
+            raise FreezeError("govmut_final_freeze_review_disposition_invalid")
+        reviewed_ids.append(disposition["mutant_id"])
+        final_dispositions.append(disposition["disposition"])
+    if (
+        len(reviewed_ids) != len(set(reviewed_ids))
+        or set(reviewed_ids) != expected_ids
+        or "included" not in final_dispositions
+    ):
+        raise FreezeError("govmut_final_freeze_review_disposition_coverage_invalid")
+
+
 def validate_final_freeze(
     *, manifest_path: Path, repository_root: Path, catalog_path: Path, statistics_plan_path: Path
 ) -> dict[str, Any]:
@@ -132,23 +185,11 @@ def validate_final_freeze(
     if not isinstance(limits, dict) or required_limits - set(limits) or not all(isinstance(limits[key], int) and limits[key] > 0 for key in required_limits):
         raise FreezeError("govmut_final_freeze_limits_invalid")
 
-    review = manifest["non_equivalence_review"]
-    expected_ids = _catalog_ids(catalog_path)
-    if (
-        not isinstance(review, dict)
-        or review.get("status") != "dual_model_reviewed"
-        or review.get("model_ids") != ["gemini-3.6-flash-high", "claude-sonnet-4-6"]
-        or not isinstance(review.get("results_sha256"), str)
-        or not re.fullmatch(r"[0-9a-f]{64}", review["results_sha256"])
-        or not isinstance(review.get("included_mutant_ids"), list)
-        or not review["included_mutant_ids"]
-        or not set(review["included_mutant_ids"]).issubset(expected_ids)
-        or len(set(review["included_mutant_ids"])) != len(review["included_mutant_ids"])
-        or not isinstance(review.get("unresolved_mutant_ids"), list)
-        or not set(review["unresolved_mutant_ids"]).issubset(expected_ids)
-        or set(review["included_mutant_ids"]) & set(review["unresolved_mutant_ids"])
-    ):
-        raise FreezeError("govmut_final_freeze_non_equivalence_review_invalid")
+    _validate_review_artifact(
+        manifest_path=manifest_path,
+        review=manifest["non_equivalence_review"],
+        expected_ids=_catalog_ids(catalog_path),
+    )
     return manifest
 
 

@@ -6,7 +6,12 @@ from pathlib import Path
 import pytest
 
 from evaluation.model_adjudication.analyze import analyze
-from evaluation.model_adjudication.run import _call, _load
+from evaluation.model_adjudication.run import (
+    _call,
+    _load,
+    _parse_review,
+    _structured_content,
+)
 
 
 def test_run_fails_closed_without_router_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -28,3 +33,16 @@ def test_manifest_requires_frozen_contract(tmp_path: Path) -> None:
     path.write_text(json.dumps({"schema_version": "clara-model-review-manifest.v1", "status": "draft", "rubric": {}, "cases": []}))
     with pytest.raises(ValueError, match="not_frozen"):
         _load(path)
+
+
+def test_transport_parses_json_fence_and_complete_sse() -> None:
+    assert _parse_review("```json\n{\"label\": \"PASS\", \"rationale\": \"ok\"}\n```")["label"] == "PASS"
+    sse = b'data: {"choices":[{"delta":{"content":"{\\"label\\":\\"PASS\\","}}]}\ndata: {"choices":[{"delta":{"content":"\\"rationale\\":\\"ok\\"}"}}]}\ndata: [DONE]\n'
+    assert _parse_review(_structured_content(payload_bytes=sse, content_type="text/event-stream"))["label"] == "PASS"
+
+
+def test_transport_rejects_interrupted_or_empty_response() -> None:
+    with pytest.raises(ValueError, match="sse_malformed"):
+        _structured_content(payload_bytes=b'data: {"choices": []}\n', content_type="text/event-stream")
+    with pytest.raises(ValueError, match="response_empty"):
+        _structured_content(payload_bytes=b'{"choices":[{"message":{"content":""}}]}', content_type="application/json")
