@@ -23,10 +23,11 @@ does not itself perform HTTP, persistence, caching, or audit observation, so it
 is not executable RIVF evidence until an isolated boundary adapter calls it on
 the real write path.
 
-`run.py` intentionally rejects execution because its former input schema
-predated the current logical case/arm contract. A replacement boundary adapter
-must be reviewed before any frozen-network run; it must observe the real
-HTTP/auth/cache/PostgreSQL/audit path rather than fabricate a transport table.
+`isolated_boundary_adapter.py` is the minimal concrete adapter for the mounted
+synthetic GovRed research API. It refuses production or unattested projects,
+uses ordinary HTTP disclosure/proposal/commit and audit requests, and observes
+PostgreSQL/Redis/audit only through `remote_store_observer.py`. It never issues
+cache or database mutation commands. Unsupported schedules are `NOT_RUN`.
 
 `execute.py` is the current frozen-manifest executor. It accepts only an
 operator-owned `module:function` adapter, an explicit isolated-research

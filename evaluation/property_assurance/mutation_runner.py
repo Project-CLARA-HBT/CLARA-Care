@@ -67,6 +67,7 @@ def execute_mutant(
     mutant: MutantOverlay,
     pytest_targets: list[str],
     hypothesis_seed: int | None = None,
+    pytest_timeout_seconds: int = 120,
     retain_raw_output: bool = False,
 ) -> dict[str, object]:
     """Run one mutant in a copied API source tree without touching production code."""
@@ -74,6 +75,8 @@ def execute_mutant(
     root = repository_root.resolve()
     if not pytest_targets:
         raise ValueError("govmut_pytest_targets_required")
+    if not isinstance(pytest_timeout_seconds, int) or pytest_timeout_seconds <= 0:
+        raise ValueError("govmut_pytest_timeout_invalid")
     target_hashes = target_file_hashes(repository_root=root, pytest_targets=pytest_targets)
     provenance: dict[str, object] = {
         "repository_revision": repository_revision(root),
@@ -139,7 +142,7 @@ def execute_mutant(
                 env=environment,
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=pytest_timeout_seconds,
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
