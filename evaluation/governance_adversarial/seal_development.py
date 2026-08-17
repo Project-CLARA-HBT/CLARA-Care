@@ -21,6 +21,10 @@ _DEVELOPMENT_PROBE_CONTRACTS = {
         "govred-isolated-http-admission-development-v1",
         "development_probe_not_headline",
     ),
+    "development_case_matrix.json": (
+        "govred-development-case-matrix-v1",
+        "development_matrix_not_headline",
+    ),
 }
 
 
