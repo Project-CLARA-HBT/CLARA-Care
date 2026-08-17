@@ -11,6 +11,7 @@ from evaluation.governance_adversarial.development_case_matrix import (
     DEVELOPMENT_MATRIX,
     _normalized_outcome,
     _response_sha256,
+    _wait_for_health,
     run_matrix,
     run_single_case,
 )
@@ -47,6 +48,8 @@ class FakeTransport:
         return 201, {"outcome": "transition_committed"}
 
     def __call__(self, base_url: str, path: str, *, method: str = "GET", body: dict | None = None, token: str | None = None, profile: str | None = None) -> tuple[int, dict]:
+        if path == "/health":
+            return 200, {}
         if path == "/api/v1/govred-research/arm":
             return 200, {"arm": self.arm, "bind_snapshot": True, "revalidate_state": True, "revalidate_governance": True}
         self.requests.append((path, body or {}))
@@ -79,6 +82,25 @@ def test_response_sha256_is_deterministic() -> None:
     payload = {"arm": "UNBOUND", "outcome": "transition_committed"}
     assert _response_sha256(payload) == _response_sha256(payload)
     assert len(_response_sha256(payload)) == 64
+
+
+def test_health_wait_retries_connection_reset(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+
+    def transport(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise ConnectionResetError
+        return 200, {}
+
+    monkeypatch.setattr(
+        "evaluation.governance_adversarial.development_case_matrix.time.sleep",
+        lambda _seconds: None,
+    )
+
+    assert _wait_for_health("http://127.0.0.1:1", transport, attempts=2)
+    assert calls == 2
 
 
 def test_run_case_marks_not_applicable_mutation_not_run() -> None:
@@ -165,6 +187,20 @@ def test_run_matrix_policy_restart_command_marks_executed() -> None:
     assert policy_case["status"] == "EXECUTED"
     assert policy_case["outcome"] == "assertion_policy_mismatch"
     assert matrix["mismatch_count"] == 0
+
+
+def test_run_matrix_records_explicit_source_attestation() -> None:
+    matrix = run_matrix(
+        base_url="http://127.0.0.1:1",
+        arm="UNBOUND",
+        run_id="dev-run-source",
+        transport=FakeTransport(arm="UNBOUND"),
+        source_revision="a" * 40,
+        source_tree_clean=True,
+    )
+
+    assert matrix["source_revision"] == "a" * 40
+    assert matrix["git_dirty"] is False
 
 
 def test_run_matrix_rejects_arm_mismatch() -> None:

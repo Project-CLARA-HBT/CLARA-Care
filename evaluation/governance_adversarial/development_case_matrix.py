@@ -24,6 +24,7 @@ import json
 import secrets
 import subprocess
 import time
+import urllib.error
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -257,6 +258,28 @@ def _probe_request(
     )
 
 
+def _wait_for_health(
+    base_url: str,
+    transport: Callable[..., tuple[int, dict[str, Any]]],
+    *,
+    attempts: int = 45,
+    interval_seconds: int = 2,
+) -> bool:
+    """Wait for a restarted isolated API without interpreting its payload."""
+
+    for _ in range(attempts):
+        try:
+            status, _response = transport(base_url, "/health")
+            if status == 200:
+                return True
+        except (OSError, urllib.error.URLError):
+            # A recreated loopback-bound API can reset a connection before its
+            # health route is mounted; this is retried within the bounded wait.
+            pass
+        time.sleep(interval_seconds)
+    return False
+
+
 def _outcome_row(
     *,
     case_id: str,
@@ -486,6 +509,23 @@ def run_policy_restart_case(
                 note=f"Policy-restart command failed rc={completed.returncode}.",
             ),
         )
+    if not _wait_for_health(base_url, transport):
+        return CaseOutcome(
+            False,
+            _outcome_row(
+                case_id=case_id,
+                mutation=mutation,
+                arm=arm,
+                sentinel_id=sentinel_id,
+                expected=expected,
+                status="INFRASTRUCTURE_ERROR",
+                http_status=None,
+                outcome=None,
+                latency_ms=int((time.monotonic() - started) * 1000),
+                response_sha256=None,
+                note="Policy-restarted isolated API did not become healthy.",
+            ),
+        )
     commit_status, committed = _probe_request(
         base_url=base_url,
         transport=transport,
@@ -551,6 +591,8 @@ def run_matrix(
     replicates: int = 1,
     transport: Callable[..., tuple[int, dict[str, Any]]] | None = None,
     policy_restart_command: str | None = None,
+    source_revision: str | None = None,
+    source_tree_clean: bool | None = None,
 ) -> dict[str, object]:
     if arm not in ARMS:
         raise ValueError("govred_development_arm_invalid")
@@ -624,8 +666,8 @@ def run_matrix(
         "arm": arm,
         "arm_report": report,
         "base_url_host": base_url.split("//")[-1].split("/")[0],
-        "source_revision": _source_revision(),
-        "git_dirty": _git_dirty(),
+        "source_revision": source_revision or _source_revision(),
+        "git_dirty": not source_tree_clean if source_tree_clean is not None else _git_dirty(),
         "started_at_utc": datetime.now(UTC).isoformat(),
         "replicates": replicates,
         "case_count": len(rows),
@@ -645,6 +687,8 @@ def main() -> int:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--replicates", type=int, default=1)
     parser.add_argument("--policy-restart-command")
+    parser.add_argument("--source-revision")
+    parser.add_argument("--source-tree-clean", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = run_matrix(
@@ -653,6 +697,8 @@ def main() -> int:
         run_id=args.run_id,
         replicates=args.replicates,
         policy_restart_command=args.policy_restart_command,
+        source_revision=args.source_revision,
+        source_tree_clean=True if args.source_tree_clean else None,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
