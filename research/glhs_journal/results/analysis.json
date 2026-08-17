@@ -1,0 +1,70 @@
+{
+  "code_revision": "2074f87550c5ee32302bde47bc0b9e6be6af36b5",
+  "committed_transition": 1,
+  "forbidden_commit_observed": 0,
+  "indeterminate_ordering": 1,
+  "latency_ms": [
+    51.3,
+    53.8,
+    40.4,
+    17.4,
+    12.3
+  ],
+  "rejected": 4,
+  "run_id": "GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
+  "schedule_rows": [
+    {
+      "audit_persisted_row": false,
+      "audit_reconstruction": "no_commit_expected",
+      "commit_outcome": "assertion_consent_mismatch",
+      "forbidden_commit_observed": false,
+      "id": "TOCTOU-01",
+      "latency_ms": 51.3,
+      "observer_complete": true,
+      "ordering": "ordered_serial_schedule"
+    },
+    {
+      "audit_persisted_row": false,
+      "audit_reconstruction": "no_commit_expected",
+      "commit_outcome": "proposal_snapshot_actor_role_mismatch",
+      "forbidden_commit_observed": false,
+      "id": "TOCTOU-02",
+      "latency_ms": 53.8,
+      "observer_complete": true,
+      "ordering": "ordered_serial_schedule"
+    },
+    {
+      "audit_persisted_row": true,
+      "audit_reconstruction": "exact_snapshot_linkage",
+      "commit_outcome": "transition_committed",
+      "forbidden_commit_observed": null,
+      "id": "TOCTOU-03",
+      "latency_ms": 40.4,
+      "observer_complete": true,
+      "ordering": "indeterminate_ordering_transition_committed"
+    },
+    {
+      "audit_persisted_row": false,
+      "audit_reconstruction": "no_commit_expected",
+      "commit_outcome": "proposal_snapshot_policy_mismatch",
+      "forbidden_commit_observed": false,
+      "id": "TOCTOU-04",
+      "latency_ms": 17.4,
+      "observer_complete": true,
+      "ordering": "ordered_serial_schedule"
+    },
+    {
+      "audit_persisted_row": false,
+      "audit_reconstruction": "no_commit_expected",
+      "commit_outcome": "proposal_snapshot_consent_mismatch",
+      "forbidden_commit_observed": false,
+      "id": "TOCTOU-05",
+      "latency_ms": 12.3,
+      "observer_complete": true,
+      "ordering": "rejected_after_or_during_governance_race"
+    }
+  ],
+  "schedules_executed": 5,
+  "study": "glhs-journal-revision-evidence",
+  "unit_of_analysis": "one frozen logical schedule; retries and repeated API calls are not additional N"
+}
