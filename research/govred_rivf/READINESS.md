@@ -135,3 +135,20 @@ comparison, cache/index observation, audit-reconstruction observation, or
 claim-eligible RIVF result.
 
 The host inspected on 2026-08-16 runs the shared `clara-app` stack, so it is explicitly excluded from this study. The isolated compose file uses a unique project, project-local network, ports, and volumes; its non-tracked environment file must contain new random credentials.
+
+Development run `2026-08-17-rivf-dev018-attested-*` used four fresh isolated
+PostgreSQL/Redis/API projects, one for each prespecified research arm, with
+source revision `a03677956a3f39c10e548428f605c262d4f33599` and synthetic
+records only. Its sealed per-arm matrix exercised baseline, consent revoke,
+deployment-level policy-version change, actor switch, subject replay, stale
+state, digest tamper attempt, natural snapshot expiry, and concurrent consent
+writer schedules. Every applicable development oracle matched. The two
+snapshot-binding arms recorded PostgreSQL trigger rejection of the direct
+digest-tampering attempt and admission rejection after natural expiry; the
+strict arm rejected the sequential governance mutations. Concurrent committed
+outcomes are retained as `indeterminate_ordering_transition_committed`, never
+as safe. The unbound and state-version-only arms correctly mark snapshot-only
+families `NOT_RUN` rather than zero failures. This is development evidence
+only: it does not observe a governed cache/index route or independent complete
+audit reconstruction per logical case, is not a frozen manifest, and is not an
+RIVF attack-rate or superiority result.
