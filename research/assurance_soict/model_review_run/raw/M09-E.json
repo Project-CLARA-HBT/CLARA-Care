@@ -1,0 +1,47 @@
+{
+  "case_id": "M09-E",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "1dbdd0796f0945a559af8c060c6c7ce2b2ce88234b33e5faeef6ddac35b4394f",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3997.176,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "a3fd594f8cafb094bbfb65efff7d455fecfb8ca3974af1abba8bef4a60add379",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the condition `proposal.context_binding_mode != \"base_version_only\"` with `False` disables an active invariant check, preventing `GlhsInvariantError` from being raised when `proposal.context_binding_mode` is not equal to 'base_version_only'. This directly alters error-handling behavior and execution flow."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:52:13.805315+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 6037.74,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "77e6afddf2f6ae30be2e601e9118423317810607c4a0c313855cdaa5736e81c2",
+      "review": {
+        "confidence": 0.99,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original code raises a GlhsInvariantError when proposal.context_binding_mode is not equal to 'base_version_only', enforcing a runtime invariant check. The mutated code replaces the condition with 'if False:', which unconditionally prevents the error from ever being raised, regardless of the value of proposal.context_binding_mode. This means that proposals with any context_binding_mode value other than 'base_version_only' will no longer trigger the GlhsInvariantError. The observable behavioral difference is that the validation/guard is completely disabled: callers passing proposals with non-conforming binding modes will proceed past this check without an exception, whereas the original code would have raised GlhsInvariantError. This constitutes a clear, observable behavioral difference in control flow and exception propagation."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:52:19.843132+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

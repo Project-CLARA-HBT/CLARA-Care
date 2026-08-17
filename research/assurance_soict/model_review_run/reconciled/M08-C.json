@@ -1,0 +1,44 @@
+{
+  "case_id": "M08-C",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3174.471,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "559b6d5c189cb1a8228920c79e212c021876029f7fee3f2eaed07345b3637629",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the manifest digest validation check `if manifest_fingerprint != manifest.manifest_digest:` with `if False:` disables the mismatch check. This allows requests or payloads with mismatched manifest fingerprints to bypass validation, producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:50:47.478944+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5633.626,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "9ad3aedaa7d7180cd3353b86fb2009ed20c2876f77e595f7652da95dcb6fe63b",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional check `if manifest_fingerprint != manifest.manifest_digest:` with `if False:`, which unconditionally disables the branch body. The original condition evaluates whether a manifest fingerprint matches a digest, and when they differ, executes some behavior (e.g., raising an error, logging, rejecting the request, or taking a corrective action). By substituting `if False:`, that branch body becomes permanently unreachable, meaning any observable behavior that previously occurred when the fingerprints did not match will no longer occur. This produces a clear, observable behavioral difference whenever `manifest_fingerprint != manifest.manifest_digest` would have been true in the original code."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:50:53.112658+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

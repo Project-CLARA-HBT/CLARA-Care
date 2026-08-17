@@ -95,7 +95,7 @@
       "id": "M02-B",
       "family_seed": "M02",
       "source_path": "services/api/src/clara_api/glhs/gateway.py",
-      "anchor": "if revalidate_governance and assertion.policy_version != POLICY_VERSION:",
+      "anchor": "if revalidate_governance and assertion.policy_version != _effective_policy_version():",
       "replacement": "if False:",
       "status": "anchor_verified_not_executed"
     },

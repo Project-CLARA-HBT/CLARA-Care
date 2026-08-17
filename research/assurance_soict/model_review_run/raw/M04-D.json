@@ -1,0 +1,47 @@
+{
+  "case_id": "M04-D",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "14f8bbee17464ae6c1fdafff1b8eb49eaaf3c076df75d3a3ad21db2dd9d998e8",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 4104.94,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "d7e31fa93d133d9012fc1f4cc1e0c74dea6070d0013932e18bdb91e68bf9c852",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a scope validation check (`commitment.profile_id != scope.profile.id`) with `False`, preventing `GlhsInvariantError('commitment_scope_forbidden')` from being raised when a profile mismatch occurs. This directly alters observable behavior by allowing invalid scope transitions to proceed rather than raising an exception."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:51:47.689377+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5324.237,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "6d6bdb714b9b3ffbaf82c06d1ced9b764c36873a58a93ad13e2a47ff285eeb10",
+      "review": {
+        "confidence": 0.99,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces the condition `if commitment.profile_id != scope.profile.id:` with `if False:`, which unconditionally disables the scope ownership check. In the original code, when a commitment's profile_id does not match the scope's profile id, a `GlhsInvariantError` is raised with the message 'commitment_scope_forbidden'. After the mutation, this check never executes regardless of the input values. Any caller passing a commitment belonging to a different profile than the scope will no longer receive the error \u2014 the function will proceed past this guard. This produces an observable behavioral difference: the governed system will accept cross-profile commitment transitions that would previously have been rejected with an exception."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:51:53.013674+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

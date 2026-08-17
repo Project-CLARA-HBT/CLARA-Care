@@ -1,0 +1,44 @@
+{
+  "case_id": "M13-A",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3378.312,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "f3f1d14a0b40e2e68851dbe8e0459efb85facd73e7ef635047d0cb20ba3ff76e",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing `GlhsAssertion.lifecycle_status.in_(ACTIVE_LIFECYCLE_STATES)` with `True` removes the filter enforcing active lifecycle states. This allows inactive or deprecated assertions to be included in query results or checks, producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:48:18.691374+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5427.013,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "eebafadf6a6e0d7bcf780083b2662c7db4024ace20aee8c9794683121ad656fd",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a filtering predicate `GlhsAssertion.lifecycle_status.in_(ACTIVE_LIFECYCLE_STATES)` with the literal `True`. The original predicate restricts query results to records whose lifecycle_status is within the ACTIVE_LIFECYCLE_STATES set, excluding records with other statuses (e.g., inactive, deprecated, retired). Substituting `True` removes this filter entirely, causing the query to return all records regardless of lifecycle_status. This produces an observable behavioral difference: the governed system will return a superset of records compared to the original implementation, including records that would previously have been excluded. Any consumer of this API endpoint will potentially receive different data in its response."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:48:24.118433+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

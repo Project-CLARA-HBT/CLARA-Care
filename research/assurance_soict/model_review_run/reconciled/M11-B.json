@@ -1,0 +1,44 @@
+{
+  "case_id": "M11-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3582.963,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "42918f03ec0e7eedae38efef4431ef7add6f7ce08efc9dc147763329d4c0d980",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing 'if not evidence_rows:' with 'if False:' permanently disables the conditional block that handles empty or falsy evidence sets. When evidence_rows is empty, the original code enters the conditional block while the mutated code bypasses it, producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:49:49.417615+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 4916.058,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "9a82c85a3f1242d08acdda39c91b12ef21ebe132f727d1c7b74f280010797697",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing `if not evidence_rows:` with `if False:` changes the conditional guard from a data-dependent check to a hardcoded never-true condition. When `evidence_rows` is empty or falsy, the original code would execute the guarded branch (e.g., early return, error handling, or default behavior). With `if False:`, that branch is never executed regardless of the value of `evidence_rows`. This produces an observable behavioral difference whenever `evidence_rows` is empty or falsy: the governed system will skip the guarded logic and proceed into code paths that were previously unreachable under those conditions."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:49:54.333793+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

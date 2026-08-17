@@ -1,0 +1,15 @@
+{
+  "schema_version": "glhs-postgres-governance-toctou-observer-contract.v1",
+  "status": "FROZEN_FINAL_REVIEWED",
+  "observer_import": "evaluation.glhs_postgres_toctou.postgres_observer:observe",
+  "execution_boundary": "production GLHS gateway with PostgreSQL random schema",
+  "required_observation_fields": ["id", "run_status", "commit_outcome", "forbidden_commit_observed", "ordering", "audit", "latency_ms"],
+  "audit_contract": {
+    "persisted_transition_requires_exact_reconstruction": true,
+    "rejected_transition_records_no_commit_expected": true,
+    "hash_only_observation_accepted": false,
+    "missing_audit_marks_schedule_observer_incomplete": true
+  },
+  "ordering_rule": "Only an observer-proven governance commit before transition admission can classify a committed transition as forbidden; overlapping windows remain indeterminate.",
+  "privacy_rule": "Observations contain structural identifiers and counts only; no clinical fixture payload is emitted."
+}

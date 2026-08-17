@@ -1,0 +1,42 @@
+{
+  "case_id": "M11-D",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 7488.874,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "883af7ab34d20d6c45caa2c7b3bf13423d990cbda74602e819a0c6d259800304",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the evidence ID subset check with `if False` bypasses an active validation constraint, allowing previously rejected or guarded inputs to proceed and altering observable system behavior."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:52:27.332272+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 6435.342,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "fc2caf37bd3ffda25155f252d46f5afad5396035a78d6e46f8e0a3449baecea5",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json)):` performs a subset check and raises/returns an error or takes a branch when evidence_ids are not a subset of the proposal's observed evidence IDs. Replacing this with `if False:` unconditionally skips that branch entirely, meaning the validation logic inside the block will never execute regardless of input. This produces an observable behavioral difference: inputs that previously triggered the guarded branch (e.g., mismatched or missing evidence IDs) will now silently pass through without the expected response, error, or side effect."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:52:33.767730+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

@@ -1,0 +1,42 @@
+{
+  "case_id": "M04-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 6584.662,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "dd217550e284fa0989735949c46ad1d100b81a62b881c0fb680a8f5a91bbaff9",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the validation condition `source is None or source.profile_id != profile_id` with `if False:` completely disables enforcement of source existence and profile authorization, allowing unauthorized or null-source requests to proceed through execution paths that previously would have branched or failed."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:47:53.500904+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5431.39,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "df3f16ad3a5b145da317a7d6f5c24c4fa18b7058194e058f437aa195453e02a8",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if source is None or source.profile_id != profile_id:` performs a guard check that can evaluate to True under two circumstances: (1) when source is None, or (2) when source.profile_id does not match profile_id. When True, the guarded branch executes (e.g., raising an error, returning early, or taking a different code path). Replacing this with `if False:` unconditionally prevents the guarded branch from ever executing, regardless of the values of source or profile_id. This means that cases where source is None or where there is a profile_id mismatch will no longer trigger the guarded behavior, producing an observable behavioral difference in the governed system's output or control flow."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:47:58.932359+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

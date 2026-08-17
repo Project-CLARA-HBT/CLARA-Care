@@ -1,0 +1,49 @@
+{
+  "case_id": "M05-A",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "9d3d63225f94642e635d7e9dbb932045ab08d57af8cf25d5b644ea69521a4570",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3789.282,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "fe0120951cbb4d2f36177b1f152ac20f255d2f563e7ceedb7e4530f1c63c20e5",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the actor user ID check (`if actor_user_id is not None and snapshot.actor_user_id != actor_user_id:`) with `if False:` completely removes the authorization/validation branch. When `actor_user_id` is provided and differs from `snapshot.actor_user_id`, the original code executes the mismatch handling branch (e.g., throwing an error or denying access), whereas the mutated code bypasses the check entirely, producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:46:26.769648+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 6144.713,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "0dd05ab7bac8cc83788bc60386e207ede9c447a97a97cacabbb2d4d9d5563ef9",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional guard `if actor_user_id is not None and snapshot.actor_user_id != actor_user_id:` with `if False:`, which unconditionally disables the branch. The original condition filters or raises when a non-None actor_user_id is provided and does not match the snapshot's actor_user_id. With `if False:`, that enforcement branch is never executed regardless of input values. Any caller passing a non-None actor_user_id that differs from snapshot.actor_user_id would previously trigger the branch body (e.g., an exception, filtering, or access denial); after the mutation, that code is unreachable. This produces an observable behavioral difference: requests that would have been rejected or handled differently are now processed as if the actor_user_id check passed."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:46:32.914427+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

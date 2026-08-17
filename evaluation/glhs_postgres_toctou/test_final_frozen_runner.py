@@ -14,8 +14,21 @@ from evaluation.glhs_postgres_toctou.final_frozen_runner import execute, validat
 def _write_protocol(tmp_path: Path, **changes: object) -> Path:
     statistics = tmp_path / "statistics-plan.json"
     schedule_manifest = tmp_path / "schedule-manifest.json"
+    observer_contract = tmp_path / "observer-contract.json"
     statistics.write_text('{"status":"frozen"}\n', encoding="utf-8")
     schedule_manifest.write_text('{"schedules":"frozen"}\n', encoding="utf-8")
+    observer_contract.write_text(
+        json.dumps(
+            {
+                "schema_version": "glhs-postgres-governance-toctou-observer-contract.v1",
+                "status": "FROZEN_FINAL_REVIEWED",
+                "observer_import": "example.observer:observe",
+                "required_observation_fields": sorted(runner.REQUIRED_OBSERVATION_KEYS),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     protocol: dict[str, object] = {
         "schema_version": "glhs-postgres-governance-toctou-final-v1",
         "status": "FROZEN_FINAL_REVIEWED",
@@ -30,6 +43,8 @@ def _write_protocol(tmp_path: Path, **changes: object) -> Path:
         "statistics_plan_sha256": hashlib.sha256(statistics.read_bytes()).hexdigest(),
         "schedule_manifest_path": schedule_manifest.name,
         "schedule_manifest_sha256": hashlib.sha256(schedule_manifest.read_bytes()).hexdigest(),
+        "observer_contract_path": observer_contract.name,
+        "observer_contract_sha256": hashlib.sha256(observer_contract.read_bytes()).hexdigest(),
         "schedules": [
             {
                 "id": schedule_id,
@@ -120,6 +135,18 @@ def test_final_executor_requires_explicit_isolation_attestation(
         )
 
 
+def test_final_executor_refuses_default_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(runner.FINAL_ISOLATION_ATTESTATION, "1")
+    with pytest.raises(RuntimeError, match="glhs_toctou_final_requires_non_default_database"):
+        execute(
+            _write_protocol(tmp_path),
+            schedule_observer=lambda _engine, _schedule: pytest.fail("must not execute"),
+            database_url="postgresql://operator@localhost/postgres",
+        )
+
+
 def test_final_executor_preserves_frozen_order_and_observations(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -144,12 +171,20 @@ def test_final_executor_preserves_frozen_order_and_observations(
     monkeypatch.setattr(runner, "create_engine", lambda *_args, **_kwargs: _Engine())
     seen: list[str] = []
     ordering = {"classification": "indeterminate_ordering_transition_committed"}
-    audit = {"persisted_audit_row": True, "reconstruction": "exact_snapshot_linkage"}
+    audit = {"persisted_audit_row": True, "reconstruction": "exact_snapshot_linkage", "observer_complete": True}
 
     def observe(_engine: object, schedule: dict[str, object]) -> dict[str, object]:
         schedule_id = str(schedule["id"])
         seen.append(schedule_id)
-        return {"id": schedule_id, "ordering": ordering, "audit": audit}
+        return {
+            "id": schedule_id,
+            "run_status": "EXECUTED",
+            "commit_outcome": "rejected",
+            "forbidden_commit_observed": False,
+            "ordering": ordering,
+            "audit": audit,
+            "latency_ms": 1.0,
+        }
 
     result = execute(
         _write_protocol(tmp_path),
@@ -189,5 +224,43 @@ def test_final_executor_refuses_mismatched_observation_id(
         execute(
             _write_protocol(tmp_path),
             schedule_observer=lambda _engine, _schedule: {"id": "fabricated"},
+            database_url="postgresql://operator@localhost/glhs",
+        )
+
+
+def test_final_executor_refuses_observer_incomplete_audit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class _Transaction:
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def execute(self, _statement: object) -> None:
+            return None
+
+    class _Engine:
+        def begin(self) -> _Transaction:
+            return _Transaction()
+
+        def dispose(self) -> None:
+            return None
+
+    monkeypatch.setenv(runner.FINAL_ISOLATION_ATTESTATION, "1")
+    monkeypatch.setattr(runner, "create_engine", lambda *_args, **_kwargs: _Engine())
+    with pytest.raises(ValueError, match="glhs_toctou_final_schedule_observer_incomplete"):
+        execute(
+            _write_protocol(tmp_path),
+            schedule_observer=lambda _engine, schedule: {
+                "id": schedule["id"],
+                "run_status": "EXECUTED",
+                "commit_outcome": "rejected",
+                "forbidden_commit_observed": False,
+                "ordering": {},
+                "audit": {"observer_complete": False},
+                "latency_ms": 1.0,
+            },
             database_url="postgresql://operator@localhost/glhs",
         )

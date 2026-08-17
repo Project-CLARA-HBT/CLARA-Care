@@ -1,0 +1,7 @@
+{
+  "case_count": 45,
+  "cohens_kappa": 1.0,
+  "pre_reconciliation_agreement": 1.0,
+  "unit_of_analysis": "case; model calls and retries are not independent units",
+  "unresolved_rate": null
+}

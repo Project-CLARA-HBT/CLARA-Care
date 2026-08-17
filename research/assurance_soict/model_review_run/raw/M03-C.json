@@ -1,0 +1,47 @@
+{
+  "case_id": "M03-C",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "b3494a3d08082c8094a3e5ab9d8ead1951d3d3371bdf26778fa8cb915e187b32",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 7679.178,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "2eca996088811eff52625a66032adc2ea8b36ed09812c7cca6ef3f33a37586d9",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the check `if proposal.consent_version != consent_version:` with `if False:` removes the consent version mismatch enforcement. Under conditions where the proposal's consent version differs from the expected consent version, the original code enters the conditional branch (e.g., raising an error or rejecting the request), whereas the mutated code bypasses it. This results in an observable behavioral difference in the governed system."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:49:05.283379+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5616.765,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "0749885143e528b10700e22edb50a2e782ab7cd0410490506e6f936b123be910",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional check `if proposal.consent_version != consent_version:` with `if False:`, which permanently disables the consent version validation branch. In the original code, when a proposal's consent version does not match the expected consent version, the branch body executes (likely raising an error, rejecting the proposal, or triggering some enforcement action). With the mutation, that branch body is never executed regardless of the actual consent version values. This produces an observable behavioral difference: proposals with mismatched consent versions that would previously have been rejected or flagged will now pass through silently as if the versions matched."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:49:10.900232+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

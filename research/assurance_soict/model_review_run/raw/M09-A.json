@@ -1,0 +1,47 @@
+{
+  "case_id": "M09-A",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "35e8219e9fddeed5a83f9b2d987b2dea682e21c549e4c9ab09692ea25a573c8c",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 2750.96,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "cbc2557eed4c235bec3a21870da3d128f5d44813ec4c9fe12483ac93d2529208",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the conditional check on data attributes with a constant False disables the governed branch execution entirely, altering observable system behavior when the original condition is satisfied."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:47:05.565185+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 4928.643,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "afdd7f5bb2c52758963d3bf44b6cffff8a64ecdaf9a42c6cd04ebb6e76a96965",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional guard `if data.proposal_consumed_thss and data.source_snapshot_id is None:` with `if False:`, which unconditionally disables the branch. Any execution path where `data.proposal_consumed_thss` is truthy and `data.source_snapshot_id` is None would previously have entered the branch and executed its body; after the mutation, that body is never executed regardless of input values. This produces an observable behavioral difference: the guarded logic (error raising, state mutation, response modification, or other side effects within the branch) is suppressed for all inputs that would have satisfied the original condition."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:47:10.493891+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

@@ -1,0 +1,42 @@
+{
+  "case_id": "M06-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 2661.078,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "55556ec9a7dfc73ac1681865439ac01d6309a890d82e9de52eabdcbbbcf5d194",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the purpose check `if proposal.purpose != scope.purpose:` with `if False:` completely removes the purpose-matching enforcement in the commitment gateway. This allows proposals with non-matching purposes to bypass the guard condition and proceed, resulting in an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:48:01.593841+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5322.604,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "ffc004ee7200fd48a1546179b8ff5a14486907e075cba5c8602273fcd73e30a1",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional check `if proposal.purpose != scope.purpose:` with `if False:`, which unconditionally disables the purpose-mismatch enforcement branch. In the original code, when a proposal's purpose differs from the scope's purpose, the branch executes (likely raising an error, returning early, or logging a violation). With `if False:`, that branch is dead code and never executes regardless of input values. This means a proposal with a mismatched purpose will no longer be caught by this guard, producing an observable behavioral difference: requests that would previously have been rejected or flagged will now proceed through the gateway unchallenged."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:48:06.916486+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

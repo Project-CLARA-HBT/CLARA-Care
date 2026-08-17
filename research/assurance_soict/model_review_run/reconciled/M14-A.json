@@ -1,0 +1,42 @@
+{
+  "case_id": "M14-A",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3236.035,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "b9a15d4262dcb6a2b4536eaa4fd2e4a38e2b2974cbaaacfe3d9e241aec617f78",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the computed digest of the idempotency key with a static constant string ('0' * 64) collapses distinct idempotency keys into a single hash, causing cross-request collision and altering caching or deduplication behavior."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:48:27.355029+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 7723.141,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "e6e3f3742e4d458cb453f701da9a5be9f969295bdbf3d68647bca4da8c486ad1",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a computed cryptographic digest of the idempotency key with a hardcoded string of 64 zero characters. The original code produces a unique hash per distinct idempotency_key value, enabling the idempotency mechanism to distinguish between different requests. The mutated code always produces the same fixed string regardless of the input, causing all requests to share the same idempotency hash. This creates an observable behavioral difference: (1) distinct idempotency keys that should be treated as independent operations will now collide, causing the system to treat them as duplicates of whichever request was first stored under the '000...0' key; (2) repeated requests with the same idempotency key will still deduplicate correctly by coincidence, but (3) any request with a different idempotency key will be incorrectly deduplicated against the first request processed, returning cached responses inappropriately or blocking new operations. The hash lookup, storage, and deduplication logic downstream will observe different keys and produce different branching behavior at runtime."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:48:35.078247+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

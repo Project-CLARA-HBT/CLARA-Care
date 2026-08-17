@@ -1,0 +1,47 @@
+{
+  "case_id": "M06-C",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "82897b57e94a4241bbf5c0548096bb086f2f810d8438063ff43e705e91fd59ed",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 2437.861,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "c7ada5ca6d9ee596deaafdf4330db3485e854a2db25f0a43dc7029d82a5b4109",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the validation condition `if purpose != scope.purpose:` with `if False:` completely disables the purpose mismatch check in `services/api/src/clara_api/glhs/gateway.py`. Requests with non-matching purposes that previously triggered validation enforcement will now bypass the guard, producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:50:27.409259+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5187.111,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "330474da1b7e9d1342434014a5e22a5e8fd21922bd083c941f20a946f939ce43",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional check `if purpose != scope.purpose:` with `if False:`, which unconditionally disables the branch that was previously triggered when the purpose did not match the scope's purpose. In the original code, a mismatch between `purpose` and `scope.purpose` would cause the branch body to execute (e.g., raising an error, returning early, or logging a violation). With the mutation, that branch body can never execute regardless of the values of `purpose` and `scope.purpose`. Any input where `purpose != scope.purpose` would previously have produced different observable behavior (exception raised, error response, alternative return value) than the mutated version, which silently skips the branch. This is an observable behavioral difference in the governed system."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:50:32.596438+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

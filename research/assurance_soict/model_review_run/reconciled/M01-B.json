@@ -1,0 +1,44 @@
+{
+  "case_id": "M01-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3174.0,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "5c1f658498f8150cccc9302c0675e3fca8d156efe98dbb9d2f1794925b17cd69",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the condition `if action == \"activate\" and revalidate_state and assertion.base_state_version != base_version:` with `if False:` completely disables state version revalidation during activation, bypassing the guarded enforcement block when a version mismatch occurs and producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:47:23.191412+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 6758.521,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "5afe74325e236442a0088dfd9fa29c08de30f6b5a299bd57e70f0d6bd4e1ac6d",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional guard that checks whether an 'activate' action is being performed with a mismatched base_state_version (triggering revalidation) with the literal `if False:`, which unconditionally disables the entire branch. Any code within the original conditional block will now never execute, regardless of the values of `action`, `revalidate_state`, `assertion.base_state_version`, or `base_version`. This produces an observable behavioral difference whenever all three original conditions would have evaluated to True: activation requests with revalidation enabled and a version mismatch will no longer trigger the guarded behavior (e.g., state revalidation, error raising, or alternative processing). The change is a direct suppression of a logical enforcement path."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:47:29.949979+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

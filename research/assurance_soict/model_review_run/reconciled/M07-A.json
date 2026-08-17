@@ -1,0 +1,42 @@
+{
+  "case_id": "M07-A",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 5939.102,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "7b1e57dc493864b3fb430cc86c27f22510b51d4f8e03c9565ecd452171ca7606",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the snapshot expiration check (`if require_unexpired and _as_utc(snapshot.expires_at) <= datetime.now(UTC):`) with `if False:` disables expiration validation, allowing expired snapshots to bypass enforcement and producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:46:47.249008+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5532.631,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "9ae6527a0559d984661797d4008a12346b0fbaa9ece887f52fb03edba9b05e3a",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional expiration check (`if require_unexpired and _as_utc(snapshot.expires_at) <= datetime.now(UTC):`) with `if False:`, permanently disabling the branch body. Whenever `require_unexpired` is True and the snapshot's expiry timestamp is in the past or equal to the current UTC time, the original code would execute the branch body (e.g., raising an error, returning early, or setting a flag indicating expiration). With `if False:`, that branch body is never reached regardless of inputs. This produces an observable behavioral difference: expired snapshots that would previously have been rejected or flagged are now processed as if unexpired."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:46:52.781730+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

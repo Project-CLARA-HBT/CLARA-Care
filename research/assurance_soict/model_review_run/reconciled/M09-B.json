@@ -1,0 +1,44 @@
+{
+  "case_id": "M09-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3399.458,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "bd18cf0f5e15e78d5066f78e2c6f6a1bc35b2e03f40979b77b54ee6e88fcb727",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the conditional check 'if proposal.context_binding_mode != \"snapshot_bound\":' with 'if False:' bypasses validation or enforcement logic when context_binding_mode is not 'snapshot_bound', producing an observable behavioral difference in system execution."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:48:10.316339+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 4996.221,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "8209d865b7ec511e87498a51e9bfb0b4f1683d52612e0f4552ab288e48f8b2d8",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The one-change overlay replaces a conditional check `if proposal.context_binding_mode != \"snapshot_bound\":` with `if False:`. The original condition evaluates to True whenever the context_binding_mode is anything other than \"snapshot_bound\", triggering the associated branch logic. The replacement `if False:` unconditionally suppresses that branch entirely, meaning the branch body will never execute regardless of the actual value of `proposal.context_binding_mode`. For any input where `context_binding_mode` differs from \"snapshot_bound\"`, the original code would execute the branch body while the mutated code would not, producing an observable behavioral difference in the governed system's output or state."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:48:15.312658+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

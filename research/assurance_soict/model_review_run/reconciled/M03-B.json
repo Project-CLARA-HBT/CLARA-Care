@@ -1,0 +1,42 @@
+{
+  "case_id": "M03-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 2942.58,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "67130fecf35e86a49f1c1915e421b0ee780e4776b8f26a486c4e6aff340430f2",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the conditional check `if revalidate_governance and assertion.consent_version != current_consent_version:` with `if False:` completely disables the consent version revalidation branch. In scenarios where `revalidate_governance` is true and consent versions mismatch, the governance check will no longer be executed, producing an observable behavioral change in enforcement."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:47:41.392491+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5522.435,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "38dc33009f7e57e04b6e3517b7da2b1909c934f616cf8303472199b43515d940",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional guard `if revalidate_governance and assertion.consent_version != current_consent_version:` with `if False:`, which unconditionally suppresses the branch body regardless of the values of `revalidate_governance` or the consent version comparison. In the original code, when `revalidate_governance` is truthy and the assertion's consent version differs from the current consent version, the branch body executes. After the mutation, that branch body never executes under any input. This produces an observable behavioral difference in any scenario where `revalidate_governance` is true and consent versions differ: the governed system will skip whatever revalidation or enforcement logic resides in that branch, altering the observable output or side effects of the system."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:47:46.914977+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

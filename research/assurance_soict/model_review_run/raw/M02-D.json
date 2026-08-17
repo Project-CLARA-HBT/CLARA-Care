@@ -1,0 +1,47 @@
+{
+  "case_id": "M02-D",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "79addf9f7239f611935144c8cf2b27edccdc7d3c4c38e2164f735300a9562359",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3154.344,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "e457d91a367f5df3b1a3c197235aa5c56792d3c620f798fbffbebf0393ae58f4",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the check `if proposal.policy_version != COMMITMENT_POLICY_VERSION:` with `if False:` disables policy version enforcement, preventing `GlhsInvariantError(\"commitment_proposal_policy_mismatch\")` from being raised when a policy version mismatch occurs. This change creates an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:51:28.797386+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 6091.783,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "2cd1d84d6211fbffa00ec04ae1649cf6aafc096d06f0cedf0e247f14e503d3b1",
+      "review": {
+        "confidence": 0.99,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional check `if proposal.policy_version != COMMITMENT_POLICY_VERSION:` with `if False:`, which unconditionally disables the policy version enforcement. Under the original code, any commitment proposal whose `policy_version` differs from `COMMITMENT_POLICY_VERSION` would raise a `GlhsInvariantError` with message 'commitment_proposal_policy_mismatch', halting further processing. Under the mutated code, that branch is dead code and can never execute, so a mismatched policy version will silently pass through to the subsequent `consent_version` check. This produces an observable behavioral difference: inputs with `proposal.policy_version != COMMITMENT_POLICY_VERSION` that previously raised an exception will no longer raise one, changing the observable output (exception vs. continued execution) for those inputs."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:51:34.889413+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

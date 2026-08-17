@@ -1,0 +1,42 @@
+{
+  "case_id": "M08-D",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 2682.993,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "64d8dde16cf9ee841c84db4ac1a7f1aad7b4f5b62d18d6504a575b995c9cb2f6",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the digest algorithm equality check (`if snapshot.digest_algorithm != DIGEST_ALGORITHM:`) with `if False:` completely disables validation against mismatched digest algorithms. This allows requests or snapshots with incompatible digest algorithms to bypass validation checks that would otherwise trigger rejection or error handling, creating an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:52:05.613723+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 4194.022,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "fa9944eaa4e0ac565f56b47d1a0054b20258719feb0f8932363c79c4406e0d89",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional check `if snapshot.digest_algorithm != DIGEST_ALGORITHM:` with `if False:`, permanently disabling the branch. In the original code, when `snapshot.digest_algorithm` differs from `DIGEST_ALGORITHM`, the branch body executes (presumably raising an error, logging, or taking corrective action). With `if False:`, that branch body never executes regardless of the actual digest algorithm value. This produces an observable behavioral difference: mismatched digest algorithms will no longer trigger the guarded behavior, allowing execution to proceed past the check unconditionally."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:52:09.807810+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

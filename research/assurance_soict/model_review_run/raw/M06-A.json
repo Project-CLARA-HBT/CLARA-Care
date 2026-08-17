@@ -1,0 +1,49 @@
+{
+  "case_id": "M06-A",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "7a74532ee98ab04373e962911c853f464b656c26544cc6a3ed49e792e6deb39b",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3175.574,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "dc8cb3422c313ff056a0a4774721efe5eafa2991ddb90c23214b6940b262b424",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the purpose validation check (`if snapshot.purpose != purpose:`) with `if False:` disables the conditional branch when a purpose mismatch occurs. This bypasses purpose enforcement, leading to an observable behavioral difference when `snapshot.purpose` does not match `purpose`."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:46:36.090399+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5218.96,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "12a2f2192a173f87bbae0b70672a7c9e650eeb89c8d4ee21241a2cbeed8bc1ad",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional check `if snapshot.purpose != purpose:` with `if False:`, which unconditionally disables the branch. The original code conditionally executes the branch body when the snapshot's purpose does not match the expected purpose. With `if False:`, that branch body is never executed regardless of the actual purpose values. This produces an observable behavioral difference: any scenario where `snapshot.purpose != purpose` would have been true now silently passes through without triggering the guarded logic (e.g., an error, rejection, or alternative handling). The governed system will behave differently in all cases where purpose mismatch would have occurred."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:46:41.309487+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

@@ -1,0 +1,79 @@
+{
+  "catalog": "mutation_site_candidates.json",
+  "catalog_sha256": "9701f186c3b3bdca02fd77afea41e6d9d6a58d5252d925d05d17408afb0efee6",
+  "code_revision": "ab877e041895f8817a2798a95f360f658de9635d",
+  "hypothesis": {
+    "ordered_seeds": null,
+    "version": null
+  },
+  "limits": {
+    "hypothesis_max_examples": null,
+    "hypothesis_stateful_step_count": null,
+    "pytest_timeout_seconds": null
+  },
+  "methods": {
+    "M0_regression": {
+      "target_sha256": {
+        "services/api/tests/test_commitloop_gateway.py": "731b63ddeba4c355138f4d3a6fa25acb4f116b74fbb17ad7d334a4a7a7f69410",
+        "services/api/tests/test_commitment_endpoints_integration.py": "244309aa8cb339a1173d1d25145846300c213d0c570da69aafe2e27ce024e774",
+        "services/api/tests/test_glhs_gateway.py": "ce59176f9e7eefcd3600633ea9348983b59aeda246cecbd08f4dd6d1b408f547",
+        "services/api/tests/test_glhs_mandatory_thss_binding.py": "3650d2a05b0dfd121be50cbc96dd063c7266c71fa0f6ed9ffe1227b699a99e29"
+      },
+      "targets": [
+        "services/api/tests/test_glhs_gateway.py",
+        "services/api/tests/test_glhs_mandatory_thss_binding.py",
+        "services/api/tests/test_commitment_endpoints_integration.py",
+        "services/api/tests/test_commitloop_gateway.py"
+      ]
+    },
+    "M1_stateless_property": {
+      "target_sha256": {
+        "evaluation/property_assurance/test_glhs_gateway_properties.py": "6ad090d4bc23f38ec2bc525b5e6ce4d2ea237105d5c17dccc284bd7fc23c95e3"
+      },
+      "targets": [
+        "evaluation/property_assurance/test_glhs_gateway_properties.py"
+      ]
+    },
+    "M2_state_machine": {
+      "target_sha256": {
+        "evaluation/property_assurance/test_state_machine.py": "1c51d9416637821bc640abedc82c76dd6d371bef25680c7e07896f643bb8b00d"
+      },
+      "targets": [
+        "evaluation/property_assurance/test_state_machine.py"
+      ]
+    },
+    "M3_combined": {
+      "target_sha256": {
+        "evaluation/property_assurance/test_glhs_gateway_properties.py": "6ad090d4bc23f38ec2bc525b5e6ce4d2ea237105d5c17dccc284bd7fc23c95e3",
+        "evaluation/property_assurance/test_state_machine.py": "1c51d9416637821bc640abedc82c76dd6d371bef25680c7e07896f643bb8b00d",
+        "services/api/tests/test_commitloop_gateway.py": "731b63ddeba4c355138f4d3a6fa25acb4f116b74fbb17ad7d334a4a7a7f69410",
+        "services/api/tests/test_commitment_endpoints_integration.py": "244309aa8cb339a1173d1d25145846300c213d0c570da69aafe2e27ce024e774",
+        "services/api/tests/test_glhs_gateway.py": "ce59176f9e7eefcd3600633ea9348983b59aeda246cecbd08f4dd6d1b408f547",
+        "services/api/tests/test_glhs_mandatory_thss_binding.py": "3650d2a05b0dfd121be50cbc96dd063c7266c71fa0f6ed9ffe1227b699a99e29"
+      },
+      "targets": [
+        "services/api/tests/test_glhs_gateway.py",
+        "services/api/tests/test_glhs_mandatory_thss_binding.py",
+        "services/api/tests/test_commitment_endpoints_integration.py",
+        "services/api/tests/test_commitloop_gateway.py",
+        "evaluation/property_assurance/test_glhs_gateway_properties.py",
+        "evaluation/property_assurance/test_state_machine.py"
+      ]
+    }
+  },
+  "non_equivalence_review": {
+    "manifest": "dual_model_review_manifest.json",
+    "model_ids": [
+      "gemini-3.6-flash-high",
+      "claude-sonnet-4-6"
+    ],
+    "result_artifact": "model_review_run/dual_model_review.json",
+    "results_sha256": "e9a19c4f71b26aee876ff216aa58c56314c6eb9d57b27087caa0f1e266381ba6"
+  },
+  "promotion_rule": "final freeze promoted: govmut-soict-2026-final-v2, hypothesis 6.163.0, seeds [17,23,41,97,271], limits 600/1000/100, catalog rebound for M02-B anchor to match ab877e04.",
+  "schema_version": "govmut-final-freeze-input.v1",
+  "statistics_plan": "statistics_plan.json",
+  "statistics_plan_sha256": "aef4d87ea409044e92117c90802526c68f0bb59b8e05c7516759dbdd8abb90f2",
+  "status": "frozen",
+  "study_id": "assurance-soict-2026"
+}

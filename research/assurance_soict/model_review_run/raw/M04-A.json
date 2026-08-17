@@ -1,0 +1,47 @@
+{
+  "case_id": "M04-A",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "c08d8c47fd38c426a57a8f681ec261b9cc7424f793fdc519e8e898fcc961ff34",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3582.42,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "acd0be09a86382fa64189cfc3d1181933875f5ec4b3ab31918e20f342fe2f134",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the conditional check `if assertion.profile_id != scope.profile.id:` with `if False:` disables enforcement of profile ID matching, allowing requests with mismatched profile identifiers to bypass the conditional branch and resulting in an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:46:15.915135+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 7064.942,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "1fd58897c798233ca83bea33c57e9160ca9e7aa246831172c29175a85d59e54d",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if assertion.profile_id != scope.profile.id:` performs a profile ID mismatch check, which would trigger some enforcement action (e.g., raising an error, rejecting a request, or branching to alternative logic) whenever the assertion's profile ID does not match the scope's profile ID. Replacing this with `if False:` unconditionally disables that branch, meaning the enforcement action inside the block will never execute regardless of the actual profile IDs. This produces an observable behavioral difference: requests or assertions that previously would have been rejected or handled differently due to a profile ID mismatch will now pass through without that check being applied. The governed system's access control or validation behavior changes in a directly observable way."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:46:22.980125+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

@@ -1,0 +1,44 @@
+{
+  "case_id": "M01-D",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 10756.741,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "dc992b8145f1a43cf2cf1ef47be6058df02742f197976f392b51b924e718d33d",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing `if observed_base_state_version != base_state_version:` with `if False:` disables state version conflict checking in the commitment gateway. When a version mismatch occurs, the original implementation executes the conditional branch (e.g., rejecting stale updates or raising concurrency errors), while the mutated implementation bypasses it, producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:51:19.939195+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5703.11,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "5029194ba250f77f2c3f551db064c3710b721c3f668d790f698c5c7e01a082d7",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional check `if observed_base_state_version != base_state_version:` with `if False:`, which permanently disables the guard that detects version mismatches between observed and expected base state versions. In the original code, when the versions differ, the branch body executes (likely raising an error, returning early, or triggering conflict resolution). With `if False:`, that branch body can never execute regardless of actual version values. This produces an observable behavioral difference: cases where `observed_base_state_version != base_state_version` (i.e., a version mismatch exists) will no longer trigger the corresponding code path, allowing execution to continue past the guard unconditionally. This is a straightforward semantic change with directly observable consequences in any scenario involving a version mismatch."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:51:25.642393+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

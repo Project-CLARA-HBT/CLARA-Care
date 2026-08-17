@@ -1,0 +1,42 @@
+{
+  "case_id": "M11-A",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3278.976,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "c28e307a0df98c9e2fd74ac29a7bea46dfbaed7c9776d34fefdf3682b6d2ab39",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the guard condition `if not _assertion_evidence_ids(db, assertion_id=assertion.id):` with `if False:` disables the validation check when evidence IDs are missing, causing the branch to never execute and producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:47:13.773460+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 6243.463,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "6cb8fe712d3286ce5cc2444551320c43f74ba9e5aa1c97708babe209d2952204",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if not _assertion_evidence_ids(db, assertion_id=assertion.id):` evaluates a function call that returns a collection of evidence IDs, and the branch executes when that collection is empty/falsy. Replacing it with `if False:` unconditionally prevents the branch from ever executing, regardless of whether `_assertion_evidence_ids` would have returned an empty result. This means any logic inside that conditional block (e.g., early returns, error handling, alternative processing paths, state mutations, or response modifications) will never be reached under the mutated code, whereas the original code would execute that block whenever the assertion has no associated evidence IDs. This produces an observable behavioral difference in at least the case where an assertion exists with no evidence IDs."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:47:20.017044+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

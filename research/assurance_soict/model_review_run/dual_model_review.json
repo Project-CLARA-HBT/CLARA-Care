@@ -1,0 +1,369 @@
+{
+  "schema_version": "govmut-dual-model-review.v1",
+  "model_ids": [
+    "gemini-3.6-flash-high",
+    "claude-sonnet-4-6"
+  ],
+  "dispositions": [
+    {
+      "mutant_id": "M01-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M01-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M01-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M01-D",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M02-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M02-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M02-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M02-D",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M03-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M03-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M03-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M03-D",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M04-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M04-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M04-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M04-D",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M05-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M05-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M05-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M06-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M06-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M06-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M07-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M07-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M07-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M07-D",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M08-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M08-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M08-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M08-D",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M09-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M09-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M09-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M09-D",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M09-E",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M11-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M11-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M11-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M11-D",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M13-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M13-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M13-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M14-A",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M14-B",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    },
+    {
+      "mutant_id": "M14-C",
+      "disposition": "included",
+      "model_dispositions": {
+        "gemini-3.6-flash-high": "included",
+        "claude-sonnet-4-6": "included"
+      }
+    }
+  ]
+}

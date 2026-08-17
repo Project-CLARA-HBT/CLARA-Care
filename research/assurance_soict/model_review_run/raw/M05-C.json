@@ -1,0 +1,47 @@
+{
+  "case_id": "M05-C",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "bd3615e05399abc709592eb595f59be217cdbcd693ef447cf78c57ae30fa16f6",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 1945.055,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "cb748087b4f2732111dbcbb21cf009dbe1a55775e5f5f3d84da07deccafbbe0d",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the actor role membership check with `if False:` disables role-based access validation, permitting previously unauthorized actor roles to proceed and altering observable system behavior."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:51:54.959161+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 7687.828,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "6fef0d3fbf8ae6cdc33076c6661a9c427891b5cc4415323303abffc4bd73fd1f",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional guard `if scope.actor_role not in policy.actor_roles:` with `if False:`, which permanently disables the actor role enforcement check. The original code would raise an exception or take a restrictive action when the actor's role is not in the permitted roles list; the mutated code never executes that branch regardless of the actor's role. This produces an observable behavioral difference: requests from actors whose roles are not in `policy.actor_roles` will no longer be blocked/rejected by this check and will instead proceed through the gateway as if they were authorized."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:52:02.647100+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

@@ -1,0 +1,42 @@
+{
+  "case_id": "M11-C",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3499.342,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "26246dc067a7703b8d86fde757d91359d1de10a367934ac70b48a50159713481",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the validation check `if not evidence or any(item.profile_id != scope.profile.id for item in evidence):` with `if False:` disables enforcement for missing or mismatched evidence, altering system behavior on invalid inputs."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:51:04.783561+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 4397.661,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "f0be80cf9f04d784b31edda923d7c96fff492eb3bc3554a775529bfeffb0f917",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if not evidence or any(item.profile_id != scope.profile.id for item in evidence):` performs a guard check that triggers when evidence is absent or contains items with mismatched profile IDs. Replacing this with `if False:` permanently disables the guard, meaning the conditional branch body will never execute regardless of the state of `evidence` or `scope.profile.id`. Any scenario where the original condition would have evaluated to `True` \u2014 such as empty evidence or profile ID mismatches \u2014 will now produce different observable behavior, as the guarded code path is permanently bypassed."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:51:09.181275+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

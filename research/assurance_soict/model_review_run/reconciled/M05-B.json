@@ -1,0 +1,42 @@
+{
+  "case_id": "M05-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3050.129,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "a87166ac018583ae50e8ac707f241844f03f7ca8c9e7dbeb81a246810765c974",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the conditional role-check `if actor_role is not None and snapshot.actor_role != actor_role:` with `if False:` disables the role validation logic, allowing mismatched actor roles to bypass the branch and altering observable execution behavior."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:50:20.223594+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 4747.168,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "b80d51c14656e43a98355054983a541ba0c778fcd34bc057c8606235d2e1a361",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional guard `if actor_role is not None and snapshot.actor_role != actor_role:` with `if False:`. The original condition evaluates to True when `actor_role` is provided (not None) AND the snapshot's actor_role does not match the requested actor_role, presumably triggering some enforcement action (e.g., rejection, filtering, or error). By substituting `if False:`, the body of this conditional block becomes permanently unreachable, meaning the enforcement action never executes regardless of input values. This produces an observable behavioral difference: requests that previously would have been blocked or filtered based on actor_role mismatch will now pass through unconditionally."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:50:24.970932+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

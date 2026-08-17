@@ -1,0 +1,47 @@
+{
+  "case_id": "M02-C",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "76a98d4d402c75c38ba0adaa184b62f76056efda60e52bf36bc8f754e1bcf165",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3439.815,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "3ee6a1809623332a6c34d87a46ccbf8e31af45b3818040ff93638999e93394e7",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the policy version check `if proposal.policy_version != COMMITMENT_POLICY_VERSION:` with `if False:` bypasses invariant enforcement. Under mismatched policy versions, the original code raises `GlhsInvariantError(\"commitment_proposal_policy_mismatch\")` while the mutated code does not, resulting in an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:48:48.550351+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 9053.281,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "cf58c700e6012f44abec62cc6d6b8326b3d4dc8276c7a6722325836705f52406",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional check `if proposal.policy_version != COMMITMENT_POLICY_VERSION` with `if False`, permanently disabling the invariant enforcement. In the original code, when `proposal.policy_version` does not match `COMMITMENT_POLICY_VERSION`, a `GlhsInvariantError` is raised, halting execution and signaling a policy mismatch. In the mutated code, this branch is dead code and the error is never raised regardless of the policy version values. Any caller passing a commitment proposal with a mismatched policy version will now proceed past this guard without an exception, producing observably different runtime behavior: no exception is thrown where one previously would have been."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:48:57.603751+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

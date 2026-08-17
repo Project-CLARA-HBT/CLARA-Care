@@ -1,0 +1,44 @@
+{
+  "case_id": "M09-C",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 2556.144,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "6a826c3127684e514cc5758aaac3774e90ee8c889c73623bc5c8725b436ec6e2",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing `if source_snapshot_id is None:` with `if False:` disables the conditional branch when `source_snapshot_id` is None and `source_snapshot_digest` is provided, preventing execution of the nested logic and producing an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:49:40.918310+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 4915.955,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "cb2e48a8b39d29d4c3778800869a1d2a4f2aab3f99267e1a7511c82fb30d7c52",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional check `if source_snapshot_id is None:` with `if False:`, which hardcodes the branch to never execute. In the original code, when `source_snapshot_id` is None, the inner block (including the nested check `if source_snapshot_digest is not None:`) would be evaluated and potentially executed. After the mutation, this entire branch is unconditionally skipped regardless of the actual value of `source_snapshot_id`. This produces an observable behavioral difference: any code path that previously executed when `source_snapshot_id is None` (e.g., fallback logic using `source_snapshot_digest`) will never execute after the mutation, altering the governed system's control flow and output for inputs where `source_snapshot_id` is None."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:49:45.834337+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

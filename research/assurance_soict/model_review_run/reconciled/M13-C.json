@@ -1,0 +1,41 @@
+{
+  "case_id": "M13-C",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 118.197,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "db1e26cc7ca2abdaae8f306bf16c8673cfb78f46528d226521cfde122ed91600",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the temporal validity check (`row.valid_to is None or row.valid_to >= valid_at`) with `if True` eliminates the expiration filtering mechanism. This allows expired records (where `row.valid_to < valid_at`) to be processed as valid, producing an observable behavioral difference in the gateway's record evaluation."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:52:33.886305+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 106.656,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "22c54cd7b90eae166c86dfaeeb2c0c9e2e868d16850d853d7abe9741f3aa2a26",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if row.valid_to is None or row.valid_to >= valid_at` filters rows based on temporal validity \u2014 a row is included only if it has no expiration date or its expiration date is on or after the reference date `valid_at`. Replacing this with `if True` unconditionally passes all rows regardless of their `valid_to` value. This means rows that have expired (where `row.valid_to < valid_at`) will now be included in the governed output that previously would have been excluded. This produces an observable behavioral difference: the set of rows returned or processed downstream will differ whenever any row exists with a non-null `valid_to` that is strictly less than `valid_at`."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:52:33.992996+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

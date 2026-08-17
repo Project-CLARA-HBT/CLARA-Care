@@ -1,0 +1,42 @@
+{
+  "case_id": "M01-C",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 4297.271,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "5afaffdfeeb9e5512c511bdbfa1b5eb9d70dfebdf8152cd9282eb235c3119b71",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the version consistency check with a constant False eliminates the condition that detects stale base state versions, allowing mismatched proposals to proceed and directly altering observable system control flow and behavior."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:48:39.375844+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5734.269,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "5f813de8a95a4fdadf47f49ad31ce0930bec519a9055006b4c91d70d43cfaba6",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if base != expected_state_version or proposal.base_state_version != base:` performs a state version validation check that can evaluate to True when version mismatches occur, triggering whatever guard logic follows (e.g., raising an error, returning early, or rejecting the proposal). Replacing it with `if False:` unconditionally disables this branch entirely, meaning the guarded code block will never execute regardless of the actual state of `base`, `expected_state_version`, or `proposal.base_state_version`. This produces an observable behavioral difference: under the mutation, stale or mismatched state version proposals will no longer be rejected, allowing commitment to proceed in scenarios where the original code would have halted or raised an exception."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:48:45.110178+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

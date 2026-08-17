@@ -1,0 +1,42 @@
+{
+  "case_id": "M09-D",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3070.07,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "862c33246b96032bddc1d39e6f19360c079b7d911f42b7106a46d10dda7bad24",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the validation check `if not snapshot_id or not manifest_digest:` with `if False:` removes enforcement that handles missing or invalid identifier parameters, resulting in an observable behavioral difference during execution."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:50:56.183218+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5100.462,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "018432eb611b23af8a167dc6202ae0c24b6795be0efb61e3b936e2c7eebb38c4",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if not snapshot_id or not manifest_digest:` guards against missing/empty values for snapshot_id or manifest_digest, presumably raising an error or returning early when either is falsy. Replacing this with `if False:` unconditionally disables the guard, meaning the branch body never executes regardless of the values of snapshot_id or manifest_digest. When either or both variables are falsy (None, empty string, 0, etc.), the original code would take the guarded branch (e.g., raise an exception, return an error response), but the mutated code would fall through to subsequent logic. This produces an observable behavioral difference: inputs that previously triggered the guard now proceed past it."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:51:01.283879+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

@@ -1,0 +1,47 @@
+{
+  "case_id": "M14-C",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "a6b637629860ee76ee6d77b1334f19ea42f18ed683bfd74d8a2a9d8355269b72",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3620.746,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "7b66b8cc818bdc71d50635c7cbfb3db5de02e5cd28c324090c0c200c1108cdfa",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces the idempotency request digest verification (`existing.request_digest != request_digest`) with `False`. Under the mutated code, submitting a request with a matching idempotency key hash but a conflicting request digest will return the existing commitment transition instead of raising `GlhsInvariantError('commitment_idempotency_reuse_mismatch')`, resulting in an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:52:37.614392+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5642.29,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "c8eea529ce67fe996922e8d5eee9564a6fce6f97a2a6219f841ceb19b1386bad",
+      "review": {
+        "confidence": 0.99,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces the condition `if existing.request_digest != request_digest:` with `if False:`, which unconditionally prevents the `GlhsInvariantError(\"commitment_idempotency_reuse_mismatch\")` from ever being raised. In the original code, when an existing idempotency record is found but its stored request digest differs from the current request digest, an error is raised to signal misuse of the idempotency key. After the mutation, this check is permanently disabled: any request reusing an idempotency key with a different payload will silently succeed and return the existing transition record rather than raising an error. This constitutes an observable behavioral difference \u2014 specifically, the suppression of an error response branch that was previously reachable under defined input conditions."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:52:43.256706+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

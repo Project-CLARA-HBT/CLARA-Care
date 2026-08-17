@@ -1,8 +1,11 @@
 {
   "schema_version": "glhs-postgres-governance-toctou-statistics-v1",
-  "status": "draft_not_final_not_run",
+  "status": "FROZEN_FINAL_REVIEWED",
   "study_id": "glhs-journal-revision",
+  "run_id": "GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
   "protocol_path": "research/glhs_journal/postgres_toctou_protocol.json",
+  "schedule_manifest_path": "research/glhs_journal/postgres_toctou_schedule_manifest.json",
+  "observer_contract_path": "research/glhs_journal/postgres_toctou_observer_contract.json",
   "unit_of_analysis": "one frozen logical read-mutate-commit schedule; retries remain within that schedule",
   "primary_endpoint": {
     "name": "forbidden_commit_observed",
@@ -22,5 +25,6 @@
     "audit": "Report exact reconstruction status separately from commit outcome; an empty or hash-only audit observation is not completeness."
   },
   "missing_data_rule": "Missing work is NOT_RUN and is never encoded as zero forbidden commits or a successful schedule.",
-  "freeze_rule": "Before final execution, independently review and freeze this plan, the five-schedule manifest, ordered seeds, environment metadata, and observer contract; any material change requires a new run ID."
+  "freeze_rule": "This plan, the five-schedule manifest, ordered seeds, environment metadata, and observer contract are frozen before execution; any material change requires a new run ID.",
+  "result_status_rule": "A final result is claim-eligible only when every scheduled execution is observer-complete. NOT_RUN, infrastructure error, missing audit, and indeterminate ordering remain explicit and are never recoded as safe."
 }

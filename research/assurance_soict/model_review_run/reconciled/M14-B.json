@@ -1,0 +1,42 @@
+{
+  "case_id": "M14-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 7576.986,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "ef0a601b7e219824158985e345d81ec558e0ca507dffd0e8a0d78c40a60fe969",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces the check `existing.request_digest != request_digest` with `False`, eliminating the `GlhsInvariantError` raised on idempotency reuse mismatch when an existing record has a differing request digest."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:50:11.637387+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5535.087,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "be8a43da272723489364d5cff1b3318098994564025108142a957fde31636574",
+      "review": {
+        "confidence": 0.99,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces the condition `existing.request_digest != request_digest` with the literal `False`, which permanently disables the idempotency mismatch check. In the original code, when an existing commitment is found and its stored request digest differs from the incoming request digest, a `GlhsInvariantError('commitment_idempotency_reuse_mismatch')` is raised. After the mutation, that error is never raised regardless of digest mismatch; instead, the function always proceeds to `return cast(GlhsClinicalCommitmentTransition, existing)`. This produces an observable behavioral difference: a caller submitting a reused commitment ID with a different request payload will receive a successful return value instead of an exception."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:50:17.172507+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

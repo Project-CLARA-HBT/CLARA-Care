@@ -1,0 +1,47 @@
+{
+  "case_id": "M08-A",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "98f48765f7dc2390a8fcc59a59622e0634b06da602302f7d45035e0fef17b73f",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3375.866,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "db006f010fd10bdc1ac4568d5bade88dfa2c3003a503f292475ce10429902da6",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the digest comparison check with `if False:` disables integrity verification between `assertion.value_json` and `assertion.value_fingerprint`. When an assertion has a mismatched digest, the original code enters the conditional branch whereas the mutated code bypasses it, leading to an observable difference in governed behavior."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:46:56.158090+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 6655.579,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "8b7a369049dd1dd7494e2841a37c817a9358dd943b862dbe81af397a0a51f57d",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional integrity check `if _digest(assertion.value_json) != assertion.value_fingerprint:` with `if False:`, which unconditionally disables the fingerprint validation branch. In the original code, when the digest of `assertion.value_json` does not match `assertion.value_fingerprint`, the condition evaluates to True and whatever action follows (e.g., raising an exception, returning an error, logging a warning, rejecting the assertion) is executed. With the mutation, that branch is never taken regardless of the actual digest comparison result. This produces an observable behavioral difference: assertions with mismatched fingerprints that would previously trigger the guarded code path will now silently pass through without triggering it. The governed system's observable behavior changes whenever an assertion has a non-matching fingerprint."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:47:02.813725+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

@@ -1,0 +1,47 @@
+{
+  "case_id": "M08-B",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "5e2bb19b12121378cfa451e10d782a2ae4a2f661cc0c6803933ce196cb24fd3d",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 2963.474,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "8178a3b88b6a72e797a681d74310ea082f4a395ffd0034d087bd59cb0e2d57ab",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the digest comparison check with `if False:` permanently bypasses manifest snapshot digest validation, allowing mismatched digests to proceed without triggering the corresponding branch, which directly alters observable system behavior."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:49:31.601194+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 6760.401,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "6705a0ec3d65d3aefe9bc4efbf5b733096383b194c57fe0624284460ff990448",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The mutation replaces a conditional integrity check (`if reconstructed_digest != manifest.snapshot_digest:`) with `if False:`, which permanently disables the branch that would execute when the reconstructed digest does not match the manifest snapshot digest. In the original code, a mismatch between digests triggers whatever logic follows (e.g., raising an error, returning a failure response, logging a security violation). With `if False:`, that branch is never entered regardless of digest values, meaning digest mismatches are silently ignored. This produces an observable behavioral difference: inputs that previously caused the mismatch-handling code to execute will now proceed as if the digests matched, changing the output or side effects of the governed system."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:49:38.361687+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

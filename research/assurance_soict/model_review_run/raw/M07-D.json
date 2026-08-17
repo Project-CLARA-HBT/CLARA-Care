@@ -1,0 +1,47 @@
+{
+  "case_id": "M07-D",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "3479a39fb98d7f297880044e818321e9fa41d0a878045fffed9a1adce3513193",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 183.958,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "3a9f622b70fc9838ba71b37ccf43efd0f0ec3073686e8cf5db39c52d77db46e8",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Disabling the temporal validity check by replacing the expiration condition with `if False:` permits expired scopes to bypass rejection or expiration handling, resulting in an observable behavioral difference."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:52:02.831840+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 98.177,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "1f54651a1ce8e6e1c8a7ed98548dd9628e5a6e218f7ad1c06d6e08e0096792a0",
+      "review": {
+        "confidence": 0.98,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition checks whether a scope has a non-null valid_until timestamp and whether that timestamp is in the past (i.e., expired). When this condition evaluates to True, it triggers some enforcement branch (e.g., rejection, error, expiry handling). Replacing this with `if False:` unconditionally disables that branch entirely, meaning expired scopes will never be detected as expired regardless of their valid_until value. This produces an observable behavioral difference: any scope with a past valid_until timestamp will no longer trigger the expiry enforcement path, altering the gateway's response for inputs that previously would have matched the original condition."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:52:02.930128+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

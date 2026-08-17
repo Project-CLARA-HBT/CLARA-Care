@@ -1,0 +1,47 @@
+{
+  "case_id": "M03-A",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "857c152806ddcc7d59322d04cbff7c213bba75661c59513e6a7da1108da793c0",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3588.345,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "f1911c2c0963ff1fe699726c134f5d8bc9cc011dd25cb21fcc067a567b7f3fe7",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the consent version comparison check `if snapshot.consent_version != consent_version:` with `if False:` disables the conditional branch handling version mismatches, leading to observable behavioral differences when the consent versions do not match."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:46:06.397129+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5935.088,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "345be5c57950f022b36e7211017f2328a252cc2d8a75003e1c00d606f694ae06",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional check `if snapshot.consent_version != consent_version:` with `if False:`, which unconditionally disables the branch body. In the original code, whenever the snapshot's consent version differs from the expected consent version, the branch executes (likely raising an error, returning early, or triggering some consent-mismatch handling). With the mutation, that branch body is never executed regardless of the actual consent version values. This produces an observable behavioral difference: cases where `snapshot.consent_version != consent_version` would previously have triggered the branch will now silently bypass it, resulting in different control flow, return values, side effects, or exception behavior."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:46:12.332271+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

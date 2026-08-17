@@ -1,0 +1,382 @@
+{
+  "cases": [
+    {
+      "case_id": "M01-A",
+      "evidence": {
+        "E1": "Fault family: M01.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if revalidate_state and base_version != expected_state_version:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M02-A",
+      "evidence": {
+        "E1": "Fault family: M02.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if snapshot.policy_version != policy_version:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M03-A",
+      "evidence": {
+        "E1": "Fault family: M03.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if snapshot.consent_version != consent_version:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M04-A",
+      "evidence": {
+        "E1": "Fault family: M04.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if assertion.profile_id != scope.profile.id:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M05-A",
+      "evidence": {
+        "E1": "Fault family: M05.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if actor_user_id is not None and snapshot.actor_user_id != actor_user_id:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M06-A",
+      "evidence": {
+        "E1": "Fault family: M06.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if snapshot.purpose != purpose:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M07-A",
+      "evidence": {
+        "E1": "Fault family: M07.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if require_unexpired and _as_utc(snapshot.expires_at) <= datetime.now(UTC):` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M08-A",
+      "evidence": {
+        "E1": "Fault family: M08.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if _digest(assertion.value_json) != assertion.value_fingerprint:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M09-A",
+      "evidence": {
+        "E1": "Fault family: M09.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if data.proposal_consumed_thss and data.source_snapshot_id is None:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M11-A",
+      "evidence": {
+        "E1": "Fault family: M11.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if not _assertion_evidence_ids(db, assertion_id=assertion.id):` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M01-B",
+      "evidence": {
+        "E1": "Fault family: M01.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if action == \"activate\" and revalidate_state and assertion.base_state_version != base_version:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M02-B",
+      "evidence": {
+        "E1": "Fault family: M02.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if revalidate_governance and assertion.policy_version != _effective_policy_version():` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M03-B",
+      "evidence": {
+        "E1": "Fault family: M03.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if revalidate_governance and assertion.consent_version != current_consent_version:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M04-B",
+      "evidence": {
+        "E1": "Fault family: M04.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if source is None or source.profile_id != profile_id:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M06-B",
+      "evidence": {
+        "E1": "Fault family: M06.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if proposal.purpose != scope.purpose:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M09-B",
+      "evidence": {
+        "E1": "Fault family: M09.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if proposal.context_binding_mode != \"snapshot_bound\":` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M13-A",
+      "evidence": {
+        "E1": "Fault family: M13.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `GlhsAssertion.lifecycle_status.in_(ACTIVE_LIFECYCLE_STATES),` with `True,`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M14-A",
+      "evidence": {
+        "E1": "Fault family: M14.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `key_hash = _idempotency_digest(idempotency_key)` with `key_hash = \"0\" * 64`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M01-C",
+      "evidence": {
+        "E1": "Fault family: M01.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if base != expected_state_version or proposal.base_state_version != base:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M02-C",
+      "evidence": {
+        "E1": "Fault family: M02.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `    consent_version: str,\n) -> None:\n    if proposal.policy_version != COMMITMENT_POLICY_VERSION:\n        raise GlhsInvariantError(\"commitment_proposal_policy_mismatch\")` with `    consent_version: str,\n) -> None:\n    if False:\n        raise GlhsInvariantError(\"commitment_proposal_policy_mismatch\")`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M03-C",
+      "evidence": {
+        "E1": "Fault family: M03.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if proposal.consent_version != consent_version:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M04-C",
+      "evidence": {
+        "E1": "Fault family: M04.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if proposal.target_profile_public_id != scope.profile.public_id:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M07-B",
+      "evidence": {
+        "E1": "Fault family: M07.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if scope.valid_until is not None and _utc(scope.valid_until) <= datetime.now(UTC):` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M08-B",
+      "evidence": {
+        "E1": "Fault family: M08.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if reconstructed_digest != manifest.snapshot_digest:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M09-C",
+      "evidence": {
+        "E1": "Fault family: M09.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if source_snapshot_id is None:\n        if source_snapshot_digest is not None:` with `if False:\n        if source_snapshot_digest is not None:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M11-B",
+      "evidence": {
+        "E1": "Fault family: M11.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if not evidence_rows:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M13-B",
+      "evidence": {
+        "E1": "Fault family: M13.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if row.valid_to is None or row.valid_to >= valid_at` with `if True`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M14-B",
+      "evidence": {
+        "E1": "Fault family: M14.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `    if existing is not None:\n        if existing.request_digest != request_digest:\n            raise GlhsInvariantError(\"commitment_idempotency_reuse_mismatch\")\n        return cast(GlhsClinicalCommitmentTransition, existing)\n    if base != expected_state_version or proposal.base_state_version != base:` with `    if existing is not None:\n        if False:\n            raise GlhsInvariantError(\"commitment_idempotency_reuse_mismatch\")\n        return cast(GlhsClinicalCommitmentTransition, existing)\n    if base != expected_state_version or proposal.base_state_version != base:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M05-B",
+      "evidence": {
+        "E1": "Fault family: M05.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if actor_role is not None and snapshot.actor_role != actor_role:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M06-C",
+      "evidence": {
+        "E1": "Fault family: M06.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if purpose != scope.purpose:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M07-C",
+      "evidence": {
+        "E1": "Fault family: M07.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `    if scope.valid_until is not None and _as_utc(scope.valid_until) <= datetime.now(UTC):\n        raise GlhsInvariantError(\"snapshot_scope_expired\")` with `    if False:\n        raise GlhsInvariantError(\"snapshot_scope_expired\")`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M08-C",
+      "evidence": {
+        "E1": "Fault family: M08.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if manifest_fingerprint != manifest.manifest_digest:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M09-D",
+      "evidence": {
+        "E1": "Fault family: M09.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if not snapshot_id or not manifest_digest:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M11-C",
+      "evidence": {
+        "E1": "Fault family: M11.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if not evidence or any(item.profile_id != scope.profile.id for item in evidence):` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M01-D",
+      "evidence": {
+        "E1": "Fault family: M01.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if observed_base_state_version != base_state_version:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M02-D",
+      "evidence": {
+        "E1": "Fault family: M02.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `    if proposal.policy_version != COMMITMENT_POLICY_VERSION:\n        raise GlhsInvariantError(\"commitment_proposal_policy_mismatch\")\n    if proposal.consent_version != current_consent_version:` with `    if False:\n        raise GlhsInvariantError(\"commitment_proposal_policy_mismatch\")\n    if proposal.consent_version != current_consent_version:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M03-D",
+      "evidence": {
+        "E1": "Fault family: M03.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `    if proposal.consent_version != current_consent_version:\n        raise GlhsInvariantError(\"commitment_proposal_consent_mismatch\")\n\n\ndef _validate_current_proposal_context` with `    if False:\n        raise GlhsInvariantError(\"commitment_proposal_consent_mismatch\")\n\n\ndef _validate_current_proposal_context`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M04-D",
+      "evidence": {
+        "E1": "Fault family: M04.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `def propose_bound_commitment_transition(\n    db: Session,\n    *,\n    scope: ProfileScope,\n    commitment: GlhsClinicalCommitment,\n    observed_evidence: tuple[GlhsEvidence, ...],\n    proposed_transition: str,\n    origin: str,\n    observed_base_state_version: int,\n    task: str,\n    source_snapshot_id: str,\n    source_snapshot_digest: str,\n    model_manifest_ref: str | None = None,\n) -> GlhsClinicalCommitmentProposal:\n    _require_live_scope(scope)\n    if commitment.profile_id != scope.profile.id:\n        raise GlhsInvariantError(\"commitment_scope_forbidden\")\n    if proposed_transition not in LIFECYCLE_STATES:` with `def propose_bound_commitment_transition(\n    db: Session,\n    *,\n    scope: ProfileScope,\n    commitment: GlhsClinicalCommitment,\n    observed_evidence: tuple[GlhsEvidence, ...],\n    proposed_transition: str,\n    origin: str,\n    observed_base_state_version: int,\n    task: str,\n    source_snapshot_id: str,\n    source_snapshot_digest: str,\n    model_manifest_ref: str | None = None,\n) -> GlhsClinicalCommitmentProposal:\n    _require_live_scope(scope)\n    if False:\n        raise GlhsInvariantError(\"commitment_scope_forbidden\")\n    if proposed_transition not in LIFECYCLE_STATES:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M05-C",
+      "evidence": {
+        "E1": "Fault family: M05.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if scope.actor_role not in policy.actor_roles:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M07-D",
+      "evidence": {
+        "E1": "Fault family: M07.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if scope.valid_until is not None and _utc(scope.valid_until) <= datetime.now(UTC):` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M08-D",
+      "evidence": {
+        "E1": "Fault family: M08.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if snapshot.digest_algorithm != DIGEST_ALGORITHM:` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M09-E",
+      "evidence": {
+        "E1": "Fault family: M09.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if proposal.context_binding_mode != \"base_version_only\":\n        raise GlhsInvariantError(\"commitment_proposal_binding_mode_mismatch\")` with `if False:\n        raise GlhsInvariantError(\"commitment_proposal_binding_mode_mismatch\")`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M11-D",
+      "evidence": {
+        "E1": "Fault family: M11.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json)):` with `if False:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M13-C",
+      "evidence": {
+        "E1": "Fault family: M13.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/gateway.py: replace `if row.valid_to is None or row.valid_to >= valid_at` with `if True`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    },
+    {
+      "case_id": "M14-C",
+      "evidence": {
+        "E1": "Fault family: M14.",
+        "E2": "One-change overlay in services/api/src/clara_api/glhs/commitment_gateway.py: replace `    existing = db.execute(\n        select(GlhsClinicalCommitmentTransition).where(\n            GlhsClinicalCommitmentTransition.profile_id == scope.profile.id,\n            GlhsClinicalCommitmentTransition.idempotency_key_hash == key_hash,\n        )\n    ).scalar_one_or_none()\n    if existing is not None:\n        if existing.request_digest != request_digest:\n            raise GlhsInvariantError(\"commitment_idempotency_reuse_mismatch\")\n        return cast(GlhsClinicalCommitmentTransition, existing)\n    if base != expected_state_version or proposal.base_state_version != base:` with `    existing = db.execute(\n        select(GlhsClinicalCommitmentTransition).where(\n            GlhsClinicalCommitmentTransition.profile_id == scope.profile.id,\n            GlhsClinicalCommitmentTransition.idempotency_key_hash == key_hash,\n        )\n    ).scalar_one_or_none()\n    if existing is not None:\n        if False:\n            raise GlhsInvariantError(\"commitment_idempotency_reuse_mismatch\")\n        return cast(GlhsClinicalCommitmentTransition, existing)\n    if base != expected_state_version or proposal.base_state_version != base:`.",
+        "E3": "Classify only behavioral non-equivalence of this controlled overlay. Do not assess clinical correctness, severity, or production deployment."
+      }
+    }
+  ],
+  "rubric": {
+    "allowed_labels": [
+      "NON_EQUIVALENT",
+      "EQUIVALENT",
+      "INVALID",
+      "UNCERTAIN"
+    ],
+    "decision_rule": "Return NON_EQUIVALENT only when the changed enforcement can produce an observable behavioral difference. Return EQUIVALENT for no observable difference, INVALID for a malformed/non-applicable overlay, and UNCERTAIN when the evidence is insufficient.",
+    "final_disposition_rule": "Only mutual NON_EQUIVALENT maps to included. Mutual EQUIVALENT maps to excluded_equivalent. Mutual INVALID maps to excluded_unexecutable. All other outcomes, including disagreement after at most one anonymous reconciliation round, map to unresolved.",
+    "model_ids": [
+      "gemini-3.6-flash-high",
+      "claude-sonnet-4-6"
+    ],
+    "task": "Determine whether the supplied one-change mutation can change observable governed-system behavior. This is a software-assurance non-equivalence review, not human review or clinical validation."
+  },
+  "schema_version": "clara-model-review-manifest.v1",
+  "status": "frozen",
+  "study_id": "assurance-soict-2026"
+}

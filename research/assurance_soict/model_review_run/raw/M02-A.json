@@ -1,0 +1,49 @@
+{
+  "case_id": "M02-A",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "8dcc75958d92ae6f53a8f2215adcf440bab41e5632d31e27cc4973db41352115",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3280.415,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "d80fee2036f2061c4b6cab92ff30324fe162f2b5c1de394998df0fc6e48b3653",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing `if snapshot.policy_version != policy_version:` with `if False:` bypasses the policy version check, causing mismatched snapshot policy versions to no longer trigger the conditional block. This produces an observable behavioral difference when a policy version mismatch occurs."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:45:57.590404+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5217.843,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "1006c26e8a92804b5302aecc9ab6e3f246a151c2cb926bf112118dd9a35a615b",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if snapshot.policy_version != policy_version:` evaluates to True whenever the snapshot's policy version differs from the current policy version, triggering whatever branch logic follows (likely a refresh, error, or re-fetch). Replacing it with `if False:` unconditionally disables that branch entirely, meaning the system will never execute the guarded code regardless of version mismatch. This produces an observable behavioral difference: version mismatches that previously triggered the branch will now be silently ignored, altering control flow in any scenario where `snapshot.policy_version != policy_version` would have been true."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:46:02.808321+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

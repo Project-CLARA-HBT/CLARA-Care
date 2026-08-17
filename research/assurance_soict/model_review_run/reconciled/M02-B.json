@@ -1,0 +1,42 @@
+{
+  "case_id": "M02-B",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 2866.056,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "e63d0d50e9b29c3cec3410a0df8499cc8237313252db040a653dc748dbd958f0",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the conditional check `if revalidate_governance and assertion.policy_version != POLICY_VERSION:` with `if False:` bypasses governance revalidation when policy versions mismatch, causing an observable change in governed system behavior."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:47:32.816504+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5632.902,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "9371fd7606bce969d083fa75b0c9c351699f5f413a7a4ed97337c499c26f527d",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional branch `if revalidate_governance and assertion.policy_version != POLICY_VERSION:` with `if False:`. The original condition, when true, triggers revalidation logic (e.g., re-checking governance assertions against the current policy version). By substituting `if False:`, that branch body becomes permanently unreachable, meaning any scenario where `revalidate_governance` is truthy AND the assertion's policy version differs from `POLICY_VERSION` will no longer execute the revalidation code path. This produces an observable behavioral difference: governance revalidation is silently skipped for outdated policy versions, changing the governed system's enforcement behavior in those cases."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:47:38.449494+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

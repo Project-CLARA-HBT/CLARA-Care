@@ -1,0 +1,47 @@
+{
+  "case_id": "M04-C",
+  "decoding": {
+    "temperature": 0
+  },
+  "prompt_sha256": "f5a59f0f82209ca56e92ae043581252360e5216d875644d5a9356cdfe08b3cfe",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3496.037,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "d64551fc30791c49987f9439e639e49d4dfd4af3671a2ee184de7e2b4daf931c",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the profile mismatch check `if proposal.target_profile_public_id != scope.profile.public_id:` with `if False:` disables an active enforcement guard. When a proposal's target profile public ID differs from the scope profile public ID, the system will no longer execute the mismatch handling branch (e.g., rejecting or failing the operation), leading to an observable behavioral difference in system enforcement."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:49:14.396845+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 5841.043,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "e81dbc9e59e72c27cbea4847f48621236ed39687be3b246cb661e216825da31d",
+      "review": {
+        "confidence": 0.97,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The original condition `if proposal.target_profile_public_id != scope.profile.public_id:` performs an identity/authorization check, raising an error or taking a branch when the proposal's target profile does not match the scope's profile. Replacing it with `if False:` unconditionally skips that branch, meaning the guarded behavior (e.g., rejection, error raising, or access denial) will never execute regardless of input values. This produces an observable behavioral difference: requests that previously triggered the guarded branch (mismatched profile IDs) will now pass through silently instead of being blocked or redirected."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:49:20.237960+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "e13c7a925f033b7c840d3e98e6fd84132a690aa8d0f3800ded08dbd2714f8dbc"
+}

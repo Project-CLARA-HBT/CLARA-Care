@@ -1,0 +1,42 @@
+{
+  "case_id": "M07-C",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3309.442,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "fd5f7567cc3bb635f3623f1c4b28e6cee33f946942ac0efc33fbff6268e3b559",
+      "review": {
+        "confidence": 0.95,
+        "evidence_ids": [
+          "E2"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "Replacing the scope expiration check with 'if False:' neutralizes the expiration condition check, allowing expired scopes to proceed without raising GlhsInvariantError('snapshot_scope_expired'). This creates an observable behavioral change when an expired scope is evaluated."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T11:50:35.906670+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 8396.601,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "c6e9bb39a73e6db32687a89206443afb457df4cdc189e13f08c66448a454a217",
+      "review": {
+        "confidence": 0.99,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "NON_EQUIVALENT",
+        "rationale": "The overlay replaces a conditional check that raises `GlhsInvariantError('snapshot_scope_expired')` when a scope's `valid_until` is non-null and the expiry timestamp is in the past (i.e., the scope has expired) with `if False:`, which is a dead-code branch that can never execute. This means the expiry enforcement is permanently disabled: any call that previously would have raised `GlhsInvariantError` due to an expired snapshot scope will now proceed without error. This produces an observable behavioral difference \u2014 expired scopes are no longer rejected, so downstream processing continues where it previously terminated with an exception."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T11:50:44.303315+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

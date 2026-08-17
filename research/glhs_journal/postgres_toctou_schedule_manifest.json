@@ -1,0 +1,16 @@
+{
+  "schema_version": "glhs-postgres-governance-toctou-schedule-manifest.v1",
+  "status": "FROZEN_FINAL_REVIEWED",
+  "run_id": "GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
+  "fixture_data": "synthetic_non_phi",
+  "schedule_order": ["TOCTOU-01", "TOCTOU-02", "TOCTOU-03", "TOCTOU-04", "TOCTOU-05"],
+  "ordered_seed_labels": ["consent-revoke", "persisted-role-change", "governance-race", "policy-snapshot-replay", "concurrent-consent-proposal"],
+  "schedules": [
+    {"id": "TOCTOU-01", "sequence": ["authorized_read", "persisted_consent_revoke", "bound_transition"], "expected": "governance_invalid_commit_rejected", "persisted_governance_writer": true},
+    {"id": "TOCTOU-02", "sequence": ["authorized_read", "persisted_role_change", "bound_transition"], "expected": "governance_invalid_commit_rejected", "persisted_governance_writer": true},
+    {"id": "TOCTOU-03", "sequence": ["authorized_read", "persisted_consent_writer_races_bound_transition"], "expected": "no_observer_proven_forbidden_commit", "persisted_governance_writer": true},
+    {"id": "TOCTOU-04", "sequence": ["snapshot_issued", "policy_version_increment", "snapshot_replay"], "expected": "stale_policy_snapshot_rejected", "persisted_governance_writer": false},
+    {"id": "TOCTOU-05", "sequence": ["persisted_consent_writer_races_proposal_writer"], "expected": "no_observer_proven_forbidden_commit", "persisted_governance_writer": true}
+  ],
+  "missing_schedule_rule": "NOT_RUN is reported separately and never converted to a zero forbidden-commit observation."
+}

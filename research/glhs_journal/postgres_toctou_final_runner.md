@@ -1,13 +1,12 @@
 # Final PostgreSQL TOCTOU Runner Gate
 
-`evaluation/glhs_postgres_toctou/final_frozen_runner.py` is a validation-only
-scaffold for a future final GLHS governance-TOCTOU execution. It does not import
-database code, create a database engine, connect to PostgreSQL, or write a
-result artifact.
+`evaluation/glhs_postgres_toctou/final_frozen_runner.py` validates the frozen
+protocol by default. With `--execute` and the explicitly bound PostgreSQL
+observer, it creates one random schema, executes the frozen schedule order, and
+removes that schema before returning the structural observations.
 
-The current `postgres_toctou_protocol.json` is `draft_not_run`; the final
-runner must refuse it. Development observations from `development_probe.py` are
-not input to, or evidence for, a final run.
+The current `postgres_toctou_protocol.json` is frozen but not executed.
+Development-probe output is not an input or substitute for this final run.
 
 Before an isolated operator can execute a future protocol, the validator
 requires all of the following:
@@ -24,6 +23,8 @@ requires all of the following:
   rejects hash-only observations, and classifies missing audit as observer
   incomplete.
 
-Successful validation reports only
-`VALIDATED_FINAL_PROTOCOL_NOT_EXECUTED`. It is neither a database execution nor
-a result, safety conclusion, denominator, or claim-eligible evidence.
+Validation reports `VALIDATED_FINAL_PROTOCOL_NOT_EXECUTED`. Execution is only
+available with `GLHS_TOCTOU_FINAL_ISOLATED_RESEARCH=1`, an operator-owned
+PostgreSQL URL, and `evaluation.glhs_postgres_toctou.postgres_observer:observe`.
+The emitted observations are not a safety conclusion; apply the frozen
+statistics plan before deriving any result or claim.
