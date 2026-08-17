@@ -85,6 +85,36 @@ class RedisSecurityStore:
             logger.exception("Redis get_ttl failed")
             return None
 
+    def available(self) -> bool:
+        """Return whether the configured Redis client is usable right now."""
+
+        return self._get_client() is not None
+
+    def set_bytes(self, key: str, value: bytes, *, ttl_seconds: int) -> bool:
+        """Store opaque bounded data for an explicitly opted-in caller."""
+
+        client = self._get_client()
+        if client is None:
+            return False
+        try:
+            return bool(client.set(key, value, ex=max(1, ttl_seconds)))
+        except Exception:
+            logger.exception("Redis set_bytes failed")
+            return False
+
+    def get_bytes(self, key: str) -> bytes | None:
+        """Retrieve opaque data; callers should check :meth:`available` first."""
+
+        client = self._get_client()
+        if client is None:
+            return None
+        try:
+            value = client.get(key)
+            return bytes(value) if value is not None else None
+        except Exception:
+            logger.exception("Redis get_bytes failed")
+            return None
+
     def delete(self, *keys: str) -> None:
         if not keys:
             return
@@ -95,4 +125,3 @@ class RedisSecurityStore:
             client.delete(*keys)
         except Exception:
             logger.exception("Redis delete failed")
-

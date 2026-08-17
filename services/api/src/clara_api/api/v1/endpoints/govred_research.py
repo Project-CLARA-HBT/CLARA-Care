@@ -15,6 +15,8 @@ check.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import threading
 import time
 from dataclasses import dataclass
@@ -28,6 +30,7 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from clara_api.core.config import get_settings
 from clara_api.core.consent import (
     MEDICAL_CONSENT_TYPE,
     ensure_medical_disclaimer_consent,
@@ -35,11 +38,14 @@ from clara_api.core.consent import (
 )
 from clara_api.core.govred_research import GovredResearchArm, isolated_govred_arm
 from clara_api.core.rbac import require_roles
+from clara_api.core.redis_security_store import RedisSecurityStore
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     FamilyAccessGrant,
     GlhsAssertion,
     GlhsSnapshotManifest,
+    GlhsStateVersion,
+    GlhsTransition,
     GlhsTransitionItem,
     HealthSourceReference,
     PhrProfile,
@@ -54,6 +60,7 @@ from clara_api.glhs.gateway import (
     apply_transition,
     compile_thss,
     propose_assertion,
+    reconstruct_governed_decision,
     record_evidence,
 )
 from clara_api.lifemap.profile_scope import ProfileScope, resolve_profile_scope
@@ -87,6 +94,14 @@ class SyntheticCommitProbeRequest(_Strict):
     concurrent_revoke_delay_ms: int = Field(default=5, ge=0, le=1000)
 
 
+class SyntheticCacheProbeRequest(_Strict):
+    """Isolated cache/index probe for one synthetic governed disclosure."""
+
+    phase: Literal["seed", "read_after_revoke"]
+    sentinel_id: str = Field(min_length=8, max_length=96, pattern=r"^[A-Za-z0-9_-]+$")
+    probe_id: str = Field(min_length=8, max_length=96, pattern=r"^[A-Za-z0-9_-]+$")
+
+
 @router.get("/arm")
 def synthetic_arm_report(
     token: TokenPayload = USER,
@@ -101,6 +116,191 @@ def synthetic_arm_report(
         "bind_snapshot": arm.bind_snapshot,
         "revalidate_state": arm.revalidate_state,
         "revalidate_governance": arm.revalidate_governance,
+    }
+
+
+@router.post("/synthetic-disclosure-cache-probe")
+def synthetic_disclosure_cache_probe(
+    request: SyntheticCacheProbeRequest,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, object]:
+    """Exercise an isolated Redis cache of one governed synthetic disclosure.
+
+    The cache contains only an opaque digest of the synthetic snapshot
+    coordinates.  The read phase is intentionally allowed after consent
+    revocation so the selected research arm determines whether a stale entry
+    is invalidated before reuse. No cache value is returned to the caller.
+    """
+
+    arm = _require_research_arm()
+    scope = _scope(db, token)
+    store = _research_cache_store()
+    _require_research_cache(store)
+    cache_key = _research_cache_key(profile_id=scope.profile.id, probe_id=request.probe_id)
+    cache_key_sha256 = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()
+    if request.phase == "seed":
+        ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+        snapshot = compile_thss(
+            db,
+            scope=scope,
+            task="govred-isolated-cache-probe",
+            purpose="self_care",
+            allowed_data_classes=frozenset({"medications"}),
+        )
+        opaque_value = hashlib.sha256(
+            json.dumps(
+                {
+                    "manifest_digest": snapshot.manifest_digest,
+                    "policy_version": snapshot.policy_version,
+                    "consent_version": snapshot.consent_version,
+                    "sentinel_sha256": hashlib.sha256(
+                        request.sentinel_id.encode("utf-8")
+                    ).hexdigest(),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest().encode("ascii")
+        if not store.set_bytes(cache_key, opaque_value, ttl_seconds=300):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={"code": "research_cache_write_failed"},
+            )
+        return {
+            "arm": arm.name,
+            "phase": "seed",
+            "cache_seeded": True,
+            "cache_key_sha256": cache_key_sha256,
+            "raw_cache_value_persisted": False,
+        }
+
+    revoked = False
+    try:
+        ensure_medical_disclaimer_consent(db, user_id=scope.profile.user_id)
+    except HTTPException as exc:
+        if exc.status_code != status.HTTP_428_PRECONDITION_REQUIRED:
+            raise
+        revoked = True
+    if not revoked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "governance_not_revoked"},
+        )
+    if arm.revalidate_governance:
+        store.delete(cache_key)
+    _require_research_cache(store)
+    cache_present = store.get_bytes(cache_key) is not None
+    return {
+        "arm": arm.name,
+        "phase": "read_after_revoke",
+        "governance_revoked": True,
+        "cache_present_after_revoke": cache_present,
+        "cache_key_sha256": cache_key_sha256,
+        "raw_cache_value_persisted": False,
+    }
+
+
+@router.get("/synthetic-audit-observation")
+def synthetic_audit_observation(
+    sentinel_id: str,
+    probe_id: str,
+    db: Session = Depends(get_db),
+    token: TokenPayload = USER,
+) -> dict[str, object]:
+    """Return a post-commit, payload-free reconstruction observation.
+
+    This endpoint is called through a separate HTTP request after admission, so
+    its SQLAlchemy session is independent from the original transition writer.
+    """
+
+    _require_research_arm()
+    scope = _scope(db, token)
+    proposal = db.execute(
+        select(GlhsAssertion).where(
+            GlhsAssertion.profile_id == scope.profile.id,
+            GlhsAssertion.semantic_key == _proposal_semantic_key(
+                sentinel_id=sentinel_id, probe_id=probe_id, label="target"
+            ),
+        )
+    ).scalar_one_or_none()
+    if proposal is None:
+        return {
+            "commit_found": False,
+            "transition_item_count": 0,
+            "state_version_recorded": False,
+            "snapshot_linkage_valid": False,
+            "audit_reconstruction_complete": False,
+            "reconstruction_status": "not_committed",
+        }
+    transitions = list(
+        db.execute(
+            select(GlhsTransition)
+            .join(GlhsTransitionItem, GlhsTransitionItem.transition_id == GlhsTransition.id)
+            .where(
+                GlhsTransition.profile_id == scope.profile.id,
+                GlhsTransitionItem.assertion_id == proposal.id,
+            )
+            .order_by(GlhsTransition.id)
+        ).scalars()
+    )
+    if len(transitions) != 1:
+        return {
+            "commit_found": False,
+            "transition_item_count": 0,
+            "state_version_recorded": False,
+            "snapshot_linkage_valid": False,
+            "audit_reconstruction_complete": False,
+            "reconstruction_status": "not_committed" if not transitions else "incomplete",
+        }
+    transition = transitions[0]
+    item_count = len(
+        list(
+            db.execute(
+                select(GlhsTransitionItem.id).where(
+                    GlhsTransitionItem.transition_id == transition.id,
+                    GlhsTransitionItem.assertion_id == proposal.id,
+                )
+            ).scalars()
+        )
+    )
+    state_version_recorded = db.execute(
+        select(GlhsStateVersion.id).where(
+            GlhsStateVersion.profile_id == scope.profile.id,
+            GlhsStateVersion.state_version == transition.resulting_state_version,
+        )
+    ).scalar_one_or_none() is not None
+    snapshot_linkage_valid = (
+        proposal.source_snapshot_id is not None
+        and proposal.source_snapshot_id == transition.source_snapshot_id
+        and proposal.source_snapshot_digest == transition.source_snapshot_digest
+    )
+    reconstruction_status = "not_applicable"
+    reconstructed = False
+    if proposal.source_snapshot_id is not None:
+        try:
+            reconstruct_governed_decision(
+                db,
+                profile_id=scope.profile.id,
+                snapshot_id=proposal.source_snapshot_id,
+                transition_id=transition.public_id,
+            )
+            reconstructed = True
+            reconstruction_status = "complete"
+        except GlhsInvariantError:
+            reconstruction_status = "incomplete"
+    return {
+        "commit_found": True,
+        "transition_item_count": item_count,
+        "state_version_recorded": state_version_recorded,
+        "snapshot_linkage_valid": snapshot_linkage_valid,
+        "audit_reconstruction_complete": (
+            item_count == 1
+            and state_version_recorded
+            and snapshot_linkage_valid
+            and reconstructed
+        ),
+        "reconstruction_status": reconstruction_status,
     }
 
 
@@ -130,6 +330,28 @@ def _scope(db: Session, token: TokenPayload) -> ProfileScope:
 
 def _proposal_semantic_key(*, sentinel_id: str, probe_id: str, label: str) -> str:
     return f"medication:govred-sentinel:{sentinel_id}:{probe_id}:{label}"
+
+
+def _research_cache_store() -> RedisSecurityStore:
+    """Construct the Redis adapter only for an already-gated research route."""
+
+    return RedisSecurityStore()
+
+
+def _research_cache_key(*, profile_id: int, probe_id: str) -> str:
+    # Keep the Redis key free of profile identifiers and sentinel text. The
+    # run-scoped security prefix lets the isolated observer inspect only this
+    # deployment's namespaced keys.
+    coordinate = hashlib.sha256(f"{profile_id}:{probe_id}".encode()).hexdigest()
+    return f"{get_settings().security_redis_key_prefix}:govred-research-cache:{coordinate}"
+
+
+def _require_research_cache(store: RedisSecurityStore) -> None:
+    if not store.available():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "research_cache_unavailable"},
+        )
 
 
 @dataclass(frozen=True)
@@ -265,7 +487,10 @@ def _apply_mutations(
             consent_version=required_medical_disclaimer_version(),
             revoked_at=datetime.now(UTC),
         ))
-        db.flush()
+        # The governance update is the explicit schedule mutation. Persist it
+        # independently so a rejected target admission cannot erase the state
+        # whose commit-time revalidation is being evaluated.
+        db.commit()
     if request.mutation == "snapshot_digest_invalid":
         if not arm.bind_snapshot:
             raise HTTPException(

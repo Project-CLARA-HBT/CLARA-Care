@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime
 
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+import clara_api.api.v1.endpoints.govred_research as govred_module
 from clara_api.api.v1.endpoints.govred_research import (
+    SyntheticCacheProbeRequest,
     SyntheticCommitProbeRequest,
+    synthetic_audit_observation,
     synthetic_commit_probe,
+    synthetic_disclosure_cache_probe,
 )
 from clara_api.core.consent import MEDICAL_CONSENT_TYPE, required_medical_disclaimer_version
 from clara_api.core.security import TokenPayload
@@ -50,6 +55,26 @@ def _token() -> TokenPayload:
 
 def _probe(mutation: str, sentinel: str, **kwargs) -> SyntheticCommitProbeRequest:
     return SyntheticCommitProbeRequest(mutation=mutation, sentinel_id=sentinel, **kwargs)
+
+
+class _MemoryCache:
+    def __init__(self) -> None:
+        self.values: dict[str, bytes] = {}
+
+    def available(self) -> bool:
+        return True
+
+    def set_bytes(self, key: str, value: bytes, *, ttl_seconds: int) -> bool:
+        assert ttl_seconds > 0
+        self.values[key] = value
+        return True
+
+    def get_bytes(self, key: str) -> bytes | None:
+        return self.values.get(key)
+
+    def delete(self, *keys: str) -> None:
+        for key in keys:
+            self.values.pop(key, None)
 
 
 def test_state_only_http_primitive_commits_after_synthetic_consent_revoke(
@@ -333,3 +358,91 @@ def test_commit_phase_requires_existing_proposal(
 
     assert raised.value.status_code == 404
     assert raised.value.detail == {"code": "proposal_not_found"}
+
+
+def test_strict_cache_probe_invalidates_after_persisted_revoke(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+    cache = _MemoryCache()
+    monkeypatch.setattr(govred_module, "_research_cache_store", lambda: cache)
+    request = SyntheticCacheProbeRequest(
+        phase="seed", sentinel_id="sentinel25", probe_id="cacheprobe25"
+    )
+
+    seeded = synthetic_disclosure_cache_probe(request, db, _token())
+    assert seeded["cache_seeded"] is True
+
+    owner = db.query(User).filter(User.email == "govred-http@example.test").one()
+    db.add(UserConsent(
+        user_id=owner.id,
+        consent_type=MEDICAL_CONSENT_TYPE,
+        consent_version=required_medical_disclaimer_version(),
+        revoked_at=datetime.now(UTC),
+    ))
+    db.commit()
+
+    observed = synthetic_disclosure_cache_probe(
+        SyntheticCacheProbeRequest(
+            phase="read_after_revoke", sentinel_id="sentinel25", probe_id="cacheprobe25"
+        ),
+        db,
+        _token(),
+    )
+    assert observed["governance_revoked"] is True
+    assert observed["cache_present_after_revoke"] is False
+
+
+def test_state_only_cache_probe_retains_entry_after_revoke(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "STATE_VERSION_ONLY")
+    cache = _MemoryCache()
+    monkeypatch.setattr(govred_module, "_research_cache_store", lambda: cache)
+    synthetic_disclosure_cache_probe(
+        SyntheticCacheProbeRequest(
+            phase="seed", sentinel_id="sentinel26", probe_id="cacheprobe26"
+        ),
+        db,
+        _token(),
+    )
+    owner = db.query(User).filter(User.email == "govred-http@example.test").one()
+    db.add(UserConsent(
+        user_id=owner.id,
+        consent_type=MEDICAL_CONSENT_TYPE,
+        consent_version=required_medical_disclaimer_version(),
+        revoked_at=datetime.now(UTC),
+    ))
+    db.commit()
+
+    observed = synthetic_disclosure_cache_probe(
+        SyntheticCacheProbeRequest(
+            phase="read_after_revoke", sentinel_id="sentinel26", probe_id="cacheprobe26"
+        ),
+        db,
+        _token(),
+    )
+    assert observed["cache_present_after_revoke"] is True
+
+
+def test_audit_observer_reconstructs_committed_snapshot_bound_transition(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+    committed = synthetic_commit_probe(_probe("none", "sentinel27"), db, _token())
+
+    observed = synthetic_audit_observation(
+        sentinel_id="sentinel27",
+        probe_id=committed["probe_id"],
+        db=db,
+        token=_token(),
+    )
+
+    assert observed == {
+        "commit_found": True,
+        "transition_item_count": 1,
+        "state_version_recorded": True,
+        "snapshot_linkage_valid": True,
+        "audit_reconstruction_complete": True,
+        "reconstruction_status": "complete",
+    }
