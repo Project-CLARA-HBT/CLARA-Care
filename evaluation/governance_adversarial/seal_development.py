@@ -25,6 +25,10 @@ _DEVELOPMENT_PROBE_CONTRACTS = {
         "govred-development-case-matrix-v1",
         "development_matrix_not_headline",
     ),
+    "cache_audit_probe.json": (
+        "govred-cache-audit-development-probe-v1",
+        "development_cache_audit_probe_not_headline",
+    ),
 }
 
 

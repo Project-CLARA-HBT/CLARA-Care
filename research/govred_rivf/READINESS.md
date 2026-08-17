@@ -152,3 +152,14 @@ families `NOT_RUN` rather than zero failures. This is development evidence
 only: it does not observe a governed cache/index route or independent complete
 audit reconstruction per logical case, is not a frozen manifest, and is not an
 RIVF attack-rate or superiority result.
+
+Development run `2026-08-17-rivf-dev020-cacheaudit` then exercised the new
+isolated-only governed-disclosure Redis cache and separate HTTP audit observer
+on `STATE_VERSION_ONLY` and `GLHS_STRICT`. After the same persisted synthetic
+consent revocation, the state-only arm retained an opaque cache entry and
+committed; the strict arm invalidated the entry and rejected admission. The
+post-commit observer correctly reported no complete reconstruction for the
+unbound state-only commit and `not_committed` for the strict rejection. This
+two-arm trace is sealed development evidence only. It neither provides the
+full four-arm cache study nor establishes audit completeness, a frozen
+complete-boundary run, or any headline RIVF outcome.
