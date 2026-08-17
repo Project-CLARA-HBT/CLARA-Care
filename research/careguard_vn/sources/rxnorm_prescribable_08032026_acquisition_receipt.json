@@ -1,0 +1,19 @@
+{
+  "schema_version": "careguard-vn.rxnorm-acquisition-receipt.v1",
+  "status": "FROZEN_ACQUIRED_CONTROLLED_MANIFEST_OUTSIDE_GIT",
+  "source_name": "RxNorm Current Prescribable Content",
+  "independence_role": "terminology",
+  "source_url": "https://download.nlm.nih.gov/rxnorm/RxNorm_full_prescribe_08032026.zip",
+  "release": "RxNorm_full_prescribe_08032026",
+  "published_md5": "5854a3cc9f4cbd214a70e67edb6a0625",
+  "payload_sha256": "ca90484736109dc1551dfdca3b4b9831fabdf8664a16dbbe7d8183e222d71000",
+  "rrf_record_count": 6183895,
+  "full_manifest_status": "validated_with_full_record_hash_inventory",
+  "full_manifest_retention": "artifacts/careguard-external/2026-08-17-rxnorm-prescribable-08032026/source_manifest_full_inventory.json",
+  "raw_archive_retention": "artifacts/careguard-external/2026-08-17-rxnorm-prescribable-08032026/RxNorm_full_prescribe_08032026.zip",
+  "redistribution_policy": "derived_only",
+  "non_claims": [
+    "This is terminology baseline evidence only, not a Vietnam product frame.",
+    "This is not a DDI reference, negative-label source, identity benchmark, or CareGuard-VN result."
+  ]
+}

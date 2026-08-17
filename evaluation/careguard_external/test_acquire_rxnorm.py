@@ -13,6 +13,7 @@ import evaluation.careguard_external.acquire_rxnorm as rxnorm
 from evaluation.careguard_external.acquire_rxnorm import (
     _archive_inventory,
     build_manifest,
+    manifest_from_retained_archive,
 )
 from evaluation.careguard_external.source_manifest import validate_source_manifest
 
@@ -97,3 +98,27 @@ def test_acquisition_writes_a_valid_manifest_only_after_md5_match(
     )
     assert manifest["row_count"] == 3
     assert validate_source_manifest(manifest_path)["payload_sha256"] == manifest["payload_sha256"]
+
+
+def test_retained_archive_requires_published_md5_before_manifest(tmp_path: Path) -> None:
+    archive = _archive(tmp_path / "retained.zip")
+    manifest_path = tmp_path / "manifest.json"
+
+    manifest = manifest_from_retained_archive(
+        archive_path=archive,
+        source_url="https://download.nlm.nih.gov/example.zip",
+        release="fixture",
+        expected_md5=hashlib.md5(archive.read_bytes()).hexdigest(),
+        manifest_path=manifest_path,
+    )
+
+    assert manifest["row_count"] == 3
+    assert validate_source_manifest(manifest_path)["archive_md5"] == manifest["archive_md5"]
+    with pytest.raises(ValueError, match="careguard_rxnorm_published_md5_mismatch"):
+        manifest_from_retained_archive(
+            archive_path=archive,
+            source_url="https://download.nlm.nih.gov/example.zip",
+            release="fixture",
+            expected_md5="a" * 32,
+            manifest_path=tmp_path / "invalid.json",
+        )
