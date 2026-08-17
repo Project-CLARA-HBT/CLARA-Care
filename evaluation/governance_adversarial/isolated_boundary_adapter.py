@@ -113,7 +113,7 @@ def _json_response(raw: bytes) -> dict[str, object]:
 
 def _identity(config: AdapterConfig) -> str:
     suffix = uuid4().hex
-    email = f"rivf-boundary-{suffix}@example.test"
+    email = f"rivf-boundary-{suffix}@example.org"
     password = f"Rivf{suffix[:16]}9"
     status, _, unavailable = _request(config, "/api/v1/auth/register", method="POST", body={
         "email": email, "password": password, "full_name": "Synthetic GovRed Boundary",

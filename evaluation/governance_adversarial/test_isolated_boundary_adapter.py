@@ -67,6 +67,30 @@ def test_adapter_runs_http_commit_and_writes_sanitized_hash_bound_artifacts(monk
     assert (tmp_path / result["arm_implementation_attestation"]["implementation_artifact_ref"]).is_file()
 
 
+def test_adapter_uses_valid_synthetic_email_domain(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _configure(monkeypatch, tmp_path)
+    registered: list[dict[str, object]] = []
+
+    def request(_config, path, *, method="GET", body=None, token=None):
+        if path.endswith("/register"):
+            assert body is not None and isinstance(body.get("email"), str)
+            registered.append(body)
+            return 200, b"{}", False
+        if path.endswith("/login"):
+            return 200, b'{"access_token":"token"}', False
+        if path.endswith("/arm"):
+            return 200, json.dumps({"arm": "GLHS_STRICT", "bind_snapshot": True, "revalidate_state": True, "revalidate_governance": True}).encode(), False
+        if "synthetic-audit-observation" in path:
+            return 200, b'{"audit_reconstruction_complete":true}', False
+        return 409, b'{"detail":{"code":"stale_state_version"}}', False
+
+    monkeypatch.setattr(adapter, "_request", request)
+    monkeypatch.setattr(adapter, "_snapshot", lambda _: {"postgres_sha256": "b" * 64, "redis_sha256": "c" * 64, "audit_sha256": "d" * 64})
+    adapter.adapter(case=_case(), arm=_arm())
+    email = str(registered[0]["email"])
+    assert email.endswith("@example.org")
+
+
 def test_adapter_marks_unsupported_cross_subject_read_as_not_run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _configure(monkeypatch, tmp_path)
     assert adapter.adapter(case=_case("cross_subject_retrieval"), arm=_arm()) == {"run_status": "NOT_RUN"}
