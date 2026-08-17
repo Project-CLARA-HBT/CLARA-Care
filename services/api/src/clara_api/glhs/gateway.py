@@ -745,7 +745,7 @@ def propose_assertion(
         estimated_time=data.estimated_time,
         asserted_by_user_id=actor_user_id,
         process_kind=data.process_kind,
-        policy_version=POLICY_VERSION,
+        policy_version=_effective_policy_version(),
         consent_version=_proposal_consent_version(db, profile_id=profile_id),
         source_snapshot_id=data.source_snapshot_id,
         source_snapshot_digest=data.source_snapshot_digest,
@@ -1034,7 +1034,7 @@ def apply_transition(
                         profile_id=scope.profile.id,
                         state_version=result_version,
                         valid_at=effective_at,
-                        policy_version=POLICY_VERSION,
+                        policy_version=_effective_policy_version(),
                     )
                 )
                 add_outbox(
@@ -1129,7 +1129,7 @@ def apply_transition(
             profile_id=scope.profile.id,
             state_version=result_version,
             valid_at=effective_at,
-            policy_version=POLICY_VERSION,
+            policy_version=_effective_policy_version(),
         )
     )
     add_outbox(
@@ -1367,7 +1367,7 @@ def compile_thss(
         "valid_time_cutoff": _as_utc(as_of).isoformat(),
         "knowledge_time_cutoff": _as_utc(known_at).isoformat(),
         "state_version": state_version,
-        "policy_version": POLICY_VERSION,
+        "policy_version": _effective_policy_version(),
         "consent_version": consent_version,
         "consent_basis": consent_basis,
         "actor_user_id": scope.actor.id,
@@ -1400,7 +1400,7 @@ def compile_thss(
         canonicalization_profile=CANONICALIZATION_PROFILE,
         valid_time_cutoff=as_of,
         knowledge_time_cutoff=known_at,
-        policy_version=POLICY_VERSION,
+        policy_version=_effective_policy_version(),
         consent_version=consent_version,
         consent_basis=consent_basis,
         assertion_hashes_json=assertion_hashes,
@@ -1422,7 +1422,7 @@ def compile_thss(
     return Snapshot(
         snapshot_id=manifest.public_id,
         state_version=state_version,
-        policy_version=POLICY_VERSION,
+        policy_version=_effective_policy_version(),
         consent_version=consent_version,
         task=task,
         purpose=purpose,

@@ -53,6 +53,9 @@ services:
       CLARA_GOVRED_ISOLATED_RESEARCH: "1"
       GOVRED_RESEARCH_PROJECT: ${RIVF_COMPOSE_PROJECT:?set_a_unique_rivf_project_name}
       GOVRED_RESEARCH_ARM: ${GOVRED_RESEARCH_ARM:-}
+      # A policy update is deployment-scoped in GLHS. This override is only
+      # honored by an explicitly attested isolated GovRed process.
+      GOVRED_RESEARCH_POLICY_VERSION: ${GOVRED_RESEARCH_POLICY_VERSION:-}
       API_UVICORN_WORKERS: "1"
     ports:
       - "127.0.0.1:${RIVF_API_PORT:?required}:8000"

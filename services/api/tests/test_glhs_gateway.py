@@ -155,6 +155,26 @@ def test_state_only_arm_commits_after_policy_update(
     assert transition.policy_version == "govred-synthetic-v2"
 
 
+def test_isolated_policy_override_versions_new_snapshots(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CLARA_GOVRED_ISOLATED_RESEARCH", "1")
+    monkeypatch.setenv("GOVRED_RESEARCH_ARM", "GLHS_STRICT")
+    monkeypatch.setenv("GOVRED_RESEARCH_PROJECT", "clara-rivf-unit")
+    monkeypatch.setenv("GOVRED_RESEARCH_POLICY_VERSION", "govred-synthetic-v2")
+    monkeypatch.setenv("ENV", "development")
+
+    snapshot = compile_thss(
+        db,
+        scope=_scope(db),
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+
+    assert snapshot.policy_version == "govred-synthetic-v2"
+
+
 def test_thss_pipeline_trace_rejects_reordered_or_incomplete_stages() -> None:
     trace = [
         {"stage": 1, "name": "authorization"},
