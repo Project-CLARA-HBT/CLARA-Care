@@ -438,6 +438,7 @@ def run_local_e2e(
     production_strict_context_builder: StrictContextBuilder | None = None,
     subject_splits: dict[str, str] | None = None,
     include_all_adversarial_variants: bool = False,
+    model_order: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     if not conditions or len(conditions) != len(set(conditions)):
         raise ValueError("benchmark_conditions_invalid")
@@ -682,7 +683,15 @@ def run_local_e2e(
     )
     budget_exhausted = generation_budget_exhausted
     pending: list[tuple[str, str, dict[str, Any], EvaluationClient]] = []
-    for model, client in clients.items():
+    ordered_models = (
+        tuple(model_order)
+        if model_order is not None
+        else tuple(clients.keys())
+    )
+    if not ordered_models or set(ordered_models) != set(clients):
+        raise ValueError("benchmark_model_order_invalid")
+    for model in ordered_models:
+        client = clients[model]
         for condition in conditions:
             for packet in packets_by_condition[condition]:
                 key = f"{model}:{condition}:{packet['case_id']}"

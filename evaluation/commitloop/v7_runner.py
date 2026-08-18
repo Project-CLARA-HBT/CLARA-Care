@@ -156,6 +156,7 @@ def run_v7_development_partition(
         production_strict_context_builder=compile_production_commitment_context,
         subject_splits=splits,
         include_all_adversarial_variants=True,
+        model_order=("gemini-3.6-flash-high", "claude-sonnet-4.6"),
     )
     # A non-final run must be reproducible from its own sealed directory while
     # never copying the withheld cohort rows into a development/validation
