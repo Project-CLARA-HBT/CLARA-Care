@@ -1,0 +1,3735 @@
+{
+  "aggregation_rule": {
+    "first_killing_seed": "first frozen-ordered seed with KILLED outcome",
+    "kill_fraction": "killed_executable_seeds / executable_seeds",
+    "primary": "detected_any_seed",
+    "robustness": "detected_all_seeds",
+    "seed_instability": "1 - kill_fraction when 0 < kill_fraction < 1 else 0",
+    "seeds_not_independent": "Hypothesis seeds are deterministic example streams, not independent replication; seed-level summaries never form an independent-N sample and mutation score is computed per mutant.",
+    "time_to_first_kill_ms": "runtime_ms of the first killing seed execution"
+  },
+  "freeze_id": "govmut-soict-2026-final-v2",
+  "infra_exclusions": {
+    "by_method": {
+      "M0_regression": [],
+      "M1_stateless_property": [],
+      "M2_state_machine": [],
+      "M3_combined": []
+    },
+    "note": "INFRASTRUCTURE_ERROR is never counted as killed or survived; mutants fully unexecutable for a method are excluded from that method's mutation-score denominator.",
+    "total": 0
+  },
+  "mutation_scores": {
+    "M0_regression": {
+      "denominator": 45,
+      "excluded_infra_mutants": 0,
+      "killed": 16,
+      "score": 0.35555555555555557
+    },
+    "M1_stateless_property": {
+      "denominator": 45,
+      "excluded_infra_mutants": 0,
+      "killed": 4,
+      "score": 0.08888888888888889
+    },
+    "M2_state_machine": {
+      "denominator": 45,
+      "excluded_infra_mutants": 0,
+      "killed": 6,
+      "score": 0.13333333333333333
+    },
+    "M3_combined": {
+      "denominator": 45,
+      "excluded_infra_mutants": 0,
+      "killed": 20,
+      "score": 0.4444444444444444
+    }
+  },
+  "outcome_counts": {
+    "INFRASTRUCTURE_ERROR": 0,
+    "KILLED": 161,
+    "SURVIVED": 559
+  },
+  "paired_method_comparisons": [
+    {
+      "a_only": 13,
+      "agreement": 0.6888888888888889,
+      "b_only": 1,
+      "both_detected": 3,
+      "mcnemar_exact_p": 0.0018310546875,
+      "method_a": "M0_regression",
+      "method_b": "M1_stateless_property",
+      "neither": 28,
+      "shared_mutants": 45
+    },
+    {
+      "a_only": 13,
+      "agreement": 0.6444444444444445,
+      "b_only": 3,
+      "both_detected": 3,
+      "mcnemar_exact_p": 0.021270751953125,
+      "method_a": "M0_regression",
+      "method_b": "M2_state_machine",
+      "neither": 26,
+      "shared_mutants": 45
+    },
+    {
+      "a_only": 0,
+      "agreement": 0.9111111111111111,
+      "b_only": 4,
+      "both_detected": 16,
+      "mcnemar_exact_p": 0.125,
+      "method_a": "M0_regression",
+      "method_b": "M3_combined",
+      "neither": 25,
+      "shared_mutants": 45
+    },
+    {
+      "a_only": 1,
+      "agreement": 0.9111111111111111,
+      "b_only": 3,
+      "both_detected": 3,
+      "mcnemar_exact_p": 0.625,
+      "method_a": "M1_stateless_property",
+      "method_b": "M2_state_machine",
+      "neither": 38,
+      "shared_mutants": 45
+    },
+    {
+      "a_only": 0,
+      "agreement": 0.6444444444444445,
+      "b_only": 16,
+      "both_detected": 4,
+      "mcnemar_exact_p": 3.0517578125e-05,
+      "method_a": "M1_stateless_property",
+      "method_b": "M3_combined",
+      "neither": 25,
+      "shared_mutants": 45
+    },
+    {
+      "a_only": 0,
+      "agreement": 0.6888888888888889,
+      "b_only": 14,
+      "both_detected": 6,
+      "mcnemar_exact_p": 0.0001220703125,
+      "method_a": "M2_state_machine",
+      "method_b": "M3_combined",
+      "neither": 25,
+      "shared_mutants": 45
+    }
+  ],
+  "per_mutant_method": {
+    "M01-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 23437.575
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 9781.189
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 23,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.8,
+        "seed_instability": 0.19999999999999996,
+        "time_to_first_kill_ms": 98213.908
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 29429.76
+      }
+    },
+    "M01-B": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 22873.151
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 27886.677
+      }
+    },
+    "M01-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M01-D": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M02-A": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 63086.188
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 93711.18
+      }
+    },
+    "M02-B": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 22056.19
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 29647.014
+      }
+    },
+    "M02-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M02-D": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 26334.232
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 37283.053
+      }
+    },
+    "M03-A": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 10993.615
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 32742.661
+      }
+    },
+    "M03-B": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 23,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.6,
+        "seed_instability": 0.4,
+        "time_to_first_kill_ms": 136005.66
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 23,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.6,
+        "seed_instability": 0.4,
+        "time_to_first_kill_ms": 157412.809
+      }
+    },
+    "M03-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M03-D": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M04-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 25451.424
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 29236.613
+      }
+    },
+    "M04-B": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M04-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M04-D": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M05-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 22063.578
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 27476.465
+      }
+    },
+    "M05-B": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 21269.818
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 26291.112
+      }
+    },
+    "M05-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M06-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 23062.689
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 26854.709
+      }
+    },
+    "M06-B": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M06-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M07-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 23390.295
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 27202.559
+      }
+    },
+    "M07-B": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 22317.001
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 27917.384
+      }
+    },
+    "M07-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M07-D": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 35866.131
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 57596.359
+      }
+    },
+    "M08-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 22558.995
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 27335.339
+      }
+    },
+    "M08-B": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M08-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M08-D": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M09-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 22482.918
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 29259.756
+      }
+    },
+    "M09-B": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M09-C": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 24268.871
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 10543.054
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 20009.088
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 48716.523
+      }
+    },
+    "M09-D": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M09-E": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M11-A": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 3654.821
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 28272.105
+      }
+    },
+    "M11-B": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M11-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M11-D": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M13-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 21657.551
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 23300.51
+      }
+    },
+    "M13-B": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M13-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M14-A": {
+      "M0_regression": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 18818.64
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 3355.682
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 84667.219
+      },
+      "M3_combined": {
+        "detected_all_seeds": 1,
+        "detected_any_seed": 1,
+        "executable_seed_count": 5,
+        "first_killing_seed": 17,
+        "infra_seed_count": 0,
+        "kill_fraction": 1.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": 131195.704
+      }
+    },
+    "M14-B": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    },
+    "M14-C": {
+      "M0_regression": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 1,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M1_stateless_property": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M2_state_machine": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      },
+      "M3_combined": {
+        "detected_all_seeds": 0,
+        "detected_any_seed": 0,
+        "executable_seed_count": 5,
+        "first_killing_seed": null,
+        "infra_seed_count": 0,
+        "kill_fraction": 0.0,
+        "seed_instability": 0.0,
+        "time_to_first_kill_ms": null
+      }
+    }
+  },
+  "robustness_scores": {
+    "M0_regression": {
+      "denominator": 45,
+      "robust": 16,
+      "score": 0.35555555555555557
+    },
+    "M1_stateless_property": {
+      "denominator": 45,
+      "robust": 4,
+      "score": 0.08888888888888889
+    },
+    "M2_state_machine": {
+      "denominator": 45,
+      "robust": 4,
+      "score": 0.08888888888888889
+    },
+    "M3_combined": {
+      "denominator": 45,
+      "robust": 19,
+      "score": 0.4222222222222222
+    }
+  },
+  "run_sha256": "c59768dced443bb9cde6ba78762b728522cc9f581e30556b008f4b054e7cb6ce",
+  "runtime_stats": {
+    "per_method": {
+      "M0_regression": {
+        "count": 45,
+        "mean_ms": 25372.787,
+        "median_ms": 22785.265,
+        "total_ms": 1141775.437
+      },
+      "M1_stateless_property": {
+        "count": 225,
+        "mean_ms": 4355.057,
+        "median_ms": 3742.347,
+        "total_ms": 979887.734
+      },
+      "M2_state_machine": {
+        "count": 225,
+        "mean_ms": 12118.605,
+        "median_ms": 4494.048,
+        "total_ms": 2726686.056
+      },
+      "M3_combined": {
+        "count": 225,
+        "mean_ms": 39617.25,
+        "median_ms": 28281.934,
+        "total_ms": 8913881.35
+      }
+    },
+    "time_to_first_kill_ms": {
+      "count": 46,
+      "mean_ms": 37760.604,
+      "median_ms": 26594.47
+    },
+    "total_executions": 720,
+    "total_runtime_ms": 13762230.577
+  },
+  "schema_version": "govmut-final-analysis.v1",
+  "status": "ANALYZED",
+  "stratification": {
+    "anchor": {
+      "    consent_version: str,\n) -> None:\n    if proposal.policy_version != COMMITMENT_POLICY_VERSION:\n        raise GlhsInvariantError(\"commitment_proposal_policy_mismatch\")": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "    existing = db.execute(\n        select(GlhsClinicalCommitmentTransition).where(\n            GlhsClinicalCommitmentTransition.profile_id == scope.profile.id,\n            GlhsClinicalCommitmentTransition.idempotency_key_hash == key_hash,\n        )\n    ).scalar_one_or_none()\n    if existing is not None:\n        if existing.request_digest != request_digest:\n            raise GlhsInvariantError(\"commitment_idempotency_reuse_mismatch\")\n        return cast(GlhsClinicalCommitmentTransition, existing)\n    if base != expected_state_version or proposal.base_state_version != base:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "    if existing is not None:\n        if existing.request_digest != request_digest:\n            raise GlhsInvariantError(\"commitment_idempotency_reuse_mismatch\")\n        return cast(GlhsClinicalCommitmentTransition, existing)\n    if base != expected_state_version or proposal.base_state_version != base:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "    if proposal.consent_version != current_consent_version:\n        raise GlhsInvariantError(\"commitment_proposal_consent_mismatch\")\n\n\ndef _validate_current_proposal_context": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "    if proposal.policy_version != COMMITMENT_POLICY_VERSION:\n        raise GlhsInvariantError(\"commitment_proposal_policy_mismatch\")\n    if proposal.consent_version != current_consent_version:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "    if scope.valid_until is not None and _as_utc(scope.valid_until) <= datetime.now(UTC):\n        raise GlhsInvariantError(\"snapshot_scope_expired\")": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "GlhsAssertion.lifecycle_status.in_(ACTIVE_LIFECYCLE_STATES),": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "def propose_bound_commitment_transition(\n    db: Session,\n    *,\n    scope: ProfileScope,\n    commitment: GlhsClinicalCommitment,\n    observed_evidence: tuple[GlhsEvidence, ...],\n    proposed_transition: str,\n    origin: str,\n    observed_base_state_version: int,\n    task: str,\n    source_snapshot_id: str,\n    source_snapshot_digest: str,\n    model_manifest_ref: str | None = None,\n) -> GlhsClinicalCommitmentProposal:\n    _require_live_scope(scope)\n    if commitment.profile_id != scope.profile.id:\n        raise GlhsInvariantError(\"commitment_scope_forbidden\")\n    if proposed_transition not in LIFECYCLE_STATES:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if _digest(assertion.value_json) != assertion.value_fingerprint:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if action == \"activate\" and revalidate_state and assertion.base_state_version != base_version:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if actor_role is not None and snapshot.actor_role != actor_role:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if actor_user_id is not None and snapshot.actor_user_id != actor_user_id:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if assertion.profile_id != scope.profile.id:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if base != expected_state_version or proposal.base_state_version != base:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if data.proposal_consumed_thss and data.source_snapshot_id is None:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if manifest_fingerprint != manifest.manifest_digest:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if not _assertion_evidence_ids(db, assertion_id=assertion.id):": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if not evidence or any(item.profile_id != scope.profile.id for item in evidence):": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if not evidence_rows:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json)):": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if not snapshot_id or not manifest_digest:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if observed_base_state_version != base_state_version:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if proposal.consent_version != consent_version:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if proposal.context_binding_mode != \"base_version_only\":\n        raise GlhsInvariantError(\"commitment_proposal_binding_mode_mismatch\")": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if proposal.context_binding_mode != \"snapshot_bound\":": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if proposal.purpose != scope.purpose:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if proposal.target_profile_public_id != scope.profile.public_id:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if purpose != scope.purpose:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if reconstructed_digest != manifest.snapshot_digest:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if require_unexpired and _as_utc(snapshot.expires_at) <= datetime.now(UTC):": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if revalidate_governance and assertion.consent_version != current_consent_version:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if revalidate_governance and assertion.policy_version != _effective_policy_version():": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if revalidate_state and base_version != expected_state_version:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if row.valid_to is None or row.valid_to >= valid_at": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 2,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 2,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 2,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 2,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 2
+      },
+      "if scope.actor_role not in policy.actor_roles:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if scope.valid_until is not None and _utc(scope.valid_until) <= datetime.now(UTC):": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 2,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 2,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 2,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 2,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 2
+      },
+      "if snapshot.consent_version != consent_version:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if snapshot.digest_algorithm != DIGEST_ALGORITHM:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if snapshot.policy_version != policy_version:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if snapshot.purpose != purpose:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if source is None or source.profile_id != profile_id:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "if source_snapshot_id is None:\n        if source_snapshot_digest is not None:": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      },
+      "key_hash = _idempotency_digest(idempotency_key)": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M1_stateless_property": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M2_state_machine": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          },
+          "M3_combined": {
+            "denominator": 1,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 1.0
+          }
+        },
+        "mutant_count": 1
+      }
+    },
+    "family_seed": {
+      "M01": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.5
+          },
+          "M1_stateless_property": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          },
+          "M2_state_machine": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          },
+          "M3_combined": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.5
+          }
+        },
+        "mutant_count": 4
+      },
+      "M02": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.5
+          },
+          "M1_stateless_property": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          },
+          "M3_combined": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 3,
+            "score": 0.75
+          }
+        },
+        "mutant_count": 4
+      },
+      "M03": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.5
+          },
+          "M3_combined": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.5
+          }
+        },
+        "mutant_count": 4
+      },
+      "M04": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          },
+          "M1_stateless_property": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          }
+        },
+        "mutant_count": 4
+      },
+      "M05": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.6666666666666666
+          },
+          "M1_stateless_property": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.6666666666666666
+          }
+        },
+        "mutant_count": 3
+      },
+      "M06": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.3333333333333333
+          },
+          "M1_stateless_property": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.3333333333333333
+          }
+        },
+        "mutant_count": 3
+      },
+      "M07": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 3,
+            "score": 0.75
+          },
+          "M1_stateless_property": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 3,
+            "score": 0.75
+          }
+        },
+        "mutant_count": 4
+      },
+      "M08": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          },
+          "M1_stateless_property": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          }
+        },
+        "mutant_count": 4
+      },
+      "M09": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 5,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.4
+          },
+          "M1_stateless_property": {
+            "denominator": 5,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.2
+          },
+          "M2_state_machine": {
+            "denominator": 5,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.2
+          },
+          "M3_combined": {
+            "denominator": 5,
+            "excluded_infra_mutants": 0,
+            "killed": 2,
+            "score": 0.4
+          }
+        },
+        "mutant_count": 5
+      },
+      "M11": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M1_stateless_property": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          },
+          "M2_state_machine": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 4,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.25
+          }
+        },
+        "mutant_count": 4
+      },
+      "M13": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.3333333333333333
+          },
+          "M1_stateless_property": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.3333333333333333
+          }
+        },
+        "mutant_count": 3
+      },
+      "M14": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.3333333333333333
+          },
+          "M1_stateless_property": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.3333333333333333
+          },
+          "M2_state_machine": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.3333333333333333
+          },
+          "M3_combined": {
+            "denominator": 3,
+            "excluded_infra_mutants": 0,
+            "killed": 1,
+            "score": 0.3333333333333333
+          }
+        },
+        "mutant_count": 3
+      }
+    },
+    "source_path": {
+      "services/api/src/clara_api/glhs/commitment_gateway.py": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 18,
+            "excluded_infra_mutants": 0,
+            "killed": 3,
+            "score": 0.16666666666666666
+          },
+          "M1_stateless_property": {
+            "denominator": 18,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M2_state_machine": {
+            "denominator": 18,
+            "excluded_infra_mutants": 0,
+            "killed": 0,
+            "score": 0.0
+          },
+          "M3_combined": {
+            "denominator": 18,
+            "excluded_infra_mutants": 0,
+            "killed": 3,
+            "score": 0.16666666666666666
+          }
+        },
+        "mutant_count": 18
+      },
+      "services/api/src/clara_api/glhs/gateway.py": {
+        "methods": {
+          "M0_regression": {
+            "denominator": 27,
+            "excluded_infra_mutants": 0,
+            "killed": 13,
+            "score": 0.48148148148148145
+          },
+          "M1_stateless_property": {
+            "denominator": 27,
+            "excluded_infra_mutants": 0,
+            "killed": 4,
+            "score": 0.14814814814814814
+          },
+          "M2_state_machine": {
+            "denominator": 27,
+            "excluded_infra_mutants": 0,
+            "killed": 6,
+            "score": 0.2222222222222222
+          },
+          "M3_combined": {
+            "denominator": 27,
+            "excluded_infra_mutants": 0,
+            "killed": 17,
+            "score": 0.6296296296296297
+          }
+        },
+        "mutant_count": 27
+      }
+    }
+  },
+  "unit_of_analysis": "controlled mutant"
+}

@@ -1,0 +1,13 @@
+{
+  "files": {
+    "govmut-soict-2026-final_analysis-v2": "e3ab1832c42be2a745ddae4ab960697143688302f78f6f4c08e82ef379278a67",
+    "govmut-soict-2026-final_run-v2": "c59768dced443bb9cde6ba78762b728522cc9f581e30556b008f4b054e7cb6ce",
+    "unmutated_preflight.json": "432bd2ab66b707fd3de01d0ef5ce2830e0501c10801c21c51321a04f62b97db0"
+  },
+  "freeze_id": "govmut-soict-2026-final-v2",
+  "run_sha256": "ac859ffc6f5eca7d3264720c4aee025b67a85b0273225d91121483cee4a41432",
+  "schema_version": "govmut-final-seal-artifact-inventory.v1",
+  "sealed_at": "2026-08-18T02:13:03.990577+00:00",
+  "status": "sealed",
+  "total_files": 3
+}

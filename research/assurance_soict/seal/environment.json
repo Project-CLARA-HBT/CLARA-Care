@@ -1,0 +1,18 @@
+{
+  "freeze_id": "govmut-soict-2026-final-v2",
+  "hypothesis_version": "6.163.0",
+  "limits": {
+    "hypothesis_max_examples": 1000,
+    "hypothesis_stateful_step_count": 100,
+    "pytest_timeout_seconds": 600
+  },
+  "python": {
+    "executable": "/home/nguyennt/Documents/CLARA-Care/services/api/.venv/bin/python",
+    "implementation": "cpython",
+    "version": "3.11.15 (main, Jul 18 2026, 17:02:49) [Clang 22.1.3 ]"
+  },
+  "schema_version": "govmut-final-seal-environment.v1",
+  "sealed_at": "2026-08-18T02:13:03.990577+00:00",
+  "source_sha": "7c963153c5ad4b62bc9eb58b5ad976b233a3631f",
+  "status": "sealed"
+}

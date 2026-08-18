@@ -1,0 +1,133 @@
+{
+  "results": [
+    {
+      "method": "M1_stateless_property",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 15598,
+      "seed": 17,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M1_stateless_property",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 15214,
+      "seed": 23,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M1_stateless_property",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 15129,
+      "seed": 41,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M1_stateless_property",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 15202,
+      "seed": 97,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M1_stateless_property",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 15082,
+      "seed": 271,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M2_state_machine",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 18897,
+      "seed": 17,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M2_state_machine",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 18982,
+      "seed": 23,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M2_state_machine",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 19000,
+      "seed": 41,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M2_state_machine",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 19311,
+      "seed": 97,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M2_state_machine",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 19646,
+      "seed": 271,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M0_regression",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 33774,
+      "seed": null,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M3_combined",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 33058,
+      "seed": 17,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M3_combined",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 28128,
+      "seed": 23,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M3_combined",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 30917,
+      "seed": 41,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M3_combined",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 29783,
+      "seed": 97,
+      "stderr_tail": ""
+    },
+    {
+      "method": "M3_combined",
+      "outcome": "PASS",
+      "returncode": 0,
+      "runtime_ms": 28497,
+      "seed": 271,
+      "stderr_tail": ""
+    }
+  ],
+  "status": "preflight_complete"
+}
