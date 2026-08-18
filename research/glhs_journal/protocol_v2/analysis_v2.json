@@ -1,0 +1,124 @@
+{
+  "committed": 1,
+  "executed_source_revision": "67e528b61512aabc201b344e54f9e3e724490e41",
+  "forbidden_commit_observed": 0,
+  "indeterminate_ordering": 0,
+  "operational_deadlock": 0,
+  "persisted_writer_coverage": [
+    "advance_governance_policy_epoch",
+    "consent_revoke",
+    "role_change"
+  ],
+  "rejected": 10,
+  "run_id": "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
+  "schedule_count": 12,
+  "schedule_rows": [
+    {
+      "classification": "rejected_after_observed_revoke_commit",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-01",
+      "outcome": "assertion_consent_mismatch",
+      "persisted_writers": [
+        "consent_revoke"
+      ]
+    },
+    {
+      "classification": "rejected_during_or_before_governance_race",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-02",
+      "outcome": "proposal_snapshot_actor_role_mismatch",
+      "persisted_writers": [
+        "role_change"
+      ]
+    },
+    {
+      "classification": "rejected_during_or_before_governance_race",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-03",
+      "outcome": "assertion_policy_mismatch",
+      "persisted_writers": [
+        "advance_governance_policy_epoch"
+      ]
+    },
+    {
+      "classification": "rejected_during_or_before_governance_race",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-04",
+      "outcome": "stale_state_version",
+      "persisted_writers": []
+    },
+    {
+      "classification": "rejected_after_or_during_governance_race",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-05",
+      "outcome": "proposal_snapshot_consent_mismatch",
+      "persisted_writers": [
+        "consent_revoke"
+      ]
+    },
+    {
+      "classification": "rejected_after_observed_revoke_commit",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-06",
+      "outcome": "assertion_consent_mismatch",
+      "persisted_writers": [
+        "consent_revoke"
+      ]
+    },
+    {
+      "classification": "transition_committed_before_observed_revoke_commit",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-07",
+      "outcome": "transition_committed",
+      "persisted_writers": [
+        "consent_revoke"
+      ]
+    },
+    {
+      "classification": "rejected_during_or_before_governance_race",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-08",
+      "outcome": "stale_state_version",
+      "persisted_writers": []
+    },
+    {
+      "classification": "rejected_during_or_before_governance_race",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-09",
+      "outcome": "proposal_snapshot_consent_mismatch",
+      "persisted_writers": [
+        "consent_revoke"
+      ]
+    },
+    {
+      "classification": "committed",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-10",
+      "outcome": "transition_committed",
+      "persisted_writers": []
+    },
+    {
+      "classification": "rejected_during_or_before_governance_race",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-11",
+      "outcome": "assertion_consent_mismatch",
+      "persisted_writers": [
+        "consent_revoke",
+        "role_change"
+      ]
+    },
+    {
+      "classification": "rejected_during_or_before_governance_race",
+      "forbidden_commit": false,
+      "id": "TOCTOU-V2-12",
+      "outcome": "assertion_policy_mismatch",
+      "persisted_writers": [
+        "advance_governance_policy_epoch",
+        "consent_revoke",
+        "role_change"
+      ]
+    }
+  ],
+  "schema_version": "glhs-postgres-governance-toctou-final-v2-analysis.v1",
+  "unit_of_analysis": "one frozen logical schedule; retries remain within schedule, never independent N"
+}
