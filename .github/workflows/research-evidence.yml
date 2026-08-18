@@ -1,0 +1,253 @@
+name: Research Evidence (W11 CI/release + reproducibility)
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-evidence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-status-consistency:
+    name: docs/status consistency (SEALED resolves)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Requires the full artifact tree (sealed artifacts are gitignored), so it
+    # only runs on manual dispatch from a host that carries them.
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/api/uv.lock
+
+      - name: Sync frozen API environment
+        run: |
+          cd services/api
+          python -m pip install --disable-pip-version-check "uv==0.8.22"
+          uv sync --frozen --extra dev --no-editable
+
+      - name: Run render_status validate mode
+        run: |
+          PYTHONPATH=services/api/src:. services/api/.venv/bin/python - <<'PY'
+          from pathlib import Path
+
+          from evaluation.evidence_program.render_status import build_status
+
+          root = Path(".")
+          if not (root / "artifacts").is_dir():
+              print(
+                  "SKIP: gitignored sealed artifacts are not present in this checkout; "
+                  "run on a host with the full artifact tree."
+              )
+              raise SystemExit(0)
+          try:
+              status = build_status(root)
+          except OSError as exc:
+              print(f"FAIL: could not build machine status from artifacts: {exc}")
+              raise SystemExit(1)
+
+          top = status["top_level"]
+          runs = status["runs"]
+          if top.get("sealed") and not all(
+              run.get("seal", {}).get("resolved") for run in runs.values()
+          ):
+              print("FAIL: top-level says SEALED without a resolvable seal")
+              raise SystemExit(1)
+
+          errors = status["validation"]["errors"]
+          for error in errors:
+              print("FAIL:", error)
+          if errors:
+              raise SystemExit(1)
+          print(
+              f"OK: top-level {top['status']}; seals resolve; "
+              f"validation errors = {len(errors)}"
+          )
+          PY
+
+  ruff:
+    name: ruff (services/api/src + evaluation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Non-blocking: lint signal without failing unrelated PRs.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/api/uv.lock
+
+      - name: Sync frozen API environment
+        run: |
+          cd services/api
+          python -m pip install --disable-pip-version-check "uv==0.8.22"
+          uv sync --frozen --extra dev --no-editable
+
+      - name: Run ruff (make lint scope on services/api/src + evaluation)
+        run: |
+          services/api/.venv/bin/ruff check services/api/src evaluation
+
+  focused-pytest:
+    name: focused pytest (evidence program)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Non-blocking: bounded evidence tests without failing unrelated PRs.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/api/uv.lock
+
+      - name: Sync frozen API environment
+        run: |
+          cd services/api
+          python -m pip install --disable-pip-version-check "uv==0.8.22"
+          uv sync --frozen --extra dev --no-editable
+
+      - name: Run focused pytest
+        run: |
+          PYTHONPATH=services/api/src:. services/api/.venv/bin/python -m pytest -q \
+            evaluation/evidence_program \
+            evaluation/model_adjudication \
+            evaluation/property_assurance \
+            evaluation/glhs_postgres_toctou \
+            evaluation/formal_governance
+
+  secret-scan:
+    name: secret-scan (research/ + evaluation/)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Non-blocking: security signal without failing unrelated PRs.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Scan committed files for router keys / plaintext passwords
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import subprocess
+
+          tracked = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+          files = [
+              pathlib.Path(path)
+              for path in tracked
+              if path.startswith(("research/", "evaluation/")) and pathlib.Path(path).is_file()
+          ]
+
+          placeholder = (
+              rb"(?:REPLACE_WITH|CHANGE_ME|YOUR_|EXAMPLE|example|DUMMY|dummy|"
+              rb"PLACEHOLDER|placeholder|REDACTED|not-?a-?|non-?login|non_?login|"
+              rb"<[^>]{1,40}>|benchmark|fixture)"
+          )
+          patterns = {
+              "router_api_key": re.compile(rb"(?<![A-Za-z0-9])sk-[A-Za-z0-9]{20,}"),
+              "sshpass": re.compile(rb"sshpass\b"),
+              "env_password": re.compile(
+                  rb"(?:^|[^A-Za-z])(?:PASSWORD|POSTGRES_PASSWORD|DB_PASSWORD|"
+                  rb"REDIS_PASSWORD)\s*=\s*(?!\s*"
+                  + placeholder
+                  + rb")[^\s'\";#]{6,}"
+              ),
+              "inline_password": re.compile(
+                  rb"(?<!hashed_)(?<!non_)(?<!fake)password\s*[:=]\s*['\"]"
+                  rb"(?!\s*" + placeholder + rb")[^'\"]{6,}['\"]"
+              ),
+          }
+
+          findings = []
+          for path in files:
+              raw = path.read_bytes()
+              if b"\x00" in raw:
+                  continue
+              for name, pattern in patterns.items():
+                  if pattern.search(raw):
+                      findings.append(f"{path} ({name})")
+          if findings:
+              raise SystemExit("secret_scan_failed:" + ",".join(sorted(findings)))
+          print(f"secret_scan_passed ({len(files)} tracked files under research/ and evaluation/)")
+          PY
+
+  govmut-preflight:
+    name: govmut unmutated baseline preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Evidence gate over the sealed preflight record; manual-dispatch only so it
+    # never blocks unrelated PRs.
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Assert no baseline failures recorded
+        run: |
+          python3 - <<'PY'
+          import json
+          import pathlib
+
+          path = pathlib.Path("research/assurance_soict/unmutated_preflight.json")
+          preflight = json.loads(path.read_text())
+          if preflight.get("status") != "preflight_complete":
+              raise SystemExit(f"unmutated preflight status = {preflight.get('status')!r}")
+          failed = [r.get("method") for r in preflight.get("results", []) if r.get("outcome") != "PASS"]
+          if failed:
+              raise SystemExit("govmut_preflight_baseline_failures:" + ",".join(sorted(failed)))
+          print(f"govmut_preflight_passed ({len(preflight.get('results', []))} slots, all PASS)")
+          PY
+
+  artifact-schema:
+    name: artifact minimal schema (schema_version + status)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Non-blocking: schema signal on committed artifacts without failing PRs.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Validate minimal schema over result + protocol_v2 JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          import pathlib
+
+          files = sorted(
+              list(pathlib.Path("research").glob("*/results/*.json"))
+              + list(pathlib.Path("research/glhs_journal/protocol_v2").glob("*.json"))
+          )
+          # Seal inventories (artifact-sha256.json) are hash manifests, not
+          # result/protocol artifacts, and are not subject to the minimal schema.
+          files = [path for path in files if path.name != "artifact-sha256.json"]
+          violations = []
+          for path in files:
+              value = json.loads(path.read_text())
+              missing = [key for key in ("schema_version", "status") if key not in value]
+              if missing:
+                  violations.append(f"{path} missing {','.join(missing)}")
+          if violations:
+              raise SystemExit("artifact_schema_violations:\n" + "\n".join(violations))
+          print(f"artifact_schema_passed ({len(files)} JSON artifacts declare schema_version + status)")
+          PY
