@@ -1,0 +1,19 @@
+{
+  "api_key_retained": false,
+  "conditions": [
+    "thss_strict",
+    "thss_bound",
+    "state_only",
+    "unbound"
+  ],
+  "models": [
+    "gemini-3.6-flash-high",
+    "claude-sonnet-4-6"
+  ],
+  "raw_model_text_retained": false,
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "row_count": 48,
+  "schema_version": "clara-utility-grid-v2.v1",
+  "status": "completed",
+  "task_count": 6
+}

@@ -36,3 +36,19 @@ honest self-assessment; every box reflects actual sealed artifacts, not aspirati
 
 CareGuard-VN: PAUSED_BY_OPERATOR.
 No DAV crawl or CareGuard source acquisition was performed by this evidence-upgrade program.
+
+
+## W6 utility grid (completed with router)
+
+Source-disjoint synthetic structural grid, 6 tasks x 4 conditions x 2 locked models = 48 calls, 0 errors, subject/task-level scoring.
+
+| condition | correct |
+|---|---|
+| thss_strict | 11/12 = 0.92 |
+| thss_bound | 12/12 = 1.00 |
+| state_only | 11/12 = 0.92 |
+| unbound | 9/12 = 0.75 |
+
+Models: gemini-3.6-flash-high 23/24=0.96, claude-sonnet-4-6 20/24=0.83. Context conditions differ by ACTUAL bytes (AUD-050 fixed); raw model text not retained; key never written.
+
+W6 gate boxes now: >=2 model families PASS; actual condition-specific context artifacts PASS; subject-level analysis PASS; safety-gain-without-utility-noninferiority PARTIAL (context improves correctness vs unbound but this is a small synthetic set; formal noninferiority margins not yet applied at scale).

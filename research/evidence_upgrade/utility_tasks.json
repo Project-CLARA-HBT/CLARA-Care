@@ -1,0 +1,91 @@
+{
+  "cohort": "source-disjoint synthetic structural cases; no overlap with the historical 64-subject study",
+  "schema_version": "clara-utility-grid-v2-tasks.v1",
+  "tasks": [
+    {
+      "consent_version": "c3",
+      "expected_state": "v7",
+      "governed_disclosure_block": "Record A. Event E0 at v6 (state s6). Event E1 at v7 (state s7, supersedes E0). Current state = s7. Consent c3 active. Policy p2 active.",
+      "policy_version": "p2",
+      "scenario": "Synthetic record A: two events, later event supersedes. Return the current state version.",
+      "source_ids": [
+        "evidence:e0",
+        "evidence:e1"
+      ],
+      "state_version": "v7",
+      "task_id": "struct-001",
+      "task_kind": "state"
+    },
+    {
+      "consent_version": "c1",
+      "expected_decision": "rejected",
+      "expected_state": "v3",
+      "governed_disclosure_block": "Record B. Snapshot at v3 with consent c1. Consent c1 later revoked. Current consent state: revoked.",
+      "policy_version": "p1",
+      "scenario": "Synthetic record B: consent revoked after disclosure. Return whether a bound commit is authorized.",
+      "source_ids": [
+        "evidence:e2"
+      ],
+      "state_version": "v3",
+      "task_id": "struct-002",
+      "task_kind": "auth"
+    },
+    {
+      "consent_version": "c2",
+      "expected_decision": "rejected",
+      "expected_state": "v5",
+      "governed_disclosure_block": "Record C. Snapshot at v5 under policy p1. Policy advanced to p2. Current policy p2. Commit requires current policy.",
+      "policy_version": "p1",
+      "scenario": "Synthetic record C: policy advanced after snapshot. Return whether a bound commit is authorized.",
+      "source_ids": [
+        "evidence:e3",
+        "evidence:e4"
+      ],
+      "state_version": "v5",
+      "task_id": "struct-003",
+      "task_kind": "auth"
+    },
+    {
+      "consent_version": "c4",
+      "expected_decision": "rejected",
+      "expected_state": "v2",
+      "governed_disclosure_block": "Record D. Snapshot at v2. State advanced to v3. Bound commit requires base state v2 to still be current.",
+      "policy_version": "p3",
+      "scenario": "Synthetic record D: state advanced after snapshot. Return whether a bound commit is authorized.",
+      "source_ids": [
+        "evidence:e5"
+      ],
+      "state_version": "v2",
+      "task_id": "struct-004",
+      "task_kind": "auth"
+    },
+    {
+      "consent_version": "c5",
+      "expected_decision": "committed",
+      "expected_state": "v4",
+      "governed_disclosure_block": "Record E. Snapshot at v4. State v4, consent c5, policy p4 all current. No drift.",
+      "policy_version": "p4",
+      "scenario": "Synthetic record E: no drift, all coordinates current. Return whether a bound commit is authorized.",
+      "source_ids": [
+        "evidence:e6"
+      ],
+      "state_version": "v4",
+      "task_id": "struct-005",
+      "task_kind": "auth"
+    },
+    {
+      "consent_version": "c6",
+      "expected_decision": "rejected",
+      "expected_state": "v1",
+      "governed_disclosure_block": "Record F. Snapshot at v1 expired at time T. Current time after T.",
+      "policy_version": "p5",
+      "scenario": "Synthetic record F: snapshot expired. Return whether a bound commit is authorized.",
+      "source_ids": [
+        "evidence:e7"
+      ],
+      "state_version": "v1",
+      "task_id": "struct-006",
+      "task_kind": "auth"
+    }
+  ]
+}
