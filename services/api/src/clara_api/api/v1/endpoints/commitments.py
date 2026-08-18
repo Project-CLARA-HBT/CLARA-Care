@@ -74,6 +74,7 @@ class TransitionRequest(_Strict):
     evidence_state: str = "CLEAR"
     timeliness_state: str = "UNKNOWN"
     dependencies: list[str] = Field(default_factory=list, max_length=64)
+    state_effective_at: datetime | None = None
     earliest_valid_time: datetime | None = None
     due_time: datetime | None = None
     grace_end: datetime | None = None
@@ -88,6 +89,7 @@ class TransitionRequest(_Strict):
     @field_validator(
         "anchor_valid_time",
         "anchor_known_time",
+        "state_effective_at",
         "earliest_valid_time",
         "due_time",
         "grace_end",
@@ -294,6 +296,7 @@ def apply_transition(
                 evidence_state=request.evidence_state,
                 timeliness_state=request.timeliness_state,
                 dependencies=tuple(request.dependencies),
+                state_effective_at=request.state_effective_at,
                 earliest_valid_time=request.earliest_valid_time,
                 due_time=request.due_time,
                 grace_end=request.grace_end,

@@ -10,6 +10,7 @@ import math
 from datetime import UTC, datetime
 from typing import Any
 
+from clara_api.glhs.canonical_json import consistency_fingerprint
 from clara_api.glhs.domain import GlhsInvariantError
 
 DSL_VERSION = "commitloop-predicate.v1"
@@ -28,6 +29,11 @@ _EVENT_FIELDS = frozenset(
         "semantic_key",
     }
 )
+# Additive provenance metadata: ``derive_lifecycle_predicates`` stamps event
+# predicates with {"derived_from_policy": domain}.  It never participates in
+# evaluation; it is preserved so stored derived predicates remain re-validatable
+# and auditable.  Behavior for every pre-existing predicate is unchanged.
+_METADATA_FIELDS = frozenset({"derived_from_policy"})
 _NUMERIC_FIELDS = frozenset({"numeric_value", "quantity_value"})
 _COMPARATORS = frozenset({"lt", "lte", "eq", "gte", "gt"})
 _AUTHORITY_RANK = {
@@ -110,9 +116,13 @@ def validate_predicate(predicate: object, *, depth: int = 0) -> dict[str, Any]:
                 "not_before",
                 "not_after",
                 "known_before",
+                *_METADATA_FIELDS,
             }
         ),
     )
+    marker = predicate.get("derived_from_policy")
+    if marker is not None and (not isinstance(marker, str) or not marker):
+        raise GlhsInvariantError("invalid_predicate_fields")
     fields = predicate.get("equals", {})
     if not isinstance(fields, dict) or set(fields) - _EVENT_FIELDS:
         raise GlhsInvariantError("invalid_predicate_event_fields")
@@ -174,22 +184,66 @@ def validate_predicate(predicate: object, *, depth: int = 0) -> dict[str, Any]:
     if "not_before" in result and "not_after" in result:
         if _at(result["not_before"]) > _at(result["not_after"]):
             raise GlhsInvariantError("invalid_predicate_time_window")
+    if marker is not None:
+        result["derived_from_policy"] = marker
     return result
 
 
-def evaluate_predicate(predicate: object, events: list[dict[str, Any]]) -> bool:
-    """Evaluate only validated event dictionaries; input ordering is irrelevant."""
+def _sortable_time(value: object) -> datetime | None:
+    """Normalize a valid_at for deterministic scan ordering."""
+    if isinstance(value, datetime):
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+        return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
+    return None
 
-    value = validate_predicate(predicate)
-    unique_events = []
-    seen_ids = set()
-    for event in events:
+
+def match_predicate(predicate: object, events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Match a validated predicate and report the decisive evidence, bounded.
+
+    Returns ``{"matched", "matched_event_ids", "decisive_event",
+    "predicate_digest"}``:
+
+    * ``matched`` - whether the predicate holds over ``events``.
+    * ``matched_event_ids`` - the evidence ids the predicate consumed, in
+      deterministic ``(valid_at, evidence_id)`` scan order.
+    * ``decisive_event`` - ``{"evidence_id", "valid_at", "known_at"}`` of the
+      event at which the predicate first becomes satisfied when events are
+      scanned in ``(valid_at, evidence_id)`` order; ``None`` when the predicate
+      holds with no event (e.g. ``not``).
+    * ``predicate_digest`` - sha-256 hex of the canonical validated predicate.
+
+    Evaluation semantics are identical to ``evaluate_predicate`` (order
+    invariant; duplicates by ``evidence_id`` are idempotent); only the
+    matched/decisive reporting is new.
+    """
+
+    validated = validate_predicate(predicate)
+    unique = []
+    seen: set[str] = set()
+    for event in sorted(
+        events,
+        key=lambda item: (
+            _sortable_time(item.get("valid_at")) or datetime.max.replace(tzinfo=UTC),
+            str(item.get("evidence_id", "")),
+        ),
+    ):
         evidence_id = event.get("evidence_id")
         if isinstance(evidence_id, str):
-            if evidence_id in seen_ids:
+            if evidence_id in seen:
                 continue
-            seen_ids.add(evidence_id)
-        unique_events.append(event)
+            seen.add(evidence_id)
+        unique.append(event)
+
+    def scan_index(event: dict[str, Any]) -> tuple[datetime, str]:
+        return (
+            _sortable_time(event.get("valid_at")) or datetime.max.replace(tzinfo=UTC),
+            str(event.get("evidence_id", "")),
+        )
 
     def matches(node: dict[str, Any], event: dict[str, Any]) -> bool:
         if not all(
@@ -234,16 +288,63 @@ def evaluate_predicate(predicate: object, events: list[dict[str, Any]]) -> bool:
             isinstance(known_at, str) and _at(known_at) <= _at(node["known_before"])
         )
 
-    def evaluate(node: dict[str, Any]) -> bool:
-        if node["op"] == "all":
-            return all(evaluate(child) for child in node["children"])
-        if node["op"] == "any":
-            return any(evaluate(child) for child in node["children"])
+    def consume(node: dict[str, Any]) -> tuple[bool, list[dict[str, Any]], dict[str, Any] | None]:
+        """Return (matched, consumed events in scan order, decisive event)."""
+        if node["op"] in {"all", "any"}:
+            results = [consume(child) for child in node["children"]]
+            matched = all(item[0] for item in results) if node["op"] == "all" else any(
+                item[0] for item in results
+            )
+            matched_results = [item for item in results if item[0]]
+            consumed = [
+                event
+                for event in unique
+                if any(event in item[1] for item in matched_results)
+            ]
+            decisive = None
+            if consumed:
+                if node["op"] == "any" and any(item[2] is None for item in matched_results):
+                    decisive = None
+                elif node["op"] == "all":
+                    decisive = max(consumed, key=scan_index)
+                else:
+                    decisive = min(consumed, key=scan_index)
+            return matched, consumed, decisive
         if node["op"] == "not":
-            return not evaluate(node["child"])
+            return not consume(node["child"])[0], [], None
         if node["op"] == "count":
-            count = sum(matches(node["where"], event) for event in unique_events)
-            return count >= node["min"] and ("max" not in node or count <= node["max"])
-        return any(matches(node, event) for event in unique_events)
+            matching = [event for event in unique if matches(node["where"], event)]
+            minimum = node["min"]
+            maximum = node.get("max")
+            matched = len(matching) >= minimum and (
+                maximum is None or len(matching) <= maximum
+            )
+            if not matched:
+                return False, [], None
+            consumed = matching[:minimum]
+            return True, consumed, consumed[-1]
+        for event in unique:
+            if matches(node, event):
+                return True, [event], event
+        return False, [], None
 
-    return evaluate(value)
+    matched, consumed, decisive = consume(validated)
+    decisive_event = None
+    if decisive is not None:
+        decisive_event = {
+            "evidence_id": str(decisive.get("evidence_id", "")),
+            "valid_at": decisive.get("valid_at"),
+            "known_at": decisive.get("known_at"),
+        }
+    return {
+        "matched": matched,
+        "matched_event_ids": [str(event.get("evidence_id")) for event in consumed],
+        "decisive_event": decisive_event,
+        "predicate_digest": consistency_fingerprint(validated),
+    }
+
+
+def evaluate_predicate(predicate: object, events: list[dict[str, Any]]) -> bool:
+    """Evaluate only validated event dictionaries; input ordering is irrelevant."""
+
+    return match_predicate(predicate, events)["matched"]

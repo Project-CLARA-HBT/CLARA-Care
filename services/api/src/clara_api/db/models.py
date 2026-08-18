@@ -2378,6 +2378,9 @@ class GlhsClinicalCommitmentVersion(Base):
     abstention_rules_json: Mapped[dict] = mapped_column(JSON, default=dict)
     anchor_valid_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     anchor_known_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    state_effective_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     earliest_valid_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

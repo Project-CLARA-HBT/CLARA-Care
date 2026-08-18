@@ -40,6 +40,7 @@ from clara_api.glhs.canonical_json import (
     fingerprint_for_profile,
     legacy_consistency_fingerprint,
 )
+from clara_api.glhs.commitment_projection import AbstentionDecision
 from clara_api.glhs.domain import (
     ACTIVE_LIFECYCLE_STATES,
     EPISTEMIC_STATES,
@@ -1202,6 +1203,13 @@ def compile_thss(
     The caller must already have proven actor/profile/grant permissions through
     ``resolve_profile_scope``.  This compiler intersects, rather than expands,
     the granted data classes at use time and persists an opaque audit manifest.
+
+    Expiry (P11) is bounded by the authorization scope:
+    ``expires_at = min(now + expires_in, scope.valid_until)`` when
+    ``scope.valid_until`` is set; an already-expired scope is rejected with
+    ``snapshot_scope_expired`` before any state query.  The ``risk`` decision
+    uses the shared ``AbstentionDecision`` vocabulary (P10), byte-identical to
+    commitment THSS ``sufficiency["decision"]``.
     """
 
     if purpose != scope.purpose:
@@ -1268,6 +1276,8 @@ def compile_thss(
     )
     consent_basis = _consent_basis(purpose=purpose, consent_version=consent_version)
     expires_at = datetime.now(UTC) + expires_in
+    if scope.valid_until is not None:
+        expires_at = min(expires_at, _as_utc(scope.valid_until))
     evidence_map: dict[int, list[int]] = {
         row.id: _assertion_evidence_ids(db, assertion_id=row.id) for row in selected
     }
@@ -1334,7 +1344,9 @@ def compile_thss(
         "conflict": {"open_conflict_ids": critical_conflicts},
         "escalation_reasons": escalation_reasons,
         "decision": (
-            "ABSTAIN_ESCALATE" if selection_policy == "risk_aware" and critical_issue else "USABLE"
+            AbstentionDecision.ABSTAIN_ESCALATE.value
+            if selection_policy == "risk_aware" and critical_issue
+            else AbstentionDecision.USABLE.value
         ),
         "escalation_required": selection_policy == "risk_aware" and critical_issue,
     }

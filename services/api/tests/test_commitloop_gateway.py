@@ -435,6 +435,59 @@ def test_snapshot_binding_rejects_each_changed_context_coordinate(db: Session) -
     )
 
 
+def test_open_derives_missing_fulfillment_predicate_from_policy(db: Session) -> None:
+    """P4: a lifecycle predicate missing at creation is derived from the frozen
+    domain policy and stamped with the derived_from_policy marker."""
+
+    scope = _scope(db)
+    at = datetime(2026, 1, 1, tzinfo=UTC)
+    evidence = _evidence(db, scope, at, label="derived-predicate")
+    commitment = get_or_create_commitment(
+        db,
+        scope=scope,
+        semantic_key="observation:derived",
+        domain="observations",
+        supersession_key="observation:derived",
+    )
+    proposal = propose_bound_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=(evidence,),
+        proposed_transition="OPEN",
+        origin="user",
+        **_snapshot_binding(db, scope, evidence, at),
+    )
+    transition = apply_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        proposal=proposal,
+        evidence=(evidence,),
+        data=replace(_version(at), fulfillment_predicate=None),
+        expected_state_version=0,
+        idempotency_key="derived-fulfillment",
+        transition_kind="commitment_opened",
+        reason_code="derived_predicate_fixture",
+    )
+    version = db.get(GlhsClinicalCommitmentVersion, transition.result_version_id)
+    assert version is not None
+    derived = version.fulfillment_predicate_json
+    assert derived is not None
+    assert derived["derived_from_policy"] == "observations"
+    assert derived["equals"]["resource_type"] == "Observation"
+    assert derived["equals"]["system"] == "http://loinc.org"
+    assert derived["equals"]["code"] == "example"
+    reconstructed = reconstruct_commitments(
+        db,
+        profile_id=scope.profile.id,
+        valid_at=at + timedelta(days=1),
+        known_at=datetime.now(UTC) + timedelta(seconds=1),
+    )
+    assert reconstructed[0]["state_effective_at"] is not None
+    assert reconstructed[0]["fulfillment_predicate"]["derived_from_policy"] == "observations"
+
+
 def test_model_and_stale_proposals_cannot_commit(db: Session) -> None:
     scope = _scope(db)
     at = datetime(2026, 1, 1, tzinfo=UTC)
@@ -729,7 +782,9 @@ def test_commitment_thss_is_versioned_and_abstains_on_conflict(db: Session) -> N
         exclusion["commitment_id"] for exclusion in snapshot.exclusions
     }
     assert snapshot.authority["authority_classes"] == ["patient_report"]
-    assert snapshot.critical_fact_coverage["covered_domains"] == ["observations"]
+    assert snapshot.critical_fact_coverage["target"]["note"] == "target_not_specified"
+    assert snapshot.critical_fact_coverage["anchor"]["covered"] is True
+    assert snapshot.critical_fact_coverage["minimum_evidence"]["covered"] is True
     assert snapshot.snapshot_digest
 
 

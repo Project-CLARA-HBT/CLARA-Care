@@ -110,6 +110,82 @@ def policy_for(domain: str) -> CommitmentDomainPolicy:
         raise GlhsInvariantError("commitment_domain_forbidden") from exc
 
 
+# Frozen action -> FHIR resource_type mapping used to derive lifecycle
+# predicates from the domain policy (P4).  Code-owned; an unmapped action
+# simply cannot derive a predicate and keeps today's required-predicate error.
+_ACTION_RESOURCE_TYPES: Mapping[str, Mapping[str, str]] = {
+    "medications": {
+        "take_medication": "MedicationStatement",
+        "refill_medication": "MedicationRequest",
+        "medication_review": "MedicationStatement",
+    },
+    "allergies": {
+        "avoid_substance": "AllergyIntolerance",
+        "verify_allergy": "AllergyIntolerance",
+        "update_allergy_status": "AllergyIntolerance",
+    },
+    "conditions": {
+        "follow_up_condition": "Condition",
+        "monitor_condition": "Observation",
+        "review_condition": "Condition",
+    },
+    "observations": {
+        "repeat_measurement": "Observation",
+        "complete_service_request": "ServiceRequest",
+        "monitor_observation": "Observation",
+    },
+}
+
+
+def derive_lifecycle_predicates(
+    policy: CommitmentDomainPolicy,
+    *,
+    action: str,
+    target: dict[str, object],
+    due_time: datetime | None,
+) -> dict[str, dict[str, object]]:
+    """Derive lifecycle predicates from the frozen domain policy (P4).
+
+    Returns a mapping of predicate name to a bounded ``event`` predicate whose
+    ``equals`` fields are taken from the action/domain mapping and the target
+    (``system``/``code``) where sensible, stamped with the provenance marker
+    ``{"derived_from_policy": <domain>}``.  The marker is preserved by the
+    predicate DSL validator and never participates in evaluation.
+
+    ``due_time`` is reserved for policy-bounded time windows; current policies
+    derive none.  When no derivation is possible for a lifecycle, callers keep
+    today's ``commitment_<predicate>_predicate_required`` invariant.
+    """
+
+    resource_type = _ACTION_RESOURCE_TYPES.get(policy.domain, {}).get(action)
+    if resource_type is None:
+        return {}
+    equals: dict[str, object] = {"resource_type": resource_type}
+    for field in ("system", "code"):
+        value = target.get(field) if isinstance(target, Mapping) else None
+        if isinstance(value, str) and value:
+            equals[field] = value
+    marker: dict[str, object] = {"derived_from_policy": policy.domain}
+    return {
+        "fulfillment": {"op": "event", "equals": dict(equals), **marker},
+        "partial": {
+            "op": "event",
+            "equals": {**equals, "status": "preliminary"},
+            **marker,
+        },
+        "cancellation": {
+            "op": "event",
+            "equals": {**equals, "status": "cancelled"},
+            **marker,
+        },
+        "supersession": {
+            "op": "event",
+            "equals": {**equals, "status": "superseded"},
+            **marker,
+        },
+    }
+
+
 def validate_domain_version(
     *,
     policy: CommitmentDomainPolicy,

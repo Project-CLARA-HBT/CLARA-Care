@@ -23,6 +23,7 @@ from clara_api.db.models import (
 from clara_api.glhs.canonical_json import consistency_fingerprint
 from clara_api.glhs.commitments import (
     COMMITMENT_SCHEMA_VERSION,
+    derive_lifecycle_predicates,
     policy_for,
     validate_domain_version,
 )
@@ -216,6 +217,7 @@ class CommitmentVersionInput:
     evidence_state: str = "CLEAR"
     timeliness_state: str = "UNKNOWN"
     dependencies: tuple[str, ...] = ()
+    state_effective_at: datetime | None = None
     earliest_valid_time: datetime | None = None
     due_time: datetime | None = None
     grace_end: datetime | None = None
@@ -592,6 +594,21 @@ def apply_commitment_transition(
         .limit(1)
     ).scalar_one_or_none()
     policy = policy_for(commitment.domain)
+    # P4: lifecycle predicates complete at creation.  When a lifecycle requires
+    # a predicate the caller did not supply, derive it from the frozen domain
+    # policy (stamped with the {"derived_from_policy": domain} marker) BEFORE
+    # the domain validation runs, so the required-predicate checks see it.
+    derived = derive_lifecycle_predicates(
+        policy, action=data.action, target=data.target, due_time=data.due_time
+    )
+    for name, clause in (
+        ("fulfillment", "fulfillment_predicate"),
+        ("cancellation", "cancellation_predicate"),
+        ("supersession", "supersession_predicate"),
+        ("partial", "partial_predicate"),
+    ):
+        if predicates[clause] is None and name in derived:
+            predicates[clause] = validate_predicate(derived[name])
     validate_domain_version(
         policy=policy,
         action=data.action,
@@ -627,6 +644,11 @@ def apply_commitment_transition(
         abstention_rules_json={"rule": policy.abstention_rule},
         anchor_valid_time=data.anchor_valid_time,
         anchor_known_time=data.anchor_known_time,
+        state_effective_at=(
+            data.state_effective_at
+            if data.state_effective_at is not None
+            else data.anchor_valid_time
+        ),
         earliest_valid_time=data.earliest_valid_time,
         due_time=data.due_time,
         grace_end=data.grace_end,
@@ -722,8 +744,10 @@ def reconstruct_commitments(
                 "action": version.action,
                 "target": version.target_json,
                 "evidence_ids": transition.evidence_ids_json,
+                "dependencies": list(version.dependencies_json or ()),
                 "anchor_valid_time": _iso(version.anchor_valid_time),
                 "anchor_known_time": _iso(version.anchor_known_time),
+                "state_effective_at": _iso(version.state_effective_at),
                 "earliest_valid_time": _iso(version.earliest_valid_time),
                 "due_time": _iso(version.due_time),
                 "grace_end": _iso(version.grace_end),
