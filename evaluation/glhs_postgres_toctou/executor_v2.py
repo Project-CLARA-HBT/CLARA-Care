@@ -450,6 +450,24 @@ def _transition_item_count(db: Any, *, assertion_id: int) -> int:
     return int(value or 0)
 
 
+def _committed_transition_total(db: Any, *, assertion_id: int) -> int:
+    """Total committed transition items for a proposal, read in a fresh session.
+
+    Prefers an explicit session-level committed count when the caller provides
+    one (duck-typed tests), otherwise reads the real PostgreSQL count. This
+    distinguishes a competing-lock winner (one committed item) from serial
+    rejection schedules (zero items).
+    """
+
+    explicit = getattr(db, "committed_transition_item_count", None)
+    if callable(explicit):
+        return int(explicit(assertion_id=assertion_id) or 0)
+    value = db.scalar(
+        select(func.count(GlhsTransitionItem.id)).where(GlhsTransitionItem.assertion_id == assertion_id)
+    )
+    return int(value or 0)
+
+
 def _rejection_subcontract(
     *,
     reason_code: str,
@@ -1350,10 +1368,19 @@ def _driver_v2_08(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
     if not rejected:
         raise AssertionError(f"v2_08_no_loser_observed:{outcomes}")
     loser = rejected[0]
-    loser_record = results[loser]
     outcome = outcomes[loser]
-    if int(loser_record["item_count"]) != 0:
-        raise AssertionError("v2_rejected_commit_created_transition_item")
+    # Competing-lock invariant: exactly one committed transition for the proposal
+    # (the winner). The loser's own attempt must not have committed. Counting all
+    # transition items for the proposal is invalid here because the winner's item
+    # is visible to a by-assertion count; the loser is verified rejected by its
+    # outcome, and the committed-item total is checked to be exactly one.
+    check_db = env.session_factory()
+    try:
+        committed_total = _committed_transition_total(check_db, assertion_id=proposal_id)
+    finally:
+        check_db.close()
+    if committed_total != 1:
+        raise AssertionError(f"v2_08_committed_transition_count_invalid:{committed_total}")
     classification, forbidden = classify_concurrent_commit_order(
         outcome=outcome,
         revoke_commit_ns=None,

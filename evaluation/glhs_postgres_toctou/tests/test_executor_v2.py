@@ -60,6 +60,10 @@ class FakeSession:
             user_id=1, consent_type="medical_disclaimer", consent_version="2026-04-v1"
         )
         self.policy_epoch: object = SimpleNamespace(version="glhs.v1")
+        self.committed_transition_item_count_value = 0
+
+    def committed_transition_item_count(self, *, assertion_id: int) -> int:
+        return self.committed_transition_item_count_value
 
     def add(self, instance: object) -> None:
         self.added.append(instance)
@@ -195,10 +199,18 @@ def _fake_env(
     *,
     gateway: FakeGateway | None = None,
     scalar_values: dict[str, int] | None = None,
+    committed_item_count: int = 0,
 ) -> ExecutorEnv:
     shared_scalar = dict(scalar_values or {})
+    shared_committed = committed_item_count
+
+    def make_session():
+        session = FakeSession(scalar_values=shared_scalar)
+        session.committed_transition_item_count_value = shared_committed
+        return session
+
     return ExecutorEnv(
-        session_factory=lambda: FakeSession(scalar_values=shared_scalar),
+        session_factory=make_session,
         adapter_factory=lambda session: session,
         gateway=gateway or FakeGateway(rejections=REJECTIONS),
         barrier_factory=lambda parties: PhasedBarrier(parties, timeout_s=10.0),
@@ -349,7 +361,7 @@ def test_driver_v2_07_commit_before_mutation_control_commits() -> None:
 
 
 def test_driver_v2_08_competing_lock_loser_rejects() -> None:
-    env = _fake_env()
+    env = _fake_env(committed_item_count=1)
     observation = _run_one_schedule(env, _schedule(_load_frozen_protocol(), "TOCTOU-V2-08"))[0]
     outcome = observation["outcome"]
     assert outcome["commit_outcome"] == "stale_state_version"
@@ -432,7 +444,7 @@ def test_driver_v2_09_simultaneous_release_is_never_fabricated_forbidden() -> No
 # --- no fabrication + orchestration ------------------------------------------
 
 def test_run_schedules_writes_raw_json_and_validates(tmp_path: Path) -> None:
-    env = _fake_env()
+    env = _fake_env(committed_item_count=1)
     out = tmp_path / "run_v2_raw.json"
     result = run_schedules(env, _load_frozen_protocol(), out_path=out, source_revision="deadbeef")
 
