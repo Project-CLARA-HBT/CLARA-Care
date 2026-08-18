@@ -41,9 +41,9 @@ M3 subsumed M0: 16 both, 4 M3-only, 0 M0-only. The four-mutant gain over M0 was 
 
 Permitted interpretation: **the combined strategy produced the highest observed mutation score and complements regression testing; it does not establish formal verification or a universal hierarchy of testing methods.**
 
-## GLHS — FMC / AMIA HSS / AMIA Amplify
+## GLHS — journal / FMC / AMIA HSS / AMIA Amplify
 
-Model-context cohort:
+### Primary frozen model-context cohort
 
 - 64 prospectively frozen controlled synthetic subjects.
 - 1,152 model-condition solver cells.
@@ -51,19 +51,35 @@ Model-context cohort:
 - Aggregate all-axes exact: 1,027/1,152 = 89.15%.
 - Six of ten preregistered contrasts Holm-significant; significant contrasts had only 9–21 discordant subjects, below the planned informative-pair target.
 
-Governance TOCTOU evidence:
+### Mandatory later null-result qualifier for model-superiority discussion
+
+A later sealed Claude-only synthetic run used 384 independent subjects and 3,456 solver cells. Strict THSS versus full authorized history had 70 wins, 73 losses and 241 ties; mean effect -0.0078125, 95% bootstrap CI [-0.0677083, 0.0520833], exact two-sided sign-test `p=0.8672499071`. **Do not claim universal model-level superiority of Strict THSS over full authorized history.**
+
+### Newest W6 source-disjoint utility sanity grid
+
+- 6 tasks × 4 context conditions × 2 locked model families = 48 calls, 0 errors.
+- Strict THSS: 11/12 correct (91.7%).
+- Bound THSS: 12/12 (100%).
+- State-only: 11/12 (91.7%).
+- Unbound: 9/12 (75.0%).
+- Gemini: 23/24 (95.8%); Claude: 20/24 (83.3%).
+
+Permitted interpretation: **the small source-disjoint grid did not show catastrophic utility loss under governed context and is directionally consistent with better correctness than unbound context.** It is only six tasks and is not a powered superiority or formal noninferiority experiment.
+
+### Governance TOCTOU evidence
 
 - Run `GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01`, 12 frozen PostgreSQL schedules.
 - Persisted governance writers included consent revoke, role change, and policy-epoch advance.
+- 10 invalid post-change attempts rejected; temporally valid controls could commit.
 - 0 forbidden commits observed; 0 indeterminate ordering; 0 deadlock-as-safety.
-- Invalid post-change attempts were rejected; temporally valid controls could commit.
 
-Bounded formal assurance:
+### Bounded formal assurance
 
 - Depth-5 exhaustive exploration: 21,361 unique states, 90,432 transitions, 0 violations of 11 invariants.
+- Depth 6: 69,342 states, 378,602 transitions, 0 violations.
 - This is bounded finite-state checking, not universal proof.
 
-Permitted interpretation: **GLHS provides tested software continuity from governed disclosure to persistent write admission under the frozen synthetic/system conditions.** Do not claim clinical efficacy or correctness for arbitrary unbounded interleavings.
+Permitted interpretation: **GLHS provides tested software continuity from governed disclosure to persistent write admission under the frozen synthetic/system conditions.** Do not claim clinical efficacy, universal LLM superiority, or correctness for arbitrary unbounded interleavings.
 
 ## CLARA-Care FHIR App
 
