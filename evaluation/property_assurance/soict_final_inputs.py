@@ -14,7 +14,10 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any
 
-from evaluation.property_assurance.suite_matrix import METHOD_IDS, load_development_suite_matrix
+from evaluation.property_assurance.suite_matrix import (
+    METHOD_IDS,
+    load_development_suite_matrix,
+)
 
 _STUDY_ID = "assurance-soict-2026"
 _MODELS = ["gemini-3.6-flash-high", "claude-sonnet-4-6"]

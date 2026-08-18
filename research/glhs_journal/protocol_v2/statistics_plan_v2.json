@@ -1,0 +1,38 @@
+{
+  "schema_version": "glhs-postgres-governance-toctou-statistics-v2",
+  "status": "FROZEN_FINAL_REVIEWED",
+  "study_id": "glhs-journal-revision-v2",
+  "run_id": "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
+  "protocol_path": "research/glhs_journal/protocol_v2/postgres_toctou_protocol_v2.json",
+  "unit_of_analysis": "one frozen logical schedule; retries remain within the same schedule and are never an independent N",
+  "primary_endpoint": {
+    "name": "forbidden_commit_observed",
+    "definition": "A transition committed only when the final observer proves the relevant persisted governance mutation committed before transition admission began.",
+    "denominator_rule": "Only executed, observer-complete frozen schedules enter a denominator; NOT_RUN, infrastructure error, missing audit, and indeterminate ordering remain separate categories and never enter the denominator.",
+    "reporting": "rate of observer-complete schedules with forbidden_commit_observed=true over the executed, observer-complete denominator, with a Wilson-score upper confidence bound (alpha 0.05).",
+    "zero_event_interval": "When zero forbidden commits are observed, report the Wilson upper bound for a zero-event interval; an empty observation is never reported as a zero-finding.",
+    "indeterminate_rule": "INDETERMINATE is never counted as safe, never counted in the numerator, and never recoded as a zero forbidden-commit observation."
+  },
+  "secondary_endpoints": {
+    "rejection_auditability": {
+      "definition": "A rejected governance commit is auditable when the rejection decision event, reason code, proposal/snapshot coordinates, and zero state-transition rows are all present.",
+      "reporting": "proportion of rejected schedules that are observer-complete with full rejection_auditability; missing any field marks the schedule incomplete, not a safety outcome."
+    },
+    "committed_reconstructability": {
+      "definition": "A committed transition is reconstructable when the transition exists, the resulting state version is captured, the snapshot linkage is exact, and reconstruction succeeds.",
+      "reporting": "proportion of committed schedules with full committed_reconstructability; an empty or hash-only reconstruction is not completeness."
+    },
+    "false_stale_burden": {
+      "definition": "Valid independent writes that were rejected only because of a state/coordination coordinate they legitimately did not depend on.",
+      "reporting": "count and proportion over the executed denominator; a false stale rejection is recorded as burden, never as a safety failure of the rejected writer."
+    },
+    "latency": {
+      "definition": "Per-schedule descriptive wall latency in milliseconds from setup through final observation.",
+      "reporting": "report p50, p95, and p99 across executed schedules; never infer deployment throughput from these latencies."
+    }
+  },
+  "operational_rule": "Deadlock/serialization outcomes (deadlock_detected, could_not_serialize_access, lock_wait_timeout) are operational outcomes, never safety success, and are reported separately from safety classifications.",
+  "missing_data_rule": "Missing work is NOT_RUN and is never encoded as zero forbidden commits or a successful schedule.",
+  "freeze_rule": "This plan, the frozen twelve-schedule v2 protocol, ordered synthetic seeds, environment metadata, and the v2 observer contract are frozen before execution; any material change requires a new run ID.",
+  "result_status_rule": "A final result is claim-eligible only when every scheduled execution is observer-complete and every observed classification matches the frozen expected classification. NOT_RUN, infrastructure error, missing audit, indeterminate ordering, and expected/observed classification mismatches remain explicit and are never recoded as safe."
+}
