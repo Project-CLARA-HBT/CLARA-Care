@@ -1,8 +1,21 @@
 """Concrete, isolated-only GovRed adapter for the synthetic research API.
 
 This adapter drives ordinary HTTP requests through the mounted GovRed research
-routes. PostgreSQL, Redis, and audit state are observed only through the
+routes.  PostgreSQL, Redis, and audit state are observed only through the
 sanitized store observer; this module never executes cache or database commands.
+
+The three mandatory-primary families that were NOT_RUN in final-003 now execute
+as two-phase schedules (create then commit): ``cross_subject_retrieval`` via
+``subject_cross_replay``, ``purpose_mismatch`` via the narrow synthetic
+``purpose_switch_replay`` grant mutation, and ``policy_version_change`` via the
+deployment-level ``GOVRED_RESEARCH_POLICY_VERSION`` override.  Each executed
+family's ``boundary_path_attestation`` is derived from its
+:mod:`family_contracts` contract rather than hard-coded all-true: a non-cache
+family never claims a cache traversal, and a cache family carries its cache
+observation.  A rejected admission additionally surfaces the structural
+rejection event (reason code, proposal/snapshot coordinates, actor/purpose/
+task, zero transition rows) recorded through the synthetic-audit-observation
+endpoint.
 """
 
 from __future__ import annotations
@@ -18,6 +31,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
+from evaluation.governance_adversarial.family_contracts import (
+    STAGE_NAMES,
+    family_contract,
+)
 from evaluation.governance_adversarial.observation import (
     BoundaryObservation,
     sanitized_observation_metadata,
@@ -27,6 +44,9 @@ from evaluation.governance_adversarial.remote_store_observer import observe
 _ARM_FIELDS = ("arm", "bind_snapshot", "revalidate_state", "revalidate_governance")
 _MUTATIONS = {
     "cross_subject_proposal_write": "subject_cross_replay",
+    "cross_subject_retrieval": "subject_cross_replay",
+    "purpose_mismatch": "purpose_switch_replay",
+    "policy_version_change": "policy_version_change",
     "revoked_consent_cache_index_reuse": "consent_revoke",
     "role_mismatch": "actor_switch_replay",
     "stale_thss_replay": "state_advance",
@@ -36,10 +56,16 @@ _MUTATIONS = {
     "derived_cache_persistence_after_revocation": "consent_revoke",
     "audit_reconstruction_failure": "none",
 }
-_CACHE_OBSERVATION_FAMILIES = frozenset(
+#: Mandatory-primary families executed as a two-phase schedule: the create
+#: phase persists the synthetic disclosure (and its bound THSS snapshot for
+#: binding arms); the commit phase applies the mutation and runs the ordinary
+#: admission path.  This lets the real policy-version override or a purpose
+#: grant switch be observed between disclosure and commit.
+_TWO_PHASE_FAMILIES = frozenset(
     {
-        "revoked_consent_cache_index_reuse",
-        "derived_cache_persistence_after_revocation",
+        "cross_subject_retrieval",
+        "purpose_mismatch",
+        "policy_version_change",
     }
 )
 
@@ -173,10 +199,26 @@ def _arm_attestation(config: AdapterConfig, arm: dict[str, object]) -> dict[str,
 
 
 def _mutation_for(case: dict[str, object]) -> str | None:
-    family = case["family"]
-    if family == "cross_subject_retrieval":
-        return None
-    return _MUTATIONS.get(str(family))
+    return _MUTATIONS.get(str(case["family"]))
+
+
+def _boundary_path_attestation(family: str) -> dict[str, bool]:
+    """Derive the stage attestation from the family's contract.
+
+    Every executed family traverses the HTTP, PostgreSQL (store observer), and
+    audit-observation stages; only a cache family may claim the ``cache``
+    stage, and the claim is taken from the contract rather than hard-coded.
+    A non-cache family must never claim a cache traversal.
+    """
+
+    contract = family_contract(family)
+    traversed = frozenset({"http", "postgres", "audit"})
+    if contract.cache_required:
+        traversed = frozenset(traversed | {"cache"})
+    return {
+        stage: stage in traversed and stage in contract.permitted_stages()
+        for stage in STAGE_NAMES
+    }
 
 
 def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, object]:
@@ -198,12 +240,13 @@ def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, obj
         arm["name"], arm["bind_snapshot"], arm["revalidate_state"], arm["revalidate_governance"],
     ):
         raise RuntimeError("govred_adapter_arm_endpoint_mismatch")
-    before = _snapshot(config)
+    family = str(case["family"])
+    contract = family_contract(family)
     sentinel = str(case["oracle"]["sentinel_token"])
     probe_id = uuid4().hex
     cache_failure = False
     cache_unavailable = False
-    if str(case["family"]) in _CACHE_OBSERVATION_FAMILIES:
+    if contract.cache_required:
         # Seed the governed disclosure before the commit route persists the
         # scheduled revocation. Cache invalidation remains entirely service-owned.
         seed_status, _, cache_unavailable = _request(
@@ -215,9 +258,34 @@ def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, obj
         )
         if seed_status != 200 and not cache_unavailable:
             raise RuntimeError("govred_adapter_cache_seed_failed")
+    if family in _TWO_PHASE_FAMILIES:
+        # Two-phase schedules: persist the synthetic disclosure (and its bound
+        # THSS snapshot) first, then apply the mutation at commit time.  The
+        # policy-version override and the purpose grant switch are deployment/
+        # request-orchestrated between the two phases.
+        create_status, create_raw, create_unavailable = _request(
+            config,
+            "/api/v1/govred-research/synthetic-commit-probe",
+            method="POST",
+            token=token,
+            body={
+                "mutation": mutation,
+                "sentinel_id": sentinel,
+                "probe_id": probe_id,
+                "phase": "create",
+            },
+        )
+        if create_unavailable or create_status != 201:
+            raise RuntimeError("govred_adapter_two_phase_create_failed")
+        created = _json_response(create_raw)
+        created_probe_id = created.get("probe_id")
+        if isinstance(created_probe_id, str) and created_probe_id:
+            probe_id = created_probe_id
+    before = _snapshot(config)
     started = time.monotonic()
     status, raw, unavailable = _request(config, "/api/v1/govred-research/synthetic-commit-probe", method="POST", token=token, body={
         "mutation": mutation, "sentinel_id": sentinel, "probe_id": probe_id,
+        "phase": "commit" if family in _TWO_PHASE_FAMILIES else "full",
     })
     latency_ms = (time.monotonic() - started) * 1000
     response = _json_response(raw) if raw else {}
@@ -231,7 +299,15 @@ def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, obj
     )
     audit = _json_response(audit_raw) if audit_raw and not audit_unavailable else {}
     audit_complete = audit.get("audit_reconstruction_complete") is True
-    if str(case["family"]) in _CACHE_OBSERVATION_FAMILIES and not cache_unavailable:
+    rejection_audit_event = None
+    if isinstance(audit.get("rejection_reason_code"), str):
+        rejection_audit_event = {
+            "rejection_reason_code": audit["rejection_reason_code"],
+            "rejection_coordinates": audit.get("rejection_coordinates"),
+            "rejection_context": audit.get("rejection_context"),
+            "transition_item_count": audit.get("transition_item_count", 0),
+        }
+    if contract.cache_required and not cache_unavailable:
         _, cache_raw, cache_read_unavailable = _request(
             config,
             "/api/v1/govred-research/synthetic-disclosure-cache-probe",
@@ -250,17 +326,20 @@ def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, obj
     after = _snapshot(config)
     observation = BoundaryObservation(status, raw, before["postgres_sha256"], after["postgres_sha256"], audit_complete, cache_failure, commit_occurred, latency_ms, unavailable or audit_unavailable or cache_unavailable)
     artifact_value = {
-        "schema_version": "govred-isolated-boundary-observation-v1", "case_id": case["case_id"],
-        "arm": arm["name"], "http_status": status, "response_sha256": hashlib.sha256(raw).hexdigest(),
+        "schema_version": "govred-isolated-boundary-observation-v2", "case_id": case["case_id"],
+        "arm": arm["name"], "mutation": mutation, "mutation_class": mutation,
+        "http_status": status, "response_sha256": hashlib.sha256(raw).hexdigest(),
         "observer_before": before, "observer_after": after,
         "cache_index_revocation_failure": cache_failure,
+        "rejection_audit_event": rejection_audit_event,
         "observation": sanitized_observation_metadata(observation), "raw_response_persisted": False,
     }
     ref, digest = _write_artifact(config, f"{case['case_id']}-{arm['name']}-{probe_id}.json", artifact_value)
     return {
         "isolated_attestation": True, "arm_name": arm["name"], "arm_implementation_attestation": _arm_attestation(config, arm),
-        "observation": observation, "execution_id": probe_id,
+        "observation": observation, "execution_id": probe_id, "mutation": mutation,
+        "mutation_class": mutation, "rejection_audit_event": rejection_audit_event,
         "normalized_outcome": "unavailable" if unavailable else "committed" if commit_occurred else "rejected",
-        "boundary_path_attestation": {"http": True, "postgres": True, "cache": True, "audit": True},
+        "boundary_path_attestation": _boundary_path_attestation(family),
         "observation_artifact_ref": ref, "observation_artifact_sha256": digest,
     }

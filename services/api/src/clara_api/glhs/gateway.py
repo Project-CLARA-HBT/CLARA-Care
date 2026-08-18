@@ -28,6 +28,7 @@ from clara_api.db.models import (
     GlhsStateVersion,
     GlhsTransition,
     GlhsTransitionItem,
+    GovernancePolicyEpoch,
     HealthSourceReference,
     PhrProfile,
     UserConsent,
@@ -66,16 +67,51 @@ THSS_PIPELINE_STAGE_NAMES = (
 )
 
 
-def _effective_policy_version() -> str:
+def read_current_policy_epoch(
+    db: Session,
+    *,
+    policy_domain: str | None = None,
+) -> GovernancePolicyEpoch | None:
+    """Return the active persisted governance policy epoch, or ``None``.
+
+    The active epoch is the row whose ``active_from`` is not in the future,
+    choosing the highest ``version`` (ties broken by newest row id).  An
+    optional ``policy_domain`` narrows the lookup; without it the highest
+    active version across domains wins, which is the deployment-level policy
+    version read by ``_effective_policy_version``.  Returns ``None`` when the
+    epoch table has no matching row, which leaves every default path unchanged.
+    """
+
+    statement = select(GovernancePolicyEpoch).where(
+        GovernancePolicyEpoch.active_from <= datetime.now(UTC)
+    )
+    if policy_domain is not None:
+        statement = statement.where(GovernancePolicyEpoch.policy_domain == policy_domain)
+    statement = statement.order_by(
+        GovernancePolicyEpoch.version.desc(), GovernancePolicyEpoch.id.desc()
+    )
+    return db.execute(statement).scalars().first()
+
+
+def _effective_policy_version(db: Session | None = None) -> str:
     """Return the policy version governing admission at this moment.
 
     A real policy update advances the deployment-time constant at deploy time.
-    An attested isolated GovRed deployment may simulate such an update by
-    overriding the version for its process; every normal process always
-    returns the constant and the override is never honored otherwise.
+    An attested isolated GovRed deployment may simulate such an update for its
+    process; every normal process always returns the constant and the override
+    is never honored otherwise.  Under that isolated attestation the persisted
+    ``governance_policy_epochs`` table is the v2.1 source of truth when it has
+    an active epoch (``read_current_policy_epoch``); the
+    ``GOVRED_RESEARCH_POLICY_VERSION`` environment override remains the
+    sanctioned isolated override for processes without a persisted epoch.  The
+    default strict path performs no epoch read and is byte-identical to the
+    pre-v2.1 behavior.
     """
 
     if isolated_govred_arm() is not None:
+        epoch = read_current_policy_epoch(db) if db is not None else None
+        if epoch is not None:
+            return epoch.version
         override = os.environ.get("GOVRED_RESEARCH_POLICY_VERSION")
         if override:
             return override
@@ -407,7 +443,7 @@ def _validate_proposal_snapshot(
         manifest_digest=source_snapshot_digest,
         base_state_version=base_state_version,
         policy_version=(
-        _effective_policy_version() if revalidate_governance else snapshot.policy_version
+        _effective_policy_version(db) if revalidate_governance else snapshot.policy_version
     ),
         purpose=(purpose or snapshot.purpose) if revalidate_governance else snapshot.purpose,
         consent_version=current_consent,
@@ -745,7 +781,7 @@ def propose_assertion(
         estimated_time=data.estimated_time,
         asserted_by_user_id=actor_user_id,
         process_kind=data.process_kind,
-        policy_version=_effective_policy_version(),
+        policy_version=_effective_policy_version(db),
         consent_version=_proposal_consent_version(db, profile_id=profile_id),
         source_snapshot_id=data.source_snapshot_id,
         source_snapshot_digest=data.source_snapshot_digest,
@@ -883,7 +919,7 @@ def apply_transition(
         raise GlhsInvariantError("model_cannot_apply_transition")
     if _digest(assertion.value_json) != assertion.value_fingerprint:
         raise GlhsInvariantError("assertion_value_digest_mismatch")
-    if revalidate_governance and assertion.policy_version != _effective_policy_version():
+    if revalidate_governance and assertion.policy_version != _effective_policy_version(db):
         raise GlhsInvariantError("assertion_policy_mismatch")
     current_consent_version = _governed_consent_version(
         db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
@@ -975,7 +1011,7 @@ def apply_transition(
         process_kind=assertion.process_kind,
         review_state=review_state,
         reviewed_at=reviewed_at,
-        policy_version=_effective_policy_version(),
+        policy_version=_effective_policy_version(db),
         consent_version=current_consent_version,
         source_snapshot_id=(assertion.source_snapshot_id if action == "activate" else None),
         source_snapshot_digest=(assertion.source_snapshot_digest if action == "activate" else None),
@@ -1034,7 +1070,7 @@ def apply_transition(
                         profile_id=scope.profile.id,
                         state_version=result_version,
                         valid_at=effective_at,
-                        policy_version=_effective_policy_version(),
+                        policy_version=_effective_policy_version(db),
                     )
                 )
                 add_outbox(
@@ -1129,7 +1165,7 @@ def apply_transition(
             profile_id=scope.profile.id,
             state_version=result_version,
             valid_at=effective_at,
-            policy_version=_effective_policy_version(),
+            policy_version=_effective_policy_version(db),
         )
     )
     add_outbox(
@@ -1367,7 +1403,7 @@ def compile_thss(
         "valid_time_cutoff": _as_utc(as_of).isoformat(),
         "knowledge_time_cutoff": _as_utc(known_at).isoformat(),
         "state_version": state_version,
-        "policy_version": _effective_policy_version(),
+        "policy_version": _effective_policy_version(db),
         "consent_version": consent_version,
         "consent_basis": consent_basis,
         "actor_user_id": scope.actor.id,
@@ -1400,7 +1436,7 @@ def compile_thss(
         canonicalization_profile=CANONICALIZATION_PROFILE,
         valid_time_cutoff=as_of,
         knowledge_time_cutoff=known_at,
-        policy_version=_effective_policy_version(),
+        policy_version=_effective_policy_version(db),
         consent_version=consent_version,
         consent_basis=consent_basis,
         assertion_hashes_json=assertion_hashes,
@@ -1422,7 +1458,7 @@ def compile_thss(
     return Snapshot(
         snapshot_id=manifest.public_id,
         state_version=state_version,
-        policy_version=_effective_policy_version(),
+        policy_version=_effective_policy_version(db),
         consent_version=consent_version,
         task=task,
         purpose=purpose,

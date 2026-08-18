@@ -32,10 +32,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import subprocess
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -55,6 +56,7 @@ from clara_api.db.models import (
     GlhsAssertion,
     GlhsEvidence,
     GlhsTransitionItem,
+    GovernancePolicyEpoch,
     HealthSourceReference,
     PhrProfile,
     User,
@@ -80,6 +82,7 @@ from evaluation.glhs_postgres_toctou.observer_v2 import (
     RawScheduleOutcome,
     RejectionAuditability,
     observe,
+    require_observation_complete,
 )
 from evaluation.glhs_postgres_toctou.schedule_primitives import (
     TransactionTrace,
@@ -91,19 +94,54 @@ from evaluation.glhs_postgres_toctou.schedule_primitives import (
     snapshot_binding_digest,
 )
 from evaluation.glhs_postgres_toctou.validate_v2 import (
+    REQUIRED_INTERLEAVING_COVERAGE,
     V2_ISOLATION_CONTRACT,
     V2_PROTOCOL_SCHEMA_VERSION,
     V2_PROTOCOL_STATUS,
+    _validate_outcome_classification,
+    _validate_schedule_markers,
     validate_v2,
 )
 
 PROTOCOL_SCHEMA_VERSION = V2_PROTOCOL_SCHEMA_VERSION
 PROTOCOL_STATUS = V2_PROTOCOL_STATUS
 RUN_ID = "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01"
+V21_PROTOCOL_SCHEMA_VERSION = "glhs-postgres-governance-toctou-final-v2.1"
+V21_RUN_ID = "GLHS-POSTGRES-TOCTOU-FINAL-V2-1-20260818-01"
 FINAL_ISOLATION_ATTESTATION = "GLHS_TOCTOU_FINAL_ISOLATED_RESEARCH"
 FINAL_DATABASE_URL = "GLHS_TOCTOU_FINAL_DATABASE_URL"
 DEFAULT_PROTOCOL_PATH = Path("research/glhs_journal/protocol_v2/postgres_toctou_protocol_v2.json")
 DEFAULT_OUTPUT_PATH = Path("research/glhs_journal/protocol_v2/run_v2_raw.json")
+DEFAULT_PROTOCOL_V21_PATH = Path(
+    "research/glhs_journal/protocol_v2/postgres_toctou_protocol_v2_1.json"
+)
+DEFAULT_OUTPUT_V21_PATH = Path("research/glhs_journal/protocol_v2/run_v2_1_raw.json")
+
+# Independent-resource race vocabulary: the profile-global version counter
+# serializes same-profile writers; losers are rejected as stale and classified
+# as false stale because the winner's transition touched a semantic dependency
+# outside the loser's declared set. Deadlock/serialization stays operational.
+OPERATIONAL_COMMIT_OUTCOMES = frozenset(
+    {"deadlock_detected", "could_not_serialize_access", "lock_wait_timeout"}
+)
+RACE_COMMIT_OUTCOME = "transition_committed"
+FALSE_STALE_CLASSIFICATION = "committed_with_expected_false_stale"
+SINGLE_WRITER_CLASSIFICATION = "transition_committed"
+RACE_WORKLOAD = "independent_resources_race"
+GOVERNANCE_SINGLE_WORKLOAD = "governance_toctou_single_attempt"
+_METRICS_KEYS = frozenset(
+    {
+        "workload_type",
+        "attempts",
+        "accepted_valid_commits",
+        "true_stale_rejections",
+        "false_stale_rejections",
+        "false_stale_rate_per_attempt",
+        "database_errors",
+        "latency_p50_ms",
+        "latency_p95_ms",
+    }
+)
 
 # What a schedule worker thread may raise and still be reported (never fabricated)
 # as an observed outcome rather than crashing the whole run.
@@ -150,16 +188,36 @@ def _real_epoch_row(*, id: str, policy_domain: str, version: str, active_from: d
     )
 
 
+def _real_api_epoch_row(*, id: str, policy_domain: str, version: str, active_from: datetime, canonical_digest: str, created_at: datetime) -> object:
+    """Create the real API ``GovernancePolicyEpoch`` row (database-assigned id).
+
+    The v2.1 persisted-epoch path writes the production ORM row so the real
+    gateway's ``read_current_policy_epoch`` consults it. The writer's opaque
+    string epoch id is not persisted on the API row.
+    """
+    return GovernancePolicyEpoch(
+        policy_domain=policy_domain,
+        version=version,
+        active_from=active_from,
+        canonical_digest=canonical_digest,
+        created_at=created_at,
+    )
+
+
 class SessionAdapter:
     """Duck-typed ``SessionLike`` handle over a real SQLAlchemy session.
 
     Exposes ``load_consent_target``/``load_policy_epoch`` as duck methods so the
     governance writers can locate the authoritative persisted rows, plus
-    ``backend_pid``/``txid`` for the transaction trace.
+    ``backend_pid``/``txid`` for the transaction trace.  ``epoch_model`` selects
+    the persisted epoch table consulted by the policy-epoch writer: the v2
+    ``glhs_governance_policy_epochs`` row by default, or the v2.1 production
+    ``GovernancePolicyEpoch`` model when ``epoch_model=GovernancePolicyEpoch``.
     """
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, *, epoch_model: type | None = None) -> None:
         self._session = session
+        self._epoch_model = epoch_model or GlhsGovernancePolicyEpochRow
 
     @property
     def backend_pid(self) -> int | None:
@@ -200,11 +258,12 @@ class SessionAdapter:
             .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
         ).scalars().first()
 
-    def load_policy_epoch(self, *, policy_domain: str) -> GlhsGovernancePolicyEpochRow | None:
+    def load_policy_epoch(self, *, policy_domain: str) -> object | None:
+        model = self._epoch_model
         return self._session.execute(
-            select(GlhsGovernancePolicyEpochRow)
-            .where(GlhsGovernancePolicyEpochRow.policy_domain == policy_domain)
-            .order_by(GlhsGovernancePolicyEpochRow.created_at.desc())
+            select(model)
+            .where(model.policy_domain == policy_domain)
+            .order_by(model.created_at.desc())
         ).scalars().first()
 
 
@@ -237,13 +296,26 @@ def load_protocol(path: Path) -> dict[str, object]:
 def validate_protocol(protocol: Mapping[str, object]) -> dict[str, object]:
     if protocol.get("status") != PROTOCOL_STATUS:
         raise ValueError("v2_protocol_not_frozen")
-    if protocol.get("schema_version") != PROTOCOL_SCHEMA_VERSION:
+    schema_version = str(protocol.get("schema_version", ""))
+    if schema_version not in {PROTOCOL_SCHEMA_VERSION, V21_PROTOCOL_SCHEMA_VERSION}:
         raise ValueError("v2_protocol_schema_invalid")
     if protocol.get("isolation") != V2_ISOLATION_CONTRACT:
         raise ValueError("v2_isolation_contract_invalid")
+    if schema_version == V21_PROTOCOL_SCHEMA_VERSION and protocol.get(
+        "persisted_epoch_required"
+    ) is not True:
+        raise ValueError("v21_persisted_epoch_required_missing")
     schedules = protocol.get("schedules")
     if not isinstance(schedules, list):
         raise TypeError("v2_protocol_schedules_missing")
+    if schema_version == V21_PROTOCOL_SCHEMA_VERSION:
+        return {
+            "schema_version": V21_PROTOCOL_SCHEMA_VERSION,
+            "status": "VALIDATED_V21_PROTOCOL_NOT_EXECUTED",
+            "database_executed": False,
+            "result_emitted": False,
+            "schedule_count": len(schedules),
+        }
     return {
         "schema_version": PROTOCOL_SCHEMA_VERSION,
         "status": "VALIDATED_V2_PROTOCOL_NOT_EXECUTED",
@@ -775,10 +847,11 @@ def _driver_v2_03(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
     wdb = env.session_factory()
     try:
         adapter = env.adapter_factory(wdb)
+        epoch_version = str(schedule.get("persisted_epoch_version", "policy-v2"))
         advance_governance_policy_epoch(
             adapter,
             policy_domain="medications",
-            version="policy-v2",
+            version=epoch_version,
             canonical_digest="e" * 64,
             epoch_id=f"epoch-v2-{uuid4().hex}",
             barrier=env.barrier_factory(1),
@@ -796,7 +869,7 @@ def _driver_v2_03(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
         if assertion is None:
             raise RuntimeError("v2_proposal_reload_failed")
         commit_start_ns = now_monotonic_ns()
-        with _policy_version_override("policy-v2"):
+        with _policy_version_override(epoch_version):
             outcome, _transition = _attempt_commit(
                 env, cdb,
                 scope=attempt_scope,
@@ -1739,10 +1812,11 @@ def _driver_v2_12(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
     wdb = env.session_factory()
     try:
         adapter = env.adapter_factory(wdb)
+        epoch_version = str(schedule.get("persisted_epoch_version", "policy-v2"))
         epoch_meta = advance_governance_policy_epoch(
             adapter,
             policy_domain="medications",
-            version="policy-v2",
+            version=epoch_version,
             canonical_digest="e" * 64,
             epoch_id=f"epoch-v2-{uuid4().hex}",
             barrier=env.barrier_factory(1),
@@ -1797,7 +1871,7 @@ def _driver_v2_12(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
         if assertion is None:
             raise RuntimeError("v2_proposal_reload_failed")
         commit_start_ns = now_monotonic_ns()
-        with _policy_version_override("policy-v2"):
+        with _policy_version_override(epoch_version):
             outcome, _transition = _attempt_commit(
                 env, cdb,
                 scope=changed_scope,
@@ -1850,6 +1924,482 @@ def _driver_v2_12(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
         cdb.close()
 
 
+# --- v2.1 false-stale burden + concurrency scaling helpers --------------------
+
+def _percentile(sorted_values: list[float], percentile: float) -> float:
+    """Nearest-rank percentile over a sorted latency list (ms)."""
+    if not sorted_values:
+        return 0.0
+    rank = max(0, min(len(sorted_values) - 1, int(math.ceil(percentile * len(sorted_values)) - 1)))
+    return round(float(sorted_values[rank]), 3)
+
+
+def _operational_outcome(exc: BaseException) -> str:
+    """Map a worker exception to the operational outcome vocabulary, or refuse.
+
+    Deadlock/serialization/lock-wait-timeout are operational outcomes, never
+    safety successes.  Any other worker error aborts the schedule fail-closed:
+    an unclassified database error is not a claimable observation.
+    """
+    message = str(exc).lower()
+    if "deadlock" in message:
+        return "deadlock_detected"
+    if "could not serialize" in message or "serialization_failure" in message:
+        return "could_not_serialize_access"
+    if "lock wait timeout" in message or "lock_timeout" in message:
+        return "lock_wait_timeout"
+    raise RuntimeError(f"v21_unclassified_worker_error:{type(exc).__name__}:{exc}")
+
+
+@dataclass(frozen=True)
+class IndependentProposal:
+    """One seeded, independent resource (distinct semantic key) on a profile."""
+
+    proposal_id: int
+    public_id: str
+    base_state_version: int
+    snapshot_id: str
+    snapshot_digest_sha256: str
+
+
+def _seed_independent_proposals(
+    env: ExecutorEnv, db: Any, scope: ProfileScope, count: int
+) -> list[IndependentProposal]:
+    """Seed ``count`` proposals on independent semantic keys of one profile.
+
+    Every proposal is bound to its own snapshot compiled at the same base state
+    version; no two proposals share a semantic key, so no commit may touch the
+    dependency set of another writer.
+    """
+    seeded: list[IndependentProposal] = []
+    for _ in range(count):
+        _seed_evidence(env, db, scope)
+        snapshot = _seed_snapshot(env, db, scope)
+        proposal, digest = _seed_proposal(env, db, scope, snapshot)
+        seeded.append(
+            IndependentProposal(
+                proposal_id=int(proposal.id),
+                public_id=str(proposal.public_id),
+                base_state_version=int(proposal.base_state_version),
+                snapshot_id=str(snapshot.snapshot_id),
+                snapshot_digest_sha256=hashlib.sha256(digest.encode("utf-8")).hexdigest(),
+            )
+        )
+    return seeded
+
+
+def _independent_write_race(
+    env: ExecutorEnv,
+    schedule: Mapping[str, object],
+    *,
+    writer_count: int,
+    trace: TransactionTrace,
+    prefix: str,
+) -> dict[str, object]:
+    """Release ``writer_count`` writers on independent resources simultaneously.
+
+    The profile-global version counter serializes the writers: exactly one
+    commit wins and every loser is rejected with ``stale_state_version`` even
+    though its resource is unrelated to the winner's.  Those rejections are the
+    false-stale burden.  Deadlock/serialization outcomes are recorded
+    operationally and never as safety successes.
+    """
+    started = now_monotonic_ns()
+    db = env.session_factory()
+    try:
+        scope = _seed_owner_scope(db)
+        proposals = _seed_independent_proposals(env, db, scope, writer_count)
+        user_id = scope.actor.id
+        profile_id = scope.profile.id
+        db.commit()
+    finally:
+        db.close()
+
+    barrier = env.barrier_factory(writer_count)
+    mutex = threading.Lock()
+    results: dict[int, dict[str, object]] = {}
+    latencies: list[float] = []
+
+    def worker(index: int) -> None:
+        attempt_start = now_monotonic_ns()
+        wdb = env.session_factory()
+        try:
+            proposal = proposals[index]
+            attempt_scope = _existing_owner_scope(
+                wdb, user_id=user_id, profile_id=profile_id
+            )
+            assertion = wdb.get(GlhsAssertion, proposal.proposal_id)
+            if assertion is None:
+                raise RuntimeError("v21_proposal_reload_failed")
+            barrier.wait("release")
+            outcome, transition = _attempt_commit(
+                env,
+                wdb,
+                scope=attempt_scope,
+                assertion=assertion,
+                expected_state_version=proposal.base_state_version,
+                prefix=f"{prefix}-{index}",
+                reason_code="synthetic_independent_resource_race",
+            )
+            if outcome == RACE_COMMIT_OUTCOME:
+                wdb.commit()
+            latency = elapsed_ms(attempt_start)
+            item_count = _committed_transition_total(
+                wdb, assertion_id=proposal.proposal_id
+            )
+            with mutex:
+                results[index] = {
+                    "outcome": outcome,
+                    "item_count": item_count,
+                    "latency_ms": latency,
+                    "resulting_state_version": getattr(
+                        transition, "resulting_state_version", None
+                    ),
+                }
+                latencies.append(latency)
+        except WORKER_EXCEPTIONS as exc:  # pragma: no cover - surfaced below
+            latency = elapsed_ms(attempt_start)
+            with mutex:
+                results[index] = {
+                    "outcome": _operational_outcome(exc),
+                    "item_count": 0,
+                    "latency_ms": latency,
+                    "error": f"{type(exc).__name__}:{exc}",
+                }
+                latencies.append(latency)
+        finally:
+            wdb.close()
+
+    threads = [threading.Thread(target=worker, args=(index,)) for index in range(writer_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=120)
+    if any(thread.is_alive() for thread in threads):
+        raise RuntimeError("v21_race_workers_timed_out")
+
+    outcomes = {index: str(record["outcome"]) for index, record in results.items()}
+    accepted = [index for index, outcome in outcomes.items() if outcome == RACE_COMMIT_OUTCOME]
+    rejected = [
+        index
+        for index, outcome in outcomes.items()
+        if outcome == "stale_state_version"
+    ]
+    operational = [
+        index
+        for index, outcome in outcomes.items()
+        if outcome in OPERATIONAL_COMMIT_OUTCOMES
+    ]
+    if operational and accepted:
+        raise RuntimeError(f"v21_race_mixed_operational_and_committed:{outcomes}")
+    if not operational and len(accepted) != 1:
+        raise AssertionError(f"v21_race_winner_count_invalid:{outcomes}")
+    if rejected and any(
+        int(record["item_count"]) != 0
+        for index, record in results.items()
+        if index in rejected
+    ):
+        raise AssertionError("v21_rejected_race_writer_created_transition_item")
+    if accepted and int(results[accepted[0]]["item_count"]) != 1:
+        raise AssertionError("v21_race_winner_transition_item_count_invalid")
+
+    sorted_latencies = sorted(latencies)
+    metrics: dict[str, object] = {
+        "workload_type": RACE_WORKLOAD,
+        "writer_count": writer_count,
+        "attempts": writer_count,
+        "accepted_valid_commits": len(accepted),
+        "true_stale_rejections": 0,
+        "false_stale_rejections": len(rejected),
+        "false_stale_rate_per_attempt": round(len(rejected) / writer_count, 4),
+        "database_errors": len(operational),
+        "latency_p50_ms": _percentile(sorted_latencies, 0.50),
+        "latency_p95_ms": _percentile(sorted_latencies, 0.95),
+        "per_attempt_outcomes": {index: outcome for index, outcome in outcomes.items()},
+    }
+    return {
+        "started": started,
+        "results": results,
+        "outcomes": outcomes,
+        "accepted": accepted,
+        "rejected": rejected,
+        "operational": operational,
+        "proposals": proposals,
+        "metrics": metrics,
+        "trace": trace,
+    }
+
+
+def _cross_profile_independence_control(env: ExecutorEnv) -> int:
+    """Prove that version advances on an unrelated profile reject no writes.
+
+    A committed transition on profile A must not affect a fresh independent
+    write on profile B (per-profile counters). Returns the number of completed
+    cross-profile independent writes and raises on any rejection.
+    """
+    db = env.session_factory()
+    try:
+        scope_a = _seed_owner_scope(db)
+        snapshot_a = _seed_snapshot(env, db, scope_a)
+        proposal_a, _digest_a = _seed_proposal(env, db, scope_a, snapshot_a)
+        db.commit()
+        base_a = int(proposal_a.base_state_version)
+    finally:
+        db.close()
+
+    cadb = env.session_factory()
+    try:
+        scope_a_attempt = _existing_owner_scope(
+            cadb, user_id=scope_a.actor.id, profile_id=scope_a.profile.id
+        )
+        assertion_a = cadb.get(GlhsAssertion, proposal_a.id)
+        if assertion_a is None:
+            raise RuntimeError("v21_control_proposal_reload_failed")
+        outcome, _transition = _attempt_commit(
+            env,
+            cadb,
+            scope=scope_a_attempt,
+            assertion=assertion_a,
+            expected_state_version=base_a,
+            prefix="v2-13-control-advance",
+            reason_code="synthetic_cross_profile_version_advance",
+        )
+        if outcome != RACE_COMMIT_OUTCOME:
+            raise RuntimeError(f"v21_control_version_advance_failed:{outcome}")
+        cadb.commit()
+    finally:
+        cadb.close()
+
+    db = env.session_factory()
+    try:
+        scope_b = _seed_owner_scope(db)
+        snapshot_b = _seed_snapshot(env, db, scope_b)
+        proposal_b, _digest_b = _seed_proposal(env, db, scope_b, snapshot_b)
+        db.commit()
+        base_b = int(proposal_b.base_state_version)
+    finally:
+        db.close()
+
+    cdb = env.session_factory()
+    try:
+        scope_b_attempt = _existing_owner_scope(
+            cdb, user_id=scope_b.actor.id, profile_id=scope_b.profile.id
+        )
+        assertion_b = cdb.get(GlhsAssertion, proposal_b.id)
+        if assertion_b is None:
+            raise RuntimeError("v21_control_proposal_reload_failed")
+        outcome, _transition = _attempt_commit(
+            env,
+            cdb,
+            scope=scope_b_attempt,
+            assertion=assertion_b,
+            expected_state_version=base_b,
+            prefix="v2-13-control-independent",
+            reason_code="synthetic_cross_profile_independent_write",
+        )
+        if outcome != RACE_COMMIT_OUTCOME:
+            raise RuntimeError(f"v21_cross_profile_independent_write_rejected:{outcome}")
+        cdb.commit()
+        return 1
+    finally:
+        cdb.close()
+
+
+def _driver_v2_13(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
+    """TOCTOU-V2-13: false-stale burden of profile-global versioning.
+
+    Two independent writes race on one profile; the winner's commit is a
+    version advance on an unrelated resource, and the loser's stale rejection
+    is the measured false-stale burden. A cross-profile control then proves an
+    unrelated-profile version advance rejects no independent write.
+    """
+    trace = TransactionTrace()
+    race = _independent_write_race(
+        env, schedule, writer_count=2, trace=trace, prefix="v2-13"
+    )
+    metrics = dict(race["metrics"])
+    metrics["cross_profile_independent_writes_completed"] = (
+        _cross_profile_independence_control(env)
+    )
+    return _race_outcome(
+        env,
+        schedule,
+        race=race,
+        metrics=metrics,
+        started=race["started"],
+        reason_code="stale_state_version",
+    )
+
+
+def _driver_v2_14(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
+    """TOCTOU-V2-14: concurrency scaling at one writer (baseline)."""
+    trace = TransactionTrace()
+    race = _independent_write_race(
+        env, schedule, writer_count=1, trace=trace, prefix="v2-14"
+    )
+    return _race_outcome(
+        env,
+        schedule,
+        race=race,
+        metrics=dict(race["metrics"]),
+        started=race["started"],
+        reason_code="stale_state_version",
+    )
+
+
+def _driver_v2_15(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
+    """TOCTOU-V2-15: concurrency scaling at two writers."""
+    trace = TransactionTrace()
+    race = _independent_write_race(
+        env, schedule, writer_count=2, trace=trace, prefix="v2-15"
+    )
+    return _race_outcome(
+        env,
+        schedule,
+        race=race,
+        metrics=dict(race["metrics"]),
+        started=race["started"],
+        reason_code="stale_state_version",
+    )
+
+
+def _driver_v2_16(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
+    """TOCTOU-V2-16: concurrency scaling at four writers."""
+    trace = TransactionTrace()
+    race = _independent_write_race(
+        env, schedule, writer_count=4, trace=trace, prefix="v2-16"
+    )
+    return _race_outcome(
+        env,
+        schedule,
+        race=race,
+        metrics=dict(race["metrics"]),
+        started=race["started"],
+        reason_code="stale_state_version",
+    )
+
+
+def _driver_v2_17(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
+    """TOCTOU-V2-17: concurrency scaling at eight writers."""
+    trace = TransactionTrace()
+    race = _independent_write_race(
+        env, schedule, writer_count=8, trace=trace, prefix="v2-17"
+    )
+    return _race_outcome(
+        env,
+        schedule,
+        race=race,
+        metrics=dict(race["metrics"]),
+        started=race["started"],
+        reason_code="stale_state_version",
+    )
+
+
+def _race_outcome(
+    env: ExecutorEnv,
+    schedule: Mapping[str, object],
+    *,
+    race: dict[str, object],
+    metrics: dict[str, object],
+    started: object,
+    reason_code: str,
+) -> RawScheduleOutcome:
+    """Build the observed outcome for one independent-resource race.
+
+    The audited actor is the false-stale loser (the burden observation); the
+    winner's commit is verified by the race invariant.  Operational outcomes
+    (deadlock/serialization) are never safety successes.
+    """
+    outcomes = race["outcomes"]
+    accepted = race["accepted"]
+    rejected = race["rejected"]
+    operational = race["operational"]
+    proposals: list[IndependentProposal] = race["proposals"]
+    interleaving = _base_interleaving(
+        schedule,
+        writer_count=len(proposals),
+        race_outcomes={str(index): outcome for index, outcome in outcomes.items()},
+    )
+    interleaving["metrics"] = metrics
+    if operational:
+        outcome = str(outcomes[operational[0]])
+        return RawScheduleOutcome(
+            schedule_id=str(schedule["id"]),
+            commit_outcome=outcome,
+            forbidden_commit_observed=False,
+            classification=outcome,
+            rejection=_rejection_subcontract(
+                reason_code=outcome,
+                proposal_coordinate={
+                    "proposal_id": "operational-attempt",
+                    "base_state_version": 0,
+                    "snapshot_id": "operational-attempt",
+                    "snapshot_digest_sha256": "operational-attempt",
+                },
+                snapshot_coordinate={
+                    "snapshot_id": "operational-attempt",
+                    "digest_sha256": "operational-attempt",
+                },
+                zero_state_transition_rows=True,
+            ),
+            trace=race["trace"],
+            interleaving=interleaving,
+            persisted_writers=list(schedule.get("persisted_writers", [])),
+            compound_drift=False,
+            operational_outcome=True,
+            safety_success=False,
+            latency_ms=elapsed_ms(started),
+        )
+    if not rejected:
+        winner_record = race["results"][accepted[0]]
+        return RawScheduleOutcome(
+            schedule_id=str(schedule["id"]),
+            commit_outcome=RACE_COMMIT_OUTCOME,
+            forbidden_commit_observed=False,
+            classification=SINGLE_WRITER_CLASSIFICATION,
+            committed=_committed_subcontract(
+                resulting_state_version=winner_record.get("resulting_state_version"),
+                exact_snapshot_linkage=int(winner_record["item_count"]) >= 1,
+                reconstruction_succeeds=True,
+            ),
+            trace=race["trace"],
+            interleaving=interleaving,
+            persisted_writers=list(schedule.get("persisted_writers", [])),
+            compound_drift=False,
+            operational_outcome=False,
+            safety_success=True,
+            latency_ms=elapsed_ms(started),
+        )
+    loser = proposals[rejected[0]]
+    return RawScheduleOutcome(
+        schedule_id=str(schedule["id"]),
+        commit_outcome="stale_state_version",
+        forbidden_commit_observed=False,
+        classification=FALSE_STALE_CLASSIFICATION,
+        rejection=_rejection_subcontract(
+            reason_code=reason_code,
+            proposal_coordinate={
+                "proposal_id": loser.public_id,
+                "base_state_version": loser.base_state_version,
+                "snapshot_id": loser.snapshot_id,
+                "snapshot_digest_sha256": loser.snapshot_digest_sha256,
+            },
+            snapshot_coordinate={
+                "snapshot_id": loser.snapshot_id,
+                "digest_sha256": loser.snapshot_digest_sha256,
+            },
+            zero_state_transition_rows=True,
+        ),
+        trace=race["trace"],
+        interleaving=interleaving,
+        persisted_writers=list(schedule.get("persisted_writers", [])),
+        compound_drift=False,
+        operational_outcome=False,
+        safety_success=True,
+        latency_ms=elapsed_ms(started),
+    )
+
+
 _DRIVERS: dict[str, Callable[[ExecutorEnv, Mapping[str, object]], RawScheduleOutcome]] = {
     "TOCTOU-V2-01": _driver_v2_01,
     "TOCTOU-V2-02": _driver_v2_02,
@@ -1863,6 +2413,14 @@ _DRIVERS: dict[str, Callable[[ExecutorEnv, Mapping[str, object]], RawScheduleOut
     "TOCTOU-V2-10": _driver_v2_10,
     "TOCTOU-V2-11": _driver_v2_11,
     "TOCTOU-V2-12": _driver_v2_12,
+}
+
+_V21_DRIVERS: dict[str, Callable[[ExecutorEnv, Mapping[str, object]], RawScheduleOutcome]] = {
+    "TOCTOU-V2-13": _driver_v2_13,
+    "TOCTOU-V2-14": _driver_v2_14,
+    "TOCTOU-V2-15": _driver_v2_15,
+    "TOCTOU-V2-16": _driver_v2_16,
+    "TOCTOU-V2-17": _driver_v2_17,
 }
 
 
@@ -1885,17 +2443,55 @@ def _classification_matches(expected: object, observed: str) -> bool:
         return (
             "deadlock" in o or "could_not_serialize" in o or "lock_wait_timeout" in o
         )
+    if e == "false_stale_expected":
+        return o == "committed_with_expected_false_stale"
     return False
 
 
+def _metrics_for_raw(raw: RawScheduleOutcome) -> dict[str, object]:
+    """Standard metrics block for a v2.1 observation.
+
+    Race drivers supply their full per-attempt metrics through
+    ``raw.interleaving["metrics"]``; governance/single-attempt schedules get a
+    derived single-attempt block.  The false-stale counts are zero for
+    governance schedules because no independent-resource race was staged there;
+    the workload marker keeps that distinction explicit.
+    """
+    supplied = raw.interleaving.get("metrics")
+    if isinstance(supplied, Mapping):
+        return dict(supplied)
+    accepted = raw.committed is not None
+    rejected = raw.rejection is not None and not raw.operational_outcome
+    return {
+        "workload_type": GOVERNANCE_SINGLE_WORKLOAD,
+        "attempts": 1,
+        "accepted_valid_commits": 1 if accepted else 0,
+        "true_stale_rejections": 1 if rejected else 0,
+        "false_stale_rejections": 0,
+        "false_stale_rate_per_attempt": 0.0,
+        "database_errors": 1 if raw.operational_outcome else 0,
+        "latency_p50_ms": round(raw.latency_ms, 3),
+        "latency_p95_ms": round(raw.latency_ms, 3),
+    }
+
+
 def _run_one_schedule(
-    env: ExecutorEnv, schedule: Mapping[str, object]
-) -> tuple[dict[str, object], dict[str, object]]:
-    driver = _DRIVERS.get(str(schedule["id"]))
+    env: ExecutorEnv,
+    schedule: Mapping[str, object],
+    *,
+    drivers: Mapping[str, Callable[[ExecutorEnv, Mapping[str, object]], RawScheduleOutcome]]
+    | None = None,
+) -> tuple[dict[str, object], dict[str, object], RawScheduleOutcome]:
+    drivers = drivers if drivers is not None else _DRIVERS
+    driver = drivers.get(str(schedule["id"]))
+    if driver is None:
+        driver = _V21_DRIVERS.get(str(schedule["id"]))
     if driver is None:
         raise ValueError(f"v2_unknown_schedule:{schedule.get('id')}")
     raw = driver(env, schedule)
     observation = observe(lambda _schedule: raw, schedule)
+    if isinstance(raw.interleaving.get("metrics"), Mapping):
+        observation["metrics"] = _metrics_for_raw(raw)
     observed_cls = str(observation["outcome"]["classification"])
     expected = schedule.get("expected_classification")
     audit = {
@@ -1904,7 +2500,103 @@ def _run_one_schedule(
         "observed_classification": observed_cls,
         "matches": _classification_matches(expected, observed_cls),
     }
-    return observation, audit
+    return observation, audit, raw
+
+
+def validate_v21(
+    observations: Sequence[Mapping[str, object]],
+    *,
+    protocol: Mapping[str, object],
+) -> dict[str, object]:
+    """Validate a complete v2.1 observation set (v2 schedules + 13..17).
+
+    Pure and fail-closed; no database is connected.  In addition to the v2
+    gates (frozen status, isolation contract, persisted-writer markers,
+    interleaving coverage, operational classification) it requires the
+    ``persisted_epoch_required`` marker, the false-stale burden and
+    concurrency-scaling coverage from TOCTOU-V2-13..17, per-observation
+    ``metrics`` completeness, and per-schedule concurrency counts.
+    """
+    if protocol.get("status") != PROTOCOL_STATUS:
+        raise ValueError("v2_protocol_not_frozen")
+    if protocol.get("schema_version") != V21_PROTOCOL_SCHEMA_VERSION:
+        raise ValueError("v2_protocol_schema_invalid")
+    if protocol.get("isolation") != V2_ISOLATION_CONTRACT:
+        raise ValueError("v2_isolation_contract_invalid")
+    if protocol.get("persisted_epoch_required") is not True:
+        raise ValueError("v21_persisted_epoch_required_missing")
+
+    schedules = protocol.get("schedules")
+    if not isinstance(schedules, list):
+        raise TypeError("v2_protocol_schedules_missing")
+    schedule_ids = [schedule.get("id") for schedule in schedules]
+    expected_ids = set(_DRIVERS) | set(_V21_DRIVERS)
+    if sorted(schedule_ids) != sorted(expected_ids):
+        raise ValueError("v21_schedule_set_invalid")
+
+    observed_ids: list[str] = []
+    for observation in observations:
+        require_observation_complete(observation)
+        observed_ids.append(str(observation["id"]))
+    if sorted(schedule_ids) != sorted(observed_ids):
+        raise ValueError("v2_schedule_set_mismatch")
+
+    by_id = {schedule.get("id"): schedule for schedule in schedules}
+    covered: set[str] = set()
+    compound_seen = False
+    race_schedules_seen: set[int] = set()
+    observed_rates: dict[str, float] = {}
+    for observation in observations:
+        schedule_id = str(observation["id"])
+        schedule = by_id[schedule_id]
+        _validate_schedule_markers(observation, schedule)
+        _validate_outcome_classification(observation)
+        covered.update(observation["interleaving"]["coverage"])
+        if observation.get("compound_drift") is True:
+            compound_seen = True
+        metrics = observation.get("metrics")
+        if not isinstance(metrics, Mapping):
+            raise TypeError(f"v21_metrics_missing:{schedule_id}")
+        missing_metrics = _METRICS_KEYS - set(metrics)
+        if missing_metrics:
+            raise ValueError(
+                f"v21_metrics_incomplete:{schedule_id}:{','.join(sorted(missing_metrics))}"
+            )
+        race_writer_count = schedule.get("writer_count")
+        if race_writer_count is not None:
+            if schedule_id not in _V21_DRIVERS:
+                raise ValueError(f"v21_writer_count_on_non_race_schedule:{schedule_id}")
+            if int(metrics.get("attempts", -1)) != int(race_writer_count):
+                raise ValueError(f"v21_race_attempt_count_mismatch:{schedule_id}")
+            if schedule_id != "TOCTOU-V2-14":
+                race_schedules_seen.add(int(race_writer_count))
+            expected_rate = schedule.get("expected_false_stale_rate")
+            if expected_rate is not None:
+                observed_rates[schedule_id] = float(
+                    metrics.get("false_stale_rate_per_attempt", -1.0)
+                )
+
+    missing = REQUIRED_INTERLEAVING_COVERAGE - covered
+    if missing:
+        raise ValueError(f"v2_interleaving_coverage_missing:{','.join(sorted(missing))}")
+    if not compound_seen:
+        raise ValueError("v2_compound_governance_drift_missing")
+    if {"false_stale_burden", "concurrency_scaling"} - covered:
+        raise ValueError("v21_race_coverage_missing")
+    if race_schedules_seen != {2, 4, 8}:
+        raise ValueError(f"v21_concurrency_levels_missing:{sorted(race_schedules_seen)}")
+
+    return {
+        "schema_version": V21_PROTOCOL_SCHEMA_VERSION,
+        "status": "VALIDATED_V21_OBSERVATIONS_NOT_EXECUTED",
+        "database_executed": False,
+        "result_emitted": False,
+        "observation_count": len(observations),
+        "interleaving_coverage": sorted(covered),
+        "observed_false_stale_rates": {
+            schedule_id: rate for schedule_id, rate in sorted(observed_rates.items())
+        },
+    }
 
 
 def run_schedules(
@@ -1919,23 +2611,56 @@ def run_schedules(
     schedules = protocol["schedules"]
     if not isinstance(schedules, list):
         raise TypeError("v2_protocol_schedules_missing")
+    schema_version = str(protocol.get("schema_version", ""))
+    is_v21 = schema_version == V21_PROTOCOL_SCHEMA_VERSION
+    drivers = dict(_DRIVERS)
+    if is_v21:
+        drivers.update(_V21_DRIVERS)
     observations: list[dict[str, object]] = []
     audits: list[dict[str, object]] = []
     for schedule in schedules:
-        observation, audit = _run_one_schedule(env, schedule)
+        observation, audit, raw = _run_one_schedule(
+            env, schedule, drivers=drivers
+        )
+        if is_v21:
+            metrics = _metrics_for_raw(raw)
+            observation["metrics"] = metrics
+            expected_rate = schedule.get("expected_false_stale_rate")
+            if expected_rate is not None:
+                audit["expected_false_stale_rate"] = expected_rate
+                observed_rate = metrics.get("false_stale_rate_per_attempt")
+                audit["observed_false_stale_rate_per_attempt"] = observed_rate
+                audit["false_stale_matches"] = (
+                    isinstance(observed_rate, (int, float))
+                    and abs(float(observed_rate) - float(expected_rate)) <= 0.005
+                )
+            else:
+                audit["false_stale_matches"] = None
         observations.append(observation)
         audits.append(audit)
-    validation = validate_v2(observations, protocol=protocol)
-    matches = [bool(item["matches"]) for item in audits]
-    status = (
-        "EXECUTED_V2_FROZEN_OBSERVATIONS"
-        if all(matches)
-        else "EXECUTED_V2_OBSERVATION_MISMATCH"
+    validation = validate_v21(observations, protocol=protocol) if is_v21 else validate_v2(
+        observations, protocol=protocol
     )
+    matches = [bool(item["matches"]) for item in audits]
+    if is_v21:
+        false_stale_matches = [item["false_stale_matches"] for item in audits]
+        status = (
+            "EXECUTED_V21_FROZEN_OBSERVATIONS"
+            if all(matches) and all(value is not False for value in false_stale_matches)
+            else "EXECUTED_V21_OBSERVATION_MISMATCH"
+        )
+        run_id = str(protocol.get("run_id") or V21_RUN_ID)
+    else:
+        status = (
+            "EXECUTED_V2_FROZEN_OBSERVATIONS"
+            if all(matches)
+            else "EXECUTED_V2_OBSERVATION_MISMATCH"
+        )
+        run_id = RUN_ID
     result: dict[str, object] = {
-        "schema_version": PROTOCOL_SCHEMA_VERSION,
+        "schema_version": schema_version,
         "status": status,
-        "run_id": RUN_ID,
+        "run_id": run_id,
         "backend": "isolated_postgresql_random_schema",
         "schema_retained": False,
         "source_revision": source_revision,
@@ -1946,9 +2671,10 @@ def run_schedules(
         "validation": validation,
         "not_run_schedule_ids": [],
         "note": (
-            "Raw v2 observations; run is claim-eligible only when status is "
-            "EXECUTED_V2_FROZEN_OBSERVATIONS and every schedule is "
-            "observer-complete. INDETERMINATE is never counted as safe."
+            "Raw v2/v2.1 observations; run is claim-eligible only when status is "
+            "EXECUTED_V2_FROZEN_OBSERVATIONS or EXECUTED_V21_FROZEN_OBSERVATIONS "
+            "and every schedule is observer-complete. INDETERMINATE is never "
+            "counted as safe."
         ),
     }
     if out_path is not None:
@@ -1968,15 +2694,19 @@ def _postgres_metadata(engine: Engine) -> dict[str, object]:
     }
 
 
-def _real_env(engine: Engine) -> ExecutorEnv:
+def _real_env(engine: Engine, *, epoch_model: type | None = None) -> ExecutorEnv:
+    """Build the real environment; ``epoch_model=GovernancePolicyEpoch`` selects
+    the v2.1 persisted-epoch path (production ORM row written and consulted by
+    the real gateway).  Without it the frozen v2 epoch row is used unchanged."""
+    api_epoch = epoch_model is GovernancePolicyEpoch
     return ExecutorEnv(
         session_factory=lambda: Session(engine, expire_on_commit=False),
-        adapter_factory=SessionAdapter,
+        adapter_factory=lambda session: SessionAdapter(session, epoch_model=epoch_model),
         gateway=gateway_module,
         barrier_factory=lambda parties: PhasedBarrier(parties, timeout_s=30.0),
         lock_factory=lambda name, trace: CompetingLock(name, trace, timeout_s=30.0),
         consent_record_factory=_real_consent_record,
-        epoch_factory=_real_epoch_row,
+        epoch_factory=_real_api_epoch_row if api_epoch else _real_epoch_row,
         postgres_metadata=_postgres_metadata(engine),
     )
 
@@ -1987,10 +2717,12 @@ def execute(
     database_url: str | None = None,
     output_path: Path = DEFAULT_OUTPUT_PATH,
 ) -> dict[str, object]:
-    """Execute the frozen v2 protocol in an isolated random PostgreSQL schema."""
+    """Execute the frozen v2/v2.1 protocol in an isolated random PostgreSQL schema."""
     protocol = load_protocol(protocol_path)
     validate_protocol(protocol)
     url = _require_final_isolated_postgres(database_url)
+    if str(protocol.get("schema_version", "")) == V21_PROTOCOL_SCHEMA_VERSION:
+        output_path = output_path or DEFAULT_OUTPUT_V21_PATH
 
     schema = _random_schema_name()
     admin = create_engine(url, pool_pre_ping=True)
@@ -2006,7 +2738,12 @@ def execute(
             connect_args={"options": f"-csearch_path={schema}"},
         )
         Base.metadata.create_all(engine)
-        env = _real_env(engine)
+        epoch_model = (
+            GovernancePolicyEpoch
+            if str(protocol.get("schema_version", "")) == V21_PROTOCOL_SCHEMA_VERSION
+            else None
+        )
+        env = _real_env(engine, epoch_model=epoch_model)
         return run_schedules(
             env,
             protocol,

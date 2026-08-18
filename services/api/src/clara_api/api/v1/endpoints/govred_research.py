@@ -42,6 +42,7 @@ from clara_api.core.redis_security_store import RedisSecurityStore
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     FamilyAccessGrant,
+    FamilyAccessLog,
     GlhsAssertion,
     GlhsSnapshotManifest,
     GlhsStateVersion,
@@ -85,6 +86,7 @@ class SyntheticCommitProbeRequest(_Strict):
         "snapshot_digest_invalid",
         "snapshot_expired",
         "actor_switch_replay",
+        "purpose_switch_replay",
         "concurrent_governance_writer",
     ]
     sentinel_id: str = Field(min_length=8, max_length=96, pattern=r"^[A-Za-z0-9_-]+$")
@@ -218,6 +220,21 @@ def synthetic_audit_observation(
 
     _require_research_arm()
     scope = _scope(db, token)
+    rejection_event = _find_rejection_event(
+        db, profile_id=scope.profile.id, sentinel_id=sentinel_id, probe_id=probe_id
+    )
+    if rejection_event is not None:
+        return {
+            "commit_found": False,
+            "transition_item_count": 0,
+            "state_version_recorded": False,
+            "snapshot_linkage_valid": False,
+            "audit_reconstruction_complete": False,
+            "reconstruction_status": "rejected",
+            "rejection_reason_code": rejection_event["rejection_reason_code"],
+            "rejection_coordinates": rejection_event["rejection_coordinates"],
+            "rejection_context": rejection_event["rejection_context"],
+        }
     proposal = db.execute(
         select(GlhsAssertion).where(
             GlhsAssertion.profile_id == scope.profile.id,
@@ -598,6 +615,40 @@ def _apply_mutations(
             data_class="medications",
             purpose="self_care",
         )
+    if request.mutation == "purpose_switch_replay":
+        if request.phase == "full":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "mutation_requires_two_phase"},
+            )
+        # A persisted synthetic purpose/authorization grant mutation applied
+        # before commit: the same owner gains a synthetic grant under a
+        # purpose-distinct value while the proposal (and its bound THSS
+        # snapshot, for binding arms) was created under ``self_care``.  The
+        # ordinary admission path then revalidates the purpose dimension and
+        # rejects the drift.  The grant is a synthetic research row only.
+        db.add(FamilyAccessGrant(
+            profile_id=scope.profile.id,
+            grantor_user_id=scope.profile.user_id,
+            grantee_user_id=scope.profile.user_id,
+            object_type="profile",
+            object_id="*",
+            purpose="care_coordination",
+            status="active",
+            starts_at=datetime.now(UTC) - timedelta(minutes=1),
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
+            allowed_actions_json=["view", "create"],
+            data_classes_json=["medications"],
+        ))
+        db.flush()
+        commit_scope = resolve_profile_scope(
+            db,
+            TokenPayload({"sub": scope.actor.email, "role": scope.actor.role}),
+            requested_profile=str(scope.profile.public_id),
+            action="create",
+            data_class="medications",
+            purpose="care_coordination",
+        )
     concurrent_revoke = None
     if request.mutation == "concurrent_governance_writer":
         if db.get_bind().dialect.name != "postgresql":
@@ -660,7 +711,14 @@ def _commit(
         )
         db.commit()
     except GlhsInvariantError as exc:
+        coordinates = _rejection_coordinates(
+            commit_scope=commit_scope,
+            proposal=proposal,
+            request=request,
+            probe_id=probe_id,
+        )
         db.rollback()
+        _record_rejection_event(db, coordinates=coordinates, rejection_reason_code=str(exc))
         _raise_invariant(exc)
     if concurrent_revoke is not None:
         # The writer thread has either committed by now or is imminent; join
@@ -706,6 +764,125 @@ def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
+_REJECTION_AUDIT_ACTION = "govred_synthetic_commit"
+_REJECTION_AUDIT_TASK = "govred-isolated-synthetic-probe"
+
+
+@dataclass(frozen=True)
+class _RejectionCoordinates:
+    """Sanitized structural coordinates for a rejected synthetic admission."""
+
+    profile_id: int
+    actor_user_id: int
+    purpose: str
+    task: str
+    mutation: str
+    sentinel_id: str
+    probe_id: str
+    proposal_public_id: str
+    proposal_semantic_key: str
+    snapshot_public_id: str | None
+
+
+def _rejection_coordinates(
+    *,
+    commit_scope: ProfileScope,
+    proposal,
+    request: SyntheticCommitProbeRequest,
+    probe_id: str,
+) -> _RejectionCoordinates:
+    """Capture sanitized structural coordinates before a rejected admission.
+
+    Nothing here is clinical: only synthetic probe coordinates, the numeric
+    actor id, purpose, and task.  The proposal attributes are read before the
+    failed transaction is rolled back (after rollback they would be expired).
+    The event is scoped to the proposal's own profile (the synthetic disclosure
+    subject), which differs from the commit scope for a subject-cross replay.
+    """
+
+    return _RejectionCoordinates(
+        profile_id=proposal.profile_id,
+        actor_user_id=commit_scope.actor.id,
+        purpose=commit_scope.purpose,
+        task=_REJECTION_AUDIT_TASK,
+        mutation=request.mutation,
+        sentinel_id=request.sentinel_id,
+        probe_id=probe_id,
+        proposal_public_id=proposal.public_id,
+        proposal_semantic_key=proposal.semantic_key,
+        snapshot_public_id=proposal.source_snapshot_id,
+    )
+
+
+def _record_rejection_event(
+    db: Session, *, coordinates: _RejectionCoordinates, rejection_reason_code: str
+) -> None:
+    """Persist one structural rejection event (no clinical payload).
+
+    The event survives the admission rollback because it is written in its own
+    independent commit on the cleaned session.  It carries the reason code,
+    proposal/snapshot coordinates, actor/purpose/task, and zero transition
+    rows, and is readable through the synthetic-audit-observation endpoint.
+    """
+
+    db.add(FamilyAccessLog(
+        profile_id=coordinates.profile_id,
+        actor_user_id=coordinates.actor_user_id,
+        object_type="glhs_synthetic_proposal",
+        object_id=(coordinates.proposal_public_id or coordinates.proposal_semantic_key)[:64],
+        action=_REJECTION_AUDIT_ACTION,
+        outcome="denied",
+        purpose=coordinates.purpose,
+        metadata_json={
+            "rejection_audit_kind": "structural_rejection_event",
+            "rejection_reason_code": rejection_reason_code,
+            "mutation": coordinates.mutation,
+            "task": coordinates.task,
+            "sentinel_id": coordinates.sentinel_id,
+            "probe_id": coordinates.probe_id,
+            "transition_item_count": 0,
+            "rejection_coordinates": {
+                "proposal_public_id": coordinates.proposal_public_id,
+                "proposal_semantic_key": coordinates.proposal_semantic_key,
+                "snapshot_public_id": coordinates.snapshot_public_id,
+            },
+            "rejection_context": {
+                "actor_user_id": coordinates.actor_user_id,
+                "purpose": coordinates.purpose,
+                "task": coordinates.task,
+                "mutation": coordinates.mutation,
+            },
+        },
+    ))
+    db.commit()
+
+
+def _find_rejection_event(
+    db: Session, *, profile_id: int, sentinel_id: str, probe_id: str
+) -> dict[str, object] | None:
+    """Return the matching structural rejection event metadata, if any."""
+
+    rows = list(
+        db.execute(
+            select(FamilyAccessLog)
+            .where(
+                FamilyAccessLog.profile_id == profile_id,
+                FamilyAccessLog.action == _REJECTION_AUDIT_ACTION,
+                FamilyAccessLog.outcome == "denied",
+            )
+            .order_by(FamilyAccessLog.id.desc())
+        ).scalars()
+    )
+    for row in rows:
+        metadata = row.metadata_json or {}
+        if (
+            metadata.get("sentinel_id") == sentinel_id
+            and metadata.get("probe_id") == probe_id
+        ):
+            return metadata
+    return None
+
+
 @router.post("/synthetic-commit-probe", status_code=status.HTTP_201_CREATED)
 def synthetic_commit_probe(
     request: SyntheticCommitProbeRequest,
@@ -724,6 +901,13 @@ def synthetic_commit_probe(
     so it exercises a real stale-state check.  ``snapshot_digest_invalid``
     attempts direct-SQL corruption of a synthetic snapshot manifest; the
     persistence layer's immutability trigger is the invariant under test.
+    ``purpose_switch_replay`` (two-phase) persists a synthetic purpose grant
+    under a purpose-distinct value before commit so admission revalidates the
+    purpose dimension.  ``policy_version_change`` (two-phase) is driven by the
+    deployment-level ``GOVRED_RESEARCH_POLICY_VERSION`` override.  A rejected
+    admission records a structural rejection event (reason code, proposal and
+    snapshot coordinates, actor/purpose/task, zero transition rows) readable
+    through the synthetic-audit-observation endpoint.
     """
 
     arm = _require_research_arm()

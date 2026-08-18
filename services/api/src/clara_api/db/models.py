@@ -3924,3 +3924,29 @@ class ClinicalReviewAction(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
+
+
+class GovernancePolicyEpoch(Base):
+    """A persisted, digest-bound governance policy epoch for one policy domain.
+
+    ``version`` advances monotonically per ``policy_domain``; the active epoch
+    governing admission is the row whose ``active_from`` is not in the future,
+    choosing the highest ``version``.  This table stores policy metadata only
+    and contains no PHI.
+    """
+
+    __tablename__ = "governance_policy_epochs"
+    __table_args__ = (
+        UniqueConstraint(
+            "policy_domain", "version", name="uq_governance_policy_epochs_domain_version"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    policy_domain: Mapped[str] = mapped_column(String(64), index=True)
+    version: Mapped[str] = mapped_column(String(64), index=True)
+    active_from: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    canonical_digest: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

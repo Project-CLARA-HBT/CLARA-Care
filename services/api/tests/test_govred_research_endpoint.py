@@ -450,3 +450,164 @@ def test_audit_observer_reconstructs_committed_snapshot_bound_transition(
         "audit_reconstruction_complete": True,
         "reconstruction_status": "complete",
     }
+
+
+def test_full_phase_purpose_switch_requires_two_phase(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe("purpose_switch_replay", "sentinel30"),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 400
+    assert raised.value.detail == {"code": "mutation_requires_two_phase"}
+
+
+def test_two_phase_purpose_switch_rejects_under_strict(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+    created = synthetic_commit_probe(
+        _probe("purpose_switch_replay", "sentinel31", phase="create"),
+        db,
+        _token(),
+    )
+    assert created["phase"] == "create"
+    assert created["snapshot_public_id"] is not None
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe(
+                "purpose_switch_replay",
+                "sentinel31",
+                phase="commit",
+                probe_id=created["probe_id"],
+            ),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail == {"code": "proposal_snapshot_purpose_mismatch"}
+
+
+def test_purpose_switch_rejection_recorded_for_audit(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+    created = synthetic_commit_probe(
+        _probe("purpose_switch_replay", "sentinel32", phase="create"),
+        db,
+        _token(),
+    )
+    try:
+        synthetic_commit_probe(
+            _probe(
+                "purpose_switch_replay",
+                "sentinel32",
+                phase="commit",
+                probe_id=created["probe_id"],
+            ),
+            db,
+            _token(),
+        )
+    except HTTPException:
+        pass
+
+    observed = synthetic_audit_observation(
+        sentinel_id="sentinel32",
+        probe_id=created["probe_id"],
+        db=db,
+        token=_token(),
+    )
+
+    assert observed["commit_found"] is False
+    assert observed["transition_item_count"] == 0
+    assert observed["reconstruction_status"] == "rejected"
+    assert observed["rejection_reason_code"] == "proposal_snapshot_purpose_mismatch"
+    assert observed["rejection_coordinates"]["proposal_public_id"] == created["proposal_public_id"]
+    assert observed["rejection_coordinates"]["snapshot_public_id"] == created["snapshot_public_id"]
+    assert observed["rejection_context"]["purpose"] == "care_coordination"
+    assert observed["rejection_context"]["task"] == "govred-isolated-synthetic-probe"
+
+
+def test_two_phase_policy_version_change_rejects_under_strict(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+    monkeypatch.setenv("GOVRED_RESEARCH_POLICY_VERSION", "research-policy-v1")
+    created = synthetic_commit_probe(
+        _probe("policy_version_change", "sentinel33", phase="create"),
+        db,
+        _token(),
+    )
+    monkeypatch.setenv("GOVRED_RESEARCH_POLICY_VERSION", "research-policy-v2")
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe(
+                "policy_version_change",
+                "sentinel33",
+                phase="commit",
+                probe_id=created["probe_id"],
+            ),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail == {"code": "assertion_policy_mismatch"}
+
+
+def test_two_phase_subject_cross_replay_rejects_under_strict(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _configure_arm(monkeypatch, "GLHS_STRICT")
+    created = synthetic_commit_probe(
+        _probe("subject_cross_replay", "sentinel34", phase="create"),
+        db,
+        _token(),
+    )
+
+    with pytest.raises(HTTPException) as raised:
+        synthetic_commit_probe(
+            _probe(
+                "subject_cross_replay",
+                "sentinel34",
+                phase="commit",
+                probe_id=created["probe_id"],
+            ),
+            db,
+            _token(),
+        )
+
+    assert raised.value.status_code == 409
+    assert raised.value.detail == {"code": "assertion_scope_forbidden"}
+
+    observed = synthetic_audit_observation(
+        sentinel_id="sentinel34",
+        probe_id=created["probe_id"],
+        db=db,
+        token=_token(),
+    )
+    assert observed["commit_found"] is False
+    assert observed["transition_item_count"] == 0
+    assert observed["rejection_reason_code"] == "assertion_scope_forbidden"
+    assert observed["rejection_coordinates"]["proposal_public_id"] == created["proposal_public_id"]
+
+
+def test_strict_policy_override_is_isolated_attestation_gated(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Without the isolated research attestation the override is never honored:
+    # the gateway returns the production POLICY_VERSION constant.
+    monkeypatch.delenv("CLARA_GOVRED_ISOLATED_RESEARCH", raising=False)
+    monkeypatch.setenv("GOVRED_RESEARCH_POLICY_VERSION", "research-policy-v1")
+    from clara_api.glhs import gateway
+
+    assert gateway._effective_policy_version() == gateway.POLICY_VERSION

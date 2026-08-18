@@ -58,12 +58,17 @@ BASE_OBSERVATION_FIELDS: tuple[str, ...] = (
     "commit_occurred",
 )
 
+#: Writer type exercised per family. The three mandatory-primary families that
+#: were NOT_RUN in final-003 (cross_subject_retrieval, purpose_mismatch,
+#: policy_version_change) now map to real API mutation modes so the adapter can
+#: execute them: cross-subject access/replay, the narrow synthetic purpose-switch
+#: grant, and the deployment-level policy version override.
 _GOVERNANCE_WRITER_TYPE = {
-    "cross_subject_retrieval": "none",
+    "cross_subject_retrieval": "subject_cross_replay",
     "cross_subject_proposal_write": "subject_cross_replay",
     "revoked_consent_cache_index_reuse": "consent_revoke",
     "role_mismatch": "actor_switch_replay",
-    "purpose_mismatch": "none",
+    "purpose_mismatch": "purpose_switch_replay",
     "stale_thss_replay": "state_advance",
     "concurrent_stale_state_write": "concurrent_governance_writer",
     "authorization_consent_toctou": "consent_revoke",
