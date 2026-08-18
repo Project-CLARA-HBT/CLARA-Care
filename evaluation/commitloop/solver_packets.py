@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any, Protocol
 
 from evaluation.commitloop.oracle import grace_end_for_case
+from evaluation.commitloop.production_context import compile_glhs_v2_full_context
 from evaluation.commitloop.schema import ConstructedCase, TimelineEvent
 from evaluation.comparator_studies.bitemporal_state_arbitration.adapter import (
     btsa_context,
@@ -34,7 +35,7 @@ CONDITIONS = (
 # V21/V22 and all V5/V6 validators intentionally retain ``CONDITIONS`` above.
 # A future exploratory protocol may opt into this stronger retrieval comparator
 # only through its own frozen inventory; it cannot silently alter past runs.
-EXPLORATORY_V7_CONDITIONS = (*CONDITIONS, "temporal_bm25")
+EXPLORATORY_V7_CONDITIONS = (*CONDITIONS, "temporal_bm25", "glhs_v2_full")
 
 
 def _event(event: TimelineEvent) -> dict[str, Any]:
@@ -240,6 +241,14 @@ def build_solver_packets(
         "glhs_hybrid_thss_strict": {
             **strict_context,
             "predicate": case.fulfillment_predicate,
+        },
+        "glhs_v2_full": {
+            **compile_glhs_v2_full_context(
+                case,
+                events,
+                valid_cutoff=valid_cutoff,
+                known_cutoff=known_cutoff,
+            ),
         },
     }
     packets = {}
