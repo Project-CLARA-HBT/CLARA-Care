@@ -1,0 +1,87 @@
+{
+  "branch": "codex/commitloop-phase-a",
+  "careguard": "PAUSED_BY_OPERATOR; no DAV crawl or CareGuard source acquisition performed by this evidence-upgrade program.",
+  "generated_at": "2026-08-18",
+  "head_sha": "b6218abc",
+  "schema_version": "clara-evidence-upgrade-program-manifest.v1",
+  "streams": {
+    "Formal_Assurance": {
+      "invariant_violations": 0,
+      "report": "research/evidence_upgrade/formal/FORMAL_ASSURE_REPORT.md",
+      "sealed": true,
+      "states_explored": 21361,
+      "transitions_explored": 90432
+    },
+    "GLHS_Journal": {
+      "final_run_id_v1": "GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
+      "final_run_id_v2": "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
+      "protocol_qa": {
+        "agreement": 1.0,
+        "kappa": 1.0,
+        "unresolved": 0
+      },
+      "sealed_claim_eligible": true,
+      "source_sha_v2": "67e528b61512aabc201b344e54f9e3e724490e41",
+      "v2_analysis": "research/glhs_journal/protocol_v2/analysis_v2.json",
+      "v2_matrix": {
+        "committed": 1,
+        "forbidden_commit_observed": 0,
+        "indeterminate": 0,
+        "persisted_writers": [
+          "consent_revoke",
+          "role_change",
+          "advance_governance_policy_epoch"
+        ],
+        "rejected": 10,
+        "schedules": 12
+      },
+      "v2_raw": "research/glhs_journal/protocol_v2/run_v2_raw.json"
+    },
+    "RIVF_GovRed": {
+      "analysis_v2": "research/govred_rivf/results/final-003-analysis-v2.json",
+      "final_run_id": "2026-08-17-rivf-final-003",
+      "note": "Dual-model protocol QA NOT_RUN_pending_router_key; NOT_RUN 180/arm excluded from denominators.",
+      "paired_mcnemar_exact_p": 1.6155871338926322e-27,
+      "primary": {
+        "GLHS_STRICT": {
+          "ci": [
+            0.1019,
+            0.1966
+          ],
+          "k": 30,
+          "rate": 0.1429
+        },
+        "UNBOUND": {
+          "ci": [
+            0.504,
+            0.636
+          ],
+          "k": 120,
+          "rate": 0.5714
+        },
+        "denominator": 210
+      },
+      "prohibited_disclosure": "0/270 every arm",
+      "raw_root": "artifacts/govred/2026-08-17-rivf-final-003",
+      "sealed_claim_eligible": true,
+      "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb"
+    },
+    "SOICT_GovMut": {
+      "analysis": "research/assurance_soict/results/final-analysis.json",
+      "baseline_preflight": "all 16 method/seed PASS, 0 false kills",
+      "final_freeze": "govmut-soict-2026-final-v2",
+      "final_run": "research/assurance_soict/final_run.json",
+      "infra_errors": 0,
+      "mutation_scores": {
+        "M0": 0.356,
+        "M1": 0.089,
+        "M2": 0.133,
+        "M3": 0.444
+      },
+      "seal": "research/assurance_soict/seal",
+      "sealed_claim_eligible": true,
+      "source_sha": "ab877e04",
+      "unit": "controlled mutant; seeds not independent N"
+    }
+  }
+}
