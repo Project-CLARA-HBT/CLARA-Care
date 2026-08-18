@@ -400,6 +400,26 @@ def test_driver_v2_05_proposal_writer_race_is_never_fabricated_forbidden() -> No
     assert observation["interleaving"]["coverage"] == ["simultaneous_release"]
 
 
+def test_driver_v2_05_uses_pre_seeded_in_scope_evidence() -> None:
+    """The race proposal must use evidence already inside the disclosed snapshot
+    scope (evidence_source_scope_forbidden invariant), never newly recorded
+    out-of-scope evidence inside the proposal worker."""
+
+    env = _fake_env()
+    _run_one_schedule(env, _schedule(_load_frozen_protocol(), "TOCTOU-V2-05"))
+    gateway = env.gateway
+    assert isinstance(gateway, FakeGateway)
+    calls = list(gateway.calls)
+    # One record_evidence during setup; the proposal worker must not record
+    # additional evidence after the snapshot.
+    record_calls = [c for c in calls if c[0] == "record_evidence"]
+    assert len(record_calls) == 1
+    # record_evidence happened before compile_thss (evidence is in-scope).
+    record_at = calls.index(record_calls[0])
+    compile_at = next(i for i, c in enumerate(calls) if c[0] == "compile_thss")
+    assert record_at < compile_at
+
+
 def test_driver_v2_09_simultaneous_release_is_never_fabricated_forbidden() -> None:
     env = _fake_env()
     observation = _run_one_schedule(env, _schedule(_load_frozen_protocol(), "TOCTOU-V2-09"))[0]

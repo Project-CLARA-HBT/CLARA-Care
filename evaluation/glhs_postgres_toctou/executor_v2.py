@@ -907,11 +907,16 @@ def _driver_v2_05(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
     db = env.session_factory()
     try:
         scope = _seed_owner_scope(db)
+        # Seed the in-scope evidence BEFORE compiling the disclosure so the
+        # bound proposal uses only evidence within the disclosed snapshot scope
+        # (the gateway rejects out-of-scope evidence via evidence_source_scope_forbidden).
+        evidence = _seed_evidence(env, db, scope)
         snapshot = _seed_snapshot(env, db, scope)
         db.commit()
         user_id = scope.actor.id
         profile_id = scope.profile.id
         snapshot_id = str(snapshot.snapshot_id)
+        evidence_id = int(evidence.id)
         digest, _binding_field = snapshot_binding_digest(snapshot)
     finally:
         db.close()
@@ -950,28 +955,9 @@ def _driver_v2_05(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
             pdb = env.session_factory()
             try:
                 barrier.wait(phase)
-                pdb.add(
-                    HealthSourceReference(
-                        profile_id=profile_id,
-                        source_kind="glhs-toctou-v2",
-                        source_identity=f"synthetic:{uuid4()}",
-                        checksum=f"synthetic:{uuid4()}",
-                        observed_at=datetime.now(UTC),
-                    )
-                )
-                pdb.flush()
-                evidence = env.gateway.record_evidence(
-                    pdb,
-                    profile_id=profile_id,
-                    data=EvidenceInput(
-                        source_reference_id=1,
-                        evidence_kind="glhs-toctou-v2",
-                        artifact_type="synthetic",
-                        artifact_public_id=f"synthetic:{uuid4()}",
-                        fingerprint=f"synthetic:{uuid4()}",
-                        valid_from=datetime.now(UTC),
-                    ),
-                )
+                evidence = pdb.get(GlhsEvidence, evidence_id)
+                if evidence is None:
+                    raise RuntimeError("v2_05_in_scope_evidence_missing")
                 try:
                     env.gateway.propose_assertion(
                         pdb,
