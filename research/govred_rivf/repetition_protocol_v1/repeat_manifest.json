@@ -1,0 +1,68 @@
+{
+  "aggregation": "schedule robust only if all valid repetitions satisfy the invariant; mixed classifications reported, never majority-voted",
+  "db": {
+    "commit_order_evidence": "pg_xact_commit_timestamp (never txid order alone)",
+    "isolation_level": "READ_COMMITTED",
+    "lock_timeout_s": 30.0,
+    "statement_timeout_s": 30.0,
+    "track_commit_timestamp_available": true
+  },
+  "family": "concurrent_stale_state_write",
+  "frozen_at": "2026-08-19T06:27:50.928247+00:00",
+  "interleaving_modes": [
+    "simultaneous_release",
+    "governance_first",
+    "commit_first"
+  ],
+  "jitter": {
+    "range_ms": [
+      5.0,
+      50.0
+    ],
+    "seed_list": [
+      20260818,
+      20260819,
+      20260820,
+      20260821
+    ]
+  },
+  "logical_unit": "scenario (repetitions never increase N)",
+  "observer_schema_version": "glhs-postgres-governance-toctou-final-v2.1",
+  "repetitions_per_logical_schedule": 50,
+  "scenario_count": 30,
+  "scenario_ids": [
+    "concurrent_stale_state_write-001",
+    "concurrent_stale_state_write-002",
+    "concurrent_stale_state_write-003",
+    "concurrent_stale_state_write-004",
+    "concurrent_stale_state_write-005",
+    "concurrent_stale_state_write-006",
+    "concurrent_stale_state_write-007",
+    "concurrent_stale_state_write-008",
+    "concurrent_stale_state_write-009",
+    "concurrent_stale_state_write-010",
+    "concurrent_stale_state_write-011",
+    "concurrent_stale_state_write-012",
+    "concurrent_stale_state_write-013",
+    "concurrent_stale_state_write-014",
+    "concurrent_stale_state_write-015",
+    "concurrent_stale_state_write-016",
+    "concurrent_stale_state_write-017",
+    "concurrent_stale_state_write-018",
+    "concurrent_stale_state_write-019",
+    "concurrent_stale_state_write-020",
+    "concurrent_stale_state_write-021",
+    "concurrent_stale_state_write-022",
+    "concurrent_stale_state_write-023",
+    "concurrent_stale_state_write-024",
+    "concurrent_stale_state_write-025",
+    "concurrent_stale_state_write-026",
+    "concurrent_stale_state_write-027",
+    "concurrent_stale_state_write-028",
+    "concurrent_stale_state_write-029",
+    "concurrent_stale_state_write-030"
+  ],
+  "schema_version": "govred-repetition-protocol-v1",
+  "status": "frozen",
+  "total_repetitions": 1500
+}

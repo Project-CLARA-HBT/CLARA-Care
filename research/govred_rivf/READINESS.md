@@ -163,3 +163,54 @@ unbound state-only commit and `not_committed` for the strict rejection. This
 two-arm trace is sealed development evidence only. It neither provides the
 full four-arm cache study nor establishes audit completeness, a frozen
 complete-boundary run, or any headline RIVF outcome.
+
+## Workstream E — GovRed completion status (2026-08-19)
+
+Final-003 remains the sealed historical study (read-only). Workstream E adds
+new, separately frozen artifacts. Current state:
+
+- **E-001 three-state primary (GRD-01).** `final_analysis_schema.py`
+  (`govred-three-state-primary-v1`) re-derives the primary table into
+  `results/final-003-three-state-primary.json` and
+  `three_state_primary.md`. GLHS_STRICT: CONFIRMED_INVALID 0,
+  INDETERMINATE 30 (concurrent_stale_state_write, never relabelled as
+  confirmed violations), CONFIRMED_SAFE_OR_REJECTED 180, OPERATIONAL_FAILURE 0.
+  The binary non-safe composite remains a secondary frozen endpoint only.
+- **E-002/E-003 repetition protocol (GRD-02).** `govred_repetition_protocol.py`
+  freezes 30 scenarios x 50 repetitions with DB commit-order evidence
+  (`pg_xact_commit_timestamp`, never txid-order-only). Frozen under
+  `repetition_protocol_v1/` and marked **PENDING EXECUTION**: no reachable
+  isolated PostgreSQL on this host (docker unavailable). No INDETERMINATE
+  schedule has been reclassified.
+- **E-004 Not Run capability audit (GRD-03).** `not_run_capability.py` ->
+  `not_run_capability_audit.md`: 16 family-arm rows IMPLEMENTABLE_FAITHFULLY
+  (cross_subject_retrieval, purpose_mismatch, policy_version_change,
+  unrelated_disclosure_request), 8 REQUIRES_LLM_ATTACK_STUDY (gst_bypass_prompt,
+  patient_evidence_prompt_injection), 0 TASK_OR_ARM_SEMANTICS_UNSUPPORTED.
+  Three mandatory-primary families were completed in the adapter at commit
+  `bd0d7d65` (capability, not result).
+- **E-005 feasible Not Run scenarios.** `not_run_adapter_scenarios.py`
+  implements DB-free scenario drivers for the feasible families using the
+  existing persisted governance writers (`advance_governance_policy_epoch`,
+  `purpose_or_authorization_change`, `role_change`); prompt-injection families
+  stay unimplemented (E-006).
+- **E-007/E-008 audit opportunity denominators (GRD-04).**
+  `opportunity_schema.py` -> `audit_opportunity_denominators.md`: completeness
+  reported only within each eligible opportunity set (rejected-operations
+  record, committed-operations reconstruction, governance-mutation trace
+  linkage). The frozen final-003 observer emits only the reconstruction boolean
+  (0.400 within its eligible set); rejection-record and trace-linkage are
+  `not_emitted` and reported as such, never as completeness claims.
+- **E-009 fresh holdout (GRD-05).** `holdout_protocol.py` +
+  `holdout_v1/FREEZE.md` + `holdout_v1/schedules_skeleton.json`: 39 skeleton
+  schedules, **FROZEN-NOT-EXECUTED** under a manual independent-human
+  authorship gate. LLM-simulated authorship is forbidden; the gate is open.
+- **E-010 new freeze.** Not started; requires the manual gates above.
+- **E-011 publication routing (GRD-06).** `PUBLICATION_ROUTING.md`: **RIVF
+  primary** (final-003 is its sealed study); BigData Healthcare held
+  /extension-only until resolved concurrency + holdout + additional
+  backend/attack-family evidence.
+
+Remaining manual gates before any new freeze or submission: independent human
+holdout authors (E-009), repetition execution against an isolated PostgreSQL
+(E-002/E-003), and a new GovRed freeze (E-010).

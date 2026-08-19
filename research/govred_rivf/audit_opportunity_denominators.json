@@ -1,0 +1,1252 @@
+{
+  "gr_requirement": "GRD-04 audit opportunity denominators",
+  "reporting_rule": "completeness is reported ONLY within each eligible opportunity set; raw cross-arm counts are never completeness",
+  "rows": [
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "authorization_consent_toctou",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "cross_subject_proposal_write",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "derived_cache_persistence_after_revocation",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "digest_expiry_tamper_replay",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "revoked_consent_cache_index_reuse",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "role_mismatch",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "stale_thss_replay",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "cross_subject_proposal_write",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "derived_cache_persistence_after_revocation",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "digest_expiry_tamper_replay",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "revoked_consent_cache_index_reuse",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "stale_thss_replay",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "cross_subject_proposal_write",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "derived_cache_persistence_after_revocation",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "digest_expiry_tamper_replay",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "revoked_consent_cache_index_reuse",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "stale_thss_replay",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "cross_subject_proposal_write",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "derived_cache_persistence_after_revocation",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "digest_expiry_tamper_replay",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "revoked_consent_cache_index_reuse",
+      "missing_fields": {
+        "rejection_coordinates:not_emitted": 30,
+        "rejection_reason_code:not_emitted": 30,
+        "zero_transition_rows:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "rejected_operation_decision_record",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "rejection_reason_code",
+        "rejection_coordinates",
+        "zero_transition_rows"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 30,
+      "completeness_within_eligible_set": 1.0,
+      "eligible_opportunity_n": 30,
+      "family": "audit_reconstruction_failure",
+      "missing_fields": {},
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 30,
+      "completeness_within_eligible_set": 1.0,
+      "eligible_opportunity_n": 30,
+      "family": "concurrent_stale_state_write",
+      "missing_fields": {},
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 30,
+      "completeness_within_eligible_set": 1.0,
+      "eligible_opportunity_n": 30,
+      "family": "audit_reconstruction_failure",
+      "missing_fields": {},
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 30,
+      "completeness_within_eligible_set": 1.0,
+      "eligible_opportunity_n": 30,
+      "family": "authorization_consent_toctou",
+      "missing_fields": {},
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 30,
+      "completeness_within_eligible_set": 1.0,
+      "eligible_opportunity_n": 30,
+      "family": "concurrent_stale_state_write",
+      "missing_fields": {},
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 30,
+      "completeness_within_eligible_set": 1.0,
+      "eligible_opportunity_n": 30,
+      "family": "role_mismatch",
+      "missing_fields": {},
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "audit_reconstruction_failure",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "authorization_consent_toctou",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "concurrent_stale_state_write",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "role_mismatch",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "audit_reconstruction_failure",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "authorization_consent_toctou",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "concurrent_stale_state_write",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "role_mismatch",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "stale_thss_replay",
+      "missing_fields": {
+        "audit_reconstruction_complete:missing": 30
+      },
+      "observer_emitted_required_record": true,
+      "opportunity_kind": "committed_operation_exact_reconstruction",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "audit_reconstruction_complete"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "authorization_consent_toctou",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "concurrent_stale_state_write",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "cross_subject_proposal_write",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "derived_cache_persistence_after_revocation",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "digest_expiry_tamper_replay",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "revoked_consent_cache_index_reuse",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "role_mismatch",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "GLHS_STRICT",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "stale_thss_replay",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "authorization_consent_toctou",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "concurrent_stale_state_write",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "cross_subject_proposal_write",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "derived_cache_persistence_after_revocation",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "digest_expiry_tamper_replay",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "revoked_consent_cache_index_reuse",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "role_mismatch",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "stale_thss_replay",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "authorization_consent_toctou",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "concurrent_stale_state_write",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "cross_subject_proposal_write",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "derived_cache_persistence_after_revocation",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "digest_expiry_tamper_replay",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "revoked_consent_cache_index_reuse",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "role_mismatch",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "STATE_VERSION_ONLY",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "stale_thss_replay",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "authorization_consent_toctou",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "concurrent_stale_state_write",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "cross_subject_proposal_write",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "derived_cache_persistence_after_revocation",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "digest_expiry_tamper_replay",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "secondary_robustness_stress",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "revoked_consent_cache_index_reuse",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "role_mismatch",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    },
+    {
+      "arm": "UNBOUND",
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 30,
+      "family": "stale_thss_replay",
+      "missing_fields": {
+        "commit_order_evidence:not_emitted": 30,
+        "transaction_trace:not_emitted": 30
+      },
+      "observer_emitted_required_record": false,
+      "opportunity_kind": "governance_mutation_trace_linkage",
+      "reporting_scope": "primary_authorization_drift",
+      "required_record": [
+        "transaction_trace",
+        "commit_order_evidence"
+      ]
+    }
+  ],
+  "schema_version": "govred-audit-opportunity-denominators-v1",
+  "source": "immutable final-003 raw_results.csv (all four arms)",
+  "summary": {
+    "committed_operation_exact_reconstruction": {
+      "complete_n": 180,
+      "completeness_within_eligible_set": 0.4,
+      "eligible_opportunity_n": 450,
+      "observer_emitted_required_record": true
+    },
+    "governance_mutation_trace_linkage": {
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 960,
+      "observer_emitted_required_record": false
+    },
+    "rejected_operation_decision_record": {
+      "complete_n": 0,
+      "completeness_within_eligible_set": 0.0,
+      "eligible_opportunity_n": 630,
+      "observer_emitted_required_record": false
+    }
+  }
+}

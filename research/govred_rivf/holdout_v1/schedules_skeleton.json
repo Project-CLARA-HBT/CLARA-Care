@@ -1,0 +1,406 @@
+{
+  "authorship_gate": {
+    "forbidden_modes": [
+      "llm_authored",
+      "llm_simulated"
+    ],
+    "note": "independent human authorship required; never simulated with an LLM; do not execute without real independent authors",
+    "required_mode": "INDEPENDENT_HUMAN_REQUIRED"
+  },
+  "created_at": "2026-08-19T06:36:53.097397+00:00",
+  "schedule_count": 30,
+  "schedules": [
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "cross_subject_retrieval",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-cross_subject_retrieval-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "cross_subject_retrieval",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-cross_subject_retrieval-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "cross_subject_retrieval",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-cross_subject_retrieval-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "cross_subject_proposal_write",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-cross_subject_proposal_write-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "cross_subject_proposal_write",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-cross_subject_proposal_write-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "cross_subject_proposal_write",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-cross_subject_proposal_write-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "revoked_consent_cache_index_reuse",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-revoked_consent_cache_index_reuse-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "revoked_consent_cache_index_reuse",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-revoked_consent_cache_index_reuse-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "revoked_consent_cache_index_reuse",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-revoked_consent_cache_index_reuse-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "role_mismatch",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-role_mismatch-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "role_mismatch",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-role_mismatch-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "role_mismatch",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-role_mismatch-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "purpose_mismatch",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-purpose_mismatch-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "purpose_mismatch",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-purpose_mismatch-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "purpose_mismatch",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-purpose_mismatch-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "stale_thss_replay",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-stale_thss_replay-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "stale_thss_replay",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-stale_thss_replay-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "stale_thss_replay",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-stale_thss_replay-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "concurrent_stale_state_write",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-concurrent_stale_state_write-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "concurrent_stale_state_write",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-concurrent_stale_state_write-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "concurrent_stale_state_write",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-concurrent_stale_state_write-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "authorization_consent_toctou",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-authorization_consent_toctou-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "authorization_consent_toctou",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-authorization_consent_toctou-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "authorization_consent_toctou",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-authorization_consent_toctou-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "policy_version_change",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-policy_version_change-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "policy_version_change",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-policy_version_change-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "policy_version_change",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "primary_authorization_drift",
+      "schedule_id": "holdout-v1-policy_version_change-003"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "unrelated_disclosure_request",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "secondary_robustness_stress",
+      "schedule_id": "holdout-v1-unrelated_disclosure_request-001"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "unrelated_disclosure_request",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "secondary_robustness_stress",
+      "schedule_id": "holdout-v1-unrelated_disclosure_request-002"
+    },
+    {
+      "arm_applicability": [
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT"
+      ],
+      "authorship": null,
+      "family": "unrelated_disclosure_request",
+      "invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+      "reporting_scope": "secondary_robustness_stress",
+      "schedule_id": "holdout-v1-unrelated_disclosure_request-003"
+    }
+  ],
+  "schema_version": "govred-holdout-protocol-v1",
+  "status": "SKELETON_NOT_AUTHORED"
+}

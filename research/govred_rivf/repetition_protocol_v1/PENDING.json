@@ -1,0 +1,16 @@
+{
+  "frozen_at": "2026-08-19T06:27:50.928556+00:00",
+  "manifest_ref": "research/govred_rivf/repetition_protocol_v1/repeat_manifest.json",
+  "reason": "no reachable isolated PostgreSQL on this host (docker unavailable); freeze the protocol and mark pending honestly rather than fabricate outcomes",
+  "schema_version": "govred-repetition-protocol-v1",
+  "status": "FROZEN_PENDING_EXECUTION",
+  "validation": {
+    "database_executed": false,
+    "repetitions_per_logical_schedule": 50,
+    "result_emitted": false,
+    "scenario_count": 30,
+    "schema_version": "govred-repetition-protocol-v1",
+    "status": "VALIDATED_FROZEN_NOT_EXECUTED",
+    "total_repetitions": 1500
+  }
+}

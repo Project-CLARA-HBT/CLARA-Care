@@ -1,0 +1,187 @@
+{
+  "derivation_notes": [
+    "CONFIRMED_INVALID counts confirmed invalid-commit acceptances with attribution arm_omitted_coordinate for weaker-arm residuals; never presented as production defects.",
+    "INDETERMINATE counts concurrent_stale_state_write residuals per the frozen GLHS TOCTOU wording; never relabelled as confirmed violations.",
+    "OPERATIONAL_FAILURE counts availability failures (zero in final-003).",
+    "CONFIRMED_SAFE_OR_REJECTED is the remainder of the primary denominator.",
+    "The historical binary non-safe composite remains a secondary frozen endpoint and is reported unchanged below."
+  ],
+  "derived_from": "2026-08-17-rivf-final-003",
+  "rows": [
+    {
+      "CONFIRMED_INVALID": 90,
+      "CONFIRMED_SAFE_OR_REJECTED": 90,
+      "INDETERMINATE": 30,
+      "OPERATIONAL_FAILURE": 0,
+      "arm": "UNBOUND",
+      "indeterminate_breakdown": [
+        {
+          "family": "concurrent_stale_state_write",
+          "n": 30,
+          "reason": "concurrency/ordering residual; ordering not resolvable from the frozen final-003 observer (never relabelled as a confirmed violation)",
+          "state": "INDETERMINATE"
+        }
+      ],
+      "invalid_breakdown": [
+        {
+          "arm_omits_coordinate": true,
+          "attribution": "arm_omitted_coordinate",
+          "family": "authorization_consent_toctou",
+          "n": 30,
+          "note": "controlled ablation outcome: the arm design removes the governance_revalidation coordinate; not a production defect",
+          "omitted_coordinate": "governance_revalidation",
+          "state": "CONFIRMED_INVALID"
+        },
+        {
+          "arm_omits_coordinate": true,
+          "attribution": "arm_omitted_coordinate",
+          "family": "role_mismatch",
+          "n": 30,
+          "note": "controlled ablation outcome: the arm design removes the governance_revalidation coordinate; not a production defect",
+          "omitted_coordinate": "governance_revalidation",
+          "state": "CONFIRMED_INVALID"
+        },
+        {
+          "arm_omits_coordinate": true,
+          "attribution": "arm_omitted_coordinate",
+          "family": "stale_thss_replay",
+          "n": 30,
+          "note": "controlled ablation outcome: the arm design removes the state_revalidation coordinate; not a production defect",
+          "omitted_coordinate": "state_revalidation",
+          "state": "CONFIRMED_INVALID"
+        }
+      ],
+      "primary_endpoint_n": 210
+    },
+    {
+      "CONFIRMED_INVALID": 60,
+      "CONFIRMED_SAFE_OR_REJECTED": 120,
+      "INDETERMINATE": 30,
+      "OPERATIONAL_FAILURE": 0,
+      "arm": "STATE_VERSION_ONLY",
+      "indeterminate_breakdown": [
+        {
+          "family": "concurrent_stale_state_write",
+          "n": 30,
+          "reason": "concurrency/ordering residual; ordering not resolvable from the frozen final-003 observer (never relabelled as a confirmed violation)",
+          "state": "INDETERMINATE"
+        }
+      ],
+      "invalid_breakdown": [
+        {
+          "arm_omits_coordinate": true,
+          "attribution": "arm_omitted_coordinate",
+          "family": "authorization_consent_toctou",
+          "n": 30,
+          "note": "controlled ablation outcome: the arm design removes the governance_revalidation coordinate; not a production defect",
+          "omitted_coordinate": "governance_revalidation",
+          "state": "CONFIRMED_INVALID"
+        },
+        {
+          "arm_omits_coordinate": true,
+          "attribution": "arm_omitted_coordinate",
+          "family": "role_mismatch",
+          "n": 30,
+          "note": "controlled ablation outcome: the arm design removes the governance_revalidation coordinate; not a production defect",
+          "omitted_coordinate": "governance_revalidation",
+          "state": "CONFIRMED_INVALID"
+        }
+      ],
+      "primary_endpoint_n": 210
+    },
+    {
+      "CONFIRMED_INVALID": 60,
+      "CONFIRMED_SAFE_OR_REJECTED": 120,
+      "INDETERMINATE": 30,
+      "OPERATIONAL_FAILURE": 0,
+      "arm": "SNAPSHOT_BOUND_STATE_ONLY",
+      "indeterminate_breakdown": [
+        {
+          "family": "concurrent_stale_state_write",
+          "n": 30,
+          "reason": "concurrency/ordering residual; ordering not resolvable from the frozen final-003 observer (never relabelled as a confirmed violation)",
+          "state": "INDETERMINATE"
+        }
+      ],
+      "invalid_breakdown": [
+        {
+          "arm_omits_coordinate": true,
+          "attribution": "arm_omitted_coordinate",
+          "family": "authorization_consent_toctou",
+          "n": 30,
+          "note": "controlled ablation outcome: the arm design removes the governance_revalidation coordinate; not a production defect",
+          "omitted_coordinate": "governance_revalidation",
+          "state": "CONFIRMED_INVALID"
+        },
+        {
+          "arm_omits_coordinate": true,
+          "attribution": "arm_omitted_coordinate",
+          "family": "role_mismatch",
+          "n": 30,
+          "note": "controlled ablation outcome: the arm design removes the governance_revalidation coordinate; not a production defect",
+          "omitted_coordinate": "governance_revalidation",
+          "state": "CONFIRMED_INVALID"
+        }
+      ],
+      "primary_endpoint_n": 210
+    },
+    {
+      "CONFIRMED_INVALID": 0,
+      "CONFIRMED_SAFE_OR_REJECTED": 180,
+      "INDETERMINATE": 30,
+      "OPERATIONAL_FAILURE": 0,
+      "arm": "GLHS_STRICT",
+      "indeterminate_breakdown": [
+        {
+          "family": "concurrent_stale_state_write",
+          "n": 30,
+          "reason": "concurrency/ordering residual; ordering not resolvable from the frozen final-003 observer (never relabelled as a confirmed violation)",
+          "state": "INDETERMINATE"
+        }
+      ],
+      "invalid_breakdown": [],
+      "primary_endpoint_n": 210
+    }
+  ],
+  "schema_version": "govred-three-state-primary-v1",
+  "secondary_frozen_binary_endpoint": {
+    "GLHS_STRICT": {
+      "primary_endpoint_n": 210,
+      "primary_failures": 30,
+      "primary_rate": 0.142857,
+      "wilson_95_ci": [
+        0.101935,
+        0.196612
+      ]
+    },
+    "SNAPSHOT_BOUND_STATE_ONLY": {
+      "primary_endpoint_n": 210,
+      "primary_failures": 90,
+      "primary_rate": 0.428571,
+      "wilson_95_ci": [
+        0.363513,
+        0.496196
+      ]
+    },
+    "STATE_VERSION_ONLY": {
+      "primary_endpoint_n": 210,
+      "primary_failures": 90,
+      "primary_rate": 0.428571,
+      "wilson_95_ci": [
+        0.363513,
+        0.496196
+      ]
+    },
+    "UNBOUND": {
+      "primary_endpoint_n": 210,
+      "primary_failures": 120,
+      "primary_rate": 0.571429,
+      "wilson_95_ci": [
+        0.503804,
+        0.636487
+      ]
+    }
+  },
+  "source_schema_version": "govred-analysis-v2",
+  "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb"
+}
