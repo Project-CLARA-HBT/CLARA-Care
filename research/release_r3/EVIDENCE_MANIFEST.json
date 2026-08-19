@@ -1464,7 +1464,7 @@
     "research/glhs_journal/protocol_v2/**",
     "artifacts/**"
   ],
-  "source_commit": "00c5a31bc68918fbfcfb180ac7ff9480dcd2ff5b",
+  "source_commit": "7c64ef84e783b52815d0a13584d5e45b088f43c4",
   "tracked_source_package": [
     "package/research/FINAL_PRE_CAREGUARD_STATUS.md",
     "package/research/FINAL_TOP_TIER_EVIDENCE_STATUS.md",
