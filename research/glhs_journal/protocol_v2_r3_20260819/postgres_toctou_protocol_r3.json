@@ -1,0 +1,403 @@
+{
+  "schema_version": "glhs-postgres-governance-toctou-final-v2",
+  "status": "FROZEN_FINAL_REVIEWED",
+  "run_id": "GLHS-POSTGRES-TOCTOU-R3-20260819-01",
+  "statistics_plan_path": "statistics_plan_v2.json",
+  "statistics_plan_sha256": "46a7e270f067769a3c43dc643dd448a2a25bdfffe74597c2d3b399b073af4fa7",
+  "isolation": {
+    "backend": "postgresql",
+    "operator_owned": true,
+    "random_schema_per_run": true,
+    "shared_or_default_database": false,
+    "production_resources": false
+  },
+  "unit_of_analysis": "one frozen logical schedule; retries remain within the same schedule and are never an independent N",
+  "required_observations": [
+    "id",
+    "run_status",
+    "schedule_type",
+    "persisted_writers",
+    "interleaving",
+    "compound_drift",
+    "outcome",
+    "rejection_auditability",
+    "committed_reconstructability",
+    "transaction_trace",
+    "latency_ms"
+  ],
+  "schedules": [
+    {
+      "id": "TOCTOU-V2-01",
+      "schedule_type": "consent_mutation_via_persisted_consent_writer",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "persisted_consent_writer_revoke",
+        "bound_transition_attempt"
+      ],
+      "barrier_phases": [
+        "release"
+      ],
+      "interleaving_coverage": [
+        "mutation_before_commit"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "expected_classification": "rejected",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "zero_transition_rows",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-02",
+      "schedule_type": "actor_role_mutation_via_persisted_role_writer",
+      "sequence": [
+        "seed_delegated_scope",
+        "persisted_role_change",
+        "fresh_scope_resolution",
+        "bound_transition_attempt"
+      ],
+      "barrier_phases": [
+        "release"
+      ],
+      "interleaving_coverage": [
+        "mutation_before_commit"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "role_change"
+      ],
+      "expected_classification": "rejected",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "zero_transition_rows",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-03",
+      "schedule_type": "policy_epoch_mutation_via_persisted_policy_epoch_writer",
+      "sequence": [
+        "seed_scope_snapshot",
+        "persisted_policy_epoch_advance",
+        "bound_transition_attempt"
+      ],
+      "barrier_phases": [
+        "release"
+      ],
+      "interleaving_coverage": [
+        "mutation_before_commit"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "advance_governance_policy_epoch"
+      ],
+      "expected_classification": "rejected",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "zero_transition_rows",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-04",
+      "schedule_type": "stale_state_version",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "stale_expected_state_version",
+        "bound_transition_attempt"
+      ],
+      "barrier_phases": [
+        "release"
+      ],
+      "interleaving_coverage": [
+        "mutation_before_commit"
+      ],
+      "persisted_governance_writer": false,
+      "persisted_writers": [],
+      "expected_classification": "rejected",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "zero_transition_rows",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-05",
+      "schedule_type": "concurrent_governance_writer_vs_proposal_writer",
+      "sequence": [
+        "seed_scope_snapshot",
+        "barrier_simultaneous_release",
+        "persisted_consent_writer_races_proposal_writer"
+      ],
+      "barrier_phases": [
+        "simultaneous_release"
+      ],
+      "interleaving_coverage": [
+        "simultaneous_release"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "expected_classification": "indeterminate_ordering",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "committed_reconstructability",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-06",
+      "schedule_type": "mutation_before_commit",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "phase_governance_release",
+        "persisted_consent_writer_commit",
+        "phase_commit_release",
+        "bound_transition_attempt"
+      ],
+      "barrier_phases": [
+        "governance_release",
+        "commit_release"
+      ],
+      "interleaving_coverage": [
+        "mutation_before_commit"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "expected_classification": "rejected",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "zero_transition_rows",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-07",
+      "schedule_type": "commit_before_mutation_control",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "phase_commit_release",
+        "bound_transition_commit",
+        "phase_governance_release",
+        "persisted_consent_writer_commit"
+      ],
+      "barrier_phases": [
+        "commit_release",
+        "governance_release"
+      ],
+      "interleaving_coverage": [
+        "commit_before_mutation_control"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "expected_classification": "committed",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "committed_reconstructability",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-08",
+      "schedule_type": "competing_lock",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "barrier_release",
+        "competing_lock_contention",
+        "bound_transition_attempts"
+      ],
+      "barrier_phases": [
+        "release"
+      ],
+      "interleaving_coverage": [
+        "competing_lock"
+      ],
+      "persisted_governance_writer": false,
+      "persisted_writers": [],
+      "expected_classification": "rejected",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "zero_transition_rows",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-09",
+      "schedule_type": "simultaneous_release",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "barrier_simultaneous_release",
+        "governance_writer_and_commit_writer_release"
+      ],
+      "barrier_phases": [
+        "simultaneous_release"
+      ],
+      "interleaving_coverage": [
+        "simultaneous_release"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "expected_classification": "indeterminate_ordering",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "committed_reconstructability",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-10",
+      "schedule_type": "rollback_retry",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "barrier_release",
+        "first_attempt_rollback",
+        "retry_with_fresh_state",
+        "bound_transition_commit"
+      ],
+      "barrier_phases": [
+        "release"
+      ],
+      "interleaving_coverage": [
+        "rollback_retry"
+      ],
+      "persisted_governance_writer": false,
+      "persisted_writers": [],
+      "expected_classification": "committed",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "committed_reconstructability",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-11",
+      "schedule_type": "compound_drift_consent_plus_state",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "persisted_consent_writer_revoke",
+        "persisted_role_writer_change",
+        "stale_expected_state_version",
+        "bound_transition_attempt"
+      ],
+      "barrier_phases": [
+        "release"
+      ],
+      "interleaving_coverage": [
+        "mutation_before_commit"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "consent_revoke",
+        "role_change"
+      ],
+      "expected_classification": "rejected",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "zero_transition_rows",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    },
+    {
+      "id": "TOCTOU-V2-12",
+      "schedule_type": "compound_drift_policy_plus_consent_plus_state",
+      "sequence": [
+        "seed_scope_snapshot_proposal",
+        "persisted_policy_epoch_advance",
+        "persisted_consent_writer_revoke",
+        "persisted_role_writer_change",
+        "stale_expected_state_version",
+        "bound_transition_attempt"
+      ],
+      "barrier_phases": [
+        "release"
+      ],
+      "interleaving_coverage": [
+        "mutation_before_commit"
+      ],
+      "persisted_governance_writer": true,
+      "persisted_writers": [
+        "advance_governance_policy_epoch",
+        "consent_revoke",
+        "role_change"
+      ],
+      "expected_classification": "rejected",
+      "required_observations": [
+        "commit_outcome",
+        "forbidden_commit_observed",
+        "classification",
+        "rejection_auditability",
+        "zero_transition_rows",
+        "transaction_trace",
+        "latency_ms"
+      ]
+    }
+  ],
+  "classification_enum": [
+    "rejected",
+    "committed",
+    "indeterminate_ordering",
+    "operational_deadlock"
+  ],
+  "audit_completeness": {
+    "persisted_audit_row_required": true,
+    "exact_reconstruction_required": true,
+    "hash_only_observation_accepted": false,
+    "missing_audit_marks_schedule_observer_incomplete": true
+  },
+  "result_rule": "An unavailable schedule is NOT_RUN, never a zero forbidden-commit count. An observed classification that differs from the frozen expected classification is recorded as an explicit mismatch and the run is not claim-eligible.",
+  "freeze_rule": "Freeze synthetic seeds, schema/image/version metadata, the twelve-schedule v2 protocol, the statistics plan, and the v2 observer contract before final execution. Any material change requires a new run ID.",
+  "source_revision": "f1533e74"
+}
