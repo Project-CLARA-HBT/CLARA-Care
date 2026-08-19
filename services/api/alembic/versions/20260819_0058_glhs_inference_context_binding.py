@@ -126,15 +126,15 @@ def _add_proposal_lineage_columns() -> None:
         )
         batch.add_column(sa.Column("review_actor_role", sa.String(32), nullable=True))
         batch.create_index(
-            "ix_glhs_clinical_commitment_proposals_inference_context_binding_id",
+            "ix_glhs_prop_inf_binding",
             ["inference_context_binding_id"],
         )
         batch.create_index(
-            "ix_glhs_clinical_commitment_proposals_inference_actor_user_id",
+            "ix_glhs_prop_inf_actor",
             ["inference_actor_user_id"],
         )
         batch.create_index(
-            "ix_glhs_clinical_commitment_proposals_review_actor_user_id",
+            "ix_glhs_prop_review_actor",
             ["review_actor_user_id"],
         )
         batch.create_check_constraint(
@@ -182,11 +182,11 @@ def _add_transition_lineage_columns() -> None:
             ondelete="RESTRICT",
         )
         batch.create_index(
-            "ix_glhs_clinical_commitment_transitions_inference_context_binding_id",
+            "ix_glhs_trans_inf_binding",
             ["inference_context_binding_id"],
         )
         batch.create_index(
-            "ix_glhs_clinical_commitment_transitions_root_proposal_id",
+            "ix_glhs_trans_root_prop",
             ["root_proposal_id"],
         )
         batch.create_check_constraint(
@@ -285,10 +285,8 @@ def downgrade() -> None:
     with op.batch_alter_table("glhs_clinical_commitment_transitions") as batch:
         batch.drop_constraint("ck_glhs_transition_binding_requires_snapshot", type_="check")
         batch.drop_constraint("ck_glhs_transition_lineage_pair", type_="check")
-        batch.drop_index("ix_glhs_clinical_commitment_transitions_root_proposal_id")
-        batch.drop_index(
-            "ix_glhs_clinical_commitment_transitions_inference_context_binding_id"
-        )
+        batch.drop_index("ix_glhs_trans_root_prop")
+        batch.drop_index("ix_glhs_trans_inf_binding")
         batch.drop_constraint("fk_glhs_commitment_transition_root_proposal", type_="foreignkey")
         batch.drop_column("root_proposal_id")
         batch.drop_constraint(
@@ -300,11 +298,9 @@ def downgrade() -> None:
         batch.drop_constraint("ck_glhs_proposal_base_only_lineage_absent", type_="check")
         batch.drop_constraint("ck_glhs_proposal_snapshot_digest_pair", type_="check")
         batch.drop_constraint("ck_glhs_proposal_binding_mode", type_="check")
-        batch.drop_index("ix_glhs_clinical_commitment_proposals_review_actor_user_id")
-        batch.drop_index("ix_glhs_clinical_commitment_proposals_inference_actor_user_id")
-        batch.drop_index(
-            "ix_glhs_clinical_commitment_proposals_inference_context_binding_id"
-        )
+        batch.drop_index("ix_glhs_prop_review_actor")
+        batch.drop_index("ix_glhs_prop_inf_actor")
+        batch.drop_index("ix_glhs_prop_inf_binding")
         batch.drop_constraint("fk_glhs_proposal_review_actor", type_="foreignkey")
         batch.drop_column("review_actor_role")
         batch.drop_column("review_actor_user_id")

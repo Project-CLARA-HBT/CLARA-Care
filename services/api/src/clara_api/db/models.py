@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     LargeBinary,
     String,
@@ -2466,6 +2467,9 @@ class GlhsClinicalCommitmentProposal(Base):
 
     __tablename__ = "glhs_clinical_commitment_proposals"
     __table_args__ = (
+        Index("ix_glhs_prop_inf_binding", "inference_context_binding_id"),
+        Index("ix_glhs_prop_inf_actor", "inference_actor_user_id"),
+        Index("ix_glhs_prop_review_actor", "review_actor_user_id"),
         CheckConstraint(
             "context_binding_mode IN ('snapshot_bound', 'base_version_only')",
             name="ck_glhs_proposal_binding_mode",
@@ -2514,16 +2518,16 @@ class GlhsClinicalCommitmentProposal(Base):
     inference_context_binding_id: Mapped[int | None] = mapped_column(
         ForeignKey("glhs_inference_context_bindings.id", ondelete="RESTRICT"),
         nullable=True,
-        index=True,
+        index=False,
     )
     # Root inference actor is preserved separately from the reviewer actor so a
     # human review cannot overwrite model provenance (GLHS-B02/B-009).
     inference_actor_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=False
     )
     inference_actor_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
     review_actor_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=False
     )
     review_actor_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
     context_binding_mode: Mapped[str] = mapped_column(
@@ -2556,6 +2560,8 @@ class GlhsClinicalCommitmentTransition(Base):
 
     __tablename__ = "glhs_clinical_commitment_transitions"
     __table_args__ = (
+        Index("ix_glhs_trans_inf_binding", "inference_context_binding_id"),
+        Index("ix_glhs_trans_root_prop", "root_proposal_id"),
         UniqueConstraint(
             "profile_id", "idempotency_key_hash", name="uq_glhs_commitment_transition_key"
         ),
@@ -2611,12 +2617,12 @@ class GlhsClinicalCommitmentTransition(Base):
     inference_context_binding_id: Mapped[int | None] = mapped_column(
         ForeignKey("glhs_inference_context_bindings.id", ondelete="RESTRICT"),
         nullable=True,
-        index=True,
+        index=False,
     )
     root_proposal_id: Mapped[int | None] = mapped_column(
         ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="RESTRICT"),
         nullable=True,
-        index=True,
+        index=False,
     )
     source_snapshot_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True, index=True
