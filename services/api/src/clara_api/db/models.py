@@ -2329,6 +2329,68 @@ class GlhsSnapshotManifest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class GlhsInferenceContextBinding(Base):
+    """Immutable, append-only inference-to-THSS lineage binding (GLHS-B01).
+
+    Created exclusively by API-owned code at the moment a model/inference
+    process consumes a THSS snapshot; ``consumed_thss`` is server-determined
+    and never client-declared.  Rows are never updated or deleted: the binding
+    digest covers every security-relevant field and the DB/ORM layers both
+    reject mutation (GLHS-B06).
+    """
+
+    __tablename__ = "glhs_inference_context_bindings"
+    __table_args__ = (
+        CheckConstraint(
+            "(consumed_thss IS TRUE AND "
+            "source_snapshot_id IS NOT NULL AND "
+            "source_snapshot_digest IS NOT NULL AND "
+            "source_manifest_digest IS NOT NULL) OR "
+            "(consumed_thss IS FALSE AND "
+            "source_snapshot_id IS NULL AND "
+            "source_snapshot_digest IS NULL AND "
+            "source_manifest_digest IS NULL)",
+            name="ck_glhs_inference_binding_snapshot_required",
+        ),
+        CheckConstraint(
+            "binding_schema_version <> ''",
+            name="ck_glhs_inference_binding_schema_version",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    inference_manifest_id: Mapped[str] = mapped_column(String(160), index=True)
+    consumed_thss: Mapped[bool] = mapped_column(Boolean)
+    source_snapshot_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    source_snapshot_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_manifest_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    base_state_version: Mapped[int] = mapped_column(Integer)
+    policy_version: Mapped[str] = mapped_column(String(64))
+    consent_version: Mapped[str] = mapped_column(String(96))
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    actor_role: Mapped[str] = mapped_column(String(32), default="")
+    purpose: Mapped[str] = mapped_column(String(64), index=True)
+    task: Mapped[str] = mapped_column(String(96), index=True)
+    disclosed_evidence_ids_json: Mapped[list | dict] = mapped_column(JSON)
+    evidence_set_digest: Mapped[str] = mapped_column(String(64))
+    snapshot_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    canonicalization_profile: Mapped[str] = mapped_column(String(64))
+    digest_algorithm: Mapped[str] = mapped_column(String(32))
+    binding_schema_version: Mapped[str] = mapped_column(String(64))
+    binding_digest: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
 class GlhsClinicalCommitment(Base):
     """Stable identity for an append-only, evidence-linked clinical commitment."""
 
@@ -2403,6 +2465,32 @@ class GlhsClinicalCommitmentProposal(Base):
     """Reviewable proposal; never itself a canonical commitment transition."""
 
     __tablename__ = "glhs_clinical_commitment_proposals"
+    __table_args__ = (
+        CheckConstraint(
+            "context_binding_mode IN ('snapshot_bound', 'base_version_only')",
+            name="ck_glhs_proposal_binding_mode",
+        ),
+        CheckConstraint(
+            "(source_snapshot_id IS NULL AND source_snapshot_digest IS NULL) OR "
+            "(source_snapshot_id IS NOT NULL AND source_snapshot_digest IS NOT NULL)",
+            name="ck_glhs_proposal_snapshot_digest_pair",
+        ),
+        CheckConstraint(
+            "context_binding_mode <> 'base_version_only' OR "
+            "(origin <> 'model' AND model_manifest_ref IS NULL AND "
+            "source_snapshot_id IS NULL AND source_snapshot_digest IS NULL AND "
+            "inference_context_binding_id IS NULL AND inference_actor_user_id IS NULL AND "
+            "inference_actor_role IS NULL AND review_actor_user_id IS NULL AND "
+            "review_actor_role IS NULL)",
+            name="ck_glhs_proposal_base_only_lineage_absent",
+        ),
+        CheckConstraint(
+            "inference_context_binding_id IS NULL OR "
+            "(context_binding_mode = 'snapshot_bound' AND "
+            "source_snapshot_id IS NOT NULL AND source_snapshot_digest IS NOT NULL)",
+            name="ck_glhs_proposal_binding_requires_snapshot",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=_public_id)
@@ -2420,6 +2508,24 @@ class GlhsClinicalCommitmentProposal(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     actor_role: Mapped[str] = mapped_column(String(32), default="")
+    # Immutable inference-to-THSS lineage reference (GLHS-B02/B-005).  Null for
+    # legacy or genuinely manual proposals; such proposals are readable but are
+    # never retroactively claimed as mandatory-bound evidence (B-013).
+    inference_context_binding_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_inference_context_bindings.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    # Root inference actor is preserved separately from the reviewer actor so a
+    # human review cannot overwrite model provenance (GLHS-B02/B-009).
+    inference_actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    inference_actor_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    review_actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    review_actor_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
     context_binding_mode: Mapped[str] = mapped_column(
         String(32), default="snapshot_bound", server_default="snapshot_bound"
     )
@@ -2453,6 +2559,16 @@ class GlhsClinicalCommitmentTransition(Base):
         UniqueConstraint(
             "profile_id", "idempotency_key_hash", name="uq_glhs_commitment_transition_key"
         ),
+        CheckConstraint(
+            "(inference_context_binding_id IS NULL AND root_proposal_id IS NULL) OR "
+            "(inference_context_binding_id IS NOT NULL AND root_proposal_id IS NOT NULL)",
+            name="ck_glhs_transition_lineage_pair",
+        ),
+        CheckConstraint(
+            "inference_context_binding_id IS NULL OR "
+            "(source_snapshot_id IS NOT NULL AND source_snapshot_digest IS NOT NULL)",
+            name="ck_glhs_transition_binding_requires_snapshot",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -2485,6 +2601,19 @@ class GlhsClinicalCommitmentTransition(Base):
     policy_version: Mapped[str] = mapped_column(String(64))
     consent_version: Mapped[str] = mapped_column(String(96))
     proposal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    # Commit-time root lineage coordinates re-read from the database (GLHS-B05/
+    # B-010): the root inference binding and the root model proposal that
+    # originally produced the THSS-derived lineage.
+    inference_context_binding_id: Mapped[int | None] = mapped_column(
+        ForeignKey("glhs_inference_context_bindings.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    root_proposal_id: Mapped[int | None] = mapped_column(
         ForeignKey("glhs_clinical_commitment_proposals.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
@@ -2557,6 +2686,12 @@ sa_event.listen(GlhsAssertion, "before_update", _protect_glhs_assertion_content)
 sa_event.listen(GlhsAssertion, "before_delete", _reject_glhs_ledger_mutation)
 sa_event.listen(GlhsConflict, "before_update", _protect_glhs_conflict_content)
 sa_event.listen(GlhsConflict, "before_delete", _reject_glhs_ledger_mutation)
+sa_event.listen(
+    GlhsInferenceContextBinding, "before_update", _reject_glhs_ledger_mutation
+)
+sa_event.listen(
+    GlhsInferenceContextBinding, "before_delete", _reject_glhs_ledger_mutation
+)
 
 
 for _immutable_glhs_model in (

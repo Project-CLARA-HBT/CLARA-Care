@@ -2580,6 +2580,7 @@ def run_auto_ddi_check(
                 purpose="self_care",
                 allowed_data_classes=frozenset({"medications", "allergies"}),
                 selection_policy="strict",
+                consumed_for_inference=True,
             )
             thss_metadata = {
                 "snapshot_id": snapshot.snapshot_id,
@@ -2587,6 +2588,7 @@ def run_auto_ddi_check(
                 "policy_version": snapshot.policy_version,
                 "consent_version": snapshot.consent_version,
                 "risk": snapshot.risk,
+                "inference_context_binding_id": snapshot.inference_context_binding_id,
             }
             for assertion in snapshot.assertions:
                 value = assertion.get("value")

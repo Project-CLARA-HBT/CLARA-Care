@@ -131,6 +131,7 @@ def check_confirmed_courses_against_drugbank(
         purpose="self_care",
         allowed_data_classes=frozenset({"medications"}),
         selection_policy="strict",
+        consumed_for_inference=True,
     )
     courses = []
     for assertion in snapshot.assertions:

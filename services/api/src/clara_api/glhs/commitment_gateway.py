@@ -17,6 +17,7 @@ from clara_api.db.models import (
     GlhsClinicalCommitmentTransition,
     GlhsClinicalCommitmentVersion,
     GlhsEvidence,
+    GlhsInferenceContextBinding,
     GlhsSnapshotManifest,
     GlhsStateVersion,
 )
@@ -33,6 +34,9 @@ from clara_api.glhs.gateway import (
     _lock_profile_state,
     current_state_version,
     reconstruct_snapshot_artifact,
+    validate_current_governance_coordinates,
+    validate_exact_disclosure_dependency,
+    validate_inference_context_binding,
     validate_snapshot_manifest,
 )
 from clara_api.glhs.predicate_dsl import validate_predicate
@@ -59,6 +63,35 @@ def _canonical_digest(value: object) -> str:
     return consistency_fingerprint(value)
 
 
+def _commitment_request_digest(
+    *,
+    commitment: GlhsClinicalCommitment,
+    proposal: GlhsClinicalCommitmentProposal,
+    root_proposal: GlhsClinicalCommitmentProposal,
+    evidence_ids: list[str],
+    data: CommitmentVersionInput,
+    expected_state_version: int,
+    transition_kind: str,
+    reason_code: str,
+) -> str:
+    return _canonical_digest(
+        {
+            "commitment_id": commitment.public_id,
+            "proposal_id": proposal.public_id,
+            "proposal_digest": proposal.proposal_digest,
+            "source_snapshot_id": proposal.source_snapshot_id,
+            "source_snapshot_digest": proposal.source_snapshot_digest,
+            "inference_context_binding_id": root_proposal.inference_context_binding_id,
+            "root_proposal_id": root_proposal.public_id,
+            "evidence_ids": evidence_ids,
+            "data": asdict(data),
+            "expected_state_version": expected_state_version,
+            "transition_kind": transition_kind,
+            "reason_code": reason_code,
+        }
+    )
+
+
 def _utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
@@ -73,7 +106,7 @@ def _require_live_scope(scope: ProfileScope) -> None:
 
 
 def _proposal_envelope(proposal: GlhsClinicalCommitmentProposal) -> dict[str, object]:
-    return {
+    envelope: dict[str, object] = {
         "proposal_id": proposal.public_id,
         "commitment_id": proposal.commitment_id,
         "target_profile_public_id": proposal.target_profile_public_id,
@@ -93,6 +126,21 @@ def _proposal_envelope(proposal: GlhsClinicalCommitmentProposal) -> dict[str, ob
         "policy_version": proposal.policy_version,
         "consent_version": proposal.consent_version,
     }
+    # The lineage fields are conditionally included so pre-binding proposals
+    # remain digest-stable and readable (B-013).  Presence or absence of the
+    # fields is itself part of the canonical digest, so they cannot be silently
+    # added or stripped.
+    if proposal.inference_context_binding_id is not None:
+        envelope["inference_context_binding_id"] = proposal.inference_context_binding_id
+    if proposal.inference_actor_user_id is not None:
+        envelope["inference_actor_user_id"] = proposal.inference_actor_user_id
+    if proposal.inference_actor_role:
+        envelope["inference_actor_role"] = proposal.inference_actor_role
+    if proposal.review_actor_user_id is not None:
+        envelope["review_actor_user_id"] = proposal.review_actor_user_id
+    if proposal.review_actor_role:
+        envelope["review_actor_role"] = proposal.review_actor_role
+    return envelope
 
 
 def _validate_proposal_digest(proposal: GlhsClinicalCommitmentProposal) -> None:
@@ -125,27 +173,78 @@ def validate_bound_proposal_context(
     proposal: GlhsClinicalCommitmentProposal,
     observed_evidence_ids: tuple[str, ...] | list[str],
     current_version: int,
-) -> None:
-    """Validate every coordinate of one snapshot-bound proposal context."""
+    binding: GlhsInferenceContextBinding | None = None,
+    snapshot: GlhsSnapshotManifest | None = None,
+) -> GlhsSnapshotManifest:
+    """Validate every coordinate of one snapshot-bound proposal context.
+
+    Production composition (spec 3.2 / C-003): the current-governance primitive
+    and the exact-disclosure primitive are BOTH always invoked for THSS-derived
+    lineages.  There is deliberately no ``disable_binding`` parameter (GR-03).
+    """
 
     _validate_proposal_scope_coordinates(scope=scope, proposal=proposal)
     if proposal.context_binding_mode != "snapshot_bound":
         raise GlhsInvariantError("commitment_proposal_binding_mode_mismatch")
     if proposal.base_state_version != current_version:
         raise GlhsInvariantError("stale_commitment_proposal")
-    validate_snapshot_manifest(
+    if proposal.source_snapshot_id is None or proposal.source_snapshot_digest is None:
+        raise GlhsInvariantError("commitment_proposal_snapshot_binding_required")
+    # A reviewed proposal's actor is the reviewer; the snapshot's governance
+    # coordinates belong to the immutable root inference actor recorded in the
+    # binding.  When a binding is present it therefore governs the coordinate
+    # comparison (GLHS-B02/B-009) instead of the proposal's reviewer actor.
+    actor_user_id: int | None = proposal.actor_user_id
+    actor_role = proposal.actor_role
+    purpose = proposal.purpose
+    task = proposal.task
+    if binding is not None:
+        actor_user_id = binding.actor_user_id
+        actor_role = binding.actor_role
+        purpose = binding.purpose
+        task = binding.task
+    if snapshot is None:
+        snapshot = validate_snapshot_manifest(
+            db,
+            profile_id=scope.profile.id,
+            snapshot_id=proposal.source_snapshot_id,
+            manifest_digest=proposal.source_snapshot_digest,
+            base_state_version=proposal.base_state_version,
+            policy_version=proposal.policy_version,
+            consent_version=proposal.consent_version,
+            purpose=purpose,
+            observed_evidence_ids=observed_evidence_ids,
+            actor_user_id=actor_user_id,
+            actor_role=actor_role,
+            task=task,
+        )
+    validate_current_governance_coordinates(
+        profile_id=scope.profile.id,
+        base_state_version=proposal.base_state_version,
+        policy_version=proposal.policy_version,
+        consent_version=proposal.consent_version,
+        purpose=purpose,
+        task=task,
+        actor_user_id=actor_user_id,
+        actor_role=actor_role,
+        snapshot=snapshot,
+    )
+    return validate_exact_disclosure_dependency(
         db,
         profile_id=scope.profile.id,
         snapshot_id=proposal.source_snapshot_id,
-        manifest_digest=proposal.source_snapshot_digest,
+        source_snapshot_digest=snapshot.snapshot_digest,
+        source_manifest_digest=proposal.source_snapshot_digest,
         base_state_version=proposal.base_state_version,
         policy_version=proposal.policy_version,
-        purpose=proposal.purpose,
         consent_version=proposal.consent_version,
+        purpose=purpose,
+        task=task,
+        actor_user_id=actor_user_id,
+        actor_role=actor_role,
         observed_evidence_ids=observed_evidence_ids,
-        actor_user_id=proposal.actor_user_id,
-        actor_role=proposal.actor_role,
-        task=proposal.task,
+        binding=binding,
+        snapshot=snapshot,
     )
 
 
@@ -181,6 +280,8 @@ def _validate_current_proposal_context(
     evidence_ids: list[str],
     current_version: int,
     consent_version: str,
+    binding: GlhsInferenceContextBinding | None = None,
+    snapshot: GlhsSnapshotManifest | None = None,
 ) -> None:
     if proposal.policy_version != COMMITMENT_POLICY_VERSION:
         raise GlhsInvariantError("commitment_proposal_policy_mismatch")
@@ -193,6 +294,8 @@ def _validate_current_proposal_context(
             proposal=proposal,
             observed_evidence_ids=evidence_ids,
             current_version=current_version,
+            binding=binding,
+            snapshot=snapshot,
         )
         return
     if proposal.context_binding_mode == "base_version_only":
@@ -204,6 +307,128 @@ def _validate_current_proposal_context(
         )
         return
     raise GlhsInvariantError("commitment_proposal_binding_mode_invalid")
+
+
+MAX_PROPOSAL_LINEAGE_DEPTH = 4
+
+
+def _binding_for_snapshot(
+    db: Session, *, profile_id: int, snapshot_id: str
+) -> GlhsInferenceContextBinding | None:
+    """Return the persisted consumed-THSS binding for a snapshot, if any."""
+
+    return db.execute(
+        select(GlhsInferenceContextBinding).where(
+            GlhsInferenceContextBinding.profile_id == profile_id,
+            GlhsInferenceContextBinding.source_snapshot_id == snapshot_id,
+            GlhsInferenceContextBinding.consumed_thss.is_(True),
+        ).execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+
+
+def _reload_proposal(
+    db: Session, *, proposal_id: int, missing_reason: str = "commitment_proposal_history_incomplete"
+) -> GlhsClinicalCommitmentProposal:
+    proposal = db.execute(
+        select(GlhsClinicalCommitmentProposal)
+        .where(GlhsClinicalCommitmentProposal.id == proposal_id)
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+    if proposal is None:
+        raise GlhsInvariantError(missing_reason)
+    return proposal
+
+
+def _resolve_proposal_lineage_root(
+    db: Session, *, proposal: GlhsClinicalCommitmentProposal
+) -> GlhsClinicalCommitmentProposal:
+    """Follow ``reviewed_proposal_id`` to the root with cycle/depth protection.
+
+    GLHS-B11: the lineage is acyclic and bounded (at most one human descendant
+    of a model proposal plus explicit new revisions that retain the root
+    binding).  Cycles or over-deep chains fail closed with explicit reason
+    codes instead of recursing indefinitely.
+    """
+
+    current = proposal
+    seen = {current.id}
+    for _ in range(MAX_PROPOSAL_LINEAGE_DEPTH):
+        if current.reviewed_proposal_id is None:
+            return current
+        parent = _reload_proposal(
+            db,
+            proposal_id=current.reviewed_proposal_id,
+            missing_reason="commitment_lineage_parent_missing",
+        )
+        if parent.id in seen:
+            raise GlhsInvariantError("commitment_lineage_cycle_detected")
+        seen.add(parent.id)
+        current = parent
+    raise GlhsInvariantError("commitment_lineage_depth_exceeded")
+
+
+def _require_lineage_binding(
+    db: Session,
+    *,
+    scope: ProfileScope,
+    proposal: GlhsClinicalCommitmentProposal,
+    root_proposal: GlhsClinicalCommitmentProposal,
+) -> GlhsInferenceContextBinding | None:
+    """GLHS-B03 anti-laundering invariant at admission time.
+
+    If any root inference in the lineage consumed THSS, every descendant SHALL
+    be ``snapshot_bound`` and SHALL bind the same root snapshot.  A proposal
+    whose snapshot carries a persisted ``consumed_thss=true`` binding must
+    reference that binding even when its own origin is non-model; otherwise a
+    model-produced snapshot could be laundered through a user-origin proposal.
+    """
+
+    root_binding: GlhsInferenceContextBinding | None = None
+    if root_proposal.inference_context_binding_id is not None:
+        _validate_proposal_digest(root_proposal)
+        root_binding = db.execute(
+            select(GlhsInferenceContextBinding)
+            .where(
+                GlhsInferenceContextBinding.id
+                == root_proposal.inference_context_binding_id
+            )
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if root_binding is None:
+            raise GlhsInvariantError("commitment_lineage_binding_missing")
+        root_binding = validate_inference_context_binding(
+            db, profile_id=scope.profile.id, binding_id=root_binding.public_id
+        )
+        _validate_bound_proposal_binding(
+            binding=root_binding,
+            scope=scope,
+            base_state_version=root_proposal.base_state_version,
+            policy_version=root_proposal.policy_version,
+            consent_version=root_proposal.consent_version,
+            purpose=root_proposal.purpose,
+            task=root_proposal.task,
+            actor_user_id=root_proposal.actor_user_id,
+            actor_role=root_proposal.actor_role,
+            source_snapshot_id=root_proposal.source_snapshot_id,
+            source_manifest_digest=root_proposal.source_snapshot_digest,
+            evidence_ids=sorted(root_proposal.observed_evidence_ids_json or ()),
+        )
+        if proposal.inference_context_binding_id != root_proposal.inference_context_binding_id:
+            raise GlhsInvariantError("commitment_lineage_binding_mismatch")
+        if root_binding.consumed_thss:
+            if proposal.context_binding_mode != "snapshot_bound":
+                raise GlhsInvariantError("commitment_lineage_base_only_forbidden")
+            if proposal.source_snapshot_id != root_binding.source_snapshot_id:
+                raise GlhsInvariantError("commitment_lineage_snapshot_mismatch")
+            if proposal.source_snapshot_digest != root_binding.source_manifest_digest:
+                raise GlhsInvariantError("commitment_lineage_manifest_digest_mismatch")
+    elif proposal.context_binding_mode == "snapshot_bound" and proposal.source_snapshot_id:
+        snapshot_binding = _binding_for_snapshot(
+            db, profile_id=scope.profile.id, snapshot_id=proposal.source_snapshot_id
+        )
+        if snapshot_binding is not None and snapshot_binding.consumed_thss:
+            raise GlhsInvariantError("commitment_lineage_binding_required")
+    return root_binding
 
 
 @dataclass(frozen=True)
@@ -275,6 +500,7 @@ def propose_bound_commitment_transition(
     source_snapshot_id: str,
     source_snapshot_digest: str,
     model_manifest_ref: str | None = None,
+    inference_context_binding_id: str | None = None,
 ) -> GlhsClinicalCommitmentProposal:
     _require_live_scope(scope)
     if commitment.profile_id != scope.profile.id:
@@ -317,6 +543,57 @@ def propose_bound_commitment_transition(
         actor_role=scope.actor_role,
         task=task,
     )
+    binding: GlhsInferenceContextBinding | None = None
+    if origin == "model":
+        # GLHS-B02/B-005: a model-derived proposal REQUIRES the immutable
+        # inference binding that the server created when it consumed THSS.
+        if inference_context_binding_id is None:
+            raise GlhsInvariantError("inference_binding_required")
+        binding = validate_inference_context_binding(
+            db, profile_id=scope.profile.id, binding_id=inference_context_binding_id
+        )
+        _validate_bound_proposal_binding(
+            binding=binding,
+            scope=scope,
+            base_state_version=base_state_version,
+            policy_version=COMMITMENT_POLICY_VERSION,
+            consent_version=consent_version,
+            purpose=scope.purpose,
+            task=task,
+            actor_user_id=scope.actor.id,
+            actor_role=scope.actor_role,
+            source_snapshot_id=source_snapshot_id,
+            source_manifest_digest=source_snapshot_digest,
+            evidence_ids=evidence_ids,
+        )
+    elif inference_context_binding_id is not None:
+        # Non-model origins may reference a binding; when supplied it must be
+        # consistent with the proposal's exact coordinates.
+        binding = validate_inference_context_binding(
+            db, profile_id=scope.profile.id, binding_id=inference_context_binding_id
+        )
+        _validate_bound_proposal_binding(
+            binding=binding,
+            scope=scope,
+            base_state_version=base_state_version,
+            policy_version=COMMITMENT_POLICY_VERSION,
+            consent_version=consent_version,
+            purpose=scope.purpose,
+            task=task,
+            actor_user_id=scope.actor.id,
+            actor_role=scope.actor_role,
+            source_snapshot_id=source_snapshot_id,
+            source_manifest_digest=source_snapshot_digest,
+            evidence_ids=evidence_ids,
+        )
+    else:
+        # Anti-laundering (GLHS-B03): a snapshot that carries a persisted
+        # consumed-THSS binding cannot be silently re-presented without it.
+        snapshot_binding = _binding_for_snapshot(
+            db, profile_id=scope.profile.id, snapshot_id=source_snapshot_id
+        )
+        if snapshot_binding is not None:
+            raise GlhsInvariantError("commitment_lineage_binding_required")
     row = GlhsClinicalCommitmentProposal(
         public_id=str(uuid4()),
         commitment_id=commitment.id,
@@ -329,6 +606,11 @@ def propose_bound_commitment_transition(
         origin=origin,
         actor_user_id=scope.actor.id,
         actor_role=scope.actor_role,
+        inference_context_binding_id=binding.id if binding is not None else None,
+        inference_actor_user_id=scope.actor.id if binding is not None else None,
+        inference_actor_role=scope.actor_role if binding is not None else "",
+        review_actor_user_id=None,
+        review_actor_role=None,
         context_binding_mode="snapshot_bound",
         model_manifest_ref=model_manifest_ref,
         source_snapshot_id=source_snapshot_id,
@@ -342,6 +624,47 @@ def propose_bound_commitment_transition(
     return row
 
 
+def _validate_bound_proposal_binding(
+    *,
+    binding: GlhsInferenceContextBinding,
+    scope: ProfileScope,
+    base_state_version: int,
+    policy_version: str,
+    consent_version: str,
+    purpose: str,
+    task: str,
+    actor_user_id: int | None,
+    actor_role: str,
+    source_snapshot_id: str,
+    source_manifest_digest: str,
+    evidence_ids: list[str],
+) -> None:
+    """Tie the immutable binding to the exact proposal coordinates (B-005)."""
+
+    if binding.profile_id != scope.profile.id:
+        raise GlhsInvariantError("inference_binding_profile_mismatch")
+    if binding.base_state_version != base_state_version:
+        raise GlhsInvariantError("inference_binding_state_version_mismatch")
+    if binding.policy_version != policy_version:
+        raise GlhsInvariantError("inference_binding_policy_mismatch")
+    if binding.consent_version != consent_version:
+        raise GlhsInvariantError("inference_binding_consent_mismatch")
+    if binding.purpose != purpose:
+        raise GlhsInvariantError("inference_binding_purpose_mismatch")
+    if binding.task != task:
+        raise GlhsInvariantError("inference_binding_task_mismatch")
+    if binding.actor_user_id != actor_user_id:
+        raise GlhsInvariantError("inference_binding_actor_mismatch")
+    if binding.actor_role != actor_role:
+        raise GlhsInvariantError("inference_binding_actor_role_mismatch")
+    if binding.source_snapshot_id != source_snapshot_id:
+        raise GlhsInvariantError("inference_binding_snapshot_id_mismatch")
+    if binding.source_manifest_digest != source_manifest_digest:
+        raise GlhsInvariantError("inference_binding_manifest_digest_mismatch")
+    if not set(evidence_ids).issubset({str(item) for item in binding.disclosed_evidence_ids_json}):
+        raise GlhsInvariantError("commitment_binding_evidence_not_disclosed")
+
+
 def propose_base_commitment_transition(
     db: Session,
     *,
@@ -353,8 +676,16 @@ def propose_base_commitment_transition(
     observed_base_state_version: int,
     task: str,
     model_manifest_ref: str | None = None,
+    inference_context_binding_id: str | None = None,
 ) -> GlhsClinicalCommitmentProposal:
-    """Create an explicit base-version-only proposal without a THSS binding."""
+    """Create an explicit base-version-only proposal without a THSS binding.
+
+    GLHS-B04/B-007: the base-version-only path remains available only to
+    genuinely manual user/clinician workflows with no model/THSS lineage.  Any
+    model-derived or THSS-consuming lineage is rejected with an explicit reason
+    code so a persisted ``consumed_thss=true`` lineage can never be laundered
+    into base-only admission (GLHS-B03 / Gate B).
+    """
 
     _require_live_scope(scope)
     if commitment.profile_id != scope.profile.id:
@@ -363,15 +694,19 @@ def propose_base_commitment_transition(
         raise GlhsInvariantError("invalid_commitment_proposed_transition")
     if origin not in PROPOSAL_ORIGINS:
         raise GlhsInvariantError("invalid_commitment_proposal_origin")
+    if origin == "model":
+        raise GlhsInvariantError("model_base_proposal_forbidden")
     expected_origin = {
         "owner": "user",
         "clinician": "clinician",
         "caregiver": "caregiver",
     }.get(scope.actor_role)
-    if origin not in {expected_origin, "model"}:
+    if origin not in {expected_origin}:
         raise GlhsInvariantError("commitment_proposal_origin_mismatch")
-    if origin == "model" and not model_manifest_ref:
-        raise GlhsInvariantError("model_manifest_required")
+    if model_manifest_ref is not None:
+        raise GlhsInvariantError("model_manifest_forbidden")
+    if inference_context_binding_id is not None:
+        raise GlhsInvariantError("commitment_base_proposal_binding_present")
     if not observed_evidence:
         raise GlhsInvariantError("commitment_provenance_required")
     if any(row.profile_id != scope.profile.id for row in observed_evidence):
@@ -394,8 +729,13 @@ def propose_base_commitment_transition(
         origin=origin,
         actor_user_id=scope.actor.id,
         actor_role=scope.actor_role,
+        inference_context_binding_id=None,
+        inference_actor_user_id=None,
+        inference_actor_role=None,
+        review_actor_user_id=None,
+        review_actor_role=None,
         context_binding_mode="base_version_only",
-        model_manifest_ref=model_manifest_ref,
+        model_manifest_ref=None,
         source_snapshot_id=None,
         source_snapshot_digest=None,
         policy_version=COMMITMENT_POLICY_VERSION,
@@ -413,7 +753,13 @@ def review_model_commitment_proposal(
     scope: ProfileScope,
     proposal: GlhsClinicalCommitmentProposal,
 ) -> GlhsClinicalCommitmentProposal:
-    """Create a separate human proposal after reviewing an immutable model proposal."""
+    """Create a separate human proposal after reviewing an immutable model proposal.
+
+    GLHS-B02/B-009: the root inference binding is resolved and verified BEFORE
+    review; the reviewed proposal preserves the root binding reference and the
+    root inference actor, records the reviewer actor separately, and can never
+    downgrade a THSS-derived lineage to base-only (GLHS-B03).
+    """
 
     _require_live_scope(scope)
     if proposal.origin != "model" or proposal.model_manifest_ref is None:
@@ -425,6 +771,32 @@ def review_model_commitment_proposal(
     policy = policy_for(commitment.domain)
     if scope.actor_role not in policy.actor_roles:
         raise GlhsInvariantError("commitment_review_authority_required")
+    if proposal.inference_context_binding_id is None:
+        raise GlhsInvariantError("inference_binding_required")
+    root_binding_row = db.get(
+        GlhsInferenceContextBinding, proposal.inference_context_binding_id
+    )
+    if root_binding_row is None:
+        raise GlhsInvariantError("commitment_lineage_binding_missing")
+    root_binding = validate_inference_context_binding(
+        db, profile_id=scope.profile.id, binding_id=root_binding_row.public_id
+    )
+    if proposal.context_binding_mode != "snapshot_bound" or proposal.source_snapshot_id is None:
+        raise GlhsInvariantError("commitment_review_downgrade_forbidden")
+    _validate_bound_proposal_binding(
+        binding=root_binding,
+        scope=scope,
+        base_state_version=proposal.base_state_version,
+        policy_version=proposal.policy_version,
+        consent_version=proposal.consent_version,
+        purpose=proposal.purpose,
+        task=proposal.task,
+        actor_user_id=proposal.actor_user_id,
+        actor_role=proposal.actor_role,
+        source_snapshot_id=proposal.source_snapshot_id,
+        source_manifest_digest=proposal.source_snapshot_digest,
+        evidence_ids=sorted(proposal.observed_evidence_ids_json or ()),
+    )
     evidence = list(
         db.execute(
             select(GlhsEvidence).where(
@@ -446,6 +818,7 @@ def review_model_commitment_proposal(
         evidence_ids=[item.public_id for item in evidence],
         current_version=base_state_version,
         consent_version=consent_version,
+        binding=root_binding,
     )
     expected_origin = {"owner": "user", "clinician": "clinician", "caregiver": "caregiver"}.get(
         scope.actor_role
@@ -462,8 +835,19 @@ def review_model_commitment_proposal(
         purpose=scope.purpose,
         task=proposal.task,
         origin=expected_origin,
-        actor_user_id=proposal.actor_user_id,
-        actor_role=proposal.actor_role,
+        actor_user_id=scope.actor.id,
+        actor_role=scope.actor_role,
+        inference_context_binding_id=root_binding.id,
+        inference_actor_user_id=(
+            proposal.inference_actor_user_id
+            if proposal.inference_actor_user_id is not None
+            else proposal.actor_user_id
+        ),
+        inference_actor_role=(
+            proposal.inference_actor_role or proposal.actor_role
+        ),
+        review_actor_user_id=scope.actor.id,
+        review_actor_role=scope.actor_role,
         context_binding_mode=proposal.context_binding_mode,
         model_manifest_ref=proposal.model_manifest_ref,
         source_snapshot_id=proposal.source_snapshot_id,
@@ -536,19 +920,16 @@ def apply_commitment_transition(
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
     predicates = _validated_version(data)
     key_hash = _hash(idempotency_key)
-    request_digest = _canonical_digest(
-        {
-            "commitment_id": commitment.public_id,
-            "proposal_id": proposal.public_id,
-            "proposal_digest": proposal.proposal_digest,
-            "source_snapshot_id": proposal.source_snapshot_id,
-            "source_snapshot_digest": proposal.source_snapshot_digest,
-            "evidence_ids": evidence_ids,
-            "data": asdict(data),
-            "expected_state_version": expected_state_version,
-            "transition_kind": transition_kind,
-            "reason_code": reason_code,
-        }
+    root_proposal_ref = _resolve_proposal_lineage_root(db, proposal=proposal)
+    request_digest = _commitment_request_digest(
+        commitment=commitment,
+        proposal=proposal,
+        root_proposal=root_proposal_ref,
+        evidence_ids=evidence_ids,
+        data=data,
+        expected_state_version=expected_state_version,
+        transition_kind=transition_kind,
+        reason_code=reason_code,
     )
     existing = db.execute(
         select(GlhsClinicalCommitmentTransition).where(
@@ -576,9 +957,51 @@ def apply_commitment_transition(
         return cast(GlhsClinicalCommitmentTransition, existing)
     if base != expected_state_version or proposal.base_state_version != base:
         raise GlhsInvariantError("stale_commitment_proposal")
+    # The caller's proposal object was checked before waiting on the profile
+    # lock. Re-read it now so commit-time admission cannot rely on stale ORM
+    # state if another transaction changed the persisted lineage meanwhile.
+    proposal = _reload_proposal(db, proposal_id=proposal.id)
+    _validate_proposal_digest(proposal)
+    if proposal.commitment_id != commitment.id:
+        raise GlhsInvariantError("commitment_scope_forbidden")
+    if proposal.origin == "model":
+        raise GlhsInvariantError("model_cannot_commit_commitment")
+    if proposal.proposed_transition != data.lifecycle_state:
+        raise GlhsInvariantError("commitment_proposal_transition_mismatch")
+    if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json or ())):
+        raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
     consent_version = _governed_consent_version(
         db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
     )
+    # GLHS-B05/B-010: after acquiring the profile/state lock, re-resolve the
+    # root inference binding from the database (never from the proposal payload)
+    # and re-read the exact root snapshot before persisting anything.
+    root_proposal = _resolve_proposal_lineage_root(db, proposal=proposal)
+    request_digest = _commitment_request_digest(
+        commitment=commitment,
+        proposal=proposal,
+        root_proposal=root_proposal,
+        evidence_ids=evidence_ids,
+        data=data,
+        expected_state_version=expected_state_version,
+        transition_kind=transition_kind,
+        reason_code=reason_code,
+    )
+    root_binding = _require_lineage_binding(
+        db, scope=scope, proposal=proposal, root_proposal=root_proposal
+    )
+    root_snapshot: GlhsSnapshotManifest | None = None
+    if root_binding is not None:
+        root_snapshot = db.execute(
+            select(GlhsSnapshotManifest)
+            .where(
+                GlhsSnapshotManifest.profile_id == scope.profile.id,
+                GlhsSnapshotManifest.public_id == root_binding.source_snapshot_id,
+            )
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if root_snapshot is None:
+            raise GlhsInvariantError("commitment_snapshot_history_incomplete")
     _validate_current_proposal_context(
         db,
         scope=scope,
@@ -586,6 +1009,8 @@ def apply_commitment_transition(
         evidence_ids=evidence_ids,
         current_version=base,
         consent_version=consent_version,
+        binding=root_binding,
+        snapshot=root_snapshot,
     )
     prior = db.execute(
         select(GlhsClinicalCommitmentVersion)
@@ -680,6 +1105,12 @@ def apply_commitment_transition(
         policy_version=COMMITMENT_POLICY_VERSION,
         consent_version=consent_version,
         proposal_id=proposal.id,
+        inference_context_binding_id=(
+            root_binding.id if root_binding is not None else None
+        ),
+        root_proposal_id=(
+            root_proposal.id if root_binding is not None else None
+        ),
         source_snapshot_id=proposal.source_snapshot_id,
         source_snapshot_digest=proposal.source_snapshot_digest,
         request_digest=request_digest,
@@ -811,6 +1242,46 @@ def reconstruct_commitment_decision(
         if manifest.manifest_digest != transition.source_snapshot_digest:
             raise GlhsInvariantError("commitment_snapshot_transition_digest_mismatch")
         snapshot_artifact = reconstruct_snapshot_artifact(manifest)
+    # GLHS-B14 audit reconstruction: root inference binding -> snapshot ->
+    # model proposal -> reviewed proposal -> transition.  The binding row is
+    # immutable, so the exact coordinates the model consumed are recoverable
+    # independently of any later governance change.
+    root_binding_public_id: str | None = None
+    root_binding_artifact: dict[str, object] | None = None
+    root_proposal_public_id: str | None = None
+    if transition.inference_context_binding_id is not None:
+        root_binding_row = db.get(
+            GlhsInferenceContextBinding, transition.inference_context_binding_id
+        )
+        if root_binding_row is None:
+            raise GlhsInvariantError("commitment_binding_history_incomplete")
+        root_binding_public_id = root_binding_row.public_id
+        root_binding_artifact = {
+            "binding_id": root_binding_row.public_id,
+            "inference_manifest_id": root_binding_row.inference_manifest_id,
+            "consumed_thss": bool(root_binding_row.consumed_thss),
+            "source_snapshot_id": root_binding_row.source_snapshot_id,
+            "source_snapshot_digest": root_binding_row.source_snapshot_digest,
+            "source_manifest_digest": root_binding_row.source_manifest_digest,
+            "base_state_version": root_binding_row.base_state_version,
+            "policy_version": root_binding_row.policy_version,
+            "consent_version": root_binding_row.consent_version,
+            "actor_user_id": root_binding_row.actor_user_id,
+            "actor_role": root_binding_row.actor_role,
+            "purpose": root_binding_row.purpose,
+            "task": root_binding_row.task,
+            "evidence_set_digest": root_binding_row.evidence_set_digest,
+            "snapshot_expires_at": _iso(root_binding_row.snapshot_expires_at),
+            "binding_schema_version": root_binding_row.binding_schema_version,
+            "binding_digest": root_binding_row.binding_digest,
+        }
+    if transition.root_proposal_id is not None:
+        root_proposal_row = db.get(
+            GlhsClinicalCommitmentProposal, transition.root_proposal_id
+        )
+        if root_proposal_row is None:
+            raise GlhsInvariantError("commitment_proposal_history_incomplete")
+        root_proposal_public_id = root_proposal_row.public_id
     return {
         "decision_id": transition.public_id,
         "commitment_id": commitment.public_id,
@@ -839,6 +1310,10 @@ def reconstruct_commitment_decision(
                 "target_profile_id": proposal.target_profile_public_id,
                 "actor_user_id": proposal.actor_user_id,
                 "actor_role": proposal.actor_role,
+                "inference_actor_user_id": proposal.inference_actor_user_id,
+                "inference_actor_role": proposal.inference_actor_role,
+                "review_actor_user_id": proposal.review_actor_user_id,
+                "review_actor_role": proposal.review_actor_role,
                 "purpose": proposal.purpose,
                 "task": proposal.task,
                 "observed_base_state_version": proposal.base_state_version,
@@ -846,12 +1321,20 @@ def reconstruct_commitment_decision(
                 "policy_version": proposal.policy_version,
                 "consent_version": proposal.consent_version,
                 "observed_evidence_ids": proposal.observed_evidence_ids_json,
+                "inference_context_binding_id": proposal.inference_context_binding_id,
                 "proposal_digest": proposal.proposal_digest,
                 "reviewed_proposal_id": proposal.reviewed_proposal_id,
             }
             if proposal is not None
             else None
         ),
+        "lineage": {
+            "root_proposal_id": root_proposal_public_id,
+            "root_inference_binding_id": root_binding_public_id,
+            "root_inference_binding": root_binding_artifact,
+            "source_snapshot_id": transition.source_snapshot_id,
+            "source_snapshot_digest": transition.source_snapshot_digest,
+        },
         "source_snapshot_id": transition.source_snapshot_id,
         "source_snapshot_digest": transition.source_snapshot_digest,
         "request_digest": transition.request_digest,

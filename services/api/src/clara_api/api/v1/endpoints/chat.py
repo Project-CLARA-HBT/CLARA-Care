@@ -270,6 +270,7 @@ def _build_chat_context(
         purpose="self_care",
         allowed_data_classes=requested_classes,
         selection_policy="strict",
+        consumed_for_inference=True,
     )
     merged["task_bounded_health_state"] = {
         "snapshot_id": snapshot.snapshot_id,
@@ -280,6 +281,7 @@ def _build_chat_context(
         "assertions": list(snapshot.assertions),
         "conflicts": list(snapshot.conflicts),
         "risk": snapshot.risk,
+        "inference_context_binding_id": snapshot.inference_context_binding_id,
     }
     merged["context_provenance"] = (
         "thss_plus_user_supplied_untrusted" if user_context else "thss"

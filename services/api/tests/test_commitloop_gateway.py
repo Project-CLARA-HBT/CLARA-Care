@@ -34,6 +34,7 @@ from clara_api.glhs.commitment_thss import compile_commitment_thss
 from clara_api.glhs.domain import GlhsInvariantError
 from clara_api.glhs.gateway import (
     EvidenceInput,
+    create_inference_context_binding,
     current_state_version,
     record_evidence,
     validate_snapshot_manifest,
@@ -499,6 +500,23 @@ def test_model_and_stale_proposals_cannot_commit(db: Session) -> None:
         domain="observations",
         supersession_key="observation:example",
     )
+    binding_snapshot = _snapshot_binding(db, scope, evidence, at)
+    snapshot_row = (
+        db.query(GlhsSnapshotManifest)
+        .filter_by(public_id=binding_snapshot["source_snapshot_id"])
+        .one()
+    )
+    binding = create_inference_context_binding(
+        db,
+        profile_id=scope.profile.id,
+        inference_manifest_id=snapshot_row.public_id,
+        snapshot=snapshot_row,
+        actor_user_id=scope.actor.id,
+        actor_role=scope.actor_role,
+        purpose="self_care",
+        task=binding_snapshot["task"],
+        disclosed_evidence_ids=[evidence.public_id],
+    )
     model = propose_bound_commitment_transition(
         db,
         scope=scope,
@@ -507,8 +525,13 @@ def test_model_and_stale_proposals_cannot_commit(db: Session) -> None:
         proposed_transition="OPEN",
         origin="model",
         model_manifest_ref="prompt-sha256:fixture",
-        **_snapshot_binding(db, scope, evidence, at),
+        inference_context_binding_id=binding.public_id,
+        observed_base_state_version=int(binding_snapshot["observed_base_state_version"]),
+        task=str(binding_snapshot["task"]),
+        source_snapshot_id=str(binding_snapshot["source_snapshot_id"]),
+        source_snapshot_digest=str(binding_snapshot["source_snapshot_digest"]),
     )
+    assert model.inference_context_binding_id == binding.id
     with pytest.raises(GlhsInvariantError, match="model_cannot_commit_commitment"):
         apply_commitment_transition(
             db,
@@ -525,6 +548,9 @@ def test_model_and_stale_proposals_cannot_commit(db: Session) -> None:
     reviewed = review_model_commitment_proposal(db, scope=scope, proposal=model)
     assert reviewed.origin == "user"
     assert reviewed.reviewed_proposal_id == model.id
+    assert reviewed.inference_context_binding_id == binding.id
+    assert reviewed.inference_actor_user_id == scope.actor.id
+    assert reviewed.review_actor_user_id == scope.actor.id
     transition = apply_commitment_transition(
         db,
         scope=scope,
@@ -538,6 +564,8 @@ def test_model_and_stale_proposals_cannot_commit(db: Session) -> None:
         reason_code="human_reviewed_model_proposal",
     )
     assert transition.origin == "user"
+    assert transition.inference_context_binding_id == binding.id
+    assert transition.root_proposal_id == model.id
 
 
 def test_expired_scope_and_mismatched_proposal_fail_closed(db: Session) -> None:

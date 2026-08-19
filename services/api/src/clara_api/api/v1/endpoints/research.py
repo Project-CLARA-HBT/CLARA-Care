@@ -1906,6 +1906,7 @@ def _build_personal_context_payload(
             {"lifemap", "medications", "allergies", "conditions", "observations"}
         ),
         selection_policy="strict",
+        consumed_for_inference=True,
     )
     medications: list[dict[str, Any]] = []
     allergies: list[dict[str, Any]] = []

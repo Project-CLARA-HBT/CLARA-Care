@@ -24,6 +24,7 @@ from clara_api.db.models import (
     GlhsAssertionEvidence,
     GlhsConflict,
     GlhsEvidence,
+    GlhsInferenceContextBinding,
     GlhsSnapshotManifest,
     GlhsStateVersion,
     GlhsTransition,
@@ -59,6 +60,7 @@ from clara_api.lifemap.profile_scope import ProfileScope
 
 SNAPSHOT_SCHEMA_VERSION = "glhs.snapshot.v3"
 SNAPSHOT_PAYLOAD_SCHEMA_VERSION = "glhs.snapshot.payload.v3"
+BINDING_SCHEMA_VERSION = "glhs.inference-binding.v1"
 THSS_PIPELINE_STAGE_NAMES = (
     "authorization",
     "temporal_lifecycle",
@@ -191,6 +193,9 @@ class Snapshot:
     assertions: tuple[dict[str, object], ...]
     conflicts: tuple[dict[str, object], ...]
     risk: dict[str, object]
+    # Immutable inference-context binding persisted when this snapshot was
+    # compiled for model/inference consumption (``consumed_for_inference``).
+    inference_context_binding_id: str | None = None
 
 
 def current_state_version(db: Session, *, profile_id: int) -> int:
@@ -396,6 +401,316 @@ def validate_snapshot_manifest(
     if not set(observed_evidence_ids).issubset(disclosed):
         raise GlhsInvariantError("proposal_evidence_not_disclosed")
     return cast(GlhsSnapshotManifest, snapshot)
+
+
+def inference_binding_envelope(binding: GlhsInferenceContextBinding) -> dict[str, object]:
+    """Return every security-relevant binding field covered by its digest."""
+
+    return {
+        "binding_id": binding.public_id,
+        "profile_id": binding.profile_id,
+        "inference_manifest_id": binding.inference_manifest_id,
+        "consumed_thss": bool(binding.consumed_thss),
+        "source_snapshot_id": binding.source_snapshot_id,
+        "source_snapshot_digest": binding.source_snapshot_digest,
+        "source_manifest_digest": binding.source_manifest_digest,
+        "base_state_version": binding.base_state_version,
+        "policy_version": binding.policy_version,
+        "consent_version": binding.consent_version,
+        "actor_user_id": binding.actor_user_id,
+        "actor_role": binding.actor_role,
+        "purpose": binding.purpose,
+        "task": binding.task,
+        "disclosed_evidence_ids": sorted(binding.disclosed_evidence_ids_json or []),
+        "evidence_set_digest": binding.evidence_set_digest,
+        "snapshot_expires_at": _as_utc(binding.snapshot_expires_at).isoformat(),
+        "canonicalization_profile": binding.canonicalization_profile,
+        "digest_algorithm": binding.digest_algorithm,
+        "binding_schema_version": binding.binding_schema_version,
+    }
+
+
+def create_inference_context_binding(
+    db: Session,
+    *,
+    profile_id: int,
+    inference_manifest_id: str,
+    snapshot: GlhsSnapshotManifest,
+    actor_user_id: int | None,
+    actor_role: str,
+    purpose: str,
+    task: str,
+    disclosed_evidence_ids: Iterable[str],
+) -> GlhsInferenceContextBinding:
+    """Persist the immutable inference-to-THSS binding at the API-owned boundary.
+
+    This is called only by server code at the moment an API-owned model or
+    inference adapter has received a THSS snapshot. For adapters without a
+    persisted ``MLInferenceManifest``, ``inference_manifest_id`` is the local
+    API inference-context identity supplied by that adapter; it is not a claim
+    that the downstream model service persisted this row. ``consumed_thss`` is
+    fixed to true here and is never client-declared (GLHS-B01). The binding
+    digest covers every security-relevant field and the row is append-only at
+    both ORM and DB layers (GLHS-B06).
+    """
+
+    evidence_ids = sorted({str(item) for item in disclosed_evidence_ids})
+    if snapshot.profile_id != profile_id:
+        raise GlhsInvariantError("inference_binding_profile_mismatch")
+    if not inference_manifest_id:
+        raise GlhsInvariantError("inference_binding_manifest_required")
+    if set(evidence_ids) != {str(item) for item in snapshot.provenance_ids_json or ()}:
+        raise GlhsInvariantError("inference_binding_evidence_mismatch")
+    # The API boundary must bind the exact persisted snapshot, including its
+    # payload/manifest integrity, before it can issue a lineage reference.
+    persisted_snapshot = validate_snapshot_manifest(
+        db,
+        profile_id=profile_id,
+        snapshot_id=snapshot.public_id,
+        manifest_digest=snapshot.manifest_digest,
+        base_state_version=snapshot.state_version,
+        policy_version=snapshot.policy_version,
+        purpose=snapshot.purpose,
+        consent_version=snapshot.consent_version,
+        observed_evidence_ids=evidence_ids,
+        actor_user_id=snapshot.actor_user_id,
+        actor_role=snapshot.actor_role,
+        task=snapshot.task,
+        require_unexpired=False,
+    )
+    validate_current_governance_coordinates(
+        profile_id=profile_id,
+        base_state_version=persisted_snapshot.state_version,
+        policy_version=persisted_snapshot.policy_version,
+        consent_version=persisted_snapshot.consent_version,
+        purpose=purpose,
+        task=task,
+        actor_user_id=actor_user_id,
+        actor_role=actor_role,
+        snapshot=persisted_snapshot,
+    )
+    snapshot = persisted_snapshot
+    snapshot_id = snapshot.public_id
+    binding = GlhsInferenceContextBinding(
+        public_id=str(uuid4()),
+        profile_id=profile_id,
+        inference_manifest_id=inference_manifest_id,
+        consumed_thss=True,
+        source_snapshot_id=snapshot_id,
+        source_snapshot_digest=snapshot.snapshot_digest,
+        source_manifest_digest=snapshot.manifest_digest,
+        base_state_version=snapshot.state_version,
+        policy_version=snapshot.policy_version,
+        consent_version=snapshot.consent_version,
+        actor_user_id=actor_user_id,
+        actor_role=actor_role,
+        purpose=purpose,
+        task=task,
+        disclosed_evidence_ids_json=evidence_ids,
+        evidence_set_digest=_snapshot_fingerprint(evidence_ids),
+        snapshot_expires_at=snapshot.expires_at,
+        canonicalization_profile=snapshot.canonicalization_profile,
+        digest_algorithm=snapshot.digest_algorithm,
+        binding_schema_version=BINDING_SCHEMA_VERSION,
+        binding_digest="",
+    )
+    binding.binding_digest = _snapshot_fingerprint(inference_binding_envelope(binding))
+    db.add(binding)
+    db.flush()
+    add_outbox(
+        db,
+        event_id=_digest(
+            {"kind": "glhs.inference-binding.created", "binding": binding.public_id}
+        ),
+        profile_id=profile_id,
+        aggregate_type="glhs_inference_context_binding",
+        aggregate_public_id=binding.public_id,
+        event_type="glhs.inference-binding.created",
+    )
+    return binding
+
+
+def validate_inference_context_binding(
+    db: Session,
+    *,
+    profile_id: int,
+    binding_id: str,
+) -> GlhsInferenceContextBinding:
+    """Resolve and cryptographically verify one immutable inference binding."""
+
+    binding = db.execute(
+        select(GlhsInferenceContextBinding).where(
+            GlhsInferenceContextBinding.public_id == binding_id
+        ).execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+    if binding is None:
+        raise GlhsInvariantError("inference_binding_not_found")
+    if binding.profile_id != profile_id:
+        raise GlhsInvariantError("inference_binding_profile_mismatch")
+    if not binding.consumed_thss:
+        raise GlhsInvariantError("inference_binding_thss_not_consumed")
+    if binding.binding_schema_version != BINDING_SCHEMA_VERSION:
+        raise GlhsInvariantError("inference_binding_schema_mismatch")
+    if binding.digest_algorithm != DIGEST_ALGORITHM:
+        raise GlhsInvariantError("inference_binding_digest_algorithm_mismatch")
+    if binding.canonicalization_profile != CANONICALIZATION_PROFILE:
+        raise GlhsInvariantError("inference_binding_canonicalization_mismatch")
+    if not binding.binding_digest or _snapshot_fingerprint(
+        inference_binding_envelope(binding)
+    ) != binding.binding_digest:
+        raise GlhsInvariantError("inference_binding_digest_mismatch")
+    if _as_utc(binding.snapshot_expires_at) <= datetime.now(UTC):
+        raise GlhsInvariantError("inference_binding_snapshot_expired")
+    return binding
+
+
+def validate_current_governance_coordinates(
+    *,
+    profile_id: int,
+    base_state_version: int,
+    policy_version: str,
+    consent_version: str,
+    purpose: str,
+    task: str,
+    actor_user_id: int | None,
+    actor_role: str,
+    snapshot: GlhsSnapshotManifest,
+) -> None:
+    """Production primitive: validate the current-governance coordinates.
+
+    Compares the persisted snapshot's state/policy/consent/purpose/task/actor
+    coordinates against the current claimed coordinates.  This is the
+    governance half of the bound-proposal validation split (spec 3.2 / C-001).
+    """
+
+    if snapshot.profile_id != profile_id:
+        raise GlhsInvariantError("proposal_snapshot_scope_forbidden")
+    if snapshot.state_version != base_state_version:
+        raise GlhsInvariantError("proposal_snapshot_stale_state_version")
+    if snapshot.policy_version != policy_version:
+        raise GlhsInvariantError("proposal_snapshot_policy_mismatch")
+    if snapshot.consent_version != consent_version:
+        raise GlhsInvariantError("proposal_snapshot_consent_mismatch")
+    if snapshot.purpose != purpose:
+        raise GlhsInvariantError("proposal_snapshot_purpose_mismatch")
+    if task and snapshot.task != task:
+        raise GlhsInvariantError("proposal_snapshot_task_mismatch")
+    if actor_user_id is not None and snapshot.actor_user_id != actor_user_id:
+        raise GlhsInvariantError("proposal_snapshot_actor_mismatch")
+    if actor_role is not None and snapshot.actor_role != actor_role:
+        raise GlhsInvariantError("proposal_snapshot_actor_role_mismatch")
+
+
+def validate_exact_disclosure_dependency(
+    db: Session,
+    *,
+    profile_id: int,
+    snapshot_id: str,
+    source_snapshot_digest: str,
+    source_manifest_digest: str,
+    base_state_version: int,
+    policy_version: str,
+    consent_version: str,
+    purpose: str,
+    task: str,
+    actor_user_id: int | None,
+    actor_role: str,
+    observed_evidence_ids: Iterable[str],
+    binding: GlhsInferenceContextBinding | None = None,
+    snapshot: GlhsSnapshotManifest | None = None,
+) -> GlhsSnapshotManifest:
+    """Production primitive: validate the exact disclosure dependency.
+
+    Verifies the exact THSS snapshot identity, payload digest, manifest digest,
+    evidence membership and expiry, and when a binding is supplied the exact
+    root inference binding equality (spec 3.2 / C-002).  This is the
+    disclosure half of the bound-proposal validation split; it deliberately
+    never accepts a ``disable_binding`` flag (GR-03).
+    """
+
+    if snapshot is None:
+        snapshot = validate_snapshot_manifest(
+            db,
+            profile_id=profile_id,
+            snapshot_id=snapshot_id,
+            manifest_digest=source_manifest_digest,
+            base_state_version=base_state_version,
+            policy_version=policy_version,
+            purpose=purpose,
+            consent_version=consent_version,
+            observed_evidence_ids=observed_evidence_ids,
+            actor_user_id=actor_user_id,
+            actor_role=actor_role,
+            task=task,
+        )
+    else:
+        validate_current_governance_coordinates(
+            profile_id=profile_id,
+            base_state_version=base_state_version,
+            policy_version=policy_version,
+            consent_version=consent_version,
+            purpose=purpose,
+            task=task,
+            actor_user_id=actor_user_id,
+            actor_role=actor_role,
+            snapshot=snapshot,
+        )
+        if _as_utc(snapshot.expires_at) <= datetime.now(UTC):
+            raise GlhsInvariantError("proposal_snapshot_expired")
+    if snapshot.public_id != snapshot_id:
+        raise GlhsInvariantError("proposal_snapshot_id_mismatch")
+    if not source_snapshot_digest or snapshot.snapshot_digest != source_snapshot_digest:
+        raise GlhsInvariantError("proposal_snapshot_digest_mismatch")
+    if not snapshot.snapshot_payload_json or fingerprint_for_profile(
+        snapshot.snapshot_payload_json,
+        profile=snapshot.canonicalization_profile,
+        algorithm=snapshot.digest_algorithm,
+    ) != snapshot.snapshot_digest:
+        raise GlhsInvariantError("proposal_snapshot_digest_mismatch")
+    if not source_manifest_digest or snapshot.manifest_digest != source_manifest_digest:
+        raise GlhsInvariantError("proposal_manifest_digest_mismatch")
+    if _as_utc(snapshot.expires_at) <= datetime.now(UTC):
+        raise GlhsInvariantError("proposal_snapshot_expired")
+    disclosed = {str(item) for item in snapshot.provenance_ids_json}
+    if not set(observed_evidence_ids).issubset(disclosed):
+        raise GlhsInvariantError("proposal_evidence_not_disclosed")
+    if binding is not None:
+        _validate_binding_snapshot_equality(
+            binding=binding, snapshot=snapshot, profile_id=profile_id
+        )
+    return snapshot
+
+
+def _validate_binding_snapshot_equality(
+    *,
+    binding: GlhsInferenceContextBinding,
+    snapshot: GlhsSnapshotManifest,
+    profile_id: int,
+) -> None:
+    """Assert the binding and the persisted snapshot agree byte-for-byte."""
+
+    if not binding.consumed_thss:
+        raise GlhsInvariantError("inference_binding_thss_not_consumed")
+    if binding.profile_id != profile_id or snapshot.profile_id != profile_id:
+        raise GlhsInvariantError("inference_binding_profile_mismatch")
+    if binding.source_snapshot_id != snapshot.public_id:
+        raise GlhsInvariantError("inference_binding_snapshot_id_mismatch")
+    if binding.source_snapshot_digest != snapshot.snapshot_digest:
+        raise GlhsInvariantError("inference_binding_snapshot_digest_mismatch")
+    if binding.source_manifest_digest != snapshot.manifest_digest:
+        raise GlhsInvariantError("inference_binding_manifest_digest_mismatch")
+    if _as_utc(binding.snapshot_expires_at) != _as_utc(snapshot.expires_at):
+        raise GlhsInvariantError("inference_binding_expiry_mismatch")
+    if binding.base_state_version != snapshot.state_version:
+        raise GlhsInvariantError("inference_binding_state_version_mismatch")
+    if _snapshot_fingerprint(binding.disclosed_evidence_ids_json or []) != (
+        binding.evidence_set_digest
+    ):
+        raise GlhsInvariantError("inference_binding_evidence_set_digest_mismatch")
+    if binding.evidence_set_digest != _snapshot_fingerprint(
+        list(snapshot.provenance_ids_json or ())
+    ):
+        raise GlhsInvariantError("inference_binding_evidence_membership_mismatch")
 
 
 def _validate_proposal_snapshot(
@@ -1197,6 +1512,7 @@ def compile_thss(
     known_at: datetime | None = None,
     selection_policy: str = "strict",
     expires_in: timedelta = timedelta(minutes=5),
+    consumed_for_inference: bool = False,
 ) -> Snapshot:
     """Compile a minimum necessary, policy-bound health context for one task.
 
@@ -1467,6 +1783,24 @@ def compile_thss(
         aggregate_public_id=manifest.public_id,
         event_type="glhs.snapshot.created",
     )
+    inference_binding_id: str | None = None
+    if consumed_for_inference:
+        # GLHS-B01/B-004: the snapshot is loaded for model/inference use at this
+        # API-owned boundary.  The LLM call itself is external; we bind at
+        # snapshot-load-for-inference and record the snapshot itself as the
+        # immutable inference context for that manifest.
+        binding = create_inference_context_binding(
+            db,
+            profile_id=scope.profile.id,
+            inference_manifest_id=manifest.public_id,
+            snapshot=manifest,
+            actor_user_id=scope.actor.id,
+            actor_role=scope.actor_role,
+            purpose=purpose,
+            task=task,
+            disclosed_evidence_ids=manifest.provenance_ids_json or (),
+        )
+        inference_binding_id = binding.public_id
     return Snapshot(
         snapshot_id=manifest.public_id,
         state_version=state_version,
@@ -1482,4 +1816,5 @@ def compile_thss(
         assertions=tuple(assertion_payloads),
         conflicts=tuple(conflict_payloads),
         risk=risk,
+        inference_context_binding_id=inference_binding_id,
     )

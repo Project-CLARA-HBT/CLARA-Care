@@ -18,6 +18,7 @@ from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
     AIContextManifest,
+    GlhsSnapshotManifest,
     LifeMapBaselineDefinition,
     LifeMapBaselineSnapshot,
     LifeMapCareTask,
@@ -34,7 +35,7 @@ from clara_api.db.models import (
     WearableDailyAggregate,
 )
 from clara_api.db.session import get_db
-from clara_api.glhs.gateway import compile_thss
+from clara_api.glhs.gateway import compile_thss, create_inference_context_binding
 from clara_api.lifemap.baselines import recompute_baseline, serialize_snapshot
 from clara_api.lifemap.commands import (
     add_outbox,
@@ -507,6 +508,31 @@ def ask_lifemap_v2(
         db.flush()
         context_id = context_manifest.public_id
         inference_id = inference.public_id
+        snapshot_manifest = (
+            db.execute(
+                select(GlhsSnapshotManifest).where(
+                    GlhsSnapshotManifest.profile_id == scope.profile.id,
+                    GlhsSnapshotManifest.public_id == glhs_snapshot_id,
+                )
+            ).scalar_one_or_none()
+            if glhs_snapshot_id
+            else None
+        )
+        if snapshot_manifest is not None:
+            # GLHS-B01/B-004: bind at the API-owned point where the model
+            # inference manifest is constructed from the THSS snapshot.  The
+            # server decides ``consumed_thss``; the client never declares it.
+            create_inference_context_binding(
+                db,
+                profile_id=scope.profile.id,
+                inference_manifest_id=inference.public_id,
+                snapshot=snapshot_manifest,
+                actor_user_id=scope.actor.id,
+                actor_role=scope.actor_role,
+                purpose=scope.purpose,
+                task="lifemap_ask",
+                disclosed_evidence_ids=snapshot_manifest.provenance_ids_json or (),
+            )
         db.commit()
     else:
         # The THSS manifest is audit evidence even when governed selection
