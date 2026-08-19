@@ -50,12 +50,13 @@ function taskHref(task: LifeMapTask): string {
 export default function TodayPage() {
   const router = useRouter();
   const language = useUILanguage();
+  const [today, setToday] = useState<LifeMapToday | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     router.replace("/home");
   }, [router]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
