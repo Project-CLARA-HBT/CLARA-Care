@@ -20,13 +20,15 @@
         "kappa": 1.0,
         "unresolved": 0
       },
-      "sealed_claim_eligible": true,
+      "claim_eligibility": "BYTE_VERIFIED_NOT_CLAIM_ELIGIBLE",
+      "sealed_claim_eligible": false,
       "source_sha_v2": "67e528b61512aabc201b344e54f9e3e724490e41",
       "v2_analysis": "research/glhs_journal/protocol_v2/analysis_v2.json",
       "v2_matrix": {
-        "committed": 1,
+        "committed": 2,
         "forbidden_commit_observed": 0,
         "indeterminate": 0,
+        "classification_mismatches": ["TOCTOU-V2-05", "TOCTOU-V2-09"],
         "persisted_writers": [
           "consent_revoke",
           "role_change",

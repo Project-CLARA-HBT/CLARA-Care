@@ -1,0 +1,46 @@
+{
+  "generated_date": "2026-08-19",
+  "package_files": [
+    "package/research/FINAL_PRE_CAREGUARD_STATUS.md",
+    "package/research/FINAL_TOP_TIER_EVIDENCE_STATUS.md",
+    "package/research/PROGRAM_READINESS.md",
+    "package/research/R3_BASELINE_AUDIT.json",
+    "package/research/R3_WORKSTREAM_A_REPORT.md",
+    "package/research/assurance_soict/MANUSCRIPT_RESULTS.md",
+    "package/research/assurance_soict/READINESS.md",
+    "package/research/assurance_soict/claim_to_evidence.csv",
+    "package/research/careguard_vn/MANUSCRIPT_RESULTS.md",
+    "package/research/careguard_vn/READINESS.md",
+    "package/research/careguard_vn/claim_to_evidence.csv",
+    "package/research/claim_ledger.csv",
+    "package/research/glhs_journal/CANONICAL_TOCTOU_EVIDENCE.md",
+    "package/research/glhs_journal/CURRENT_EVIDENCE_STATUS.json",
+    "package/research/glhs_journal/MANUSCRIPT_RESULTS.md",
+    "package/research/glhs_journal/REVISION_READINESS.md",
+    "package/research/glhs_journal/revision_claim_ledger.csv",
+    "package/research/govred_rivf/MANUSCRIPT_RESULTS.md",
+    "package/research/govred_rivf/PUBLICATION_ROUTING.md",
+    "package/research/govred_rivf/READINESS.md",
+    "package/research/govred_rivf/claim_to_evidence.csv"
+  ],
+  "package_policy": "tracked source and tracked PDF paths only",
+  "preflight": {
+    "build_tool_preflight": "MISSING_PDF_BUILD_TOOLS",
+    "build_tools": {
+      "latexmk": false,
+      "pandoc": false,
+      "pdflatex": false,
+      "xelatex": false
+    },
+    "missing_tracked_sources": [],
+    "pdf_preflight": "MISSING_TRACKED_PDF_SOURCES",
+    "pdf_source_count": 0,
+    "source_files_all_tracked": true,
+    "tracked_pdf_sources": []
+  },
+  "publication_registry_modified": false,
+  "schema_version": "clara-r3-build-info.v1",
+  "sealed_artifacts_modified": false,
+  "source_commit": "00c5a31bc68918fbfcfb180ac7ff9480dcd2ff5b",
+  "spec": "MASTER_SPEC_REVIEWER_R3_2026-08-19.md#2.11"
+}

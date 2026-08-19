@@ -1,0 +1,92 @@
+{
+  "schema_version": "clara-r3-baseline-audit.v1",
+  "generated_at": "2026-08-19",
+  "generated_by": "R3 Workstream A (MASTER_SPEC_REVIEWER_R3_2026-08-19.md)",
+  "baseline_commit": "0a6c5940b164d5f262d1f82a9a7ad9a443275602",
+  "blockers": {
+    "glhs_lineage": {
+      "status": "MISSING",
+      "repo_path": "services/api/src/clara_api/glhs",
+      "evidence_path": "MASTER_SPEC_REVIEWER_R3_2026-08-19.md#workstream-b",
+      "notes": "Mandatory THSS inference lineage (B-001..B-014) not implemented. REG-03 canonical guarantee wording applies until implementation + tests exist."
+    },
+    "glhs_ablation": {
+      "status": "MISSING",
+      "repo_path": "services/api/src/clara_api/glhs",
+      "evidence_path": "MASTER_SPEC_REVIEWER_R3_2026-08-19.md#workstream-c",
+      "notes": "Exact-disclosure matched binding-only ablation (C-001..C-011) not executed; no 320-logical-schedule freeze or paired arms."
+    },
+    "toctou_discrepancy": {
+      "status": "PARTIAL",
+      "repo_path": "research/glhs_journal/protocol_v2",
+      "evidence_path": "research/glhs_journal/CANONICAL_TOCTOU_EVIDENCE.md",
+      "notes": "5-vs-12-schedule discrepancy resolved at byte level: v2 12-schedule artifact exists and ALL 4 sealed sha256 PASS. Raw run status is EXECUTED_V2_OBSERVATION_MISMATCH (TOCTOU-V2-05, -09 expected indeterminate, observed rejected) so claim-eligibility is UNRESOLVED pending EXECUTED_V2_FROZEN_OBSERVATIONS re-run (D-001/D-004). No failing hash."
+    },
+    "malformed_audit": {
+      "status": "MISSING",
+      "repo_path": "evaluation",
+      "evidence_path": "MASTER_SPEC_REVIEWER_R3_2026-08-19.md#workstream-d",
+      "notes": "D-006/D-007/D-008 malformed-output taxonomy parser and condition/task decomposition of the 220 fail-closed outputs not present; sealed 384-subject raw outputs not located/verified (see report)."
+    },
+    "govred_states": {
+      "status": "PARTIAL",
+      "repo_path": "research/govred_rivf/results/final-003-analysis-v2.json",
+      "evidence_path": "research/govred_rivf/results/final-003-analysis-v2.json",
+      "notes": "final-003-analysis-v2.json (sha 098d4c3b... verified) provides four-arm rates, Wilson CIs and exact paired McNemar (p=1.6e-27). Explicit E-001 four-state final schema (confirmed_invalid/indeterminate/confirmed_safe_or_rejected/operational_failure) and E-002 DB ordering evidence not yet implemented."
+    },
+    "govred_notrun": {
+      "status": "PARTIAL",
+      "repo_path": "research/govred_rivf/results/final-003-analysis-v2.json",
+      "evidence_path": "research/govred_rivf/results/final-003-analysis-v2.json",
+      "notes": "NOT_RUN=180/arm excluded (never zeroed) and documented; capability audit (E-004) and execution of feasible primary families (E-005) not completed."
+    },
+    "govred_holdout": {
+      "status": "MISSING",
+      "repo_path": "artifacts/govred",
+      "evidence_path": "MASTER_SPEC_REVIEWER_R3_2026-08-19.md#grd-05",
+      "notes": "Fresh 30-60 schedule holdout (GRD-05 / E-009/E-010) not frozen or executed; final-003 remains the only frozen GovRed run."
+    },
+    "govmut_renderer": {
+      "status": "PARTIAL",
+      "repo_path": "research/assurance_soict/seal/govmut-soict-2026-final_analysis-v2",
+      "evidence_path": "research/assurance_soict/seal/claim_to_evidence.csv",
+      "notes": "Sealed analysis-v2 (sha e3ab1832... verified) and run-v2 (sha c59768dc... verified) exist with claim-to-evidence mapping; full 45 x strategy kill matrix / survivor tables / runtime-seed stability (F-002/F-003) not yet rendered into manuscript tables."
+    },
+    "govmut_survivors": {
+      "status": "MISSING",
+      "repo_path": "research/assurance_soict",
+      "evidence_path": "research/assurance_soict/seal/govmut-soict-2026-final_run-v2",
+      "notes": "25-survivor prespecified diagnostic classification (F-004) not found; no retroactive exclusions made."
+    },
+    "govmut_budget": {
+      "status": "MISSING",
+      "repo_path": "evaluation/property_assurance",
+      "evidence_path": "MASTER_SPEC_REVIEWER_R3_2026-08-19.md#gmt-04",
+      "notes": "Outcome-blind equal wall-clock budget calibration and budget-fair M0-M3 comparison (F-011..F-014) not executed; W8 ranking remains non-budget-normalized."
+    },
+    "careguard_gate": {
+      "status": "MANUAL-GATE",
+      "repo_path": "evaluation/careguard_external",
+      "evidence_path": "research/FINAL_TOP_TIER_EVIDENCE_STATUS.md",
+      "notes": "External Vietnam identity source acquisition requires authorized DAV export/API (G-001 MANUAL). CareGuard marked PAUSED_BY_OPERATOR; no DAV crawl performed; RxNorm/DDInter baseline only."
+    },
+    "fhir_matrix": {
+      "status": "PARTIAL",
+      "repo_path": "evaluation",
+      "evidence_path": "MASTER_SPEC_REVIEWER_R3_2026-08-19.md#workstream-h",
+      "notes": "Pinned HL7 validator exists; batch R4+STU3 fixture matrix, negative conformance cases and sealed result manifest (H-002..H-008) not packaged. Administrative signatures/milestone date remain MANUAL-GATE (H-009)."
+    },
+    "registry_stale": {
+      "status": "DONE",
+      "repo_path": "research/publication_registry.yaml",
+      "evidence_path": "research/R3_WORKSTREAM_A_REPORT.md",
+      "notes": "GovRed 02 headline reconciled to run 2026-08-17-rivf-final-003 (450 cases, 4 arms, analysis sha 098d4c3b...). GovMut 03 reconciled to freeze govmut-soict-2026-final-v2 (45 mutants, 720 executions, analysis sha e3ab1832...). GLHS canonical TOCTOU set to v2 12-schedule with pointer to research/glhs_journal/CANONICAL_TOCTOU_EVIDENCE.md."
+    },
+    "duplicate_publication": {
+      "status": "DONE",
+      "repo_path": "research/publication_registry.yaml",
+      "evidence_path": "research/R3_WORKSTREAM_A_REPORT.md",
+      "notes": "Added parent_study_id / evidence_freeze_ids / publication_relationship / overlap_status to all registry manuscripts; 02/08 same-parent govred-final-003, 03/11 same-parent govmut-w8-45mutant, second-venue-requires-material-extension."
+    }
+  }
+}
