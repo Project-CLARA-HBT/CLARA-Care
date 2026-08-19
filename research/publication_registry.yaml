@@ -1,30 +1,38 @@
 schema_version: clara-publication-registry-v1
-updated_at: 2026-08-17
+updated_at: 2026-08-19
 studies:
   - id: govred-rivf-2026
     title: "GovRed-Health: Benchmarking Authorization Drift Between Governed Disclosure and Persistent Commit"
     target_venue: IEEE-RIVF 2026
-    status: protocol_implementation
+    status: sealed_claim_eligible_executable_primary_schedules
     primary_research_question: "Do explicit mutations after governed disclosure invalidate a later persistent health commit across the real boundary?"
     primary_endpoint: unauthorized_or_stale_commit_acceptance_and_prohibited_disclosure
-    frozen_manifest: NOT_RUN
-    headline_run_id: NOT_RUN
-    related_manuscripts: [glhs-journal]
+    frozen_manifest: artifacts/govred/2026-08-17-rivf-freeze-candidate/final/final_locked_manifest.json
+    headline_run_id: 2026-08-17-rivf-final-003
+    related_manuscripts: [glhs-journal, bigdata-healthcare-2026]
     overlapping_code_modules: ["services/api/src/clara_api/glhs", "services/api/src/clara_api/db"]
     overlapping_background_datasets: [synthetic_sentinel_fixtures_only]
     novelty_boundary: "Matched governed-disclosure-to-mutation-to-commit schedules; not a generic cybersecurity, prompt-injection, or governed-memory benchmark."
+    parent_study_id: govred-final-003
+    evidence_freeze_ids: [2026-08-17-rivf-final-003]
+    publication_relationship: primary
+    overlap_status: "same-frozen-evidence; second-venue-requires-material-extension"
   - id: assurance-soict-2026
     title: "GovMut-Health: A Mutation Benchmark for Sequence-Sensitive Governance Faults in Stateful Health-AI Systems"
     target_venue: SOICT 2026
-    status: development_mutation_infrastructure_only
+    status: sealed_w8_45mutant_complete
     primary_research_question: "Which health-AI governance faults survive which established testing strategies under a fixed mutant corpus?"
     primary_endpoint: mutation_score
-    frozen_manifest: NOT_RUN
-    headline_run_id: NOT_RUN
-    related_manuscripts: [glhs-journal, govred-rivf-2026]
+    frozen_manifest: research/assurance_soict/seal/govmut-soict-2026-final_run-v2
+    headline_run_id: govmut-soict-2026-final-v2
+    related_manuscripts: [glhs-journal, govred-rivf-2026, bigdata-ml-2026]
     overlapping_code_modules: ["services/api/src/clara_api/glhs"]
     overlapping_background_datasets: [synthetic_governed_store_fixtures]
     novelty_boundary: "Health-AI fault taxonomy, executable mutant corpus, and comparative adequacy evidence; not a novel testing methodology."
+    parent_study_id: govmut-w8-45mutant
+    evidence_freeze_ids: [govmut-soict-2026-final-v2]
+    publication_relationship: primary
+    overlap_status: "same-frozen-evidence; second-venue-requires-material-extension"
   - id: careguard-vn
     title: "CareGuard-VN: Source-Bound Medication Identity as a Safety Gate for Drug–Drug Interaction Screening"
     target_venue: arXiv_then_tbd
@@ -37,18 +45,27 @@ studies:
     overlapping_code_modules: ["services/ml", "services/api/src/clara_api/glhs/adapters.py"]
     overlapping_background_datasets: [DrugBank_historical_conformance_only]
     novelty_boundary: "Independent Vietnam identity/DDI validation with an oracle-identity arm; no generic normalization, abstention, evidence-grounded DDI, or historical DrugBank result is headline evidence."
+    parent_study_id: careguard-vn
+    evidence_freeze_ids: []
+    publication_relationship: standalone
+    overlap_status: none
   - id: glhs-journal
     title: "GLHS: A Co-Versioned Disclosure-to-Commit Governance Contract for Longitudinal Health AI"
     target_venue: journal_revision
-    status: revision_evidence_development_only
+    status: revision_evidence_sealed_partial
     primary_research_question: "Can co-versioned disclosure-to-commit binding govern longitudinal health-AI writes?"
     primary_endpoint: governed_read_to_proposal_to_write_correctness
-    frozen_manifest: existing_glhs_runs_background_only
-    headline_run_id: existing_glhs_runs_not_reused
+    frozen_manifest: research/glhs_journal/protocol_v2/run_v2_raw.json
+    headline_run_id: GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01
+    canonical_toctou_evidence: research/glhs_journal/CANONICAL_TOCTOU_EVIDENCE.md
     related_manuscripts: [govred-rivf-2026, assurance-soict-2026, fmc-2026]
     overlapping_code_modules: ["services/api/src/clara_api/glhs"]
     overlapping_background_datasets: [GLHS_synthetic_64_subject_cohort]
     novelty_boundary: "Disclosure-conditioned health commit binding and its health-specific governance evidence; not generic transactional memory, stale authorization, bitemporal writes, or governed-memory novelty."
+    parent_study_id: glhs-journal
+    evidence_freeze_ids: [GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01, GLHS-POSTGRES-TOCTOU-FINAL-20260817-01]
+    publication_relationship: primary
+    overlap_status: none
   - id: fmc-2026
     title: "From Longitudinal Context to Safe Action: A Co-Versioned Governance Contract for Persistent Health AI"
     target_venue: FMC 2026
@@ -61,3 +78,39 @@ studies:
     overlapping_code_modules: ["services/api/src/clara_api/glhs"]
     overlapping_background_datasets: [GLHS_synthetic_64_subject_cohort]
     novelty_boundary: "Presentation-only communication of supported GLHS evidence; no new archival claim."
+    parent_study_id: glhs-journal
+    evidence_freeze_ids: []
+    publication_relationship: presentation_only_derivative
+    overlap_status: not_archival_duplicate
+  - id: bigdata-healthcare-2026
+    title: "GovRed-Health: Authorization Drift Between Governed Disclosure and Persistent Commit (IEEE BigData Healthcare companion)"
+    target_venue: IEEE BigData 2026
+    status: held_extension_only
+    primary_research_question: "Do explicit mutations after governed disclosure invalidate a later persistent health commit across the real boundary?"
+    primary_endpoint: unauthorized_or_stale_commit_acceptance_and_prohibited_disclosure
+    frozen_manifest: artifacts/govred/2026-08-17-rivf-freeze-candidate/final/final_locked_manifest.json
+    headline_run_id: 2026-08-17-rivf-final-003
+    related_manuscripts: [govred-rivf-2026, glhs-journal]
+    overlapping_code_modules: ["services/api/src/clara_api/glhs", "services/api/src/clara_api/db"]
+    overlapping_background_datasets: [synthetic_sentinel_fixtures_only]
+    novelty_boundary: "Same study as govred-rivf-2026; second venue requires materially new frozen evidence (resolved concurrency, holdout, additional backend/attack family)."
+    parent_study_id: govred-final-003
+    evidence_freeze_ids: [2026-08-17-rivf-final-003]
+    publication_relationship: held_extension_only
+    overlap_status: "same-frozen-evidence; second-venue-requires-material-extension"
+  - id: bigdata-ml-2026
+    title: "GovMut-Health: A Mutation Benchmark for Sequence-Sensitive Governance Faults in Stateful Health-AI Systems (IEEE BigData ML companion)"
+    target_venue: IEEE BigData ML 2026
+    status: held_extension_only
+    primary_research_question: "Which health-AI governance faults survive which established testing strategies under a fixed mutant corpus?"
+    primary_endpoint: mutation_score
+    frozen_manifest: research/assurance_soict/seal/govmut-soict-2026-final_run-v2
+    headline_run_id: govmut-soict-2026-final-v2
+    related_manuscripts: [assurance-soict-2026, glhs-journal]
+    overlapping_code_modules: ["services/api/src/clara_api/glhs"]
+    overlapping_background_datasets: [synthetic_governed_store_fixtures]
+    novelty_boundary: "Same W8 study as assurance-soict-2026; second venue requires a material W9/equal-budget/human-review extension and descriptive mutation-score CIs."
+    parent_study_id: govmut-w8-45mutant
+    evidence_freeze_ids: [govmut-soict-2026-final-v2]
+    publication_relationship: held_extension_only
+    overlap_status: "same-frozen-evidence; second-venue-requires-material-extension"
