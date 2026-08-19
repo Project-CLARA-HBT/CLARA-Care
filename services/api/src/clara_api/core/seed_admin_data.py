@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -12,11 +11,9 @@ from sqlalchemy.orm import Session
 
 from clara_api.db.models import (
     LifeMapCareTask,
-    LifeMapEpisode,
     LifeMapEvent,
     LifeMapVisit,
     MedicationCourse,
-    MedicationCourseChange,
     MedicineCabinet,
     MedicineItem,
     PhrObservation,
@@ -37,6 +34,57 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
         select(PhrProfile).where(PhrProfile.user_id == admin_user.id).order_by(PhrProfile.id.asc())
     ).scalars().first()
 
+    allergies_payload = [
+        {
+            "id": "alg_penicillin",
+            "name": "Penicillin (và kháng sinh nhóm Beta-lactam)",
+            "severity": "severe",
+            "reaction": "Phù mạch nhẹ, nổi mề đay cấp tính",
+            "verification_status": "confirmed",
+            "source_name": "Bệnh viện Chợ Rẫy (2019)",
+            "recorded_at": (now - timedelta(days=365)).isoformat(),
+        },
+        {
+            "id": "alg_nsaid",
+            "name": "Aspirin liều cao / NSAIDs",
+            "severity": "mild",
+            "reaction": "Cồn cào và đau vùng thượng vị",
+            "verification_status": "suspected",
+            "source_name": "Người dùng tự ghi nhận",
+            "recorded_at": (now - timedelta(days=200)).isoformat(),
+        },
+    ]
+
+    conditions_payload = [
+        {
+            "id": "cond_hypertension",
+            "name": "Tăng huyết áp nguyên phát độ 1",
+            "clinical_status": "active",
+            "verification_status": "confirmed",
+            "onset_date": "2022-03-10",
+            "source_name": "BV Đại học Y Dược TP.HCM",
+            "notes": "Huyết áp mục tiêu điều trị: < 130/80 mmHg. Đáp ứng tốt với Amlodipine 5mg.",
+        },
+        {
+            "id": "cond_gastritis",
+            "name": "Viêm dạ dày tá tràng mạn tính",
+            "clinical_status": "remission",
+            "verification_status": "confirmed",
+            "onset_date": "2021-08-15",
+            "source_name": "Phòng khám Tiêu hóa",
+            "notes": "Nội soi gần nhất niêm mạc ổn định, không có loét tiến triển.",
+        },
+        {
+            "id": "cond_dyslipidemia",
+            "name": "Rối loạn lipid máu nhẹ (Tăng Cholesterol máu)",
+            "clinical_status": "active",
+            "verification_status": "confirmed",
+            "onset_date": "2023-11-20",
+            "source_name": "BV Đại học Y Dược TP.HCM",
+            "notes": "Đang duy trì Rosuvastatin 10mg buổi tối.",
+        },
+    ]
+
     if not profile:
         profile = PhrProfile(
             user_id=admin_user.id,
@@ -52,65 +100,16 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
             emergency_contact_relationship="Vợ",
             allergy_status="has_allergies",
             notes="Tiền sử dị ứng Penicillin (phù mạch nhẹ, mề đay). Tăng huyết áp nguyên phát đang kiểm soát tốt.",
-            allergies_json=[
-                {
-                    "id": "alg_penicillin",
-                    "name": "Penicillin (và kháng sinh nhóm Beta-lactam)",
-                    "severity": "severe",
-                    "reaction": "Phù mạch nhẹ, nổi mề đay cấp tính",
-                    "verification_status": "confirmed",
-                    "source_name": "Bệnh viện Chợ Rẫy (2019)",
-                    "recorded_at": (now - timedelta(days=365)).isoformat(),
-                },
-                {
-                    "id": "alg_nsaid",
-                    "name": "Aspirin liều cao / NSAIDs",
-                    "severity": "mild",
-                    "reaction": "Cồn cào và đau vùng thượng vị",
-                    "verification_status": "suspected",
-                    "source_name": "Người dùng tự ghi nhận",
-                    "recorded_at": (now - timedelta(days=200)).isoformat(),
-                },
-            ],
-            conditions_json=[
-                {
-                    "id": "cond_hypertension",
-                    "name": "Tăng huyết áp nguyên phát độ 1",
-                    "clinical_status": "active",
-                    "verification_status": "confirmed",
-                    "onset_date": "2022-03-10",
-                    "source_name": "BV Đại học Y Dược TP.HCM",
-                    "notes": "Huyết áp mục tiêu điều trị: < 130/80 mmHg. Đáp ứng tốt với Amlodipine 5mg.",
-                },
-                {
-                    "id": "cond_gastritis",
-                    "name": "Viêm dạ dày tá tràng mạn tính",
-                    "clinical_status": "remission",
-                    "verification_status": "confirmed",
-                    "onset_date": "2021-08-15",
-                    "source_name": "Phòng khám Tiêu hóa",
-                    "notes": "Nội soi gần nhất niêm mạc ổn định, không có loét tiến triển.",
-                },
-                {
-                    "id": "cond_dyslipidemia",
-                    "name": "Rối loạn lipid máu nhẹ (Tăng Cholesterol máu)",
-                    "clinical_status": "active",
-                    "verification_status": "confirmed",
-                    "onset_date": "2023-11-20",
-                    "source_name": "BV Đại học Y Dược TP.HCM",
-                    "notes": "Đang duy trì Rosuvastatin 10mg buổi tối.",
-                },
-            ],
+            allergies_json=allergies_payload,
+            conditions_json=conditions_payload,
             medications_json=[],
             version_no=5,
-            onboarding_completed=True,
-            preferred_locale="vi",
+            onboarding_completed_at=now,
         )
         db.add(profile)
         db.commit()
         db.refresh(profile)
     else:
-        # Update demographics with full realistic details if missing
         profile.full_name = "BS. Nguyễn Tuấn Anh"
         profile.date_of_birth = datetime(1985, 6, 15, tzinfo=timezone.utc).date()
         profile.gender = "male"
@@ -123,56 +122,9 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
         profile.allergy_status = "has_allergies"
         profile.notes = "Tiền sử dị ứng Penicillin (phù mạch nhẹ, mề đay). Tăng huyết áp nguyên phát đang kiểm soát tốt."
         if not profile.allergies_json:
-            profile.allergies_json = [
-                {
-                    "id": "alg_penicillin",
-                    "name": "Penicillin (và kháng sinh nhóm Beta-lactam)",
-                    "severity": "severe",
-                    "reaction": "Phù mạch nhẹ, nổi mề đay cấp tính",
-                    "verification_status": "confirmed",
-                    "source_name": "Bệnh viện Chợ Rẫy (2019)",
-                    "recorded_at": (now - timedelta(days=365)).isoformat(),
-                },
-                {
-                    "id": "alg_nsaid",
-                    "name": "Aspirin liều cao / NSAIDs",
-                    "severity": "mild",
-                    "reaction": "Cồn cào và đau vùng thượng vị",
-                    "verification_status": "suspected",
-                    "source_name": "Người dùng tự ghi nhận",
-                    "recorded_at": (now - timedelta(days=200)).isoformat(),
-                },
-            ]
+            profile.allergies_json = allergies_payload
         if not profile.conditions_json:
-            profile.conditions_json = [
-                {
-                    "id": "cond_hypertension",
-                    "name": "Tăng huyết áp nguyên phát độ 1",
-                    "clinical_status": "active",
-                    "verification_status": "confirmed",
-                    "onset_date": "2022-03-10",
-                    "source_name": "BV Đại học Y Dược TP.HCM",
-                    "notes": "Huyết áp mục tiêu điều trị: < 130/80 mmHg. Đáp ứng tốt với Amlodipine 5mg.",
-                },
-                {
-                    "id": "cond_gastritis",
-                    "name": "Viêm dạ dày tá tràng mạn tính",
-                    "clinical_status": "remission",
-                    "verification_status": "confirmed",
-                    "onset_date": "2021-08-15",
-                    "source_name": "Phòng khám Tiêu hóa",
-                    "notes": "Nội soi gần nhất niêm mạc ổn định, không có loét tiến triển.",
-                },
-                {
-                    "id": "cond_dyslipidemia",
-                    "name": "Rối loạn lipid máu nhẹ (Tăng Cholesterol máu)",
-                    "clinical_status": "active",
-                    "verification_status": "confirmed",
-                    "onset_date": "2023-11-20",
-                    "source_name": "BV Đại học Y Dược TP.HCM",
-                    "notes": "Đang duy trì Rosuvastatin 10mg buổi tối.",
-                },
-            ]
+            profile.conditions_json = conditions_payload
         db.commit()
 
     # 2. Seed Medication Courses
@@ -291,43 +243,48 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
         obs_list = [
             PhrObservation(
                 profile_id=profile.id,
+                entry_id=f"obs_{uuid4().hex[:8]}",
                 name="Huyết áp",
                 value="124/80",
                 unit="mmHg",
-                observed_on=now - timedelta(days=1, hours=2),
-                source_system="manual",
+                observed_on=(now - timedelta(days=1)).date(),
+                information_source="self-declared",
             ),
             PhrObservation(
                 profile_id=profile.id,
+                entry_id=f"obs_{uuid4().hex[:8]}",
                 name="Nhịp tim",
                 value="72",
                 unit="bpm",
-                observed_on=now - timedelta(days=1, hours=2),
-                source_system="manual",
+                observed_on=(now - timedelta(days=1)).date(),
+                information_source="self-declared",
             ),
             PhrObservation(
                 profile_id=profile.id,
+                entry_id=f"obs_{uuid4().hex[:8]}",
                 name="Đường huyết đói (Glucose)",
                 value="5.3",
                 unit="mmol/L",
-                observed_on=now - timedelta(days=4),
-                source_system="hospital_lab",
+                observed_on=(now - timedelta(days=4)).date(),
+                information_source="lab_document",
             ),
             PhrObservation(
                 profile_id=profile.id,
+                entry_id=f"obs_{uuid4().hex[:8]}",
                 name="Nồng độ Oxy máu (SpO2)",
                 value="99",
                 unit="%",
-                observed_on=now - timedelta(days=1, hours=2),
-                source_system="manual",
+                observed_on=(now - timedelta(days=1)).date(),
+                information_source="device_fitbit",
             ),
             PhrObservation(
                 profile_id=profile.id,
+                entry_id=f"obs_{uuid4().hex[:8]}",
                 name="Cân nặng",
                 value="68.5",
                 unit="kg",
-                observed_on=now - timedelta(days=7),
-                source_system="manual",
+                observed_on=(now - timedelta(days=7)).date(),
+                information_source="self-declared",
             ),
         ]
         db.add_all(obs_list)
@@ -344,33 +301,33 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
             profile_id=profile.id,
             public_id=f"tsk_{uuid4().hex[:12]}",
             title="Uống Amlodipine 5mg sau ăn sáng",
-            description="Uống 1 viên cùng một ly nước lọc đầy đủ.",
             status="accepted",
             due_at=today_8am,
+            provenance_json={"reason": "daily_medication", "frequency": "morning"},
         )
         task2 = LifeMapCareTask(
             profile_id=profile.id,
             public_id=f"tsk_{uuid4().hex[:12]}",
             title="Đo và ghi lại huyết áp buổi tối",
-            description="Nghỉ ngơi 5 phút ở tư thế ngồi trước khi đo.",
             status="accepted",
             due_at=today_8pm,
+            provenance_json={"reason": "vitals_monitoring", "frequency": "evening"},
         )
         task3 = LifeMapCareTask(
             profile_id=profile.id,
             public_id=f"tsk_{uuid4().hex[:12]}",
             title="Đi bộ nhẹ nhàng 30 phút duy trì sức bền",
-            description="Tập thể dục nhịp điệu đều đặn hỗ trợ kiểm soát huyết áp.",
             status="in_progress",
             due_at=now.replace(hour=17, minute=30),
+            provenance_json={"reason": "lifestyle"},
         )
         task4 = LifeMapCareTask(
             profile_id=profile.id,
             public_id=f"tsk_{uuid4().hex[:12]}",
             title="Chuẩn bị câu hỏi thảo luận cho buổi tái khám Tim mạch",
-            description="Ghi chú lại các đợt hồi hộp nhẹ hoặc thắc mắc về liều thuốc.",
             status="proposed",
             due_at=now + timedelta(days=2),
+            provenance_json={"reason": "visit_prep"},
         )
         db.add_all([task1, task2, task3, task4])
         db.commit()
@@ -426,6 +383,7 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
         )
         ev2 = LifeMapEvent(
             profile_id=profile.id,
+            public_id=f"ev_{uuid4().hex[:12]}",
             event_type="medication",
             truth_state="confirmed",
             occurred_at=now - timedelta(days=120),
@@ -437,6 +395,7 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
         )
         ev3 = LifeMapEvent(
             profile_id=profile.id,
+            public_id=f"ev_{uuid4().hex[:12]}",
             event_type="visit",
             truth_state="confirmed",
             occurred_at=now - timedelta(days=150),
