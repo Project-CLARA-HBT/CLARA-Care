@@ -341,6 +341,9 @@ def _random_schema_name() -> str:
 
 
 def _source_revision() -> str:
+    configured = os.environ.get("GLHS_SOURCE_REVISION")
+    if configured:
+        return configured
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
@@ -2656,7 +2659,7 @@ def run_schedules(
             if all(matches)
             else "EXECUTED_V2_OBSERVATION_MISMATCH"
         )
-        run_id = RUN_ID
+        run_id = str(protocol.get("run_id") or RUN_ID)
     result: dict[str, object] = {
         "schema_version": schema_version,
         "status": status,
