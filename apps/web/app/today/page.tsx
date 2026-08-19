@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PageShell from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
@@ -47,8 +48,12 @@ function taskHref(task: LifeMapTask): string {
 }
 
 export default function TodayPage() {
+  const router = useRouter();
   const language = useUILanguage();
-  const [today, setToday] = useState<LifeMapToday | null>(null);
+
+  useEffect(() => {
+    router.replace("/home");
+  }, [router]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 

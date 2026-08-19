@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from clara_ml.llm.capabilities import ModelCapability, RouteClass
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.observability import model_routing_evidence
 
@@ -55,7 +56,8 @@ class ModelTask(StrEnum):
 class TaskContract:
     task: ModelTask
     risk_level: str
-    allowed_model_tiers: tuple[str, ...]
+    route_class: RouteClass
+    required_capabilities: tuple[ModelCapability, ...]
     prompt_version: str
     output_contract: str
     safety_fallback: str
@@ -63,7 +65,8 @@ class TaskContract:
     max_tokens: int
     required_tools: tuple[str, ...]
     human_review_below: float
-    model_profile: str
+    model_profile: str = "pro"
+    allowed_model_tiers: tuple[str, ...] = ("generative_slm", "medium_llm")
     shadow_only: bool = False
 
 
@@ -226,13 +229,33 @@ def load_task_contracts() -> tuple[str, dict[ModelTask, TaskContract]]:
         risk_level = _contract_string(raw, "risk_level")
         if risk_level not in _RISK_LEVELS:
             raise ValueError("model_task_contract_risk_level_invalid")
-        tiers = raw.get("allowed_model_tiers")
+        raw_route_class = _contract_string(raw, "route_class")
+        try:
+            route_class = RouteClass(raw_route_class)
+        except ValueError as exc:
+            raise ValueError("model_task_contract_route_class_invalid") from exc
+        raw_capabilities = raw.get("required_capabilities")
         if (
-            not isinstance(tiers, list)
-            or not tiers
-            or not all(isinstance(tier, str) and tier in _MODEL_TIERS for tier in tiers)
+            not isinstance(raw_capabilities, list)
+            or not raw_capabilities
+            or not all(isinstance(cap, str) for cap in raw_capabilities)
         ):
-            raise ValueError("model_task_contract_allowed_model_tiers_invalid")
+            raise ValueError("model_task_contract_required_capabilities_invalid")
+        try:
+            required_capabilities = tuple(ModelCapability(cap) for cap in raw_capabilities)
+        except ValueError as exc:
+            raise ValueError("model_task_contract_required_capabilities_invalid") from exc
+        tiers = raw.get("allowed_model_tiers")
+        if tiers is not None:
+            if (
+                not isinstance(tiers, list)
+                or not tiers
+                or not all(isinstance(tier, str) and tier in _MODEL_TIERS for tier in tiers)
+            ):
+                raise ValueError("model_task_contract_allowed_model_tiers_invalid")
+            parsed_tiers = tuple(tiers)
+        else:
+            parsed_tiers = ("generative_slm", "medium_llm")
         tools = raw.get("required_tools")
         if not isinstance(tools, list) or not all(
             isinstance(tool, str) and tool.strip() for tool in tools
@@ -244,13 +267,18 @@ def load_task_contracts() -> tuple[str, dict[ModelTask, TaskContract]]:
         shadow_only = raw.get("shadow_only")
         if not isinstance(shadow_only, bool):
             raise ValueError("model_task_contract_shadow_only_invalid")
-        model_profile = _contract_string(raw, "model_profile")
-        if model_profile not in _MODEL_PROFILES:
-            raise ValueError("model_task_contract_model_profile_invalid")
+        raw_profile = raw.get("model_profile")
+        if raw_profile is not None:
+            model_profile = _contract_string(raw, "model_profile")
+            if model_profile not in _MODEL_PROFILES:
+                raise ValueError("model_task_contract_model_profile_invalid")
+        else:
+            model_profile = "flash" if route_class == RouteClass.FAST_MULTIMODAL else "pro"
         contracts[task] = TaskContract(
             task=task,
             risk_level=risk_level,
-            allowed_model_tiers=tuple(tiers),
+            route_class=route_class,
+            required_capabilities=required_capabilities,
             prompt_version=_contract_string(raw, "prompt_version"),
             output_contract=_contract_string(raw, "output_contract"),
             safety_fallback=_contract_string(raw, "safety_fallback"),
@@ -261,6 +289,7 @@ def load_task_contracts() -> tuple[str, dict[ModelTask, TaskContract]]:
                 raw, "human_review_below", minimum=0, maximum=1
             ),
             model_profile=model_profile,
+            allowed_model_tiers=parsed_tiers,
             shadow_only=shadow_only,
         )
     return schema_version, contracts

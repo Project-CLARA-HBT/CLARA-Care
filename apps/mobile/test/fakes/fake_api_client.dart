@@ -493,6 +493,18 @@ class FakeApiClient extends ApiClient {
   }
 
   @override
+  Future<Map<String, dynamic>> getHomeV2({
+    required String accessToken,
+    String? profileId,
+  }) {
+    return _dispatch(
+      'getHomeV2',
+      {'profileId': profileId},
+      accessToken: accessToken,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>> getLifeMapToday({required String accessToken}) {
     return _dispatch('getLifeMapToday', const {}, accessToken: accessToken);
   }

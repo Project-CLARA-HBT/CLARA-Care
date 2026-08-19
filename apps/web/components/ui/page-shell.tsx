@@ -1,15 +1,18 @@
 export default function PageShell({
   title,
   description,
+  subtitle,
   children,
   variant = "card",
 }: {
   title: string;
   description?: string;
+  subtitle?: string;
   children?: React.ReactNode;
   variant?: "card" | "plain";
 }) {
-  const hasHeading = Boolean(title?.trim()) || Boolean(description?.trim());
+  const desc = description ?? subtitle;
+  const hasHeading = Boolean(title?.trim()) || Boolean(desc?.trim());
   const heading = (
     <header className="page-intro max-w-4xl">
       {title ? (
@@ -17,9 +20,9 @@ export default function PageShell({
           {title}
         </h1>
       ) : null}
-      {description ? (
+      {desc ? (
         <p className="mt-2 max-w-[68ch] text-sm leading-6 text-[var(--text-secondary)] sm:text-[15px]">
-          {description}
+          {desc}
         </p>
       ) : null}
     </header>

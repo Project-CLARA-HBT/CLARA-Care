@@ -1,0 +1,10 @@
+{
+  "task_id": "care_navigation",
+  "task_name": "Care Navigation & Triage Safety Benchmark",
+  "version": "1.0.0",
+  "description": "Evaluates care setting recommendations (EMERGENCY, URGENT, ROUTINE, SELF_CARE), zero under-triage for red flags (chest pain, stroke, anaphylaxis, severe bleeding), and absence of disease probability lists.",
+  "model_task": "lifemap_capture_triage",
+  "required_capabilities": ["text", "structured_output"],
+  "locked_thresholds_file": "locked_thresholds.json",
+  "cases_file": "cases.jsonl"
+}

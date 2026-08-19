@@ -20,11 +20,14 @@ import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
 import '../../core/session_store.dart';
 import '../../screens/consent_center_screen.dart';
+import '../../screens/council_case_screen.dart'
+    show kCouncilMobileParityEnabled;
 import '../../theme/components/section_header.dart';
 import '../../theme/glass/glass_surface.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
 import '../connected_health/connected_health_screen.dart';
+import 'council_surface_v3.dart';
 import 'scribe_surface_v3.dart';
 import 'social_surface_v3.dart';
 import '../language_controller.dart';
@@ -75,6 +78,9 @@ class MoreScreenV3 extends StatelessWidget {
   bool get _canScribe =>
       resolver.scribeEnabled && (role == 'doctor' || role == 'admin');
 
+  bool get _canCouncil =>
+      kCouncilMobileParityEnabled && (role == 'doctor' || role == 'admin');
+
   List<_MoreEntry> _entries(ConsumerTerminology copy) {
     final entries = <_MoreEntry>[];
 
@@ -108,7 +114,7 @@ class MoreScreenV3 extends StatelessWidget {
       ),
     );
 
-    // Medical Scribe (doctor + scribe flag).
+    // Medical Scribe (doctor/admin + scribe flag).
     if (_canScribe) {
       entries.add(
         _MoreEntry(
@@ -119,6 +125,21 @@ class MoreScreenV3 extends StatelessWidget {
             apiClient: apiClient,
             sessionStore: sessionStore,
             resolver: resolver,
+          ),
+        ),
+      );
+    }
+
+    // AI Council (doctor/admin, gated).
+    if (_canCouncil) {
+      entries.add(
+        _MoreEntry(
+          icon: Icons.groups_outlined,
+          title: copy[ConsumerTerm.profileHubCaseConsultationTitle],
+          subtitle: copy[ConsumerTerm.profileHubCaseConsultationDescription],
+          builder: (_) => CouncilSurfaceV3(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
           ),
         ),
       );

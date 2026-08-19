@@ -46,6 +46,12 @@ export const ANALYTICS_EVENTS = {
   adminObservabilityViewed: "admin_observability_viewed",
   adminAnalyticsViewed: "admin_analytics_viewed",
   adminClinicalAnalyticsViewed: "admin_clinical_analytics_viewed",
+  // Consumer Home surface events
+  homeViewed: "home_viewed",
+  homeActionClicked: "home_action_clicked",
+  homeAlertClicked: "home_alert_clicked",
+  homeScheduleItemClicked: "home_schedule_item_clicked",
+  homeRecentChangeClicked: "home_recent_change_clicked",
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];
@@ -269,5 +275,73 @@ export function trackAdminSurfaceViewed(props: { view: AdminView }): void {
   emit(ANALYTICS_EVENTS.adminSurfaceViewed, {
     surface: "admin",
     view: props.view,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Consumer Home
+// ---------------------------------------------------------------------------
+
+/**
+ * The Consumer Home surface was viewed. No PII or clinical data included.
+ */
+export function trackHomeViewed(): void {
+  emit(ANALYTICS_EVENTS.homeViewed, {
+    surface: "home",
+  });
+}
+
+/**
+ * A primary or quick action was clicked on the Home surface.
+ * Only coarse action kind and optional severity are recorded. No health details.
+ */
+export function trackHomeActionClicked(props: {
+  actionKind: string;
+  severity?: string;
+  targetHref?: string;
+}): void {
+  emit(ANALYTICS_EVENTS.homeActionClicked, {
+    surface: "home",
+    action_kind: props.actionKind,
+    ...(props.severity ? { severity: props.severity } : {}),
+    ...(props.targetHref ? { target_href: props.targetHref } : {}),
+  });
+}
+
+/**
+ * A safety alert banner was clicked on Home.
+ */
+export function trackHomeAlertClicked(props: {
+  severity: string;
+  alertKind?: string;
+}): void {
+  emit(ANALYTICS_EVENTS.homeAlertClicked, {
+    surface: "home",
+    severity: props.severity,
+    ...(props.alertKind ? { alert_kind: props.alertKind } : {}),
+  });
+}
+
+/**
+ * A scheduled medication, visit, or care task item was clicked on Home.
+ */
+export function trackHomeScheduleItemClicked(props: {
+  itemKind: string;
+}): void {
+  emit(ANALYTICS_EVENTS.homeScheduleItemClicked, {
+    surface: "home",
+    item_kind: props.itemKind,
+  });
+}
+
+/**
+ * A recent change item was clicked on Home.
+ */
+export function trackHomeRecentChangeClicked(props: {
+  changeKind: string;
+}): void {
+  emit(ANALYTICS_EVENTS.homeRecentChangeClicked, {
+    surface: "home",
+    change_kind: props.changeKind,
   });
 }

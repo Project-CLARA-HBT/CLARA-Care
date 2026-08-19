@@ -40,19 +40,19 @@ def ensure_bootstrap_admin(db: Session, settings: Settings) -> None:
 
     user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
     if user is None:
-        db.add(
-            User(
-                email=email,
-                hashed_password=hash_password(password),
-                role="admin",
-                full_name="System Administrator",
-                is_email_verified=True,
-                status="active",
-            )
+        new_user = User(
+            email=email,
+            hashed_password=hash_password(password),
+            role="admin",
+            full_name="BS. Nguyễn Tuấn Anh",
+            is_email_verified=True,
+            status="active",
         )
+        db.add(new_user)
         try:
             db.commit()
-            return
+            db.refresh(new_user)
+            user = new_user
         except IntegrityError:
             # Multi-worker startup can race on bootstrap user creation.
             # If another worker inserted first, reload and continue with
@@ -79,3 +79,9 @@ def ensure_bootstrap_admin(db: Session, settings: Settings) -> None:
     if changed:
         db.add(user)
         db.commit()
+
+    try:
+        from clara_api.core.seed_admin_data import seed_admin_clinical_data
+        seed_admin_clinical_data(db, user)
+    except Exception as exc:
+        logger.warning("Failed to seed admin clinical data: %s", exc)

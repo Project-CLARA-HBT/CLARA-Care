@@ -75,7 +75,7 @@ const LABELS: Record<WorkspaceId, { key: UITranslationKey; icon: string; homeHre
   personal: {
     key: "navigation.workspace.personal",
     icon: "person",
-    homeHref: "/today",
+    homeHref: "/home",
   },
   clinical: {
     key: "navigation.workspace.clinical",

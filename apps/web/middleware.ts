@@ -26,6 +26,18 @@ const PUBLIC_PATHS = new Set([
   "/verify-email",
 ]);
 
+export const LEGACY_ROUTE_REDIRECTS: Record<string, string> = {
+  "/today": "/home",
+  "/chat": "/ask",
+  "/lifemap": "/health/timeline",
+  "/phr": "/health",
+  "/medicines": "/health/medications",
+  "/visits": "/care/visits",
+  "/family": "/you/sharing",
+  "/account/consent": "/you/privacy",
+  "/account/data": "/you/privacy",
+};
+
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
   if (pathname.startsWith("/share/") || pathname.startsWith("/phr/shared/"))
@@ -40,6 +52,12 @@ function isPublicPath(pathname: string): boolean {
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   if (AUTH_BYPASS_ENABLED) {
+    const legacyTarget = LEGACY_ROUTE_REDIRECTS[pathname];
+    if (legacyTarget) {
+      const redirectUrl = new URL(legacyTarget, request.url);
+      redirectUrl.search = search;
+      return NextResponse.redirect(redirectUrl);
+    }
     return NextResponse.next();
   }
 
@@ -61,9 +79,17 @@ export function middleware(request: NextRequest) {
   }
 
   if (!hasSession) {
+    const canonicalPath = LEGACY_ROUTE_REDIRECTS[pathname] ?? pathname;
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", `${pathname}${search}`);
+    loginUrl.searchParams.set("next", `${canonicalPath}${search}`);
     return NextResponse.redirect(loginUrl);
+  }
+
+  const legacyTarget = LEGACY_ROUTE_REDIRECTS[pathname];
+  if (legacyTarget) {
+    const redirectUrl = new URL(legacyTarget, request.url);
+    redirectUrl.search = search;
+    return NextResponse.redirect(redirectUrl);
   }
 
   return NextResponse.next();

@@ -1,27 +1,25 @@
 // Today agenda surface for the CLARA_Mobile unified experience
 // (clara-mobile-unified).
 //
-// `TodaySurface` is the daily home for LifeMap: it shows the tasks the user has
-// already ACCEPTED into their day, the open care journeys, and the count of
-// items awaiting confirmation. Framing is deliberately non-clinical — these are
-// "việc bạn đã chấp nhận" (things you accepted), never medical advice or a
-// diagnosis (CLARA is a clinical assistant, not a doctor).
+// Consumes the /api/v2/home read model:
+//   * Priority 1: Top next-action card (severity-based).
+//   * Priority 2: Full-width Ask CLARA entry card with text/camera/voice affordances.
+//   * Priority 3: Today's schedule (medications, visits, care tasks).
+//   * Priority 4: Recent changes (real source records only; no fake activity).
+//   * Priority 5: Calm caught-up state when all tasks are complete.
 //
-// It reads its agenda from `ApiClient.getLifeMapToday`, which returns 409 when
-// the user has no PHR profile yet; that case routes to onboarding via
-// [TodaySurface.onNeedsOnboarding] and renders a gentle prompt rather than an
-// error. Loading uses skeletons, failures reuse `ErrorRetryView`, and an empty
-// agenda uses `ClaraEmptyState`. Product copy comes from the versioned,
-// Vietnamese-first terminology contract and remains PII-free.
+// Gated on PHR profile (409 returns onboarding). Supports offline caching.
 
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/consumer_terminology.dart';
+import '../../core/home_v2_model.dart';
 import '../../core/lifemap_read_cache.dart';
 import '../../core/session_store.dart';
 import '../../theme/components/clara_button.dart';
 import '../../theme/components/clara_card.dart';
+import '../../theme/components/clara_chip.dart';
 import '../../theme/components/section_header.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
@@ -33,17 +31,19 @@ String _str(Object? value) => value == null ? '' : value.toString();
 
 /// A single accepted task rendered on the Today agenda.
 class _TodayTask {
-  const _TodayTask({required this.id, required this.title, this.dueAt});
+  const _TodayTask({required this.id, required this.title, this.dueAt, this.completed = false});
 
   factory _TodayTask.fromJson(Map<String, dynamic> json) => _TodayTask(
         id: _str(json['id']),
-        title: _str(json['title']),
+        title: _str(json['title'] ?? json['name']),
         dueAt: json['due_at'] == null ? null : _str(json['due_at']),
+        completed: json['status'] == 'completed' || json['completed'] == true,
       );
 
   final String id;
   final String title;
   final String? dueAt;
+  final bool completed;
 }
 
 /// A single open care episode summarized on the Today agenda.
@@ -94,8 +94,7 @@ class TodaySurface extends StatefulWidget {
   final VoidCallback? onPrepareVisit;
   final LifeMapReadCache? readCache;
 
-  /// Optional app-level language state. Omit only for legacy/direct embedding;
-  /// it then resolves Vietnamese through [ConsumerTerminology]'s fallback.
+  /// Optional app-level language state.
   final LanguageController? languageController;
 
   @override
@@ -109,8 +108,11 @@ class _TodaySurfaceState extends State<TodaySurface> {
   /// True when the load failed with 409 (no PHR profile yet).
   bool _needsOnboarding = false;
 
+  HomeV2Model? _homeModel;
   List<_TodayTask> _tasks = const [];
   List<_TodayEpisode> _episodes = const [];
+  List<HomeRecentChange> _recentChanges = const [];
+  HomeNextAction? _topAction;
   int _pendingConfirmationCount = 0;
   DateTime? _offlineCachedAt;
   DateTime? _offlineValidUntil;
@@ -149,9 +151,20 @@ class _TodaySurfaceState extends State<TodaySurface> {
       _needsOnboarding = false;
     });
     try {
-      final data = await widget.apiClient.getLifeMapToday(accessToken: token);
+      Map<String, dynamic> data;
+      try {
+        data = await widget.apiClient.getHomeV2(accessToken: token);
+      } on ApiException catch (e) {
+        if (e.statusCode == 409) rethrow;
+        data = await widget.apiClient.getLifeMapToday(accessToken: token);
+      } catch (_) {
+        data = await widget.apiClient.getLifeMapToday(accessToken: token);
+      }
+
+      final homeModel = HomeV2Model.fromJson(data);
+
       final tasks = <_TodayTask>[];
-      final rawTasks = data['tasks'];
+      final rawTasks = data['today'] ?? data['tasks'] ?? data['schedule'];
       if (rawTasks is List) {
         for (final item in rawTasks) {
           if (item is Map) {
@@ -172,8 +185,11 @@ class _TodaySurfaceState extends State<TodaySurface> {
       await widget.readCache?.save(data);
       if (!mounted) return;
       setState(() {
+        _homeModel = homeModel;
         _tasks = tasks;
         _episodes = episodes;
+        _topAction = homeModel.topAction;
+        _recentChanges = homeModel.recentChanges;
         _pendingConfirmationCount =
             pending is int ? pending : int.tryParse(_str(pending)) ?? 0;
         _offlineCachedAt = null;
@@ -182,7 +198,6 @@ class _TodaySurfaceState extends State<TodaySurface> {
     } on ApiException catch (error) {
       if (!mounted) return;
       if (error.statusCode == 409) {
-        // No PHR profile yet — route to onboarding and show a gentle prompt.
         widget.onNeedsOnboarding?.call();
         setState(() => _needsOnboarding = true);
         return;
@@ -204,7 +219,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
     final cached = await widget.readCache?.read();
     if (cached == null || !mounted) return false;
     final data = cached.data;
-    final tasks = (data['tasks'] as List? ?? const [])
+    final tasks = (data['tasks'] as List? ?? data['today'] as List? ?? const [])
         .whereType<Map>()
         .map((item) => _TodayTask.fromJson(item.cast<String, dynamic>()))
         .toList();
@@ -213,8 +228,11 @@ class _TodaySurfaceState extends State<TodaySurface> {
         .map((item) => _TodayEpisode.fromJson(item.cast<String, dynamic>()))
         .toList();
     setState(() {
+      _homeModel = HomeV2Model.fromJson(data);
       _tasks = tasks;
       _episodes = episodes;
+      _topAction = _homeModel?.topAction;
+      _recentChanges = _homeModel?.recentChanges ?? const [];
       _pendingConfirmationCount = data['pending_confirmation_count'] is int
           ? data['pending_confirmation_count'] as int
           : 0;
@@ -254,8 +272,6 @@ class _TodaySurfaceState extends State<TodaySurface> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Formats an ISO due date as `dd/MM/yyyy`, or a friendly fallback when the
-  /// task has no concrete deadline.
   String _formatDue(String? dueAt) {
     final trimmed = dueAt?.trim() ?? '';
     if (trimmed.isEmpty) return _copy[ConsumerTerm.todayNoDueDate];
@@ -315,8 +331,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
     if (_needsOnboarding) {
       return _buildOnboardingPrompt(context);
     }
-    if (_error != null) {
-      // Keep the error scrollable so pull-to-refresh still works.
+    if (_error != null && _tasks.isEmpty) {
       return ListView(
         children: [
           const SizedBox(height: ClaraTokens.spaceXl),
@@ -368,38 +383,113 @@ class _TodaySurfaceState extends State<TodaySurface> {
   }
 
   Widget _buildLoaded(BuildContext context) {
+    final copy = _copy;
+    final topAction = _topAction;
+    final recentChanges = _recentChanges;
+    final isCaughtUp = _tasks.isNotEmpty && _tasks.every((t) => t.completed);
+
     final children = <Widget>[
       if (_offlineCachedAt != null) _buildOfflineNotice(context),
-      Row(
-        children: [
-          Expanded(
-            child: SectionHeader(
-              title: _copy[ConsumerTerm.todayTitle],
-              emphasize: true,
+
+      // Header row
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: Row(
+          children: [
+            Expanded(
+              child: SectionHeader(
+                title: copy[ConsumerTerm.todayTitle],
+                emphasize: true,
+              ),
             ),
-          ),
-          if (widget.onOpenLifeMap != null)
-            TextButton.icon(
-              onPressed: widget.onOpenLifeMap,
-              icon: const Icon(Icons.map_outlined, size: 18),
-              label: Text(_copy[ConsumerTerm.todayOpenLifeMap]),
-            ),
-        ],
+            if (widget.onOpenLifeMap != null)
+              TextButton.icon(
+                onPressed: widget.onOpenLifeMap,
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: Text(copy[ConsumerTerm.todayOpenLifeMap]),
+              ),
+          ],
+        ),
       ),
       const SizedBox(height: ClaraTokens.spaceSm),
+
+      // Priority 1: Top next-action card (severity-based)
+      if (topAction != null) ...[
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+          child: _TopActionBanner(
+            action: topAction,
+            copy: copy,
+            onAction: () {
+              if (topAction.kind == 'medication') {
+                widget.onCheckMedicines?.call();
+              } else if (topAction.kind == 'visit') {
+                widget.onPrepareVisit?.call();
+              } else if (topAction.kind == 'chat' || topAction.kind == 'review') {
+                widget.onAskHealth?.call();
+              } else {
+                widget.onOpenLifeMap?.call();
+              }
+            },
+          ),
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+      ],
+
+      // Stats
       _buildStats(context),
       const SizedBox(height: ClaraTokens.spaceLg),
+
+      // Priority 2: Full-width Ask CLARA entry card with text/camera/voice affordances
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: _AskClaraCard(
+          copy: copy,
+          onText: widget.onAskHealth,
+          onCamera: widget.onCheckMedicines,
+          onVoice: widget.onAskHealth,
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceLg),
+
+      // Task-first entry points (Start Here)
       _buildStartHere(context),
       const SizedBox(height: ClaraTokens.spaceLg),
-      SectionHeader(title: _copy[ConsumerTerm.todayAccepted]),
+
+      // Priority 3: Today's schedule (Medications, Visits, Care tasks)
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: SectionHeader(
+          title: copy[ConsumerTerm.todayAccepted],
+          trailing: _tasks.where((t) => !t.completed).isNotEmpty
+              ? ClaraChip(
+                  label:
+                      '${_tasks.where((t) => !t.completed).length} ${copy[ConsumerTerm.todayPending]}',
+                  selected: true,
+                )
+              : null,
+        ),
+      ),
+      const SizedBox(height: ClaraTokens.spaceSm),
     ];
+
+    // Priority 5: Calm caught-up state
+    if (isCaughtUp) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+          child: _CaughtUpBanner(copy: copy),
+        ),
+      );
+      children.add(const SizedBox(height: ClaraTokens.spaceMd));
+    }
 
     if (_tasks.isEmpty) {
       children.add(
         ClaraEmptyState(
           icon: Icons.task_alt_outlined,
-          title: _copy[ConsumerTerm.todayEmptyTitle],
-          message: _copy[ConsumerTerm.todayEmptyDescription],
+          title: copy[ConsumerTerm.todayEmptyTitle],
+          message: copy[ConsumerTerm.todayEmptyDescription],
         ),
       );
     } else {
@@ -426,6 +516,80 @@ class _TodaySurfaceState extends State<TodaySurface> {
       );
     }
 
+    // Priority 4: Recent changes (real source records only)
+    children.add(const SizedBox(height: ClaraTokens.spaceLg));
+    children.add(
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionHeader(title: copy[ConsumerTerm.homeRecentChangesTitle]),
+            const SizedBox(height: ClaraTokens.spaceXs),
+            Text(
+              copy[ConsumerTerm.homeRecentChangesRealSourceNotice],
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: ClaraTokens.spaceSm),
+            if (recentChanges.isEmpty)
+              ClaraEmptyState(
+                icon: Icons.history,
+                title: copy[ConsumerTerm.homeRecentChangesEmpty],
+                message: copy[ConsumerTerm.homeScreenNoRecentDescription],
+              )
+            else
+              ...recentChanges.map(
+                (change) => Padding(
+                  padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+                  child: ClaraCard.static_(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.description_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 22,
+                        ),
+                        const SizedBox(width: ClaraTokens.spaceMd),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                change.title,
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              if (change.summary != null)
+                                Text(
+                                  change.summary!,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              if (change.source != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: ClaraTokens.spaceXs),
+                                  child: ClaraChip(
+                                    label: change.source!,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+
     return ListView(
       padding: const EdgeInsets.only(
         top: ClaraTokens.spaceMd,
@@ -435,8 +599,6 @@ class _TodaySurfaceState extends State<TodaySurface> {
     );
   }
 
-  /// The primary consumer actions intentionally come before the agenda so a
-  /// person can begin with a concrete task without learning CLARA vocabulary.
   Widget _buildStartHere(BuildContext context) {
     final actions = <_TodayStartAction>[
       _TodayStartAction(
@@ -544,7 +706,7 @@ class _TodaySurfaceState extends State<TodaySurface> {
           _StatCard(
             icon: Icons.pending_actions_outlined,
             label: _copy[ConsumerTerm.todayPending],
-            value: _tasks.length,
+            value: _tasks.where((t) => !t.completed).length,
           ),
           _StatCard(
             icon: Icons.route_outlined,
@@ -576,8 +738,11 @@ class _TodaySurfaceState extends State<TodaySurface> {
                   task.title.isEmpty
                       ? _copy[ConsumerTerm.todayUnnamedTask]
                       : task.title,
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    decoration:
+                        task.completed ? TextDecoration.lineThrough : null,
+                  ),
                 ),
                 const SizedBox(height: ClaraTokens.spaceXs),
                 Text(
@@ -590,12 +755,293 @@ class _TodaySurfaceState extends State<TodaySurface> {
             ),
           ),
           const SizedBox(width: ClaraTokens.spaceSm),
-          ClaraButton.primary(
-            label: _copy[ConsumerTerm.actionComplete],
-            icon: Icons.check,
-            loading: busy,
-            onPressed:
-                _offlineCachedAt == null ? () => _completeTask(task) : null,
+          if (task.completed)
+            const ClaraChip(label: 'Đã xong')
+          else
+            ClaraButton.primary(
+              label: _copy[ConsumerTerm.actionComplete],
+              icon: Icons.check,
+              loading: busy,
+              onPressed:
+                  _offlineCachedAt == null ? () => _completeTask(task) : null,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopActionBanner extends StatelessWidget {
+  const _TopActionBanner({
+    required this.action,
+    required this.copy,
+    required this.onAction,
+  });
+
+  final HomeNextAction action;
+  final ConsumerTerminology copy;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isUrgent = action.isUrgent;
+    final isAttention = action.isAttention;
+
+    final accentColor = isUrgent
+        ? const Color(0xFFDC2626)
+        : isAttention
+            ? const Color(0xFFD97706)
+            : scheme.primary;
+
+    final badgeLabel = isUrgent
+        ? copy[ConsumerTerm.homeSeverityUrgent]
+        : isAttention
+            ? copy[ConsumerTerm.homeSeverityAttention]
+            : copy[ConsumerTerm.homeSeverityNormal];
+
+    return Container(
+      padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(ClaraTokens.radiusLg),
+        border: Border.all(color: accentColor.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isUrgent ? Icons.warning_amber_rounded : Icons.task_alt,
+                color: accentColor,
+                size: 22,
+              ),
+              const SizedBox(width: ClaraTokens.spaceSm),
+              Expanded(
+                child: Text(
+                  action.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              ClaraChip(
+                label: badgeLabel,
+                selected: isUrgent || isAttention,
+              ),
+            ],
+          ),
+          if (action.description != null) ...[
+            const SizedBox(height: ClaraTokens.spaceXs),
+            Text(
+              action.description!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: ClaraTokens.spaceMd),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ClaraButton.primary(
+              label: action.actionLabel ?? copy[ConsumerTerm.actionOpen],
+              icon: Icons.arrow_forward_rounded,
+              onPressed: onAction,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AskClaraCard extends StatelessWidget {
+  const _AskClaraCard({
+    required this.copy,
+    this.onText,
+    this.onCamera,
+    this.onVoice,
+  });
+
+  final ConsumerTerminology copy;
+  final VoidCallback? onText;
+  final VoidCallback? onCamera;
+  final VoidCallback? onVoice;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: onText,
+            borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceXs),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome, color: scheme.primary, size: 24),
+                  const SizedBox(width: ClaraTokens.spaceMd),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          copy[ConsumerTerm.actionAskClara],
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          copy[ConsumerTerm.homeAskPlaceholder],
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+          const Divider(height: 1),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          Row(
+            children: [
+              Expanded(
+                child: _AskActionPill(
+                  icon: Icons.chat_bubble_outline,
+                  label: copy[ConsumerTerm.homeAskText],
+                  onTap: onText,
+                ),
+              ),
+              Expanded(
+                child: _AskActionPill(
+                  icon: Icons.camera_alt_outlined,
+                  label: copy[ConsumerTerm.homeAskCamera],
+                  onTap: onCamera,
+                ),
+              ),
+              Expanded(
+                child: _AskActionPill(
+                  icon: Icons.mic_none_outlined,
+                  label: copy[ConsumerTerm.homeAskVoice],
+                  onTap: onVoice,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AskActionPill extends StatelessWidget {
+  const _AskActionPill({
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: ClaraTokens.spaceXs,
+            vertical: ClaraTokens.spaceSm,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: scheme.primary),
+              const SizedBox(width: ClaraTokens.spaceXs),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CaughtUpBanner extends StatelessWidget {
+  const _CaughtUpBanner({required this.copy});
+
+  final ConsumerTerminology copy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+        border: Border.all(color: const Color(0xFF86EFAC)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.task_alt_rounded,
+            color: Color(0xFF16A34A),
+            size: 24,
+          ),
+          const SizedBox(width: ClaraTokens.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy[ConsumerTerm.homeCaughtUpTitle],
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF166534),
+                  ),
+                ),
+                Text(
+                  copy[ConsumerTerm.homeCaughtUpDescription],
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -664,7 +1110,6 @@ class _TodayStartActionCard extends StatelessWidget {
   }
 }
 
-/// A compact summary statistic card used in the Today header.
 class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.icon,

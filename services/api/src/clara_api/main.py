@@ -9,6 +9,8 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 
 from clara_api.api.router import api_router
 from clara_api.api.v1.endpoints.research import start_research_job_recovery
+from clara_api.api.v2.conventions import ApiV2HTTPException
+from clara_api.api.v2.router import api_v2_router
 from clara_api.core.bootstrap_admin import ensure_bootstrap_admin
 from clara_api.core.config import get_settings
 from clara_api.core.exceptions import ClaraAPIError
@@ -247,6 +249,15 @@ def _json_safe(value: object) -> object:
     return value
 
 
+@app.exception_handler(ApiV2HTTPException)
+async def api_v2_exception_handler(_request: Request, exc: ApiV2HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=exc.error.model_dump(exclude_none=True),
+        headers=exc.headers,
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_request: Request, exc: RequestValidationError):
     return JSONResponse(status_code=422, content={"detail": _json_safe(exc.errors())})
@@ -371,3 +382,4 @@ app.include_router(api_router)
 # Backward compatibility for stale frontend bundles that accidentally call
 # double-prefixed paths like /api/v1/api/v1/*.
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_v2_router)

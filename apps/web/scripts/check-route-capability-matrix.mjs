@@ -10,7 +10,11 @@ async function pageRoutes(directory) {
     const full = join(directory, entry.name);
     if (entry.isDirectory()) routes.push(...(await pageRoutes(full)));
     else if (entry.name === "page.tsx") {
-      const route = relative(appRoot, full).replaceAll("\\", "/").replace(/(?:^|\/)page\.tsx$/, "");
+      const route = relative(appRoot, full)
+        .replaceAll("\\", "/")
+        .replace(/(?:^|\/)\([^)]+\)/g, "")
+        .replace(/(?:^|\/)page\.tsx$/, "")
+        .replace(/^\/+/, "");
       routes.push(route ? `/${route}` : "/");
     }
   }

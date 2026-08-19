@@ -143,10 +143,11 @@ void main() {
     });
 
     testWidgets(
-        'Home: greeting + always-present PHR card render with tap targets',
+        'Home: greeting + always-present Ask CLARA card render with tap targets',
         (tester) async {
       final apiClient = FakeApiClient()
         // Seeded from the passed summary; stub in case a refresh is triggered.
+        ..stub('getHomeV2', response: const {'schedule': [], 'recent_changes': []})
         ..stub('getMobileSummary', response: const {'feature_flags': {}});
       final sessionStore = await FakeSessionStore.authenticated(role: 'normal');
 
@@ -158,7 +159,7 @@ void main() {
             resolver: MobileFeatureFlagResolver(
               summary: const {'feature_flags': {}},
             ),
-            summary: const {'feature_flags': {}},
+            summary: const {'schedule': [], 'recent_changes': []},
           ),
         ),
       );
@@ -167,25 +168,24 @@ void main() {
       // Time-of-day greeting header renders (always begins with "Chào ...").
       expect(find.textContaining('Chào'), findsWidgets);
 
-      // The PHR quick-action is ALWAYS present regardless of the summary.
-      expect(find.text('Lưu thông tin sức khỏe'), findsOneWidget);
+      // The Ask CLARA entry card is ALWAYS present on Home.
+      expect(find.text('Hỏi CLARA'), findsOneWidget);
 
-      // Cards render (greeting header + quick-action cards), and the tappable
-      // PHR card's InkWell hit area meets the ≥48dp minimum. The redesign now
-      // renders quick-action cards on GlassSurface chrome (opaque fallback when
-      // the glass scope is off), so we assert on the tappable InkWell directly.
-      final phrInkWell = find.ancestor(
-        of: find.text('Lưu thông tin sức khỏe'),
+      // Cards render (greeting header + Ask card), and the tappable
+      // Ask card's InkWell hit area meets the ≥48dp minimum.
+      final askInkWell = find.ancestor(
+        of: find.text('Hỏi CLARA'),
         matching: find.byType(InkWell),
       );
-      expect(phrInkWell, findsWidgets);
-      final phrHeight = tester.getSize(phrInkWell.first).height;
-      expect(phrHeight, greaterThanOrEqualTo(A11y.minTapTargetDimension));
+      expect(askInkWell, findsWidgets);
+      final askHeight = tester.getSize(askInkWell.first).height;
+      expect(askHeight, greaterThanOrEqualTo(A11y.minTapTargetDimension));
     });
 
     testWidgets('Home: text scales without crashing at large text scale',
         (tester) async {
       final apiClient = FakeApiClient()
+        ..stub('getHomeV2', response: const {'schedule': [], 'recent_changes': []})
         ..stub('getMobileSummary', response: const {'feature_flags': {}});
       final sessionStore = await FakeSessionStore.authenticated(role: 'normal');
 
@@ -197,7 +197,7 @@ void main() {
             resolver: MobileFeatureFlagResolver(
               summary: const {'feature_flags': {}},
             ),
-            summary: const {'feature_flags': {}},
+            summary: const {'schedule': [], 'recent_changes': []},
           ),
           // A11y clamps to 1.6, so this exercises the upper bound.
           textScale: 1.6,
@@ -207,7 +207,7 @@ void main() {
 
       // Renders cleanly at the large text scale — no layout/build exception.
       expect(tester.takeException(), isNull);
-      expect(find.text('Lưu thông tin sức khỏe'), findsOneWidget);
+      expect(find.text('Hỏi CLARA'), findsOneWidget);
     });
   });
 }

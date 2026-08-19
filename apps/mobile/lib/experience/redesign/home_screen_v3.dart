@@ -1,35 +1,14 @@
 // Home surface for the CLARA_Mobile redesign (Experience_V3).
 //
-// clara-mobile-redesign, Requirement 3 (rebuilt visual Home). This is the
-// "Trang chủ" flanking destination: a modern, role-aware landing built on the
-// redesign design system (ClaraTokens / ClaraCard / SectionHeader) rather than
-// a bare list.
+// Consumes the /api/v2/home read model with prioritized consumer hierarchy:
+//   * Priority 1: Top next-action card (severity-based: urgent/attention/normal).
+//   * Priority 2: Full-width Ask CLARA entry card with text/camera/voice affordances.
+//   * Priority 3: Today's schedule (medications, visits, care tasks).
+//   * Priority 4: Recent changes (real source records only; no fake activity).
+//   * Priority 5: Calm caught-up state when all tasks are complete.
 //
-// It renders:
-//   * a personalized, time-of-day greeting header with a role chip (Req 3.1);
-//   * a role-aware quick-action grid of tappable `ClaraCard`s that routes each
-//     available tool to its existing feature screen (Req 3.1, 3.6, 3.7);
-//   * a "recent activity" region backed by the shared friendly empty state,
-//     since no recents endpoint exists yet — no fabricated data (Req 3.1);
-//   * a first-load skeleton, a PII-free `ErrorRetryView`, and pull-to-refresh
-//     (Req 3.3, 3.4, 3.5).
-//
-// The redesign root (`redesign_root.dart`) already loaded the role-scoped
-// `mobile/summary` and built the [MobileFeatureFlagResolver]; both are passed in
-// so this surface does NOT re-fetch for gating. Privileged tool entries are
-// derived ONLY from a successfully loaded summary and fail CLOSED — a null
-// summary yields only the universally available PHR entry (INV-4, Req 3.2).
-// Pull-to-refresh re-fetches `mobile/summary`, updates local state, and rebuilds
-// the resolver from the fresh summary so gating stays consistent.
-//
-// Gating mirrors `lib/experience/home_screen.dart`:
-//   * careguard / council via the summary `feature_flags` booleans;
-//   * chat / selfMedCabinet / consentCenter via the resolver gates;
-//   * scribe requires the flag AND an authorized role — `doctor` OR (for this
-//     redesign) `admin`, so it is never reachable for any other role;
-//   * PHR is ALWAYS reachable, independent of the summary.
-//
-// Copy is Vietnamese-first; analytics is a single coarse, no-PII screen-view.
+// Privileged feature launcher grid is removed from ordinary user personal Home;
+// Council and Scribe are scoped to professional drawer/menu for doctor/admin.
 
 import 'package:flutter/material.dart';
 
@@ -38,37 +17,27 @@ import '../../core/analytics.dart';
 import '../../core/api_client.dart';
 import '../../core/consumer_terminology.dart';
 import '../../core/feature_flags.dart';
+import '../../core/home_v2_model.dart';
 import '../../core/session_store.dart';
 import '../../screens/careguard_cabinet_screen.dart';
-import '../../screens/careguard_screen.dart';
 import '../../screens/chat_screen.dart';
-import '../../screens/consent_center_screen.dart';
-import '../../screens/council_case_screen.dart';
-import '../../screens/council_screen.dart';
 import '../../screens/phr_screen.dart';
-import '../../screens/scribe_screen.dart';
-import '../../screens/selfmed_cabinet_screen.dart';
+import '../../theme/components/clara_button.dart';
+import '../../theme/components/clara_card.dart';
+import '../../theme/components/clara_chip.dart';
 import '../../theme/components/section_header.dart';
-import '../../theme/glass/glass_surface.dart';
 import '../../theme/glass/glass_tokens.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/error_retry_view.dart';
 import '../language_controller.dart';
 import '../states/empty_state.dart';
-import '../states/skeleton.dart';
+import '../unified/visits_surface.dart';
+import 'more_screen_v3.dart';
 
 /// Coarse, no-PII screen-view event name for the redesigned Home.
-///
-/// A plain string literal (not a `MobileAnalyticsEvents` constant) because
-/// `analytics.dart` is owned by another concern. It carries no PII and
-/// identifies only the surface viewed (INV-3, Req 3.8).
 const String kMobileHomeViewedEvent = 'mobile_home_viewed';
 
-/// The redesigned, role-aware Home surface (Experience_V3, Requirement 3).
-///
-/// The constructor contract is fixed by `redesign_root.dart`: it is given the
-/// already-loaded role-scoped [summary] (may be null) and a [resolver] built
-/// from it, so this surface derives tools without a second fetch.
+/// The redesigned, role-aware Home surface consuming the /api/v2/home read model.
 class HomeScreenV3 extends StatefulWidget {
   const HomeScreenV3({
     super.key,
@@ -82,15 +51,13 @@ class HomeScreenV3 extends StatefulWidget {
   final ApiClient apiClient;
   final SessionStore sessionStore;
 
-  /// Resolver built by the redesign root from [summary]. Used as-is for the
-  /// initial render; rebuilt locally after a pull-to-refresh.
+  /// Resolver built by the redesign root from [summary].
   final MobileFeatureFlagResolver resolver;
 
-  /// The already-loaded role-scoped `mobile/summary` (may be null when the
-  /// parent's load failed). Privileged tools are derived only when non-null.
+  /// The already-loaded role-scoped `mobile/summary` (may be null).
   final Map<String, dynamic>? summary;
 
-  /// Optional app-wide language state; absent embeddings stay Vietnamese-first.
+  /// Optional app-wide language state.
   final LanguageController? languageController;
 
   @override
@@ -98,101 +65,103 @@ class HomeScreenV3 extends StatefulWidget {
 }
 
 class _HomeScreenV3State extends State<HomeScreenV3> {
-  /// Current role-scoped summary. Seeded from the parent-provided value and
-  /// replaced on a successful pull-to-refresh.
   late Map<String, dynamic>? _summary = widget.summary;
-
-  /// Resolver for the current [_summary]. Seeded from the parent-built resolver
-  /// and rebuilt from the fresh summary after a refresh so gating stays in sync.
   late MobileFeatureFlagResolver _resolver = widget.resolver;
 
-  bool _refreshing = false;
+  HomeV2Model? _homeModel;
+  bool _loading = true;
+  String? _error;
+
+  /// Ids of tasks whose completion action is in flight.
+  final Set<String> _completing = <String>{};
 
   @override
   void initState() {
     super.initState();
-    // Coarse, no-PII screen-view through the shared consent/PII-guarded client.
     getAnalyticsClient().captureScreenView(kMobileHomeViewedEvent);
+    if (widget.summary != null) {
+      _homeModel = HomeV2Model.fromJson(widget.summary!);
+      _loading = false;
+    } else {
+      _loadHome();
+    }
   }
 
-  /// Whether a role-scoped summary is currently available (fail-closed gate).
-  bool get _summaryLoaded => _summary != null;
-
-  /// The authenticated role, defaulting to the least-privileged `normal`.
   String get _role => widget.sessionStore.role ?? 'normal';
+  bool get _isDoctorOrAdmin => _role == 'doctor' || _role == 'admin';
 
   ConsumerTerminology get _copy => ConsumerTerminology.forLocale(
         widget.languageController?.languageCode,
       );
 
-  /// Reads a boolean `feature_flags` entry from the current summary, mirroring
-  /// `home_screen.dart`'s `_featureEnabled`: an unloadable summary, a non-map
-  /// `feature_flags`, a missing key, or a non-`true` value all resolve to
-  /// `false` (fail-closed).
-  bool _featureEnabled(String key) {
-    final summary = _summary;
-    if (summary == null) {
-      return false;
-    }
-    final flags = summary['feature_flags'];
-    if (flags is! Map<String, dynamic>) {
-      return false;
-    }
-    return flags[key] == true;
-  }
-
-  /// Whether the summary reports the API as healthy. Reads the `api_health`
-  /// status the summary already carries; a missing/non-`ok` status resolves to
-  /// `false` (fail-closed). No extra request is made.
-  bool get _apiHealthy {
-    final summary = _summary;
-    if (summary == null) {
-      return false;
-    }
-    final health = summary['api_health'];
-    if (health is! Map) {
-      return false;
-    }
-    return health['status'] == 'ok';
-  }
-
-  /// Re-fetches the role-scoped `mobile/summary` and rebuilds the resolver from
-  /// the fresh payload. Exposed as the `RefreshIndicator.onRefresh` callback and
-  /// the `ErrorRetryView` retry affordance. Guards every `setState` with
-  /// `mounted` and surfaces a Vietnamese-first, PII-free error.
-  Future<void> _refreshSummary() async {
+  Future<void> _loadHome() async {
     final token = widget.sessionStore.accessToken;
     if (token == null || token.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = _copy[ConsumerTerm.sessionExpired];
+        });
+      }
       return;
     }
 
-    setState(() {
-      _refreshing = true;
-    });
+    try {
+      Map<String, dynamic> data;
+      try {
+        data = await widget.apiClient.getHomeV2(accessToken: token);
+      } catch (_) {
+        // Fallback to mobile/summary or cached state if getHomeV2 is unavailable
+        if (_summary != null) {
+          data = _summary!;
+        } else {
+          data = await widget.apiClient.getMobileSummary(accessToken: token);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _homeModel = HomeV2Model.fromJson(data);
+        _loading = false;
+        _error = null;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = _copy[ConsumerTerm.todayLoadFailed];
+      });
+    }
+  }
+
+  Future<void> _refresh() async {
+    final token = widget.sessionStore.accessToken;
+    if (token == null || token.isEmpty) return;
 
     try {
-      final data = await widget.apiClient.getMobileSummary(accessToken: token);
-      if (!mounted) {
-        return;
-      }
+      final data = await widget.apiClient.getHomeV2(accessToken: token);
+      if (!mounted) return;
       setState(() {
-        _summary = data;
-        _resolver = MobileFeatureFlagResolver(summary: data);
+        _homeModel = HomeV2Model.fromJson(data);
+        _error = null;
       });
-    } on ApiException {
-      if (!mounted) {
-        return;
-      }
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-    } finally {
-      if (mounted) {
+      try {
+        final summaryData =
+            await widget.apiClient.getMobileSummary(accessToken: token);
+        if (!mounted) return;
         setState(() {
-          _refreshing = false;
+          _summary = summaryData;
+          _resolver = MobileFeatureFlagResolver(summary: summaryData);
+          _homeModel = HomeV2Model.fromJson(summaryData);
         });
-      }
+      } catch (_) {}
     }
   }
 
@@ -202,266 +171,269 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
     );
   }
 
+  Future<void> _completeTask(String taskId) async {
+    final token = widget.sessionStore.accessToken;
+    if (token == null || token.isEmpty || _completing.contains(taskId)) return;
+
+    setState(() => _completing.add(taskId));
+    try {
+      await widget.apiClient
+          .completeLifeMapTask(accessToken: token, taskId: taskId);
+      // Optimistically update schedule item state
+      if (_homeModel != null) {
+        final updatedSchedule = _homeModel!.schedule.map((item) {
+          if (item.id == taskId) {
+            return item.copyWith(completed: true, status: 'completed');
+          }
+          return item;
+        }).toList();
+        setState(() {
+          _homeModel = HomeV2Model(
+            profileId: _homeModel!.profileId,
+            displayName: _homeModel!.displayName,
+            topAction: _homeModel!.topAction,
+            schedule: updatedSchedule,
+            recentChanges: _homeModel!.recentChanges,
+            alerts: _homeModel!.alerts,
+            generatedAt: _homeModel!.generatedAt,
+            contextVersion: _homeModel!.contextVersion,
+            hasConnectedHealth: _homeModel!.hasConnectedHealth,
+          );
+        });
+      }
+      await _refresh();
+    } on ApiException catch (e) {
+      _showSnack(e.message);
+    } catch (_) {
+      _showSnack(_copy[ConsumerTerm.todayCompleteFailed]);
+    } finally {
+      if (mounted) {
+        setState(() => _completing.remove(taskId));
+      }
+    }
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _handleTopAction(HomeNextAction action) {
+    final kind = action.kind.toLowerCase();
+    if (kind == 'medication') {
+      _openScreen(
+        CareguardCabinetScreen(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+        ),
+      );
+    } else if (kind == 'visit') {
+      _openScreen(
+        VisitsSurface(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          languageController: widget.languageController,
+        ),
+      );
+    } else if (kind == 'review' || kind == 'chat') {
+      _openScreen(
+        ChatScreen(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          resolver: _resolver,
+          polished: _resolver.uxPolishEnabled,
+        ),
+      );
+    } else if (kind == 'phr') {
+      _openScreen(
+        PhrScreen(
+          apiClient: widget.apiClient,
+          sessionStore: widget.sessionStore,
+          featureFlags: _resolver,
+        ),
+      );
+    } else {
+      _completeTask(action.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final role = _role;
-    final resolver = _resolver;
-    final summaryLoaded = _summaryLoaded;
-    final apiHealthy = _apiHealthy;
+    final copy = _copy;
 
-    // Privileged tool entries are derived ONLY from a successfully loaded,
-    // role-scoped summary; when it is unavailable we fail closed and show none
-    // of them (INV-4, Req 3.2).
-    final canCareguard = _featureEnabled('careguard');
-    final canCouncil = _featureEnabled('council');
-    // Scribe additionally requires an authorized role. In this redesign both
-    // `doctor` and `admin` may reach it; every other role stays fail-closed.
-    final canScribe =
-        resolver.scribeEnabled && (role == 'doctor' || role == 'admin');
+    return Scaffold(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: _buildBody(copy),
+        ),
+      ),
+    );
+  }
 
-    // A skeleton stands in for the tools grid only while a refresh is in flight
-    // and we have no summary to show yet (Req 3.3). When content already exists,
-    // the RefreshIndicator spinner is enough — we don't blank the screen.
-    final showInitialSkeleton = _refreshing && !summaryLoaded;
+  Widget _buildBody(ConsumerTerminology copy) {
+    if (_loading && _homeModel == null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceMd),
+        children: [
+          _GreetingHeader(
+            role: _role,
+            email: widget.sessionStore.email,
+            onOpenProfessionalTools: _isDoctorOrAdmin
+                ? () => _openScreen(
+                      MoreScreenV3(
+                        apiClient: widget.apiClient,
+                        sessionStore: widget.sessionStore,
+                        resolver: _resolver,
+                        role: _role,
+                        languageController: widget.languageController,
+                      ),
+                    )
+                : null,
+          ),
+          const SizedBox(height: ClaraTokens.spaceXl),
+          const Center(child: CircularProgressIndicator()),
+        ],
+      );
+    }
 
-    // A settled state with no summary shows no privileged entries and offers a
-    // retry via the shared `ErrorRetryView` (INV-4, Req 3.4).
-    final showSummaryRetry = !summaryLoaded && !_refreshing;
+    if (_error != null && _homeModel == null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+        children: [
+          const SizedBox(height: ClaraTokens.spaceXl),
+          ErrorRetryView(message: _error!, onRetry: _loadHome),
+        ],
+      );
+    }
 
-    final quickActions = <Widget>[
-      if (summaryLoaded) ...[
-        if (resolver.chatEnabled)
-          _QuickActionCard(
-            icon: Icons.chat_bubble_outline,
-            title: _copy[ConsumerTerm.todayAskHealthTitle],
-            subtitle: _copy[ConsumerTerm.todayAskHealthDescription],
-            accent: const Color(0xFF2563EB),
-            onTap: () => _openScreen(
+    final home = _homeModel ?? const HomeV2Model();
+    final topAction = home.topAction;
+    final schedule = home.schedule;
+    final recentChanges = home.recentChanges;
+    final isCaughtUp = home.isCaughtUp;
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceMd),
+      children: [
+        // Top Greeting Header
+        _GreetingHeader(
+          role: _role,
+          email: widget.sessionStore.email,
+          onOpenProfessionalTools: _isDoctorOrAdmin
+              ? () => _openScreen(
+                    MoreScreenV3(
+                      apiClient: widget.apiClient,
+                      sessionStore: widget.sessionStore,
+                      resolver: _resolver,
+                      role: _role,
+                      languageController: widget.languageController,
+                    ),
+                  )
+              : null,
+        ),
+        const SizedBox(height: ClaraTokens.spaceMd),
+
+        // Priority 1: Top next-action card (severity-based)
+        if (topAction != null) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: _TopNextActionCard(
+              action: topAction,
+              copy: copy,
+              onAction: () => _handleTopAction(topAction),
+            ),
+          ),
+          const SizedBox(height: ClaraTokens.spaceMd),
+        ],
+
+        // Priority 2: Full-width Ask CLARA entry card with text/camera/voice affordances
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+          child: _AskClaraEntryCard(
+            copy: copy,
+            onTextTap: () => _openScreen(
               ChatScreen(
                 apiClient: widget.apiClient,
                 sessionStore: widget.sessionStore,
-                resolver: resolver,
-                polished: resolver.uxPolishEnabled,
+                resolver: _resolver,
+                polished: _resolver.uxPolishEnabled,
               ),
             ),
-          ),
-        if (canCareguard)
-          _QuickActionCard(
-            icon: Icons.medication,
-            title: _copy[ConsumerTerm.todayCheckMedicineTitle],
-            subtitle: _copy[ConsumerTerm.todayCheckMedicineDescription],
-            accent: const Color(0xFF0EA5A4),
-            onTap: () => _openScreen(
-              CareguardScreen(
-                apiClient: widget.apiClient,
-                sessionStore: widget.sessionStore,
-              ),
-            ),
-          ),
-        if (kCareguardMobileCabinetEnabled && canCareguard)
-          _QuickActionCard(
-            icon: Icons.medical_services_outlined,
-            title: 'Tủ thuốc',
-            subtitle: 'Quản lý danh sách thuốc của bạn',
-            accent: const Color(0xFF14B8A6),
-            onTap: () => _openScreen(
+            onCameraTap: () => _openScreen(
               CareguardCabinetScreen(
                 apiClient: widget.apiClient,
                 sessionStore: widget.sessionStore,
               ),
             ),
-          ),
-        if (resolver.selfMedCabinetEnabled)
-          _QuickActionCard(
-            icon: Icons.medication_outlined,
-            title: 'Tủ thuốc tự kê',
-            subtitle: 'Quản lý thuốc & kiểm tra tương tác',
-            accent: const Color(0xFF14B8A6),
-            onTap: () => _openScreen(
-              SelfMedCabinetScreen(
+            onVoiceTap: () => _openScreen(
+              ChatScreen(
                 apiClient: widget.apiClient,
                 sessionStore: widget.sessionStore,
-                featureFlags: resolver,
+                resolver: _resolver,
+                polished: _resolver.uxPolishEnabled,
               ),
             ),
-          ),
-        if (canCouncil)
-          _QuickActionCard(
-            icon: Icons.groups,
-            title: 'Hội chẩn AI',
-            subtitle: 'Tổng hợp ý kiến nhiều chuyên khoa',
-            accent: const Color(0xFF7C3AED),
-            onTap: () => _openScreen(
-              // Council mobile parity: when COUNCIL_MOBILE_PARITY_ENABLED is on
-              // route to the case-based flow, otherwise the legacy run screen —
-              // mirroring `home_screen.dart`.
-              kCouncilMobileParityEnabled
-                  ? CouncilCaseScreen(
-                      apiClient: widget.apiClient,
-                      sessionStore: widget.sessionStore,
-                    )
-                  : CouncilScreen(
-                      apiClient: widget.apiClient,
-                      sessionStore: widget.sessionStore,
-                    ),
-            ),
-          ),
-        if (canScribe)
-          _QuickActionCard(
-            icon: Icons.mic_none,
-            title: 'Ghi chú lâm sàng',
-            subtitle: 'Ghi âm và tạo ghi chú SOAP',
-            accent: const Color(0xFFDB2777),
-            onTap: () => _openScreen(
-              ScribeScreen(
-                apiClient: widget.apiClient,
-                sessionStore: widget.sessionStore,
-                featureFlags: resolver,
-              ),
-            ),
-          ),
-        if (resolver.consentCenterEnabled)
-          _QuickActionCard(
-            icon: Icons.privacy_tip_outlined,
-            title: 'Trung tâm đồng ý',
-            subtitle: 'Quản lý quyền riêng tư & yêu cầu dữ liệu',
-            accent: const Color(0xFFF59E0B),
-            onTap: () => _openScreen(
-              ConsentCenterScreen(
-                apiClient: widget.apiClient,
-                resolver: resolver,
-                sessionStore: widget.sessionStore,
-              ),
-            ),
-          ),
-      ],
-      // PHR is available to every authenticated role independent of the
-      // summary, so its card is ALWAYS present (Req 3.2).
-      _QuickActionCard(
-        icon: Icons.folder_shared,
-        title: _copy[ConsumerTerm.todaySaveHealthInfoTitle],
-        subtitle: _copy[ConsumerTerm.todaySaveHealthInfoDescription],
-        accent: const Color(0xFF0284C7),
-        onTap: () => _openScreen(
-          PhrScreen(
-            apiClient: widget.apiClient,
-            sessionStore: widget.sessionStore,
-            // Enhanced read-only PHR surfaces are gated by
-            // `phr_enhanced_mobile_enabled`; a null/unloadable summary resolves
-            // the gate to false, so the screen behaves as the legacy PHR.
-            featureFlags: resolver,
           ),
         ),
-      ),
-    ];
+        const SizedBox(height: ClaraTokens.spaceLg),
 
-    return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          // Pull-to-refresh reloads the role-scoped summary (Req 3.5). The list
-          // is ALWAYS scrollable so the gesture works even when content is short.
-          onRefresh: _refreshSummary,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceMd),
-            children: [
-              _GreetingHeader(
-                role: role,
-                email: widget.sessionStore.email,
+        // Priority 3: Today's schedule (medications, visits, care tasks)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+          child: _TodayScheduleSection(
+            schedule: schedule,
+            completingIds: _completing,
+            copy: copy,
+            onCompleteTask: _completeTask,
+            onOpenMedications: () => _openScreen(
+              CareguardCabinetScreen(
+                apiClient: widget.apiClient,
+                sessionStore: widget.sessionStore,
               ),
-              // Primary call-to-action: the single most useful action for this
-              // audience is to ask CLARA a question, so it gets a prominent,
-              // full-width entry right under the hero. Only shown when a summary
-              // is loaded and chat is granted for the role (fail-closed).
-              if (summaryLoaded && resolver.chatEnabled) ...[
-                const SizedBox(height: ClaraTokens.spaceMd),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: ClaraTokens.spaceMd,
-                  ),
-                  child: _PrimaryChatCta(
-                    title: _copy[ConsumerTerm.todayAskHealthTitle],
-                    subtitle: _copy[ConsumerTerm.todayAskHealthDescription],
-                    onTap: () => _openScreen(
-                      ChatScreen(
-                        apiClient: widget.apiClient,
-                        sessionStore: widget.sessionStore,
-                        resolver: resolver,
-                        polished: resolver.uxPolishEnabled,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              // A daily wellness tip: general, non-clinical encouragement that
-              // makes the surface feel alive on every open. It is deterministic
-              // (keyed off the calendar day), never fabricates medical claims,
-              // and carries a soft reminder that CLARA supports decisions only.
-              const SizedBox(height: ClaraTokens.spaceMd),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-                child: _DailyTipCard(),
+            ),
+            onOpenVisits: () => _openScreen(
+              VisitsSurface(
+                apiClient: widget.apiClient,
+                sessionStore: widget.sessionStore,
+                languageController: widget.languageController,
               ),
-              // At-a-glance stats: only rendered when a summary is loaded, and
-              // only from data it already carries (system status + the number
-              // of tools this role can reach). No extra fetch, no PII.
-              if (summaryLoaded && !showInitialSkeleton) ...[
-                const SizedBox(height: ClaraTokens.spaceMd),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: ClaraTokens.spaceMd,
-                  ),
-                  child: _AtAGlanceRow(
-                    apiHealthy: apiHealthy,
-                    toolCount: quickActions.length,
-                  ),
-                ),
-              ],
-              const SizedBox(height: ClaraTokens.spaceSm),
-              SectionHeader(title: _copy[ConsumerTerm.homeScreenToolsTitle]),
-              // First load shows a polished skeleton instead of a blank region
-              // (Req 3.3); once a summary exists the real tools grid is shown.
-              if (showInitialSkeleton)
-                const ClaraSkeletonList(itemCount: 4, showLeading: false)
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: ClaraTokens.spaceMd,
-                  ),
-                  child: _QuickActionGrid(children: quickActions),
-                ),
-              // Fail-closed error: a settled load with no summary shows no
-              // privileged entries and offers a retry (INV-4, Req 3.4).
-              if (showSummaryRetry) ...[
-                const SizedBox(height: ClaraTokens.spaceMd),
-                ErrorRetryView(
-                  message: _copy[ConsumerTerm.homeScreenToolsLoadFailed],
-                  onRetry: _refreshSummary,
-                ),
-              ],
-              const SizedBox(height: ClaraTokens.spaceLg),
-              SectionHeader(title: _copy[ConsumerTerm.homeScreenRecentTitle]),
-              // No recents endpoint yet, so a friendly Vietnamese-first empty
-              // state stands in — no fabricated data (Req 3.1).
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-                child: ClaraEmptyState(
-                  icon: Icons.history,
-                  title: _copy[ConsumerTerm.homeScreenNoRecentTitle],
-                  message: _copy[ConsumerTerm.homeScreenNoRecentDescription],
-                ),
-              ),
-              const SizedBox(height: ClaraTokens.spaceXl),
-            ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: ClaraTokens.spaceLg),
+
+        // Priority 5: Calm caught-up state when all tasks are complete
+        if (isCaughtUp || (schedule.isNotEmpty && schedule.every((e) => e.completed))) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+            child: _CaughtUpCard(copy: copy),
+          ),
+          const SizedBox(height: ClaraTokens.spaceLg),
+        ],
+
+        // Priority 4: Recent changes (real source records only; no fake activity)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
+          child: _RecentChangesSection(
+            recentChanges: recentChanges,
+            copy: copy,
+          ),
+        ),
+        const SizedBox(height: ClaraTokens.spaceXl),
+      ],
     );
   }
 }
 
-/// Maps an RBAC role id to a Vietnamese-first display label. Unknown roles fall
-/// back to the least-privileged label so the header never leaks a raw id.
+// =============================================================================
+// Header & Greeting
+// =============================================================================
+
 String _roleLabel(String role) {
   switch (role) {
     case 'admin':
@@ -476,45 +448,32 @@ String _roleLabel(String role) {
   }
 }
 
-/// A time-of-day greeting keyed off the local hour, Vietnamese-first.
 String _timeOfDayGreeting(DateTime now) {
   final hour = now.hour;
-  if (hour < 11) {
-    return 'Chào buổi sáng';
-  }
-  if (hour < 14) {
-    return 'Chào buổi trưa';
-  }
-  if (hour < 18) {
-    return 'Chào buổi chiều';
-  }
+  if (hour < 11) return 'Chào buổi sáng';
+  if (hour < 14) return 'Chào buổi trưa';
+  if (hour < 18) return 'Chào buổi chiều';
   return 'Chào buổi tối';
 }
 
-/// A time-of-day icon that echoes the greeting (decorative only).
 IconData _timeOfDayIcon(DateTime now) {
   final hour = now.hour;
-  if (hour < 11) {
-    return Icons.wb_sunny_outlined;
-  }
-  if (hour < 14) {
-    return Icons.wb_sunny;
-  }
-  if (hour < 18) {
-    return Icons.wb_twilight;
-  }
+  if (hour < 11) return Icons.wb_sunny_outlined;
+  if (hour < 14) return Icons.wb_sunny;
+  if (hour < 18) return Icons.wb_twilight;
   return Icons.nightlight_round;
 }
 
-/// Greeting hero: a bold, brand-gradient welcome banner with a soft glow, a
-/// decorative time-of-day glyph, a role chip, and the signed-in email. Pure
-/// chrome (no clinical text). The gradient is a deliberate, high-impact modern
-/// hero — distinct from the flatter glass cards below it.
 class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader({required this.role, this.email});
+  const _GreetingHeader({
+    required this.role,
+    this.email,
+    this.onOpenProfessionalTools,
+  });
 
   final String role;
   final String? email;
+  final VoidCallback? onOpenProfessionalTools;
 
   @override
   Widget build(BuildContext context) {
@@ -532,8 +491,8 @@ class _GreetingHeader extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: ClaraTokens.spaceMd),
-      child: A11yLabeled(
-        label: '$greeting, vai trò ${_roleLabel(role)}',
+      child: ClipRRect(
+        borderRadius: radius,
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: radius,
@@ -555,15 +514,17 @@ class _GreetingHeader extends StatelessWidget {
             ],
           ),
           child: Stack(
+            clipBehavior: Clip.hardEdge,
             children: [
-              // Decorative oversized time-of-day glyph, softly clipped.
               Positioned(
                 right: -8,
                 top: -8,
-                child: Icon(
-                  _timeOfDayIcon(now),
-                  size: 96,
-                  color: Colors.white.withValues(alpha: 0.14),
+                child: ExcludeSemantics(
+                  child: Icon(
+                    _timeOfDayIcon(now),
+                    size: 96,
+                    color: Colors.white.withValues(alpha: 0.14),
+                  ),
                 ),
               ),
               Padding(
@@ -581,28 +542,39 @@ class _GreetingHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: ClaraTokens.spaceXs),
                     Text(
-                      'CLARA sẵn sàng hỗ trợ bạn hôm nay.',
+                      'CLARA sẵn sàng đồng hành cùng sức khỏe của bạn.',
                       style: textTheme.bodyMedium?.copyWith(
                         color: Colors.white.withValues(alpha: 0.88),
                       ),
                       textScaler: textScaler,
                     ),
                     const SizedBox(height: ClaraTokens.spaceMd),
-                    Row(
+                    Wrap(
+                      spacing: ClaraTokens.spaceSm,
+                      runSpacing: ClaraTokens.spaceSm,
                       children: [
                         _HeroChip(
                           icon: Icons.badge_outlined,
                           label: _roleLabel(role),
                         ),
-                        if (hasEmail) ...[
-                          const SizedBox(width: ClaraTokens.spaceSm),
-                          Flexible(
-                            child: _HeroChip(
-                              icon: Icons.mail_outline,
-                              label: email!,
+                        if (hasEmail)
+                          _HeroChip(
+                            icon: Icons.mail_outline,
+                            label: email!,
+                          ),
+                        if (onOpenProfessionalTools != null)
+                          Material(
+                            type: MaterialType.transparency,
+                            child: InkWell(
+                              onTap: onOpenProfessionalTools,
+                              borderRadius:
+                                  BorderRadius.circular(GlassTokens.radiusPill),
+                              child: const _HeroChip(
+                                icon: Icons.medical_services_outlined,
+                                label: 'Công cụ chuyên môn →',
+                              ),
                             ),
                           ),
-                        ],
                       ],
                     ),
                   ],
@@ -616,7 +588,6 @@ class _GreetingHeader extends StatelessWidget {
   }
 }
 
-/// A translucent white pill used on the brand-gradient hero (chrome only).
 class _HeroChip extends StatelessWidget {
   const _HeroChip({required this.icon, required this.label});
 
@@ -625,399 +596,315 @@ class _HeroChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ClaraTokens.spaceSm,
-          vertical: ClaraTokens.spaceXs,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.20),
-          borderRadius: BorderRadius.circular(GlassTokens.radiusPill),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.30)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: Colors.white),
-            const SizedBox(width: ClaraTokens.spaceXs),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                textScaler: A11y.resolveTextScaler(context),
-              ),
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ClaraTokens.spaceSm,
+        vertical: ClaraTokens.spaceXs,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.20),
+        borderRadius: BorderRadius.circular(GlassTokens.radiusPill),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: Colors.white),
+          const SizedBox(width: ClaraTokens.spaceXs),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Lays out quick-action cards in a responsive grid: two columns on phone
-/// widths, three on wider (tablet/rail) layouts. Uses a `Wrap` so it never
-/// overflows and sizes naturally with dynamic text scaling.
-class _QuickActionGrid extends StatelessWidget {
-  const _QuickActionGrid({required this.children});
+// =============================================================================
+// Priority 1: Top Next-Action Card (Severity-Based)
+// =============================================================================
 
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const spacing = ClaraTokens.spaceMd;
-        final maxWidth = constraints.maxWidth;
-        final columns = maxWidth >= 600 ? 3 : 2;
-        final itemWidth = (maxWidth - spacing * (columns - 1)) / columns;
-
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final child in children)
-              SizedBox(width: itemWidth, child: child),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// A single quick-action card: a tappable liquid-glass chrome surface with a
-/// tinted leading icon, a Vietnamese title, and a short supporting subtitle.
-///
-/// These are navigation affordances (labels/subtitles are chrome copy, not
-/// clinical content), so they render on [GlassSurface]. When the ambient
-/// [GlassScope] is disabled the surface falls back to the same opaque squircle,
-/// so contrast and layout are preserved. The whole surface is the tap target
-/// (announced as a button via [A11yLabeled]) and far exceeds the 48dp minimum.
-class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.accent,
+class _TopNextActionCard extends StatelessWidget {
+  const _TopNextActionCard({
+    required this.action,
+    required this.copy,
+    required this.onAction,
   });
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  /// Optional per-tool accent color for the icon tile so the grid reads as a
-  /// set of distinct tools rather than a wall of identical blue cards. Falls
-  /// back to the scheme primary when null. Decorative only (title text carries
-  /// the meaning), so it never affects contrast of the label.
-  final Color? accent;
+  final HomeNextAction action;
+  final ConsumerTerminology copy;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    final textScaler = A11y.resolveTextScaler(context);
-    final tileColor = accent ?? scheme.primary;
 
-    return A11yLabeled(
-      label: title,
-      isButton: true,
-      child: GlassSurface(
-        radius: GlassTokens.radiusCard,
-        blurSigma: GlassTokens.blurCard,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(
-              GlassTokens.radiusCard * GlassTokens.squircleFactor,
+    final isUrgent = action.isUrgent;
+    final isAttention = action.isAttention;
+
+    final Color accentColor = isUrgent
+        ? const Color(0xFFDC2626) // Red
+        : isAttention
+            ? const Color(0xFFD97706) // Amber
+            : scheme.primary; // Brand Teal
+
+    final Color containerColor = isUrgent
+        ? const Color(0xFFFEF2F2)
+        : isAttention
+            ? const Color(0xFFFFFBEB)
+            : scheme.primaryContainer.withValues(alpha: 0.25);
+
+    final String badgeLabel = isUrgent
+        ? copy[ConsumerTerm.homeSeverityUrgent]
+        : isAttention
+            ? copy[ConsumerTerm.homeSeverityAttention]
+            : copy[ConsumerTerm.homeSeverityNormal];
+
+    final IconData icon = isUrgent
+        ? Icons.warning_amber_rounded
+        : isAttention
+            ? Icons.priority_high_rounded
+            : Icons.task_alt_outlined;
+
+    return Container(
+      padding: const EdgeInsets.all(ClaraTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: containerColor,
+        borderRadius: BorderRadius.circular(ClaraTokens.radiusLg),
+        border: Border.all(color: accentColor.withValues(alpha: 0.45), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.10),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+                ),
+                child: Icon(icon, color: accentColor, size: 22),
+              ),
+              const SizedBox(width: ClaraTokens.spaceSm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      copy[ConsumerTerm.homeNextActionTitle],
+                      style: textTheme.labelSmall?.copyWith(
+                        color: accentColor,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    Text(
+                      action.title,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ClaraChip(
+                label: badgeLabel,
+                selected: isUrgent || isAttention,
+              ),
+            ],
+          ),
+          if (action.description != null && action.description!.isNotEmpty) ...[
+            const SizedBox(height: ClaraTokens.spaceSm),
+            Text(
+              action.description!,
+              style: textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
+          ],
+          const SizedBox(height: ClaraTokens.spaceMd),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ClaraButton.primary(
+              label: action.actionLabel ?? copy[ConsumerTerm.actionOpen],
+              icon: Icons.arrow_forward_rounded,
+              onPressed: onAction,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Priority 2: Full-width Ask CLARA Entry Card with text/camera/voice affordances
+// =============================================================================
+
+class _AskClaraEntryCard extends StatelessWidget {
+  const _AskClaraEntryCard({
+    required this.copy,
+    required this.onTextTap,
+    required this.onCameraTap,
+    required this.onVoiceTap,
+  });
+
+  final ConsumerTerminology copy;
+  final VoidCallback onTextTap;
+  final VoidCallback onCameraTap;
+  final VoidCallback onVoiceTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return ClaraCard.static_(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: onTextTap,
+            borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
             child: Padding(
-              padding: const EdgeInsets.all(ClaraTokens.spaceMd),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+              padding: const EdgeInsets.symmetric(vertical: ClaraTokens.spaceXs),
+              child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color.lerp(tileColor, Colors.white, 0.15)!,
-                          tileColor,
-                        ],
+                        colors: [scheme.primary, const Color(0xFF2563EB)],
                       ),
                       borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
-                      boxShadow: [
-                        BoxShadow(
-                          color: tileColor.withValues(alpha: 0.35),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                    ),
+                    child: const Icon(Icons.auto_awesome, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: ClaraTokens.spaceMd),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          copy[ConsumerTerm.actionAskClara],
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          copy[ConsumerTerm.homeAskPlaceholder],
+                          style: textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
-                    child: Icon(
-                      icon,
-                      color: Colors.white,
-                      size: 24,
-                    ),
                   ),
-                  const SizedBox(height: ClaraTokens.spaceMd),
-                  Text(
-                    title,
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    textScaler: textScaler,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: ClaraTokens.spaceXs),
-                  Text(
-                    subtitle,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    textScaler: textScaler,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: ClaraTokens.spaceXs),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// An "at-a-glance" row of small glass stat chips built ONLY from data the
-/// role-scoped summary already carries — the API health status and the number
-/// of tools this role can reach. No extra network call and no PII; a stat with
-/// no real backing is simply omitted by the caller.
-class _AtAGlanceRow extends StatelessWidget {
-  const _AtAGlanceRow({required this.apiHealthy, required this.toolCount});
-
-  /// Whether the summary reported the API as healthy (`api_health.status`).
-  final bool apiHealthy;
-
-  /// The number of quick-action tools currently available to this role.
-  final int toolCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _StatChip(
-            child: StatusByText(
-              label: apiHealthy ? 'Hệ thống ổn định' : 'Đang kiểm tra',
-              level: apiHealthy
-                  ? A11yStatusLevel.success
-                  : A11yStatusLevel.warning,
-              semanticsPrefix: 'Trạng thái hệ thống',
-            ),
-          ),
-        ),
-        const SizedBox(width: ClaraTokens.spaceMd),
-        Expanded(
-          child: _StatChip(
-            child: _StatValue(
-              value: '$toolCount',
-              label: 'công cụ khả dụng',
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// A compact glass chrome chip hosting a single at-a-glance stat.
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassSurface(
-      radius: GlassTokens.radiusControl,
-      blurSigma: GlassTokens.blurCard,
-      fill: GlassFill.thin,
-      padding: const EdgeInsets.symmetric(
-        horizontal: ClaraTokens.spaceMd,
-        vertical: ClaraTokens.spaceSm,
-      ),
-      child: Align(alignment: Alignment.centerLeft, child: child),
-    );
-  }
-}
-
-/// A numeric stat: a prominent value over a muted Vietnamese caption.
-class _StatValue extends StatelessWidget {
-  const _StatValue({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final textScaler = A11y.resolveTextScaler(context);
-
-    return Semantics(
-      label: '$value $label',
-      container: true,
-      child: ExcludeSemantics(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.primary,
-              ),
-              textScaler: textScaler,
-            ),
-            const SizedBox(width: ClaraTokens.spaceXs),
-            Flexible(
-              child: Text(
-                label,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
+          const SizedBox(height: ClaraTokens.spaceSm),
+          const Divider(height: 1),
+          const SizedBox(height: ClaraTokens.spaceSm),
+          Row(
+            children: [
+              Expanded(
+                child: _AskAffordanceButton(
+                  icon: Icons.chat_bubble_outline,
+                  label: copy[ConsumerTerm.homeAskText],
+                  onTap: onTextTap,
                 ),
-                textScaler: textScaler,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
-        ),
+              Expanded(
+                child: _AskAffordanceButton(
+                  icon: Icons.camera_alt_outlined,
+                  label: copy[ConsumerTerm.homeAskCamera],
+                  onTap: onCameraTap,
+                ),
+              ),
+              Expanded(
+                child: _AskAffordanceButton(
+                  icon: Icons.mic_none_outlined,
+                  label: copy[ConsumerTerm.homeAskVoice],
+                  onTap: onVoiceTap,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-/// A prominent, full-width primary call-to-action inviting the user to ask
-/// CLARA a question — the single most useful action for this audience. Pure
-/// navigation chrome (no clinical content); the whole surface is one large tap
-/// target announced as a button.
-class _PrimaryChatCta extends StatelessWidget {
-  const _PrimaryChatCta({
-    required this.title,
-    required this.subtitle,
+class _AskAffordanceButton extends StatelessWidget {
+  const _AskAffordanceButton({
+    required this.icon,
+    required this.label,
     required this.onTap,
   });
 
-  final String title;
-  final String subtitle;
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-    final textScaler = A11y.resolveTextScaler(context);
-    final radius = BorderRadius.circular(
-      GlassTokens.radiusCard * GlassTokens.squircleFactor,
-    );
 
-    return A11yLabeled(
-      label: title,
-      isButton: true,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: radius,
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  scheme.primary,
-                  Color.lerp(scheme.primary, const Color(0xFF7C3AED), 0.55)!,
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.primary.withValues(alpha: 0.28),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: ClaraTokens.spaceXs,
+            vertical: ClaraTokens.spaceSm,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: scheme.primary),
+              const SizedBox(width: ClaraTokens.spaceXs),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(ClaraTokens.spaceMd),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.20),
-                      borderRadius:
-                          BorderRadius.circular(GlassTokens.radiusPill),
-                    ),
-                    child: const ExcludeSemantics(
-                      child: Icon(Icons.auto_awesome,
-                          color: Colors.white, size: 26),
-                    ),
-                  ),
-                  const SizedBox(width: ClaraTokens.spaceMd),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          style: textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          textScaler: textScaler,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.88),
-                          ),
-                          textScaler: textScaler,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: ClaraTokens.spaceSm),
-                  const ExcludeSemantics(
-                    child: Icon(Icons.arrow_forward_rounded,
-                        color: Colors.white, size: 22),
-                  ),
-                ],
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -1025,106 +912,344 @@ class _PrimaryChatCta extends StatelessWidget {
   }
 }
 
-/// A rotating daily wellness tip: general, non-clinical encouragement so the
-/// Home feels alive on every open. Deterministic (keyed off the calendar day)
-/// so it is stable within a day and testable; it NEVER makes a medical claim or
-/// fabricates data, and stays clearly in the "supports decisions only" framing.
-class _DailyTipCard extends StatelessWidget {
-  const _DailyTipCard();
+// =============================================================================
+// Priority 3: Today's Schedule (Medications, Visits, Care Tasks)
+// =============================================================================
 
-  /// General wellness prompts — deliberately non-diagnostic and non-prescriptive
-  /// (hydration, sleep, movement, medication organization, check-in prep).
-  static const List<({IconData icon, String text})> _tips = [
-    (
-      icon: Icons.local_drink_outlined,
-      text: 'Uống đủ nước trong ngày giúp cơ thể tỉnh táo và khỏe khoắn hơn.'
-    ),
-    (
-      icon: Icons.bedtime_outlined,
-      text: 'Ngủ đủ giấc và đúng giờ là nền tảng cho sức khỏe lâu dài.'
-    ),
-    (
-      icon: Icons.directions_walk_outlined,
-      text: 'Vận động nhẹ mỗi ngày, dù chỉ vài phút, đều có ích cho tim mạch.'
-    ),
-    (
-      icon: Icons.medication_outlined,
-      text: 'Sắp xếp thuốc theo lịch giúp bạn dùng đúng liều, đúng giờ.'
-    ),
-    (
-      icon: Icons.event_note_outlined,
-      text:
-          'Ghi lại triệu chứng trước khi đi khám giúp bác sĩ hiểu bạn nhanh hơn.'
-    ),
-    (
-      icon: Icons.self_improvement_outlined,
-      text: 'Dành ít phút hít thở sâu có thể giúp giảm căng thẳng trong ngày.'
-    ),
-    (
-      icon: Icons.restaurant_outlined,
-      text: 'Bữa ăn cân bằng rau, đạm và tinh bột hỗ trợ năng lượng ổn định.'
-    ),
-  ];
+class _TodayScheduleSection extends StatelessWidget {
+  const _TodayScheduleSection({
+    required this.schedule,
+    required this.completingIds,
+    required this.copy,
+    required this.onCompleteTask,
+    required this.onOpenMedications,
+    required this.onOpenVisits,
+  });
+
+  final List<HomeScheduleItem> schedule;
+  final Set<String> completingIds;
+  final ConsumerTerminology copy;
+  final ValueChanged<String> onCompleteTask;
+  final VoidCallback onOpenMedications;
+  final VoidCallback onOpenVisits;
+
+  @override
+  Widget build(BuildContext context) {
+    final pendingItems = schedule.where((item) => !item.completed).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: copy[ConsumerTerm.homeScheduleTitle],
+          trailing: pendingItems.isNotEmpty
+              ? ClaraChip(
+                  label:
+                      '${pendingItems.length} ${copy[ConsumerTerm.todayPending]}',
+                  selected: true,
+                )
+              : null,
+        ),
+        const SizedBox(height: ClaraTokens.spaceSm),
+        if (schedule.isEmpty)
+          ClaraEmptyState(
+            icon: Icons.calendar_today_outlined,
+            title: copy[ConsumerTerm.homeScheduleEmpty],
+            message: copy[ConsumerTerm.todayEmptyDescription],
+          )
+        else
+          ...schedule.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+              child: _ScheduleItemCard(
+                item: item,
+                isCompleting: completingIds.contains(item.id),
+                copy: copy,
+                onComplete: () => onCompleteTask(item.id),
+                onOpenMedications: onOpenMedications,
+                onOpenVisits: onOpenVisits,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ScheduleItemCard extends StatelessWidget {
+  const _ScheduleItemCard({
+    required this.item,
+    required this.isCompleting,
+    required this.copy,
+    required this.onComplete,
+    required this.onOpenMedications,
+    required this.onOpenVisits,
+  });
+
+  final HomeScheduleItem item;
+  final bool isCompleting;
+  final ConsumerTerminology copy;
+  final VoidCallback onComplete;
+  final VoidCallback onOpenMedications;
+  final VoidCallback onOpenVisits;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-    final textScaler = A11y.resolveTextScaler(context);
+    final kind = item.kind.toLowerCase();
 
-    final now = DateTime.now();
-    final dayIndex = now.difference(DateTime(2020)).inDays;
-    final tip = _tips[dayIndex % _tips.length];
+    final IconData icon = kind == 'medication'
+        ? Icons.medication_outlined
+        : kind == 'visit'
+            ? Icons.event_available_outlined
+            : Icons.task_alt_outlined;
 
-    return A11yLabeled(
-      label: 'Gợi ý hôm nay: ${tip.text}',
-      child: GlassSurface(
-        radius: GlassTokens.radiusCard,
-        blurSigma: GlassTokens.blurCard,
-        fill: GlassFill.thin,
-        padding: const EdgeInsets.all(ClaraTokens.spaceMd),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
-              ),
-              child: ExcludeSemantics(
-                child: Icon(tip.icon, color: scheme.primary, size: 22),
-              ),
+    final Color iconColor = kind == 'medication'
+        ? const Color(0xFF0D9488)
+        : kind == 'visit'
+            ? const Color(0xFF2563EB)
+            : const Color(0xFF7C3AED);
+
+    return ClaraCard.static_(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(ClaraTokens.radiusMd),
             ),
-            const SizedBox(width: ClaraTokens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Gợi ý hôm nay',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
-                    ),
-                    textScaler: textScaler,
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: ClaraTokens.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title.isEmpty
+                      ? copy[ConsumerTerm.todayUnnamedTask]
+                      : item.title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    decoration:
+                        item.completed ? TextDecoration.lineThrough : null,
                   ),
+                ),
+                if (item.subtitle != null && item.subtitle!.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
-                    tip.text,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface,
+                    item.subtitle!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
-                    textScaler: textScaler,
                   ),
                 ],
-              ),
+                if (item.time != null && item.time!.isNotEmpty) ...[
+                  const SizedBox(height: ClaraTokens.spaceXs),
+                  Text(
+                    item.time!,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
+          ),
+          const SizedBox(width: ClaraTokens.spaceSm),
+          if (item.completed)
+            const ClaraChip(
+              label: 'Đã xong',
+            )
+          else if (kind == 'medication')
+            TextButton.icon(
+              onPressed: onOpenMedications,
+              icon: const Icon(Icons.check, size: 16),
+              label: Text(copy[ConsumerTerm.actionComplete]),
+            )
+          else if (kind == 'visit')
+            TextButton.icon(
+              onPressed: onOpenVisits,
+              icon: const Icon(Icons.arrow_forward, size: 16),
+              label: Text(copy[ConsumerTerm.actionOpen]),
+            )
+          else
+            ClaraButton.primary(
+              label: copy[ConsumerTerm.actionComplete],
+              icon: Icons.check,
+              loading: isCompleting,
+              onPressed: onComplete,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Priority 5: Calm Caught-Up State
+// =============================================================================
+
+class _CaughtUpCard extends StatelessWidget {
+  const _CaughtUpCard({required this.copy});
+
+  final ConsumerTerminology copy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(ClaraTokens.spaceLg),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(ClaraTokens.radiusLg),
+        border: Border.all(color: const Color(0xFF86EFAC)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.task_alt_rounded,
+            color: Color(0xFF16A34A),
+            size: 28,
+          ),
+          const SizedBox(width: ClaraTokens.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy[ConsumerTerm.homeCaughtUpTitle],
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF166534),
+                  ),
+                ),
+                const SizedBox(height: ClaraTokens.spaceXs),
+                Text(
+                  copy[ConsumerTerm.homeCaughtUpDescription],
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Priority 4: Recent Changes (Real Source Records Only; No Fake Activity)
+// =============================================================================
+
+class _RecentChangesSection extends StatelessWidget {
+  const _RecentChangesSection({
+    required this.recentChanges,
+    required this.copy,
+  });
+
+  final List<HomeRecentChange> recentChanges;
+  final ConsumerTerminology copy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: copy[ConsumerTerm.homeRecentChangesTitle]),
+        const SizedBox(height: ClaraTokens.spaceXs),
+        Text(
+          copy[ConsumerTerm.homeRecentChangesRealSourceNotice],
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
         ),
+        const SizedBox(height: ClaraTokens.spaceSm),
+        if (recentChanges.isEmpty)
+          ClaraEmptyState(
+            icon: Icons.history,
+            title: copy[ConsumerTerm.homeRecentChangesEmpty],
+            message: copy[ConsumerTerm.homeScreenNoRecentDescription],
+          )
+        else
+          ...recentChanges.map(
+            (change) => Padding(
+              padding: const EdgeInsets.only(bottom: ClaraTokens.spaceSm),
+              child: _RecentChangeCard(change: change, copy: copy),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _RecentChangeCard extends StatelessWidget {
+  const _RecentChangeCard({
+    required this.change,
+    required this.copy,
+  });
+
+  final HomeRecentChange change;
+  final ConsumerTerminology copy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    final IconData icon = change.kind.contains('medication')
+        ? Icons.medication_outlined
+        : change.kind.contains('visit')
+            ? Icons.event_note_outlined
+            : Icons.description_outlined;
+
+    return ClaraCard.static_(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: scheme.primary, size: 22),
+          const SizedBox(width: ClaraTokens.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  change.title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (change.summary != null && change.summary!.isNotEmpty) ...[
+                  const SizedBox(height: ClaraTokens.spaceXs),
+                  Text(
+                    change.summary!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (change.source != null && change.source!.isNotEmpty) ...[
+                  const SizedBox(height: ClaraTokens.spaceXs),
+                  ClaraChip(
+                    label: change.source!,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

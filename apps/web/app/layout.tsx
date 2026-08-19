@@ -1,5 +1,8 @@
 import "@/styles/globals.css";
 import AppShell from "@/components/app-shell";
+import { PreferenceProvider } from "@/components/shell/preference-provider";
+import { SessionBoundary } from "@/components/shell/session-boundary";
+import { ProfileBoundary } from "@/components/shell/profile-boundary";
 import AnalyticsConsentBootstrap from "@/components/analytics/analytics-consent-bootstrap";
 import { getThemeInitScript } from "@/lib/theme";
 import type { Metadata } from "next";
@@ -52,7 +55,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <AnalyticsConsentBootstrap />
-        <AppShell>{children}</AppShell>
+        <PreferenceProvider initialLanguage={language}>
+          <SessionBoundary>
+            <ProfileBoundary>
+              <AppShell>{children}</AppShell>
+            </ProfileBoundary>
+          </SessionBoundary>
+        </PreferenceProvider>
       </body>
     </html>
   );

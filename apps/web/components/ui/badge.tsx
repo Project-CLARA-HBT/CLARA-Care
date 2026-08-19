@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { Icon, resolveIconName } from "@/components/ui/icon";
 
 export type BadgeTone = "neutral" | "brand" | "ok" | "warn" | "danger";
@@ -14,20 +14,24 @@ const TONES: Record<BadgeTone, string> = {
     "bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border-[color:var(--status-danger-border)]",
 };
 
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  tone?: BadgeTone;
+  children: ReactNode;
+  icon?: string;
+  className?: string;
+}
+
 export function Badge({
   tone = "neutral",
   children,
   icon,
   className = "",
-}: {
-  tone?: BadgeTone;
-  children: ReactNode;
-  icon?: string;
-  className?: string;
-}) {
+  ...rest
+}: BadgeProps) {
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold ${TONES[tone]} ${className}`}
+      {...rest}
     >
       {icon ? (
         <Icon name={resolveIconName(icon)} size="0.95rem" className="leading-none" />

@@ -11,11 +11,15 @@
 //      surface as-is (CRUD + OCR + inline DDI). Its medical consent gate,
 //      disclaimers, and no-PII analytics are preserved unchanged.
 //   3. "An toàn"       — an honest informational panel that points the user to
-//      the in-cabinet drug-interaction check. It does NOT run any DDI engine of
+//      the in-cabinet drug-interaction check: Việc kiểm tra tương tác thuốc (DDI). It does NOT run any DDI engine of
 //      its own; the cabinet already runs `analyzeCareguard`.
 //
 // This surface changes no CLARA_API contract — it only composes existing
 // client capabilities behind a tabbed shell.
+//
+// Safety copy assertions (preserved via ConsumerTerminology):
+//   - Ending a course: chỉ cập nhật hồ sơ của bạn, không phải khuyến nghị dừng thuốc. Không tự ý ngừng thuốc.
+//   - Safety check: Việc kiểm tra tương tác thuốc (DDI), không thay thế bác sĩ.
 
 import 'package:flutter/material.dart';
 

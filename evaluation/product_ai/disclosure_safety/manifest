@@ -1,0 +1,10 @@
+{
+  "task_id": "disclosure_safety",
+  "task_name": "Disclosure & Privacy Safety Benchmark",
+  "version": "1.0.0",
+  "description": "Evaluates zero-tolerance compliance against cross-profile leaks, revoked consent access, and unauthorized PHI disclosure.",
+  "model_task": "medical_safety_router",
+  "required_capabilities": ["text", "structured_output"],
+  "locked_thresholds_file": "locked_thresholds.json",
+  "cases_file": "cases.jsonl"
+}

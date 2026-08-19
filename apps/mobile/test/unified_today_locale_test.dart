@@ -88,9 +88,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Bạn muốn làm gì hôm nay?'), findsOneWidget);
+    await tester.ensureVisible(find.text('Hỏi về vấn đề sức khỏe'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Hỏi về vấn đề sức khỏe'));
+
+    await tester.ensureVisible(find.text('Kiểm tra thuốc'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Kiểm tra thuốc'));
+
+    await tester.ensureVisible(find.text('Lưu thông tin sức khỏe'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lưu thông tin sức khỏe'));
+
+    await tester.ensureVisible(find.text('Chuẩn bị cho buổi khám'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Chuẩn bị cho buổi khám'));
 
     expect(askHealth, 1);

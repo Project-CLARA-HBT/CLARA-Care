@@ -83,6 +83,24 @@ This manifest is the pre-M2 reachability gate. Every `apps/web/app/**/page.tsx` 
 | `/account/consent` | authenticated all + compliance | personal/support | More/profile | account E2E |
 | `/account/data` | authenticated all + compliance | personal/support | More/profile | account E2E |
 | `/account/data/delete/[step]` | authenticated owner + explicit confirmation | personal/support | Focused destructive flow | account safety E2E |
+| `/ask` | authenticated all roles | personal | Rebuild consumer ask | ask E2E |
+| `/care` | authenticated owner/profile | personal | Rebuild consumer care | care E2E |
+| `/care/check-symptoms` | authenticated all roles | personal | Rebuild symptom checker | symptom check E2E |
+| `/care/prepare` | authenticated owner/profile | personal | Rebuild consumer visit prep | visit prep E2E |
+| `/care/visits` | authenticated owner/profile | personal | Rebuild consumer visits | visit E2E |
+| `/health` | authenticated permitted profile | personal | Rebuild consumer health | health E2E |
+| `/health/documents` | authenticated permitted profile | personal | Rebuild consumer health documents | documents E2E |
+| `/health/measurements` | authenticated permitted profile | personal | Rebuild consumer health measurements | measurements E2E |
+| `/health/medications` | authenticated owner/profile | personal | Rebuild consumer medications | medications E2E |
+| `/health/results` | authenticated permitted profile | personal | Rebuild consumer health results | results E2E |
+| `/health/timeline` | authenticated permitted profile | personal | Rebuild consumer health timeline | timeline E2E |
+| `/home` | authenticated all roles | personal | Rebuild consumer home | home E2E |
+| `/you` | authenticated owner/profile | personal | Rebuild consumer you | you E2E |
+| `/you/integrations` | authenticated owner/profile | personal | Rebuild consumer integrations | integrations E2E |
+| `/you/notifications` | authenticated owner/profile | personal | Rebuild consumer notifications | notifications E2E |
+| `/you/privacy` | authenticated owner/profile | personal | Rebuild consumer privacy | privacy E2E |
+| `/you/profile` | authenticated owner/profile | personal | Rebuild consumer profile | profile E2E |
+| `/you/sharing` | authenticated owner/profile | personal | Rebuild consumer sharing | sharing E2E |
 
 ## Gate rules
 

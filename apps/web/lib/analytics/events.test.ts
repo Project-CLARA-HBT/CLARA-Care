@@ -27,6 +27,11 @@ import {
   trackCareguardDdiChecked,
   trackCouncilRun,
   trackCouncilViewed,
+  trackHomeActionClicked,
+  trackHomeAlertClicked,
+  trackHomeRecentChangeClicked,
+  trackHomeScheduleItemClicked,
+  trackHomeViewed,
   trackResearchSourcesSynced,
   trackResearchViewed
 } from "@/lib/analytics/events";
@@ -239,5 +244,60 @@ describe("Council surface events (Feature: product-polish-analytics, Req 9.1)", 
       }
       expect(props.surface).toBe("council");
     }
+  });
+});
+
+describe("Consumer Home surface events (HOME-001/HOME-015)", () => {
+  it("declares canonical consumer home events", () => {
+    expect(ANALYTICS_EVENTS.homeViewed).toBe("home_viewed");
+    expect(ANALYTICS_EVENTS.homeActionClicked).toBe("home_action_clicked");
+    expect(ANALYTICS_EVENTS.homeAlertClicked).toBe("home_alert_clicked");
+    expect(ANALYTICS_EVENTS.homeScheduleItemClicked).toBe("home_schedule_item_clicked");
+    expect(ANALYTICS_EVENTS.homeRecentChangeClicked).toBe("home_recent_change_clicked");
+  });
+
+  it("emits home_viewed without PII", () => {
+    trackHomeViewed();
+    expect(trackMock).toHaveBeenCalledWith("home_viewed", {
+      surface: "home",
+    });
+  });
+
+  it("emits home_action_clicked with coarse parameters only", () => {
+    trackHomeActionClicked({
+      actionKind: "medication",
+      severity: "urgent",
+      targetHref: "/health/medications",
+    });
+    expect(trackMock).toHaveBeenCalledWith("home_action_clicked", {
+      surface: "home",
+      action_kind: "medication",
+      severity: "urgent",
+      target_href: "/health/medications",
+    });
+  });
+
+  it("emits home_alert_clicked and schedule item clicked with coarse non-PII props", () => {
+    trackHomeAlertClicked({
+      severity: "critical",
+      alertKind: "ddi",
+    });
+    expect(trackMock).toHaveBeenCalledWith("home_alert_clicked", {
+      surface: "home",
+      severity: "critical",
+      alert_kind: "ddi",
+    });
+
+    trackHomeScheduleItemClicked({ itemKind: "visit" });
+    expect(trackMock).toHaveBeenCalledWith("home_schedule_item_clicked", {
+      surface: "home",
+      item_kind: "visit",
+    });
+
+    trackHomeRecentChangeClicked({ changeKind: "result" });
+    expect(trackMock).toHaveBeenCalledWith("home_recent_change_clicked", {
+      surface: "home",
+      change_kind: "result",
+    });
   });
 });

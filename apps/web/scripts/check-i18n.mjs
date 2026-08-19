@@ -22,7 +22,7 @@ const MIGRATED_SURFACES = [
     forbidden: ['<html lang="vi"'],
   },
   {
-    path: "components/app-shell.tsx",
+    path: "components/shell/professional-layout.tsx",
     required: ["@/lib/i18n/catalog", "navigation.workspace.label", "language.preference"],
     forbidden: ["Hỏi CLARA", "Ask CLARA", "Tùy chọn ngôn ngữ", "Language preferences"],
   },

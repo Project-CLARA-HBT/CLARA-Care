@@ -1,0 +1,10 @@
+{
+  "task_id": "grounded_answer",
+  "task_name": "Grounded Medical Answer Benchmark",
+  "version": "1.0.0",
+  "description": "Evaluates factual faithfulness, citation precision, and hallucination rates against retrieved evidence.",
+  "model_task": "rag_synthesis",
+  "required_capabilities": ["text", "structured_output"],
+  "locked_thresholds_file": "locked_thresholds.json",
+  "cases_file": "cases.jsonl"
+}

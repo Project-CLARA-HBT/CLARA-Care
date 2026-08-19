@@ -1,0 +1,10 @@
+{
+  "task_id": "document_extraction",
+  "task_name": "Document & Prescription Extraction Benchmark",
+  "version": "1.0.0",
+  "description": "Evaluates field-level structured extraction accuracy for Vietnamese prescriptions, lab sheets, and discharge summaries.",
+  "model_task": "lifemap_text_draft_extraction",
+  "required_capabilities": ["text", "document", "structured_output"],
+  "locked_thresholds_file": "locked_thresholds.json",
+  "cases_file": "cases.jsonl"
+}

@@ -187,7 +187,7 @@ describe("WelcomeStepClient", () => {
         action: "complete",
         confirm_self_declared: true,
       });
-      expect(mocks.replace).toHaveBeenCalledWith("/today");
+      expect(mocks.replace).toHaveBeenCalledWith("/home");
       expect(mocks.refresh).toHaveBeenCalled();
     });
   });

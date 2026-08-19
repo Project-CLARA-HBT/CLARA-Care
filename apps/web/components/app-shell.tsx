@@ -166,7 +166,23 @@ export default function AppShell({ children }: Props) {
 
   useEffect(() => {
     if (hideSidebar || !isSessionChecked) {
-      if (hideSidebar) {
+  const isConsumerRoute =
+    pathname === "/home" ||
+    pathname.startsWith("/home/") ||
+    pathname === "/ask" ||
+    pathname.startsWith("/ask/") ||
+    pathname === "/health" ||
+    pathname.startsWith("/health/") ||
+    pathname === "/care" ||
+    pathname.startsWith("/care/") ||
+    pathname === "/you" ||
+    pathname.startsWith("/you/");
+
+  if (isConsumerRoute) {
+    return <>{children}</>;
+  }
+
+  if (hideSidebar) {
         setProfileContext(null);
         setFamilyNotificationCount(0);
       }

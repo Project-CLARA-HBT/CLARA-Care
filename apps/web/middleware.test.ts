@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 
-import { middleware } from "@/middleware";
+import { middleware, LEGACY_ROUTE_REDIRECTS } from "@/middleware";
 
 describe("authentication middleware", () => {
   it("redirects a protected route when no session signal exists", () => {
@@ -12,6 +12,17 @@ describe("authentication middleware", () => {
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
       "https://clara.test/login?next=%2Fdashboard",
+    );
+  });
+
+  it("redirects legacy routes to canonical targets in next param when unauthenticated", () => {
+    const response = middleware(
+      new NextRequest("https://clara.test/today?view=calendar"),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://clara.test/login?next=%2Fhome%3Fview%3Dcalendar",
     );
   });
 
@@ -42,5 +53,50 @@ describe("authentication middleware", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
+  });
+
+  describe("legacy route compatibility redirects when authenticated", () => {
+    const testCases: Array<[string, string]> = [
+      ["/today", "/home"],
+      ["/chat", "/ask"],
+      ["/lifemap", "/health/timeline"],
+      ["/phr", "/health"],
+      ["/medicines", "/health/medications"],
+      ["/visits", "/care/visits"],
+      ["/family", "/you/sharing"],
+      ["/account/consent", "/you/privacy"],
+      ["/account/data", "/you/privacy"],
+    ];
+
+    for (const [legacyPath, canonicalPath] of testCases) {
+      it(`redirects ${legacyPath} -> ${canonicalPath} while preserving query params`, () => {
+        const request = new NextRequest(
+          `https://clara.test${legacyPath}?tab=details&filter=active`,
+          {
+            headers: { cookie: "clara_client_session=1" },
+          },
+        );
+        const response = middleware(request);
+
+        expect(response.status).toBe(307);
+        expect(response.headers.get("location")).toBe(
+          `https://clara.test${canonicalPath}?tab=details&filter=active`,
+        );
+      });
+    }
+
+    it("verifies all expected legacy routes are in the redirect dictionary", () => {
+      expect(LEGACY_ROUTE_REDIRECTS).toEqual({
+        "/today": "/home",
+        "/chat": "/ask",
+        "/lifemap": "/health/timeline",
+        "/phr": "/health",
+        "/medicines": "/health/medications",
+        "/visits": "/care/visits",
+        "/family": "/you/sharing",
+        "/account/consent": "/you/privacy",
+        "/account/data": "/you/privacy",
+      });
+    });
   });
 });

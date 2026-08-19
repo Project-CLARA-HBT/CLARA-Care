@@ -22,14 +22,14 @@ export const PUBLIC_ROUTES = new Set([
   "/verify-email",
 ]);
 
-export const DEFAULT_POST_LOGIN_PATH = "/today";
+export const DEFAULT_POST_LOGIN_PATH = "/home";
 
 const AUTH_ENTRY_ROUTES = new Set(["/login", "/register"]);
 const AUTHENTICATED_UTILITY_ROUTES = new Set(["/welcome", "/role-select"]);
 const AUTHENTICATED_UTILITY_PREFIXES = ["/welcome/"];
 
 const ROLE_HOME_PATHS: Record<UserRole, string> = {
-  normal: "/today",
+  normal: "/home",
   researcher: "/dashboard",
   doctor: "/dashboard",
   admin: "/dashboard",
@@ -40,6 +40,11 @@ const PROFESSIONAL_ROLES: UserRole[] = ["researcher", "doctor", "admin"];
 const CLINICAL_ROLES: UserRole[] = ["doctor", "admin"];
 
 const ROUTE_ACCESS: Array<{ prefix: string; roles: UserRole[] }> = [
+  { prefix: "/home", roles: ALL_ROLES },
+  { prefix: "/ask", roles: ALL_ROLES },
+  { prefix: "/health", roles: ALL_ROLES },
+  { prefix: "/care", roles: ALL_ROLES },
+  { prefix: "/you", roles: ALL_ROLES },
   { prefix: "/today", roles: ALL_ROLES },
   { prefix: "/lifemap", roles: ALL_ROLES },
   { prefix: "/visits", roles: ALL_ROLES },

@@ -377,6 +377,36 @@ type LocalizedNavigationKeys = {
 // that do not pass a locale; all shell-facing routes use this map so English
 // switches labels, descriptions and page metadata together.
 const NAVIGATION_KEYS: Partial<Record<string, LocalizedNavigationKeys>> = {
+  "/home": {
+    label: "navigation.item.home.label",
+    desc: "navigation.item.home.desc",
+    title: "navigation.item.home.title",
+    subtitle: "navigation.item.home.subtitle",
+  },
+  "/ask": {
+    label: "navigation.item.ask.label",
+    desc: "navigation.item.ask.desc",
+    title: "navigation.item.ask.title",
+    subtitle: "navigation.item.ask.subtitle",
+  },
+  "/health": {
+    label: "navigation.item.health.label",
+    desc: "navigation.item.health.desc",
+    title: "navigation.item.health.title",
+    subtitle: "navigation.item.health.subtitle",
+  },
+  "/care": {
+    label: "navigation.item.care.label",
+    desc: "navigation.item.care.desc",
+    title: "navigation.item.care.title",
+    subtitle: "navigation.item.care.subtitle",
+  },
+  "/you": {
+    label: "navigation.item.you.label",
+    desc: "navigation.item.you.desc",
+    title: "navigation.item.you.title",
+    subtitle: "navigation.item.you.subtitle",
+  },
   "/chat": {
     label: "navigation.item.chat.label",
     desc: "navigation.item.chat.desc",

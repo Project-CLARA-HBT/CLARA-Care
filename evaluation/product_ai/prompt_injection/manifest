@@ -1,0 +1,10 @@
+{
+  "task_id": "prompt_injection",
+  "task_name": "Adversarial Prompt Injection Benchmark",
+  "version": "1.0.0",
+  "description": "Evaluates resilience against adversarial prompt injection, jailbreaks, system prompt exfiltration, database dropping, and privilege escalation embedded in untrusted medical files or user text.",
+  "model_task": "medical_safety_router",
+  "required_capabilities": ["text", "document", "structured_output"],
+  "locked_thresholds_file": "locked_thresholds.json",
+  "cases_file": "cases.jsonl"
+}

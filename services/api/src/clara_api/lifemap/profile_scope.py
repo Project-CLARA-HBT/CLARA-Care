@@ -202,3 +202,143 @@ def resolve_profile_scope(
         status_code=status.HTTP_404_NOT_FOUND,
         detail={"code": "scope_forbidden", "message": "Profile not found"},
     )
+
+
+def require_profile_scope(
+    db: Session,
+    user: User | None = None,
+    profile_id: str | None = None,
+    *,
+    action: str = "view",
+    data_class: str = "lifemap",
+    purpose: str = "self_care",
+    **kwargs,
+) -> ProfileScope:
+    """Resolve one profile and authorize requested action for a User entity."""
+    if user is None:
+        user = kwargs.get("user")
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "unauthorized", "message": "User not authenticated"},
+        )
+    if profile_id is None:
+        profile_id = kwargs.get("profile_id")
+
+    policy = ProfileAccessPolicy(token_role=user.role, account_role=user.role)
+    owned = list(
+        db.execute(
+            select(PhrProfile)
+            .where(PhrProfile.user_id == user.id, PhrProfile.status == "active")
+            .order_by(PhrProfile.id)
+        ).scalars()
+    )
+
+    if profile_id:
+        profile = db.execute(
+            select(PhrProfile).where(
+                _profile_selector(profile_id), PhrProfile.status == "active"
+            )
+        ).scalar_one_or_none()
+    else:
+        profile = owned[0] if owned else None
+
+    if profile is None:
+        if profile_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "scope_forbidden", "message": "Profile not found"},
+            )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "profile_required", "message": "Profile not found"},
+        )
+
+    if profile.user_id == user.id:
+        return ProfileScope(
+            actor=user,
+            profile=profile,
+            actor_role="owner",
+            purpose=purpose,
+            allowed_actions=frozenset(
+                {
+                    "view",
+                    "create",
+                    "confirm",
+                    "correct",
+                    "dispute",
+                    "invalidate",
+                    "resolve",
+                    "accept",
+                    "complete",
+                    "share",
+                    "export",
+                }
+            ),
+            allowed_data_classes=frozenset(
+                {
+                    "lifemap",
+                    "medications",
+                    "allergies",
+                    "conditions",
+                    "observations",
+                    "visits",
+                    "evidence",
+                }
+            ),
+        )
+
+    if policy.administrative:
+        db.add(
+            FamilyAccessLog(
+                profile_id=profile.id,
+                actor_user_id=user.id,
+                object_type="lifemap",
+                object_id=profile.public_id,
+                action=action,
+                outcome="denied",
+                purpose="support_access",
+                metadata_json={"reason_code": "break_glass_required"},
+            )
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "scope_forbidden", "message": "Profile not found"},
+        )
+
+    now = datetime.now(UTC)
+    grants = list(
+        db.execute(
+            select(FamilyAccessGrant).where(
+                FamilyAccessGrant.grantee_user_id == user.id,
+                FamilyAccessGrant.profile_id == profile.id,
+                FamilyAccessGrant.status == "active",
+                FamilyAccessGrant.revoked_at.is_(None),
+                FamilyAccessGrant.starts_at <= now,
+                FamilyAccessGrant.expires_at > now,
+                FamilyAccessGrant.purpose == purpose,
+            )
+        ).scalars()
+    )
+    for grant in grants:
+        actions = frozenset(
+            str(item) for item in (grant.allowed_actions_json or []) if isinstance(item, str)
+        )
+        classes = _data_classes(grant)
+        if _grant_covers_profile(grant, profile) and action in actions and data_class in classes:
+            return ProfileScope(
+                actor=user,
+                profile=profile,
+                actor_role=policy.delegated_actor_role,
+                purpose=purpose,
+                allowed_actions=actions,
+                allowed_data_classes=classes,
+                grant_id=grant.id,
+                valid_until=grant.expires_at,
+            )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={"code": "scope_forbidden", "message": "Profile not found"},
+    )

@@ -18,9 +18,9 @@ import {
 } from "@/lib/navigation.workspaces";
 
 describe("authenticated navigation defaults", () => {
-  it("lands consumers on Today and professional roles on dashboard, never chat", () => {
-    expect(getRoleHomePath("normal")).toBe("/today");
-    expect(resolvePostLoginPath({ role: "normal" })).toBe("/today");
+  it("lands consumers on Home and professional roles on dashboard, never chat", () => {
+    expect(getRoleHomePath("normal")).toBe("/home");
+    expect(resolvePostLoginPath({ role: "normal" })).toBe("/home");
     for (const role of ["researcher", "doctor", "admin"] as const) {
       expect(getRoleHomePath(role)).toBe("/dashboard");
       expect(resolvePostLoginPath({ role })).toBe("/dashboard");

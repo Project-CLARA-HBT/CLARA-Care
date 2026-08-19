@@ -1555,7 +1555,22 @@ class ApiClient {
     );
   }
 
-  // --- LifeMap / Today (clara-mobile-unified) -------------------------------
+  // --- LifeMap / Today / Home V2 (clara-mobile-unified) --------------------
+
+  /// Loads the profile-scoped Home read model (`GET /api/v2/home`).
+  ///
+  /// Returns the v2 Home read model containing `profile`, `top_action`,
+  /// `today` (schedule items for medications, visits, care tasks),
+  /// `recent_changes` (real source records only), `alerts`, and `integration_state`.
+  Future<Map<String, dynamic>> getHomeV2({
+    required String accessToken,
+    String? profileId,
+  }) {
+    final query = profileId != null && profileId.isNotEmpty
+        ? '?profile_id=${Uri.encodeComponent(profileId)}'
+        : '';
+    return _get('/api/v2/home$query', accessToken: accessToken);
+  }
 
   /// Today agenda: accepted care tasks, open episodes, and the pending-
   /// confirmation count. Returns 409 when no PHR profile exists yet (the caller

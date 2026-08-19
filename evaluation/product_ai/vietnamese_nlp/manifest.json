@@ -1,0 +1,10 @@
+{
+  "task_id": "vietnamese_nlp",
+  "task_name": "Vietnamese Clinical NLP & Terminology Benchmark",
+  "version": "1.0.0",
+  "description": "Evaluates medical Vietnamese comprehension: standard abbreviations (THA, ĐTĐ, ĐTN), clinical negations, colloquial symptom expressions, tone/diacritic resilience, and English/Vietnamese code-mixing.",
+  "model_task": "clinical_language_extraction",
+  "required_capabilities": ["text", "structured_output"],
+  "locked_thresholds_file": "locked_thresholds.json",
+  "cases_file": "cases.jsonl"
+}

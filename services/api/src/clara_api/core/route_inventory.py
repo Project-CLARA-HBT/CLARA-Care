@@ -110,6 +110,7 @@ INTENTIONAL_PUBLIC_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/health/ready"),
         ("GET", "/api/v1/health"),
         ("GET", "/api/v1/health/ready"),
+        ("GET", "/api/v2/health"),
         # FastAPI's read-only interactive documentation/schema surface. These
         # are framework bootstrap routes rather than clinical data handlers;
         # listing them explicitly keeps the public inventory deny-by-default.

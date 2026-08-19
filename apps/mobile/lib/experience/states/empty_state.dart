@@ -82,7 +82,6 @@ class ClaraEmptyState extends StatelessWidget {
         child: Padding(
           padding: padding,
           child: Column(
-            key: const Key('clara-empty-state'),
             mainAxisSize: MainAxisSize.min,
             children: [
               // Decorative icon: excluded so the title/message are the single
