@@ -1,0 +1,325 @@
+{
+  "audit_kind": "offline_descriptive",
+  "by_condition": {
+    "btsa": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "full_authorized_history": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "glhs_hybrid": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "glhs_hybrid_thss_strict": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "glhs_no_bitemporal_knowledge_time": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "glhs_no_predicate_engine": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "long_context_chronological": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "lww": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "naive_rag": {
+      "denominator": 40,
+      "malformed": 0,
+      "rate": 0.0
+    }
+  },
+  "by_model": {
+    "antigravity/claude-sonnet-4-6": {
+      "denominator": 180,
+      "malformed": 0,
+      "rate": 0.0
+    },
+    "antigravity/gemini-3.6-flash-high": {
+      "denominator": 180,
+      "malformed": 0,
+      "rate": 0.0
+    }
+  },
+  "by_stratum": {
+    "validation": {
+      "denominator": 360,
+      "malformed": 0,
+      "rate": 0.0
+    }
+  },
+  "by_task": {
+    "reconcile_future_oriented_commitment": {
+      "denominator": 360,
+      "malformed": 0,
+      "rate": 0.0
+    }
+  },
+  "checksum_verification": {
+    "file_count": 49,
+    "files": [
+      {
+        "file": "checkpoint.json",
+        "status": "OK"
+      },
+      {
+        "file": "commitments.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "construction_gold.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "error_ledger.csv",
+        "status": "OK"
+      },
+      {
+        "file": "error_ledger.json",
+        "status": "OK"
+      },
+      {
+        "file": "generation_error_ledger.json",
+        "status": "OK"
+      },
+      {
+        "file": "metrics.json",
+        "status": "OK"
+      },
+      {
+        "file": "model_generation.json",
+        "status": "OK"
+      },
+      {
+        "file": "model_generation.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "model_manifest.json",
+        "status": "OK"
+      },
+      {
+        "file": "partition_manifest.json",
+        "status": "OK"
+      },
+      {
+        "file": "per_case_metrics.csv",
+        "status": "OK"
+      },
+      {
+        "file": "perturbation_manifest.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "protocol_manifest.json",
+        "status": "OK"
+      },
+      {
+        "file": "report.md",
+        "status": "OK"
+      },
+      {
+        "file": "run_manifest.json",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/btsa.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/full_authorized_history.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/glhs_hybrid.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/glhs_hybrid_thss_strict.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/glhs_no_bitemporal_knowledge_time.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/glhs_no_predicate_engine.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/long_context_chronological.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/lww.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__claude-sonnet-4-6/naive_rag.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/btsa.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/full_authorized_history.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/glhs_hybrid.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/glhs_hybrid_thss_strict.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/glhs_no_bitemporal_knowledge_time.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/glhs_no_predicate_engine.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/long_context_chronological.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/lww.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs/antigravity__gemini-3.6-flash-high/naive_rag.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_outputs.json",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/btsa.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/full_authorized_history.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/glhs_hybrid.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/glhs_hybrid_thss_strict.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/glhs_no_bitemporal_knowledge_time.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/glhs_no_predicate_engine.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/long_context_chronological.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/lww.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "solver_packets/naive_rag.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "source_manifest.json",
+        "status": "OK"
+      },
+      {
+        "file": "statistical_results.json",
+        "status": "OK"
+      },
+      {
+        "file": "synthetic_notes.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "timeline.jsonl",
+        "status": "OK"
+      },
+      {
+        "file": "validation_report.json",
+        "status": "OK"
+      }
+    ],
+    "verified": true
+  },
+  "expected_total_cells": 360,
+  "failure_type_distribution": {
+    "format": 0,
+    "other": 0,
+    "parse": 0,
+    "schema": 0
+  },
+  "missing_output_count": 0,
+  "note": "Offline descriptive audit. Malformed outputs are fail-closed errors under the original scoring; the primary comparison is UNCHANGED. No model was rerun and no run artifact was modified.",
+  "paired_by_stratum": {
+    "validation": {
+      "neither": 2
+    }
+  },
+  "paired_contingency": {
+    "both": 0,
+    "full_only": 0,
+    "neither": 2,
+    "strict_only": 0
+  },
+  "paired_rows": [
+    {
+      "bucket": "neither",
+      "case_count": 10,
+      "full_history_malformed": false,
+      "stratum": "validation",
+      "strict_malformed": false,
+      "subject": "87db19701913fa0403d644171c3c358f6deac8d006a8bceb783a21dcf2990fb9"
+    },
+    {
+      "bucket": "neither",
+      "case_count": 10,
+      "full_history_malformed": false,
+      "stratum": "validation",
+      "strict_malformed": false,
+      "subject": "9d468ffacaba70f184cba0ed7c7e2ac8ff519d0f147b76233c4eb7916c004ee6"
+    }
+  ],
+  "primary_null_result_unchanged": true,
+  "primary_reference_subject_count": 384,
+  "provider_error_count": 0,
+  "run_dir": "artifacts/commitloop/local-phase-a-v6",
+  "schema_version": "glhs-malformed-audit-v1",
+  "source_subject_count": 2,
+  "subject_count_with_malformed": 0,
+  "total_malformed": 0,
+  "total_parsed": 360
+}
