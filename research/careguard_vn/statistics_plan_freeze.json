@@ -1,0 +1,133 @@
+{
+  "schema_version": "careguard-vn.statistics-plan.v2-frozen",
+  "status": "frozen",
+  "freeze_date_utc": "2026-08-19T00:00:00Z",
+  "freeze_binding": "Bound by git commit recorded in READINESS.md and by statistics_plan_freeze.json sha256 recorded in STATISTICS_PLAN_FROZEN.md.",
+  "supersedes": "research/careguard_vn/statistics_plan.json (draft v1, draft_not_run)",
+  "identity_unit": "frozen DAV product identity case (one official DAV product record)",
+  "ddi_unit": "frozen logical medication pair/case (accepted identity A x accepted identity B matched to an external positive reference)",
+  "clustering_unit": "canonical product identity cluster; natural (brand/generic/strength/form/registrant) and noisy (typo/whitespace/punctuation/diacritic) variants of one product resolve to the same cluster key",
+  "primary_endpoint": {
+    "name": "end_to_end_false_reassurance",
+    "definition": "Proportion of all frozen externally positive cases for which CareGuard releases a completed reassuring (no-interaction) conclusion when reassurance must not be released, including wrong-identity, ambiguous/unresolved-identity, stale-identity, and DDI-knowledge-miss paths.",
+    "denominator": "ALL frozen externally positive cases in the test set. Identity failure/ambiguity stays in the denominator and cannot be excluded.",
+    "numerator_components": [
+      "wrong_identity_reassurance",
+      "ambiguous_or_unresolved_reassurance",
+      "stale_or_invalid_identity_reassurance",
+      "positive_reference_missed_after_admissible_identity"
+    ]
+  },
+  "secondary_decomposition": [
+    {
+      "name": "conditional_ddi_false_clear",
+      "definition": "False-clear rate among admissibly resolved identities only (denominator excludes identity-failure cases). Decomposition only; not a substitute primary endpoint."
+    },
+    {
+      "name": "identity_accuracy",
+      "definition": "Proportion of frozen identity cases whose accepted mapping matches the adjudicated frozen identity ledger (review-reference accuracy) and, where independently known, the correct RxCUI. Reported with numerator/denominator and abstention count."
+    },
+    {
+      "name": "abstention_or_clarification",
+      "definition": "Rate at which CareGuard returns clarification or an unavailable (no-reassurance) conclusion for ambiguous, unresolved, stale, or source-conflicting identities. Reported per identity-resolution state."
+    },
+    {
+      "name": "risk_coverage_grid",
+      "definition": "Coverage and false-reassurance by stratum: DDInter risk/severity level, identity-resolution state, source-field completeness, and brand-generic invariance stratum. Reported with numerator/denominator per cell; cells may be empty (reported as empty, not zero)."
+    },
+    {
+      "name": "error_decomposition",
+      "definition": "End-to-end false reassurance decomposed into identity-stage error vs DDI-knowledge error via Mode B oracle-identity decomposition on the same frozen inputs."
+    }
+  ],
+  "precision_objective_cg03": {
+    "statement": "Sufficient positive-reference cases that the two-sided 95% interval for a plausible 5-10% false-reassurance rate has half-width <= 3 percentage points.",
+    "formula": "n = ceil(z^2 * p * (1-p) / h^2)",
+    "z": 1.959963984540054,
+    "half_width_pp": 0.03,
+    "required_positive_reference_n": {
+      "p_0.05": 203,
+      "p_0.10": 385,
+      "planning_target_n": 385,
+      "note": "planning_target_n is the maximum over the plausible range; achieved half-width recomputed by research/careguard_vn/precision_requirement.py"
+    },
+    "achieved_precision_fallback": "If the mapped eligible positive population cannot meet the target, report the achieved precision with the observed denominator rather than manufacturing pseudo-independent perturbations (CG-03)."
+  },
+  "sample_selection": {
+    "rule": "Use all eligible frozen externally positive cases, or a prespecified stratified sample/cap. Never stop based on observed performance.",
+    "stratification_dimensions": ["DDInter risk/severity level", "identity-resolution state", "registration/registrant", "dosage form"],
+    "cap": "prespecified at source-set freeze; no performance-adaptive stopping"
+  },
+  "development_test_split": {
+    "design": "Split at the product-identity-case level (never by string); 80% development / 20% locked test prespecified, stratified by registrant and DDInter risk level.",
+    "rule": "Split is assigned only after source mapping and before any CareGuard result inspection; development-only rows may tune normalization aliases/rules but are never reused as test rows.",
+    "status": "assignment BLOCKED until authorized DAV identity frame is delivered and mapped"
+  },
+  "exclusions": {
+    "rule": "Exclusions are prespecified with reason codes before result inspection and recorded in the freeze ledger.",
+    "reason_codes": {
+      "E01": "DAV record lacks active-ingredient text",
+      "E02": "DAV record lacks product-name text",
+      "E03": "duplicate registration number with conflicting identity fields (source_conflict)",
+      "E04": "non-medication product (device/cosmetic/not a drug)",
+      "E05": "no RxNorm candidate above deterministic threshold",
+      "E06": "external positive pair has no eligible frozen identity on either side",
+      "E07": "DailyMed confirmation subset is confirmation-only and never used as a negative or exclusion driver",
+      "E08": "record not in the frozen source manifest row-hash inventory"
+    }
+  },
+  "source_hashes": {
+    "ddinter_2_0": {
+      "controlled_manifest_sha256": "253cf0ab0d01e33c9cae9a953da92266ba95ed72e5a0c5934274bc15cb986c26",
+      "payload_bundle_sha256": "b49b8094065d5c063306c546b88599467ec1cd29e32a5e2abd91eccfece44bb1",
+      "row_count": 222383,
+      "role": "positive_ddi_reference"
+    },
+    "rxnorm_2026_08_03": {
+      "published_md5": "5854a3cc9f4cbd214a70e67edb6a0625",
+      "payload_sha256": "ca90484736109dc1551dfdca3b4b9831fabdf8664a16dbbe7d8183e222d71000",
+      "rrf_record_count": 6183895,
+      "role": "terminology",
+      "release": "RxNorm_full_prescribe_08032026"
+    },
+    "dailymed_warfarin_subset": {
+      "payload_sha256": "1d0d99c8b25f24ce8dbc5f22dc84d3a3f3f7a46d44c3eaec004ef0846deceef3",
+      "row_count": 5,
+      "record_hashes": [
+        "dac2a6b419dce7fc076011c91e3bcadbde1e3ef7e2c0234b0942f1a6d39514fa",
+        "2ba07d657fa8ee0a9c93509799405e0e39f3180220ac7beac1baf286720e5f99",
+        "e54b83242ed03a5bc176ddde4b441230674872be189eeb9dd629f845745e31ac",
+        "55626d6aaab57e8d9b55f2870f5f81c14769d066b27339b07fd67f6574ef26a2",
+        "f168ab992f00569724f899dbcf12ef9c82d314c77e8a62c5cf951bb4bfb65670"
+      ],
+      "role": "regulatory_confirmation"
+    },
+    "vietnam_identity_frame": {
+      "status": "NOT_ACQUIRED",
+      "note": "DAV identity frame is the CG-01 external MANUAL gate; no authorized export is available, so the source-set freeze and benchmark remain BLOCKED."
+    }
+  },
+  "unknown_label_rule": "not-in-reference is unknown and excluded from negative/specificity denominators; specificity is UNSUPPORTED (research/careguard_vn/NEGATIVE_REFERENCE.md)",
+  "analysis": {
+    "primary_uncertainty": "two-sided 95% Wilson interval for end-to-end false reassurance; Wald half-width only for the CG-03 precision sizing",
+    "paired_comparisons": "Exact McNemar where Mode A vs Mode B are paired on identical cases; prespecified contrast families use Holm correction",
+    "clustering": "Within-cluster (canonical product identity) dependence acknowledged; primary analysis case-level with cluster-robust inference and a cluster-level sensitivity analysis",
+    "agreement": "Cohen's kappa for blinded mapping reviewers per research/careguard_vn/MAPPING_REVIEW_PROTOCOL.md",
+    "negative_results_visible": true,
+    "clinical_inference": false
+  },
+  "release_rule": "Reassurance (completed no-interaction conclusion) is released only for accepted identities bound to a current frozen source record; ambiguous, unresolved, stale, or source-conflicting identities return clarification or an unavailable conclusion and count toward abstention, not toward released reassurance.",
+  "references": {
+    "pipeline": "research/careguard_vn/PIPELINE_SPEC.md",
+    "mapping_review": "research/careguard_vn/MAPPING_REVIEW_PROTOCOL.md",
+    "rxmap_feasibility": "research/careguard_vn/RXMAP_FEASIBILITY.md",
+    "negative_reference": "research/careguard_vn/NEGATIVE_REFERENCE.md",
+    "source_gate": "research/careguard_vn/SOURCE_GATE_CHECKLIST.md",
+    "readiness": "research/careguard_vn/READINESS.md"
+  },
+  "non_claims": [
+    "No negative/specificity claim is made; DDInter absence is not a negative label.",
+    "No performance result is claimed; identity failure stays in the primary denominator.",
+    "The precision objective records a planning target only; it is not a completed benchmark."
+  ]
+}

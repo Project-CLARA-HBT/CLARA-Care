@@ -45,6 +45,18 @@ Machine status: `clara-w0-machine-status.v1` — top-level SEALED. RIVF dual-mod
 
 - English/Vietnamese abstracts, GLHS disclosure, presentation outline, venue format validation, submission checklist complete; author metadata and portal confirmation pending.
 
-## CareGuard-VN — PAUSED_BY_OPERATOR
+## CareGuard-VN — RESULT-INCOMPLETE (refreshed 2026-08-19 by Workstream G R3)
 
-No DAV crawl or CareGuard source acquisition performed during this phase.
+Supporting source roles acquired under controlled manifests only: DDInter 2.0
+positive reference (222,383 rows), RxNorm 2026-08-03 prescribable terminology
+(6,183,895 RRF rows), and a five-record DailyMed regulatory-confirmation
+subset. These are distinct source roles, not a benchmark or negative set.
+Statistics plan is frozen (precision target: positive-reference N = 203 at
+p=0.05, 385 at p=0.10, planning target 385); mapping-review protocol, RxMap
+feasibility disposition (`ASSET_GATED`), and negative-reference decision
+(specificity `UNSUPPORTED`) are recorded under `research/careguard_vn/`.
+
+No DAV crawl or CareGuard benchmark run was performed. The Vietnam identity
+frame (CG-01 external MANUAL gate) is NOT acquired, so the four-role source set
+cannot validate and no final-test execution or performance result exists. See
+`research/careguard_vn/READINESS.md` for the full CG-01..CG-07 gate checklist.
