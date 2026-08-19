@@ -1,0 +1,3 @@
+claim_id,claim,evidence_artifact,status,scientific_unit,notes
+GLHS-TOCTOU-R3-RERUN-001,"R3 rerun executed all 12 frozen TOCTOU schedules under isolated PostgreSQL.",research/glhs_journal/protocol_v2_r3_20260819_02/seal/seal.json,SEALED_NOT_CLAIM_ELIGIBLE,12 logical schedules,"TOCTOU-V2-05 and TOCTOU-V2-09 mismatched frozen expected classifications; no safety reclassification."
+GLHS-TOCTOU-R3-REPETITION-001,"Frozen v2 schedules were repeated 50 times each with PostgreSQL commit-timestamp instrumentation.",research/glhs_journal/concurrency_repetition_v1/seal/seal.json,SEALED_DESCRIPTIVE,12 logical schedules,"600 robustness executions; repetitions are not new N; ordering confidence was PARTIAL for all 600 records; 10 schedules robust and 2 nonrobust."
