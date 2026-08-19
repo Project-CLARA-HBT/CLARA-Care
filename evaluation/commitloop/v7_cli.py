@@ -46,7 +46,7 @@ def main() -> int:
         timeout_seconds=90,
         checkpoint_every=5,
         max_retries=int(contract["max_retries"]),
-        retry_backoff_seconds=0.5,
+        retry_backoff_seconds=1.5,
     )
     base_url = os.environ.get("ROUTER_BASE_URL", "")
     api_key = os.environ.get("CLARA_ROUTER_API_KEY", "")
