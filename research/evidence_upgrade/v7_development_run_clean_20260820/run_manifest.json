@@ -1,0 +1,40 @@
+{
+  "batch_size": 5,
+  "case_count": 1056,
+  "clinical_adjudication": "NOT_RUN",
+  "completed_cell_count": 19008,
+  "conditions": [
+    "full_authorized_history",
+    "long_context_chronological",
+    "naive_rag",
+    "lww",
+    "btsa",
+    "glhs_no_predicate_engine",
+    "glhs_no_bitemporal_knowledge_time",
+    "glhs_hybrid",
+    "glhs_hybrid_thss_strict"
+  ],
+  "execution_mode": "glhs_bench_router",
+  "expected_cell_count": 19008,
+  "generation_case_count": 0,
+  "generation_error_count": 0,
+  "generation_request_count": 0,
+  "max_concurrency": 5,
+  "models": [
+    "claude-sonnet-4.6",
+    "gemini-3.6-flash-high"
+  ],
+  "phase_a_freeze_sha": "1dc4d8100853cd7528a74d70b3be5f26d5403acb",
+  "primary_model": "claude-sonnet-4.6",
+  "provider_approval_sha256": null,
+  "provider_probe_sha256": "85ea0319c925c6fbf65fbe350fbe458592bd73a41bf2d374ef49267bb8f23de8",
+  "request_count": 19008,
+  "router_calls_before_freeze": 0,
+  "run_status": "COMPLETE",
+  "schema_version": "commitloop-run.v1",
+  "solver_request_count": 19008,
+  "source_case_count": 192,
+  "source_cohort": "glhs_bench_v7_confirmatory_768:development",
+  "subject_count": 192,
+  "variant_case_count": 864
+}

@@ -1,0 +1,8 @@
+{
+  "case_count": 1056,
+  "completed_cell_count": 19008,
+  "external_calls": "INJECTED_TRANSPORT_ONLY",
+  "schema_version": "commitloop-validation.v1",
+  "status": "PASS_PENDING_SEAL_VERIFICATION",
+  "subject_count": 192
+}
