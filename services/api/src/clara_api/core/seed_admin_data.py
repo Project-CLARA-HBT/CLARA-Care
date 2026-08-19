@@ -352,12 +352,14 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
 
         c1 = VisitConcern(
             visit_id=visit.id,
-            concern_text="Gần đây thỉnh thoảng có cảm giác hồi hộp nhẹ vào buổi chiều muộn sau khi làm việc căng thẳng.",
+            profile_id=profile.id,
+            text="Gần đây thỉnh thoảng có cảm giác hồi hộp nhẹ vào buổi chiều muộn sau khi làm việc căng thẳng.",
             priority="routine",
         )
         c2 = VisitConcern(
             visit_id=visit.id,
-            concern_text="Cần kiểm tra lại bộ mỡ máu (Lipid panel) và men gan sau 3 tháng duy trì Rosuvastatin.",
+            profile_id=profile.id,
+            text="Cần kiểm tra lại bộ mỡ máu (Lipid panel) và men gan sau 3 tháng duy trì Rosuvastatin.",
             priority="routine",
         )
         db.add_all([c1, c2])
