@@ -1,0 +1,424 @@
+{
+  "created_at": "2026-08-19T07:56:35.885184+00:00",
+  "fixtures": [
+    {
+      "category": "cross_subject_reference",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-cross-subject-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: wrong/cross-subject reference",
+      "path": "fixtures/negative/cross-subject-reference.json",
+      "sha256": "4d69f4ad1911e59951ba0493569bd9841c317e33b49ba102cdc923675aab1fa2"
+    },
+    {
+      "category": "reference_rejection",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-dangling-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: dangling reference; bench reference-scope is subject-only and does not resolve CarePlan.goal, so bench accepts",
+      "path": "fixtures/negative/dangling-reference.json",
+      "sha256": "5a0869d9dd4f483a26e7c35622077cb80e3ccd49307b5db1f6a1238ba151db6c"
+    },
+    {
+      "category": "replay",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-duplicate-replay",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: duplicate/replayed bundle \u2014 byte-identical to lifemap-summary-r4.json (same sha256); parse gate is idempotent; endpoint-level replay protection uses Idempotency-Key (N/D offline)",
+      "path": "fixtures/negative/duplicate-replay.json",
+      "sha256": "d712001b0128f9928df639c9a59aff4c68125e1dce8ed2259b1d26aa7fd30a8a"
+    },
+    {
+      "category": "temporal_error",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "error"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-invalid-temporal",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: invalid temporal field (2026-02-30); HL7 rejects, CLARA import gate does not parse temporal values \u2014 recorded as a gap; bench refs use the product urn convention so bench_r4 rejects on reference scope, not on the temporal value",
+      "path": "fixtures/negative/invalid-temporal.json",
+      "sha256": "6e9604bc5115b51521748f5fa27f7e7c464c7f6c70dcd0ca2f71ca306b46827a"
+    },
+    {
+      "category": "missing_patient",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-missing-patient",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: missing Patient",
+      "path": "fixtures/negative/missing-patient.json",
+      "sha256": "d84ece38c2754d7852c6afb44bf927a7f5d95348fef603b57cf7b682dd3a5504"
+    },
+    {
+      "category": "multiple_patient",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-multiple-patient",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: multiple Patient where unsupported",
+      "path": "fixtures/negative/multiple-patient.json",
+      "sha256": "8857021603c6b8efa5c591065cb391823a48e6792e9c98b82bc87b67c149d224"
+    },
+    {
+      "category": "provenance_loss",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-provenance-loss",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: provenance/source identity loss; Provenance is present in the bundle but the import gate accepts it without retaining a Provenance candidate; bench does not emit Provenance events",
+      "path": "fixtures/negative/provenance-loss.json",
+      "sha256": "ddbd40793eb2c550626ec7c1846233b91f4b9668aa05a96e44e0c4c0282f2ab4"
+    },
+    {
+      "category": "resource_unsupported",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-unsupported-resource",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: unsupported resource (Procedure is valid R4 but outside the product API surface); bench silently drops it",
+      "path": "fixtures/negative/unsupported-resource.json",
+      "sha256": "07d14ba4064ca61c4bfdad0a2968ae21daa2d112cbe8462d60ec54c46b1dde23"
+    },
+    {
+      "category": "version_mismatch",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_stu3": {
+          "accepted": true
+        },
+        "hl7_stu3": {
+          "structural": "error"
+        }
+      },
+      "gates": [
+        "hl7_stu3",
+        "api_r4",
+        "bench_stu3"
+      ],
+      "id": "neg-version-mismatch",
+      "label": "synthetic",
+      "mode": "stu3",
+      "notes": "FHIR-02: STU3/R4 version mismatch \u2014 ServiceRequest (R4-only resource) in a STU3-claimed bundle",
+      "path": "fixtures/negative/version-mismatch-stu3-r4.json",
+      "sha256": "cb722f640c0e82c77cd21906335b70b1cd073d324f9c594d1ace706644d49aeb"
+    },
+    {
+      "category": "wrong_patient_reference",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "neg-wrong-patient-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "FHIR-02: resource points at a Patient id absent from the bundle",
+      "path": "fixtures/negative/wrong-patient-reference.json",
+      "sha256": "9980c4e6b4a534c1c5912fcf15271bc16bd65fb3a662507995f58b84847de5b6"
+    },
+    {
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "pos-r4-bench-collection",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "bench R4 collection incl. ServiceRequest; ServiceRequest is outside the product API's 15-type surface so api_r4 rejects by design",
+      "path": "fixtures/positive/r4/bench-r4-collection.json",
+      "sha256": "dce64e260e309c1b4cbc8e3e9310adad95f53bddb0ca81a9ae6747702dcfc1bd"
+    },
+    {
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "pos-r4-bench-transaction",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "transaction bundle form; bench accepts, product API rejects by design",
+      "path": "fixtures/positive/r4/bench-r4-transaction.json",
+      "sha256": "94186baddc878eb3985c0b4bfdb741d20637ba0ee740a3acf85e8128b5af7087"
+    },
+    {
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "pos-r4-document",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "document bundle form; Composition first entry; bench supports only collection/transaction",
+      "path": "fixtures/positive/r4/lifemap-document-r4.json",
+      "sha256": "48a590bcb760d15c7f6310e9ec095d57f4a6ae668c7f6374a8f29a7476cfb8cf"
+    },
+    {
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "pos-r4-full",
+      "label": "synthetic",
+      "mode": "r4",
+      "notes": "mapper-shaped full export surface; synthetic, no real data; bench_r4 rejects the product urn reference convention (cross_subject_reference)",
+      "path": "fixtures/positive/r4/lifemap-full-export-r4.json",
+      "sha256": "5d560a42ae3349200748947625accd25d7b9595b9eb8ec1f8c83f0f745ea5353"
+    },
+    {
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_r4",
+        "api_r4",
+        "bench_r4"
+      ],
+      "id": "pos-r4-golden",
+      "label": "repo",
+      "mode": "r4",
+      "notes": "repo fixture services/api/tests/fixtures/fhir/lifemap-summary-r4.json",
+      "path": "fixtures/positive/r4/lifemap-summary-r4.json",
+      "sha256": "d712001b0128f9928df639c9a59aff4c68125e1dce8ed2259b1d26aa7fd30a8a"
+    },
+    {
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_stu3": {
+          "accepted": true
+        },
+        "hl7_stu3": {
+          "structural": "valid"
+        }
+      },
+      "gates": [
+        "hl7_stu3",
+        "api_r4",
+        "bench_stu3"
+      ],
+      "id": "pos-stu3-bench-collection",
+      "label": "synthetic",
+      "mode": "stu3",
+      "notes": "bench STU3 collection incl. ProcedureRequest; product API is R4-only and rejects STU3-only types by design",
+      "path": "fixtures/positive/stu3/bench-stu3-collection.json",
+      "sha256": "4eb805a077c54dfcfdc59f7d43cdaff99f5417293ef2d4f31285386086c7acca"
+    },
+    {
+      "category": "snapshot_input",
+      "expected": {},
+      "gates": [],
+      "id": "snapshot_input",
+      "label": "synthetic",
+      "mode": "n/a",
+      "notes": "CLARA canonical snapshot input for export-path temporal mapping",
+      "path": "fixtures/snapshot-inputs/export-snapshot.json",
+      "sha256": "9d06999f398454c1d558e40a233bdff01503bd234b15f222ebd65dbef699f609"
+    }
+  ],
+  "freeze_id": "FHIR-CONFORMANCE-V1-20260819",
+  "git_sha": "aa82a75644f9a3d7409a13198bc36f421949cc34",
+  "validator_pin": {
+    "artifact": "validator_cli.jar",
+    "sha256": "0e53ab1d1a6f1e35f505255c0b8ce10a35fcf27e6e96b503640f784cd07e5ad6",
+    "url": "https://github.com/hapifhir/org.hl7.fhir.core/releases/download/6.9.12/validator_cli.jar",
+    "version": "6.9.12"
+  }
+}

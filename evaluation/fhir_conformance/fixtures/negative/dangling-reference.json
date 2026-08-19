@@ -1,0 +1,38 @@
+{
+  "resourceType": "Bundle",
+  "id": "negative-dangling-reference-001",
+  "type": "collection",
+  "timestamp": "2026-07-29T08:00:00+00:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-a",
+        "name": [
+          {
+            "text": "Patient A"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:f07d5edd-49fb-5fdd-b907-c8146968e50b",
+      "resource": {
+        "resourceType": "CarePlan",
+        "id": "careplan-dangling",
+        "status": "active",
+        "intent": "plan",
+        "title": "Plan with dangling goal",
+        "subject": {
+          "reference": "Patient/patient-a"
+        },
+         "goal": [
+           {
+             "reference": "urn:uuid:99999999-9999-4999-8999-999999999999"
+           }
+         ]
+      }
+    }
+  ]
+}

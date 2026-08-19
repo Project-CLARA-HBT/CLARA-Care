@@ -1,0 +1,883 @@
+{
+  "fixtures": [
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['entry_1_dangling_reference']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['entry_1_dangling_reference']",
+        "bench_r4": "accepted=False errors=['cross_subject_reference']"
+      },
+      "bench_r4": {
+        "detail": "accepted=False errors=['cross_subject_reference']",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "cross_subject_reference",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "neg-cross-subject-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/cross-subject-reference.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['entry_1_dangling_reference', 'entry_1_dangling_reference']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['entry_1_dangling_reference', 'entry_1_dangling_reference']",
+        "bench_r4": "accepted=True errors=[]"
+      },
+      "bench_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "reference_rejection",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "neg-dangling-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/dangling-reference.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=True errors=[]",
+        "bench_r4": "accepted=True errors=[]"
+      },
+      "bench_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "replay",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "neg-duplicate-replay",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/duplicate-replay.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=True errors=[]",
+        "bench_r4": "accepted=False errors=['cross_subject_reference']"
+      },
+      "bench_r4": {
+        "detail": "accepted=False errors=['cross_subject_reference']",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "temporal_error",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "error"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=error",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=error"
+      },
+      "id": "neg-invalid-temporal",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/invalid-temporal.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['exactly_one_patient_required']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['exactly_one_patient_required']",
+        "bench_r4": "accepted=False errors=['bundle_must_contain_one_patient']"
+      },
+      "bench_r4": {
+        "detail": "accepted=False errors=['bundle_must_contain_one_patient']",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "missing_patient",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "neg-missing-patient",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/missing-patient.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['exactly_one_patient_required']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['exactly_one_patient_required']",
+        "bench_r4": "accepted=False errors=['bundle_must_contain_one_patient']"
+      },
+      "bench_r4": {
+        "detail": "accepted=False errors=['bundle_must_contain_one_patient']",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "multiple_patient",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "neg-multiple-patient",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/multiple-patient.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=True errors=[]",
+        "bench_r4": "accepted=False errors=['cross_subject_reference']"
+      },
+      "bench_r4": {
+        "detail": "accepted=False errors=['cross_subject_reference']",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "provenance_loss",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "neg-provenance-loss",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/provenance-loss.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+        "bench_r4": "accepted=True errors=[]"
+      },
+      "bench_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "resource_unsupported",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "neg-unsupported-resource",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/unsupported-resource.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+        "bench_stu3": "accepted=True errors=[]"
+      },
+      "bench_stu3": {
+        "detail": "accepted=True errors=[]",
+        "gate": "bench_stu3",
+        "verdict": "PASS"
+      },
+      "category": "version_mismatch",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_stu3": {
+          "accepted": true
+        },
+        "hl7_stu3": {
+          "structural": "error"
+        }
+      },
+      "hl7_structural_layer": {
+        "hl7_stu3": "structural=error"
+      },
+      "hl7_stu3": {
+        "detail": "structural=error",
+        "gate": "hl7_stu3",
+        "verdict": "PASS"
+      },
+      "id": "neg-version-mismatch",
+      "label": "synthetic",
+      "mode": "stu3",
+      "path": "fixtures/negative/version-mismatch-stu3-r4.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['entry_1_dangling_reference']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['entry_1_dangling_reference']",
+        "bench_r4": "accepted=False errors=['cross_subject_reference']"
+      },
+      "bench_r4": {
+        "detail": "accepted=False errors=['cross_subject_reference']",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "wrong_patient_reference",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "neg-wrong-patient-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/wrong-patient-reference.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['entry_2_resource_type_unsupported', 'entry_6_resource_type_unsupported', 'entry_1_dangling_reference', 'entry_2_dangling_reference', 'entry_3_dangling_reference', 'entry_4_dangling_reference', 'entry_5_dangling_reference', 'entry_6_dangling_reference', 'entry_7_dangling_reference']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['entry_2_resource_type_unsupported', 'entry_6_resource_type_unsupported', 'entry_1_dangling_reference', 'entry_2_dangling_reference', 'entry_3_dangling_reference', 'entry_4_dangling_reference', 'entry_5_dangling_reference', 'entry_6_dangling_reference', 'entry_7_dangling_reference']",
+        "bench_r4": "accepted=True errors=[]"
+      },
+      "bench_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "pos-r4-bench-collection",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/bench-r4-collection.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['unsupported_bundle_type', 'entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['unsupported_bundle_type', 'entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+        "bench_r4": "accepted=True errors=[]"
+      },
+      "bench_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "pos-r4-bench-transaction",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/bench-r4-transaction.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=True errors=[]",
+        "bench_r4": "accepted=False errors=['invalid_fhir_bundle']"
+      },
+      "bench_r4": {
+        "detail": "accepted=False errors=['invalid_fhir_bundle']",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "pos-r4-document",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/lifemap-document-r4.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=True errors=[]",
+        "bench_r4": "accepted=False errors=['cross_subject_reference']"
+      },
+      "bench_r4": {
+        "detail": "accepted=False errors=['cross_subject_reference']",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": false
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "pos-r4-full",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/lifemap-full-export-r4.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=True errors=[]",
+        "bench_r4": "accepted=True errors=[]"
+      },
+      "bench_r4": {
+        "detail": "accepted=True errors=[]",
+        "gate": "bench_r4",
+        "verdict": "PASS"
+      },
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": true
+        },
+        "bench_r4": {
+          "accepted": true
+        },
+        "hl7_r4": {
+          "structural": "valid"
+        }
+      },
+      "hl7_r4": {
+        "detail": "structural=valid",
+        "gate": "hl7_r4",
+        "verdict": "PASS"
+      },
+      "hl7_structural_layer": {
+        "hl7_r4": "structural=valid"
+      },
+      "id": "pos-r4-golden",
+      "label": "repo",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/lifemap-summary-r4.json"
+    },
+    {
+      "api_r4": {
+        "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_6_resource_type_unsupported', 'entry_1_dangling_reference', 'entry_2_dangling_reference', 'entry_3_dangling_reference', 'entry_4_dangling_reference', 'entry_5_dangling_reference', 'entry_6_dangling_reference', 'entry_7_dangling_reference']",
+        "gate": "api_r4",
+        "verdict": "PASS"
+      },
+      "app_semantic_layer": {
+        "api_r4": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_6_resource_type_unsupported', 'entry_1_dangling_reference', 'entry_2_dangling_reference', 'entry_3_dangling_reference', 'entry_4_dangling_reference', 'entry_5_dangling_reference', 'entry_6_dangling_reference', 'entry_7_dangling_reference']",
+        "bench_stu3": "accepted=True errors=[]"
+      },
+      "bench_stu3": {
+        "detail": "accepted=True errors=[]",
+        "gate": "bench_stu3",
+        "verdict": "PASS"
+      },
+      "category": "positive",
+      "expected": {
+        "api_r4": {
+          "accepted": false
+        },
+        "bench_stu3": {
+          "accepted": true
+        },
+        "hl7_stu3": {
+          "structural": "valid"
+        }
+      },
+      "hl7_structural_layer": {
+        "hl7_stu3": "structural=valid"
+      },
+      "hl7_stu3": {
+        "detail": "structural=valid",
+        "gate": "hl7_stu3",
+        "verdict": "PASS"
+      },
+      "id": "pos-stu3-bench-collection",
+      "label": "synthetic",
+      "mode": "stu3",
+      "path": "fixtures/positive/stu3/bench-stu3-collection.json"
+    },
+    {
+      "app_semantic_layer": {},
+      "category": "snapshot_input",
+      "expected": {},
+      "hl7_structural_layer": {},
+      "id": "snapshot_input",
+      "label": "synthetic",
+      "mode": "n/a",
+      "path": "fixtures/snapshot-inputs/export-snapshot.json"
+    }
+  ],
+  "freeze_id": "FHIR-CONFORMANCE-V1-20260819",
+  "gaps": [
+    {
+      "category": "replay",
+      "fixture": "neg-duplicate-replay",
+      "message": "Duplicate/replay protection is endpoint-level (Idempotency-Key + payload digest); not measurable offline without the DB-backed API."
+    },
+    {
+      "category": "temporal_error",
+      "fixture": "neg-invalid-temporal",
+      "message": "HL7 r4 rejects this fixture but the api_r4 application gate accepts it; the CLARA gate does not validate this domain."
+    },
+    {
+      "category": "provenance_loss",
+      "fixture": "neg-provenance-loss",
+      "message": "Provenance is accepted by the import gate but never becomes a capture candidate (documented product policy); provenance preservation is therefore N/D for import candidates."
+    },
+    {
+      "category": "version_mismatch",
+      "fixture": "neg-version-mismatch",
+      "message": "HL7 stu3 rejects this fixture but the bench_stu3 application gate accepts it; the CLARA gate does not validate this domain."
+    },
+    {
+      "category": "temporal_mapping",
+      "fixture": "pos-stu3-bench-collection",
+      "message": "Bench temporal mapping does not parse STU3 canonical ProcedureRequest.occurrenceDateTime (valid_at stays None); counted in temporal_mapping_correctness:bench_stu3."
+    }
+  ],
+  "layer_verdict_summary": {
+    "clara_application_semantic": {
+      "PASS": 32
+    },
+    "hl7_structural": {
+      "PASS": 16
+    }
+  },
+  "preservation": {
+    "api_r4_acceptance": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=api_r4; denominators from fixture manifest expected-accept set",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "api_r4_resource_preservation": {
+      "d": 18,
+      "denominator": 18,
+      "n": 18,
+      "na": false,
+      "name": "resource_preservation_accuracy:api_r4",
+      "note": "gate=api_r4; non-event types excluded per ingest policy",
+      "numerator": 18,
+      "ratio": 1.0
+    },
+    "api_r4_source_reference": {
+      "d": 18,
+      "denominator": 18,
+      "n": 18,
+      "na": false,
+      "name": "source_reference_reconstruction:api_r4",
+      "note": "gate=api_r4; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 18,
+      "ratio": 1.0
+    },
+    "api_r4_subject_rejection": {
+      "d": 4,
+      "denominator": 4,
+      "n": 4,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=api_r4; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 4,
+      "ratio": 1.0
+    },
+    "bench_r4_acceptance": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=bench_r4; denominators from fixture manifest expected-accept set",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "bench_r4_resource_preservation": {
+      "d": 10,
+      "denominator": 10,
+      "n": 10,
+      "na": false,
+      "name": "resource_preservation_accuracy:bench_r4",
+      "note": "gate=bench_r4; non-event types excluded per ingest policy",
+      "numerator": 10,
+      "ratio": 1.0
+    },
+    "bench_r4_source_reference": {
+      "d": 10,
+      "denominator": 10,
+      "n": 10,
+      "na": false,
+      "name": "source_reference_reconstruction:bench_r4",
+      "note": "gate=bench_r4; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 10,
+      "ratio": 1.0
+    },
+    "bench_r4_subject_rejection": {
+      "d": 4,
+      "denominator": 4,
+      "n": 4,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=bench_r4; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 4,
+      "ratio": 1.0
+    },
+    "bench_r4_temporal_mapping": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "temporal_mapping_correctness:bench_r4",
+      "note": "recognized source fields -> TimelineEvent.valid_at; fields not in the bench candidate list (e.g. STU3 occurrenceDateTime) are counted as gaps",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_acceptance": {
+      "d": 2,
+      "denominator": 2,
+      "n": 2,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=bench_stu3; denominators from fixture manifest expected-accept set",
+      "numerator": 2,
+      "ratio": 1.0
+    },
+    "bench_stu3_resource_preservation": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "resource_preservation_accuracy:bench_stu3",
+      "note": "gate=bench_stu3; non-event types excluded per ingest policy",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_source_reference": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "source_reference_reconstruction:bench_stu3",
+      "note": "gate=bench_stu3; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_subject_rejection": {
+      "d": 0,
+      "denominator": 0,
+      "n": 0,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=bench_stu3; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 0,
+      "ratio": null
+    },
+    "bench_stu3_temporal_mapping": {
+      "d": 5,
+      "denominator": 5,
+      "n": 5,
+      "na": false,
+      "name": "temporal_mapping_correctness:bench_stu3",
+      "note": "recognized source fields -> TimelineEvent.valid_at; fields not in the bench candidate list (e.g. STU3 occurrenceDateTime) are counted as gaps",
+      "numerator": 5,
+      "ratio": 1.0
+    },
+    "provenance_candidate_retention": {
+      "d": 0,
+      "denominator": 1,
+      "n": 1,
+      "na": false,
+      "name": "provenance_candidate_retention",
+      "note": "Provenance is parsed but excluded from import candidates by product policy",
+      "numerator": 0,
+      "ratio": 0.0
+    },
+    "temporal_mapping_export": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "temporal_mapping_correctness_export",
+      "note": "snapshot -> R4 export via production mapper (pure function)",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "unsupported_behavior": [
+      {
+        "api_r4": {
+          "accepted": false,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_resource_type_unsupported",
+            "entry_1_dangling_reference"
+          ]
+        },
+        "bench_r4": {
+          "accepted": true,
+          "dropped_types": [
+            "Patient/patient-a"
+          ],
+          "errors": []
+        },
+        "fixture_id": "neg-unsupported-resource",
+        "modes": [
+          "api_r4",
+          "bench_r4"
+        ],
+        "path": "fixtures/negative/unsupported-resource.json"
+      }
+    ]
+  },
+  "separates": {
+    "clara_application_semantic": "CLARA import/bench gate result: one-patient rule, reference scope, supported resource surface, bundle-form scope. A Bundle can be structurally valid yet violate this contract (spec 3.8).",
+    "hl7_structural": "Pinned HL7 validator result: structural validity of the Bundle per the R4/STU3 base specification."
+  },
+  "validator_execution": "OK",
+  "validator_jar_available": true
+}

@@ -1,0 +1,37 @@
+FHIR Validation tool Version 6.9.12 (Git# 73c432b5f43d). Built 2026-07-15T16:03:53.162Z (34 days old)
+  Java:   25.0.2 from /usr/lib/jvm/java-25-openjdk on amd64 (64bit). 1946MB available
+  Paths:  Current = /home/nguyennt/Documents/CLARA-Care, Package Cache = /home/nguyennt/.fhir/packages
+  Params: /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/unsupported-resource.json -version 4.0.1 -tx n/a -output-style compact
+  Locale: United States/US
+  Jurisdiction: United States of America
+Loading
+  Loading FHIR v4.0.1 from hl7.fhir.r4.core#4.0.1
+  Load hl7.terminology.r4#6.2.0 - 4288 resources (00:08.478)
+  Load hl7.fhir.uv.extensions.r4#5.2.0 - 759 resources (00:02.111)
+  Loaded FHIR - 8265 resources (00:00.000)
+  Terminology server null - Version n/a: No Terminology Server (00:00.000)
+  Load hl7.fhir.uv.extensions.r5#5.2.0 - 759 resources (00:01.815)
+  Load hl7.terminology.r5#7.1.0 - 4072 resources (00:01.398)
+  Load hl7.fhir.uv.extensions.r5#5.3.0 - 856 resources (00:00.017)
+  Load hl7.terminology#7.3.0 - 4146 resources (00:01.469)
+  Load hl7.fhir.uv.extensions#5.3.0 - 856 resources (00:01.136)
+  Package Summary: [hl7.fhir.r4.core#4.0.1, hl7.fhir.xver-extensions#0.1.0, hl7.terminology.r4#6.2.0, hl7.fhir.uv.extensions.r4#5.2.0, hl7.fhir.uv.extensions.r5#5.2.0, hl7.terminology.r5#7.1.0, hl7.fhir.uv.extensions.r5#5.3.0, hl7.terminology#7.3.0, hl7.fhir.uv.extensions#5.3.0]
+  Terminology Cache at /tmp/default-tx-cache
+  Get set... 
+  ...go! (00:04.589)
+Cached new session. Cache size = 1
+Sources to validate: /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/unsupported-resource.json
+Validating
+  Validate /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/unsupported-resource.json
+ 00:00.219
+Done. Times: Loading: 00:21.078, validation: 00:00.219. Memory = 514Mb
+
+
+----------------------------------------------------------------------------------
+/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/unsupported-resource.json 02:59:58
+[-1, -1] Bundle.entry[1].resource/*Procedure/procedure-unsupported*/.subject: Warning - Entry 0 matches the reference Patient/patient-a by type and id but its fullUrl urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53 does not match the full target URL urn:uuid:patient-a by Bundle resolution rules
+[9, 8] Bundle.entry[0].resource/*Patient/patient-a*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+[21, 8] Bundle.entry[1].resource/*Procedure/procedure-unsupported*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+
+Done. Times: Loading: 00:21.078, validation: 00:00.219. Max Memory = 1Gb
+

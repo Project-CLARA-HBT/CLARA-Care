@@ -1,0 +1,29 @@
+{
+  "resourceType": "Bundle",
+  "id": "bench-r4-transaction-001",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:55555555-5555-4555-8555-555555555550",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-bench-txn",
+        "name": [{"text": "Bench Transaction Patient"}]
+      },
+      "request": {"method": "POST", "url": "Patient"}
+    },
+    {
+      "fullUrl": "urn:uuid:55555555-5555-4555-8555-555555555551",
+      "resource": {
+        "resourceType": "ServiceRequest",
+        "id": "request-txn-1",
+        "status": "active",
+        "intent": "plan",
+        "code": {"coding": [{"system": "http://loinc.org", "code": "12180-9"}]},
+        "subject": {"reference": "Patient/patient-bench-txn"},
+        "authoredOn": "2026-01-01T00:00:00Z"
+      },
+      "request": {"method": "POST", "url": "ServiceRequest"}
+    }
+  ]
+}

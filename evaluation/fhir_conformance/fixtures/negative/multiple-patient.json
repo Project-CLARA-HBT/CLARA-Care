@@ -1,0 +1,47 @@
+{
+  "resourceType": "Bundle",
+  "id": "negative-multiple-patient-001",
+  "type": "collection",
+  "timestamp": "2026-07-29T08:00:00+00:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-a",
+        "name": [
+          {
+            "text": "Patient A"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:89a22446-cb53-5e32-b30b-f28d158ca169",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-b",
+        "name": [
+          {
+            "text": "Patient B"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:9cf7e104-895b-5427-a323-76b7e803c86d",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-multi-patient",
+        "status": "final",
+        "code": {
+          "text": "Blood pressure"
+        },
+        "subject": {
+          "reference": "urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53"
+        },
+        "effectiveDateTime": "2026-06-01T07:30:00+00:00"
+      }
+    }
+  ]
+}

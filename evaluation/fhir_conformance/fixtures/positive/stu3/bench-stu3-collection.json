@@ -1,0 +1,97 @@
+{
+  "resourceType": "Bundle",
+  "id": "bench-stu3-collection-001",
+  "type": "collection",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:66666666-6666-4666-8666-666666666660",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-bench-stu3",
+        "name": [{"text": "Bench STU3 Patient"}]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:66666666-6666-4666-8666-666666666661",
+      "resource": {
+        "resourceType": "ProcedureRequest",
+        "id": "request-stu3-1",
+        "status": "active",
+        "intent": "plan",
+        "code": {"coding": [{"system": "http://loinc.org", "code": "12180-9"}]},
+        "subject": {"reference": "Patient/patient-bench-stu3"},
+        "authoredOn": "2026-01-01T00:00:00Z",
+        "occurrenceDateTime": "2026-01-20T00:00:00Z"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:66666666-6666-4666-8666-666666666662",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-stu3-1",
+        "status": "final",
+        "code": {"coding": [{"system": "http://loinc.org", "code": "8867-4"}]},
+        "subject": {"reference": "Patient/patient-bench-stu3"},
+        "effectiveDateTime": "2026-01-10T00:00:00Z"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:66666666-6666-4666-8666-666666666663",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "medreq-stu3-1",
+        "status": "active",
+        "intent": "plan",
+        "medicationCodeableConcept": {"text": "Metformin 500mg"},
+        "subject": {"reference": "Patient/patient-bench-stu3"},
+        "authoredOn": "2026-02-01T00:00:00Z"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:66666666-6666-4666-8666-666666666664",
+      "resource": {
+         "resourceType": "AllergyIntolerance",
+         "id": "allergy-stu3-1",
+         "clinicalStatus": "active",
+         "verificationStatus": "confirmed",
+        "patient": {"reference": "Patient/patient-bench-stu3"},
+        "code": {"text": "Penicillin"}
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:66666666-6666-4666-8666-666666666665",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "condition-stu3-1",
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "code": {"text": "Hypertension"},
+        "subject": {"reference": "Patient/patient-bench-stu3"},
+        "onsetDateTime": "2021-01-15T00:00:00Z"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:66666666-6666-4666-8666-666666666666",
+      "resource": {
+        "resourceType": "Procedure",
+        "id": "procedure-stu3-1",
+        "status": "completed",
+        "code": {"text": "ECG"},
+        "subject": {"reference": "Patient/patient-bench-stu3"},
+        "performedDateTime": "2025-11-11T00:00:00Z"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:66666666-6666-4666-8666-666666666667",
+      "resource": {
+        "resourceType": "CarePlan",
+        "id": "careplan-stu3-1",
+        "status": "active",
+        "intent": "plan",
+        "title": "Hypertension follow-up",
+        "subject": {"reference": "Patient/patient-bench-stu3"},
+        "period": {"start": "2026-01-01T00:00:00Z"}
+      }
+    }
+  ]
+}

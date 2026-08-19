@@ -1,0 +1,35 @@
+{
+  "resourceType": "Bundle",
+  "id": "negative-cross-subject-reference-001",
+  "type": "collection",
+  "timestamp": "2026-07-29T08:00:00+00:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-a",
+        "name": [
+          {
+            "text": "Patient A"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:f6e1a542-2f68-5c68-be32-70bc62fff856",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-cross-subject",
+        "status": "final",
+        "code": {
+          "text": "Blood pressure"
+        },
+        "subject": {
+          "reference": "urn:uuid:89a22446-cb53-5e32-b30b-f28d158ca169"
+        },
+        "effectiveDateTime": "2026-06-01T07:30:00+00:00"
+      }
+    }
+  ]
+}

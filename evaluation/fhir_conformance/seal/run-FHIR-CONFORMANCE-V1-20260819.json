@@ -1,0 +1,1811 @@
+{
+  "created_at": "2026-08-19T08:03:50.031020+00:00",
+  "fixtures": [
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_dangling_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "cross_subject_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "cross_subject_reference",
+      "id": "neg-cross-subject-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/cross-subject-reference.json",
+      "sha256": "4d69f4ad1911e59951ba0493569bd9841c317e33b49ba102cdc923675aab1fa2",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_dangling_reference",
+            "entry_1_dangling_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [
+            "Patient/patient-a"
+          ],
+          "errors": [],
+          "event_count": 1,
+          "notes": [
+            "unsupported_resources_silently_dropped"
+          ]
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['entry_1_dangling_reference', 'entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "reference_rejection",
+      "id": "neg-dangling-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/dangling-reference.json",
+      "sha256": "5a0869d9dd4f483a26e7c35622077cb80e3ccd49307b5db1f6a1238ba151db6c",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['entry_1_dangling_reference', 'entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 1,
+          "dropped_types": [],
+          "errors": [],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [
+            "Patient/11111111-1111-4111-8111-111111111111"
+          ],
+          "errors": [],
+          "event_count": 0,
+          "notes": [
+            "unsupported_resources_silently_dropped"
+          ]
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "replay",
+      "id": "neg-duplicate-replay",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/duplicate-replay.json",
+      "sha256": "d712001b0128f9928df639c9a59aff4c68125e1dce8ed2259b1d26aa7fd30a8a",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 2,
+          "dropped_types": [],
+          "errors": [],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "cross_subject_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "temporal_error",
+      "id": "neg-invalid-temporal",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/invalid-temporal.json",
+      "sha256": "6e9604bc5115b51521748f5fa27f7e7c464c7f6c70dcd0ca2f71ca306b46827a",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=error",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=error",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "exactly_one_patient_required"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "bundle_must_contain_one_patient"
+          ],
+          "event_count": 0,
+          "notes": []
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['exactly_one_patient_required']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=False errors=['bundle_must_contain_one_patient']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "missing_patient",
+      "id": "neg-missing-patient",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/missing-patient.json",
+      "sha256": "d84ece38c2754d7852c6afb44bf927a7f5d95348fef603b57cf7b682dd3a5504",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['exactly_one_patient_required']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['bundle_must_contain_one_patient']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "exactly_one_patient_required"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "bundle_must_contain_one_patient"
+          ],
+          "event_count": 0,
+          "notes": []
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['exactly_one_patient_required']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=False errors=['bundle_must_contain_one_patient']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "multiple_patient",
+      "id": "neg-multiple-patient",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/multiple-patient.json",
+      "sha256": "8857021603c6b8efa5c591065cb391823a48e6792e9c98b82bc87b67c149d224",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['exactly_one_patient_required']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['bundle_must_contain_one_patient']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 2,
+          "dropped_types": [],
+          "errors": [],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "cross_subject_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "provenance_loss",
+      "id": "neg-provenance-loss",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/provenance-loss.json",
+      "sha256": "ddbd40793eb2c550626ec7c1846233b91f4b9668aa05a96e44e0c4c0282f2ab4",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_resource_type_unsupported",
+            "entry_1_dangling_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [
+            "Patient/patient-a"
+          ],
+          "errors": [],
+          "event_count": 1,
+          "notes": [
+            "unsupported_resources_silently_dropped"
+          ]
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "resource_unsupported",
+      "id": "neg-unsupported-resource",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/unsupported-resource.json",
+      "sha256": "07d14ba4064ca61c4bfdad0a2968ae21daa2d112cbe8462d60ec54c46b1dde23",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_resource_type_unsupported",
+            "entry_1_dangling_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_stu3": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [
+            "Patient/patient-a",
+            "ServiceRequest/request-r4-only"
+          ],
+          "errors": [],
+          "event_count": 0,
+          "notes": [
+            "unsupported_resources_silently_dropped"
+          ]
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_stu3": {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_stu3",
+          "verdict": "PASS"
+        }
+      },
+      "category": "version_mismatch",
+      "id": "neg-version-mismatch",
+      "label": "synthetic",
+      "mode": "stu3",
+      "path": "fixtures/negative/version-mismatch-stu3-r4.json",
+      "sha256": "cb722f640c0e82c77cd21906335b70b1cd073d324f9c594d1ace706644d49aeb",
+      "structural": {
+        "hl7_stu3": {
+          "detail": "structural=error",
+          "gate": "hl7_stu3",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=error",
+          "gate": "hl7_stu3",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_stu3",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_dangling_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "cross_subject_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "wrong_patient_reference",
+      "id": "neg-wrong-patient-reference",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/negative/wrong-patient-reference.json",
+      "sha256": "9980c4e6b4a534c1c5912fcf15271bc16bd65fb3a662507995f58b84847de5b6",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "entry_2_resource_type_unsupported",
+            "entry_6_resource_type_unsupported",
+            "entry_1_dangling_reference",
+            "entry_2_dangling_reference",
+            "entry_3_dangling_reference",
+            "entry_4_dangling_reference",
+            "entry_5_dangling_reference",
+            "entry_6_dangling_reference",
+            "entry_7_dangling_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [
+            "Patient/patient-bench-r4"
+          ],
+          "errors": [],
+          "event_count": 7,
+          "notes": [
+            "unsupported_resources_silently_dropped"
+          ]
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['entry_2_resource_type_unsupported', 'entry_6_resource_type_unsupported', 'entry_1_dangling_reference', 'entry_2_dangling_reference', 'entry_3_dangling_reference', 'entry_4_dangling_reference', 'entry_5_dangling_reference', 'entry_6_dangling_reference', 'entry_7_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "positive",
+      "id": "pos-r4-bench-collection",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/bench-r4-collection.json",
+      "sha256": "dce64e260e309c1b4cbc8e3e9310adad95f53bddb0ca81a9ae6747702dcfc1bd",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['entry_2_resource_type_unsupported', 'entry_6_resource_type_unsupported', 'entry_1_dangling_reference', 'entry_2_dangling_reference', 'entry_3_dangling_reference', 'entry_4_dangling_reference', 'entry_5_dangling_reference', 'entry_6_dangling_reference', 'entry_7_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "unsupported_bundle_type",
+            "entry_1_resource_type_unsupported",
+            "entry_1_dangling_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [
+            "Patient/patient-bench-txn"
+          ],
+          "errors": [],
+          "event_count": 1,
+          "notes": [
+            "unsupported_resources_silently_dropped"
+          ]
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['unsupported_bundle_type', 'entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "positive",
+      "id": "pos-r4-bench-transaction",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/bench-r4-transaction.json",
+      "sha256": "94186baddc878eb3985c0b4bfdb741d20637ba0ee740a3acf85e8128b5af7087",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['unsupported_bundle_type', 'entry_1_resource_type_unsupported', 'entry_1_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 2,
+          "dropped_types": [],
+          "errors": [],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "invalid_fhir_bundle"
+          ],
+          "event_count": 0,
+          "notes": []
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=False errors=['invalid_fhir_bundle']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "positive",
+      "id": "pos-r4-document",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/lifemap-document-r4.json",
+      "sha256": "48a590bcb760d15c7f6310e9ec095d57f4a6ae668c7f6374a8f29a7476cfb8cf",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['invalid_fhir_bundle']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 10,
+          "dropped_types": [],
+          "errors": [],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "cross_subject_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "positive",
+      "id": "pos-r4-full",
+      "label": "synthetic",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/lifemap-full-export-r4.json",
+      "sha256": "5d560a42ae3349200748947625accd25d7b9595b9eb8ec1f8c83f0f745ea5353",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['cross_subject_reference']",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 1,
+          "dropped_types": [],
+          "errors": [],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_r4": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [
+            "Patient/11111111-1111-4111-8111-111111111111"
+          ],
+          "errors": [],
+          "event_count": 0,
+          "notes": [
+            "unsupported_resources_silently_dropped"
+          ]
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_r4": {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      },
+      "category": "positive",
+      "id": "pos-r4-golden",
+      "label": "repo",
+      "mode": "r4",
+      "path": "fixtures/positive/r4/lifemap-summary-r4.json",
+      "sha256": "d712001b0128f9928df639c9a59aff4c68125e1dce8ed2259b1d26aa7fd30a8a",
+      "structural": {
+        "hl7_r4": {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_r4",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {
+        "api_r4": {
+          "accepted": false,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_resource_type_unsupported",
+            "entry_6_resource_type_unsupported",
+            "entry_1_dangling_reference",
+            "entry_2_dangling_reference",
+            "entry_3_dangling_reference",
+            "entry_4_dangling_reference",
+            "entry_5_dangling_reference",
+            "entry_6_dangling_reference",
+            "entry_7_dangling_reference"
+          ],
+          "event_count": 0,
+          "notes": []
+        },
+        "bench_stu3": {
+          "accepted": true,
+          "available": true,
+          "candidate_count": 0,
+          "dropped_types": [
+            "Patient/patient-bench-stu3"
+          ],
+          "errors": [],
+          "event_count": 7,
+          "notes": [
+            "unsupported_resources_silently_dropped"
+          ]
+        }
+      },
+      "application_semantic": {
+        "api_r4": {
+          "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_6_resource_type_unsupported', 'entry_1_dangling_reference', 'entry_2_dangling_reference', 'entry_3_dangling_reference', 'entry_4_dangling_reference', 'entry_5_dangling_reference', 'entry_6_dangling_reference', 'entry_7_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        "bench_stu3": {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_stu3",
+          "verdict": "PASS"
+        }
+      },
+      "category": "positive",
+      "id": "pos-stu3-bench-collection",
+      "label": "synthetic",
+      "mode": "stu3",
+      "path": "fixtures/positive/stu3/bench-stu3-collection.json",
+      "sha256": "4eb805a077c54dfcfdc59f7d43cdaff99f5417293ef2d4f31285386086c7acca",
+      "structural": {
+        "hl7_stu3": {
+          "detail": "structural=valid",
+          "gate": "hl7_stu3",
+          "verdict": "PASS"
+        }
+      },
+      "verdicts": [
+        {
+          "detail": "structural=valid",
+          "gate": "hl7_stu3",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=False errors=['entry_1_resource_type_unsupported', 'entry_6_resource_type_unsupported', 'entry_1_dangling_reference', 'entry_2_dangling_reference', 'entry_3_dangling_reference', 'entry_4_dangling_reference', 'entry_5_dangling_reference', 'entry_6_dangling_reference', 'entry_7_dangling_reference']",
+          "gate": "api_r4",
+          "verdict": "PASS"
+        },
+        {
+          "detail": "accepted=True errors=[]",
+          "gate": "bench_stu3",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "app": {},
+      "application_semantic": {},
+      "category": "snapshot_input",
+      "id": "snapshot_input",
+      "label": "synthetic",
+      "mode": "n/a",
+      "path": "fixtures/snapshot-inputs/export-snapshot.json",
+      "sha256": "9d06999f398454c1d558e40a233bdff01503bd234b15f222ebd65dbef699f609",
+      "structural": {},
+      "verdicts": []
+    }
+  ],
+  "freeze_id": "FHIR-CONFORMANCE-V1-20260819",
+  "gaps": [
+    {
+      "category": "replay",
+      "fixture": "neg-duplicate-replay",
+      "message": "Duplicate/replay protection is endpoint-level (Idempotency-Key + payload digest); not measurable offline without the DB-backed API."
+    },
+    {
+      "category": "temporal_error",
+      "fixture": "neg-invalid-temporal",
+      "message": "HL7 r4 rejects this fixture but the api_r4 application gate accepts it; the CLARA gate does not validate this domain."
+    },
+    {
+      "category": "provenance_loss",
+      "fixture": "neg-provenance-loss",
+      "message": "Provenance is accepted by the import gate but never becomes a capture candidate (documented product policy); provenance preservation is therefore N/D for import candidates."
+    },
+    {
+      "category": "version_mismatch",
+      "fixture": "neg-version-mismatch",
+      "message": "HL7 stu3 rejects this fixture but the bench_stu3 application gate accepts it; the CLARA gate does not validate this domain."
+    },
+    {
+      "category": "temporal_mapping",
+      "fixture": "pos-stu3-bench-collection",
+      "message": "Bench temporal mapping does not parse STU3 canonical ProcedureRequest.occurrenceDateTime (valid_at stays None); counted in temporal_mapping_correctness:bench_stu3."
+    }
+  ],
+  "git_sha": "aa82a75644f9a3d7409a13198bc36f421949cc34",
+  "preservation": {
+    "api_r4_acceptance": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=api_r4; denominators from fixture manifest expected-accept set",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "api_r4_resource_preservation": {
+      "d": 18,
+      "denominator": 18,
+      "n": 18,
+      "na": false,
+      "name": "resource_preservation_accuracy:api_r4",
+      "note": "gate=api_r4; non-event types excluded per ingest policy",
+      "numerator": 18,
+      "ratio": 1.0
+    },
+    "api_r4_source_reference": {
+      "d": 18,
+      "denominator": 18,
+      "n": 18,
+      "na": false,
+      "name": "source_reference_reconstruction:api_r4",
+      "note": "gate=api_r4; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 18,
+      "ratio": 1.0
+    },
+    "api_r4_subject_rejection": {
+      "d": 4,
+      "denominator": 4,
+      "n": 4,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=api_r4; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 4,
+      "ratio": 1.0
+    },
+    "bench_r4_acceptance": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=bench_r4; denominators from fixture manifest expected-accept set",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "bench_r4_resource_preservation": {
+      "d": 10,
+      "denominator": 10,
+      "n": 10,
+      "na": false,
+      "name": "resource_preservation_accuracy:bench_r4",
+      "note": "gate=bench_r4; non-event types excluded per ingest policy",
+      "numerator": 10,
+      "ratio": 1.0
+    },
+    "bench_r4_source_reference": {
+      "d": 10,
+      "denominator": 10,
+      "n": 10,
+      "na": false,
+      "name": "source_reference_reconstruction:bench_r4",
+      "note": "gate=bench_r4; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 10,
+      "ratio": 1.0
+    },
+    "bench_r4_subject_rejection": {
+      "d": 4,
+      "denominator": 4,
+      "n": 4,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=bench_r4; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 4,
+      "ratio": 1.0
+    },
+    "bench_r4_temporal_mapping": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "temporal_mapping_correctness:bench_r4",
+      "note": "recognized source fields -> TimelineEvent.valid_at; fields not in the bench candidate list (e.g. STU3 occurrenceDateTime) are counted as gaps",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_acceptance": {
+      "d": 2,
+      "denominator": 2,
+      "n": 2,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=bench_stu3; denominators from fixture manifest expected-accept set",
+      "numerator": 2,
+      "ratio": 1.0
+    },
+    "bench_stu3_resource_preservation": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "resource_preservation_accuracy:bench_stu3",
+      "note": "gate=bench_stu3; non-event types excluded per ingest policy",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_source_reference": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "source_reference_reconstruction:bench_stu3",
+      "note": "gate=bench_stu3; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_subject_rejection": {
+      "d": 0,
+      "denominator": 0,
+      "n": 0,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=bench_stu3; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 0,
+      "ratio": null
+    },
+    "bench_stu3_temporal_mapping": {
+      "d": 5,
+      "denominator": 5,
+      "n": 5,
+      "na": false,
+      "name": "temporal_mapping_correctness:bench_stu3",
+      "note": "recognized source fields -> TimelineEvent.valid_at; fields not in the bench candidate list (e.g. STU3 occurrenceDateTime) are counted as gaps",
+      "numerator": 5,
+      "ratio": 1.0
+    },
+    "provenance_candidate_retention": {
+      "d": 0,
+      "denominator": 1,
+      "n": 1,
+      "na": false,
+      "name": "provenance_candidate_retention",
+      "note": "Provenance is parsed but excluded from import candidates by product policy",
+      "numerator": 0,
+      "ratio": 0.0
+    },
+    "temporal_mapping_export": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "temporal_mapping_correctness_export",
+      "note": "snapshot -> R4 export via production mapper (pure function)",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "unsupported_behavior": [
+      {
+        "api_r4": {
+          "accepted": false,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_resource_type_unsupported",
+            "entry_1_dangling_reference"
+          ]
+        },
+        "bench_r4": {
+          "accepted": true,
+          "dropped_types": [
+            "Patient/patient-a"
+          ],
+          "errors": []
+        },
+        "fixture_id": "neg-unsupported-resource",
+        "modes": [
+          "api_r4",
+          "bench_r4"
+        ],
+        "path": "fixtures/negative/unsupported-resource.json"
+      }
+    ]
+  },
+  "validator": {
+    "execution": "OK",
+    "fixtures": [
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/cross-subject-reference.json",
+        "messages": [
+          "[-1, -1] Bundle.entry[1].resource/*Observation/obs-cross-subject*/.subject: Warning - URN reference is not locally contained within the bundle urn:uuid:89a22446-cb53-5e32-b30b-f28d158ca169",
+          "[9, 8] Bundle.entry[0].resource/*Patient/patient-a*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[21, 8] Bundle.entry[1].resource/*Observation/obs-cross-subject*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[21, 8] Bundle.entry[1].resource/*Observation/obs-cross-subject*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:30.459, validation: 00:00.251. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "4d69f4ad1911e59951ba0493569bd9841c317e33b49ba102cdc923675aab1fa2",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 4
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/dangling-reference.json",
+        "messages": [
+          "[-1, -1] Bundle.entry[1].resource/*CarePlan/careplan-dangling*/.goal[0]: Warning - URN reference is not locally contained within the bundle urn:uuid:99999999-9999-4999-8999-999999999999",
+          "[-1, -1] Bundle.entry[1].resource/*CarePlan/careplan-dangling*/.subject: Warning - Entry 0 matches the reference Patient/patient-a by type and id but its fullUrl urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53 does not match the full target URL urn:uuid:patient-a by Bundle resolution rules",
+          "[9, 8] Bundle.entry[0].resource/*Patient/patient-a*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[21, 8] Bundle.entry[1].resource/*CarePlan/careplan-dangling*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:24.166, validation: 00:00.229. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "5a0869d9dd4f483a26e7c35622077cb80e3ccd49307b5db1f6a1238ba151db6c",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 4
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/duplicate-replay.json",
+        "messages": [
+          "[6, 8] Bundle.meta.tag[0].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/export-status' could not be found, so the code cannot be validated",
+          "[10, 8] Bundle.meta.tag[1].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/mapping-version' could not be found, so the code cannot be validated",
+          "[25, 8] Bundle.entry[0].resource/*Patient/11111111-1111-4111-8111-111111111111*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[33, 14] Bundle.entry[0].resource/*Patient/11111111-1111-4111-8111-111111111111*/.meta.tag[0].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/export-status' could not be found, so the code cannot be validated",
+          "",
+          "Done. Times: Loading: 00:28.363, validation: 00:01.596. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "d712001b0128f9928df639c9a59aff4c68125e1dce8ed2259b1d26aa7fd30a8a",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 3,
+          "warning": 1
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 1,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/invalid-temporal.json",
+        "messages": [
+          "[9, 8] Bundle.entry[0].resource/*Patient/11111111-1111-4111-8111-111111111111*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[21, 8] Bundle.entry[1].resource/*Observation/obs-invalid-temporal*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[21, 8] Bundle.entry[1].resource/*Observation/obs-invalid-temporal*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[31, 52] Bundle.entry[1].resource/*Observation/obs-invalid-temporal*/.effective.ofType(dateTime): Error - Not a valid date/time format: '2026-02-30T00:00:00Z'",
+          "",
+          "Done. Times: Loading: 00:24.613, validation: 00:00.245. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "6e9604bc5115b51521748f5fa27f7e7c464c7f6c70dcd0ca2f71ca306b46827a",
+        "severity": {
+          "error": 1,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 3
+        },
+        "structural": "error",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/missing-patient.json",
+        "messages": [
+          "[9, 8] Bundle.entry[0].resource/*Observation/obs-no-patient*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[9, 8] Bundle.entry[0].resource/*Observation/obs-no-patient*/: Warning - Best Practice Recommendation: In general, all observations should have a subject",
+          "[9, 8] Bundle.entry[0].resource/*Observation/obs-no-patient*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[15, 10] Bundle.entry[0].resource/*Observation/obs-no-patient*/.value.ofType(Quantity): Warning - Unable to validate code 'mm[Hg]' in system 'http://unitsofmeasure.org' because the validator is running without terminology services",
+          "",
+          "Done. Times: Loading: 00:22.559, validation: 00:00.231. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "d84ece38c2754d7852c6afb44bf927a7f5d95348fef603b57cf7b682dd3a5504",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 4
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/multiple-patient.json",
+        "messages": [
+          "[9, 8] Bundle.entry[0].resource/*Patient/patient-a*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[21, 8] Bundle.entry[1].resource/*Patient/patient-b*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[33, 8] Bundle.entry[2].resource/*Observation/obs-multi-patient*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[33, 8] Bundle.entry[2].resource/*Observation/obs-multi-patient*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:28.110, validation: 00:00.312. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "8857021603c6b8efa5c591065cb391823a48e6792e9c98b82bc87b67c149d224",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 4
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/provenance-loss.json",
+        "messages": [
+          "[9, 8] Bundle.entry[0].resource/*Patient/11111111-1111-4111-8111-111111111111*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[21, 8] Bundle.entry[1].resource/*Observation/obs-0001*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[21, 8] Bundle.entry[1].resource/*Observation/obs-0001*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[32, 10] Bundle.entry[1].resource/*Observation/obs-0001*/.value.ofType(Quantity): Warning - Unable to validate code 'mm[Hg]' in system 'http://unitsofmeasure.org' because the validator is running without terminology services",
+          "[42, 8] Bundle.entry[2].resource/*Provenance/prov-omitted-by-import-policy*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:22.873, validation: 00:00.215. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "ddbd40793eb2c550626ec7c1846233b91f4b9668aa05a96e44e0c4c0282f2ab4",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 5
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/unsupported-resource.json",
+        "messages": [
+          "[-1, -1] Bundle.entry[1].resource/*Procedure/procedure-unsupported*/.subject: Warning - Entry 0 matches the reference Patient/patient-a by type and id but its fullUrl urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53 does not match the full target URL urn:uuid:patient-a by Bundle resolution rules",
+          "[9, 8] Bundle.entry[0].resource/*Patient/patient-a*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[21, 8] Bundle.entry[1].resource/*Procedure/procedure-unsupported*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:21.078, validation: 00:00.219. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "07d14ba4064ca61c4bfdad0a2968ae21daa2d112cbe8462d60ec54c46b1dde23",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 3
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 1,
+        "fhir_version": "3.0.2",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/version-mismatch-stu3-r4.json",
+        "messages": [
+          "[14, 6] Bundle.entry[1]: Error - Constraint failed: bdl-5: 'must be a resource unless there's a request or response'",
+          "[16, 8] Bundle.entry[1].resource: Fatal - Contained resource does not appear to be a FHIR resource (unknown name 'ServiceRequest')",
+          "",
+          "Done. Times: Loading: 00:22.155, validation: 00:00.300. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "stu3",
+        "payload_sha256": "cb722f640c0e82c77cd21906335b70b1cd073d324f9c594d1ace706644d49aeb",
+        "severity": {
+          "error": 1,
+          "fatal": 1,
+          "hint": 0,
+          "info": 0,
+          "warning": 0
+        },
+        "structural": "error",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/wrong-patient-reference.json",
+        "messages": [
+          "[9, 8] Bundle.entry[0].resource/*Patient/patient-a*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[21, 8] Bundle.entry[1].resource/*Observation/obs-wrong-patient*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[21, 8] Bundle.entry[1].resource/*Observation/obs-wrong-patient*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:26.907, validation: 00:00.232. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "9980c4e6b4a534c1c5912fcf15271bc16bd65fb3a662507995f58b84847de5b6",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 3
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/positive/r4/bench-r4-collection.json",
+        "messages": [
+          "[-1, -1] Bundle.entry[1].resource/*Observation/obs-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-r4 by type and id but its fullUrl urn:uuid:44444444-4444-4444-8444-444444444440 does not match the full target URL urn:uuid:patient-bench-r4 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[2].resource/*ServiceRequest/request-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-r4 by type and id but its fullUrl urn:uuid:44444444-4444-4444-8444-444444444440 does not match the full target URL urn:uuid:patient-bench-r4 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[3].resource/*MedicationRequest/medreq-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-r4 by type and id but its fullUrl urn:uuid:44444444-4444-4444-8444-444444444440 does not match the full target URL urn:uuid:patient-bench-r4 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[4].resource/*AllergyIntolerance/allergy-1*/.patient: Warning - Entry 0 matches the reference Patient/patient-bench-r4 by type and id but its fullUrl urn:uuid:44444444-4444-4444-8444-444444444440 does not match the full target URL urn:uuid:patient-bench-r4 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[5].resource/*Condition/condition-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-r4 by type and id but its fullUrl urn:uuid:44444444-4444-4444-8444-444444444440 does not match the full target URL urn:uuid:patient-bench-r4 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[6].resource/*Procedure/procedure-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-r4 by type and id but its fullUrl urn:uuid:44444444-4444-4444-8444-444444444440 does not match the full target URL urn:uuid:patient-bench-r4 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[7].resource/*CarePlan/careplan-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-r4 by type and id but its fullUrl urn:uuid:44444444-4444-4444-8444-444444444440 does not match the full target URL urn:uuid:patient-bench-r4 by Bundle resolution rules",
+          "[8, 8] Bundle.entry[0].resource/*Patient/patient-bench-r4*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[16, 8] Bundle.entry[1].resource/*Observation/obs-1*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[16, 8] Bundle.entry[1].resource/*Observation/obs-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[27, 8] Bundle.entry[2].resource/*ServiceRequest/request-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[40, 8] Bundle.entry[3].resource/*MedicationRequest/medreq-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[52, 8] Bundle.entry[4].resource/*AllergyIntolerance/allergy-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[63, 8] Bundle.entry[5].resource/*Condition/condition-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[81, 8] Bundle.entry[6].resource/*Procedure/procedure-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[92, 8] Bundle.entry[7].resource/*CarePlan/careplan-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:25.420, validation: 00:00.306. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "dce64e260e309c1b4cbc8e3e9310adad95f53bddb0ca81a9ae6747702dcfc1bd",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 16
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/positive/r4/bench-r4-transaction.json",
+        "messages": [
+          "[-1, -1] Bundle.entry[1].resource/*ServiceRequest/request-txn-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-txn by type and id but its fullUrl urn:uuid:55555555-5555-4555-8555-555555555550 does not match the full target URL urn:uuid:patient-bench-txn by Bundle resolution rules",
+          "[8, 8] Bundle.entry[0].resource/*Patient/patient-bench-txn*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[17, 8] Bundle.entry[1].resource/*ServiceRequest/request-txn-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:22.206, validation: 00:00.228. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "94186baddc878eb3985c0b4bfdb741d20637ba0ee740a3acf85e8128b5af7087",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 3
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/positive/r4/lifemap-document-r4.json",
+        "messages": [
+          "[13, 8] Bundle.entry[0].resource/*Composition/composition-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[50, 8] Bundle.entry[1].resource/*Patient/11111111-1111-4111-8111-111111111111*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[58, 14] Bundle.entry[1].resource/*Patient/11111111-1111-4111-8111-111111111111*/.meta.tag[0].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/export-status' could not be found, so the code cannot be validated",
+          "[81, 8] Bundle.entry[2].resource/*Observation/obs-0001*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[81, 8] Bundle.entry[2].resource/*Observation/obs-0001*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[97, 10] Bundle.entry[2].resource/*Observation/obs-0001*/.value.ofType(Quantity): Warning - Unable to validate code 'kg' in system 'http://unitsofmeasure.org' because the validator is running without terminology services",
+          "",
+          "Done. Times: Loading: 00:23.707, validation: 00:01.856. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "48a590bcb760d15c7f6310e9ec095d57f4a6ae668c7f6374a8f29a7476cfb8cf",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 1,
+          "warning": 5
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/positive/r4/lifemap-full-export-r4.json",
+        "messages": [
+          "[6, 8] Bundle.meta.tag[0].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/export-status' could not be found, so the code cannot be validated",
+          "[10, 8] Bundle.meta.tag[1].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/mapping-version' could not be found, so the code cannot be validated",
+          "[25, 8] Bundle.entry[0].resource/*Patient/11111111-1111-4111-8111-111111111111*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[33, 14] Bundle.entry[0].resource/*Patient/11111111-1111-4111-8111-111111111111*/.meta.tag[0].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/export-status' could not be found, so the code cannot be validated",
+          "[57, 8] Bundle.entry[1].resource/*Observation/obs-0001*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "[57, 8] Bundle.entry[1].resource/*Observation/obs-0001*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[66, 10] Bundle.entry[1].resource/*Observation/obs-0001*/.code.coding[0].system: Warning - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/fixture' could not be found, so the code cannot be validated",
+          "[79, 10] Bundle.entry[1].resource/*Observation/obs-0001*/.value.ofType(Quantity): Warning - Unable to validate code 'mm[Hg]' in system 'http://unitsofmeasure.org' because the validator is running without terminology services",
+          "[89, 8] Bundle.entry[2].resource/*AllergyIntolerance/allergy-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[132, 8] Bundle.entry[3].resource/*Condition/condition-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[167, 8] Bundle.entry[4].resource/*MedicationStatement/medication-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[199, 8] Bundle.entry[5].resource/*Goal/goal-episode-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[218, 8] Bundle.entry[6].resource/*Task/task-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[237, 8] Bundle.entry[7].resource/*CarePlan/episode-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[268, 8] Bundle.entry[8].resource/*QuestionnaireResponse/answer-1*/: Information - No questionnaire is identified, so no validation can be performed against the base questionnaire",
+          "[268, 8] Bundle.entry[8].resource/*QuestionnaireResponse/answer-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[296, 8] Bundle.entry[9].resource/*DocumentReference/document-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[316, 47] Bundle.entry[9].resource/*DocumentReference/document-1*/.content[0].attachment.contentType: Information - The value provided ('application/pdf') could not be validated in the absence of a terminology server",
+          "[325, 8] Bundle.entry[10].resource/*Consent/consent-full-export-20260729-001*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[344, 12] Bundle.entry[10].resource/*Consent/consent-full-export-20260729-001*/.category[0]: Information - Could not confirm that the codes provided are from the extensible value set http://hl7.org/fhir/ValueSet/consent-category|4.0.1 because there is no terminology service",
+          "[363, 10] Bundle.entry[10].resource/*Consent/consent-full-export-20260729-001*/.policyRule: Warning - None of the codings provided are in the value set 'Consent PolicyRule Codes' (http://hl7.org/fhir/ValueSet/consent-policy|4.0.1), and a coding should come from this value set unless it has no suitable code (note that the validator cannot judge what is suitable) (codes = http://terminology.hl7.org/CodeSystem/v3-ActCode#OPTIN)",
+          "[375, 14] Bundle.entry[10].resource/*Consent/consent-full-export-20260729-001*/.provision.purpose[0].system: Warning - A definition for CodeSystem 'https://theclaracare.com/fhir/export-purpose' could not be found, so the code cannot be validated",
+          "[375, 14] Bundle.entry[10].resource/*Consent/consent-full-export-20260729-001*/.provision.purpose[0]: Warning - The Coding provided (https://theclaracare.com/fhir/export-purpose#self_download) was not found in the value set 'PurposeOfUse' (http://terminology.hl7.org/ValueSet/v3-PurposeOfUse|3.1.0), and a code should come from this value set unless it has no suitable code (note that the validator cannot judge what is suitable).  (error message = A definition for CodeSystem 'https://theclaracare.com/fhir/export-purpose' could not be found, so the code cannot be validated; The provided code 'https://theclaracare.com/fhir/export-purpose#self_download' was not found in the value set 'http://terminology.hl7.org/ValueSet/v3-PurposeOfUse|3.1.0')",
+          "[385, 8] Bundle.entry[11].resource/*AuditEvent/audit-full-export-20260729-001*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[428, 8] Bundle.entry[12].resource/*Provenance/prov-obs-0001*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[473, 8] Bundle.entry[13].resource/*Provenance/prov-medication-1*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "",
+          "Done. Times: Loading: 00:24.021, validation: 00:01.752. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "5d560a42ae3349200748947625accd25d7b9595b9eb8ec1f8c83f0f745ea5353",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 6,
+          "warning": 20
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "4.0.1",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/positive/r4/lifemap-summary-r4.json",
+        "messages": [
+          "[6, 8] Bundle.meta.tag[0].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/export-status' could not be found, so the code cannot be validated",
+          "[10, 8] Bundle.meta.tag[1].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/mapping-version' could not be found, so the code cannot be validated",
+          "[25, 8] Bundle.entry[0].resource/*Patient/11111111-1111-4111-8111-111111111111*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "[33, 14] Bundle.entry[0].resource/*Patient/11111111-1111-4111-8111-111111111111*/.meta.tag[0].system: Information - A definition for CodeSystem 'https://theclaracare.com/fhir/CodeSystem/export-status' could not be found, so the code cannot be validated",
+          "",
+          "Done. Times: Loading: 00:22.642, validation: 00:01.420. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "r4",
+        "payload_sha256": "d712001b0128f9928df639c9a59aff4c68125e1dce8ed2259b1d26aa7fd30a8a",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 3,
+          "warning": 1
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      },
+      {
+        "execution": "OK",
+        "exit_status": 0,
+        "fhir_version": "3.0.2",
+        "fixture": "/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/positive/stu3/bench-stu3-collection.json",
+        "messages": [
+          "[-1, -1] Bundle.entry[1].resource/*ProcedureRequest/request-stu3-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-stu3 by type and id but its fullUrl urn:uuid:66666666-6666-4666-8666-666666666660 does not match the full target URL urn:uuid:patient-bench-stu3 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[2].resource/*Observation/obs-stu3-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-stu3 by type and id but its fullUrl urn:uuid:66666666-6666-4666-8666-666666666660 does not match the full target URL urn:uuid:patient-bench-stu3 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[3].resource/*MedicationRequest/medreq-stu3-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-stu3 by type and id but its fullUrl urn:uuid:66666666-6666-4666-8666-666666666660 does not match the full target URL urn:uuid:patient-bench-stu3 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[4].resource/*AllergyIntolerance/allergy-stu3-1*/.patient: Warning - Entry 0 matches the reference Patient/patient-bench-stu3 by type and id but its fullUrl urn:uuid:66666666-6666-4666-8666-666666666660 does not match the full target URL urn:uuid:patient-bench-stu3 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[5].resource/*Condition/condition-stu3-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-stu3 by type and id but its fullUrl urn:uuid:66666666-6666-4666-8666-666666666660 does not match the full target URL urn:uuid:patient-bench-stu3 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[6].resource/*Procedure/procedure-stu3-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-stu3 by type and id but its fullUrl urn:uuid:66666666-6666-4666-8666-666666666660 does not match the full target URL urn:uuid:patient-bench-stu3 by Bundle resolution rules",
+          "[-1, -1] Bundle.entry[7].resource/*CarePlan/careplan-stu3-1*/.subject: Warning - Entry 0 matches the reference Patient/patient-bench-stu3 by type and id but its fullUrl urn:uuid:66666666-6666-4666-8666-666666666660 does not match the full target URL urn:uuid:patient-bench-stu3 by Bundle resolution rules",
+          "[29, 8] Bundle.entry[2].resource/*Observation/obs-stu3-1*/: Warning - Best Practice Recommendation: In general, all observations should have a performer",
+          "",
+          "Done. Times: Loading: 00:23.062, validation: 00:00.353. Max Memory = 1Gb",
+          ""
+        ],
+        "mode": "stu3",
+        "payload_sha256": "4eb805a077c54dfcfdc59f7d43cdaff99f5417293ef2d4f31285386086c7acca",
+        "severity": {
+          "error": 0,
+          "fatal": 0,
+          "hint": 0,
+          "info": 0,
+          "warning": 8
+        },
+        "structural": "valid",
+        "validator_version": "6.9.12"
+      }
+    ],
+    "jar_available": true,
+    "jar_sha256": "0e53ab1d1a6f1e35f505255c0b8ce10a35fcf27e6e96b503640f784cd07e5ad6",
+    "pin": {
+      "artifact": "validator_cli.jar",
+      "sha256": "0e53ab1d1a6f1e35f505255c0b8ce10a35fcf27e6e96b503640f784cd07e5ad6",
+      "version": "6.9.12"
+    }
+  }
+}

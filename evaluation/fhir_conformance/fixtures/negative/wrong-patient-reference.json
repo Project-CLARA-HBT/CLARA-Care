@@ -1,0 +1,35 @@
+{
+  "resourceType": "Bundle",
+  "id": "negative-wrong-patient-reference-001",
+  "type": "collection",
+  "timestamp": "2026-07-29T08:00:00+00:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-a",
+        "name": [
+          {
+            "text": "Patient A"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:bf60a1a5-6d4a-5be7-bc85-3b9f0f1e2c62",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-wrong-patient",
+        "status": "final",
+        "code": {
+          "text": "Weight"
+        },
+        "subject": {
+          "reference": "Patient/patient-b"
+        },
+        "effectiveDateTime": "2026-06-01T07:30:00+00:00"
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+FHIR Validation tool Version 6.9.12 (Git# 73c432b5f43d). Built 2026-07-15T16:03:53.162Z (34 days old)
+  Java:   25.0.2 from /usr/lib/jvm/java-25-openjdk on amd64 (64bit). 1946MB available
+  Paths:  Current = /home/nguyennt/Documents/CLARA-Care, Package Cache = /home/nguyennt/.fhir/packages
+  Params: /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/missing-patient.json -version 4.0.1 -tx n/a -output-style compact
+  Locale: United States/US
+  Jurisdiction: United States of America
+Loading
+  Loading FHIR v4.0.1 from hl7.fhir.r4.core#4.0.1
+  Load hl7.terminology.r4#6.2.0 - 4288 resources (00:09.443)
+  Load hl7.fhir.uv.extensions.r4#5.2.0 - 759 resources (00:02.123)
+  Loaded FHIR - 8265 resources (00:00.000)
+  Terminology server null - Version n/a: No Terminology Server (00:00.000)
+  Load hl7.fhir.uv.extensions.r5#5.2.0 - 759 resources (00:01.873)
+  Load hl7.terminology.r5#7.1.0 - 4072 resources (00:01.286)
+  Load hl7.fhir.uv.extensions.r5#5.3.0 - 856 resources (00:00.014)
+  Load hl7.terminology#7.3.0 - 4146 resources (00:01.474)
+  Load hl7.fhir.uv.extensions#5.3.0 - 856 resources (00:01.000)
+  Package Summary: [hl7.fhir.r4.core#4.0.1, hl7.fhir.xver-extensions#0.1.0, hl7.terminology.r4#6.2.0, hl7.fhir.uv.extensions.r4#5.2.0, hl7.fhir.uv.extensions.r5#5.2.0, hl7.terminology.r5#7.1.0, hl7.fhir.uv.extensions.r5#5.3.0, hl7.terminology#7.3.0, hl7.fhir.uv.extensions#5.3.0]
+  Terminology Cache at /tmp/default-tx-cache
+  Get set... 
+  ...go! (00:05.285)
+Cached new session. Cache size = 1
+Sources to validate: /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/missing-patient.json
+Validating
+  Validate /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/missing-patient.json
+ 00:00.230
+Done. Times: Loading: 00:22.559, validation: 00:00.231. Memory = 669Mb
+
+
+----------------------------------------------------------------------------------
+/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/missing-patient.json 02:58:38
+[9, 8] Bundle.entry[0].resource/*Observation/obs-no-patient*/: Warning - Best Practice Recommendation: In general, all observations should have a performer
+[9, 8] Bundle.entry[0].resource/*Observation/obs-no-patient*/: Warning - Best Practice Recommendation: In general, all observations should have a subject
+[9, 8] Bundle.entry[0].resource/*Observation/obs-no-patient*/: Warning - Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+[15, 10] Bundle.entry[0].resource/*Observation/obs-no-patient*/.value.ofType(Quantity): Warning - Unable to validate code 'mm[Hg]' in system 'http://unitsofmeasure.org' because the validator is running without terminology services
+
+Done. Times: Loading: 00:22.559, validation: 00:00.231. Max Memory = 1Gb
+

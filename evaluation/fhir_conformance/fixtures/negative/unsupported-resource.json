@@ -1,0 +1,35 @@
+{
+  "resourceType": "Bundle",
+  "id": "negative-unsupported-resource-001",
+  "type": "collection",
+  "timestamp": "2026-07-29T08:00:00+00:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:41d9752c-b7b6-5a8e-ba22-85294fb10a53",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-a",
+        "name": [
+          {
+            "text": "Patient A"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:32b3a762-cd8b-53b3-b126-cf8c5ecf06be",
+      "resource": {
+        "resourceType": "Procedure",
+        "id": "procedure-unsupported",
+        "status": "completed",
+        "code": {
+          "text": "Surgical procedure"
+        },
+        "subject": {
+          "reference": "Patient/patient-a"
+        },
+        "performedDateTime": "2025-11-11T00:00:00Z"
+      }
+    }
+  ]
+}

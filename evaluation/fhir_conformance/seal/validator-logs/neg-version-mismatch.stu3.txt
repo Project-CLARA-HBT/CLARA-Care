@@ -1,0 +1,36 @@
+FHIR Validation tool Version 6.9.12 (Git# 73c432b5f43d). Built 2026-07-15T16:03:53.162Z (34 days old)
+  Java:   25.0.2 from /usr/lib/jvm/java-25-openjdk on amd64 (64bit). 1946MB available
+  Paths:  Current = /home/nguyennt/Documents/CLARA-Care, Package Cache = /home/nguyennt/.fhir/packages
+  Params: /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/version-mismatch-stu3-r4.json -version 3.0.2 -tx n/a -output-style compact
+  Locale: United States/US
+  Jurisdiction: United States of America
+Loading
+  Loading FHIR v3.0.2 from hl7.fhir.r3.core#3.0.2
+  Load hl7.terminology.r3#6.2.0 - 4288 resources (00:07.487)
+  Load hl7.fhir.uv.extensions.r3#5.2.0 - 759 resources (00:00.035)
+  Loaded FHIR - 9066 resources (00:00.000)
+  Terminology server null - Version n/a: No Terminology Server (00:00.001)
+  Load hl7.fhir.uv.extensions.r5#5.2.0 - 759 resources (00:01.748)
+  Load hl7.terminology.r5#7.1.0 - 4072 resources (00:02.030)
+  Load hl7.fhir.uv.extensions.r5#5.3.0 - 856 resources (00:00.013)
+  Load hl7.terminology#7.3.0 - 4146 resources (00:01.879)
+  Load hl7.fhir.uv.extensions#5.3.0 - 856 resources (00:00.980)
+  Package Summary: [hl7.fhir.r3.core#3.0.2, hl7.fhir.xver-extensions#0.1.0, hl7.terminology.r3#6.2.0, hl7.fhir.uv.extensions.r3#5.2.0, hl7.fhir.uv.extensions.r5#5.2.0, hl7.terminology.r5#7.1.0, hl7.fhir.uv.extensions.r5#5.3.0, hl7.terminology#7.3.0, hl7.fhir.uv.extensions#5.3.0]
+  Terminology Cache at /tmp/default-tx-cache
+  Get set... 
+  ...go! (00:07.912)
+Cached new session. Cache size = 1
+Sources to validate: /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/version-mismatch-stu3-r4.json
+Validating
+  Validate /home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/version-mismatch-stu3-r4.json
+ 00:00.299
+Done. Times: Loading: 00:22.155, validation: 00:00.300. Memory = 350Mb
+
+
+----------------------------------------------------------------------------------
+/home/nguyennt/Documents/CLARA-Care/evaluation/fhir_conformance/fixtures/negative/version-mismatch-stu3-r4.json 03:00:21
+[14, 6] Bundle.entry[1]: Error - Constraint failed: bdl-5: 'must be a resource unless there's a request or response'
+[16, 8] Bundle.entry[1].resource: Fatal - Contained resource does not appear to be a FHIR resource (unknown name 'ServiceRequest')
+
+Done. Times: Loading: 00:22.155, validation: 00:00.300. Max Memory = 1Gb
+

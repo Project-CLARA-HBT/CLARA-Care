@@ -1,0 +1,99 @@
+{
+  "snapshot_kind": "clara_lifemap_canonical_snapshot_v1",
+  "profile": {
+    "public_id": "snapshot-patient-1",
+    "full_name": "Snapshot Fixture Patient",
+    "date_of_birth": "1985-04-12",
+    "gender": "female",
+    "allergies": [
+      {
+        "id": "allergy-1",
+        "substance": "Penicillin",
+        "verification_status": "confirmed",
+        "reaction": "Mề đay",
+        "information_source": "self-declared"
+      }
+    ],
+    "conditions": [
+      {
+        "id": "condition-1",
+        "name": "Tăng huyết áp",
+        "status": "active",
+        "verification_status": "confirmed",
+        "diagnosed_on": "2021-01-15"
+      }
+    ]
+  },
+  "actor_role": "owner",
+  "events": [
+    {
+      "public_id": "obs-snap-1",
+      "event_type": "measurement",
+      "truth_state": "confirmed",
+      "occurred_at": "2026-06-01T07:30:00+00:00",
+      "source_kind": "device",
+      "payload": {
+        "display": "Huyết áp",
+        "value": 120,
+        "unit": "mmHg",
+        "ucum_code": "mm[Hg]"
+      }
+    }
+  ],
+  "answers": [
+    {
+      "public_id": "answer-snap-1",
+      "truth_state": "confirmed",
+      "occurred_at": "2026-06-15T09:00:00+00:00",
+      "payload": {
+        "field_key": "smoking",
+        "question": "Bạn có hút thuốc không?",
+        "answer": "Không"
+      }
+    }
+  ],
+  "episodes": [
+    {
+      "id": "episode-snap-1",
+      "public_id": "episode-snap-1",
+      "title": "Theo dõi tăng huyết áp",
+      "goal": "Kiểm soát huyết áp",
+      "status": "active"
+    }
+  ],
+  "tasks": [
+    {
+      "public_id": "task-snap-1",
+      "episode_id": "episode-snap-1",
+      "title": "Đo huyết áp mỗi sáng",
+      "status": "accepted",
+      "created_at": "2026-05-01T06:00:00+00:00"
+    }
+  ],
+  "medications": [
+    {
+      "public_id": "medication-snap-1",
+      "medication_name": "Amlodipine 5mg",
+      "original_text": "Amlodipine 5mg",
+      "normalization_system": "",
+      "normalization_code": "",
+      "status": "active",
+      "dose_text": "5mg",
+      "schedule_text": "mỗi sáng",
+      "route_text": "uống",
+      "started_at": "2026-01-01T00:00:00+00:00",
+      "ended_at": "2026-06-30T00:00:00+00:00",
+      "truth_state": "confirmed"
+    }
+  ],
+  "documents": [
+    {
+      "public_id": "document-snap-1",
+      "title": "Kết quả xét nghiệm tháng 3",
+      "document_kind": "laboratory_report",
+      "media_type": "application/pdf",
+      "status": "current",
+      "created_at": "2026-03-10T00:00:00+00:00"
+    }
+  ]
+}

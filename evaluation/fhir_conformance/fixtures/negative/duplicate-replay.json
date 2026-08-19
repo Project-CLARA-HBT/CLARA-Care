@@ -1,0 +1,49 @@
+{
+  "resourceType": "Bundle",
+  "id": "88888888-8888-4888-8888-888888888888",
+  "meta": {
+    "tag": [
+      {
+        "system": "https://theclaracare.com/fhir/CodeSystem/export-status",
+        "code": "clara-r4-summary-not-ips"
+      },
+      {
+        "system": "https://theclaracare.com/fhir/CodeSystem/mapping-version",
+        "code": "clara-lifemap-fhir-r4-v1"
+      }
+    ]
+  },
+  "identifier": {
+    "system": "https://theclaracare.com/fhir/export",
+    "value": "88888888-8888-4888-8888-888888888888"
+  },
+  "type": "collection",
+  "timestamp": "2026-07-29T00:00:00+00:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "11111111-1111-4111-8111-111111111111",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Patient"
+          ],
+          "tag": [
+            {
+              "system": "https://theclaracare.com/fhir/CodeSystem/export-status",
+              "code": "clara-r4-summary-not-ips",
+              "display": "FHIR R4 summary; IPS conformance not asserted"
+            }
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://theclaracare.com/fhir/profile",
+            "value": "11111111-1111-4111-8111-111111111111"
+          }
+        ]
+      }
+    }
+  ]
+}

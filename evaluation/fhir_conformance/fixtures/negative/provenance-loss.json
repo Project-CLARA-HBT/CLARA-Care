@@ -1,0 +1,61 @@
+{
+  "resourceType": "Bundle",
+  "id": "negative-provenance-loss-001",
+  "type": "collection",
+  "timestamp": "2026-07-29T08:00:00+00:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "11111111-1111-4111-8111-111111111111",
+        "name": [
+          {
+            "text": "Patient A"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:3d623a4f-7e20-5005-b410-304a969b337d",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-0001",
+        "status": "final",
+        "code": {
+          "text": "Blood pressure"
+        },
+        "subject": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "effectiveDateTime": "2026-06-01T07:30:00+00:00",
+        "valueQuantity": {
+          "value": 118,
+          "unit": "mmHg",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:6e4b1cc1-13d6-5e3f-8f54-f7e5b4c2ad11",
+      "resource": {
+        "resourceType": "Provenance",
+        "id": "prov-omitted-by-import-policy",
+        "target": [
+          {
+            "reference": "urn:uuid:3d623a4f-7e20-5005-b410-304a969b337d"
+          }
+        ],
+        "recorded": "2026-07-29T08:00:00+00:00",
+        "agent": [
+          {
+            "who": {
+              "display": "Synthetic fixture source"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,517 @@
+{
+  "resourceType": "Bundle",
+  "id": "full-export-20260729-001",
+  "meta": {
+    "tag": [
+      {
+        "system": "https://theclaracare.com/fhir/CodeSystem/export-status",
+        "code": "clara-r4-summary-not-ips"
+      },
+      {
+        "system": "https://theclaracare.com/fhir/CodeSystem/mapping-version",
+        "code": "clara-lifemap-fhir-r4-v1"
+      }
+    ]
+  },
+  "identifier": {
+    "system": "https://theclaracare.com/fhir/export",
+    "value": "full-export-20260729-001"
+  },
+  "type": "collection",
+  "timestamp": "2026-07-29T08:00:00+00:00",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "11111111-1111-4111-8111-111111111111",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Patient"
+          ],
+          "tag": [
+            {
+              "system": "https://theclaracare.com/fhir/CodeSystem/export-status",
+              "code": "clara-r4-summary-not-ips",
+              "display": "FHIR R4 summary; IPS conformance not asserted"
+            }
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://theclaracare.com/fhir/profile",
+            "value": "11111111-1111-4111-8111-111111111111"
+          }
+        ],
+        "name": [
+          {
+            "text": "Fixture Patient"
+          }
+        ],
+        "birthDate": "1985-04-12",
+        "gender": "female"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:3d623a4f-7e20-5005-b410-304a969b337d",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-0001",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Observation"
+          ]
+        },
+        "status": "final",
+        "code": {
+          "text": "Huyết áp",
+          "coding": [
+            {
+              "system": "https://theclaracare.com/fhir/CodeSystem/fixture",
+              "code": "blood-pressure"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "effectiveDateTime": "2026-06-01T07:30:00+00:00",
+        "valueQuantity": {
+          "value": 120,
+          "unit": "mmHg",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:f792c478-fd75-5006-9796-54f0f8d776ec",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/AllergyIntolerance"
+          ]
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "text": "Penicillin"
+        },
+        "patient": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "reaction": [
+          {
+            "manifestation": [
+              {
+                "text": "Mề đay"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:6746d180-e7bd-5867-8f66-8562fd4b74f2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "condition-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Condition"
+          ]
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "text": "Tăng huyết áp"
+        },
+        "subject": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "onsetDateTime": "2021-01-15T00:00:00+00:00"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:e48a7688-b4b2-5f7a-ba41-b0d19474f280",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "medication-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/MedicationStatement"
+          ]
+        },
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Amlodipine 5mg"
+        },
+        "subject": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "effectivePeriod": {
+          "start": "2026-01-01T00:00:00+00:00",
+          "end": "2026-06-30T00:00:00+00:00"
+        },
+        "dateAsserted": "2026-07-29T08:00:00+00:00",
+        "informationSource": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "dosage": [
+          {
+            "text": "5mg · mỗi sáng · đường uống"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:730d1b40-7d05-53f0-ab31-16050c58faa4",
+      "resource": {
+        "resourceType": "Goal",
+        "id": "goal-episode-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Goal"
+          ]
+        },
+        "lifecycleStatus": "active",
+        "description": {
+          "text": "Kiểm soát huyết áp dưới 140/90"
+        },
+        "subject": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:74eaf1aa-a462-5e59-89f5-9f45e7362177",
+      "resource": {
+        "resourceType": "Task",
+        "id": "task-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Task"
+          ]
+        },
+        "status": "accepted",
+        "intent": "plan",
+        "description": "Đo huyết áp mỗi sáng",
+        "for": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "authoredOn": "2026-05-01T06:00:00+00:00"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:ebdcd885-8df5-5e4e-bc94-391f06076218",
+      "resource": {
+        "resourceType": "CarePlan",
+        "id": "episode-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/CarePlan"
+          ]
+        },
+        "status": "active",
+        "intent": "plan",
+        "title": "Theo dõi tăng huyết áp",
+        "description": "User-managed LifeMap episode; not a clinician order.",
+        "subject": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "goal": [
+          {
+            "reference": "urn:uuid:730d1b40-7d05-53f0-ab31-16050c58faa4"
+          }
+        ],
+        "activity": [
+          {
+            "reference": {
+              "reference": "urn:uuid:74eaf1aa-a462-5e59-89f5-9f45e7362177"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:1c8279f1-62d2-5673-872c-e711d84d4e43",
+      "resource": {
+        "resourceType": "QuestionnaireResponse",
+        "id": "answer-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse"
+          ]
+        },
+        "status": "completed",
+        "subject": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "authored": "2026-06-15T09:00:00+00:00",
+        "item": [
+          {
+            "linkId": "smoking",
+            "text": "Bạn có hút thuốc không?",
+            "answer": [
+              {
+                "valueString": "Không"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:6dd6b075-20c1-5c2a-8f39-9f7b023571b6",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "document-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/DocumentReference"
+          ]
+        },
+        "status": "current",
+        "type": {
+          "text": "laboratory_report"
+        },
+        "subject": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "date": "2026-03-10T00:00:00+00:00",
+        "description": "Kết quả xét nghiệm tháng 3",
+        "content": [
+          {
+            "attachment": {
+              "contentType": "application/pdf",
+              "title": "Kết quả xét nghiệm tháng 3"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:8201d9ce-4817-5167-98a3-81385073d44d",
+      "resource": {
+        "resourceType": "Consent",
+        "id": "consent-full-export-20260729-001",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Consent"
+          ]
+        },
+        "status": "active",
+        "scope": {
+          "text": "patient-privacy",
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/consentscope",
+              "code": "patient-privacy"
+            }
+          ]
+        },
+        "category": [
+          {
+            "text": "Patient Consent",
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "59284-0"
+              }
+            ]
+          }
+        ],
+        "patient": {
+          "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+        },
+        "dateTime": "2026-07-29T08:00:00+00:00",
+        "performer": [
+          {
+            "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+          }
+        ],
+        "policyRule": {
+          "text": "CLARA purpose-bound export policy",
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+              "code": "OPTIN"
+            }
+          ]
+        },
+        "provision": {
+          "type": "permit",
+          "purpose": [
+            {
+              "system": "https://theclaracare.com/fhir/export-purpose",
+              "code": "self_download"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:300eebb1-86ef-5995-bd32-2d86584485bd",
+      "resource": {
+        "resourceType": "AuditEvent",
+        "id": "audit-full-export-20260729-001",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/AuditEvent"
+          ]
+        },
+        "type": {
+          "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+          "code": "rest",
+          "display": "Restful Operation"
+        },
+        "action": "E",
+        "recorded": "2026-07-29T08:00:00+00:00",
+        "outcome": "0",
+        "agent": [
+          {
+            "requestor": true,
+            "who": {
+              "identifier": {
+                "system": "https://theclaracare.com/fhir/actor-role",
+                "value": "owner"
+              }
+            }
+          }
+        ],
+        "source": {
+          "observer": {
+            "display": "CLARA API"
+          }
+        },
+        "entity": [
+          {
+            "what": {
+              "reference": "urn:uuid:37f0c4d3-6ec2-53ac-85b8-5dd4ac35358d"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:f3c805d7-747e-51c4-a449-97af90b5b177",
+      "resource": {
+        "resourceType": "Provenance",
+        "id": "prov-obs-0001",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Provenance"
+          ]
+        },
+        "target": [
+          {
+            "reference": "urn:uuid:3d623a4f-7e20-5005-b410-304a969b337d"
+          }
+        ],
+        "recorded": "2026-07-29T08:00:00+00:00",
+        "agent": [
+          {
+            "type": {
+              "text": "assembler",
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "assembler"
+                }
+              ]
+            },
+            "who": {
+              "display": "CLARA LifeMap export"
+            }
+          }
+        ],
+        "entity": [
+          {
+            "role": "source",
+            "what": {
+              "identifier": {
+                "system": "https://theclaracare.com/fhir/source-kind",
+                "value": "reported"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:44dcc52f-3b6b-5a00-b903-417b8bfcf074",
+      "resource": {
+        "resourceType": "Provenance",
+        "id": "prov-medication-1",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Provenance"
+          ]
+        },
+        "target": [
+          {
+            "reference": "urn:uuid:e48a7688-b4b2-5f7a-ba41-b0d19474f280"
+          }
+        ],
+        "recorded": "2026-07-29T08:00:00+00:00",
+        "agent": [
+          {
+            "type": {
+              "text": "assembler",
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+                  "code": "assembler"
+                }
+              ]
+            },
+            "who": {
+              "display": "CLARA LifeMap export"
+            }
+          }
+        ],
+        "entity": [
+          {
+            "role": "source",
+            "what": {
+              "identifier": {
+                "system": "https://theclaracare.com/fhir/source-kind",
+                "value": "confirmed-medication-course"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

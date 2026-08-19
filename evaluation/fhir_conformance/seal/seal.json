@@ -1,0 +1,250 @@
+{
+  "admin_fields": {
+    "note": "Support letter, signatures, advisor confirmation, and the exact milestone date are HUMAN administrative gates (H-009, FHIR-05). They are never fabricated and are not part of this machine seal.",
+    "status": "MANUAL_GATE"
+  },
+  "artifact_sha256_manifest": "4c72c5b426dbbafbaa4a2d06c7be87bfc02c30f9dea42757c0aad161496c32ea",
+  "created_at": "2026-08-19T08:03:54.117057+00:00",
+  "fixture_counts": {
+    "negative": 10,
+    "positive": 6,
+    "snapshot_input": 1
+  },
+  "freeze_id": "FHIR-CONFORMANCE-V1-20260819",
+  "gaps": [
+    {
+      "category": "replay",
+      "fixture": "neg-duplicate-replay",
+      "message": "Duplicate/replay protection is endpoint-level (Idempotency-Key + payload digest); not measurable offline without the DB-backed API."
+    },
+    {
+      "category": "temporal_error",
+      "fixture": "neg-invalid-temporal",
+      "message": "HL7 r4 rejects this fixture but the api_r4 application gate accepts it; the CLARA gate does not validate this domain."
+    },
+    {
+      "category": "provenance_loss",
+      "fixture": "neg-provenance-loss",
+      "message": "Provenance is accepted by the import gate but never becomes a capture candidate (documented product policy); provenance preservation is therefore N/D for import candidates."
+    },
+    {
+      "category": "version_mismatch",
+      "fixture": "neg-version-mismatch",
+      "message": "HL7 stu3 rejects this fixture but the bench_stu3 application gate accepts it; the CLARA gate does not validate this domain."
+    },
+    {
+      "category": "temporal_mapping",
+      "fixture": "pos-stu3-bench-collection",
+      "message": "Bench temporal mapping does not parse STU3 canonical ProcedureRequest.occurrenceDateTime (valid_at stays None); counted in temporal_mapping_correctness:bench_stu3."
+    }
+  ],
+  "git_sha": "aa82a75644f9a3d7409a13198bc36f421949cc34",
+  "layer_verdict_summary": {
+    "clara_application_semantic": {
+      "PASS": 32
+    },
+    "hl7_structural": {
+      "PASS": 16
+    }
+  },
+  "preservation": {
+    "api_r4_acceptance": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=api_r4; denominators from fixture manifest expected-accept set",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "api_r4_resource_preservation": {
+      "d": 18,
+      "denominator": 18,
+      "n": 18,
+      "na": false,
+      "name": "resource_preservation_accuracy:api_r4",
+      "note": "gate=api_r4; non-event types excluded per ingest policy",
+      "numerator": 18,
+      "ratio": 1.0
+    },
+    "api_r4_source_reference": {
+      "d": 18,
+      "denominator": 18,
+      "n": 18,
+      "na": false,
+      "name": "source_reference_reconstruction:api_r4",
+      "note": "gate=api_r4; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 18,
+      "ratio": 1.0
+    },
+    "api_r4_subject_rejection": {
+      "d": 4,
+      "denominator": 4,
+      "n": 4,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=api_r4; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 4,
+      "ratio": 1.0
+    },
+    "bench_r4_acceptance": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=bench_r4; denominators from fixture manifest expected-accept set",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "bench_r4_resource_preservation": {
+      "d": 10,
+      "denominator": 10,
+      "n": 10,
+      "na": false,
+      "name": "resource_preservation_accuracy:bench_r4",
+      "note": "gate=bench_r4; non-event types excluded per ingest policy",
+      "numerator": 10,
+      "ratio": 1.0
+    },
+    "bench_r4_source_reference": {
+      "d": 10,
+      "denominator": 10,
+      "n": 10,
+      "na": false,
+      "name": "source_reference_reconstruction:bench_r4",
+      "note": "gate=bench_r4; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 10,
+      "ratio": 1.0
+    },
+    "bench_r4_subject_rejection": {
+      "d": 4,
+      "denominator": 4,
+      "n": 4,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=bench_r4; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 4,
+      "ratio": 1.0
+    },
+    "bench_r4_temporal_mapping": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "temporal_mapping_correctness:bench_r4",
+      "note": "recognized source fields -> TimelineEvent.valid_at; fields not in the bench candidate list (e.g. STU3 occurrenceDateTime) are counted as gaps",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_acceptance": {
+      "d": 2,
+      "denominator": 2,
+      "n": 2,
+      "na": false,
+      "name": "supported_resource_acceptance",
+      "note": "gate=bench_stu3; denominators from fixture manifest expected-accept set",
+      "numerator": 2,
+      "ratio": 1.0
+    },
+    "bench_stu3_resource_preservation": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "resource_preservation_accuracy:bench_stu3",
+      "note": "gate=bench_stu3; non-event types excluded per ingest policy",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_source_reference": {
+      "d": 7,
+      "denominator": 7,
+      "n": 7,
+      "na": false,
+      "name": "source_reference_reconstruction:bench_stu3",
+      "note": "gate=bench_stu3; resource_type/resource_id traced to bundle entry; bench TimelineEvent does not retain Bundle.fullUrl",
+      "numerator": 7,
+      "ratio": 1.0
+    },
+    "bench_stu3_subject_rejection": {
+      "d": 0,
+      "denominator": 0,
+      "n": 0,
+      "na": false,
+      "name": "subject_rejection_accuracy",
+      "note": "gate=bench_stu3; categories=['cross_subject_reference', 'missing_patient', 'multiple_patient', 'wrong_patient_reference']",
+      "numerator": 0,
+      "ratio": null
+    },
+    "bench_stu3_temporal_mapping": {
+      "d": 5,
+      "denominator": 5,
+      "n": 5,
+      "na": false,
+      "name": "temporal_mapping_correctness:bench_stu3",
+      "note": "recognized source fields -> TimelineEvent.valid_at; fields not in the bench candidate list (e.g. STU3 occurrenceDateTime) are counted as gaps",
+      "numerator": 5,
+      "ratio": 1.0
+    },
+    "provenance_candidate_retention": {
+      "d": 0,
+      "denominator": 1,
+      "n": 1,
+      "na": false,
+      "name": "provenance_candidate_retention",
+      "note": "Provenance is parsed but excluded from import candidates by product policy",
+      "numerator": 0,
+      "ratio": 0.0
+    },
+    "temporal_mapping_export": {
+      "d": 6,
+      "denominator": 6,
+      "n": 6,
+      "na": false,
+      "name": "temporal_mapping_correctness_export",
+      "note": "snapshot -> R4 export via production mapper (pure function)",
+      "numerator": 6,
+      "ratio": 1.0
+    },
+    "unsupported_behavior": [
+      {
+        "api_r4": {
+          "accepted": false,
+          "dropped_types": [],
+          "errors": [
+            "entry_1_resource_type_unsupported",
+            "entry_1_dangling_reference"
+          ]
+        },
+        "bench_r4": {
+          "accepted": true,
+          "dropped_types": [
+            "Patient/patient-a"
+          ],
+          "errors": []
+        },
+        "fixture_id": "neg-unsupported-resource",
+        "modes": [
+          "api_r4",
+          "bench_r4"
+        ],
+        "path": "fixtures/negative/unsupported-resource.json"
+      }
+    ]
+  },
+  "validator": {
+    "execution": "OK",
+    "jar_available": true,
+    "jar_sha256": "0e53ab1d1a6f1e35f505255c0b8ce10a35fcf27e6e96b503640f784cd07e5ad6",
+    "pin": {
+      "artifact": "validator_cli.jar",
+      "sha256": "0e53ab1d1a6f1e35f505255c0b8ce10a35fcf27e6e96b503640f784cd07e5ad6",
+      "version": "6.9.12"
+    }
+  },
+  "verdict_summary": {
+    "PASS": 48
+  }
+}
