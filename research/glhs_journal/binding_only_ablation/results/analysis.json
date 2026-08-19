@@ -1,0 +1,204 @@
+{
+  "adversarial_schedule_count": 256,
+  "claim_eligible": true,
+  "control_schedule_count": 64,
+  "controls": {
+    "acceptance": {
+      "FULL_GOVERNANCE_NO_EXACT_BINDING": {
+        "valid_commit_acceptance": 1.0,
+        "valid_commit_acceptance_denominator": 64,
+        "valid_commit_acceptance_numerator": 64
+      },
+      "GLHS_EXACT_BINDING": {
+        "valid_commit_acceptance": 1.0,
+        "valid_commit_acceptance_denominator": 64,
+        "valid_commit_acceptance_numerator": 64
+      }
+    },
+    "rejection_reason_distribution": {
+      "FULL_GOVERNANCE_NO_EXACT_BINDING": {},
+      "GLHS_EXACT_BINDING": {
+        "proposal_evidence_not_disclosed": 128,
+        "proposal_manifest_digest_mismatch": 32,
+        "proposal_snapshot_binding_required": 8,
+        "proposal_snapshot_digest_mismatch": 32,
+        "proposal_snapshot_expired": 32,
+        "proposal_snapshot_scope_forbidden": 24
+      }
+    }
+  },
+  "execution_count": 640,
+  "expected_admissibility_audit": {
+    "mismatches": [],
+    "valid": true
+  },
+  "freeze_id": "GLHS-BINDING-ABLATION-20260819-01",
+  "gate_c_arm_diff": {
+    "checked_schedules": 320,
+    "duplicate_or_unknown_pairs": [],
+    "mismatches": [],
+    "missing_arm_schedule_ids": [],
+    "unexpected_schedule_ids": [],
+    "valid": true
+  },
+  "note": "N fixed at freeze time (256 adversarial + 64 controls); no adaptive sample-size increase (GLHS-A06).",
+  "per_family": {
+    "1": {
+      "bootstrap_iterations": 10000,
+      "bootstrap_seed": 20260819,
+      "ci95_paired_bootstrap": [
+        1.0,
+        1.0
+      ],
+      "denominator": 32,
+      "discordant_arm_a_admitted_arm_b_rejected": 32,
+      "discordant_arm_a_rejected_arm_b_admitted": 0,
+      "invalid_commit_acceptance_arm_a": 1.0,
+      "invalid_commit_acceptance_arm_b": 0.0,
+      "mcnemar_exact_two_sided_p": 4.656612873077393e-10,
+      "numerator_arm_a": 32,
+      "numerator_arm_b": 0,
+      "risk_difference_arm_a_minus_arm_b": 1.0
+    },
+    "2": {
+      "bootstrap_iterations": 10000,
+      "bootstrap_seed": 20260819,
+      "ci95_paired_bootstrap": [
+        1.0,
+        1.0
+      ],
+      "denominator": 32,
+      "discordant_arm_a_admitted_arm_b_rejected": 32,
+      "discordant_arm_a_rejected_arm_b_admitted": 0,
+      "invalid_commit_acceptance_arm_a": 1.0,
+      "invalid_commit_acceptance_arm_b": 0.0,
+      "mcnemar_exact_two_sided_p": 4.656612873077393e-10,
+      "numerator_arm_a": 32,
+      "numerator_arm_b": 0,
+      "risk_difference_arm_a_minus_arm_b": 1.0
+    },
+    "3": {
+      "bootstrap_iterations": 10000,
+      "bootstrap_seed": 20260819,
+      "ci95_paired_bootstrap": [
+        1.0,
+        1.0
+      ],
+      "denominator": 32,
+      "discordant_arm_a_admitted_arm_b_rejected": 32,
+      "discordant_arm_a_rejected_arm_b_admitted": 0,
+      "invalid_commit_acceptance_arm_a": 1.0,
+      "invalid_commit_acceptance_arm_b": 0.0,
+      "mcnemar_exact_two_sided_p": 4.656612873077393e-10,
+      "numerator_arm_a": 32,
+      "numerator_arm_b": 0,
+      "risk_difference_arm_a_minus_arm_b": 1.0
+    },
+    "4": {
+      "bootstrap_iterations": 10000,
+      "bootstrap_seed": 20260819,
+      "ci95_paired_bootstrap": [
+        1.0,
+        1.0
+      ],
+      "denominator": 32,
+      "discordant_arm_a_admitted_arm_b_rejected": 32,
+      "discordant_arm_a_rejected_arm_b_admitted": 0,
+      "invalid_commit_acceptance_arm_a": 1.0,
+      "invalid_commit_acceptance_arm_b": 0.0,
+      "mcnemar_exact_two_sided_p": 4.656612873077393e-10,
+      "numerator_arm_a": 32,
+      "numerator_arm_b": 0,
+      "risk_difference_arm_a_minus_arm_b": 1.0
+    },
+    "5": {
+      "bootstrap_iterations": 10000,
+      "bootstrap_seed": 20260819,
+      "ci95_paired_bootstrap": [
+        1.0,
+        1.0
+      ],
+      "denominator": 32,
+      "discordant_arm_a_admitted_arm_b_rejected": 32,
+      "discordant_arm_a_rejected_arm_b_admitted": 0,
+      "invalid_commit_acceptance_arm_a": 1.0,
+      "invalid_commit_acceptance_arm_b": 0.0,
+      "mcnemar_exact_two_sided_p": 4.656612873077393e-10,
+      "numerator_arm_a": 32,
+      "numerator_arm_b": 0,
+      "risk_difference_arm_a_minus_arm_b": 1.0
+    },
+    "6": {
+      "bootstrap_iterations": 10000,
+      "bootstrap_seed": 20260819,
+      "ci95_paired_bootstrap": [
+        1.0,
+        1.0
+      ],
+      "denominator": 32,
+      "discordant_arm_a_admitted_arm_b_rejected": 32,
+      "discordant_arm_a_rejected_arm_b_admitted": 0,
+      "invalid_commit_acceptance_arm_a": 1.0,
+      "invalid_commit_acceptance_arm_b": 0.0,
+      "mcnemar_exact_two_sided_p": 4.656612873077393e-10,
+      "numerator_arm_a": 32,
+      "numerator_arm_b": 0,
+      "risk_difference_arm_a_minus_arm_b": 1.0
+    },
+    "7": {
+      "bootstrap_iterations": 10000,
+      "bootstrap_seed": 20260819,
+      "ci95_paired_bootstrap": [
+        1.0,
+        1.0
+      ],
+      "denominator": 32,
+      "discordant_arm_a_admitted_arm_b_rejected": 32,
+      "discordant_arm_a_rejected_arm_b_admitted": 0,
+      "invalid_commit_acceptance_arm_a": 1.0,
+      "invalid_commit_acceptance_arm_b": 0.0,
+      "mcnemar_exact_two_sided_p": 4.656612873077393e-10,
+      "numerator_arm_a": 32,
+      "numerator_arm_b": 0,
+      "risk_difference_arm_a_minus_arm_b": 1.0
+    },
+    "8": {
+      "bootstrap_iterations": 10000,
+      "bootstrap_seed": 20260819,
+      "ci95_paired_bootstrap": [
+        1.0,
+        1.0
+      ],
+      "denominator": 32,
+      "discordant_arm_a_admitted_arm_b_rejected": 32,
+      "discordant_arm_a_rejected_arm_b_admitted": 0,
+      "invalid_commit_acceptance_arm_a": 1.0,
+      "invalid_commit_acceptance_arm_b": 0.0,
+      "mcnemar_exact_two_sided_p": 4.656612873077393e-10,
+      "numerator_arm_a": 32,
+      "numerator_arm_b": 0,
+      "risk_difference_arm_a_minus_arm_b": 1.0
+    }
+  },
+  "primary": {
+    "bootstrap_iterations": 10000,
+    "bootstrap_seed": 20260819,
+    "ci95_paired_bootstrap": [
+      1.0,
+      1.0
+    ],
+    "denominator": 256,
+    "discordant_arm_a_admitted_arm_b_rejected": 256,
+    "discordant_arm_a_rejected_arm_b_admitted": 0,
+    "invalid_commit_acceptance_arm_a": 1.0,
+    "invalid_commit_acceptance_arm_b": 0.0,
+    "mcnemar_exact_two_sided_p": 1.727233711018889e-77,
+    "numerator_arm_a": 256,
+    "numerator_arm_b": 0,
+    "risk_difference_arm_a_minus_arm_b": 1.0
+  },
+  "run_ids": [
+    "GLHS-BA-POSTGRES-20260819-05"
+  ],
+  "schema_version": "glhs-binding-ablation-analysis.v1"
+}

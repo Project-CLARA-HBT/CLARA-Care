@@ -1,0 +1,131 @@
+{
+  "analysis_plan_hash": "1873f9aa346e6b6beb45fa8fbf098fe5fd4829691676aa5abaa3c7df69760e0d",
+  "arm_definitions": {
+    "FULL_GOVERNANCE_NO_EXACT_BINDING": "state, current authorization, policy, consent, actor, role, purpose, task, DB locking, idempotency, ordinary provenance and audit are preserved; ONLY the persisted exact THSS identity/digest/evidence dependency is omitted; implemented by calling validate_current_governance_coordinates() and SKIPPING validate_exact_disclosure_dependency(); lives ONLY under evaluation/ and is never selectable through production HTTP, env settings, tenant config or runtime flags (GLHS-A02).",
+    "GLHS_EXACT_BINDING": "identical to FULL_GOVERNANCE_NO_EXACT_BINDING plus exact THSS ID/digest/manifest/evidence-membership/expiry via validate_bound_proposal_context (composition of both primitives)."
+  },
+  "arms": [
+    "FULL_GOVERNANCE_NO_EXACT_BINDING",
+    "GLHS_EXACT_BINDING"
+  ],
+  "code_revision": "8ef508b7",
+  "environment": {
+    "db": "isolated_postgresql_random_schema OR sqlite_smoke",
+    "platform": "Linux-6.19.10-300.fc44.x86_64-x86_64-with-glibc2.43",
+    "pytest": "9.1.1",
+    "python": "3.11.15",
+    "sqlalchemy": "2.0.51"
+  },
+  "execution_note": "Each logical schedule executes once per arm (640 executions). Postgres is the final backend (isolated random schema, real production commitment admission path). SQLite smoke runs are labeled backend=sqlite_smoke and are never sealed as the final run.",
+  "freeze_id": "GLHS-BINDING-ABLATION-20260819-01",
+  "freeze_utc": "2026-08-19T00:00:00+00:00",
+  "git_sha": "8ef508b7e3f6fdc4cdd8974dbd8cea6d42560ad5",
+  "no_adaptive_sample_size_note": "N is frozen at 256 adversarial + 64 controls = 320 logical schedules and is never increased after result inspection (GLHS-A06).",
+  "primary_analysis": {
+    "adaptive_sample_size": false,
+    "bootstrap_iterations": 10000,
+    "bootstrap_seed": 20260819,
+    "ci95": "95% paired bootstrap percentile CI over the 256 pairs, deterministic seed, 10000 resamples",
+    "controls": "valid-commit acceptance per arm over 64 controls + rejection-reason distribution",
+    "denominator": 256,
+    "discordant_counts": "reported as a (arm A admits / arm B rejects) and b (arm A rejects / arm B admits)",
+    "endpoint": "Primary: paired invalid-commit acceptance on the 256 adversarial logical schedules (each executed under both arms).",
+    "exact_mcnemar": "exact two-sided McNemar test over discordant pairs",
+    "numerator": "per-arm count of adversarial schedules admitted (invalid-commit acceptance)",
+    "per_family": "identical paired statistics per family over its 32 adversarial schedules",
+    "risk_difference": "paired absolute risk difference = (a - b) / 256, a = arm A admitted & arm B rejected, b = arm A rejected & arm B admitted"
+  },
+  "protocol_hash": "60c9babee3b70697584610c6a9ff42526666414b7755f3329c9cee58e22ad95a",
+  "schedule_families": [
+    {
+      "definition": "wrong snapshot ID but same profile/current versions",
+      "disclosure_delta_type": "wrong_snapshot_id",
+      "family_id": 1,
+      "name": "wrong_snapshot_id"
+    },
+    {
+      "definition": "wrong snapshot digest",
+      "disclosure_delta_type": "wrong_snapshot_digest",
+      "family_id": 2,
+      "name": "wrong_snapshot_digest"
+    },
+    {
+      "definition": "mutated snapshot payload with unchanged current state/governance",
+      "disclosure_delta_type": "mutated_snapshot_payload",
+      "family_id": 3,
+      "name": "mutated_snapshot_payload"
+    },
+    {
+      "definition": "evidence used by proposal but absent from disclosed set",
+      "disclosure_delta_type": "evidence_not_disclosed",
+      "family_id": 4,
+      "name": "evidence_not_disclosed"
+    },
+    {
+      "definition": "substitute another valid snapshot from same profile/state version",
+      "disclosure_delta_type": "valid_snapshot_substitution",
+      "family_id": 5,
+      "name": "valid_snapshot_substitution"
+    },
+    {
+      "definition": "expired original snapshot while state/policy/consent unchanged",
+      "disclosure_delta_type": "expired_snapshot",
+      "family_id": 6,
+      "name": "expired_snapshot"
+    },
+    {
+      "definition": "minimized evidence-set swap",
+      "disclosure_delta_type": "minimized_evidence_swap",
+      "family_id": 7,
+      "name": "minimized_evidence_swap"
+    },
+    {
+      "definition": "lineage-root/snapshot substitution after human review",
+      "disclosure_delta_type": "lineage_root_substitution",
+      "family_id": 8,
+      "name": "lineage_root_substitution"
+    }
+  ],
+  "schedule_inventory": {
+    "adversarial": 256,
+    "controls": 64,
+    "per_family": {
+      "1": {
+        "adversarial": 32,
+        "controls": 8
+      },
+      "2": {
+        "adversarial": 32,
+        "controls": 8
+      },
+      "3": {
+        "adversarial": 32,
+        "controls": 8
+      },
+      "4": {
+        "adversarial": 32,
+        "controls": 8
+      },
+      "5": {
+        "adversarial": 32,
+        "controls": 8
+      },
+      "6": {
+        "adversarial": 32,
+        "controls": 8
+      },
+      "7": {
+        "adversarial": 32,
+        "controls": 8
+      },
+      "8": {
+        "adversarial": 32,
+        "controls": 8
+      }
+    },
+    "schedules_sha256": "81947281132e03c7728a48f790dc69be9f85f5159b309fe844fdd0125aaaaf54",
+    "total": 320
+  },
+  "schema_version": "glhs-binding-ablation-protocol.v1",
+  "status": "FROZEN"
+}

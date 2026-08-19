@@ -1,0 +1,25 @@
+{
+  "adapter_sha256": "696008c8f90174f0316cfb01fd5c1b8549abb2be91dd53dad40747508585c4b7",
+  "analysis_sha256": "8576cdde6f4e8768f12b22fca2b24fc9967ae79daf531f5769d6fcdd42d0bd20",
+  "backend": "isolated_postgresql_random_schema",
+  "backend_detail": {
+    "backend": "postgresql",
+    "isolation_level": "read committed",
+    "track_commit_timestamp": "off",
+    "version": "PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit"
+  },
+  "executed_executions": 640,
+  "freeze_id": "GLHS-BINDING-ABLATION-20260819-01",
+  "git_sha": "ce69991af6d2ac5f77afea29000480f907310383",
+  "note": "Isolated PostgreSQL random schema execution.",
+  "protocol_sha256": "5e03a4de6239c13688b9d63cf728dc919a8fde07540a466c54416f0c48c7874b",
+  "raw_streams": {
+    "research/glhs_journal/binding_only_ablation/results/raw/executions_GLHS-BA-POSTGRES-20260819-05.jsonl": "2bd99c506f6671fca00a688b233c1cd5d9b68a8ce34d369689b7f96a07b66b23"
+  },
+  "raw_streams_combined_sha256": "2bd99c506f6671fca00a688b233c1cd5d9b68a8ce34d369689b7f96a07b66b23",
+  "run_id": "GLHS-BA-POSTGRES-20260819-05",
+  "runner_sha256": "4c003a43d6ee6f531fd6d35854674dfd6f411290b8ec4e928a67b7c9b76716f9",
+  "schedules_sha256": "81947281132e03c7728a48f790dc69be9f85f5159b309fe844fdd0125aaaaf54",
+  "schema_version": "glhs-binding-ablation-seal.v1",
+  "sealed_at_utc": "2026-08-19T07:54:49.955834+00:00"
+}

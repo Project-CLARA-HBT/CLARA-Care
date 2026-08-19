@@ -1,0 +1,33 @@
+{
+  "arm_order": [
+    "FULL_GOVERNANCE_NO_EXACT_BINDING",
+    "GLHS_EXACT_BINDING"
+  ],
+  "backend": "isolated_postgresql_random_schema",
+  "backend_detail": {
+    "backend": "postgresql",
+    "isolation_level": "read committed",
+    "track_commit_timestamp": "off",
+    "version": "PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit"
+  },
+  "executed_executions": 640,
+  "expected_executions": 640,
+  "finished_utc": "2026-08-19T07:49:51.426429+00:00",
+  "freeze_hashes": {
+    "protocol_sha256": "5e03a4de6239c13688b9d63cf728dc919a8fde07540a466c54416f0c48c7874b",
+    "schedules_sha256": "81947281132e03c7728a48f790dc69be9f85f5159b309fe844fdd0125aaaaf54"
+  },
+  "freeze_id": "GLHS-BINDING-ABLATION-20260819-01",
+  "note": "Isolated PostgreSQL random schema; final run candidate.",
+  "protocol_path": "evaluation/glhs_binding_only_ablation/protocol.json",
+  "protocol_sha256": "5e03a4de6239c13688b9d63cf728dc919a8fde07540a466c54416f0c48c7874b",
+  "raw_stream": "raw/executions_GLHS-BA-POSTGRES-20260819-05.jsonl",
+  "run_id": "GLHS-BA-POSTGRES-20260819-05",
+  "schedule_count": 320,
+  "schedules_path": "evaluation/glhs_binding_only_ablation/schedules.json",
+  "schedules_sha256": "81947281132e03c7728a48f790dc69be9f85f5159b309fe844fdd0125aaaaf54",
+  "schema_retained": false,
+  "source_revision": "ce69991a",
+  "source_sha256": "ce69991af6d2ac5f77afea29000480f907310383",
+  "started_utc": "2026-08-19T07:48:34.588809+00:00"
+}

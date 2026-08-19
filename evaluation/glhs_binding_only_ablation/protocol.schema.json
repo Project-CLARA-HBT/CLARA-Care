@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "glhs-binding-ablation-protocol.v1",
+  "description": "Frozen protocol for the GLHS evaluation-only exact-binding matched ablation (MASTER_SPEC_REVIEWER_R3_2026-08-19, section 2.3 GLHS-A01..A06, section 3.3, workstream C-004..C-011).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "freeze_id",
+    "git_sha",
+    "code_revision",
+    "protocol_hash",
+    "analysis_plan_hash",
+    "environment",
+    "arms",
+    "schedule_inventory",
+    "schedule_families",
+    "primary_analysis",
+    "freeze_utc"
+  ],
+  "properties": {
+    "schema_version": { "const": "glhs-binding-ablation-protocol.v1" },
+    "status": { "const": "FROZEN" },
+    "freeze_id": { "type": "string", "pattern": "^GLHS-BINDING-ABLATION-[0-9]{8}-[0-9]{2}$" },
+    "git_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "code_revision": { "type": "string" },
+    "protocol_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "analysis_plan_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "environment": { "type": "object" },
+    "arms": {
+      "type": "array",
+      "items": { "enum": ["FULL_GOVERNANCE_NO_EXACT_BINDING", "GLHS_EXACT_BINDING"] },
+      "minItems": 2,
+      "uniqueItems": true
+    },
+    "schedule_inventory": {
+      "type": "object",
+      "required": ["total", "adversarial", "controls", "per_family"],
+      "properties": {
+        "total": { "const": 320 },
+        "adversarial": { "const": 256 },
+        "controls": { "const": 64 },
+        "per_family": {
+          "type": "object",
+          "patternProperties": { "^[1-8]$": { "type": "object" } }
+        }
+      }
+    },
+    "schedule_families": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["family_id", "name", "disclosure_delta_type"],
+        "properties": {
+          "family_id": { "type": "integer", "minimum": 1, "maximum": 8 },
+          "name": { "type": "string" },
+          "disclosure_delta_type": { "type": "string" }
+        }
+      },
+      "minItems": 8
+    },
+    "primary_analysis": {
+      "type": "object",
+      "required": [
+        "endpoint",
+        "numerator",
+        "denominator",
+        "risk_difference",
+        "ci95",
+        "discordant_counts",
+        "exact_mcnemar",
+        "per_family",
+        "controls",
+        "adaptive_sample_size"
+      ],
+      "properties": {
+        "endpoint": { "type": "string" },
+        "numerator": { "type": "string" },
+        "denominator": { "const": 256 },
+        "risk_difference": { "type": "string" },
+        "ci95": { "type": "string" },
+        "discordant_counts": { "type": "string" },
+        "exact_mcnemar": { "type": "string" },
+        "per_family": { "type": "string" },
+        "controls": { "type": "string" },
+        "adaptive_sample_size": { "const": false },
+        "bootstrap_seed": { "type": "integer" },
+        "bootstrap_iterations": { "type": "integer", "const": 10000 }
+      }
+    },
+    "freeze_utc": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}
