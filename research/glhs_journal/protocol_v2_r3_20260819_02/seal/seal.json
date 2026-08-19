@@ -1,0 +1,15 @@
+{
+  "schema_version": "glhs-postgres-toctou-r3-seal.v1",
+  "freeze_id": "GLHS-POSTGRES-TOCTOU-R3-20260819-02",
+  "run_id": "GLHS-POSTGRES-TOCTOU-R3-20260819-02",
+  "code_sha": "ada17aab",
+  "backend": "isolated_postgresql_random_schema",
+  "logical_schedule_count": 12,
+  "executed_schedule_count": 12,
+  "status": "EXECUTED_V2_OBSERVATION_MISMATCH",
+  "claim_eligible": false,
+  "mismatch_schedule_ids": ["TOCTOU-V2-05", "TOCTOU-V2-09"],
+  "raw_run_sha256": "74b8d5b445a45000fca1c46f94be9e63b6d45b8cf9640f078c7cac66e93d738e",
+  "track_commit_timestamp": "on",
+  "note": "All 12 logical schedules executed. The two prespecified indeterminate schedules remained mismatched and are not reclassified. This seal preserves the negative execution result and does not replace any historical v1/v2 artifact."
+}

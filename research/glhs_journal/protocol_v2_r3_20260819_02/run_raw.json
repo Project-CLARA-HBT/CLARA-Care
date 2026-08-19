@@ -1,0 +1,837 @@
+{
+  "backend": "isolated_postgresql_random_schema",
+  "classification_audit": [
+    {
+      "expected_classification": "rejected",
+      "id": "TOCTOU-V2-01",
+      "matches": true,
+      "observed_classification": "rejected_after_observed_revoke_commit"
+    },
+    {
+      "expected_classification": "rejected",
+      "id": "TOCTOU-V2-02",
+      "matches": true,
+      "observed_classification": "rejected_during_or_before_governance_race"
+    },
+    {
+      "expected_classification": "rejected",
+      "id": "TOCTOU-V2-03",
+      "matches": true,
+      "observed_classification": "rejected_during_or_before_governance_race"
+    },
+    {
+      "expected_classification": "rejected",
+      "id": "TOCTOU-V2-04",
+      "matches": true,
+      "observed_classification": "rejected_during_or_before_governance_race"
+    },
+    {
+      "expected_classification": "indeterminate_ordering",
+      "id": "TOCTOU-V2-05",
+      "matches": false,
+      "observed_classification": "rejected_after_or_during_governance_race"
+    },
+    {
+      "expected_classification": "rejected",
+      "id": "TOCTOU-V2-06",
+      "matches": true,
+      "observed_classification": "rejected_after_observed_revoke_commit"
+    },
+    {
+      "expected_classification": "committed",
+      "id": "TOCTOU-V2-07",
+      "matches": true,
+      "observed_classification": "transition_committed_before_observed_revoke_commit"
+    },
+    {
+      "expected_classification": "rejected",
+      "id": "TOCTOU-V2-08",
+      "matches": true,
+      "observed_classification": "rejected_during_or_before_governance_race"
+    },
+    {
+      "expected_classification": "indeterminate_ordering",
+      "id": "TOCTOU-V2-09",
+      "matches": false,
+      "observed_classification": "rejected_during_or_before_governance_race"
+    },
+    {
+      "expected_classification": "committed",
+      "id": "TOCTOU-V2-10",
+      "matches": true,
+      "observed_classification": "committed"
+    },
+    {
+      "expected_classification": "rejected",
+      "id": "TOCTOU-V2-11",
+      "matches": true,
+      "observed_classification": "rejected_during_or_before_governance_race"
+    },
+    {
+      "expected_classification": "rejected",
+      "id": "TOCTOU-V2-12",
+      "matches": true,
+      "observed_classification": "rejected_during_or_before_governance_race"
+    }
+  ],
+  "executed_at": "2026-08-19T08:41:01.867523+00:00",
+  "not_run_schedule_ids": [],
+  "note": "Raw v2/v2.1 observations; run is claim-eligible only when status is EXECUTED_V2_FROZEN_OBSERVATIONS or EXECUTED_V21_FROZEN_OBSERVATIONS and every schedule is observer-complete. INDETERMINATE is never counted as safe.",
+  "postgres_metadata": {
+    "backend": "postgresql",
+    "isolation_level": "read committed",
+    "version": "PostgreSQL 16.14 (Debian 16.14-1.pgdg12+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit"
+  },
+  "run_id": "GLHS-POSTGRES-TOCTOU-R3-20260819-02",
+  "schedules": [
+    {
+      "committed_reconstructability": null,
+      "compound_drift": false,
+      "id": "TOCTOU-V2-01",
+      "interleaving": {
+        "barrier_phases": [
+          "release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "mutation_before_commit"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 272.192,
+      "outcome": {
+        "classification": "rejected_after_observed_revoke_commit",
+        "commit_outcome": "assertion_consent_mismatch",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "proposal_id": "995eca0c-3471-43c4-8db7-a44e30720367",
+          "snapshot_digest_sha256": "154c271d50180bae31a46a015908c15434d2d99449877adbeb3c52cbb33a9daa",
+          "snapshot_id": "0e96234c-52da-4b58-a32a-0d94cbc6f7a1"
+        },
+        "reason_code": "assertion_consent_mismatch",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "154c271d50180bae31a46a015908c15434d2d99449877adbeb3c52cbb33a9daa",
+          "snapshot_id": "0e96234c-52da-4b58-a32a-0d94cbc6f7a1"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "consent_mutation_via_persisted_consent_writer",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 886,
+            "event": "begin",
+            "monotonic_ns": 789727200106703,
+            "txid": 3665
+          },
+          {
+            "backend_pid": 886,
+            "event": "commit",
+            "monotonic_ns": 789727206828135,
+            "txid": 3666
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": false,
+      "id": "TOCTOU-V2-02",
+      "interleaving": {
+        "barrier_phases": [
+          "release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "mutation_before_commit"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 57.998,
+      "outcome": {
+        "classification": "rejected_during_or_before_governance_race",
+        "commit_outcome": "proposal_snapshot_actor_role_mismatch",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "role_change"
+      ],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "proposal_id": "b1fcd83c-1d76-45e6-9ff2-d9325b67ba1b",
+          "snapshot_digest_sha256": "bc5a11099e974ca39aeb3b1f622dac77e8440776121c89d69c4b8829ad0e4820",
+          "snapshot_id": "30d42d04-1278-4713-9f2d-2eeaeb755f22"
+        },
+        "reason_code": "proposal_snapshot_actor_role_mismatch",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "bc5a11099e974ca39aeb3b1f622dac77e8440776121c89d69c4b8829ad0e4820",
+          "snapshot_id": "30d42d04-1278-4713-9f2d-2eeaeb755f22"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "actor_role_mutation_via_persisted_role_writer",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 886,
+            "event": "begin",
+            "monotonic_ns": 789727260387424,
+            "txid": 3668
+          },
+          {
+            "backend_pid": 886,
+            "event": "commit",
+            "monotonic_ns": 789727264840959,
+            "txid": 3669
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": false,
+      "id": "TOCTOU-V2-03",
+      "interleaving": {
+        "barrier_phases": [
+          "release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "mutation_before_commit"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 52.335,
+      "outcome": {
+        "classification": "rejected_during_or_before_governance_race",
+        "commit_outcome": "assertion_policy_mismatch",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "advance_governance_policy_epoch"
+      ],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "proposal_id": "a58f29ea-f9d1-40a1-b115-913eb14e9b6b",
+          "snapshot_digest_sha256": "eace17f1d28754d3fa7c714a2b984ea7805320cb0d491082b1a386251cfeae7d",
+          "snapshot_id": "e4afd85e-dc9c-4492-9960-c244057395a7"
+        },
+        "reason_code": "assertion_policy_mismatch",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "eace17f1d28754d3fa7c714a2b984ea7805320cb0d491082b1a386251cfeae7d",
+          "snapshot_id": "e4afd85e-dc9c-4492-9960-c244057395a7"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "policy_epoch_mutation_via_persisted_policy_epoch_writer",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 886,
+            "event": "begin",
+            "monotonic_ns": 789727314952116,
+            "txid": 3672
+          },
+          {
+            "backend_pid": 886,
+            "event": "commit",
+            "monotonic_ns": 789727323533126,
+            "txid": 3673
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": false,
+      "id": "TOCTOU-V2-04",
+      "interleaving": {
+        "barrier_phases": [
+          "release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "mutation_before_commit"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 43.076,
+      "outcome": {
+        "classification": "rejected_during_or_before_governance_race",
+        "commit_outcome": "stale_state_version",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "proposal_id": "d996857a-f037-404a-ac72-e3355ab330b0",
+          "snapshot_digest_sha256": "4fcaa0910c4c78c4e4476e304edf172d56efbe277668a4f2a65aa871a3c561b4",
+          "snapshot_id": "45601597-ae98-4ad7-b553-1c05de683a66"
+        },
+        "reason_code": "stale_state_version",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "4fcaa0910c4c78c4e4476e304edf172d56efbe277668a4f2a65aa871a3c561b4",
+          "snapshot_id": "45601597-ae98-4ad7-b553-1c05de683a66"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "stale_state_version",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": null,
+            "event": "begin",
+            "monotonic_ns": 789727371475093,
+            "txid": null
+          },
+          {
+            "backend_pid": null,
+            "event": "rollback",
+            "monotonic_ns": 789727379985680,
+            "txid": null
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": false,
+      "id": "TOCTOU-V2-05",
+      "interleaving": {
+        "barrier_phases": [
+          "simultaneous_release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "simultaneous_release"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 52.462,
+      "outcome": {
+        "classification": "rejected_after_or_during_governance_race",
+        "commit_outcome": "proposal_snapshot_consent_mismatch",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "snapshot_digest_sha256": "013e2135b93a0bd672fc5f0e3c1a20cfb36a3527e94c5fe1ef2448d31296b6b8",
+          "snapshot_id": "b1cccee2-1335-4ec2-b79c-df54abf9b167"
+        },
+        "reason_code": "proposal_snapshot_consent_mismatch",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "013e2135b93a0bd672fc5f0e3c1a20cfb36a3527e94c5fe1ef2448d31296b6b8",
+          "snapshot_id": "b1cccee2-1335-4ec2-b79c-df54abf9b167"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "concurrent_governance_writer_vs_proposal_writer",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 886,
+            "event": "begin",
+            "monotonic_ns": 789727404585216,
+            "txid": 3677
+          },
+          {
+            "backend_pid": 886,
+            "event": "commit",
+            "monotonic_ns": 789727410594590,
+            "txid": 3678
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": false,
+      "id": "TOCTOU-V2-06",
+      "interleaving": {
+        "barrier_phases": [
+          "commit_release",
+          "governance_release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "mutation_before_commit"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 39.06,
+      "outcome": {
+        "classification": "rejected_after_observed_revoke_commit",
+        "commit_outcome": "assertion_consent_mismatch",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "snapshot_digest_sha256": "66109e02a5a0f982eea84ace847191f5e9078101e4b93834393110fd92b3c8fc",
+          "snapshot_id": "2c3da45d-cce9-450d-85a6-3e70cdb0ec01"
+        },
+        "reason_code": "assertion_consent_mismatch",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "66109e02a5a0f982eea84ace847191f5e9078101e4b93834393110fd92b3c8fc",
+          "snapshot_id": "2c3da45d-cce9-450d-85a6-3e70cdb0ec01"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "mutation_before_commit",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 886,
+            "event": "begin",
+            "monotonic_ns": 789727462775260,
+            "txid": 3680
+          },
+          {
+            "backend_pid": 886,
+            "event": "commit",
+            "monotonic_ns": 789727470218495,
+            "txid": 3681
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": {
+        "exact_snapshot_linkage": true,
+        "reconstruction_succeeds": true,
+        "resulting_state_version": 1,
+        "transition_exists": true
+      },
+      "compound_drift": false,
+      "id": "TOCTOU-V2-07",
+      "interleaving": {
+        "barrier_phases": [
+          "commit_release",
+          "governance_release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "commit_before_mutation_control"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 74.97,
+      "outcome": {
+        "classification": "transition_committed_before_observed_revoke_commit",
+        "commit_outcome": "transition_committed",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "rejection_auditability": null,
+      "run_status": "EXECUTED",
+      "schedule_type": "commit_before_mutation_control",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 887,
+            "event": "begin",
+            "monotonic_ns": 789727541212809,
+            "txid": 3684
+          },
+          {
+            "backend_pid": 886,
+            "event": "commit",
+            "monotonic_ns": 789727548244789,
+            "txid": 3685
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": false,
+      "id": "TOCTOU-V2-08",
+      "interleaving": {
+        "barrier_phases": [
+          "release"
+        ],
+        "competing_lock": true,
+        "coverage": [
+          "competing_lock"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 70.127,
+      "outcome": {
+        "classification": "rejected_during_or_before_governance_race",
+        "commit_outcome": "stale_state_version",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "proposal_id": "competing-lock",
+          "snapshot_digest_sha256": "c50cd2554801f478180f4df44b72708a4ec196a4241cde941939adc5364b1fdd",
+          "snapshot_id": "98872de0-6fba-4a43-ba7a-486a73871ca7"
+        },
+        "reason_code": "stale_state_version",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "c50cd2554801f478180f4df44b72708a4ec196a4241cde941939adc5364b1fdd",
+          "snapshot_id": "98872de0-6fba-4a43-ba7a-486a73871ca7"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "competing_lock",
+      "transaction_trace": {
+        "events": [],
+        "lock_waits": [
+          {
+            "acquired": true,
+            "lock": "profile-lock",
+            "waited_ns": 4853
+          },
+          {
+            "acquired": true,
+            "lock": "profile-lock",
+            "waited_ns": 20125177
+          }
+        ]
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": false,
+      "id": "TOCTOU-V2-09",
+      "interleaving": {
+        "barrier_phases": [
+          "simultaneous_release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "simultaneous_release"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 47.11,
+      "outcome": {
+        "classification": "rejected_during_or_before_governance_race",
+        "commit_outcome": "proposal_snapshot_consent_mismatch",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "consent_revoke"
+      ],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "snapshot_digest_sha256": "69c872c3b4d11fbb60381a088a1be722493a0be7d3198d8f7814288f72819d4a",
+          "snapshot_id": "caa204f7-5ef6-421e-99ad-86c493cdddaa"
+        },
+        "reason_code": "proposal_snapshot_consent_mismatch",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "69c872c3b4d11fbb60381a088a1be722493a0be7d3198d8f7814288f72819d4a",
+          "snapshot_id": "caa204f7-5ef6-421e-99ad-86c493cdddaa"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "simultaneous_release",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 887,
+            "event": "begin",
+            "monotonic_ns": 789727656149317,
+            "txid": 3690
+          },
+          {
+            "backend_pid": 887,
+            "event": "commit",
+            "monotonic_ns": 789727662893335,
+            "txid": 3692
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": {
+        "exact_snapshot_linkage": true,
+        "reconstruction_succeeds": true,
+        "resulting_state_version": 2,
+        "transition_exists": true
+      },
+      "compound_drift": false,
+      "id": "TOCTOU-V2-10",
+      "interleaving": {
+        "barrier_phases": [
+          "release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "rollback_retry"
+        ],
+        "rollback_retry": true
+      },
+      "latency_ms": 131.084,
+      "outcome": {
+        "classification": "committed",
+        "commit_outcome": "transition_committed",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [],
+      "rejection_auditability": null,
+      "run_status": "EXECUTED",
+      "schedule_type": "rollback_retry",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": null,
+            "event": "begin",
+            "monotonic_ns": 789727729154554,
+            "txid": null
+          },
+          {
+            "backend_pid": null,
+            "event": "rollback",
+            "monotonic_ns": 789727736610473,
+            "txid": null
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": true,
+      "id": "TOCTOU-V2-11",
+      "interleaving": {
+        "barrier_phases": [
+          "release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "mutation_before_commit"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 99.822,
+      "outcome": {
+        "classification": "rejected_during_or_before_governance_race",
+        "commit_outcome": "assertion_consent_mismatch",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "consent_revoke",
+        "role_change"
+      ],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "proposal_id": "6bb3ae72-b5d4-4ad8-85f1-72a1a0659828",
+          "snapshot_digest_sha256": "92b4b93e07f09c5efdce125b3e7c7a0a2042fcf8cd1cde1582e04d97f17ed3da",
+          "snapshot_id": "c79a0c58-dc8a-4045-8dae-e754d1e3897b"
+        },
+        "reason_code": "assertion_consent_mismatch",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "92b4b93e07f09c5efdce125b3e7c7a0a2042fcf8cd1cde1582e04d97f17ed3da",
+          "snapshot_id": "c79a0c58-dc8a-4045-8dae-e754d1e3897b"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "compound_drift_consent_plus_state",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 886,
+            "event": "begin",
+            "monotonic_ns": 789727850902229,
+            "txid": 3699
+          },
+          {
+            "backend_pid": 887,
+            "event": "commit",
+            "monotonic_ns": 789727871781994,
+            "txid": 3700
+          },
+          {
+            "backend_pid": 887,
+            "event": "begin",
+            "monotonic_ns": 789727876581335,
+            "txid": 3700
+          },
+          {
+            "backend_pid": 886,
+            "event": "commit",
+            "monotonic_ns": 789727882580722,
+            "txid": 3701
+          }
+        ],
+        "lock_waits": []
+      }
+    },
+    {
+      "committed_reconstructability": null,
+      "compound_drift": true,
+      "id": "TOCTOU-V2-12",
+      "interleaving": {
+        "barrier_phases": [
+          "release"
+        ],
+        "competing_lock": false,
+        "coverage": [
+          "mutation_before_commit"
+        ],
+        "rollback_retry": false
+      },
+      "latency_ms": 96.763,
+      "outcome": {
+        "classification": "rejected_during_or_before_governance_race",
+        "commit_outcome": "assertion_policy_mismatch",
+        "forbidden_commit_observed": false,
+        "operational_outcome": false,
+        "safety_success": true
+      },
+      "persisted_writers": [
+        "advance_governance_policy_epoch",
+        "consent_revoke",
+        "role_change"
+      ],
+      "rejection_auditability": {
+        "proposal_coordinate": {
+          "base_state_version": 0,
+          "proposal_id": "8a675a48-0508-44db-84fb-7ce13fcd870d",
+          "snapshot_digest_sha256": "1afcb6ae2edb59ccc03ea151d66e4149650c43f8b7c5c36d20d58aabefbdadd1",
+          "snapshot_id": "0162d480-1724-4d11-9d69-35377080350b"
+        },
+        "reason_code": "assertion_policy_mismatch",
+        "rejection_decision_event": true,
+        "snapshot_coordinate": {
+          "digest_sha256": "1afcb6ae2edb59ccc03ea151d66e4149650c43f8b7c5c36d20d58aabefbdadd1",
+          "snapshot_id": "0162d480-1724-4d11-9d69-35377080350b"
+        },
+        "zero_state_transition_rows": true
+      },
+      "run_status": "EXECUTED",
+      "schedule_type": "compound_drift_policy_plus_consent_plus_state",
+      "transaction_trace": {
+        "events": [
+          {
+            "backend_pid": 886,
+            "event": "begin",
+            "monotonic_ns": 789727948586686,
+            "txid": 3703
+          },
+          {
+            "backend_pid": 887,
+            "event": "commit",
+            "monotonic_ns": 789727956386887,
+            "txid": 3704
+          },
+          {
+            "backend_pid": 887,
+            "event": "begin",
+            "monotonic_ns": 789727958392928,
+            "txid": 3704
+          },
+          {
+            "backend_pid": 886,
+            "event": "commit",
+            "monotonic_ns": 789727979807659,
+            "txid": 3705
+          },
+          {
+            "backend_pid": 886,
+            "event": "begin",
+            "monotonic_ns": 789727983441757,
+            "txid": 3705
+          },
+          {
+            "backend_pid": 887,
+            "event": "commit",
+            "monotonic_ns": 789727987505912,
+            "txid": 3706
+          }
+        ],
+        "lock_waits": []
+      }
+    }
+  ],
+  "schema_retained": false,
+  "schema_version": "glhs-postgres-governance-toctou-final-v2",
+  "source_revision": "ada17aab",
+  "status": "EXECUTED_V2_OBSERVATION_MISMATCH",
+  "validation": {
+    "database_executed": false,
+    "interleaving_coverage": [
+      "commit_before_mutation_control",
+      "competing_lock",
+      "mutation_before_commit",
+      "rollback_retry",
+      "simultaneous_release"
+    ],
+    "observation_count": 12,
+    "result_emitted": false,
+    "schema_version": "glhs-postgres-governance-toctou-final-v2",
+    "status": "VALIDATED_V2_OBSERVATIONS_NOT_EXECUTED"
+  }
+}
