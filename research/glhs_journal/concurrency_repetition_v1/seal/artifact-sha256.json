@@ -1,0 +1,25 @@
+{
+  "schema_version": "glhs-concurrency-repetition-seal.v1",
+  "freeze_id": "GLHS-CONCURRENCY-REPETITION-V1-20260819",
+  "run_id": "GLHS-CONCURRENCY-REPETITION-V1-20260819-RUN01",
+  "code_sha": "7bd677e4",
+  "artifacts": {
+    "FREEZE.md": "ef9d5e368f7dbc54f214935730b786fa24e691ea7272d0fb4ffd6ee759e0dae6",
+    "README.md": "8408d43e9ea58b65310aca8af4d9153aaea1c54f02d3f3f974b72e42caa0c3f9",
+    "repeat_manifest.json": "4b66c774bb8f16bbb697d0efc1c1da69953ffbb2b7521602cae9accd12a5e62e",
+    "repeat_raw.jsonl": "f98ce492e54a4478d929a0b8a7e800929e3c7a9b6316d4acca07d04ca77357a5",
+    "analysis.json": "6915dfbd764c2b54ba0befd0f5fd93cd81cc2dfe18d443651958e06d3b3f737a"
+  },
+  "backend": "isolated_postgresql_random_schema",
+  "track_commit_timestamp": "on",
+  "logical_schedule_count": 12,
+  "repetitions_per_logical_schedule": 50,
+  "total_repetitions_executed": 600,
+  "scientific_n": 12,
+  "status": "EXECUTED",
+  "ordering_confidence_summary": {"PARTIAL": 600},
+  "robust_schedule_count": 10,
+  "mixed_schedule_count": 0,
+  "indeterminate_or_nonrobust_schedule_ids": ["TOCTOU-V2-05", "TOCTOU-V2-09"],
+  "repetitions_are_new_n": false
+}
