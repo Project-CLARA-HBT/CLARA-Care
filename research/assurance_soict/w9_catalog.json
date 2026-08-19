@@ -1,0 +1,130 @@
+{
+  "anchor_verification": {
+    "artifact": "w9_anchor_verification.json",
+    "revision_verified": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+    "summary": {
+      "INVALIDATED": 0,
+      "REANCHORED": 1,
+      "VERIFIED": 10,
+      "total": 11
+    }
+  },
+  "candidates": [
+    {
+      "anchor": "        if manifest.manifest_digest != transition.source_snapshot_digest:",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-RECON-LINKAGE",
+      "id": "W9-C01",
+      "replacement": "        if False:",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "                GlhsClinicalCommitmentTransition.known_at <= _utc(known_at),",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-BITEMP-CUTOFF",
+      "id": "W9-C02",
+      "replacement": "                True,",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "    for transition in latest.values():\n        commitment = db.get(GlhsClinicalCommitment, transition.commitment_id)\n        version = db.get(GlhsClinicalCommitmentVersion, transition.result_version_id)\n        if commitment is None or version is None:",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-INCOMPLETE-HISTORY",
+      "id": "W9-C03",
+      "replacement": "    for transition in latest.values():\n        commitment = db.get(GlhsClinicalCommitment, transition.commitment_id)\n        version = db.get(GlhsClinicalCommitmentVersion, transition.result_version_id)\n        if False:",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "        raise GlhsInvariantError(\"commitment_decision_not_found\")\n    commitment = db.get(GlhsClinicalCommitment, transition.commitment_id)\n    version = db.get(GlhsClinicalCommitmentVersion, transition.result_version_id)\n    if commitment is None or version is None:",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-INCOMPLETE-HISTORY",
+      "id": "W9-C04",
+      "replacement": "        raise GlhsInvariantError(\"commitment_decision_not_found\")\n    commitment = db.get(GlhsClinicalCommitment, transition.commitment_id)\n    version = db.get(GlhsClinicalCommitmentVersion, transition.result_version_id)\n    if False:",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "        resulting_state_version=base + 1,",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-STATE-VERSION-WRITE",
+      "id": "W9-C05",
+      "replacement": "        resulting_state_version=base,",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "    if snapshot.manifest_schema_version != SNAPSHOT_SCHEMA_VERSION:",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-STALE-CACHE",
+      "id": "W9-G01",
+      "replacement": "    if False:",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "    if snapshot.canonicalization_profile != CANONICALIZATION_PROFILE:",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-STALE-CACHE",
+      "id": "W9-G02",
+      "replacement": "    if False:",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "    disclosed = {str(item) for item in snapshot.provenance_ids_json}\n    if not set(observed_evidence_ids).issubset(disclosed):\n        raise GlhsInvariantError(\"proposal_evidence_not_disclosed\")\n    return cast(GlhsSnapshotManifest, snapshot)",
+      "anchor_status": "REANCHORED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-STALE-CACHE",
+      "id": "W9-G03",
+      "replacement": "    disclosed = {str(item) for item in snapshot.provenance_ids_json}\n    if False:\n        raise GlhsInvariantError(\"proposal_evidence_not_disclosed\")\n    return cast(GlhsSnapshotManifest, snapshot)",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "anchor_reanchored_not_executed"
+    },
+    {
+      "anchor": "                action=\"activate\",",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-TRANSITION-ITEM-WRITE",
+      "id": "W9-P01",
+      "replacement": "                action=\"reject\",",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "            GlhsTransition.recorded_at <= known_at,",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-BITEMP-CUTOFF",
+      "id": "W9-P02",
+      "replacement": "            True,",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "anchor_verified_not_executed"
+    },
+    {
+      "anchor": "            same_anchor = historical.valid_from == assertion.valid_from",
+      "anchor_status": "VERIFIED",
+      "anchor_verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+      "family_seed": "W9-DEDUP-REJECT-WRITE",
+      "id": "W9-P03",
+      "replacement": "            same_anchor = False",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "anchor_verified_not_executed"
+    }
+  ],
+  "distinctness_rule": "Each mutant must not be a near-duplicate of any of the 45 sealed mutants (mutation_site_candidates.json) and must not overlap its guard/write/reconstruction site; argued per candidate in W9_FOLLOWUP_CORPUS_PROPOSAL.json (reason_distinct).",
+  "notes": "W9 follow-up corpus (11 candidates) derived from W9_FOLLOWUP_CORPUS_PROPOSAL.json. Every anchor was re-verified in the committed current-HEAD blob 3263d011; W9-G03 is re-anchored to a unique 4-line context because commit 4e133a4a duplicated its one-line guard (see w9_anchor_verification.json). Anchors are real enforcement-site anchors, not results: each still requires the hard MANUAL human non-equivalence review gate, any separately specified auxiliary review, and frozen M0-M3 execution before entering an executable denominator.",
+  "repository_revision_requirement": "Freeze the code revision before treating an anchor as executable.",
+  "schema_version": "govmut-w9-catalog.v1",
+  "status": "anchor_verified_not_executed",
+  "unanchored_family_seeds": []
+}

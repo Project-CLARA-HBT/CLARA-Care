@@ -1,0 +1,146 @@
+{
+  "budget_rule": "B = ceil(max over methods of unmutated total wall-clock), in whole seconds; every strategy receives the same wall-clock budget B per mutant in budget_fair_runner. Outcome-blind: no mutant is executed.",
+  "budget_seconds": 233,
+  "code_revision_at_calibration": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+  "freeze_input": "research/assurance_soict/w9_freeze_input.json",
+  "freeze_input_code_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf",
+  "hypothesis_version": "6.163.0",
+  "limits": {
+    "hypothesis_max_examples": 1000,
+    "hypothesis_stateful_step_count": 100,
+    "pytest_timeout_seconds": 600
+  },
+  "max_method_total_ms": 232927.134,
+  "method_timing": {
+    "M0_regression": {
+      "executions": 1,
+      "timings": [
+        {
+          "hypothesis_seed": null,
+          "returncode": 0,
+          "runtime_ms": 36797.347,
+          "timed_out": false
+        }
+      ],
+      "total_ms": 36797.347
+    },
+    "M1_stateless_property": {
+      "executions": 5,
+      "timings": [
+        {
+          "hypothesis_seed": 17,
+          "returncode": 0,
+          "runtime_ms": 6443.094,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 23,
+          "returncode": 0,
+          "runtime_ms": 4683.858,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 41,
+          "returncode": 0,
+          "runtime_ms": 6638.436,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 97,
+          "returncode": 0,
+          "runtime_ms": 5644.836,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 271,
+          "returncode": 0,
+          "runtime_ms": 8233.664,
+          "timed_out": false
+        }
+      ],
+      "total_ms": 31643.888
+    },
+    "M2_state_machine": {
+      "executions": 5,
+      "timings": [
+        {
+          "hypothesis_seed": 17,
+          "returncode": 0,
+          "runtime_ms": 8687.435,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 23,
+          "returncode": 0,
+          "runtime_ms": 7958.153,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 41,
+          "returncode": 0,
+          "runtime_ms": 8573.787,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 97,
+          "returncode": 0,
+          "runtime_ms": 9139.109,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 271,
+          "returncode": 0,
+          "runtime_ms": 9699.79,
+          "timed_out": false
+        }
+      ],
+      "total_ms": 44058.274
+    },
+    "M3_combined": {
+      "executions": 5,
+      "timings": [
+        {
+          "hypothesis_seed": 17,
+          "returncode": 0,
+          "runtime_ms": 49439.715,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 23,
+          "returncode": 0,
+          "runtime_ms": 46378.34,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 41,
+          "returncode": 0,
+          "runtime_ms": 46699.271,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 97,
+          "returncode": 0,
+          "runtime_ms": 41673.912,
+          "timed_out": false
+        },
+        {
+          "hypothesis_seed": 271,
+          "returncode": 0,
+          "runtime_ms": 48735.896,
+          "timed_out": false
+        }
+      ],
+      "total_ms": 232927.134
+    }
+  },
+  "ordered_seeds": [
+    17,
+    23,
+    41,
+    97,
+    271
+  ],
+  "schema_version": "govmut-budget-calibration.v1",
+  "status": "completed",
+  "target_hash_verified": true
+}

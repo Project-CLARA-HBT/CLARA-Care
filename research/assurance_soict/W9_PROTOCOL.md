@@ -1,6 +1,10 @@
 # W9 Protocol — GovMut/SOICT follow-up corpus execution (design phase)
 
-Status: **protocol definition; W9-T01..T04 design complete, execution NOT started**.
+Status: **corpus/protocol frozen; anchor gate complete at the pre-commit current
+HEAD, human MANUAL gate OPEN, execution NOT started**.
+
+Workstream F made **no LLM calls**. No model output, placeholder, or automated
+classification may satisfy the human gate below.
 This document states what W9 execution requires. It is not an execution log.
 
 Inputs produced by the design phase (this W9 task):
@@ -11,6 +15,8 @@ Inputs produced by the design phase (this W9 task):
   (commitment gateway 5, governance-cache 3, persistence-reconstruction 3) with
   grep-verified unique anchors. **Proposal only; no code created, not executed,
   no models called.**
+- `w9_anchor_verification.json` — all 11 anchors verified against the committed
+  current-HEAD source blobs before any outcome observation.
 
 ## 1. New frozen protocol version (required before any execution)
 
@@ -103,7 +109,116 @@ mutant set (2x2 table, exact two-sided McNemar p-value), consistent with
   (`research/assurance_soict/seal/*`), `final_run.json`, `final_freeze.json`, or
   `results/final-analysis.json`.
 
-## 6. W8 immutability statement
+## 6. Human non-equivalence review — MANUAL precondition (required before denominator freeze)
+
+Status: **design specified; not yet executed.** This is a MANUAL gate
+(GMT-02 / F-005 / F-006). It is a human task; it SHALL NOT be simulated,
+approximated, or delegated to an LLM, including for "pilot" or "sanity"
+purposes. A simulated human review does not satisfy this gate.
+
+### 6.1 Ordering and precondition
+
+1. The human review must complete **before** the W9 denominator freeze
+   (`w9_final_freeze.json` promotion, Step 5 of `W9_EXECUTION_PLAN.md`).
+2. Each of the 11 W9 candidates receives independent human non-equivalence
+   review **before** its disposition enters the W9 denominator.
+3. Any separately recorded auxiliary review remains distinct; it does not
+   substitute for, and must not be conflated with, the human review. Workstream
+   F does not invoke an LLM to produce or simulate this artifact.
+
+### 6.2 Reviewer requirements and background fields
+
+One reviewer is the minimum; **two independent reviewers are preferred** and
+are required for the agreement statistic (6.5). The preferred profile is an
+independent software/verification engineer with no authorship stake in the
+GovMut result, no knowledge of the W8 or W9 outcome labels, and sufficient
+fluency in the Python/SQLAlchemy governance code to evaluate a one-change
+overlay. Recorded per reviewer:
+
+- `reviewer_id` (anonymized or named, per project policy);
+- `background` — role/title, years of software-verification or security
+  experience, familiarity with mutation testing and with the CLARA governance
+  layer;
+- `reviewer_independence_declaration` — confirming no prior exposure to the
+  W9 strategy outcomes or W8 survivor labels;
+- `review_date`.
+
+### 6.3 Blind packet structure
+
+Each candidate is delivered as an independent, isolated packet. Strategy
+outcomes (M0/M1/M2/M3 kill/survive) MUST remain hidden during review:
+
+- `case_id` (e.g. `W9-C01`);
+- the exact one-change overlay: `source_path`, `anchor`, `replacement`;
+- the invariant the mutation would violate (from `W9_MUTATION_CATALOG.json`);
+- the fault family and layer (from the proposal);
+- the frozen code revision the anchor was verified against;
+- a "no extra context" rule: packets contain no method scores, no W8
+  comparisons, no survivor lists, and no reviewer-community discussion.
+
+Reviewers review each candidate independently; packets are exchanged between
+reviewers only after both have recorded their own dispositions.
+
+### 6.4 Rubric and disposition categories
+
+Rubric (same behavioral test as W7, applied by humans):
+
+> Determine whether the one-change mutation can change observable governed-system
+> behavior under the CLARA governance invariants. This is a software-assurance
+> non-equivalence review, not a clinical-safety review.
+
+Disposition categories (exactly one per reviewer per candidate):
+
+- `NON_EQUIVALENT` — the overlay can produce an observable behavioral
+  difference in governed behavior;
+- `EQUIVALENT` — no observable behavioral difference is possible;
+- `INVALID` — the overlay is malformed, unanchored, or cannot apply;
+- `UNCERTAIN` — evidence insufficient for a confident disposition.
+
+Per-candidate final dispositions (from the two reviewers):
+
+- both `NON_EQUIVALENT` → `included`;
+- both `EQUIVALENT` → `excluded_equivalent`;
+- both `INVALID` → `excluded_unexecutable`;
+- any disagreement or `UNCERTAIN` after adjudication (6.6) → `unresolved`,
+  excluded transparently — never counted killed or survived.
+
+### 6.5 Agreement statistic
+
+When two reviewers are used, compute **Cohen's kappa** over the 11-candidate
+packet using the reviewer disposition categories (weighted for
+`NON_EQUIVALENT` vs the other labels, or unweighted, per the frozen analysis
+plan; the choice is recorded before scoring). Report:
+
+- the 11 x 11 (or 2 x 2 collapsed) reviewer disposition table;
+- `kappa` with a confidence interval where computable;
+- a qualitative agreement note (e.g. `substantial`, `moderate`, `poor` via the
+  standard Landis–Koch bands), used only as context, never as a pass/fail
+  gate on its own.
+
+### 6.6 Disagreement adjudication
+
+- Initial independent dispositions are recorded before any discussion.
+- Disagreement (labels differ, or either reviewer used `UNCERTAIN`) triggers
+  exactly one anonymous adjudication round (reviewers exchange anonymized
+  rationales without strategy outcomes).
+- If dispositions still differ after that round, the candidate is
+  `unresolved` and excluded transparently.
+- `NON_EQUIVALENT` vs `EQUIVALENT` after the round → `unresolved` (never
+  forced to either side).
+
+### 6.7 Records and artifact
+
+The human review produces `research/assurance_soict/w9_human_review.json`
+(schema `govmut-w9-human-review.v1`) with: reviewer fields (7.2), packet
+references (7.3), per-candidate dispositions per reviewer, the kappa statistic
+(6.5), adjudication outcomes and date (6.6), and the overall completion date.
+`w9_final_freeze.json` records `human_review.status == completed` and the
+artifact hash, mirroring how the dual-model review is recorded. Without this
+artifact the W9 denominator MUST NOT freeze. The executable `w9_final_runner`
+and budget-fair runner both fail closed on this gate.
+
+## 7. W8 immutability statement
 
 The W8 sealed 45-mutant study is **immutable and remains authoritative**:
 - `research/assurance_soict/seal/*` (frozen artifacts, `govmut-soict-2026-final-v2`),

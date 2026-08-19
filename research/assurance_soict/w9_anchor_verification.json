@@ -1,0 +1,119 @@
+{
+  "intervening_commits_touching_services_api_since_proposal": [
+    "4e133a4a feat(glhs): commitment reconciliation engine, task-aware selection, evidence minimization, freshness, expiry bound",
+    "bd0d7d65 feat(rivf): mandatory-primary NOT_RUN elimination, rejection audit, per-family attestation"
+  ],
+  "method": "unique exact substring count (count == 1) per mutation_overlay.py govmut_overlay_anchor_not_unique; re-anchor requires a unique multi-line context preserving the targeted enforcement site",
+  "mutants": [
+    {
+      "anchor": "        if manifest.manifest_digest != transition.source_snapshot_digest:",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "reconstruct_commitment_decision",
+      "id": "W9-C01",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "                GlhsClinicalCommitmentTransition.known_at <= _utc(known_at),",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "reconstruct_commitments",
+      "id": "W9-C02",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "    for transition in latest.values():\n        commitment = db.get(GlhsClinicalCommitment, transition.commitment_id)\n        version = db.get(GlhsClinicalCommitmentVersion, transition.result_version_id)\n        if commitment is None or version is None:",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "reconstruct_commitments",
+      "id": "W9-C03",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "        raise GlhsInvariantError(\"commitment_decision_not_found\")\n    commitment = db.get(GlhsClinicalCommitment, transition.commitment_id)\n    version = db.get(GlhsClinicalCommitmentVersion, transition.result_version_id)\n    if commitment is None or version is None:",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "reconstruct_commitment_decision",
+      "id": "W9-C04",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "        resulting_state_version=base + 1,",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "apply_commitment_transition",
+      "id": "W9-C05",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/commitment_gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "    if snapshot.manifest_schema_version != SNAPSHOT_SCHEMA_VERSION:",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "validate_snapshot_manifest",
+      "id": "W9-G01",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "    if snapshot.canonicalization_profile != CANONICALIZATION_PROFILE:",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "validate_snapshot_manifest",
+      "id": "W9-G02",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "    disclosed = {str(item) for item in snapshot.provenance_ids_json}\n    if not set(observed_evidence_ids).issubset(disclosed):\n        raise GlhsInvariantError(\"proposal_evidence_not_disclosed\")\n    return cast(GlhsSnapshotManifest, snapshot)",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "validate_snapshot_manifest",
+      "id": "W9-G03",
+      "note": "Commit 4e133a4a (glhs reconciliation engine) added a second, semantically identical proposal_evidence_not_disclosed guard. The anchor is re-anchored to a unique 4-line context pinning to the original _validate_proposal_snapshot site at current HEAD; same fault, same invariant. Precedent: W9-C03/C04 multi-line anchors; W8 M02-B rebinding_note.",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "REANCHORED"
+    },
+    {
+      "anchor": "                action=\"activate\",",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "apply_transition",
+      "id": "W9-P01",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "            GlhsTransition.recorded_at <= known_at,",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "reconstruct_state",
+      "id": "W9-P02",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "VERIFIED"
+    },
+    {
+      "anchor": "            same_anchor = historical.valid_from == assertion.valid_from",
+      "anchor_substring_count_at_revision": 1,
+      "enclosing_function": "apply_transition",
+      "id": "W9-P03",
+      "note": "unique exact substring (count == 1) in the committed current-HEAD blob; targeted enforcement site unchanged.",
+      "source_path": "services/api/src/clara_api/glhs/gateway.py",
+      "status": "VERIFIED"
+    }
+  ],
+  "proposal_revision": "a3bec6ed754a611f03a45c48151bc39a959965b7",
+  "schema_version": "govmut-w9-anchor-verification.v1",
+  "status": "complete",
+  "summary": {
+    "INVALIDATED": 0,
+    "REANCHORED": 1,
+    "VERIFIED": 10,
+    "total": 11
+  },
+  "verification_basis": "Verified against the COMMITTED blob at current HEAD 3263d011 (git show REV:path), independent of mutable working-tree edits. The Workstream F commit changes only protocol/report/evaluation artifacts; it does not change the verified services/api blobs.",
+  "verified_revision": "3263d011562e9246b6da6aa183e0ff2259d1d9cf"
+}

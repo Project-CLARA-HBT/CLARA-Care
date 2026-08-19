@@ -1,0 +1,49 @@
+# W8 kill matrix (45 x strategy, detected_any_seed)
+
+| Mutant | Family | Layer | M0 killed | M1 killed | M2 killed | M3 killed |
+|---|---|---|---|---|---|---|
+| M01-A | M01 | generic gateway | 1 | 1 | 1 | 1 |
+| M01-B | M01 | generic gateway | 1 | 0 | 0 | 1 |
+| M01-C | M01 | commitment gateway | 0 | 0 | 0 | 0 |
+| M01-D | M01 | commitment gateway | 0 | 0 | 0 | 0 |
+| M02-A | M02 | generic gateway | 0 | 0 | 1 | 1 |
+| M02-B | M02 | generic gateway | 1 | 0 | 0 | 1 |
+| M02-C | M02 | commitment gateway | 0 | 0 | 0 | 0 |
+| M02-D | M02 | commitment gateway | 1 | 0 | 0 | 1 |
+| M03-A | M03 | generic gateway | 0 | 0 | 1 | 1 |
+| M03-B | M03 | generic gateway | 0 | 0 | 1 | 1 |
+| M03-C | M03 | commitment gateway | 0 | 0 | 0 | 0 |
+| M03-D | M03 | commitment gateway | 0 | 0 | 0 | 0 |
+| M04-A | M04 | generic gateway | 1 | 0 | 0 | 1 |
+| M04-B | M04 | generic gateway | 0 | 0 | 0 | 0 |
+| M04-C | M04 | commitment gateway | 0 | 0 | 0 | 0 |
+| M04-D | M04 | commitment gateway | 0 | 0 | 0 | 0 |
+| M05-A | M05 | generic gateway | 1 | 0 | 0 | 1 |
+| M05-B | M05 | generic gateway | 1 | 0 | 0 | 1 |
+| M05-C | M05 | commitment gateway | 0 | 0 | 0 | 0 |
+| M06-A | M06 | generic gateway | 1 | 0 | 0 | 1 |
+| M06-B | M06 | commitment gateway | 0 | 0 | 0 | 0 |
+| M06-C | M06 | generic gateway | 0 | 0 | 0 | 0 |
+| M07-A | M07 | generic gateway | 1 | 0 | 0 | 1 |
+| M07-B | M07 | commitment gateway | 1 | 0 | 0 | 1 |
+| M07-C | M07 | generic gateway | 0 | 0 | 0 | 0 |
+| M07-D | M07 | commitment gateway | 1 | 0 | 0 | 1 |
+| M08-A | M08 | generic gateway | 1 | 0 | 0 | 1 |
+| M08-B | M08 | generic gateway | 0 | 0 | 0 | 0 |
+| M08-C | M08 | generic gateway | 0 | 0 | 0 | 0 |
+| M08-D | M08 | generic gateway | 0 | 0 | 0 | 0 |
+| M09-A | M09 | generic gateway | 1 | 0 | 0 | 1 |
+| M09-B | M09 | commitment gateway | 0 | 0 | 0 | 0 |
+| M09-C | M09 | generic gateway | 1 | 1 | 1 | 1 |
+| M09-D | M09 | generic gateway | 0 | 0 | 0 | 0 |
+| M09-E | M09 | commitment gateway | 0 | 0 | 0 | 0 |
+| M11-A | M11 | generic gateway | 0 | 1 | 0 | 1 |
+| M11-B | M11 | generic gateway | 0 | 0 | 0 | 0 |
+| M11-C | M11 | commitment gateway | 0 | 0 | 0 | 0 |
+| M11-D | M11 | commitment gateway | 0 | 0 | 0 | 0 |
+| M13-A | M13 | generic gateway | 1 | 0 | 0 | 1 |
+| M13-B | M13 | generic gateway | 0 | 0 | 0 | 0 |
+| M13-C | M13 | generic gateway | 0 | 0 | 0 | 0 |
+| M14-A | M14 | generic gateway | 1 | 1 | 1 | 1 |
+| M14-B | M14 | commitment gateway | 0 | 0 | 0 | 0 |
+| M14-C | M14 | commitment gateway | 0 | 0 | 0 | 0 |
