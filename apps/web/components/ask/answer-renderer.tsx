@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/icon";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { ContextDisclosureBadge } from "./context-disclosure-badge";
 import { SaveProposalCard } from "./save-proposal-card";
+import { ClaimEvidenceInspector } from "./claim-evidence-inspector";
 
 export interface AnswerRendererProps {
   envelope: ConsumerAnswerEnvelope;
@@ -128,6 +129,12 @@ export function AnswerRenderer({
   const safetyMeta = resolveSafetyTone(safety?.urgency);
   const [copied, setCopied] = useState(false);
   const [showEvidence, setShowEvidence] = useState(false);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
+
+  const handleOpenEvidence = () => {
+    setIsInspectorOpen(true);
+    onOpenEvidenceDrawer?.();
+  };
 
   const handleCopyAnswer = async () => {
     try {
@@ -486,14 +493,14 @@ export function AnswerRenderer({
             ) : null}
           </div>
 
-          {onOpenEvidenceDrawer && totalEvidenceCount > 0 ? (
+          {totalEvidenceCount > 0 ? (
             <button
               type="button"
-              onClick={onOpenEvidenceDrawer}
+              onClick={handleOpenEvidence}
               className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-brand)] hover:underline focus-ring rounded"
               data-testid="answer-evidence-drawer-button"
             >
-              <span>Xem chi tiết hồ sơ & nguồn ({totalEvidenceCount})</span>
+              <span>Xem chi tiết bằng chứng & nguồn ({totalEvidenceCount})</span>
               <Icon name="arrow-right" size={13} aria-hidden="true" />
             </button>
           ) : null}
@@ -505,7 +512,7 @@ export function AnswerRenderer({
             <ContextDisclosureBadge
               disclosure={disclosure}
               personalEvidenceCount={personal_evidence.length}
-              onOpenEvidenceDrawer={onOpenEvidenceDrawer}
+              onOpenEvidenceDrawer={handleOpenEvidence}
             />
           </div>
         ) : null}
@@ -614,6 +621,14 @@ export function AnswerRenderer({
           </p>
         </section>
       ) : null}
+
+      {/* Claim & Evidence Inspector Drawer */}
+      <ClaimEvidenceInspector
+        isOpen={isInspectorOpen}
+        onClose={() => setIsInspectorOpen(false)}
+        personalEvidence={personal_evidence}
+        externalSources={external_sources}
+      />
     </div>
   );
 }

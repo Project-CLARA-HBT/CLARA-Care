@@ -256,9 +256,15 @@ def validate_base_proposal_context(
     current_version: int,
     current_consent_version: str,
 ) -> None:
-    """Validate an explicit base-version-only proposal with no snapshot."""
+    """Validate an explicit base-version-only proposal with no snapshot.
+
+    Enforces that model/agent origins can NEVER use base-version-only proposals;
+    they MUST strictly provide a valid snapshot binding (GLHS-B03/A* Invariant).
+    """
 
     _validate_proposal_scope_coordinates(scope=scope, proposal=proposal)
+    if proposal.origin in {"model", "agent", "clinical_ai", "automated_assistant"}:
+        raise GlhsInvariantError("commitment_proposal_snapshot_binding_required")
     if proposal.context_binding_mode != "base_version_only":
         raise GlhsInvariantError("commitment_proposal_binding_mode_mismatch")
     if proposal.source_snapshot_id is not None:

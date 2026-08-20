@@ -90,9 +90,12 @@ class Settings(BaseSettings):
     deepseek_api_key: str = Field(
         default="",
         validation_alias=AliasChoices(
+            "ROUTER_API_KEY",
             "DEEPSEEK_API_KEY",
             "YESCALE_API_KEY",
             "EMBEDDING_API_KEY",
+            "OPENAI_API_KEY",
+            "OCR_API_KEY",
         ),
     )
     llm_deepseek_only: bool = Field(
@@ -100,31 +103,29 @@ class Settings(BaseSettings):
         validation_alias="LLM_DEEPSEEK_ONLY",
     )
     deepseek_base_url: str = Field(
-        # V4 Pro/Flash are served through CLARA's governed OpenAI-compatible
-        # DeepSeek gateway.  Keep this code default aligned with the example
-        # environment and both deployment compose variants so an omitted env
-        # does not silently select a different, unsupported model catalog.
-        default="https://api.yescale.io/v1",
-        validation_alias="DEEPSEEK_BASE_URL",
+        default="https://router.theclaracare.com/v1",
+        validation_alias=AliasChoices(
+            "ROUTER_BASE_URL",
+            "DEEPSEEK_BASE_URL",
+            "OPENAI_BASE_URL",
+        ),
     )
-    # Legacy/global DeepSeek model used when task routing is explicitly disabled.
-    # New deployments route registered tasks between the two governed V4 models
-    # below; neither value is ever sourced from an end-user request.
-    deepseek_model: str = Field(default="deepseek-v4-pro", validation_alias="DEEPSEEK_MODEL")
+    # Primary/pro/flash models served through OpenAI-compatible router
+    deepseek_model: str = Field(
+        default="gemini-3.7-flash-tiered",
+        validation_alias=AliasChoices("DEEPSEEK_MODEL", "ROUTER_MODEL", "LLM_MODEL"),
+    )
     deepseek_pro_model: str = Field(
-        default="deepseek-v4-pro",
-        validation_alias="DEEPSEEK_PRO_MODEL",
+        default="gemini-3.7-flash-tiered",
+        validation_alias=AliasChoices("DEEPSEEK_PRO_MODEL", "LLM_PRO_MODEL"),
     )
     deepseek_flash_model: str = Field(
-        default="deepseek-v4-flash",
-        validation_alias="DEEPSEEK_FLASH_MODEL",
+        default="gemini-3.6-flash-high",
+        validation_alias=AliasChoices("DEEPSEEK_FLASH_MODEL", "LLM_FLASH_MODEL"),
     )
     deepseek_fallback_model: str = Field(
-        # Secondary model tried when the primary model fails across all bases
-        # (e.g. upstream 5xx / "temporarily unavailable"). Empty disables the
-        # fallback so behavior is byte-for-byte the single-model path.
-        default="",
-        validation_alias="DEEPSEEK_FALLBACK_MODEL",
+        default="gemini-3.6-flash-high",
+        validation_alias=AliasChoices("DEEPSEEK_FALLBACK_MODEL", "LLM_FALLBACK_MODEL"),
     )
     deepseek_required: bool = Field(
         default=False,

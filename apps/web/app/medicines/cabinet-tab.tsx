@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "@/components/ui/button";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { SurfaceCard, EmptyState, InlineError } from "@/components/ui/surface";
@@ -142,7 +142,7 @@ export default function MedicinesCabinetTab() {
     [language, topItems]
   );
 
-  const refreshCabinet = async () => {
+  const refreshCabinet = useCallback(async () => {
     setError("");
     setIsLoading(true);
     try {
@@ -156,7 +156,7 @@ export default function MedicinesCabinetTab() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [language]);
 
   useEffect(() => {
     // Emit a named SelfMed/CareGuard product event (Req 9.1). The facade
@@ -164,7 +164,7 @@ export default function MedicinesCabinetTab() {
     // the coarse surface label is sent.
     trackCareguardViewed({ surface: "selfmed" });
     void refreshCabinet();
-  }, []);
+  }, [refreshCabinet]);
 
   const onDelete = async (itemId: number) => {
     setNotice("");

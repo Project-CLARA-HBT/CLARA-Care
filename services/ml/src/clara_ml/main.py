@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import hashlib
 import json
 import logging
@@ -67,7 +68,6 @@ from clara_ml.streaming.chat_stream import (
 )
 from clara_ml.streaming.council_stream import stream_council_sse
 
-app = FastAPI(title="CLARA ML Service", version="0.1.0")
 logger = logging.getLogger(__name__)
 
 prompt_loader = PromptLoader(Path(__file__).resolve().parent / "prompts" / "templates")
@@ -75,8 +75,7 @@ rag_pipeline = RagPipelineP1()
 router = P1RoleIntentRouter()
 
 
-@app.on_event("startup")
-def _rag_persistent_store_self_check() -> None:
+def _rag_persistent_store_self_check(app_instance: FastAPI) -> None:
     """Resolve effective persistent-RAG flags via the store self-check (task 1.10).
 
     When a persistent RAG flag is enabled, validate that the pgvector extension
@@ -87,13 +86,12 @@ def _rag_persistent_store_self_check() -> None:
     """
 
     try:
-        app.state.rag_persistent_flags = run_startup_self_check(settings)
+        app_instance.state.rag_persistent_flags = run_startup_self_check(settings)
     except Exception:
         logger.exception("RAG persistent store self-check failed; using legacy path")
 
 
-@app.on_event("startup")
-def _init_tracing() -> None:
+def _init_tracing(app_instance: FastAPI) -> None:
     """Initialize the optional OTEL tracer once at startup (Requirement 6.1).
 
     Idempotent: a tracer is only built if one is not already present on
@@ -102,16 +100,15 @@ def _init_tracing() -> None:
     never crashes (Requirements 6.2, 6.3, 6.5).
     """
 
-    if getattr(app.state, "tracer", None) is not None:
+    if getattr(app_instance.state, "tracer", None) is not None:
         return
     try:
-        app.state.tracer = init_tracing(settings)
+        app_instance.state.tracer = init_tracing(settings)
     except Exception:
         logger.exception("Tracing initialization failed; tracing disabled")
-        app.state.tracer = None
+        app_instance.state.tracer = None
 
 
-@app.on_event("startup")
 def _warm_ddi_index() -> None:
     """Pre-build the memory-safe DrugBank SQLite DDI index at startup.
 
@@ -145,6 +142,17 @@ def _warm_ddi_index() -> None:
     import threading
 
     threading.Thread(target=_warm, name="ddi-index-warm", daemon=True).start()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _rag_persistent_store_self_check(app)
+    _init_tracing(app)
+    _warm_ddi_index()
+    yield
+
+
+app = FastAPI(title="CLARA ML Service", version="0.1.0", lifespan=lifespan)
 
 
 _LEGAL_GUARD_PATTERNS: list[tuple[re.Pattern[str], str]] = [

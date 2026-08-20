@@ -40,7 +40,7 @@ export default function SharedConversationClient({
         setPayload(null);
         // Public capability failures deliberately collapse token-not-found,
         // revocation, expiry and transport details into one PII-free state.
-        setError(copy("workspace.shared.unavailable"));
+        setError(t(language, "workspace.shared.unavailable"));
       } finally {
         if (active) setIsLoading(false);
       }

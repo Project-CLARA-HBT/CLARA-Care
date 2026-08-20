@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "@/components/ui/button";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/field";
@@ -121,7 +121,7 @@ export default function MedicinesSafetyTab() {
     })
   );
 
-  const refreshCabinet = async () => {
+  const refreshCabinet = useCallback(async () => {
     setCabinetError("");
     setIsLoadingCabinet(true);
     try {
@@ -132,13 +132,13 @@ export default function MedicinesSafetyTab() {
     } finally {
       setIsLoadingCabinet(false);
     }
-  };
+  }, [language]);
 
   useEffect(() => {
     // Named SelfMed/CareGuard product event (Req 9.1); consent/PII guarded.
     trackCareguardViewed({ surface: "selfmed" });
     void refreshCabinet();
-  }, []);
+  }, [refreshCabinet]);
 
   const onRunDdi = async () => {
     setError("");

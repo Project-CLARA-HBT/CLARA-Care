@@ -171,7 +171,7 @@ class GraphRagSidecar:
                     self._graph_load_reason = "database_unavailable_or_empty"
                 except Exception as exc:  # noqa: BLE001 - defensive: never crash on DB
                     self._graph_load_reason = f"database_error:{exc.__class__.__name__}"
-                    logger.warning("graphrag DB edge-load failed (%s)", exc.__class__.__name__)
+                    logger.debug("graphrag DB edge-load unavailable (%s: %s)", exc.__class__.__name__, exc)
                     self._reset_graph_state()
 
             if self._static_json_fallback_allowed():

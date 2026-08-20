@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { acceptConsent, getConsentStatus } from "@/lib/consent";
 import { formatLocaleDate, t } from "@/lib/i18n/catalog";
@@ -33,7 +33,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
     ? formatLocaleDate(language, acceptedAt, { dateStyle: "medium", timeStyle: "short" })
     : null;
 
-  const refreshConsent = async (): Promise<boolean> => {
+  const refreshConsent = useCallback(async (): Promise<boolean> => {
     setError("");
     try {
       const status = await getConsentStatus();
@@ -46,7 +46,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
       setError(safeUserFacingError(cause, t(language, "medicines.consent.checkError")));
       return false;
     }
-  };
+  }, [language]);
 
   useEffect(() => {
     const init = async () => {
@@ -55,7 +55,7 @@ export default function MedicalConsentGate({ children }: MedicalConsentGateProps
       setIsLoading(false);
     };
     void init();
-  }, []);
+  }, [refreshConsent]);
 
   const onAccept = async () => {
     if (!requiredVersion) return;

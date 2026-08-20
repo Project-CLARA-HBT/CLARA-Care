@@ -28,19 +28,18 @@ class Settings(BaseSettings):
     # always preserved as the liveness check; ``DB_POOL_PRE_PING`` exists only as an
     # explicit override and defaults on.
     db_pool_size: int = Field(
-        default=5,
+        default=20,
         validation_alias="DB_POOL_SIZE",
         ge=1,
     )
     db_max_overflow: int = Field(
-        default=10,
+        default=30,
         validation_alias="DB_MAX_OVERFLOW",
         ge=0,
     )
-    # Recycle connections after this many seconds. ``-1`` (the default) disables
-    # recycling, matching SQLAlchemy's default and the prior behavior.
+    # Recycle connections after this many seconds. ``1800`` (30m) prevents stale connections.
     db_pool_recycle: int = Field(
-        default=-1,
+        default=1800,
         validation_alias="DB_POOL_RECYCLE",
         ge=-1,
     )

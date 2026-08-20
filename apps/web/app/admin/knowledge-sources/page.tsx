@@ -231,18 +231,21 @@ export default function AdminKnowledgeSourcesPage() {
     }
   }, [language]);
 
-  const loadDocuments = async (sourceId: number) => {
-    setIsLoadingDocs(true);
-    setError("");
-    try {
-      const items = await listKnowledgeSourceDocuments(sourceId);
-      setDocuments(items);
-    } catch (cause) {
-      setError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.loadDocuments")));
-    } finally {
-      setIsLoadingDocs(false);
-    }
-  };
+  const loadDocuments = useCallback(
+    async (sourceId: number) => {
+      setIsLoadingDocs(true);
+      setError("");
+      try {
+        const items = await listKnowledgeSourceDocuments(sourceId);
+        setDocuments(items);
+      } catch (cause) {
+        setError(safeUserFacingError(cause, t(language, "admin.knowledgeSources.error.loadDocuments")));
+      } finally {
+        setIsLoadingDocs(false);
+      }
+    },
+    [language]
+  );
 
   useEffect(() => {
     void loadSources();
@@ -257,7 +260,7 @@ export default function AdminKnowledgeSourcesPage() {
   useEffect(() => {
     if (!activeSourceId) return;
     void loadDocuments(activeSourceId);
-  }, [activeSourceId]);
+  }, [activeSourceId, loadDocuments]);
 
   const onCreateSource = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -398,7 +401,7 @@ export default function AdminKnowledgeSourcesPage() {
     } finally {
       setRagRegistryLoading(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     void loadRagRegistry();

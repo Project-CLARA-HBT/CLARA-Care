@@ -1,6 +1,7 @@
 import logging
 import secrets
 from collections.abc import Mapping, Sequence
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -41,7 +42,94 @@ logger = logging.getLogger(__name__)
 # the current logging configuration is preserved (Requirement 7.5, 11.1, 11.2).
 configure_logging(settings)
 
-app = FastAPI(title=settings.app_name, debug=settings.debug)
+def init_db_schema() -> None:
+    # Timeout-floor invariant (Requirement 2.4): the API ML request timeout must
+    # never sit below the downstream CLARA_ML synthesis timeout. Validated in
+    # every environment so a misconfiguration fails fast at startup.
+    try:
+        assert_settings_timeout_floors(
+            ml_service_timeout_seconds=settings.ml_service_timeout_seconds,
+            ml_research_timeout_seconds=settings.ml_research_timeout_seconds,
+            deepseek_timeout_seconds=settings.deepseek_timeout_seconds,
+        )
+    except TimeoutFloorError as exc:
+        raise RuntimeError(
+            "ML request timeout misconfigured: "
+            "ML_SERVICE_TIMEOUT_SECONDS must be >= DEEPSEEK_TIMEOUT_SECONDS "
+            "and the sync-research path must stay >= ML_RESEARCH_TIMEOUT_SECONDS. "
+            f"{exc}"
+        ) from exc
+    if settings.environment.lower() == "production":
+        if settings.jwt_secret_key.strip().lower() in _INSECURE_JWT_SECRET_VALUES:
+            raise RuntimeError(
+                "JWT_SECRET_KEY uses an insecure/placeholder value; "
+                "configure a strong, unique secret in production."
+            )
+        # Reject a previous-key rotation window that reuses a known-insecure
+        # placeholder (Requirement 1.2, 1.7). An empty previous key is the
+        # default and is always allowed (no overlap window).
+        previous_jwt_key = settings.jwt_secret_key_previous.strip()
+        if previous_jwt_key and previous_jwt_key.lower() in _INSECURE_JWT_SECRET_VALUES:
+            raise RuntimeError(
+                "JWT_SECRET_KEY_PREVIOUS uses an insecure/placeholder value; "
+                "set it only to a real prior signing key during rotation, "
+                "and clear it once prior-key tokens have expired."
+            )
+        if not settings.auth_cookie_secure:
+            raise RuntimeError("AUTH_COOKIE_SECURE must be true in production.")
+        if settings.auth_csrf_enabled and not settings.auth_cookie_secure:
+            raise RuntimeError("CSRF protection requires AUTH_COOKIE_SECURE=true in production.")
+        ml_internal_key = settings.ml_internal_api_key.strip()
+        if not ml_internal_key:
+            raise RuntimeError("ML_INTERNAL_API_KEY must be configured in production.")
+        if ml_internal_key.lower() in _INSECURE_ML_INTERNAL_KEY_VALUES:
+            raise RuntimeError(
+                "ML_INTERNAL_API_KEY uses an insecure/placeholder value; "
+                "configure a strong, unique secret in production."
+            )
+        if settings.auth_auto_provision_users:
+            raise RuntimeError("AUTH_AUTO_PROVISION_USERS must be disabled in production.")
+        bootstrap_password = settings.auth_bootstrap_admin_password.strip().lower()
+        if (
+            settings.auth_bootstrap_admin_enabled
+            and bootstrap_password in _INSECURE_BOOTSTRAP_PASSWORDS
+        ):
+            raise RuntimeError(
+                "AUTH_BOOTSTRAP_ADMIN_PASSWORD uses insecure default; configure a strong secret."
+            )
+        if (
+            settings.rate_limit_distributed_enabled or settings.auth_login_distributed_enabled
+        ) and not settings.redis_url.strip():
+            raise RuntimeError(
+                "REDIS_URL must be configured when distributed security limiters are enabled."
+            )
+    # Migration-management guard (Requirement 1.2): in production the PHR schema
+    # must be created by Alembic migrations, never by the create_all fallback
+    # below. This runs before create_all so the inspected table set reflects the
+    # migration-produced schema. No-op outside production.
+    try:
+        assert_engine_phr_profiles_migration_managed(
+            engine, environment=settings.environment
+        )
+    except PhrMigrationGuardError as exc:
+        raise RuntimeError(str(exc)) from exc
+    # Production schema changes are owned exclusively by Alembic. Keeping
+    # create_all in local/test preserves their convenient empty-DB bootstrap
+    # without allowing a production startup to race ahead of a migration.
+    if settings.environment.strip().lower() != "production":
+        Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        ensure_bootstrap_admin(db, settings)
+    start_research_job_recovery()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db_schema()
+    yield
+
+
+app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 _CSRF_EXEMPT_PATHS = {
     "/api/v1/auth/login",
     "/api/v1/auth/login-otp/verify",
@@ -150,88 +238,6 @@ app.add_middleware(RateLimiterMiddleware)
 # middleware).
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(APIMetricsMiddleware)
-
-
-@app.on_event("startup")
-def init_db_schema() -> None:
-    # Timeout-floor invariant (Requirement 2.4): the API ML request timeout must
-    # never sit below the downstream CLARA_ML synthesis timeout. Validated in
-    # every environment so a misconfiguration fails fast at startup.
-    try:
-        assert_settings_timeout_floors(
-            ml_service_timeout_seconds=settings.ml_service_timeout_seconds,
-            ml_research_timeout_seconds=settings.ml_research_timeout_seconds,
-            deepseek_timeout_seconds=settings.deepseek_timeout_seconds,
-        )
-    except TimeoutFloorError as exc:
-        raise RuntimeError(
-            "ML request timeout misconfigured: "
-            "ML_SERVICE_TIMEOUT_SECONDS must be >= DEEPSEEK_TIMEOUT_SECONDS "
-            "and the sync-research path must stay >= ML_RESEARCH_TIMEOUT_SECONDS. "
-            f"{exc}"
-        ) from exc
-    if settings.environment.lower() == "production":
-        if settings.jwt_secret_key.strip().lower() in _INSECURE_JWT_SECRET_VALUES:
-            raise RuntimeError(
-                "JWT_SECRET_KEY uses an insecure/placeholder value; "
-                "configure a strong, unique secret in production."
-            )
-        # Reject a previous-key rotation window that reuses a known-insecure
-        # placeholder (Requirement 1.2, 1.7). An empty previous key is the
-        # default and is always allowed (no overlap window).
-        previous_jwt_key = settings.jwt_secret_key_previous.strip()
-        if previous_jwt_key and previous_jwt_key.lower() in _INSECURE_JWT_SECRET_VALUES:
-            raise RuntimeError(
-                "JWT_SECRET_KEY_PREVIOUS uses an insecure/placeholder value; "
-                "set it only to a real prior signing key during rotation, "
-                "and clear it once prior-key tokens have expired."
-            )
-        if not settings.auth_cookie_secure:
-            raise RuntimeError("AUTH_COOKIE_SECURE must be true in production.")
-        if settings.auth_csrf_enabled and not settings.auth_cookie_secure:
-            raise RuntimeError("CSRF protection requires AUTH_COOKIE_SECURE=true in production.")
-        ml_internal_key = settings.ml_internal_api_key.strip()
-        if not ml_internal_key:
-            raise RuntimeError("ML_INTERNAL_API_KEY must be configured in production.")
-        if ml_internal_key.lower() in _INSECURE_ML_INTERNAL_KEY_VALUES:
-            raise RuntimeError(
-                "ML_INTERNAL_API_KEY uses an insecure/placeholder value; "
-                "configure a strong, unique secret in production."
-            )
-        if settings.auth_auto_provision_users:
-            raise RuntimeError("AUTH_AUTO_PROVISION_USERS must be disabled in production.")
-        bootstrap_password = settings.auth_bootstrap_admin_password.strip().lower()
-        if (
-            settings.auth_bootstrap_admin_enabled
-            and bootstrap_password in _INSECURE_BOOTSTRAP_PASSWORDS
-        ):
-            raise RuntimeError(
-                "AUTH_BOOTSTRAP_ADMIN_PASSWORD uses insecure default; configure a strong secret."
-            )
-        if (
-            settings.rate_limit_distributed_enabled or settings.auth_login_distributed_enabled
-        ) and not settings.redis_url.strip():
-            raise RuntimeError(
-                "REDIS_URL must be configured when distributed security limiters are enabled."
-            )
-    # Migration-management guard (Requirement 1.2): in production the PHR schema
-    # must be created by Alembic migrations, never by the create_all fallback
-    # below. This runs before create_all so the inspected table set reflects the
-    # migration-produced schema. No-op outside production.
-    try:
-        assert_engine_phr_profiles_migration_managed(
-            engine, environment=settings.environment
-        )
-    except PhrMigrationGuardError as exc:
-        raise RuntimeError(str(exc)) from exc
-    # Production schema changes are owned exclusively by Alembic. Keeping
-    # create_all in local/test preserves their convenient empty-DB bootstrap
-    # without allowing a production startup to race ahead of a migration.
-    if settings.environment.strip().lower() != "production":
-        Base.metadata.create_all(bind=engine)
-    with SessionLocal() as db:
-        ensure_bootstrap_admin(db, settings)
-    start_research_job_recovery()
 
 
 @app.exception_handler(ClaraAPIError)
