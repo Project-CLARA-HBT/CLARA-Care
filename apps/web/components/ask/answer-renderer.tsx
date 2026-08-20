@@ -102,12 +102,32 @@ export function AnswerRenderer({
     (envelope as any).message ||
     (envelope as any).text ||
     "";
-  const actions = answer?.actions ?? [];
+  const rawActions = (answer?.actions ?? (envelope as any).actions ?? []) as Array<
+    ConsumerAnswerActionDto | string
+  >;
+  const actions: ConsumerAnswerActionDto[] = rawActions.map((act, idx) => {
+    if (typeof act === "string") {
+      return {
+        id: `act_${idx}`,
+        label: act,
+        description: undefined,
+        target: undefined,
+      };
+    }
+    return {
+      id: act.id || `act_${idx}`,
+      label: act.label || (act as any).title || (act as any).name || String(act),
+      description: act.description,
+      target: act.target,
+    };
+  });
+
   const sections = answer?.sections ?? [];
   const totalEvidenceCount = personal_evidence.length + external_sources.length;
 
   const safetyMeta = resolveSafetyTone(safety?.urgency);
   const [copied, setCopied] = useState(false);
+  const [showEvidence, setShowEvidence] = useState(false);
 
   const handleCopyAnswer = async () => {
     try {
@@ -211,52 +231,52 @@ export function AnswerRenderer({
         </div>
 
         <div
-          className="medical-markdown prose prose-sm max-w-none text-base leading-relaxed text-[var(--text-primary)] font-normal dark:prose-invert"
+          className="medical-markdown text-base leading-relaxed text-[var(--text-primary)] font-normal"
           data-testid="answer-main-message"
         >
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               h1: ({ children }) => (
-                <h1 className="text-lg font-bold text-[var(--text-primary)] mt-3 mb-2">
+                <h1 className="text-lg font-bold text-[var(--text-primary)] mt-4 mb-2.5 pb-1 border-b border-[color:var(--shell-border)]/60">
                   {children}
                 </h1>
               ),
               h2: ({ children }) => (
-                <h2 className="text-base font-bold text-[var(--text-primary)] mt-3 mb-1.5 border-b border-[color:var(--shell-border)]/50 pb-1">
+                <h2 className="text-base font-bold text-[var(--text-primary)] mt-3.5 mb-2 pb-1 border-b border-[color:var(--shell-border)]/40 text-[var(--text-brand)]">
                   {children}
                 </h2>
               ),
               h3: ({ children }) => (
-                <h3 className="text-sm font-semibold text-[var(--text-primary)] mt-2.5 mb-1">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] mt-3 mb-1.5">
                   {children}
                 </h3>
               ),
               p: ({ children }) => (
-                <p className="mb-2 leading-relaxed text-[var(--text-primary)] last:mb-0">
+                <p className="mb-3 leading-[1.7] text-[15px] text-[var(--text-primary)] last:mb-0">
                   {children}
                 </p>
               ),
               ul: ({ children }) => (
-                <ul className="list-disc pl-5 my-2 space-y-1 text-sm text-[var(--text-primary)]">
+                <ul className="list-disc pl-5 my-2.5 space-y-1.5 text-sm text-[var(--text-primary)]">
                   {children}
                 </ul>
               ),
               ol: ({ children }) => (
-                <ol className="list-decimal pl-5 my-2 space-y-1 text-sm text-[var(--text-primary)]">
+                <ol className="list-decimal pl-5 my-2.5 space-y-1.5 text-sm text-[var(--text-primary)]">
                   {children}
                 </ol>
               ),
               li: ({ children }) => (
-                <li className="leading-relaxed">{children}</li>
+                <li className="leading-relaxed pl-0.5">{children}</li>
               ),
               strong: ({ children }) => (
-                <strong className="font-semibold text-[var(--text-primary)]">
+                <strong className="font-bold text-[var(--text-primary)] bg-[var(--surface-brand-soft)]/50 px-1 py-0.5 rounded">
                   {children}
                 </strong>
               ),
               table: ({ children }) => (
-                <div className="my-3 overflow-x-auto rounded-lg border border-[color:var(--shell-border)]">
+                <div className="my-3.5 overflow-x-auto rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-xs">
                   <table className="min-w-full divide-y divide-[color:var(--shell-border)] text-left text-xs">
                     {children}
                   </table>
@@ -273,24 +293,27 @@ export function AnswerRenderer({
                 </tbody>
               ),
               tr: ({ children }) => (
-                <tr className="hover:bg-[var(--surface-muted)]/30 transition-colors">
+                <tr className="hover:bg-[var(--surface-muted)]/40 transition-colors">
                   {children}
                 </tr>
               ),
               th: ({ children }) => (
-                <th className="px-3 py-2 text-xs font-semibold text-[var(--text-primary)]">
+                <th className="px-3.5 py-2.5 text-xs font-semibold text-[var(--text-primary)]">
                   {children}
                 </th>
               ),
               td: ({ children }) => (
-                <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">
+                <td className="px-3.5 py-2.5 text-xs text-[var(--text-secondary)]">
                   {children}
                 </td>
               ),
               blockquote: ({ children }) => (
-                <blockquote className="border-l-4 border-[var(--brand-500)] pl-3 my-2 text-xs italic text-[var(--text-muted)]">
+                <blockquote className="border-l-4 border-[var(--brand-500)] pl-3 my-2.5 text-xs italic text-[var(--text-muted)] bg-[var(--surface-muted)]/40 py-1 rounded-r">
                   {children}
                 </blockquote>
+              ),
+              hr: () => (
+                <hr className="my-4 border-t border-[color:var(--shell-border)]/60" />
               ),
             }}
           >
@@ -424,7 +447,7 @@ export function AnswerRenderer({
         className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-xs"
         data-testid="answer-evidence-section"
       >
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
               <Icon name="folder" size={14} aria-hidden="true" />
@@ -432,6 +455,9 @@ export function AnswerRenderer({
             <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
               3. Dựa trên đâu
             </h3>
+            {totalEvidenceCount > 0 ? (
+              <Badge tone="neutral">{totalEvidenceCount} nguồn</Badge>
+            ) : null}
           </div>
 
           {onOpenEvidenceDrawer && totalEvidenceCount > 0 ? (
@@ -449,7 +475,7 @@ export function AnswerRenderer({
 
         {/* Context Disclosure Badge */}
         {disclosure && disclosure.used_personal_context ? (
-          <div className="mb-3">
+          <div className="mb-2.5">
             <ContextDisclosureBadge
               disclosure={disclosure}
               personalEvidenceCount={personal_evidence.length}
@@ -458,34 +484,49 @@ export function AnswerRenderer({
           </div>
         ) : null}
 
-        {/* Evidence items summary strip */}
-        <div className="flex flex-wrap gap-2 text-xs">
-          {personal_evidence.slice(0, 3).map((item) => (
-            <span
-              key={item.id}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-[var(--text-secondary)]"
-            >
-              <Icon name="check" size={12} className="text-[var(--status-ok-text)]" aria-hidden="true" />
-              <span className="font-medium text-[var(--text-primary)]">{item.title}</span>
+        {/* Collapsible Evidence List (Hidden/Collapsed by default) */}
+        <details
+          className="group rounded-lg border border-[color:var(--shell-border)]/50 bg-[var(--surface-muted)]/30 p-2.5 transition-all"
+          data-testid="answer-evidence-accordion"
+        >
+          <summary className="flex cursor-pointer select-none items-center justify-between text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+            <span className="flex items-center gap-1.5">
+              <Icon name="clinical-notes" size={13} aria-hidden="true" />
+              <span>Danh sách tài liệu tham khảo & hồ sơ ({totalEvidenceCount})</span>
             </span>
-          ))}
-
-          {external_sources.slice(0, 2).map((src) => (
-            <span
-              key={src.id}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-[var(--text-muted)]"
-            >
-              <Icon name="clinical-notes" size={12} aria-hidden="true" />
-              <span className="truncate max-w-[180px]">{src.title}</span>
+            <span className="text-[11px] text-[var(--text-brand)] underline">
+              Bấm để xem/ẩn
             </span>
-          ))}
+          </summary>
 
-          {totalEvidenceCount === 0 && !disclosure?.used_personal_context ? (
-            <p className="text-xs text-[var(--text-muted)]">
-              Trả lời dựa trên kiến thức y khoa đại chúng và mô tả trong câu hỏi của bạn.
-            </p>
-          ) : null}
-        </div>
+          <div className="mt-3 flex flex-wrap gap-2 pt-2.5 border-t border-[color:var(--shell-border)]/50 text-xs">
+            {personal_evidence.map((item) => (
+              <span
+                key={item.id}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-[var(--text-secondary)]"
+              >
+                <Icon name="check" size={12} className="text-[var(--status-ok-text)]" aria-hidden="true" />
+                <span className="font-medium text-[var(--text-primary)]">{item.title}</span>
+              </span>
+            ))}
+
+            {external_sources.map((src) => (
+              <span
+                key={src.id}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-1 text-[var(--text-muted)]"
+              >
+                <Icon name="clinical-notes" size={12} aria-hidden="true" />
+                <span className="truncate max-w-[240px]">{src.title}</span>
+              </span>
+            ))}
+
+            {totalEvidenceCount === 0 && !disclosure?.used_personal_context ? (
+              <p className="text-xs text-[var(--text-muted)]">
+                Trả lời dựa trên kiến thức y khoa đại chúng và mô tả trong câu hỏi của bạn.
+              </p>
+            ) : null}
+          </div>
+        </details>
       </section>
 
       {/* 4. ĐIỀU CLARA CHƯA BIẾT HOẶC CHƯA CHẮC (Unknowns) */}
