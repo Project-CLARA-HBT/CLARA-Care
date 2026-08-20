@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import asdict, dataclass
+import threading
+import time
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any, cast
 from uuid import uuid4
 
@@ -465,19 +469,641 @@ class CommitmentVersionInput:
     supersession_predicate: dict[str, object] | None = None
 
 
+DOMAIN_NORMALIZATION_MAP = {
+    "medication": "medications",
+    "medications": "medications",
+    "allergy": "allergies",
+    "allergies": "allergies",
+    "condition": "conditions",
+    "conditions": "conditions",
+    "observation": "observations",
+    "observations": "observations",
+}
+
+
+def _normalize_domain(domain: str) -> str:
+    norm = DOMAIN_NORMALIZATION_MAP.get(str(domain).strip().lower())
+    if norm is None or norm not in DOMAINS:
+        raise GlhsInvariantError("commitment_domain_forbidden")
+    return norm
+
+
+@dataclass(frozen=True)
+class EntityDAGCoordinate:
+    """Canonical DAG entity coordinate for fine-grained partition locking."""
+
+    profile_id: int
+    domain: str
+    semantic_key: str
+
+    def __post_init__(self) -> None:
+        norm_domain = _normalize_domain(self.domain)
+        stripped_key = str(self.semantic_key).strip()
+        if not stripped_key:
+            raise GlhsInvariantError("invalid_entity_coordinate")
+        object.__setattr__(self, "domain", norm_domain)
+        object.__setattr__(self, "semantic_key", stripped_key)
+
+    @property
+    def key(self) -> tuple[str, str]:
+        return (self.domain, self.semantic_key)
+
+    @property
+    def canonical_tuple(self) -> tuple[int, str, str]:
+        return (self.profile_id, self.domain, self.semantic_key)
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, EntityDAGCoordinate):
+            return NotImplemented
+        return self.canonical_tuple < other.canonical_tuple
+
+
+class LeaseState(StrEnum):
+    """Lifecycle states of a dynamic partition lease and reasoning transaction."""
+
+    ACTIVE = "active"
+    WAITING = "waiting"
+    WOUNDED = "wounded"
+    ABORTED = "aborted"
+    COMMITTED = "committed"
+    RELEASED = "released"
+
+
+@dataclass
+class DynamicLeaseContext:
+    """Transaction context for multi-agent reasoning with Wound-Wait priority ordering."""
+
+    txn_id: str
+    profile_id: int
+    timestamp: float
+    epoch: int = 1
+    state: LeaseState = LeaseState.ACTIVE
+    held_coordinates: set[EntityDAGCoordinate] = field(default_factory=set)
+    snapshot_versions: dict[EntityDAGCoordinate, int] = field(default_factory=dict)
+    wound_reason: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def is_active(self) -> bool:
+        return self.state == LeaseState.ACTIVE
+
+    @property
+    def is_wounded(self) -> bool:
+        return self.state == LeaseState.WOUNDED
+
+    def mark_wounded(self, reason: str) -> None:
+        self.state = LeaseState.WOUNDED
+        self.wound_reason = reason
+
+    def check_not_wounded(self) -> None:
+        """Verify the transaction is active; fail fast if preempted or aborted."""
+        if self.state == LeaseState.WOUNDED:
+            raise GlhsInvariantError(f"wound_wait_preempted:{self.wound_reason or 'preempted'}")
+        if self.state == LeaseState.ABORTED:
+            raise GlhsInvariantError("transaction_aborted")
+        if self.state != LeaseState.ACTIVE:
+            raise GlhsInvariantError(f"invalid_lease_state:{self.state}")
+
+    def record_snapshot_version(self, coord: EntityDAGCoordinate, version: int) -> None:
+        self.snapshot_versions[coord] = version
+
+
+def canonical_entity_sort_key(
+    item: EntityDAGCoordinate | tuple[str, str] | tuple[int, str, str],
+) -> tuple[int, str, str] | tuple[str, str]:
+    """Return a deterministic sort key preserving canonical ordering."""
+    if isinstance(item, EntityDAGCoordinate):
+        return item.canonical_tuple
+    if isinstance(item, tuple):
+        if len(item) == 2:
+            return (_normalize_domain(item[0]), str(item[1]).strip())
+        if len(item) == 3:
+            return (int(item[0]), _normalize_domain(item[1]), str(item[2]).strip())
+    raise GlhsInvariantError("invalid_entity_coordinate")
+
+
+def canonical_sort_coordinates(
+    items: Iterable[EntityDAGCoordinate | tuple[str, str]],
+) -> list[Any]:
+    """Sort coordinates or (domain, semantic_key) tuples in deterministic canonical order."""
+    return sorted(items, key=canonical_entity_sort_key)
+
+
+def resolve_coordinate(
+    profile_id: int,
+    domain_or_dep: str,
+    semantic_key: str | None = None,
+) -> EntityDAGCoordinate:
+    """Construct a canonical EntityDAGCoordinate from domain/key or prefixed dependency."""
+    if semantic_key is None:
+        raw = str(domain_or_dep).strip()
+        if ":" in raw:
+            prefix, _, rest = raw.partition(":")
+            return EntityDAGCoordinate(
+                profile_id=profile_id,
+                domain=prefix,
+                semantic_key=rest,
+            )
+        raise GlhsInvariantError("invalid_entity_coordinate")
+    return EntityDAGCoordinate(
+        profile_id=profile_id,
+        domain=domain_or_dep,
+        semantic_key=semantic_key,
+    )
+
+
+class DynamicDAGLockManager:
+    """In-memory Wound-Wait lock manager for dynamic DAG entity partition leases.
+
+    Guarantees deadlock freedom during dynamic multi-hop expansion by enforcing:
+    - Wound-Wait rule: Older transactions (lower timestamp) wound younger holders.
+      Younger transactions wait for older holders.
+    - Strict timestamp ordering eliminates cycles in the wait-for graph.
+    - Snapshot version validation detects stale reads on dynamic expansion.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self._leases: dict[EntityDAGCoordinate, DynamicLeaseContext] = {}
+        self._transactions: dict[str, DynamicLeaseContext] = {}
+        self._wait_events: dict[str, threading.Event] = {}
+        self._coord_waiters: dict[EntityDAGCoordinate, list[str]] = {}
+        self._clock_counter = 0
+
+    def _next_timestamp(self) -> float:
+        self._clock_counter += 1
+        return datetime.now(UTC).timestamp() + (self._clock_counter * 1e-6)
+
+    def begin_transaction(
+        self,
+        *,
+        profile_id: int,
+        timestamp: float | None = None,
+        epoch: int = 1,
+        txn_id: str | None = None,
+    ) -> DynamicLeaseContext:
+        with self._lock:
+            t_id = txn_id or str(uuid4())
+            ts = timestamp if timestamp is not None else self._next_timestamp()
+            ctx = DynamicLeaseContext(
+                txn_id=t_id,
+                profile_id=profile_id,
+                timestamp=ts,
+                epoch=epoch,
+                state=LeaseState.ACTIVE,
+            )
+            self._transactions[t_id] = ctx
+            self._wait_events[t_id] = threading.Event()
+            return ctx
+
+    def get_transaction(self, txn_id: str) -> DynamicLeaseContext | None:
+        with self._lock:
+            return self._transactions.get(txn_id)
+
+    def acquire_coordinate(
+        self,
+        txn: DynamicLeaseContext,
+        coordinate: EntityDAGCoordinate,
+        *,
+        timeout: float = 5.0,
+        db: Session | None = None,
+        expected_version: int | None = None,
+    ) -> bool:
+        """Acquire a partition lease under Wound-Wait deadlock prevention."""
+        start_time = time.monotonic()
+        while True:
+            event_to_wait: threading.Event | None = None
+            with self._lock:
+                txn.check_not_wounded()
+
+                if coordinate.profile_id != txn.profile_id:
+                    raise GlhsInvariantError("commitment_scope_forbidden")
+
+                holder = self._leases.get(coordinate)
+                if holder is not None and holder.txn_id == txn.txn_id:
+                    if db is not None:
+                        self._verify_db_version(db, coordinate, expected_version, txn)
+                    return True
+
+                if holder is None:
+                    self._leases[coordinate] = txn
+                    txn.held_coordinates.add(coordinate)
+                    if db is not None:
+                        self._verify_db_version(db, coordinate, expected_version, txn)
+                    return True
+
+                # Lock is held by another transaction `holder`
+                if txn.timestamp < holder.timestamp:
+                    # Older txn wounds younger holder
+                    holder.mark_wounded(f"preempted_by_older_txn_{txn.txn_id}")
+                    holder.held_coordinates.discard(coordinate)
+                    self._leases[coordinate] = txn
+                    txn.held_coordinates.add(coordinate)
+
+                    holder_event = self._wait_events.get(holder.txn_id)
+                    if holder_event is not None:
+                        holder_event.set()
+
+                    if db is not None:
+                        self._verify_db_version(db, coordinate, expected_version, txn)
+                    return True
+                else:
+                    # Younger txn waits for older holder
+                    waiters = self._coord_waiters.setdefault(coordinate, [])
+                    if txn.txn_id not in waiters:
+                        waiters.append(txn.txn_id)
+                    txn.state = LeaseState.WAITING
+                    event_to_wait = self._wait_events[txn.txn_id]
+                    event_to_wait.clear()
+
+            elapsed = time.monotonic() - start_time
+            remaining = timeout - elapsed
+            if remaining <= 0:
+                with self._lock:
+                    self._remove_waiter(coordinate, txn.txn_id)
+                    if txn.state == LeaseState.WAITING:
+                        txn.state = LeaseState.ACTIVE
+                raise GlhsInvariantError("lock_acquisition_timeout")
+
+            event_to_wait.wait(timeout=remaining)
+            elapsed = time.monotonic() - start_time
+            if elapsed >= timeout:
+                with self._lock:
+                    self._remove_waiter(coordinate, txn.txn_id)
+                    if txn.state == LeaseState.WAITING:
+                        txn.state = LeaseState.ACTIVE
+                raise GlhsInvariantError("lock_acquisition_timeout")
+
+            with self._lock:
+                self._remove_waiter(coordinate, txn.txn_id)
+                if txn.is_wounded:
+                    txn.check_not_wounded()
+                if txn.state == LeaseState.WAITING:
+                    txn.state = LeaseState.ACTIVE
+
+    def _verify_db_version(
+        self,
+        db: Session,
+        coord: EntityDAGCoordinate,
+        expected_version: int | None,
+        txn: DynamicLeaseContext,
+    ) -> None:
+        partition = get_or_create_entity_partition(
+            db,
+            profile_id=coord.profile_id,
+            domain=coord.domain,
+            semantic_key=coord.semantic_key,
+        )
+        if expected_version is not None and partition.state_version != expected_version:
+            raise GlhsInvariantError("snapshot_version_violation")
+        txn.record_snapshot_version(coord, partition.state_version)
+
+    def _remove_waiter(self, coordinate: EntityDAGCoordinate, txn_id: str) -> None:
+        waiters = self._coord_waiters.get(coordinate)
+        if waiters and txn_id in waiters:
+            waiters.remove(txn_id)
+            if not waiters:
+                self._coord_waiters.pop(coordinate, None)
+
+    def acquire_coordinates_batch(
+        self,
+        txn: DynamicLeaseContext,
+        coordinates: Iterable[EntityDAGCoordinate],
+        *,
+        timeout: float = 5.0,
+        db: Session | None = None,
+        expected_versions: dict[EntityDAGCoordinate, int] | None = None,
+    ) -> list[EntityDAGCoordinate]:
+        """Acquire multiple coordinates in canonical sorted order."""
+        sorted_coords = sorted(set(coordinates), key=lambda c: c.canonical_tuple)
+        acquired: list[EntityDAGCoordinate] = []
+        for coord in sorted_coords:
+            exp_ver = expected_versions.get(coord) if expected_versions else None
+            self.acquire_coordinate(
+                txn, coord, timeout=timeout, db=db, expected_version=exp_ver
+            )
+            acquired.append(coord)
+        return acquired
+
+    def expand_dynamic_dependencies(
+        self,
+        txn: DynamicLeaseContext,
+        additional_coordinates: Iterable[EntityDAGCoordinate | tuple[str, str]],
+        *,
+        db: Session | None = None,
+        expected_versions: dict[EntityDAGCoordinate, int] | None = None,
+        timeout: float = 5.0,
+    ) -> list[EntityDAGCoordinate]:
+        """Dynamically register and acquire additional coordinates during multi-hop reasoning."""
+        txn.check_not_wounded()
+        resolved: list[EntityDAGCoordinate] = []
+        for item in additional_coordinates:
+            if isinstance(item, EntityDAGCoordinate):
+                coord = item
+            elif isinstance(item, tuple):
+                coord = EntityDAGCoordinate(
+                    profile_id=txn.profile_id,
+                    domain=item[0],
+                    semantic_key=item[1],
+                )
+            else:
+                raise GlhsInvariantError("invalid_entity_coordinate")
+            resolved.append(coord)
+
+        sorted_coords = sorted(set(resolved), key=lambda c: c.canonical_tuple)
+        newly_acquired: list[EntityDAGCoordinate] = []
+        for coord in sorted_coords:
+            if coord not in txn.held_coordinates:
+                exp_ver = expected_versions.get(coord) if expected_versions else None
+                self.acquire_coordinate(
+                    txn, coord, timeout=timeout, db=db, expected_version=exp_ver
+                )
+                newly_acquired.append(coord)
+        return newly_acquired
+
+    def release_coordinate(
+        self, txn: DynamicLeaseContext, coordinate: EntityDAGCoordinate
+    ) -> None:
+        with self._lock:
+            if coordinate in txn.held_coordinates:
+                txn.held_coordinates.remove(coordinate)
+                current = self._leases.get(coordinate)
+                if current is not None and current.txn_id == txn.txn_id:
+                    self._leases.pop(coordinate, None)
+                    waiters = self._coord_waiters.pop(coordinate, None)
+                    if waiters:
+                        for w_id in waiters:
+                            ev = self._wait_events.get(w_id)
+                            if ev is not None:
+                                ev.set()
+
+    def release_transaction(self, txn: DynamicLeaseContext) -> None:
+        """Release all leases held by transaction and wake up waiting transactions."""
+        with self._lock:
+            to_wake: set[str] = set()
+            for coord in list(txn.held_coordinates):
+                current = self._leases.get(coord)
+                if current is not None and current.txn_id == txn.txn_id:
+                    self._leases.pop(coord, None)
+                    waiters = self._coord_waiters.pop(coord, None)
+                    if waiters:
+                        to_wake.update(waiters)
+            txn.held_coordinates.clear()
+            if txn.state in (LeaseState.ACTIVE, LeaseState.WAITING):
+                txn.state = LeaseState.RELEASED
+            self._transactions.pop(txn.txn_id, None)
+            self._wait_events.pop(txn.txn_id, None)
+
+            for w_id in to_wake:
+                ev = self._wait_events.get(w_id)
+                if ev is not None:
+                    ev.set()
+
+    def validate_snapshot_invariance(
+        self,
+        txn: DynamicLeaseContext,
+        db: Session,
+        target_coordinates: Iterable[EntityDAGCoordinate] | None = None,
+    ) -> None:
+        """Validate that all recorded snapshot versions still match current database state."""
+        txn.check_not_wounded()
+        coords_to_check = (
+            target_coordinates if target_coordinates is not None else txn.held_coordinates
+        )
+        for coord in coords_to_check:
+            expected_ver = txn.snapshot_versions.get(coord)
+            if expected_ver is None:
+                continue
+            partition = db.execute(
+                select(GlhsEntityVersionPartition).where(
+                    GlhsEntityVersionPartition.profile_id == coord.profile_id,
+                    GlhsEntityVersionPartition.domain == coord.domain,
+                    GlhsEntityVersionPartition.semantic_key == coord.semantic_key,
+                )
+            ).scalar_one_or_none()
+            if partition is None or partition.state_version != expected_ver:
+                raise GlhsInvariantError("snapshot_version_violation")
+
+    def clear(self) -> None:
+        """Reset lock manager state."""
+        with self._lock:
+            for ev in self._wait_events.values():
+                ev.set()
+            self._leases.clear()
+            self._transactions.clear()
+            self._wait_events.clear()
+            self._coord_waiters.clear()
+            self._clock_counter = 0
+
+
+_GLOBAL_DAG_LOCK_MANAGER = DynamicDAGLockManager()
+
+
+def get_dag_lock_manager() -> DynamicDAGLockManager:
+    """Return the global dynamic DAG Wound-Wait lock manager."""
+    return _GLOBAL_DAG_LOCK_MANAGER
+
+
+def reset_dag_lock_manager() -> None:
+    """Reset the global dynamic DAG lock manager (for testing isolation)."""
+    _GLOBAL_DAG_LOCK_MANAGER.clear()
+
+
+def acquire_dynamic_dag_lease(
+    db: Session,
+    *,
+    profile_id: int,
+    partitions: list[tuple[str, str]] | set[tuple[str, str]] | tuple[tuple[str, str], ...],
+    txn_context: DynamicLeaseContext | None = None,
+    timestamp: float | None = None,
+    epoch: int = 1,
+    expected_versions: dict[tuple[str, str], int] | None = None,
+    policy_version: str = COMMITMENT_POLICY_VERSION,
+    timeout: float = 5.0,
+) -> tuple[DynamicLeaseContext, list[GlhsEntityVersionPartition]]:
+    """Acquire dynamic partition lease and DB row locks under Wound-Wait deadlock prevention."""
+    lock_mgr = get_dag_lock_manager()
+    if txn_context is None:
+        txn_context = lock_mgr.begin_transaction(
+            profile_id=profile_id, timestamp=timestamp, epoch=epoch
+        )
+    txn_context.check_not_wounded()
+
+    coords = [
+        EntityDAGCoordinate(profile_id=profile_id, domain=p[0], semantic_key=p[1])
+        for p in partitions
+    ]
+    exp_ver_map: dict[EntityDAGCoordinate, int] = {}
+    if expected_versions:
+        for p_key, ver in expected_versions.items():
+            exp_ver_map[
+                EntityDAGCoordinate(profile_id=profile_id, domain=p_key[0], semantic_key=p_key[1])
+            ] = ver
+
+    lock_mgr.acquire_coordinates_batch(
+        txn_context, coords, timeout=timeout, db=db, expected_versions=exp_ver_map
+    )
+
+    locked_db_rows = lock_entity_partitions(
+        db,
+        profile_id=profile_id,
+        partitions=partitions,
+        policy_version=policy_version,
+    )
+    return txn_context, locked_db_rows
+
+
+def expand_dynamic_dag_lease(
+    db: Session,
+    *,
+    txn_context: DynamicLeaseContext,
+    additional_partitions: (
+        list[tuple[str, str]] | set[tuple[str, str]] | tuple[tuple[str, str], ...]
+    ),
+    expected_versions: dict[tuple[str, str], int] | None = None,
+    policy_version: str = COMMITMENT_POLICY_VERSION,
+    timeout: float = 5.0,
+) -> list[GlhsEntityVersionPartition]:
+    """Dynamically acquire additional entity DAG coordinates during execution."""
+    lock_mgr = get_dag_lock_manager()
+    txn_context.check_not_wounded()
+
+    coords = [
+        EntityDAGCoordinate(
+            profile_id=txn_context.profile_id, domain=p[0], semantic_key=p[1]
+        )
+        for p in additional_partitions
+    ]
+    exp_ver_map: dict[EntityDAGCoordinate, int] = {}
+    if expected_versions:
+        for p_key, ver in expected_versions.items():
+            exp_ver_map[
+                EntityDAGCoordinate(
+                    profile_id=txn_context.profile_id, domain=p_key[0], semantic_key=p_key[1]
+                )
+            ] = ver
+
+    newly_acquired = lock_mgr.expand_dynamic_dependencies(
+        txn_context, coords, db=db, expected_versions=exp_ver_map, timeout=timeout
+    )
+
+    if not newly_acquired:
+        return []
+
+    new_partition_tuples = [(c.domain, c.semantic_key) for c in newly_acquired]
+    return lock_entity_partitions(
+        db,
+        profile_id=txn_context.profile_id,
+        partitions=new_partition_tuples,
+        policy_version=policy_version,
+    )
+
+
+def validate_dynamic_dag_snapshot_invariance(
+    db: Session,
+    *,
+    txn_context: DynamicLeaseContext,
+) -> None:
+    """Validate snapshot version invariance for all coordinates held by transaction."""
+    lock_mgr = get_dag_lock_manager()
+    lock_mgr.validate_snapshot_invariance(txn_context, db)
+
+
+def release_dynamic_dag_lease(txn_context: DynamicLeaseContext) -> None:
+    """Release all dynamic partition leases held by transaction."""
+    lock_mgr = get_dag_lock_manager()
+    lock_mgr.release_transaction(txn_context)
+
+
+class DynamicDAGLeaseSession:
+    """Context manager for dynamic DAG partition lease lifecycle."""
+
+    def __init__(
+        self,
+        db: Session,
+        *,
+        profile_id: int,
+        initial_partitions: (
+            list[tuple[str, str]]
+            | set[tuple[str, str]]
+            | tuple[tuple[str, str], ...]
+        ) = (),
+        timestamp: float | None = None,
+        epoch: int = 1,
+        policy_version: str = COMMITMENT_POLICY_VERSION,
+        timeout: float = 5.0,
+    ) -> None:
+        self.db = db
+        self.profile_id = profile_id
+        self.initial_partitions = initial_partitions
+        self.timestamp = timestamp
+        self.epoch = epoch
+        self.policy_version = policy_version
+        self.timeout = timeout
+        self.context: DynamicLeaseContext | None = None
+        self.locked_partitions: list[GlhsEntityVersionPartition] = []
+
+    def __enter__(self) -> DynamicDAGLeaseSession:
+        if self.initial_partitions:
+            self.context, self.locked_partitions = acquire_dynamic_dag_lease(
+                self.db,
+                profile_id=self.profile_id,
+                partitions=self.initial_partitions,
+                timestamp=self.timestamp,
+                epoch=self.epoch,
+                policy_version=self.policy_version,
+                timeout=self.timeout,
+            )
+        else:
+            self.context = get_dag_lock_manager().begin_transaction(
+                profile_id=self.profile_id,
+                timestamp=self.timestamp,
+                epoch=self.epoch,
+            )
+        return self
+
+    def expand(
+        self,
+        additional_partitions: (
+            list[tuple[str, str]]
+            | set[tuple[str, str]]
+            | tuple[tuple[str, str], ...]
+        ),
+        expected_versions: dict[tuple[str, str], int] | None = None,
+    ) -> list[GlhsEntityVersionPartition]:
+        if self.context is None:
+            raise GlhsInvariantError("lease_session_not_active")
+        newly_locked = expand_dynamic_dag_lease(
+            self.db,
+            txn_context=self.context,
+            additional_partitions=additional_partitions,
+            expected_versions=expected_versions,
+            policy_version=self.policy_version,
+            timeout=self.timeout,
+        )
+        self.locked_partitions.extend(newly_locked)
+        return newly_locked
+
+    def validate_snapshots(self) -> None:
+        if self.context is None:
+            raise GlhsInvariantError("lease_session_not_active")
+        validate_dynamic_dag_snapshot_invariance(self.db, txn_context=self.context)
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
+        if self.context is not None:
+            if exc_type is not None:
+                self.context.mark_wounded(str(exc_val) if exc_val else "exception_in_context")
+            release_dynamic_dag_lease(self.context)
+
+
 def _resolve_dependency_partition_keys(
     domain: str, dependencies: tuple[str, ...] | list[str]
 ) -> set[tuple[str, str]]:
-    domain_map = {
-        "medication": "medications",
-        "medications": "medications",
-        "allergy": "allergies",
-        "allergies": "allergies",
-        "condition": "conditions",
-        "conditions": "conditions",
-        "observation": "observations",
-        "observations": "observations",
-    }
     keys: set[tuple[str, str]] = set()
     for dep in dependencies:
         dep_str = str(dep).strip()
@@ -485,10 +1111,10 @@ def _resolve_dependency_partition_keys(
             continue
         if ":" in dep_str:
             prefix, _, rest = dep_str.partition(":")
-            if prefix in domain_map and rest:
-                keys.add((domain_map[prefix], rest))
+            if prefix.lower() in DOMAIN_NORMALIZATION_MAP and rest:
+                keys.add((DOMAIN_NORMALIZATION_MAP[prefix.lower()], rest))
                 continue
-        keys.add((domain, dep_str))
+        keys.add((_normalize_domain(domain), dep_str))
     return keys
 
 
