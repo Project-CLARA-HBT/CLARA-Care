@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "alembic>=1.13.2",
-  "email-validator>=2.2.0",
+  "email-validator>=2.3.0",
   "fastapi>=0.116.0",
   "httpx>=0.27.2",
   "markdown-it-py>=3.0.0",
