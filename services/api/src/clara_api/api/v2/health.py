@@ -643,7 +643,7 @@ def get_health_timeline(
     # Fetch LifeMap events
     query = select(LifeMapEvent).where(
         LifeMapEvent.profile_id == profile.id
-    ).order_by(desc(LifeMapEvent.event_time), desc(LifeMapEvent.id))
+    ).order_by(desc(LifeMapEvent.occurred_at), desc(LifeMapEvent.id))
 
     events = list(db.execute(query.limit(50)).scalars())
 
@@ -653,20 +653,24 @@ def get_health_timeline(
         if allowed_types and kind not in allowed_types:
             continue
 
-        if search and search.lower() not in (ev.title or "").lower() and search.lower() not in (ev.description or "").lower():
+        payload = ev.payload_json or {}
+        title = payload.get("title") or getattr(ev, "title", None) or "Sự kiện sức khỏe"
+        summary = payload.get("summary") or getattr(ev, "description", None) or ""
+
+        if search and search.lower() not in title.lower() and search.lower() not in summary.lower():
             continue
 
         timeline_items.append(
             HealthTimelineItem(
                 id=ev.public_id or f"ev_{ev.id}",
                 kind=kind,
-                title=ev.title or "Sự kiện sức khỏe",
-                summary=ev.description or "",
-                effective_at=str(ev.event_time or ev.created_at or datetime.now(timezone.utc)),
+                title=title,
+                summary=summary,
+                effective_at=str(ev.occurred_at or ev.created_at or datetime.now(timezone.utc)),
                 recorded_at=str(ev.created_at or datetime.now(timezone.utc)),
                 state="confirmed" if ev.truth_state == "confirmed" else "user_reported",
-                source_kind="lifemap",
-                source_label=ev.source_system or "Hành trình sức khỏe",
+                source_kind=ev.source_kind or "lifemap",
+                source_label="Hành trình sức khỏe",
                 raw_payload=ev.payload_json,
             )
         )
