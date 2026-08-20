@@ -426,7 +426,7 @@ def get_health_summary(
                 value=obs.value,
                 unit=obs.unit,
                 effective_time=str(obs.observed_on or ""),
-                source_system=obs.source_system or "manual",
+                source_system=getattr(obs, "information_source", "manual") or "manual",
                 source_name="Nhập thủ công",
             )
         )
@@ -1032,11 +1032,12 @@ def add_measurement(
 
     obs = PhrObservation(
         profile_id=profile.id,
+        entry_id=f"obs_{uuid4().hex[:8]}",
         name=payload.label or payload.type,
         value=str(payload.value),
         unit=payload.unit,
-        observed_on=datetime.now(timezone.utc),
-        source_system=payload.source_system or "manual",
+        observed_on=datetime.now(timezone.utc).date(),
+        information_source=payload.source_system or "self-declared",
     )
     db.add(obs)
     db.commit()
@@ -1050,6 +1051,6 @@ def add_measurement(
             value=obs.value,
             unit=obs.unit,
             effective_time=str(obs.observed_on or ""),
-            source_system=obs.source_system,
+            source_system=obs.information_source,
         )
     )
