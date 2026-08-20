@@ -5,7 +5,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
 \usepackage{microtype}
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amssymb,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
@@ -466,7 +466,7 @@ By transitivity, $K_1 \prec_{\text{lex}} K_1$, which contradicts the irreflexivi
 Therefore, no directed cycle can exist in $\operatorname{WFG}(\mathcal{S})$, and the protocol is provably deadlock-free. $\blacksquare$
 \end{proof}
 
-\subsection{Proof of Theorem 3 (Soundness & Completeness of Layer 1 State Barrier)}
+\subsection{Proof of Theorem 3 (Soundness \& Completeness of Layer 1 State Barrier)}
 \begin{proof}
 Let $\mathcal{X}$ be a finite, decidable clinical taxonomy and let $\mathcal{E}$ be a set of bitemporal clinical assertions.
 The Layer 1 Deterministic Reconciliation Kernel evaluates constraints $\psi \in \Psi$ defined over the AST DSL.
