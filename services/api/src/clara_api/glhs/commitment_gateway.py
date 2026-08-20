@@ -16,6 +16,7 @@ from clara_api.db.models import (
     GlhsClinicalCommitmentProposal,
     GlhsClinicalCommitmentTransition,
     GlhsClinicalCommitmentVersion,
+    GlhsEntityVersionPartition,
     GlhsEvidence,
     GlhsInferenceContextBinding,
     GlhsSnapshotManifest,
@@ -386,6 +387,11 @@ def _require_lineage_binding(
     root_binding: GlhsInferenceContextBinding | None = None
     if root_proposal.inference_context_binding_id is not None:
         _validate_proposal_digest(root_proposal)
+        if (
+            root_proposal.source_snapshot_id is None
+            or root_proposal.source_snapshot_digest is None
+        ):
+            raise GlhsInvariantError("commitment_lineage_snapshot_mismatch")
         root_binding = db.execute(
             select(GlhsInferenceContextBinding)
             .where(
@@ -453,6 +459,118 @@ class CommitmentVersionInput:
     supersession_predicate: dict[str, object] | None = None
 
 
+def _resolve_dependency_partition_keys(
+    domain: str, dependencies: tuple[str, ...] | list[str]
+) -> set[tuple[str, str]]:
+    domain_map = {
+        "medication": "medications",
+        "medications": "medications",
+        "allergy": "allergies",
+        "allergies": "allergies",
+        "condition": "conditions",
+        "conditions": "conditions",
+        "observation": "observations",
+        "observations": "observations",
+    }
+    keys: set[tuple[str, str]] = set()
+    for dep in dependencies:
+        dep_str = str(dep).strip()
+        if not dep_str:
+            continue
+        if ":" in dep_str:
+            prefix, _, rest = dep_str.partition(":")
+            if prefix in domain_map and rest:
+                keys.add((domain_map[prefix], rest))
+                continue
+        keys.add((domain, dep_str))
+    return keys
+
+
+def get_or_create_entity_partition(
+    db: Session,
+    *,
+    profile_id: int,
+    domain: str,
+    semantic_key: str,
+    policy_version: str = COMMITMENT_POLICY_VERSION,
+    consent_version: str = "not_required",
+) -> GlhsEntityVersionPartition:
+    """Retrieve or initialize the DAG entity version partition."""
+    existing = db.execute(
+        select(GlhsEntityVersionPartition).where(
+            GlhsEntityVersionPartition.profile_id == profile_id,
+            GlhsEntityVersionPartition.domain == domain,
+            GlhsEntityVersionPartition.semantic_key == semantic_key,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return cast(GlhsEntityVersionPartition, existing)
+    partition = GlhsEntityVersionPartition(
+        profile_id=profile_id,
+        domain=domain,
+        semantic_key=semantic_key,
+        state_version=1,
+        policy_version=policy_version,
+        consent_version=consent_version,
+    )
+    db.add(partition)
+    db.flush()
+    return partition
+
+
+def lock_entity_partitions(
+    db: Session,
+    *,
+    profile_id: int,
+    partitions: list[tuple[str, str]] | set[tuple[str, str]] | tuple[tuple[str, str], ...],
+    policy_version: str = COMMITMENT_POLICY_VERSION,
+    consent_version: str = "not_required",
+) -> list[GlhsEntityVersionPartition]:
+    """Acquire SELECT ... FOR UPDATE row locks on entity partitions in canonical sorted order."""
+    sorted_keys = sorted(set(partitions), key=lambda item: (item[0], item[1]))
+    locked: list[GlhsEntityVersionPartition] = []
+    for domain, semantic_key in sorted_keys:
+        get_or_create_entity_partition(
+            db,
+            profile_id=profile_id,
+            domain=domain,
+            semantic_key=semantic_key,
+            policy_version=policy_version,
+            consent_version=consent_version,
+        )
+        row = db.execute(
+            select(GlhsEntityVersionPartition)
+            .where(
+                GlhsEntityVersionPartition.profile_id == profile_id,
+                GlhsEntityVersionPartition.domain == domain,
+                GlhsEntityVersionPartition.semantic_key == semantic_key,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalar_one()
+        locked.append(row)
+    return locked
+
+
+def increment_partition_versions(
+    db: Session,
+    *,
+    partitions: list[GlhsEntityVersionPartition] | tuple[GlhsEntityVersionPartition, ...],
+    consent_version: str | None = None,
+    policy_version: str | None = None,
+) -> None:
+    """Advance local state_version counters on touched entity partitions (DAG Nodes)."""
+    now = datetime.now(UTC)
+    for partition in partitions:
+        partition.state_version += 1
+        if consent_version is not None:
+            partition.consent_version = consent_version
+        if policy_version is not None:
+            partition.policy_version = policy_version
+        partition.updated_at = now
+    db.flush()
+
+
 def get_or_create_commitment(
     db: Session,
     *,
@@ -466,6 +584,13 @@ def get_or_create_commitment(
         raise GlhsInvariantError("commitment_domain_forbidden")
     if "create" not in scope.allowed_actions:
         raise GlhsInvariantError("commitment_action_forbidden")
+    get_or_create_entity_partition(
+        db,
+        profile_id=scope.profile.id,
+        domain=domain,
+        semantic_key=semantic_key,
+        policy_version=COMMITMENT_POLICY_VERSION,
+    )
     existing = db.execute(
         select(GlhsClinicalCommitment).where(
             GlhsClinicalCommitment.profile_id == scope.profile.id,
@@ -747,6 +872,52 @@ def propose_base_commitment_transition(
     return row
 
 
+def propose_commitment_transition(
+    db: Session,
+    *,
+    scope: ProfileScope,
+    commitment: GlhsClinicalCommitment,
+    observed_evidence: tuple[GlhsEvidence, ...],
+    proposed_transition: str,
+    origin: str,
+    observed_base_state_version: int,
+    task: str,
+    source_snapshot_id: str | None = None,
+    source_snapshot_digest: str | None = None,
+    model_manifest_ref: str | None = None,
+    inference_context_binding_id: str | None = None,
+) -> GlhsClinicalCommitmentProposal:
+    """Backward-compatible entrypoint dispatching to snapshot-bound or base proposal creation."""
+
+    if source_snapshot_id is not None and source_snapshot_digest is not None:
+        return propose_bound_commitment_transition(
+            db,
+            scope=scope,
+            commitment=commitment,
+            observed_evidence=observed_evidence,
+            proposed_transition=proposed_transition,
+            origin=origin,
+            observed_base_state_version=observed_base_state_version,
+            task=task,
+            source_snapshot_id=source_snapshot_id,
+            source_snapshot_digest=source_snapshot_digest,
+            model_manifest_ref=model_manifest_ref,
+            inference_context_binding_id=inference_context_binding_id,
+        )
+    return propose_base_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=observed_evidence,
+        proposed_transition=proposed_transition,
+        origin=origin,
+        observed_base_state_version=observed_base_state_version,
+        task=task,
+        model_manifest_ref=model_manifest_ref,
+        inference_context_binding_id=inference_context_binding_id,
+    )
+
+
 def review_model_commitment_proposal(
     db: Session,
     *,
@@ -781,7 +952,11 @@ def review_model_commitment_proposal(
     root_binding = validate_inference_context_binding(
         db, profile_id=scope.profile.id, binding_id=root_binding_row.public_id
     )
-    if proposal.context_binding_mode != "snapshot_bound" or proposal.source_snapshot_id is None:
+    if (
+        proposal.context_binding_mode != "snapshot_bound"
+        or proposal.source_snapshot_id is None
+        or proposal.source_snapshot_digest is None
+    ):
         raise GlhsInvariantError("commitment_review_downgrade_forbidden")
     _validate_bound_proposal_binding(
         binding=root_binding,
@@ -898,6 +1073,7 @@ def apply_commitment_transition(
     idempotency_key: str,
     transition_kind: str,
     reason_code: str,
+    known_at: datetime | None = None,
 ) -> GlhsClinicalCommitmentTransition:
     """Commit one reviewed version and advance the canonical GLHS state counter."""
 
@@ -941,6 +1117,15 @@ def apply_commitment_transition(
         if existing.request_digest != request_digest:
             raise GlhsInvariantError("commitment_idempotency_reuse_mismatch")
         return cast(GlhsClinicalCommitmentTransition, existing)
+    dep_keys = _resolve_dependency_partition_keys(commitment.domain, data.dependencies)
+    target_and_dep_keys = list({(commitment.domain, commitment.semantic_key)} | dep_keys)
+    locked_partitions = lock_entity_partitions(
+        db,
+        profile_id=scope.profile.id,
+        partitions=target_and_dep_keys,
+        policy_version=COMMITMENT_POLICY_VERSION,
+        consent_version="not_required",
+    )
     base = _lock_profile_state(db, profile_id=scope.profile.id)
     # Re-check after lock acquisition: another transaction may have committed
     # the same key while this writer waited. This prevents a raw unique-key
@@ -1067,16 +1252,18 @@ def apply_commitment_transition(
         partial_predicate_json=predicates["partial_predicate"],
         conflict_rules_json={"rule": policy.conflict_rule},
         abstention_rules_json={"rule": policy.abstention_rule},
-        anchor_valid_time=data.anchor_valid_time,
-        anchor_known_time=data.anchor_known_time,
+        anchor_valid_time=_utc(data.anchor_valid_time),
+        anchor_known_time=_utc(data.anchor_known_time),
         state_effective_at=(
-            data.state_effective_at
+            _utc(data.state_effective_at)
             if data.state_effective_at is not None
-            else data.anchor_valid_time
+            else _utc(data.anchor_valid_time)
         ),
-        earliest_valid_time=data.earliest_valid_time,
-        due_time=data.due_time,
-        grace_end=data.grace_end,
+        earliest_valid_time=(
+            _utc(data.earliest_valid_time) if data.earliest_valid_time is not None else None
+        ),
+        due_time=_utc(data.due_time) if data.due_time is not None else None,
+        grace_end=_utc(data.grace_end) if data.grace_end is not None else None,
         authority_class=data.authority_class,
         schema_version=COMMITMENT_SCHEMA_VERSION,
         policy_version=COMMITMENT_POLICY_VERSION,
@@ -1093,8 +1280,8 @@ def apply_commitment_transition(
         result_version_id=version.id,
         base_state_version=base,
         resulting_state_version=base + 1,
-        valid_at=data.anchor_valid_time,
-        known_at=now,
+        valid_at=_utc(data.anchor_valid_time),
+        known_at=_utc(known_at) if known_at is not None else now,
         transition_kind=transition_kind,
         reason_code=reason_code,
         evidence_ids_json=evidence_ids,
@@ -1124,6 +1311,12 @@ def apply_commitment_transition(
             valid_at=data.anchor_valid_time,
             policy_version=COMMITMENT_POLICY_VERSION,
         )
+    )
+    increment_partition_versions(
+        db,
+        partitions=locked_partitions,
+        consent_version=consent_version,
+        policy_version=COMMITMENT_POLICY_VERSION,
     )
     add_outbox(
         db,

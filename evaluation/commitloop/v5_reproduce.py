@@ -272,6 +272,8 @@ def reproduce(source: Path, output: Path) -> dict[str, Any]:
     )
     if "error_detail" in source_error_header:
         error_fields.insert(error_fields.index("attempts"), "error_detail")
+    if "response_format_signature" in source_error_header:
+        error_fields.insert(error_fields.index("attempts"), "response_format_signature")
     _write_csv(
         output / "error_ledger.csv",
         errors,

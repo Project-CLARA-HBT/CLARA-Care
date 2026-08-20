@@ -190,69 +190,77 @@ def build_solver_packets(
         strict_context.get("production_path"), dict
     ):
         raise ValueError("production_strict_context_provenance_required")
-    contexts = {
-        "full_authorized_history": {
-            "representation": "chronological_full_authorized",
-            "events": serialized_chronological,
-        },
-        "long_context_chronological": {
-            **long_context(serialized_visible),
-        },
-        "naive_rag": {
-            **naive_rag(
-                serialized_visible,
-                system=case.target["system"],
-                code=case.target["code"],
-            ),
-        },
-        "temporal_bm25": {
-            **temporal_bm25(
-                serialized_visible,
-                query_terms=[case.target["system"], case.target["code"], case.action or ""],
-                valid_cutoff=valid_cutoff.isoformat(),
-            ),
-        },
-        "lww": {
-            **last_write_wins(serialized_visible),
-        },
-        "btsa": {
-            **btsa_context(
-                serialized_chronological,
-                valid_at=valid_cutoff,
-                known_at=known_cutoff,
-            ),
-        },
-        "glhs_no_predicate_engine": {
-            "representation": "glhs_bitemporal_without_predicate",
-            "events": [_event(item) for item in chronological],
-            "provenance_closed": True,
-        },
-        "glhs_no_bitemporal_knowledge_time": {
-            "representation": "glhs_valid_time_only",
-            "events": [_event_without_knowledge_time(item) for item in visible],
-            "predicate": case.fulfillment_predicate,
-        },
-        "glhs_hybrid": {
-            "representation": "glhs_bitemporal_predicate_hybrid",
-            "events": [_event(item) for item in chronological],
-            "predicate": case.fulfillment_predicate,
-            "provenance_closed": True,
-        },
-        "glhs_hybrid_thss_strict": {
-            **strict_context,
-            "predicate": case.fulfillment_predicate,
-        },
-        "glhs_v2_full": {
-            **compile_glhs_v2_full_context(
-                case,
-                events,
-                valid_cutoff=valid_cutoff,
-                known_cutoff=known_cutoff,
-            ),
-        },
-    }
     packets = {}
     for condition in conditions:
-        payload = {**common, "condition": condition, "context": contexts[condition]}
+        ctx: dict[str, Any]
+        if condition == "full_authorized_history":
+            ctx = {
+                "representation": "chronological_full_authorized",
+                "events": serialized_chronological,
+            }
+        elif condition == "long_context_chronological":
+            ctx = {**long_context(serialized_visible)}
+        elif condition == "naive_rag":
+            ctx = {
+                **naive_rag(
+                    serialized_visible,
+                    system=case.target["system"],
+                    code=case.target["code"],
+                )
+            }
+        elif condition == "temporal_bm25":
+            ctx = {
+                **temporal_bm25(
+                    serialized_visible,
+                    query_terms=[case.target["system"], case.target["code"], case.action or ""],
+                    valid_cutoff=valid_cutoff.isoformat(),
+                )
+            }
+        elif condition == "lww":
+            ctx = {**last_write_wins(serialized_visible)}
+        elif condition == "btsa":
+            ctx = {
+                **btsa_context(
+                    serialized_chronological,
+                    valid_at=valid_cutoff,
+                    known_at=known_cutoff,
+                )
+            }
+        elif condition == "glhs_no_predicate_engine":
+            ctx = {
+                "representation": "glhs_bitemporal_without_predicate",
+                "events": [_event(item) for item in chronological],
+                "provenance_closed": True,
+            }
+        elif condition == "glhs_no_bitemporal_knowledge_time":
+            ctx = {
+                "representation": "glhs_valid_time_only",
+                "events": [_event_without_knowledge_time(item) for item in visible],
+                "predicate": case.fulfillment_predicate,
+            }
+        elif condition == "glhs_hybrid":
+            ctx = {
+                "representation": "glhs_bitemporal_predicate_hybrid",
+                "events": [_event(item) for item in chronological],
+                "predicate": case.fulfillment_predicate,
+                "provenance_closed": True,
+            }
+        elif condition == "glhs_hybrid_thss_strict":
+            ctx = {
+                **strict_context,
+                "predicate": case.fulfillment_predicate,
+            }
+        elif condition == "glhs_v2_full":
+            ctx = {
+                **compile_glhs_v2_full_context(
+                    case,
+                    events,
+                    valid_cutoff=valid_cutoff,
+                    known_cutoff=known_cutoff,
+                )
+            }
+        else:
+            raise ValueError(f"unsupported condition: {condition}")
+        payload = {**common, "condition": condition, "context": ctx}
         packets[condition] = {**payload, "packet_sha256": _hash(payload)}
     return packets

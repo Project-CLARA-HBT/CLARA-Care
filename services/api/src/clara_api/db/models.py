@@ -2033,6 +2033,37 @@ class GlhsStateVersion(Base):
     policy_version: Mapped[str] = mapped_column(String(64), default="glhs.v1")
 
 
+class GlhsEntityVersionPartition(Base):
+    """Stores independent version vectors for each entity partition (DAG Node)."""
+
+    __tablename__ = "glhs_entity_version_partitions"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id", "domain", "semantic_key", name="uq_glhs_partition_key"
+        ),
+        Index("ix_glhs_partition_lookup", "profile_id", "domain", "semantic_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("phr_profiles.id", ondelete="CASCADE"), index=True
+    )
+    domain: Mapped[str] = mapped_column(String(64), nullable=False)
+    semantic_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    state_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    policy_version: Mapped[str] = mapped_column(
+        String(64), default="commitloop.v1", server_default="commitloop.v1"
+    )
+    consent_version: Mapped[str] = mapped_column(
+        String(96), default="not_required", server_default="not_required"
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    profile: Mapped["PhrProfile"] = relationship("PhrProfile")
+
+
 class GlhsEvidence(Base):
     """Canonical evidence pointer with explicit valid and recorded time.
 

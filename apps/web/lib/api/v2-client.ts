@@ -1763,9 +1763,14 @@ export class ApiV2Client {
         if (response.status === 404 || response.status === 405) {
           handlers.onStart?.();
           const res = await this.ask(request, options);
-          if (res.answer?.main_message) {
-            handlers.onMainMessage?.(res.answer.main_message);
-            handlers.onToken?.(res.answer.main_message);
+          const msg =
+            res.answer?.main_message ||
+            (res as any).main_message ||
+            (typeof res.answer === "string" ? res.answer : "") ||
+            "";
+          if (msg) {
+            handlers.onMainMessage?.(msg);
+            handlers.onToken?.(msg);
           }
           if (res.safety) handlers.onSafety?.(res.safety);
           if (res.personal_evidence || res.external_sources || res.disclosure) {
@@ -1890,6 +1895,8 @@ export class ApiV2Client {
             answer: {
               main_message:
                 envelope?.answer?.main_message ||
+                (envelope as any)?.main_message ||
+                (typeof envelope?.answer === "string" ? envelope.answer : "") ||
                 accumulatedEnvelope.answer?.main_message ||
                 "",
               actions:

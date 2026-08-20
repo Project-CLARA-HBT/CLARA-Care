@@ -597,16 +597,55 @@ function ConsumerAskContent() {
                     </div>
                   </div>
                 </div>
-              ) : exchange.answerEnvelope ? (
-                <AnswerRenderer
-                  envelope={exchange.answerEnvelope}
-                  isStreaming={exchange.status === "streaming"}
-                  onConfirmProposal={handleConfirmProposal}
-                  onRejectProposal={handleRejectProposal}
-                  onEditProposal={handleEditProposal}
-                  onOpenEvidenceDrawer={() => setIsEvidenceDrawerOpen(true)}
-                  locale={uiLanguage}
-                />
+              ) : exchange.answerEnvelope || exchange.streamingText ? (
+                exchange.answerEnvelope?.answer?.sections && exchange.answerEnvelope.answer.sections.length > 0 ? (
+                  <AnswerRenderer
+                    envelope={exchange.answerEnvelope}
+                    isStreaming={exchange.status === "streaming"}
+                    onConfirmProposal={handleConfirmProposal}
+                    onRejectProposal={handleRejectProposal}
+                    onEditProposal={handleEditProposal}
+                    onOpenEvidenceDrawer={() => setIsEvidenceDrawerOpen(true)}
+                    locale={uiLanguage}
+                  />
+                ) : (
+                  <AnswerRenderer
+                    envelope={
+                      exchange.answerEnvelope
+                        ? {
+                            ...exchange.answerEnvelope,
+                            answer: {
+                              actions:
+                                exchange.answerEnvelope.answer?.actions ??
+                                (exchange.answerEnvelope as any).actions ??
+                                [],
+                              sections:
+                                exchange.answerEnvelope.answer?.sections ??
+                                (exchange.answerEnvelope as any).sections ??
+                                [],
+                              main_message:
+                                exchange.streamingText ||
+                                exchange.answerEnvelope.answer?.main_message ||
+                                (exchange.answerEnvelope as any).main_message ||
+                                "",
+                            },
+                          }
+                        : {
+                            answer: {
+                              main_message: exchange.streamingText || "",
+                              actions: [],
+                              sections: [],
+                            },
+                          }
+                    }
+                    isStreaming={exchange.status === "streaming"}
+                    onConfirmProposal={handleConfirmProposal}
+                    onRejectProposal={handleRejectProposal}
+                    onEditProposal={handleEditProposal}
+                    onOpenEvidenceDrawer={() => setIsEvidenceDrawerOpen(true)}
+                    locale={uiLanguage}
+                  />
+                )
               ) : null}
             </div>
           </div>

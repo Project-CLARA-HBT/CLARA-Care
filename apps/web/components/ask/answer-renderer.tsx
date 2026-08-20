@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type {
   ConsumerAnswerEnvelope,
   ConsumerAnswerActionDto,
@@ -92,12 +95,29 @@ export function AnswerRenderer({
     disclosure,
   } = envelope;
 
-  const mainMessage = answer?.main_message ?? "";
+  const mainMessage =
+    answer?.main_message ||
+    (envelope as any).main_message ||
+    (typeof answer === "string" ? answer : "") ||
+    (envelope as any).message ||
+    (envelope as any).text ||
+    "";
   const actions = answer?.actions ?? [];
   const sections = answer?.sections ?? [];
   const totalEvidenceCount = personal_evidence.length + external_sources.length;
 
   const safetyMeta = resolveSafetyTone(safety?.urgency);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAnswer = async () => {
+    try {
+      await navigator.clipboard.writeText(mainMessage);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <div
@@ -166,20 +186,116 @@ export function AnswerRenderer({
         className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm"
         data-testid="answer-main-message-section"
       >
-        <div className="flex items-center gap-2 mb-2.5">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-            <Icon name="clinical-notes" size={14} aria-hidden="true" />
-          </span>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
-            1. Điều quan trọng nhất
-          </h2>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+              <Icon name="clinical-notes" size={14} aria-hidden="true" />
+            </span>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+              1. Điều quan trọng nhất
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleCopyAnswer}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-colors focus-ring"
+              title="Sao chép nội dung"
+              aria-label="Sao chép nội dung câu trả lời"
+            >
+              <Icon name={copied ? "check" : "clinical-notes"} size={13} aria-hidden="true" />
+              <span>{copied ? "Đã chép" : "Sao chép"}</span>
+            </button>
+          </div>
         </div>
 
         <div
-          className="text-base leading-relaxed text-[var(--text-primary)] font-medium whitespace-pre-line"
+          className="medical-markdown prose prose-sm max-w-none text-base leading-relaxed text-[var(--text-primary)] font-normal dark:prose-invert"
           data-testid="answer-main-message"
         >
-          {mainMessage}
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h1: ({ children }) => (
+                <h1 className="text-lg font-bold text-[var(--text-primary)] mt-3 mb-2">
+                  {children}
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-base font-bold text-[var(--text-primary)] mt-3 mb-1.5 border-b border-[color:var(--shell-border)]/50 pb-1">
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] mt-2.5 mb-1">
+                  {children}
+                </h3>
+              ),
+              p: ({ children }) => (
+                <p className="mb-2 leading-relaxed text-[var(--text-primary)] last:mb-0">
+                  {children}
+                </p>
+              ),
+              ul: ({ children }) => (
+                <ul className="list-disc pl-5 my-2 space-y-1 text-sm text-[var(--text-primary)]">
+                  {children}
+                </ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal pl-5 my-2 space-y-1 text-sm text-[var(--text-primary)]">
+                  {children}
+                </ol>
+              ),
+              li: ({ children }) => (
+                <li className="leading-relaxed">{children}</li>
+              ),
+              strong: ({ children }) => (
+                <strong className="font-semibold text-[var(--text-primary)]">
+                  {children}
+                </strong>
+              ),
+              table: ({ children }) => (
+                <div className="my-3 overflow-x-auto rounded-lg border border-[color:var(--shell-border)]">
+                  <table className="min-w-full divide-y divide-[color:var(--shell-border)] text-left text-xs">
+                    {children}
+                  </table>
+                </div>
+              ),
+              thead: ({ children }) => (
+                <thead className="bg-[var(--surface-muted)] font-semibold text-[var(--text-secondary)]">
+                  {children}
+                </thead>
+              ),
+              tbody: ({ children }) => (
+                <tbody className="divide-y divide-[color:var(--shell-border)]/40">
+                  {children}
+                </tbody>
+              ),
+              tr: ({ children }) => (
+                <tr className="hover:bg-[var(--surface-muted)]/30 transition-colors">
+                  {children}
+                </tr>
+              ),
+              th: ({ children }) => (
+                <th className="px-3 py-2 text-xs font-semibold text-[var(--text-primary)]">
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">
+                  {children}
+                </td>
+              ),
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-4 border-[var(--brand-500)] pl-3 my-2 text-xs italic text-[var(--text-muted)]">
+                  {children}
+                </blockquote>
+              ),
+            }}
+          >
+            {mainMessage}
+          </ReactMarkdown>
           {isStreaming ? (
             <span className="inline-block h-4 w-2 ml-1 animate-pulse bg-[var(--brand-500)] align-middle" />
           ) : null}
@@ -193,9 +309,11 @@ export function AnswerRenderer({
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                   {sec.title}
                 </h3>
-                <p className="text-sm leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
-                  {sec.content}
-                </p>
+                <div className="medical-markdown text-sm leading-relaxed text-[var(--text-secondary)]">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {sec.content}
+                  </ReactMarkdown>
+                </div>
               </div>
             ))}
           </div>

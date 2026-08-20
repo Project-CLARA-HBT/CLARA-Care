@@ -55,7 +55,7 @@ def test_all_conditions_build_distinct_gold_free_packets() -> None:
         known_cutoff=datetime(2026, 2, 1, tzinfo=UTC),
     )
     assert set(packets) == set(CONDITIONS)
-    assert EXPLORATORY_V7_CONDITIONS == (*CONDITIONS, "temporal_bm25")
+    assert EXPLORATORY_V7_CONDITIONS == (*CONDITIONS, "temporal_bm25", "glhs_v2_full")
     assert "temporal_bm25" not in packets
     assert len({item["packet_sha256"] for item in packets.values()}) == len(CONDITIONS)
     assert len(

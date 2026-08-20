@@ -22,8 +22,12 @@ from clara_api.glhs.commitment_gateway import (
     CommitmentVersionInput,
     apply_commitment_transition,
     get_or_create_commitment,
+    get_or_create_entity_partition,
+    increment_partition_versions,
+    lock_entity_partitions,
     propose_base_commitment_transition,
     propose_bound_commitment_transition,
+    propose_commitment_transition,
     reconstruct_commitment_decision,
     reconstruct_commitments,
     review_model_commitment_proposal,
@@ -996,3 +1000,96 @@ def test_commitment_fault_rolls_back_and_clean_retry_recovers(
         reason_code="fault_test",
     )
     assert recovered.resulting_state_version == 1
+
+
+def test_entity_partition_lifecycle_and_locking(db: Session) -> None:
+    scope = _scope(db)
+    at = datetime(2026, 1, 1, tzinfo=UTC)
+    evidence = _evidence(db, scope, at, label="dag-partition-test")
+
+    # 1. get_or_create_entity_partition
+    partition = get_or_create_entity_partition(
+        db,
+        profile_id=scope.profile.id,
+        domain="medications",
+        semantic_key="medication:metformin-500mg",
+    )
+    assert partition.state_version == 1
+    assert partition.domain == "medications"
+    assert partition.semantic_key == "medication:metformin-500mg"
+
+    # 2. lock_entity_partitions with multiple sorted keys
+    partitions = lock_entity_partitions(
+        db,
+        profile_id=scope.profile.id,
+        partitions=[
+            ("medications", "medication:metformin-500mg"),
+            ("observations", "observation:fasting-glucose"),
+        ],
+    )
+    assert len(partitions) == 2
+    # Verify deterministic alphabetical sorting
+    assert (partitions[0].domain, partitions[0].semantic_key) <= (
+        partitions[1].domain,
+        partitions[1].semantic_key,
+    )
+
+    # 3. increment_partition_versions
+    increment_partition_versions(db, partitions=partitions)
+    assert partitions[0].state_version == 2
+    assert partitions[1].state_version == 2
+
+    # 4. commitment transition advances DAG entity partition version
+    commitment = get_or_create_commitment(
+        db,
+        scope=scope,
+        semantic_key="observation:fasting-glucose",
+        domain="observations",
+        supersession_key="observation:fasting-glucose",
+    )
+    # 5. propose_commitment_transition legacy dispatch (bound)
+    proposal = propose_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=(evidence,),
+        proposed_transition="OPEN",
+        origin="user",
+        **_snapshot_binding(db, scope, evidence, at),
+    )
+    transition = apply_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        proposal=proposal,
+        evidence=(evidence,),
+        data=_version(at),
+        expected_state_version=current_state_version(db, profile_id=scope.profile.id),
+        idempotency_key="dag-partition-commit",
+        transition_kind="commitment_opened",
+        reason_code="dag_partition_test",
+    )
+    assert transition.resulting_state_version == 1
+
+    part_after = get_or_create_entity_partition(
+        db,
+        profile_id=scope.profile.id,
+        domain="observations",
+        semantic_key="observation:fasting-glucose",
+    )
+    # State version incremented during apply_commitment_transition (was 2, now 3)
+    assert part_after.state_version == 3
+
+    # 6. propose_commitment_transition legacy dispatch (base_only)
+    base_prop = propose_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=(evidence,),
+        proposed_transition="OPEN",
+        origin="user",
+        observed_base_state_version=current_state_version(db, profile_id=scope.profile.id),
+        task="base-only-verification",
+    )
+    assert base_prop.context_binding_mode == "base_version_only"
+

@@ -283,7 +283,7 @@ def compile_commitment_thss(
         raise GlhsInvariantError("commitment_snapshot_domain_invalid")
     if not allowed_domains.issubset(scope.allowed_data_classes):
         raise GlhsInvariantError("commitment_snapshot_domain_forbidden")
-    if scope.valid_until is not None and scope.valid_until <= datetime.now(UTC):
+    if scope.valid_until is not None and _as_utc(scope.valid_until) <= datetime.now(UTC):
         raise GlhsInvariantError("commitment_snapshot_scope_expired")
     if any(item.profile_id != scope.profile.id for item in disclosed_evidence):
         raise GlhsInvariantError("commitment_snapshot_evidence_scope_forbidden")

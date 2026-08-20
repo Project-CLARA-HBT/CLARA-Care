@@ -471,6 +471,7 @@ def compile_production_commitment_context(
                 idempotency_key=f"glhs-bench:{token}:open",
                 transition_kind="commitment_opened",
                 reason_code="deterministic_synthetic_anchor",
+                known_at=known_cutoff,
             )
             final = compile_commitment_thss(
                 db,
@@ -876,6 +877,7 @@ def compile_glhs_v2_full_context(
                 idempotency_key=f"glhs-bench:{token}:open",
                 transition_kind="commitment_opened",
                 reason_code="deterministic_synthetic_anchor",
+                known_at=known_cutoff,
             )
             final = compile_commitment_thss(
                 db,
@@ -948,6 +950,44 @@ def compile_glhs_v2_full_context(
                 str(evidence_id): str(role)
                 for evidence_id, role in minimal_evidence["roles"].items()
             }
+            role_hierarchy = [
+                "conflict",
+                "anchor",
+                "dependency",
+                "target_supporting",
+                "predicate_supporting",
+            ]
+            grouped_roles: dict[str, list[str]] = {role: [] for role in role_hierarchy}
+            for evidence_id in minimal_evidence["evidence_ids"]:
+                role = roles.get(str(evidence_id))
+                if role in grouped_roles:
+                    grouped_roles[role].append(str(evidence_id))
+
+            role_topology = {
+                "hierarchy": role_hierarchy,
+                "role_distribution": {
+                    role: len(ids) for role, ids in grouped_roles.items() if ids
+                },
+                "roles_by_evidence_id": roles,
+                "evidence_by_role": {
+                    role: sorted(ids) for role, ids in grouped_roles.items() if ids
+                },
+            }
+
+            closed_world_frame = {
+                "closed_world_frame": True,
+                "semantics": "negation_as_failure",
+                "boundary_status": "complete_within_cutoff",
+                "temporal_horizon": {
+                    "valid_cutoff": valid_cutoff.isoformat(),
+                    "known_cutoff": known_cutoff.isoformat(),
+                },
+                "disclosed_evidence_count": len(minimal_evidence["evidence_ids"]),
+                "excluded_caller_evidence_count": len(
+                    minimal_evidence.get("excluded_caller_evidence", [])
+                ),
+            }
+
             events_by_id = {event.evidence_id: _timeline_event(event) for event in visible}
             disclosed_events = sorted(
                 (
@@ -993,6 +1033,7 @@ def compile_glhs_v2_full_context(
             }
             disclosure = {
                 "representation": "glhs_v2_full_reconciled",
+                "closed_world_frame": closed_world_frame,
                 # These are manifest-bound production query coordinates, not
                 # task labels.  A downstream reconciliation consumer must know
                 # both axes used to determine which source events were visible.
@@ -1016,6 +1057,7 @@ def compile_glhs_v2_full_context(
                     "target": case.target,
                     "dependencies": list(dependencies),
                 },
+                "role_topology": role_topology,
                 "commitments": [compact_commitment],
                 "events": disclosed_events,
                 "governed_source_ledger": {

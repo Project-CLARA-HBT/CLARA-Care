@@ -111,6 +111,23 @@ def test_glhs_v2_full_context_exposes_the_upgraded_production_information() -> N
         assert fact in context["fact_coverage"]
     assert context["fact_coverage"]["anchor"]["covered"] is True
 
+    # Closed-world frame and role topology disclosures
+    assert context["closed_world_frame"]["closed_world_frame"] is True
+    assert context["closed_world_frame"]["semantics"] == "negation_as_failure"
+    assert context["closed_world_frame"]["boundary_status"] == "complete_within_cutoff"
+    assert context["role_topology"]["hierarchy"] == [
+        "conflict",
+        "anchor",
+        "dependency",
+        "target_supporting",
+        "predicate_supporting",
+    ]
+    assert context["role_topology"]["role_distribution"] == {"anchor": 2}
+    assert context["role_topology"]["evidence_by_role"]["anchor"] == [
+        "Observation/observation-one",
+        "ServiceRequest/request-one",
+    ]
+
     # Minimal evidence carries explicit roles per id.
     roles = context["minimal_evidence"]["roles"]
     assert roles["ServiceRequest/request-one"] == "anchor"
