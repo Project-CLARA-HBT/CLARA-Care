@@ -46,6 +46,24 @@ We assume an authenticated but potentially overreaching user, stale client state
 Let an issued disclosure snapshot be $H=(u,a,p,v_s,v_g,d,e)$, where $u$ is subject, $a$ actor, $p$ purpose, $v_s$ state version, $v_g$ governance version, $d$ snapshot digest, and $e$ expiry. A later proposal $P$ requests persistent change. A security failure occurs when the deployment releases protected information or commits $P$ despite a violated invariant that should make the operation inadmissible.
 
 \begin{table}[t]
+\caption{Cross-Benchmark Capability Comparison: Evaluating Coverage of Threat Dimensions in Stateful Clinical Agent Security.}
+\label{tab:benchmark_comparison}
+\centering\scriptsize
+\begin{tabularx}{\columnwidth}{l c c c c c}
+\toprule
+\textbf{Benchmark} & \textbf{Prompt Attack} & \textbf{Tool Access} & \textbf{TOCTOU Drift} & \textbf{Consent Revoke} & \textbf{Merkle Trace}\\
+\midrule
+AgentDojo~\cite{agentdojo} & \checkmark & \checkmark & $\times$ & $\times$ & $\times$\\
+MPIB~\cite{mpib} & \checkmark & $\times$ & $\times$ & $\times$ & $\times$\\
+CommitGuard~\cite{temporaryauth} & $\times$ & \checkmark & \checkmark & $\times$ & $\times$\\
+Provenact~\cite{statefulgov} & $\times$ & \checkmark & \checkmark & $\times$ & $\times$\\
+GateMem~\cite{gatemem} & $\times$ & \checkmark & $\times$ & $\times$ & $\times$\\
+\textbf{GovRed-Health (Ours)} & \checkmark & \checkmark & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[t]
 \caption{Core authorization-drift schedules and their primary invariant.}
 \label{tab:attacks}
 \centering\scriptsize

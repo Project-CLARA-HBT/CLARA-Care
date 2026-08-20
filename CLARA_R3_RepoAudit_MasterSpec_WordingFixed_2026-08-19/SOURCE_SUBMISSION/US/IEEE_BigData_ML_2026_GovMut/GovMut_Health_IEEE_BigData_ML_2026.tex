@@ -74,6 +74,24 @@ Generated examples, state-machine steps, retries, and shrinks are execution mech
 The benchmark starts from 15 prespecified fault families (Table~\ref{tab:mut}). A family may instantiate multiple mutants only at semantically distinct enforcement sites. Cosmetic edits are not used to inflate $N$.
 
 \begin{table}[t]
+\caption{Cross-Paradigm Mutation and Verification Benchmark Comparison.}
+\label{tab:paradigm_comparison}
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{l c c c c c}
+\toprule
+\textbf{Paradigm} & \textbf{State Inv.} & \textbf{Lineage} & \textbf{Bitemp.} & \textbf{Merkle} & \textbf{Domain}\\
+\midrule
+Syntactic MutPy & $\times$ & $\times$ & $\times$ & $\times$ & Code\\
+MemTxn/Cordon~\cite{memtxn,cordon} & \checkmark & $\times$ & $\times$ & $\times$ & Agent Memory\\
+TOKI Algebra~\cite{toki} & \checkmark & $\times$ & \checkmark & $\times$ & Bitemporal\\
+FHIR OCC~\cite{fhirhttp} & \checkmark & $\times$ & $\times$ & $\times$ & EHR REST\\
+\textbf{GovMut-Health} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{Health AI}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
 \caption{Prespecified mutation families.}
 \label{tab:mut}
 \centering\scriptsize

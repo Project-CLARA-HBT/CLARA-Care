@@ -81,6 +81,23 @@ The state-machine generator is biased toward transitions that create meaningful 
 The mutation manifest is frozen before the headline run. Each mutant is a test-only, reversible change representing one realistic fault. Mutants are not runtime feature flags available to production deployments. The 15 rows in Table~\ref{tab:mut} are \emph{fault families}, not the intended final sample size. Where the implementation exposes multiple semantically distinct enforcement sites, the study instantiates multiple mutants per family. The target is at least 45 executable, non-duplicate mutants across several code locations; if the repository does not support that many defensible mutants, the final denominator and the resulting limitation are reported rather than padded with cosmetic edits.
 
 \begin{table}[t]
+\caption{Cross-Paradigm Mutation and Verification Benchmark Comparison.}
+\label{tab:paradigm_comparison}
+\centering\scriptsize
+\begin{tabularx}{\textwidth}{l c c c c c}
+\toprule
+\textbf{Paradigm} & \textbf{State Invariants} & \textbf{Lineage Trace} & \textbf{Bitemporal Math} & \textbf{Merkle Root} & \textbf{Target Domain}\\
+\midrule
+Syntactic Mutants (MutPy) & $\times$ & $\times$ & $\times$ & $\times$ & Generic Code\\
+MemTxn / Cordon~\cite{memtxn,cordon} & \checkmark & $\times$ & $\times$ & $\times$ & Agent Memory\\
+TOKI Algebra~\cite{toki} & \checkmark & $\times$ & \checkmark & $\times$ & Bitemporal Memory\\
+FHIR Version OCC~\cite{fhirhttp} & \checkmark & $\times$ & $\times$ & $\times$ & EHR REST\\
+\textbf{GovMut-Health (Ours)} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{Stateful Health AI}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[t]
 \caption{Prespecified mutation families.}
 \label{tab:mut}
 \centering\scriptsize
