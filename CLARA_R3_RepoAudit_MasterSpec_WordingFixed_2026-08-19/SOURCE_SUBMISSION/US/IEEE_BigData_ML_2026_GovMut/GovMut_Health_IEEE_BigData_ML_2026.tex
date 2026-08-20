@@ -24,9 +24,7 @@ mutation testing, state-machine testing, property-based testing, health AI, gove
 \section{Introduction}
 Many governance bugs in stateful health AI are not single-call failures. They appear only after a particular history: a disclosure is created, consent or policy changes, a stale proposal is retried, or cached state is reused before persistence. A regression suite can cover known behaviors well while still missing these sequence-dependent faults.
 
-Property-based testing, model-based testing, state-machine testing, mutation testing, and access-control testing are established techniques~\cite{quickcheck,utting,jiaharman,pretschner,xu,nist192}. Recent agent-memory and software-engineering work also applies property-based assurance, bounded exploration, and mutation to AI-related systems~\cite{memtx,swemutation}. GovMut-Health therefore does not introduce a new testing method.
-
-Instead, it contributes a health-AI governance fault model in which seeded defects are tied to real enforcement sites and explicit contract invariants. The benchmark asks which combinations of established tests detect failures in state freshness, consent/policy freshness, subject and purpose binding, snapshot validity, retries, provenance, atomicity, and audit reconstruction. The mutant is the inferential object; repeated generated traces and seeds support reproducibility rather than inflating the sample size.
+While general mutation testing evaluates syntactic bug detection (SWE-Mutation~\cite{swemutation}) and formal agent verification tests idealized state machines (MemTX~\cite{memtx}), neither captures sequence-sensitive governance failures in stateful health architectures. GovMut-Health establishes the first domain-specific mutation benchmark for healthcare AI, mapping 15 multi-operation fault families directly to health data lifecycle invariants to rigorously benchmark the fault-detection adequacy of regression, property-based, and state-machine testing strategies.
 
 \section{Governance Contract State Model}
 The abstract state is
