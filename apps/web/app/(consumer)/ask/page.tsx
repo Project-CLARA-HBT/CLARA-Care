@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   AskComposer,
@@ -466,17 +467,29 @@ function ConsumerAskContent() {
           </p>
         </div>
 
-        {exchange ? (
-          <button
-            type="button"
-            onClick={handleStartNewQuestion}
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-ring"
-            data-testid="ask-new-question-button"
+        <div className="flex items-center gap-2">
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/60 px-3 py-1.5 text-xs font-semibold text-[var(--text-brand)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-colors focus-ring"
+            title="Chuyển sang giao diện CLARA Chat với chế độ Pro (DeepBeta)"
           >
-            <Icon name="plus" size={14} aria-hidden="true" />
-            <span>Câu hỏi mới</span>
-          </button>
-        ) : null}
+            <Icon name="clinical-notes" size={14} aria-hidden="true" />
+            <span>Chế độ Pro (DeepBeta)</span>
+            <Icon name="arrow-right" size={13} aria-hidden="true" />
+          </Link>
+
+          {exchange ? (
+            <button
+              type="button"
+              onClick={handleStartNewQuestion}
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-ring"
+              data-testid="ask-new-question-button"
+            >
+              <Icon name="plus" size={14} aria-hidden="true" />
+              <span>Câu hỏi mới</span>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/* Scoped Entry Context Banner if attached */}
