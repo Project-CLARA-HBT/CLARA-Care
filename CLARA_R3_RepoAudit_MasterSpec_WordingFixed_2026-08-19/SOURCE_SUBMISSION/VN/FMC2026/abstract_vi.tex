@@ -1,0 +1,22 @@
+\documentclass[11pt]{article}
+\usepackage[T5]{fontenc}\usepackage[utf8]{inputenc}\usepackage{lmodern}
+\usepackage[a4paper,margin=1in]{geometry}\usepackage{microtype}\usepackage{parskip}\pagestyle{empty}
+\begin{document}
+\begin{center}
+{\Large\bfseries Từ bối cảnh sức khỏe dọc đến hành động an toàn: hợp đồng quản trị đồng phiên bản cho AI y tế có trạng thái}\\[0.7em]
+\textbf{Nguyễn Ngọc Thiện, Trịnh Minh Quang}\\
+Trường THPT Hai Bà Trưng, Huế, Việt Nam\\
+Tác giả liên hệ: kakangocthien109@gmail.com
+\end{center}
+\textbf{Chuyên đề:} AI và chuyển đổi số trong Y tế và Giáo dục Y khoa
+
+\textbf{Đặt vấn đề.} Một hệ thống AI y tế có trạng thái có thể đọc một phần hồ sơ bệnh nhân khi dữ liệu và quyền truy cập vẫn còn hợp lệ, nhưng chỉ tạo đề xuất cập nhật sau khi hồ sơ, trạng thái đồng thuận hoặc chính sách quản trị đã thay đổi. Vì vậy, một lần đọc hợp lệ chưa chắc còn đủ để cho phép một thay đổi dữ liệu ở thời điểm ghi.
+
+\textbf{Phương pháp.} Nghiên cứu trình bày GLHS, được triển khai trong CLARA-Care như một cơ chế nối bối cảnh sức khỏe đã thực sự cung cấp cho AI với bước xét duyệt ghi về sau trên đường xử lý có ràng buộc ảnh chụp đã được đánh giá. Ảnh chụp trạng thái sức khỏe giới hạn theo tác vụ (THSS) ghi lại phần trạng thái bệnh nhân được cung cấp cho một chủ thể, vai trò, mục đích và tác vụ cụ thể, cùng các tọa độ về phiên bản và quản trị. Khi một đề xuất bền vững do mô hình tạo ra đi theo đường xử lý này, đề xuất phải giữ ràng buộc với đúng THSS đã được sử dụng. Trước khi ghi, cơ chế Chuyển trạng thái có quản trị (GST) kiểm tra lại độ mới của trạng thái và các điều kiện quản trị liên quan. Đánh giá gồm kiểm thử hợp đồng xác định, thực nghiệm đồng thời trên PostgreSQL và một đoàn hệ tổng hợp đã khóa trước gồm 64 đối tượng, sử dụng Claude Sonnet 4.6 và Gemini 3.6 Flash High. Tổng 1.152 ô mô hình--điều kiện là các lần đánh giá lặp lại, không phải 1.152 đối tượng độc lập.
+
+\textbf{Kết quả.} Với THSS nghiêm ngặt, Claude đạt đúng hoàn toàn trên các trục đã định trước ở 63/64 đối tượng (98,44\%), còn Gemini đạt 64/64 (100\%). Sáu trong mười so sánh cặp đã định trước vẫn có ý nghĩa sau hiệu chỉnh Holm, nhưng các kiểm định có ý nghĩa chỉ dựa trên 9--21 cặp bất đồng. Trong một ma trận PostgreSQL TOCTOU độc lập gồm 12 lịch đã khóa trước, không ghi nhận giao dịch bị cấm khi thay đổi đồng thuận, vai trò, phiên bản chính sách, trạng thái hoặc nhiều điều kiện cùng lúc; các đề xuất không còn hợp lệ sau thay đổi bị từ chối, trong khi đối chứng hợp lệ theo thứ tự thời gian vẫn có thể ghi. Một mô hình hữu hạn khác đã duyệt 21.361 trạng thái và 90.432 chuyển trạng thái đến độ sâu 5 mà không phát hiện vi phạm 11 bất biến đã định nghĩa. Đây là kiểm tra hữu hạn, không phải chứng minh phổ quát. Trong một lần chạy Claude độc lập sau đó với 384 đối tượng, so sánh THSS nghiêm ngặt với toàn bộ lịch sử được phép sử dụng cho kết quả không khác biệt; vì vậy bằng chứng về bối cảnh mô hình không cho phép kết luận THSS luôn vượt trội.
+
+\textbf{Kết luận.} GLHS tạo ra một đường đi phần mềm có thể truy vết, trong đó chính phần dữ liệu sức khỏe đã được cung cấp cho AI trong lúc suy luận vẫn gắn với quyết định cho phép hay từ chối ghi dữ liệu về sau. Tính mới nằm ở mối liên kết xuyên suốt từ công bố dữ liệu đến ghi thay đổi, không nằm ở đồng thuận, truy vết nguồn gốc, cơ sở dữ liệu hai thời gian hay kiểm tra phiên bản riêng lẻ. Bằng chứng hiện tại giới hạn ở dữ liệu tổng hợp và đánh giá hệ thống phần mềm; nghiên cứu chưa chứng minh hiệu quả lâm sàng, tính đúng đắn cho mọi lịch đồng thời không bị chặn, tuân thủ pháp lý hay cải thiện kết cục người bệnh.
+
+\textbf{Từ khóa:} AI y tế dọc; quản trị dữ liệu; đồng thuận; AI có trạng thái; nhất quán trạng thái; tin học y sinh
+\end{document}

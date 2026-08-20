@@ -1,0 +1,23 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}\usepackage[utf8]{inputenc}\usepackage{lmodern}
+\usepackage[a4paper,margin=1in]{geometry}\usepackage{microtype}\usepackage{parskip}\usepackage[hidelinks]{hyperref}
+\pagestyle{empty}\begin{document}
+
+\begin{center}
+{\Large\bfseries From Longitudinal Context to Safe Action: A Co-Versioned Governance Contract for Persistent Health AI}\\[0.7em]
+\textbf{Nguyen Ngoc Thien, Trinh Minh Quang}\\
+Hai Ba Trung High School, Hue, Vietnam\\
+Corresponding author: kakangocthien109@gmail.com
+\end{center}
+\textbf{Topic area:} AI and Digital Transformation in Healthcare and Medical Education
+
+\textbf{Background.} A persistent health-AI system may read a patient snapshot that is valid and authorized at the time of access, but return a proposed update only after the record, consent state, or governing policy has changed. The original read may therefore be legitimate while the later write is no longer admissible.
+
+\textbf{Methods.} This presentation reports the GLHS systems study implemented in CLARA-Care. GLHS links the exact governed health context supplied to the AI with later write admission on the evaluated snapshot-bound path. A Task-Bounded Health State Snapshot (THSS) records the patient-state view disclosed for a specific subject, actor, purpose, and task, together with state and governance coordinates. When a model-derived durable proposal follows that path, the proposal retains the same snapshot binding. A Governed State Transition (GST) then checks whether the relevant state and governance conditions still permit persistence. We evaluated the software contract with deterministic tests, PostgreSQL concurrency experiments, and a prospectively frozen synthetic cohort of 64 subjects using Claude Sonnet 4.6 and Gemini 3.6 Flash High. The 1,152 model-condition cells are repeated evaluations, not 1,152 independent subjects.
+
+\textbf{Results.} Under Strict THSS, all predefined axes were exact for 63/64 subjects (98.44\%) with Claude and 64/64 (100\%) with Gemini. Six of ten prespecified paired comparisons remained significant after Holm correction, although the significant tests were informed by only 9--21 discordant subjects. In a separate frozen PostgreSQL governance-TOCTOU matrix of 12 schedules, no forbidden commit was observed across consent, role, policy-epoch, state, and compound-drift changes; invalid post-change proposals were rejected while temporally valid controls could commit. Bounded finite-state exploration reached 21,361 states and 90,432 transitions to depth 5 without violating 11 specified invariants. This is bounded checking, not a universal proof. A later 384-subject Claude-only comparison between Strict THSS and full authorized history was null, so the model-context evidence does not establish universal superiority.
+
+\textbf{Conclusion.} GLHS provides a traceable software path that keeps the exact governed health disclosure used during inference connected to a later write-admission decision. The contribution lies in this cross-operation binding, not in consent, provenance, bitemporality, or version checking individually. Current evidence is limited to synthetic data and software evaluation and does not establish clinical effectiveness, correctness for arbitrary unbounded interleavings, regulatory compliance, or improved patient outcomes.
+
+\textbf{Keywords:} longitudinal health AI; governance; consent; persistent AI; state consistency; clinical informatics
+\end{document}

@@ -1,0 +1,354 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{float}
+\usepackage{caption}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\newcommand{\repo}{\url{https://github.com/Project-CLARA-HBT/CLARA-Care}}
+\newcommand{\pending}{\textbf{PENDING SEALED EXTERNAL RUN}}
+\title{\textbf{CareGuard-VN: Source-Bound Medication Identity as a Safety Gate for Drug--Drug Interaction Screening}}
+\author{Nguyen Ngoc Thien \qquad Trinh Minh Quang\\[0.45em]
+\small Hai Ba Trung High School, Hue, Vietnam}
+\date{Draft preprint -- August 2026}
+
+\emergencystretch=3em
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Medication-safety systems depend on a basic assumption that is easy to overlook: the medication identity supplied to downstream drug--drug interaction (DDI) reasoning must be the intended one. CareGuard-VN studies this identity boundary rather than proposing a new DDI model. The system uses a source-bound medication identity (SBMI) contract in which a reassuring downstream DDI conclusion is releasable only when every required medication has a current, source-verifiable identity. Unknown or ambiguous aliases trigger clarification; previously selected identities are rejected if their alias, stable identifier, or source-version binding is stale; and a missing or integrity-invalid required knowledge source produces an incomplete result rather than an empty all-clear. The planned external evaluation uses Vietnamese Drug Administration (DAV) product records, RxNorm, DDInter 2.0, DailyMed, and optional access-controlled n2c2 data. The primary safety endpoint is false-clear rate on externally positive interaction cases, reported together with automatic coverage, wrong-identity completion, and clarification burden. An oracle-identity arm separates identity-resolution errors from DDI-knowledge coverage. Existing runtime checks are retained as engineering conformance only. No external performance claim is made until the frozen, hash-bound benchmark has been executed.
+\end{abstract}
+
+\section{Introduction}
+Drug--drug interaction screening is only as meaningful as the medication identities supplied to it. This sounds obvious, but medication names vary across brands, generic names, local formularies, abbreviations, spelling, and free-text documentation. RxNorm and systems such as MedXN were designed to normalize these variants~\cite{nelson2011rxnorm,sohn2014medxn}, and approximate matching has long addressed lexical variation~\cite{peters2011approx}. Recent systems have pushed this further: RxMap combines deterministic candidate generation with LLM-assisted parsing~\cite{korpela2026rxmap}, while RxEmbed reports very high precision for medication mappings across several healthcare organizations~\cite{huser2025rxembed}. Medication normalization itself is therefore a mature research problem.
+
+Ambiguity and deferral are also established ideas. Clinical concept-normalization datasets contain several forms of ambiguity~\cite{newmangriffis2021ambiguity}, and selective-prediction systems can abstain when the expected cost of an error is higher than the cost of review~\cite{swaminathan2024selective}. CareGuard-VN does not claim novelty for ambiguity detection, human clarification, or abstention alone.
+
+The unresolved issue is what happens \\emph{after} normalization, when the selected identity becomes the input to medication-safety reasoning. DDI resources such as DrugBank and DDInter assume that the query refers to the intended drugs. Yet DDI tools disagree substantially across sources and severity schemes~\cite{gibson2026ddireview}, and drug-name substitutions can change downstream model behavior even when the pharmacology is unchanged~\cite{gallifant2024rabbits}. Recent direct evaluations of LLM-based DDI reasoning also report unsafe recommendations despite strong interaction-identification performance~\cite{chase2026ddi}. A technically correct DDI lookup can therefore still answer the wrong question if the medication identity is wrong.
+
+CareGuard-VN treats medication identity as a release condition, not merely a preprocessing score. Its proposed \\textbf{source-bound medication identity (SBMI) contract} allows a downstream DDI conclusion to be released only when each required medication has a current, source-verifiable identity. Unknown or ambiguous aliases trigger clarification. A previously chosen identity becomes inadmissible if its observed alias, stable source identifier, or source version no longer matches. If a required interaction source is unavailable or fails integrity checks, the system reports an incomplete result rather than interpreting the failure as ``no interaction.''
+
+The novelty claim is intentionally narrow. We do not claim that RxNorm normalization, candidate ranking, ambiguity detection, human review, abstention, terminology versioning, DrugBank lookup, or Vietnamese-language rendering is new. The study instead asks whether making source-valid medication identity a \\emph{mandatory precondition} for downstream DDI release can reduce unsafe completed conclusions, and what loss of automatic coverage that safety gate requires. The contributions are:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{SBMI as a downstream release contract:} identity is treated as an admissibility condition for DDI inference rather than only as a best-match output;
+  \item \textbf{version-bound clarification:} a selected identity remains tied to the observed alias, stable identifier, and exact source version, preventing silent reuse after identity drift;
+  \item \textbf{safety-oriented evaluation:} false-clear rate and risk--coverage are primary outcomes, with an oracle-identity arm separating identity-resolution failure from DDI-knowledge failure; and
+  \item \textbf{external Vietnamese identity stress testing:} DAV product records provide an independent local identity challenge, complemented by RxNorm, DDInter, DailyMed, and optional n2c2 evidence.
+\end{enumerate}
+
+\section{Related Work}
+\subsection{Medication normalization, ambiguity, and review}
+Medication normalization has a mature terminology and NLP literature. RxNorm provides normalized drug concepts and relationships \cite{nelson2011rxnorm}; MedXN extracts medication mentions and attributes and maps them to RxCUIs \cite{sohn2014medxn}; and approximate matching methods explicitly target local spelling and lexical variants \cite{peters2011approx}. A 2026 survey synthesizes datasets and classical, neural, transformer, graph, and LLM approaches to medical concept normalization, reinforcing that normalization itself is a mature problem rather than a novelty claim \cite{chen2026mcnsurvey}. The n2c2 2019 concept-normalization task provides an access-controlled external benchmark \cite{n2c22019}. RxMap is the closest contemporary medication-normalization comparator because it directly targets heterogeneous free-text medication strings with deterministic RxNorm candidates, LLM-assisted parsing, confidence stratification, and an optional review interface \cite{korpela2026rxmap}.
+
+Ambiguity itself is not a new CareGuard contribution. Existing clinical-normalization datasets underrepresent several forms of ambiguity relative to the UMLS concept space \cite{newmangriffis2021ambiguity}. CareGuard's distinction is downstream: ambiguity is not merely a low-confidence mapping to be scored; under strict SBMI it prevents release of a DDI conclusion until the identity contract is satisfied.
+
+\subsection{Selective prediction and abstention}
+Abstention has an established theoretical and clinical precedent. Selective-prediction systems can trade automation coverage against misclassification cost and defer uncertain cases for review \cite{swaminathan2024selective}. CareGuard therefore does not claim abstention itself as novel. Its gate differs from probability-threshold selective prediction because release can be forbidden by a failed structural prerequisite---for example zero or multiple source-backed candidates, a stale source version, or an integrity-invalid required knowledge artifact---even if another model could produce a confident guess.
+
+\subsection{Drug-name robustness and wrong-drug safety}
+Medication-name variation is clinically relevant beyond terminology matching. RABBITS showed that substituting physician-validated brand and generic names can change LLM performance on biomedical benchmarks \cite{gallifant2024rabbits}. Wrong-drug and look-alike/sound-alike errors are also established medication-safety problems; MedGuard evaluated a machine-learning CDSS over more than 1.2 million prescriptions and explicitly targeted inappropriate and LASA drug errors \cite{chen2024medguard}. These works establish the safety relevance of identity errors, but they do not evaluate a source-version-bound identity predicate as a mandatory precondition for DDI release.
+
+\subsection{Drug--drug interaction resources and evaluation}
+DrugBank is a structured drug and interaction resource \cite{wishart2018drugbank}. DDInter 2.0 provides an independently maintained interaction resource with 302,516 DDI records and mechanism/management information \cite{tian2025ddinter,ddinterdownload2026}. Because DDI tools vary in sources, severity schemes, and clinical relevance, database membership should not be conflated with universal ground truth. Gibson et al. found generally poor-to-moderate agreement across DDI checkers and substantial reference-standard limitations \cite{gibson2026ddireview}. A separate 2025 systematic review of eight controlled/prospective studies (43,413 patients) found no significant reduction in targeted adverse DDIs and no clear patient-important outcome benefit from electronic DDI alerts \cite{holbrook2025alerts}. Accordingly, CareGuard-VN is evaluated as software/information-safety behavior, not as demonstrated clinical effectiveness.
+
+CrossDDI is an especially important 2026 neighbor because it makes DDI prediction verification-first: LLM-based evidence extraction is followed by deterministic arbitration over DrugBank and PubMed, and positive interaction claims must link to supporting evidence \cite{crossddi2026}. This prevents CareGuard-VN from claiming ``evidence-gated DDI release'' in general. The remaining distinction is upstream: CrossDDI assumes medications can be represented for interaction verification, whereas SBMI asks whether the medication identity itself is admissible before any reassuring DDI conclusion is released.
+
+For external validation, DDInter is therefore used as an independent \emph{positive reference} rather than universal DDI truth. Absence from DDInter is not labeled a true negative unless a separate independently adjudicated negative set is available.
+
+\subsection{Regulatory and Vietnamese identity sources}
+The U.S. National Library of Medicine publishes versioned RxNorm releases; the July 6, 2026 Current Prescribable Content subset is used as a terminology baseline \cite{nlmrxnorm2026}. DailyMed provides current Structured Product Labeling resources and SPL--RxNorm mappings \cite{dailymed2026}. In Vietnam, the Drug Administration of Vietnam (DAV) public portal exposes product-registration fields including drug name, active ingredient, strength, dosage form, license/registration information, and manufacturer \cite{dav2026}. We use DAV as an external product-identity source, not as proof of present market availability.
+
+\subsection{Literature-derived novelty boundary}
+Table~\ref{tab:novelty} summarizes the nearest-neighbor boundary that governs the manuscript claims. The gap is not any component alone; it is the coupling of source-verifiable identity to downstream release plus a safety endpoint that measures the harm of completing on the wrong identity.
+
+\begin{table}[H]
+\centering
+\caption{Nearest-neighbor literature and the CareGuard-VN novelty boundary.}
+\label{tab:novelty}
+\scriptsize
+\begin{tabularx}{\textwidth}{p{2.6cm}p{3.0cm}X}
+\toprule
+\textbf{Established line} & \textbf{Representative prior work} & \textbf{Boundary retained for CareGuard-VN} \\
+\midrule
+Medication normalization & RxNorm, MedXN, approximate matching, RxMap & Not novel: mapping noisy strings, candidate ranking, LLM parsing, confidence tiers, or optional review. New question: whether identity admissibility gates downstream DDI release. \\
+Ambiguity / abstention & Newman-Griffis et al.; selective prediction & Not novel: ambiguity characterization or abstention. Distinction: structural source validity can forbid release independent of model confidence. \\
+Drug-name safety & RABBITS; MedGuard & Not novel: brand/generic fragility or wrong-drug prevention. Distinction: identity error is traced specifically into DDI completion and false reassurance. \\
+DDI knowledge/checkers & DrugBank; DDInter; DDI systematic reviews & Not novel: DDI lookup/severity resources. Distinction: source-separated positive references evaluate the downstream consequences of identity gating. \\
+Evidence-grounded DDI verification & CrossDDI 2026 & Not novel: requiring interaction predictions to be evidence-supported. Distinction: SBMI gates the upstream medication identity before downstream DDI verification/release. \\
+Terminology/source versioning & RxNorm and versioned knowledge artifacts & Not novel: version identifiers. Distinction: a stale identity binding is made inadmissible for a later DDI conclusion. \\
+Vietnam localization & DAV product records & Not novel: Vietnamese UI. Contribution: independent local product identities and noisy local surface forms as an external stress test of the general contract. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\section{System Design}
+\subsection{Implementation snapshot}
+The present draft is grounded in the public CLARA-Care repository at commit \texttt{81c024d74ea9} (full Git revision recorded in the benchmark manifest). The relevant implementation spans the CareGuard analysis agent, the on-disk DrugBank DDI store, DrugBank ingestion tooling, API surfaces, and mobile/web projections. The repository is available at \repo.
+
+The current implementation separates three concerns: input interpretation, medication identity, and interaction checking. Vietnamese free-text medication extraction is deliberately bounded. Deterministic Vietnamese clinical parsing and exact dictionary/index probes may nominate source spans, while an optional LLM augmentation path may nominate only exact spans from the original input. The LLM is not permitted to choose a DrugBank ID, infer an interaction, set severity, or author the final DDI decision.
+
+\subsection{Source-bound medication identity}
+For strict identity resolution, a raw input alias is queried against the verified DrugBank-backed dictionary. The resolver has three relevant outcomes:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{unique current candidate}: continue with the source-backed identity;
+  \item \textbf{unknown or ambiguous alias}: return \texttt{requires\_medication\_clarification};
+  \item \textbf{stale or substituted choice}: reject the submitted choice and return to clarification.
+\end{itemize}
+
+A user-selected candidate is validated against the exact original alias, \texttt{drugbank\_id}, and active \texttt{drugbank\_version}. This prevents a client from substituting an arbitrary identifier or replaying a choice from a stale knowledge release. For medicine-cabinet flows, the selection is additionally request-scoped to the cabinet item and does not silently overwrite the stored medication record.
+
+We summarize the contract as
+\begin{equation}
+\mathrm{DDIReady}(m) \iff \mathrm{CurrentSource}(s) \land \mathrm{AliasBound}(m,s) \land \mathrm{IdentityResolved}(m,s).
+\end{equation}
+For a medication set $M$, CareGuard may produce a completed DDI conclusion only if the required identity predicate holds for every medication that enters the interaction check.
+
+\subsection{Fail-closed knowledge-source integrity}
+The DrugBank store is maintained as an on-disk SQLite index to avoid loading a large interaction layer into memory. Before the store can advertise \texttt{ready}, it verifies a manifest identity, source/version fields, per-shard SHA-256 values, manifest digest, interaction and dictionary counts, and readability of the indexed tables. Rebuilds occur into a temporary SQLite file and are atomically replaced. In strict mode, an unavailable or integrity-mismatched required source produces an unavailable DDI conclusion rather than an empty ``safe'' result.
+
+\subsection{Interaction and wording boundary}
+The DDI engine performs pair lookup after identity resolution. The implementation also handles allergy conflicts, critical symptoms, and selected laboratory risk flags. Consumer wording is generated from the final deterministic result and is not allowed to alter medication identity or interaction severity. A required-source failure is explicitly worded as an incomplete check rather than ``no interaction.''
+
+\section{Research Questions}
+The external study is organized around five research questions, with RQ2 as the primary safety question.
+
+\textbf{RQ1 -- External medication identity.} How accurately does CareGuard resolve externally sourced Vietnamese medication products and independent clinical medication strings to the intended ingredient identity under clean and noisy surface forms?
+
+\textbf{RQ2 -- Main safety question.} At prespecified common automatic-coverage levels, does strict source-bound identity gating reduce end-to-end false reassurance and conditional false-clear DDI conclusions relative to legacy, exact/approximate terminology, fuzzy, and reproducible modern normalization pipelines?
+
+\textbf{RQ3 -- Coverage cost.} What clarification/abstention burden is incurred by strict SBMI, and what is the resulting risk--coverage trade-off?
+
+\textbf{RQ4 -- Error decomposition.} How much end-to-end DDI failure is attributable to medication identity resolution versus interaction-knowledge coverage, as estimated by an oracle-identity arm using the same downstream DDI engine?
+
+\textbf{RQ5 -- Contract integrity.} Does the system preserve non-release under ambiguous identities, stale source-bound selections, and unavailable or integrity-invalid required knowledge sources, including on a secondary DailyMed regulatory-warning subset?
+\section{External Evaluation Protocol}
+\subsection{Data sources}
+Table~\ref{tab:sources} defines the planned external evidence sources. No source used to create the current internal CareGuard DDI oracle is permitted to serve as the sole external benchmark oracle.
+
+\begin{table}[H]
+\centering
+\caption{External sources and their intended role.}
+\label{tab:sources}
+\small
+\begin{tabularx}{\textwidth}{p{2.4cm}p{3.1cm}X}
+\toprule
+\textbf{Source} & \textbf{Role} & \textbf{Use in evaluation} \\
+\midrule
+DAV & Vietnam product identity & Product/registration name, active ingredient, strength, dosage form, and manufacturer fields. Used for identity evaluation only; not treated as definitive current-market status. \\
+RxNorm July 2026 CPC & Terminology baseline & Deterministic exact/normalized/approximate candidate baselines and standardized ingredient identities where applicable. \\
+DDInter 2.0 & External positive DDI reference & Known positive DDI pairs independent of the runtime DrugBank artifact. Used for positive-pair recall and false-clear analysis, not naive specificity. \\
+DailyMed & Regulatory warning subset & Explicit interaction statements in current SPLs, linked to RxNorm with NLM mapping files. Used as a secondary positive regulatory-reference subset. \\
+n2c2 2019 Track 3 & Optional external normalization & Access-controlled generalization benchmark; only RxNorm-relevant treatment/medication concepts are used after compliance with the DUA. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Frozen units of analysis}
+The unit of analysis differs by benchmark and is fixed prospectively.
+\begin{itemize}[leftmargin=*]
+  \item \textbf{DAV identity}: the external product record is the primary unit. Multiple deterministic perturbations of one product are clustered under that product and are not treated as independent products.
+  \item \textbf{Normalization benchmark}: the original independently annotated medication string is the primary unit; perturbations are clustered under the original string.
+  \item \textbf{DDI benchmark}: the unordered canonical drug pair is the primary unit. Alias variants of the same pair are repeated observations within that pair, not independent interactions.
+  \item \textbf{DailyMed}: the label-supported drug pair or explicit interaction target is the primary unit after mapping and manual rule validation of the extraction logic.
+\end{itemize}
+This prevents inflated sample sizes from multiple aliases or perturbations of the same underlying medication/product/pair.
+
+\subsection{Input strata}
+The Vietnamese identity evaluation includes clean and noisy conditions derived only after the clean external product set is frozen: exact product name, normalized generic/ingredient name where available, no-diacritic form, punctuation/whitespace variation, strength and dosage-form suffixes, manufacturer suffixes, deterministic typographic corruption, OCR-like substitutions, and Vietnamese--English code-switch templates. Any transformation rule is versioned and applied identically across systems.
+
+The benchmark distinguishes naturally occurring external strings from synthetic robustness transformations. The latter are never presented as independent real-world samples.
+
+\subsection{Baselines}
+At minimum, the following systems are compared on the same frozen instances:
+\begin{enumerate}[leftmargin=*]
+  \item RxNorm exact normalized-string lookup;
+  \item RxNorm approximate matching or an equivalent documented deterministic matcher;
+  \item a transparent fuzzy-string baseline with fixed threshold selected on development data only;
+  \item CareGuard legacy/non-strict identity behavior;
+  \item \textbf{CareGuard strict source-bound identity}; and
+  \item an oracle-identity arm that bypasses identity resolution and supplies the external gold ingredient identity directly to the DDI stage, isolating identity error from interaction-source coverage.
+\end{enumerate}
+RxMap is the mandatory nearest-neighbor comparator to attempt because it is a strong contemporary medication-normalization baseline with public research tooling \cite{korpela2026rxmap}. RxEmbed is an additional methodological nearest neighbor for high-precision LLM-assisted mapping/review, but its use as an executable comparator depends on reproducible public availability and applicable terms \cite{huser2025rxembed}. If its public code/interface cannot be reproduced under the applicable terms, the run manifest must record the failed feasibility attempt and the paper must not fabricate a comparator result. A brand--generic invariance stratum inspired by RABBITS is also prespecified where the external identity source provides both forms \cite{gallifant2024rabbits}.
+
+\subsection{Primary and secondary metrics}
+For identity resolution, report exact ingredient-set accuracy, wrong-identity completion rate, unresolved/abstention rate, safe coverage, and clarification burden. For multi-ingredient products, both exact set match and ingredient-level precision/recall are reported. Because abstention is already established in the literature, the headline comparison is not whether CareGuard can abstain; it is the \textbf{risk--coverage trade-off}: false-clear/wrong-identity risk at matched or reported automatic-coverage levels. Report a coverage-versus-risk curve rather than a single optimized threshold.
+
+For externally positive DDI pairs, the primary end-to-end safety metric keeps identity failures inside the denominator:
+\begin{equation}
+\mathrm{E2E\mbox{-}FR}=\frac{N_{\mathrm{reassuring\ output\ on\ positive}}}{N_{\mathrm{all\ frozen\ external\ positives}}}.
+\end{equation}
+A secondary conditional metric isolates the downstream DDI stage:
+\begin{equation}
+\mathrm{Conditional\mbox{-}FC}=\frac{N_{\mathrm{resolved\ positive\ returned\ clear}}}{N_{\mathrm{positive\ pairs\ reaching\ DDI\ stage}}}.
+\end{equation}
+This decomposition prevents mapping or identity-resolution failures from disappearing from the main safety denominator. Also report interaction-detection recall, abstention rate, identity-failure rate, and oracle-identity recall. The gap between strict-system and oracle-identity performance estimates the contribution of identity resolution separately from DDI-knowledge coverage.
+
+Specificity, false-positive rate, and positive predictive value are \textbf{not reported} unless an explicit independent negative reference set is obtained. Random pairs absent from DDInter are not treated as true negatives.
+
+If external severity labels are available and a prespecified semantic mapping is defensible, severity agreement is reported separately using weighted agreement statistics. No severity mapping is tuned after viewing CareGuard outputs.
+
+\subsection{Statistical analysis}
+Final sample sizes and precision targets must also be frozen before any locked test execution; until the Vietnam identity frame is acquired and those values are hash-bound, no final benchmark run is permitted. Coverage matching is fixed before final-test inspection. Thresholded baselines are tuned on development data only, and the confirmatory report evaluates a prespecified grid of common coverage levels; the risk--coverage curve and its summary over that common grid are reported without choosing a favorable post-hoc operating point. Binary paired comparisons on the same units use paired effect estimates with 95\% confidence intervals. McNemar's exact test is used for prespecified paired binary contrasts when its assumptions are met. Cluster bootstrap confidence intervals are used when multiple perturbations share one underlying product/string/pair. Multiple confirmatory contrasts are corrected with Holm's method. Every percentage is accompanied by numerator and denominator. No solver cell, alias variant, or perturbation is counted as an independent biological or clinical unit.
+
+\subsection{Freeze, leakage control, and reproducibility}
+Every source is represented by a manifest containing source name, version/retrieval date, official URL or access statement, file checksum, row count, parser version, and license/access notes. Development and final test manifests are disjoint and hash-bound. A final run records the Git commit, container/image identifiers when available, feature flags, RxNorm release, DrugBank runtime release, DDInter snapshot, DAV extraction snapshot, DailyMed snapshot, random seeds, perturbation version, and all per-case outputs before aggregate tables are generated.
+
+Cross-source DAV-to-standard-identity mapping is frozen before the final run. Deterministic one-to-one mappings are accepted automatically; ambiguous brand, combination, ingredient, or historical-registration mappings are assigned to two independent reviewers using a written rubric, with disagreement adjudicated before system outputs are inspected. Unresolved mappings are excluded transparently with a reason code and never relabeled after seeing CareGuard results. The final external test set is immutable after the first result is inspected. A changed mapping/parser/source file requires a new run identifier and complete rerun. Access-controlled n2c2 data and licensed DrugBank content are never redistributed in the public repository.
+
+\section{Current Engineering Evidence}
+The current repository contains meaningful engineering evidence, but it does not yet contain the external benchmark described above. The historical runtime check uses a DrugBank 5.0 XML export dated 20 December 2017, parsed into 10,562 top-level drug records, 357,839 normalized/deduplicated DDI pairs, and 34,344 dictionary records. In one same-source runtime conformance sample, 242 of 250 positive pairs sampled from that same DrugBank artifact were returned by the deployed API, while 250 of 250 sampled pairs constructed as absent from the same index produced no DrugBank alert. Because this artifact is historical relative to the 2026 study, it is used only to test source-to-runtime conformance of that frozen index; it is not evidence of current DDI coverage or contemporary medication-safety performance. The report records eight positive lookup failures for investigation.
+
+Since that run, the source tree has added stricter source identity and clarification behavior: ambiguous aliases are retained as multiple candidates; choices are bound to alias, DrugBank ID, and version; stale choices are rejected; a missing or mismatched required index fails closed; and the mobile/client path treats clarification as an incomplete check rather than an all-clear. These properties are covered by source-level tests. However, the previously reported 242/250 deployment result remains the last runtime conformance result in the repository snapshot audited for this draft. It must not be silently replaced by source-level test success.
+
+\begin{table}[H]
+\centering
+\caption{Evidence status in the manuscript draft.}
+\small
+\begin{tabularx}{\textwidth}{p{4.0cm}p{3.2cm}X}
+\toprule
+\textbf{Evidence item} & \textbf{Status} & \textbf{Permitted interpretation} \\
+\midrule
+Manifest/index integrity tests & Implemented & Technical assurance of artifact identity and fail-closed behavior; not clinical validation. \\
+Same-source DrugBank runtime conformance & 242/250 positive; 250/250 same-index absent-pair checks & Runtime/source conformance only; not external sensitivity/specificity. \\
+Strict ambiguity and stale-choice rejection & Implemented and source-tested & Contract behavior under test fixtures; external identity accuracy not yet measured. \\
+DAV external identity benchmark & \pending & No result claimed. \\
+DDInter 2.0 external positive DDI benchmark & \pending & No result claimed. \\
+DailyMed regulatory-warning subset & \pending & No result claimed. \\
+Optional n2c2 normalization generalization & \pending & No result claimed. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Threats to Validity}
+First, the current runtime DrugBank artifact is old relative to the 2026 study date. A refreshed lawful release should be preferred before headline external evaluation; if it cannot be obtained, the artifact date must remain explicit and conclusions must be restricted to that frozen source. Second, DAV registration records are an identity source, not a guarantee of current market status, and the portal warns that original registration data may omit later changes. Third, DDInter provides positive interaction knowledge but database absence cannot serve as a clinical negative label. Fourth, cross-database identity mapping can introduce evaluation error; therefore ambiguous crosswalks are either independently reviewed or excluded by prespecified rules. Fifth, synthetic typo/OCR/code-switch perturbations measure robustness to controlled transformations, not their population prevalence. Sixth, n2c2 is English-language and older in terminology version, so it is a generalization stress test rather than a Vietnamese benchmark. Finally, this study evaluates software behavior and information safety, not patient outcomes, prescribing quality, or regulatory compliance.
+
+\section{Discussion}
+CareGuard-VN is built around a simple but consequential distinction: the interaction knowledge can be correct while the medication identity is wrong. In that situation, a conventional DDI lookup can return a valid answer to the wrong question. A source-bound clarification gate changes this failure mode from silent substitution to explicit incompleteness. Automatic coverage may fall, but the safety objective is not to maximize completion at any cost; it is to avoid a reassuring completed result when the identity precondition has not been satisfied.
+
+The planned evaluation therefore separates identity resolution from interaction knowledge. The oracle-identity arm estimates how well the existing DDI stage performs when the identity is known to be correct. The strict-versus-legacy comparison measures the safety benefit and coverage cost of the SBMI gate. DDInter and DailyMed provide interaction evidence outside the runtime DrugBank artifact, while DAV supplies a Vietnam-specific product-identity source that is independent of the current internal dictionary.
+
+This framing also keeps the novelty claim aligned with the nearest literature. RxMap and RxEmbed already demonstrate strong LLM-assisted medication normalization and review; selective prediction already formalizes deferral; CrossDDI already uses evidence-supported DDI verification; and ambiguity, wrong-drug errors, and drug-name fragility are established problems. CareGuard-VN therefore does not claim those components. Its proposed contribution is the \\emph{identity-admissibility release contract}: a current, stable-ID- and source-version-bound medication identity is required before a reassuring DDI conclusion can be released. The external study must still show whether this contract reduces false-clear outcomes enough to justify the associated clarification burden.
+
+\section{Conclusion}
+CareGuard-VN is not positioned as a new medication-normalization algorithm or a new DDI database. It places a source-bound identity contract around an existing medication-safety pipeline. Prior work already provides strong normalization methods, ambiguity handling, review workflows, selective abstention, DDI knowledge resources, and evidence that wrong medication names can change downstream behavior. The remaining hypothesis is narrower: a reassuring DDI conclusion should not be released when the medication identity on which it depends is stale, ambiguous, or not source-verifiable.
+
+The planned external benchmark will test whether enforcing this prerequisite reduces false-clear outcomes at an acceptable cost in automatic coverage, while an oracle-identity arm separates terminology failures from DDI-knowledge limitations. Until the DAV, RxNorm, DDInter, DailyMed, and other external tracks are frozen and executed, the current evidence should be read as engineering conformance rather than external validation.
+\section*{Code and Data Availability}
+Implementation code and public reproducibility scaffolding are available in the CLARA-Care repository at \repo. Licensed DrugBank content and access-controlled clinical datasets are not redistributed. External public-source snapshots should be accompanied by retrieval/version manifests and hashes. Final benchmark artifacts will be released only to the extent permitted by source licenses and access agreements.
+
+\section*{Ethics and Scope}
+This draft describes software evaluation and public or access-controlled secondary data resources. No human-participant experiment or patient-outcome claim is reported here. If pharmacist adjudication or a usability study is added, the applicable ethics/consent requirements must be determined before data collection.
+
+\section*{Funding and Competing Interests}
+No funding was received for this work. The authors declare no competing interests.
+
+\sloppy
+\begin{thebibliography}{20}
+
+\bibitem{nelson2011rxnorm}
+S.~J. Nelson, K. Zeng, J. Kilbourne, T. Powell, and R. Moore,
+``Normalized names for clinical drugs: RxNorm at 6 years,''
+\emph{J. Am. Med. Inform. Assoc.}, vol. 18, no. 4, pp. 441--448, 2011, doi: 10.1136/amiajnl-2011-000116.
+
+\bibitem{sohn2014medxn}
+S. Sohn, C. Clark, S. R. Halgrim, S. P. Murphy, C. G. Chute, and H. Liu,
+``MedXN: an open source medication extraction and normalization tool for clinical text,''
+\emph{J. Am. Med. Inform. Assoc.}, vol. 21, no. 5, pp. 858--865, 2014, doi: 10.1136/amiajnl-2013-002190.
+
+\bibitem{peters2011approx}
+L. Peters, D. T. Nguyen, O. Bodenreider, and J. Kapusnik-Uner,
+``An approximate matching method for clinical drug names,''
+\emph{AMIA Annu. Symp. Proc.}, 2011. PMID: 22195172.
+
+\bibitem{newmangriffis2021ambiguity}
+D. Newman-Griffis, G. Divita, B. Desmet, et al.,
+``Ambiguity in medical concept normalization: An analysis of types and coverage in electronic health record datasets,''
+\emph{J. Am. Med. Inform. Assoc.}, vol. 28, no. 3, pp. 516--532, 2021, doi: 10.1093/jamia/ocaa269.
+
+\bibitem{swaminathan2024selective}
+A. Swaminathan, I. Lopez, W. Wang, et al.,
+``Selective prediction for extracting unstructured clinical data,''
+\emph{J. Am. Med. Inform. Assoc.}, vol. 31, no. 1, pp. 188--197, 2024, doi: 10.1093/jamia/ocad182.
+
+\bibitem{gallifant2024rabbits}
+J. Gallifant, S. Chen, P. J. F. Moreira, et al.,
+``Language Models are Surprisingly Fragile to Drug Names in Biomedical Benchmarks,''
+in \emph{Findings of EMNLP 2024}, pp. 12448--12465, doi: 10.18653/v1/2024.findings-emnlp.726.
+
+\bibitem{chen2024medguard}
+C.-Y. Chen, Y.-L. Chen, J. Scholl, H.-C. Yang, and Y.-C. J. Li,
+``Ability of machine-learning based clinical decision support system to reduce alert fatigue, wrong-drug errors, and alert users about look alike, sound alike medication,''
+\emph{Comput. Methods Programs Biomed.}, vol. 243, 107869, 2024, doi: 10.1016/j.cmpb.2023.107869.
+
+\bibitem{gibson2026ddireview}
+B. N. Gibson, S. Chodapuneedi, H. Y. Koh, et al.,
+``Identification, reliability, and validity of drug--drug interaction checkers in chronic diseases: A systematic review,''
+\emph{Br. J. Pharmacol.}, vol. 183, no. 16, pp. 4532--4561, 2026, doi: 10.1111/bph.70515.
+
+\bibitem{holbrook2025alerts}
+A. M. Holbrook, J. M. Silva, J. A. Y. Faruque, J. Deng, T. Schneider, and A. Jaffer,
+``Effect of electronic drug--drug interaction alerts on patient and clinician outcomes: a systematic review,''
+\emph{J. Am. Med. Inform. Assoc.}, vol. 32, no. 10, pp. 1617--1628, 2025, doi: 10.1093/jamia/ocaf139.
+
+\bibitem{n2c22019}
+National NLP Clinical Challenges (n2c2), ``2019 Track 3: Clinical Concept Normalization,'' 2019. [Online]. Available: \url{https://n2c2.dbmi.hms.harvard.edu/2019-track-3}.
+
+\bibitem{wishart2018drugbank}
+D. S. Wishart et al., ``DrugBank 5.0: a major update to the DrugBank database for 2018,''
+\emph{Nucleic Acids Res.}, vol. 46, no. D1, pp. D1074--D1082, 2018, doi: 10.1093/nar/gkx1037.
+
+\bibitem{tian2025ddinter}
+Y. Tian et al., ``DDInter 2.0: an enhanced drug interaction resource with expanded data coverage, new interaction types, and improved user interface,''
+\emph{Nucleic Acids Res.}, vol. 53, no. D1, pp. D1356--D1362, 2025, doi: 10.1093/nar/gkae726.
+
+\bibitem{ddinterdownload2026}
+DDInter 2.0, ``Download portal,'' 2026. [Online]. Available: \url{https://ddinter2.scbdd.com/download/}.
+
+\bibitem{huser2025rxembed}
+M. H\"user, J. Doole, V. Pinho, et al.,
+``A machine learning approach for automating review of a RxNorm medication mapping pipeline output,''
+\emph{J. Biomed. Inform.}, vol. 170, 104909, 2025, doi: 10.1016/j.jbi.2025.104909.
+
+\bibitem{chase2026ddi}
+A. Chase, A. Most, A. Sikora, et al.,
+``Evaluation of large language models' ability to identify clinically relevant drug--drug interactions and generate high-quality clinical pharmacotherapy recommendations,''
+\emph{Am. J. Health-Syst. Pharm.}, vol. 83, no. 13, pp. e494--e500, 2026, doi: 10.1093/ajhp/zxaf168.
+
+\bibitem{korpela2026rxmap}
+E. Korpela, L. H. Rubin, R. M. Dastgheyb, and Y. Xu,
+``RxMap: an LLM-assisted tool for medication normalization,''
+\emph{JAMIA Open}, vol. 9, no. 3, ooag085, 2026, doi: 10.1093/jamiaopen/ooag085.
+
+\bibitem{nlmrxnorm2026}
+U.S. National Library of Medicine, ``RxNorm Files: July 6, 2026 Monthly Release and Current Prescribable Content,'' 2026. [Online]. Available: \url{https://www.nlm.nih.gov/research/umls/rxnorm/docs/rxnormfiles.html}.
+
+\bibitem{dailymed2026}
+U.S. National Library of Medicine, ``DailyMed Structured Product Labeling Resources,'' 2026. [Online]. Available: \url{https://dailymed.nlm.nih.gov/dailymed/spl-resources.cfm}.
+
+\bibitem{dav2026}
+Drug Administration of Vietnam, Ministry of Health, ``Public drug registration and over-the-counter medicine lookup portal,'' 2026. [Online]. Available: \url{https://06dichvucong.dav.gov.vn/congbothuockhongkedon/index}.
+
+\bibitem{luo2020n2c2}
+Luo Y.-F. et al., ``The 2019 n2c2/UMass Lowell shared task on clinical concept normalization,'' \emph{J. Am. Med. Inform. Assoc.}, 2020.
+
+\bibitem{chen2026mcnsurvey}
+H. Chen, Y. Zhou, R. Li, A. M. Illa, A. Cleveland, and J. Ding, ``A comprehensive survey on medical concept normalization: Datasets, techniques, applications, and future directions,'' \emph{J. Biomed. Inform.}, vol. 178, 105005, 2026, doi: 10.1016/j.jbi.2026.105005.
+
+\bibitem{crossddi2026}
+H. Wang, B. Chu, and N. Fuhr, ``CrossDDI: Cross-Source Evidence-Grounded Drug-Drug Interaction Verification,'' in \emph{Proc. BioNLP 2026 Workshop}, Association for Computational Linguistics, 2026. [Online]. Available: \url{https://aclanthology.org/volumes/2026.bionlp-1/}.
+
+
+\end{thebibliography}
+\end{document}

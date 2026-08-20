@@ -1,0 +1,40 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[letterpaper,margin=0.8in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{enumitem}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\begin{document}
+\begin{center}
+{\Large\bfseries CLARA-Care FHIR Resource List - Student Prototype}
+\end{center}
+
+\textbf{Implemented ingestion scope:} FHIR STU3 and R4 Bundle resources. This list documents the prototype ingestion code; it is not a FHIR server CapabilityStatement.
+
+\section*{Container / subject}
+\begin{itemize}[nosep]
+\item Bundle (collection or transaction)
+\item Patient (exactly one per accepted Bundle)
+\end{itemize}
+
+\section*{Common STU3/R4 resources}
+\begin{itemize}[nosep]
+\item AllergyIntolerance
+\item CarePlan
+\item Condition
+\item MedicationRequest
+\item Observation
+\item Procedure
+\end{itemize}
+
+\section*{R4-specific supported resource}
+\begin{itemize}[nosep]\item ServiceRequest\end{itemize}
+
+\section*{STU3-specific supported resource}
+\begin{itemize}[nosep]\item ProcedureRequest\end{itemize}
+
+\textbf{Current non-claims:} no asserted SMART launch, CDS Hooks, Bulk Data, CQL, US Core conformance, or live production EHR connection.
+\end{document}

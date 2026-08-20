@@ -1,0 +1,20 @@
+/goal
+Finish the R3 reviewer blockers in Project-CLARA-HBT/CLARA-Care on codex/commitloop-phase-a by improving the real production system and adding new, separately frozen evidence. Do not change any RQ, tune held-out benchmarks/prompts/gold, suppress null results, overwrite old seals, inflate N with retries/seeds/repetitions, or add benchmark-only branches to production.
+
+First reconcile the evidence registry: preserve all old runs and resolve the current GLHS 5-schedule canonical-status vs manuscript 12-schedule TOCTOU discrepancy by locating/sealing the real v2 artifact or rerunning under a new freeze. Update stale publication_registry statuses only from verified artifacts.
+
+Close mandatory THSS lineage. The public commitment API is already bound; fix internal/model/review lineage. Persist an immutable API-owned inference→THSS binding (snapshot ID/digest/manifest, evidence set, state/policy/consent, actor/role, purpose/task, expiry, model manifest). Model-derived proposals must reference it. Human review must preserve it. After the profile lock, GST must re-read the root lineage and exact snapshot. A THSS-derived lineage can never become base_version_only. Keep base-only semantics only for genuine manual non-model workflows. Add DB consistency checks and exhaustive PostgreSQL tests.
+
+Refactor validation into current-governance checks + exact-disclosure-dependency checks. Production always performs both. Build an evaluation-only matched ablation using the same primitives: FULL_GOVERNANCE_NO_EXACT_BINDING vs identical GLHS_EXACT_BINDING. No production feature flag. Freeze 320 logical schedules (256 binding-specific attacks +64 valid controls), run both through PostgreSQL, analyze paired outcomes, seal.
+
+Extend existing GLHS TOCTOU v2 machinery with prespecified repeated randomized interleavings and DB transaction/commit-order evidence; repetitions never increase N. Preserve indeterminate if ordering remains unknown. Offline-analyze the sealed 384-subject run’s 220 malformed outputs without changing its null primary. Add 20–30 real independently human-authored contract holdouts if available.
+
+GovRed: make confirmed-invalid/indeterminate/safe-rejected primary states, instrument the 30 races, execute only faithfully implementable Not Run families, define audit-eligible denominators, add a separately frozen 30–60 schedule holdout. Never rewrite final-003. Choose one of RIVF/BigData as the initial archival study unless the second gets material new evidence.
+
+GovMut: keep W8 immutable. Render its existing secondary timing/seed/family data and classify all 25 survivors. Extend existing W9 11-mutant design, require blinded human non-equivalence review before the new denominator, freeze/run/seal separately. Add equal-wall-clock or explicit cost-effectiveness M0–M3 follow-up because M3 is a superset. Choose one of SOICT/BigData as initial archival study unless the second is a material extension.
+
+CareGuard: do not run until an authorized Vietnam identity frame is obtained. DDInter/RxNorm/DailyMed are supporting roles only. Freeze exact N/selection/precision/risk-coverage, mapping-review qualifications, RxMap feasibility, and any defensible negative subset before final test. Primary false reassurance keeps all frozen external-positive cases in the denominator. Preserve RESULT-INCOMPLETE until sealed.
+
+FHIR: expand the pinned validator from one R4 fixture to a frozen R4/STU3 conformance + application-semantic matrix, including wrong/missing Patient, cross-subject refs, unsupported resources, temporal mapping and provenance preservation; seal results. Never invent advisor/signature/milestone fields.
+
+After every new seal, synchronize all manuscripts from claim-to-evidence registries, keep 64-subject positive and 384-subject null evidence balanced, enforce one canonical GLHS guarantee, compile English/original and Vietnamese PDFs, preflight/render-check, and package source + PDF + BUILD_INFO + EVIDENCE_MANIFEST + SHA256SUMS.

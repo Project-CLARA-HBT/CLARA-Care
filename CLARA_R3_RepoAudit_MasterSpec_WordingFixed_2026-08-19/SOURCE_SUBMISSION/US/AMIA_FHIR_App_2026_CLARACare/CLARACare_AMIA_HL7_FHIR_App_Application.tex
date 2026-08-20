@@ -1,0 +1,93 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage[letterpaper,top=0.65in,bottom=0.65in,left=0.72in,right=0.72in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.4em}{}
+\titlespacing*{\section}{0pt}{0.9em}{0.3em}
+\pagestyle{plain}
+\begin{document}
+\begin{center}
+{\Large\bfseries AMIA/HL7 FHIR App Competition 2026 - Student Application Draft}\\[4pt]
+{\large\bfseries CLARA-Care: Governed Longitudinal Health Context for Persistent AI Workflows}\\[3pt]
+Nguyen Ngoc Thien; Trinh Minh Quang\\
+Hai Ba Trung High School, Hue, Vietnam
+\end{center}
+
+\section{Title}
+CLARA-Care: Governed Longitudinal Health Context for Persistent AI Workflows
+
+\section{Category}
+Student
+
+\section{Letter of Support}
+Required before submission. Use the included primary-advisor attestation template; do not upload an unsigned placeholder.
+
+\section{Project abstract (max 1,000 characters)}
+CLARA-Care is a research prototype for longitudinal personal-health AI that treats model-visible context and later persistent updates as one traceable workflow. It ingests synthetic longitudinal records, including FHIR Bundle data, into a source-preserving timeline, derives task-bounded context for an AI, and routes any model-derived durable proposal through a governed state transition rather than allowing direct writeback. The design targets stale-state, wrong-subject, over-disclosure, and write-consistency failures while preserving provenance. Current evaluation uses synthetic data and software benchmarks only; the system is not deployed for patient care.
+
+\section{Project rationale, impact and innovation (max 3,500 characters)}
+Longitudinal health assistants repeatedly read from and may later add to a growing record. Relevant retrieval alone does not guarantee that the model sees the correct current state, that the disclosed information is appropriate for the present task, or that a later proposal remains admissible after the record or governance context changes. CLARA-Care separates canonical evidence and state from derived AI context, then links the context used during inference to the admission checks applied before persistence. The prototype combines source-preserving ingestion, explicit temporal and version coordinates, task-bounded disclosure, proposal review, version-aware persistence, and audit reconstruction. FHIR is used as an interoperable source representation, not as evidence of clinical deployment. The application demonstrates that source identity and provenance from FHIR-derived events can be carried into a governed AI read-to-write workflow without turning model output into a direct record update. It does not claim that FHIR ingestion, provenance, or the underlying GLHS research contribution is a second independent novelty, and it makes no claim of clinical effectiveness or regulatory certification.
+
+\section{Project design and implementation (max 7,000 characters)}
+The prototype is organized around a longitudinal state layer with explicit read and write boundaries. A version-explicit FHIR ingestion module accepts supported STU3 or R4 Bundles, requires exactly one Patient per Bundle, validates patient references to prevent cross-subject ingestion, preserves the source resource, extracts coded concepts and encounter references, and separates clinical valid/effective time from the time at which evidence became known. Supported resources currently include AllergyIntolerance, CarePlan, Condition, MedicationRequest, Observation, Procedure, and version-specific ServiceRequest/ProcedureRequest. These events enter the same longitudinal evidence interface used elsewhere in CLARA-Care.
+
+For AI use, CLARA-Care compiles a Task-Bounded Health State Snapshot (THSS) containing only context admitted for a defined subject, actor, purpose, task, and state/governance coordinates. Model output cannot update canonical state directly. On the evaluated snapshot-bound path, if the model proposes a durable change, the proposal returns through a Governed State Transition (GST), which checks base-state freshness and the bound snapshot and, on strict research paths, revalidates the relevant governance conditions before persistence. Provenance and audit artifacts are retained so the system can reconstruct which source-derived context was used and why a proposal was accepted or rejected.
+
+The implementation remains a research prototype. It does not claim SMART-on-FHIR launch, CDS Hooks, Bulk Data, CQL, US Core conformance, production EHR integration, or clinical deployment unless those capabilities are separately implemented and verified.
+
+\section{Project evaluation and sustainability (max 3,500 characters)}
+Evaluation separates interoperability and ingestion behavior from model-context utility and software-governance safety. Verified local processing includes 1,307,771 SyntheticMass FHIR Bundles; 927,109 MIMIC-IV Demo FHIR records for 100 subjects; and 540,237 normalized eICU Demo records covering 1,841 subjects and 2,520 ICU stays. These counts demonstrate ingestion and provenance handling, not clinical correctness. In a frozen 64-subject synthetic model cohort, Strict THSS achieved all-axis exact match for 63/64 subjects with Claude Sonnet 4.6 and 64/64 with Gemini 3.6 Flash High. A separate 12-schedule PostgreSQL governance-TOCTOU matrix observed no forbidden commit under the tested consent, role, policy-epoch, state, and compound-drift interleavings. A later source-disjoint six-task, two-model sanity grid completed 48/48 calls and observed 11/12 correct Strict-THSS cells versus 9/12 under unbound context; the grid is too small for a powered superiority claim. Separately, a sealed 384-subject Claude-only comparison between Strict THSS and full authorized history was null, which further limits any model-superiority interpretation. All of these results are software or synthetic evidence rather than clinical validation.
+
+The project is designed for reproducibility through an open modular codebase, explicit schemas and hashes, source-preserving FHIR ingestion, and a clear separation between canonical state and rebuildable derived views. Future work includes broader FHIR conformance testing, external interoperability evaluation, and independent clinical assessment before any patient-care use.
+
+\section{Intended users / audience}
+Researchers and developers building longitudinal personal-health assistants, patient-facing health-record tools, or health-informatics prototypes that need interoperable data ingestion together with explicit governance of AI context and persistent writeback.
+
+\section{140-character project summary}
+CLARA-Care links FHIR-derived longitudinal health data to task-bounded AI context and governed, version-aware persistent writeback.
+
+\section{How is FHIR used? (max 500 characters)}
+The prototype ingests FHIR STU3/R4 Bundles as longitudinal source data. It validates one Patient per Bundle, checks patient references, preserves source resources, and maps supported clinical resources into source-linked timeline events with separate valid/effective and known-at times. FHIR currently serves as an ingestion and interoperability boundary; no live production EHR connection is claimed.
+
+\section{FHIR release and resources (max 500 characters)}
+Implemented research ingestion supports FHIR STU3 and R4 Bundles. Common resource types: Patient, AllergyIntolerance, CarePlan, Condition, MedicationRequest, Observation, and Procedure. R4 additionally supports ServiceRequest; STU3 additionally supports ProcedureRequest. The prototype preserves resource identity and source payload for provenance.
+
+\section{FHIR data source and access (max 500 characters)}
+Current research inputs include SyntheticMass FHIR Bundles and MIMIC-IV Demo FHIR records, plus non-FHIR eICU source data normalized into the common longitudinal evidence interface. The competition claim is verified Bundle/file ingestion rather than a live SMART-on-FHIR server connection.
+
+\section{FHIR resources / Capability Statement}
+Upload a resource list for the current prototype (included in this pack). Do not upload a CapabilityStatement unless a conformant FHIR server endpoint has actually been implemented and verified.
+
+\section{US Core or other implementation guides?}
+No dedicated US Core conformance claim in the current prototype. The ingestion module accepts supported generic STU3/R4 Bundle resources.
+
+\section{FHIR technologies used}
+FHIR Bundle ingestion. No current claim for SMART-on-FHIR, CDS Hooks, Bulk Data, or CQL.
+
+\section{Other information (max 1,500 characters)}
+CLARA-Care is a student-led research prototype. Its FHIR path is deliberately source-preserving: supported source resources remain available alongside normalized timeline fields so later state construction can be audited. The broader GLHS layer is evaluated on a snapshot-bound path that links the exact governed snapshot shown to the AI with later persistent write admission; the current work does not claim provenance-sensitive mandatory retention across every possible internal adaptation route. This application is therefore presented as an interoperability and system demonstration, not as a second algorithmic-novelty claim. All reported evaluation uses synthetic data or software-level tests. The project does not provide diagnosis or treatment, is not clinically deployed, and should not be interpreted as a regulated medical device.
+
+\section{Paying customers?}
+No.
+
+\section{When conceived?}
+2025.
+
+\section{When implemented?}
+Research prototype developed during 2025--2026; update with the exact project milestone date used in your records.
+
+\section{Users / patients impacted}
+No patient-impact claim. Research and development prototype; clinical user count not established.
+
+\section{Website / URL}
+\url{https://github.com/Project-CLARA-HBT/CLARA-Care}
+
+\section{SMART App Gallery publication if feasible}
+Yes, if the organizers determine the prototype is technically suitable and the published listing accurately describes its current FHIR capabilities.
+\end{document}

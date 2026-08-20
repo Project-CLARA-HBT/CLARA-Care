@@ -1,0 +1,77 @@
+\documentclass[11pt]{article}
+\input{../common_preamble.tex}
+\title{\textbf{CareGuard-VN: Định danh thuốc gắn với nguồn như một cổng an toàn trước sàng lọc tương tác thuốc--thuốc}}
+\author{Nguyễn Ngọc Thiện, Trịnh Minh Quang \\ Trường THPT Hai Bà Trưng, Huế, Việt Nam}
+\date{Bản nghiên cứu đang hoàn thiện -- 2026}
+\begin{document}\maketitle
+
+\begin{abstract}
+Một hệ thống kiểm tra tương tác thuốc--thuốc (DDI) chỉ có ý nghĩa khi các thuốc đầu vào đã được định danh đúng. CareGuard-VN tập trung vào ranh giới này thay vì đề xuất một mô hình DDI mới. Hệ thống sử dụng hợp đồng \emph{định danh thuốc gắn với nguồn} (Source-Bound Medication Identity, SBMI): chỉ cho phép trả một kết luận DDI mang tính trấn an khi mọi thuốc cần thiết đều có định danh hiện hành, có nguồn rõ ràng và có thể kiểm chứng. Tên thuốc không biết hoặc mơ hồ buộc hệ thống yêu cầu làm rõ; một lựa chọn cũ bị từ chối nếu tên quan sát được, định danh ổn định hoặc phiên bản nguồn không còn khớp; nếu nguồn tri thức bắt buộc không sẵn sàng hoặc kiểm tra tính toàn vẹn thất bại, hệ thống trả trạng thái ``chưa đủ điều kiện kết luận'' thay vì suy diễn thành ``không có tương tác''. Kế hoạch đánh giá ngoài sử dụng dữ liệu sản phẩm của Cục Quản lý Dược Việt Nam (DAV), RxNorm, DDInter 2.0, DailyMed và, nếu có quyền truy cập phù hợp, dữ liệu n2c2. Chỉ số an toàn chính là tỷ lệ \emph{false-clear}, tức các ca tương tác dương tính theo nguồn độc lập nhưng hệ thống vẫn trả một kết luận ``an toàn'' hoàn chỉnh. Các chỉ số phụ gồm tỷ lệ xử lý tự động, tỷ lệ định danh sai nhưng vẫn hoàn tất và số trường hợp phải yêu cầu người dùng làm rõ. Một nhánh dùng định danh chuẩn tham chiếu tách lỗi nhận diện thuốc khỏi giới hạn của kho tri thức DDI. Nghiên cứu chưa đưa ra tuyên bố hiệu năng ngoài cho đến khi tập đánh giá đã khóa trước và gắn mã băm được chạy hoàn tất.
+\end{abstract}
+
+\section{Giới thiệu}
+Sàng lọc DDI chỉ trả lời đúng câu hỏi nếu hệ thống biết chính xác người dùng đang nói đến thuốc nào. Trên thực tế, tên thuốc có thể xuất hiện dưới dạng biệt dược, hoạt chất, viết tắt, lỗi chính tả, tên thương mại địa phương hoặc mô tả tự do. RxNorm, MedXN và nhiều phương pháp đối sánh gần đúng đã nghiên cứu bài toán chuẩn hóa thuốc từ lâu. Các hệ thống gần đây như RxMap kết hợp tạo ứng viên bằng luật xác định với phân tích từ vựng bằng LLM, trong khi RxEmbed báo cáo độ chính xác rất cao trên dữ liệu ánh xạ thuốc từ nhiều tổ chức. Vì vậy, CareGuard-VN không xem chuẩn hóa tên thuốc là đóng góp mới.
+
+Việc phát hiện mơ hồ và chuyển ca khó sang con người cũng không mới. Selective prediction cho phép hệ thống từ chối hoặc trì hoãn kết luận khi chi phí của một dự đoán sai lớn hơn chi phí phải xem xét lại. CareGuard-VN cũng không tuyên bố cơ chế từ chối trả lời là một đóng góp mới.
+
+Khoảng trống nằm ở bước \emph{sau} chuẩn hóa. DrugBank, DDInter và các cơ sở dữ liệu DDI đều giả định truy vấn đã dùng đúng định danh thuốc. Nếu định danh sai, phép tra cứu có thể hoàn toàn đúng đối với cơ sở dữ liệu nhưng lại trả lời cho một thuốc khác với thuốc người dùng thực sự đề cập. Các tổng quan gần đây còn cho thấy các công cụ DDI không phải lúc nào cũng nhất quán giữa các nguồn, và việc thay đổi tên biệt dược hoặc tên hoạt chất có thể làm thay đổi hành vi của mô hình y sinh. Ngoài ra, một LLM có thể nhận diện được tương tác nhưng vẫn tạo ra khuyến nghị dược lý không an toàn.
+
+CareGuard-VN vì vậy chuyển định danh thuốc từ một bước tiền xử lý thành một \textbf{điều kiện bắt buộc trước khi cho phép phát hành kết quả}. Với SBMI nghiêm ngặt, một kết luận DDI không được xem là hoàn chỉnh nếu định danh còn mơ hồ, đã cũ hoặc không thể kiểm chứng theo nguồn. Hệ thống ưu tiên một trạng thái ``chưa đủ điều kiện kết luận'' hơn một câu trả lời có vẻ trấn an nhưng dựa trên sai thuốc.
+
+\section{Ranh giới tính mới}
+Nghiên cứu không tuyên bố các thành phần sau là mới: ánh xạ RxNorm, xếp hạng ứng viên, đối sánh gần đúng, chuẩn hóa có hỗ trợ LLM, phát hiện mơ hồ, yêu cầu con người làm rõ, selective abstention, tra cứu DrugBank/DDInter, quản lý phiên bản thuật ngữ hoặc giao diện tiếng Việt.
+
+Đóng góp đề xuất nằm ở cách nối các thành phần thành một \emph{hợp đồng cho phép phát hành kết quả}. Một định danh chỉ được dùng cho DDI khi đồng thời gắn được với tên thuốc quan sát được, một định danh nguồn ổn định, phiên bản nguồn cụ thể và các kiểm tra tính toàn vẹn cần thiết. Lựa chọn định danh được xem như một mệnh đề có nguồn gốc và thời hạn sử dụng, thay vì một ánh xạ chuỗi có thể tái dùng vô điều kiện.
+
+Ba câu hỏi nghiên cứu chính là:
+\begin{enumerate}
+\item SBMI có giảm tỷ lệ kết luận ``an toàn'' sai trên các ca tương tác dương tính từ nguồn ngoài hay không?
+\item Mức giảm rủi ro đó phải đánh đổi bao nhiêu tỷ lệ xử lý tự động và bao nhiêu yêu cầu làm rõ từ người dùng?
+\item Khi hệ thống được cung cấp định danh thuốc chuẩn tham chiếu, phần kiểm tra DDI phía sau còn bỏ sót bao nhiêu ca, qua đó tách lỗi định danh khỏi giới hạn bao phủ của kho tri thức?
+\end{enumerate}
+
+\section{Thiết kế hệ thống}
+\subsection{Định danh thuốc gắn với nguồn}
+Mỗi lựa chọn định danh thuốc phải giữ tối thiểu: tên hoặc chuỗi đã quan sát, định danh chuẩn hoặc định danh nguồn ổn định, nguồn và phiên bản thuật ngữ, thời điểm tạo lựa chọn, cùng trạng thái đã được xem xét hay chưa. Khi người dùng hoặc chuỗi xử lý cố tái sử dụng một lựa chọn cũ, hệ thống kiểm tra lại các trường này. Nếu tên quan sát thay đổi, phiên bản nguồn thay đổi, định danh không còn hợp lệ hoặc tập ứng viên thay đổi đáng kể, ràng buộc cũ có thể không còn đủ điều kiện sử dụng.
+
+\subsection{Thất bại an toàn khi nguồn tri thức không đáng tin cậy}
+Một cơ sở dữ liệu DDI bị thiếu, sai mã kiểm tra hoặc không đúng phiên bản không được diễn giải thành ``không tìm thấy tương tác''. CareGuard-VN phân biệt rõ ba trạng thái: (1) không có tương tác theo một nguồn hợp lệ; (2) nguồn chưa đủ hoặc không truy cập được; và (3) định danh thuốc chưa đủ điều kiện. Chỉ trạng thái thứ nhất mới có thể đóng góp vào một kết luận mang tính trấn an.
+
+\subsection{Ranh giới diễn đạt}
+CareGuard-VN không biến kết quả tra cứu thành chỉ định điều trị cá nhân. Kết quả chỉ phản ánh thông tin tương tác, mức độ chắc chắn của định danh và trạng thái của nguồn, kèm yêu cầu làm rõ hoặc tham khảo chuyên gia khi cần. Nghiên cứu hiện tại đánh giá an toàn thông tin và phần mềm, không đánh giá kết cục kê đơn hay kết cục lâm sàng.
+
+\section{Kế hoạch đánh giá ngoài}
+\textbf{Nguồn định danh.} Dữ liệu DAV tạo một tập sản phẩm thuốc Việt Nam độc lập với từ điển nội bộ. RxNorm cung cấp các khái niệm thuốc đã chuẩn hóa và định danh ổn định. DailyMed cung cấp nhãn thuốc và dữ liệu nhãn sản phẩm có cấu trúc.
+
+\textbf{Nguồn DDI.} DDInter 2.0 được dùng như một nguồn dương tính độc lập với hệ thống chạy chính. DrugBank là nguồn tri thức DDI có giấy phép trong runtime. Việc một cặp không xuất hiện trong DDInter không tự động được coi là âm tính thật, vì các cơ sở dữ liệu DDI khác nhau về phạm vi và mức độ nghiêm trọng được ghi nhận.
+
+\textbf{Nhánh dùng định danh chuẩn tham chiếu.} Với một tập con có định danh đã được xác định chắc chắn, hệ thống bỏ qua bước chuẩn hóa và đưa trực tiếp định danh đúng vào tầng kiểm tra DDI. Chênh lệch giữa quy trình nghiêm ngặt và nhánh này cho phép tách lỗi nhận diện thuốc khỏi lỗi do kho tri thức DDI chưa bao phủ.
+
+\textbf{Chỉ số chính.} Tỷ lệ false-clear trên các ca tương tác dương tính theo nguồn ngoài:
+\[
+\mathrm{FCR}=\frac{\text{số ca dương tính ngoài nhưng hệ thống vẫn trả kết luận ``an toàn'' hoàn chỉnh}}{\text{tổng số ca dương tính ngoài đủ điều kiện}}.
+\]
+Các chỉ số phụ gồm tỷ lệ xử lý tự động, tỷ lệ phải yêu cầu làm rõ, tỷ lệ hoàn tất với định danh sai, tỷ lệ định danh chưa giải quyết được, lỗi tính toàn vẹn nguồn và đường cong rủi ro--độ bao phủ.
+
+\textbf{Khóa giao thức trước đánh giá.} Danh sách bản ghi, ảnh chụp nguồn, phiên bản thuật ngữ, mã băm, luật, phương pháp so sánh và kế hoạch thống kê phải được khóa trước lần chạy cuối. Không tăng cỡ mẫu hoặc thay đổi ngưỡng sau khi đã xem kết quả chính.
+
+\section{Bằng chứng kỹ thuật hiện tại}
+Codebase hiện đã có các kiểm tra bảo đảm tên thuốc và định danh đến từ cùng nguồn, kiểm tra phiên bản nguồn, từ chối lựa chọn đã cũ và kiểm tra tính toàn vẹn của gói dữ liệu. Các kiểm thử này cho thấy hợp đồng được thực thi ở mức kỹ thuật, nhưng chưa trả lời câu hỏi quan trọng hơn: trên dữ liệu ngoài, cổng nghiêm ngặt có thực sự giảm false-clear hay chỉ đơn thuần làm giảm tỷ lệ xử lý tự động.
+
+Vì vậy, các số liệu hiện tại chỉ được xem là \textbf{bằng chứng tuân thủ cơ chế ở mức phần mềm}. Bài nghiên cứu chỉ được xem là hoàn tất về kết quả khi các nhánh DAV/RxNorm/DDInter/DailyMed và các nhánh ngoài đã khóa khác được chạy đầy đủ với mẫu số được xác định rõ.
+
+\section{Thảo luận}
+Điểm cốt lõi của CareGuard-VN là tách hai câu hỏi: ``kho tri thức có thông tin đúng không?'' và ``hệ thống đã nhận diện đúng thuốc chưa?''. Một hệ thống có thể truy xuất chính xác tương tác của Thuốc A và Thuốc B, nhưng người dùng thực ra đang nói đến Thuốc C. Nếu chuỗi xử lý buộc chọn ứng viên gần nhất rồi vẫn trả ``không thấy tương tác'', lỗi định danh bị che khuất dưới một kết luận có vẻ an toàn.
+
+SBMI thay đổi cách hệ thống thất bại. Khi định danh chưa đủ điều kiện, hệ thống trả trạng thái chưa hoàn chỉnh một cách rõ ràng thay vì giả định an toàn. Điều này chắc chắn có thể làm giảm tỷ lệ xử lý tự động, nên không thể chỉ báo một con số ``độ chính xác tăng''. Kết quả phải trình bày đồng thời tỷ lệ false-clear và độ bao phủ để thể hiện đúng sự đánh đổi giữa an toàn và khả năng tự động hóa.
+
+Văn liệu gần nhất cũng buộc ranh giới tính mới phải hẹp. RxMap và RxEmbed đã đạt kết quả mạnh về chuẩn hóa; selective prediction đã nghiên cứu cơ chế từ chối; CrossDDI đã nghiên cứu xác minh có bám bằng chứng; các nguồn DDI và lỗi chọn nhầm thuốc đều có nền tảng văn liệu đáng kể. Vì vậy, câu hỏi cần bảo vệ là: \textbf{định danh thuốc có nên trở thành điều kiện bắt buộc trước khi cho phép trả một kết luận DDI hoàn chỉnh hay không, và điều kiện đó có giảm false-clear đủ nhiều để bù cho phần độ bao phủ bị mất hay không?}
+
+\section{Giới hạn}
+Nghiên cứu chưa có kết quả đánh giá ngoài cuối cùng. DAV là dữ liệu về định danh sản phẩm thuốc, không phải dữ liệu kết cục lâm sàng. RxNorm, DailyMed và DDInter có phạm vi và hệ thống thuật ngữ khác với thị trường thuốc Việt Nam. DDInter không phải chuẩn chân lý tuyệt đối cho mọi tương tác. Nếu sử dụng, n2c2 là dữ liệu tiếng Anh và khác miền. Nghiên cứu không chứng minh giảm biến cố bất lợi do thuốc, cải thiện kê đơn hoặc đáp ứng yêu cầu pháp lý.
+
+\section{Kết luận}
+CareGuard-VN không cố xây một mô hình chuẩn hóa thuốc mới hay một cơ sở dữ liệu DDI mới. Nghiên cứu đặt một hợp đồng định danh gắn với nguồn trước tầng an toàn thuốc: nếu định danh còn cũ, mơ hồ hoặc không thể xác minh, hệ thống không được trả một kết luận DDI mang tính trấn an như thể mọi điều kiện đã được thỏa mãn. Đánh giá ngoài sẽ kiểm tra liệu nguyên tắc này có giảm false-clear đủ nhiều để bù cho phần độ bao phủ mất đi hay không, đồng thời dùng nhánh định danh chuẩn tham chiếu để phân biệt lỗi chuẩn hóa với giới hạn của kho tri thức. Cho đến khi đánh giá ngoài hoàn tất, bằng chứng hiện tại chỉ phản ánh tính đúng đắn kỹ thuật của cơ chế.
+
+\textbf{Trạng thái: KẾT QUẢ CHƯA HOÀN TẤT (RESULT-INCOMPLETE).}
+\end{document}

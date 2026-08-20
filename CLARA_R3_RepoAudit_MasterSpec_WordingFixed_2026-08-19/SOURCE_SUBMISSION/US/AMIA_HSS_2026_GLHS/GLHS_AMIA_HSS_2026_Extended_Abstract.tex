@@ -1,0 +1,92 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage[letterpaper,top=0.55in,bottom=0.55in,left=0.62in,right=0.62in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{ragged2e}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{xcolor}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3.0pt}
+\setstretch{0.985}
+\pagestyle{empty}
+\emergencystretch=1em
+
+% ------------------------------------------------------------------
+% REQUIRED BEFORE SUBMISSION: AMIA HSS requires a research mentor as
+% a co-author and a supporting letter from that research mentor.
+% Mentor metadata intentionally omitted from the rendered draft. Add only verified
+% mentor name/affiliation here if required by the final submission form.
+% ------------------------------------------------------------------
+
+\newcommand{\sectionlead}[1]{\textbf{#1.}\ }
+
+\begin{document}
+
+\begin{center}
+{\fontsize{12}{13.2}\selectfont\bfseries
+From Governed Health Context to Safe Persistent Action: A Co-Versioned Disclosure-to-Commit Contract for Longitudinal Health AI\par}
+\vspace{3pt}
+{\fontsize{9.5}{10.5}\selectfont\bfseries
+Nguyen Ngoc Thien\textsuperscript{1}, Trinh Minh Quang\textsuperscript{1}\par}
+\vspace{1pt}
+{\fontsize{9.3}{10.3}\selectfont
+\textsuperscript{1}Hai Ba Trung High School, Hue, Vietnam\par}
+\vspace{1pt}
+{\fontsize{9}{10}\selectfont\itshape Corresponding student: Nguyen Ngoc Thien -- kakangocthien109@gmail.com\par}
+\end{center}
+
+\vspace{1pt}
+\fontsize{9.5}{10.55}\selectfont
+\justifying
+
+\sectionlead{Abstract} Persistent health AI can act on a patient snapshot after the record, consent state, or governing policy has changed. On the evaluated snapshot-bound path, GLHS keeps the exact task-bounded disclosure supplied to the AI linked to a later persistent proposal and revalidates the relevant state and governance conditions before write admission. In a frozen 64-subject synthetic cohort, Strict THSS achieved all-axis exact match for 63/64 Claude subjects and 64/64 Gemini subjects. A separate 12-schedule PostgreSQL governance-race matrix observed no forbidden commits, and bounded finite-state exploration found no violations across 21,361 states and 90,432 transitions.
+
+\sectionlead{Introduction} Longitudinal health AI needs more than relevant retrieval. Context can be correct and authorized when read yet become stale as a basis for persistence if the underlying state, consent, role, or policy changes before writeback. Existing standards and agent systems already provide versioning, provenance, transactional memory, and commit-time authorization. Our narrower objective is to keep the exact governed health disclosure actually used during inference as an auditable dependency of a later write proposal.
+
+\sectionlead{Methods} GLHS uses a Task-Bounded Health State Snapshot (THSS) to record the subject, actor, purpose, task, state version, policy and consent coordinates, selected evidence, expiry, and canonical digest of the model-visible context. On the evaluated snapshot-bound path, a model-derived proposal that consumed THSS retains that exact snapshot binding; universal provenance-sensitive retention across every internal review/adaptation path remains an implementation target. A Governed State Transition (GST) then rechecks the relevant state and governance conditions before persistence. We evaluated software-contract behavior separately from model-context utility. The model study froze 64 synthetic subjects in advance and evaluated Claude Sonnet 4.6 and Gemini 3.6 Flash High across several context conditions; the 1,152 solver cells are repeated model-condition evaluations, not independent subjects. Additional experiments covered deterministic contract clauses, PostgreSQL governance-writer interleavings, and a finite state model with 11 machine-checked invariants.
+
+\sectionlead{Results} With Strict THSS, Claude was exact on all predefined axes for 63/64 subjects (98.44\%) and Gemini for 64/64 (100\%). Six of ten prespecified paired contrasts remained significant after Holm correction, although only 9--21 discordant subjects informed those significant tests. Across 12 frozen PostgreSQL schedules that interleaved write admission with consent revocation, role change, policy-epoch advance, state change, and compound drift, no forbidden commit was observed; invalid post-change proposals were rejected while temporally valid controls could commit. Bounded exploration to depth 5 reached 21,361 states and 90,432 transitions with no violations of 11 specified invariants. In a later sealed 384-subject Claude-only comparison, Strict THSS versus full authorized history was null (70 wins, 73 losses, 241 ties; $p=0.867$), so the model-context evidence does not establish universal superiority.
+
+\sectionlead{Discussion} The results support a software-level path that keeps the governed context actually shown to an AI connected to later persistence under the tested conditions. The contribution is not bitemporality, consent, provenance, transactional memory, commit-time authorization, or optimistic concurrency individually; it is the disclosure-conditioned dependency carried across the read--write interval. The cohort is synthetic, several paired comparisons had few informative discordances, and the experiments do not establish clinical effectiveness, clinician agreement, regulatory compliance, or correctness for arbitrary unbounded interleavings.
+
+\newpage
+\begin{center}
+{\fontsize{11}{12}\selectfont\bfseries Optional Figure / Table / References}
+\end{center}
+\vspace{3pt}
+\fontsize{8.6}{9.6}\selectfont
+
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{3pt}
+\noindent\begin{tabularx}{0.96\textwidth}{@{}>{\raggedright\arraybackslash}p{0.21\textwidth} >{\raggedright\arraybackslash}p{0.23\textwidth} >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Evaluation component} & \textbf{Unit} & \textbf{What it supports} \\
+\midrule
+Frozen model cohort & 64 synthetic subjects & Controlled longitudinal-state context utility; not clinical effectiveness \\
+Strict THSS result & Claude 63/64; Gemini 64/64 & All-axis exact match under the frozen task rubric \\
+Paired contrasts & 10 prespecified; 6 Holm-significant & Condition differences, with limited discordant counts acknowledged \\
+Governance TOCTOU matrix & 12 frozen PostgreSQL schedules & No forbidden commit in tested consent/role/policy/state interleavings \\
+Bounded formal exploration & 21,361 states; 90,432 transitions & 0 violations of 11 invariants to depth 5; not universal proof \\
+\bottomrule
+\end{tabularx}
+
+\vspace{7pt}
+\textbf{References}
+\begin{enumerate}[leftmargin=1.25em,itemsep=1.5pt,topsep=2pt,parsep=0pt]
+\item HL7 International. \textit{FHIR R4: Consent, Provenance, and RESTful API / HTTP}. 2019.
+\item W3C. \textit{PROV-O: The PROV Ontology}. W3C Recommendation. 2013.
+\item Li X, Wang Y, Lu H, et al. MemTX: Transactional Belief Commit for Stateful Agent Memory. arXiv:2607.23929. 2026.
+\item Santos-Grueiro I. Temporary Authority, Permanent Effects: Commit-Time Authorization for LLM Agents. arXiv:2607.10487. 2026.
+\item Nguyen NN, Trinh MQ. GLHS: A Co-Versioned Disclosure-to-Commit Governance Contract for Longitudinal Health AI. Manuscript under review, 2026.
+\end{enumerate}
+
+\end{document}

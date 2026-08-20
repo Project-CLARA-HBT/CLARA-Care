@@ -1,0 +1,73 @@
+\documentclass[11pt]{article}
+\input{../common_preamble.tex}
+\title{\textbf{GovMut-Health: Đánh giá khả năng phát hiện lỗi quản trị phụ thuộc chuỗi thao tác bằng kiểm thử đột biến}}
+\author{Nguyễn Ngọc Thiện, Trịnh Minh Quang \\ Trường THPT Hai Bà Trưng, Huế, Việt Nam}
+\date{2026}
+\begin{document}\maketitle
+\begin{abstract}
+Nhiều lỗi quản trị trong AI y tế có trạng thái chỉ xuất hiện sau một chuỗi thao tác, thay vì ở một lời gọi đơn lẻ. Chẳng hạn, hệ thống có thể xử lý đúng khi cung cấp dữ liệu cho mô hình, đúng khi kiểm tra đồng thuận và đúng khi tạo đề xuất, nhưng vẫn chấp nhận một thao tác ghi sai nếu đồng thuận đã thay đổi, đề xuất cũ được thử lại hoặc dữ liệu trong bộ nhớ đệm bị tái sử dụng. GovMut-Health đánh giá khả năng phát hiện nhóm lỗi này bằng bốn chiến lược kiểm thử đã có: kiểm thử hồi quy, kiểm thử dựa trên thuộc tính không trạng thái, kiểm thử bằng máy trạng thái và chiến lược kết hợp. Tính mới không nằm ở bản thân kiểm thử đột biến, kiểm thử dựa trên thuộc tính hay kiểm thử dựa trên mô hình, mà ở \emph{mô hình lỗi quản trị phụ thuộc lịch sử thao tác}, tập biến thể lỗi được rà soát và ánh xạ tới các bất biến của hợp đồng, cùng cách phân tích ở cấp biến thể lỗi. Đợt đánh giá đã khóa trước gồm 45 biến thể lỗi không tương đương; mỗi biến thể được chạy trên 16 tổ hợp phương pháp--hạt giống ngẫu nhiên, tạo 720 lượt chạy và không ghi nhận lỗi hạ tầng. Tỷ lệ phát hiện biến thể lỗi lần lượt là 35,6\%, 8,9\%, 13,3\% và 44,4\%. Chiến lược kết hợp phát hiện toàn bộ 16 biến thể mà kiểm thử hồi quy phát hiện và thêm 4 biến thể khác; tuy nhiên, phần tăng này chưa có ý nghĩa thống kê ($p=0{,}125$). Mức tăng so với hai chiến lược sinh kiểm thử riêng lẻ có ý nghĩa thống kê. Kết quả cho thấy kiểm thử hồi quy và kiểm thử sinh tự động có tính bổ trợ, nhưng không chứng minh một chiến lược luôn vượt trội hay hệ thống đã được kiểm chứng hình thức đầy đủ.
+\end{abstract}
+
+\section{Giới thiệu}
+Một hợp đồng quản trị có trạng thái có thể chứa lỗi chỉ lộ ra sau nhiều bước. Ví dụ, hệ thống cung cấp dữ liệu cho AI khi quyền còn hợp lệ; sau đó đồng thuận bị thu hồi; một đề xuất cũ vẫn được giữ lại; cuối cùng hệ thống thử ghi đề xuất đó vào trạng thái bền vững. Mỗi bước riêng lẻ có thể vượt qua kiểm thử, trong khi toàn bộ chuỗi vẫn vi phạm hợp đồng quản trị.
+
+Kiểm thử dựa trên thuộc tính (property-based testing), kiểm thử dựa trên mô hình hoặc máy trạng thái (model-based/state-machine testing) và kiểm thử đột biến (mutation testing) đều là các kỹ thuật đã được nghiên cứu rộng rãi. Nghiên cứu về kiểm soát truy cập cũng đã sử dụng mô hình trạng thái và biến đổi chính sách để tạo ca lỗi. Gần đây, các hệ thống bộ nhớ cho tác tử AI và các nghiên cứu đánh giá bộ kiểm thử do LLM sinh cũng sử dụng property testing, duyệt trạng thái hữu hạn và mutation testing. Vì vậy, GovMut-Health không đề xuất một phương pháp kiểm thử cơ bản mới.
+
+Khoảng trống nằm ở \textbf{mô hình lỗi}. Các lỗi liên quan đến độ mới của trạng thái, đồng thuận, chính sách, ràng buộc đúng chủ thể, mục đích sử dụng, ảnh chụp ngữ cảnh, cơ chế thử lại, truy vết nguồn gốc, tính nguyên tử và khả năng tái dựng kiểm toán thường phụ thuộc vào thứ tự các thao tác trước đó. GovMut-Health chủ động tạo các biến thể lỗi tại những điểm thực thi kiểm soát trong codebase, yêu cầu mỗi biến thể phải gắn với một bất biến cụ thể có thể bị phá vỡ, rồi so sánh các chiến lược kiểm thử dưới cùng một ngân sách đã khóa trước.
+
+\section{Mô hình lỗi và đơn vị phân tích}
+Tập biến thể lỗi bao phủ các nhóm như: bỏ kiểm tra phiên bản trạng thái; bỏ bước kiểm tra lại đồng thuận hoặc chính sách; cho phép ảnh chụp thuộc sai chủ thể hoặc sai mục đích; chấp nhận mã băm hoặc thời hạn không hợp lệ; tái sử dụng trạng thái dẫn xuất đã cũ; phá cơ chế chống ghi lặp; thử lại một đề xuất đã bị từ chối mà không xin lại quyền; làm mất thông tin nguồn gốc; hoặc phá tính nguyên tử và khả năng tái dựng dấu vết kiểm toán.
+
+Một biến thể lỗi chỉ được đưa vào mẫu phân tích khi có thể chạy được và đã được rà soát là \emph{không tương đương} với chương trình gốc. Ở lần đóng băng cuối, việc sàng lọc này dùng quy trình mù với hai mô hình khóa, Gemini 3.6 Flash High và Claude Sonnet 4.6, theo cùng một tiêu chí đã cố định trước. Chỉ những biến thể mà cả hai cùng xác nhận là không tương đương (kể cả sau bước hòa giải đã quy định trước) mới được đưa vào mẫu số. Đây là rà soát bằng hai mô hình nhằm tăng khả năng tái lập, \textbf{không phải thẩm định độc lập của chuyên gia con người}. Nếu một biến thể không thể thay đổi hành vi quan sát được, hoặc không thể biên dịch hoặc chạy ổn định, lý do loại phải được ghi lại. Chỉ số chính là \emph{tỷ lệ phát hiện biến thể lỗi} (mutation score):
+\[
+MS(T)=\frac{K_T}{N_{exec}-N_{eq}},
+\]
+trong đó $K_T$ là số biến thể lỗi bị chiến lược $T$ phát hiện. Đơn vị suy luận thống kê là \textbf{một biến thể lỗi}, không phải số chuỗi thực thi hay số hạt giống ngẫu nhiên.
+
+\section{Bốn chiến lược kiểm thử}
+\textbf{M0 -- Kiểm thử hồi quy (Regression):} sử dụng bộ kiểm thử hiện có, chủ yếu bảo vệ các hành vi đã biết và các lỗi từng được quan sát.
+
+\textbf{M1 -- Kiểm thử thuộc tính không trạng thái (Stateless properties):} sinh nhiều đầu vào độc lập và kiểm tra bất biến cục bộ, nhưng không duy trì lịch sử trạng thái qua một chuỗi nhiều bước.
+
+\textbf{M2 -- Kiểm thử bằng máy trạng thái (State machine):} sinh các chuỗi chuyển trạng thái hợp lệ và không hợp lệ từ một mô hình trạng thái, rồi kiểm tra bất biến sau từng bước.
+
+\textbf{M3 -- Kết hợp (Combined):} sử dụng đồng thời kiểm thử hồi quy, kiểm thử thuộc tính không trạng thái và kiểm thử bằng máy trạng thái trong cùng ngân sách đã khóa trước.
+
+Hạt giống ngẫu nhiên, số ví dụ sinh ra, độ dài chuỗi trạng thái, phiên bản khung kiểm thử, môi trường chạy và danh sách biến thể lỗi đều được khóa trước khi đánh giá. Việc chạy nhiều hạt giống giúp kiểm tra độ ổn định và khả năng tái lập, nhưng không làm tăng số đơn vị khoa học độc lập.
+
+\section{Kết quả}
+Đợt chạy \texttt{govmut-soict-2026-final-v2} sử dụng mã nguồn tại revision \texttt{ab877e04}. Cả bốn chiến lược được đánh giá trên cùng 45 biến thể lỗi:
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Chiến lược & Phát hiện/45 & Tỷ lệ phát hiện \\
+\midrule
+M0 Hồi quy & 16 & 35,6\%\\
+M1 Thuộc tính không trạng thái & 4 & 8,9\%\\
+M2 Máy trạng thái & 6 & 13,3\%\\
+M3 Kết hợp & 20 & 44,4\%\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+KTC Wilson 95\% cho tỷ lệ phát hiện lần lượt là 23,2--50,2\% (M0), 3,5--20,7\% (M1), 6,3--26,2\% (M2) và 30,9--58,8\% (M3).
+
+M3 phát hiện toàn bộ 16 biến thể mà M0 phát hiện và thêm 4 biến thể khác; không có biến thể nào chỉ M0 phát hiện nhưng M3 bỏ sót. Tuy vậy, chênh lệch giữa M3 và M0 chưa đạt ý nghĩa thống kê trong kiểm định ghép cặp chính xác ($p=0{,}125$). M3 vượt M1 và M2 với $p$ lần lượt khoảng $3{,}05\times10^{-5}$ và $1{,}22\times10^{-4}$. M0 cũng phát hiện nhiều biến thể hơn M1 ($p=0{,}00183$) và M2 ($p=0{,}0213$).
+
+Nếu tính theo lượt chạy, nhật ký có 161 kết quả \textsc{Killed}, 559 kết quả \textsc{Survived} và 0 lỗi hạ tầng. Tuy nhiên, 720 lượt chạy này chỉ là các phép lặp trên cùng tập 45 biến thể, không phải 720 mẫu độc lập.
+
+\section{Diễn giải}
+Kết quả không ủng hộ nhận định rằng kiểm thử bằng máy trạng thái hoặc kiểm thử thuộc tính không trạng thái, khi dùng riêng lẻ, sẽ tốt hơn bộ kiểm thử hồi quy hiện có. Trái lại, M0 phát hiện nhiều biến thể lỗi hơn từng chiến lược sinh tự động riêng lẻ. Giá trị của M3 nằm ở chỗ giữ nguyên toàn bộ khả năng phát hiện của M0 đồng thời bổ sung thêm bốn lỗi mà M0 bỏ sót. Một cách giải thích hợp lý là bộ hồi quy đi thẳng vào các chốt cưỡng chế đã biết, trong khi máy trạng thái phải dùng ngân sách hữu hạn để thăm dò một không gian chuyển trạng thái rộng hơn; kết quả này vì thế không cho phép kết luận kiểm thử máy trạng thái vốn kém hơn.
+
+Vì phần tăng bốn biến thể chưa có ý nghĩa thống kê so với M0, cách diễn giải phù hợp là \textbf{các chiến lược bổ sung cho nhau}, chứ không phải ``kiểm thử sinh tự động thay thế kiểm thử hồi quy''. Những biến thể còn sống sau tất cả chiến lược nên được xem là dấu hiệu cho thấy bộ kiểm thử vẫn còn điểm mù, hoặc mô hình lỗi cần được xem lại; chúng không phải bằng chứng rằng các biến thể đó vô hại.
+
+Bốn mươi lăm biến thể lỗi là một tập ca được tuyển chọn và đóng băng, không phải mẫu ngẫu nhiên của mọi lỗi phần mềm có thể xuất hiện trong tương lai. Vì vậy, các kiểm định ghép cặp được xem là bằng chứng mô tả thứ cấp; diễn giải kỹ thuật chính dựa trên mẫu phát hiện ở cấp biến thể, các lỗi chỉ một chiến lược phát hiện được, độ bao phủ theo nhóm bất biến và chi phí chạy kiểm thử.
+
+\section{Đe dọa tính hợp lệ}
+Tính hợp lệ về cấu trúc phụ thuộc vào việc các biến thể lỗi có đại diện cho những sai sót quản trị dữ liệu sức khỏe có ý nghĩa hay không, như chấp nhận ghi dựa trên trạng thái thuốc đã cũ, bỏ qua thay đổi đồng thuận/chính sách, nhầm chủ thể hoặc mục đích, tái sử dụng ảnh chụp hết hạn/bị sửa, làm mất nguồn gốc hoặc phá tính nguyên tử giữa trạng thái và dấu vết kiểm toán. Việc xác định biến thể tương đương dùng hai mô hình khóa chứ chưa có thẩm định độc lập của chuyên gia con người, nên đây vẫn là một nguồn bất định. Tính hợp lệ nội tại chịu ảnh hưởng của tính ngẫu nhiên trong các bộ sinh ca kiểm thử; việc khóa hạt giống, ngân sách và lưu phản ví dụ đã thu gọn giúp làm phần biến thiên này minh bạch. Khả năng khái quát còn hạn chế vì GLHS là hệ thống chính được thử và tập 45 biến thể vẫn nhỏ so với các nghiên cứu mutation testing quy mô lớn. Đây là nghiên cứu về bảo đảm chất lượng phần mềm, không phải đánh giá hiệu quả lâm sàng hay tuân thủ quy định.
+
+Ma trận đầy đủ giữa từng biến thể lỗi và từng chiến lược, cùng siêu dữ liệu theo hạt giống, được lưu trong \texttt{research/assurance\_soict/results/final-analysis.json}.
+
+\section{Kết luận}
+GovMut-Health đưa ra một mô hình lỗi có thể thực thi cho các sai sót quản trị chỉ xuất hiện sau một chuỗi thao tác trong AI y tế có trạng thái. Trên tập 45 biến thể lỗi đã khóa trước, chiến lược kết hợp đạt tỷ lệ phát hiện cao nhất, 44,4\%. Tuy nhiên, mức tăng bốn biến thể so với kiểm thử hồi quy chưa có ý nghĩa thống kê, trong khi mức tăng so với hai chiến lược sinh kiểm thử riêng lẻ có ý nghĩa. Bằng chứng hiện tại ủng hộ việc phối hợp nhiều chiến lược kiểm thử trên cùng một hợp đồng quản trị; nó không chứng minh kiểm chứng hình thức toàn diện hoặc loại trừ khả năng còn lỗi chưa được phát hiện.
+\end{document}

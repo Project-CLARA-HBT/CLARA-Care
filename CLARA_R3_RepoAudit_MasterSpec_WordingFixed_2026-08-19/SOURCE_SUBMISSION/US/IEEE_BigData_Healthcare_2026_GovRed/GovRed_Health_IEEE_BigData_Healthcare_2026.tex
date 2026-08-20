@@ -1,0 +1,148 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{url}
+\usepackage{microtype}
+\usepackage{balance}
+\emergencystretch=2em
+\begin{document}
+\title{GovRed-Health: Benchmarking Authorization Drift Between Governed Disclosure and Persistent Commit}
+\author{\IEEEauthorblockN{Nguyen Ngoc Thien, Trinh Minh Quang}
+\IEEEauthorblockA{Hai Ba Trung High School, Hue, Vietnam\\
+Corresponding author: kakangocthien109@gmail.com}}
+\maketitle
+
+\begin{abstract}
+Stateful health-AI systems may read a governed longitudinal-health disclosure and return a persistent proposal only after patient state, consent, policy, role, purpose, cache state, or snapshot validity has changed. GovRed-Health benchmarks this authorization drift across the disclosure-to-commit interval. Each matched logical schedule issues a governed disclosure, mutates one or more relevant dependencies, and then exercises persistence through the application, authorization, cache/index, PostgreSQL, and audit path. The research arms are mechanism ablations, not claimed implementations of prior systems. In a sealed isolated run, the executable primary set contained 210 schedules per arm. The prespecified original non-safe composite was 57.1\% for Unbound, 42.9\% for State-Version-Only, 42.9\% for Snapshot-Bound-State-Only, and 14.3\% for GLHS-Strict. Strict versus Unbound had 90 discordant schedules favoring Strict and none favoring Unbound under that composite. All 30 Strict residuals were concurrent stale-state schedules with indeterminate linearization and therefore are not counted as confirmed invalid commits. The tested serial authorization-drift families produced zero confirmed invalid Strict commits; prohibited disclosure was 0/270 in every arm. The benchmark supports a bounded software governance-consistency claim, not a general cybersecurity or clinical-effectiveness claim.
+\end{abstract}
+
+\begin{IEEEkeywords}
+health AI, healthcare data governance, authorization drift, TOCTOU, consent, persistent agents, benchmark
+\end{IEEEkeywords}
+
+\section{Introduction}
+Stateful health AI repeatedly reads from and may later add to a longitudinal record. This creates a cross-operation problem: a disclosure can be valid when shown to a model but no longer be a valid basis for a durable effect after consent, policy, role, purpose, patient state, cache state, or snapshot validity has changed.
+
+This problem is narrower than prompt injection. AgentDojo benchmarks prompt injection against tool-using agents~\cite{agentdojo}; Agent Security Bench evaluates multiple attack and defense families~\cite{asb}; MPIB focuses on direct and RAG-mediated prompt injection in clinical tasks~\cite{mpib}; and SecureClaw combines sensitive-read confinement with external-effect authorization~\cite{secureclaw}. A separate line of work is closer still: commit-time authorization shows that previously valid authority can become stale before durability~\cite{commitguard}; Provenact formalizes policy-state serializability for concurrent effects~\cite{provenact}; and GateMem benchmarks access control and forgetting in multi-principal memory~\cite{gatemem}.
+
+GovRed-Health therefore makes a narrower claim. It asks what happens after a \emph{governed health disclosure has actually been consumed by a model} and one of the dependencies of that disclosure or later write changes. The benchmark treats the disclosure, intervening mutation, commit attempt, and audit reconstruction as one matched schedule rather than reducing the experiment to model attack success or endpoint success.
+
+Its contributions are: (1) a frozen schedule abstraction that includes the model-visible governed disclosure in the experimental unit; (2) matched state and governance mutations across subject, consent, policy, role/purpose, state, cache, snapshot, and audit dimensions; (3) execution through real application and persistence boundaries; and (4) an analysis contract that keeps safe rejection, service failure, and indeterminate concurrent ordering distinct.
+
+\section{Novelty Boundary and Threat Model}
+\subsection{What GovRed-Health does not claim}
+GovRed-Health does not introduce prompt injection, access-control testing, governed memory, dual-boundary enforcement, optimistic concurrency, commit-time authorization, or policy-state serializability. The four system configurations are internal mechanism ablations and are not claimed as faithful implementations of AgentDojo, SecureClaw, CommitGuard, Provenact, GateMem, or another published system.
+
+\subsection{Authorization drift object}
+Let an issued governed disclosure be
+\begin{equation}
+H=(u,a,p,v_s,v_g,d,e,E),
+\end{equation}
+where $u$ is subject, $a$ actor, $p$ purpose, $v_s$ state version, $v_g$ governance coordinate, $d$ digest, $e$ expiry, and $E$ the admitted evidence set. A model-derived proposal $P$ may later request persistent state change. The benchmark perturbs one relevant dependency between issuance of $H$ and the commit attempt for $P$ while preserving the task and payload shape as far as the schedule allows.
+
+We assume authenticated requests, stale client state, potentially overreaching users, conflicting or untrusted text in evidence, and legitimate concurrent updates. The study does not assume database-administrator compromise, stolen infrastructure secrets, or production patient data. Headline runs use synthetic subjects and unique sentinel values.
+
+\section{Benchmark Design}
+\subsection{Matched schedules}
+Table~\ref{tab:schedules} fixes the core schedule families before the final run. A logical schedule, not an HTTP retry or model call, is the statistical unit.
+
+\begin{table}[t]
+\caption{Core authorization-drift schedules.}
+\label{tab:schedules}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{p{0.30\columnwidth}p{0.59\columnwidth}}
+\toprule
+Schedule & Primary invariant \\
+\midrule
+Disclosure $\rightarrow$ consent revoke $\rightarrow$ commit & Revoked authority cannot license a later disclosure-derived commit. \\
+Disclosure $\rightarrow$ policy update $\rightarrow$ commit & Policy drift is revalidated at durability. \\
+Disclosure $\rightarrow$ actor/role/purpose change & Authorization coordinates cannot silently rebind. \\
+Subject-cross replay & Snapshot/proposal cannot migrate across subjects. \\
+State advance $\rightarrow$ stale commit & Stale base state cannot overwrite newer state. \\
+Revoke $\rightarrow$ derived-cache reuse & Derived state cannot preserve revoked disclosure authority. \\
+Expiry/digest invalidation & Invalid disclosure witnesses cannot authorize commit. \\
+Governance writer \newline $\parallel$ proposal commit & Outcome must match the governance state that linearizes first; unresolved ordering remains indeterminate. \\
+Audit reconstruction & Disclosure, mutation, decision, and effect remain reconstructable. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Mechanism ablations}
+The isolated study uses four configurations on the same research application path.
+\begin{itemize}
+\item \textbf{UNBOUND}: persistent proposal admission without snapshot/write binding.
+\item \textbf{STATE\_VERSION\_ONLY}: base state version is revalidated, but the exact disclosure is not bound.
+\item \textbf{SNAPSHOT\_BOUND\_STATE\_ONLY}: proposal is bound to a snapshot/state coordinate, without strict commit-time governance revalidation.
+\item \textbf{GLHS\_STRICT}: exact snapshot coordinates plus state and relevant governance are revalidated before persistence.
+\end{itemize}
+An arm/case pair that cannot be implemented faithfully is reported as not applicable or not run under a prespecified rule; it is never converted to a zero failure rate.
+
+\subsection{Real-boundary execution}
+Headline observations traverse the isolated deployment through ordinary HTTP requests and the application path into PostgreSQL, Redis/cache where applicable, and audit/reconstruction logic. Store observers are read-only with respect to the measured outcome. In particular, the measurement route must not create the expected result (for example, by deleting a cache entry solely because the selected arm is strict) and then count that deletion as independent evidence of cache invalidation.
+
+Each case records normalized response class, relevant before/after state coordinates, commit occurrence, transition/audit observations, cache presence or reuse where applicable, response hash, and latency. Raw secrets and unnecessary payload content are excluded from public artifacts.
+
+\subsection{Oracles}
+Deterministic sentinels and state/audit assertions score observable boundary properties without asking an LLM to grade its own behavior. Oracles cover wrong-subject exposure, prohibited sentinel release, stale/invalid commit acceptance, snapshot expiry/digest acceptance, governance invalidation, and audit reconstruction. Model-based methodological review may inspect the protocol but is not used as the primary runtime oracle.
+
+\section{Analysis Plan}
+For each compatible arm, the final report gives numerators, denominators, and 95\% Wilson intervals for the frozen original non-safe composite and prohibited-disclosure rate. Confirmed invalid/stale commits, confirmed safe/rejected outcomes, and indeterminate concurrent ordering are interpreted as distinct outcome classes; the composite is retained for preregistered reproducibility rather than treated as a confirmed-violation rate. Matched binary arm comparisons use exact McNemar tests where applicable; prespecified comparison families use Holm adjustment. Secondary outcomes include cache/governance revalidation behavior, rejected-operation auditability, committed-operation reconstructability, p50/p95 latency, and availability/retry cost.
+
+A defensive rejection is distinct from transport or infrastructure failure. Race schedules retain an \texttt{INDETERMINATE} state when the required ordering cannot be established from the recorded timing/transaction evidence. Repeated low-level retries do not increase $N$.
+
+\section{Results}
+\subsection{Final four-arm boundary outcomes}
+The sealed run \texttt{2026-08-17-rivf-final-003}, frozen at source revision \texttt{5b2c0dbf17e2}, executed 270 synthetic logical schedules per arm. The original primary non-safe composite included 210 executable mandatory-primary schedules per arm; 180 protocol-excluded/unsupported rows per arm remained \textsc{Not Run} and were excluded from denominators.
+
+\begin{table}[t]
+\caption{Sealed final-run outcomes. The first column is the prespecified original non-safe composite, not a confirmed-invalid-commit rate. All 30 Strict residuals are indeterminate concurrent-ordering schedules. Raw audit counts are omitted because audit-eligible opportunities differ by arm and require conditional denominators.}
+\label{tab:results}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{p{0.31\columnwidth}p{0.39\columnwidth}p{0.20\columnwidth}}
+\toprule
+Arm & \shortstack{Original non-safe composite\\(95\% CI)} & \shortstack{Prohibited\\disclosure} \\
+\midrule
+UNBOUND & 120/210; 0.571 (0.504--0.636) & 0/270 \\
+\shortstack[l]{STATE\_VERSION\\ONLY} & 90/210; 0.429 (0.364--0.496) & 0/270 \\
+\shortstack[l]{SNAPSHOT\_BOUND\\STATE\_ONLY} & 90/210; 0.429 (0.364--0.496) & 0/270 \\
+GLHS\_STRICT & 30/210; 0.143 (0.102--0.197) & 0/270 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The exact paired McNemar comparison between GLHS\_STRICT and UNBOUND on identical primary logical cases gave $b=90$, $c=0$, and $p=1.62\times10^{-27}$. All 30 GLHS\_STRICT primary residuals were concurrent-stale-state-write schedules with indeterminate ordering; they are reported as a third outcome category rather than confirmed failures or successes. Serial authorization-drift families yielded zero confirmed invalid Strict commits.
+
+\subsection{Audit, cache, concurrency, and claim boundary}
+Cache/index observation was measurement-only: the adapter did not directly invalidate the measured cache path, and cache-revocation failure was 0/270 in every arm under that observer contract. Prohibited disclosure was also 0/270 for every arm. These zeros apply only to the executed benchmark schedules and do not establish a general privacy or deployment-security guarantee. The 180 \textsc{Not Run} rows per arm remain explicit protocol exclusions rather than successes. Audit completeness will be reported only against prespecified eligible opportunities (for example, rejected operations requiring a rejection decision record and committed operations requiring exact reconstruction). Rejection-auditability controls and a fresh confirmatory holdout remain future evidence gates; the present paper therefore reports a sealed controlled robustness experiment, not production cybersecurity validation.
+
+\section{Discussion}
+The benchmark exposes a distinction that endpoint-success metrics can hide: a request may complete even though the authority or governed disclosure that justified the persistent effect is stale. The mechanism arms help separate state freshness, governance freshness, and exact disclosure binding rather than treating them as one undifferentiated security property.
+
+The sealed result is encouraging but bounded. Strict removed the serial authorization-drift failures exercised by the benchmark, while the remaining Strict composite residuals occurred only in concurrent stale-state schedules with indeterminate ordering and are not classified as confirmed failures. This does not establish universal concurrency safety. Zero prohibited disclosure in the tested schedules likewise does not establish a general confidentiality guarantee. The benchmark is most useful as a diagnostic tool for identifying which dependency a system revalidates and where residual failures remain.
+
+\section{Limitations and Ethics}
+The study uses synthetic subjects and one application architecture, so external validity to other EHR stacks and authorization models is limited. Sentinel oracles cover observable disclosure and persistence failures, not every semantic privacy harm. Downgraded arms are research configurations only. The benchmark does not evaluate diagnosis, treatment, patient outcomes, legal compliance, or resistance to privileged infrastructure compromise.
+
+\section{Reproducibility}
+A claim-eligible run binds the frozen case manifest, statistics plan, exact source revision, arm implementation, isolated environment contract, database/cache configuration, timestamps, raw observations, and a SHA-256 inventory under an immutable run ID. Material post-freeze changes require a new run ID. Tables and figures are generated from the same sealed machine-readable results; missing work remains explicitly not run.
+
+\section{Conclusion}
+GovRed-Health defines a real-boundary benchmark for authorization drift between a model-consumed governed health disclosure and a later persistent commit. In the sealed executable primary schedules, GLHS-Strict reduced the original composite non-safe endpoint from 57.1\% in Unbound to 14.3\%. The entire Strict residual was indeterminate concurrency, while confirmed invalid Strict commits were absent in the tested serial authorization-drift families. The contribution is the matched disclosure--mutation--commit schedule and its end-to-end observability, not a new authorization mechanism. The result supports a bounded synthetic software claim under the frozen schedules, not production cybersecurity or clinical effectiveness.
+\balance
+\begin{thebibliography}{00}
+\bibitem{agentdojo} E. Debenedetti, J. Zhang, M. Balunovi\'c, L. Beurer-Kellner, M. Fischer, and F. Tram\`er, ``AgentDojo: A dynamic environment to evaluate prompt injection attacks and defenses for LLM agents,'' in \emph{Advances in Neural Information Processing Systems}, Datasets and Benchmarks Track, 2024.
+\bibitem{asb} H. Zhang, J. Huang, K. Mei, Y. Yao, Z. Wang, C. Zhan, H. Wang, and Y. Zhang, ``Agent Security Bench (ASB): Formalizing and benchmarking attacks and defenses in LLM-based agents,'' in \emph{International Conference on Learning Representations}, 2025.
+\bibitem{mpib} J. Lee, H. Jang, and K. S. Choi, ``MPIB: A benchmark for medical prompt injection attacks and clinical safety in LLMs,'' arXiv:2602.06268, 2026.
+\bibitem{secureclaw} Y. Ma and S. Schmid, ``SecureClaw: Clawing back control of LLM agents,'' arXiv:2606.09549, 2026.
+\bibitem{commitguard} I. Santos-Grueiro, ``Temporary Authority, Permanent Effects: Commit-time authorization for LLM agents,'' arXiv:2607.10487, 2026.
+\bibitem{provenact} Y. Peng and X. Wu, ``Stateful governance for concurrent agentic systems,'' arXiv:2608.02764, 2026.
+\bibitem{gatemem} Z. Ren, Y. Yang, Y. Chen, et al., ``GateMem: Benchmarking memory governance in multi-principal shared-memory agents,'' arXiv:2606.18829, 2026.
+\bibitem{fhirconsent} HL7 International, ``FHIR R4: Consent,'' 2019.
+\bibitem{fhirprov} HL7 International, ``FHIR R4: Provenance,'' 2019.
+\end{thebibliography}
+\end{document}

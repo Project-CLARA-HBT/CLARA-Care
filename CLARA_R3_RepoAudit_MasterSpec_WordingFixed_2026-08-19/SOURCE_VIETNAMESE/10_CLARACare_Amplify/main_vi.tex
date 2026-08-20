@@ -1,0 +1,17 @@
+\documentclass[10pt]{article}
+\input{../common_preamble.tex}
+\title{\textbf{CLARA-Care: Nguyên mẫu AI sức khỏe dọc có quản trị, từ dữ liệu tương tác đến bối cảnh giới hạn theo tác vụ và ghi bền vững}}
+\author{Nguyễn Ngọc Thiện; Trịnh Minh Quang \\ Trường THPT Hai Bà Trưng, Huế, Việt Nam}
+\date{Bản tiếng Việt đồng hành cho AMIA Amplify 2027}
+\begin{document}\maketitle
+
+\textbf{Tóm tắt.} CLARA-Care là nguyên mẫu nghiên cứu cho AI sức khỏe cá nhân theo chiều dọc, nối ba phần thường bị tách rời: nhập dữ liệu có giữ nguồn, tạo bối cảnh có giới hạn cho mô hình và quản trị thao tác ghi bền vững. Phần trình diễn theo dõi một hồ sơ tổng hợp từ dữ liệu dẫn xuất FHIR, qua bước xây dựng trạng thái dọc, tạo ảnh chụp theo mục đích, nhận đề xuất từ mô hình, kiểm tra lại phiên bản và điều kiện quản trị, rồi trả quyết định cho phép hoặc từ chối kèm dấu vết có thể kiểm toán. Hệ thống chưa được triển khai trong chăm sóc lâm sàng.
+
+\textbf{Vấn đề.} Một trợ lý sức khỏe dọc liên tục đọc một hồ sơ ngày càng lớn và có thể đề xuất thêm dữ liệu mới. Truy xuất được tài liệu phù hợp chưa đảm bảo mô hình đang nhìn đúng trạng thái hiện tại, chỉ nhìn đúng phần dữ liệu cần cho tác vụ, hoặc đề xuất vẫn còn được phép ghi nếu hồ sơ hay chính sách đã thay đổi trong lúc suy luận. CLARA-Care tách đầu ra của mô hình khỏi thao tác ghi vào trạng thái chuẩn và làm ranh giới này trở nên quan sát, kiểm tra và tái dựng được.
+
+\textbf{Hệ thống và phần trình diễn.} Thành phần nhập dữ liệu tiếp nhận các FHIR STU3/R4 Bundle nằm trong phạm vi hỗ trợ, kiểm tra tham chiếu đúng chủ thể, giữ tài nguyên nguồn và tách thời gian hiệu lực lâm sàng khỏi thời gian hệ thống biết thông tin. Lớp trạng thái dọc giữ nguồn gốc và tọa độ phiên bản. Ảnh chụp trạng thái sức khỏe giới hạn theo tác vụ (THSS) chỉ cung cấp phần bối cảnh được phép cho một chủ thể, tác nhân, mục đích và tác vụ cụ thể. Nếu mô hình đề xuất một thay đổi bền vững, đề xuất đi qua Chuyển trạng thái có quản trị (GST), nơi hệ thống kiểm tra độ mới của trạng thái, ràng buộc với ảnh chụp và, trên đường nghiên cứu nghiêm ngặt, các điều kiện quản trị hiện hành. Giao diện cho người xem biết bằng chứng nào đã được chọn, đề xuất gắn với những tọa độ nào và vì sao hệ thống cho phép hoặc từ chối ghi. Phần trình diễn gồm một đối chứng hợp lệ, một ca dùng trạng thái đã cũ và một ca có thay đổi điều kiện quản trị.
+
+\textbf{Bằng chứng.} Trong ma trận PostgreSQL TOCTOU gồm 12 lịch, không ghi nhận thao tác ghi bị cấm khi thay đổi đồng thuận, vai trò, phiên bản chính sách, trạng thái hoặc nhiều điều kiện cùng lúc. Mô hình trạng thái hữu hạn duyệt 21.361 trạng thái và 90.432 bước chuyển đến độ sâu 5 mà không vi phạm 11 bất biến. Trong đoàn hệ mô hình 64 đối tượng, THSS nghiêm ngặt đạt 63/64 với Claude và 64/64 với Gemini. Một lưới kiểm tra độc lập về nguồn gồm 48 lượt gọi ghi nhận 11/12 ô đúng ở THSS nghiêm ngặt, 12/12 ở THSS có ràng buộc, 11/12 ở cấu hình chỉ kiểm tra trạng thái và 9/12 ở cấu hình không ràng buộc; quy mô này quá nhỏ để đưa ra kết luận về ưu thế hoặc không thua kém.
+
+\textbf{Tính mới và trạng thái triển khai.} Phần trình diễn không tuyên bố một thuật toán mới riêng. Nghiên cứu GLHS phía dưới nối chính phần dữ liệu có quản trị mà AI đã thực sự sử dụng với bước quyết định cho phép ghi về sau; CLARA-Care minh họa cách hợp đồng đó đi xuyên suốt một nguyên mẫu có giao diện FHIR. Đây là hệ thống nghiên cứu do học sinh phát triển, hiện chỉ được thử nghiệm trong môi trường cô lập, chưa dùng cho chăm sóc bệnh nhân và không đưa ra tuyên bố về hiệu quả lâm sàng hay tuân thủ quy định.
+\end{document}

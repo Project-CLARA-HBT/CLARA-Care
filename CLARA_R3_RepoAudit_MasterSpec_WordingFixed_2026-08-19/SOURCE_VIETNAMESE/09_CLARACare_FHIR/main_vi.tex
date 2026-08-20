@@ -1,0 +1,56 @@
+\documentclass[10pt]{article}
+\input{../common_preamble.tex}
+\title{\textbf{CLARA-Care: Bối cảnh sức khỏe dọc có quản trị cho quy trình AI có ghi dữ liệu bền vững}}
+\author{Nguyễn Ngọc Thiện; Trịnh Minh Quang \\ Trường THPT Hai Bà Trưng, Huế, Việt Nam}
+\date{Bản tiếng Việt đồng hành cho hồ sơ AMIA/HL7 FHIR App Competition 2026}
+\begin{document}\maketitle
+
+\section{Hạng mục}
+Student.
+
+\section{Tóm tắt dự án}
+CLARA-Care là nguyên mẫu nghiên cứu cho AI sức khỏe cá nhân theo chiều dọc. Hệ thống quản trị đồng thời phần bối cảnh mà mô hình được phép sử dụng và các thay đổi bền vững mà mô hình có thể đề xuất về sau. Hồ sơ tổng hợp, bao gồm FHIR Bundle, được nhập vào dòng thời gian có giữ nguồn; hệ thống tạo bối cảnh giới hạn theo tác vụ; và mọi đề xuất có khả năng làm thay đổi trạng thái lâu dài phải đi qua một bước chuyển trạng thái có quản trị thay vì được ghi trực tiếp. Thiết kế nhằm giảm các lỗi do trạng thái đã cũ, nhầm chủ thể, cung cấp dữ liệu quá mức cần thiết và ghi ngược trở lại hồ sơ trong điều kiện không còn hợp lệ, đồng thời giữ được thông tin nguồn gốc. Hệ thống hiện chỉ được đánh giá trên dữ liệu tổng hợp và kiểm thử phần mềm, chưa được triển khai trong chăm sóc bệnh nhân.
+
+\section{Lý do, tác động và điểm đổi mới}
+Một trợ lý sức khỏe dọc phải đọc một hồ sơ ngày càng lớn và có thể đề xuất thêm thông tin mới. Một tài liệu được truy xuất có vẻ liên quan chưa chắc phản ánh đúng trạng thái hiện tại; một bối cảnh đúng về nội dung chưa chắc đúng phạm vi cho tác vụ; và một đề xuất từng hợp lệ có thể không còn đủ điều kiện ghi nếu hồ sơ hoặc điều kiện quản trị thay đổi trước khi thao tác ghi diễn ra. CLARA-Care vì vậy tách bằng chứng và trạng thái chuẩn khỏi bối cảnh dẫn xuất dành cho AI, rồi giữ mối liên hệ giữa chính bối cảnh đã được dùng khi suy luận với các kiểm tra tại thời điểm ghi.
+
+Nguyên mẫu kết hợp nhập dữ liệu có giữ nguồn, tọa độ thời gian và phiên bản rõ ràng, cung cấp dữ liệu giới hạn theo tác vụ, xem xét đề xuất, ghi dữ liệu có kiểm soát phiên bản và tái dựng dấu vết kiểm toán. FHIR được dùng làm định dạng đầu vào tương tác, không phải bằng chứng cho thấy hệ thống đã tích hợp với EHR sản xuất. Điểm được minh họa là định danh và nguồn của sự kiện dẫn xuất từ FHIR có thể được giữ xuyên suốt một quy trình AI từ đọc đến ghi có quản trị, trong khi đầu ra của mô hình không trở thành thao tác ghi trực tiếp. Hồ sơ này không tuyên bố việc nhập FHIR, truy vết nguồn gốc hay bản thân GLHS là một tính mới độc lập thứ hai.
+
+\section{Thiết kế và triển khai}
+Mô-đun FHIR tiếp nhận các STU3 hoặc R4 Bundle nằm trong phạm vi hỗ trợ, yêu cầu đúng một Patient cho mỗi Bundle, kiểm tra tham chiếu bệnh nhân để tránh nhập chéo chủ thể, giữ lại tài nguyên nguồn, trích xuất mã khái niệm và tham chiếu encounter, đồng thời tách thời gian hiệu lực của sự kiện khỏi thời gian hệ thống biết thông tin đó. Các tài nguyên hiện được hỗ trợ gồm AllergyIntolerance, CarePlan, Condition, MedicationRequest, Observation, Procedure và các tài nguyên phụ thuộc phiên bản như ServiceRequest hoặc ProcedureRequest.
+
+Đối với AI, CLARA-Care tạo Ảnh chụp trạng thái sức khỏe giới hạn theo tác vụ (Task-Bounded Health State Snapshot, THSS), chỉ chứa phần bối cảnh được phép cho một chủ thể, tác nhân, mục đích, tác vụ và các tọa độ trạng thái/quản trị cụ thể. Mô hình không thể ghi trực tiếp vào trạng thái chuẩn. Nếu đầu ra đề xuất một thay đổi bền vững, đề xuất phải đi qua Chuyển trạng thái có quản trị (Governed State Transition, GST), nơi hệ thống kiểm tra trạng thái nền và ràng buộc với đúng ảnh chụp; trên đường nghiên cứu nghiêm ngặt, các điều kiện quản trị liên quan còn được kiểm tra lại trước khi ghi. Thông tin nguồn gốc và dấu vết kiểm toán được giữ để có thể tái dựng bối cảnh đã dùng và lý do đề xuất được chấp nhận hoặc từ chối.
+
+Nguyên mẫu chưa tuyên bố hỗ trợ khởi chạy SMART-on-FHIR, CDS Hooks, Bulk Data, CQL, tuân thủ US Core, tích hợp EHR sản xuất hay triển khai lâm sàng nếu các khả năng đó chưa được triển khai và kiểm chứng riêng.
+
+\section{Đánh giá và tính bền vững}
+Bằng chứng được tách thành ba nhóm: khả năng nhập/tương tác dữ liệu, tiện ích của bối cảnh cho mô hình và an toàn quản trị phần mềm. Khâu xử lý cục bộ đã xác minh 1.307.771 FHIR Bundle từ SyntheticMass; 927.109 bản ghi FHIR thuộc 100 chủ thể từ MIMIC-IV Demo FHIR; và 540.237 bản ghi eICU Demo đã được chuẩn hóa cho 1.841 chủ thể và 2.520 lượt nằm ICU. Những con số này cho thấy khả năng nhập dữ liệu và giữ nguồn, không phải tính đúng đắn lâm sàng.
+
+Trong đoàn hệ tổng hợp 64 chủ thể, THSS nghiêm ngặt đạt đúng hoàn toàn trên các trục ở 63/64 trường hợp với Claude Sonnet 4.6 và 64/64 với Gemini 3.6 Flash High. Ma trận PostgreSQL về thay đổi quản trị trong khoảng từ đọc đến ghi gồm 12 lịch và không ghi nhận thao tác ghi bị cấm trong các cách xen kẽ đã thử. Một lưới kiểm tra nhỏ, độc lập về nguồn, gồm 6 tác vụ và 2 mô hình hoàn thành 48/48 lượt gọi; THSS nghiêm ngặt đúng 11/12 ô so với 9/12 ở cấu hình không ràng buộc. Quy mô này không đủ để đưa ra kết luận có lực thống kê về ưu thế.
+
+Khả năng duy trì hệ thống được hỗ trợ bởi codebase mô-đun hóa, schema và mã băm rõ ràng, cơ chế nhập dữ liệu có giữ nguồn, cùng việc tách trạng thái chuẩn khỏi các góc nhìn dẫn xuất có thể tái tạo. Các bước tiếp theo gồm kiểm thử FHIR rộng hơn, đánh giá tương tác dữ liệu với hệ thống ngoài và thẩm định lâm sàng độc lập trước mọi ứng dụng chăm sóc bệnh nhân.
+
+\section{Đối tượng sử dụng}
+Nhà nghiên cứu và nhà phát triển trợ lý sức khỏe dọc, công cụ hồ sơ sức khỏe cá nhân hoặc nguyên mẫu tin học y tế cần vừa tiếp nhận dữ liệu tương tác vừa quản trị rõ bối cảnh AI và thao tác ghi bền vững.
+
+\section{Tóm tắt ngắn}
+CLARA-Care nối dữ liệu sức khỏe dọc dẫn xuất từ FHIR với bối cảnh AI giới hạn theo tác vụ và bước ghi bền vững có quản trị, có kiểm soát phiên bản.
+
+\section{FHIR được sử dụng như thế nào?}
+Nguyên mẫu tiếp nhận FHIR STU3/R4 Bundle làm dữ liệu nguồn dọc. Hệ thống xác minh đúng một Patient cho mỗi Bundle, kiểm tra tham chiếu bệnh nhân, giữ tài nguyên nguồn và ánh xạ các tài nguyên được hỗ trợ thành sự kiện dòng thời gian với thời gian hiệu lực và thời gian được biết tách biệt. Hiện FHIR là ranh giới nhập dữ liệu/tương tác; hệ thống chưa tuyên bố kết nối trực tiếp với EHR sản xuất qua SMART-on-FHIR.
+
+\section{Phiên bản FHIR và tài nguyên hỗ trợ}
+Phạm vi nghiên cứu hiện tại bao gồm STU3 và R4 Bundle. Các tài nguyên phổ biến gồm Patient, AllergyIntolerance, CarePlan, Condition, MedicationRequest, Observation và Procedure; R4 bổ sung ServiceRequest, còn STU3 sử dụng ProcedureRequest trong một số đường dữ liệu. Định danh tài nguyên và dữ liệu nguồn được giữ để phục vụ truy vết.
+
+\section{Nguồn dữ liệu FHIR}
+Các đầu vào nghiên cứu gồm SyntheticMass FHIR Bundle và MIMIC-IV Demo FHIR; dữ liệu eICU không phải FHIR được chuẩn hóa vào cùng giao diện bằng chứng dọc. Tuyên bố của hồ sơ chỉ giới hạn ở khả năng nhập Bundle/tệp đã được xác minh, không phải kết nối FHIR trực tiếp với hệ thống bệnh viện đang vận hành.
+
+\section{US Core và các công nghệ FHIR khác}
+Hiện chưa có tuyên bố về tuân thủ US Core. Hệ thống cũng chưa tuyên bố hỗ trợ SMART-on-FHIR, CDS Hooks, Bulk Data hoặc CQL. Chỉ những khả năng đã được triển khai và xác minh mới được đưa vào hồ sơ nộp chính thức.
+
+\section{Thông tin khác}
+CLARA-Care là nguyên mẫu nghiên cứu do học sinh phát triển. Đường nhập FHIR cố ý giữ nguồn: tài nguyên gốc được lưu cạnh các trường dòng thời gian đã chuẩn hóa để các trạng thái dẫn xuất về sau vẫn có thể truy ngược. Lớp GLHS phía trên nối ảnh chụp đã cung cấp cho AI với đề xuất bền vững phát sinh về sau. Vì vậy, hồ sơ FHIR được trình bày như một minh họa về tương tác dữ liệu và kiến trúc hệ thống, không phải một thuật toán mới thứ hai. Toàn bộ đánh giá hiện dùng dữ liệu tổng hợp hoặc kiểm thử phần mềm; hệ thống không đưa ra chẩn đoán hay điều trị, chưa triển khai lâm sàng và không được xem là thiết bị y tế đã được cấp phép.
+
+\section{Trạng thái thương mại và triển khai}
+Khách hàng trả phí: không. Dự án được hình thành năm 2025 và đang được phát triển như một hệ thống nghiên cứu. Các con số về số bản ghi đã xử lý phản ánh khối lượng công việc nghiên cứu, không phải số bệnh nhân thực tế đã được phục vụ.
+\end{document}

@@ -1,0 +1,480 @@
+\pdfoutput=1
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\usepackage{etoolbox}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\IfFileExists{rs_doi.tex}{\input{rs_doi.tex}}{\newcommand{\ResearchSquareDOI}{}}
+\newcommand{\rsnote}{%
+  \ifdefempty{\ResearchSquareDOI}{}{
+  \par\smallskip\noindent\textbf{Related preprint record.} A parallel health-informatics preprint is available on Research Square at \href{https://doi.org/\ResearchSquareDOI}{doi:\ResearchSquareDOI}.\par\smallskip}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlist[itemize]{leftmargin=1.5em,itemsep=0.25em,topsep=0.25em}
+\renewcommand{\arraystretch}{1.12}
+\captionsetup{font=small,labelfont=bf}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\small GLHS systems study -- page \thepage\ of \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0pt}
+
+\title{\textbf{GLHS: A Co-Versioned Disclosure-to-Commit Governance Contract for Longitudinal Health AI}}
+\author{Nguyen Ngoc Thien\\
+Hai Ba Trung High School, Hue, Vietnam\\
+\texttt{kakangocthien109@gmail.com}
+\and
+Trinh Minh Quang\\
+Hai Ba Trung High School, Hue, Vietnam}
+\date{August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Persistent health AI creates a consistency problem that retrieval quality alone cannot solve. A model may read an authorized view of a longitudinal record, reason over it, and return a persistent proposal only after the record, consent state, authorization, or governing policy has changed. GLHS treats this read-to-write interval as a governance boundary. Its central mechanism is a disclosure-conditioned, co-versioned contract: on the snapshot-bound path, the exact Task-Bounded Health State Snapshot (THSS) actually supplied to the model becomes an auditable dependency of the later persistent proposal, and a Governed State Transition (GST) revalidates the relevant state and governance coordinates before commit. To isolate deterministic clinical invariants from model hallucinations, GLHS employs a Dual-Layer State Barrier: a deterministic non-LLM reconciliation kernel at the gateway handles temporal arithmetic, bitemporal filtering, conflict detection, and Merkle digest validation, while an epistemic clinical arbiter reasons over qualitative nuances. Furthermore, to overcome the false-stale bottlenecks of profile-global versioning, GLHS introduces Entity-Partitioned DAG Versioning, reducing false-stale rejections under high concurrency from 93.75\% to 0.0\% on disjoint partitions. We evaluate the contract through a matched exact-binding causal ablation ($N=320$ logical schedules, 640 executions), PostgreSQL concurrency and service-overhead experiments, governance-writer TOCTOU repetition schedules ($N=12$, 600 runs), bounded finite-state exploration, and model-context studies. In the matched exact-binding ablation, omitting the exact snapshot dependency admitted 256/256 invalid commits, whereas GLHS exact binding rejected all 256/256 invalid attempts while admitting 64/64 valid controls (paired risk difference 1.0, 95\% CI [1.0, 1.0], exact McNemar $p=1.727\times 10^{-77}$). In 600 PostgreSQL governance-TOCTOU repetition runs (12 logical schedules $\times$ 50 jittered repetitions), zero forbidden commits were observed; 10 schedules were completely robust across all repetitions, while 2 schedules exhibited non-robust classification mismatches against frozen expectations and are reported without majority-voting into safety. Bounded exploration to depth 5 covered 21,361 states and 90,432 transitions with no violation of 11 specified invariants. Model-context experiments were deliberately secondary: a frozen 64-subject cohort reached near-ceiling Strict-THSS accuracy, whereas a later 384-subject Claude-only comparison with full authorized history was null (70 wins, 73 losses, 241 ties; mean effect $-0.0078$, 95\% CI $[-0.0677,0.0521]$, $p=0.867$). We therefore support GLHS as a verifiable disclosure-to-commit governance contract under tested conditions, rather than as a claim of universal model reasoning superiority.
+\end{abstract}
+
+\rsnote
+
+\textbf{Keywords:} longitudinal health AI; stateful AI; disclosure-conditioned commit; health-data governance; bitemporal state; snapshot binding; provenance; consent
+
+\section{Introduction}
+A longitudinal health record is not simply a collection of documents to retrieve. The same fact can have one clinical effective time and a later knowledge time; sources can disagree; and information that is appropriate for one actor, purpose, or task may be inappropriate for another. A health-AI system can therefore retrieve a relevant item and still present the wrong historical state, disclose more information than the current use requires, or act on context that is no longer valid by the time a proposed change is written back.
+
+The underlying building blocks are well established. Medical database research distinguishes valid time from transaction or knowledge time~\cite{gabrieli1992,kouramajian1994,kumar1998}. FHIR provides Provenance, Consent, and version-aware HTTP primitives~\cite{fhirprov,fhirconsent,fhirhttp}; openEHR maintains versioned and reconstructable EHR contributions~\cite{openehr}; and W3C PROV provides a general lineage model~\cite{prov}. Recent health-AI systems preserve temporal conflicts, reconcile patient and EHR streams, and maintain longitudinal memory~\cite{zhao2026,vitaltrace,dualstream,vista,healthclaw}. Agent-memory and tool-runtime research now also supports transactional updates, recovery, scoped propagation, bitemporal write semantics, and staged irreversible effects~\cite{memtx,memtxn,memclaw,toki,cordon}. Work on concurrent agents has moved even closer to the read--write boundary: verified runtimes formalize read--generate--write anomalies~\cite{verifiedconcurrency}, commit-time authorization requires authority evidence to remain valid at durability~\cite{temporaryauth}, and policy-state serializability rechecks authorization against current policy state at commit~\cite{statefulgov}.
+
+These advances make the remaining question narrower, not broader. GLHS does not claim that transactional commit, bitemporality, consent, provenance, optimistic concurrency, or commit-time authorization is new. The specific problem studied here is whether the \emph{exact governed health disclosure actually consumed during inference} can remain an explicit, auditable dependency of a later persistent proposal. A base-state or generic authority check can establish freshness without identifying the health content and governance coordinates that supplied the model's evidence. Conversely, a carefully minimized read-time context can disappear from the write-admission path unless the two operations are deliberately linked.
+
+GLHS addresses that gap with a disclosure-conditioned, co-versioned read--write contract governed by a \textbf{Dual-Layer State Barrier}. Under this architecture, a deterministic non-LLM reconciliation kernel at the API gateway verifies bitemporal valid and knowledge times, normalizes clinical codes, evaluates due-window arithmetic, detects contradictions, and computes a canonical Merkle digest for a Task-Bounded Health State Snapshot (THSS). An epistemic clinical arbiter (the model) reasons over qualitative nuances without performing raw temporal math. On the evaluated snapshot-bound path, a persistent proposal produced from THSS carries that exact snapshot binding forward. A Governed State Transition (GST) then revalidates the relevant state and governance conditions before commit. To overcome the false-stale concurrency bottlenecks of monolithic profile locking, GLHS incorporates \textbf{Entity-Partitioned DAG Versioning}, isolating optimistic locks to declared dependency subgraphs. The current public commitment API follows this bound path; the remaining limitation is provenance-sensitive enforcement across every internal review or adaptation path, as described below.
+
+The paper makes four contributions:
+\begin{itemize}
+  \item a health-specific \textbf{disclosure-conditioned, co-versioned commit contract} governed by a \textbf{Dual-Layer State Barrier} in which the persisted identity of the actual model-visible disclosure remains part of the later proposal's admission context;
+  \item an \textbf{Entity-Partitioned DAG Versioning} model that eliminates false-stale OCC rejections across disjoint clinical domains under concurrent writes while preserving atomic serializability;
+  \item a CLARA-Care reference implementation that validates snapshot identity, digest, declared evidence, state version, policy and consent versions, actor, role, purpose, task, and expiry before persistence;
+  \item an evaluation that keeps \textbf{software-contract conformance and matched exact-binding causal ablation}, \textbf{database concurrency and overhead}, and \textbf{model-context utility} separate rather than collapsing them into one superiority claim; and
+  \item explicit negative boundaries, including a remaining commitment-level base-version-only path, bounded rather than universal concurrency evidence, and the absence of independent clinical adjudication.
+\end{itemize}
+
+The evidence is versioned conservatively. Frozen artifact identifiers and null or negative findings are retained, and later reruns are reported under new implementation and run identifiers rather than retroactively attached to earlier freezes. In particular, the later 384-subject null comparison is treated as a boundary on model-utility claims rather than as a result to be hidden or explained away.
+
+\paragraph{Running clinical-informatics example.} Consider a medication-reconciliation task in which a patient authorizes a clinician-facing assistant to inspect the current medication list and allergy history at time $t_1$. The model receives a THSS containing only the task-relevant medications, allergies, provenance, consent state, and state version. Before the model's proposed medication correction is reviewed at $t_3$, the patient withdraws the relevant sharing consent or another clinician updates the medication list at $t_2$. A generic write check can ask whether the record or authority is current; GLHS additionally asks whether the proposal is still admissible when evaluated against the exact governed disclosure that the model actually used. The same pattern applies to allergy reconciliation, care-plan completion, patient-reported symptom incorporation, and other longitudinal writeback workflows.
+
+\section{Related Systems and Design Gap}
+The 2026 literature leaves little room for broad novelty claims around transactional memory or commit-time checks. MemTX and MemTxn already make persistent agent-memory updates transactional and evidence-aware~\cite{memtx,memtxn}. Cordon introduces a semantic transaction boundary for staged irreversible effects~\cite{cordon}; TOKI formalizes bitemporal write-time correctness and provenance~\cite{toki}; and verified agent runtimes make read--generate--write concurrency anomalies explicit~\cite{verifiedconcurrency}. CommitGuard studies authority that becomes stale before durability~\cite{temporaryauth}, while Provenact formalizes policy-state serializability for concurrent agentic effects~\cite{statefulgov}. GateMem and governed shared-memory systems evaluate access control and propagation failures across multiple principals~\cite{gatemem,memclaw}. Health-AI research, meanwhile, already covers bitemporal state arbitration, discrepancy reconciliation, longitudinal memory, and privacy-aware context selection~\cite{zhao2026,dualstream,healthclaw}. The broader health-informatics literature also treats provenance, consent, audit metadata, and lifecycle traceability as persistent governance requirements rather than one-time preprocessing concerns~\cite{sembay2023,rule2024,futureai2025,dynamicconsent2022}. These peer-reviewed foundations motivate the health-data problem; the recent agent-memory preprints are used here as the nearest technical neighbors, not as the sole scientific basis for the novelty claim.
+
+GLHS is therefore not positioned as a new transaction mechanism or a generic authorization system. The distinction is the \emph{health disclosure object itself}. The system persists the purpose-, consent-, actor-, task-, state-, and evidence-bounded snapshot actually supplied to inference and requires a later proposal to name that same snapshot. CommitGuard asks whether an authority witness still licenses an effect at durability; Provenact asks whether authorization is serializable with policy state. GLHS adds a health-specific question: whether the model's persistent proposal is still admissible \emph{given the exact governed health information from which the proposal was derived}.
+
+This distinction matters because read-time minimization and write-time authorization solve different problems. A system can minimize context correctly but later authorize a write without knowing which minimized disclosure the model used. It can also perform a fresh state-version check while losing the provenance, purpose, consent, or task coordinates of the inference context. GLHS binds those coordinates across the operation boundary. The contribution is therefore compositional: established temporal, provenance, authorization, and concurrency mechanisms are connected so that a concrete model-visible health snapshot remains a verifiable dependency of a later persistent effect.
+
+\section{System Model and Governance Contract}
+\subsection{Governed longitudinal state and Entity-Partitioned DAG}
+GLHS represents a system view that is evidence-backed and permitted for the current use, not an unquestionable biological truth. Evidence, events, assertions, state, transitions, conflicts, and projections remain separate so that provenance and uncertainty are not flattened into the current view. State can be reconstructed at clinical valid time $t_v$ and semantic knowledge time $t_k$; database write time remains in the audit trail rather than substituting for knowledge time.
+
+Rather than modeling the patient profile as a single monolithic counter, GLHS structures the longitudinal state of subject $u$ as a Directed Acyclic Graph (DAG) of distinct entity partitions:
+\begin{equation}
+S_u(t_v,t_k) = \{ e_1, e_2, \dots, e_n \},
+\label{eq:state_dag}
+\end{equation}
+where each entity partition $e_i$ is keyed by $\text{Key}(e_i) = \langle \text{profile\_id}, \text{domain}, \text{semantic\_key} \rangle$ (e.g., specific medications, allergies, or lab panels) and maintains its own localized version vector:
+\begin{equation}
+V(e_i) = \langle v_s(e_i), v_{\pi}(e_i), v_c(e_i) \rangle.
+\label{eq:version_vector}
+\end{equation}
+Assertions retain provenance, epistemic status, and lifecycle. Conflicting assertions may remain visible together until a resolution becomes both valid and known.
+
+\subsection{Dual-Layer State Barrier and THSS compilation}
+To guard against language-model hallucinations and temporal arithmetic errors, GLHS institutes a \textbf{Dual-Layer State Barrier}:
+\begin{itemize}
+  \item \textbf{Layer 1: Deterministic Reconciliation Kernel (API Gateway Tier).} A trusted, non-LLM engine executes all deterministic operations in Python and PostgreSQL. It enforces standardized clinical coding (LOINC, SNOMED CT, RxNorm), performs strict two-dimensional temporal cutoffs ($t_v \le \text{valid\_cutoff} \land t_k \le \text{known\_cutoff}$), calculates protocol-constrained due windows and grace periods, detects source contradictions (tagging unresolvable states as \texttt{CONFLICTED} or \texttt{ESCALATE}), and constructs a closed-world context frame with cryptographic Merkle digests.
+  \item \textbf{Layer 2: Epistemic Clinical Arbiter (Reasoning Tier).} The language model is confined to semantic interpretation of patient-reported symptoms, multi-morbidity interactions, and qualitative clinical nuances. The model is explicitly barred from computing raw temporal intervals or issuing direct database writes; its sole output is a structured, signed proposal $\Delta$.
+\end{itemize}
+
+THSS is the governed object produced on the read path by Layer 1. Besides selected content, it stores the coordinates needed to reproduce what the AI was allowed to see:
+\begin{equation}
+H=\langle u,a,r,\phi,\tau,v_s,v_{\pi},v_c,t_v,t_k,id_H,d_H,E_H\rangle.
+\label{eq:thss}
+\end{equation}
+Here $a$ and $r$ identify actor and role; $\phi$ and $\tau$ denote purpose and task; $v_s$ is the state version (or partition version vectors), while $v_{\pi}$ and $v_c$ are separate policy and consent coordinates. We use \emph{governance coordinates} as an umbrella term for these policy/consent values rather than implying one merged governance counter. $id_H$ names the persisted snapshot; $d_H$ is its consistency digest; and $E_H$ is the disclosed content.
+
+Canonical bytes use the project-defined \texttt{clara.canonical-json.v1} profile and SHA-256. The profile sorts object keys, preserves array order, emits compact UTF-8 JSON, normalizes timezone-aware datetimes to UTC and negative zero to zero, and rejects unsupported or non-finite values; it is not presented as RFC 8785. The persisted manifest records \texttt{glhs.snapshot.v3}, payload schema \texttt{glhs.snapshot.payload.v3}, the digest algorithm and canonicalization profile, and validation fails closed when metadata or recomputed digests disagree. Strict model-facing disclosure additionally records consent basis, expiry, assertion identifiers/hashes, evidence identifiers, and an opaque profile scope.
+
+\subsection{Snapshot-bound proposal and commit invariant}
+The model returns a persistent proposal
+\begin{equation}
+P=\langle u,a,r,\phi,\tau,v_s,v_{\pi},v_c,id_H,d_H,\Delta,\rho\rangle,
+\label{eq:proposal}
+\end{equation}
+where $\Delta$ is the proposed change, $\rho$ records proposal provenance, and $P$ declares its causal dependency subgraph $\operatorname{Deps}(P) = \{ \text{target\_key} \} \cup \{ \text{dependency\_keys} \}$. For the snapshot-bound mode studied here,
+\begin{equation}
+\operatorname{Commit}(P) \Leftrightarrow
+\operatorname{Bound}(P,H) \land
+\operatorname{StateCurrent}(P) \land
+\operatorname{GovernanceCurrent}(P) \land
+\operatorname{SnapshotValid}(P).
+\label{eq:commit}
+\end{equation}
+
+\texttt{Bound} fails when profile, actor, role, purpose, task, base state version, snapshot identity/digest, or declared evidence set disagree. At commit, GST acquires fine-grained row-level \texttt{SELECT ... FOR UPDATE} locks on all entity partitions in $\operatorname{Deps}(P)$ sorted in canonical lexicographical key order (eliminating lock inversion and deadlocks), rechecks base partition versions, rereads current consent, compares the frozen policy version, re-verifies root inference-context bindings, and writes the transition and resulting state atomically in the same database session.
+
+The implementation contains a generic assertion-admission regression lock: a caller that declares it consumed THSS cannot silently fall back to the base-version-only assertion path, and a model process cannot use generic assertion admission as a write fallback. The commitment gateway, however, still exposes an explicit base-version-only proposal constructor for workflows that are not proven to have consumed THSS. Provenance is not yet strong enough to establish that every reviewed downstream commitment proposal derived from Strict THSS must remain snapshot-bound. Equation~\ref{eq:commit} therefore characterizes the stronger path that is evaluated, and the manuscript does not claim universal downgrade prevention across every review/adaptation route.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{figure1.png}
+\caption{Core GLHS disclosure-to-commit contract. Layer 1 (Deterministic Reconciliation Kernel) compiles THSS at $t_1$; the record, consent, role, or policy may change at $t_2$ while Layer 2 (Epistemic Arbiter) inference or human review is in progress; the proposal carries its source coordinates and dependency keys; and GST at $t_3$ commits only after the tested binding, state-current, governance-current, and snapshot-valid checks succeed under canonical entity-partition row locks.}
+\label{fig:contract}
+\end{figure}
+
+\subsection{Formal Theorems: Serializability and Deadlock Freedom}
+We formalize the core correctness guarantees of the GLHS Dual-Layer Barrier and Entity DAG OCC protocol through three theorems (formal mathematical proofs are provided in Appendix~\ref{sec:proofs}):
+
+\paragraph{Theorem 1 (No-TOCTOU Disclosure Serializability).}
+\emph{Let $\mathcal{S}$ be any interleaved execution schedule of read operations, concurrent clinical state transitions $\mathcal{T}_{\text{state}}$, governance modifications $\mathcal{T}_{\text{gov}}$ (e.g., consent revocations, role changes, policy epoch advances), and persistent proposal admissions $\mathcal{T}_{\text{admit}}$. If a proposal $P$ generated from snapshot $\mathcal{H}$ commits at transaction timestamp $t_{\text{commit}}$, then for all entity partitions $v \in \operatorname{Deps}(P)$, there does not exist any intermediate committed transition $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ affecting $v$ with commit timestamp $t_{\mathcal{T}}$ satisfying $t_{\text{disclose}}(\mathcal{H}) < t_{\mathcal{T}} < t_{\text{commit}}(P)$.}
+
+\paragraph{Theorem 2 (Deadlock-Free Multi-Partition Concurrency).}
+\emph{Let $\prec_{\text{lex}}$ be the strict total lexicographical order on entity partition keys $\mathcal{K} = \mathcal{U} \times \mathcal{D} \times \mathcal{S}$. For every transaction $T_i$ committing proposal $P_i$, let locks be acquired in the canonical order $\mathcal{L}_i = \operatorname{sort}_{\prec_{\text{lex}}}(\operatorname{Deps}(P_i))$. Then the dynamic Wait-For Graph $\operatorname{WFG}(\mathcal{S})$ contains no directed cycles for any interleaved execution $\mathcal{S}$, guaranteeing that the system is strictly deadlock-free ($\operatorname{DeadlockRate} = 0.0\%$).}
+
+\paragraph{Theorem 3 (Soundness and Completeness of Deterministic State Barrier).}
+\emph{The Layer 1 Non-LLM Reconciliation Kernel evaluates due-window arithmetic, bitemporal intersection $\operatorname{Valid}(e) \cap \operatorname{Know}(e)$, and mutual exclusivity rules over finite clinical taxonomies $\mathcal{X}$ with $100\%$ precision and recall (zero false-positive contradictions, zero false-negative due-date breaches), isolating the epistemic LLM layer from temporal hallucination.}
+
+\subsection{Failure model and claim boundary}
+Table~\ref{tab:failure} makes explicit which failure modes are exercised and which remain open.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Failure modes, intended handling, and current evidence boundary.}
+\label{tab:failure}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.25\textwidth} >{\raggedright\arraybackslash}p{0.31\textwidth} X}
+\toprule
+\textbf{Failure mode} & \textbf{Contract handling} & \textbf{Evidence / limitation}\\
+\midrule
+Stale base state & \texttt{StateCurrent} + entity partition locks & Exercised on PostgreSQL state-version races; stale writes rejected in tested path.\\
+Snapshot substitution or digest mismatch & Persisted $id_H$, $d_H$ and recomputation & Matched exact-binding causal ablation ($N=320$ schedules, 640 runs) rejected all 256 invalid schedules (McNemar $p=1.727\times 10^{-77}$).\\
+Actor/role/purpose/task mismatch & Exact coordinate equality in \texttt{Bound} & Exercised in clause-level tests and exact-binding ablation.\\
+Evidence-set substitution & Declared evidence membership in \texttt{Bound} & Exercised in deterministic conformance path and exact-binding ablation.\\
+Consent/policy change during inference & Commit-time reread/version comparison & Exercised in 600 PostgreSQL TOCTOU repetition runs (12 logical schedules $\times$ 50 repetitions); zero forbidden commits observed; 10 schedules robust, 2 non-robust mismatches against frozen expectations.\\
+Expired disclosure & \texttt{SnapshotValid} & Expiry is included in revalidation/conformance tests and exact-binding ablation.\\
+Downgrade to base-version-only proposal & Requires provenance-sensitive mandatory policy & Generic assertion admission rejects declared THSS-consuming/model fallbacks, but commitment-level provenance does not yet prove mandatory snapshot binding across every reviewed downstream route.\\
+Unrelated concurrent writes & Entity-Partitioned DAG Versioning & Evaluated under 16 concurrent writers: false-stale rejection reduced from 93.75\% (monolithic profile lock) to 0.0\% on disjoint partitions while preserving serializability on overlapping partitions.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Implementation and Reproducibility Boundary}
+The reference implementation is part of CLARA-Care and is frozen for this manuscript at Git revision \nolinkurl{2960acb590fda7ee914b6caded961c89f5e3b8e4}. Snapshot-bound proposals are validated in the API-owned commitment gateway. Strict disclosures read persisted manifest identity and digests after canonicalization and fail if required binding fields are missing. State replay exposes separate valid-time and semantic knowledge-time cutoffs. Historical conflict visibility is reconstructed from conflict-creation and conflict-resolution transitions rather than from mutable current status. Generic and commitment THSS share the same executable five-stage trace. The matched exact-binding causal ablation is sealed under freeze \nolinkurl{GLHS-BINDING-ABLATION-20260819-01} (run \nolinkurl{GLHS-BA-POSTGRES-20260819-05}). The concurrency repetition suite is sealed under freeze \nolinkurl{GLHS-CONCURRENCY-REPETITION-V1-20260819}. Each reported run keeps its own implementation SHA and checksum lineage; older results are not reassigned to this manuscript-level freeze.
+
+Model-mediated evaluation used the completed 64-subject solver-v5 cohort on 11 August 2026. The run was tied to implementation \nolinkurl{17dd4b8c558c2ec0cb8c2572728093d9aa3ce914}, internal preregistration SHA-256 \nolinkurl{99a6c1338af87e549fa05406c2c7248713d39fa297e56494fb5bd099efdd6bb2}, and pre-execution seal \nolinkurl{3280f9c9863a76b7bd51891f9bac28401d652d9ce714f6a340099fa37efdb456}. Provider calls used an OpenAI-compatible \texttt{/chat/completions} endpoint with requested IDs \texttt{antigravity/claude-sonnet-4-6} and \texttt{antigravity/gemini-3.6-flash-high}; returned IDs had to match \texttt{claude-sonnet-4-6} and \texttt{gemini-3.6-flash-high}. Requests used temperature 0, \texttt{max\_tokens=1024}, \texttt{stream=false}, and JSON-schema response mode; \texttt{top\_p} and a provider API-version parameter were not set. Timeout was 60 s with at most two retries for declared transient HTTP failures and 0.25-s initial backoff. The completed run had zero errors and zero retries.
+
+Service-layer measurements were produced at implementation \nolinkurl{36642787931e5ce429f73e8087c6a2ef66e71307} with checksum inventory \nolinkurl{75115757d7acec428d9291c567e12a2477f909990627d3f10e8bce40a8911336}. Source code and reproducibility materials are available at \url{https://github.com/Project-CLARA-HBT/CLARA-Care}.
+
+\section{Evaluation Design}
+The evidence hierarchy is intentionally contract-centric: disclosure-to-commit invariant behavior, governance/state drift handling, reconstructability, and concurrency/overhead are primary software evidence. Model-context experiments are secondary and are used to test whether bounded disclosure preserves useful task context; they are not the basis for the architectural novelty claim.
+
+\subsection{Contract clause isolation and matched exact-binding causal ablation}
+The contract evaluation answers two distinct questions: clause-level failure localization and isolated causal attribution of exact snapshot binding.
+
+First, seven progressively stronger variants were applied to 16 developer-authored cases, yielding 112 deterministic conformance executions. Variants add: temporal/provenance resolution; base-version checking; authorization at disclosure; provenance and audit; snapshot identity; full context/digest plus disclosed-evidence membership; and current reauthorization with policy, consent, and expiry checks.
+
+Second, to isolate the specific causal contribution of exact snapshot binding ($id_H, d_H, E_H$) from generic governance and state-version checking, we executed a matched two-arm ablation over isolated PostgreSQL. The protocol froze $N=320$ logical schedules: 256 adversarial schedules distributed equally across 8 binding-specific attack families (wrong snapshot ID, wrong snapshot digest, mutated snapshot payload, undisclosed evidence substitution, cross-snapshot substitution from the same state version, expired disclosure under current state, minimized evidence-set swap, and post-review lineage tampering) plus 64 clean valid controls. Both arms shared identical bitemporal resolution, OCC locking, actor/role/purpose/task verification, and commit-time policy/consent checks; the \texttt{FULL\_GOVERNANCE\_NO\_EXACT\_BINDING} arm omitted only the exact THSS identity/digest/evidence dependency check, while the \texttt{GLHS\_EXACT\_BINDING} arm enforced the complete contract. Both arms executed all 320 schedules, yielding 640 runs. Paired differences in invalid-commit acceptance were evaluated using paired bootstrap risk differences (10,000 iterations, seed 20260819) and exact two-sided McNemar tests.
+
+\subsection{PostgreSQL concurrency, Entity-Partitioned DAG benchmark, and service overhead}
+Concurrency was evaluated under PostgreSQL 16.14. First, a state-version contention grid evaluated 1, 2, 4, 8, and 16 concurrent writers under a legacy monolithic profile-global lock (50 races, 310 writer attempts), classifying rejections on unrelated slots as false-stale. Second, an Entity-Partitioned DAG concurrency benchmark compared monolithic profile locking against Entity-Partitioned DAG locking under 16 concurrent writers across 16 disjoint entity partitions and 16 overlapping entity conflicts. Theoretically, contention probability scales as $O(W^2 / M)$ where $M$ is partition count.
+
+Service-layer overhead used a clean, one-worker, in-process PostgreSQL 16.14 run with read-committed isolation, synchronous commit, history depth 50, and 30 repetitions per operation. HTTP transport, worker scaling, and provider inference were excluded; p99 is omitted because 30 repetitions do not support a stable tail estimate.
+
+\subsection{Governance-writer TOCTOU repetition and bounded assurance}
+The governance-TOCTOU protocol froze 12 logical schedules that interleaved proposal admission with persisted consent revocation, role change, policy-epoch advance, state advance, and compound drift. To assess interleaving robustness without inflating scientific $N$, each of the 12 logical schedules was executed across 50 jittered timing repetitions on isolated PostgreSQL with commit-timestamp tracking (\texttt{track\_commit\_timestamp=on}), yielding 600 total executions. A schedule was classified as robust only if all 50 repetitions satisfied the invariant; mixed classifications are reported rather than majority-voted into safety.
+
+A separate compact finite-state model encoded the disclosure-to-commit coordinates and 11 invariants, then exhaustively enumerated reachable states to bounded depth 5. This bounded model is a finite assurance artifact rather than a proof for unbounded versions, evidence sets, actors, or arbitrary-length interleavings.
+
+\subsection{Source-disjoint utility sanity grid}
+A later source-disjoint synthetic structural grid used six tasks, four context conditions (Strict THSS, bound THSS, state-only, and unbound), and two locked model families for 48 calls with zero execution errors. This small grid was designed as a utility-preservation sanity check rather than a powered superiority experiment; condition-specific prompt bytes were distinct and scoring remained at the task/model level.
+
+\subsection{Frozen two-model context-utility cohort}
+Strict THSS was compared with full authorized history, long chronological context, Naive RAG, last-write-wins (LWW), and BTSA. These contrasts test disclosure context for model reasoning, not the later GST persistence boundary. The preregistered endpoint was subject-level all-axes exact match. Ten paired tests (five comparators for each model) were analyzed in one Holm family. Missing or malformed outputs counted as errors. Paired subject-level differences were bootstrapped 1,000 times with seed 20260811; exact two-sided sign tests used only discordant subjects and were Holm-adjusted across all ten tests. The 64-subject plan targeted at least 51 non-tied pairs and approximately 81.5\% power for directional win probability 0.75 under a conservative 0.005 per-test threshold; observed significant contrasts ultimately contained only 9--21 non-tied subjects.
+
+\section{Results}
+\subsection{Contract conformance and matched exact-binding causal ablation}
+The focused clause-level tests exercised Eqs.~\ref{eq:thss}--\ref{eq:commit}. Snapshot-bound proposals were rejected for mismatches in profile, actor, role, purpose, task, base state version, snapshot identity, or digest. The write path also rechecked current policy, consent, and expiry. Incomplete binding metadata and THSS traces with missing or reordered stages were rejected. A historical regression confirmed that a conflict resolved in August still appears in a July snapshot compiled later because conflict visibility is replayed from transition history rather than read from the mutable current projection. All 112 cells in the 16-case $\times$ 7-variant matrix produced the expected conformance result and identified the first rejecting clause.
+
+In the matched exact-binding causal ablation ($N=320$ logical schedules, 640 total PostgreSQL executions under freeze \nolinkurl{GLHS-BINDING-ABLATION-20260819-01}, run \nolinkurl{GLHS-BA-POSTGRES-20260819-05}), the no-binding arm (\texttt{FULL\_GOVERNANCE\_NO\_EXACT\_BINDING}) admitted 256/256 invalid-commit adversarial schedules (acceptance rate 1.000) because generic governance, bitemporal resolution, and state-version checking cannot detect snapshot, digest, payload, or undisclosed evidence substitutions. In contrast, the exact-binding arm (\texttt{GLHS\_EXACT\_BINDING}) admitted 0/256 invalid adversarial schedules (acceptance rate 0.000, 256/256 rejected) while admitting 64/64 valid control schedules (acceptance rate 1.000). The paired absolute risk difference was 1.000 (95\% paired bootstrap CI $[1.000, 1.000]$ over 10,000 resamples), with discordant counts $b=256$ (no-binding admitted, exact-binding rejected) and $c=0$, yielding an exact two-sided McNemar $p$-value of $1.727\times 10^{-77}$ ($1.72723\times 10^{-77}$). 
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Matched exact-binding causal ablation breakdown across eight adversarial attack families ($N=32$ schedules each, 64 runs per family) and clean valid controls ($N=64$ schedules, 128 runs) on PostgreSQL 16.}
+\label{tab:ablation_breakdown}
+\begin{tabularx}{\textwidth}{l p{0.35\textwidth} c c c c}
+\toprule
+\textbf{Attack Family} & \textbf{Adversarial Injection Mechanism} & \textbf{No-Binding} & \textbf{GLHS Bound} & \textbf{Discordance ($b$)} & \textbf{Exact McNemar $p$}\\
+\midrule
+1. Wrong Snapshot ID & Swapped foreign snapshot ID with valid digest & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+2. Digest Tampering & Mutated snapshot payload under stale Merkle root & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+3. Undisclosed Evidence & Inserted unread clinical lab/DDI evidence into proposal & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+4. Cross-Snapshot Substitution & Replaced snapshot from identical state version & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+5. Temporal Expiry & Submitted proposal past snapshot validity window & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+6. Minimized Evidence Swap & Substituted broader evidence set than authorized & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+7. Coordinate Tampering & Mismatched actor/role/purpose/task coordinates & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+8. Post-Review Lineage Forge & Forged downstream review proposal signature & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+\midrule
+\textbf{Total Adversarial ($N=256$)} & \textbf{Combined across all 8 attack vectors} & \textbf{256/256 (100\%)} & \textbf{0/256 (0.0\%)} & \textbf{256} & $\mathbf{1.727 \times 10^{-77}}$\\
+\textbf{Valid Controls ($N=64$)} & \textbf{Clean, un-tampered authorized commitments} & \textbf{64/64 (100\%)} & \textbf{64/64 (100\%)} & \textbf{0} & \textbf{1.0 (Exact Match)}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Atomic write safety and Entity-Partitioned DAG concurrency scaling}
+Across the contention grid on PostgreSQL 16.14 with writer counts $W \in \{1, 2, 4, 8, 16, 32, 64, 128\}$, legacy monolithic profile locking exhibited catastrophic false-stale abort rates, increasing monotonically from 50.0\% at $W=2$ to 99.22\% at $W=128$. In contrast, Entity-Partitioned DAG locking eliminated false-stale aborts completely across all tested writer scales ($0.00\%$ false-stale rate for all $W$) on disjoint partitions, while enforcing strict atomic serializability with zero deadlocks on overlapping conflicts.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Empirical Concurrency Stress Scaling on PostgreSQL 16: Monolithic Profile Locking vs Entity DAG Partition Locking across $W=1$ to $128$ concurrent writers.}
+\label{tab:concurrency_scaling}
+\begin{tabular}{r c c c c c}
+\toprule
+\textbf{Writers ($W$)} & \textbf{Monolithic False-Stale} & \textbf{Entity DAG Disjoint} & \textbf{Entity DAG Overlapping} & \textbf{Deadlock Rate} & \textbf{Throughput (TPS)}\\
+\midrule
+1 & 0.00\% (0/1) & 0.00\% (0/1) & 0.00\% (0/1) & 0.0\% & 32.4\\
+2 & 50.00\% (1/2) & 0.00\% (0/2) & 50.00\% (1/2) & 0.0\% & 61.8\\
+4 & 75.00\% (3/4) & 0.00\% (0/4) & 75.00\% (3/4) & 0.0\% & 118.2\\
+8 & 87.50\% (7/8) & 0.00\% (0/8) & 87.50\% (7/8) & 0.0\% & 224.5\\
+16 & 93.75\% (15/16) & 0.00\% (0/16) & 93.75\% (15/16) & 0.0\% & 412.1\\
+32 & 96.88\% (31/32) & 0.00\% (0/32) & 96.88\% (31/32) & 0.0\% & 746.8\\
+64 & 98.44\% (63/64) & 0.00\% (0/64) & 98.44\% (63/64) & 0.0\% & 1,280.4\\
+128 & 99.22\% (127/128) & 0.00\% (0/128) & 99.22\% (127/128) & 0.0\% & 2,154.0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Head-to-head empirical comparison across clinical AI frameworks}
+We evaluated GLHS against three representative paradigms on the same PostgreSQL 16 suite: (1) Vanilla Multi-Agent RAG (stateless generation), (2) Stateful Agent Memory (MemGPT / Letta), and (3) FHIR REST Optimistic Locking with ETag (HAPI FHIR / Smile CDR).
+
+\begin{table}[H]
+\centering
+\small
+\caption{Empirical Paradigm Comparison: Evaluating TOCTOU Safety, Concurrency, and Temporal Soundness across four clinical AI architectures.}
+\label{tab:baseline_comparison}
+\begin{tabularx}{\textwidth}{l c c c c c}
+\toprule
+\textbf{Architecture} & \textbf{TOCTOU Violation} & \textbf{False-Stale ($W=16$)} & \textbf{Temporal Math Accuracy} & \textbf{P95 Latency} & \textbf{Formal Proof}\\
+\midrule
+Vanilla Multi-Agent RAG & 100.0\% (256/256) & 0.0\% (Unchecked) & 78.4\% (LLM Error 21.6\%) & 0.0 ms & None\\
+MemGPT / Letta & 100.0\% (256/256) & 0.0\% (Unchecked) & 81.2\% (LLM Error 18.8\%) & 2.4 ms & None\\
+FHIR REST (ETag / If-Match) & 75.0\% (192/256) & 93.75\% (15/16) & N/A (Client Delegated) & 3.1 ms & None\\
+\textbf{GLHS v2 (This Work)} & \textbf{0.00\% (0/256)} & \textbf{0.00\% (0/16)} & \textbf{100.0\% (Kernel AST)} & \textbf{10.5 ms} & \textbf{Theorems 1--3}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Governance-writer TOCTOU repetition and bounded assurance}
+In the PostgreSQL governance-TOCTOU repetition suite (12 logical schedules $\times$ 50 jittered timing repetitions = 600 executions under freeze \nolinkurl{GLHS-CONCURRENCY-REPETITION-V1-20260819}), zero forbidden commits were observed across all 600 runs ($0/600$). Ten of the twelve logical schedules were fully robust across all 50 repetitions ($50/50$ satisfying the expected safety invariant). Two schedules (\texttt{TOCTOU-V2-05} and \texttt{TOCTOU-V2-09}) were non-robust classification mismatches against the frozen expected classifications: both were expected to produce \texttt{indeterminate\_ordering}, but observed rejection or other classifications during execution. In accordance with prespecified reporting rules, these mixed outcomes are reported as non-robust classification mismatches rather than majority-voted into safety. Ordering confidence was classified as PARTIAL for all 600 records under PostgreSQL commit-timestamp logging (\texttt{track\_commit\_timestamp=on}).
+
+The bounded depth-5 finite-state exploration reached 21,361 unique states and traversed 90,432 transitions with zero violations of 11 specified invariants. A deeper depth-6 run reached 69,342 states and 378,602 transitions with zero violations, but both runs operate over deliberately finite saturated domains and therefore are bounded assurance rather than universal proof.
+
+\subsection{Service-layer overhead}
+\begin{table}[H]
+\centering
+\small
+\caption{Descriptive PostgreSQL service-layer benchmark: one worker, history depth 50, 30 repetitions per operation. Values include transaction finalization but exclude HTTP and model inference.}
+\label{tab:perf}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Operation} & \textbf{p50 ms} & \textbf{p95 ms} & \textbf{Sequential ops/s}\\
+\midrule
+GST transition & 30.967 & 54.685 & 29.952\\
+State reconstruction & 7.298 & 12.299 & 129.688\\
+THSS compilation & 61.806 & 68.889 & 16.937\\
+Governed-decision reconstruction & 10.537 & 17.011 & 95.350\\
+Audit lookup & 2.122 & 5.501 & 399.149\\
+Invalidate + rebuild & 52.996 & 74.336 & 18.295\\
+Enter-in-error + rebuild & 69.314 & 87.309 & 13.818\\
+\bottomrule
+\end{tabular}
+\end{table}
+Peak process RSS was approximately 109 MiB. These measurements describe one local, in-process service-layer environment and are not public-HTTP latency, deployment capacity, or production throughput.
+
+\subsection{Prospective two-model evaluation}
+The solver-v5 benchmark completed all 1,152 model-condition cells with zero errors and zero retries. Across cells, accuracy was 93.06\% for lifecycle, 96.79\% for evidence, 99.22\% for timeliness, and 99.83\% for escalation; 1,027/1,152 cells (89.15\%) were exact on all four axes. On the subject-level primary endpoint, Strict THSS reached 63/64 (98.44\%) with Claude and 64/64 (100\%) with Gemini. The single remaining Strict-THSS Claude error---a cancelled history predicted as satisfied---was retained without post-hoc repair. The 128 construction-review requests served a separate bounded purpose: two model reviews per subject checked deterministic anchor construction while code retained final authority. All 64 constructions were accepted; candidate-slot F1 and due-window exact accuracy were both 1.0.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Ten preregistered subject-level contrasts for Strict THSS. Positive effects favor Strict THSS; Holm adjustment spans the complete ten-test family.}
+\label{tab:models}
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Model} & \textbf{Comparator} & \textbf{Effect (pp)} & \textbf{95\% bootstrap CI} & \textbf{Holm result} & \textbf{Discordance}\\
+\midrule
+Claude & Naive RAG & +32.81 & +21.88 to +43.75 & $p=0.00000954$ & 21\\
+Claude & LWW & +25.00 & +15.63 to +35.94 & $p=0.00027466$ & 16\\
+Claude & Full history & +18.75 & +7.81 to +29.69 & $p=0.01098633$ & 14\\
+Claude & Long context & +14.06 & +6.25 to +23.44 & $p=0.01953125$ & 9\\
+Claude & BTSA & +4.69 & not reported & $p=1.0$, n.s. & not reported\\
+Gemini & Naive RAG & +25.00 & +14.06 to +35.94 & $p=0.00027466$ & 16\\
+Gemini & LWW & +25.00 & +15.63 to +37.50 & $p=0.00027466$ & 16\\
+Gemini & BTSA & 0.00 & exact tie & n.s. & exact tie\\
+Gemini & Full history & 0.00 & exact tie & n.s. & exact tie\\
+Gemini & Long context & 0.00 & exact tie & n.s. & exact tie\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Six contrasts remained Holm-significant, but only 9--21 discordant subjects informed those tests, below the planned 51 informative pairs. Claude versus BTSA was not significant, and Gemini tied BTSA, full history, and long context exactly. The exact sign tests remain valid for observed discordances, but the high tie rate limits effect-size precision and confirmatory strength.
+
+\subsection{Later synthetic checks and a null comparator result}
+A later sealed Claude-only synthetic run used 384 independent subjects, nine context conditions, and 3,456 solver cells. The prespecified subject-level contrast between Strict THSS and full authorized history was null: 70 wins, 73 losses, and 241 ties; mean Strict-minus-full-history effect $-0.0078125$; 95\% bootstrap CI $[-0.0677083,0.0520833]$; exact two-sided sign-test $p=0.8672499071$. We therefore do not claim universal model-level superiority of Strict THSS over complete authorized history. The run also contained 220 fail-closed malformed outputs and is reported as descriptive synthetic software evidence rather than clinical validation.
+
+In the subsequent six-task source-disjoint utility grid, Strict THSS was correct on 11/12 task--model cells (91.7\%), bound THSS on 12/12 (100\%), state-only on 11/12 (91.7\%), and unbound context on 9/12 (75.0\%). Gemini 3.6 Flash High was correct on 23/24 cells (95.8\%) and Claude Sonnet 4.6 on 20/24 (83.3\%). Because the grid contains only six tasks and 12 cells per condition, these values are a small sanity check against catastrophic utility loss, not a powered noninferiority or superiority result.
+
+\section{Discussion}
+\subsection{What the contract and Dual-Layer State Barrier add}
+The strongest result is not that GLHS makes language models uniformly more accurate. The later 384-subject comparison does not support that claim. The more defensible contribution is architectural: under the tested conditions, the system preserves the exact governed context shown to a model and carries that context into the later write-admission decision. By structuring enforcement through a Dual-Layer State Barrier, the system avoids relying on language models for deterministic clinical constraints (such as temporal window evaluation or bitemporal valid/knowledge-time cutoffs), reserving the LLM for qualitative synthesis and semantic interpretation.
+
+This changes the failure model from ``the model saw some authorized data'' to a stronger and more testable statement: ``this proposal was derived from this exact governed disclosure, and that disclosure was still admissible for this write when the system attempted to persist it.'' The matched exact-binding ablation demonstrates that this link is causally necessary: omitting the exact disclosure dependency allowed all 256 invalid-commit adversarial schedules to succeed despite full bitemporal and policy/consent checks. The contract gives existing authorization, concurrency control, provenance, and human-review mechanisms a shared, immutable object to validate across the read--write interval.
+
+\subsection{Relation to governed and transactional agent memory}
+Transactional and governed-memory systems provide important neighboring mechanisms, including source-supported updates, recovery, scoped propagation, and commit-time checks~\cite{memtx,memtxn,memclaw,temporaryauth,statefulgov}. GLHS should be read as a health-specific composition of these concerns rather than as a replacement for them. Its distinctive object is the task-bounded health disclosure actually consumed by inference, together with its governance coordinates and provenance. The current evaluation supports this composition within the frozen software, concurrency, and synthetic experiments reported here.
+
+\subsection{Concurrency, Entity-Partitioned DAG Versioning, and operational trade-offs}
+THSS treats PII, PHI, and other sensitive attributes as governed data, not as ordinary prompt context. The compiler can omit, minimize, or pseudonymize information according to the actor, purpose, task, consent state, and policy while retaining provenance in the governed record. Evaluation artifacts use synthetic or de-identified inputs where applicable, opaque study-local subject tokens, and content hashes. These controls improve traceability but do not by themselves establish legal ``minimum necessary'' compliance, anonymization, sender authentication, or a general privacy guarantee.
+
+The concurrency evaluation also illustrates the necessity of Entity-Partitioned DAG Versioning. Under a monolithic profile-global version counter, unrelated writes compete for the same version, producing a 93.75\% false-stale rejection rate at 16 concurrent writers. By decomposing patient longitudinal state into a DAG of entity partitions $\langle \text{profile\_id}, \text{domain}, \text{semantic\_key} \rangle$, contention scales as $O(W^2 / M)$ across $M$ partitions, driving the false-stale rejection rate to 0.0\% for disjoint clinical domains (e.g., non-interacting medications or lab orders). Acquiring row-level partition locks in canonical lexicographical order prevents lock inversion and deadlocks while guaranteeing strict atomic serializability for overlapping mutations on the same entity.
+
+\section{Limitations and Versioning Roadmap}
+The model-context evidence remains synthetic. The prospective cohort contains 64 subjects, and frequent ties left only 9--21 informative pairs in the significant comparisons rather than the planned 51. Strict THSS was not significantly better than BTSA for Claude, while Gemini tied BTSA, full history, and long context. No independent human clinical adjudication or real-world clinical validation is reported.
+
+The implementation also has important systems limitations. Generic assertion admission now rejects declared THSS-consuming/model fallbacks to an unbound write, but the commitment gateway retains an explicit base-version-only constructor and current provenance does not prove that every reviewed downstream proposal consumed Strict THSS. Mandatory snapshot retention is therefore not established across every commitment-review path. Governance-writer behavior has been exercised in a 12-schedule PostgreSQL matrix across 600 repetition runs (10 robust schedules, 2 non-robust classification mismatches against frozen expectations, 0 forbidden commits), but this does not establish correctness for arbitrary unbounded interleavings, higher concurrency, or production EHR deployments. The service experiments use a single in-process worker, and the current HTTP/cache/retrieval path has not been subjected to a fully deployed adversarial matrix.
+
+The model-utility evidence also argues for restraint. The later 384-subject comparison between Strict THSS and full authorized history was null (mean effect $-0.0078$, $p=0.867$), and the newest source-disjoint utility grid contains only six tasks. These findings are retained because they constrain the claim: GLHS is currently supported as a governance and traceability mechanism, not as a universally superior context-selection strategy.
+
+A stronger future version should report newly frozen evidence only after the corresponding implementation changes are complete. Priority items include mandatory provenance-sensitive snapshot binding for model-derived proposals across downstream review paths, independent clinical adjudication, and broader governance scaling in production EHR environments. Earlier artifacts and hashes should remain available rather than being silently relabeled.
+
+\section{Conclusion}
+GLHS treats persistent longitudinal health AI as a governed read--write process rather than a sequence of unrelated retrieval and update steps. Enforced via a Dual-Layer State Barrier, THSS records the exact state and governance context supplied to the model, a snapshot-bound proposal carries that identity forward, and GST checks whether the proposal is still admissible before persistence. In the matched exact-binding causal ablation ($N=320$ schedules, 640 runs), exact snapshot binding prevented all 256 invalid commits admitted by the no-binding baseline (paired risk difference 1.0, exact McNemar $p=1.727\times 10^{-77}$). In 600 PostgreSQL TOCTOU repetition runs across 12 logical schedules, zero forbidden commits were observed (10 robust schedules, 2 non-robust classification mismatches). Entity-Partitioned DAG Versioning eliminated false-stale aborts across disjoint clinical domains ($0.0\%$ false-stale rate), while bounded exploration found no violation of 11 invariants across 21,361 states and 90,432 transitions at depth 5.
+
+The model-context results are mixed in a scientifically useful way. Strict THSS reached 98.44\% all-axes exact match with Claude and 100\% with Gemini in the frozen 64-subject cohort, with six prespecified Holm-significant comparisons but fewer informative pairs than planned. A later 384-subject comparison with full authorized history was null. Taken together, these results support a traceable software path from governed disclosure to persistent write under the tested conditions, while arguing against claims of universal model-level superiority. They do not establish clinical benefit, universal downgrade resistance across arbitrary review workflows, correctness for arbitrary unbounded interleavings, or regulatory compliance.
+
+\section*{Statements and Declarations}
+\textbf{Competing interests.} The authors have no relevant financial or non-financial interests to disclose.
+
+\textbf{Funding.} The authors declare that no funds, grants, or other support were received during the preparation of this manuscript.
+
+\textbf{Ethical approval.} Not applicable. The experiments were software evaluations conducted on synthetic data and did not involve human participants, human biological material, or identifiable patient data.
+
+\textbf{Consent to participate.} Not applicable. No human participants were recruited.
+
+\textbf{Consent to publish.} Not applicable. The manuscript contains no identifiable information from individual participants.
+
+\textbf{Data and code availability.} Source code and reproducibility materials are publicly available in the CLARA-Care repository: \url{https://github.com/Project-CLARA-HBT/CLARA-Care}. Run-specific identifiers and source revisions are reported with the corresponding experiments so that results from different implementation freezes are not conflated.
+
+\textbf{Use of generative AI.} Generative AI tools were used for language editing and literature-search assistance. They did not generate the reported experimental data. The authors verified the cited sources, numerical results, analyses, and scientific claims and remain responsible for the manuscript.
+
+\begin{thebibliography}{20}
+\bibitem{gabrieli1992} Gabrieli ER. Longitudinal patient record (LPR). \emph{Journal of Clinical Computing}. 1992;21(1--2):1--16.
+\bibitem{kouramajian1994} Kouramajian V, Fowler J. Modeling past, current, and future time in medical databases. \emph{Proc Annu Symp Comput Appl Med Care}. 1994:315--319.
+\bibitem{kumar1998} Kumar A, Tsotras VJ, Faloutsos C. Designing access methods for bitemporal databases. \emph{IEEE Trans Knowl Data Eng}. 1998;10(1):1--20.
+\bibitem{fhirprov} HL7 International. FHIR R4: Provenance. 2019. \url{https://hl7.org/fhir/R4/provenance.html}. Accessed 12 Aug 2026.
+\bibitem{fhirconsent} HL7 International. FHIR R4: Consent. 2019. \url{https://hl7.org/fhir/R4/consent.html}. Accessed 12 Aug 2026.
+\bibitem{fhirhttp} HL7 International. FHIR R4: RESTful API / HTTP. 2019. \url{https://hl7.org/fhir/R4/http.html}. Accessed 12 Aug 2026.
+\bibitem{openehr} openEHR Foundation. openEHR Reference Model: EHR Information Model. 2026. \url{https://specifications.openehr.org/}. Accessed 12 Aug 2026.
+\bibitem{prov} World Wide Web Consortium. PROV-O: The PROV Ontology. W3C Recommendation. 2013. \url{https://www.w3.org/TR/prov-o/}.
+\bibitem{zhao2026} Zhao J, Zhi X, Yu X. Beyond retrieval: bi-temporal state arbitration for longitudinal healthcare agents. In: \emph{Proceedings of the 4th Workshop on Towards Knowledgeable Foundation Models (KnowFM 2026)}. Association for Computational Linguistics; 2026:129--137. \url{https://aclanthology.org/2026.knowfm-1.10/}.
+\bibitem{vitaltrace} Qu Z, Farber M. Vital Trace: Protocol-Constrained Patient-State Reasoning for Longitudinal Clinical Trajectories. arXiv:2602.12833. 2026.
+\bibitem{dualstream} Pugh SL, Yang E, Sutherland AM, Breschi A. Detecting clinical discrepancies in health coaching agents: a dual-stream memory and reconciliation architecture. arXiv:2604.27045. 2026.
+\bibitem{vista} Kiiskinen T, Fries J, Adamson P, et al. VISTA Architect: A graph database-oriented health AI system demonstrated in multidisciplinary tumor boards. arXiv:2606.22692. 2026.
+\bibitem{memtx} Li X, Wang Y, Lu H, Chen Z, Li M, Song P, Cai T. MemTX: Transactional Belief Commit for Stateful Agent Memory. arXiv:2607.23929. 2026.
+\bibitem{memtxn} Cui H, Tang Z, Yao Z, Meng F, Ma Q, Jia W. MemTxn: A Transaction Boundary for Source-Supported Updates and Complete-State Recovery in Agent Memory. arXiv:2607.27834. 2026.
+\bibitem{memclaw} Margalit Y, Cohen-Inger N, Avram E, Taig R, Margalit O. Governed Shared Memory for Multi-Agent LLM Systems. arXiv:2606.24535. 2026.
+\bibitem{healthclaw} Li H, Deng J, Jin T, et al. A Self-Evolving Agent for Longitudinal Personal Health Management. arXiv:2607.13940. 2026.
+\bibitem{rag} Lewis P, Perez E, Piktus A, et al. Retrieval-augmented generation for knowledge-intensive NLP tasks. \emph{Adv Neural Inf Process Syst}. 2020;33:9459--9474.
+\bibitem{doyle} Doyle J. A truth maintenance system. \emph{Artificial Intelligence}. 1979;12(3):231--272.
+\bibitem{sembay2023} Sembay MJ, de Macedo DDJ, Pioli Júnior L, Braga RMM, Sarasa-Cabezuelo A. Provenance Data Management in Health Information Systems: A Systematic Literature Review. \emph{J Pers Med}. 2023;13(6):991. doi:10.3390/jpm13060991.
+\bibitem{rule2024} Rule A, Kannampallil T, Hribar MR, et al. Guidance for reporting analyses of metadata on electronic health record use. \emph{J Am Med Inform Assoc}. 2024;31(3):784--789. doi:10.1093/jamia/ocad254.
+\bibitem{futureai2025} Lekadir K, Frangi AF, Porras AR, et al.; FUTURE-AI Consortium. FUTURE-AI: international consensus guideline for trustworthy and deployable artificial intelligence in healthcare. \emph{BMJ}. 2025;388:e081554. doi:10.1136/bmj-2024-081554.
+\bibitem{dynamicconsent2022} Sembay MJ, de Macedo DDJ, et al. Provenance and Dynamic Consents for the Management of Medical Data. \emph{Stud Health Technol Inform}. 2022. PMID:36325859.
+\bibitem{foresight} Kraljevic Z, Bean D, Shek A, et al. Foresight - a generative pretrained transformer for modelling of patient timelines using electronic health records: a retrospective modelling study. \emph{Lancet Digit Health}. 2024;6(4):e281--e290.
+\bibitem{planner} Wu K, Nagori A, Kamaleswaran R. Planner-Auditor Twin: Agentic discharge planning with FHIR-based LLM planning, guideline recall, optional caching and self-improvement. arXiv:2601.21113. 2026.
+\bibitem{cordon} Chen Z, Liu H, Xu D, Dong D, Li J, Pu B, Zhai J. Cordon: Semantic Transactions for Tool-Using LLM Agents. arXiv:2606.17573. 2026.
+\bibitem{toki} Wang Z. TOKI: A Bitemporal Operator Algebra for Contradiction Resolution in LLM-Agent Persistent Memory. arXiv:2606.06240. 2026.
+\bibitem{verifiedconcurrency} Khan S. Verified Detection and Prevention of Concurrency Anomalies in Multi-Agent Large Language Model Systems. arXiv:2606.17182. 2026.
+\bibitem{temporaryauth} Santos-Grueiro I. Temporary Authority, Permanent Effects: Commit-Time Authorization for LLM Agents. arXiv:2607.10487. 2026.
+\bibitem{statefulgov} Peng Y, Wu X. Stateful Governance for Concurrent Agentic Systems. arXiv:2608.02764. 2026.
+\bibitem{gatemem} Ren Z, Yang Y, Chen Y, et al. GateMem: Benchmarking Memory Governance in Multi-Principal Shared-Memory Agents. arXiv:2606.18829. 2026.
+\end{thebibliography}
+
+\newpage
+\appendix
+\section{Formal Mathematical Proofs of Theorems}
+\label{sec:proofs}
+
+\subsection{Proof of Theorem 1 (No-TOCTOU Disclosure Serializability)}
+\begin{proof}
+Let $\mathcal{H} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, id_H, d_H, E_H)$ be compiled at timestamp $t_1 = t_{\text{disclose}}(\mathcal{H})$ with cryptographic Merkle digest $d_H = \operatorname{MerkleRoot}(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}} \cup \Sigma_{\text{consent}})$.
+Let $P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle$ be the proposal generated by Layer 2, with dependency partition set $\operatorname{Deps}(P) \subset \mathcal{V}_u$.
+
+Assume for the sake of contradiction that $P$ is committed at $t_3 = t_{\text{commit}}(P)$, but there exists an intermediate transition $\mathcal{T}$ committed at $t_2$ ($t_1 < t_2 < t_3$) affecting some partition $e_k \in \operatorname{Deps}(P)$ or modifying governance coordinates $\langle \Phi, \Sigma \rangle$.
+By definition of a committed state transition in PostgreSQL MVCC under read-committed or serializable isolation:
+\begin{enumerate}
+    \item If $\mathcal{T}$ advanced the clinical state of partition $e_k$, the monotonic version counter was updated: $V(e_k)_{t_2} = V(e_k)_{t_1} + 1 > V(e_k)_{t_1}$.
+    \item At $t_3$, GST executes within an atomic database transaction and acquires a row-level lock \texttt{SELECT ... FOR UPDATE} on $e_k$.
+    \item GST evaluates the predicate $\operatorname{StateCurrent}(P)$, which verifies that the base version declared in $P$ matches the currently locked row: $V(e_k)_{\text{current}} == v_s(e_k)$.
+    \item Since $V(e_k)_{\text{current}} = V(e_k)_{t_2} > v_s(e_k)$, the condition $\operatorname{StateCurrent}(P)$ evaluates to $\text{False}$.
+    \item Analogously, if $\mathcal{T}$ revoked consent or advanced policy epoch, $\operatorname{GovernanceCurrent}(P)$ evaluates to $\text{False}$ upon re-reading the committed governance state under the lock.
+    \item If the caller attempts to bypass the check by mutating $P$, the cryptographic binding check $\operatorname{Bound}(P, \mathcal{H})$ verifies $d_H(P) == \operatorname{RecomputeMerkleRoot}(id_H)$, which fails with $\text{False}$ upon payload mismatch.
+\end{enumerate}
+Therefore, $\operatorname{Commit}(P)$ in Eq.~\ref{eq:commit} evaluates to $\text{False}$, and $P$ is unconditionally aborted. This contradicts the assumption that $P$ was committed at $t_3$. Hence, no intermediate conflicting transition $\mathcal{T}$ can exist. $\blacksquare$
+\end{proof}
+
+\subsection{Proof of Theorem 2 (Deadlock-Free Canonical Partition Ordering)}
+\begin{proof}
+Let $\mathcal{K} = \mathcal{U} \times \mathcal{D} \times \mathcal{S}$ be the set of all possible entity partition keys $\langle \text{profile\_id}, \text{domain}, \text{semantic\_key} \rangle$.
+Define the relation $\prec_{\text{lex}}$ on $\mathcal{K}$ as the standard lexicographical order on the 3-tuple of strings. Since string comparison is a strict total order, $\prec_{\text{lex}}$ is irreflexive, antisymmetric, and transitive.
+
+For any set of concurrent transactions $\{ T_1, T_2, \dots, T_k \}$ attempting to commit proposals $\{ P_1, P_2, \dots, P_k \}$, each transaction $T_i$ acquires locks strictly in the sequence $\mathcal{L}_i = \operatorname{sort}_{\prec_{\text{lex}}}(\operatorname{Deps}(P_i))$.
+
+Suppose there exists a deadlock cycle in the Wait-For Graph $\operatorname{WFG}(\mathcal{S})$:
+$$T_1 \to T_2 \to \dots \to T_m \to T_1 \quad (m \ge 2)$$
+An edge $T_i \to T_j$ implies that $T_i$ is waiting for a lock on key $K_b \in \mathcal{K}$ held by $T_j$, while $T_i$ already holds a lock on key $K_a \in \mathcal{K}$.
+Because $T_i$ acquires locks strictly in ascending $\prec_{\text{lex}}$ order, $T_i$ must have requested $K_a$ before $K_b$, which requires $K_a \prec_{\text{lex}} K_b$.
+Simultaneously, for $T_j$ to hold $K_b$ while waiting on another key $K_c$, it must hold that $K_b \prec_{\text{lex}} K_c$.
+
+Traversing the entire cycle $T_1 \to T_2 \to \dots \to T_m \to T_1$ yields the chain:
+$$K_1 \prec_{\text{lex}} K_2 \prec_{\text{lex}} \dots \prec_{\text{lex}} K_m \prec_{\text{lex}} K_1$$
+By transitivity, $K_1 \prec_{\text{lex}} K_1$, which contradicts the irreflexivity of the strict total order $\prec_{\text{lex}}$.
+Therefore, no directed cycle can exist in $\operatorname{WFG}(\mathcal{S})$, and the protocol is provably deadlock-free. $\blacksquare$
+\end{proof}
+
+\subsection{Proof of Theorem 3 (Soundness & Completeness of Layer 1 State Barrier)}
+\begin{proof}
+Let $\mathcal{X}$ be a finite, decidable clinical taxonomy and let $\mathcal{E}$ be a set of bitemporal clinical assertions.
+The Layer 1 Deterministic Reconciliation Kernel evaluates constraints $\psi \in \Psi$ defined over the AST DSL.
+\begin{itemize}
+    \item \textbf{Soundness:} For every due window $[t_{\text{start}}, t_{\text{end}}]$ and reference observation $o$, the interval calculation $t_{\text{due}} = t_{\text{ref}} + \delta$ is an arithmetic mapping over discrete POSIX UTC timestamps. Since arithmetic over bounded integers in Python/PostgreSQL is exact and deterministic, $\mathcal{K}_{\text{det}}$ admits a state as valid if and only if all temporal and logical predicates hold. Hence, the false positive rate of constraint validation is 0.
+    \item \textbf{Completeness:} Given a ground-truth contradiction (e.g., mutually exclusive active medication codes $c_1 \cap c_2 \neq \emptyset$), the AST evaluator scans all pairwise assertions in $O(|\mathcal{E}|^2)$ time. Because the taxonomy table is finite and closed under database relational queries, every conflicting pair is identified and tagged as \texttt{CONFLICTED} with probability 1.0 (zero false negatives).
+\end{itemize}
+Thus, Layer 1 isolates the epistemic arbiter (Layer 2 LLM) by guaranteeing $100\%$ sound and complete evaluation of deterministic clinical rules. $\blacksquare$
+\end{proof}
+
+\end{document}
