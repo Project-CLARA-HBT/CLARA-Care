@@ -225,21 +225,21 @@ In the matched exact-binding causal ablation ($N=320$ logical schedules, 640 tot
 \scriptsize
 \caption{Matched exact-binding causal ablation breakdown across eight adversarial attack families ($N=32$ schedules each, 64 runs per family) and clean valid controls ($N=64$ schedules, 128 runs) on PostgreSQL 16.}
 \label{tab:ablation_breakdown}
-\begin{tabularx}{\textwidth}{l p{0.35\textwidth} c c c c}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.24\textwidth} X c c c c}
 \toprule
-\textbf{Attack Family} & \textbf{Adversarial Injection Mechanism} & \textbf{No-Binding} & \textbf{GLHS Bound} & \textbf{Discordance ($b$)} & \textbf{Exact McNemar $p$}\\
+\textbf{Attack Family} & \textbf{Adversarial Injection Mechanism} & \textbf{No-Binding} & \textbf{GLHS} & \textbf{$b$} & \textbf{McNemar $p$}\\
 \midrule
-1. Wrong Snapshot ID & Swapped foreign snapshot ID with valid digest & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
-2. Digest Tampering & Mutated snapshot payload under stale Merkle root & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
-3. Undisclosed Evidence & Inserted unread clinical lab/DDI evidence into proposal & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
-4. Cross-Snapshot Substitution & Replaced snapshot from identical state version & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
-5. Temporal Expiry & Submitted proposal past snapshot validity window & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
-6. Minimized Evidence Swap & Substituted broader evidence set than authorized & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
-7. Coordinate Tampering & Mismatched actor/role/purpose/task coordinates & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
-8. Post-Review Lineage Forge & Forged downstream review proposal signature & 32/32 Admitted & 0/32 Admitted & 32 & $4.657 \times 10^{-10}$\\
+1. Wrong Snapshot ID & Swapped foreign snapshot ID with valid digest & 32/32 & 0/32 & 32 & $4.66 \times 10^{-10}$\\
+2. Digest Tampering & Mutated snapshot payload under stale Merkle root & 32/32 & 0/32 & 32 & $4.66 \times 10^{-10}$\\
+3. Undisclosed Evidence & Inserted unread clinical lab/DDI evidence into proposal & 32/32 & 0/32 & 32 & $4.66 \times 10^{-10}$\\
+4. Cross-Snapshot Sub. & Replaced snapshot from identical state version & 32/32 & 0/32 & 32 & $4.66 \times 10^{-10}$\\
+5. Temporal Expiry & Submitted proposal past snapshot validity window & 32/32 & 0/32 & 32 & $4.66 \times 10^{-10}$\\
+6. Minimized Set Swap & Substituted broader evidence set than authorized & 32/32 & 0/32 & 32 & $4.66 \times 10^{-10}$\\
+7. Coordinate Tampering & Mismatched actor/role/purpose/task coordinates & 32/32 & 0/32 & 32 & $4.66 \times 10^{-10}$\\
+8. Lineage Forgery & Forged downstream review proposal signature & 32/32 & 0/32 & 32 & $4.66 \times 10^{-10}$\\
 \midrule
-\textbf{Total Adversarial ($N=256$)} & \textbf{Combined across all 8 attack vectors} & \textbf{256/256 (100\%)} & \textbf{0/256 (0.0\%)} & \textbf{256} & $\mathbf{1.727 \times 10^{-77}}$\\
-\textbf{Valid Controls ($N=64$)} & \textbf{Clean, un-tampered authorized commitments} & \textbf{64/64 (100\%)} & \textbf{64/64 (100\%)} & \textbf{0} & \textbf{1.0 (Exact Match)}\\
+\textbf{Total Adversarial ($N=256$)} & \textbf{Combined across all 8 attack vectors} & \textbf{256/256} & \textbf{0/256} & \textbf{256} & $\mathbf{1.73 \times 10^{-77}}$\\
+\textbf{Valid Controls ($N=64$)} & \textbf{Clean, un-tampered authorized commitments} & \textbf{64/64} & \textbf{64/64} & \textbf{0} & \textbf{1.0 (Match)}\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -252,20 +252,20 @@ Across the contention grid on PostgreSQL 16.14 with writer counts $W \in \{1, 2,
 \small
 \caption{Empirical Concurrency Stress Scaling on PostgreSQL 16: Monolithic Profile Locking vs Entity DAG Partition Locking across $W=1$ to $128$ concurrent writers.}
 \label{tab:concurrency_scaling}
-\begin{tabular}{r c c c c c}
+\begin{tabularx}{\textwidth}{c >{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X c c}
 \toprule
-\textbf{Writers ($W$)} & \textbf{Monolithic False-Stale} & \textbf{Entity DAG Disjoint} & \textbf{Entity DAG Overlapping} & \textbf{Deadlock Rate} & \textbf{Throughput (TPS)}\\
+\textbf{Writers ($W$)} & \textbf{Monolithic False-Stale} & \textbf{DAG Disjoint False-Stale} & \textbf{DAG Overlap True-Stale} & \textbf{Deadlocks} & \textbf{Throughput}\\
 \midrule
-1 & 0.00\% (0/1) & 0.00\% (0/1) & 0.00\% (0/1) & 0.0\% & 32.4\\
-2 & 50.00\% (1/2) & 0.00\% (0/2) & 50.00\% (1/2) & 0.0\% & 61.8\\
-4 & 75.00\% (3/4) & 0.00\% (0/4) & 75.00\% (3/4) & 0.0\% & 118.2\\
-8 & 87.50\% (7/8) & 0.00\% (0/8) & 87.50\% (7/8) & 0.0\% & 224.5\\
-16 & 93.75\% (15/16) & 0.00\% (0/16) & 93.75\% (15/16) & 0.0\% & 412.1\\
-32 & 96.88\% (31/32) & 0.00\% (0/32) & 96.88\% (31/32) & 0.0\% & 746.8\\
-64 & 98.44\% (63/64) & 0.00\% (0/64) & 98.44\% (63/64) & 0.0\% & 1,280.4\\
-128 & 99.22\% (127/128) & 0.00\% (0/128) & 99.22\% (127/128) & 0.0\% & 2,154.0\\
+1 & 0.0\% (0/1) & \textbf{0.0\% (0/1)} & 0.0\% (0/1) & 0.0\% & 32.4 TPS\\
+2 & 50.0\% (1/2) & \textbf{0.0\% (0/2)} & 50.0\% (1/2) & 0.0\% & 61.8 TPS\\
+4 & 75.0\% (3/4) & \textbf{0.0\% (0/4)} & 75.0\% (3/4) & 0.0\% & 118.2 TPS\\
+8 & 87.5\% (7/8) & \textbf{0.0\% (0/8)} & 87.5\% (7/8) & 0.0\% & 224.5 TPS\\
+16 & 93.8\% (15/16) & \textbf{0.0\% (0/16)} & 93.8\% (15/16) & 0.0\% & 412.1 TPS\\
+32 & 96.9\% (31/32) & \textbf{0.0\% (0/32)} & 96.9\% (31/32) & 0.0\% & 746.8 TPS\\
+64 & 98.4\% (63/64) & \textbf{0.0\% (0/64)} & 98.4\% (63/64) & 0.0\% & 1,280.4 TPS\\
+128 & 99.2\% (127/128) & \textbf{0.0\% (0/128)} & 99.2\% (127/128) & 0.0\% & 2,154.0 TPS\\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \subsection{Head-to-head empirical comparison across clinical AI frameworks}
@@ -273,17 +273,17 @@ We evaluated GLHS against three representative paradigms on the same PostgreSQL 
 
 \begin{table}[H]
 \centering
-\small
+\footnotesize
 \caption{Empirical Paradigm Comparison: Evaluating TOCTOU Safety, Concurrency, and Temporal Soundness across four clinical AI architectures.}
 \label{tab:baseline_comparison}
-\begin{tabularx}{\textwidth}{l c c c c c}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.30\textwidth} >{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X}
 \toprule
-\textbf{Architecture} & \textbf{TOCTOU Violation} & \textbf{False-Stale ($W=16$)} & \textbf{Temporal Math Accuracy} & \textbf{P95 Latency} & \textbf{Formal Proof}\\
+\textbf{Architecture} & \textbf{TOCTOU Breach} & \textbf{False-Stale ($W=16$)} & \textbf{Temporal Math} & \textbf{P95 Latency}\\
 \midrule
-Vanilla Multi-Agent RAG & 100.0\% (256/256) & 0.0\% (Unchecked) & 78.4\% (LLM Error 21.6\%) & 0.0 ms & None\\
-MemGPT / Letta & 100.0\% (256/256) & 0.0\% (Unchecked) & 81.2\% (LLM Error 18.8\%) & 2.4 ms & None\\
-FHIR REST (ETag / If-Match) & 75.0\% (192/256) & 93.75\% (15/16) & N/A (Client Delegated) & 3.1 ms & None\\
-\textbf{GLHS v2 (This Work)} & \textbf{0.00\% (0/256)} & \textbf{0.00\% (0/16)} & \textbf{100.0\% (Kernel AST)} & \textbf{10.5 ms} & \textbf{Theorems 1--3}\\
+Vanilla Multi-Agent RAG & 100.0\% (256/256) & 0.0\% (Unchecked) & 78.4\% (Error 21.6\%) & 0.0 ms\\
+MemGPT / Letta & 100.0\% (256/256) & 0.0\% (Unchecked) & 81.2\% (Error 18.8\%) & 2.4 ms\\
+FHIR REST (ETag / If-Match) & 75.0\% (192/256) & 93.8\% (15/16) & N/A (Delegated) & 3.1 ms\\
+\textbf{GLHS v2 (This Work)} & \textbf{0.00\% (0/256)} & \textbf{0.00\% (0/16)} & \textbf{100.0\% (AST)} & \textbf{10.5 ms}\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -431,7 +431,10 @@ The model-context results are mixed in a scientifically useful way. Strict THSS 
 
 \subsection{Proof of Theorem 1 (No-TOCTOU Disclosure Serializability)}
 \begin{proof}
-Let $\mathcal{H} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, id_H, d_H, E_H)$ be compiled at timestamp $t_1 = t_{\text{disclose}}(\mathcal{H})$ with cryptographic Merkle digest $d_H = \operatorname{MerkleRoot}(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}} \cup \Sigma_{\text{consent}})$.
+Let $\mathcal{H} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, id_H, d_H, E_H)$ be compiled at timestamp $t_1 = t_{\text{disclose}}(\mathcal{H})$ with cryptographic Merkle digest:
+\begin{equation*}
+d_H = \operatorname{MerkleRoot}(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}} \cup \Sigma_{\text{consent}}).
+\end{equation*}
 Let $P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle$ be the proposal generated by Layer 2, with dependency partition set $\operatorname{Deps}(P) \subset \mathcal{V}_u$.
 
 Assume for the sake of contradiction that $P$ is committed at $t_3 = t_{\text{commit}}(P)$, but there exists an intermediate transition $\mathcal{T}$ committed at $t_2$ ($t_1 < t_2 < t_3$) affecting some partition $e_k \in \operatorname{Deps}(P)$ or modifying governance coordinates $\langle \Phi, \Sigma \rangle$.
@@ -449,7 +452,10 @@ Therefore, $\operatorname{Commit}(P)$ in Eq.~\ref{eq:commit} evaluates to $\text
 
 \subsection{Proof of Theorem 2 (Deadlock-Free Canonical Partition Ordering)}
 \begin{proof}
-Let $\mathcal{K} = \mathcal{U} \times \mathcal{D} \times \mathcal{S}$ be the set of all possible entity partition keys $\langle \text{profile\_id}, \text{domain}, \text{semantic\_key} \rangle$.
+Let $\mathcal{K} = \mathcal{U} \times \mathcal{D} \times \mathcal{S}$ be the set of all entity partition keys:
+\begin{equation*}
+K = \langle \text{profile\_id}, \text{domain}, \text{semantic\_key} \rangle.
+\end{equation*}
 Define the relation $\prec_{\text{lex}}$ on $\mathcal{K}$ as the standard lexicographical order on the 3-tuple of strings. Since string comparison is a strict total order, $\prec_{\text{lex}}$ is irreflexive, antisymmetric, and transitive.
 
 For any set of concurrent transactions $\{ T_1, T_2, \dots, T_k \}$ attempting to commit proposals $\{ P_1, P_2, \dots, P_k \}$, each transaction $T_i$ acquires locks strictly in the sequence $\mathcal{L}_i = \operatorname{sort}_{\prec_{\text{lex}}}(\operatorname{Deps}(P_i))$.
