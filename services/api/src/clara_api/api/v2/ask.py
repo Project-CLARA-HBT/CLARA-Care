@@ -199,7 +199,7 @@ def ask_question(
                         id=c.public_id,
                         resource_type="medication",
                         title=f"Đơn thuốc đang dùng: {c.medication_name}",
-                        effective_at=str(c.start_date or ""),
+                        effective_at=str(c.started_at or ""),
                         state="confirmed",
                     )
                 )

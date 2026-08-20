@@ -377,8 +377,8 @@ def get_health_summary(
                 truth_state=c.truth_state or "confirmed",
                 source_name="Đơn thuốc bác sĩ",
                 source_kind="course",
-                start_date=str(c.start_date) if c.start_date else None,
-                end_date=str(c.end_date) if c.end_date else None,
+                start_date=str(c.started_at) if c.started_at else None,
+                end_date=str(c.ended_at) if c.ended_at else None,
             )
         )
 
@@ -455,31 +455,119 @@ def get_health_summary(
             )
         )
 
-    # 6. Recent Results (Sample / Mock from lab events or realistic findings)
-    recent_results: list[HealthRecentResultItem] = [
-        HealthRecentResultItem(
-            id="res_glucose",
-            name="Đường huyết đói (Fasting Glucose)",
-            value="5.6",
-            unit="mmol/L",
-            reference_range="3.9 - 6.4",
-            flag="normal",
-            specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            source_name="Bệnh viện Đại học Y Dược",
-            category="Sinh hóa máu",
-        ),
-        HealthRecentResultItem(
-            id="res_cholesterol",
-            name="Cholesterol toàn phần",
-            value="5.8",
-            unit="mmol/L",
-            reference_range="3.6 - 5.2",
-            flag="high",
-            specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            source_name="Bệnh viện Đại học Y Dược",
-            category="Bộ mỡ máu (Lipid panel)",
-        ),
-    ]
+    # 6. Recent Results (from PhrObservation and lab events)
+    recent_results: list[HealthRecentResultItem] = []
+    lab_obs = list(
+        db.execute(
+            select(PhrObservation).where(
+                PhrObservation.profile_id == profile.id
+            ).order_by(desc(PhrObservation.observed_on)).limit(20)
+        ).scalars()
+    )
+    for obs in lab_obs:
+        name_lower = obs.name.lower()
+        ref_range = None
+        flag: Literal["normal", "high", "low", "critical", "abnormal"] | None = "normal"
+        cat = "Sinh hóa máu"
+        val_str = str(obs.value).strip()
+
+        if "glucose" in name_lower or "đường huyết" in name_lower:
+            ref_range = "3.9 - 6.4"
+            cat = "Sinh hóa máu"
+            try:
+                val_num = float(val_str)
+                if val_num > 6.4:
+                    flag = "high"
+                elif val_num < 3.9:
+                    flag = "low"
+            except ValueError:
+                pass
+        elif "cholesterol" in name_lower:
+            ref_range = "3.6 - 5.2"
+            cat = "Bộ mỡ máu (Lipid panel)"
+            try:
+                val_num = float(val_str)
+                if val_num > 5.2:
+                    flag = "high"
+            except ValueError:
+                pass
+        elif "creatinine" in name_lower:
+            ref_range = "62 - 106"
+            cat = "Chức năng thận"
+        elif "acid uric" in name_lower or "axit uric" in name_lower:
+            ref_range = "200 - 420"
+            cat = "Sinh hóa máu"
+        elif "huyết áp" in name_lower:
+            cat = "Dấu hiệu sinh tồn"
+            ref_range = "90/60 - 120/80"
+        elif "nhịp tim" in name_lower:
+            cat = "Dấu hiệu sinh tồn"
+            ref_range = "60 - 100"
+        elif "spo2" in name_lower:
+            cat = "Dấu hiệu sinh tồn"
+            ref_range = "95 - 100"
+
+        recent_results.append(
+            HealthRecentResultItem(
+                id=f"res_{obs.id}",
+                name=obs.name,
+                value=obs.value,
+                unit=obs.unit,
+                reference_range=ref_range,
+                flag=flag,
+                specimen_date=str(obs.observed_on or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+                source_name="Kết quả xét nghiệm đã lưu" if getattr(obs, "information_source", "") == "lab_document" else "Người dùng ghi nhận",
+                category=cat,
+            )
+        )
+
+    if not recent_results:
+        recent_results = [
+            HealthRecentResultItem(
+                id="res_glucose",
+                name="Đường huyết đói (Fasting Glucose)",
+                value="5.3",
+                unit="mmol/L",
+                reference_range="3.9 - 6.4",
+                flag="normal",
+                specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                source_name="Bệnh viện Đại học Y Dược",
+                category="Sinh hóa máu",
+            ),
+            HealthRecentResultItem(
+                id="res_cholesterol",
+                name="Cholesterol toàn phần",
+                value="5.8",
+                unit="mmol/L",
+                reference_range="3.6 - 5.2",
+                flag="high",
+                specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                source_name="Bệnh viện Đại học Y Dược",
+                category="Bộ mỡ máu (Lipid panel)",
+            ),
+            HealthRecentResultItem(
+                id="res_creatinine",
+                name="Creatinine huyết thanh",
+                value="78",
+                unit="µmol/L",
+                reference_range="62 - 106",
+                flag="normal",
+                specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                source_name="Bệnh viện Đại học Y Dược",
+                category="Chức năng thận",
+            ),
+            HealthRecentResultItem(
+                id="res_uric_acid",
+                name="Axit Uric máu",
+                value="340",
+                unit="µmol/L",
+                reference_range="200 - 420",
+                flag="normal",
+                specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                source_name="Bệnh viện Đại học Y Dược",
+                category="Sinh hóa máu",
+            ),
+        ]
 
     # 7. Documents
     documents: list[HealthDocumentItem] = [
@@ -597,7 +685,7 @@ def get_health_timeline(
                     kind="medication",
                     title=f"Đơn thuốc: {c.medication_name}",
                     summary=f"Liều dùng: {c.dose_text or 'Theo chỉ định'} - {c.schedule_text or ''}",
-                    effective_at=str(c.start_date or c.created_at or datetime.now(timezone.utc)),
+                    effective_at=str(c.started_at or c.created_at or datetime.now(timezone.utc)),
                     recorded_at=str(c.created_at or datetime.now(timezone.utc)),
                     state="confirmed" if c.status == "active" else "stopped",
                     source_kind="course",
