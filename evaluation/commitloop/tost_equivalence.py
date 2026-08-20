@@ -19,10 +19,10 @@ from __future__ import annotations
 import argparse
 import json
 import math
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Sequence
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # High-Precision Special Mathematical & Statistical Distribution Functions
@@ -750,7 +750,7 @@ def generate_latex_table(study: GLHSStudyResult) -> str:
         f"Overall TOST Equivalence & $p_{{\\text{{TOST}}}} = \\max(p_1, p_2)$ & $p_{{\\text{{TOST}}}} = {ptost_str}$ & \\textbf{{Equivalence Confirmed ($p < 0.001$)}} \\\\",
         f"Confidence Intervals & 90\\% Two-Sided CI & $[{ci_90_low_pct:+.3f}\\%\\, {ci_90_high_pct:+.3f}\\%]$ & Strictly Contained in $[-\\delta, +\\delta]$ \\\\",
         f"                     & 95\\% Two-Sided CI & $[{ci_95_low_pct:+.3f}\\%\\, {ci_95_high_pct:+.3f}\\%]$ & Strictly Contained in $[-\\delta, +\\delta]$ \\\\",
-        f"Statistical Power    & Equivalence Power ($1 - \\beta$) & ${power_pct:.2f}\\%$ & Near-Unit Deterministic Power \\\\",
+        f"Statistical Power    & Equivalence Power ($1 - \\beta$) & ${power_pct:.3f}\\%$ & Near-Unit Deterministic Power \\\\",
         r"\midrule",
         r"\multicolumn{4}{l}{\textbf{Panel B: Systems Efficiency \& Concurrency Governance Guarantees}} \\",
         r"\midrule",

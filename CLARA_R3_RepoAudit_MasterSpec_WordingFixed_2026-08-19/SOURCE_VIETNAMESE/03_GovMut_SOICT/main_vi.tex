@@ -1,73 +1,238 @@
 \documentclass[11pt]{article}
 \input{../common_preamble.tex}
-\title{\textbf{GovMut-Health: Đánh giá khả năng phát hiện lỗi quản trị phụ thuộc chuỗi thao tác bằng kiểm thử đột biến}}
+\title{\textbf{GovMut-Health: Đánh giá khả năng phát hiện lỗi quản trị phụ thuộc chuỗi thao tác trong AI y tế có trạng thái bằng kiểm thử đột biến}}
 \author{Nguyễn Ngọc Thiện, Trịnh Minh Quang \\ Trường THPT Hai Bà Trưng, Huế, Việt Nam}
 \date{2026}
 \begin{document}\maketitle
 \begin{abstract}
-Nhiều lỗi quản trị trong AI y tế có trạng thái chỉ xuất hiện sau một chuỗi thao tác, thay vì ở một lời gọi đơn lẻ. Chẳng hạn, hệ thống có thể xử lý đúng khi cung cấp dữ liệu cho mô hình, đúng khi kiểm tra đồng thuận và đúng khi tạo đề xuất, nhưng vẫn chấp nhận một thao tác ghi sai nếu đồng thuận đã thay đổi, đề xuất cũ được thử lại hoặc dữ liệu trong bộ nhớ đệm bị tái sử dụng. GovMut-Health đánh giá khả năng phát hiện nhóm lỗi này bằng bốn chiến lược kiểm thử đã có: kiểm thử hồi quy, kiểm thử dựa trên thuộc tính không trạng thái, kiểm thử bằng máy trạng thái và chiến lược kết hợp. Tính mới không nằm ở bản thân kiểm thử đột biến, kiểm thử dựa trên thuộc tính hay kiểm thử dựa trên mô hình, mà ở \emph{mô hình lỗi quản trị phụ thuộc lịch sử thao tác}, tập biến thể lỗi được rà soát và ánh xạ tới các bất biến của hợp đồng, cùng cách phân tích ở cấp biến thể lỗi. Đợt đánh giá đã khóa trước gồm 45 biến thể lỗi không tương đương; mỗi biến thể được chạy trên 16 tổ hợp phương pháp--hạt giống ngẫu nhiên, tạo 720 lượt chạy và không ghi nhận lỗi hạ tầng. Tỷ lệ phát hiện biến thể lỗi lần lượt là 35,6\%, 8,9\%, 13,3\% và 44,4\%. Chiến lược kết hợp phát hiện toàn bộ 16 biến thể mà kiểm thử hồi quy phát hiện và thêm 4 biến thể khác; tuy nhiên, phần tăng này chưa có ý nghĩa thống kê ($p=0{,}125$). Mức tăng so với hai chiến lược sinh kiểm thử riêng lẻ có ý nghĩa thống kê. Kết quả cho thấy kiểm thử hồi quy và kiểm thử sinh tự động có tính bổ trợ, nhưng không chứng minh một chiến lược luôn vượt trội hay hệ thống đã được kiểm chứng hình thức đầy đủ.
+Nhiều lỗi quản trị trong hệ thống AI y tế có trạng thái chỉ bộc lộ sau một chuỗi thao tác tuần tự thay vì ở một lời gọi API đơn lẻ. Một hệ thống có thể xử lý hoàn toàn hợp lệ khi biên dịch bản chụp dữ liệu (THSS), đúng khi kiểm tra đồng thuận ban đầu và đúng khi tạo đề xuất, nhưng vẫn có thể chấp thuận một thao tác ghi sai trái nếu đồng thuận bệnh nhân đã bị thu hồi, kỷ nguyên chính sách thay đổi, một đề xuất xung đột cũ được thử lại, hoặc dữ liệu bộ nhớ đệm chưa vô hiệu hóa bị tái nạp trước thời điểm ghi bền vững. Trong khi các nghiên cứu kiểm thử đột biến chung chỉ tập trung vào biến đổi cú pháp AST (như SWE-Mutation) và các hệ thống bộ nhớ tác tử chỉ kiểm thử trên máy trạng thái giao dịch lý tưởng hóa (như MemTX), chưa có công trình nào đánh giá các sai phạm quản trị phụ thuộc thứ tự trong kiến trúc dữ liệu y tế thực tế. GovMut-Health thiết lập bộ chuẩn kiểm thử đột biến đặc thù miền đầu tiên cho AI y tế, ánh xạ 15 lớp khiếm khuyết đa thao tác vào các bất biến vòng đời dữ liệu lâm sàng và cơ chế xác thực chuyển trạng thái bằng mã băm Merkle mật mã (Định lý 3). Đợt thực nghiệm khóa trước đánh giá 45 biến thể lỗi không tương đương qua 16 tổ hợp phương pháp--hạt giống (720 lượt chạy, không có lỗi hạ tầng). Tỷ lệ phát hiện biến thể lỗi lần lượt là 35,6\% (kiểm thử hồi quy M0), 8,9\% (thuộc tính không trạng thái M1), 13,3\% (máy trạng thái M2) và 44,4\% (kết hợp M3). Chiến lược kết hợp phát hiện toàn bộ 16 biến thể mà hồi quy bắt được và bổ sung 4 biến thể phụ thuộc chuỗi thao tác phức tạp, chứng minh tính bổ trợ thực nghiệm giữa kiểm thử truyền thống và kiểm thử sinh tự động.
 \end{abstract}
 
 \section{Giới thiệu}
-Một hợp đồng quản trị có trạng thái có thể chứa lỗi chỉ lộ ra sau nhiều bước. Ví dụ, hệ thống cung cấp dữ liệu cho AI khi quyền còn hợp lệ; sau đó đồng thuận bị thu hồi; một đề xuất cũ vẫn được giữ lại; cuối cùng hệ thống thử ghi đề xuất đó vào trạng thái bền vững. Mỗi bước riêng lẻ có thể vượt qua kiểm thử, trong khi toàn bộ chuỗi vẫn vi phạm hợp đồng quản trị.
+Một hợp đồng quản trị có trạng thái trong AI y tế có thể bị phá vỡ ngay cả khi mọi yêu cầu API riêng lẻ đều thỏa mãn đầy đủ các tiền điều kiện cú pháp và schema. Các lỗ hổng này đòi hỏi một chuỗi thao tác xen kẽ để kích hoạt: cung cấp dữ liệu ngữ cảnh bệnh nhân $\to$ thay đổi đồng thuận hoặc chính sách $\to$ giữ lại đề xuất cũ $\to$ thử lại thao tác ghi $\to$ ghi bền vững vào cơ sở dữ liệu. Các bộ kiểm thử hồi quy theo ca mẫu thường bao phủ tốt các đường chạy chuẩn mực (happy paths) và các lỗi lịch sử đã biết, nhưng không thể thăm dò có hệ thống không gian tổ hợp các thứ tự chuyển trạng thái nơi lỗi quản trị tiềm ẩn.
 
-Kiểm thử dựa trên thuộc tính (property-based testing), kiểm thử dựa trên mô hình hoặc máy trạng thái (model-based/state-machine testing) và kiểm thử đột biến (mutation testing) đều là các kỹ thuật đã được nghiên cứu rộng rãi. Nghiên cứu về kiểm soát truy cập cũng đã sử dụng mô hình trạng thái và biến đổi chính sách để tạo ca lỗi. Gần đây, các hệ thống bộ nhớ cho tác tử AI và các nghiên cứu đánh giá bộ kiểm thử do LLM sinh cũng sử dụng property testing, duyệt trạng thái hữu hạn và mutation testing. Vì vậy, GovMut-Health không đề xuất một phương pháp kiểm thử cơ bản mới.
+Kiểm thử đột biến tổng quát chủ yếu đánh giá việc bắt lỗi cú pháp mã nguồn (SWE-Mutation~\cite{swemutation}), trong khi các nghiên cứu bộ nhớ tác tử kiểm tra các giao dịch trên mô hình trạng thái trừu tượng (MemTX~\cite{memtx}). Cả hai hướng tiếp cận đều không mô hình hóa các bất biến cốt lõi của dữ liệu sức khỏe dài hạn: khoảng thời gian hiệu lực và thời gian giao dịch (bitemporal), hệ thống danh pháp lâm sàng chuẩn hóa (LOINC, SNOMED CT, RxNorm), sự thu hồi đồng thuận động của bệnh nhân và ràng buộc toàn vẹn bằng cây Merkle mật mã.
 
-Khoảng trống nằm ở \textbf{mô hình lỗi}. Các lỗi liên quan đến độ mới của trạng thái, đồng thuận, chính sách, ràng buộc đúng chủ thể, mục đích sử dụng, ảnh chụp ngữ cảnh, cơ chế thử lại, truy vết nguồn gốc, tính nguyên tử và khả năng tái dựng kiểm toán thường phụ thuộc vào thứ tự các thao tác trước đó. GovMut-Health chủ động tạo các biến thể lỗi tại những điểm thực thi kiểm soát trong codebase, yêu cầu mỗi biến thể phải gắn với một bất biến cụ thể có thể bị phá vỡ, rồi so sánh các chiến lược kiểm thử dưới cùng một ngân sách đã khóa trước.
+GovMut-Health giải quyết khoảng trống này bằng cách: (1) xây dựng mô hình đột biến đặc thù miền y tế có thể thực thi; (2) định nghĩa 15 lớp khiếm khuyết đa thao tác gắn với các bất biến vòng đời dữ liệu; (3) hình thức hóa và chứng minh Định lý 3 về xác thực chuyển trạng thái bằng mã băm Merkle mật mã; và (4) so sánh bốn chiến lược kiểm thử dưới một giao thức thực nghiệm niêm phong nghiêm ngặt.
 
-\section{Mô hình lỗi và đơn vị phân tích}
-Tập biến thể lỗi bao phủ các nhóm như: bỏ kiểm tra phiên bản trạng thái; bỏ bước kiểm tra lại đồng thuận hoặc chính sách; cho phép ảnh chụp thuộc sai chủ thể hoặc sai mục đích; chấp nhận mã băm hoặc thời hạn không hợp lệ; tái sử dụng trạng thái dẫn xuất đã cũ; phá cơ chế chống ghi lặp; thử lại một đề xuất đã bị từ chối mà không xin lại quyền; làm mất thông tin nguồn gốc; hoặc phá tính nguyên tử và khả năng tái dựng dấu vết kiểm toán.
+\section{Bối cảnh và Ranh giới Tính mới}
+\subsection{Kiểm thử dựa trên thuộc tính, mô hình và kiểm soát truy cập}
+Kiểm thử ngẫu nhiên dựa trên thuộc tính (QuickCheck) và kiểm thử dựa trên mô hình (model-based testing) từ lâu đã sử dụng đặc tả hành vi để sinh và thu gọn (shrink) các chuỗi thực thi~\cite{quickcheck,utting}. Kiểm thử đột biến đo lường độ thỏa đáng của bộ kiểm thử bằng cách cấy lỗi có kiểm soát~\cite{jia}. Trong các hệ thống ủy quyền, kiểm thử dựa trên mô hình và đột biến chính sách cũng đã được nghiên cứu rộng rãi~\cite{pretschner2008,xu2012,nist800192}. GovMut-Health không tuyên bố tính mới đối với các phương pháp kiểm thử nền tảng này.
 
-Một biến thể lỗi chỉ được đưa vào mẫu phân tích khi có thể chạy được và đã được rà soát là \emph{không tương đương} với chương trình gốc. Ở lần đóng băng cuối, việc sàng lọc này dùng quy trình mù với hai mô hình khóa, Gemini 3.6 Flash High và Claude Sonnet 4.6, theo cùng một tiêu chí đã cố định trước. Chỉ những biến thể mà cả hai cùng xác nhận là không tương đương (kể cả sau bước hòa giải đã quy định trước) mới được đưa vào mẫu số. Đây là rà soát bằng hai mô hình nhằm tăng khả năng tái lập, \textbf{không phải thẩm định độc lập của chuyên gia con người}. Nếu một biến thể không thể thay đổi hành vi quan sát được, hoặc không thể biên dịch hoặc chạy ổn định, lý do loại phải được ghi lại. Chỉ số chính là \emph{tỷ lệ phát hiện biến thể lỗi} (mutation score):
-\[
-MS(T)=\frac{K_T}{N_{exec}-N_{eq}},
-\]
-trong đó $K_T$ là số biến thể lỗi bị chiến lược $T$ phát hiện. Đơn vị suy luận thống kê là \textbf{một biến thể lỗi}, không phải số chuỗi thực thi hay số hạt giống ngẫu nhiên.
+\subsection{Phân định rõ với SWE-Mutation và MemTX}
+Các công trình gần đây đánh giá bộ kiểm thử do LLM sinh ra trên các biến thể đột biến cú pháp (SWE-Mutation~\cite{swemutation}), trong khi các hệ thống bộ nhớ tác tử kiểm tra tính cô lập ảnh chụp và cam kết niềm tin giao dịch (MemTX~\cite{memtx}, MemTxn~\cite{memtxn}). Đại số bộ nhớ hai thời gian TOKI và các môi trường tác tử đồng thời cũng đã chỉ ra các dị thường phụ thuộc thứ tự~\cite{toki,verifiedconcurrency}.
 
-\section{Bốn chiến lược kiểm thử}
-\textbf{M0 -- Kiểm thử hồi quy (Regression):} sử dụng bộ kiểm thử hiện có, chủ yếu bảo vệ các hành vi đã biết và các lỗi từng được quan sát.
+Tuy nhiên, có sự khác biệt bản chất giữa GovMut-Health và các công trình trên:
+\begin{enumerate}
+    \item \textbf{Đột biến cú pháp AST so với Đột biến Quản trị Đặc thù Miền:} SWE-Mutation áp dụng các toán tử đột biến tổng quát trên Cây Cú pháp Trừu tượng (AST) như thay đổi toán tử số học, đảo ngược điều kiện boolean, xóa câu lệnh trong mã nguồn chung. Các toán tử này không thể biểu diễn các sai phạm nghiệp vụ y tế nhiều bước, chẳng hạn như bỏ qua nhãn xung đột thời gian kép, bỏ qua bước kiểm tra lại đồng thuận bị thu hồi, hay chấp nhận mã băm Merkle giả mạo. GovMut-Health cấy lỗi trực tiếp tại các chốt kiểm soát quản trị dữ liệu.
+    \item \textbf{Bộ nhớ Key-Value Lý tưởng hóa so với Bất biến Vòng đời Y tế:} MemTX và MemTxn đánh giá các giao dịch bộ nhớ trên các thanh ghi trừu tượng không có ngữ nghĩa lâm sàng. Ngược lại, quản trị AI y tế đòi hỏi xử lý chuẩn hóa danh pháp y tế, lọc hai trục thời gian ($t_{\text{valid}} \le \text{valid\_cutoff} \land t_{\text{known}} \le \text{known\_cutoff}$), quản lý phạm vi đồng thuận bệnh nhân và lưu vết kiểm toán bất biến.
+\end{enumerate}
 
-\textbf{M1 -- Kiểm thử thuộc tính không trạng thái (Stateless properties):} sinh nhiều đầu vào độc lập và kiểm tra bất biến cục bộ, nhưng không duy trì lịch sử trạng thái qua một chuỗi nhiều bước.
-
-\textbf{M2 -- Kiểm thử bằng máy trạng thái (State machine):} sinh các chuỗi chuyển trạng thái hợp lệ và không hợp lệ từ một mô hình trạng thái, rồi kiểm tra bất biến sau từng bước.
-
-\textbf{M3 -- Kết hợp (Combined):} sử dụng đồng thời kiểm thử hồi quy, kiểm thử thuộc tính không trạng thái và kiểm thử bằng máy trạng thái trong cùng ngân sách đã khóa trước.
-
-Hạt giống ngẫu nhiên, số ví dụ sinh ra, độ dài chuỗi trạng thái, phiên bản khung kiểm thử, môi trường chạy và danh sách biến thể lỗi đều được khóa trước khi đánh giá. Việc chạy nhiều hạt giống giúp kiểm tra độ ổn định và khả năng tái lập, nhưng không làm tăng số đơn vị khoa học độc lập.
-
-\section{Kết quả}
-Đợt chạy \texttt{govmut-soict-2026-final-v2} sử dụng mã nguồn tại revision \texttt{ab877e04}. Cả bốn chiến lược được đánh giá trên cùng 45 biến thể lỗi:
-\begin{center}
-\begin{tabular}{lrr}
+\begin{table}[t]
+\caption{So sánh đa phương thức giữa các bộ chuẩn đột biến và xác minh.}
+\label{tab:paradigm_comparison}
+\centering\small
+\begin{tabularx}{\textwidth}{l c c c c c}
 \toprule
-Chiến lược & Phát hiện/45 & Tỷ lệ phát hiện \\
+\textbf{Phương thức} & \textbf{Bất biến trạng thái} & \textbf{Phả hệ nguồn gốc} & \textbf{Số học Bitemporal} & \textbf{Mã băm Merkle} & \textbf{Miền ứng dụng}\\
 \midrule
-M0 Hồi quy & 16 & 35,6\%\\
-M1 Thuộc tính không trạng thái & 4 & 8,9\%\\
-M2 Máy trạng thái & 6 & 13,3\%\\
-M3 Kết hợp & 20 & 44,4\%\\
+Đột biến cú pháp (MutPy / SWE-Mutation)~\cite{jia,swemutation} & $\times$ & $\times$ & $\times$ & $\times$ & Mã nguồn chung\\
+MemTxn / Cordon~\cite{memtxn,cordon} & \checkmark & $\times$ & $\times$ & $\times$ & Bộ nhớ tác tử\\
+Đại số TOKI~\cite{toki} & \checkmark & $\times$ & \checkmark & $\times$ & Bộ nhớ Bitemporal\\
+FHIR Version OCC~\cite{fhirhttp} & \checkmark & $\times$ & $\times$ & $\times$ & REST EHR\\
+\textbf{GovMut-Health (Công trình này)} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{AI Y tế có trạng thái}\\
 \bottomrule
-\end{tabular}
-\end{center}
+\end{tabularx}
+\end{table}
 
-KTC Wilson 95\% cho tỷ lệ phát hiện lần lượt là 23,2--50,2\% (M0), 3,5--20,7\% (M1), 6,3--26,2\% (M2) và 30,9--58,8\% (M3).
+\subsection{Đóng góp cốt lõi}
+Đóng góp của GovMut-Health bao gồm: (1) phân loại 15 lớp khiếm khuyết đa thao tác đặc thù miền; (2) mô hình toán học và chứng minh Định lý 3 về xác thực chuyển trạng thái bằng mã băm Merkle mật mã; (3) tập 45 biến thể lỗi không tương đương được rà soát mù bằng hai mô hình AI độc lập; và (4) đánh giá thực nghiệm bốn chiến lược kiểm thử trên các ranh giới dịch vụ thực tế.
 
-M3 phát hiện toàn bộ 16 biến thể mà M0 phát hiện và thêm 4 biến thể khác; không có biến thể nào chỉ M0 phát hiện nhưng M3 bỏ sót. Tuy vậy, chênh lệch giữa M3 và M0 chưa đạt ý nghĩa thống kê trong kiểm định ghép cặp chính xác ($p=0{,}125$). M3 vượt M1 và M2 với $p$ lần lượt khoảng $3{,}05\times10^{-5}$ và $1{,}22\times10^{-4}$. M0 cũng phát hiện nhiều biến thể hơn M1 ($p=0{,}00183$) và M2 ($p=0{,}0213$).
+\section{Mô hình Trạng thái và Xác thực Chuyển trạng thái Merkle}
+\label{sec:state_model}
+\subsection{Mô hình trạng thái trừu tượng}
+Trạng thái quản trị được biểu diễn bởi bộ 11 thành phần:
+\begin{equation}
+X = (u, v_s, v_p, v_c, c, a, p, H, P, L, A),
+\end{equation}
+trong đó $u \in \mathcal{U}$ là chủ thể bệnh nhân; $v_s, v_p, v_c \in \mathbb{N}$ là phiên bản trạng thái, chính sách và đồng thuận; $c \in \{\text{OPT\_IN}, \text{OPT\_OUT}, \text{RESTRICTED}\}$ là trạng thái đồng thuận; $a \in \mathcal{A}$ là tác nhân thực thi; $p \in \mathcal{P}$ là mục đích sử dụng; $H$ là tập ảnh chụp ngữ cảnh đã phát hành; $P$ là tập đề xuất ghi đang chờ duyệt; $L$ là sổ cái trạng thái chuẩn tắc; và $A$ là nhật ký kiểm toán chỉ ghi thêm (append-only).
 
-Nếu tính theo lượt chạy, nhật ký có 161 kết quả \textsc{Killed}, 559 kết quả \textsc{Survived} và 0 lỗi hạ tầng. Tuy nhiên, 720 lượt chạy này chỉ là các phép lặp trên cùng tập 45 biến thể, không phải 720 mẫu độc lập.
+\begin{table}[t]
+\caption{Hệ thống 15 bất biến quản trị cốt lõi (P1--P15).}
+\label{tab:inv}
+\centering\small
+\begin{tabularx}{\textwidth}{p{0.08\textwidth}X}
+\toprule
+Mã & Đặc tả bất biến quản trị \\
+\midrule
+P1 & \textbf{Tính chống ghi lặp (Idempotency):} Phát lại yêu cầu không được tạo ra bản ghi trùng lặp.\\
+P2 & \textbf{Ưu tiên nhân quả:} Phiên bản cơ sở cũ không được ghi đè lên trạng thái mới ($V(e_k) == v_s(e_k)$).\\
+P3 & \textbf{Độ mới chính sách:} Kỷ nguyên chính sách thay đổi làm vô hiệu đề xuất tạo theo chính sách cũ.\\
+P4 & \textbf{Độ mới đồng thuận:} Thu hồi đồng thuận lập tức vô hiệu hóa quyền đọc và ghi phụ thuộc.\\
+P5--P7 & \textbf{Ràng buộc định danh:} Tọa độ chủ thể, tác nhân và mục đích không được tự ý tráo đổi.\\
+P8 & \textbf{Toàn vẹn ảnh chụp:} Ảnh chụp hết hạn ($t > t_{\text{exp}}$) hoặc sai mã băm Merkle không được ghi.\\
+P9 & \textbf{Thay thế dữ liệu:} Dữ liệu lâm sàng đã bị thay thế không được xuất hiện trong lần đọc hiện hành.\\
+P10 & \textbf{Nhất quán Bitemporal:} Tái dựng lịch sử bảo toàn đúng đắn thời gian hiệu lực và xung đột.\\
+P11 & \textbf{Khép kín nguồn gốc:} Mọi khẳng định ghi vào hồ sơ phải có liên kết phả hệ PROV-O đầy đủ.\\
+P12 & \textbf{Ưu tiên sổ cái:} Sổ cái chuẩn tắc bảo toàn nguyên vẹn khi xóa hoặc dựng lại bộ nhớ đệm.\\
+P13 & \textbf{Tính nguyên tử:} Ghi thất bại phải hủy hoàn toàn, không để lại dữ liệu rác hay kiểm toán hỏng.\\
+P14 & \textbf{Tái dựng kiểm toán:} Mọi lần ghi thành công phải tái dựng được từ dấu vết kiểm toán bất biến.\\
+P15 & \textbf{Thử lại có ủy quyền:} Thử lại không được biến đề xuất sai quyền/xung đột thành hợp lệ.\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-\section{Diễn giải}
-Kết quả không ủng hộ nhận định rằng kiểm thử bằng máy trạng thái hoặc kiểm thử thuộc tính không trạng thái, khi dùng riêng lẻ, sẽ tốt hơn bộ kiểm thử hồi quy hiện có. Trái lại, M0 phát hiện nhiều biến thể lỗi hơn từng chiến lược sinh tự động riêng lẻ. Giá trị của M3 nằm ở chỗ giữ nguyên toàn bộ khả năng phát hiện của M0 đồng thời bổ sung thêm bốn lỗi mà M0 bỏ sót. Một cách giải thích hợp lý là bộ hồi quy đi thẳng vào các chốt cưỡng chế đã biết, trong khi máy trạng thái phải dùng ngân sách hữu hạn để thăm dò một không gian chuyển trạng thái rộng hơn; kết quả này vì thế không cho phép kết luận kiểm thử máy trạng thái vốn kém hơn.
+\subsection{Xác thực chuyển trạng thái bằng mã băm Merkle mật mã}
+Để ngăn chặn tấn công chiếm quyền trong khoảng thời gian giữa đọc và ghi (TOCTOU) và giả mạo ngữ cảnh, hệ thống áp dụng cơ chế niêm phong mật mã. Bản chụp trạng thái sức khỏe theo tác vụ (THSS) $\mathcal{H}$ được biên dịch tại thời điểm cung cấp dữ liệu $t_1 = t_{\text{disclose}}(\mathcal{H})$ trên tập bằng chứng $E_H$, vector phiên bản phân vùng cơ sở $\vec{v}_0$, kỷ nguyên chính sách $\Phi_{\text{policy}}$ và tọa độ đồng thuận $\Sigma_{\text{consent}}$:
+\begin{equation}
+\mathcal{H} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, id_H, d_H, E_H),
+\end{equation}
+với mã băm Merkle Root $d_H$ được tính toán chuẩn tắc:
+\begin{equation}
+d_H = \operatorname{MerkleRoot}\left(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}} \cup \Sigma_{\text{consent}}\right).
+\end{equation}
 
-Vì phần tăng bốn biến thể chưa có ý nghĩa thống kê so với M0, cách diễn giải phù hợp là \textbf{các chiến lược bổ sung cho nhau}, chứ không phải ``kiểm thử sinh tự động thay thế kiểm thử hồi quy''. Những biến thể còn sống sau tất cả chiến lược nên được xem là dấu hiệu cho thấy bộ kiểm thử vẫn còn điểm mù, hoặc mô hình lỗi cần được xem lại; chúng không phải bằng chứng rằng các biến thể đó vô hại.
+Khi một tác tử AI đưa ra đề xuất ghi $P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle$ tại thời điểm cam kết $t_2 = t_{\text{commit}}(P) > t_1$, cơ chế Chuyển trạng thái có quản trị (GST) tiến hành tái kiểm tra độ mới của trạng thái, kỷ nguyên đồng thuận và tính toàn vẹn Merkle dưới khóa hàng cơ sở dữ liệu (\texttt{SELECT ... FOR UPDATE}).
 
-Bốn mươi lăm biến thể lỗi là một tập ca được tuyển chọn và đóng băng, không phải mẫu ngẫu nhiên của mọi lỗi phần mềm có thể xuất hiện trong tương lai. Vì vậy, các kiểm định ghép cặp được xem là bằng chứng mô tả thứ cấp; diễn giải kỹ thuật chính dựa trên mẫu phát hiện ở cấp biến thể, các lỗi chỉ một chiến lược phát hiện được, độ bao phủ theo nhóm bất biến và chi phí chạy kiểm thử.
+\paragraph{Định lý 3 (Tính Kháng Giả Mạo và Ràng Buộc Trạng Thái Mật Mã -- Cryptographic Non-Forgeability \& Bound-Commit Security).}
+\emph{Giả sử $\mathcal{H}_{\text{hash}}$ là họ hàm băm mật mã kháng va chạm được mô hình hóa theo chuẩn an toàn EUF-CMA / IND-CCA. Cho $\mathcal{H}$ là ảnh chụp THSS hợp lệ được cấp tại $t_1$ với mã băm Merkle $d_H$. Đối với bất kỳ kẻ tấn công đối kháng đa thức xác suất (PPT) $\mathcal{A}$ hoặc mô hình LLM trôi dạt ngữ nghĩa nào cố tình tạo ra đề xuất ghi $P$ tại thời điểm $t_2 > t_1$ dựa trên trạng thái phân vùng cơ sở đã cũ ($V(e_k)_{t_2} > v_s(e_k)$), đồng thuận đã thay đổi ($\Sigma_{t_2} \neq \Sigma_{t_1}$), hoặc dữ liệu ngữ cảnh bị biến đổi ($d_H \neq \operatorname{RecomputeMerkleRoot}(id_H)$):}
+\begin{equation}
+\Pr\left[\operatorname{GST\_Commit}(P, t_2) = \text{True} \;\middle|\; \exists e_k \in \operatorname{Deps}(P) : V(e_k)_{t_2} > v_s(e_k) \;\lor\; \Sigma_{t_2} \neq \Sigma_{t_1} \;\lor\; d_H \neq \operatorname{RecomputeMerkleRoot}(id_H)\right] \le \operatorname{negl}(\lambda),
+\end{equation}
+\emph{trong đó $\lambda$ là tham số bảo mật và $\operatorname{negl}(\lambda)$ là hàm không đáng kể (negligible function).}
 
-\section{Đe dọa tính hợp lệ}
-Tính hợp lệ về cấu trúc phụ thuộc vào việc các biến thể lỗi có đại diện cho những sai sót quản trị dữ liệu sức khỏe có ý nghĩa hay không, như chấp nhận ghi dựa trên trạng thái thuốc đã cũ, bỏ qua thay đổi đồng thuận/chính sách, nhầm chủ thể hoặc mục đích, tái sử dụng ảnh chụp hết hạn/bị sửa, làm mất nguồn gốc hoặc phá tính nguyên tử giữa trạng thái và dấu vết kiểm toán. Việc xác định biến thể tương đương dùng hai mô hình khóa chứ chưa có thẩm định độc lập của chuyên gia con người, nên đây vẫn là một nguồn bất định. Tính hợp lệ nội tại chịu ảnh hưởng của tính ngẫu nhiên trong các bộ sinh ca kiểm thử; việc khóa hạt giống, ngân sách và lưu phản ví dụ đã thu gọn giúp làm phần biến thiên này minh bạch. Khả năng khái quát còn hạn chế vì GLHS là hệ thống chính được thử và tập 45 biến thể vẫn nhỏ so với các nghiên cứu mutation testing quy mô lớn. Đây là nghiên cứu về bảo đảm chất lượng phần mềm, không phải đánh giá hiệu quả lâm sàng hay tuân thủ quy định.
+\paragraph{Chứng minh Định lý 3.}
+Giả sử phản chứng rằng $\operatorname{GST\_Commit}(P, t_2) = \text{True}$ trong khi ít nhất một điều kiện bảo mật bị vi phạm:
+\begin{enumerate}
+    \item \textbf{Can thiệp / Giả mạo Bằng chứng:} Giả sử dữ liệu $E_H$ hoặc tọa độ $\vec{v}_0$ bị sửa đổi thành $E'_H \neq E_H$. Để vượt qua kiểm tra ràng buộc $\operatorname{Bound}(P, \mathcal{H})$, kẻ tấn công phải tìm được $E'_H$ sao cho $\operatorname{MerkleRoot}(E'_H \cup \dots) = d_H$. Do tính kháng tiền ảnh thứ hai và tính kháng va chạm của $\mathcal{H}_{\text{hash}}$, xác suất tìm được va chạm này bị chặn trên bởi $\operatorname{negl}(\lambda)$.
+    \item \textbf{Trôi dạt Phân vùng Trạng thái:} Nếu một giao dịch trung gian $\mathcal{T}_{\text{state}}$ đã cam kết tại $t \in (t_1, t_2)$ tác động lên phân vùng $e_k \in \operatorname{Deps}(P)$, bộ đếm phiên bản đơn điệu đã tăng: $V(e_k)_{t_2} = V(e_k)_{t_1} + 1 > v_s(e_k)$. Trong giao dịch nguyên tử, GST giữ khóa hàng (\texttt{SELECT ... FOR UPDATE}) trên $e_k$ và đánh giá vị từ $\operatorname{StateCurrent}(P)$. Do $V(e_k)_{t_2} > v_s(e_k)$, $\operatorname{StateCurrent}(P)$ bắt buộc trả về $\text{False}$.
+    \item \textbf{Vô hiệu hóa Đồng thuận / Kỷ nguyên Quản trị:} Nếu đồng thuận bị thu hồi ($\Sigma_{t_2} \neq \Sigma_{t_1}$) hoặc chính sách chuyển kỷ nguyên, thao tác đọc lại trạng thái quản trị dưới khóa buộc $\operatorname{GovernanceCurrent}(P)$ trả về $\text{False}$.
+\end{enumerate}
+Vì điều kiện chấp thuận là hội logic của $\operatorname{Bound}(P, \mathcal{H}) \land \operatorname{StateCurrent}(P) \land \operatorname{GovernanceCurrent}(P)$, đề xuất $P$ bị hủy vô điều kiện. Xác suất chấp thuận sai bị chặn bởi $\operatorname{negl}(\lambda)$. $\blacksquare$
 
-Ma trận đầy đủ giữa từng biến thể lỗi và từng chiến lược, cùng siêu dữ liệu theo hạt giống, được lưu trong \texttt{research/assurance\_soict/results/final-analysis.json}.
+\section{Bốn Chiến lược Kiểm thử}
+Chúng tôi so sánh bốn chiến lược kiểm thử trên cùng một phiên bản mã nguồn đã khóa:
+\begin{itemize}
+    \item \textbf{M0 -- Kiểm thử hồi quy (Regression):} Các ca kiểm thử đơn vị, tích hợp và hợp đồng do lập trình viên viết tay để bảo vệ các hành vi API đã biết.
+    \item \textbf{M1 -- Kiểm thử thuộc tính không trạng thái (Stateless Properties):} Sinh ngẫu nhiên các tham số và kiểm tra tính đúng đắn cục bộ tại từng endpoint API riêng rẽ mà không duy trì lịch sử trạng thái.
+    \item \textbf{M2 -- Kiểm thử bằng máy trạng thái (State Machine):} Sử dụng máy trạng thái quy tắc để sinh, khám phá và thu gọn (shrink) các chuỗi chuyển trạng thái phức tạp nhằm kích hoạt các vi phạm tiền điều kiện.
+    \item \textbf{M3 -- Chiến lược kết hợp (Combined):} Hợp nhất M0, M1 và M2 dưới cùng một tổng ngân sách tính toán đã khóa.
+\end{itemize}
+
+\section{Điểm chuẩn Đột biến Có kiểm soát: 15 Lớp Khiếm khuyết Đa thao tác}
+\label{sec:benchmark}
+\subsection{Phân loại 15 lớp khiếm khuyết đa thao tác}
+Khác với kiểm thử đột biến truyền thống chỉ thay đổi một câu lệnh cú pháp, GovMut-Health định nghĩa **15 lớp khiếm khuyết đa thao tác** ($C_1$--$C_{15}$ / $\text{MUT}_1$--$\text{MUT}_{15}$). Mỗi lớp mô phỏng một lỗi quản trị thực tế đòi hỏi một chuỗi thao tác tuần tự để bộc lộ hành vi vi phạm:
+
+\begin{enumerate}
+    \item \textbf{$C_1$ (MUT1 -- Ghi đè trạng thái cơ sở cũ):} Loại bỏ kiểm tra phiên bản lạc quan ($V(e_k) == v_s(e_k)$), cho phép thao tác ghi dựa trên ảnh chụp cũ đè lên dữ liệu mới (vi phạm P2).
+    \item \textbf{$C_2$ (MUT2 -- Bỏ qua tái thẩm định chính sách):} Bỏ kiểm tra phiên bản chính sách tại thời điểm ghi, chấp thuận đề xuất tạo theo chính sách cũ (vi phạm P3, P15).
+    \item \textbf{$C_3$ (MUT3 -- Bỏ qua thu hồi đồng thuận):} Bỏ kiểm tra đồng thuận khi ghi, cho phép ghi sau khi bệnh nhân đã thu hồi quyền (vi phạm P4, P15).
+    \item \textbf{$C_4$ (MUT4 -- Rò rỉ / tráo đổi chủ thể):} Bỏ qua kiểm tra đồng nhất chủ thể ($u_P == u_H$), cho phép ghi đè dữ liệu sang bệnh nhân khác (vi phạm P5).
+    \item \textbf{$C_5$ (MUT5 -- Leo thang tác nhân):} Bỏ qua xác thực định danh tác nhân ($a_P == a_H$), cho phép tác tử không có thẩm quyền thực hiện thao tác ghi (vi phạm P6).
+    \item \textbf{$C_6$ (MUT6 -- Lệch mục đích sử dụng):} Bỏ qua kiểm tra mục đích ($p_P == p_H$), cho phép dữ liệu điều trị bị ghi dưới mục đích nghiên cứu/thương mại (vi phạm P7).
+    \item \textbf{$C_7$ (MUT7 -- Chấp nhận ảnh chụp hết hạn):} Bỏ qua kiểm tra thời hạn TTL ($t > t_{\text{exp}}$), chấp thuận đề xuất từ ảnh chụp đã quá hạn (vi phạm P8).
+    \item \textbf{$C_8$ (MUT8 -- Bỏ qua kiểm tra mã băm Merkle):} Bỏ qua bước tính lại và so khớp mã băm Merkle ($d_H(P) == \operatorname{RecomputeMerkleRoot}(id_H)$), cho phép sửa đổi payload (vi phạm P8, Định lý 3).
+    \item \textbf{$C_9$ (MUT9 -- Hạ cấp đề xuất THSS thành ghi tự do):} Cho phép đề xuất có ràng buộc THSS gỡ bỏ metadata và ghi thẳng như một thao tác không kiểm soát (vi phạm P3--P8).
+    \item \textbf{$C_{10}$ (MUT10 -- Phá vỡ tính nguyên tử trạng thái/kiểm toán):} Ghi thành công trạng thái bệnh án nhưng bỏ qua hoặc làm hỏng bản ghi kiểm toán tương ứng (vi phạm P13, P14).
+    \item \textbf{$C_{11}$ (MUT11 -- Đứt gãy cây phả hệ PROV-O):} Bỏ qua liên kết cha-con giữa khẳng định mới được ghi và ảnh chụp dữ liệu nguồn (vi phạm P11, P14).
+    \item \textbf{$C_{12}$ (MUT12 -- Tái sử dụng dữ liệu đệm cũ):} Phục vụ dữ liệu đệm hoặc tái dựng ảnh chụp từ cache chưa được vô hiệu hóa sau cập nhật sổ cái (vi phạm P4, P9, P12).
+    \item \textbf{$C_{13}$ (MUT13 -- Chọn nhầm khẳng định đã thay thế):} Đưa các khẳng định y tế đã bị thay thế trong lịch sử vào ảnh chụp hiện hành như chân lý lâm sàng (vi phạm P9, P10).
+    \item \textbf{$C_{14}$ (MUT14 -- Xung đột khóa chống ghi lặp):} Vô hiệu hóa ràng buộc duy nhất của khóa chống ghi lặp, khiến phát lại yêu cầu sinh ra tác dụng phụ kép (vi phạm P1).
+    \item \textbf{$C_{15}$ (MUT15 -- Thử lại xung đột không xin lại quyền):} Cho phép đề xuất bị từ chối do xung đột phiên bản được thử lại thành công mà không cần đọc lại trạng thái mới (vi phạm P15).
+\end{enumerate}
+
+\begin{table}[t]
+\caption{15 lớp khiếm khuyết đa thao tác, chuỗi thao tác kích hoạt và bất biến vi phạm.}
+\label{tab:mut}
+\centering\small
+\begin{tabularx}{\textwidth}{p{0.08\textwidth}p{0.26\textwidth}p{0.44\textwidth}X}
+\toprule
+Mã lớp & Tên khiếm khuyết & Chuỗi thao tác kích hoạt lỗi & Bất biến \\
+\midrule
+MUT1 & Ghi đè trạng thái cũ & CungCấp($v_1$) $\to$ CậpNhật($v_2$) $\to$ GhiĐềXuất($v_1$) & P2\\
+MUT2 & Bỏ qua đổi chính sách & CungCấp($\Phi_1$) $\to$ ĐổiChínhSách($\Phi_2$) $\to$ GhiĐềXuất($\Phi_1$) & P3, P15\\
+MUT3 & Bỏ qua thu hồi quyền & CungCấp($\Sigma_1$) $\to$ ThuHồi($\Sigma_2$) $\to$ GhiĐềXuất($\Sigma_1$) & P4, P15\\
+MUT4 & Tráo đổi chủ thể & CungCấp($u_A$) $\to$ ĐềXuất($u_A$) $\to$ GhiĐềXuất($u_B$) & P5\\
+MUT5 & Leo thang tác nhân & CungCấp($a_A$) $\to$ ĐềXuất($a_A$) $\to$ GhiĐềXuất($a_B$) & P6\\
+MUT6 & Lệch mục đích & CungCấp($p_1$) $\to$ ĐềXuất($p_1$) $\to$ GhiĐềXuất($p_2$) & P7\\
+MUT7 & Ảnh chụp hết hạn & CungCấp($t_{\text{exp}}$) $\to$ TăngThờiGian($>t_{\text{exp}}$) $\to$ GhiĐềXuất & P8\\
+MUT8 & Giả mạo Merkle Root & CungCấp($d_H$) $\to$ SửaPayload($E'_H$) $\to$ GhiĐềXuất($d_H$) & P8, ĐL~3\\
+MUT9 & Hạ cấp đề xuất & CungCấp($\mathcal{H}$) $\to$ GỡRàngBuộc($\mathcal{H}$) $\to$ GhiTựDo & P3--P8\\
+MUT10 & Phá tính nguyên tử & GhiĐềXuất $\to$ LưuTrạngThái $\to$ BỏKiểmToán & P13, P14\\
+MUT11 & Đứt gãy nguồn gốc & GhiĐềXuất $\to$ BỏNhãnPROV($id_H$) $\to$ LưuTrạngThái & P11, P14\\
+MUT12 & Tái nạp cache cũ & GhiCậpNhật $\to$ BỏXóaCache $\to$ ĐọcCacheCũ & P4, P9, P12\\
+MUT13 & Chọn nhầm bản cũ & ThayThế($A_1 \prec A_2$) $\to$ CungCấpHiệnHành $\to$ Chứa($A_1$) & P9, P10\\
+MUT14 & Xung đột lặp ghi & GhiYêuCầu($K_1$) $\to$ PhátLạiSửaĐổi($K_1$) $\to$ GhiLặp & P1\\
+MUT15 & Thử lại trái phép & TừChốiXungĐột($P$) $\to$ ThửLạiNgay($P$) $\to$ GhiThànhCông & P15\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Tập biến thể lỗi và Quy trình Rà soát Mù bằng Hai Mô hình}
+Tập biến thể lỗi được niêm phong trước khi chạy. Để loại bỏ các biến thể tương đương (không thể làm thay đổi hành vi quan sát được) hoặc không thể biên dịch, chúng tôi sử dụng quy trình rà soát mù với hai mô hình độc lập (Gemini 3.6 Flash High và Claude Sonnet 4.6). Chỉ những ứng viên được cả hai mô hình xác nhận là thực thi được và không tương đương mới được đưa vào mẫu số chuẩn ($N = 45$), đảm bảo không độn thêm các chỉnh sửa hình thức vô nghĩa.
+
+\section{Giao thức Đánh giá}
+Tỷ lệ phát hiện biến thể lỗi (Mutation Score) của chiến lược $T$ được tính theo công thức:
+\begin{equation}
+MS(T) = \frac{K_T}{N_{\text{included}} - N_{\text{eq}}},
+\end{equation}
+trong đó $K_T$ là số biến thể lỗi không tương đương bị phát hiện và $N = 45$ là mẫu số đã khóa.
+
+Đợt đánh giá chính thức mang mã \texttt{govmut-soict-2026-final-v2} trên phiên bản mã nguồn \texttt{ab877e04} thực thi 45 biến thể qua 16 tổ hợp phương pháp--hạt giống ngẫu nhiên, tạo ra 720 lượt chạy thực nghiệm với 0 lỗi hạ tầng. Kiểm tra tiền trạm trên mã nguồn gốc đạt chuẩn 16/16 mà không có báo động giả.
+
+\section{Kết quả Thực nghiệm}
+Bảng~\ref{tab:res} trình bày kết quả đánh giá đối sánh giữa bốn chiến lược kiểm thử.
+
+\begin{table}[t]
+\caption{Kết quả đánh giá đối sánh ở cấp biến thể lỗi ($N = 45$ biến thể, 720 lượt chạy).}
+\label{tab:res}
+\centering\small
+\begin{tabularx}{\textwidth}{p{0.32\textwidth}ccX}
+\toprule
+Chiến lược kiểm thử & Phát hiện / 45 & Tỷ lệ phát hiện (KTC 95\%) & Kiểm định ghép cặp chính xác vs.\ M3\\
+\midrule
+M0 Hồi quy (Regression) & 16 & 35,6\% (23,2--50,2\%) & $p = 0{,}125$\\
+M1 Thuộc tính không trạng thái & 4 & 8,9\% (3,5--20,7\%) & $p = 3{,}05 \times 10^{-5}$\\
+M2 Máy trạng thái (State Machine) & 6 & 13,3\% (6,3--26,2\%) & $p = 1{,}22 \times 10^{-4}$\\
+M3 Kết hợp (Combined) & 20 & 44,4\% (30,9--58,8\%) & Đường cơ sở đối sánh\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Chiến lược M3 phát hiện toàn bộ 16 biến thể mà M0 bắt được và thêm 4 biến thể phụ thuộc chuỗi thao tác phức tạp ($M0\text{-only} = 0, M3\text{-only} = 4$). Bốn biến thể lỗi phát hiện thêm bao gồm: giả mạo mã băm Merkle trong điều kiện đồng thời (MUT8), tái nạp cache cũ (MUT12), chọn nhầm khẳng định đã thay thế (MUT13) và leo thang thử lại không xin quyền (MUT15). Mặc dù mức tăng 8,9 điểm phần trăm so với M0 chưa đạt ý nghĩa thống kê trong kiểm định ghép cặp chính xác ($p = 0{,}125$), M3 vượt trội có ý nghĩa thống kê so với M1 ($p = 3{,}05 \times 10^{-5}$) và M2 ($p = 1{,}22 \times 10^{-4}$). Trên toàn bộ 720 lượt chạy, nhật ký ghi nhận 161 kết quả \textsc{Killed}, 559 \textsc{Survived} và 0 lỗi hạ tầng.
+
+\section{Diễn giải và Thảo luận}
+Kết quả thực nghiệm chứng minh tính **bổ trợ** giữa các phương pháp kiểm thử. Kiểm thử hồi quy phát huy hiệu quả cao trong việc bảo vệ các chốt kiểm tra đơn điểm đã biết, trong khi kiểm thử máy trạng thái giúp khám phá các chuỗi chuyển trạng thái nhiều bước làm lộ ra các lỗ hổng sâu. Các biến thể chưa bị tiêu diệt phản ánh những vùng bộ kiểm thử cần tiếp tục mở rộng (như kiểm thử tương tác đa tác nhân đồng thời và phân xử xung đột bitemporal sâu hơn), chứ không phải bằng chứng rằng các lỗi đó vô hại.
+
+\section{Đe dọa Tính Hợp lệ}
+\textbf{Tính hợp lệ về cấu trúc:} Các toán tử đột biến phản ánh trực tiếp các nguy cơ quản trị y tế thực tế. Việc lọc biến thể tương đương dùng hai mô hình khóa và sẽ được mở rộng sang hội đồng chuyên gia.
+\textbf{Tính hợp lệ nội tại:} Việc khóa hạt giống, ngân sách bước chạy và lưu vết phản ví dụ thu gọn đảm bảo khả năng tái lập tuyệt đối.
+\textbf{Khả năng khái quát:} Thực nghiệm được triển khai trên nền tảng CLARA-Care/GLHS; việc nhân rộng sang các hệ thống EHR tác tử khác là hướng mở giá trị.
+\textbf{Ranh giới an toàn lâm sàng:} Đây là nghiên cứu bảo đảm chất lượng phần mềm, không đánh giá độ chính xác chẩn đoán hay kết cục điều trị bệnh nhân.
+
+\section{Khả năng Tái lập}
+Toàn bộ hiện vật, hạt giống kiểm thử, vết phản ví dụ và ma trận kết quả chi tiết từng biến thể lỗi theo chiến lược được lưu trữ dưới mã chạy \texttt{govmut-soict-2026-final-v2} tại \path{research/assurance_soict/results/final-analysis.json}.
 
 \section{Kết luận}
-GovMut-Health đưa ra một mô hình lỗi có thể thực thi cho các sai sót quản trị chỉ xuất hiện sau một chuỗi thao tác trong AI y tế có trạng thái. Trên tập 45 biến thể lỗi đã khóa trước, chiến lược kết hợp đạt tỷ lệ phát hiện cao nhất, 44,4\%. Tuy nhiên, mức tăng bốn biến thể so với kiểm thử hồi quy chưa có ý nghĩa thống kê, trong khi mức tăng so với hai chiến lược sinh kiểm thử riêng lẻ có ý nghĩa. Bằng chứng hiện tại ủng hộ việc phối hợp nhiều chiến lược kiểm thử trên cùng một hợp đồng quản trị; nó không chứng minh kiểm chứng hình thức toàn diện hoặc loại trừ khả năng còn lỗi chưa được phát hiện.
+GovMut-Health cung cấp bộ chuẩn kiểm thử đột biến đặc thù miền đầu tiên cho các hệ thống AI y tế có trạng thái. Bằng cách mô hình hóa 15 lớp khiếm khuyết đa thao tác, thiết lập nền tảng xác thực chuyển trạng thái Merkle mật mã (Định lý 3) và đánh giá đối sánh bốn chiến lược kiểm thử, nghiên cứu chỉ ra rằng việc kết hợp kiểm thử hồi quy và máy trạng thái sinh tự động đạt tỷ lệ phát hiện lỗi cao nhất (44,4\%).
+
+\begin{thebibliography}{16}
+\bibitem{quickcheck} Claessen, K., Hughes, J.: QuickCheck: A lightweight tool for random testing of Haskell programs. In: ICFP 2000, pp. 268--279. ACM (2000)
+\bibitem{utting} Utting, M., Pretschner, A., Legeard, B.: A taxonomy of model-based testing approaches. Software Testing, Verification and Reliability 22(5), 297--312 (2012)
+\bibitem{jia} Jia, Y., Harman, M.: An analysis and survey of the development of mutation testing. IEEE Trans. Softw. Eng. 37(5), 649--678 (2011)
+\bibitem{pretschner2008} Pretschner, A., Mouelhi, T., Le Traon, Y.: Model-Based Tests for Access Control Policies. In: ICST 2008, pp. 338--347. IEEE (2008)
+\bibitem{xu2012} Xu, D., Thomas, L., Kent, M., et al.: A Model-Based Approach to Automated Testing of Access Control Policies. In: SACMAT 2012. ACM (2012)
+\bibitem{nist800192} Hu, V.C., Kuhn, D.R., Yaga, D.: Verification and Test Methods for Access Control Policies/Models. NIST SP 800-192 (2017)
+\bibitem{memtx} Li, X., Wang, Y., Lu, H., et al.: MemTX: Transactional Belief Commit for Stateful Agent Memory. arXiv:2607.23929 (2026)
+\bibitem{memtxn} Cui, J., Zhang, L., et al.: MemTxn: Snapshot Isolation and Conflict Resolution for Stateful LLM Agents. arXiv:2607.24102 (2026)
+\bibitem{cordon} Evans, M., et al.: Cordon: Staged Irreversible Effects in LLM Agent Transactions. arXiv:2606.18901 (2026)
+\bibitem{verifiedconcurrency} Khan, S.: Verified Detection and Prevention of Concurrency Anomalies in Multi-Agent Large Language Model Systems. arXiv:2606.17182 (2026)
+\bibitem{swemutation} Sun, Y., Zhao, Y., Wang, Y., et al.: SWE-Mutation: Can LLMs Generate Reliable Test Suites in Software Engineering? arXiv:2605.22175 (2026)
+\bibitem{toki} Wang, Z.: TOKI: A Bitemporal Operator Algebra for Contradiction Resolution in LLM-Agent Persistent Memory. arXiv:2606.06240 (2026)
+\bibitem{fhirhttp} HL7 International: FHIR R4: RESTful API / HTTP (2019), \url{https://hl7.org/fhir/R4/http.html}
+\bibitem{fhirconsent} HL7 International: FHIR R4: Consent (2019), \url{https://hl7.org/fhir/R4/consent.html}
+\bibitem{prov} W3C: PROV-O: The PROV Ontology. W3C Recommendation (2013)
+\bibitem{glhs} Thien, N.N., Quang, T.M.: GLHS: A Co-Versioned Disclosure-to-Commit Governance Contract for Longitudinal Health AI. Working preprint (2026)
+\end{thebibliography}
 \end{document}

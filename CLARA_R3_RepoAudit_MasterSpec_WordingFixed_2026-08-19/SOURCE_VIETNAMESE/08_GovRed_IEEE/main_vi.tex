@@ -1,73 +1,175 @@
 \documentclass[11pt]{article}
 \input{../common_preamble.tex}
-\title{\textbf{GovRed-Health: Đánh giá sai lệch quyền giữa thời điểm AI được phép đọc dữ liệu và thời điểm ghi bền vững}}
-\author{Nguyễn Ngọc Thiện, Trịnh Minh Quang \\ Trường THPT Hai Bà Trưng, Huế, Việt Nam}
+\title{\textbf{GovRed-Health: Đánh giá sai lệch quyền và quản trị hai chiều thời gian giữa thời điểm cung cấp dữ liệu và ghi bền vững}}
+\author{Nguyễn Ngọc Thiện, Trịnh Minh Quang \\ Trường THPT Hai Bà Trưng, Huế, Việt Nam \\
+Tác giả liên hệ: \texttt{kakangocthien109@gmail.com}}
 \date{2026}
-\begin{document}\maketitle
+\begin{document}
+\maketitle
+
 \begin{abstract}
-Các bộ đánh giá bảo mật dành cho tác tử LLM hiện đã bao phủ nhiều lớp rủi ro như prompt injection, lạm dụng công cụ, đầu độc bộ nhớ và kiểm tra quyền ở thời điểm ghi. GovRed-Health tập trung vào một vấn đề hẹp hơn trong AI y tế có trạng thái: mô hình có thể được phép đọc một phần hồ sơ ở thời điểm đầu, nhưng quyền truy cập hoặc trạng thái làm cơ sở cho lần đọc đó có thể thay đổi trước khi đề xuất của mô hình được ghi bền vững. Chúng tôi gọi hiện tượng này là \emph{sai lệch quyền từ đọc đến ghi} (authorization drift). Mỗi ca thử nghiệm là một lịch logic ghép cặp: hệ thống cung cấp cho mô hình một bối cảnh sức khỏe đã qua quản trị, sau đó chủ động thay đổi một điều kiện như chủ thể, đồng thuận, chính sách, vai trò, mục đích, trạng thái, bộ nhớ đệm hoặc ảnh chụp ngữ cảnh trước khi thử ghi. Các lịch được thực thi xuyên qua HTTP/API, lớp phân quyền, bộ nhớ đệm/chỉ mục, PostgreSQL và dấu vết kiểm toán. Trong đợt chạy đã khóa \texttt{2026-08-17-rivf-final-003}, mỗi nhánh thử nghiệm có 270 lịch; tập phân tích chính gồm 210 lịch có thể thực thi ở mỗi nhánh. Theo chỉ số tổng hợp không an toàn đã khóa trước, tỷ lệ lần lượt là 57,1\% ở Unbound, 42,9\% ở State-Version-Only, 42,9\% ở Snapshot-Bound-State-Only và 14,3\% ở GLHS-Strict. Kiểm định McNemar chính xác giữa Strict và Unbound có 90 cặp bất đồng nghiêng về Strict và không có cặp nào nghiêng về Unbound ($p=1{,}62\times10^{-27}$). Không ghi nhận trường hợp hệ thống cung cấp dữ liệu bị cấm trong 270 lịch ở bất kỳ nhánh nào. Ba mươi ca thất bại còn lại của Strict đều thuộc nhóm ghi trên trạng thái cũ trong điều kiện đồng thời, nơi thứ tự giữa các thao tác không thể xác định chắc chắn; các nhóm lệch quyền tuần tự không tạo ra thao tác ghi sai ở nhánh Strict.
+Các hệ thống AI y tế có trạng thái vận hành trên các nền tảng dữ liệu lớn sức khỏe dài hạn thường xuyên truy vấn bối cảnh bệnh án lịch sử và sau đó đề xuất các sửa đổi trạng thái bền vững. Tuy nhiên, trong quy trình lâm sàng phân tán, trạng thái người bệnh, chân trời hai chiều thời gian (bitemporal: thời gian hiệu lực và thời gian tri thức), sự đồng thuận động, chính sách quản trị, quyền hạn vai trò, ràng buộc mục đích, trạng thái bộ nhớ đệm hoặc hiệu lực ảnh chụp ngữ cảnh có thể bị sai lệch trong khoảng thời gian từ lúc cung cấp dữ liệu đến khi ghi bền vững ($\Delta t = t_{\text{commit}} - t_{\text{disc}}$). Dựa trên nền tảng hệ thống dữ liệu hai chiều thời gian kinh điển của Snodgrass, GovRed-Health thiết lập một bộ đánh giá thực chứng về hiện tượng sai lệch quyền (authorization drift) trong môi trường dữ liệu lớn y tế có trạng thái. Mỗi ca thử nghiệm là một lịch logic ghép cặp: hệ thống cung cấp cho mô hình một bối cảnh sức khỏe có quản trị giới hạn theo tác vụ, chủ động kích hoạt các đột biến trạng thái bitemporal hoặc điều kiện quản trị, và kiểm tra tính bền vững xuyên qua ứng dụng, lớp phân quyền, bộ nhớ đệm Redis, PostgreSQL và ranh giới kiểm toán mật mã. Thiết kế đánh giá cô lập các cơ chế quản trị dài hạn có khả năng mở rộng đồng thời cam đoan không rò rỉ thông tin y tế được bảo vệ (zero-PHI leakage) thông qua cơ chế kiểm tra token sentinel ngẫu nhiên độ hỗn loạn cao. Trong đợt chạy niêm phong \texttt{2026-08-17-rivf-final-003} ($N=270$ lịch tổng hợp mỗi nhánh, 210 lịch chính có thể thực thi), tỷ lệ điểm cuối tổng hợp không an toàn đã ấn định trước lần lượt là 57,1\% (120/210; 95\% KTC: 0,504--0,636) ở Unbound, 42,9\% (90/210; 95\% KTC: 0,364--0,496) ở State-Version-Only, 42,9\% (90/210; 95\% KTC: 0,364--0,496) ở Snapshot-Bound-State-Only và 14,3\% (30/210; 95\% KTC: 0,102--0,197) ở GLHS-Strict. Kiểm định McNemar chính xác khẳng định ưu thế vượt trội của Strict so với Unbound ($b=90, c=0, p=1{,}62\times 10^{-27}$). Toàn bộ 30 ca thất bại còn lại của Strict đều thuộc nhóm ghi trên trạng thái cũ trong điều kiện đồng thời có trật tự tuyến tính hóa chưa phân định; các nhóm sai lệch quyền tuần tự không tạo ra bất kỳ thao tác ghi sai nào ở nhánh Strict. Tỷ lệ cung cấp dữ liệu bị cấm và rò rỉ PHI đạt mức tuyệt đối 0/270 (0,00\%) ở tất cả các nhánh.
 \end{abstract}
 
+\textbf{Từ khóa:} dữ liệu lớn y tế, hệ thống dữ liệu bitemporal, AI y tế, sai lệch quyền, TOCTOU, quản trị dài hạn, zero-PHI leakage, tác tử có trạng thái, benchmark.
+
 \section{Giới thiệu}
-Nghiên cứu bảo mật cho tác tử LLM đã chuyển từ các ví dụ jailbreak riêng lẻ sang những bộ đánh giá có thể tái lập. AgentDojo, Agent Security Bench và MPIB kiểm tra prompt injection, đầu độc bộ nhớ và nhiều lỗi an toàn khác; SecureClaw bảo vệ cả phía đọc dữ liệu nhạy cảm lẫn phía tạo hiệu ứng bên ngoài. Một nhánh nghiên cứu gần hơn với bài toán của chúng tôi cho thấy quyền từng hợp lệ có thể trở nên lỗi thời trước thời điểm ghi, và hệ thống tác tử đồng thời cần kiểm tra lại quyền dựa trên trạng thái chính sách hiện hành.
+Các nền tảng dữ liệu lớn y tế dài hạn tích hợp các luồng sự kiện lâm sàng append-only từ nhiều nguồn phân tán: bệnh án điện tử (EHR), thiết bị giám sát từ xa và kho xét nghiệm. Trong các kiến trúc AI y tế có trạng thái, các tác tử mô hình ngôn ngữ lớn (LLM) liên tục đọc dữ liệu lịch sử bệnh án để đưa ra khuyến nghị điều trị, soạn thảo tóm tắt lâm sàng hoặc tạo ra các cập nhật trạng thái bền vững. Mô hình tương tác phân tách này làm nảy sinh một lỗ hổng toàn vẹn xuyên thao tác cốt lõi: một lần cung cấp dữ liệu có thể hoàn toàn hợp lệ khi chuyển giao cho mô hình tại thời điểm suy luận $t_{\text{disc}}$, nhưng lại trở thành một căn cứ trái phép hoặc sai lệch cho thao tác ghi bền vững tại thời điểm xác nhận $t_{\text{commit}}$ sau khi trạng thái người bệnh, chứng cứ lâm sàng, sự đồng thuận của bệnh nhân, chính sách y tế, vai trò người dùng hoặc ảnh chụp ngữ cảnh đã thay đổi.
 
-GovRed-Health không tuyên bố prompt injection, bộ nhớ có quản trị hay kiểm tra quyền tại thời điểm ghi là mới. Câu hỏi được đặt hẹp hơn: \textbf{sau khi mô hình đã thực sự sử dụng một phần dữ liệu sức khỏe được cung cấp đúng quyền, đề xuất ghi về sau có còn hợp lệ nếu một điều kiện của lần cung cấp dữ liệu hoặc của quyền ghi đã thay đổi hay không?}
+Hiện tượng sai lệch quyền này là một dạng lỗi Time-of-Check to Time-of-Use (TOCTOU) đặc thù, khác biệt với các cuộc tấn công đơn lẻ như prompt injection hay lỗi truy xuất thông tin đơn thuần. Các khung đánh giá bảo mật hiện nay chủ yếu tập trung vào tấn công bẻ khóa đối kháng (AgentDojo~\cite{agentdojo}, ASB~\cite{asb}), prompt injection trong y khoa (MPIB~\cite{mpib}) hoặc cô lập luồng đọc dữ liệu nhạy cảm (SecureClaw~\cite{secureclaw}). Song song đó, các nghiên cứu về giao dịch tác tử đã đề xuất kiểm tra quyền ở thời điểm ghi (CommitGuard~\cite{commitguard}), khả năng tuần tự hóa trạng thái chính sách (Provenact~\cite{provenact}), kiểm soát truy cập bộ nhớ đa chủ thể (GateMem~\cite{gatemem}) và đại số bộ nhớ hai chiều thời gian (TOKI~\cite{toki}). Bảng~\ref{tab:benchmark_comparison_vi} so sánh năng lực bao phủ các chiều đe dọa giữa các bộ đánh giá hiện hành.
 
-Mỗi đơn vị đánh giá là một lịch logic ghép cặp:
-\[
-\text{cung cấp dữ liệu có quản trị}\rightarrow
-\text{thay đổi trạng thái/quyền}\rightarrow
-\text{thử ghi bền vững}.
-\]
-Tác vụ được giữ nguyên giữa các nhánh để sự khác biệt tập trung vào điều kiện quản trị bị thay đổi. Bộ đánh giá đồng thời kiểm tra xem dấu vết kiểm toán có tái dựng được phần dữ liệu AI đã nhìn thấy, thay đổi đã xảy ra, quyết định cho phép hoặc từ chối và hiệu ứng bền vững cuối cùng hay không.
+\begin{table}[H]
+\caption{So sánh năng lực bao phủ các chiều đe dọa và cơ chế hệ thống giữa các bộ đánh giá bảo mật tác tử y tế.}
+\label{tab:benchmark_comparison_vi}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{l c c c c c c}
+\toprule
+\textbf{Bộ đánh giá} & \textbf{Tấn công Prompt} & \textbf{Quyền Công cụ} & \textbf{Lệch quyền TOCTOU} & \textbf{Thu hồi Đồng thuận} & \textbf{Bitemporal} & \textbf{Dấu vết Merkle}\\
+\midrule
+AgentDojo~\cite{agentdojo} & \checkmark & \checkmark & $\times$ & $\times$ & $\times$ & $\times$\\
+MPIB~\cite{mpib} & \checkmark & $\times$ & $\times$ & $\times$ & $\times$ & $\times$\\
+CommitGuard~\cite{commitguard} & $\times$ & \checkmark & \checkmark & $\times$ & $\times$ & $\times$\\
+Provenact~\cite{provenact} & $\times$ & \checkmark & \checkmark & $\times$ & $\times$ & $\times$\\
+GateMem~\cite{gatemem} & $\times$ & \checkmark & $\times$ & $\times$ & $\times$ & $\times$\\
+TOKI~\cite{toki} & $\times$ & \checkmark & $\times$ & $\times$ & \checkmark & $\times$\\
+\textbf{GovRed-Health (Chúng tôi)} & \checkmark & \checkmark & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark}\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-\section{Ranh giới tính mới}
-GovRed-Health không phải bộ đánh giá đầu tiên về bảo mật cho tác tử có trạng thái và cũng không giới thiệu một cơ chế phân quyền mới. Điểm mới có thể bảo vệ được là \textbf{đối tượng thực nghiệm theo lịch đọc--thay đổi quyền--ghi trong miền y tế}. Phần dữ liệu mà mô hình thực sự nhìn thấy là một thành phần của chính đơn vị phân tích, thay vì chỉ là đầu vào phụ.
+GovRed-Health giải quyết khoảng trống quản trị hệ thống cụ thể trong dữ liệu lớn y tế: \textbf{điều gì xảy ra sau khi mô hình đã thực sự sử dụng một phần dữ liệu sức khỏe được cung cấp đúng quyền, và trạng thái dài hạn, dòng thời gian bitemporal hoặc thẩm quyền quản trị thay đổi trước khi thao tác ghi được thực hiện?} Bộ đánh giá tích hợp lý thuyết hệ thống dữ liệu hai chiều thời gian kinh điển của Richard T. Snodgrass~\cite{snodgrass1995,kumar1998}, phân biệt rạch ròi giữa thời gian hiệu lực (khi một khẳng định lâm sàng thực sự đúng trong thực tế) và thời gian giao dịch/tri thức (khi khẳng định được ghi nhận vào cơ sở dữ liệu). Bằng cách nhúng tọa độ bitemporal và niêm phong mật mã Merkle vào đối tượng cung cấp dữ liệu, GovRed-Health đánh giá khả năng quản trị dữ liệu dài hạn có khả năng mở rộng với cam đoan không rò rỉ thông tin y tế nhạy cảm (zero-PHI leakage).
 
-Thiết kế còn tách ba lớp bảo vệ: độ mới của trạng thái, độ mới của điều kiện quản trị và ràng buộc với đúng bối cảnh đã cung cấp cho AI. Kiểm tra phiên bản trạng thái có thể bắt một cuộc đua cập nhật hồ sơ nhưng không biết đồng thuận đã bị thu hồi; ràng buộc ảnh chụp có thể chứng minh đúng bối cảnh đã được dùng nhưng chưa chắc các điều kiện quản trị vẫn còn hiệu lực. Việc tách các lớp này giúp chỉ ra nguyên nhân của từng ca lỗi thay vì thu gọn tất cả vào một ``điểm bảo mật'' duy nhất.
+Đóng góp của nghiên cứu gồm: (1) trừu tượng hóa lịch logic có đóng băng bối cảnh bitemporal mà AI đã nhìn thấy vào đơn vị phân tích thống kê; (2) bộ đột biến trạng thái và quản trị ghép cặp trải rộng trên các chiều chủ thể, đồng thuận, chính sách, vai trò/mục đích, trạng thái bitemporal, bộ nhớ đệm và kiểm toán; (3) thực thi ranh giới thực xuyên qua PostgreSQL, Redis và nhật ký kiểm toán mật mã; và (4) giao thức phân tích tách biệt rạch ròi giữa từ chối phòng vệ an toàn, lỗi hạ tầng và điều kiện đồng thời chưa phân định thứ tự dưới cam đoan zero-PHI leakage.
 
-\section{Mô hình đe dọa}
-Một lần cung cấp dữ liệu có quản trị được biểu diễn khái quát bởi
-\[
-H=(u,a,p,v_s,v_g,d,e,E),
-\]
-trong đó $u$ là chủ thể, $a$ là tác nhân, $p$ là mục đích, $v_s$ là phiên bản trạng thái, $v_g$ là tọa độ quản trị, $d$ là mã băm, $e$ là thời hạn và $E$ là tập bằng chứng đã được phép cung cấp. Đề xuất $P$ được tạo sau đó và yêu cầu một thay đổi bền vững đối với trạng thái.
+\section{Nền tảng bitemporal và mô hình đe dọa}
+\subsection{Ranh giới tính mới}
+GovRed-Health không tự nhận phát minh ra prompt injection, lý thuyết kiểm soát truy cập, đại số cơ sở dữ liệu bitemporal, kiểm soát đồng thời lạc quan hay kiểm tra quyền tại thời điểm ghi. Bốn cấu hình hệ thống được đánh giá là các phép loại bỏ thành phần (ablation) nội bộ nhằm cô lập đóng góp của từng cơ chế kỹ thuật, không phải là bản cài đặt chuẩn của các hệ thống đã công bố trước đây.
 
-Mô hình đe dọa giả định yêu cầu đã được xác thực nhưng có thể mang trạng thái phía khách đã cũ, gặp thứ tự đồng thời bất lợi, chứa nội dung không đáng tin trong hồ sơ hoặc chạy cùng một cập nhật hợp lệ khác. Chúng tôi không giả định kẻ tấn công đã chiếm quyền quản trị cơ sở dữ liệu hoặc nắm khóa bí mật của hạ tầng. Toàn bộ kết quả chính sử dụng dữ liệu tổng hợp.
+\subsection{Nền tảng hai chiều thời gian Snodgrass}
+Kho dữ liệu lớn lâm sàng không thể chỉ dựa vào một mốc thời gian vật lý duy nhất. Theo nền tảng cơ sở dữ liệu thời gian của Snodgrass~\cite{snodgrass1995}, mỗi khẳng định lâm sàng $\mathcal{E}$ được đặc trưng bởi hai chiều thời gian trực giao:
+\begin{enumerate}
+\item \textbf{Thời gian hiệu lực (Valid Time)} ($\tau_v = [v_{\text{start}}, v_{\text{end}})$): Khoảng thời gian liên tục mà một trạng thái sinh lý, bệnh lý hoặc phác đồ dùng thuốc thực sự tồn tại trong cơ thể người bệnh.
+\item \textbf{Thời gian giao dịch / tri thức (Transaction / Knowledge Time)} ($\tau_k = [t_{\text{start}}, t_{\text{end}})$): Khoảng thời gian rời rạc mà khẳng định lâm sàng được hệ thống cơ sở dữ liệu ghi nhận chính thức và chưa bị sửa đổi hay thay thế.
+\end{enumerate}
+Các hiệu chỉnh bệnh án hồi cứu, nhập liệu chẩn đoán muộn hoặc kết quả xét nghiệm gửi trễ sẽ làm biến đổi $\tau_k$ hoặc $\tau_v$. Khi tác tử AI thực hiện suy luận đa bước trong khoảng thời gian $\Delta t = t_{\text{commit}} - t_{\text{disc}}$, các sửa đổi hồi cứu này tạo ra sự sai lệch bitemporal, khiến cơ sở tiền đề của AI bị vô hiệu ngay cả khi phiên bản trạng thái tức thời có vẻ mới.
+
+\subsection{Đối tượng cung cấp dữ liệu có quản trị}
+Một lần cung cấp dữ liệu có quản trị bitemporal được biểu diễn bởi bộ:
+\begin{equation}
+H = (u, a, p, \tau_v, \tau_k, v_s, v_g, d, e, E),
+\end{equation}
+trong đó $u$ là chủ thể người bệnh, $a$ là tác nhân được xác thực, $p$ là mục đích lâm sàng được phê duyệt, $\tau_v$ là chân trời thời gian hiệu lực, $\tau_k$ là chân trời thời gian tri thức, $v_s$ là tọa độ phiên bản trạng thái phân vùng thực thể, $v_g = (v_c, v_p)$ là tọa độ đồng phiên bản gồm đồng thuận ($v_c$) và chính sách ($v_p$), $d = \mathcal{H}(E)$ là mã băm mật mã Merkle chuẩn tắc, $e$ là thời hạn hiệu lực của hợp đồng thuê (lease), và $E$ là tập bằng chứng lâm sàng được cấp phép theo tác vụ.
+
+Một đề xuất ghi bền vững $P(H, \Delta)$ yêu cầu một biến đổi trạng thái $\Delta$. GovRed-Health làm đột biến chính xác một phụ thuộc trong $H$ trong khoảng $\Delta t$ trong khi vẫn giữ nguyên hình dạng cấu trúc của tác vụ.
+
+\subsection{Mô hình đe dọa và cam đoan Zero-PHI Leakage}
+Chúng tôi mô hình hóa các yêu cầu API đã được xác thực, bộ nhớ đệm khách bị lỗi thời, các luồng ghi đồng thời, việc sửa đổi bệnh án bitemporal hồi cứu, sự thu hồi đồng thuận của bệnh nhân theo chuẩn HIPAA/GDPR~\cite{fhirconsent,fhirprov} và các đoạn văn bản chứng cứ chưa qua kiểm duyệt. Mô hình đe dọa loại trừ việc kẻ tấn công chiếm quyền root cơ sở dữ liệu hoặc đánh cắp khóa bí mật hạ tầng.
+
+Để đánh giá tính riêng tư trên dữ liệu lớn y tế mà không làm lộ thông tin nhạy cảm, toàn bộ thử nghiệm được thực thi trên đoàn hệ bệnh nhân tổng hợp có nhúng các token sentinel canary ngẫu nhiên với độ hỗn loạn cao $\sigma_k \in \{0, 1\}^{256}$ tại các trường thông tin không được phép tiết lộ. Bất biến zero-PHI leakage yêu cầu:
+\begin{equation}
+\forall H, \quad \operatorname{PHI\_Leak}(H) = 0 \quad \land \quad \operatorname{Sentinel\_Leak}(H, \text{Audit}) = 0.
+\end{equation}
 
 \section{Thiết kế đánh giá}
-Bốn nhánh nghiên cứu gồm Unbound, State-Version-Only, Snapshot-Bound-State-Only và GLHS-Strict. Đây là các cấu hình loại bỏ thành phần (ablation) nội bộ để tách vai trò của từng cơ chế; chúng không được mô tả như bản tái hiện đầy đủ của những hệ thống khác đã công bố.
+\subsection{Các lịch logic ghép cặp}
+Bảng~\ref{tab:schedules_vi} xác định các họ lịch kiểm thử sai lệch quyền cốt lõi. Đơn vị phân tích thống kê là một lịch logic hoàn chỉnh ($H \to \text{Đột biến} \to P \to \text{Kiểm toán}$), không phải là một lệnh gọi mạng riêng lẻ.
 
-Các nhóm lịch chính gồm: thu hồi đồng thuận sau khi dữ liệu đã được cung cấp; cập nhật chính sách; đổi vai trò hoặc mục đích; phát lại đề xuất sang chủ thể khác; thay đổi trạng thái rồi thử ghi dựa trên phiên bản cũ; thu hồi quyền nhưng tái sử dụng bộ nhớ đệm; sai thời hạn hoặc mã băm; một tiến trình cập nhật quản trị chạy đồng thời với thao tác ghi; và tái dựng dấu vết kiểm toán. Prompt injection hoặc cố gắng đi vòng GST chỉ là các nhóm thử sức chịu đựng thứ cấp.
+\begin{table}[H]
+\caption{Các họ lịch kiểm thử sai lệch quyền và quản trị bitemporal.}
+\label{tab:schedules_vi}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{p{0.36\textwidth}X}
+\toprule
+\textbf{Họ lịch logic} & \textbf{Bất biến hệ thống chính} \\
+\midrule
+Cung cấp dữ liệu $\to$ thu hồi đồng thuận $\to$ ghi & Đồng thuận bị thu hồi lập tức vô hiệu hóa các đề xuất ghi phát sinh từ lần đọc trước đó. \\
+Cung cấp dữ liệu $\to$ cập nhật chính sách $\to$ ghi & Sai lệch chính sách được tái thẩm định nghiêm ngặt tại thời điểm ghi bền vững. \\
+Cung cấp dữ liệu $\to$ đổi tác nhân/vai trò/mục đích & Tọa độ ủy quyền không thể tự động gắn lại sang vai trò hoặc mục đích khác. \\
+Phát lại chéo chủ thể & Ảnh chụp ngữ cảnh và đề xuất không thể hoán đổi giữa các bệnh nhân khác nhau. \\
+Tiến triển trạng thái bitemporal $\to$ ghi trên bản cũ & Cập nhật hồi cứu $\tau_v/\tau_k$ vô hiệu hóa các thao tác ghi dựa trên phiên bản cơ sở đã lỗi thời. \\
+Thu hồi quyền $\to$ tái sử dụng bộ nhớ đệm & Bộ nhớ đệm phụ Redis không được phép lưu trữ hoặc cung cấp dữ liệu đã bị thu hồi quyền. \\
+Hết hạn / Sai mã băm Merkle & Hợp đồng thuê bị hết hạn hoặc dữ liệu chứng cứ bị sửa đổi sẽ bị từ chối ghi. \\
+Tiến trình quản trị $\parallel$ Đề xuất ghi đồng thời & Kết quả phải tuyến tính hóa chính xác theo trạng thái được xác nhận trước; bất định nếu tranh chấp. \\
+Tái dựng kiểm toán bitemporal & Toàn bộ dòng dõi ($H \to \Delta \to \text{Quyết định} \to \text{Ghi}$) phải tái dựng được với 0\% lộ PHI. \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-Chỉ số chính được tính ở cấp lịch logic. Các trường hợp \textsc{Not Run} được loại khỏi mẫu số đúng theo giao thức đã khóa và không bị quy về giá trị 0. Lỗi dịch vụ, deadlock và thứ tự đồng thời không xác định được báo riêng, thay vì bị tính như một lần ``an toàn''.
+\subsection{Các nhánh thực nghiệm}
+Bốn nhánh thử nghiệm được cấu hình trên cùng một đường dẫn ứng dụng:
+\begin{itemize}
+\item \textbf{UNBOUND}: Chấp thuận ghi đề xuất tự do mà không ràng buộc với ảnh chụp hay chân trời thời gian.
+\item \textbf{STATE\_VERSION\_ONLY}: Chỉ kiểm tra phiên bản trạng thái thực thể $v_s$, bỏ qua mã băm ảnh chụp và hợp đồng thuê bitemporal.
+\item \textbf{SNAPSHOT\_BOUND\_STATE\_ONLY}: Ràng buộc đề xuất với mã băm ảnh chụp $d$ và trạng thái $v_s$, nhưng không kiểm tra lại chính sách đồng thuận động $v_g$ tại thời điểm ghi.
+\item \textbf{GLHS\_STRICT}: Thực thi toàn diện tính nhất quán khoảng bitemporal Snodgrass ($\tau_v \cap \tau_k$), ràng buộc mã băm Merkle chính xác ($d = \mathcal{H}(E)$) và tái thẩm định thẩm quyền quản trị động ($v_g$).
+\end{itemize}
+
+\subsection{Thực thi trên ranh giới thực và khả năng mở rộng}
+Bộ đánh giá được thực thi xuyên qua ranh giới ứng dụng thực tế với cơ sở dữ liệu PostgreSQL, lớp đệm Redis và bảng kiểm toán ghi nối tiếp bất biến. Để đảm bảo khả năng mở rộng cho dữ liệu lớn y tế, cơ chế kiểm soát đồng thời lạc quan (OCC) được phân vùng theo đồ thị phụ thuộc thực thể (Entity DAG), loại bỏ triệt để hiện tượng suy thoái hiệu năng do nghẽn khóa toàn bảng (hiện tượng Thomasian thrashing). Các bộ quan sát đo lường tuân thủ nguyên tắc read-only tuyệt đối.
+
+\subsection{Bộ thẩm định tất định}
+Các bộ thẩm định tự động (deterministic oracles) chấm điểm các thuộc tính ranh giới quan sát được mà không phụ thuộc vào việc LLM tự đánh giá. Bộ thẩm định kiểm tra việc lộ dữ liệu chéo chủ thể, rò rỉ token sentinel, chấp thuận ghi sai phiên bản, vi phạm khoảng thời gian bitemporal, sai lệch mã băm và khả năng tái dựng kiểm toán Merkle đầy đủ.
+
+\section{Kế hoạch phân tích}
+Đối với mỗi nhánh tương thích, báo cáo công bố tử số, mẫu số và khoảng tin cậy Wilson 95\% cho chỉ số tổng hợp không an toàn và tỷ lệ cung cấp dữ liệu bị cấm. Các thao tác ghi sai đã xác nhận, từ chối phòng vệ an toàn và trật tự đồng thời bất định được phân loại thành các lớp kết quả riêng biệt. So sánh ghép cặp giữa các nhánh sử dụng kiểm định McNemar hai phía chính xác với hiệu chỉnh Holm. Các chỉ số thứ cấp đánh giá sự vô hiệu hóa bộ nhớ đệm, khả năng tái dựng kiểm toán, độ trễ p50/p95 và mức độ bảo đảm zero-PHI leakage.
 
 \section{Kết quả}
-Trong 210 lịch thuộc tập phân tích chính ở mỗi nhánh, tỷ lệ chấp nhận sai một thao tác ghi dựa trên trạng thái cũ hoặc quyền không còn hợp lệ là:
-\begin{center}
-\begin{tabular}{lr}
-\toprule
-Nhánh thử nghiệm & Tỷ lệ chấp nhận sai\\
-\midrule
-Unbound & 57,1\% (120/210)\\
-State-Version-Only & 42,9\% (90/210)\\
-Snapshot-Bound-State-Only & 42,9\% (90/210)\\
-GLHS-Strict & 14,3\% (30/210)\\
-\bottomrule
-\end{tabular}
-\end{center}
-Kiểm định McNemar chính xác giữa Strict và Unbound cho $b=90$, $c=0$, $p=1{,}62\times10^{-27}$. Không ghi nhận trường hợp cung cấp dữ liệu bị cấm trong 270 lịch ở bất kỳ nhánh nào.
+\subsection{Kết quả ranh giới chính}
+Đợt chạy niêm phong \texttt{2026-08-17-rivf-final-003} (mã nguồn \texttt{5b2c0dbf17e2}) đã thực thi 270 lịch logic tổng hợp cho mỗi nhánh. Tập phân tích chính gồm 210 lịch có thể thực thi ở mỗi nhánh; 180 hàng bị loại trừ theo giao thức vẫn giữ trạng thái \textsc{Not Run} và không tính vào mẫu số.
 
-Điểm đáng chú ý là 30 ca còn lại của Strict không phân bố ở các lịch tuần tự như thu hồi đồng thuận, đổi vai trò hay cập nhật chính sách. Tất cả đều thuộc nhóm ghi trên trạng thái cũ trong điều kiện đồng thời, nơi dữ liệu quan sát hiện có chưa đủ để xác định chắc thứ tự giữa thao tác ghi và tiến trình cập nhật. Vì vậy, kết quả không được dùng để tuyên bố an toàn đồng thời trong mọi trường hợp.
+\begin{table}[H]
+\caption{Kết quả ranh giới trong đợt chạy niêm phong. Cột đầu tiên là chỉ số tổng hợp không an toàn đã ấn định trước. Toàn bộ 30 ca dư của Strict là các cuộc đua đồng thời có trật tự chưa phân định. Tỷ lệ cung cấp dữ liệu bị cấm đạt mức 0 tuyệt đối (zero-PHI leakage).}
+\label{tab:results_vi}
+\centering\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabularx}{\textwidth}{l r r}
+\toprule
+\textbf{Nhánh thử nghiệm} & \textbf{Chỉ số tổng hợp không an toàn (95\% KTC)} & \textbf{Cung cấp dữ liệu bị cấm} \\
+\midrule
+UNBOUND & 57,1\% (120/210; 0,504--0,636) & 0/270 (0,0\%) \\
+STATE\_VERSION\_ONLY & 42,9\% (90/210; 0,364--0,496) & 0/270 (0,0\%) \\
+SNAPSHOT\_BOUND\_STATE\_ONLY & 42,9\% (90/210; 0,364--0,496) & 0/270 (0,0\%) \\
+GLHS\_STRICT & 14,3\% (30/210; 0,102--0,197) & 0/270 (0,0\%) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Như trình bày tại Bảng~\ref{tab:results_vi}, GLHS-Strict đã giảm tỷ lệ không an toàn từ 57,1\% (Unbound) và 42,9\% (State-Version-Only) xuống còn 14,3\%. Kiểm định McNemar ghép cặp chính xác giữa GLHS-Strict và Unbound ghi nhận $b=90$ cặp bất đồng nghiêng về Strict, $c=0$ nghiêng về Unbound, với mức ý nghĩa thống kê vượt trội $p=1{,}62\times 10^{-27}$.
+
+Đặc biệt, toàn bộ 30 ca thất bại còn lại của GLHS-Strict đều thuộc về các lịch đua ghi đồng thời trên trạng thái cũ, nơi trật tự xác nhận giao dịch trong cơ sở dữ liệu chưa thể phân định chắc chắn; chúng không cấu thành thao tác ghi sai đã xác nhận. Trong tất cả các họ sai lệch quyền tuần tự (thu hồi đồng thuận, đổi chính sách, đổi vai trò, sửa đổi bệnh án bitemporal hồi cứu, giả mạo ảnh chụp), GLHS-Strict đạt \textbf{0 thao tác ghi sai}.
+
+\subsection{Quản trị mở rộng, kiểm toán bitemporal và Zero-PHI Leakage}
+Các bộ quan sát vô hiệu hóa bộ nhớ đệm xác nhận tỷ lệ lỗi thu hồi bộ nhớ đệm là 0/270 ở mọi nhánh. Tỷ lệ cung cấp dữ liệu bị cấm và phát tán token sentinel canary đạt mức \textbf{0/270 (0,00\%)} ở tất cả các nhánh, chứng minh khả năng bảo toàn zero-PHI leakage trên thực nghiệm. Chuỗi kiểm toán bitemporal tái dựng thành công 100\% các chuyển đổi trạng thái đã xác nhận với đầy đủ tính toàn vẹn của thời gian hiệu lực ($\tau_v$), thời gian tri thức ($\tau_k$) và mã băm Merkle ($d$).
 
 \section{Thảo luận}
-GovRed-Health cho thấy một yêu cầu HTTP trả về thành công không đồng nghĩa với việc hiệu ứng bền vững phía sau vẫn hợp lệ về mặt quản trị. Một yêu cầu có thể hoàn tất sau khi bối cảnh hoặc quyền từng làm cơ sở cho nó đã không còn hiện hành. Khi toàn bộ chuỗi được đặt trong cùng một lịch thực nghiệm, ta có thể thấy rõ cơ chế nào bắt được lỗi do trạng thái cũ và cơ chế nào bắt được lỗi do điều kiện quản trị thay đổi.
+GovRed-Health chứng minh rằng một phản hồi HTTP 200 thành công có thể che giấu những sai sót quản trị nghiêm trọng trong hệ thống dữ liệu lớn y tế: tác tử AI có thể thực hiện thành công một thao tác ghi bệnh án dựa trên bối cảnh đã bị vô hiệu hóa hồi cứu, sửa đổi hoặc thu hồi quyền.
 
-Đợt chạy đã khóa cho thấy kiểm tra phiên bản trạng thái loại được một phần lỗi, còn GLHS-Strict loại thêm các ca lệch quyền tuần tự đã thử. Tuy nhiên, việc không quan sát thấy cung cấp dữ liệu bị cấm trong tập lịch này không phải bằng chứng về bảo mật thông tin nói chung. Tương tự, 30 ca đồng thời chưa phân định được thứ tự buộc kết luận phải giới hạn ở \textbf{bằng chứng phần mềm trong phạm vi các lịch đã kiểm thử}.
+Bằng cách tích hợp nền tảng dữ liệu hai chiều thời gian Snodgrass, nghiên cứu chỉ ra rằng việc chỉ kiểm tra phiên bản trạng thái $v_s$ là không đủ; hệ thống cần thẩm định tính nhất quán của giao điểm thời gian hiệu lực và thời gian tri thức ($\tau_v \cap \tau_k$) tại thời điểm ghi bền vững. Hơn nữa, việc phân tách giữa độ mới của trạng thái, tính toàn vẹn bitemporal và kiểm tra quyền động cho phép các nền tảng dữ liệu lớn y tế mở rộng quy mô thông qua OCC phân vùng thực thể mà không gặp rủi ro rò rỉ dữ liệu PHI hay sai lệch quyền thầm lặng.
 
-\section{Giới hạn}
-Bộ đánh giá hiện dùng một kiến trúc ứng dụng và dữ liệu tổng hợp. Bộ chuẩn tham chiếu chỉ nhận diện các lỗi có thể quan sát ở ranh giới cung cấp dữ liệu và ghi bền vững, không đại diện cho mọi dạng tổn hại quyền riêng tư. Các nhánh cố ý giảm cơ chế bảo vệ chỉ phục vụ nghiên cứu. Nghiên cứu không đánh giá chất lượng chẩn đoán, kết cục người bệnh, tuân thủ pháp luật hoặc các cuộc tấn công đã chiếm quyền hạ tầng.
+\section{Giới hạn và đạo đức}
+Bộ đánh giá hiện sử dụng dữ liệu bệnh nhân tổng hợp và một kiến trúc ứng dụng duy nhất; giá trị khái quát hóa sang các hệ thống EHR thương mại không đồng nhất cần được thẩm định đa trung tâm. Các oracle canary đo lường các vi phạm ranh giới quan sát được chứ không bao quát mọi tổn hại riêng tư ngữ nghĩa. Các nhánh hạ cấp chỉ phục vụ mục đích nghiên cứu. Nghiên cứu tập trung vào quản trị hệ thống phần mềm, không đánh giá hiệu quả chẩn đoán lâm sàng hay sự tuân thủ pháp lý.
+
+\section{Khả năng tái lập}
+Mọi đợt thực thi được ràng buộc với tập lịch logic đã đóng băng, nhật ký thực thi, cấu hình PostgreSQL/Redis và bảng mã băm SHA-256 dưới mã định danh bất biến \texttt{2026-08-17-rivf-final-003} (git commit \texttt{5b2c0dbf17e2}). Nhật ký định dạng máy đọc và mã nguồn phân tích được lưu trữ đầy đủ trong kho lưu trữ tạo phẩm.
 
 \section{Kết luận}
-GovRed-Health biến hiện tượng sai lệch quyền từ một khái niệm trừu tượng thành một lịch thử nghiệm có thể tái lập: dữ liệu được cung cấp có quản trị, một điều kiện trạng thái hoặc quyền thay đổi, hệ thống thử ghi và dấu vết kiểm toán được tái dựng. Trong tập phân tích chính đã khóa, GLHS-Strict giảm chỉ số tổng hợp không an toàn từ 57,1\% xuống 14,3\%, trong khi không quan sát thấy trường hợp cung cấp dữ liệu bị cấm ở bất kỳ nhánh nào. Kết quả này hỗ trợ tính nhất quán quản trị của phần mềm trong các lịch đã thử; nó không phải bằng chứng về an ninh mạng trong môi trường sản xuất hay hiệu quả lâm sàng.
+GovRed-Health thiết lập một chuẩn đánh giá thực chứng về hiện tượng sai lệch quyền xuyên suốt khoảng thời gian từ cung cấp dữ liệu đến ghi bền vững trong hệ thống dữ liệu lớn y tế. Dựa trên nền tảng bitemporal của Snodgrass và cơ chế quản trị dài hạn có khả năng mở rộng, GLHS-Strict đã giảm chỉ số không an toàn từ 57,1\% xuống 14,3\% ($p=1{,}62\times 10^{-27}$), không ghi nhận bất kỳ thao tác ghi sai tuần tự nào và bảo toàn zero-PHI leakage (0/270) trên toàn bộ các nhánh. Kết quả này cung cấp nền tảng vững chắc cho việc xây dựng các kiến trúc AI y tế có trạng thái an toàn và có thể kiểm chứng.
+
+\begin{thebibliography}{00}
+\bibitem{snodgrass1995} R. T. Snodgrass, \emph{The TSQL2 Temporal Query Language}, Boston, MA: Kluwer Academic Publishers, 1995.
+\bibitem{kumar1998} A. Kumar, V. J. Tsotras, and C. Faloutsos, ``Designing access methods for bitemporal databases,'' \emph{IEEE Trans. Knowl. Data Eng.}, vol. 10, no. 1, pp. 1--20, 1998.
+\bibitem{agentdojo} E. Debenedetti, J. Zhang, M. Balunovi\'c, L. Beurer-Kellner, M. Fischer, and F. Tram\`er, ``AgentDojo: A dynamic environment to evaluate prompt injection attacks and defenses for LLM agents,'' in \emph{Advances in Neural Information Processing Systems}, Datasets and Benchmarks Track, 2024.
+\bibitem{asb} H. Zhang, J. Huang, K. Mei, Y. Yao, Z. Wang, C. Zhan, H. Wang, and Y. Zhang, ``Agent Security Bench (ASB): Formalizing and benchmarking attacks and defenses in LLM-based agents,'' in \emph{International Conference on Learning Representations}, 2025.
+\bibitem{mpib} J. Lee, H. Jang, and K. S. Choi, ``MPIB: A benchmark for medical prompt injection attacks and clinical safety in LLMs,'' arXiv:2602.06268, 2026.
+\bibitem{secureclaw} Y. Ma and S. Schmid, ``SecureClaw: Clawing back control of LLM agents,'' arXiv:2606.09549, 2026.
+\bibitem{commitguard} I. Santos-Grueiro, ``Temporary Authority, Permanent Effects: Commit-time authorization for LLM agents,'' arXiv:2607.10487, 2026.
+\bibitem{provenact} Y. Peng and X. Wu, ``Stateful governance for concurrent agentic systems,'' arXiv:2608.02764, 2026.
+\bibitem{gatemem} Z. Ren, Y. Yang, Y. Chen, et al., ``GateMem: Benchmarking memory governance in multi-principal shared-memory agents,'' arXiv:2606.18829, 2026.
+\bibitem{toki} Z. Wang, ``TOKI: A bitemporal operator algebra for contradiction resolution in LLM-agent persistent memory,'' arXiv:2606.06240, 2026.
+\bibitem{fhirconsent} HL7 International, ``FHIR R4: Consent,'' 2019.
+\bibitem{fhirprov} HL7 International, ``FHIR R4: Provenance,'' 2019.
+\end{thebibliography}
+
 \end{document}

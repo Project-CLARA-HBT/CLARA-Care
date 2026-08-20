@@ -53,6 +53,37 @@ class TestSpecialDistributions:
             z = norm_ppf(p)
             assert norm_cdf(z) == pytest.approx(p, abs=1e-10)
 
+    def test_incomplete_beta_functions(self) -> None:
+        # beta(1, 1) is uniform: I_x(1, 1) = x
+        assert betainc(1.0, 1.0, 0.0) == 0.0
+        assert betainc(1.0, 1.0, 1.0) == 1.0
+        assert betainc(1.0, 1.0, 0.42) == pytest.approx(0.42, abs=1e-10)
+
+        # Symmetric beta(2, 2) CDF at 0.5 is 0.5
+        assert betainc(2.0, 2.0, 0.5) == pytest.approx(0.5, abs=1e-10)
+
+        # Continued fraction evaluation
+        cf_val = betacf(1.0, 1.0, 0.5)
+        assert cf_val > 0.0
+
+        # Input error validation
+        with pytest.raises(ValueError, match="beta parameters must be positive"):
+            betacf(0.0, 1.0, 0.5)
+        with pytest.raises(ValueError, match="x must be in"):
+            betacf(1.0, 1.0, 1.5)
+        with pytest.raises(ValueError, match="beta parameters a and b must be positive"):
+            betainc(-1.0, 1.0, 0.5)
+        with pytest.raises(ValueError, match="x must be in"):
+            betainc(1.0, 1.0, -0.1)
+
+    def test_student_t_pdf(self) -> None:
+        # t-distribution PDF for df=1 is Cauchy: 1 / (pi * (1 + t^2))
+        assert t_pdf(0.0, 1) == pytest.approx(1.0 / math.pi, abs=1e-10)
+        assert t_pdf(1.0, 1) == pytest.approx(0.5 / math.pi, abs=1e-10)
+
+        with pytest.raises(ValueError, match="df must be positive"):
+            t_pdf(0.0, 0.0)
+
     def test_student_t_distribution(self) -> None:
         # Check symmetry at 0
         assert t_cdf(0.0, 10) == pytest.approx(0.5, abs=1e-12)
@@ -279,3 +310,59 @@ class TestGLHSStudyVerification:
         assert r"68.2\%" in latex_str
         assert r"100.0\%" in latex_str
         assert r"1.73 \times 10^{-77}" in latex_str
+
+        # Verify writing to file
+        json_file = tmp_path / "study_tost.json"
+        tex_file = tmp_path / "study_tost.tex"
+        json_file.write_text(json_str, encoding="utf-8")
+        tex_file.write_text(latex_str, encoding="utf-8")
+        assert json_file.exists()
+        assert tex_file.exists()
+
+    def test_dataclasses_direct_instantiation_and_to_dict(self) -> None:
+        tost_res = TOSTResult(
+            mean_diff=-0.0078125,
+            delta=0.02,
+            se=0.002296,
+            df=383.0,
+            t1=5.3072,
+            p1=9.44e-8,
+            t2=-12.1114,
+            p2=4.15e-29,
+            p_tost=9.44e-8,
+            alpha=0.05,
+            is_equivalent=True,
+            ci_90=(-0.0116, -0.0040),
+            ci_95=(-0.0123, -0.0033),
+            ci_95_contained=True,
+            test_type="custom",
+        )
+        d = tost_res.to_dict()
+        assert d["is_equivalent"] is True
+        assert d["test_type"] == "custom"
+        assert d["ci_95"] == [-0.0123, -0.0033]
+
+        sys_metrics = SystemsParetoMetrics()
+        sys_dict = sys_metrics.to_dict()
+        assert sys_dict["token_reduction_pct"] == 87.4
+        assert sys_dict["phi_over_disclosure_pct"] == 0.0
+
+        study = GLHSStudyResult(
+            n_subjects=384,
+            reference_condition="ref",
+            comparator_condition="comp",
+            wins=70,
+            losses=73,
+            ties=241,
+            legacy_sign_test_p=0.8672,
+            equivalence_margin_delta=0.02,
+            assumed_sigma=0.045,
+            significance_level_alpha=0.05,
+            tost=tost_res,
+            statistical_power_exact=0.99987,
+            statistical_power_shifted_t=0.99987,
+            statistical_power_normal=0.99987,
+            systems_metrics=sys_metrics,
+        )
+        s_dict = study.to_dict()
+        assert s_dict["conclusion"] == "STATISTICAL_EQUIVALENCE_ESTABLISHED_WITH_PARETO_DOMINANT_SYSTEMS_PROFILE"

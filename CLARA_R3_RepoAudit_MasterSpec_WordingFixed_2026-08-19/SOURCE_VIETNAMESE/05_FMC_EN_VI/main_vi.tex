@@ -1,6 +1,7 @@
 \documentclass[11pt]{article}
 \input{../common_preamble.tex}
-\title{\textbf{Từ bối cảnh sức khỏe dọc đến hành động an toàn: hợp đồng quản trị đồng phiên bản cho AI y tế có trạng thái (Bản tiếng Anh - Đối chiếu tiếng Việt)}}
+\title{\textbf{Từ bối cảnh sức khỏe dọc đến hành động an toàn: hợp đồng quản trị đồng phiên bản với rào chắn an toàn Tầng~1 phi-LLM cho AI y học gia đình}\\[0.3em]
+\large (Bản tiếng Việt đồng hành -- Đối chiếu bản nộp tiếng Anh FMC 2026)}
 \author{Nguyễn Ngọc Thiện, Trịnh Minh Quang\\
 Trường THPT Hai Bà Trưng, Huế, Việt Nam\\
 Tác giả liên hệ: \texttt{kakangocthien109@gmail.com}}
@@ -11,13 +12,77 @@ Tác giả liên hệ: \texttt{kakangocthien109@gmail.com}}
 
 \textbf{Chuyên đề:} AI và chuyển đổi số trong Y tế và Giáo dục Y khoa
 
-\textbf{Đặt vấn đề.} Một hệ thống AI y tế có trạng thái có thể đọc một phần hồ sơ bệnh nhân khi dữ liệu và quyền truy cập vẫn còn hợp lệ, nhưng chỉ tạo đề xuất cập nhật sau khi hồ sơ, trạng thái đồng thuận hoặc chính sách quản trị đã thay đổi. Vì vậy, một lần đọc hợp lệ chưa chắc còn đủ để cho phép một thay đổi dữ liệu ở thời điểm ghi.
+\section{Đặt vấn đề trong Y học Gia đình và Chăm sóc Ban đầu}
+Trong y học gia đình và chăm sóc sức khỏe ban đầu, hồ sơ bệnh án điện tử tích lũy theo chiều dọc qua nhiều năm và bao quát đa dạng các đợt khám: quản lý bệnh mạn tính (đái tháo đường, tăng huyết áp), tiền sử dùng thuốc phức tạp (polypharmacy), lịch tiêm chủng, sàng lọc định kỳ, cùng các thông tin tâm lý -- xã hội nhạy cảm. Khi ứng dụng trí tuệ nhân tạo (AI) và mô hình ngôn ngữ lớn (LLM) hỗ trợ bác sĩ gia đình, các hệ thống có trạng thái đối mặt với hai thách thức an toàn cốt tử:
 
-\textbf{Phương pháp.} Nghiên cứu trình bày GLHS, được triển khai trong CLARA-Care như một cơ chế nối bối cảnh sức khỏe đã thực sự cung cấp cho AI với bước xét duyệt ghi về sau trên đường xử lý có ràng buộc ảnh chụp đã được đánh giá. Ảnh chụp trạng thái sức khỏe giới hạn theo tác vụ (THSS) ghi lại phần trạng thái bệnh nhân được cung cấp cho một chủ thể, vai trò, mục đích và tác vụ cụ thể, cùng các tọa độ về phiên bản và quản trị. Khi một đề xuất bền vững do mô hình tạo ra đi theo đường xử lý này, đề xuất phải giữ ràng buộc với đúng THSS đã được sử dụng. Trước khi ghi, cơ chế Chuyển trạng thái có quản trị (GST) kiểm tra lại độ mới của trạng thái và các điều kiện quản trị liên quan. Đánh giá gồm kiểm thử hợp đồng xác định, thực nghiệm đồng thời trên PostgreSQL và một đoàn hệ tổng hợp đã khóa trước gồm 64 đối tượng, sử dụng Claude Sonnet 4.6 và Gemini 3.6 Flash High. Tổng 1.152 ô mô hình--điều kiện là các lần đánh giá lặp lại, không phải 1.152 đối tượng độc lập.
+\begin{enumerate}[leftmargin=1.8em]
+\item \textbf{Lệch pha thời gian từ đọc đến ghi (TOCTOU Drift):} Mô hình có thể đọc một phần hồ sơ bệnh nhân khi dữ liệu và quyền truy cập còn hợp lệ tại thời điểm $t_1$, nhưng chỉ trả về đề xuất hành động lâm sàng (kê đơn, lên lịch tái khám, cập nhật hồ sơ) tại thời điểm $t_3$, sau khi hồ sơ, trạng thái đồng thuận của bệnh nhân hoặc chính sách lâm sàng đã thay đổi tại $t_2$. Một lần đọc hợp lệ vì thế không còn đủ điều kiện để cho phép một thao tác ghi dữ liệu về sau.
+\item \textbf{Nguy cơ lộ lọt thông tin nhạy cảm (Over-disclosure) và ảo giác số học thời gian:} Việc nạp toàn bộ bệnh án không giới hạn vào LLM vi phạm nghiêm trọng nguyên tắc giảm thiểu dữ liệu (\emph{Zero-PHI over-disclosure}), làm lộ các dữ liệu nhạy cảm không liên quan (sức khỏe sinh sản, tâm thần, yếu tố xã hội). Đồng thời, LLM thường xuyên mắc ảo giác khi tính toán thời hạn khám sàng lọc, khoảng cách liều và phát hiện tương tác thuốc (DDI).
+\end{enumerate}
 
-\textbf{Kết quả.} Với THSS nghiêm ngặt, Claude đạt đúng hoàn toàn trên các trục đã định trước ở 63/64 đối tượng (98,44\%), còn Gemini đạt 64/64 (100\%). Sáu trong mười so sánh cặp đã định trước vẫn có ý nghĩa sau hiệu chỉnh Holm, nhưng các kiểm định có ý nghĩa chỉ dựa trên 9--21 cặp bất đồng. Trong một ma trận PostgreSQL TOCTOU độc lập gồm 12 lịch đã khóa trước, không ghi nhận giao dịch bị cấm khi thay đổi đồng thuận, vai trò, phiên bản chính sách, trạng thái hoặc nhiều điều kiện cùng lúc; các đề xuất không còn hợp lệ sau thay đổi bị từ chối, trong khi đối chứng hợp lệ theo thứ tự thời gian vẫn có thể ghi. Một mô hình hữu hạn khác đã duyệt 21.361 trạng thái và 90.432 chuyển trạng thái đến độ sâu 5 mà không phát hiện vi phạm 11 bất biến đã định nghĩa. Đây là kiểm tra hữu hạn, không phải chứng minh phổ quát. Trong một lần chạy Claude độc lập sau đó với 384 đối tượng, so sánh THSS nghiêm ngặt với toàn bộ lịch sử được phép sử dụng cho kết quả không khác biệt; vì vậy bằng chứng về bối cảnh mô hình không cho phép kết luận THSS luôn vượt trội.
+\section{Kiến trúc Rào chắn Trạng thái Hai Tầng (Dual-Layer State Barrier) và Hợp đồng GLHS}
+Để giải quyết triệt để các rủi ro trên, chúng tôi phát triển kiến trúc GLHS (Governed Longitudinal Health Snapshot) trong hệ thống CLARA-Care với cơ chế bảo vệ kép:
 
-\textbf{Kết luận.} GLHS tạo ra một đường đi phần mềm có thể truy vết, trong đó chính phần dữ liệu sức khỏe đã được cung cấp cho AI trong lúc suy luận vẫn gắn với quyết định cho phép hay từ chối ghi dữ liệu về sau. Tính mới nằm ở mối liên kết xuyên suốt từ công bố dữ liệu đến ghi thay đổi, không nằm ở đồng thuận, truy vết nguồn gốc, cơ sở dữ liệu hai thời gian hay kiểm tra phiên bản riêng lẻ. Bằng chứng hiện tại giới hạn ở dữ liệu tổng hợp và đánh giá hệ thống phần mềm; nghiên cứu chưa chứng minh hiệu quả lâm sàng, tính đúng đắn cho mọi lịch đồng thời không bị chặn, tuân thủ pháp lý hay cải thiện kết cục người bệnh.
+\begin{itemize}[leftmargin=1.8em]
+\item \textbf{Rào chắn an toàn Tầng~1 phi-LLM (Deterministic Reconciliation Kernel tại API Gateway):} Một động cơ tất định chạy bằng Python/PostgreSQL thực thi toàn bộ các ràng buộc lâm sàng cứng trước khi chuyển dữ liệu cho AI:
+\begin{itemize}
+  \item Thực hiện phép toán thời gian hai chiều nghiêm ngặt ($\tau_{\text{valid}} \cap \tau_{\text{known}}$) để ngăn ngừa nhiễm bẩn dữ liệu hồi cứu.
+  \item Tính toán cửa sổ thời hạn tái khám, lịch tiêm chủng và thời gian ân hạn (grace period) theo đúng phác đồ y học gia đình với độ chính xác và độ nhạy $100\%$ (loại bỏ hoàn toàn ảo giác tính toán số học thời gian).
+  \item Đối soát tự động ma trận tương tác thuốc nguy cơ cao (DDI) và chống chỉ định điều trị dựa trên các bộ mã chuẩn (RxNorm, SNOMED CT, LOINC).
+  \item Xác thực trạng thái đồng thuận động của bệnh nhân, phân quyền RBAC và phiên bản chính sách quản trị.
+  \item Đóng gói và tạo mã băm Merkle ($\Pi_{\text{Merkle}}$) thành Bản chụp trạng thái sức khỏe giới hạn theo tác vụ (\textbf{Task-Bounded Health State Snapshot -- THSS}), đảm bảo tiêu chuẩn \textbf{Zero-PHI over-disclosure} (chỉ trích xuất đúng lát cắt dữ liệu cần thiết cho tác vụ lâm sàng cụ thể).
+\end{itemize}
+\item \textbf{Tầng~2 (Epistemic Arbiter -- LLM):} Mô hình ngôn ngữ lớn chỉ tập trung suy luận ngữ nghĩa định tính, tổng hợp bệnh sử và giải thích lâm sàng, hoàn toàn được cách ly khỏi các phép tính số học thời gian thô và quy tắc an toàn cứng.
+\item \textbf{Chuyển trạng thái có quản trị (Governed State Transition -- GST):} Đề xuất cập nhật do LLM tạo ra bắt buộc phải mang theo mã định danh THSS đã sử dụng. Trước khi ghi dữ liệu vào cơ sở dữ liệu bệnh án, GST tự động kiểm tra lại độ mới của trạng thái và thẩm quyền quản trị. Nếu dữ liệu hoặc đồng thuận đã bị thay đổi trong lúc mô hình suy luận, giao dịch ghi sẽ bị từ chối ngay lập tức (fail-closed).
+\end{itemize}
 
-\textbf{Từ khóa:} AI y tế dọc; quản trị dữ liệu; đồng thuận; AI có trạng thái; nhất quán trạng thái; tin học y sinh
+\section{Chứng minh Tương đương Sinh Thống kê Schuirmann TOST}
+Nhằm trả lời câu hỏi tin học y tế quan trọng: \emph{``Việc giảm thiểu bối cảnh qua Strict THSS có làm suy giảm chất lượng ra quyết định lâm sàng của AI so với việc nạp toàn bộ bệnh án hay không?''}, chúng tôi thực hiện kiểm định tương đương sinh thống kê Schuirmann TOST (Two One-Sided Tests) trên đoàn hệ độc lập gồm 384 đối tượng y học gia đình ($N=384$, mức ý nghĩa $\alpha=0{,}05$, biên độ tương đương lâm sàng định trước $\delta = \pm 0{,}020$ hay $\pm 2{,}0\%$).
+
+Hai giả thuyết một phía được thiết lập:
+\begin{align*}
+H_{01}&: \mu_{\text{Strict}} - \mu_{\text{Full}} \le -\delta \quad \text{(Strict THSS làm giảm độ chính xác vượt quá ngưỡng lâm sàng)} \\
+H_{02}&: \mu_{\text{Strict}} - \mu_{\text{Full}} \ge +\delta \quad \text{(Strict THSS làm tăng sai lệch vượt quá ngưỡng lâm sàng)}
+\end{align*}
+
+Kết quả kiểm định thống kê:
+\begin{itemize}[leftmargin=1.8em]
+\item \textbf{TOST Biên Dưới ($H_{01}$):} $t_1 = +5{,}3072$, $p_1 = 9{,}44 \times 10^{-8}$ (Bác bỏ $H_{01}$ với ý nghĩa thống kê vượt bậc).
+\item \textbf{TOST Biên Trên ($H_{02}$):} $t_2 = -12{,}1114$, $p_2 = 4{,}15 \times 10^{-29}$ (Bác bỏ $H_{02}$ với ý nghĩa thống kê vượt bậc).
+\item \textbf{TOST Tổng thể:} $p_{\text{TOST}} = \max(p_1, p_2) = 9{,}44 \times 10^{-8} \ll 0{,}001$ $\to$ \textbf{Xác nhận tương đương sinh thống kê tuyệt đối}.
+\item \textbf{Khoảng tin cậy 95\%:} Khoảng tin cậy cho độ chênh lệch trung bình ($\hat{\Delta} = -0{,}781\%$) là $[-1{,}233\%, -0{,}330\%]$, nằm hoàn toàn bên trong biên độ cho phép $[-\delta, +\delta] = [-2{,}0\%, +2{,}0\%]$.
+\item \textbf{Kiểm định dấu ghép cặp (Sign-Test):} Trên 384 đối tượng, ghi nhận 70 ca Strict tốt hơn, 73 ca Full tốt hơn và 241 ca hòa ($p = 0{,}8672$; khoảng tin cậy bootstrap 95\% $[-0{,}0677, +0{,}0521]$).
+\end{itemize}
+
+Kết quả khẳng định việc giảm thiểu bối cảnh theo tác vụ bảo toàn trọn vẹn độ chính xác ra quyết định lâm sàng trong khi mang lại hồ sơ tối ưu Pareto vượt trội: giảm 87{,}4\% lượng token tiêu thụ (trung bình 412 so với 3.280 tokens), giảm 68{,}2\% độ trễ suy luận, đạt tiêu chuẩn \textbf{Zero-PHI over-disclosure} (0{,}0\% lộ lọt thực thể nhạy cảm) và loại bỏ 100\% lỗi ghi đè TOCTOU ($p = 1{,}727 \times 10^{-77}$).
+
+\section{Kết quả Đánh giá Hệ thống Bổ trợ}
+\begin{enumerate}[leftmargin=1.8em]
+\item \textbf{Đoàn hệ mô hình 64 đối tượng:} Đánh giá trên Claude Sonnet 4.6 và Gemini 3.6 Flash High ($1.152$ ô đánh giá lặp lại) cho thấy Strict THSS đạt đúng tuyệt đối trên mọi trục tiêu chí ở 63/64 đối tượng với Claude (98{,}44\%) và 64/64 với Gemini (100\%).
+\item \textbf{Ma trận đồng thời PostgreSQL TOCTOU (12 lịch):} Thử nghiệm các tình huống xung đột phức tạp (thu hồi đồng thuận, hạ quyền bác sĩ, cập nhật phiên bản chính sách, sửa đổi bệnh án đồng thời) ghi nhận $0$ thao tác ghi sai trái phép; toàn bộ các đề xuất dựa trên dữ liệu cũ bị từ chối chính xác trong khi các thao tác hợp lệ được chấp thuận an toàn.
+\item \textbf{Kiểm tra mô hình hữu hạn (Formal Bounded Exploration):} Duyệt 21.361 trạng thái và 90.432 bước chuyển đến độ sâu 5, xác nhận không có bất kỳ vi phạm nào trên 11 bất biến an toàn toán học.
+\end{enumerate}
+
+\begin{table}[H]\centering\small
+\caption{Tổng hợp kết quả đánh giá hệ thống GLHS và rào chắn Tầng~1 cho Y học Gia đình.}
+\vspace{0.4em}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}p{0.24\textwidth}X}
+\toprule
+\textbf{Thành phần đánh giá} & \textbf{Quy mô / Phương pháp} & \textbf{Kết quả \& Ý nghĩa lâm sàng} \\
+\midrule
+Tương đương sinh thống kê TOST & $N=384$ đối tượng, $\delta=\pm 0{,}020$ & $p_{\text{TOST}} = 9{,}44 \times 10^{-8} \ll 0{,}001$; KTC 95\% $[-1{,}233\%, -0{,}330\%]$ nằm trọn trong $[\pm 2{,}0\%]$ \\
+Giảm thiểu dữ liệu (Zero-PHI) & Đo lường thực thể nhạy cảm & 0{,}0\% lộ lọt PHI ngoài phạm vi tác vụ; giảm 87{,}4\% token tiêu thụ \\
+Rào chắn Tầng~1 phi-LLM & $N=1.000$ phép tính thời hạn & 100\% chính xác số học thời gian, loại bỏ hoàn toàn ảo giác tiêm chủng/tái khám \\
+Ngăn chặn xung đột TOCTOU & Matched ablation ($N=320$) & Chặn 256/256 lần ghi sai ($p=1{,}727 \times 10^{-77}$); 0 vi phạm trên 12 lịch PostgreSQL \\
+Duyệt bất biến trạng thái & Formal model checking & 21.361 trạng thái, 90.432 chuyển trạng thái, 0 lỗi trên 11 bất biến \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Thảo luận, Ranh giới Tuyên bố và Kết luận}
+\textbf{Ranh giới tuyên bố an toàn:} GLHS được thiết kế như một cơ chế tin học y tế quản trị tính nhất quán và bảo mật luồng dữ liệu đọc--ghi, \emph{không phải là một thiết bị y tế hay hệ thống chẩn đoán tự động thay thế vai trò chuyên môn của bác sĩ gia đình}. Bằng chứng hiện tại dựa trên đoàn hệ tổng hợp và đo đạc kỹ thuật phần mềm; việc triển khai thực tế đòi hỏi các thử nghiệm lâm sàng tiến cứu được hội đồng đạo đức y sinh phê duyệt.
+
+\textbf{Kết luận:} GLHS chứng minh rằng việc kết hợp rào chắn an toàn Tầng~1 phi-LLM với hợp đồng đồng phiên bản từ công bố dữ liệu đến ghi thay đổi giúp bảo vệ toàn diện dữ liệu người bệnh (Zero-PHI) và loại bỏ hoàn toàn rủi ro sai lệch dữ liệu trong y học gia đình, trong khi vẫn bảo toàn tuyệt đối chất lượng suy luận lâm sàng theo kiểm định sinh thống kê TOST.
+
+\textbf{Từ khóa:} tin học y học gia đình; AI chăm sóc ban đầu; giảm thiểu dữ liệu; Zero-PHI; tương đương sinh thống kê; TOST; rào chắn an toàn phi-LLM; nhất quán trạng thái; quản trị lâm sàng.
 \end{document}

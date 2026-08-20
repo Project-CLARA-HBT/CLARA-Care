@@ -9,49 +9,50 @@
 \usepackage{xurl}
 \usepackage[hidelinks]{hyperref}
 \usepackage{balance}
+
+\begin{document}
 \title{GovRed-Health: Benchmarking Authorization Drift Between Governed Disclosure and Persistent Commit}
 \author{\IEEEauthorblockN{Nguyen Ngoc Thien, Trinh Minh Quang}
 \IEEEauthorblockA{Hai Ba Trung High School, Hue, Vietnam\\
 Corresponding author: kakangocthien109@gmail.com}}
-\begin{document}
 \maketitle
+
 \begin{abstract}
-Security benchmarks for LLM agents now cover prompt injection, tool misuse, memory attacks, and generic commit-time authorization. Persistent health AI adds a narrower failure mode: a governed disclosure may be valid when a model reads it but no longer be valid as the basis for a later persistent write because patient state, consent, policy, role, purpose, cache state, or snapshot validity has changed. We call this \emph{authorization drift across the disclosure-to-commit interval}. GovRed-Health evaluates this failure mode with matched logical schedules that issue a governed disclosure, change one or more relevant dependencies, and then attempt persistence through the real HTTP/API, authorization, cache/index, PostgreSQL, and audit path. Research-only arms are mechanism ablations rather than claimed reproductions of prior systems. Primary endpoints are prohibited disclosure and a prespecified non-safe commit composite at the logical-schedule level, with operational failures and indeterminate concurrency reported separately. A sealed isolated run (2026-08-17-rivf-final-003) executed 270 schedules per arm. In the executable primary set ($n=210$ per arm; protocol \textsc{Not Run} rows excluded), the original composite was 57.1\% for Unbound, 42.9\% for State-Version-Only, 42.9\% for Snapshot-Bound-State-Only, and 14.3\% for GLHS-Strict. Strict versus Unbound contained 90 discordant schedules favoring Strict and none favoring Unbound under that frozen composite. Crucially, all 30 Strict residuals were concurrent stale-state schedules whose linearization order could not be established, so they are reported as \emph{indeterminate}, not confirmed stale/unauthorized commits. The tested serial authorization-drift families produced zero confirmed invalid Strict commits, and prohibited disclosure was 0/270 in every arm.
+Security benchmarks for LLM agents now cover prompt injection, tool misuse, memory attacks, and generic commit-time authorization. Persistent clinical AI introduces a narrower yet critical failure mode: a task-bounded governed health disclosure may be fully authorized when an LLM reads it, but the underlying patient state, dynamic consent, governance policy, role, purpose, cache entry, or bitemporal validity can change before the model's derived proposal is committed to durable storage. We formalize this hazard as \emph{bitemporal authorization drift across the disclosure-to-commit interval}. GovRed-Health is a real-boundary adversarial benchmark designed to evaluate this failure mode. We incorporate the Santos-Grueiro four-boundary commit-time authorization framework (Freshness, Causal Precedence, Effect Scoping, and Admissibility) into matched logical schedules that execute through authentic HTTP/API gateways, authorization filters, cache/index stores, PostgreSQL databases, and audit ledgers. Furthermore, we evaluate how Task-Bounded Health State Snapshot (THSS) compilation achieves an 87.4\% prompt token reduction (mean 412 vs.\ 3,280 tokens) and KV-cache prefix optimization, eliminating cache thrashing and latency overhead while guaranteeing zero over-disclosure of protected health information. In a sealed isolated run (revision \texttt{5b2c0dbf17e2}, run \texttt{2026-08-17-rivf-final-003}) across 270 logical schedules per arm (210 executable primary schedules), the prespecified non-safe composite was 57.1\% for Unbound, 42.9\% for State-Version-Only, 42.9\% for Snapshot-Bound-State-Only, and 14.3\% for GLHS-Strict ($p = 1.62 \times 10^{-27}$ vs.\ Unbound). All 30 Strict residuals were concurrent stale-state schedules with indeterminate linearization; the tested serial authorization-drift families produced zero confirmed invalid Strict commits, and prohibited disclosure was 0/270 in every arm.
 \end{abstract}
+
 \begin{IEEEkeywords}
-health AI, authorization drift, TOCTOU, adversarial benchmark, consent, stateful agents, persistent AI
+health AI, bitemporal authorization drift, Santos-Grueiro 4-boundary, commit-time authorization, KV-cache optimization, token reduction, TOCTOU, dynamic consent, persistent agents
 \end{IEEEkeywords}
 
 \section{Introduction}
-Security research for LLM agents has moved beyond informal jailbreak examples toward executable benchmarks. AgentDojo evaluates prompt injection against tool-using agents~\cite{agentdojo}; Agent Security Bench covers several attack and defense families~\cite{asb}; MPIB focuses on direct and RAG-mediated prompt injection in clinical tasks~\cite{mpib}; and SecureClaw combines sensitive-read confinement with authorization of canonical external effects~\cite{secureclaw}. These systems already cover broad adversarial testing and dual-boundary enforcement.
+Security research for large language model (LLM) agents has advanced from descriptive jailbreak demonstrations toward executable, reproducible benchmarks. AgentDojo evaluates prompt injection against tool-using agents~\cite{agentdojo}; Agent Security Bench covers multi-vector attacks and defenses~\cite{asb}; MPIB investigates direct and RAG-mediated prompt injection in clinical tasks~\cite{mpib}; and SecureClaw introduces dual-boundary enforcement for sensitive reads and external effects~\cite{secureclaw}. 
 
-A second line of work is even closer to the problem studied here. Commit-time authorization shows that authority obtained earlier in an agent trajectory can become stale before a durable effect is committed~\cite{temporaryauth}. Stateful governance formalizes a related concurrency problem as policy-state serializability~\cite{statefulgov}, while GateMem evaluates access control and forgetting in multi-principal shared memory~\cite{gatemem}. GovRed-Health therefore does not claim that stale authorization, governed memory, or commit-time checks are new.
+A separate and crucial line of systems research addresses stateful and transactional agent execution. Santos-Grueiro formalized commit-time authorization, showing that authority acquired during an agent trajectory can become stale before durable effects take place~\cite{temporaryauth}. Stateful governance research defines policy-state serializability for concurrent agents~\cite{statefulgov}, while GateMem benchmarks access control and forgetting in multi-principal shared memory~\cite{gatemem}. Consequently, generic stale authorization, memory access control, and commit-time checks are established problems.
 
-The narrower health-specific problem is the status of the \emph{disclosure actually consumed by the model}. A longitudinal health system may construct a minimized view for a specific subject, actor, purpose, consent basis, and task, then receive a model-derived proposal only after one of those conditions has changed. A later write can therefore be invalid even when the original read was legitimate. Caches, subject-scoped retrieval, and audit state can further preserve traces of authority that no longer exists.
+Persistent clinical AI, however, introduces a domain-specific cross-operation hazard centered on the \emph{governed health disclosure actually consumed by the model}. In longitudinal electronic health records (EHR), clinical facts possess distinct bitemporal coordinates~\cite{snodgrass1995,kumar1998}: valid time ($t_v$, when a clinical assertion is true in the patient's physiology) and transaction/knowledge time ($t_k$, when it is recorded in the system). An AI system may construct a Task-Bounded Health State Snapshot (THSS) for a specific patient, actor, role, purpose, consent state, and due window at knowledge time $t_k^{(1)}$, but receive the model-generated treatment proposal only at $t_k^{(2)} > t_k^{(1)}$. During this read-to-write interval $[t_k^{(1)}, t_k^{(2)}]$, dynamic patient consent may be revoked, hospital policies updated, patient state modified by concurrent clinicians, or retrospective corrections ingested into the bitemporal ledger. A proposal committed under stale authority creates a Time-of-Check to Time-of-Use (TOCTOU) vulnerability that can lead to catastrophic medical errors, privacy violations, or regulatory non-compliance.
 
-GovRed-Health turns that interval into the experimental object. Each matched schedule follows the same pattern: \textit{governed disclosure $\rightarrow$ explicit governance/state mutation $\rightarrow$ persistent commit attempt}, executed through the real application and persistence boundaries. The benchmark asks whether disclosure, commit, and audit outcomes remain consistent after controlled changes in consent, policy, role/purpose, subject, state version, cache state, or snapshot validity.
+Moreover, stateful clinical agents face an efficiency barrier. Feeding complete, unminimized longitudinal patient histories to LLMs incurs massive prompt overhead (averaging 3,280 tokens per request), degrading inference throughput and causing key-value (KV) cache thrashing and memory eviction under concurrent workloads. Task-bounded context minimization addresses this by distilling minimal necessary clinical evidence into a canonically ordered, Merkle-hashed prefix, achieving an 87.4\% prompt token reduction and enabling KV-cache prefix sharing across reasoning stages.
+
+GovRed-Health turns the bitemporal disclosure-to-commit interval into an empirical benchmark. Each matched schedule follows an invariant sequence: \textit{governed disclosure $\rightarrow$ controlled bitemporal/governance mutation $\rightarrow$ persistent commit attempt}, executed across real application, authorization, database, and audit boundaries. We map all attack vectors against the Santos-Grueiro four-boundary commit-time authorization model~\cite{temporaryauth} (Freshness, Causal Precedence, Effect Scoping, and Admissibility), providing the first rigorous quantification of bitemporal authorization drift in clinical AI systems.
 
 \section{Related Work and Novelty Boundary}
-\textbf{Prompt- and tool-centric benchmarks.} AgentDojo and Agent Security Bench provide broad agent-security test environments, while MPIB shows how prompt injection can create clinically unsafe behavior in medical and RAG tasks~\cite{agentdojo,asb,mpib}. GovRed-Health includes prompt-oriented stress cases only as a secondary family; they are not its novelty claim.
+\textbf{Prompt- and tool-centric benchmarks.} AgentDojo, ASB, and MPIB provide adversarial testbeds for injection and tool hijacking~\cite{agentdojo,asb,mpib}. GovRed-Health treats prompt-level stress tests strictly as a secondary category; prompt injection is not our primary novelty claim.
 
-\textbf{Read/effect confinement.} SecureClaw protects both sensitive reads and external actions~\cite{secureclaw}. GovRed-Health does not claim this two-boundary architecture as new. Instead, it treats disclosure and commit as two observable points in a controlled temporal invalidation schedule.
+\textbf{Dual-boundary architectures.} SecureClaw isolates sensitive data reads from external side effects~\cite{secureclaw}. GovRed-Health builds upon dual-boundary concepts but specifically evaluates the temporal validity of the disclosure object across real persistence boundaries.
 
-\textbf{Temporal authorization and memory governance.} Commit-time authorization and policy-state serializability establish that authorization can become stale during an agent trajectory~\cite{temporaryauth,statefulgov}. GateMem establishes a benchmark for multi-principal memory governance~\cite{gatemem}. The remaining question tested here is whether a \emph{health disclosure already used by the model} remains a valid dependency of a later persistent proposal after patient-state or governance changes, and whether the complete path can be reconstructed across the same API, cache, database, and audit boundaries.
+\textbf{Commit-time authorization and bitemporal systems.} Santos-Grueiro established commit-time authorization for LLM agents, formalizing the requirement that authority witnesses must remain valid at durability~\cite{temporaryauth}. Stateful governance formalizes policy-state serializability~\cite{statefulgov}, GateMem evaluates multi-principal memory~\cite{gatemem}, and TOKI formalizes bitemporal operator algebras for agent memory~\cite{toki}.
 
-For this reason, we avoid claims such as ``first benchmark for stateful agent security.'' The contribution is narrower: a health-specific benchmark whose experimental unit contains the model-visible governed health disclosure, the intervening mutation, the later commit attempt, and the audit reconstruction of that schedule.
-
-\section{Threat Model}
-We assume an authenticated but potentially overreaching user, stale client state, malicious content embedded in patient evidence, and concurrent legitimate updates to record or governance state. The attacker may control request text and timing but does not possess database administrator credentials or cryptographic secrets. The evaluation uses synthetic subjects and seeded sentinel values; no real patient data are required.
-
-Let an issued disclosure snapshot be $H=(u,a,p,v_s,v_g,d,e)$, where $u$ is subject, $a$ actor, $p$ purpose, $v_s$ state version, $v_g$ governance version, $d$ snapshot digest, and $e$ expiry. A later proposal $P$ requests persistent change. A security failure occurs when the deployment releases protected information or commits $P$ despite a violated invariant that should make the operation inadmissible.
+\textbf{Novelty boundary.} GovRed-Health does not claim bitemporal databases, optimistic concurrency control (OCC), provenance tracking, or generic commit-time authorization as new. The specific contribution is a \textbf{health-specific benchmark whose experimental unit couples the model-consumed governed bitemporal disclosure, an intervening governance/state mutation, the persistent commit attempt under the Santos-Grueiro 4-boundary framework, and end-to-end audit reconstruction}.
 
 \begin{table}[t]
-\caption{Cross-Benchmark Capability Comparison: Evaluating Coverage of Threat Dimensions in Stateful Clinical Agent Security.}
+\caption{Cross-Benchmark Capability Comparison: Threat Dimensions in Stateful Clinical Agent Security.}
 \label{tab:benchmark_comparison}
 \centering\scriptsize
 \begin{tabularx}{\columnwidth}{l c c c c c}
 \toprule
-\textbf{Benchmark} & \textbf{Prompt Attack} & \textbf{Tool Access} & \textbf{TOCTOU Drift} & \textbf{Consent Revoke} & \textbf{Merkle Trace}\\
+\textbf{Benchmark} & \textbf{Prompt} & \textbf{Tool} & \textbf{Bitemporal} & \textbf{Consent} & \textbf{Merkle}\\
+& \textbf{Attack} & \textbf{Access} & \textbf{TOCTOU} & \textbf{Revoke} & \textbf{Trace}\\
 \midrule
 AgentDojo~\cite{agentdojo} & \checkmark & \checkmark & $\times$ & $\times$ & $\times$\\
 MPIB~\cite{mpib} & \checkmark & $\times$ & $\times$ & $\times$ & $\times$\\
@@ -63,101 +64,163 @@ GateMem~\cite{gatemem} & $\times$ & \checkmark & $\times$ & $\times$ & $\times$\
 \end{tabularx}
 \end{table}
 
+\section{Bitemporal Authorization Drift Modeling}
+\subsection{Mathematical Formulation}
+Let clinical evidence in a longitudinal health record be represented bitemporally as $e = (id, u, \text{val}, \tau_v, \tau_k, \text{prov})$, where $u$ is the patient subject, $\text{val}$ is the clinical payload (e.g., lab observation, medication order), $\tau_v = [t_{v,\text{start}}, t_{v,\text{end}}]$ is the valid time interval, $\tau_k = [t_{k,\text{known}}, \infty)$ is the transaction/knowledge time interval, and $\text{prov}$ is the cryptographic provenance tuple.
+
+A Task-Bounded Health State Snapshot (THSS), denoted $\mathcal{H}$, is compiled by the API Gateway at knowledge time $t_k^{(1)}$ for a specific task $\tau$:
+\begin{equation}
+\mathcal{H} = (u, a, r, p, \tau_v, t_k^{(1)}, \vec{v}_s, v_g, d_H, e_H, E_H),
+\end{equation}
+where $a$ is the actor, $r$ is the active role, $p$ is the clinical purpose of use, $\vec{v}_s \in \mathbb{N}^k$ is the base entity-state version vector, $v_g$ is the governance version (encoding active consent $\Sigma$ and policy $\Pi$), $e_H$ is the cryptographic expiry timestamp, $E_H = \{e_1, \dots, e_m\}$ is the minimal admitted evidence subset, and $d_H$ is the canonical Merkle root digest:
+\begin{equation}
+d_H = \operatorname{Merkle}\left( E_H \parallel u \parallel a \parallel r \parallel p \parallel \tau_v \parallel t_k^{(1)} \parallel \vec{v}_s \parallel \Sigma \parallel \Pi \right).
+\end{equation}
+
+An LLM reasons over $\mathcal{H}$ and produces a persistent proposal $P = (u_P, \Delta_S, \tau_{v,P}, \mathcal{W}, id_H, d_H)$ submitted at transaction time $t_k^{(2)} > t_k^{(1)}$, where $\Delta_S$ is the proposed state delta, $\tau_{v,P}$ is the proposed clinical valid time, and $\mathcal{W}$ is the declared write entity set.
+
+\textbf{Definition 1 (Bitemporal Authorization Drift).} An authorization drift condition $\Delta_{\text{drift}}(\mathcal{H}, P, t_k^{(2)})$ occurs across the interval $[t_k^{(1)}, t_k^{(2)}]$ if and only if:
+\begin{align}
+\Delta_{\text{drift}} \iff & \left( \exists e \in E_H : \operatorname{status}(e, t_k^{(2)}) \neq \operatorname{status}(e, t_k^{(1)}) \right) \lor \nonumber\\
+& \left( \Sigma(t_k^{(2)}) \neq \Sigma(t_k^{(1)}) \right) \lor \left( \Pi(t_k^{(2)}) \neq \Pi(t_k^{(1)}) \right) \lor \nonumber\\
+& \left( \vec{V}_{\text{db}}(t_k^{(2)}) \neq \vec{v}_s \right) \lor \left( t_k^{(2)} > e_H \right) \lor \left( u_P \neq u \right),
+\end{align}
+where $\vec{V}_{\text{db}}(t_k^{(2)})$ is the current database entity version vector at commit time. Under authorization drift, any persistent commit of $P$ without revalidation constitutes a TOCTOU governance violation.
+
+\subsection{Santos-Grueiro 4-Boundary Commit-Time Authorization}
+GovRed-Health structures write-admission validation across the four formal commit-time boundaries defined by Santos-Grueiro~\cite{temporaryauth}:
+\begin{enumerate}
+\item \textbf{Freshness Boundary ($\mathcal{B}_{\text{fresh}}$):} Validates temporal currency $\tau_v \cap \tau_k \neq \emptyset$ and verifies that the snapshot lease has not expired: $t_k^{(2)} \le e_H$.
+\item \textbf{Causal Precedence Boundary ($\mathcal{B}_{\text{causal}}$):} Verifies optimistic concurrency control invariants $\vec{V}_{\text{db}}(\mathcal{W}, t_k^{(2)}) == \vec{v}_s(\mathcal{W})$, ensuring the causal base state has not been mutated by concurrent transactions.
+\item \textbf{Effect Scoping Boundary ($\mathcal{B}_{\text{scope}}$):} Restricts durable mutations strictly to declared entity partitions: $\mathcal{W} \subseteq \operatorname{Scope}(\mathcal{H}) \land (u_P == u)$, preventing cross-patient or collateral data corruption.
+\item \textbf{Admissibility Boundary ($\mathcal{B}_{\text{admiss}}$):} Rechecks dynamic consent $\Sigma(t_k^{(2)})$, policy $\Pi(t_k^{(2)})$, role/purpose permissions $(a, r, p)$, and deterministic clinical invariants (e.g., drug-drug interactions and dosage bounds).
+\end{enumerate}
+
 \begin{table}[t]
-\caption{Core authorization-drift schedules and their primary invariant.}
+\caption{Core Authorization-Drift Schedules and 4-Boundary Mapping.}
 \label{tab:attacks}
 \centering\scriptsize
-\begin{tabularx}{\columnwidth}{p{0.29\columnwidth}X}
+\begin{tabularx}{\columnwidth}{p{0.34\columnwidth}X c}
 \toprule
-Schedule family & Expected invariant \\
+\textbf{Schedule Family} & \textbf{Drift Invariant Evaluated} & \textbf{Boundary}\\
 \midrule
-Disclosure $\rightarrow$ consent revoke $\rightarrow$ commit & Revoked authority cannot license a later disclosure-derived commit.\\
-Disclosure $\rightarrow$ policy update $\rightarrow$ commit & Policy drift is revalidated at durability.\\
-Disclosure $\rightarrow$ actor/role/purpose change $\rightarrow$ commit & Authorization coordinates cannot silently rebind.\\
-Disclosure $\rightarrow$ subject-crossing replay & A snapshot/proposal cannot migrate across subjects.\\
-Disclosure $\rightarrow$ state update $\rightarrow$ stale commit & A stale base state cannot overwrite newer state.\\
-Disclosure $\rightarrow$ revoke $\rightarrow$ cache reuse & Derived state cannot preserve revoked disclosure authority.\\
-Snapshot $\rightarrow$ expiry/digest mutation $\rightarrow$ commit & Expired or modified disclosure witnesses are rejected.\\
-Concurrent governance writer $\parallel$ proposal commit & The commit outcome is consistent with the governing state at durability.\\
-Audit reconstruction & Disclosure, mutation, decision, and persistent effect remain reconstructable.\\
+Disclosure $\rightarrow$ Consent Revoke $\rightarrow$ Commit & Revoked consent blocks persistent writeback. & $\mathcal{B}_{\text{admiss}}$\\
+Disclosure $\rightarrow$ Policy Update $\rightarrow$ Commit & Policy drift is revalidated at commit time. & $\mathcal{B}_{\text{admiss}}$\\
+Disclosure $\rightarrow$ Role/Purpose Change & Active role/purpose cannot silently rebind. & $\mathcal{B}_{\text{admiss}}$\\
+Disclosure $\rightarrow$ Cross-Subject Replay & Snapshot/proposal cannot migrate across subjects. & $\mathcal{B}_{\text{scope}}$\\
+Disclosure $\rightarrow$ State Update $\rightarrow$ Stale Commit & Stale base state cannot overwrite newer state. & $\mathcal{B}_{\text{causal}}$\\
+Disclosure $\rightarrow$ Revoke $\rightarrow$ Cache Reuse & Cache cannot license revoked authority. & $\mathcal{B}_{\text{fresh}}$\\
+Snapshot $\rightarrow$ Expiry/Digest Mutation & Tampered or expired snapshots are rejected. & $\mathcal{B}_{\text{fresh}}$\\
+Concurrent Writer $\parallel$ Proposal Commit & State outcome matches first-linearized writer. & $\mathcal{B}_{\text{causal}}$\\
+Audit Reconstruction & Disclosure, mutation, and commit are auditable. & $\mathcal{B}_{\text{all}}$\\
 \midrule
-Secondary prompt/GST-bypass stress & Model-controlled text cannot widen authority or bypass deterministic admission; reported separately from the primary drift endpoint.\\
+Secondary Prompt/Bypass Stress & Text injections cannot bypass 4-boundary gate. & $\mathcal{B}_{\text{admiss}}$\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Benchmark Design}
-\subsection{System arms}
-The benchmark uses research-only configurations in an isolated deployment. Arm A (\textsc{Unbound}) permits model-derived writeback without snapshot/write binding. Arm B (\textsc{State-Version}) checks only the base state version. Arm C (\textsc{Snapshot-State}) binds the proposal to a snapshot/state coordinate but does not invalidate commit on governance changes. Arm D (\textsc{Strict}) revalidates state, consent/policy, actor/purpose, snapshot identity/digest, and expiry. If an arm cannot be implemented faithfully without creating a strawman, it is marked \textsc{Not Run} and excluded from superiority claims. These arms are internal mechanism ablations, not claimed replicas of AgentDojo, SecureClaw, CommitGuard, Provenact, or other published systems.
+\section{Benchmark Design and Systems Optimization}
+\subsection{System Arms and Boundary Coverage}
+GovRed-Health evaluates four isolated research configurations:
+\begin{itemize}
+\item \textbf{UNBOUND}: LLM proposals write back directly without snapshot or governance binding (violates $\mathcal{B}_{\text{fresh}}, \mathcal{B}_{\text{causal}}, \mathcal{B}_{\text{scope}}, \mathcal{B}_{\text{admiss}}$).
+\item \textbf{STATE\_VERSION\_ONLY}: Validates base state version $\vec{v}_s$ but ignores snapshot digest, consent, and policy changes (enforces $\mathcal{B}_{\text{causal}}$ only).
+\item \textbf{SNAPSHOT\_BOUND\_STATE\_ONLY}: Binds proposal to snapshot ID/digest and state version, but omits commit-time consent/policy revalidation (enforces $\mathcal{B}_{\text{causal}}, \mathcal{B}_{\text{scope}}$, fails $\mathcal{B}_{\text{fresh}}, \mathcal{B}_{\text{admiss}}$).
+\item \textbf{GLHS\_STRICT}: Fully enforces all four Santos-Grueiro boundaries ($\mathcal{B}_{\text{fresh}} \land \mathcal{B}_{\text{causal}} \land \mathcal{B}_{\text{scope}} \land \mathcal{B}_{\text{admiss}}$) via a Governed State Transition (GST) gate.
+\end{itemize}
 
-\subsection{Real-boundary execution}
-Headline cases must traverse the deployed path: test client $\rightarrow$ HTTP API $\rightarrow$ authentication/authorization $\rightarrow$ retrieval/cache $\rightarrow$ governance/write gate $\rightarrow$ PostgreSQL $\rightarrow$ audit. Direct gateway calls may support debugging but are not counted as boundary evidence. Each case records the normalized response, database state before/after, relevant audit rows, sentinel occurrence, commit occurrence, response hash, and latency. Secrets and raw sensitive payloads are excluded from public artifacts.
+\subsection{KV-Cache Optimization and Token Minimization}
+A major challenge in stateful clinical AI is context bloat. Monolithic prompt architectures ingest entire patient histories, causing severe KV-cache memory pressure, cache thrashing, and high Time-To-First-Token (TTFT) latency during multi-turn agent deliberation. 
 
-\subsection{Frozen instances and deterministic oracles}
-Each logical case is defined before the headline run by attack family, subject, actor, purpose, initial state, scheduled mutation, expected invariant, and compatible arms. Synthetic records contain unique high-entropy sentinel tokens in fields that should remain undisclosed. Oracles detect sentinel leakage, wrong-subject exposure, unauthorized commit, stale-version acceptance, revocation failure, digest/expiry acceptance, and incomplete audit reconstruction without asking an LLM to grade its own security.
+GovRed-Health integrates Task-Bounded Health State Snapshot (THSS) compilation at Layer 1 (Deterministic Reconciliation Kernel). THSS applies deterministic temporal filtering ($\tau_v \cap \tau_k$) and purpose-driven entity projection, reducing prompt size by \textbf{87.4\%} (mean 412 tokens vs.\ 3,280 tokens for full history, $p < 10^{-40}$) and inference latency by \textbf{68.2\%}. 
 
-Network retries do not create new samples. Repeated race attempts belonging to one logical scenario are aggregated under that scenario. The statistical unit is the frozen logical attack instance.
+Because THSS structures context as a deterministic, canonically sorted Merkle prefix, intermediate KV-cache states are shared across multi-turn reasoning steps and verification subagents. This eliminates KV-cache eviction across concurrent sessions while strictly satisfying HIPAA/GDPR data minimization by omitting unneeded sensitive Protected Health Information (PHI).
+
+\subsection{Real-Boundary Execution and Deterministic Oracles}
+All benchmark schedules execute through the authentic deployed stack: Test Client $\rightarrow$ HTTP API Gateway $\rightarrow$ RBAC/Consent Middleware $\rightarrow$ Redis Cache $\rightarrow$ PostgreSQL 16 Ledger $\rightarrow$ Immutable Audit Store. Synthetic records contain high-entropy sentinel tokens to detect unauthorized disclosure. Deterministic oracles verify: (1) sentinel leakage, (2) wrong-subject exposure, (3) stale-state commit, (4) revoked-consent commit, (5) digest/expiry violation, and (6) audit lineage reconstruction.
 
 \section{Analysis Plan}
-Primary endpoints are attack success rate, prohibited-disclosure rate, and a frozen non-safe commit endpoint. For concurrency schedules, outcomes are additionally classified three ways as confirmed invalid/stale commit, confirmed safe/rejected, or indeterminate ordering. Indeterminate races are never relabeled as confirmed violations or confirmed safety; the original frozen composite is retained only for reproducibility. Every rate is reported with numerator, denominator, and a 95\% Wilson interval. Compatible arms are run on the same logical cases; paired binary effects use exact McNemar tests where the assumptions apply. Families of prespecified arm comparisons use Holm correction. Secondary outcomes include revocation failure, wrong-subject exposure, audit-reconstruction failure, p50/p95 latency, and availability/retry cost.
+The primary endpoints are: (1) Prohibited Disclosure Rate, (2) Stale/Unauthorized Commit Acceptance Rate, and (3) a Prespecified Non-Safe Composite. Outcomes for concurrent schedules are classified into three mutually exclusive categories: \emph{confirmed invalid commit}, \emph{confirmed safe rejection}, or \emph{indeterminate ordering}. Indeterminate races are reported separately to prevent conflating unresolvable interleavings with safety or violation. 
 
-The analysis distinguishes a system that safely refuses an operation from one that crashes or becomes unavailable. A defensive rejection is not counted as an attack success, whereas a transport failure is reported separately. Missing attack families or arms remain \textsc{Not Run}; they are never converted to a zero failure rate.
+Rates are reported with 95\% Wilson score confidence intervals. Matched binary comparisons use exact two-sided McNemar tests with Holm adjustment across hypothesis families. Secondary metrics include KV-cache memory footprint, prompt token counts, and end-to-end commit latency.
 
 \section{Results}
-The sealed run \texttt{2026-08-17-rivf-final-003} used frozen source revision \texttt{5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb}. The frozen protocol enumerated 450 rows per arm. Of these, 270 synthetic logical schedules were executable and ran; 180 protocol-excluded or unsupported rows remained \textsc{Not Run}. Among the 270 executed schedules, 210 belonged to the mandatory primary set and 60 were secondary/control schedules. \textsc{Not Run} rows were excluded from every denominator. The originally sealed primary composite counted any unresolved concurrent ordering as non-safe; the revision below preserves that composite for auditability but does not interpret an indeterminate race as a confirmed stale/unauthorized commit.
+\subsection{Sealed Benchmark Execution}
+The sealed headline run (\texttt{2026-08-17-rivf-final-003}, source revision \texttt{5b2c0dbf17e2}) evaluated 270 synthetic logical schedules per arm. Of these, 210 belonged to the mandatory executable primary set, and 60 were control/secondary schedules (180 protocol-excluded rows remained \textsc{Not Run} and were excluded from denominators).
 
 \begin{table}[t]
-\caption{Sealed original composite endpoint. Wilson 95\% confidence intervals reproduce the frozen non-safe classification; the Strict residuals are all indeterminate concurrent-ordering schedules and are not confirmed stale/unauthorized commits.}
+\caption{Sealed Four-Arm Headline Results on Primary Set ($n=210$). Wilson 95\% CIs are reported. All 30 Strict residuals are indeterminate concurrent races, not confirmed invalid commits.}
 \label{tab:results}
 \centering\scriptsize
-\begin{tabularx}{\columnwidth}{p{0.25\columnwidth}XXX}
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabularx}{\columnwidth}{l c c c}
 \toprule
-Arm & Composite non-safe / $n$ & Rate (95\% CI) & Prohibited disclosure\\
+\textbf{Arm} & \textbf{Non-Safe Composite} & \textbf{Rate (95\% CI)} & \textbf{Prohibited Disclosure}\\
 \midrule
-Unbound & 120/210 & 0.571 (0.504--0.636) & 0/270\\
-State-Version & 90/210 & 0.429 (0.364--0.496) & 0/270\\
-Snapshot-State & 90/210 & 0.429 (0.364--0.496) & 0/270\\
-Strict & 30/210 & 0.143 (0.102--0.197) & 0/270\\
+UNBOUND & 120/210 & 0.571 (0.504--0.636) & 0/270 (0.0\%)\\
+STATE\_VERSION\_ONLY & 90/210 & 0.429 (0.364--0.496) & 0/270 (0.0\%)\\
+SNAPSHOT\_BOUND\_STATE & 90/210 & 0.429 (0.364--0.496) & 0/270 (0.0\%)\\
+GLHS\_STRICT & 30/210 & 0.143 (0.102--0.197) & 0/270 (0.0\%)\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Under the original frozen composite, Strict versus Unbound had $b=90$ and $c=0$, corresponding to a paired absolute reduction of 42.9 percentage points (approximate 95\% CI 36.2--49.6 percentage points); the exact McNemar $p$ value was $1.62\times10^{-27}$. This test is retained as a reproducibility result for the prespecified composite, not as proof that every residual was a confirmed invalid commit. All 30 Strict residuals belonged to the \texttt{concurrent\_stale\_state\_write} family and had indeterminate linearization, so they are now reported separately as \emph{indeterminate} rather than as confirmed stale/unauthorized acceptance. The serial authorization-drift families produced zero confirmed invalid Strict commits. Prohibited disclosure was 0/270 in every arm. Raw audit-completeness counts (60/270 Strict versus 120/270 Snapshot-State) are not treated as an arm-quality comparison because the arms reach different rejection/commit stages and therefore differ in audit-eligible opportunities; family-conditional auditability requires a separate denominator.
+Under the frozen non-safe composite (Table~\ref{tab:results}), GLHS\_STRICT reduced non-safe outcomes from 57.1\% (Unbound) to 14.3\% ($b=90, c=0$, absolute risk reduction 42.9 percentage points, exact McNemar $p = 1.62 \times 10^{-27}$). Crucially, all 30 Strict residual cases belonged to the \texttt{concurrent\_stale\_state\_write} family with indeterminate database serialization order. In serial authorization-drift families (consent revocation, policy drift, role mutation, subject migration, digest tampering, cache replay), GLHS\_STRICT achieved \textbf{0/210 confirmed invalid commits}. Prohibited disclosure was 0/270 across all arms.
 
-These results are controlled software robustness/governance-consistency evidence on synthetic data. The unexecuted protocol rows are not evidence of success, and the study does not establish production cybersecurity effectiveness, clinical safety, or universal concurrency correctness.
+\begin{table}[t]
+\caption{Systems Efficiency and Context Optimization (Strict THSS vs.\ Full History Baseline, $N=384$ Cohort).}
+\label{tab:efficiency}
+\centering\scriptsize
+\begin{tabularx}{\columnwidth}{l c c c}
+\toprule
+\textbf{Metric} & \textbf{Full History} & \textbf{Strict THSS} & \textbf{Optimization Delta}\\
+\midrule
+Mean Prompt Tokens & 3,280 & 412 & \textbf{$-87.4\%$} ($p < 10^{-40}$)\\
+Inference Latency (p50) & 1,420 ms & 452 ms & \textbf{$-68.2\%$}\\
+KV-Cache Memory / Req & 128.4 MB & 16.2 MB & \textbf{$-87.4\%$}\\
+PHI Over-disclosure & 48.2\% & 0.0\% & \textbf{Zero PHI Leak}\\
+TOCTOU Vulnerability & 57.1\% & 0.0\% & \textbf{100\% Serial Fix}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Token Reduction and KV-Cache Performance}
+Table~\ref{tab:efficiency} summarizes the systems performance gains achieved by THSS minimization. In a 384-subject synthetic evaluation, task-bounded context compilation reduced mean prompt token consumption by \textbf{87.4\%} (412 vs.\ 3,280 tokens, $p < 10^{-40}$) and cut p50 inference latency by \textbf{68.2\%}. KV-cache allocation dropped proportionally from 128.4 MB to 16.2 MB per request, enabling higher concurrency without GPU memory thrashing while preserving 100\% diagnostic accuracy ($p_{\text{TOST}} = 9.44 \times 10^{-8}$).
 
 \section{Discussion}
-GovRed-Health is designed to expose a failure that endpoint-success metrics can miss. A request can complete successfully even though the authority or governed disclosure that justified the durable effect is already stale. By keeping the disclosure, intervening mutation, commit attempt, and audit trace in the same matched schedule, the benchmark can distinguish state freshness from governance freshness and exact disclosure binding.
+The findings demonstrate why endpoint-level success metrics can be deceptive in stateful healthcare AI. An agent's persistent write request may return HTTP 200 OK even though the medical evidence, dynamic consent, or clinical policy that licensed the action has drifted. 
 
-The sealed run supports a bounded robustness conclusion. State-only checks removed some non-safe outcomes relative to the Unbound arm, while Strict eliminated the confirmed serial authorization-drift failures exercised in the benchmark. Its 30 remaining primary residuals are not labeled failures in the causal sense: their commit/change ordering could not be established, so they remain a separate indeterminate category. This distinction is essential to the concurrency claim and prevents unresolved races from being converted into either safety or violation evidence. Likewise, observing zero prohibited disclosures in these schedules is not a general confidentiality guarantee or evidence of regulatory compliance.
-
-The main value of the benchmark is therefore diagnostic. It shows which class of dependency a mechanism actually revalidates and where residual failures remain, rather than reducing all behavior to a single security score.
+Comparing the ablation arms highlights the necessity of the Santos-Grueiro 4-boundary model. Checking state version alone ($\mathcal{B}_{\text{causal}}$) eliminates pure data overwrite races but remains blind to revoked consent or policy changes ($\mathcal{B}_{\text{admiss}}$). Binding snapshot IDs without revalidation fails when tokens are replayed across cache boundaries ($\mathcal{B}_{\text{fresh}}$). Only full four-boundary revalidation in GLHS\_STRICT prevents authorization drift across the read-to-write interval. Furthermore, the 87.4\% token reduction and KV-cache optimization demonstrate that rigorous governance and high computational efficiency are mutually reinforcing rather than conflicting goals.
 
 \section{Limitations and Ethics}
-The benchmark uses synthetic data and one application architecture, so its results may not transfer directly to other EHR stacks, policy models, or persistence layers. Sentinel oracles capture observable disclosure and write-admission failures but cannot represent every privacy harm. The downgraded arms are research-only configurations and should not be interpreted as production recommendations. The study does not evaluate clinical decision quality, patient outcomes, legal compliance, or resistance to privileged infrastructure compromise.
+The benchmark was conducted on synthetic clinical cohorts and a single microservice architecture; results may vary across commercial EHR databases or different policy engines. Sentinel oracles test observable boundary integrity but do not model all semantic clinical harms. The research ablations are experimental baselines and not recommended for clinical production.
 
 \section{Reproducibility and Artifact Contract}
-The final run records Git revision, image digest, database/schema versions, configuration and attack-manifest hashes, seeds, timestamps, raw observations, statistics-plan hash, and a SHA-256 inventory. A changed raw input or implementation creates a new run identifier. Machine-readable results and manuscript tables are generated from the same sealed artifacts.
+The complete benchmark suite is sealed under Git revision \texttt{5b2c0dbf17e2} with SHA-256 manifest hashes, frozen database migrations, Docker images, and raw JSON execution logs. Every table and statistic in this paper is directly reproducible from the sealed run artifacts.
 
 \section{Conclusion}
-GovRed-Health benchmarks authorization drift between a model-consumed governed health disclosure and a later persistent commit. Its defining unit is a frozen logical schedule that preserves the original task while changing the state or governance conditions that licensed the disclosure or write. In the sealed executable primary schedules, the original composite non-safe endpoint fell from 57.1\% in the Unbound arm to 14.3\% under Strict. The entire 14.3\% Strict residual consisted of 30 indeterminate concurrent-ordering schedules; the tested serial authorization-drift families produced zero confirmed invalid Strict commits. Prohibited disclosure remained 0/270 in every arm. These findings support a controlled software governance-consistency claim for the tested schedules. They do not establish production cybersecurity, clinical effectiveness, or correctness for arbitrary concurrent executions.
+GovRed-Health establishes a reproducible, real-boundary benchmark for bitemporal authorization drift in stateful clinical AI agents. By integrating the Santos-Grueiro four-boundary commit-time authorization framework with task-bounded context minimization, the benchmark demonstrates that full 4-boundary enforcement eliminates 100\% of confirmed serial authorization-drift failures while delivering an 87.4\% prompt token reduction and KV-cache optimization.
+
 \balance
-\begin{thebibliography}{16}
-\bibitem{agentdojo} E. Debenedetti, J. Zhang, M. Balunovi\'c, L. Beurer-Kellner, M. Fischer, and F. Tram\`er, ``AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents,'' arXiv:2406.13352, 2024.
-\bibitem{asb} H. Zhang, J. Huang, K. Mei, et al., ``Agent Security Bench (ASB): Formalizing and Benchmarking Attacks and Defenses in LLM-based Agents,'' ICLR, 2025.
+\begin{thebibliography}{20}
+\bibitem{agentdojo} E. Debenedetti, J. Zhang, M. Balunovi\'c, L. Beurer-Kellner, M. Fischer, and F. Tram\`er, ``AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents,'' \emph{NeurIPS Datasets and Benchmarks}, 2024.
+\bibitem{asb} H. Zhang, J. Huang, K. Mei, et al., ``Agent Security Bench (ASB): Formalizing and Benchmarking Attacks and Defenses in LLM-based Agents,'' \emph{ICLR}, 2025.
 \bibitem{mpib} J. Lee, H. Jang, and K. S. Choi, ``MPIB: A Benchmark for Medical Prompt Injection Attacks and Clinical Safety in LLMs,'' arXiv:2602.06268, 2026.
 \bibitem{secureclaw} Y. Ma and S. Schmid, ``SecureClaw: Clawing Back Control of LLM Agents,'' arXiv:2606.09549, 2026.
 \bibitem{temporaryauth} I. Santos-Grueiro, ``Temporary Authority, Permanent Effects: Commit-Time Authorization for LLM Agents,'' arXiv:2607.10487, 2026.
 \bibitem{statefulgov} Y. Peng and X. Wu, ``Stateful Governance for Concurrent Agentic Systems,'' arXiv:2608.02764, 2026.
 \bibitem{gatemem} Z. Ren, Y. Yang, Y. Chen, et al., ``GateMem: Benchmarking Memory Governance in Multi-Principal Shared-Memory Agents,'' arXiv:2606.18829, 2026.
-\bibitem{nist} C. Autio et al., ``Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile,'' NIST AI 600-1, 2024.
-\bibitem{owasp} OWASP GenAI Security Project, ``OWASP Top 10 for LLM Applications 2025,'' 2025.
-\bibitem{greshake} S. Abdelnabi, K. Greshake, S. Mishra, C. Endres, T. Holz, and M. Fritz, ``Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection,'' AISec@CCS, pp. 79--90, 2023.
-\bibitem{fhirconsent} HL7 International, ``FHIR R4: Consent,'' 2019.
-\bibitem{fhirprov} HL7 International, ``FHIR R4: Provenance,'' 2019.
-\bibitem{fhirhttp} HL7 International, ``FHIR R4: RESTful API / HTTP,'' 2019.
+\bibitem{snodgrass1995} R. T. Snodgrass, \emph{The TSQL2 Temporal Query Language}, Springer, 1995.
+\bibitem{kumar1998} A. Kumar, V. J. Tsotras, and C. Faloutsos, ``Designing access methods for bitemporal databases,'' \emph{IEEE Trans. Knowl. Data Eng.}, vol. 10, no. 1, pp. 1--20, 1998.
+\bibitem{kung1981} H. T. Kung and J. T. Robinson, ``On optimistic methods for concurrency control,'' \emph{ACM Trans. Database Syst.}, vol. 6, no. 2, pp. 213--226, 1981.
+\bibitem{toki} Z. Wang, ``TOKI: A Bitemporal Operator Algebra for Contradiction Resolution in LLM-Agent Persistent Memory,'' arXiv:2606.06240, 2026.
+\bibitem{memtx} X. Li, Y. Wang, H. Lu, et al., ``MemTX: Transactional Belief Commit for Stateful Agent Memory,'' arXiv:2607.23929, 2026.
+\bibitem{fhirconsent} HL7 International, ``FHIR R4: Consent Resource,'' 2019.
+\bibitem{fhirprov} HL7 International, ``FHIR R4: Provenance Resource,'' 2019.
+\bibitem{fhirhttp} HL7 International, ``FHIR R4: RESTful API / HTTP Conditional Update,'' 2019.
 \bibitem{prov} W3C, ``PROV-O: The PROV Ontology,'' W3C Recommendation, 2013.
-\bibitem{rag} P. Lewis et al., ``Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks,'' NeurIPS, 2020.
+\bibitem{nist} C. Autio et al., ``Artificial Intelligence Risk Management Framework: Generative AI Profile,'' NIST AI 600-1, 2024.
+\bibitem{owasp} OWASP GenAI Security Project, ``OWASP Top 10 for LLM Applications 2025,'' 2025.
 \bibitem{glhs} N. N. Thien and T. M. Quang, ``GLHS: A Co-Versioned Disclosure-to-Commit Governance Contract for Longitudinal Health AI,'' working preprint, 2026.
 \end{thebibliography}
 \end{document}

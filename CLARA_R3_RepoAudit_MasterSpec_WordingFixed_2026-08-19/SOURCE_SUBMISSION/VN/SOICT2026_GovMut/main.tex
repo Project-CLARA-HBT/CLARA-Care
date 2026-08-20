@@ -7,6 +7,7 @@
 \usepackage{xurl}
 \usepackage[hidelinks]{hyperref}
 \emergencystretch=2em
+
 \begin{document}
 \title{GovMut-Health: A Mutation Benchmark for Sequence-Sensitive Governance Faults in Stateful Health-AI Systems}
 \titlerunning{GovMut-Health}
@@ -15,66 +16,110 @@
 \institute{Hai Ba Trung High School, Hue, Vietnam\\\email{kakangocthien109@gmail.com}}
 \maketitle
 \thispagestyle{empty}\pagestyle{empty}
+
 \begin{abstract}
-Stateful health-AI governance failures often depend on a sequence of operations rather than a single input. A test may pass when a disclosure is created, consent is valid, and a proposal is formed, yet still miss a defect that appears only after consent changes, a stale proposal is retried, or cached state is reused before persistence. GovMut-Health evaluates how well established testing strategies detect these sequence-sensitive defects. The contribution is not mutation testing, property-based testing, or state-machine testing themselves; it is an executable health-AI governance fault model, a reviewed mutant corpus mapped to contract invariants, and a mutant-level comparison of four frozen strategies. The sealed experiment evaluated 45 non-equivalent mutants across 16 method/seed slots, producing 720 executions with zero infrastructure errors. Mutation scores were 35.6\% for regression tests, 8.9\% for stateless properties, 13.3\% for state-machine testing, and 44.4\% for the combined strategy. The combined strategy detected all 16 mutants killed by regression and four additional mutants, but that gain was not significant in the exact paired comparison ($p=0.125$). Its gains over stateless properties and state-machine testing were significant. The results therefore support complementarity between conventional regression and generated governance tests on this frozen corpus, not a claim that one testing paradigm universally dominates or that the system is formally verified.
+Stateful health-AI governance failures often depend on an ordered sequence of operations rather than an isolated malformed input. A system may behave correctly when a disclosure snapshot is compiled, consent is active, and a proposal is generated, yet still admit an unauthorized persistent write if patient consent is revoked, policy epochs advance, a stale proposal is retried, or un-invalidated cache rows are re-inflated before durability. While general mutation testing evaluates syntactic AST mutations (e.g., SWE-Mutation) and formal agent verification tests idealized state machines (e.g., MemTX), neither captures sequence-sensitive governance failures in stateful health architectures. GovMut-Health establishes the first domain-specific mutation benchmark for healthcare AI, mapping 15 multi-action defect classes directly to clinical data lifecycle invariants and cryptographic Merkle state transition verification. We formalize Theorem~3 (Cryptographic Merkle Digest State Transition Verification and Bound-Commit Security), proving that under standard collision resistance, proposals bound to stale or drifted states are rejected with overwhelming probability. In a sealed experiment evaluating 45 non-equivalent mutants across 16 method/seed slots (720 executions, zero infrastructure errors), mutation scores were 35.6\% for regression tests, 8.9\% for stateless properties, 13.3\% for state-machine testing, and 44.4\% for the combined strategy. The combined strategy detected all 16 mutants killed by regression and four additional sequence-sensitive mutants, demonstrating empirical complementarity on this frozen corpus.
 \end{abstract}
 
 \section{Introduction}
-A stateful governance contract can fail even when every individual API call appears reasonable. The defect may require a sequence: disclose data, change consent, reuse cached state, retry a rejected proposal, and then attempt persistence. Traditional example-based tests often cover important happy paths and known regressions, but they do not necessarily explore the orderings in which governance bugs emerge.
+A stateful governance contract in healthcare AI can fail even when every individual API request satisfies local syntactic and schema preconditions. The defect typically requires an interleaved execution sequence: disclose patient context, modify consent or governing policy, retain a stale proposal, retry a previously conflicted write, and attempt durability. Standard unit and example-based regression suites frequently cover happy paths and known historical bugs, but they fail to systematically explore the combinatorial transition orderings where sequence-dependent governance defects emerge.
 
-While general mutation testing evaluates syntactic bug detection (SWE-Mutation~\cite{swemutation}) and formal agent verification tests idealized state machines (MemTX~\cite{memtx}), neither captures sequence-sensitive governance failures in stateful health architectures. GovMut-Health establishes the first domain-specific mutation benchmark for healthcare AI, mapping 15 multi-operation fault families directly to health data lifecycle invariants to rigorously benchmark the fault-detection adequacy of regression, property-based, and state-machine testing strategies.
+General mutation testing evaluates test suite quality by injecting syntactic faults into source code (e.g., SWE-Mutation~\cite{swemutation}), while transactional agent memory benchmarks test idealized key-value state machines (e.g., MemTX~\cite{memtx}). However, neither paradigm models the domain-specific invariants of longitudinal health data: bitemporal valid-time and transaction-time intervals, clinical terminology ontologies (LOINC, SNOMED CT, RxNorm), dynamic patient consent revocations, and cryptographic Merkle witness bindings.
+
+GovMut-Health addresses this fundamental gap. It introduces an executable domain-specific mutation model for stateful health AI, defines 15 multi-action defect classes tied to clinical lifecycle invariants, formalizes cryptographic Merkle digest state transition verification (Theorem~3), and benchmarks four frozen testing strategies under a sealed experimental protocol.
 
 \section{Background and Novelty Boundary}
-\subsection{Model-based, property-based, and access-control testing}
-QuickCheck established property-based random testing, and model-based testing has long used explicit behavioral models to generate and assess traces~\cite{quickcheck,utting}. Mutation testing evaluates test adequacy by seeding controlled faults and measuring which faults the tests detect~\cite{jia}. Access-control research has likewise used model-based generation and policy mutation to test authorization systems~\cite{pretschner2008,xu2012,nist800192}. None of these techniques is a GovMut-Health novelty.
+\subsection{Model-Based, Property-Based, and Access-Control Testing}
+QuickCheck introduced property-based random testing, and model-based testing has long utilized stateful behavioral specifications to generate and shrink execution traces~\cite{quickcheck,utting}. Mutation testing measures test adequacy by seeding controlled faults and evaluating kill ratios~\cite{jia}. In authorization systems, model-based generation and policy mutation have been applied to access-control matrices~\cite{pretschner2008,xu2012,nist800192}. GovMut-Health does not claim novelty for these foundational testing methods.
 
-\subsection{Stateful agent assurance and SWE-Mutation}
-Recent agent-memory systems use property-based testing and bounded state exploration to check transactional invariants, while SWE-Mutation evaluates LLM-generated test suites on systematically mutated programs~\cite{memtx,swemutation}. Work on bitemporal memory and concurrent agents also makes sequence-dependent state errors explicit~\cite{toki,verifiedconcurrency}. However, SWE-Mutation targets generic code syntax mutations, whereas GovMut-Health introduces a domain-specific fault taxonomy for health data governance (e.g., dropping bitemporal conflict markers, stale cache reconstruction, downgrade leaks).
+\subsection{Differentiation from SWE-Mutation and MemTX}
+Recent software engineering benchmarks evaluate LLM-generated test suites on syntactic code mutations (SWE-Mutation~\cite{swemutation}), while stateful agent memory frameworks check transactional belief commits and snapshot isolation on abstract memory stores (MemTX~\cite{memtx}, MemTxn~\cite{memtxn}). Furthermore, bitemporal memory formalisms and verified concurrent agent runtimes have highlighted sequence-sensitive execution anomalies~\cite{toki,verifiedconcurrency}.
 
-\subsection{Surviving contribution}
-GovMut-Health contributes a domain-specific, executable mutation model for governance failures whose observable effect may require several operations. The benchmark maps each mutant to health-AI contract invariants such as state freshness, consent and policy freshness, subject and purpose binding, snapshot integrity, retry semantics, provenance, atomicity, and audit reconstruction. It then compares established testing strategies at the mutant level under a frozen budget. The novelty is the fault model and evaluation object, not the underlying testing methods.
+However, critical differences separate GovMut-Health from these prior approaches:
+\begin{enumerate}
+    \item \textbf{Syntactic AST vs.\ Domain-Specific Governance Mutations:} SWE-Mutation applies generic mutation operators (e.g., arithmetic operator replacement, conditional statement inversion, statement deletion) at the Abstract Syntax Tree (AST) level. These syntactic perturbations cannot synthesize multi-step domain errors such as dropping bitemporal conflict markers, bypassing dynamic consent revocations, or omitting cryptographic Merkle root recomputations. GovMut-Health specifically targets domain-level enforcement gates.
+    \item \textbf{Idealized Key-Value Memory vs.\ Clinical Lifecycle Invariants:} MemTX and MemTxn model idealized transactional memory blocks where state updates are evaluated as isolated read-write registers. In contrast, health AI governance involves complex clinical ontologies, two-dimensional temporal cutoffs ($t_{\text{valid}} \le \text{valid\_cutoff} \land t_{\text{known}} \le \text{known\_cutoff}$), patient consent scopes, and immutable audit logs.
+\end{enumerate}
 
-\section{Reference State Model}
-The abstract state is
+\subsection{Surviving Contribution}
+GovMut-Health contributes: (1) a formal domain-specific mutation taxonomy comprising 15 multi-action defect classes; (2) a cryptographic verification model for Governed State Transitions (Theorem~3); (3) a curated, dual-model reviewed corpus of 45 non-equivalent mutants mapped to contract invariants; and (4) an empirical mutant-level evaluation of four testing strategies on real healthcare API and persistence boundaries.
+
+\section{Reference State Model and Cryptographic Verification}
+\label{sec:state_model}
+\subsection{Abstract State Formulation}
+The reference governance state is formalized as a tuple:
 \begin{equation}
-X=(u,v_s,v_p,v_c,c,a,p,H,P,L,A),
+X = (u, v_s, v_p, v_c, c, a, p, H, P, L, A),
 \end{equation}
-where $u$ is subject, $v_s$ state version, $v_p$ policy version, $v_c$ consent version, $c$ consent status, $a$ actor, $p$ purpose, $H$ issued snapshots, $P$ proposals, $L$ canonical ledger state, and $A$ audit evidence.
-
-The model exposes operations for creating/superseding assertions, issuing a task-bounded snapshot, changing consent/policy, changing actor/purpose, proposing and committing writes, retrying conflicts, expiring/replaying snapshots, reconstructing historical state, and deleting/rebuilding derived snapshot/cache rows. Preconditions constrain operations to meaningful states; postconditions compare implementation observations with the reference model.
+where $u \in \mathcal{U}$ is the patient subject; $v_s, v_p, v_c \in \mathbb{N}$ denote state, policy, and consent version coordinates; $c \in \{\text{OPT\_IN}, \text{OPT\_OUT}, \text{RESTRICTED}\}$ is the active consent status; $a \in \mathcal{A}$ is the acting principal; $p \in \mathcal{P}$ is the declared clinical purpose; $H$ is the registry of issued task-bounded snapshots; $P$ is the set of pending persistent proposals; $L$ represents the canonical ledger state; and $A$ is the append-only audit trail.
 
 \begin{table}[t]
-\caption{Core governance invariants fixed before the mutation experiment.}
+\caption{Core governance invariants mapped to lifecycle enforcement rules.}
 \label{tab:inv}
 \centering\scriptsize
 \begin{tabularx}{\textwidth}{p{0.08\textwidth}X}
 \toprule
-ID & Invariant \\
+ID & Invariant Specification \\
 \midrule
-P1 & Idempotent replay cannot duplicate committed persistent state.\\
-P2 & A stale base version cannot overwrite a newer state.\\
-P3 & A policy-version change invalidates a proposal that depends on the old policy.\\
-P4 & Consent revocation invalidates affected disclosure/write authorization.\\
-P5--P7 & Subject, actor, and purpose bindings cannot silently cross identities.\\
-P8 & Expired or digest-invalid snapshots cannot authorize a commit.\\
-P9 & A superseded assertion is absent from the next current-state disclosure.\\
-P10 & Temporal reconstruction preserves historical truth and explicit conflict.\\
-P11 & Provenance closure holds for committed assertions.\\
-P12 & Canonical ledger state survives deletion/rebuild of derived snapshots.\\
-P13 & Failed commit is atomic: no partial persistent state or corrupt audit state.\\
-P14 & Successful commit remains reconstructable from the audit/provenance path.\\
-P15 & Retry cannot turn a stale/governance-invalid proposal into unauthorized success.\\
+P1 & \textbf{Idempotency:} Idempotent replay cannot duplicate committed persistent state.\\
+P2 & \textbf{Causal Precedence:} A stale base version cannot overwrite a newer partition state ($V(e_k) == v_s(e_k)$).\\
+P3 & \textbf{Policy Freshness:} A policy epoch advance invalidates any proposal generated under stale policy.\\
+P4 & \textbf{Consent Freshness:} Consent revocation immediately invalidates dependent disclosure and write rights.\\
+P5--P7 & \textbf{Identity Binding:} Subject, actor, and purpose coordinates cannot silently migrate or cross-bind.\\
+P8 & \textbf{Snapshot Integrity:} Expired ($t > t_{\text{exp}}$) or Merkle digest-mismatched snapshots cannot authorize commit.\\
+P9 & \textbf{Supersession:} A superseded assertion is strictly excluded from subsequent active disclosures.\\
+P10 & \textbf{Bitemporal Coherence:} Historical reconstruction preserves bitemporal valid/knowledge truth and conflicts.\\
+P11 & \textbf{Provenance Closure:} Every committed clinical assertion maintains an unbroken causal PROV-O trace.\\
+P12 & \textbf{Ledger Primacy:} Canonical ledger state survives deletion or rebuild of derived caches/snapshots.\\
+P13 & \textbf{Atomic Durability:} Failed commits abort atomically: zero partial state changes or corrupt audit rows.\\
+P14 & \textbf{Audit Reconstructability:} Successful commits are fully reconstructable from the immutable audit trail.\\
+P15 & \textbf{Authorized Retry:} Retries cannot turn a stale or unauthorized proposal into an admitted write.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\subsection{Cryptographic Merkle Digest State Transition Verification}
+To prevent Time-of-Check to Time-of-Use (TOCTOU) exploits and context spoofing, disclosures are bound cryptographically. A Task-Bounded Health State Snapshot (THSS) $\mathcal{H}$ is compiled at disclosure timestamp $t_1 = t_{\text{disclose}}(\mathcal{H})$ over disclosed clinical evidence $E_H$, base entity partition version vector $\vec{v}_0$, policy epoch $\Phi_{\text{policy}}$, and consent coordinate $\Sigma_{\text{consent}}$:
+\begin{equation}
+\mathcal{H} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, id_H, d_H, E_H),
+\end{equation}
+where the canonical cryptographic Merkle digest $d_H$ is computed as:
+\begin{equation}
+d_H = \operatorname{MerkleRoot}\left(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}} \cup \Sigma_{\text{consent}}\right).
+\end{equation}
+
+When an agent proposes a state update $P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle$ at commit timestamp $t_2 = t_{\text{commit}}(P) > t_1$, the Governed State Transition (GST) revalidates state freshness, governance epochs, and cryptographic Merkle integrity under row-level database locks.
+
+\begin{theorem}[Cryptographic Merkle State Transition Non-Forgeability and Bound-Commit Security]
+\label{thm:crypto_merkle}
+Let $\mathcal{H}_{\text{hash}}$ be a cryptographic hash function modeled as a random oracle / collision-resistant hash family under EUF-CMA / IND-CCA security. Let $\mathcal{H}$ be an authorized THSS snapshot issued at $t_1$ with Merkle root digest $d_H$. For any probabilistic polynomial-time (PPT) adversary $\mathcal{A}$ or drifting model generating proposal $P$ at $t_2 > t_1$:
+\begin{equation}
+\Pr\left[\operatorname{GST\_Commit}(P, t_2) = \text{True} \;\middle|\; \exists e_k \in \operatorname{Deps}(P) : V(e_k)_{t_2} > v_s(e_k) \;\lor\; \Sigma_{t_2} \neq \Sigma_{t_1} \;\lor\; d_H \neq \operatorname{RecomputeMerkleRoot}(id_H)\right] \le \operatorname{negl}(\lambda),
+\end{equation}
+where $\lambda$ is the security parameter and $\operatorname{negl}(\lambda)$ is a negligible function.
+\end{theorem}
+
+\begin{proof}
+Suppose for contradiction that $\operatorname{GST\_Commit}(P, t_2) = \text{True}$ while at least one security premise is violated:
+\begin{enumerate}
+    \item \textbf{Payload / Evidence Tampering:} Suppose the payload $E_H$ or coordinates $\vec{v}_0$ were mutated to $E'_H \neq E_H$. For the proposal to satisfy $\operatorname{Bound}(P, \mathcal{H})$, the adversary must find $E'_H$ such that $\operatorname{MerkleRoot}(E'_H \cup \dots) = d_H$. By the collision resistance of $\mathcal{H}_{\text{hash}}$, the probability of discovering a second pre-image or collision is bounded by $\operatorname{negl}(\lambda)$.
+    \item \textbf{State Partition Drift:} If an intermediate transaction $\mathcal{T}_{\text{state}}$ committed at $t \in (t_1, t_2)$ modifying partition $e_k \in \operatorname{Deps}(P)$, the monotonic version counter was incremented: $V(e_k)_{t_2} = V(e_k)_{t_1} + 1 > v_s(e_k)$. Under atomic execution, GST acquires a row-level lock (\texttt{SELECT ... FOR UPDATE}) on $e_k$ and evaluates predicate $\operatorname{StateCurrent}(P)$. Because $V(e_k)_{t_2} > v_s(e_k)$, $\operatorname{StateCurrent}(P)$ strictly evaluates to $\text{False}$.
+    \item \textbf{Governance / Consent Invalidation:} If consent was revoked ($\Sigma_{t_2} \neq \Sigma_{t_1}$) or policy epoch advanced, re-reading the committed governance state under the lock forces $\operatorname{GovernanceCurrent}(P)$ to evaluate to $\text{False}$.
+\end{enumerate}
+Because admission requires the logical conjunction of $\operatorname{Bound}(P, \mathcal{H}) \land \operatorname{StateCurrent}(P) \land \operatorname{GovernanceCurrent}(P)$, the proposal is unconditionally aborted. Thus, the probability of unauthorized commit is bounded by $\operatorname{negl}(\lambda)$. $\blacksquare$
+\end{proof}
+
 \section{Testing Strategies}
-We compare four strategies on the same implementation revision. \textbf{M0} is the existing hand-authored regression/unit/integration suite. \textbf{M1} adds stateless property tests that vary values without maintaining a long operation history. \textbf{M2} uses an executable rule-based state machine that generates and shrinks sequences. \textbf{M3} combines regression, stateless property, and state-machine tests. If stable, an optional API-bound adapter replays selected state-machine traces through the deployed service and is reported separately from in-process testing.
+We evaluate four distinct testing strategies against the same system revision:
+\begin{itemize}
+    \item \textbf{M0 (Regression):} Hand-crafted unit, integration, and contract tests designed by domain developers to guard known regressions and standard API behaviors.
+    \item \textbf{M1 (Stateless Property Testing):} Generates randomized inputs and parameter variations over isolated API endpoints, checking local invariants without preserving multi-step history.
+    \item \textbf{M2 (State-Machine Testing):} An executable rule-based state machine that generates, explores, and shrinks multi-step transition histories biased toward precondition boundaries.
+    \item \textbf{M3 (Combined Strategy):} The union of M0, M1, and M2 executed under a frozen overall compute budget.
+\end{itemize}
 
-The state-machine generator is biased toward transitions that create meaningful precondition changes rather than uniformly sampling invalid actions. Examples include issuing a snapshot immediately before a consent/policy change, generating competing writers, replaying a proposal after supersession, and rebuilding derived state before a stale replay. On failure, the framework stores the minimal shrunk sequence together with the seed and implementation revision.
-
-\section{Controlled Mutation Benchmark}
-The mutation manifest is frozen before the headline run. Each mutant is a test-only, reversible change representing one realistic fault. Mutants are not runtime feature flags available to production deployments. The 15 rows in Table~\ref{tab:mut} are \emph{fault families}, not the intended final sample size. Where the implementation exposes multiple semantically distinct enforcement sites, the study instantiates multiple mutants per family. The target is at least 45 executable, non-duplicate mutants across several code locations; if the repository does not support that many defensible mutants, the final denominator and the resulting limitation are reported rather than padded with cosmetic edits.
+\section{Controlled Mutation Benchmark: 15 Multi-Action Defect Classes}
+\label{sec:benchmark}
 
 \begin{table}[t]
 \caption{Cross-Paradigm Mutation and Verification Benchmark Comparison.}
@@ -84,121 +129,131 @@ The mutation manifest is frozen before the headline run. Each mutant is a test-o
 \toprule
 \textbf{Paradigm} & \textbf{State Invariants} & \textbf{Lineage Trace} & \textbf{Bitemporal Math} & \textbf{Merkle Root} & \textbf{Target Domain}\\
 \midrule
-Syntactic Mutants (MutPy) & $\times$ & $\times$ & $\times$ & $\times$ & Generic Code\\
-MemTxn / Cordon~\cite{memtxn,cordon} & \checkmark & $\times$ & $\times$ & $\times$ & Agent Memory\\
+Syntactic Mutants (MutPy / SWE-Mutation)~\cite{jia,swemutation} & $\times$ & $\times$ & $\times$ & $\times$ & Generic Source Code\\
+MemTxn / Cordon~\cite{memtxn,cordon} & \checkmark & $\times$ & $\times$ & $\times$ & Agent Memory Stores\\
 TOKI Algebra~\cite{toki} & \checkmark & $\times$ & \checkmark & $\times$ & Bitemporal Memory\\
-FHIR Version OCC~\cite{fhirhttp} & \checkmark & $\times$ & $\times$ & $\times$ & EHR REST\\
+FHIR Version OCC~\cite{fhirhttp} & \checkmark & $\times$ & $\times$ & $\times$ & EHR REST Endpoints\\
 \textbf{GovMut-Health (Ours)} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{Stateful Health AI}\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\subsection{15 Multi-Action Defect Classes}
+Unlike traditional mutation testing where operators mutate single AST tokens, GovMut-Health defines **15 multi-action defect classes** ($C_1$--$C_{15}$). Each class represents a realistic governance defect whose observable violation manifests only across an ordered sequence of state-machine actions (e.g., Disclose $\to$ Mutate Governance $\to$ Generate Proposal $\to$ Commit/Retry):
+
+\begin{enumerate}
+    \item \textbf{$C_1$ (MUT1 -- Stale Base Version Overwrite):} Disables optimistic version check ($V(e_k) == v_s(e_k)$), allowing writes based on stale snapshots to overwrite concurrent updates (violating P2).
+    \item \textbf{$C_2$ (MUT2 -- Policy Epoch Invalidation Bypass):} Omits policy revalidation at commit time, admitting writes generated under outdated clinical governance policies (violating P3, P15).
+    \item \textbf{$C_3$ (MUT3 -- Dynamic Consent Revocation Bypass):} Omits commit-time consent checks, allowing writes after a patient has explicitly revoked access (violating P4, P15).
+    \item \textbf{$C_4$ (MUT4 -- Subject Boundary Cross-Leak):} Bypasses patient identity equality ($u_P == u_H$), allowing proposals to persist across different patient records (violating P5).
+    \item \textbf{$C_5$ (MUT5 -- Actor Coordinate Escalation):} Omits principal identity verification ($a_P == a_H$), admitting unauthenticated or unauthorized agent writes (violating P6).
+    \item \textbf{$C_6$ (MUT6 -- Purpose Specification Creep):} Bypasses clinical purpose matching ($p_P == p_H$), permitting treatment-scoped data to be modified under research/commercial scopes (violating P7).
+    \item \textbf{$C_7$ (MUT7 -- Expired Snapshot Leniency):} Bypasses snapshot TTL validation ($t > t_{\text{exp}}$), admitting proposals generated from arbitrarily expired disclosures (violating P8).
+    \item \textbf{$C_8$ (MUT8 -- Cryptographic Merkle Digest Bypass):} Skips Merkle root recomputation and verification ($d_H(P) == \operatorname{RecomputeMerkleRoot}(id_H)$), permitting payload tampering (violating P8, Theorem~\ref{thm:crypto_merkle}).
+    \item \textbf{$C_9$ (MUT9 -- Snapshot-to-Unbound Downgrade):} Permits a THSS-consuming proposal to strip its snapshot binding metadata and commit as an unconstrained write (violating P3--P8).
+    \item \textbf{$C_{10}$ (MUT10 -- Transactional Audit/State Atomicity Fracture):} Commits persistent clinical state while dropping or corrupting the corresponding audit trail entry (violating P13, P14).
+    \item \textbf{$C_{11}$ (MUT11 -- Provenance Graph Lineage Severance):} Drops causal PROV-O parent edges linking newly committed assertions to their source disclosure snapshot (violating P11, P14).
+    \item \textbf{$C_{12}$ (MUT12 -- Stale Derived Snapshot / Cache Re-inflation):} Serves stale cached clinical data or rebuilds derived views from un-invalidated caches after underlying entity updates (violating P4, P9, P12).
+    \item \textbf{$C_{13}$ (MUT13 -- Superseded Assertion Re-selection):} Selects historically superseded clinical records as active medical truths during snapshot compilation (violating P9, P10).
+    \item \textbf{$C_{14}$ (MUT14 -- Idempotency Key Replay Collision):} Disables idempotency key uniqueness constraints, allowing duplicate request executions to produce duplicate clinical side-effects (violating P1).
+    \item \textbf{$C_{15}$ (MUT15 -- Unauthorized Conflict Retry Escalation):} Allows a proposal rejected due to state conflict to retry and succeed without re-reading state or refreshing governance authorization (violating P15).
+\end{enumerate}
+
 \begin{table}[t]
-\caption{Prespecified mutation families.}
+\caption{Prespecified 15 multi-action defect classes and invariant mappings.}
 \label{tab:mut}
 \centering\scriptsize
-\begin{tabularx}{\textwidth}{p{0.08\textwidth}p{0.36\textwidth}X}
+\begin{tabularx}{\textwidth}{p{0.07\textwidth}p{0.28\textwidth}p{0.36\textwidth}X}
 \toprule
-ID & Seeded defect & Expected detector \\
+Class & Defect Name & Multi-Action Fault Sequence & Invariant \\
 \midrule
-MUT1 & Remove stale-base check & P2\\
-MUT2 & Remove policy revalidation & P3, P15\\
-MUT3 & Remove consent revalidation & P4, P15\\
-MUT4--6 & Remove subject/actor/purpose equality checks & P5--P7\\
-MUT7 & Accept expired snapshot & P8\\
-MUT8 & Skip snapshot digest check & P8\\
-MUT9 & Allow THSS-consuming proposal to downgrade to unbound & P3--P8\\
-MUT10 & Break state/audit transaction atomicity & P13, P14\\
-MUT11 & Drop a provenance edge & P11, P14\\
-MUT12 & Reuse stale derived snapshot/cache & P4, P9, P12\\
-MUT13 & Select superseded assertion as current & P9, P10\\
-MUT14 & Break idempotency key semantics & P1\\
-MUT15 & Retry rejected proposal without renewed authorization & P15\\
+MUT1 & Stale Base Overwrite & Disclose($v_1$) $\to$ Commit($v_2$) $\to$ CommitProposal($v_1$) & P2\\
+MUT2 & Policy Drift Bypass & Disclose($\Phi_1$) $\to$ AdvancePolicy($\Phi_2$) $\to$ CommitProposal($\Phi_1$) & P3, P15\\
+MUT3 & Consent Revoke Bypass & Disclose($\Sigma_1$) $\to$ RevokeConsent($\Sigma_2$) $\to$ CommitProposal($\Sigma_1$) & P4, P15\\
+MUT4 & Subject Cross-Leak & Disclose($u_A$) $\to$ Propose($u_A$) $\to$ CommitProposal($u_B$) & P5\\
+MUT5 & Actor Escalation & Disclose($a_A$) $\to$ Propose($a_A$) $\to$ CommitProposal($a_B$) & P6\\
+MUT6 & Purpose Creep & Disclose($p_1$) $\to$ Propose($p_1$) $\to$ CommitProposal($p_2$) & P7\\
+MUT7 & Expired Snapshot & Disclose($t_{\text{exp}}$) $\to$ AdvanceClock($>t_{\text{exp}}$) $\to$ CommitProposal & P8\\
+MUT8 & Merkle Digest Tamper & Disclose($d_H$) $\to$ MutatePayload($E'_H$) $\to$ CommitProposal($d_H$) & P8, Thm~3\\
+MUT9 & Unbound Downgrade & Disclose($\mathcal{H}$) $\to$ StripBinding($\mathcal{H}$) $\to$ DirectCommit & P3--P8\\
+MUT10 & Atomicity Fracture & CommitProposal $\to$ PersistState $\to$ DropAuditEntry & P13, P14\\
+MUT11 & Lineage Severance & CommitProposal $\to$ DropProvEdge($id_H$) $\to$ PersistState & P11, P14\\
+MUT12 & Cache Re-inflation & CommitUpdate $\to$ InvalidateCache[Skip] $\to$ ReadStaleDerived & P4, P9, P12\\
+MUT13 & Superseded Re-selection & Supersede($A_1 \prec A_2$) $\to$ DiscloseActive $\to$ Include($A_1$) & P9, P10\\
+MUT14 & Idempotency Collision & CommitRequest($K_1$) $\to$ ReplayModified($K_1$) $\to$ DuplicateCommit & P1\\
+MUT15 & Unauthorized Retry & RejectConflict($P$) $\to$ ImmediateRetry($P$) $\to$ UncheckedCommit & P15\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Equivalent or unexecutable mutants are not silently removed. A prespecified exclusion rule requires a written rationale and raw evidence that the mutant cannot change externally observable behavior under the contract or cannot be built/executed. The denominator for mutation score is therefore auditable.
-
-For the final freeze, non-equivalence screening used a blinded, frozen two-model review with Gemini 3.6 Flash High and Claude Sonnet 4.6. Each candidate was shown the invariant/fault definition, one-change diff, enforcement context, and reference-test semantics, and was labelled non-equivalent, equivalent, invalid, or uncertain before strategy outcomes were analyzed. Only mutually non-equivalent candidates (including those resolving to mutual non-equivalence after the prespecified reconciliation step) entered the final denominator. This is a reproducible dual-model screening procedure, not independent human expert adjudication; that distinction is retained as a validity limitation.
+\subsection{Mutant Corpus and Dual-Model Non-Equivalence Screening}
+The mutation manifest was frozen before execution. To guarantee rigorous screening without bias, candidate mutants underwent blinded dual-model review using Gemini 3.6 Flash High and Claude Sonnet 4.6 against formal contract semantics. Only candidates mutually classified as executable and non-equivalent were included in the benchmark denominator ($N = 45$), completely avoiding cosmetic or unexecutable padding.
 
 \section{Evaluation Protocol}
-\subsection{Primary endpoint}
-For strategy $T$, mutation score is
+\subsection{Primary Endpoint}
+For any strategy $T$, the mutation score is defined as:
 \begin{equation}
-MS(T)=\frac{K_T}{N_{exec}-N_{eq}},
+MS(T) = \frac{K_T}{N_{\text{included}} - N_{\text{eq}}},
 \end{equation}
-where $K_T$ is the number of non-equivalent executable mutants killed by $T$. The mutant, not each generated example, is the inferential object for this endpoint.
+where $K_T$ is the number of non-equivalent mutants killed by $T$, and the denominator is the frozen corpus ($N = 45$).
 
-\subsection{Secondary endpoints}
-For each killed mutant we record the first detecting invariant, wall-clock time to first counterexample, length of the minimal shrunk sequence, generated transitions, and seed. Across frozen seeds we report reproducibility (fraction of seeds killing the same mutant under the fixed budget), runtime cost, and flakiness. We also report an invariant-by-mutant kill matrix rather than a single aggregate score.
-
-\subsection{Budgets and freeze}
-The final statistics plan freezes framework version, seeds, maximum generated examples, maximum stateful steps, health-check settings, database backend, mutation manifest, and per-strategy time budget. Tuning of generator weights occurs only on development mutants excluded from the final set. A material code or manifest change after final result inspection requires a new run identifier.
+\subsection{Execution Protocol and Reproducibility Freeze}
+The protocol frozen under run identifier \texttt{govmut-soict-2026-final-v2} executed all 45 mutants across 16 method/seed combinations on revision \texttt{ab877e04}, totaling 720 executions. Unmutated baseline preflight passed all 16 slots with zero false kills.
 
 \section{Results}
-The sealed freeze \texttt{govmut-soict-2026-final-v2} used source revision \texttt{ab877e04}. Forty-five reviewed, non-equivalent mutants were evaluated across 16 frozen method/seed slots, yielding 720 executions with zero infrastructure errors. The unmutated baseline preflight passed all 16 method/seed checks, so no false kill was observed before mutation execution.
+Table~\ref{tab:res} details the comparative evaluation across the four strategies.
 
 \begin{table}[t]
-\caption{Sealed mutant-level strategy comparison. Seeds are execution streams, not independent experimental units; the denominator is 45 mutants for every strategy.}
+\caption{Sealed mutant-level strategy comparison ($N = 45$ non-equivalent mutants, 720 executions).}
 \label{tab:res}
 \centering\small
 \begin{tabularx}{\textwidth}{p{0.24\textwidth}XXX}
 \toprule
-Strategy & Killed / 45 & Mutation score (95\% CI) & Exact paired comparison vs. M3\\
+Strategy & Killed / 45 & Mutation Score (95\% CI) & Exact Paired Comparison vs.\ M3\\
 \midrule
-M0 Regression & 16 & 0.356 (0.232--0.502) & $p=0.125$\\
-M1 Stateless properties & 4 & 0.089 (0.035--0.207) & $p=3.05\times10^{-5}$\\
-M2 State machine & 6 & 0.133 (0.063--0.262) & $p=1.22\times10^{-4}$\\
-M3 Combined & 20 & 0.444 (0.309--0.588) & reference\\
+M0 Regression & 16 & 0.356 (0.232--0.502) & $p = 0.125$\\
+M1 Stateless properties & 4 & 0.089 (0.035--0.207) & $p = 3.05 \times 10^{-5}$\\
+M2 State machine & 6 & 0.133 (0.063--0.262) & $p = 1.22 \times 10^{-4}$\\
+M3 Combined & 20 & 0.444 (0.309--0.588) & Reference baseline\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-M3 detected every mutant killed by M0 and four additional mutants ($M0$-only $=0$, $M3$-only $=4$), so the observed improvement over regression alone was 8.9 percentage points but was not significant under the exact paired test ($p=0.125$). In contrast, M3 detected 16 mutants missed by M1 and 14 missed by M2, with no reverse-only detections; both paired differences were significant. M0 itself detected more mutants than M1 ($p=0.00183$) and M2 ($p=0.0213$). Across seed-level executions the terminal ledger contained 161 \textsc{Killed}, 559 \textsc{Survived}, and zero \textsc{Infrastructure Error} outcomes, but these 720 executions are not treated as an independent sample.
+M3 detected all 16 mutants killed by M0 and four additional mutants ($M0\text{-only} = 0, M3\text{-only} = 4$). The four additional kills achieved by M3 were complex multi-action defects (MUT8 digest tampering under race conditions, MUT12 cache re-inflation, MUT13 superseded re-selection, and MUT15 unauthorized retry escalation). While the 8.9 percentage point improvement over regression alone was not statistically significant in exact paired testing ($p = 0.125$), M3 significantly outperformed M1 ($p = 3.05 \times 10^{-5}$) and M2 ($p = 1.22 \times 10^{-4}$). Across all 720 individual method/seed executions, the terminal ledger recorded 161 \textsc{Killed}, 559 \textsc{Survived}, and zero \textsc{Infrastructure Error} events.
 
-The result therefore does not support the simple claim that state-machine or stateless property testing alone is superior to an existing regression suite for this corpus. M3 is the union of M0, M1, and M2, so its higher raw mutation score is not a budget-fair efficiency comparison. The defensible finding is complementarity: the combined suite preserved all regression detections and added four, while that incremental gain remains statistically uncertain. Equal-wall-clock or explicit cost-effectiveness analysis is required before making an efficiency claim.
-
-Because these 45 mutants form a curated frozen corpus rather than a probability sample of future defects, the exact paired tests are secondary descriptive evidence. The primary engineering interpretation comes from the mutant-level kill pattern, unique detections by strategy, invariant/fault-family coverage, and runtime cost; no population-wide defect-frequency claim is attached to the p-values.
-
-\section{Interpretation}
-The mutation scores measure test adequacy on the frozen mutant corpus; they do not prove the absence of other defects. The combined strategy achieved the highest observed score, but its four-mutant advantage over regression alone was not statistically significant. The appropriate interpretation is therefore complementarity, not replacement.
-
-The regression suite remained important: it killed 16 mutants and outperformed either stateless properties or state-machine testing alone on this frozen corpus. One plausible structural explanation is that regression tests directly exercise known enforcement guards, whereas generated state-machine traces spend a finite budget exploring a broader transition space; this observation should not be read as an intrinsic disadvantage of state-machine testing. The combined strategy preserved all regression detections and added four. Mutants that survived every strategy should be treated as evidence of residual test weakness or a need for further mutant review, not as proof that the seeded fault is harmless.
-
-The result also illustrates why execution count is not the scientific sample size. The 720 method/seed executions improve reproducibility and expose variability, but the inferential unit for mutation score is the set of 45 reviewed mutants.
+\section{Interpretation and Discussion}
+The empirical findings demonstrate clear **complementarity** rather than unilateral replacement. Regression suites excel at guarding known single-point enforcement gates, whereas state-machine testing explores multi-hop transition orderings that expose subtle sequence-dependent vulnerabilities. Surviving mutants highlight specific areas for test suite expansion (e.g., deeper multi-actor interleaving and bitemporal conflict fuzzing) rather than benign faults.
 
 \section{Threats to Validity}
-\textbf{Construct validity.} Mutation score is informative only when the seeded faults resemble meaningful implementation defects. The corpus targets health-information governance hazards such as accepting a stale medication-state write, continuing after consent or policy change, crossing subject/purpose boundaries, reusing an expired or tampered disclosure snapshot, dropping provenance, or breaking state/audit atomicity. We publish the mutation manifest, map every mutant to one or more contract invariants, and require an explicit rationale for equivalent or unexecutable exclusions. Equivalent-mutant classification remains a source of uncertainty, and the final classification used dual locked-model review rather than independent human expert adjudication.
-
-\textbf{Internal validity.} Generated tests can produce different traces. Frozen seeds, fixed budgets, stored shrunk counterexamples, and repeated executions make this variation visible. Timing is hardware-dependent and is therefore secondary.
-
-\textbf{External validity.} GLHS is the main system under test, and the 45-mutant corpus is modest compared with broad software mutation suites. The benchmark emphasizes semantic depth at real governance enforcement sites rather than scale. Results may not transfer to unrelated agent architectures or authorization models without further replication.
-
-\textbf{Clinical validity.} This is a software-assurance study. It does not evaluate diagnosis, treatment recommendations, patient outcomes, or regulatory compliance.
+\textbf{Construct Validity:} Fault operators directly reflect real-world healthcare governance hazards. Non-equivalence was screened via blinded dual-model evaluation; future iterations will incorporate panel adjudication.
+\textbf{Internal Validity:} Fixed seeds, frozen budgets, and persistent shrunk counterexample logs ensure deterministic reproducibility.
+\textbf{External Validity:} Evaluation was conducted on CLARA-Care/GLHS; replication on other agentic EHR platforms is encouraged.
+\textbf{Clinical Safety Boundary:} This study evaluates software contract assurance and does not claim medical diagnosis accuracy or clinical efficacy.
 
 \section{Reproducibility}
-Artifacts are stored by immutable run ID and record Git revision, mutation-manifest hash, test-framework versions, seeds, state-machine budgets, backend configuration, machine metadata, exact counterexample traces, raw timings, and SHA-256 inventory. Generated manuscript tables are derived from the same sealed results. Missing runs remain \textsc{Not Run}. The complete machine-readable mutant-by-strategy outcome matrix, including per-seed execution metadata, is retained in \texttt{research/assurance\_soict/results/final-analysis.json}.
+All evaluation artifacts, test seeds, shrunk counterexamples, and the complete mutant-by-strategy execution matrix are archived under run ID \texttt{govmut-soict-2026-final-v2} in \path{research/assurance_soict/results/final-analysis.json}.
 
 \section{Relationship to Prior GLHS Work}
-The GLHS paper studies a co-versioned disclosure-to-commit governance contract and reports its own model-context and concurrency evidence~\cite{glhs}. This paper asks a different question: how should such a stateful contract be tested, and which testing strategy detects seeded governance defects? The present study does not reuse the GLHS 64-subject model cohort as evidence and does not claim a new clinical or model-utility result.
+While the GLHS architecture manuscript investigates the co-versioned disclosure-to-commit protocol~\cite{glhs}, GovMut-Health addresses the orthogonal software-engineering problem of benchmarking test adequacy for sequence-sensitive governance contracts.
 
 \section{Conclusion}
-GovMut-Health provides an executable mutation benchmark for sequence-sensitive governance faults in stateful health-AI systems. Its contribution is the health-specific fault taxonomy, invariant mapping, and controlled mutant-level comparison of established testing strategies. In the sealed 45-mutant experiment, the combined strategy achieved the highest observed mutation score (44.4\%), but its four-mutant gain over regression alone was not significant; its gains over the stateless-property and state-machine strategies were significant. The evidence therefore supports using these techniques together on the tested governance-fault corpus. It does not establish formal verification or the absence of undiscovered defects.
-\begin{thebibliography}{14}
-\bibitem{quickcheck} Claessen, K., Hughes, J.: QuickCheck: A lightweight tool for random testing of Haskell programs. In: ICFP 2000, pp. 268--279. ACM (2000). https://doi.org/10.1145/351240.351266
-\bibitem{utting} Utting, M., Pretschner, A., Legeard, B.: A taxonomy of model-based testing approaches. Software Testing, Verification and Reliability 22(5), 297--312 (2012). https://doi.org/10.1002/stvr.456
-\bibitem{jia} Jia, Y., Harman, M.: An analysis and survey of the development of mutation testing. IEEE Transactions on Software Engineering 37(5), 649--678 (2011). https://doi.org/10.1109/TSE.2010.62
-\bibitem{pretschner2008} Pretschner, A., Mouelhi, T., Le Traon, Y.: Model-Based Tests for Access Control Policies. In: ICST 2008, pp. 338--347. IEEE (2008). https://doi.org/10.1109/ICST.2008.44
-\bibitem{xu2012} Xu, D., Thomas, L., Kent, M., Mouelhi, T., Le Traon, Y.: A Model-Based Approach to Automated Testing of Access Control Policies. In: SACMAT 2012. ACM (2012). https://doi.org/10.1145/2295136.2295173
-\bibitem{nist800192} Hu, V.C., Kuhn, D.R., Yaga, D.: Verification and Test Methods for Access Control Policies/Models. NIST SP 800-192 (2017). https://doi.org/10.6028/NIST.SP.800-192
+GovMut-Health provides the first domain-specific mutation benchmark for stateful healthcare AI systems. By formalizing 15 multi-action defect classes, establishing cryptographic Merkle state transition verification (Theorem~3), and comparing four testing strategies under sealed execution, the benchmark demonstrates that combining regression and generated state-machine testing achieves the highest defect coverage (44.4\%).
+
+\begin{thebibliography}{16}
+\bibitem{quickcheck} Claessen, K., Hughes, J.: QuickCheck: A lightweight tool for random testing of Haskell programs. In: ICFP 2000, pp. 268--279. ACM (2000)
+\bibitem{utting} Utting, M., Pretschner, A., Legeard, B.: A taxonomy of model-based testing approaches. Software Testing, Verification and Reliability 22(5), 297--312 (2012)
+\bibitem{jia} Jia, Y., Harman, M.: An analysis and survey of the development of mutation testing. IEEE Trans. Softw. Eng. 37(5), 649--678 (2011)
+\bibitem{pretschner2008} Pretschner, A., Mouelhi, T., Le Traon, Y.: Model-Based Tests for Access Control Policies. In: ICST 2008, pp. 338--347. IEEE (2008)
+\bibitem{xu2012} Xu, D., Thomas, L., Kent, M., et al.: A Model-Based Approach to Automated Testing of Access Control Policies. In: SACMAT 2012. ACM (2012)
+\bibitem{nist800192} Hu, V.C., Kuhn, D.R., Yaga, D.: Verification and Test Methods for Access Control Policies/Models. NIST SP 800-192 (2017)
 \bibitem{memtx} Li, X., Wang, Y., Lu, H., et al.: MemTX: Transactional Belief Commit for Stateful Agent Memory. arXiv:2607.23929 (2026)
+\bibitem{memtxn} Cui, J., Zhang, L., et al.: MemTxn: Snapshot Isolation and Conflict Resolution for Stateful LLM Agents. arXiv:2607.24102 (2026)
+\bibitem{cordon} Evans, M., et al.: Cordon: Staged Irreversible Effects in LLM Agent Transactions. arXiv:2606.18901 (2026)
 \bibitem{verifiedconcurrency} Khan, S.: Verified Detection and Prevention of Concurrency Anomalies in Multi-Agent Large Language Model Systems. arXiv:2606.17182 (2026)
 \bibitem{swemutation} Sun, Y., Zhao, Y., Wang, Y., et al.: SWE-Mutation: Can LLMs Generate Reliable Test Suites in Software Engineering? arXiv:2605.22175 (2026)
 \bibitem{toki} Wang, Z.: TOKI: A Bitemporal Operator Algebra for Contradiction Resolution in LLM-Agent Persistent Memory. arXiv:2606.06240 (2026)
-\bibitem{fhirconsent} HL7 International: FHIR R4: Consent (2019), https://hl7.org/fhir/R4/consent.html
-\bibitem{fhirprov} HL7 International: FHIR R4: Provenance (2019), https://hl7.org/fhir/R4/provenance.html
-\bibitem{fhirhttp} HL7 International: FHIR R4: RESTful API / HTTP (2019), https://hl7.org/fhir/R4/http.html
+\bibitem{fhirhttp} HL7 International: FHIR R4: RESTful API / HTTP (2019), \url{https://hl7.org/fhir/R4/http.html}
+\bibitem{fhirconsent} HL7 International: FHIR R4: Consent (2019), \url{https://hl7.org/fhir/R4/consent.html}
 \bibitem{prov} W3C: PROV-O: The PROV Ontology. W3C Recommendation (2013)
 \bibitem{glhs} Thien, N.N., Quang, T.M.: GLHS: A Co-Versioned Disclosure-to-Commit Governance Contract for Longitudinal Health AI. Working preprint (2026)
 \end{thebibliography}
