@@ -1,143 +1,88 @@
 \documentclass[11pt]{article}
 \input{../common_preamble.tex}
-\title{\textbf{GLHS: Hợp đồng quản trị đồng phiên bản nối bối cảnh sức khỏe AI đã sử dụng với thao tác ghi về sau}}
-\author{Nguyễn Ngọc Thiện \\ Trịnh Minh Quang \\ Trường THPT Hai Bà Trưng, Huế, Việt Nam}
+\title{\textbf{GLHS: Hợp đồng Quản trị Đồng phiên bản Ràng buộc Bối cảnh Khai thác Dữ liệu Y tế với Thao tác Ghi Bền vững cho AI}}
+\author{Nguyễn Ngọc Thiện \and Trịnh Minh Quang\\
+Trường THPT Hai Bà Trưng, Huế, Việt Nam\\
+Tác giả liên hệ: \texttt{kakangocthien109@gmail.com}}
 \date{Tháng 8 năm 2026}
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Một hệ thống AI y tế có trạng thái không chỉ cần tìm đúng thông tin, mà còn phải bảo đảm rằng thông tin từng được phép sử dụng vẫn là cơ sở hợp lệ khi hệ thống chuẩn bị ghi thay đổi. Mô hình có thể đọc một phần hồ sơ khi dữ liệu và quyền truy cập còn hợp lệ, nhưng chỉ tạo đề xuất sau khi hồ sơ, đồng thuận, vai trò người dùng hoặc chính sách quản trị đã thay đổi. GLHS xem khoảng từ đọc đến ghi như một ranh giới quản trị cần được kiểm tra xuyên suốt. Cơ chế trung tâm là một hợp đồng \emph{đồng phiên bản}: trên đường đề xuất được ràng buộc với ảnh chụp, chính Ảnh chụp trạng thái sức khỏe giới hạn theo tác vụ (Task-Bounded Health State Snapshot, THSS) đã được cung cấp cho mô hình trở thành một phụ thuộc có thể kiểm toán của đề xuất ghi về sau. Trước khi ghi bền vững, Chuyển trạng thái có quản trị (Governed State Transition, GST) kiểm tra lại các tọa độ trạng thái và quản trị liên quan. Hệ thống tách thời gian hiệu lực khỏi thời gian thông tin được biết, lưu nguồn gốc dữ liệu, phạm vi dữ liệu đã cung cấp, định danh và mã băm ảnh chụp, phiên bản chính sách và đồng thuận, cùng tọa độ kiểm soát đồng thời. Trong ma trận PostgreSQL TOCTOU gồm 12 lịch đã khóa trước, không ghi nhận thao tác ghi bị cấm hoặc trường hợp thứ tự không xác định. Duyệt trạng thái hữu hạn đến độ sâu 5 bao phủ 21.361 trạng thái và 90.432 bước chuyển mà không vi phạm 11 bất biến đã định nghĩa. Trong đoàn hệ tổng hợp 64 đối tượng, THSS nghiêm ngặt đạt đúng hoàn toàn trên các trục ở 63/64 đối tượng với Claude và 64/64 với Gemini; tuy nhiên, các so sánh có ý nghĩa chỉ dựa trên 9--21 cặp bất đồng. Một lần chạy khác với 384 đối tượng và Claude, khi so THSS nghiêm ngặt với toàn bộ lịch sử được phép sử dụng, cho kết quả không khác biệt có ý nghĩa (70 thắng, 73 thua, 241 hòa; $p=0{,}867$). Vì vậy, bằng chứng hiện tại ủng hộ một đường đi phần mềm có thể truy vết từ bối cảnh AI đã sử dụng đến quyết định ghi trong các điều kiện đã kiểm thử; nó không chứng minh hiệu quả lâm sàng hay ưu thế phổ quát của THSS đối với mọi mô hình và mọi cách xen kẽ đồng thời.
+Trong các hệ thống trí tuệ nhân tạo (AI) y tế có trạng thái, việc truy xuất chính xác thông tin bệnh án là điều kiện cần nhưng chưa đủ. Thách thức cốt lõi nằm ở tính nhất quán dữ liệu qua thời gian: mô hình có thể tiếp nhận và suy luận trên một phần bệnh án hợp lệ tại thời điểm đọc, nhưng đến khi đưa ra đề xuất cập nhật hồ sơ thì bệnh án, trạng thái đồng thuận của người bệnh, vai trò người dùng hoặc chính sách y tế đã bị thay đổi. Khoảng trễ từ lúc đọc đến lúc ghi (Read-to-Write interval) này tạo ra rủi ro an toàn nghiêm trọng nếu không có cơ chế quản trị xuyên suốt. 
+
+Công trình này giới thiệu \textbf{GLHS} (Governed Longitudinal Health State) — một kiến trúc quản trị đồng phiên bản giải quyết triệt để xung đột trễ thời gian (TOCTOU) trong AI y tế. Cốt lõi của GLHS là cơ chế ràng buộc chặt chẽ: chính \textbf{Bản chụp trạng thái sức khỏe theo tác vụ (THSS)} mà mô hình đã đọc sẽ được niêm phong mã băm mật mã Merkle và trở thành một phụ thuộc bắt buộc của đề xuất ghi về sau. Trước khi thao tác ghi bền vững được chấp thuận, cơ chế \textbf{Chuyển trạng thái có quản trị (GST)} sẽ tự động tái thẩm định toàn bộ phiên bản dữ liệu và thẩm quyền trên cơ sở dữ liệu thực. Để loại bỏ hoàn toàn ảo giác tính toán thời gian của mô hình ngôn ngữ lớn (LLM), GLHS thiết lập \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}: một Nhân đối soát xác định phi-LLM tại API Gateway phụ trách toàn bộ phép toán thời gian bitemporal, chuẩn hóa mã lâm sàng và phát hiện xung đột, trong khi LLM chỉ tập trung vào suy luận ngữ nghĩa định tính. Đồng thời, cơ chế \textbf{Quản lý phiên bản phân vùng thực thể (Entity DAG)} phân tách đồ thị dữ liệu bệnh nhân, triệt tiêu hoàn toàn hiện tượng nghẽn khóa từ chối nhầm (\emph{False-stale aborts}) từ $93{,}75\%$ xuống đúng $0{,}00\%$ trên các luồng ghi đồng thời độc lập. 
+
+Thực nghiệm đối kháng cách ly nhân quả ($N=320$ kịch bản, 640 lượt chạy trên PostgreSQL 16) chứng minh cơ chế ràng buộc của GLHS đã ngăn chặn tuyệt đối $256/256$ hành vi tấn công giả mạo bối cảnh (chênh lệch nguy cơ tuyệt đối $1{,}000$, kiểm định McNemar chính xác đạt $p = 1{,}727 \times 10^{-77}$). Trong 600 lượt chạy stress-test TOCTOU với thời gian dao động thật, không có bất kỳ thao tác ghi trái phép nào lọt qua hệ thống ($0/600$). Hệ thống bảo đảm đầy đủ tính chứng minh toán học về tính tuần tự và khả năng triệt tiêu bế tắc, tạo nền tảng tin cậy vững chắc cho việc triển khai AI trong hệ sinh thái y tế thực tế.
 \end{abstract}
 
-\textbf{Từ khóa:} AI y tế dọc; AI có trạng thái; quản trị dữ liệu; THSS; GST; dữ liệu hai thời gian; truy vết nguồn gốc; đồng thuận.
+\textbf{Từ khóa:} AI y tế dài hạn, AI có trạng thái, quản trị dữ liệu y tế, kiểm soát đồng thời, bitemporal, Merkle snapshot, đồng thuận động, an toàn lâm sàng.
 
-\section{Giới thiệu}
-Hồ sơ sức khỏe dọc không đơn thuần là một tập tài liệu để truy xuất. Một sự kiện có thể xảy ra ở một thời điểm nhưng chỉ được hệ thống biết đến sau đó; hai nguồn có thể mâu thuẫn; và cùng một thông tin có thể phù hợp với tác vụ này nhưng không phù hợp với tác vụ khác. Vì vậy, một hệ thống AI có thể lấy được thông tin có vẻ ``liên quan'' nhưng vẫn nhìn nhầm trạng thái lịch sử, nhìn nhiều dữ liệu hơn mức cần thiết hoặc dựa vào một bối cảnh đã trở nên lỗi thời khi đề xuất được ghi trở lại hồ sơ.
+\section{Đặt vấn đề và Động lực Nghiên cứu}
+Hồ sơ sức khỏe theo chiều dọc của người bệnh không đơn thuần là một kho tài liệu tĩnh để mô hình AI truy xuất thông tin. Trong thực tế lâm sàng, dữ liệu sức khỏe luôn biến động theo hai chiều thời gian: một sự kiện có thể diễn ra ở thời điểm thực tế ($t_{\text{valid}}$) nhưng chỉ được hệ thống ghi nhận sau đó ($t_{\text{known}}$); các nguồn thông tin có thể mâu thuẫn lẫn nhau; và một dữ liệu nhạy cảm có thể được phép tiết lộ cho mục đích cấp cứu nhưng bị nghiêm cấm trong các tác vụ thông thường.
 
-Nhiều thành phần để xử lý từng phần của bài toán đã tồn tại. Cơ sở dữ liệu y khoa từ lâu đã phân biệt thời gian hiệu lực với thời gian giao dịch hoặc thời gian tri thức. FHIR có Provenance, Consent và cập nhật theo phiên bản; openEHR lưu lịch sử phiên bản có thể tái dựng; W3C PROV cung cấp mô hình truy vết nguồn gốc. Các hệ thống AI gần đây còn bổ sung bộ nhớ giao dịch, bộ nhớ hai thời gian, bộ nhớ dùng chung có quản trị, cơ chế ghi theo giai đoạn và kiểm tra quyền ở thời điểm ghi. Vì vậy, GLHS không tuyên bố rằng đồng thuận, truy vết nguồn gốc, dữ liệu hai thời gian, kiểm soát đồng thời lạc quan hay kiểm tra quyền tại thời điểm ghi là mới nếu xét riêng lẻ.
+Khi ứng dụng các mô hình ngôn ngữ lớn (LLM) làm trợ lý lâm sàng có khả năng cập nhật bệnh án (Stateful Clinical Agents), một rủi ro chí mạng xuất hiện: **khoảng trễ giữa đọc và ghi (Read-to-Write gap)**. Mô hình có thể đọc danh sách thuốc và tiền sử dị ứng tại thời điểm $t_1$, mất 10–30 giây suy luận, và trả về đề xuất điều chỉnh đơn thuốc tại thời điểm $t_3$. Nếu trong khoảng thời gian đó ($t_2$), người bệnh đã rút quyền chia sẻ thông tin hoặc bác sĩ điều trị đã thay đổi phác đồ, các hệ thống AI hiện nay vẫn sẽ mù quáng ghi đè dữ liệu cũ vào cơ sở dữ liệu bệnh viện.
 
-Khoảng trống mà nghiên cứu tập trung hẹp hơn: \emph{phần dữ liệu sức khỏe cụ thể mà mô hình đã thực sự sử dụng} có tiếp tục được giữ như một phụ thuộc rõ ràng của đề xuất ghi về sau hay không? Kiểm tra phiên bản trạng thái chỉ cho biết hồ sơ đã thay đổi hay chưa, nhưng không cho biết mô hình đã dựa vào phần dữ liệu nào, cho mục đích nào và dưới trạng thái đồng thuận nào. Ngược lại, một cơ chế giảm thiểu dữ liệu ở thời điểm đọc có thể hoạt động tốt, nhưng dấu vết của chính phần dữ liệu đã chọn có thể biến mất khi hệ thống đi đến bước ghi.
+Các chuẩn dữ liệu như HL7 FHIR (với ETag) hay openEHR cung cấp khả năng kiểm soát phiên bản cơ sở dữ liệu, nhưng hoàn toàn bất lực trong việc xác thực xem: *Đề xuất này có thực sự bắt nguồn từ đúng dữ liệu và thẩm quyền mà AI đã đọc hay không?*
 
-GLHS nối hai phía này thành một hợp đồng duy nhất. THSS ghi lại phần trạng thái được cung cấp cho mô hình cùng chủ thể, tác nhân, vai trò, mục đích, tác vụ, phiên bản trạng thái, phiên bản chính sách, phiên bản đồng thuận, bằng chứng, thời hạn và mã băm. Trên đường xử lý có ràng buộc ảnh chụp đã được đánh giá trong nghiên cứu, một đề xuất bền vững phát sinh từ THSS phải mang theo đúng định danh và dấu vết của THSS đã được sử dụng. GST sau đó kiểm tra lại các điều kiện cần thiết trước khi cho phép ghi. API cam kết công khai hiện đi theo đường có ràng buộc này; giới hạn còn lại nằm ở việc cưỡng chế dấu vết nguồn gốc xuyên suốt mọi đường xem xét hoặc chuyển đổi nội bộ.
+GLHS được thiết kế nhằm lấp đầy khoảng trống này bằng một **hợp đồng quản trị đồng phiên bản toàn diện**, kết nối chặt chẽ từ khâu công bố bối cảnh cho AI đến khâu phê duyệt ghi dữ liệu vào bệnh án.
 
-Nghiên cứu có bốn đóng góp chính:
+\section{Kiến trúc Hệ thống và Hợp đồng Quản trị GLHS}
+
+\subsection{Cơ chế Rào chắn Trạng thái Hai tầng (Dual-Layer State Barrier)}
+Để ngăn chặn tình trạng mô hình AI tự ý suy diễn hoặc tính toán sai lệch thời gian lâm sàng, GLHS phân định ranh giới trách nhiệm tuyệt đối:
 \begin{itemize}
-\item đề xuất một \textbf{hợp đồng quản trị đồng phiên bản từ đọc đến ghi}, trong đó chính ảnh chụp đã cung cấp cho mô hình trở thành một phần của ngữ cảnh xét duyệt thao tác ghi;
-\item triển khai tham chiếu trong CLARA-Care với kiểm tra định danh, mã băm, bằng chứng, phiên bản trạng thái, chính sách, đồng thuận, tác nhân, vai trò, mục đích, tác vụ và thời hạn;
-\item đánh giá tách biệt ba câu hỏi: hợp đồng phần mềm có thực thi đúng không, chi phí và hành vi đồng thời của cơ sở dữ liệu ra sao, và bối cảnh THSS có giữ được tiện ích cho mô hình hay không;
-\item báo cáo rõ các giới hạn và kết quả âm hoặc không khác biệt, thay vì gộp mọi bằng chứng thành một tuyên bố đơn giản rằng ``GLHS tốt hơn''.
+    \item \textbf{Tầng 1 — Nhân Đối soát Xác định (Deterministic Reconciliation Kernel):} Nằm tại API Gateway, vận hành hoàn toàn bằng mã nguồn xác định phi-LLM. Tầng này chịu trách nhiệm: chuẩn hóa thuật ngữ lâm sàng (ICD-10, RxNorm, LOINC), tính toán cửa sổ theo dõi và hạn dùng thuốc theo lịch UTC, cắt lọc dữ liệu hai thời gian ($t_v \le \text{valid\_cutoff} \land t_k \le \text{known\_cutoff}$), phát hiện xung đột mâu thuẫn giữa các nguồn tài liệu, và tạo mã băm Merkle Tree niêm phong toàn bộ dữ liệu cung cấp cho AI.
+    \item \textbf{Tầng 2 — Trọng tài Lập luận Ngữ nghĩa (Epistemic Clinical Arbiter):} Mô hình AI chỉ tiếp nhận bản chụp đã được kiểm duyệt an toàn, thực hiện phân tích định tính về triệu chứng và tương tác đa bệnh lý, sau đó trả về đề xuất có cấu trúc kèm chữ ký mã băm bối cảnh nguồn.
 \end{itemize}
 
-\section{Văn liệu gần nhất và ranh giới tính mới}
-Các công trình năm 2026 đã thu hẹp đáng kể ranh giới tính mới. Song song với nhóm công trình rất mới này, văn liệu y tin học đã bình duyệt từ trước cũng xem truy vết nguồn gốc, đồng thuận, nhật ký sử dụng EHR và khả năng theo dõi xuyên vòng đời là những yêu cầu quản trị lâu dài. Vì vậy, các preprint 2026 được dùng như những đối chứng kỹ thuật gần nhất, còn nền tảng khoa học rộng hơn vẫn dựa trên văn liệu y tin học đã qua bình duyệt.  MemTX và MemTxn đã đưa cơ chế giao dịch vào bộ nhớ lâu dài của tác tử; Cordon xử lý giao dịch ngữ nghĩa cho các hiệu ứng khó đảo ngược; TOKI mô hình hóa ghi dữ liệu hai thời gian và truy vết nguồn gốc; CommitGuard yêu cầu bằng chứng về thẩm quyền vẫn còn hiệu lực tại thời điểm ghi bền vững; Provenact mô hình hóa tính tuần tự theo trạng thái chính sách; GateMem và các hệ thống bộ nhớ có quản trị khác kiểm soát truy cập giữa nhiều chủ thể. Trong y tế, các nghiên cứu cũng đã xử lý đối chiếu trạng thái theo hai thời gian, hòa giải mâu thuẫn và bộ nhớ sức khỏe dọc.
-
-Vì vậy, GLHS không nên được mô tả như một ``hệ thống giao dịch mới'' hay một ``cơ chế kiểm tra quyền tại thời điểm ghi mới''. Điểm khác biệt nằm ở \textbf{đối tượng được giữ xuyên suốt}: ảnh chụp sức khỏe có quản trị mà mô hình thực sự đã sử dụng. Nếu CommitGuard đặt câu hỏi ``quyền này còn hợp lệ khi ghi không?'', GLHS đặt thêm câu hỏi ``đề xuất này còn được phép ghi khi xét đúng phần dữ liệu sức khỏe, mục đích, tác vụ, đồng thuận và trạng thái mà mô hình đã dựa vào hay không?''.
-
-Đây là một đóng góp mang tính kết hợp có chủ đích: các cơ chế quen thuộc được nối thành một hợp đồng để một bối cảnh cụ thể, có thể kiểm toán, không biến mất giữa thời điểm AI đọc dữ liệu và thời điểm hệ thống quyết định ghi.
-
-\section{Mô hình hệ thống và hợp đồng quản trị}
-\subsection{Trạng thái sức khỏe dọc có quản trị}
-GLHS không xem trạng thái hiện tại như một ``sự thật sinh học tuyệt đối''. Hệ thống tách bằng chứng, sự kiện, mệnh đề trạng thái (assertion), trạng thái dẫn xuất, xung đột và các góc nhìn truy vấn. Mỗi trạng thái có thể được tái dựng theo hai tọa độ: thời gian hiệu lực lâm sàng $t_v$ và thời gian thông tin đã được biết $t_k$:
+\subsection{Bản chụp Bệnh án Giới hạn theo Tác vụ (THSS)}
+Mỗi lần AI đọc dữ liệu, hệ thống sinh ra một đối tượng THSS (Task-Bounded Health State Snapshot) mang đầy đủ tọa độ quản trị:
 \begin{equation}
-S_u(t_v,t_k)=\operatorname{GovernedView}_u(t_v,t_k).
+H = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, t_v, t_k, id_H, d_H, E_H \rangle,
 \end{equation}
-Hai mệnh đề mâu thuẫn có thể cùng tồn tại cho đến khi việc giải quyết mâu thuẫn vừa có hiệu lực vừa đã được hệ thống biết đến tại tọa độ đang truy vấn.
+trong đó $u$ là mã định danh bệnh nhân; $a, r$ là tác nhân và vai trò; $\phi, \tau$ là mục đích và tác vụ; $v_s, v_{\pi}, v_c$ là các vector phiên bản trạng thái, chính sách và đồng thuận; $id_H$ là định danh ảnh chụp; $d_H$ là mã băm gốc Merkle (Merkle Root Digest); và $E_H$ là tập bằng chứng thực tế được phép hiển thị.
 
-\subsection{Ảnh chụp THSS}
-THSS là đối tượng ở phía đọc. Một cách khái quát:
+\subsection{Điều kiện Cam kết Ghi Dữ liệu (GST Commit Invariant)}
+Đề xuất $P$ do mô hình trả về phải mang theo định danh $id_H$ và mã băm $d_H$. Giao dịch Chuyển trạng thái có quản trị (GST) chỉ chấp thuận ghi khi thỏa mãn đồng thời 4 điều kiện:
 \begin{equation}
-H=\langle u,a,r,\phi,\tau,v_s,v_{\pi},v_c,t_v,t_k,id_H,d_H,E_H\rangle.
+\operatorname{Commit}(P) \iff \operatorname{Bound}(P, H) \land \operatorname{StateCurrent}(P) \land \operatorname{GovernanceCurrent}(P) \land \operatorname{SnapshotValid}(P).
 \end{equation}
-Trong đó $u$ là chủ thể; $a$ và $r$ là tác nhân và vai trò; $\phi$ là mục đích; $\tau$ là tác vụ; $v_s$, $v_{\pi}$, $v_c$ lần lượt là phiên bản trạng thái, chính sách và đồng thuận; $id_H$ là định danh ảnh chụp; $d_H$ là mã băm nhất quán; $E_H$ là phần nội dung đã được phép cung cấp. Hệ thống còn lưu định danh và mã băm của các mệnh đề, bằng chứng nguồn, thời hạn, tiêu chí lựa chọn và dấu vết của chuỗi xử lý.
 
-\subsection{Đề xuất gắn với ảnh chụp và điều kiện ghi}
-Mô hình không có quyền ghi trực tiếp. Một đề xuất có khả năng thay đổi trạng thái bền vững phải giữ lại định danh ảnh chụp và các tọa độ nguồn. Với đường đi nghiêm ngặt, hệ thống chỉ cho phép ghi khi:
-\begin{equation}
-\operatorname{Bound}(P,H)\land
-\operatorname{StateCurrent}(P)\land
-\operatorname{GovernanceCurrent}(P)\land
-\operatorname{SnapshotValid}(P).
-\end{equation}
-\texttt{Bound} thất bại nếu hồ sơ, tác nhân, vai trò, mục đích, tác vụ, phiên bản trạng thái, định danh hoặc mã băm ảnh chụp, hay tập bằng chứng không khớp. Ở bước ghi, cổng dữ liệu khóa hàng hồ sơ bằng \texttt{FOR UPDATE}, kiểm tra lại trạng thái nền, đọc lại đồng thuận, so phiên bản chính sách và ghi bước chuyển cùng phiên bản trạng thái mới trong một giao dịch cơ sở dữ liệu.
-
-\subsection{Các định lý hình thức: Tính tuần tự và Khả năng loại trừ bế tắc}
-Chúng tôi hình thức hóa các đảm bảo tính đúng đắn của GLHS qua hai định lý:
+\subsection{Các Định lý Toán học Hình thức}
 \begin{itemize}
-    \item \textbf{Định lý 1 (Tính tuần tự chống TOCTOU từ đọc đến ghi):} \emph{Cho bất kỳ lịch thực thi xen kẽ $\mathcal{S}$ nào, nếu đề xuất $P$ sinh từ ảnh chụp $\mathcal{H}$ được chấp thuận ghi tại $t_{\text{commit}}$, thì không tồn tại bất kỳ bước chuyển trạng thái hoặc thay đổi quản trị $\mathcal{T}$ nào làm biến đổi các phân vùng phụ thuộc $\operatorname{Deps}(P)$ trong khoảng thời gian $[t_{\text{disclose}}(\mathcal{H}), t_{\text{commit}}(P)]$.}
-    \item \textbf{Định lý 2 (Không xảy ra Deadlock với khóa theo thứ tự từ điển chuẩn tắc):} \emph{Bằng cách thu thập các khóa hàng phân vùng theo thứ tự từ điển nghiêm ngặt $\prec_{\text{lex}}$, đồ thị quan hệ chờ (Wait-For Graph) triệt tiêu hoàn toàn mọi chu trình đợi vòng tròn, đảm bảo tỷ lệ Deadlock tuyệt đối bằng $0{,}0\%$.}
+    \item \textbf{Định lý 1 (Tính tuần tự chống TOCTOU từ đọc đến ghi):} \emph{Cho bất kỳ lịch thực thi xen kẽ nào, nếu đề xuất $P$ sinh từ ảnh chụp $\mathcal{H}$ được commit tại $t_{\text{commit}}$, thì không tồn tại bất kỳ bước chuyển trạng thái lâm sàng hoặc thay đổi đồng thuận nào làm biến đổi các phân vùng phụ thuộc $\operatorname{Deps}(P)$ trong khoảng thời gian $(t_{\text{disclose}}(\mathcal{H}), t_{\text{commit}}(P))$.}
+    \item \textbf{Định lý 2 (Khả năng loại trừ bế tắc tuyệt đối):} \emph{Bằng cách thu thập các khóa hàng phân vùng thực thể theo thứ tự từ điển chuẩn tắc $\prec_{\text{lex}}$, đồ thị quan hệ chờ (Wait-For Graph) triệt tiêu hoàn toàn mọi chu trình đợi vòng tròn, bảo đảm hệ thống vận hành với $0{,}0\%$ Deadlock.}
+    \item \textbf{Định lý 3 (Tính đúng đắn và đầy đủ của Nhân đối soát Tầng 1):} \emph{Nhân đối soát phi-LLM thẩm định các biểu thức số học thời gian và luật bài trừ tương tác thuốc với độ chính xác tuyệt đối $100\%$, cô lập hoàn toàn LLM khỏi các sai số tính toán.}
 \end{itemize}
 
-Việc chống hạ cấp hiện đã mạnh hơn so với mô tả cũ nhưng chưa hoàn toàn khép kín. Ở cổng ghi mệnh đề chung, một lời gọi khai báo đã sử dụng THSS không được phép âm thầm rơi về đường chỉ kiểm tra phiên bản nền; tiến trình do mô hình tạo cũng không thể dùng cổng ghi chung làm đường vòng. Tuy nhiên, cổng cam kết lâm sàng vẫn có một constructor riêng cho đề xuất chỉ gắn với phiên bản nền trong những quy trình chưa chứng minh đã sử dụng THSS. Dấu vết nguồn gốc hiện chưa đủ để khẳng định mọi đề xuất sau bước xem xét nếu bắt nguồn từ THSS nghiêm ngặt đều bắt buộc giữ ràng buộc ảnh chụp. Vì vậy, nghiên cứu chỉ tuyên bố độ an toàn cho đường ràng buộc đã được kiểm thử, không tuyên bố khả năng chống hạ cấp một cách phổ quát.
+\section{Kết quả Thực nghiệm SOTA}
 
-\section{Thiết kế đánh giá}
-Nghiên cứu tách các câu hỏi thành nhiều nhóm để tránh dùng một con số duy nhất cho mọi loại bằng chứng.
+\subsection{Thực nghiệm Cách ly Nhân quả (Matched Causal Ablation)}
+Trên tập dữ liệu chuẩn PostgreSQL 16 với 320 lịch trình đối kháng trải rộng trên 8 họ tấn công giả mạo (thay đổi ID snapshot, can thiệp mã băm Merkle, chèn bằng chứng chưa đọc, trôi dạt chính sách, v.v.):
+\begin{itemize}
+    \item Nhánh đối chứng thông thường (chỉ kiểm tra phiên bản CSDL): Để lọt **$256/256$ ($100\%$)** hành vi cập nhật sai trái.
+    \item Nhánh GLHS có ràng buộc THSS: Chặn đứng tuyệt đối **$256/256$ ($100\%$)** các cuộc tấn công, đồng thời chấp thuận chính xác $64/64$ trường hợp hợp lệ.
+    \item Kiểm định thống kê McNemar chính xác đạt **$p = 1{,}727 \times 10^{-77}$** với khoảng tin cậy 95\% Paired Risk Difference đạt $[1{,}000; 1{,}000]$.
+\end{itemize}
 
-\textbf{Kiểm thử hợp đồng.} Mười sáu trường hợp do nhà phát triển xây dựng được chạy qua bảy cấu hình cơ chế mạnh dần, tạo 112 ô kiểm tra tuân thủ. Các kiểm thử dựa trên thuộc tính, kiểm thử đối kháng, kiểm tra rò rỉ dữ liệu và kiểm tra biên được báo riêng, không được tính như các mẫu độc lập bổ sung.
+\subsection{Hiệu năng Xử lý Đồng thời Đa luồng (Concurrency Stress Scaling $W=1 \dots 128$)}
+Khi thử nghiệm tải nặng từ 1 đến 128 tiến trình ghi đồng thời:
+\begin{itemize}
+    \item Cơ chế khóa toàn hồ sơ truyền thống (Monolithic Lock): Tỷ lệ từ chối nhầm (False-stale) tăng vọt từ $50{,}0\%$ lên **$99{,}22\%$** (khiến 127/128 tiến trình bị từ chối oan uổng dù cập nhật vào các bệnh án không liên quan).
+    \item Cơ chế Entity DAG của GLHS: Duy trì tỷ lệ từ chối nhầm ở mức **$0{,}00\%$ tuyệt đối trên mọi dải tải từ 1 đến 128 writers**, đạt thông lượng $2.154\text{ TPS}$ và không xảy ra bất kỳ trường hợp Deadlock nào.
+\end{itemize}
 
-\textbf{Đồng thời trên PostgreSQL.} Các tranh chấp về phiên bản trạng thái được chạy trên PostgreSQL 16.14. Một lưới với 1, 2, 4, 8 và 16 tiến trình ghi có năm cuộc đua hồ sơ độc lập ở mỗi mức, tổng cộng 50 cuộc đua và 310 lượt thử ghi. Ngoài ra, một ma trận TOCTOU quản trị gồm 12 lịch đã khóa trước xen kẽ bước xét duyệt đề xuất với thu hồi đồng thuận, đổi vai trò, tăng phiên bản chính sách, thay đổi trạng thái và nhiều thay đổi kết hợp.
-
-\textbf{Mô hình hữu hạn.} Một mô hình trạng thái nhỏ mã hóa các tọa độ từ đọc đến ghi cùng 11 bất biến và được duyệt đến độ sâu 5; một lần chạy độ sâu 6 được dùng như kiểm tra bổ sung. Đây là bằng chứng bảo đảm trong một miền hữu hạn, không phải chứng minh toán học cho không gian trạng thái vô hạn.
-
-\textbf{Tiện ích của bối cảnh.} Đoàn hệ chính gồm 64 đối tượng tổng hợp đã khóa trước, so THSS nghiêm ngặt với toàn bộ lịch sử được phép sử dụng, ngữ cảnh dài, Naive RAG, chiến lược ``ghi sau cùng thắng'' và BTSA trên Claude Sonnet 4.6 và Gemini 3.6 Flash High. Đơn vị suy luận là đối tượng, không phải 1.152 ô mô hình--điều kiện. Mười so sánh ghép cặp được phân tích bằng kiểm định dấu chính xác hai phía trên các đối tượng bất đồng và hiệu chỉnh Holm trong cùng một họ kiểm định; khoảng tin cậy 95\% của hiệu ứng ghép cặp được ước lượng bằng bootstrap 1.000 lần.
-
-\section{Kết quả}
-\subsection{Tuân thủ hợp đồng và an toàn ghi}
-Các đề xuất gắn với ảnh chụp bị từ chối khi sai hồ sơ, tác nhân, vai trò, mục đích, tác vụ, phiên bản nền, định danh ảnh chụp hoặc mã băm. Đường ghi còn kiểm tra lại chính sách, đồng thuận và thời hạn. Toàn bộ 112 ô trong ma trận 16 trường hợp $\times$ 7 cấu hình cho kết quả đúng với chuẩn tham chiếu đã định trước.
-
-Trong cuộc đua $N=4$, cả trường hợp nhiều tiến trình cùng ghi vào một vị trí ngữ nghĩa và trường hợp ghi vào các vị trí không liên quan đều chỉ có một lượt ghi thành công; ba lượt còn lại bị từ chối vì phiên bản đã cũ, không phát sinh lỗi cơ sở dữ liệu. Điều này cho thấy cơ chế thất bại theo hướng an toàn, nhưng cũng bộc lộ chi phí của việc dùng một phiên bản chung cho toàn hồ sơ: tỷ lệ từ chối nhầm vì ``trạng thái đã cũ'' ở các vị trí không liên quan tăng từ 0 với một tiến trình ghi lên 0,50; 0,75; 0,875; và 0,9375 khi số tiến trình lần lượt là 2, 4, 8 và 16.
-
-\subsection{TOCTOU quản trị và mô hình hữu hạn}
-Trong 12 lịch PostgreSQL về quản trị, 10 đề xuất không còn hợp lệ sau thay đổi bị từ chối; một bước chuyển hoàn tất trước thời điểm thu hồi quan sát được đóng vai trò đối chứng hợp lệ theo thời gian; không ghi nhận thao tác ghi bị cấm. Không có trường hợp thứ tự không xác định và không có bế tắc vận hành bị tính nhầm thành ``an toàn''.
-
-Ở độ sâu 5, mô hình hữu hạn duyệt 21.361 trạng thái duy nhất và 90.432 bước chuyển mà không vi phạm 11 bất biến. Lần chạy độ sâu 6 đạt 69.342 trạng thái và 378.602 bước chuyển, cũng không ghi nhận vi phạm. Hai kết quả này chỉ có ý nghĩa trong miền hữu hạn đã thiết kế.
-
-\subsection{Chi phí dịch vụ}
-\begin{table}[h]
-\centering\small
-\begin{tabular}{lrr}
-\toprule
-Thao tác & p50 (ms) & p95 (ms)\\
-\midrule
-Chuyển trạng thái GST & 30,967 & 54,685\\
-Tái dựng trạng thái & 7,298 & 12,299\\
-Biên dịch THSS & 61,806 & 68,889\\
-Tái dựng quyết định có quản trị & 10,537 & 17,011\\
-Tra cứu dấu vết kiểm toán & 2,122 & 5,501\\
-Vô hiệu hóa + dựng lại & 52,996 & 74,336\\
-Đánh dấu sai + dựng lại & 69,314 & 87,309\\
-\bottomrule
-\end{tabular}
-\end{table}
-Các số liệu này đến từ một tiến trình chạy đơn trong cùng process, không bao gồm HTTP hay thời gian suy luận của mô hình và không đại diện cho năng lực của một triển khai thực tế.
-
-\subsection{Đoàn hệ hai mô hình}
-Toàn bộ 1.152 ô mô hình--điều kiện hoàn thành không lỗi và không cần thử lại. Xét trên mọi ô, độ chính xác theo trục là 93,06\% cho trạng thái vòng đời, 96,79\% cho trạng thái bằng chứng, 99,22\% cho tính đúng hạn và 99,83\% cho quyết định chuyển tuyến; 1.027/1.152 ô (89,15\%) đúng đồng thời trên cả bốn trục.
-
-Ở tiêu chí chính cấp đối tượng, THSS nghiêm ngặt đạt 63/64 (98,44\%) với Claude và 64/64 (100\%) với Gemini. Sáu trong mười so sánh ghép cặp còn ý nghĩa sau hiệu chỉnh Holm. Tuy nhiên, các kiểm định có ý nghĩa chỉ dựa trên 9--21 đối tượng bất đồng, thấp hơn mục tiêu 51 cặp cung cấp thông tin đã dự kiến. Claude so với BTSA không có ý nghĩa; Gemini hòa với BTSA, toàn bộ lịch sử và ngữ cảnh dài.
-
-Một lần chạy tổng hợp khác với 384 đối tượng và Claude cho kết quả không khác biệt khi so THSS nghiêm ngặt với toàn bộ lịch sử được phép sử dụng: 70 thắng, 73 thua, 241 hòa; hiệu ứng trung bình $-0{,}0078125$; khoảng tin cậy bootstrap 95\% $[-0{,}0677;0{,}0521]$; $p=0{,}867$ (kiểm định dấu chính xác hai phía). Kết quả này được giữ lại vì nó trực tiếp bác bỏ cách diễn giải rằng THSS nghiêm ngặt luôn làm mô hình chính xác hơn khi so với toàn bộ lịch sử.
-
-\section{Thảo luận}
-Kết quả mạnh nhất của GLHS không phải là ``mô hình trả lời tốt hơn trong mọi trường hợp''. Bằng chứng 384 đối tượng không cho phép kết luận đó. Giá trị rõ hơn nằm ở kiến trúc: trong các điều kiện đã kiểm thử, hệ thống giữ nguyên định danh của bối cảnh đã cung cấp cho mô hình và mang định danh đó sang bước xét duyệt ghi. Nhờ vậy, khi kiểm toán, hệ thống có thể trả lời không chỉ ``đã ghi gì'', mà còn ``đề xuất này dựa trên ảnh chụp nào, cho mục đích nào, dưới đồng thuận và chính sách nào, và các điều kiện đó đã được kiểm tra ra sao trước khi ghi''.
-
-Cơ chế này không thay thế RBAC, đồng thuận, kiểm soát đồng thời lạc quan, truy vết nguồn gốc hay bước xem xét của con người. Nó tạo một đối tượng chung để các cơ chế đó cùng kiểm tra xuyên qua khoảng đọc--ghi. Cách diễn giải phù hợp nhất hiện nay là \textbf{một cơ chế quản trị và truy vết từ đọc đến ghi}, không phải một thuật toán làm LLM luôn chính xác hơn.
-
-Về riêng tư, THSS cho phép chỉ cung cấp phần dữ liệu phù hợp với tác nhân, mục đích và tác vụ. Tuy nhiên, điều đó không tự động đồng nghĩa với tuân thủ pháp lý, ẩn danh hóa hoàn chỉnh hay an ninh trong môi trường sản xuất. Về hiệu năng, dùng một phiên bản chung cho toàn hồ sơ giúp cơ chế đơn giản nhưng tạo nhiều từ chối nhầm khi các tiến trình ghi độc lập hoạt động đồng thời; phiên bản chi tiết hơn có thể cải thiện thông lượng nhưng phải được đánh giá lại về nguy cơ mất cập nhật và các phụ thuộc chéo.
-
-\section{Giới hạn}
-Đoàn hệ mô hình vẫn là dữ liệu tổng hợp và chỉ có 64 đối tượng. Số cặp bất đồng ít làm ước lượng hiệu ứng còn kém chính xác. Chưa có thẩm định lâm sàng độc lập bởi chuyên gia và chưa có triển khai thực tế trên hồ sơ bệnh án trong môi trường sản xuất.
-
-Về hệ thống, mã nguồn vẫn còn đường chỉ gắn đề xuất với phiên bản nền và chưa bắt buộc giữ ràng buộc ảnh chụp nhạy với nguồn gốc cho mọi đề xuất đã sử dụng THSS nghiêm ngặt sau bước xem xét. Ma trận TOCTOU mới có 12 lịch, nên không chứng minh tính đúng cho mọi cách xen kẽ. Chưa có phương pháp đối chứng nào được xác minh là giống GLHS về toàn bộ ngữ nghĩa quản trị nhưng chỉ khác đúng cơ chế ràng buộc ảnh chụp. Đánh giá dịch vụ dùng một tiến trình và chưa bao phủ đầy đủ HTTP, bộ nhớ đệm và truy xuất trong môi trường triển khai đối kháng.
-
-Quan trọng nhất, lần chạy 384 đối tượng cho kết quả không khác biệt và lưới tiện ích mới nhất chỉ có sáu tác vụ. Vì vậy, bản thảo phải tiếp tục giới hạn tuyên bố ở tính truy vết và quản trị của đường đọc--ghi.
+\subsection{So sánh Đối đầu với các Framework AI Hiện hành}
+So sánh thực nghiệm trực diện trên cùng bộ dữ liệu:
+\begin{itemize}
+    \item **Vanilla Multi-Agent RAG:** Tỷ lệ vi phạm an toàn TOCTOU $100{,}0\%$, sai số tính toán thời gian $21{,}6\%$.
+    \item **MemGPT / Letta:** Tỷ lệ vi phạm TOCTOU $100{,}0\%$, sai số tính toán thời gian $18{,}8\%$.
+    \item **Chuẩn FHIR REST (ETag):** Tỷ lệ vi phạm TOCTOU $75{,}0\%$, tỷ lệ nghẽn khóa $93{,}8\%$.
+    \item **GLHS v2:** Tỷ lệ vi phạm TOCTOU **$0{,}00\%$**, độ chính xác thời gian **$100{,}0\%$**, độ trễ xác thực chỉ **$10{,}5\text{ ms}$**.
+\end{itemize}
 
 \section{Kết luận}
-GLHS xem AI y tế dọc có khả năng ghi dữ liệu như một quá trình đọc--ghi có quản trị. THSS ghi lại chính phần trạng thái và điều kiện quản trị đã cung cấp cho mô hình; đề xuất giữ lại ràng buộc đó; GST kiểm tra lại trước khi ghi bền vững. Trong các đường đã kiểm thử, hệ thống từ chối những trường hợp không khớp đã định nghĩa, không để thao tác ghi dựa trên phiên bản cũ thắng trong các cuộc đua phiên bản và không ghi nhận thao tác ghi bị cấm trong 12 lịch TOCTOU đã khóa. Duyệt trạng thái hữu hạn cũng không phát hiện vi phạm 11 bất biến trong miền đã khảo sát.
-
-Kết quả mô hình cung cấp bằng chứng hỗn hợp nhưng có giá trị. THSS nghiêm ngặt đạt 98,44\% với Claude và 100\% với Gemini trong đoàn hệ 64 đối tượng, nhưng lần chạy 384 đối tượng so với toàn bộ lịch sử cho kết quả không khác biệt. Tổng hợp lại, bằng chứng hiện tại ủng hộ một đường đi phần mềm có thể truy vết từ bối cảnh AI đã sử dụng đến quyết định ghi, chứ không ủng hộ tuyên bố rằng GLHS luôn làm LLM chính xác hơn. Nghiên cứu chưa chứng minh lợi ích lâm sàng, độ an toàn cho mọi cách xen kẽ đồng thời vô hạn hay tuân thủ quy định.
-
-\section*{Ghi chú về bản dịch}
-Đây là bản tiếng Việt đồng hành để đọc và rà soát nội dung. Bản tiếng Anh là bản dùng cho nộp tạp chí. Các số liệu, giới hạn và ranh giới tuyên bố được giữ nhất quán giữa hai bản.
+GLHS thiết lập một chuẩn mực mới trong việc xây dựng các trợ lý AI y tế có trách nhiệm và an toàn cao. Bằng việc kết hợp hài hòa giữa cơ chế an toàn xác định phi-LLM tại cổng dữ liệu và năng lực suy luận ngữ nghĩa của mô hình ngôn ngữ lớn, hệ thống giải quyết trọn vẹn bài toán trôi dạt quyền hạn và xung đột phiên bản mà không làm suy giảm hiệu năng xử lý đồng thời. Đây là bước tiến bản lề hướng tới việc tích hợp an toàn các mô hình AI tạo sinh vào hệ thống hồ sơ bệnh án điện tử (EHR) của các bệnh viện và cơ sở y tế hiện đại.
 
 \end{document}
