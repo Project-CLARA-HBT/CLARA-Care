@@ -572,6 +572,27 @@ select:focus {
   }
 }
 
+/* Sleek modern custom scrollbar for medical panels and tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+::selection {
+  background: rgba(0, 83, 219, 0.35);
+  color: inherit;
+}
+
 .medical-markdown {
   position: relative;
   isolation: isolate;
