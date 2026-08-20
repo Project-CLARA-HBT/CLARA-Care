@@ -203,144 +203,160 @@ export function AnswerRenderer({
       {/* 1. ĐIỀU QUAN TRỌNG NHẤT (Main Message) */}
       <section
         aria-label="Điều quan trọng nhất"
-        className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-sm"
+        className="relative overflow-hidden rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-sm transition-all hover:shadow-md"
         data-testid="answer-main-message-section"
       >
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-              <Icon name="clinical-notes" size={14} aria-hidden="true" />
-            </span>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
-              1. Điều quan trọng nhất
-            </h2>
-          </div>
+        {/* Top subtle gradient accent line */}
+        <div className="h-1 w-full bg-gradient-to-r from-[var(--brand-600)] via-[var(--brand-400)] to-emerald-400" />
 
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleCopyAnswer}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-colors focus-ring"
-              title="Sao chép nội dung"
-              aria-label="Sao chép nội dung câu trả lời"
-            >
-              <Icon name={copied ? "check" : "clinical-notes"} size={13} aria-hidden="true" />
-              <span>{copied ? "Đã chép" : "Sao chép"}</span>
-            </button>
-          </div>
-        </div>
-
-        <div
-          className="medical-markdown text-base leading-relaxed text-[var(--text-primary)] font-normal"
-          data-testid="answer-main-message"
-        >
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: ({ children }) => (
-                <h1 className="text-lg font-bold text-[var(--text-primary)] mt-4 mb-2.5 pb-1 border-b border-[color:var(--shell-border)]/60">
-                  {children}
-                </h1>
-              ),
-              h2: ({ children }) => (
-                <h2 className="text-base font-bold text-[var(--text-primary)] mt-3.5 mb-2 pb-1 border-b border-[color:var(--shell-border)]/40 text-[var(--text-brand)]">
-                  {children}
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-[color:var(--shell-border)]/50">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)] shadow-xs">
+                <Icon name="clinical-notes" size={15} aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-brand)]">
+                  1. Điều quan trọng nhất
                 </h2>
-              ),
-              h3: ({ children }) => (
-                <h3 className="text-sm font-semibold text-[var(--text-primary)] mt-3 mb-1.5">
-                  {children}
-                </h3>
-              ),
-              p: ({ children }) => (
-                <p className="mb-3 leading-[1.7] text-[15px] text-[var(--text-primary)] last:mb-0">
-                  {children}
-                </p>
-              ),
-              ul: ({ children }) => (
-                <ul className="list-disc pl-5 my-2.5 space-y-1.5 text-sm text-[var(--text-primary)]">
-                  {children}
-                </ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="list-decimal pl-5 my-2.5 space-y-1.5 text-sm text-[var(--text-primary)]">
-                  {children}
-                </ol>
-              ),
-              li: ({ children }) => (
-                <li className="leading-relaxed pl-0.5">{children}</li>
-              ),
-              strong: ({ children }) => (
-                <strong className="font-bold text-[var(--text-primary)] bg-[var(--surface-brand-soft)]/50 px-1 py-0.5 rounded">
-                  {children}
-                </strong>
-              ),
-              table: ({ children }) => (
-                <div className="my-3.5 overflow-x-auto rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-xs">
-                  <table className="min-w-full divide-y divide-[color:var(--shell-border)] text-left text-xs">
-                    {children}
-                  </table>
-                </div>
-              ),
-              thead: ({ children }) => (
-                <thead className="bg-[var(--surface-muted)] font-semibold text-[var(--text-secondary)]">
-                  {children}
-                </thead>
-              ),
-              tbody: ({ children }) => (
-                <tbody className="divide-y divide-[color:var(--shell-border)]/40">
-                  {children}
-                </tbody>
-              ),
-              tr: ({ children }) => (
-                <tr className="hover:bg-[var(--surface-muted)]/40 transition-colors">
-                  {children}
-                </tr>
-              ),
-              th: ({ children }) => (
-                <th className="px-3.5 py-2.5 text-xs font-semibold text-[var(--text-primary)]">
-                  {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td className="px-3.5 py-2.5 text-xs text-[var(--text-secondary)]">
-                  {children}
-                </td>
-              ),
-              blockquote: ({ children }) => (
-                <blockquote className="border-l-4 border-[var(--brand-500)] pl-3 my-2.5 text-xs italic text-[var(--text-muted)] bg-[var(--surface-muted)]/40 py-1 rounded-r">
-                  {children}
-                </blockquote>
-              ),
-              hr: () => (
-                <hr className="my-4 border-t border-[color:var(--shell-border)]/60" />
-              ),
-            }}
+                <span className="text-[11px] text-[var(--text-muted)] font-normal">
+                  Tổng hợp phân tích từ trợ lý y tế CLARA
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleCopyAnswer}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--shell-border)]/80 bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]/80 hover:text-[var(--text-primary)] transition-all focus-ring active:scale-95"
+                title="Sao chép toàn bộ câu trả lời"
+                aria-label="Sao chép nội dung câu trả lời"
+              >
+                <Icon name={copied ? "check" : "clinical-notes"} size={13} aria-hidden="true" className={copied ? "text-emerald-500" : ""} />
+                <span className={copied ? "font-semibold text-emerald-600 dark:text-emerald-400" : ""}>
+                  {copied ? "Đã sao chép!" : "Sao chép"}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div
+            className="medical-markdown text-base leading-relaxed text-[var(--text-primary)] font-normal space-y-3"
+            data-testid="answer-main-message"
           >
-            {mainMessage}
-          </ReactMarkdown>
-          {isStreaming ? (
-            <span className="inline-block h-4 w-2 ml-1 animate-pulse bg-[var(--brand-500)] align-middle" />
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => (
+                  <h1 className="text-lg sm:text-xl font-bold text-[var(--text-primary)] mt-5 mb-3 pb-1.5 border-b border-[color:var(--shell-border)]/70">
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-base sm:text-lg font-bold text-[var(--text-brand)] mt-4 mb-2 pb-1 border-b border-[color:var(--shell-border)]/40 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[var(--brand-500)]" />
+                    <span>{children}</span>
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)] mt-3.5 mb-1.5">
+                    {children}
+                  </h3>
+                ),
+                p: ({ children }) => (
+                  <p className="mb-3 leading-[1.75] text-[15px] text-[var(--text-primary)] last:mb-0">
+                    {children}
+                  </p>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc pl-6 my-3 space-y-2 text-[15px] text-[var(--text-primary)]">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-6 my-3 space-y-2 text-[15px] text-[var(--text-primary)]">
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => (
+                  <li className="leading-[1.7] pl-1">{children}</li>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-bold text-[var(--text-primary)] bg-[var(--surface-brand-soft)]/60 text-[var(--text-brand-strong)] px-1.5 py-0.5 rounded-md shadow-xs">
+                    {children}
+                  </strong>
+                ),
+                table: ({ children }) => (
+                  <div className="my-4 overflow-hidden rounded-xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-[color:var(--shell-border)] text-left text-xs sm:text-sm">
+                        {children}
+                      </table>
+                    </div>
+                  </div>
+                ),
+                thead: ({ children }) => (
+                  <thead className="bg-[var(--surface-muted)] font-bold text-[var(--text-primary)] border-b border-[color:var(--shell-border)]">
+                    {children}
+                  </thead>
+                ),
+                tbody: ({ children }) => (
+                  <tbody className="divide-y divide-[color:var(--shell-border)]/40">
+                    {children}
+                  </tbody>
+                ),
+                tr: ({ children }) => (
+                  <tr className="hover:bg-[var(--surface-muted)]/50 transition-colors">
+                    {children}
+                  </tr>
+                ),
+                th: ({ children }) => (
+                  <th className="px-4 py-3 text-xs sm:text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
+                    {children}
+                  </th>
+                ),
+                td: ({ children }) => (
+                  <td className="px-4 py-3 text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+                    {children}
+                  </td>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-4 border-[var(--brand-500)] pl-4 py-2 my-3 text-sm italic text-[var(--text-secondary)] bg-[var(--surface-muted)]/60 rounded-r-xl">
+                    {children}
+                  </blockquote>
+                ),
+                hr: () => (
+                  <hr className="my-5 border-t border-[color:var(--shell-border)]/80" />
+                ),
+              }}
+            >
+              {mainMessage}
+            </ReactMarkdown>
+            {isStreaming ? (
+              <span className="inline-block h-4 w-2 ml-1 animate-pulse bg-[var(--brand-500)] align-middle rounded-xs" />
+            ) : null}
+          </div>
+
+          {/* Narrative subsections if present */}
+          {sections.length > 0 ? (
+            <div className="mt-5 space-y-3 pt-4 border-t border-[color:var(--shell-border)]/70">
+              {sections.map((sec, idx) => (
+                <div key={idx} className="space-y-1.5 rounded-xl bg-[var(--surface-muted)]/40 p-3.5 border border-[color:var(--shell-border)]/40">
+                  <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-500)]" />
+                    <span>{sec.title}</span>
+                  </h3>
+                  <div className="medical-markdown text-sm leading-relaxed text-[var(--text-secondary)]">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {sec.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : null}
         </div>
-
-        {/* Narrative subsections if present */}
-        {sections.length > 0 ? (
-          <div className="mt-4 space-y-3 pt-3 border-t border-[color:var(--shell-border)]/60">
-            {sections.map((sec, idx) => (
-              <div key={idx} className="space-y-1">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                  {sec.title}
-                </h3>
-                <div className="medical-markdown text-sm leading-relaxed text-[var(--text-secondary)]">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {sec.content}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : null}
       </section>
 
       {/* Write Proposals (Đề xuất ghi nhận vào hồ sơ) if present */}
@@ -380,57 +396,67 @@ export function AnswerRenderer({
       {actions.length > 0 ? (
         <section
           aria-label="Bạn có thể làm gì tiếp theo"
-          className="rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 shadow-xs"
+          className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 shadow-xs transition-all hover:shadow-sm"
           data-testid="answer-actions-section"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--status-ok-bg)] text-[var(--status-ok-text)]">
-              <Icon name="check" size={14} aria-hidden="true" />
+          <div className="flex items-center gap-2.5 mb-4">
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs">
+              <Icon name="check" size={15} aria-hidden="true" />
             </span>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-              2. Bạn có thể làm gì tiếp theo
-            </h3>
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                2. Bạn có thể làm gì tiếp theo
+              </h3>
+              <span className="text-[11px] text-[var(--text-muted)] font-normal">
+                Kế hoạch theo dõi và chăm sóc được khuyến nghị
+              </span>
+            </div>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {actions.map((act) => {
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {actions.map((act, idx) => {
               const hasTarget = Boolean(act.target);
 
               return (
                 <div
                   key={act.id}
-                  className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[color:var(--shell-border)] bg-[var(--surface-muted)]/50 p-3 transition-colors hover:border-[color:var(--shell-border-strong)]"
+                  className="group relative flex flex-col justify-between rounded-xl border border-[color:var(--shell-border)]/80 bg-[var(--surface-muted)]/40 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--brand-500)]/60 hover:bg-[var(--surface-muted)]/80 hover:shadow-sm"
                   data-testid={`action-card-${act.id}`}
                 >
                   <div>
-                    <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-                      {act.label}
-                    </h4>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--surface-brand-soft)] text-[10px] font-bold text-[var(--text-brand)]">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                      <h4 className="text-sm font-semibold text-[var(--text-primary)] leading-snug">
+                        {act.label}
+                      </h4>
+                    </div>
                     {act.description ? (
-                      <p className="mt-1 text-xs text-[var(--text-secondary)] leading-relaxed">
+                      <p className="mt-1 text-xs text-[var(--text-secondary)] leading-relaxed pl-7">
                         {act.description}
                       </p>
                     ) : null}
                   </div>
 
-                  <div className="mt-3 pt-2 border-t border-[color:var(--shell-border)]/40 flex justify-end">
+                  <div className="mt-3.5 pt-2.5 border-t border-[color:var(--shell-border)]/50 flex justify-end">
                     {hasTarget ? (
                       <Link
                         href={act.target!}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-brand)] hover:underline focus-ring rounded"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-brand)] hover:underline focus-ring rounded group-hover:text-[var(--brand-600)] dark:group-hover:text-[var(--brand-400)]"
                         onClick={() => onActionClick?.(act)}
                       >
                         <span>Thực hiện ngay</span>
-                        <Icon name="arrow-right" size={13} aria-hidden="true" />
+                        <Icon name="arrow-right" size={13} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                       </Link>
                     ) : (
                       <button
                         type="button"
                         onClick={() => onActionClick?.(act)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-brand)] hover:underline focus-ring rounded"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-brand)] hover:underline focus-ring rounded group-hover:text-[var(--brand-600)] dark:group-hover:text-[var(--brand-400)]"
                       >
                         <span>Thực hiện ngay</span>
-                        <Icon name="arrow-right" size={13} aria-hidden="true" />
+                        <Icon name="arrow-right" size={13} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                       </button>
                     )}
                   </div>

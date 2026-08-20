@@ -492,24 +492,27 @@ function ConsumerAskContent() {
         {!exchange ? (
           /* Empty State with Suggestions */
           <div className="py-6 space-y-6" data-testid="ask-empty-state">
-            <div className="rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 text-center shadow-xs">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-                <Icon name="clinical-notes" size={24} aria-hidden="true" />
+            <div className="relative overflow-hidden rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-8 text-center shadow-sm">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--brand-500)]/20 to-[var(--brand-600)]/10 text-[var(--text-brand)] shadow-xs">
+                <Icon name="clinical-notes" size={28} aria-hidden="true" />
               </div>
-              <h2 className="mt-3 text-base font-semibold text-[var(--text-primary)]">
+              <h2 className="mt-4 text-lg sm:text-xl font-bold tracking-tight text-[var(--text-primary)]">
                 Bạn đang băn khoăn điều gì về sức khỏe?
               </h2>
-              <p className="mx-auto mt-1.5 max-w-lg text-xs leading-relaxed text-[var(--text-secondary)]">
-                Nhập triệu chứng, thuốc đang dùng, chụp ảnh nhãn thuốc hoặc tải tài liệu kết quả xét nghiệm để được giải thích an toàn.
+              <p className="mx-auto mt-2 max-w-lg text-xs sm:text-sm leading-relaxed text-[var(--text-secondary)]">
+                Nhập triệu chứng, thuốc đang dùng, chụp ảnh đơn thuốc hoặc hỏi bất kỳ thắc mắc y khoa nào để được CLARA phân tích và đối chiếu an toàn.
               </p>
             </div>
 
             {/* Prompt Suggestion Cards */}
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">
-                Gợi ý câu hỏi phổ biến
-              </h3>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center gap-2 mb-3.5">
+                <Icon name="help" size={14} className="text-[var(--text-brand)]" aria-hidden="true" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  Gợi ý câu hỏi phổ biến
+                </h3>
+              </div>
+              <div className="grid gap-3.5 sm:grid-cols-2">
                 {DEFAULT_SUGGESTIONS.map((item, idx) => (
                   <button
                     key={idx}
@@ -518,17 +521,17 @@ function ConsumerAskContent() {
                       setDraftText(item.query);
                       void handleSendQuestion(item.query, [], entryContext);
                     }}
-                    className="flex items-start gap-3 rounded-[var(--radius-xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-left transition-all hover:border-[color:var(--brand-500)]/40 hover:bg-[var(--surface-muted)] focus-ring"
+                    className="group flex items-start gap-3.5 rounded-2xl border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--brand-500)]/60 hover:bg-[var(--surface-muted)]/60 hover:shadow-sm focus-ring"
                     data-testid={`suggestion-chip-${idx}`}
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
-                      <Icon name={item.icon} size={18} aria-hidden="true" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)] transition-transform group-hover:scale-105 shadow-xs">
+                      <Icon name={item.icon} size={20} aria-hidden="true" />
                     </span>
                     <div>
-                      <h4 className="text-xs font-semibold text-[var(--text-primary)]">
+                      <h4 className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--brand-600)] dark:group-hover:text-[var(--brand-400)] transition-colors">
                         {item.title}
                       </h4>
-                      <p className="mt-1 text-[11px] text-[var(--text-secondary)] leading-relaxed line-clamp-2">
+                      <p className="mt-1 text-[11px] sm:text-xs text-[var(--text-secondary)] leading-relaxed line-clamp-2">
                         {item.query}
                       </p>
                     </div>
@@ -542,21 +545,25 @@ function ConsumerAskContent() {
           <div className="space-y-6" data-testid="ask-active-exchange">
             {/* User Message Bubble */}
             <div className="flex justify-end">
-              <div className="max-w-[85%] rounded-[var(--radius-2xl)] rounded-br-xs bg-[var(--brand-600)] p-4 text-white shadow-sm sm:max-w-[75%]">
-                <p className="text-sm font-medium leading-relaxed whitespace-pre-line" data-testid="ask-user-message-text">
+              <div className="max-w-[88%] rounded-3xl rounded-tr-xs bg-gradient-to-br from-[var(--brand-600)] to-indigo-600 p-4 sm:p-5 text-white shadow-md sm:max-w-[75%] transition-all">
+                <div className="flex items-center gap-1.5 mb-1 text-[11px] font-semibold text-white/80 uppercase tracking-wider">
+                  <Icon name="user-card" size={13} aria-hidden="true" />
+                  <span>Câu hỏi của bạn</span>
+                </div>
+                <p className="text-sm sm:text-[15px] font-normal leading-relaxed whitespace-pre-line text-white" data-testid="ask-user-message-text">
                   {exchange.userText}
                 </p>
 
                 {/* Attached Files inside user bubble */}
                 {exchange.userAttachments && exchange.userAttachments.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-white/20">
+                  <div className="mt-3 flex flex-wrap gap-2 pt-2.5 border-t border-white/20">
                     {exchange.userAttachments.map((att) => (
                       <span
                         key={att.id}
-                        className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-black/20 px-2.5 py-1 text-xs text-white/90"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-black/20 px-2.5 py-1 text-xs text-white/95 backdrop-blur-xs"
                       >
                         <Icon name="folder" size={13} aria-hidden="true" />
-                        <span className="max-w-[140px] truncate">{att.name}</span>
+                        <span className="max-w-[160px] truncate font-medium">{att.name}</span>
                       </span>
                     ))}
                   </div>
@@ -567,12 +574,18 @@ function ConsumerAskContent() {
             {/* Assistant Response Box */}
             <div>
               {exchange.status === "sending" && !exchange.streamingText ? (
-                <div className="flex items-center gap-3 rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-5 text-sm text-[var(--text-secondary)]">
-                  <span className="relative flex h-3 w-3">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--brand-400)] opacity-75" />
-                    <span className="relative inline-flex h-3 w-3 rounded-full bg-[var(--brand-500)]" />
-                  </span>
-                  <span>CLARA đang phân tích câu hỏi và tổng hợp thông tin y tế an toàn...</span>
+                <div className="flex items-center gap-3.5 rounded-[var(--radius-2xl)] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] p-6 shadow-sm">
+                  <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-brand-soft)] text-[var(--text-brand)]">
+                    <Icon name="clinical-notes" size={16} className="animate-pulse" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                      CLARA đang phân tích câu hỏi...
+                    </h4>
+                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                      Đang đối chiếu dữ liệu triệu chứng, tương tác thuốc và tài liệu y khoa chính thống
+                    </p>
+                  </div>
                 </div>
               ) : exchange.status === "error" ? (
                 <div className="rounded-[var(--radius-2xl)] border border-[color:var(--status-danger-border)] bg-[var(--status-danger-bg)] p-5 text-sm text-[var(--status-danger-text)]">
