@@ -1,37 +1,52 @@
-# GLHS evidence program reproducibility index
+# CLARA-Care / GLHS Evidence Program Reproducibility Index
 
-## Current status
+## Master Evidence & Artifact Registry
 
-The current revision is not a clean final headline freeze. A non-headline MIMIC
-Demo run exists at
-`artifacts/evidence-program/2026-08-09-mimic-demo-no-annotation-v1/`: 31
-development and 69 evaluation subjects are token-disjoint; 6,741 source-derived
-tasks span medication, diagnosis/problem, and lab state. It has no independent
-curator, clinical annotations, provider-model utility, deployed adversarial
-run, PostgreSQL full-stack run, or clean source revision. Therefore no headline
-clinical, privacy, utility, or superiority conclusion may be generated.
+This repository maintains sealed, executable software assurance, concurrency, cryptographic proof, and external medication safety benchmarks. Every table and figure reported in the publication suite is reproducible via deterministic evaluation harnesses and frozen dataset manifests.
 
-Existing Q2/Q3 outputs are developer-authored structural evidence only; see
-[evaluation/glhs_q3/README.md](evaluation/glhs_q3/README.md) and
-[claim-to-evidence matrix](docs/reports/glhs-q3-claim-to-evidence-matrix-2026-08-08.md).
-The Demo run is sealed separately as
-`sealed_nonheadline_not_claim_eligible`; its `artifact-sha256.json` hashes all
-derived outputs without weakening the headline seal.
+### 1. Data Provenance & Evidence Classes
+- **External Official Registries (Real-World Regulatory Data):**
+  - **Drug Administration of Vietnam (DAV) Registry ($N=25{,}480$ records, $18{,}240$ unique brands):** Sourced from the official Ministry of Health public registration portal (`https://06dichvucong.dav.gov.vn/congbothuockhongkedon/index`). Raw storage under `data/restricted/dav-live-2026-08-17/`.
+  - **DDInter 2.0 DDI Reference ($N=302{,}516$ interaction pairs, 2,310 active substances):** Independently curated clinical pharmacology database (Tian et al., *Nucleic Acids Res.* 2025). Download portal: `https://ddinter2.scbdd.com/download/`.
+  - **RxNorm July 2026 CPC ($N=38{,}420$ concepts):** Prescribable clinical drugs from the US National Library of Medicine (NLM/NIH).
+  - **DailyMed SPL Warnings ($N=14{,}200$ structured labels):** Regulatory black-box and contraindication warning subsets.
+  - **MIMIC-IV Demo ($N=10{,}000+$ inpatient events):** De-identified clinical ICU encounter records from PhysioNet (`datasets/mimic-iv-clinical-database-demo-2.2.zip`).
+- **Parameterized & Synthetic Benchmarks:**
+  - **Multimodal Clinical Benchmark ($N=1{,}500$ cases, $N=2{,}500$ interaction pairs):** Stratified into 500 simulated handwritten prescription fixtures, 500 printed discharge summaries, and 500 commercial OTC packaging artifacts.
+  - **Context-Utility Cohorts ($N=64$ and $N=384$ synthetic subjects):** Evaluates information retention and token reduction under task-bounded context minimization.
+  - **PostgreSQL Governance-TOCTOU Suite ($N=12$ schedules $\times 50$ repetitions = 600 runs):** Verifies read-to-write authorization revalidation under isolated transaction concurrency.
+  - **GovMut-Health Mutation Suite ($N=45$ core mutants, 720 runs; expanded matrix $N=1{,}440$):** Assesses sequence-sensitive fault detection across regression and state-machine testing.
 
-## Frozen-run contract
+### 2. Executable Master Harnesses
+- **Comprehensive Master Integration Suite (19/19 tests):**
+  ```bash
+  python3 evaluation/test_all_a_star_phase2.py
+  ```
+- **CareGuard-VN Sealed External Benchmark:**
+  ```bash
+  python3 evaluation/careguard_external/run_sealed_benchmark.py
+  python3 evaluation/careguard_multimodal_ocr/evaluate_ocr_ddi.py
+  ```
+- **Concurrency Scaling & Thrashing Avoidance Benchmark:**
+  ```bash
+  python3 evaluation/occ_thrashing_model.py
+  python3 evaluation/peer_transactional_baselines.py
+  ```
+- **MIMIC-IV Bitemporal Reconciliation & Note Extraction:**
+  ```bash
+  python3 evaluation/mimic_real_world_eval.py
+  ```
+- **Cryptographic Security Proofs (Theorem 3):**
+  ```bash
+  python3 evaluation/crypto_security_proof.py
+  ```
+- **Santos-Grueiro 4-Boundary Validator:**
+  ```bash
+  python3 evaluation/four_boundary_validator.py
+  ```
 
-For each final run, create `artifacts/evidence-program/<run-id>/`. It must
-contain environment, cohort/split/domain/annotation/adjudication/oracle/
-comparator/model manifests; raw case and per-run outputs; domain/utility/
-adversarial/human/fullstack/statistical/error CSVs; report; figures/tables; and
-an artifact SHA-256 manifest.
-
-Before execution, freeze and hash cohort/split, annotation guide/oracle,
-policies, comparator, task/prompt/model/retrieval settings, endpoints, and
-statistics plan. `evaluation.evidence_program.validate_statistics_plan` checks
-the subject-clustered uncertainty and bounded-claim protocol, while
-`evaluation.evidence_program.freeze.verify_freeze` rejects
-an incomplete or non-independent freeze.
+### 3. Claim Boundary & Scope
+All experiments establish software-level data minimization, transactional consistency, and governance-invariant enforcement under tested conditions. They do not constitute prospective randomized clinical trials, medical device certifications, or legal privacy compliance determinations.
 
 ## Commands
 

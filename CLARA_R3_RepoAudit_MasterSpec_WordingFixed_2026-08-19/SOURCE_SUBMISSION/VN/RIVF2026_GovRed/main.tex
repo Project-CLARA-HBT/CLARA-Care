@@ -185,7 +185,7 @@ TOCTOU Vulnerability & 57.1\% & 0.0\% & \textbf{100\% Serial Fix}\\
 \end{table}
 
 \subsection{Token Reduction and KV-Cache Performance}
-Table~\ref{tab:efficiency} summarizes the systems performance gains achieved by THSS minimization. In a 384-subject synthetic evaluation, task-bounded context compilation reduced mean prompt token consumption by \textbf{87.4\%} (412 vs.\ 3,280 tokens, $p < 10^{-40}$) and cut p50 inference latency by \textbf{68.2\%}. KV-cache allocation dropped proportionally from 128.4 MB to 16.2 MB per request, enabling higher concurrency without GPU memory thrashing while preserving 100\% diagnostic accuracy ($p_{\text{TOST}} = 9.44 \times 10^{-8}$).
+Table~\ref{tab:efficiency} summarizes the systems performance gains achieved by THSS minimization. In a 384-subject synthetic evaluation, task-bounded context compilation reduced mean prompt token consumption by \textbf{87.4\%} (412 vs.\ 3,280 tokens, $p < 10^{-40}$) and cut p50 inference latency by \textbf{68.2\%}. KV-cache allocation dropped proportionally from 128.4 MB to 16.2 MB per request, enabling higher concurrency without GPU memory thrashing while preserving decision consistency (paired sign-test $p=0.867$).
 
 \section{Discussion}
 The findings demonstrate why endpoint-level success metrics can be deceptive in stateful healthcare AI. An agent's persistent write request may return HTTP 200 OK even though the medical evidence, dynamic consent, or clinical policy that licensed the action has drifted. 

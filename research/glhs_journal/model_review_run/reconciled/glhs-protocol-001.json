@@ -1,0 +1,43 @@
+{
+  "case_id": "glhs-protocol-001",
+  "reviews": [
+    {
+      "attempt": 1,
+      "latency_ms": 3881.333,
+      "model_id": "gemini-3.6-flash-high",
+      "response_sha256": "d34debb15aa72c71ee88020543760e0cc08dc7d7cb186663e6ebf959725efe16",
+      "review": {
+        "confidence": 1.0,
+        "evidence_ids": [
+          "E1",
+          "E2"
+        ],
+        "label": "ADEQUATE",
+        "rationale": "The protocol summary explicitly provides the unit of analysis (one frozen logical schedule), exclusion handling (excluding NOT_RUN and observer-incomplete schedules from denominators), and a limitation statement acknowledging that the assessment is an adjudication surrogate rather than clinician validation or clinical-effectiveness evidence."
+      },
+      "reviewer_id": "reviewer_a",
+      "timestamp_utc": "2026-08-17T08:56:29.609196+00:00",
+      "unsupported_parameters": []
+    },
+    {
+      "attempt": 1,
+      "latency_ms": 4710.745,
+      "model_id": "claude-sonnet-4-6",
+      "response_sha256": "231d9981564b03a019fab5a78e0dffe67884f3a99bad70891f7a3c115cf4c010",
+      "review": {
+        "confidence": 0.91,
+        "evidence_ids": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "label": "ADEQUATE",
+        "rationale": "All three required methodological elements are explicitly present in the supplied evidence. The unit of analysis is unambiguously stated as one frozen logical schedule (E1, E3), with a clear clarification that retries, calls, and duplicate consistency packets do not constitute additional subjects. Exclusion handling is explicit: NOT_RUN and observer-incomplete schedules are excluded from denominators (E1). A limitation statement is directly provided: the assessment is a blinded adjudication surrogate and is not clinician validation, clinical-effectiveness evidence, or a replacement for reference evidence (E2). No contradictory or missing elements were identified across the three evidence items."
+      },
+      "reviewer_id": "reviewer_b",
+      "timestamp_utc": "2026-08-17T08:56:34.319992+00:00",
+      "unsupported_parameters": []
+    }
+  ],
+  "status": "AGREED"
+}

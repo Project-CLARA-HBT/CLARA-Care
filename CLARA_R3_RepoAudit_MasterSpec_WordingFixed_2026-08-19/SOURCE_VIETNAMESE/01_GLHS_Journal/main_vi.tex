@@ -18,9 +18,9 @@ Tác giả liên hệ: \texttt{kakangocthien109@gmail.com}}
 \begin{abstract}
 Trong các hệ thống trí tuệ nhân tạo (AI) y tế có trạng thái, việc truy xuất chính xác thông tin bệnh án là điều kiện cần nhưng chưa đủ để bảo đảm an toàn dữ liệu. Thách thức cốt lõi nằm ở tính nhất quán dữ liệu qua thời gian: mô hình có thể tiếp nhận và suy luận trên một phần bệnh án hợp lệ tại thời điểm đọc, nhưng đến khi đưa ra đề xuất cập nhật hồ sơ thì bệnh án, trạng thái đồng thuận của người bệnh, vai trò người dùng hoặc chính sách y tế đã bị thay đổi. GLHS xem khoảng trễ từ lúc đọc đến lúc ghi (Read-to-Write interval) như một ranh giới quản trị mang tính sống còn. 
 
-Cơ chế trung tâm của GLHS là một hợp đồng \emph{đồng phiên bản}: trên đường đề xuất được ràng buộc với ảnh chụp, chính \textbf{Bản chụp trạng thái sức khỏe theo tác vụ (THSS)} mà mô hình đã đọc sẽ được niêm phong mã băm mật mã Merkle và trở thành một phụ thuộc có thể kiểm toán bắt buộc của đề xuất ghi về sau. Trước khi thao tác ghi bền vững được chấp thuận, cơ chế \textbf{Chuyển trạng thái có quản trị (GST)} sẽ tự động tái thẩm định toàn bộ phiên bản dữ liệu và thẩm quyền trên cơ sở dữ liệu thực. Để loại bỏ hoàn toàn ảo giác tính toán thời gian của mô hình ngôn ngữ lớn (LLM), GLHS thiết lập \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}: một Nhân đối soát xác định phi-LLM tại API Gateway phụ trách toàn bộ phép toán thời gian bitemporal, chuẩn hóa mã lâm sàng và phát hiện xung đột, trong khi LLM chỉ tập trung vào suy luận ngữ nghĩa định tính. Đồng thời, trong khi cơ chế khóa toàn hồ sơ truyền thống (Monolithic Locking) chịu tỷ lệ từ chối nhầm thảm họa $93{,}75\%$ tại 16 writers (và lên tới $99{,}22\%$ tại 128 writers), GLHS giới thiệu cơ chế \textbf{Quản lý phiên bản phân vùng thực thể (Entity DAG)}, triệt tiêu hoàn toàn điểm nghẽn tranh chấp này để đạt $0{,}00\%$ từ chối nhầm trên mọi quy mô ghi đồng thời (lên tới $W=128$). 
+Cơ chế trung tâm của GLHS là một hợp đồng \emph{đồng phiên bản}: trên đường đề xuất được ràng buộc với ảnh chụp, chính \textbf{Bản chụp trạng thái sức khỏe theo tác vụ (THSS)} mà mô hình đã đọc sẽ được niêm phong mã băm mật mã Merkle và trở thành một phụ thuộc có thể kiểm toán bắt buộc của đề xuất ghi về sau. Trước khi thao tác ghi bền vững được chấp thuận, cơ chế \textbf{Chuyển trạng thái có quản trị (GST)} sẽ tự động tái thẩm định toàn bộ phiên bản dữ liệu và thẩm quyền trên cơ sở dữ liệu thực. Để loại bỏ hoàn toàn ảo giác tính toán thời gian của mô hình ngôn ngữ lớn (LLM), GLHS thiết lập \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}: một Nhân đối soát xác định phi-LLM tại API Gateway phụ trách toàn bộ phép toán thời gian bitemporal, chuẩn hóa mã lâm sàng và phát hiện xung đột, trong khi LLM chỉ tập trung vào suy luận ngữ nghĩa định tính. Đồng thời, nhằm khắc phục hiện tượng từ chối nhầm khi ghi đồng thời trên các phân vùng độc lập, GLHS giới thiệu cơ chế \textbf{Quản lý phiên bản phân vùng thực thể (Entity DAG)}, triệt tiêu hiện tượng từ chối nhầm ($0{,}00\%$ false-stale) trên các phân vùng rời rạc.
 
-Thực nghiệm đối kháng cách ly nhân quả ($N=320$ kịch bản, 640 lượt chạy trên PostgreSQL 16) chứng minh cơ chế ràng buộc của GLHS đã ngăn chặn tuyệt đối $256/256$ hành vi tấn công giả mạo bối cảnh (chênh lệch nguy cơ tuyệt đối $1{,}000$, $95\%$ CI $[1{,}000; 1{,}000]$, kiểm định McNemar chính xác đạt $p = 1{,}727 \times 10^{-77}$). Trong 600 lượt chạy stress-test TOCTOU với thời gian dao động thật, không có bất kỳ thao tác ghi trái phép nào lọt qua hệ thống ($0/600$). Hệ thống bảo đảm đầy đủ tính chứng minh toán học về tính tuần tự và khả năng triệt tiêu bế tắc, tạo nền tảng tin cậy vững chắc cho việc triển khai AI trong hệ sinh thái y tế thực tế.
+Thực nghiệm đối kháng cách ly nhân quả ($N=320$ kịch bản, 640 lượt chạy trên PostgreSQL 16) chứng minh cơ chế ràng buộc của GLHS đã ngăn chặn $256/256$ hành vi tấn công giả mạo bối cảnh (chênh lệch nguy cơ tuyệt đối $1{,}000$, $95\%$ CI $[1{,}000; 1{,}000]$, kiểm định McNemar chính xác đạt $p = 1{,}727 \times 10^{-77}$). Trong 600 lượt chạy stress-test TOCTOU với thời gian dao động thật, không có bất kỳ thao tác ghi trái phép nào lọt qua hệ thống ($0/600$, gồm 10 lịch đạt độ bền vững tuyệt đối và 2 lịch lệch phân loại so với kỳ vọng). Trên đoàn hệ 384 đối tượng, việc giảm thiểu bối cảnh theo tác vụ giúp giảm $87{,}4\%$ prompt tokens ($p < 10^{-40}$) và $68{,}2\%$ độ trễ suy luận với độ lệch chẩn đoán null (70 thắng, 73 thua, 241 hòa, $p = 0{,}867$). Hệ thống bảo đảm tính tuần tự nguyên tử và kiểm soát bế tắc, tạo nền tảng tin cậy cho việc triển khai AI trong hệ sinh thái y tế.
 \end{abstract}
 
 \textbf{Từ khóa:} AI y tế dài hạn, AI có trạng thái, quản trị dữ liệu y tế, kiểm soát đồng thời, bitemporal, Merkle snapshot, đồng thuận động, an toàn lâm sàng.
@@ -213,29 +213,26 @@ CommitGuard (Temporal Auth) & 0,0\% (0/256) & 6,25\% (1/16) & 7,6\% (Quy tắc c
 \end{tabularx}
 \end{table}
 
-Bảng~\ref{tab:baseline_comparison_vi} cho thấy GLHS chịu độ trễ tăng thêm khoảng $\sim 4{,}1\text{ ms}$ so với MemTX (độ trễ p95 là $10{,}5\text{ ms}$ so với $6{,}4\text{ ms}$) để thực thi Nhân đối soát xác định Tầng 1 (kiểm tra giao thoa bitemporal, chuẩn hóa ICD/ATC, phân tích mâu thuẫn AST và xác thực gốc Merkle). Trong môi trường y tế thực tế nơi suy luận LLM mất khoảng $\approx 1.200\text{ ms}$, chi phí ở quy mô micro-giây này chỉ chiếm dưới $0{,}01\%$ tổng độ trễ hệ thống—một đánh đổi hoàn toàn xứng đáng để triệt tiêu tuyệt đối các vi phạm TOCTOU và tương tác thuốc DDI chết người.
+Bảng~\ref{tab:baseline_comparison_vi} cho thấy GLHS chịu độ trễ tăng thêm khoảng $\sim 4{,}1\text{ ms}$ so với MemTX (độ trễ p95 là $10{,}5\text{ ms}$ so với $6{,}4\text{ ms}$) để thực thi Nhân đối soát xác định Tầng 1 (kiểm tra giao thoa bitemporal, chuẩn hóa ICD/ATC, phân tích mâu thuẫn AST và xác thực gốc Merkle). Trong môi trường y tế thực tế nơi suy luận LLM mất khoảng $\approx 1.200\text{ ms}$, chi phí $\sim 4{,}1\text{ ms}$ này chỉ chiếm khoảng $0{,}34\%$ tổng độ trễ hệ thống—một đánh đổi hoàn toàn xứng đáng để triệt tiêu các vi phạm TOCTOU và tương tác thuốc DDI.
 
-\subsection{Phân tích Tương đương Thống kê TOST và Đánh đổi Tối ưu Pareto}
-Nhằm đánh giá việc giảm thiểu bối cảnh theo tác vụ có làm suy giảm chất lượng suy luận lâm sàng hay không, chúng tôi thực hiện kiểm định tương đương sinh thống kê Schuirmann TOST (Two One-Sided Tests) trên đoàn hệ 384 đối tượng độc lập, so sánh GLHS Strict THSS với việc nạp Toàn bộ Lịch sử Bệnh án ($N=384$, $\alpha=0{,}05$, biên độ tương đương lâm sàng định trước $\delta = \pm 0{,}020$).
+\subsection{Phân tích Đối chiếu Cấp Đối tượng và Hiệu quả Giảm thiểu Dữ liệu}
+Nhằm đánh giá việc giảm thiểu bối cảnh theo tác vụ có làm suy giảm chất lượng suy luận lâm sàng hay không, chúng tôi thực hiện phân tích đối chiếu ghép cặp cấp đối tượng trên đoàn hệ 384 đối tượng độc lập, so sánh GLHS Strict THSS với việc nạp Toàn bộ Lịch sử Bệnh án ($N=384$, 3.456 ô thực thi).
 
 \begin{table}[H]
 \centering
 \small
-\caption{Tính Tương đương Sinh thống kê và Hồ sơ Tối ưu Pareto của GLHS Strict THSS so với Toàn bộ Lịch sử Bệnh án ($N=384$, $\alpha=0{,}05$, Biên độ $\delta=\pm 2{,}0\%$).}
+\caption{Đối chiếu Đối đầu Cấp Đối tượng và Hiệu quả Hệ thống của Giảm thiểu Bối cảnh theo Tác vụ (GLHS Strict THSS so với Toàn bộ Lịch sử Bệnh án; $N=384$ Đối tượng).}
 \label{tab:glhs_tost_equivalence_vi}
 \begin{tabularx}{\textwidth}{l l r >{\raggedright\arraybackslash}X}
 \toprule
-\textbf{Chiều Đánh giá} & \textbf{Chỉ số Thống kê / Hệ thống} & \textbf{Giá trị} & \textbf{Quyết định Sinh thống kê} \\
+\textbf{Chiều Đánh giá} & \textbf{Chỉ số Thống kê / Hệ thống} & \textbf{Giá trị} & \textbf{Diễn giải Khoa học} \\
 \midrule
 Số lượng Đối đầu & Thắng / Thua / Hòa & 70 / 73 / 241 & 384 Đối tượng Đánh giá \\
-Độ lệch Chính xác & Chênh lệch Trung bình ($\hat{\Delta}$) & $-0{,}781\%$ & Sai số Chuẩn $SE = 0{,}230\%$ \\
+Độ lệch Chính xác & Chênh lệch Trung bình ($\hat{\Delta}$) & $-0{,}781\%$ & Sai số Chuẩn $SE = 3{,}12\%$ ($s_{\Delta} = 0{,}610$) \\
+Khoảng Tin cậy & KTC Bootstrap Thực nghiệm 95\% & $[-6{,}77\%, +5{,}21\%]$ & Độ Biến thiên Quyết định Giới hạn \\
+Kiểm định Dấu Cặp & Giá trị $p$-value Hai phía & $p = 0{,}8672$ & Độ Lệch Chính xác Null \\
 Biên Tương đương & Ngưỡng Lâm sàng ($\pm \delta$) & $\pm 2{,}00\%$ & Dung sai Tương đương Định trước \\
-Kiểm định Dấu cũ & $p$-value 2 phía Cổ điển & $p = 0{,}8672$ & Null Yếu Không Kết luận \\
-TOST Biên Dưới ($H_{01}$) & $t_1 = (\hat{\Delta} + \delta)/SE$ & $t_1 = +5{,}3072$ & $p_1 = 9{,}44 \times 10^{-8}$ (Bác bỏ $H_{01}$) \\
-TOST Biên Trên ($H_{02}$) & $t_2 = (\hat{\Delta} - \delta)/SE$ & $t_2 = -12{,}1114$ & $p_2 = 4{,}15 \times 10^{-29}$ (Bác bỏ $H_{02}$) \\
-TOST Tổng thể & $p_{\text{TOST}} = \max(p_1, p_2)$ & $p_{\text{TOST}} = 9{,}44 \times 10^{-8}$ & \textbf{Xác nhận Tương đương ($p < 0{,}001$)} \\
-Khoảng Tin cậy 95\% & $[\hat{\Delta} \pm t_{0{,}975} \cdot SE]$ & $[-1{,}233\%, -0{,}330\%]$ & \textbf{Nằm hoàn toàn trong $[-\delta, +\delta]$} \\
-Lực Thống kê & Equivalence Power ($1 - \beta$) & $99{,}99\%$ & Lực Xác nhận Tuyệt đối \\
+Lực Thống kê & Lực Mẫu ($N=384, \delta=\pm 2\%$) & Chưa đủ lực & Cần $N \ge 7.500$ cho Xác nhận Biên hẹp \\
 \midrule
 Tiết kiệm Token & Giảm thiểu Prompt Token & $87{,}4\%$ & 412 so với 3.280 tokens ($p < 10^{-40}$) \\
 Độ trễ Suy luận & Giảm Độ trễ Tổng thể & $68{,}2\%$ & Tối ưu hóa KV Cache \& Sinh từ \\
@@ -245,10 +242,10 @@ An toàn Ghi đè & Triệt tiêu Trôi dạt TOCTOU & $100{,}0\%$ & $p = 1{,}73
 \end{tabularx}
 \end{table}
 
-Cả hai giả thuyết null đều bị bác bỏ với ý nghĩa thống kê vượt bậc ($p_{\text{TOST}} = 9{,}44 \times 10^{-8} \ll 0{,}001$), và khoảng tin cậy 95\% $[-1{,}233\%, -0{,}330\%]$ nằm trọn vẹn trong khoảng $[\pm 2{,}0\%]$. Kết quả khẳng định việc giảm thiểu dữ liệu bảo toàn tuyệt đối độ chính xác y khoa trong khi mang lại hồ sơ tối ưu Pareto vượt trội.
+Đối chiếu cấp đối tượng ghi nhận 70 thắng, 73 thua và 241 hòa ($\hat{\Delta} = -0{,}781\%$, $p=0{,}867$). Do các tác vụ chẩn đoán nhị phân rời rạc có độ biến thiên cặp tự nhiên ($s_{\Delta} = 0{,}610, SE = 3{,}12\%$), khoảng tin cậy bootstrap 95\% $[-6{,}77\%, +5{,}21\%]$ cắt qua biên độ hẹp $\pm 2{,}0\%$. Một nghiên cứu xác nhận tương đương biên hẹp $\pm 2{,}0\%$ đòi hỏi cỡ mẫu $N \ge 7.500$ đối tượng. Tuy nhiên, việc giảm thiểu bối cảnh theo tác vụ đã giúp giảm $87{,}4\%$ prompt tokens (trung bình 412 so với 3.280 tokens, $p < 10^{-40}$), giảm $68{,}2\%$ độ trễ suy luận và loại bỏ hoàn toàn nguy cơ rò rỉ quyền TOCTOU.
 
 \paragraph{Phân tích chẩn đoán đối với các đầu ra lỗi fail-closed.}
-Trong số 3.456 ô thực thi của thử nghiệm mở rộng này, có 220 lượt sinh (6,36\%) tạo ra đầu ra lỗi cấu trúc (malformed outputs) và bị chặn đứng an toàn theo cơ chế fail-closed bởi bộ kiểm tra ngữ pháp Pydantic JSON tại gateway (chủ yếu do mô hình sinh thừa định dạng markdown hoặc thiếu trường dữ liệu dưới bối cảnh nén cực độ). Thay vì làm hỏng dữ liệu bệnh án bền vững, Rào chắn trạng thái Tầng 1 đã nhận diện và từ chối $100\%$ các đầu ra lỗi này trước khi ghi. Theo quy trình đánh giá intent-to-treat đã đăng ký trước, mọi đầu ra lỗi đều bị tính là một thất bại chẩn đoán ($0/1$). Điều này tái khẳng định bảo đảm an toàn fail-closed của kiến trúc và định vị tính nghiêm ngặt của schema như một hiệu chỉnh kỹ thuật cho việc trích xuất, chứ không làm mất đi giá trị của kết quả tương đương sinh học TOST.
+Trong số 3.456 ô thực thi của thử nghiệm mở rộng này, có 220 lượt sinh (6,36\%) tạo ra đầu ra lỗi cấu trúc (malformed outputs) và bị chặn đứng an toàn theo cơ chế fail-closed bởi bộ kiểm tra ngữ pháp Pydantic JSON tại gateway (chủ yếu do mô hình sinh thừa định dạng markdown hoặc thiếu trường dữ liệu dưới bối cảnh nén cực độ). Thay vì làm hỏng dữ liệu bệnh án bền vững, Rào chắn trạng thái Tầng 1 đã nhận diện và từ chối $100\%$ các đầu ra lỗi này trước khi ghi. Theo quy trình đánh giá intent-to-treat đã đăng ký trước, mọi đầu ra lỗi đều bị tính là một thất bại chẩn đoán ($0/1$). Điều này tái khẳng định bảo đảm an toàn fail-closed của kiến trúc và định vị tính nghiêm ngặt của schema như một hiệu chỉnh kỹ thuật cho việc trích xuất.
 
 \subsection{Hồ sơ Vi độ trễ Quản trị Rào chắn Trạng thái Hai tầng}
 Đo lường độ phân giải nano-giây qua $N=1.000$ lần lặp chứng minh chi phí quản trị Tầng 1 chỉ chiếm $0{,}0045\%$ tổng thời gian suy luận của mô hình ($T_{\text{LLM}} \approx 1.200\text{ ms}$).

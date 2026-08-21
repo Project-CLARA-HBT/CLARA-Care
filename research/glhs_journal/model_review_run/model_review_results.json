@@ -1,0 +1,15 @@
+{
+  "case_count": 1,
+  "manifest_sha256": "58dccec62ee05ca96f4110db9945a4eb3cea390288861a23e7b9152c4933c242",
+  "model_ids": [
+    "gemini-3.6-flash-high",
+    "claude-sonnet-4-6"
+  ],
+  "raw_outputs": [
+    "raw/glhs-protocol-001.json"
+  ],
+  "router_base_url": "https://router.theclaracare.com/v1",
+  "rubric_sha256": "92956c89ef436541379f6cf0ff3d1fcaaa3b5a7fb598fb338d1de339fbfa390a",
+  "schema_version": "clara-model-review-run.v1",
+  "status": "independent_reviews_complete"
+}
