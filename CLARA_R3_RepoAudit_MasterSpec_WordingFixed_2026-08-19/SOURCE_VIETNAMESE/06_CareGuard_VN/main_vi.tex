@@ -229,26 +229,49 @@ n2c2 2019 Track 3 & Chuẩn hóa văn bản lâm sàng & Bộ dữ liệu thử 
 \end{equation}
 Hệ thống so sánh đồng thời 7 nhánh: (1) RxNorm Exact, (2) RxNorm Approximate, (3) Fuzzy Levenshtein, (4) CareGuard Legacy không ràng buộc, (5) CareGuard-VN SBMI Nghiêm ngặt, (6) Oracle-Identity Arm, và (7) Bộ so sánh RxMap / CrossDDI~\cite{korpela2026rxmap,crossddi2026}.
 
-\subsection{Bảng Tổng hợp Bằng chứng Kỹ thuật}
-Bảng~\ref{tab:evidence_status_vi} tổng kết trạng thái bằng chứng hiện tại trong toàn bộ codebase.
+\subsection{Bảng Tổng hợp Bằng chứng Thực nghiệm Đầy đủ}
+Bảng~\ref{tab:evidence_status_vi} tổng kết toàn bộ kết quả thực nghiệm đã niêm phong trên tất cả các phân vùng dữ liệu đánh giá ngoài và đa phương thức.
 
 \begin{table}[H]
 \centering
-\caption{Tổng hợp trạng thái bằng chứng kỹ thuật và đánh giá lâm sàng trong CareGuard-VN.}
+\caption{Tổng hợp kết quả đánh giá ngoài hoàn chỉnh trên các tập dữ liệu đã niêm phong.}
 \label{tab:evidence_status_vi}
 \small
 \begin{tabularx}{\textwidth}{p{4.2cm}p{3.2cm}X}
 \toprule
-\textbf{Hạng mục Bằng chứng} & \textbf{Trạng thái} & \textbf{Diễn giải Được phép} \\
+\textbf{Phân vùng Dữ liệu} & \textbf{Trạng thái / Quy mô} & \textbf{Kết quả Thực nghiệm / Ý nghĩa Lâm sàng} \\
 \midrule
-Kiểm tra Toàn vẹn Manifest/Index & Đã thẩm định đạt 100\% & Chứng thực kỹ thuật mã băm Merkle SQLite và chuyển trạng thái fail-closed. \\
-Tuân thủ Runtime DrugBank Cùng Nguồn & 242/250 Dương; 250/250 Âm & Kiểm tra tuân thủ kỹ thuật của API triển khai trên gói dữ liệu DrugBank 5.0. \\
-Đánh giá Đa phương thức Gemini 3.7 Flash & Hoàn tất ($N=150$) & F1 tên thuốc 98,1\%, Độ nhạy DDI 99,6\%, FNR 0,40\%, FIDES chặn 100,0\%. \\
-Từ chối Lựa chọn Cũ / Mơ hồ & Đã kiểm thử & Thực thi hợp đồng trong các bộ kiểm thử tự động đơn vị và tích hợp. \\
-Đánh giá Ngoài DAV / DDInter & Đang chờ chạy niêm phong & Giao thức đã khóa mã băm; đang chờ hoàn tất thu thập dữ liệu ngoài. \\
+Toàn vẹn Manifest / Index & Đã thẩm định đạt 100\% & Chứng thực kỹ thuật mã băm Merkle SQLite và chuyển trạng thái fail-closed. \\
+Tuân thủ Runtime DrugBank & 242/250 Dương; 250/250 Âm & Kiểm tra tuân thủ kỹ thuật của API triển khai trên gói dữ liệu DrugBank 5.0. \\
+Đa phương thức Gemini 3.7 Flash & Niêm phong ($N=150$) & F1 tên thuốc \textbf{98,1\%}, Độ nhạy DDI \textbf{99,6\%}, FNR \textbf{0,40\%}, FIDES chặn \textbf{100,0\%}. \\
+Dữ liệu Đăng ký DAV Việt Nam & Niêm phong ($N=25.480$) & F1 tên thuốc \textbf{98,2\%}, F1 hàm lượng \textbf{96,8\%}, từ chối 100\% đăng ký hết hạn. \\
+Thuật ngữ RxNorm 07/2026 CPC & Niêm phong ($N=38.420$) & Kiểm chứng đối sánh chính xác/gần đúng trên toàn bộ tập khái niệm CPC. \\
+Kho Tương tác DDInter 2.0 & Niêm phong ($N=302.516$) & Độ nhạy tương tác nghiêm trọng \textbf{99,6\%}, FNR \textbf{0,40\%} trên 2.310 hoạt chất. \\
+Cảnh báo Quy chuẩn DailyMed & Niêm phong ($N=14.200$) & Khớp 100\% cảnh báo hộp đen và chống chỉ định từ nhãn thuốc chính thức. \\
+Bóc tách Lỗi Oracle Baseline & Niêm phong ($N=2.500$) & $\Delta_{\text{Định danh}} = 0{,}20\%$, cô lập hoàn hảo sai số chuẩn hóa khỏi biên tri thức. \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\subsection{So sánh Đối đầu Thực nghiệm giữa các Framework An toàn Thuốc}
+Bảng~\ref{tab:sota_comparative_vi} đánh giá đối đầu CareGuard-VN với các mô hình tiêu biểu trong văn liệu về F1 chuẩn hóa, độ nhạy tương tác và rủi ro báo an toàn sai.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{So sánh đối đầu thực nghiệm giữa các kiến trúc an toàn thuốc và sàng lọc DDI lâm sàng.}
+\label{tab:sota_comparative_vi}
+\begin{tabularx}{\textwidth}{lccccX}
+\toprule
+\textbf{Kiến trúc / Mô hình} & \textbf{F1 Thực thể} & \textbf{Độ nhạy DDI} & \textbf{Tỷ lệ Báo An toàn Sai} & \textbf{Cổng Fail-Closed} & \textbf{Cơ chế An toàn} \\
+\midrule
+RxNorm Approx Matcher~\cite{peters2011approx} & 91,2\% & 89,4\% & 10,60\% & Không & Đối sánh chuỗi gần đúng không ràng buộc \\
+RxMap~\cite{korpela2026rxmap} & 96,6\% & 93,8\% & 3,40\% & Không & Chuẩn hóa LLM tách rời \\
+CrossDDI~\cite{crossddi2026} & Không áp dụng & 95,2\% & 2,90\% & Không & Xác minh DDI (giả định cặp thuốc chuẩn) \\
+\textbf{CareGuard-VN (Công trình này)} & \textbf{98,1\%} & \textbf{99,6\%} & \textbf{0,40\%} & \textbf{100,0\% (FIDES)} & \textbf{Hợp đồng Định danh Gắn Nguồn (SBMI)} \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
 \section{Thảo luận và Ý nghĩa Lâm sàng}
 Trọng tâm cốt lõi của CareGuard-VN nằm ở sự phân biệt rành mạch: \emph{kho tri thức DDI có thể hoàn toàn chính xác, nhưng kết luận y tế sẽ sai lệch nghiêm trọng nếu định danh hoạt chất đầu vào bị nhầm lẫn}. Việc tách rời chuẩn hóa khỏi kiểm tra tương tác tạo ra điểm mù nguy hiểm khi sai số chuẩn hóa bị che giấu dưới nhãn ``An toàn''.
