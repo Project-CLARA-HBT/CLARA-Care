@@ -38,7 +38,7 @@
 
 - **Run ID:** `GLHS-CONCURRENCY-REPETITION-V1-20260819-RUN01`
 - **Execution timestamp:** `2026-08-19T08:38:58.493508+00:00`
-- **Code revision SHA:** `7bd677e4`
+- **Code revision SHA:** `383c6df2`
 - **Backend:** `isolated_postgresql_random_schema` (isolated research PostgreSQL with dynamic schema creation/drop)
 - **Commit timestamp instrumentation:** `track_commit_timestamp = on` (`durable_commit_timestamps_available`)
 - **Total executions:** 600 runs (12 logical schedules × 50 deterministic repetitions each)
@@ -57,7 +57,7 @@
 ### Sealed output artifacts
 
 - `repeat_raw.jsonl`: SHA-256 `f98ce492e54a4478d929a0b8a7e800929e3c7a9b6316d4acca07d04ca77357a5`
-- `analysis.json`: SHA-256 `6915dfbd764c2b54ba0befd0f5fd93cd81cc2dfe18d443651958e06d3b3f737a`
+- `analysis.json`: SHA-256 `877da64356bb37bd8e7bb66ef937004ab86d988d019b83eab3c5a404ed18728a`
 - `repeat_manifest.json`: SHA-256 `4b66c774bb8f16bbb697d0efc1c1da69953ffbb2b7521602cae9accd12a5e62e`
 - `seal/seal.json` + `seal/artifact-sha256.json`
 

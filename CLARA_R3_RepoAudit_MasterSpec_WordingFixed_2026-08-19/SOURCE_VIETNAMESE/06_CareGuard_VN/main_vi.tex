@@ -22,7 +22,7 @@ Chúng tôi đánh giá CareGuard-VN trên bộ thử nghiệm nội bộ bao g�
 \section{Giới thiệu và Động lực Nghiên cứu}
 Sàng lọc tương tác thuốc--thuốc (DDI) tự động chỉ có giá trị lâm sàng khi hệ thống biết chính xác người bệnh đang sử dụng những hoạt chất nào. Trong thực tế khám chữa bệnh, tên thuốc thể hiện sự biến thiên từ vựng cực kỳ phức tạp: từ tên biệt dược thương mại, tên hoạt chất quốc tế (INN), tên theo danh mục trúng thầu địa phương, dạng bào chế, quy cách hàm lượng cho đến các từ viết tắt, lỗi chính tả và ngôn ngữ tự do của bác sĩ. Mặc dù các hệ thống thuật ngữ như RxNorm và công cụ MedXN đã đặt nền móng cho chuẩn hóa thuốc~\cite{nelson2011rxnorm,sohn2014medxn}, và các kỹ thuật đối sánh gần đúng đã xử lý biến thể từ vựng từ lâu~\cite{peters2011approx}, các tiến bộ AI gần đây đã nâng cao năng lực chuẩn hóa lên một tầm cao mới. Các hệ sinh thái hiện đại như RxMap kết hợp sinh ứng viên xác định với phân tích từ vựng bằng LLM~\cite{korpela2026rxmap}, hay RxEmbed ứng dụng biểu diễn vector mật độ cao (dense embeddings)~\cite{huser2025rxembed} đã đạt độ chính xác chuẩn hóa rất cao. Do đó, bài toán chuẩn hóa tên thuốc đơn thuần là một lĩnh vực nghiên cứu đã trưởng thành~\cite{chen2026mcnsurvey}.
 
-Tương tự, việc phát hiện sự mơ hồ và cơ chế phân loại chọn lọc (selective classification / abstention) cũng đã có nền tảng toán học vững chắc từ nguyên lý đánh đổi sai số--từ chối của Chow (1970)~\cite{chow1970} và các nghiên cứu học sâu của Geifman \& El-Yaniv~\cite{geifman2017selective}. Các hệ thống dự đoán chọn lọc cho phép mô hình từ chối đưa ra kết luận khi chi phí của một dự đoán sai lớn hơn chi phí chuyển ca bệnh cho chuyên gia y tế thẩm định~\cite{swaminathan2024selective}. CareGuard-VN không xem việc phát hiện mơ hồ hay từ chối trả lời là một phát kiến độc lập.
+Tương tự, việc phát hiện sự mơ hồ~\cite{newmangriffis2021ambiguity} và cơ chế phân loại chọn lọc (selective classification / abstention) cũng đã có nền tảng toán học vững chắc từ nguyên lý đánh đổi sai số--từ chối của Chow (1970)~\cite{chow1970} và các nghiên cứu học sâu của Geifman \& El-Yaniv~\cite{geifman2017selective}. Các hệ thống dự đoán chọn lọc cho phép mô hình từ chối đưa ra kết luận khi chi phí của một dự đoán sai lớn hơn chi phí chuyển ca bệnh cho chuyên gia y tế thẩm định~\cite{swaminathan2024selective}. CareGuard-VN không xem việc phát hiện mơ hồ hay từ chối trả lời là một phát kiến độc lập.
 
 Lỗ hổng an toàn nguy hiểm nhất nằm ở \textbf{điểm giao thoa giữa bước chuẩn hóa thực thể và tầng suy luận DDI phía sau}. Các cơ sở dữ liệu DDI (như DrugBank, DDInter) luôn vận hành dưới giả định rằng các thực thể truy vấn đã đại diện chính xác cho thuốc cần kiểm tra~\cite{wishart2018drugbank,tian2025ddinter}. Tuy nhiên, các công cụ DDI trong y văn có sự bất đồng lớn về phân loại mức độ nghiêm trọng~\cite{gibson2026ddireview}. Quan trọng hơn, chỉ một biến đổi nhỏ giữa tên biệt dược và tên hoạt chất có thể làm suy giảm hiệu năng của mô hình y sinh từ 1--10\%~\cite{gallifant2024rabbits}, và các đánh giá lâm sàng cho thấy LLM thường xuyên tạo ra các khuyến nghị dùng thuốc mất an toàn dù nhận diện đúng tương tác từng cặp đơn lẻ~\cite{chase2026ddi}. Khi bước chuẩn hóa phía trên nhận diện sai hoạt chất hoặc ép một tên thuốc mơ hồ vào một ứng viên không chính xác, tầng DDI phía sau vẫn thực hiện phép tra cứu hoàn hảo trên thực thể sai đó. Kết quả là hệ thống trả về thông điệp ``Không phát hiện tương tác'', tạo ra một \textbf{kết luận báo an toàn sai (False Reassurance / False-Clear)} mang tính nguy hại cho người bệnh.
 
@@ -38,7 +38,7 @@ Lỗ hổng an toàn nguy hiểm nhất nằm ở \textbf{điểm giao thoa gi�
 \label{fig:motivating_example_vi}
 \end{figure}
 
-Để giải quyết triệt để lỗ hổng này, CareGuard-VN tái định nghĩa định danh thuốc từ một bước tiền xử lý thông thường thành một \textbf{điều kiện tiên quyết bắt buộc để phát hành kết quả DDI}, được hình thức hóa thông qua \textbf{Hợp đồng Định danh Thuốc Gắn với Nguồn (SBMI)} và khung phân loại chọn lọc Chow.
+Để giải quyết triệt để lỗ hổng này (Hình~\ref{fig:motivating_example_vi}), CareGuard-VN tái định nghĩa định danh thuốc từ một bước tiền xử lý thông thường thành một \textbf{điều kiện tiên quyết bắt buộc để phát hành kết quả DDI}, được hình thức hóa thông qua \textbf{Hợp đồng Định danh Thuốc Gắn với Nguồn (SBMI)} và khung phân loại chọn lọc Chow.
 
 Bốn đóng góp khoa học chính của bài báo gồm:
 \begin{enumerate}
@@ -68,7 +68,7 @@ Nghiên cứu benchmark RABBITS (EMNLP 2024) chứng minh việc thay thế tên
 Các kho tri thức DrugBank~\cite{wishart2018drugbank} và DDInter 2.0~\cite{tian2025ddinter,ddinterdownload2026} cung cấp dữ liệu tương tác phong phú nhưng còn tồn tại sự không đồng nhất lớn giữa các nguồn~\cite{gibson2026ddireview}, và việc áp dụng cảnh báo điện tử đại trà chưa chứng minh được sự cải thiện rõ rệt đối với kết cục người bệnh nếu không kiểm soát tốt chất lượng cảnh báo~\cite{holbrook2025alerts}.
 
 \paragraph{Phân định với CrossDDI.}
-CrossDDI (BioNLP 2026) là bước tiến quan trọng trong việc xác minh DDI dựa trên bằng chứng, kết hợp trích xuất LLM với đối soát xác định trên PubMed và DrugBank~\cite{crossddi2026}. Tuy nhiên, CrossDDI \emph{giả định rằng cặp thuốc đầu vào $(d_1, d_2)$ đã là cặp thực thể chuẩn hóa hoàn hảo}. CrossDDI hoàn toàn không có cơ chế bảo vệ nếu tên thuốc đầu vào bị nhận diện sai, viết tắt nhầm hoặc trôi dạt phiên bản đăng ký. Ngay cả một công cụ xác minh tương tác hoàn hảo như CrossDDI cũng sẽ đưa ra kết luận an toàn sai nếu được cấp một thực thể thuốc sai từ đầu. CareGuard-VN giải quyết chính xác lỗ hổng thượng nguồn này bằng cách hợp nhất việc định danh thực thể với kiểm tra DDI dưới một hợp đồng fail-closed duy nhất.
+CrossDDI (BioNLP 2026) là bước tiến quan trọng trong việc xác minh DDI dựa trên bằng chứng, kết hợp trích xuất LLM với đối soát xác định trên PubMed và DrugBank~\cite{crossddi2026}. Tuy nhiên, CrossDDI \emph{giả định rằng cặp thuốc đầu vào $(d_1, d_2)$ đã là cặp thực thể chuẩn hóa hoàn hảo}. CrossDDI hoàn toàn không có cơ chế bảo vệ nếu tên thuốc đầu vào bị nhận diện sai, viết tắt nhầm hoặc trôi dạt phiên bản đăng ký. Ngay cả một công cụ xác minh tương tác hoàn hảo như CrossDDI cũng sẽ đưa ra kết luận an toàn sai nếu được cấp một thực thể thuốc sai từ đầu. CareGuard-VN giải quyết chính xác lỗ hổng thượng nguồn này bằng cách hợp nhất việc định danh thực thể với kiểm tra DDI dưới một hợp đồng fail-closed duy nhất. Bảng~\ref{tab:novelty_vi} tổng hợp chi tiết ranh giới giữa các hướng nghiên cứu đã thiết lập và phần đóng góp giữ lại cho CareGuard-VN.
 
 \begin{table}[H]
 \centering
@@ -204,7 +204,7 @@ Trên 500 cặp kiểm chứng, CareGuard-VN xác nhận chính xác 242/250 c�
 Trên 89 ca kiểm thử bất biến phần mềm, rào chắn FIDES đạt \textbf{tỷ lệ chặn 100,0\%} (89/89, KTC 95\%: [95,86\%, 100,00\%]), tuyệt đối không phát hành kết luận an toàn giả định khi cơ sở tri thức bị lỗi hoặc thiếu bằng chứng.
 
 \subsection{Phân tích Đánh đổi Rủi ro--Độ bao phủ theo Khung Chow}
-Bằng việc điều chỉnh chính sách kiểm soát mơ hồ của cổng SBMI từ mức thả lỏng hoàn toàn (100\% bao phủ tự động) đến mức SBMI nghiêm ngặt, hệ thống thiết lập đường cong đánh đổi rủi ro--độ bao phủ rõ nét:
+Hình~\ref{fig:risk_coverage_analysis_vi} thể hiện đường cong đánh đổi rủi ro--độ bao phủ thực nghiệm được tham số hóa bởi hợp đồng cổng SBMI. Bằng việc điều chỉnh chính sách kiểm soát mơ hồ của cổng SBMI từ mức thả lỏng hoàn toàn (100\% bao phủ tự động) đến mức SBMI nghiêm ngặt, hệ thống thiết lập đường cong đánh đổi rủi ro--độ bao phủ rõ nét:
 \begin{itemize}
   \item \textbf{Hệ thống không ràng buộc truyền thống:} Ở mức 100\% bao phủ tự động, rủi ro báo an toàn sai lên tới 6,80\% do nhận diện sai tên biệt dược và dạng thuốc phối hợp.
   \item \textbf{CareGuard-VN SBMI Nghiêm ngặt:} Ở mức \textbf{92,4\% bao phủ tự động}, rủi ro báo an toàn sai giảm xuống chỉ còn \textbf{0,40\%}, với 7,6\% ca bệnh còn lại được chuyển sang luồng làm rõ an toàn.
@@ -278,11 +278,11 @@ Bảng~\ref{tab:gate_status_vi} tổng kết tình trạng chính thức của c
 \textbf{Cổng} & \textbf{Yêu cầu Giao thức} & \textbf{Tình trạng / Quyết định Kiểm toán} \\
 \midrule
 CG-01 & Cổng nguồn định danh sản phẩm DAV & \textbf{CHẶN (BLOCKED)} -- Chưa tiếp nhận tệp dữ liệu DAV chính thức; bộ 4 nguồn chưa thể thẩm định. \\
-CG-02 & Niêm phong mẫu thử trước khi chạy & \textbf{ĐÃ NIÊM PHONG QUY TẮC} trong \texttt{STATISTICS_PLAN_FROZEN.md}; chia tập bị chặn đến khi DAV được ánh xạ. \\
-CG-03 & Mục tiêu độ chính xác ($h \le 3\,\text{pp}$) & \textbf{ĐÃ NIÊM PHONG} -- Mục tiêu $N=385$ ca ($p=0{,}10$) qua \texttt{precision_requirement.py}. \\
+CG-02 & Niêm phong mẫu thử trước khi chạy & \textbf{ĐÃ NIÊM PHONG QUY TẮC} trong \texttt{STATISTICS\_PLAN\_FROZEN.md}; chia tập bị chặn đến khi DAV được ánh xạ. \\
+CG-03 & Mục tiêu độ chính xác ($h \le 3\,\text{pp}$) & \textbf{ĐÃ NIÊM PHONG} -- Mục tiêu $N=385$ ca ($p=0{,}10$) qua \texttt{precision\_requirement.py}. \\
 CG-04 & Quy tắc mẫu số chính & \textbf{ĐÃ NIÊM PHONG} -- Mẫu số chứa toàn bộ ca dương tính; lỗi định danh giữ nguyên trong mẫu số. \\
-CG-05 & Giao thức chuyên gia thẩm định mù kép & \textbf{ĐÃ NIÊM PHONG GIAO THỨC} trong \texttt{MAPPING_REVIEW_PROTOCOL.md}; thực thi BỊ CHẶN (chờ tuyển dụng). \\
-CG-06 & Khả thi so sánh RxMap & \textbf{ĐÃ GHI NHẬN} -- Phân loại \texttt{ASSET_GATED} trong \texttt{RXMAP_FEASIBILITY.md}; không mô phỏng giả lập. \\
+CG-05 & Giao thức chuyên gia thẩm định mù kép & \textbf{ĐÃ NIÊM PHONG GIAO THỨC} trong \texttt{MAPPING\_REVIEW\_PROTOCOL.md}; thực thi BỊ CHẶN (chờ tuyển dụng). \\
+CG-06 & Khả thi so sánh RxMap & \textbf{ĐÃ GHI NHẬN} -- Phân loại \texttt{ASSET\_GATED} trong \texttt{RXMAP\_FEASIBILITY.md}; không mô phỏng giả lập. \\
 CG-07 & Tham chiếu âm tính & \textbf{ĐÃ NIÊM PHONG} -- Độ đặc hiệu \texttt{UNSUPPORTED} trên DDInter (vắng mặt không phải âm tính). \\
 \bottomrule
 \end{tabularx}

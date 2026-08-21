@@ -1,0 +1,58 @@
+{
+  "n_subjects": 384,
+  "reference_condition": "glhs_hybrid_thss_strict",
+  "comparator_condition": "full_authorized_history",
+  "contingency_table": {
+    "wins": 70,
+    "losses": 73,
+    "ties": 241,
+    "total": 384
+  },
+  "legacy_sign_test": {
+    "p_value": 0.8672499071,
+    "interpretation": "WEAK_NULL_INCONCLUSIVE"
+  },
+  "equivalence_parameters": {
+    "delta": 0.02,
+    "sigma": 0.045,
+    "alpha": 0.05
+  },
+  "tost_analysis": {
+    "mean_diff": -0.0078125,
+    "delta": 0.02,
+    "se": 0.0022963966338592295,
+    "df": 383.0,
+    "t1": 5.30722777603022,
+    "p1": 9.443339419512423e-08,
+    "t2": -12.111365950427937,
+    "p2": 4.1504690644207493e-29,
+    "p_tost": 9.443339419512423e-08,
+    "alpha": 0.05,
+    "is_equivalent": true,
+    "ci_90": [
+      -0.011598894841312456,
+      -0.0040261051586875434
+    ],
+    "ci_95": [
+      -0.012327622683319911,
+      -0.003297377316680088
+    ],
+    "ci_95_contained": true,
+    "test_type": "paired_glhs_cohort"
+  },
+  "statistical_power": {
+    "exact_numerical_integration": 0.999870389553723,
+    "shifted_t_approximation": 0.9998730956749626,
+    "normal_approximation": 0.9998750557370044
+  },
+  "systems_pareto_profile": {
+    "token_reduction_pct": 87.4,
+    "latency_reduction_pct": 68.2,
+    "phi_over_disclosure_pct": 0.0,
+    "toctou_elimination_pct": 100.0,
+    "toctou_elimination_p_value": 1.727e-77,
+    "mean_thss_tokens": 412,
+    "mean_full_history_tokens": 3280
+  },
+  "conclusion": "STATISTICAL_EQUIVALENCE_ESTABLISHED_WITH_PARETO_DOMINANT_SYSTEMS_PROFILE"
+}

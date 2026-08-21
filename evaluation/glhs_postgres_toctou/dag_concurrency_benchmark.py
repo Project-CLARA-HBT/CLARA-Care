@@ -53,18 +53,42 @@ from threading import BrokenBarrierError
 from typing import Any, cast
 from uuid import uuid4
 
-from clara_api.db.base import Base
-from clara_api.db.models import (
-    GlhsEntityVersionPartition,
-    GlhsStateVersion,
-    PhrProfile,
-    User,
-)
-from clara_api.glhs.domain import GlhsInvariantError
-from sqlalchemy import create_engine, select, text
-from sqlalchemy.engine import Engine
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if _REPO_ROOT.exists() and str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+_API_SRC = _REPO_ROOT / "services" / "api" / "src"
+if _API_SRC.exists() and str(_API_SRC) not in sys.path:
+    sys.path.insert(0, str(_API_SRC))
+
+try:
+    from clara_api.db.base import Base
+    from clara_api.db.models import (
+        GlhsEntityVersionPartition,
+        GlhsStateVersion,
+        PhrProfile,
+        User,
+    )
+    from clara_api.glhs.domain import GlhsInvariantError
+    from sqlalchemy import create_engine, select, text
+    from sqlalchemy.engine import Engine
+    from sqlalchemy.exc import SQLAlchemyError
+    from sqlalchemy.orm import Session
+except ImportError:
+    Base = None  # type: ignore
+    GlhsEntityVersionPartition = None  # type: ignore
+    GlhsStateVersion = None  # type: ignore
+    PhrProfile = None  # type: ignore
+    User = None  # type: ignore
+    class GlhsInvariantError(Exception):  # type: ignore
+        pass
+    create_engine = None  # type: ignore
+    select = None  # type: ignore
+    text = None  # type: ignore
+    Engine = Any  # type: ignore
+    class SQLAlchemyError(Exception):  # type: ignore
+        pass
+    Session = Any  # type: ignore
 
 from evaluation.glhs_postgres_toctou.barrier import PhasedBarrier
 from evaluation.glhs_postgres_toctou.schedule_primitives import (
@@ -813,19 +837,23 @@ def run_dag_concurrency_benchmark(
         database_url or os.getenv("GLHS_TOCTOU_FINAL_DATABASE_URL") or os.getenv("DATABASE_URL")
     )
     if resolved_db_url and resolved_db_url.startswith("postgres"):
-        backend_desc = "postgresql_isolated_schema"
-        schema_name = f"dag_bench_{uuid4().hex[:10]}"
-        admin_engine = create_engine(resolved_db_url, pool_pre_ping=True)
-        with admin_engine.begin() as conn:
-            conn.execute(text(f'CREATE SCHEMA "{schema_name}"'))
-        admin_engine.dispose()
+        if create_engine is None or Base is None:
+            if not use_simulation_fallback:
+                raise RuntimeError("PostgreSQL database URL provided but sqlalchemy/clara_api are not available.")
+        else:
+            backend_desc = "postgresql_isolated_schema"
+            schema_name = f"dag_bench_{uuid4().hex[:10]}"
+            admin_engine = create_engine(resolved_db_url, pool_pre_ping=True)
+            with admin_engine.begin() as conn:
+                conn.execute(text(f'CREATE SCHEMA "{schema_name}"'))
+            admin_engine.dispose()
 
-        engine = create_engine(
-            resolved_db_url,
-            pool_pre_ping=True,
-            connect_args={"options": f"-csearch_path={schema_name}"},
-        )
-        Base.metadata.create_all(engine)
+            engine = create_engine(
+                resolved_db_url,
+                pool_pre_ping=True,
+                connect_args={"options": f"-csearch_path={schema_name}"},
+            )
+            Base.metadata.create_all(engine)
 
     arms: dict[str, BenchmarkArmResult] = {}
 

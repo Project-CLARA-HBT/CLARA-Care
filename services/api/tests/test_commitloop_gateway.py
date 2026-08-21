@@ -572,6 +572,57 @@ def test_model_and_stale_proposals_cannot_commit(db: Session) -> None:
     assert transition.root_proposal_id == model.id
 
 
+def test_review_model_commitment_proposal_rejects_unauthorized_role(db: Session) -> None:
+    """M05-C: review_model_commitment_proposal rejects unauthorized actor role."""
+    scope = _scope(db)
+    at = datetime(2026, 1, 1, tzinfo=UTC)
+    evidence = _evidence(db, scope, at)
+    commitment = get_or_create_commitment(
+        db,
+        scope=scope,
+        semantic_key="observation:review-role-test",
+        domain="observations",
+        supersession_key="observation:review-role-test",
+    )
+    binding_snapshot = _snapshot_binding(db, scope, evidence, at)
+    snapshot_row = (
+        db.query(GlhsSnapshotManifest)
+        .filter_by(public_id=binding_snapshot["source_snapshot_id"])
+        .one()
+    )
+    binding = create_inference_context_binding(
+        db,
+        profile_id=scope.profile.id,
+        inference_manifest_id=snapshot_row.public_id,
+        snapshot=snapshot_row,
+        actor_user_id=scope.actor.id,
+        actor_role=scope.actor_role,
+        purpose="self_care",
+        task=binding_snapshot["task"],
+        disclosed_evidence_ids=[evidence.public_id],
+    )
+    model = propose_bound_commitment_transition(
+        db,
+        scope=scope,
+        commitment=commitment,
+        observed_evidence=(evidence,),
+        proposed_transition="OPEN",
+        origin="model",
+        model_manifest_ref="prompt-sha256:fixture",
+        inference_context_binding_id=binding.public_id,
+        observed_base_state_version=int(binding_snapshot["observed_base_state_version"]),
+        task=str(binding_snapshot["task"]),
+        source_snapshot_id=str(binding_snapshot["source_snapshot_id"]),
+        source_snapshot_digest=str(binding_snapshot["source_snapshot_digest"]),
+    )
+    with pytest.raises(GlhsInvariantError, match="commitment_review_authority_required"):
+        review_model_commitment_proposal(
+            db,
+            scope=replace(scope, actor_role="delegate"),
+            proposal=model,
+        )
+
+
 def test_expired_scope_and_mismatched_proposal_fail_closed(db: Session) -> None:
     scope = _scope(db)
     with pytest.raises(GlhsInvariantError, match="commitment_scope_expired"):

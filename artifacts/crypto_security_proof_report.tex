@@ -1,0 +1,30 @@
+\subsection{Formal Proof of Theorem 3 (Cryptographic Non-Forgeability \& Bounded-Commit Security)}
+\label{sec:proof_theorem3_crypto}
+
+\paragraph{Theorem 3 (Cryptographic Non-Forgeability and Bounded-Commit Security).}
+\emph{Let $\mathcal{H}: \{0,1\}^* \to \{0,1\}^{256}$ be a cryptographic hash function modeled as a random oracle, and let $(\operatorname{KeyGen}, \operatorname{Sign}, \operatorname{Verify})$ be an $\operatorname{EUF-CMA}$ secure message authentication scheme with security parameter $\lambda = 256$. For any probabilistic polynomial-time (PPT) adversary $\mathcal{A}$ with oracle access to the THSS compilation and GST commit engines, the probability that $\mathcal{A}$ produces an admissible proposal $P$ at timestamp $t_2$ reusing a snapshot issued at $t_1$ under stale causal partition state $V(e_k)_{t_2} > v_s(e_k)$ or drifted governance state $\Sigma_{t_2} \neq \Sigma_{t_1}$ is bounded by:}
+\begin{equation}
+\Pr\left[\operatorname{GST\_Commit}(P, t_2) = \text{True} \;\middle|\; V(e_k)_{t_2} > v_s(e_k) \lor \Sigma_{t_2} \neq \Sigma_{t_1}\right] \le \operatorname{Adv}_{\mathcal{H}}^{\text{CR}}(\mathcal{A}) + \operatorname{Adv}_{\text{MAC}}^{\text{EUF-CMA}}(\mathcal{A}) \le 2^{-128} = \operatorname{negl}(\lambda).
+\end{equation}
+
+\begin{proof}
+The proof proceeds via a sequence of games between challenger $\mathcal{C}$ and adversary $\mathcal{A}$:
+
+\textbf{Game 0.} The standard execution of the GLHS Layer 1 Deterministic State Barrier. At $t_1$, $\mathcal{C}$ generates Merkle THSS snapshot $S = (id_H, R_H, \mathbf{v}_s, \Sigma_{t_1})$. At $t_2$, $\mathcal{A}$ submits proposal $P = (id_H, d_H, \Delta, \sigma, \Pi_{\text{Merkle}})$.
+
+\textbf{Game 1 (EUF-CMA Hardness).} $\mathcal{C}$ aborts if $\mathcal{A}$ produces a valid proposal signature $\sigma$ without querying the proposal signing oracle. By the existential unforgeability of HMAC-SHA256:
+$|\Pr[S_0] - \Pr[S_1]| \le \operatorname{Adv}_{\text{MAC}}^{\text{EUF-CMA}}(\mathcal{A})$.
+
+\textbf{Game 2 (Merkle Tree Collision Resistance).} $\mathcal{C}$ aborts if $\mathcal{A}$ supplies an audit path $\Pi_{\text{Merkle}}$ for undisclosed evidence $e' \notin E_H$ such that $\operatorname{VerifyProof}(e', \Pi_{\text{Merkle}}, R_H) = \text{True}$. By the collision resistance of $\mathcal{H}$:
+$|\Pr[S_1] - \Pr[S_2]| \le \operatorname{Adv}_{\mathcal{H}}^{\text{CR}}(\mathcal{A}) \le q_H^2 / 2^{256}$.
+
+\textbf{Game 3 (Deterministic Causal and Epoch Assertion).} In Game 2, all proposals must carry authentic cryptographic signatures and genuine Merkle audit proofs bound to $id_H$. Step 5 of the GST verification algorithm executes:
+\begin{enumerate}
+    \item $\forall e_k \in \operatorname{Deps}(P): \text{Assert}(V(e_k)_{t_2} == v_s(e_k))$. If $V(e_k)_{t_2} > v_s(e_k)$, the check deterministically evaluates to $\text{False}$ and aborts the transaction.
+    \item $\text{Assert}(\Sigma_{t_2} == \Sigma_{t_1})$. If the consent epoch or policy version changed, the constant-time digest comparison evaluates to $\text{False}$ and aborts.
+\end{enumerate}
+Since both checks are purely deterministic Boolean predicates executed under acquired row locks, the conditional acceptance probability in Game 3 is identically 0: $\Pr[S_3] = 0$.
+
+Summing across all game transitions yields:
+$\Pr[\operatorname{GST\_Commit}(P, t_2) = \text{True} \mid \text{Invalid}] \le \operatorname{Adv}_{\mathcal{H}}^{\text{CR}}(\mathcal{A}) + \operatorname{Adv}_{\text{MAC}}^{\text{EUF-CMA}}(\mathcal{A}) \le \operatorname{negl}(\lambda)$.
+\end{proof}

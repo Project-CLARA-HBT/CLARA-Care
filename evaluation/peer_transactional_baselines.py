@@ -1,16 +1,20 @@
-"""SOTA Peer Transactional Baselines & Semantics-Matched Concurrency Evaluation.
+"""Architectural & Semantic Simulation Study of Peer Transactional Baselines & Governance Invariants.
 
-Evaluates:
-1. FHIR R4 Atomic Transaction Bundles (with per-resource ETag / If-Match preconditions)
-2. CommitGuard (Santos-Grueiro, 2026: Commit-Time Authorization Witness Revalidation)
-3. MasuGate / Stateful Governance (Peng & Wu, 2026: Policy-State Serializability)
-4. MemTX (Li et al., 2026: Snapshot-Isolated Agent Memory & Transactional Commit)
-5. PostgreSQL SSI (Serializable Snapshot Isolation / Predicate Locking)
-6. GLHS v2 (Dual-Layer State Barrier + Merkle WW-DAG)
+This benchmark is an Architectural & Semantic Simulation Study evaluating formal concurrency
+control and governance invariants across simulated peer paradigms:
+1. FHIR R4 If-Match atomic bundles (with per-resource ETag / If-Match preconditions)
+2. PostgreSQL SSI predicate conflict model (Serializable Snapshot Isolation / Predicate Locking)
+3. MemTX OCC snapshot isolation (Li et al., 2026: Snapshot-Isolated Agent Memory & Transactional Commit)
+4. CommitGuard witness revalidation (Santos-Grueiro, 2026: Commit-Time Authorization Witness Revalidation)
+5. MasuGate policy serializability (Peng & Wu, 2026: Policy-State Serializability)
+6. GLHS v2 Dual-Layer Barrier + Merkle WW-DAG (Dual-Layer State Barrier + Merkle WW-DAG)
 
-Executes real concurrent workloads across worker threads measuring wall-clock time,
+Executes concurrent simulated workloads across worker threads measuring wall-clock time,
 throughput (TPS), p95 latency, valid commits, safe aborts, unsafe commits (TOCTOU / DDI leaks),
 and false-stale abort rates.
+
+Throughput (TPS) and p95 latency reflect in-memory semantic simulation dispatch and conflict-evaluation
+times on identical hardware, without containerizing full third-party proprietary server binaries.
 """
 
 from __future__ import annotations
@@ -216,9 +220,9 @@ def generate_benchmark_workload(
 
 
 class FHIRBundleEngine:
-    """FHIR R4 Atomic Transaction Bundle Engine (StandardsComposedState).
+    """Simulated FHIR R4 Atomic Transaction Bundle Engine (StandardsComposedState).
 
-    Semantics: If-Match versioning on resource/profile bundle.
+    Semantics: Evaluates simulated FHIR R4 If-Match atomic bundles with per-resource ETag preconditions.
     Lacks inference snapshot context binding and clinical DDI safety barrier.
     """
 
@@ -290,10 +294,10 @@ class FHIRBundleEngine:
 
 
 class PostgresSSIEngine:
-    """PostgreSQL Serializable Snapshot Isolation (SSI) Engine.
+    """Simulated PostgreSQL Serializable Snapshot Isolation (SSI) Engine.
 
-    Semantics: Row/table predicate locks (SIREAD) and write conflict detection.
-    Lacks ML inference context binding and clinical DDI safety barrier.
+    Semantics: Evaluates simulated PostgreSQL SSI predicate conflict model with row/table predicate locks
+    (SIREAD) and write conflict detection. Lacks ML inference context binding and clinical DDI safety barrier.
     """
 
     def __init__(self) -> None:
@@ -361,10 +365,10 @@ class PostgresSSIEngine:
 
 
 class MemTXEngine:
-    """MemTX Engine (Li et al., 2026: Snapshot-Isolated Agent Memory).
+    """Simulated MemTX Engine (Li et al., 2026: Snapshot-Isolated Agent Memory).
 
-    Semantics: Key-level OCC validation on accessed memory cells.
-    Lacks clinical bitemporal DDI safety checks.
+    Semantics: Evaluates simulated MemTX OCC snapshot isolation via key-level OCC validation on accessed memory cells.
+    Lacks clinical bitemporal DDI safety checks and external governance epoch tracking.
     """
 
     def __init__(self) -> None:
@@ -430,10 +434,10 @@ class MemTXEngine:
 
 
 class CommitGuardEngine:
-    """CommitGuard Engine (Santos-Grueiro, 2026).
+    """Simulated CommitGuard Engine (Santos-Grueiro, 2026).
 
-    Semantics: 4-Boundary Commit-Time Authorization Witness Revalidation.
-    Validates lease TTL and base version; revalidates consent epoch.
+    Semantics: Evaluates simulated CommitGuard witness revalidation via 4-Boundary Commit-Time Authorization
+    Witness Revalidation. Validates lease TTL and base version; revalidates consent epoch.
     Lacks clinical bitemporal valid-time reconciliation and local DDI gating.
     """
 
@@ -519,10 +523,10 @@ class CommitGuardEngine:
 
 
 class MasuGateEngine:
-    """MasuGate Engine (Peng & Wu, 2026: Policy-State Serializability).
+    """Simulated MasuGate Engine (Peng & Wu, 2026: Policy-State Serializability).
 
-    Semantics: State-aware policy gate evaluating policy epochs and entity versions.
-    Entity-partition aware, but lacks clinical bitemporal DDI safety barrier.
+    Semantics: Evaluates simulated MasuGate policy serializability via state-aware policy gate evaluating policy epochs
+    and entity versions. Entity-partition aware, but lacks clinical bitemporal DDI safety barrier.
     """
 
     def __init__(self) -> None:
@@ -577,7 +581,7 @@ class MasuGateEngine:
 class GLHSV2Engine:
     """GLHS v2 Engine (Dual-Layer State Barrier + Merkle WW-DAG).
 
-    Full semantics:
+    Evaluates GLHS v2 Dual-Layer Barrier + Merkle WW-DAG full semantics:
     - Merkle Snapshot Token & Inference Binding
     - Wound-Wait (WW) Canonical Dynamic Partition Locking (Deadlock Rate = 0.00%)
     - Bitemporal Interval Math (Freshness & Validity)
@@ -748,7 +752,7 @@ def run_single_paradigm_benchmark(
 def run_peer_transactional_benchmarks(
     num_txns: int = 500, workers: int = 16, seed: int = 42
 ) -> PeerBenchmarkSuiteReport:
-    """Executes semantics-matched benchmark comparison across all 6 paradigms concurrently."""
+    """Executes architectural and semantic simulation benchmark comparison across all 6 paradigms concurrently."""
     workload = generate_benchmark_workload(num_txns=num_txns, seed=seed)
     total = len(workload)
     metrics_map: dict[str, BaselinePerformanceMetrics] = {}
@@ -786,12 +790,12 @@ def run_peer_transactional_benchmarks(
 
 
 def generate_peer_latex_table(report: PeerBenchmarkSuiteReport) -> str:
-    """Generates clean publication LaTeX table for semantics-matched peer baselines."""
+    """Generates clean publication LaTeX table for architectural and semantic simulation peer baselines."""
     lines = [
         r"\begin{table*}[t]",
         r"\centering",
         r"\small",
-        rf"\caption{{Semantics-Matched Empirical Comparison of Transactional & Governance Baselines vs.\ GLHS v2 ($N={report.num_trials}$ Clinical Workloads, $W={report.concurrency_workers}$ Concurrent Workers).}}",
+        rf"\caption{{Architectural \& Semantic Simulation Comparison of Transactional \& Governance Paradigms ($N={report.num_trials}$ Workloads, $W={report.concurrency_workers}$ Concurrent Simulated Workers). \textit{{Note:}} Throughput (TPS) and p95 latency reflect in-memory semantic simulation dispatch and conflict-evaluation times on identical hardware.}}",
         r"\label{tab:peer_transactional_baselines}",
         r"\begin{tabularx}{\textwidth}{p{4.2cm} c c c c c c}",
         r"\toprule",
@@ -841,7 +845,7 @@ def generate_peer_latex_table(report: PeerBenchmarkSuiteReport) -> str:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Concurrent Benchmark Suite for Peer Transactional Baselines"
+        description="Architectural & Semantic Simulation Benchmark Suite for Peer Transactional Baselines"
     )
     parser.add_argument("--trials", type=int, default=500)
     parser.add_argument("--workers", type=int, default=16)

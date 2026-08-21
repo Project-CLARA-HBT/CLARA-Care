@@ -24,8 +24,15 @@
         "claim_id": "GLHS-TOCTOU-V2-001",
         "ledger": "research/glhs_journal/revision_claim_ledger.csv",
         "missing_artifacts": [],
-        "status": "byte_verified_not_claim_eligible",
-        "notes": "V2 seal hashes pass, but TOCTOU-V2-05 and TOCTOU-V2-09 mismatch frozen expected classifications."
+        "notes": "V2 seal hashes pass (BYTE_VERIFIED_OBSERVATION_MISMATCH), but TOCTOU-V2-05 and TOCTOU-V2-09 mismatch frozen expected classifications; status is NOT_CLAIM_ELIGIBLE under frozen v2 expected rules, noting that observed mismatches were safe rejections rather than unsafe commits (0 forbidden commits observed across all 12 schedules).",
+        "status": "byte_verified_not_claim_eligible"
+      },
+      {
+        "claim_id": "GLHS-TOCTOU-R3-REPETITION-001",
+        "ledger": "research/glhs_journal/r3_claim_to_evidence.csv",
+        "missing_artifacts": [],
+        "notes": "600 robustness repetitions across 12 logical schedules; 0 forbidden/unsafe commits observed (10 robust schedules with 100% safe rejections/linearization, 2 non-robust schedules with 0 forbidden commits). Repetitions are robustness executions, not new scientific N.",
+        "status": "sealed_descriptive"
       }
     ]
   },
@@ -151,16 +158,65 @@
       },
       "top_level_status": "SEALED"
     },
+    "glhs_concurrency_repetition_v1": {
+      "analysis": {
+        "path": "research/glhs_journal/concurrency_repetition_v1/analysis.json",
+        "sha256": "877da64356bb37bd8e7bb66ef937004ab86d988d019b83eab3c5a404ed18728a"
+      },
+      "claim_eligibility": "SEALED_DESCRIPTIVE",
+      "forbidden_commit_observed": 0,
+      "logical_schedule_count": 12,
+      "mixed_schedule_count": 0,
+      "nonrobust_schedule_ids": [
+        "TOCTOU-V2-05",
+        "TOCTOU-V2-09"
+      ],
+      "notes": "Across all 600 runs (12 logical schedules x 50 deterministic repetitions), 0 forbidden/unsafe commits occurred: 10 robust schedules with 100% safe rejections/linearization (50/50 each), 2 non-robust schedules (TOCTOU-V2-05, TOCTOU-V2-09) with 0 forbidden commits. Repetitions are robustness executions, not new scientific N.",
+      "operational_failures": 0,
+      "ordering_confidence": {
+        "PARTIAL": 600
+      },
+      "repetitions_per_logical_schedule": 50,
+      "robust_schedule_count": 10,
+      "robust_schedule_ids": [
+        "TOCTOU-V2-01",
+        "TOCTOU-V2-02",
+        "TOCTOU-V2-03",
+        "TOCTOU-V2-04",
+        "TOCTOU-V2-06",
+        "TOCTOU-V2-07",
+        "TOCTOU-V2-08",
+        "TOCTOU-V2-10",
+        "TOCTOU-V2-11",
+        "TOCTOU-V2-12"
+      ],
+      "run_id": "GLHS-CONCURRENCY-REPETITION-V1-20260819-RUN01",
+      "scientific_n": 12,
+      "seal": {
+        "entries": 5,
+        "mismatches": [],
+        "missing": [],
+        "path": "research/glhs_journal/concurrency_repetition_v1/seal/artifact-sha256.json",
+        "resolved": true
+      },
+      "source_sha": "383c6df2",
+      "top_level_status": "EXECUTED",
+      "total_repetitions_executed": 600
+    },
     "glhs_final_v2": {
       "analysis": {
         "path": "research/glhs_journal/protocol_v2/analysis_v2.json",
         "sha256": "39efc4c7632e305eaea6b7ea12c339752266a901ad931fda806e58f207d95990"
       },
       "claim_eligibility": "BYTE_VERIFIED_NOT_CLAIM_ELIGIBLE",
-      "classification_mismatches": ["TOCTOU-V2-05", "TOCTOU-V2-09"],
-      "forbidden_commit_observed": 0,
-      "rejected": 10,
+      "classification_mismatches": [
+        "TOCTOU-V2-05",
+        "TOCTOU-V2-09"
+      ],
       "committed": 2,
+      "forbidden_commit_observed": 0,
+      "notes": "GLHS v2 single-run protocol status is BYTE_VERIFIED_OBSERVATION_MISMATCH and NOT_CLAIM_ELIGIBLE under frozen v2 expected rules. Observed classification mismatches on TOCTOU-V2-05 and TOCTOU-V2-09 were safe rejections rather than unsafe commits (0 forbidden commits observed across all 12 schedules).",
+      "rejected": 10,
       "run_id": "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
       "schedules_executed": 12,
       "seal": {
@@ -171,7 +227,7 @@
         "resolved": true
       },
       "source_sha": "67e528b61512aabc201b344e54f9e3e724490e41",
-      "top_level_status": "EXECUTED_V2_OBSERVATION_MISMATCH"
+      "top_level_status": "BYTE_VERIFIED_OBSERVATION_MISMATCH"
     },
     "rivf_final_003": {
       "analysis_v2": {
@@ -303,11 +359,23 @@
   },
   "schema_version": "clara-w0-machine-status.v1",
   "sealed_run_inventory": {
+    "glhs-concurrency-repetition-v1-20260819": {
+      "evidence_class": "postgres_concurrency_repetition",
+      "immutable": true,
+      "raw_root": "research/glhs_journal/concurrency_repetition_v1",
+      "source_sha": "383c6df2"
+    },
     "glhs-postgres-toctou-final-20260817-01": {
       "evidence_class": "postgres_concurrency",
       "immutable": true,
       "raw_root": "artifacts/glhs-postgres-toctou/GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
       "source_sha": "2074f87550c5ee32302bde47bc0b9e6be6af36b5"
+    },
+    "glhs-postgres-toctou-final-v2-20260817-01": {
+      "evidence_class": "postgres_concurrency_v2",
+      "immutable": true,
+      "raw_root": "research/glhs_journal/protocol_v2",
+      "source_sha": "67e528b61512aabc201b344e54f9e3e724490e41"
     },
     "rivf-final-003": {
       "evidence_class": "real_boundary_governance",

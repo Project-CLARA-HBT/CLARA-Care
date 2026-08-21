@@ -38,13 +38,13 @@ Kiến trúc CLARA-Care được tổ chức thành các tầng rõ ràng:
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Quy mô nhập dữ liệu}: Đã kiểm chứng cục bộ 1.307.771 FHIR Bundle từ SyntheticMass; 927.109 bản ghi FHIR của 100 chủ thể từ MIMIC-IV Demo; và 540.237 bản ghi eICU Demo chuẩn hóa cho 1.841 chủ thể và 2.520 đợt nằm ICU, bảo tồn 100\% tải trọng nguồn và mã băm provenance.
 \item \textbf{Hiệu quả bối cảnh AI}: Trong đoàn hệ 64 chủ thể tổng hợp, THSS nghiêm ngặt đạt khớp chính xác toàn trục ở 63/64 ca với Claude Sonnet 4.6 và 64/64 ca với Gemini 3.6 Flash High. Lưới 6 tác vụ đạt 11/12 ô đúng so với 9/12 ở bối cảnh không ràng buộc. Đánh giá mù trên 384 chủ thể với Claude cho kết quả độ lệch null giữa THSS nghiêm ngặt và toàn bộ lịch sử ($\hat{\Delta} = -0{,}781\%$, $p=0{,}867$), cho thấy việc giới hạn phạm vi giảm thiểu đáng kể token và độ trễ trong khi độ lệch chính xác nằm trong phương sai thực nghiệm.
-\item \textbf{Kiểm thử tương tranh và an toàn quản trị so với FHIR REST ETag}:
-Trên bộ chuẩn tương tranh PostgreSQL 16 gồm 16 luồng xử lý 500 giao dịch lâm sàng thuộc 5 nhóm kịch bản:
+\item \textbf{Nghiên cứu mô phỏng kiến trúc và ngữ nghĩa về tương tranh và an toàn quản trị}:
+Trong nghiên cứu mô phỏng kiến trúc và ngữ nghĩa với $W=16$ luồng mô phỏng đồng thời đánh giá 500 giao dịch lâm sàng qua 5 nhóm kịch bản (mô hình hóa ngữ nghĩa điều khiển tương tranh và bất biến quản trị hình thức, không tuyên bố đóng gói container các máy chủ độc quyền của bên thứ ba; thời gian điều phối phản ánh đánh giá xung đột trong bộ nhớ):
 \begin{itemize}[nosep]
-\item Cơ chế khóa lạc quan chuẩn của FHIR REST (ETag / If-Match) vi phạm TOCTOU tới 75,0\% khi có trôi dạt quản trị đồng thời (do ETag chỉ kiểm tra phiên bản thực thể và cho phép cam kết từng phần) và chịu tỷ lệ tắc nghẽn/hủy sai 93,8\% dưới tương tranh không xung đột. Đồng thời, do thiếu rào cản lâm sàng tại thời điểm ghi, FHIR REST để lọt 100\% tương tác thuốc DDI nguy hiểm.
-\item MemTX vi phạm TOCTOU 22,0\% do thiếu kiểm soát kỷ nguyên đồng thuận.
-\item CommitGuard triệt tiêu TOCTOU (0,0\%) nhưng để lọt 30,0\% rủi ro DDI do thiếu rào cản an toàn lâm sàng.
-\item CLARA-Care GST đạt 0,0\% vi phạm TOCTOU, 0,0\% rò rỉ DDI, 0,0\% deadlock, 0,0\% hủy sai nhờ phân vùng khóa thực thể giới hạn, với độ trễ ghi cam kết trung bình dưới 4ms và phát xuất đầy đủ hồ sơ FHIR R4 Provenance.
+\item Mô hình FHIR R4 Atomic Bundle (mô phỏng If-Match) vi phạm TOCTOU 20,0\% (tổng ghi không an toàn 40,0\%) do chỉ kiểm tra phiên bản thực thể, chịu tỷ lệ hủy sai 9,2\% dưới tương tranh phân vùng độc lập, và để lọt 20,0\% tương tác thuốc DDI nghiêm trọng do thiếu rào cản lâm sàng tại thời điểm ghi.
+\item MemTX (mô phỏng cô lập ảnh chụp OCC) vi phạm 20,0\% TOCTOU và 20,0\% rò rỉ DDI (40,0\% ghi không an toàn) do không theo dõi kỷ nguyên đồng thuận và thiếu cổng an toàn lâm sàng.
+\item CommitGuard (mô phỏng tái thẩm định bằng chứng) và MasuGate (mô phỏng tuần tự hóa chính sách) triệt tiêu TOCTOU (0,0\%) nhưng để lọt 20,0\% rủi ro DDI do nhân chứng ủy quyền phi lâm sàng.
+\item CLARA-Care GST (Rào chắn Hai tầng + Merkle WW-DAG) đạt 0,0\% vi phạm TOCTOU, 0,0\% rò rỉ DDI, 0,0\% deadlock và 0,0\% hủy sai nhờ phân vùng khóa DAG chuẩn tắc, với thời gian điều phối và đánh giá xung đột trong bộ nhớ ở mức dưới mili-giây, đồng thời phát xuất đầy đủ hồ sơ FHIR R4 Provenance hợp lệ.
 \end{itemize}
 \end{enumerate}
 

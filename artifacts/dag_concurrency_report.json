@@ -1,0 +1,720 @@
+{
+  "benchmark_id": "GLHS-DAG-BENCHMARK-20260821-171042",
+  "timestamp_utc": "2026-08-21T17:10:42.151126+00:00",
+  "backend": "simulated_in_memory_concurrency",
+  "num_writers": 16,
+  "all_invariants_passed": true,
+  "arms": {
+    "monolithic_disjoint": {
+      "arm_type": "monolithic_profile_locking_disjoint_entities",
+      "title": "Monolithic Profile Locking (Disjoint Entities)",
+      "description": "16 writers on disjoint entities -> false-stale rejection rate (~93.75%)",
+      "num_writers": 16,
+      "num_entities": 16,
+      "is_disjoint": true,
+      "total_attempts": 16,
+      "committed_count": 1,
+      "false_stale_count": 15,
+      "true_stale_count": 0,
+      "operational_error_count": 0,
+      "false_stale_rejection_rate": 0.9375,
+      "true_stale_rejection_rate": 0.0,
+      "commit_success_rate": 0.0625,
+      "latency_metrics_ms": {
+        "p50": 0.41,
+        "p95": 1.247,
+        "p99": 1.247,
+        "mean": 0.528,
+        "min": 0.001,
+        "max": 1.247
+      },
+      "wall_clock_duration_ms": 12.083,
+      "invariant_passed": true,
+      "verification_message": "PASS: Exactly 1 winner and 15 false-stale rejections observed (93.75%).",
+      "writer_results": [
+        {
+          "writer_id": 0,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.345,
+          "target_keys": [
+            "medications:rx_entity_00"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 1,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 1.247,
+          "target_keys": [
+            "medications:rx_entity_01"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 2,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.532,
+          "target_keys": [
+            "medications:rx_entity_02"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 3,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.41,
+          "target_keys": [
+            "medications:rx_entity_03"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 4,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.002,
+          "target_keys": [
+            "medications:rx_entity_04"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 5,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 1.12,
+          "target_keys": [
+            "medications:rx_entity_05"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 6,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.001,
+          "target_keys": [
+            "medications:rx_entity_06"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 7,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.456,
+          "target_keys": [
+            "medications:rx_entity_07"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 8,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.001,
+          "target_keys": [
+            "medications:rx_entity_08"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 9,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.498,
+          "target_keys": [
+            "medications:rx_entity_09"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 10,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.003,
+          "target_keys": [
+            "medications:rx_entity_10"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 11,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.383,
+          "target_keys": [
+            "medications:rx_entity_11"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 12,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 1.175,
+          "target_keys": [
+            "medications:rx_entity_12"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 13,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 0.001,
+          "target_keys": [
+            "medications:rx_entity_13"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 14,
+          "outcome": "false_stale_rejected",
+          "reason_code": "stale_state_version",
+          "latency_ms": 1.209,
+          "target_keys": [
+            "medications:rx_entity_14"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 15,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.073,
+          "target_keys": [
+            "medications:rx_entity_15"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        }
+      ]
+    },
+    "dag_disjoint": {
+      "arm_type": "entity_dag_partition_locking_disjoint_entities",
+      "title": "Entity DAG Partition Locking (Disjoint Entities)",
+      "description": "16 writers on disjoint entities -> false-stale rejection rate (0%)",
+      "num_writers": 16,
+      "num_entities": 16,
+      "is_disjoint": true,
+      "total_attempts": 16,
+      "committed_count": 16,
+      "false_stale_count": 0,
+      "true_stale_count": 0,
+      "operational_error_count": 0,
+      "false_stale_rejection_rate": 0.0,
+      "true_stale_rejection_rate": 0.0,
+      "commit_success_rate": 1.0,
+      "latency_metrics_ms": {
+        "p50": 1.182,
+        "p95": 1.299,
+        "p99": 1.299,
+        "mean": 1.182,
+        "min": 1.032,
+        "max": 1.299
+      },
+      "wall_clock_duration_ms": 2.864,
+      "invariant_passed": true,
+      "verification_message": "PASS: All 16 writers committed successfully with 0.00% false-stale rejection.",
+      "writer_results": [
+        {
+          "writer_id": 0,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.284,
+          "target_keys": [
+            "medications:rx_entity_00"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 1,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.299,
+          "target_keys": [
+            "medications:rx_entity_01"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 2,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.233,
+          "target_keys": [
+            "medications:rx_entity_02"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 3,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.223,
+          "target_keys": [
+            "medications:rx_entity_03"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 4,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.121,
+          "target_keys": [
+            "medications:rx_entity_04"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 5,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.289,
+          "target_keys": [
+            "medications:rx_entity_05"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 6,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.229,
+          "target_keys": [
+            "medications:rx_entity_06"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 7,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.247,
+          "target_keys": [
+            "medications:rx_entity_07"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 8,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.179,
+          "target_keys": [
+            "medications:rx_entity_08"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 9,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.064,
+          "target_keys": [
+            "medications:rx_entity_09"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 10,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.231,
+          "target_keys": [
+            "medications:rx_entity_10"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 11,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.056,
+          "target_keys": [
+            "medications:rx_entity_11"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 12,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.032,
+          "target_keys": [
+            "medications:rx_entity_12"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 13,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.107,
+          "target_keys": [
+            "medications:rx_entity_13"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 14,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.182,
+          "target_keys": [
+            "medications:rx_entity_14"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        },
+        {
+          "writer_id": 15,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.138,
+          "target_keys": [
+            "medications:rx_entity_15"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        }
+      ]
+    },
+    "dag_overlapping": {
+      "arm_type": "entity_dag_partition_locking_overlapping_entities",
+      "title": "Entity DAG Partition Locking (Overlapping Entities)",
+      "description": "16 writers on overlapping entities -> true-stale rejection rate (atomic winner)",
+      "num_writers": 16,
+      "num_entities": 1,
+      "is_disjoint": false,
+      "total_attempts": 16,
+      "committed_count": 1,
+      "false_stale_count": 0,
+      "true_stale_count": 15,
+      "operational_error_count": 0,
+      "false_stale_rejection_rate": 0.0,
+      "true_stale_rejection_rate": 0.9375,
+      "commit_success_rate": 0.0625,
+      "latency_metrics_ms": {
+        "p50": 2.443,
+        "p95": 6.83,
+        "p99": 6.83,
+        "mean": 3.499,
+        "min": 1.336,
+        "max": 6.83
+      },
+      "wall_clock_duration_ms": 8.074,
+      "invariant_passed": true,
+      "verification_message": "PASS: Exactly 1 atomic winner and 15 true-stale rejections observed (93.75%).",
+      "writer_results": [
+        {
+          "writer_id": 0,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 5.397,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 1,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 1.454,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 2,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 1.543,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 3,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 2.356,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 4,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 5.302,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 5,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 2.379,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 6,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 5.368,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 7,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 2.403,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 8,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 6.794,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 9,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 2.443,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 10,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 2.475,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 11,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 1.415,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 12,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 6.83,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 13,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 3.243,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 14,
+          "outcome": "true_stale_rejected",
+          "reason_code": "stale_partition_version",
+          "latency_ms": 5.252,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 2,
+          "resulting_version": null,
+          "error_message": null
+        },
+        {
+          "writer_id": 15,
+          "outcome": "committed",
+          "reason_code": "transition_committed",
+          "latency_ms": 1.336,
+          "target_keys": [
+            "medications:rx_metformin_500mg"
+          ],
+          "expected_version": 1,
+          "observed_version": 1,
+          "resulting_version": 2,
+          "error_message": null
+        }
+      ]
+    }
+  }
+}

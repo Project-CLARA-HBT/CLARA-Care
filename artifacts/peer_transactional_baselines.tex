@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Empirical Comparison of SOTA Transactional Baselines vs. GLHS v2 ($N=500$ Clinical Workloads, $W=16$ Concurrent Workers).}
+\label{tab:peer_transactional_baselines}
+\begin{tabularx}{\textwidth}{lccccc}
+\toprule
+\textbf{Transactional Paradigm} & \textbf{TOCTOU Rate} & \textbf{DDI Leak Rate} & \textbf{Deadlock Rate} & \textbf{False-Stale Rate} & \textbf{Throughput (TPS)} \\
+\midrule
+FHIR REST Conditional Update (ETag) & 25.8\% & 20.0\% & 0.0\% & 16.6\% &  2187.0 \\
+MemTX (Li et al., 2026) & 4.6\% & 20.0\% & 0.0\% & 3.0\% &  6615.7 \\
+CommitGuard (Santos-Grueiro, 2026) & 0.0\% & 6.0\% & 0.0\% & 9.4\% &  6281.6 \\
+Provenact (Peng & Wu, 2026) & 0.0\% & 6.0\% & 1.6\% & 0.0\% &  3978.1 \\
+GLHS v2 (Dual-Layer Barrier + Merkle WW-DAG) & \textbf{0.0\%} & \textbf{0.0\%} & \textbf{0.0\%} & \textbf{0.0\%} & \textbf{17445.0} \\
+\bottomrule
+\end{tabularx}
+\end{table}

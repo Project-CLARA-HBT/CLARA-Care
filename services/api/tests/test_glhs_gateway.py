@@ -35,6 +35,7 @@ from clara_api.glhs.gateway import (
     current_state_version,
     propose_assertion,
     reconstruct_governed_decision,
+    reconstruct_snapshot_artifact,
     reconstruct_state,
     record_evidence,
     validate_snapshot_manifest,
@@ -1151,3 +1152,364 @@ def test_stale_transition_and_model_direct_write_are_rejected(db: Session) -> No
             ),
             evidence=((evidence, "supports"),),
         )
+
+
+def test_record_evidence_rejects_foreign_or_missing_source_reference(db: Session) -> None:
+    """M04-B: record_evidence must reject foreign profile source references."""
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+
+    foreign_user = User(email="foreign_src@example.test", hashed_password="x", role="normal")
+    db.add(foreign_user)
+    db.flush()
+    foreign_profile = PhrProfile(user_id=foreign_user.id)
+    db.add(foreign_profile)
+    db.flush()
+
+    foreign_source = HealthSourceReference(
+        profile_id=foreign_profile.id,
+        source_kind="document",
+        source_identity="source:foreign-ref",
+        checksum="checksum:foreign-ref",
+        observed_at=at,
+    )
+    db.add(foreign_source)
+    db.flush()
+
+    with pytest.raises(GlhsInvariantError, match="evidence_source_scope_forbidden"):
+        record_evidence(
+            db,
+            profile_id=scope.profile.id,
+            data=EvidenceInput(
+                source_reference_id=foreign_source.id,
+                evidence_kind="prescription",
+                artifact_type="document",
+                artifact_public_id="artifact:foreign-ref",
+                fingerprint="foreign-ref-fp",
+                valid_from=at,
+            ),
+        )
+
+    with pytest.raises(GlhsInvariantError, match="evidence_source_scope_forbidden"):
+        record_evidence(
+            db,
+            profile_id=scope.profile.id,
+            data=EvidenceInput(
+                source_reference_id=999999,
+                evidence_kind="prescription",
+                artifact_type="document",
+                artifact_public_id="artifact:nonexistent-ref",
+                fingerprint="nonexistent-ref-fp",
+                valid_from=at,
+            ),
+        )
+
+
+def test_compile_thss_rejects_purpose_mismatch(db: Session) -> None:
+    """M06-C: compile_thss must reject requests when purpose != scope.purpose."""
+    scope = _scope(db)
+    assert scope.purpose == "self_care"
+    with pytest.raises(GlhsInvariantError, match="snapshot_purpose_mismatch"):
+        compile_thss(
+            db,
+            scope=scope,
+            task="careguard",
+            purpose="care_coordination",
+            allowed_data_classes=frozenset({"medications"}),
+        )
+
+
+def test_compile_thss_rejects_expired_scope(db: Session) -> None:
+    """M07-C: compile_thss must reject requests when scope.valid_until <= now."""
+    scope = _scope(db)
+    expired_scope = replace(
+        scope,
+        valid_until=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    with pytest.raises(GlhsInvariantError, match="snapshot_scope_expired"):
+        compile_thss(
+            db,
+            scope=expired_scope,
+            task="careguard",
+            purpose="self_care",
+            allowed_data_classes=frozenset({"medications"}),
+        )
+
+
+def test_reconstruct_snapshot_artifact_rejects_payload_digest_mismatch(db: Session) -> None:
+    """M08-B: reconstruct_snapshot_artifact raises error on payload hash mismatch."""
+    scope = _scope(db)
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    manifest = (
+        db.query(GlhsSnapshotManifest)
+        .filter(GlhsSnapshotManifest.public_id == snapshot.snapshot_id)
+        .one()
+    )
+    manifest.snapshot_digest = "0" * 64
+    with pytest.raises(GlhsInvariantError, match="snapshot_payload_digest_mismatch"):
+        reconstruct_snapshot_artifact(manifest)
+
+
+def test_reconstruct_snapshot_artifact_rejects_manifest_digest_mismatch(db: Session) -> None:
+    """M08-C: reconstruct_snapshot_artifact raises error on manifest envelope hash mismatch."""
+    scope = _scope(db)
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    manifest = (
+        db.query(GlhsSnapshotManifest)
+        .filter(GlhsSnapshotManifest.public_id == snapshot.snapshot_id)
+        .one()
+    )
+    manifest.manifest_digest = "f" * 64
+    with pytest.raises(GlhsInvariantError, match="snapshot_manifest_digest_mismatch"):
+        reconstruct_snapshot_artifact(manifest)
+
+
+def test_validate_snapshot_manifest_rejects_unsupported_digest_algorithm(db: Session) -> None:
+    """M08-D: validate_snapshot_manifest must reject unsupported digest algorithm."""
+    scope = _scope(db)
+    snapshot = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+    )
+    db.execute(
+        update(GlhsSnapshotManifest)
+        .where(GlhsSnapshotManifest.public_id == snapshot.snapshot_id)
+        .values(digest_algorithm="md5")
+        .execution_options(synchronize_session=False)
+    )
+    db.expire_all()
+
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_digest_algorithm_mismatch"):
+        validate_snapshot_manifest(
+            db,
+            profile_id=scope.profile.id,
+            snapshot_id=snapshot.snapshot_id,
+            manifest_digest=snapshot.manifest_digest,
+            base_state_version=snapshot.state_version,
+            policy_version=snapshot.policy_version,
+            purpose=snapshot.purpose,
+            consent_version=snapshot.consent_version,
+            actor_user_id=scope.actor.id,
+            actor_role=scope.actor_role,
+            task=snapshot.task,
+        )
+
+
+@pytest.mark.parametrize(
+    ("snapshot_id", "manifest_digest"),
+    [
+        (None, "d" * 64),
+        ("", "d" * 64),
+        ("snap-123", None),
+        ("snap-123", ""),
+        (None, None),
+        ("", ""),
+    ],
+)
+def test_validate_snapshot_manifest_rejects_empty_or_none_identifiers(
+    db: Session, snapshot_id: str | None, manifest_digest: str | None
+) -> None:
+    """M09-D: validate_snapshot_manifest rejects empty/None snapshot_id or manifest_digest."""
+    scope = _scope(db)
+    with pytest.raises(GlhsInvariantError, match="proposal_snapshot_binding_required"):
+        validate_snapshot_manifest(
+            db,
+            profile_id=scope.profile.id,
+            snapshot_id=snapshot_id,
+            manifest_digest=manifest_digest,
+            base_state_version=0,
+            policy_version="glhs.v1",
+            purpose="self_care",
+            consent_version="not_required",
+        )
+
+
+def test_propose_assertion_rejects_empty_evidence(db: Session) -> None:
+    """M11-B: propose_assertion must reject when evidence is empty."""
+    scope = _scope(db)
+    at = _at("2026-08-10T09:00:00")
+    data = AssertionInput(
+        semantic_key="medication:empty-evidence",
+        assertion_type="medications",
+        predicate="dose",
+        value={"drugbank_id": "DB00331", "dose": "500", "unit": "mg"},
+        epistemic_state="documented",
+        valid_from=at,
+    )
+    with pytest.raises(GlhsInvariantError, match="assertion_requires_evidence"):
+        propose_assertion(
+            db,
+            profile_id=scope.profile.id,
+            actor_user_id=scope.actor.id,
+            data=data,
+            evidence=(),
+        )
+    with pytest.raises(GlhsInvariantError, match="assertion_requires_evidence"):
+        propose_assertion(
+            db,
+            profile_id=scope.profile.id,
+            actor_user_id=scope.actor.id,
+            data=data,
+            evidence=[],
+        )
+
+
+def test_compile_thss_filters_out_expired_assertions_temporal_boundary(db: Session) -> None:
+    """M13-C: compile_thss strictly filters out expired assertions where valid_to < as_of."""
+    scope = _scope(db)
+    t1 = _at("2026-01-01T00:00:00")
+    t2 = _at("2026-01-15T00:00:00")
+    t3 = _at("2026-02-01T00:00:00")
+    t4 = _at("2026-02-28T23:59:59")
+
+    ev1 = _evidence(db, scope=scope, at=t1, fingerprint="temp-course-jan")
+    a1 = propose_assertion(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        data=AssertionInput(
+            semantic_key="medication:amoxicillin:oral",
+            assertion_type="medications",
+            predicate="dose",
+            value={"drugbank_id": "DB01060", "dose": "250", "unit": "mg"},
+            epistemic_state="documented",
+            valid_from=t1,
+            valid_to=t2,
+        ),
+        evidence=((ev1, "supports"),),
+    )
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=a1,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key="activate-a1",
+        transition_kind="user_report",
+        reason_code="prescription",
+    )
+
+    ev2 = _evidence(db, scope=scope, at=t1, fingerprint="ongoing-med")
+    a2 = propose_assertion(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        data=AssertionInput(
+            semantic_key="medication:metformin:oral",
+            assertion_type="medications",
+            predicate="dose",
+            value={"drugbank_id": "DB00331", "dose": "500", "unit": "mg"},
+            epistemic_state="documented",
+            valid_from=t1,
+            valid_to=None,
+        ),
+        evidence=((ev2, "supports"),),
+    )
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=a2,
+        action="activate",
+        expected_state_version=1,
+        idempotency_key="activate-a2",
+        transition_kind="user_report",
+        reason_code="prescription",
+    )
+
+    ev3 = _evidence(db, scope=scope, at=t3, fingerprint="temp-course-feb")
+    a3 = propose_assertion(
+        db,
+        profile_id=scope.profile.id,
+        actor_user_id=scope.actor.id,
+        data=AssertionInput(
+            semantic_key="medication:azithromycin:oral",
+            assertion_type="medications",
+            predicate="dose",
+            value={"drugbank_id": "DB00207", "dose": "500", "unit": "mg"},
+            epistemic_state="documented",
+            valid_from=t3,
+            valid_to=t4,
+        ),
+        evidence=((ev3, "supports"),),
+    )
+    apply_transition(
+        db,
+        scope=scope,
+        assertion=a3,
+        action="activate",
+        expected_state_version=2,
+        idempotency_key="activate-a3",
+        transition_kind="user_report",
+        reason_code="prescription",
+    )
+
+    snap_jan10 = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=_at("2026-01-10T00:00:00"),
+    )
+    snap_jan10_keys = {item["semantic_key"] for item in snap_jan10.assertions}
+    assert snap_jan10_keys == {"medication:amoxicillin:oral", "medication:metformin:oral"}
+
+    snap_jan15 = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=t2,
+    )
+    snap_jan15_keys = {item["semantic_key"] for item in snap_jan15.assertions}
+    assert snap_jan15_keys == {"medication:amoxicillin:oral", "medication:metformin:oral"}
+
+    snap_jan16 = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=_at("2026-01-16T00:00:00"),
+    )
+    snap_jan16_keys = {item["semantic_key"] for item in snap_jan16.assertions}
+    assert snap_jan16_keys == {"medication:metformin:oral"}
+
+    snap_feb10 = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=_at("2026-02-10T00:00:00"),
+    )
+    snap_feb10_keys = {item["semantic_key"] for item in snap_feb10.assertions}
+    assert snap_feb10_keys == {"medication:metformin:oral", "medication:azithromycin:oral"}
+
+    snap_mar01 = compile_thss(
+        db,
+        scope=scope,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=_at("2026-03-01T00:00:00"),
+    )
+    snap_mar01_keys = {item["semantic_key"] for item in snap_mar01.assertions}
+    assert snap_mar01_keys == {"medication:metformin:oral"}
+

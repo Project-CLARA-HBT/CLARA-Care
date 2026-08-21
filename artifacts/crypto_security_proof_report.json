@@ -1,0 +1,13 @@
+{
+  "total_adversarial_trials": 600,
+  "euf_cma_forgery_blocked": 100,
+  "replay_attacks_blocked": 100,
+  "governance_drift_blocked": 100,
+  "merkle_tampering_blocked": 100,
+  "expired_lease_blocked": 100,
+  "causal_drift_blocked": 100,
+  "false_rejection_of_valid_proposals": 0,
+  "adversary_success_rate": 0.0,
+  "theoretical_collision_bound_bits": 256,
+  "theorem3_security_bound_satisfied": true
+}

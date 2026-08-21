@@ -189,41 +189,41 @@ Dưới áp lực từ 1 đến 128 tiến trình ghi đồng thời, cơ chế 
 \end{tabularx}
 \end{table}
 
-\subsection{Đánh giá So sánh với các Kiến trúc Giao dịch và Concurrency Lâm sàng Tiên tiến}
+\subsection{Nghiên cứu Mô phỏng Kiến trúc \& Ngữ nghĩa So sánh với các Mô hình Giao dịch và Quản trị Tiên tiến}
 \paragraph{Sự thất bại của các khung bộ nhớ Agent không ràng buộc.}
 Các kiến trúc bộ nhớ tác tử LLM không ràng buộc giao dịch (như Vanilla Multi-Agent RAG và MemGPT / Letta) vốn dĩ không đáp ứng được các yêu cầu ACID lâm sàng: do xem bộ nhớ làm việc như văn bản prompt phi cấu trúc và thiếu ranh giới cô lập giao dịch, chúng ủy thác các phép toán khoảng thời gian cho mô hình xác suất (gây tỷ lệ sai sót $18{,}8\%$--$21{,}6\%$) và cho phép các thao tác ghi bất đồng bộ không có điểm tựa, dẫn đến lỗ hổng vi phạm TOCTOU đạt $100{,}0\%$ ($256/256$ ca tấn công lọt lưới) dưới tải cập nhật đồng thời của nhân viên y tế.
 
-\paragraph{So sánh đối đầu thực nghiệm giữa các kiến trúc giao dịch và quản trị tương đương.}
-Chúng tôi tiến hành benchmark đối đầu GLHS với sáu kiến trúc giao dịch và quản trị y tế trên PostgreSQL 16 dưới cùng điều kiện phần cứng, độ đồng thời ($W=16$ workers) và $N=500$ giao dịch lâm sàng:
+\paragraph{Quy trình nghiên cứu mô phỏng kiến trúc và ngữ nghĩa.}
+Để đánh giá GLHS đối chiếu với các mô hình bộ nhớ giao dịch, kiểm soát truy cập và hệ thống y tế tiên tiến, chúng tôi thực hiện nghiên cứu mô phỏng kiến trúc và ngữ nghĩa nhằm kiểm chứng các bất biến điều khiển tương tranh và quản trị hình thức trên sáu mô hình đối sánh dưới cùng điều kiện phần cứng, độ đồng thời ($W=16$ luồng mô phỏng đồng thời) và phân bố $N=500$ tải công việc lâm sàng (gồm cập nhật đơn thực thể, đa thực thể liên miền, chạy đua thu hồi TOCTOU động, phơi nhiễm DDI nghiêm trọng, và phân vùng song song độc lập). Nghiên cứu không tuyên bố đóng gói container các máy chủ độc quyền của bên thứ ba; thay vào đó, hệ thống thực thi các mô hình ngữ nghĩa chính xác trong bộ nhớ nhằm mô phỏng trung thực các giao thức khóa, cô lập ảnh chụp, và nhân chứng ủy quyền của từng mô hình:
 \begin{enumerate}
-  \item \textbf{FHIR R4 Atomic Transaction Bundle:} Thực thi với điều kiện tiên quyết \texttt{If-Match} ETag theo chuẩn FHIR R4~\cite{fhirhttp}. Các tài nguyên được commit nguyên tử, nhưng không ràng buộc ngữ cảnh suy luận LLM đa bước hoặc thu hồi đồng thuận động chéo tài nguyên.
-  \item \textbf{PostgreSQL SSI (Serializable Snapshot Isolation):} Tuần tự hóa mức cơ sở dữ liệu qua khóa vị từ SIREAD, phát hiện xung đột dữ liệu thô nhưng không nhận biết được trôi dạt đồng thuận AI.
-  \item \textbf{MemTX (Bộ nhớ Tác tử Giao dịch)~\cite{memtx}:} Cô lập bản chụp trên thanh ghi bộ nhớ chung, không có đối soát thời gian bitemporal y tế và rào chắn an toàn DDI.
-  \item \textbf{CommitGuard (Ủy quyền tại thời điểm ghi)~\cite{temporaryauth}:} Tái thẩm định bằng chứng ủy quyền thời gian nhưng thao tác trên token ủy quyền chung.
-  \item \textbf{MasuGate / Stateful Governance~\cite{statefulgov}:} Điều phối tuần tự hóa trạng thái chính sách.
+  \item \textbf{FHIR R4 Atomic Transaction Bundle (Mô phỏng If-Match):} Thực thi với điều kiện tiên quyết \texttt{If-Match} ETag theo chuẩn FHIR R4~\cite{fhirhttp}. Các tài nguyên được commit nguyên tử, nhưng không ràng buộc ngữ cảnh suy luận LLM đa bước hoặc thu hồi đồng thuận động chéo tài nguyên.
+  \item \textbf{PostgreSQL SSI (Mô hình Xung đột Vị từ Mô phỏng):} Tuần tự hóa mức cơ sở dữ liệu qua phát hiện xung đột khóa vị từ SIREAD, phát hiện xung đột dữ liệu thô nhưng không nhận biết được trôi dạt đồng thuận AI.
+  \item \textbf{MemTX (Mô phỏng Cô lập Ảnh chụp OCC)~\cite{memtx}:} Mô hình hóa cơ chế OCC trên thanh ghi bộ nhớ chung, không có đối soát thời gian bitemporal y tế và rào chắn an toàn DDI.
+  \item \textbf{CommitGuard (Mô phỏng Tái thẩm định Bằng chứng)~\cite{temporaryauth}:} Tái thẩm định 4 ranh giới ủy quyền thời gian nhưng thao tác trên token ủy quyền chung không có rào chắn danh pháp thuốc lâm sàng.
+  \item \textbf{MasuGate / Stateful Governance (Mô phỏng Tuần tự hóa Chính sách)~\cite{statefulgov}:} Điều phối tuần tự hóa trạng thái chính sách, nhưng ủy thác phân tích thời gian và dược lý lâm sàng cho mô hình cấp trên.
   \item \textbf{GLHS v2 (Rào chắn Hai tầng + Merkle WW-DAG):} Hợp đồng quản trị toàn diện từ công bố đến ghi.
 \end{enumerate}
 
 \begin{table*}[t]
 \centering
 \small
-\caption{So sánh Đối đầu Thực nghiệm giữa các Kiến trúc Giao dịch \& Quản trị vs.\ GLHS v2 ($N=500$ Giao dịch Lâm sàng, $W=16$ Workers Đồng thời).}
+\caption{So sánh Mô phỏng Kiến trúc \& Ngữ nghĩa giữa các Mô hình Giao dịch \& Quản trị vs.\ GLHS v2 ($N=500$ Tải công việc, $W=16$ Luồng mô phỏng đồng thời). \textit{Ghi chú:} Thông lượng (TPS) và độ trễ p95 phản ánh thời gian điều phối và đánh giá xung đột mô phỏng ngữ nghĩa trong bộ nhớ trên cùng phần cứng.}
 \label{tab:baseline_comparison_vi}
 \begin{tabularx}{\textwidth}{p{4.4cm} c c c c c c}
 \toprule
-\textbf{Kiến trúc Giao dịch} & \textbf{Ghi Hợp lệ} & \textbf{Hủy An toàn} & \textbf{Ghi Sai sót} & \textbf{Từ chối nhầm} & \textbf{TPS} & \textbf{Độ trễ P95} \\
+\textbf{Mô hình Giao dịch} & \textbf{Ghi Hợp lệ} & \textbf{Hủy An toàn} & \textbf{Ghi Sai sót} & \textbf{Từ chối nhầm} & \textbf{TPS} & \textbf{Độ trễ P95} \\
 \midrule
-FHIR R4 Atomic Bundle (\texttt{If-Match}) & 300 & 100 & 100 (20,0\%) & 9,4\% & 3.240,0 & 8,5 ms \\
-PostgreSQL SSI (Serializable) & 290 & 110 & 100 (20,0\%) & 12,0\% & 4.120,0 & 11,4 ms \\
-MemTX (Li et al., 2026) & 380 & 95 & 25 (5,0\%) & 3,0\% & 6.615,0 & 6,4 ms \\
-CommitGuard (Santos-Grueiro, 2026) & 380 & 100 & 20 (4,0\%) & 6,2\% & 6.280,0 & 8,2 ms \\
-MasuGate (Peng \& Wu, 2026) & 381 & 102 & 17 (3,4\%) & 0,0\% & 5.840,0 & 9,1 ms \\
-\textbf{GLHS v2 (Rào chắn Tầng 1 + Merkle WW-DAG)} & 300 & 200 & \textbf{0 (0,0\%)} & \textbf{0,0\%} & \textbf{17.445,0} & \textbf{10,5 ms} \\
+FHIR R4 Atomic Bundle (\texttt{If-Match}) & 222 & 78 & 200 (40,0\%) & 9,2\% & 31.511,8 & 0,01 ms \\
+PostgreSQL SSI (Serializable) & 247 & 53 & 200 (40,0\%) & 10,6\% & 51.698,8 & 0,01 ms \\
+MemTX (Li et al., 2026) & 269 & 31 & 200 (40,0\%) & 0,4\% & 46.529,9 & 0,01 ms \\
+CommitGuard (Santos-Grueiro, 2026) & 280 & 120 & 100 (20,0\%) & 1,8\% & 39.296,3 & 0,01 ms \\
+MasuGate (Peng \& Wu, 2026) & 292 & 108 & 100 (20,0\%) & 0,0\% & 50.381,1 & 0,01 ms \\
+\textbf{GLHS v2 (Rào chắn Tầng 1 + Merkle WW-DAG)} & 299 & 201 & \textbf{0 (0,0\%)} & \textbf{0,0\%} & \textbf{45.484,0} & \textbf{0,01 ms} \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-Bảng~\ref{tab:baseline_comparison_vi} cho thấy GLHS đạt 0 ghi sai sót (0/500) và 0 từ chối nhầm trên các phân vùng thực thể độc lập. GLHS chịu chi phí thêm khoảng $\sim 4{,}1\text{ ms}$ so với MemTX (độ trễ p95 là $10{,}5\text{ ms}$ so với $6{,}4\text{ ms}$) để thực thi Nhân đối soát xác định Tầng 1 (kiểm tra giao thoa bitemporal, chuẩn hóa ICD/ATC, phân tích mâu thuẫn AST và xác thực gốc Merkle). Trong môi trường y tế thực tế nơi suy luận LLM mất khoảng $\approx 1.200\text{ ms}$, chi phí $\sim 4{,}1\text{ ms}$ này chỉ chiếm khoảng $0{,}34\%$ tổng độ trễ hệ thống—một đánh đổi hoàn toàn xứng đáng để triệt tiêu các vi phạm TOCTOU và tương tác thuốc DDI.
+Bảng~\ref{tab:baseline_comparison_vi} phân định rõ hiệu năng điều phối ngữ nghĩa trong bộ nhớ và các đảm bảo bất biến hình thức của từng mô hình. Mọi mô hình mô phỏng đều đạt mức vi độ trễ dưới mili-giây ($0{,}01\text{ ms}$ p95), xác nhận chi phí đối soát trong bộ nhớ là không đáng kể so với chu kỳ suy luận LLM ($T_{\text{LLM}} \approx 1.200\text{ ms}$). Về mặt ngữ nghĩa bất biến, các mô hình FHIR R4 và PostgreSQL SSI để lọt $40{,}0\%$ ghi sai sót (gồm $20{,}0\%$ trôi dạt đồng thuận TOCTOU và $20{,}0\%$ rò rỉ DDI) và chịu tỷ lệ hủy sai ($9{,}2\%\text{--}10{,}6\%$) do va chạm khóa thô. MemTX tương tự để lọt $40{,}0\%$ ghi sai sót do thiếu theo dõi kỷ nguyên quản trị. CommitGuard và MasuGate loại trừ vi phạm TOCTOU ($0{,}0\%$) nhưng để lọt $20{,}0\%$ rủi ro DDI do thiếu kiến thức dược lý lâm sàng. GLHS v2 tích hợp Nhân đối soát xác định Tầng 1 và khóa phân vùng DAG chuẩn tắc, đồng thời triệt tiêu $100\%$ lỗi TOCTOU và rò rỉ DDI ($0/500$ ghi sai sót, $0{,}0\%$) mà không gây từ chối nhầm trên các miền độc lập ($0{,}0\%$).
 
 \subsection{Phân tích Đối chiếu Cấp Đối tượng và Hiệu quả Giảm thiểu Dữ liệu}
 Nhằm đánh giá việc giảm thiểu bối cảnh theo tác vụ có làm suy giảm chất lượng suy luận lâm sàng hay không, chúng tôi thực hiện phân tích đối chiếu ghép cặp cấp đối tượng trên đoàn hệ 384 đối tượng độc lập, so sánh GLHS Strict THSS với việc nạp Toàn bộ Lịch sử Bệnh án ($N=384$, 3.456 ô thực thi).

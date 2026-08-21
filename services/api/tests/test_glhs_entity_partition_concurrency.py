@@ -27,6 +27,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine, func, select, text
+from sqlalchemy import event as sa_event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -66,11 +67,20 @@ def _init_sqlite_wal_engine(db_path: str) -> Engine:
         connect_args={"timeout": 60.0, "check_same_thread": False},
         pool_pre_ping=True,
     )
-    with engine.connect() as conn:
-        conn.execute(text("PRAGMA journal_mode=WAL;"))
-        conn.execute(text("PRAGMA busy_timeout=60000;"))
-        conn.execute(text("PRAGMA synchronous=NORMAL;"))
-        conn.commit()
+
+    @sa_event.listens_for(engine, "connect")
+    def _do_connect(dbapi_connection, connection_record):
+        dbapi_connection.isolation_level = None
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute("PRAGMA busy_timeout=60000;")
+        cursor.execute("PRAGMA synchronous=NORMAL;")
+        cursor.close()
+
+    @sa_event.listens_for(engine, "begin")
+    def _do_begin(conn):
+        conn.exec_driver_sql("BEGIN IMMEDIATE")
+
     Base.metadata.create_all(engine)
     return engine
 

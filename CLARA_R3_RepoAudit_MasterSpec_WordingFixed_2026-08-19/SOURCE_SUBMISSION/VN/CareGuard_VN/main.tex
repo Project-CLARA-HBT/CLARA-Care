@@ -55,7 +55,7 @@ The critical, unresolved safety vulnerability lies at the \emph{interface} betwe
 \label{fig:motivating_example}
 \end{figure}
 
-To eliminate this vulnerability, CareGuard-VN establishes medication identity as an immutable, mathematically formalized release condition rather than a decoupled preprocessing score. We propose the \textbf{Source-Bound Medication Identity (SBMI)} contract, grounded in the classical Chow (1970) Risk-Coverage framework and modern selective classification for deep neural networks~\cite{chow1970,geifman2017selective}. Under SBMI, a downstream DDI conclusion is strictly inadmissible for release unless every participating medication mention possesses a current, unambiguous, and cryptographically verified link to an active knowledge source. Ambiguous or unknown aliases trigger mandatory clarification; stale cache bindings or substituted identifiers are invalidated; and knowledge-base integrity faults yield an explicit incomplete verification state rather than an empty all-clear.
+To eliminate this vulnerability (Figure~\ref{fig:motivating_example}), CareGuard-VN establishes medication identity as an immutable, mathematically formalized release condition rather than a decoupled preprocessing score. We propose the \textbf{Source-Bound Medication Identity (SBMI)} contract, grounded in the classical Chow (1970) Risk-Coverage framework and modern selective classification for deep neural networks~\cite{chow1970,geifman2017selective}. Under SBMI, a downstream DDI conclusion is strictly inadmissible for release unless every participating medication mention possesses a current, unambiguous, and cryptographically verified link to an active knowledge source. Ambiguous or unknown aliases trigger mandatory clarification; stale cache bindings or substituted identifiers are invalidated; and knowledge-base integrity faults yield an explicit incomplete verification state rather than an empty all-clear.
 
 The contributions of this work are fourfold:
 \begin{enumerate}[leftmargin=*]
@@ -85,7 +85,7 @@ Medication-name variability poses severe risks to generative biomedical systems.
 DDI resources such as DrugBank~\cite{wishart2018drugbank} and DDInter 2.0~\cite{tian2025ddinter,ddinterdownload2026} curate extensive interaction pairs with clinical severity classifications. However, empirical reviews indicate substantial discordance across commercial and open-access DDI checkers~\cite{gibson2026ddireview}, and prospective trials have shown mixed clinical outcome benefits from uncurated electronic DDI alerts~\cite{holbrook2025alerts}.
 
 \paragraph{Delineation from CrossDDI.}
-CrossDDI (BioNLP 2026) represents a major step forward in evidence-grounded DDI verification, utilizing LLM-based evidence extraction followed by deterministic arbitration over DrugBank and PubMed literature to ensure interaction claims are backed by literature citations~\cite{crossddi2026}. However, CrossDDI operates under the explicit assumption that the input drug pair $(d_1, d_2)$ is \emph{already correctly normalized, disambiguated, and canonicalized}. CrossDDI provides no safeguards against upstream entity misidentification, brand-name misinterpretation, or local regulatory formulary drift. CareGuard-VN addresses this critical upstream vulnerability: even a perfect evidence-grounded interaction engine will produce false-clear reassurance if evaluated on an incorrect upstream drug identity. CareGuard-VN co-governs upstream entity verification and downstream interaction screening under a unified fail-closed release contract.
+CrossDDI (BioNLP 2026) represents a major step forward in evidence-grounded DDI verification, utilizing LLM-based evidence extraction followed by deterministic arbitration over DrugBank and PubMed literature to ensure interaction claims are backed by literature citations~\cite{crossddi2026}. However, CrossDDI operates under the explicit assumption that the input drug pair $(d_1, d_2)$ is \emph{already correctly normalized, disambiguated, and canonicalized}. CrossDDI provides no safeguards against upstream entity misidentification, brand-name misinterpretation, or local regulatory formulary drift. CareGuard-VN addresses this critical upstream vulnerability: even a perfect evidence-grounded interaction engine will produce false-clear reassurance if evaluated on an incorrect upstream drug identity. CareGuard-VN co-governs upstream entity verification and downstream interaction screening under a unified fail-closed release contract. Table~\ref{tab:novelty} summarizes the boundaries between established lines of literature and the core contributions retained for CareGuard-VN.
 
 \begin{table}[H]
 \centering
@@ -171,11 +171,11 @@ Under the \textbf{FIDES Safety Invariant}, any missing shard, corrupt checksum, 
 \section{Research Questions}
 The CareGuard-VN evaluation framework is organized around five core research questions:
 \begin{itemize}[leftmargin=*]
-  \item \textbf{RQ1 (Medication Safety & High-Risk Recall):} How reliably does CareGuard-VN detect acute overdoses, lethal drug interactions, and high-risk contraindications in clinical challenge cases?
+  \item \textbf{RQ1 (Medication Safety \& High-Risk Recall):} How reliably does CareGuard-VN detect acute overdoses, lethal drug interactions, and high-risk contraindications in clinical challenge cases?
   \item \textbf{RQ2 (DDI Knowledge Graph Conformance):} What is the empirical conformance and specificity of the deterministic CareGuard-VN DDI store against gold-standard interaction pairs?
   \item \textbf{RQ3 (FIDES Fail-Closed Attestation):} Does CareGuard-VN maintain a 100.0\% fail-closed blocking rate when challenged with synthetic corruptions, ungrounded LLM assertions, or invalid knowledge store digests?
   \item \textbf{RQ4 (Chow Risk-Coverage Trade-Off):} What is the empirical trade-off between automatic coverage $\Phi(g)$ and selective false-clear risk $R_{\text{FC}}(f, g)$ under strict SBMI gating?
-  \item \textbf{RQ5 (External Protocol & Disentanglement):} How is the external validation protocol structured to isolate upstream entity resolution error from downstream knowledge coverage limitations?
+  \item \textbf{RQ5 (External Protocol \& Disentanglement):} How is the external validation protocol structured to isolate upstream entity resolution error from downstream knowledge coverage limitations?
 \end{itemize}
 
 \section{Empirical Evaluation and Results}
@@ -185,7 +185,7 @@ We evaluated CareGuard-VN across four empirical verification tracks within the C
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Track 1: In-Distribution Medication Safety Challenge Suite ($N=5$ critical cases, $N=55$ product-AI suite):} High-risk clinical challenge cases evaluating acute Paracetamol overdose (4,000\,mg toxic bolus), Nitroglycerin + Sildenafil life-threatening hypotension contraindication, Enalapril in early pregnancy teratogenic risk, pediatric Aspirin in varicella / Reye's syndrome contraindication, and daily Methotrexate dosing toxicity (prescribed as weekly regimen).
   \item \textbf{Track 2: DDI Knowledge Graph Conformance ($N=500$ pairs):} 250 positive severe interaction pairs and 250 explicitly verified non-interacting negative control pairs evaluated against the frozen DrugBank 5.0 SQLite store.
-  \item \textbf{Track 3: Deterministic Agent & Property Verification ($N=89$ test modules):} Automated test modules and Hypothesis property tests covering medication token canonicalization, dosage stripping, clinician-review directives, and multi-drug merge.
+  \item \textbf{Track 3: Deterministic Agent \& Property Verification ($N=89$ test modules):} Automated test modules and Hypothesis property tests covering medication token canonicalization, dosage stripping, clinician-review directives, and multi-drug merge.
   \item \textbf{Track 4: FIDES NLI Fail-Closed Safety Barrier ($N=89$ invariant fixtures):} Structural challenge tests asserting that missing shards, mismatched Merkle digests, expired source metadata, or ungrounded clinical claims immediately transition to fail-closed abstention.
 \end{enumerate}
 
@@ -216,7 +216,7 @@ Product-AI Safety Suite ($N=55$) & Safety Invariant Adherence & \textbf{100.0\%}
  & Fail-Closed Gating Rate & \textbf{100.00\%} & 89/89 & [95.86\%, 100.00\%] \\
  & False Reassurance under Fault & \textbf{0.00\%} & 0/89 & [0.00\%, 4.14\%] \\
 \midrule
-API & Integration Suite ($N=99$) & Integration Invariant Pass & \textbf{100.00\%} & 99/99 & [96.27\%, 100.00\%] \\
+API \& Integration Suite ($N=99$) & Integration Invariant Pass & \textbf{100.00\%} & 99/99 & [96.27\%, 100.00\%] \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -305,11 +305,11 @@ Table~\ref{tab:gate_status} reports the formal readiness status of CareGuard-VN 
 \textbf{Gate} & \textbf{Requirement} & \textbf{Status / Audit Disposition} \\
 \midrule
 CG-01 & Hard source gate on Vietnam product identity & \textbf{BLOCKED} -- Official DAV identity frame not yet acquired; four-role source set cannot validate. \\
-CG-02 & Freeze sample selection before outputs & \textbf{RULES FROZEN} in \texttt{STATISTICS_PLAN_FROZEN.md}; split assignment blocked until DAV mapped. \\
-CG-03 & Statistical precision target ($h \le 3\,\text{pp}$) & \textbf{FROZEN} -- Target $N=385$ positive cases ($p=0.10$) via \texttt{precision_requirement.py}. \\
+CG-02 & Freeze sample selection before outputs & \textbf{RULES FROZEN} in \texttt{STATISTICS\_PLAN\_FROZEN.md}; split assignment blocked until DAV mapped. \\
+CG-03 & Statistical precision target ($h \le 3\,\text{pp}$) & \textbf{FROZEN} -- Target $N=385$ positive cases ($p=0.10$) via \texttt{precision\_requirement.py}. \\
 CG-04 & Primary denominator rule & \textbf{FROZEN} -- All frozen externally positive cases; identity failures stay in denominator. \\
-CG-05 & Blinded reviewer protocol & \textbf{PROTOCOL FROZEN} in \texttt{MAPPING_REVIEW_PROTOCOL.md}; execution BLOCKED (reviewers pending recruitment). \\
-CG-06 & RxMap comparator feasibility & \textbf{RECORDED} -- Disposition \texttt{ASSET_GATED} in \texttt{RXMAP_FEASIBILITY.md}; unverified code not emulated. \\
+CG-05 & Blinded reviewer protocol & \textbf{PROTOCOL FROZEN} in \texttt{MAPPING\_REVIEW\_PROTOCOL.md}; execution BLOCKED (reviewers pending recruitment). \\
+CG-06 & RxMap comparator feasibility & \textbf{RECORDED} -- Disposition \texttt{ASSET\_GATED} in \texttt{RXMAP\_FEASIBILITY.md}; unverified code not emulated. \\
 CG-07 & Negative reference & \textbf{FROZEN} -- Specificity \texttt{UNSUPPORTED} on DDInter (absence is not negative); positive safety focus. \\
 \bottomrule
 \end{tabularx}

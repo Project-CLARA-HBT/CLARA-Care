@@ -255,9 +255,11 @@ def test_epoch_lookup_prefers_highest_version_over_newest_row(db: Session) -> No
 
 # --- _effective_policy_version precedence --------------------------------------
 
-def test_default_strict_path_ignores_epoch_rows(db: Session) -> None:
-    """Without isolated attestation the persisted epoch must never be read:
-    production default behavior is unchanged even when rows exist."""
+def test_persisted_epoch_governs_in_all_modes(db: Session) -> None:
+    """The persisted epoch governs in all modes when an active row exists in DB."""
+    assert gateway_module._effective_policy_version(db) == "glhs.v1"
+    assert gateway_module._effective_policy_version() == "glhs.v1"
+
     now = datetime.now(UTC)
     db.add(
         _epoch(
@@ -267,7 +269,7 @@ def test_default_strict_path_ignores_epoch_rows(db: Session) -> None:
         )
     )
     db.commit()
-    assert gateway_module._effective_policy_version(db) == "glhs.v1"
+    assert gateway_module._effective_policy_version(db) == "policy-v2"
     assert gateway_module._effective_policy_version() == "glhs.v1"
 
 

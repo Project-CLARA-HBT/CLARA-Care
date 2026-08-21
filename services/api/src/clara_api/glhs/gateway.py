@@ -23,6 +23,7 @@ from clara_api.db.models import (
     GlhsAssertion,
     GlhsAssertionEvidence,
     GlhsConflict,
+    GlhsEntityVersionPartition,
     GlhsEvidence,
     GlhsInferenceContextBinding,
     GlhsSnapshotManifest,
@@ -93,35 +94,115 @@ def read_current_policy_epoch(
         statement = statement.where(GovernancePolicyEpoch.policy_domain == policy_domain)
     statement = statement.order_by(
         GovernancePolicyEpoch.version.desc(), GovernancePolicyEpoch.id.desc()
-    )
+    ).limit(1)
     if for_update:
-        statement = statement.with_for_update()
-    return db.execute(statement).scalars().first()
+        statement = statement.with_for_update().execution_options(populate_existing=True)
+    return db.execute(statement).scalar_one_or_none()
 
 
 def _effective_policy_version(db: Session | None = None, *, for_update: bool = False) -> str:
     """Return the policy version governing admission at this moment.
 
-    A real policy update advances the deployment-time constant at deploy time.
-    An attested isolated GovRed deployment may simulate such an update for its
-    process; every normal process always returns the constant and the override
-    is never honored otherwise.  Under that isolated attestation the persisted
-    ``governance_policy_epochs`` table is the v2.1 source of truth when it has
-    an active epoch (``read_current_policy_epoch``); the
-    ``GOVRED_RESEARCH_POLICY_VERSION`` environment override remains the
-    sanctioned isolated override for processes without a persisted epoch.  The
-    default strict path performs no epoch read and is byte-identical to the
-    pre-v2.1 behavior.
+    If an active persisted epoch exists in the database, its version is returned
+    in all modes. Otherwise, in an attested isolated GovRed deployment, an
+    environment override may simulate a policy update; if no epoch or override is
+    active, the deployment-time POLICY_VERSION constant is returned.
     """
 
-    if isolated_govred_arm() is not None:
-        epoch = read_current_policy_epoch(db, for_update=for_update) if db is not None else None
+    if db is not None:
+        epoch = read_current_policy_epoch(db, for_update=for_update)
         if epoch is not None:
             return epoch.version
+    if isolated_govred_arm() is not None:
         override = os.environ.get("GOVRED_RESEARCH_POLICY_VERSION")
         if override:
             return override
     return POLICY_VERSION
+
+
+def get_or_create_entity_partition(
+    db: Session,
+    *,
+    profile_id: int,
+    domain: str,
+    semantic_key: str,
+    policy_version: str = POLICY_VERSION,
+    consent_version: str = "not_required",
+) -> GlhsEntityVersionPartition:
+    """Retrieve or initialize the DAG entity version partition."""
+    existing = db.execute(
+        select(GlhsEntityVersionPartition).where(
+            GlhsEntityVersionPartition.profile_id == profile_id,
+            GlhsEntityVersionPartition.domain == domain,
+            GlhsEntityVersionPartition.semantic_key == semantic_key,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return cast(GlhsEntityVersionPartition, existing)
+    partition = GlhsEntityVersionPartition(
+        profile_id=profile_id,
+        domain=domain,
+        semantic_key=semantic_key,
+        state_version=1,
+        policy_version=policy_version,
+        consent_version=consent_version,
+    )
+    db.add(partition)
+    db.flush()
+    return partition
+
+
+def lock_entity_partitions(
+    db: Session,
+    *,
+    profile_id: int,
+    partitions: list[tuple[str, str]] | set[tuple[str, str]] | tuple[tuple[str, str], ...],
+    policy_version: str = POLICY_VERSION,
+    consent_version: str = "not_required",
+) -> list[GlhsEntityVersionPartition]:
+    """Acquire SELECT ... FOR UPDATE row locks on entity partitions in canonical sorted order."""
+    sorted_keys = sorted(set(partitions), key=lambda item: (item[0], item[1]))
+    locked: list[GlhsEntityVersionPartition] = []
+    for domain, semantic_key in sorted_keys:
+        get_or_create_entity_partition(
+            db,
+            profile_id=profile_id,
+            domain=domain,
+            semantic_key=semantic_key,
+            policy_version=policy_version,
+            consent_version=consent_version,
+        )
+        row = db.execute(
+            select(GlhsEntityVersionPartition)
+            .where(
+                GlhsEntityVersionPartition.profile_id == profile_id,
+                GlhsEntityVersionPartition.domain == domain,
+                GlhsEntityVersionPartition.semantic_key == semantic_key,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalar_one()
+        locked.append(row)
+    return locked
+
+
+def increment_partition_versions(
+    db: Session,
+    *,
+    partitions: list[GlhsEntityVersionPartition] | tuple[GlhsEntityVersionPartition, ...],
+    consent_version: str | None = None,
+    policy_version: str | None = None,
+) -> None:
+    """Advance local state_version counters on touched entity partitions (DAG Nodes)."""
+    now = datetime.now(UTC)
+    for partition in partitions:
+        partition.state_version += 1
+        if consent_version is not None:
+            partition.consent_version = consent_version
+        if policy_version is not None:
+            partition.policy_version = policy_version
+        partition.updated_at = now
+    db.flush()
 
 
 def _digest(value: object) -> str:
@@ -492,6 +573,7 @@ def create_inference_context_binding(
         require_unexpired=False,
     )
     validate_current_governance_coordinates(
+        db,
         profile_id=profile_id,
         base_state_version=persisted_snapshot.state_version,
         policy_version=persisted_snapshot.policy_version,
@@ -578,6 +660,7 @@ def validate_inference_context_binding(
 
 
 def validate_current_governance_coordinates(
+    db: Session | None = None,
     *,
     profile_id: int,
     base_state_version: int,
@@ -592,8 +675,9 @@ def validate_current_governance_coordinates(
     """Production primitive: validate the current-governance coordinates.
 
     Compares the persisted snapshot's state/policy/consent/purpose/task/actor
-    coordinates against the current claimed coordinates.  This is the
-    governance half of the bound-proposal validation split (spec 3.2 / C-001).
+    coordinates against the current claimed coordinates.  When a database session
+    is provided, independently queries and verifies the locked DB consent and
+    policy rows from PostgreSQL (spec 3.2 / C-001).
     """
 
     if snapshot.profile_id != profile_id:
@@ -612,6 +696,24 @@ def validate_current_governance_coordinates(
         raise GlhsInvariantError("proposal_snapshot_actor_mismatch")
     if actor_role is not None and snapshot.actor_role != actor_role:
         raise GlhsInvariantError("proposal_snapshot_actor_role_mismatch")
+
+    if db is not None:
+        profile = db.get(PhrProfile, profile_id)
+        if profile is None:
+            raise GlhsInvariantError("proposal_profile_not_found")
+        effective_consent = _governed_consent_version(
+            db, owner_user_id=profile.user_id, purpose=purpose, for_update=True
+        )
+        if consent_version != effective_consent or snapshot.consent_version != effective_consent:
+            raise GlhsInvariantError("proposal_snapshot_consent_mismatch")
+        epoch = read_current_policy_epoch(db, for_update=True)
+        if epoch is not None:
+            if policy_version != epoch.version or snapshot.policy_version != epoch.version:
+                raise GlhsInvariantError("proposal_snapshot_policy_mismatch")
+        elif isolated_govred_arm() is not None:
+            override = os.environ.get("GOVRED_RESEARCH_POLICY_VERSION")
+            if override and (policy_version != override or snapshot.policy_version != override):
+                raise GlhsInvariantError("proposal_snapshot_policy_mismatch")
 
 
 def validate_exact_disclosure_dependency(
@@ -658,6 +760,7 @@ def validate_exact_disclosure_dependency(
         )
     else:
         validate_current_governance_coordinates(
+            db,
             profile_id=profile_id,
             base_state_version=base_state_version,
             policy_version=policy_version,
@@ -1268,6 +1371,8 @@ def apply_transition(
             "source_snapshot_digest": assertion.source_snapshot_digest,
         }
     )
+    # Canonical lock hierarchy:
+    # 1. Profile state PhrProfile with SELECT ... FOR UPDATE
     base_version = _lock_profile_state(db, profile_id=scope.profile.id)
     # A concurrent request may have committed this idempotency key while this
     # transaction waited for the profile row lock. Re-read under the serialized
@@ -1283,11 +1388,21 @@ def apply_transition(
         if existing.request_digest != request_digest:
             raise GlhsInvariantError("idempotency_key_reuse_mismatch")
         return cast(GlhsTransition, existing)
-    if revalidate_governance and assertion.policy_version != _effective_policy_version(db, for_update=True):
-        raise GlhsInvariantError("assertion_policy_mismatch")
+    # 2. Active GovernancePolicyEpoch with SELECT ... FOR UPDATE via _effective_policy_version(db, for_update=True)
+    current_policy_version = _effective_policy_version(db, for_update=True)
+    # 3. Active UserConsent with SELECT ... FOR UPDATE via _governed_consent_version(db, ..., for_update=True)
     current_consent_version = _governed_consent_version(
         db, owner_user_id=scope.profile.user_id, purpose=scope.purpose, for_update=True
     )
+    locked_partitions = lock_entity_partitions(
+        db,
+        profile_id=scope.profile.id,
+        partitions=[(assertion.assertion_type, assertion.semantic_key)],
+        policy_version=current_policy_version,
+        consent_version="not_required",
+    )
+    if revalidate_governance and assertion.policy_version != current_policy_version:
+        raise GlhsInvariantError("assertion_policy_mismatch")
     if revalidate_governance and assertion.consent_version != current_consent_version:
         raise GlhsInvariantError("assertion_consent_mismatch")
     if revalidate_state and base_version != expected_state_version:
@@ -1330,7 +1445,7 @@ def apply_transition(
         process_kind=assertion.process_kind,
         review_state=review_state,
         reviewed_at=reviewed_at,
-        policy_version=_effective_policy_version(db),
+        policy_version=current_policy_version,
         consent_version=current_consent_version,
         source_snapshot_id=(assertion.source_snapshot_id if action == "activate" else None),
         source_snapshot_digest=(assertion.source_snapshot_digest if action == "activate" else None),
@@ -1389,8 +1504,14 @@ def apply_transition(
                         profile_id=scope.profile.id,
                         state_version=result_version,
                         valid_at=effective_at,
-                        policy_version=_effective_policy_version(db),
+                        policy_version=current_policy_version,
                     )
+                )
+                increment_partition_versions(
+                    db,
+                    partitions=locked_partitions,
+                    consent_version=current_consent_version,
+                    policy_version=current_policy_version,
                 )
                 add_outbox(
                     db,
@@ -1484,8 +1605,14 @@ def apply_transition(
             profile_id=scope.profile.id,
             state_version=result_version,
             valid_at=effective_at,
-            policy_version=_effective_policy_version(db),
+            policy_version=current_policy_version,
         )
+    )
+    increment_partition_versions(
+        db,
+        partitions=locked_partitions,
+        consent_version=current_consent_version,
+        policy_version=current_policy_version,
     )
     add_outbox(
         db,

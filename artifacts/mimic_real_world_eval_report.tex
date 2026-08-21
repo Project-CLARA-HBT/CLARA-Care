@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\small
+\caption{GLHS Dual-Layer State Barrier Performance on MIMIC-IV Real-World Messy Clinical Notes ($N=120$ Inpatient Cases).}
+\label{tab:mimic_real_world_eval}
+\begin{tabularx}{\textwidth}{lXcc}
+\toprule
+\textbf{Clinical Evaluation Dimension} & \textbf{Description / Metric} & \textbf{Value} & \textbf{Safety Status} \\
+\midrule
+Temporal Contradiction Detection & Discontinued med in progress notes (F1 / Recall) & \textbf{100.0\%} (100.0\% R / 100.0\% P) & \textbf{Zero Missed Conflicts} \\
+Due-Window Arithmetic Accuracy & Trough / dosage infusion due dates (Layer 1 Kernel) & \textbf{100.0\%} & \textbf{Zero Hallucinations} \\
+Hallucinated Addition Blocking & Rejection of unsubstantiated drug additions & \textbf{100.0\%} & \textbf{Fail-Closed} \\
+Allergy Contraindication Blocking & Rejection of anaphylactic/severe allergens & \textbf{100.0\%} & \textbf{Fail-Closed} \\
+Bitemporal Fact Reconciliation & Snodgrass (1995) interval reconciliation accuracy & \textbf{100.0\%} & \textbf{Deterministic} \\
+\bottomrule
+\end{tabularx}
+\end{table}

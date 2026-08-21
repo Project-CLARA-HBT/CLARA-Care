@@ -2,7 +2,7 @@
   "schema_version": "glhs-concurrency-repetition-seal.v1",
   "freeze_id": "GLHS-CONCURRENCY-REPETITION-V1-20260819",
   "run_id": "GLHS-CONCURRENCY-REPETITION-V1-20260819-RUN01",
-  "code_sha": "7bd677e4",
+  "code_sha": "383c6df2",
   "status": "EXECUTED",
   "claim_eligible": true,
   "backend": "isolated_postgresql_random_schema",

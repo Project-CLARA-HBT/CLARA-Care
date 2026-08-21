@@ -90,9 +90,9 @@ d_H = \operatorname{MerkleRoot}\left(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}
 
 When an agent proposes a state update $P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle$ at commit timestamp $t_2 = t_{\text{commit}}(P) > t_1$, the Governed State Transition (GST) revalidates state freshness, governance epochs, and cryptographic Merkle integrity under row-level database locks.
 
-\begin{theorem}[Cryptographic Merkle State Transition Non-Forgeability and Bound-Commit Security]
+\begin{theorem}[Cryptographic Merkle Digest State Transition Verification and Bound-Commit Security]
 \label{thm:crypto_merkle}
-Let $\mathcal{H}_{\text{hash}}$ be a cryptographic hash function modeled as a random oracle / collision-resistant hash family under EUF-CMA / IND-CCA security. Let $\mathcal{H}$ be an authorized THSS snapshot issued at $t_1$ with Merkle root digest $d_H$. For any probabilistic polynomial-time (PPT) adversary $\mathcal{A}$ or drifting model generating proposal $P$ at $t_2 > t_1$:
+Let $\mathcal{H}_{\text{hash}}$ be a cryptographic hash function satisfying collision resistance and second-preimage resistance (or modeled as a random oracle). Let $\mathcal{H}$ be an authorized THSS snapshot issued at $t_1$ with Merkle root digest $d_H$. For any probabilistic polynomial-time (PPT) adversary $\mathcal{A}$ or drifting model generating proposal $P$ at $t_2 > t_1$:
 \begin{equation}
 \Pr\left[\operatorname{GST\_Commit}(P, t_2) = \text{True} \;\middle|\; \exists e_k \in \operatorname{Deps}(P) : V(e_k)_{t_2} > v_s(e_k) \;\lor\; \Sigma_{t_2} \neq \Sigma_{t_1} \;\lor\; d_H \neq \operatorname{RecomputeMerkleRoot}(id_H)\right] \le \operatorname{negl}(\lambda),
 \end{equation}
@@ -102,7 +102,7 @@ where $\lambda$ is the security parameter and $\operatorname{negl}(\lambda)$ is 
 \begin{proof}
 Suppose for contradiction that $\operatorname{GST\_Commit}(P, t_2) = \text{True}$ while at least one security premise is violated:
 \begin{enumerate}
-    \item \textbf{Payload / Evidence Tampering:} Suppose the payload $E_H$ or coordinates $\vec{v}_0$ were mutated to $E'_H \neq E_H$. For the proposal to satisfy $\operatorname{Bound}(P, \mathcal{H})$, the adversary must find $E'_H$ such that $\operatorname{MerkleRoot}(E'_H \cup \dots) = d_H$. By the collision resistance of $\mathcal{H}_{\text{hash}}$, the probability of discovering a second pre-image or collision is bounded by $\operatorname{negl}(\lambda)$.
+    \item \textbf{Payload / Evidence Tampering:} Suppose the payload $E_H$ or coordinates $\vec{v}_0$ were mutated to $E'_H \neq E_H$. For the proposal to satisfy $\operatorname{Bound}(P, \mathcal{H})$, the adversary must find $E'_H$ such that $\operatorname{MerkleRoot}(E'_H \cup \dots) = d_H$. By the collision resistance and second-preimage resistance of $\mathcal{H}_{\text{hash}}$, the probability of discovering a second pre-image or collision is bounded by $\operatorname{negl}(\lambda)$.
     \item \textbf{State Partition Drift:} If an intermediate transaction $\mathcal{T}_{\text{state}}$ committed at $t \in (t_1, t_2)$ modifying partition $e_k \in \operatorname{Deps}(P)$, the monotonic version counter was incremented: $V(e_k)_{t_2} = V(e_k)_{t_1} + 1 > v_s(e_k)$. Under atomic execution, GST acquires a row-level lock (\texttt{SELECT ... FOR UPDATE}) on $e_k$ and evaluates predicate $\operatorname{StateCurrent}(P)$. Because $V(e_k)_{t_2} > v_s(e_k)$, $\operatorname{StateCurrent}(P)$ strictly evaluates to $\text{False}$.
     \item \textbf{Governance / Consent Invalidation:} If consent was revoked ($\Sigma_{t_2} \neq \Sigma_{t_1}$) or policy epoch advanced, re-reading the committed governance state under the lock forces $\operatorname{GovernanceCurrent}(P)$ to evaluate to $\text{False}$.
 \end{enumerate}

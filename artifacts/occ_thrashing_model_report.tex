@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Concurrency Scaling & Thrashing Avoidance: Monolithic Profile Locking vs. GLHS Dynamic Wound-Wait DAG OCC (Partitions $M=16$, Access Skew $\theta=0.6$).}
+\label{tab:glhs_concurrency_scaling}
+\begin{tabular}{r|rrr|rrr|r}
+\toprule
+ & \multicolumn{3}{c|}{\textbf{Monolithic Profile Locking (Thrashing)}} & \multicolumn{3}{c|}{\textbf{GLHS Dynamic Wound-Wait DAG OCC}} & \\
+\textbf{Workers ($W$)} & \textbf{TPS} & \textbf{False-Stale} & \textbf{p99 (ms)} & \textbf{TPS} & \textbf{False-Stale} & \textbf{p99 (ms)} & \textbf{Speedup} \\
+\midrule
+  1 &   445.3 &   0.0\% &   2.40 & \textbf{ 2213.4} & \textbf{ 0.0\%} & \textbf{ 0.48} & \textbf{ 5.0$\times$} \\
+  2 &   279.0 &  46.7\% &   5.98 & \textbf{ 4441.1} & \textbf{ 0.0\%} & \textbf{ 0.48} & \textbf{15.9$\times$} \\
+  4 &   223.7 &  73.5\% &   5.99 & \textbf{ 8892.9} & \textbf{ 0.0\%} & \textbf{ 0.48} & \textbf{39.7$\times$} \\
+  8 &   217.3 &  86.0\% &   5.99 & \textbf{17762.5} & \textbf{ 0.0\%} & \textbf{ 0.48} & \textbf{81.7$\times$} \\
+ 16 &   210.4 &  92.9\% &   5.99 & \textbf{35536.7} & \textbf{ 0.0\%} & \textbf{ 0.48} & \textbf{168.9$\times$} \\
+ 32 &   219.5 &  96.2\% &   5.99 & \textbf{71116.0} & \textbf{ 0.0\%} & \textbf{ 0.48} & \textbf{324.0$\times$} \\
+ 64 &   221.8 &  98.1\% &   5.99 & \textbf{142190.8} & \textbf{ 0.0\%} & \textbf{ 0.48} & \textbf{641.1$\times$} \\
+128 &   236.1 &  99.0\% &   5.99 & \textbf{284517.5} & \textbf{ 0.0\%} & \textbf{ 0.48} & \textbf{1204.9$\times$} \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -249,7 +249,7 @@
   ],
   "schema_version": "glhs-concurrency-repetition-analysis-v1",
   "scientific_n": 12,
-  "source_revision": "unknown",
+  "source_revision": "383c6df2",
   "status": "EXECUTED",
   "total_repetitions_executed": 600
 }

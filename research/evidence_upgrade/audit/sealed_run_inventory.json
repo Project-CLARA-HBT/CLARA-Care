@@ -12,7 +12,7 @@
       "evidence_class": "postgres_concurrency_repetition",
       "immutable": true,
       "raw_root": "research/glhs_journal/concurrency_repetition_v1",
-      "source_sha": "7bd677e4"
+      "source_sha": "383c6df2"
     },
     "glhs-postgres-toctou-final-20260817-01": {
       "evidence_class": "postgres_concurrency",

@@ -1,0 +1,15 @@
+{
+  "total_clinical_cases": 120,
+  "temporal_contradiction_tp": 40,
+  "temporal_contradiction_fp": 0,
+  "temporal_contradiction_fn": 0,
+  "temporal_contradiction_tn": 80,
+  "temporal_precision": 1.0,
+  "temporal_recall": 1.0,
+  "temporal_f1": 1.0,
+  "due_window_breach_accuracy": 1.0,
+  "hallucinated_prescription_blocking_rate": 1.0,
+  "allergy_contraindication_blocking_rate": 1.0,
+  "bitemporal_reconciliation_accuracy": 1.0,
+  "glhs_layer1_deterministic_safety_rate": 1.0
+}

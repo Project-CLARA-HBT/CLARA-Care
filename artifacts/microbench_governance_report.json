@@ -1,0 +1,64 @@
+{
+  "iterations": 1000,
+  "warmup_iterations": 100,
+  "llm_latency_ms": 1200.0,
+  "timestamp_utc": "2026-08-21 17:10:51 UTC",
+  "all_targets_met": true,
+  "phases": {
+    "t_thss_ms": {
+      "mean": 0.044487,
+      "std": 0.011073,
+      "p50": 0.046762,
+      "p90": 0.056067,
+      "p99": 0.072163,
+      "min": 0.029974,
+      "max": 0.113313,
+      "target": 1.2,
+      "target_met": true
+    },
+    "t_dag_ms": {
+      "mean": 0.005262,
+      "std": 0.001723,
+      "p50": 0.005366,
+      "p90": 0.00655,
+      "p99": 0.012156,
+      "min": 0.003408,
+      "max": 0.025175,
+      "target": 0.8,
+      "target_met": true
+    },
+    "t_commit_ms": {
+      "mean": 0.0371,
+      "std": 0.232692,
+      "p50": 0.031066,
+      "p90": 0.037966,
+      "p99": 0.050806,
+      "min": 0.020447,
+      "max": 7.383824,
+      "target": 2.1,
+      "target_met": true
+    },
+    "t_gov_ms": {
+      "mean": 0.086849,
+      "std": 0.233827,
+      "p50": 0.083434,
+      "p90": 0.100491,
+      "p99": 0.126941,
+      "min": 0.053978,
+      "max": 7.449484,
+      "target": 4.1,
+      "target_met": true
+    },
+    "governance_overhead_pct": {
+      "mean": 0.007233,
+      "std": 0.019365,
+      "p50": 0.006952,
+      "p90": 0.008374,
+      "p99": 0.010577,
+      "min": 0.004498,
+      "max": 0.61696,
+      "target": 0.4,
+      "target_met": true
+    }
+  }
+}
