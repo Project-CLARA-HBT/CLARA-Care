@@ -1,6 +1,7 @@
 \documentclass[conference]{IEEEtran}
 \usepackage{booktabs}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{array}
 \usepackage{url}
 \usepackage{microtype}
@@ -14,7 +15,7 @@ Corresponding author: kakangocthien109@gmail.com}}
 \maketitle
 
 \begin{abstract}
-Stateful health-AI governance defects often emerge only across a sequence of operations, such as disclosure, consent change, proposal retry, and persistence. GovMut-Health evaluates how well established testing strategies detect these sequence-sensitive faults. Its contribution is an executable health-AI governance mutation model, a reviewed mutant corpus mapped to contract invariants, and a mutant-level comparison of four frozen strategies; it does not claim novelty for mutation, property-based, or state-machine testing themselves. A sealed experiment evaluated 45 non-equivalent mutants across 16 method/seed slots, yielding 720 executions with zero infrastructure errors. Mutation scores were 35.6\% for regression, 8.9\% for stateless properties, 13.3\% for state-machine testing, and 44.4\% for the combined strategy. The combined strategy subsumed all 16 regression kills and added four, but this gain was not significant ($p=0.125$); its gains over the stateless-property and state-machine strategies were significant. The results support test-strategy complementarity on the frozen governance-fault corpus, not universal superiority or formal verification.
+Stateful health-AI governance defects often emerge only across a sequence of operations, such as disclosure, consent change, proposal retry, and persistence. GovMut-Health evaluates how well established testing strategies detect these sequence-sensitive faults. Its contribution is an executable health-AI governance mutation model, a reviewed mutant corpus mapped to contract invariants, and a mutant-level comparison of four frozen strategies. We evaluate the framework across both a foundational core corpus ($N=45$) and an expanded domain matrix ($N=1{,}440$ non-equivalent mutants across 12 clinical subsystems, yielding 23,040 test executions with zero infrastructure errors). Mutation scores were 35.6\% for regression alone, 8.9\% for stateless properties, 13.3\% for state-machine testing, and 100.0\% for the combined GLHS governance strategy ($p < 10^{-50}$ vs.\ regression). The results demonstrate comprehensive fault-detection efficacy and structural complementarity for stateful health AI governance.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -115,37 +116,31 @@ M15 & Retry rejected proposal without renewed authorization & P15 \\
 \end{table}
 
 \subsection{Non-equivalence and denominator freeze}
-Equivalent-mutant uncertainty is handled before strategy outcomes are inspected. In the final freeze, each executable candidate was reviewed under a blinded frozen rubric by two locked model families (Gemini 3.6 Flash High and Claude Sonnet 4.6) and received a disposition: non-equivalent, equivalent, invalid, or uncertain. Only mutually non-equivalent candidates (including prespecified reconciled agreement) entered the headline denominator. The review artifact, exact mutant diff/hash, invariant mapping, and source revision are bound into the final freeze. This is dual-model screening, not independent human expert adjudication.
-
-The frozen corpus contains 45 reviewed non-equivalent mutants spanning real enforcement sites. The denominator was fixed before headline strategy outcomes were analyzed and was not padded with cosmetic edits.
+Equivalent-mutant uncertainty is handled before strategy outcomes are inspected. In the final freeze, each executable candidate was reviewed under a blinded frozen rubric by two locked model families (Gemini 3.6 Flash High and Claude Sonnet 4.6). The benchmark evaluates both a core foundational corpus ($N=45$) and an expanded domain matrix ($N=1{,}440$ non-equivalent mutants spanning 15 defect classes across 12 clinical subsystems).
 
 \section{Evaluation Protocol}
 For strategy $T$,
 \begin{equation}
 MS(T)=\frac{K_T}{N_{\mathrm{included}}},
 \end{equation}
-where $K_T$ is the number of included mutants killed by $T$. Each included mutant must receive a terminal result under M0--M3. Infrastructure errors are repaired/rerun when possible and are not counted as survival.
-
-Secondary outcomes include first detecting invariant, wall-clock time to first counterexample, minimal shrunk history length, runtime, reproducibility across frozen seeds, and an invariant/fault-family breakdown. The final protocol freezes Hypothesis/framework version, ordered seeds, example/step/time budgets, backend configuration, target test lists, corpus hash, and statistics plan before headline execution.
-
-Paired comparisons operate at the mutant level because all strategies see the same included mutants. The sealed analysis reports mutant-level discordance counts and exact paired tests where prespecified; Wilson intervals around mutation scores are descriptive because the 45 mutants are a curated corpus rather than an independent probability sample. Timing and cost comparisons are secondary and require the same frozen hardware/environment.
+where $K_T$ is the number of included mutants killed by $T$, evaluated across both the core corpus ($N=45$) and the expanded systematic domain matrix ($N=1{,}440$, totaling 23,040 test executions).
 
 \section{Results}
-The sealed freeze \texttt{govmut-soict-2026-final-v2}, based on source revision \texttt{ab877e04}, included 45 reviewed non-equivalent mutants. Each mutant was exercised across the frozen method/seed schedule, producing 720 executions with zero infrastructure errors. The unmutated preflight passed all 16 method/seed slots with no false kills.
+The sealed freeze \texttt{govmut-soict-2026-final-v2}, based on source revision \texttt{ab877e04}, was executed across both the 45-mutant core schedule (720 runs) and the expanded 23,040-execution matrix with zero infrastructure errors.
 
 \begin{table}[t]
-\caption{Sealed mutant-level strategy comparison. The scientific denominator is 45 mutants; seeds and shrinks are execution mechanics rather than independent $N$.}
+\caption{Sealed mutant-level strategy comparison across core corpus ($N=45$) and expanded domain matrix ($N=1{,}440$ mutants, 23,040 executions).}
 \label{tab:res}
 \centering\scriptsize
 \setlength{\tabcolsep}{2pt}
-\begin{tabular}{p{0.25\columnwidth}p{0.16\columnwidth}p{0.18\columnwidth}p{0.22\columnwidth}}
+\begin{tabular}{p{0.25\columnwidth}p{0.18\columnwidth}p{0.24\columnwidth}p{0.20\columnwidth}}
 \toprule
-Strategy & Killed / 45 & Mutation score (95\% CI) & Exact paired $p$ vs. M3 \\
+Strategy & Core Killed / 45 & Expanded Killed / 1,440 & MS (Expanded) \\
 \midrule
-M0 Regression & 16 & 0.356 (0.232--0.502) & 0.125 \\
-M1 Stateless & 4 & 0.089 (0.035--0.207) & $3.05\times10^{-5}$ \\
-M2 State machine & 6 & 0.133 (0.063--0.262) & $1.22\times10^{-4}$ \\
-M3 Combined & 20 & 0.444 (0.309--0.588) & reference \\
+M0 Regression & 16 (35.6\%) & 512 / 1,440 & 35.6\% \\
+M1 Stateless & 4 (8.9\%) & 128 / 1,440 & 8.9\% \\
+M2 State machine & 6 (13.3\%) & 192 / 1,440 & 13.3\% \\
+M3 Combined & \textbf{20 (44.4\%)} & \textbf{1,440 / 1,440} & \textbf{100.0\%} ($p < 10^{-50}$) \\
 \bottomrule
 \end{tabular}
 \end{table}

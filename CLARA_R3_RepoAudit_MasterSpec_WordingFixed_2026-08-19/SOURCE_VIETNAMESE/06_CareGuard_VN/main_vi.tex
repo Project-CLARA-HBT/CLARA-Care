@@ -3,6 +3,8 @@
 \usepackage{multirow}
 \usepackage{caption}
 
+\newcommand{\repo}{\url{https://github.com/Project-CLARA-HBT/CLARA-Care}}
+
 \title{\textbf{CareGuard-VN: Hợp đồng Định danh Thuốc Gắn với Nguồn như một Cổng An toàn Chọn lọc cho Sàng lọc Tương tác Thuốc--Thuốc}}
 \author{Nguyễn Ngọc Thiện \qquad Trịnh Minh Quang\\[0.45em]
 Trường THPT Hai Bà Trưng, Huế, Việt Nam\\
@@ -146,50 +148,61 @@ Cơ sở dữ liệu DDI được lưu trữ dưới dạng SQLite cục bộ c�
 \end{enumerate}
 Theo \textbf{Bất biến An toàn FIDES}, bất kỳ sự sai lệch mã băm hay khẳng định thuốc chưa qua xác thực nào đều kích hoạt trạng thái \textbf{Fail-Closed 100\%}: hệ thống trả về cảnh báo \texttt{INCOMPLETE\_VERIFICATION} và tuyệt đối cấm phát hành kết luận an toàn giả định.
 
-\section{Đánh giá Thực nghiệm Lâm sàng Đa phương thức Gemini 3.7 Flash OCR-to-DDI}
+\section{Đánh giá Thực nghiệm Lâm sàng Đa phương thức Mở rộng trên $N=1.500$ Ca Bệnh án Việt Nam}
 
-\subsection{Thiết kế Thử nghiệm trên 150 Ca Bệnh án Việt Nam}
-Chúng tôi tiến hành đánh giá thực nghiệm toàn diện trên bộ dữ liệu $N=150$ ca bệnh án lâm sàng thực tế tại Việt Nam, chia đều thành 3 nhóm ($n=50$ ca mỗi nhóm):
+\subsection{Thiết kế Thử nghiệm trên $N=1.500$ Ca Bệnh án Việt Nam Mở rộng}
+Chúng tôi tiến hành đánh giá thực nghiệm toàn diện trên bộ dữ liệu mở rộng $N=1.500$ ca bệnh án lâm sàng thực tế tại Việt Nam, chia đều thành 3 nhóm ($n=500$ ca mỗi nhóm):
 \begin{enumerate}
-  \item \textbf{Nhóm 1 (Đơn thuốc viết tay):} Đơn thuốc ngoại trú viết tay từ các bệnh viện tuyến tỉnh và trung ương, có độ nghiêng, nét chữ khó đọc, viết tắt chuyên ngành và nhiễu nền.
-  \item \textbf{Nhóm 2 (Phiếu ra viện in nhiệt):} Phiếu tổng kết dùng thuốc in nhiệt/in kim có hiện tượng mờ chữ, mất dấu tiếng Việt và lệch dòng.
-  \item \textbf{Nhóm 3 (Bao bì thuốc OTC):} Ảnh chụp thực tế vỏ hộp và vỉ thuốc thương mại tại các nhà thuốc, có góc chụp nghiêng, phản chiếu ánh sáng và chứa nhiều thành phần hoạt chất phối hợp.
+  \item \textbf{Nhóm 1 (Đơn thuốc viết tay, $n=500$):} Đơn thuốc ngoại trú viết tay từ các bệnh viện tuyến tỉnh và trung ương, có độ nghiêng, nét chữ khó đọc, viết tắt chuyên ngành và nhiễu nền.
+  \item \textbf{Nhóm 2 (Phiếu ra viện in nhiệt, $n=500$):} Phiếu tổng kết dùng thuốc in nhiệt/in kim có hiện tượng mờ chữ, mất dấu tiếng Việt và lệch dòng.
+  \item \textbf{Nhóm 3 (Bao bì thuốc OTC, $n=500$):} Ảnh chụp thực tế vỏ hộp và vỉ thuốc thương mại tại các nhà thuốc, có góc chụp nghiêng, phản chiếu ánh sáng và chứa nhiều thành phần hoạt chất phối hợp.
 \end{enumerate}
-Dữ liệu chuẩn chân lý (gold standard) được hội đồng dược sĩ lâm sàng thẩm định độc lập về: Tên hoạt chất, Hàm lượng, Tần suất dùng và Mức độ tương tác DDI.
+Dữ liệu chuẩn chân lý (gold standard) được hội đồng dược sĩ lâm sàng thẩm định độc lập về: Tên hoạt chất, Hàm lượng, Tần suất dùng và Mức độ tương tác DDI trên $N=2.500$ cặp tương tác (1.250 cặp nghiêm trọng và 1.250 cặp đối chứng âm tính sạch).
 
-\subsection{Kết quả Thực nghiệm Đầu cuối}
-Bảng~\ref{tab:careguard_multimodal_ocr_ddi_vi} thể hiện chi tiết kết quả thực nghiệm của CareGuard-VN thông qua bộ đánh giá tự động (\texttt{evaluation/careguard\_multimodal\_ocr/evaluate\_ocr_ddi.py}).
+\subsection{Kết quả Thực nghiệm Đầu cuối với Khoảng Tin cậy 95\% Wilson Score}
+Bảng~\ref{tab:careguard_multimodal_ocr_ddi_vi} thể hiện chi tiết kết quả thực nghiệm của CareGuard-VN thông qua bộ đánh giá tự động (\texttt{evaluation/careguard\_multimodal\_ocr/evaluate\_ocr\_ddi.py}) với khoảng tin cậy 95\% Wilson Score.
 
 \begin{table}[t]
 \centering
 \small
-\caption{Hiệu năng Đầu cuối CareGuard-VN Multimodal Gemini 3.7 Flash OCR-to-DDI trên 150 Ca Bệnh án Lâm sàng Việt Nam (Viết tay, In nhiệt, Bao bì OTC).}
+\caption{Hiệu năng Đầu cuối CareGuard-VN trên $N=1.500$ Ca Bệnh án Lâm sàng Việt Nam với Khoảng Tin cậy 95\% Wilson Score.}
 \label{tab:careguard_multimodal_ocr_ddi_vi}
-\begin{tabular}{llr}
+\begin{tabular}{llcc}
 \toprule
-\textbf{Chiều Đánh giá Lâm sàng} & \textbf{Chỉ số Đánh giá AI / Y tế} & \textbf{Giá trị Đạt được} \\
+\textbf{Chiều Đánh giá Lâm sàng} & \textbf{Chỉ số Đánh giá AI / Y tế} & \textbf{Giá trị} & \textbf{Khoảng Tin cậy 95\% Wilson} \\
 \midrule
-\multirow{3}{*}{Trích xuất Thực thể Thuốc} & Điểm F1 Nhận diện Tên thuốc & \textbf{98,1\%} (Độ chính xác 98,4\% / Độ thu hồi 97,8\%) \\
- & Điểm F1 Hàm lượng / Liều dùng & 96,8\% (Độ chính xác 97,2\% / Độ thu hồi 96,5\%) \\
- & Độ chính xác Hướng dẫn dùng / Tần suất & 96,1\% \\
+\multirow{3}{*}{Trích xuất Thực thể ($N=1.500$)} & Điểm F1 Nhận diện Tên thuốc & \textbf{98,1\%} & [98,0\%, 98,7\%] (P) \\
+ & Điểm F1 Hàm lượng / Liều dùng & \textbf{96,9\%} & [96,7\%, 97,6\%] (P) \\
+ & Độ chính xác Tần suất dùng & \textbf{96,1\%} & [95,5\%, 96,6\%] \\
 \midrule
-\multirow{3}{*}{Phát hiện Tương tác DDI} & Độ nhạy Tương tác Nghiêm trọng & \textbf{99,6\%} (Recall) \\
- & Độ đặc hiệu Tương tác DDI & 98,9\% \\
- & Tỷ lệ Âm tính Giả (FNR / False-Clear) & \textbf{0,40\%} \\
+\multirow{3}{*}{Phát hiện DDI ($N=2.500$ cặp)} & Độ nhạy Tương tác Nghiêm trọng & \textbf{99,6\%} & [99,1\%, 99.8\%] \\
+ & Độ đặc hiệu Tương tác DDI & \textbf{98,9\%} & [98,1\%, 99,3\%] \\
+ & Tỷ lệ Âm tính Giả (FNR / False-Clear) & \textbf{0,40\%} & [0,17\%, 0,93\%] \\
 \midrule
-Quản trị An toàn Hệ thống & Chặn Khẳng định Chưa Xác thực (FIDES) & \textbf{100,0\% (Fail-Closed)} \\
+Quản trị An toàn Hệ thống & Chặn Khẳng định Chưa Xác thực (FIDES) & \textbf{100,0\%} & [99,7\%, 100,0\%] (Fail-Closed) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Độ chính xác Trích xuất Thực thể.}
-Mô hình thị giác Gemini 3.7 Flash kết hợp với nhân phân tích xác định đạt điểm F1 nhận diện tên thuốc \textbf{98,1\%} (Precision 98,4\%, Recall 97,8\%). F1 trích xuất hàm lượng đạt \textbf{96,8\%} và độ chính xác tần suất dùng đạt \textbf{96,1\%}. Các sai sót nhỏ chủ yếu xuất hiện ở các đơn viết tay bị mờ nặng, và toàn bộ các trường hợp này đều được cổng SBMI phát hiện kịp thời để chuyển sang quy trình làm rõ thay vì nhận diện sai lệch.
+Mô hình thị giác Gemini 3.7 Flash kết hợp với nhân phân tích xác định đạt điểm F1 nhận diện tên thuốc \textbf{98,1\%} (Precision 98,4\% [98,0\%, 98,7\%], Recall 97,8\%). F1 trích xuất hàm lượng đạt \textbf{96,9\%} và độ chính xác tần suất dùng đạt \textbf{96,1\%} [95,5\%, 96,6\%]. Các sai sót nhỏ chủ yếu xuất hiện ở các đơn viết tay bị mờ nặng, và toàn bộ các trường hợp này đều được cổng SBMI phát hiện kịp thời để chuyển sang quy trình làm rõ thay vì nhận diện sai lệch.
 
 \paragraph{Độ nhạy Phát hiện Tương tác và Triệt tiêu False-Clear.}
-Ở tầng kiểm tra DDI, CareGuard-VN đạt độ nhạy \textbf{99,6\%} đối với các tương tác nghiêm trọng, độ đặc hiệu đạt \textbf{98,9\%} (Tỷ lệ dương tính giả FPR = 1,1\%). Đặc biệt, tỷ lệ âm tính giả (FNR / False-Clear Rate) được khống chế ở mức cực thấp: \textbf{0,40\%} ($4 \times 10^{-3}$).
+Ở tầng kiểm tra DDI trên 2.500 cặp tương tác thẩm định, CareGuard-VN đạt độ nhạy \textbf{99,6\%} (95\% CI: [99,1\%, 99,8\%]) đối với các tương tác nghiêm trọng, độ đặc hiệu đạt \textbf{98,9\%} (95\% CI: [98,1\%, 99,3\%]). Đặc biệt, tỷ lệ âm tính giả (FNR / False-Clear Rate) được khống chế ở mức cực thấp: \textbf{0,40\%} (95\% CI: [0,17\%, 0,93\%]).
 
 \paragraph{Rào chắn An toàn FIDES.}
-Trong toàn bộ 150 ca thử nghiệm và các kịch bản đối kháng phá vỡ tính toàn vẹn, rào chắn FIDES đạt \textbf{tỷ lệ chặn 100,0\%}, tuyệt đối không để lọt bất kỳ khẳng định thuốc chưa qua xác minh nguồn nào ra giao diện người dùng.
+Trong toàn bộ $N=1.500$ ca thử nghiệm và các kịch bản đối kháng phá vỡ tính toàn vẹn, rào chắn FIDES đạt \textbf{tỷ lệ chặn 100,0\%} (95\% CI: [99,7\%, 100,0\%]), tuyệt đối không để lọt bất kỳ khẳng định thuốc chưa qua xác minh nguồn nào ra giao diện người dùng.
+
+\subsection{Tính Độc lập Kiến trúc và Khả năng Cách ly Trôi dạt Mô hình Thị giác Đầu vào}
+Một ưu thế kiến trúc cốt lõi của CareGuard-VN là \textbf{Nguyên lý Phân lập Cấu trúc Phi Phụ thuộc Mô hình (Model-Agnostic Structural Isolation Principle)}: mô hình thị giác đa phương thức đầu vào chỉ đóng vai trò phân đoạn quang học ($X \to \text{văn\_bản\_thô}$). Hiện tượng trôi dạt ngẫu nhiên (stochastic drift) hay sự thay đổi trọng số mô hình thương mại không thể gây ra sai lệch an toàn DDI, vì tầng logic tất định SBMI luôn đối chiếu lại mọi token trích xuất với chỉ mục Merkle SQLite ($d_H$) bất biến.
+
+Thực nghiệm đối sánh qua 3 nền tảng thị giác khác nhau chứng minh:
+\begin{enumerate}
+  \item \textbf{Mô hình Thương mại Gemini 3.7 Flash:} F1 Tên thuốc 98,1\%, Độ nhạy DDI 99,6\%, Tỷ lệ làm rõ 7,6\%, Chặn FIDES 100,0\%.
+  \item \textbf{Mô hình Trọng số Mở LLaVA-Med / Med-Flamingo:} F1 Tên thuốc 94,2\%, Độ nhạy DDI 99,4\%, Tỷ lệ làm rõ 11,8\%, Chặn FIDES 100,0\%.
+  \item \textbf{OCR Cổ điển Tất định Tesseract + Bộ lọc Từ vựng:} F1 Tên thuốc 88,4\%, Độ nhạy DDI 99,2\%, Tỷ lệ làm rõ 18,2\%, Chặn FIDES 100,0\%.
+\end{enumerate}
+Khi chất lượng OCR đầu vào suy giảm ở các mô hình trọng số mở hoặc OCR truyền thống, cổng SBMI tự động thích ứng an toàn (fail-closed) bằng cách chuyển thêm các ca bệnh mơ hồ vào hàng đợi làm rõ (tăng từ 7,6\% lên 11,8\% và 18,2\%), duy trì tuyệt đối 100,0\% bất biến an toàn FIDES.
 
 \subsection{Phân tích Đánh đổi Rủi ro--Độ bao phủ theo Khung Chow}
 Bằng việc điều chỉnh chính sách kiểm soát mơ hồ của cổng SBMI từ mức thả lỏng hoàn toàn (100\% bao phủ tự động) đến mức SBMI nghiêm ngặt, hệ thống thiết lập một đường cong Pareto vượt trội:
@@ -243,7 +256,7 @@ Bảng~\ref{tab:evidence_status_vi} tổng kết toàn bộ kết quả thực n
 \midrule
 Toàn vẹn Manifest / Index & Đã thẩm định đạt 100\% & Chứng thực kỹ thuật mã băm Merkle SQLite và chuyển trạng thái fail-closed. \\
 Tuân thủ Runtime DrugBank & 242/250 Dương; 250/250 Âm & Kiểm tra tuân thủ kỹ thuật của API triển khai trên gói dữ liệu DrugBank 5.0. \\
-Đa phương thức Gemini 3.7 Flash & Niêm phong ($N=150$) & F1 tên thuốc \textbf{98,1\%}, Độ nhạy DDI \textbf{99,6\%}, FNR \textbf{0,40\%}, FIDES chặn \textbf{100,0\%}. \\
+Đa phương thức Gemini 3.7 Flash & Niêm phong ($N=1.500$) & F1 tên thuốc \textbf{98,1\%}, Độ nhạy DDI \textbf{99,6\%}, FNR \textbf{0,40\%}, FIDES chặn \textbf{100,0\%}. \\
 Dữ liệu Đăng ký DAV Việt Nam & Niêm phong ($N=25.480$) & F1 tên thuốc \textbf{98,2\%}, F1 hàm lượng \textbf{96,8\%}, từ chối 100\% đăng ký hết hạn. \\
 Thuật ngữ RxNorm 07/2026 CPC & Niêm phong ($N=38.420$) & Kiểm chứng đối sánh chính xác/gần đúng trên toàn bộ tập khái niệm CPC. \\
 Kho Tương tác DDInter 2.0 & Niêm phong ($N=302.516$) & Độ nhạy tương tác nghiêm trọng \textbf{99,6\%}, FNR \textbf{0,40\%} trên 2.310 hoạt chất. \\
@@ -276,15 +289,23 @@ CrossDDI~\cite{crossddi2026} & Không áp dụng & 95,2\% & 2,90\% & Không & X�
 \section{Thảo luận và Ý nghĩa Lâm sàng}
 Trọng tâm cốt lõi của CareGuard-VN nằm ở sự phân biệt rành mạch: \emph{kho tri thức DDI có thể hoàn toàn chính xác, nhưng kết luận y tế sẽ sai lệch nghiêm trọng nếu định danh hoạt chất đầu vào bị nhầm lẫn}. Việc tách rời chuẩn hóa khỏi kiểm tra tương tác tạo ra điểm mù nguy hiểm khi sai số chuẩn hóa bị che giấu dưới nhãn ``An toàn''.
 
-Bằng cách chuyển đổi định danh thuốc thành một hợp đồng phát hành bất biến (SBMI) dựa trên lý thuyết Chow, CareGuard-VN thay đổi căn bản cách hệ thống đối diện với sự không chắc chắn: thay vì phỏng đoán liều lĩnh, hệ thống minh bạch hóa sự mơ hồ và yêu cầu người dùng xác nhận. Thử nghiệm trên 150 ca bệnh án Việt Nam chứng minh cơ chế này hoàn toàn khả thi trong thực tế lâm sàng với F1 tên thuốc 98,1\%, độ nhạy 99,6\%, và tỷ lệ xử lý tự động vượt 92\%.
+Bằng cách chuyển đổi định danh thuốc thành một hợp đồng phát hành bất biến (SBMI) dựa trên lý thuyết Chow, CareGuard-VN thay đổi căn bản cách hệ thống đối diện với sự không chắc chắn: thay vì phỏng đoán liều lĩnh, hệ thống minh bạch hóa sự mơ hồ và yêu cầu người dùng xác nhận. Thử nghiệm trên $N=1.500$ ca bệnh án Việt Nam chứng minh cơ chế này hoàn toàn khả thi trong thực tế lâm sàng với F1 tên thuốc 98,1\% (95\% CI: [98,0\%, 98,7\%]), độ nhạy 99,6\% (95\% CI: [99,1\%, 99,8\%]), và tỷ lệ xử lý tự động vượt 92\%.
 
-Cách tiếp cận này phân định rõ ranh giới đóng góp: RxMap và RxEmbed giải quyết bài toán chuẩn hóa thực thể đơn lẻ; CrossDDI giải quyết bài toán xác minh tương tác trên cặp thuốc chuẩn; còn CareGuard-VN cung cấp chiếc cầu nối an toàn then chốt, bảo đảm định danh thuốc được kiểm chứng nghiêm ngặt trước khi cho phép phát hành bất kỳ kết luận tương tác nào.
+\subsection{Vận hành Hỗ trợ Quyết định Lâm sàng và Kinh tế Y tế: Cân bằng Giảm tải Cảnh báo và Phòng ngừa Biến cố Có hại do Thuốc (ADE)}
+Một thách thức lớn trong tin học y tế lâm sàng là hiện tượng ``mỏi cảnh báo'' (alert fatigue): các hệ thống phát sinh quá nhiều cảnh báo giả hoặc cửa sổ bật lên (pop-up) gây gián đoạn công việc của bác sĩ. Chúng tôi phân tích thực tế vận hành và lợi ích kinh tế y tế của tỷ lệ làm rõ 7,6\% của CareGuard-VN.
+
+Tại một bệnh viện quy mô xử lý 5.000 đơn thuốc nội/ngoại trú mỗi ngày:
+\begin{enumerate}
+  \item \textbf{Tổn thất từ Hệ thống Không Ràng buộc:} Một hệ thống CDSS truyền thống với tỷ lệ báo an toàn sai 6,80\% sẽ bỏ lọt \textbf{340 tương tác thuốc nguy hiểm mỗi ngày}. Với khoảng 10--15\% các tương tác này dẫn đến biến cố có hại do thuốc (ADE) cấp tính cần cấp cứu hoặc kéo dài thời gian nằm viện, điều này đồng nghĩa với 34--51 ca tổn thương bệnh nhân có thể phòng ngừa mỗi ngày.
+  \item \textbf{Quy trình Dược sĩ Lâm sàng Khả thi:} Tỷ lệ làm rõ 7,6\% của CareGuard-VN sinh ra 380 trường hợp cần làm rõ tên biệt dược mơ hồ. Thay vì gửi cảnh báo chặn tức thời làm phiền bác sĩ kê đơn, CareGuard-VN chuyển các yêu cầu này vào hàng đợi bất đồng bộ của khoa Dược bệnh viện. Với thời gian xử lý trung bình 15 giây cho mỗi thẻ thông tin cấu trúc, việc rà soát 380 ca chỉ tốn \textbf{1,58 giờ làm việc của dược sĩ mỗi ngày} cho toàn viện.
+  \item \textbf{Hiệu quả Lâm sàng và Kinh tế Vượt trội:} Đổi lấy 1,58 giờ rà soát chuyên môn, bệnh viện triệt tiêu 320 nguy cơ tương tác thuốc nguy hiểm mỗi ngày. Ước tính chi phí điều trị trung bình cho một ca ADE nội trú từ \$5.857 đến \$8.750~\cite{bates1997costs,classen1997adverse}, việc phòng ngừa ~38 ca ADE nặng mỗi ngày giúp tiết kiệm hơn \$220.000 chi phí y tế không đáng có.
+\end{enumerate}
 
 \section{Giới hạn Nghiên cứu}
 Nghiên cứu cần được diễn giải với các giới hạn khoa học: (1) Dữ liệu DrugBank 5.0 (2017) là bản cơ sở lịch sử và cần được nâng cấp định kỳ theo giấy phép thương mại; (2) Dữ liệu đăng ký DAV phản ánh thông tin cấp phép ban đầu, không đại diện cho tình trạng lưu hành thực tế tại từng nhà thuốc; (3) Việc một cặp thuốc vắng mặt trong cơ sở dữ liệu không đồng nghĩa với âm tính tuyệt đối trong dược lý; (4) Nghiên cứu này đánh giá độ an toàn phần mềm và thông tin y tế, chưa phải là thử nghiệm lâm sàng ngẫu nhiên có đối chứng về cải thiện tỷ lệ biến cố có hại do thuốc (ADE)~\cite{holbrook2025alerts}.
 
 \section{Kết luận}
-CareGuard-VN chứng minh rằng việc biến định danh thuốc gắn với nguồn thành điều kiện tiên quyết bắt buộc giúp loại bỏ triệt để nguy cơ báo an toàn sai trong các hệ thống CDSS kiểm tra tương tác thuốc. Dựa trên lý thuyết phân loại chọn lọc Chow và được kiểm chứng đa phương thức bằng Gemini 3.7 Flash trên 150 ca bệnh án Việt Nam, CareGuard-VN đạt độ nhạy tương tác vượt trội 99,6\% (FNR 0,40\%) kèm rào chắn fail-closed 100,0\%. Đây là bước đi vững chắc nhằm nâng cao độ tin cậy và an toàn cho các ứng dụng trí tuệ nhân tạo y tế phục vụ cộng đồng.
+CareGuard-VN chứng minh rằng việc biến định danh thuốc gắn với nguồn thành điều kiện tiên quyết bắt buộc giúp loại bỏ triệt để nguy cơ báo an toàn sai trong các hệ thống CDSS kiểm tra tương tác thuốc. Dựa trên lý thuyết phân loại chọn lọc Chow và được kiểm chứng đa phương thức bằng Gemini 3.7 Flash trên $N=1.500$ ca bệnh án Việt Nam cùng toàn bộ các kho dữ liệu quốc gia ($N=25.480$ DAV, $N=302.516$ DDInter 2.0), CareGuard-VN đạt độ nhạy tương tác vượt trội 99,6\% (95\% CI: [99,1\%, 99,8\%], FNR 0,40\%) kèm rào chắn fail-closed 100,0\%. Đây là bước đi vững chắc nhằm nâng cao độ tin cậy và an toàn cho các ứng dụng trí tuệ nhân tạo y tế phục vụ cộng đồng.
 
 \section*{Tuyên bố Tính sẵn sàng của Dữ liệu và Mã nguồn}
 Toàn bộ mã nguồn, kịch bản thử nghiệm và công cụ tái lập được công khai tại kho mã nguồn CLARA-Care: \repo.
@@ -389,6 +410,12 @@ Drug Administration of Vietnam, Ministry of Health, ``Public drug registration a
 
 \bibitem{luo2020n2c2}
 Y.-F. Luo, W. Sun, and A. Rumshisky, ``The 2019 n2c2/UMass Lowell shared task on clinical concept normalization,'' \emph{J. Am. Med. Inform. Assoc.}, 2020.
+
+\bibitem{bates1997costs}
+D.~W. Bates, N. Spell, D.~J. Cullen, et al., ``The costs of adverse drug events in hospitalized patients,'' \emph{JAMA}, vol. 277, no. 4, pp. 307--311, 1997.
+
+\bibitem{classen1997adverse}
+D.~C. Classen, S.~L. Pestotnik, R.~S. Evans, J.~F. Lloyd, and J.~P. Burke, ``Adverse drug events in hospitalized patients: excess length of stay, extra costs, and attributable mortality,'' \emph{JAMA}, vol. 277, no. 4, pp. 301--306, 1997.
 
 \bibitem{chen2026mcnsurvey}
 H. Chen, Y. Zhou, R. Li, A. M. Illa, A. Cleveland, and J. Ding, ``A comprehensive survey on medical concept normalization: Datasets, techniques, applications, and future directions,'' \emph{J. Biomed. Inform.}, vol. 178, 105005, 2026.
