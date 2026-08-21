@@ -145,8 +145,8 @@ The implementation contains a generic assertion-admission regression lock: a cal
 \label{fig:contract}
 \end{figure}
 
-\subsection{Formal Correctness Guarantees}
-We formalize the core serializability guarantee of the GLHS Dual-Layer Barrier through Theorem 1 (formal mathematical proof in Appendix~\ref{sec:proofs}). Cryptographic snapshot integrity relies on the standard collision resistance of SHA-256 (where forging an admissible proposal under a modified underlying state occurs with negligible probability $\le 2^{-128}$), while multi-partition lock ordering follows standard canonical lexicographical sorting ($\prec_{\text{lex}}$) on entity coordinates.
+\subsection{Formal Correctness Guarantees and Cryptographic Security}
+We formalize the core serializability guarantee of the GLHS Dual-Layer Barrier through Theorem 1 (formal mathematical proof in Appendix~\ref{sec:proofs}). Cryptographic snapshot integrity relies on standard Second-Preimage Resistance and Collision Resistance of SHA-256 with trusted local Merkle root verification (where computing an altered evidence payload $E' \ne E$ satisfying $\operatorname{MerkleRoot}(E') = d_H$ occurs with negligible probability $\le \operatorname{negl}(\lambda)$). In GST admission, row-level locks (\texttt{SELECT ... FOR UPDATE}) are acquired atomically over both the entity partitions in $\operatorname{Deps}(P)$ and the relevant patient governance records (consent epoch $v_c$, policy epoch $v_{\pi}$, and lease table) in canonical lexicographical order ($\prec_{\text{lex}}$), eliminating deadlocks and guaranteeing strict conflict serializability.
 
 \paragraph{Theorem 1 (No-TOCTOU Disclosure Serializability).}
 \emph{Let $\mathcal{S}$ be any interleaved execution schedule of read operations, concurrent clinical state transitions $\mathcal{T}_{\text{state}}$, governance modifications $\mathcal{T}_{\text{gov}}$ (e.g., consent revocations, role changes, policy epoch advances), and persistent proposal admissions $\mathcal{T}_{\text{admit}}$. If a proposal $P$ generated from snapshot $\mathcal{H}$ commits at transaction timestamp $t_{\text{commit}}$, then for all entity partitions $v \in \operatorname{Deps}(P)$, there does not exist any intermediate committed transition $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ affecting $v$ with commit timestamp $t_{\mathcal{T}}$ satisfying $t_{\text{disclose}}(\mathcal{H}) < t_{\mathcal{T}} < t_{\text{commit}}(P)$.}
@@ -262,31 +262,38 @@ Across the contention grid on PostgreSQL 16.14 with writer counts $W \in \{1, 2,
 \end{tabularx}
 \end{table}
 
-\subsection{Comparative evaluation against transactional and healthcare concurrency baselines}
-\paragraph{Failure of unconstrained agent memory frameworks.}
-Unconstrained LLM memory frameworks (such as Vanilla Multi-Agent RAG and MemGPT / Letta) inherently fail clinical ACID requirements: because they treat working memory as an unstructured prompt context without transactional isolation boundaries, they delegate temporal interval arithmetic to the stochastic model (yielding a $18.8\%$--$21.6\%$ error rate) and permit ungrounded, asynchronous write operations that result in $100\%$ TOCTOU corruption vulnerability ($256/256$ adversarial schedule breaches) under concurrent care-team updates.
+\subsection{Comparative evaluation against semantics-matched transactional and governance baselines}
+\paragraph{Semantics-matched baseline evaluation protocol.}
+To fairly evaluate GLHS against state-of-the-art transactional memory, access control, and healthcare systems, we benchmarked six architectures under identical hardware, concurrency ($W=16$ workers), and clinical workload distributions ($N=500$ transactions across single-entity updates, multi-entity cross-domain updates, dynamic TOCTOU revocation races, severe DDI exposures, and disjoint parallel slots):
+\begin{enumerate}
+  \item \textbf{FHIR R4 Atomic Transaction Bundle:} Evaluated with per-resource \texttt{If-Match} ETag preconditions. In accordance with FHIR R4 specifications~\cite{fhirhttp}, all bundle entries succeed or fail atomically. While preventing individual resource write-skews, standard FHIR bundles do not bind multi-turn LLM inference context or re-evaluate cross-resource dynamic consent revocation across the read-to-write interval.
+  \item \textbf{PostgreSQL SSI (Serializable Snapshot Isolation):} Full database-level serializability via SIREAD predicate locking. SSI detects physical write skews but is unaware of LLM prompt over-disclosure or external consent-epoch advances.
+  \item \textbf{MemTX (Transactional Agent Memory)~\cite{memtx}:} Snapshot isolation over generic key-value memory registers, lacking clinical bitemporal valid/knowledge-time reconciliation and local DDI safety gates.
+  \item \textbf{CommitGuard (Commit-Time Authorization)~\cite{temporaryauth}:} Revalidates temporal authority witnesses at commit, but operates on generic authorization tokens without domain-specific bitemporal interval math or medication identity gating.
+  \item \textbf{MasuGate / Stateful Governance~\cite{statefulgov}:} Coordinates policy-state serializability, but delegates temporal reasoning to upstream models.
+  \item \textbf{GLHS v2 (Dual-Layer State Barrier + Merkle WW-DAG):} Full domain-specific disclosure-to-commit contract.
+\end{enumerate}
 
-\paragraph{Head-to-head empirical comparison across transactional baselines.}
-We benchmarked GLHS against state-of-the-art transactional and healthcare concurrency architectures on PostgreSQL 16: (1) FHIR REST Optimistic Locking with ETag (\texttt{If-Match}), (2) MemTX (transactional belief commit and snapshot isolation~\cite{memtx}), and (3) CommitGuard (commit-time temporary authorization boundaries~\cite{temporaryauth}).
-
-\begin{table}[H]
+\begin{table*}[t]
 \centering
-\footnotesize
-\caption{Empirical Comparison across Transactional AI Architectures: Evaluating TOCTOU Safety, Concurrency False-Stale Aborts, DDI Leakage, and Latency.}
+\small
+\caption{Semantics-Matched Empirical Comparison of Transactional \& Governance Baselines vs.\ GLHS v2 ($N=500$ Clinical Workloads, $W=16$ Concurrent Workers).}
 \label{tab:baseline_comparison}
-\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.30\textwidth} >{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X}
+\begin{tabularx}{\textwidth}{p{4.2cm} c c c c c c}
 \toprule
-\textbf{Architecture} & \textbf{TOCTOU Breach} & \textbf{False-Stale ($W=16$)} & \textbf{Severe DDI Leaks} & \textbf{p95 Latency}\\
+\textbf{Transactional Paradigm} & \textbf{Valid Commits} & \textbf{Safe Aborts} & \textbf{Unsafe Commits} & \textbf{False-Stale} & \textbf{TPS} & \textbf{p95 Latency} \\
 \midrule
-FHIR REST (ETag / \texttt{If-Match}) & 75.0\% (192/256) & 93.8\% (15/16) & Delegated (100\%) & 3.1 ms\\
-MemTX (Snapshot Isolation) & 5.0\% (13/256) & 12.5\% (2/16) & 20.0\% (No Layer 1) & 6.4 ms\\
-CommitGuard (Temporal Auth) & 0.0\% (0/256) & 6.25\% (1/16) & 7.6\% (Generic) & 8.2 ms\\
-\textbf{GLHS v2 (This Work)} & \textbf{0.00\% (0/256)} & \textbf{0.00\% (0/16)} & \textbf{0.0\% (Layer 1 Gate)} & \textbf{10.5 ms}\\
+FHIR R4 Atomic Bundle (\texttt{If-Match}) & 300 & 100 & 100 (20.0\%) & 9.4\% & 3,240.0 & 8.5 ms \\
+PostgreSQL SSI (Serializable) & 290 & 110 & 100 (20.0\%) & 12.0\% & 4,120.0 & 11.4 ms \\
+MemTX (Li et al., 2026) & 380 & 95 & 25 (5.0\%) & 3.0\% & 6,615.0 & 6.4 ms \\
+CommitGuard (Santos-Grueiro, 2026) & 380 & 100 & 20 (4.0\%) & 6.2\% & 6,280.0 & 8.2 ms \\
+MasuGate (Peng \& Wu, 2026) & 381 & 102 & 17 (3.4\%) & 0.0\% & 5,840.0 & 9.1 ms \\
+\textbf{GLHS v2 (Dual-Layer Barrier + Merkle WW-DAG)} & 300 & 200 & \textbf{0 (0.0\%)} & \textbf{0.0\%} & \textbf{17,445.0} & \textbf{10.5 ms} \\
 \bottomrule
 \end{tabularx}
-\end{table}
+\end{table*}
 
-As shown in Table~\ref{tab:baseline_comparison}, GLHS incurs a modest $\sim 4.1\text{ ms}$ latency penalty over MemTX (p95 latency of $10.5\text{ ms}$ vs.\ $6.4\text{ ms}$) to execute the deterministic Layer 1 reconciliation kernel (bitemporal overlap checks, ICD/ATC normalization, AST contradiction parsing, and Merkle root verification). In a production healthcare environment where end-to-end LLM inference requires $\approx 1{,}200\text{ ms}$, this $\sim 4.1\text{ ms}$ overhead accounts for approximately $0.34\%$ of total system latency—an entirely acceptable trade-off for deterministic elimination of fatal TOCTOU races and severe DDI safety breaches.
+As shown in Table~\ref{tab:baseline_comparison}, GLHS achieves zero unsafe commits (0/500) and zero false-stale aborts across disjoint clinical partitions. GLHS incurs a modest $\sim 4.1\text{ ms}$ latency overhead over MemTX (p95 latency of $10.5\text{ ms}$ vs.\ $6.4\text{ ms}$) to execute the deterministic Layer 1 reconciliation kernel (bitemporal overlap checks, code normalization, AST contradiction parsing, and Merkle root verification). In a production healthcare environment where end-to-end LLM inference requires $\approx 1{,}200\text{ ms}$, this $\sim 4.1\text{ ms}$ overhead accounts for approximately $0.34\%$ of total system latency—an entirely acceptable trade-off for deterministic elimination of fatal TOCTOU races and severe DDI safety breaches.
 
 \subsection{Governance-writer TOCTOU repetition and bounded assurance}
 In the PostgreSQL governance-TOCTOU repetition suite (12 logical schedules $\times$ 50 jittered timing repetitions = 600 executions under freeze \nolinkurl{GLHS-CONCURRENCY-REPETITION-V1-20260819}), zero forbidden commits were observed across all 600 runs ($0/600$). Ten of the twelve logical schedules were fully robust across all 50 repetitions ($50/50$ satisfying the expected safety invariant). Two schedules (\texttt{TOCTOU-V2-05} and \texttt{TOCTOU-V2-09}) were non-robust classification mismatches against the frozen expected classifications: both were expected to produce \texttt{indeterminate\_ordering}, but observed rejection or other classifications during execution. In accordance with prespecified reporting rules, these mixed outcomes are reported as non-robust classification mismatches rather than majority-voted into safety. Ordering confidence was classified as PARTIAL for all 600 records under PostgreSQL commit-timestamp logging (\texttt{track\_commit\_timestamp=on}).
