@@ -122,7 +122,8 @@ class _ConsentCenterScreenState extends State<ConsentCenterScreen> {
   bool _available = false;
   String? _error;
 
-  bool get _english => Localizations.localeOf(context).languageCode == 'en';
+  bool get _english =>
+      Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase() == 'en';
 
   String _copy(String vi, String en) => _english ? en : vi;
 
@@ -335,7 +336,9 @@ class _UnavailableNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final english = Localizations.localeOf(context).languageCode == 'en';
+    final english =
+        Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase() ==
+            'en';
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),

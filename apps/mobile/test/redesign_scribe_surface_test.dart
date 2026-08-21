@@ -12,6 +12,7 @@
 //     `mobile_scribe_*` event names.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:clara_mobile/core/analytics.dart';
@@ -20,7 +21,16 @@ import 'package:clara_mobile/experience/redesign/scribe_surface_v3.dart';
 
 import 'fakes/fakes.dart';
 
-Widget _host(Widget child) => MaterialApp(home: child);
+Widget _host(Widget child) => MaterialApp(
+      locale: const Locale('vi'),
+      supportedLocales: const [Locale('vi'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: child,
+    );
 
 /// A resolver with `scribe_mobile_enabled` granted by the server summary.
 MobileFeatureFlagResolver _scribeOn() => MobileFeatureFlagResolver(

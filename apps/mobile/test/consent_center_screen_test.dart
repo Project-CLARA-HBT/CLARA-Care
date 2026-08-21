@@ -7,9 +7,21 @@
 import 'package:clara_mobile/core/feature_flags.dart';
 import 'package:clara_mobile/screens/consent_center_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fakes/fakes.dart';
+
+Widget _host(Widget child) => MaterialApp(
+      locale: const Locale('vi'),
+      supportedLocales: const [Locale('vi'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: child,
+    );
 
 MobileFeatureFlagResolver _resolver({required bool consentEnabled}) {
   return MobileFeatureFlagResolver(
@@ -43,8 +55,8 @@ void main() {
       ..stub('getComplianceConsents', response: _ledger());
     final session = await FakeSessionStore.authenticated();
 
-    await tester.pumpWidget(MaterialApp(
-      home: ConsentCenterScreen(
+    await tester.pumpWidget(_host(
+      ConsentCenterScreen(
         apiClient: api,
         resolver: _resolver(consentEnabled: true),
         sessionStore: session,
@@ -76,8 +88,8 @@ void main() {
       );
     final session = await FakeSessionStore.authenticated();
 
-    await tester.pumpWidget(MaterialApp(
-      home: ConsentCenterScreen(
+    await tester.pumpWidget(_host(
+      ConsentCenterScreen(
         apiClient: api,
         resolver: _resolver(consentEnabled: true),
         sessionStore: session,
@@ -103,8 +115,8 @@ void main() {
       ..stub('getComplianceConsents', error: StateError('unavailable'));
     final session = await FakeSessionStore.authenticated();
 
-    await tester.pumpWidget(MaterialApp(
-      home: ConsentCenterScreen(
+    await tester.pumpWidget(_host(
+      ConsentCenterScreen(
         apiClient: api,
         resolver: _resolver(consentEnabled: true),
         sessionStore: session,
@@ -123,8 +135,8 @@ void main() {
     final api = FakeApiClient();
     final session = await FakeSessionStore.authenticated();
 
-    await tester.pumpWidget(MaterialApp(
-      home: ConsentCenterScreen(
+    await tester.pumpWidget(_host(
+      ConsentCenterScreen(
         apiClient: api,
         resolver: _resolver(consentEnabled: false),
         sessionStore: session,

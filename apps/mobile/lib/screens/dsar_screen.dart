@@ -198,7 +198,8 @@ class _DsarScreenState extends State<DsarScreen> {
   String? _error;
   DsarAcknowledgement? _acknowledgement;
 
-  bool get _english => Localizations.localeOf(context).languageCode == 'en';
+  bool get _english =>
+      Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase() == 'en';
   String _copy(String vi, String en) => _english ? en : vi;
   String get _unavailableMessage => _copy(
         'Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.',
@@ -391,7 +392,9 @@ class _DsarActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final english = Localizations.localeOf(context).languageCode == 'en';
+    final english =
+        Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase() ==
+            'en';
     final submit = english ? 'Submit request' : 'Gửi yêu cầu';
     return Card(
       child: Padding(
@@ -446,7 +449,9 @@ class _DsarAcknowledgementView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ack = acknowledgement;
-    final english = Localizations.localeOf(context).languageCode == 'en';
+    final english =
+        Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase() ==
+            'en';
     final dueAt = _formatDate(context, ack.dueAt);
     return ListView(
       key: const Key('dsar-acknowledgement'),

@@ -132,6 +132,7 @@ const Map<String, bool> kMobileFeatureFlagBuildDefaults = <String, bool>{
   MobileFeatureFlags.consentCenterMobileEnabled: _consentCenterMobileDefault,
   MobileFeatureFlags.sharingMobileEnabled: _sharingMobileDefault,
   MobileFeatureFlags.uxPolishEnabled: _uxPolishMobileDefault,
+  MobileFeatureFlags.lifeMapVietnameseDrafts: false,
 };
 
 // --- Experience_V2 build gate (single switch, default OFF) -------------------

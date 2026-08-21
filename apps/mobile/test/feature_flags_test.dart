@@ -29,6 +29,8 @@ const Map<String, bool> _allOffDefaults = <String, bool>{
   MobileFeatureFlags.transparencyNoticeMobileEnabled: false,
   MobileFeatureFlags.consentCenterMobileEnabled: false,
   MobileFeatureFlags.sharingMobileEnabled: false,
+  MobileFeatureFlags.uxPolishEnabled: false,
+  MobileFeatureFlags.lifeMapVietnameseDrafts: false,
 };
 
 void main() {
@@ -50,6 +52,8 @@ void main() {
       expect(resolver.transparencyNoticeEnabled, isFalse);
       expect(resolver.consentCenterEnabled, isFalse);
       expect(resolver.sharingEnabled, isFalse);
+      expect(resolver.uxPolishEnabled, isFalse);
+      expect(resolver.lifeMapVietnameseDraftsEnabled, isFalse);
     });
 
     test('compile-time build defaults are all false (Req 15.1)', () {

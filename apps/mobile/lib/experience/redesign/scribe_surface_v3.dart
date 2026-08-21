@@ -94,7 +94,8 @@ class _ScribeTranscriptCopy {
   const _ScribeTranscriptCopy._(this._english);
 
   factory _ScribeTranscriptCopy.forContext(BuildContext context) {
-    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    final language =
+        Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase();
     return _ScribeTranscriptCopy._(language == 'en');
   }
 
@@ -140,7 +141,8 @@ class _ScribeSessionCopy {
   const _ScribeSessionCopy._(this._english);
 
   factory _ScribeSessionCopy.forContext(BuildContext context) {
-    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    final language =
+        Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase();
     return _ScribeSessionCopy._(language == 'en');
   }
 
@@ -928,7 +930,8 @@ class _ScribeConsentCopy {
   const _ScribeConsentCopy._(this._english);
 
   factory _ScribeConsentCopy.forContext(BuildContext context) {
-    final language = Localizations.localeOf(context).languageCode.toLowerCase();
+    final language =
+        Localizations.maybeLocaleOf(context)?.languageCode.toLowerCase();
     return _ScribeConsentCopy._(language == 'en');
   }
 

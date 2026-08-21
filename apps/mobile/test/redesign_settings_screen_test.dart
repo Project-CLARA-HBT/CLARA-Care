@@ -14,8 +14,10 @@
 //     token/secret.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:clara_mobile/core/consumer_terminology.dart';
 import 'package:clara_mobile/core/session_store.dart';
 import 'package:clara_mobile/experience/language_controller.dart';
 import 'package:clara_mobile/experience/language_store.dart';
@@ -52,7 +54,16 @@ Future<PersistentSessionStore> _session({String role = 'normal'}) {
   );
 }
 
-Widget _host(Widget child) => MaterialApp(home: child);
+Widget _host(Widget child) => MaterialApp(
+      locale: const Locale('vi'),
+      supportedLocales: const [Locale('vi'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: child,
+    );
 
 void main() {
   group('SettingsScreenV3 (Requirement 4)', () {
@@ -148,16 +159,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Quyền riêng tư & đồng ý'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Thông báo minh bạch về AI'),
+        100,
+      );
       expect(find.text('Thông báo minh bạch về AI'), findsOneWidget);
 
       await lang.setLanguage('en');
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(
+        find.text('Privacy & consent'),
+        -100,
+      );
       expect(find.text('Privacy & consent'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('AI transparency notice'),
+        100,
+      );
       expect(find.text('AI transparency notice'), findsOneWidget);
       // The governed model identity remains a stable disclosure, not a
       // translated or fabricated model claim.
-      expect(find.text('deepseek v4-pro'), findsOneWidget);
+      expect(
+        find.text(ConsumerTerminology.forLocale('en')[
+            ConsumerTerm.settingsAiModelGovernedRoute]),
+        findsOneWidget,
+      );
     });
 
     testWidgets('sign-out clears the session (routes app root to login)',
