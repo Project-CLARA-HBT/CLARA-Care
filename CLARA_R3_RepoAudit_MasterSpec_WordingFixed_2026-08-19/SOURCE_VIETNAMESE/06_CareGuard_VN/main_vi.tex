@@ -269,22 +269,22 @@ Bóc tách Lỗi Oracle Baseline & Niêm phong ($N=2.500$) & $\Delta_{\text{Đ�
 \subsection{So sánh Đối đầu Thực nghiệm giữa các Framework An toàn Thuốc}
 Bảng~\ref{tab:sota_comparative_vi} đánh giá đối đầu CareGuard-VN với các mô hình tiêu biểu trong văn liệu về F1 chuẩn hóa, độ nhạy tương tác và rủi ro báo an toàn sai.
 
-\begin{table*}[t]
+\begin{table}[H]
 \centering
 \small
 \caption{So sánh đối đầu thực nghiệm giữa các kiến trúc an toàn thuốc và sàng lọc DDI lâm sàng.}
 \label{tab:sota_comparative_vi}
-\begin{tabularx}{\textwidth}{lccccX}
+\begin{tabularx}{\textwidth}{p{3.4cm} c c c c >{\raggedright\arraybackslash}X}
 \toprule
-\textbf{Kiến trúc / Mô hình} & \textbf{F1 Thực thể} & \textbf{Độ nhạy DDI} & \textbf{Tỷ lệ Báo An toàn Sai} & \textbf{Cổng Fail-Closed} & \textbf{Cơ chế An toàn} \\
+\textbf{Kiến trúc / Mô hình} & \textbf{F1 Thực thể} & \textbf{Độ nhạy} & \textbf{Báo An toàn Sai} & \textbf{Fail-Closed} & \textbf{Cơ chế Quản trị An toàn} \\
 \midrule
 RxNorm Approx Matcher~\cite{peters2011approx} & 91,2\% & 89,4\% & 10,60\% & Không & Đối sánh chuỗi gần đúng không ràng buộc \\
 RxMap~\cite{korpela2026rxmap} & 96,6\% & 93,8\% & 3,40\% & Không & Chuẩn hóa LLM tách rời \\
-CrossDDI~\cite{crossddi2026} & Không áp dụng & 95,2\% & 2,90\% & Không & Xác minh DDI (giả định cặp thuốc chuẩn) \\
-\textbf{CareGuard-VN (Công trình này)} & \textbf{98,1\%} & \textbf{99,6\%} & \textbf{0,40\%} & \textbf{100,0\% (FIDES)} & \textbf{Hợp đồng Định danh Gắn Nguồn (SBMI)} \\
+CrossDDI~\cite{crossddi2026} & Không áp dụng & 95,2\% & 2,90\% & Không & Xác minh DDI trên cặp thuốc chuẩn \\
+\textbf{CareGuard-VN (Công trình này)} & \textbf{98,1\%} & \textbf{99,6\%} & \textbf{0,40\%} & \textbf{100,0\%} & \textbf{Hợp đồng Định danh Gắn Nguồn (SBMI)} \\
 \bottomrule
 \end{tabularx}
-\end{table*}
+\end{table}
 
 \section{Thảo luận và Ý nghĩa Lâm sàng}
 Trọng tâm cốt lõi của CareGuard-VN nằm ở sự phân biệt rành mạch: \emph{kho tri thức DDI có thể hoàn toàn chính xác, nhưng kết luận y tế sẽ sai lệch nghiêm trọng nếu định danh hoạt chất đầu vào bị nhầm lẫn}. Việc tách rời chuẩn hóa khỏi kiểm tra tương tác tạo ra điểm mù nguy hiểm khi sai số chuẩn hóa bị che giấu dưới nhãn ``An toàn''.

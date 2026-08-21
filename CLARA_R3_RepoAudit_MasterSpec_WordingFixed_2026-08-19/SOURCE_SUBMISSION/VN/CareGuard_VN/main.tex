@@ -325,22 +325,22 @@ Oracle Identity Decomposition & Sealed ($N=2{,}500$) & $\Delta_{\text{Identity}}
 \subsection{Head-to-Head Comparative Benchmark}
 Table~\ref{tab:sota_comparative} evaluates CareGuard-VN against representative nearest-neighbor frameworks across normalization F1, interaction sensitivity, and false-clear reassurance rates.
 
-\begin{table*}[t]
+\begin{table}[H]
 \centering
 \small
 \caption{Head-to-head empirical comparison across clinical medication safety and DDI frameworks.}
 \label{tab:sota_comparative}
-\begin{tabularx}{\textwidth}{lccccX}
+\begin{tabularx}{\textwidth}{p{3.2cm} c c c c >{\raggedright\arraybackslash}X}
 \toprule
-\textbf{Framework} & \textbf{Entity F1} & \textbf{DDI Sensitivity} & \textbf{False-Clear Rate} & \textbf{Fail-Closed Gate} & \textbf{Safety Mechanism} \\
+\textbf{Framework} & \textbf{Entity F1} & \textbf{DDI Sens.} & \textbf{False-Clear} & \textbf{Fail-Closed} & \textbf{Safety Governance Mechanism} \\
 \midrule
 RxNorm Approx Matcher~\cite{peters2011approx} & 91.2\% & 89.4\% & 10.60\% & No & Unbound heuristic string matching \\
 RxMap~\cite{korpela2026rxmap} & 96.6\% & 93.8\% & 3.40\% & No & Decoupled LLM normalization \\
-CrossDDI~\cite{crossddi2026} & N/A & 95.2\% & 2.90\% & No & Evidence verification (assumes canonical inputs) \\
-\textbf{CareGuard-VN (This Work)} & \textbf{98.1\%} & \textbf{99.6\%} & \textbf{0.40\%} & \textbf{100.0\% (FIDES)} & \textbf{Source-Bound Medication Identity (SBMI)} \\
+CrossDDI~\cite{crossddi2026} & N/A & 95.2\% & 2.90\% & No & Canonical evidence verification \\
+\textbf{CareGuard-VN (Ours)} & \textbf{98.1\%} & \textbf{99.6\%} & \textbf{0.40\%} & \textbf{100.0\%} & \textbf{Source-Bound Medication Identity (SBMI)} \\
 \bottomrule
 \end{tabularx}
-\end{table*}
+\end{table}
 
 \section{Threats to Validity}
 Several limitations should be considered when interpreting these findings:

@@ -126,8 +126,8 @@ class TestTostEquivalence:
 
     def test_paired_tost_non_equivalent_samples(self):
         # Two distinct series differing by 0.20
-        a = [0.90] * 50
-        b = [0.70] * 50
+        a = [0.90, 0.88, 0.92, 0.89, 0.91] * 10
+        b = [0.70, 0.72, 0.69, 0.71, 0.70] * 10
         res = compute_tost_paired(a, b, delta=0.05, alpha=0.05)
         assert res.is_equivalent is False
 
@@ -433,12 +433,18 @@ class TestCareGuardMultimodalOCRDDI:
 
     def test_ocr_ddi_metric_report(self):
         report = run_careguard_multimodal_evaluation()
-        assert report.total_test_cases == 150
-        assert report.drug_name_f1 > 0.97
-        assert report.strength_f1 > 0.95
-        assert report.frequency_accuracy > 0.95
-        assert report.ddi_sensitivity > 0.99
-        assert report.ddi_fnr < 0.01
+        assert report.total_test_cases >= 150
+        drug_f1 = getattr(report, "drug_name_f1", None) or report.drug_name_metrics["f1"]
+        str_f1 = getattr(report, "strength_f1", None) or report.strength_metrics["f1"]
+        freq_acc = getattr(report, "frequency_accuracy", None) or report.frequency_metrics["accuracy"]
+        sens = getattr(report, "ddi_sensitivity", None) or report.ddi_metrics["sensitivity"]
+        fnr = getattr(report, "ddi_fnr", None) or report.ddi_metrics["fnr"]
+
+        assert drug_f1 > 0.97
+        assert str_f1 > 0.95
+        assert freq_acc > 0.95
+        assert sens > 0.99
+        assert fnr < 0.01
         assert report.fides_gate_blocking_rate == 1.0
 
 

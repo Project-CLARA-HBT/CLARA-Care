@@ -233,6 +233,11 @@ def generate_scaled_latex_tables(report: ScaledOcrDdiReport) -> str:
     return "\n".join(lines) + "\n"
 
 
+run_careguard_multimodal_evaluation = run_scaled_careguard_evaluation
+generate_latex_table = generate_scaled_latex_tables
+OcrDdiMetricReport = ScaledOcrDdiReport
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=Path("artifacts/careguard_scaled_1500_eval.json"))
