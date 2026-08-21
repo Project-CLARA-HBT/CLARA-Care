@@ -286,7 +286,7 @@ We benchmarked GLHS against state-of-the-art transactional and healthcare concur
 \midrule
 FHIR REST (ETag / \texttt{If-Match}) & 75.0\% (192/256) & 93.8\% (15/16) & Delegated (100\%) & 3.1 ms\\
 MemTX (Snapshot Isolation) & 5.0\% (13/256) & 12.5\% (2/16) & 20.0\% (No Layer 1) & 6.4 ms\\
-CommitGuard (Temporal Auth) & 0.0\% (0/256) & 7.8\% (1/16) & 7.6\% (Generic) & 8.2 ms\\
+CommitGuard (Temporal Auth) & 0.0\% (0/256) & 6.25\% (1/16) & 7.6\% (Generic) & 8.2 ms\\
 \textbf{GLHS v2 (This Work)} & \textbf{0.00\% (0/256)} & \textbf{0.00\% (0/16)} & \textbf{0.0\% (Layer 1 Gate)} & \textbf{10.5 ms}\\
 \bottomrule
 \end{tabularx}
