@@ -146,10 +146,10 @@ The implementation contains a generic assertion-admission regression lock: a cal
 \end{figure}
 
 \subsection{Formal Correctness Guarantees and Cryptographic Security}
-We formalize the core serializability guarantee of the GLHS Dual-Layer Barrier through Theorem 1 (formal mathematical proof in Appendix~\ref{sec:proofs}). Cryptographic snapshot integrity relies on standard Second-Preimage Resistance and Collision Resistance of SHA-256 with trusted local Merkle root verification (where computing an altered evidence payload $E' \ne E$ satisfying $\operatorname{MerkleRoot}(E') = d_H$ occurs with negligible probability $\le \operatorname{negl}(\lambda)$). In GST admission, row-level locks (\texttt{SELECT ... FOR UPDATE}) are acquired atomically over both the entity partitions in $\operatorname{Deps}(P)$ and the relevant patient governance records (consent epoch $v_c$, policy epoch $v_{\pi}$, and lease table) in canonical lexicographical order ($\prec_{\text{lex}}$), eliminating deadlocks and guaranteeing strict conflict serializability.
+We formalize the core serializability guarantee of the GLHS Dual-Layer Barrier through Theorem 1 (formal mathematical proof in Appendix~\ref{sec:proofs}). Cryptographic snapshot integrity relies on standard Second-Preimage Resistance and Collision Resistance of SHA-256 with trusted local Merkle root verification (where computing an altered evidence payload $E' \ne E$ satisfying $\operatorname{MerkleRoot}(E') = d_H$ occurs with negligible probability $\le \operatorname{negl}(\lambda)$). In GST admission, row-level exclusive locks (\texttt{SELECT ... FOR UPDATE}) are acquired according to a strict canonical Two-Phase Locking (2PL) lock hierarchy: first across all accessed entity partitions in $\operatorname{Deps}(P)$ in lexicographical key order ($\prec_{\text{lex}}$), followed by the root profile state record, and finally the governance epoch records (consent epoch $v_c$, policy epoch $v_{\pi}$, and authorization leases). This strict canonical lock ordering prevents deadlock cycles and guarantees conflict serializability across concurrent clinical mutations and governance modifications.
 
-\paragraph{Theorem 1 (No-TOCTOU Disclosure Serializability).}
-\emph{Let $\mathcal{S}$ be any interleaved execution schedule of read operations, concurrent clinical state transitions $\mathcal{T}_{\text{state}}$, governance modifications $\mathcal{T}_{\text{gov}}$ (e.g., consent revocations, role changes, policy epoch advances), and persistent proposal admissions $\mathcal{T}_{\text{admit}}$. If a proposal $P$ generated from snapshot $\mathcal{H}$ commits at transaction timestamp $t_{\text{commit}}$, then for all entity partitions $v \in \operatorname{Deps}(P)$, there does not exist any intermediate committed transition $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ affecting $v$ with commit timestamp $t_{\mathcal{T}}$ satisfying $t_{\text{disclose}}(\mathcal{H}) < t_{\mathcal{T}} < t_{\text{commit}}(P)$.}
+\paragraph{Theorem 1 (No-TOCTOU Disclosure Serializability under Canonical 2PL).}
+\emph{Let $\mathcal{S}$ be any interleaved execution schedule of read operations, concurrent clinical state transitions $\mathcal{T}_{\text{state}}$, governance modifications $\mathcal{T}_{\text{gov}}$ (e.g., consent revocations, role changes, policy epoch advances), and persistent proposal admissions $\mathcal{T}_{\text{admit}}$ governed by Strict Two-Phase Locking (SS2PL) with canonical lock acquisition order ($\operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState} \prec \text{GovEpochs}$). If a proposal $P$ compiled from snapshot $\mathcal{H}$ at disclosure timestamp $t_{\text{disclose}}(\mathcal{H})$ commits at transaction timestamp $t_{\text{commit}}(P)$, then for all entity partitions $e_k \in \operatorname{Deps}(P)$ and governing policy/consent coordinates $\langle v_{\pi}, v_c \rangle$, there exists no intermediate committed transition $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ affecting $e_k$ or $\langle v_{\pi}, v_c \rangle$ whose commit timestamp $t_{\mathcal{T}}$ satisfies $t_{\text{disclose}}(\mathcal{H}) < t_{\mathcal{T}} < t_{\text{commit}}(P)$.}
 
 \subsection{Failure model and claim boundary}
 Table~\ref{tab:failure} makes explicit which failure modes are exercised and which remain open.
@@ -283,17 +283,22 @@ To fairly evaluate GLHS against state-of-the-art transactional memory, access co
 \toprule
 \textbf{Transactional Paradigm} & \textbf{Valid Commits} & \textbf{Safe Aborts} & \textbf{Unsafe Commits} & \textbf{False-Stale} & \textbf{TPS} & \textbf{p95 Latency} \\
 \midrule
-FHIR R4 Atomic Bundle (\texttt{If-Match}) & 300 & 100 & 100 (20.0\%) & 9.4\% & 3,240.0 & 8.5 ms \\
-PostgreSQL SSI (Serializable) & 290 & 110 & 100 (20.0\%) & 12.0\% & 4,120.0 & 11.4 ms \\
-MemTX (Li et al., 2026) & 380 & 95 & 25 (5.0\%) & 3.0\% & 6,615.0 & 6.4 ms \\
-CommitGuard (Santos-Grueiro, 2026) & 380 & 100 & 20 (4.0\%) & 6.2\% & 6,280.0 & 8.2 ms \\
-MasuGate (Peng \& Wu, 2026) & 381 & 102 & 17 (3.4\%) & 0.0\% & 5,840.0 & 9.1 ms \\
-\textbf{GLHS v2 (Dual-Layer Barrier + Merkle WW-DAG)} & 300 & 200 & \textbf{0 (0.0\%)} & \textbf{0.0\%} & \textbf{17,445.0} & \textbf{10.5 ms} \\
+FHIR R4 Atomic Bundle (\texttt{If-Match}) & 231 & 69 & 200 (40.0\%) & 9.4\% & 6,171.2 & 0.02 ms \\
+PostgreSQL SSI (Serializable) & 248 & 52 & 200 (40.0\%) & 10.4\% & 16,703.3 & 0.01 ms \\
+MemTX (Li et al., 2026) & 276 & 24 & 200 (40.0\%) & 1.2\% & 15,551.0 & 0.01 ms \\
+CommitGuard (Santos-Grueiro, 2026) & 279 & 121 & 100 (20.0\%) & 2.0\% & 15,959.1 & 0.02 ms \\
+MasuGate (Peng \& Wu, 2026) & 288 & 112 & 100 (20.0\%) & 0.0\% & 19,795.8 & 0.01 ms \\
+\textbf{GLHS v2 (Dual-Layer Barrier + Merkle WW-DAG)} & 299 & 201 & \textbf{0 (0.0\%)} & \textbf{0.0\%} & \textbf{17,074.1} & \textbf{0.03 ms} \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-As shown in Table~\ref{tab:baseline_comparison}, GLHS achieves zero unsafe commits (0/500) and zero false-stale aborts across disjoint clinical partitions. GLHS incurs a modest $\sim 4.1\text{ ms}$ latency overhead over MemTX (p95 latency of $10.5\text{ ms}$ vs.\ $6.4\text{ ms}$) to execute the deterministic Layer 1 reconciliation kernel (bitemporal overlap checks, code normalization, AST contradiction parsing, and Merkle root verification). In a production healthcare environment where end-to-end LLM inference requires $\approx 1{,}200\text{ ms}$, this $\sim 4.1\text{ ms}$ overhead accounts for approximately $0.34\%$ of total system latency—an entirely acceptable trade-off for deterministic elimination of fatal TOCTOU races and severe DDI safety breaches.
+\paragraph{Empirical micro-benchmarks vs.\ conceptual/protocol differences.}
+In interpreting these results, we explicitly distinguish between empirical execution performance in our concurrent benchmark harness and the conceptual protocol boundaries governing each paradigm:
+\begin{itemize}
+  \item \emph{Empirical Micro-Benchmark Performance:} In our multi-threaded harness ($N=500$ clinical workloads executed across $W=16$ workers), all paradigms execute with sub-millisecond gateway micro-latencies ($0.01\text{--}0.03\text{ ms}$ p95), confirming that in-memory validation adds negligible overhead compared to LLM reasoning cycles ($T_{\text{LLM}} \approx 1{,}200\text{ ms}$). GLHS v2 sustains 17,074.1 TPS with a p95 latency of $0.03\text{ ms}$ while executing complete Merkle root recomputations, bitemporal constraint checks, and canonical 2PL partition lock acquisitions.
+  \item \emph{Conceptual and Protocol Differences:} The critical divergence between paradigms arises from their architectural scopes and invariant guarantees. Standard FHIR R4 atomic bundles and PostgreSQL SSI operate at generic resource/row levels; they lack multi-turn LLM context binding and clinical DDI matrices, admitting 40.0\% unsafe commits (20.0\% TOCTOU consent drift and 20.0\% severe DDI leaks) while suffering from false-stale aborts (9.4\% and 10.4\%) caused by monolithic bundle ETag or page-level predicate collisions. MemTX isolates memory registers but similarly omits external governance epoch tracking and clinical DDI checks (40.0\% unsafe commits). CommitGuard and MasuGate resolve TOCTOU authorization drift (0.0\% TOCTOU violations), but because their domain-agnostic witnesses do not evaluate clinical pharmacology, they admit severe DDI exposures (20.0\% unsafe commits). GLHS v2 integrates Layer 1 deterministic safety checks with canonical 2PL partition locking, simultaneously eliminating TOCTOU authorization drift and severe DDI exposures ($0/500$ unsafe commits, 0.0\%) while eliminating false-stale aborts across disjoint clinical domains (0.0\%).
+\end{itemize}
 
 \subsection{Governance-writer TOCTOU repetition and bounded assurance}
 In the PostgreSQL governance-TOCTOU repetition suite (12 logical schedules $\times$ 50 jittered timing repetitions = 600 executions under freeze \nolinkurl{GLHS-CONCURRENCY-REPETITION-V1-20260819}), zero forbidden commits were observed across all 600 runs ($0/600$). Ten of the twelve logical schedules were fully robust across all 50 repetitions ($50/50$ satisfying the expected safety invariant). Two schedules (\texttt{TOCTOU-V2-05} and \texttt{TOCTOU-V2-09}) were non-robust classification mismatches against the frozen expected classifications: both were expected to produce \texttt{indeterminate\_ordering}, but observed rejection or other classifications during execution. In accordance with prespecified reporting rules, these mixed outcomes are reported as non-robust classification mismatches rather than majority-voted into safety. Ordering confidence was classified as PARTIAL for all 600 records under PostgreSQL commit-timestamp logging (\texttt{track\_commit\_timestamp=on}).
@@ -321,13 +326,13 @@ Power & Sample Size Power ($N=384, \delta=\pm 2\%$) & Underpowered & Requires $N
 \midrule
 Token Reduction & Prompt Token Minimization & $87.4\%$ & 412 vs.\ 3,280 tokens ($p < 10^{-40}$) \\
 Latency Reduction & End-to-End Latency Reduction & $68.2\%$ & Bounded KV Cache \& Synthesis \\
-Data Minimization & Unrelated PHI Over-Disclosure & $0.0\%$ & Zero Over-Disclosure (HIPAA/GDPR) \\
-Concurrency Safety & Read-to-Write TOCTOU Elimination & $100.0\%$ & $p = 1.73 \times 10^{-77}$ vs.\ Unbound Baseline \\
+Data Minimization & Unrelated Entity Over-Disclosure & $0.0\%$ & Task-Scoped Minimization (No Unrelated Entity Disclosure in Evaluated Suite) \\
+Concurrency Safety & Read-to-Write TOCTOU Rejection & 100.0\% (256/256) & $p = 1.73 \times 10^{-77}$ vs.\ Unbound Baseline (Evaluated Suite) \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The subject-level contrast yields 70 wins, 73 losses, and 241 ties ($\hat{\Delta} = -0.781\%$, exact sign-test $p=0.867$). Because discrete binary clinical task comparisons exhibit substantial paired variance ($s_{\Delta} = 0.610, SE = 3.12\%$), the 95\% bootstrap confidence interval $[-6.77\%, +5.21\%]$ crosses the narrow $\pm 2.0\%$ margin. A fully powered biostatistical equivalence test under $\delta = \pm 2.0\%$ requires $N \ge 7{,}500$ subjects. Crucially, however, task-bounded minimization achieves an $87.4\%$ prompt token reduction (mean 412 vs.\ 3,280 tokens, $p < 10^{-40}$), a $68.2\%$ reduction in inference latency, and eliminates 100\% of read-to-write TOCTOU authorization drift.
+The subject-level contrast yields 70 wins, 73 losses, and 241 ties ($\hat{\Delta} = -0.781\%$, exact sign-test $p=0.867$). Because discrete binary clinical task comparisons exhibit substantial paired variance ($s_{\Delta} = 0.610, SE = 3.12\%$), the 95\% bootstrap confidence interval $[-6.77\%, +5.21\%]$ crosses the narrow $\pm 2.0\%$ margin. A fully powered biostatistical equivalence test under $\delta = \pm 2.0\%$ requires $N \ge 7{,}500$ subjects. Crucially, however, task-bounded minimization achieves an $87.4\%$ prompt token reduction (mean 412 vs.\ 3,280 tokens, $p < 10^{-40}$) and a $68.2\%$ reduction in inference latency, while preventing read-to-write TOCTOU authorization drift across all evaluated schedules in our PostgreSQL benchmark suite ($p = 1.73 \times 10^{-77}$).
 
 \subsection{Fine-grained Dual-Layer State Barrier governance latency micro-benchmark}
 We measured the high-resolution latency profile of the Layer 1 State Barrier over $N=1{,}000$ iterations using \texttt{time.perf\_counter\_ns} against a reference LLM reasoning budget ($T_{\text{LLM}} \approx 1{,}200\text{ ms}$).
@@ -401,8 +406,8 @@ Gemini & Long context & 0.00 & exact tie & n.s. & exact tie\\
 
 Six contrasts remained Holm-significant, but only 9--21 discordant subjects informed those tests, below the planned 51 informative pairs. Claude versus BTSA was not significant, and Gemini tied BTSA, full history, and long context exactly. The exact sign tests remain valid for observed discordances, but the high tie rate limits effect-size precision and confirmatory strength.
 
-\subsection{Later synthetic checks and non-inferiority context-minimization trade-offs}
-A later sealed Claude-only synthetic run used 384 independent subjects, nine context conditions, and 3,456 solver cells. The prespecified subject-level contrast between Strict THSS and full authorized history confirmed statistical non-inferiority with a null accuracy delta: 70 wins, 73 losses, and 241 ties; mean Strict-minus-full-history effect $-0.0078125$; 95\% bootstrap CI $[-0.0677083,0.0520833]$; exact two-sided sign-test $p=0.8672499071$. Crucially, this demonstrates that task-bounded context minimization causes zero clinical decision degradation compared to feeding complete unminimized patient histories, while achieving a Pareto-dominant systems profile: an 87.4\% reduction in prompt token consumption (mean 412 vs.\ 3,280 tokens), a 68.2\% reduction in inference latency, zero over-disclosure of unrelated sensitive PHI (satisfying HIPAA/GDPR data minimization mandates), and provable elimination of 100\% of read-to-write TOCTOU corruptions admitted by un-bound full history ($p=1.727 \times 10^{-77}$). 
+\subsection{Later synthetic checks and context-minimization trade-offs}
+A later sealed Claude-only synthetic run used 384 independent subjects, nine context conditions, and 3,456 solver cells. The prespecified subject-level contrast between Strict THSS and full authorized history yielded a Schuirmann TOST / sign-test null result: 70 wins, 73 losses, and 241 ties; mean delta $-0.78\%$ ($-0.0078125$, $p=0.8672$); 95\% bootstrap CI $[-6.77\%, +5.21\%]$. Because this empirical confidence interval crosses the prespecified $\pm 2.0\%$ equivalence margin, the study is underpowered at $N=384$ to confirm statistical non-inferiority or equivalence (which would require $N \ge 7{,}500$). Rather than claiming zero clinical decision degradation or Pareto dominance, the results show that prompt tokens were reduced by 87.4\% (mean 412 vs.\ 3,280 tokens, $p < 10^{-40}$) and latency by 68.2\% while the clinical decision accuracy delta remained within empirical variance. Simultaneously, the framework enforced task-scoped data minimization (no unrelated entity disclosure in the evaluated suite, noting that technical controls do not constitute statutory HIPAA/GDPR legal compliance) and eliminated read-to-write TOCTOU corruptions across the evaluated test suite ($0/256$ invalid commits admitted vs.\ $256/256$ by the unbound baseline, exact McNemar $p=1.727 \times 10^{-77}$). 
 
 \paragraph{Diagnostic analysis of fail-closed malformed outputs.}
 Across the 3,456 solver cells in this extended run, 220 generations (6.36\%) produced fail-closed malformed outputs under strict Pydantic JSON schema enforcement at the gateway (primarily due to model-induced trailing markdown artifacts and schema field omission under extreme context compression). Rather than corrupting persistent EHR state, the Layer 1 State Barrier deterministically intercepted and rejected 100\% of these malformed outputs before state admission. Under our pre-registered intent-to-treat evaluation protocol, every malformed output was penalized as an outright diagnostic failure ($0/1$ match). This reinforces the fail-closed safety guarantee of the architecture and diagnoses prompt schema enforcement as an engineering calibration for extraction rather than a failure of governance invariants.
@@ -487,27 +492,46 @@ The model-context results are mixed in a scientifically useful way. Strict THSS 
 
 \newpage
 \appendix
-\section{Formal Proof of Theorem 1 (No-TOCTOU Disclosure Serializability)}
+\section{Formal Proof of Theorem 1 (No-TOCTOU Disclosure Serializability under Canonical 2PL)}
 \label{sec:proofs}
 
 \begin{proof}
-Let $\mathcal{H} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, id_H, d_H, E_H)$ be compiled at timestamp $t_1 = t_{\text{disclose}}(\mathcal{H})$ with cryptographic Merkle digest:
+Let $\mathcal{H} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, id_H, d_H, E_H)$ be compiled at disclosure timestamp $t_1 = t_{\text{disclose}}(\mathcal{H})$ with cryptographic Merkle digest:
 \begin{equation*}
-d_H = \operatorname{MerkleRoot}(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}} \cup \Sigma_{\text{consent}}).
+d_H = \operatorname{MerkleRoot}(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}} \cup \Sigma_{\text{consent}}),
 \end{equation*}
-Let $P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle$ be the proposal generated by Layer 2, with dependency partition set $\operatorname{Deps}(P) \subset \mathcal{V}_u$.
+where $\vec{v}_0 = \{ V(e_k)_{t_1} \mid e_k \in \operatorname{Deps}(P) \}$ denotes the base version vector of all dependency partitions, and $\Phi_{\text{policy}}$ and $\Sigma_{\text{consent}}$ denote the governing policy and consent epochs at $t_1$.
+Let $P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle$ be the proposal generated by Layer 2, with declared dependency partition set $\operatorname{Deps}(P) = \{e_{(1)}, e_{(2)}, \dots, e_{(m)}\} \subset \mathcal{V}_u$.
 
-Assume for the sake of contradiction that $P$ is committed at $t_3 = t_{\text{commit}}(P)$, but there exists an intermediate transition $\mathcal{T}$ committed at $t_2$ ($t_1 < t_2 < t_3$) affecting some partition $e_k \in \operatorname{Deps}(P)$ or modifying governance coordinates $\langle \Phi, \Sigma \rangle$.
-By definition of a committed state transition in PostgreSQL MVCC under read-committed or serializable isolation:
+The Governed State Transition (GST) admission protocol enforces Strict Two-Phase Locking (SS2PL) with a canonical global lock hierarchy:
+\begin{equation*}
+\mathcal{L}_{\text{canonical}} = \left( e_{(1)} \prec_{\text{lex}} e_{(2)} \prec_{\text{lex}} \dots \prec_{\text{lex}} e_{(m)} \right) \prec \text{ProfileState}(u) \prec \text{GovEpochs}(v_{\pi}, v_c),
+\end{equation*}
+where entity partitions in $\operatorname{Deps}(P)$ are sorted lexicographically by their unique canonical entity keys $\text{Key}(e_i) = \langle \text{profile\_id}, \text{domain}, \text{semantic\_key} \rangle$, followed by the root patient profile state record, and finally the governance epoch records.
+
+Assume for the sake of contradiction that $P$ is committed at $t_3 = t_{\text{commit}}(P)$, but there exists an intermediate transition $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ committed at $t_2$ ($t_1 < t_2 < t_3$) affecting some entity partition $e_k \in \operatorname{Deps}(P)$ or modifying governance coordinates $\langle v_{\pi}, v_c \rangle$.
+
+Under the SS2PL protocol and monotonic versioning invariants of GLHS:
 \begin{enumerate}
-    \item If $\mathcal{T}$ advanced the clinical state of partition $e_k$, the monotonic version counter was updated: $V(e_k)_{t_2} = V(e_k)_{t_1} + 1 > V(e_k)_{t_1}$.
-    \item At $t_3$, GST executes within an atomic database transaction and acquires a row-level lock \texttt{SELECT ... FOR UPDATE} on $e_k$.
-    \item GST evaluates the predicate $\operatorname{StateCurrent}(P)$, which verifies that the base version declared in $P$ matches the currently locked row: $V(e_k)_{\text{current}} == v_s(e_k)$.
-    \item Since $V(e_k)_{\text{current}} = V(e_k)_{t_2} > v_s(e_k)$, the condition $\operatorname{StateCurrent}(P)$ evaluates to $\text{False}$.
-    \item Analogously, if $\mathcal{T}$ revoked consent or advanced policy epoch, $\operatorname{GovernanceCurrent}(P)$ evaluates to $\text{False}$ upon re-reading the committed governance state under the lock.
-    \item If the caller attempts to bypass the check by mutating $P$, the cryptographic binding check $\operatorname{Bound}(P, \mathcal{H})$ verifies $d_H(P) == \operatorname{RecomputeMerkleRoot}(id_H)$, which fails with $\text{False}$ upon payload mismatch.
+    \item \textbf{Case 1: Intermediate Clinical State Mutation ($\mathcal{T} \in \mathcal{T}_{\text{state}}$ on $e_k \in \operatorname{Deps}(P)$).}
+    By the monotonic versioning invariant, when $\mathcal{T}$ committed at $t_2$, it held an exclusive lock on partition $e_k$ and incremented its state version: $V(e_k)_{t_2} \ge V(e_k)_{t_1} + 1 > V(e_k)_{t_1}$.
+    At $t_3$, GST initiates its growing phase under SS2PL, acquiring row-level exclusive locks (\texttt{SELECT ... FOR UPDATE}) in canonical order $\prec_{\text{lex}}$, successfully locking $e_k$.
+    Holding the exclusive lock, GST evaluates $\operatorname{StateCurrent}(P)$, which verifies that $V(e_k)_{\text{current}} == v_s(e_k) = V(e_k)_{t_1}$.
+    Since $V(e_k)_{\text{current}} = V(e_k)_{t_2} > V(e_k)_{t_1}$, the predicate $\operatorname{StateCurrent}(P)$ evaluates to $\text{False}$.
+
+    \item \textbf{Case 2: Intermediate Governance / Consent Drift ($\mathcal{T} \in \mathcal{T}_{\text{gov}}$ on $\langle v_{\pi}, v_c \rangle$).}
+    If $\mathcal{T}$ committed a consent revocation or advanced the governing policy epoch at $t_2$, the governance records were updated: $v_c(t_2) > v_c(t_1)$ or $v_{\pi}(t_2) > v_{\pi}(t_1)$.
+    At $t_3$, following canonical lock order $\mathcal{L}_{\text{canonical}}$, GST acquires exclusive locks on $\text{ProfileState}(u)$ and the governance epoch records $\text{GovEpochs}(v_{\pi}, v_c)$.
+    GST evaluates $\operatorname{GovernanceCurrent}(P)$, comparing the proposal's declared governance coordinates $\langle v_{\pi}, v_c \rangle$ against the currently locked records.
+    Because the locked governance records reflect the committed updates from $t_2$, $\operatorname{GovernanceCurrent}(P)$ evaluates to $\text{False}$.
+
+    \item \textbf{Case 3: Cryptographic Non-Bypassability of Base Coordinates.}
+    If an adversarial agent or drifted model attempts to bypass revalidation by modifying $\vec{v}_0$, $v_{\pi}$, or $v_c$ in $P$ to match the updated state at $t_2$, the predicate $\operatorname{Bound}(P, \mathcal{H})$ verifies that $d_H$ equals $\operatorname{RecomputeMerkleRoot}(id_H)$. Under the standard collision and second-preimage resistance of SHA-256, generating a mutated proposal $P'$ with updated base coordinates that matches the signed Merkle root $d_H$ succeeds with negligible probability $\le \operatorname{negl}(\lambda)$.
 \end{enumerate}
-Therefore, $\operatorname{Commit}(P)$ in Eq.~\ref{eq:commit} evaluates to $\text{False}$, and $P$ is unconditionally aborted. This contradicts the assumption that $P$ was committed at $t_3$. Hence, no intermediate conflicting transition $\mathcal{T}$ can exist. $\blacksquare$
+
+In all cases, the commit condition $\operatorname{Commit}(P)$ in Eq.~\ref{eq:commit} evaluates to $\text{False}$, forcing GST to abort the transaction and execute a rollback. This contradicts the assumption that $P$ was committed at $t_3$.
+
+Furthermore, because all concurrent transactions (reads, mutations, and admissions) acquire row locks adhering strictly to the total canonical lock ordering $\mathcal{L}_{\text{canonical}}$, the lock wait-for graph contains no directed cycles ($\operatorname{Cycle}(\mathcal{W}) = \emptyset$), eliminating deadlocks without aborting victim transactions. By the classical Two-Phase Locking Theorem (Eswaran et al., 1976), any valid interleaved execution schedule $\mathcal{S}$ is strictly conflict serializable, equivalent to a serial execution ordered by commit timestamps. $\blacksquare$
 \end{proof}
 
 \end{document}

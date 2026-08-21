@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -343,7 +343,7 @@ def main() -> None:
             "generator": "council_synthetic_case_generator_v1",
             "seed": int(args.seed),
             "total_cases": total_cases,
-            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+            "created_at_utc": datetime.now(UTC).isoformat(),
             "severity_counts": severity_counts,
             "notes": "Synthetic cases for local council endpoint evaluation only.",
         },

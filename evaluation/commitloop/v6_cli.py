@@ -29,7 +29,9 @@ def main() -> int:
     if not isinstance(contract, dict):
         raise TypeError("v6_cli_freeze_contract_missing")
     cohort_path = args.freeze.parent / "cohort" / "cohort.jsonl"
-    rows = [json.loads(line) for line in cohort_path.read_text(encoding="utf-8").splitlines() if line]
+    rows = [
+        json.loads(line) for line in cohort_path.read_text(encoding="utf-8").splitlines() if line
+    ]
     split_subjects = contract.get(f"{args.split}_subjects")
     request_count = contract.get("solver_request_counts", {}).get(args.split)
     if not isinstance(split_subjects, int) or not isinstance(request_count, int):

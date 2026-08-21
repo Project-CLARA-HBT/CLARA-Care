@@ -16,7 +16,7 @@ _Requirements: 12.2, 4.6_
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from clara_ml.config import settings
@@ -183,7 +183,7 @@ def test_run_incremental_ingestion_drives_injected_scheduler(monkeypatch) -> Non
     monkeypatch.setattr(settings, "rag_ingestion_enabled", True, raising=False)
     orchestrator = _FakeOrchestrator()
     scheduler = _RecordingScheduler({"openfda": {"ok": True}})
-    now = datetime(2026, 5, 20, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 20, tzinfo=UTC)
 
     reports = run_incremental_ingestion(scheduler=scheduler, orchestrator=orchestrator, now=now)
 
@@ -206,7 +206,7 @@ def test_scheduler_run_due_resumes_each_source_from_watermark(monkeypatch) -> No
     scheduler = Scheduler(_FakeReader(schedules))
     orchestrator = _FakeOrchestrator()
 
-    reports = scheduler.run_due(orchestrator, now=datetime(2026, 5, 20, tzinfo=timezone.utc))
+    reports = scheduler.run_due(orchestrator, now=datetime(2026, 5, 20, tzinfo=UTC))
 
     # Disabled source is skipped; due sources resume from their watermark
     # (empty watermark -> None so the orchestrator starts from the beginning).

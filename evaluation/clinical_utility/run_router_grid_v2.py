@@ -27,11 +27,24 @@ MODELS = (
 )
 
 COLUMNS = (
-    "task_id", "context_condition", "context_sha256", "model_id", "model_family",
-    "state_correct", "critical_omission", "unsupported_assertion",
-    "conflict_handling", "evidence_fidelity", "prohibited_disclosure",
-    "authorized_recall", "abstention", "input_tokens", "output_tokens",
-    "latency_ms", "completion_status", "error_code",
+    "task_id",
+    "context_condition",
+    "context_sha256",
+    "model_id",
+    "model_family",
+    "state_correct",
+    "critical_omission",
+    "unsupported_assertion",
+    "conflict_handling",
+    "evidence_fidelity",
+    "prohibited_disclosure",
+    "authorized_recall",
+    "abstention",
+    "input_tokens",
+    "output_tokens",
+    "latency_ms",
+    "completion_status",
+    "error_code",
 )
 
 PROMPT_TEMPLATE = (
@@ -89,7 +102,12 @@ def _call(base: str, key: str, model: str, prompt: str) -> CallResult:
         else:
             payload = json.loads(payload_bytes)
         return CallResult(payload, (time.monotonic() - started) * 1000.0, None)
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+    except (
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+        TimeoutError,
+        json.JSONDecodeError,
+    ) as exc:
         return CallResult({}, (time.monotonic() - started) * 1000.0, type(exc).__name__)
 
 
@@ -139,9 +157,13 @@ def main() -> int:
         for condition in CONDITIONS:
             built = build_context(task, condition)
             for model, family in MODELS:
-                prompt = PROMPT_TEMPLATE.format(context=built.text, task=str(task.get("scenario", "")))
+                prompt = PROMPT_TEMPLATE.format(
+                    context=built.text, task=str(task.get("scenario", ""))
+                )
                 result = _call(ROUTER_BASE_URL, key, model, prompt)
-                choice = ((result.payload.get("choices") or [{}])[0].get("message") or {}).get("content", "")
+                choice = ((result.payload.get("choices") or [{}])[0].get("message") or {}).get(
+                    "content", ""
+                )
                 usage = result.payload.get("usage") or {}
                 parsed = _parse(str(choice))
                 state = parsed.get("state")
@@ -151,7 +173,9 @@ def main() -> int:
                     # version plus a conflict/decision. Correct iff the reported
                     # decision matches expected_decision.
                     decision = parsed.get("decision") or (
-                        "rejected" if parsed.get("conflict") and str(parsed.get("conflict")).lower() != "none" else "committed"
+                        "rejected"
+                        if parsed.get("conflict") and str(parsed.get("conflict")).lower() != "none"
+                        else "committed"
                     )
                     correct = (
                         result.error is None
@@ -187,7 +211,9 @@ def main() -> int:
                     }
                 )
 
-    with (args.output_dir / "utility_grid_v2.csv").open("w", encoding="utf-8", newline="") as stream:
+    with (args.output_dir / "utility_grid_v2.csv").open(
+        "w", encoding="utf-8", newline=""
+    ) as stream:
         writer = csv.DictWriter(stream, fieldnames=COLUMNS)
         writer.writeheader()
         writer.writerows(rows)

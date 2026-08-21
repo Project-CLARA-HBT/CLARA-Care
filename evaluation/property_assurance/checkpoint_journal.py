@@ -45,9 +45,9 @@ class JournalChainError(JournalError):
 
 
 def _canonical(record: dict[str, Any]) -> bytes:
-    return json.dumps(
-        record, sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    ).encode("utf-8")
+    return json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode(
+        "utf-8"
+    )
 
 
 def _record_hash(record: dict[str, Any]) -> str:
@@ -123,8 +123,7 @@ class CheckpointJournal:
             or existing.get("manifest_sha256") != manifest_sha256
         ):
             raise JournalFreezeMismatch(
-                "govmut_journal_freeze_mismatch:"
-                + f"{existing.get('freeze_id')} vs {freeze_id}"
+                "govmut_journal_freeze_mismatch:" + f"{existing.get('freeze_id')} vs {freeze_id}"
             )
 
     def _require_bound(self) -> dict[str, Any]:
@@ -193,9 +192,7 @@ class CheckpointJournal:
                 if isinstance(record.get("dedupe_key"), str)
             }
             if (kind, dedupe_key) in existing:
-                raise JournalDuplicate(
-                    f"govmut_journal_duplicate:{kind}:{dedupe_key}"
-                )
+                raise JournalDuplicate(f"govmut_journal_duplicate:{kind}:{dedupe_key}")
         seq = len(records) + 1
         record: dict[str, Any] = {
             "seq": seq,

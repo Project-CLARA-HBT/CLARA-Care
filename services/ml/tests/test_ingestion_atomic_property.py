@@ -109,7 +109,7 @@ class _FakeSession:
     transaction is open), mirroring the real query under read-your-writes.
     """
 
-    def __init__(self, store: "FakeDocumentStore") -> None:
+    def __init__(self, store: FakeDocumentStore) -> None:
         self._store = store
 
     def execute(self, statement: Any) -> _FakeResult:
@@ -149,7 +149,7 @@ class _CorpusState:
         # used to decide whether to inject a failure for this document.
         self.current_external_id: str | None = None
 
-    def copy(self) -> "_CorpusState":
+    def copy(self) -> _CorpusState:
         clone = _CorpusState()
         clone.documents = copy.deepcopy(self.documents)
         clone.chunks = copy.deepcopy(self.chunks)

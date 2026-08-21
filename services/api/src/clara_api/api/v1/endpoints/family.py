@@ -17,8 +17,8 @@ from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.core.rbac import require_roles
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
-    FamilyAccessLog,
     FamilyAccessGrant,
+    FamilyAccessLog,
     LifeMapCareTask,
     LifeMapEpisode,
     LifeMapVisit,

@@ -91,17 +91,26 @@ class PhrConsentService:
     """
 
     @staticmethod
-    def _latest_row(db: Session, *, user_id: int, purpose: str) -> UserConsent | None:
+    def _latest_row(
+        db: Session,
+        *,
+        user_id: int,
+        purpose: str,
+        for_update: bool = False,
+    ) -> UserConsent | None:
         consent_type = _phr_consent_type(purpose)
-        return (
-            db.execute(
-                select(UserConsent)
-                .where(
-                    UserConsent.user_id == user_id,
-                    UserConsent.consent_type == consent_type,
-                )
-                .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
+        stmt = (
+            select(UserConsent)
+            .where(
+                UserConsent.user_id == user_id,
+                UserConsent.consent_type == consent_type,
             )
+            .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return (
+            db.execute(stmt)
             .scalars()
             .first()
         )

@@ -225,7 +225,7 @@ def _run_bounded_ingestion(job_id: str, source_key: str, since: str | None, cap:
         )
 
         factory = _resolve_session_factory()
-        orch = _build_default_orchestrator(factory) if factory is not None else None
+        orch: Any = _build_default_orchestrator(factory) if factory is not None else None
         if orch is None:
             _set_job(job_id, status="failed", errors=["orchestrator_unavailable"])
             return

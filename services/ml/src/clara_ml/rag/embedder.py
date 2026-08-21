@@ -3,9 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from threading import Lock
-from typing import TYPE_CHECKING, Any, List, Sequence
+from typing import TYPE_CHECKING, Any
 from urllib.request import Request, urlopen
 
 from clara_ml.config import settings
@@ -65,12 +66,12 @@ class BgeM3EmbedderStub:
     silent fallback that Requirement 2 removes from the production path.
     """
 
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         digest = hashlib.sha256(text.encode("utf-8")).digest()
         # 16 deterministic dimensions — non-production placeholder only.
         return [b / 255.0 for b in digest[:16]]
 
-    def embed_batch(self, texts: Sequence[str]) -> List[List[float]]:
+    def embed_batch(self, texts: Sequence[str]) -> list[list[float]]:
         return [self.embed(text) for text in texts]
 
 
@@ -109,7 +110,7 @@ class HttpEmbeddingClient:
         base_url: str | None = None,
         model: str | None = None,
         timeout_seconds: float | None = None,
-        embedding_cache: "EmbeddingCache | None" = None,
+        embedding_cache: EmbeddingCache | None = None,
     ) -> None:
         self._api_key = (settings.embedding_api_key if api_key is None else api_key).strip()
         self._base_url = (settings.embedding_base_url if base_url is None else base_url).strip()
@@ -419,5 +420,5 @@ class HttpEmbeddingClient:
 
         return [vector if vector is not None else [] for vector in vectors]
 
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         return self.embed_batch([text])[0]

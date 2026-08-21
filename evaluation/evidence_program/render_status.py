@@ -43,9 +43,7 @@ RIVF_SOURCE_SHA = "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb"
 RIVF_ARMS = ("UNBOUND", "STATE_VERSION_ONLY", "SNAPSHOT_BOUND_STATE_ONLY", "GLHS_STRICT")
 
 RIVF_RECONCILIATION = "research/govred_rivf/provenance/final-003-reconciliation.json"
-RIVF_MANIFEST = (
-    "artifacts/govred/2026-08-17-rivf-freeze-candidate/final/final_locked_manifest.json"
-)
+RIVF_MANIFEST = "artifacts/govred/2026-08-17-rivf-freeze-candidate/final/final_locked_manifest.json"
 RIVF_STATS_PLAN = (
     "artifacts/govred/2026-08-17-rivf-freeze-candidate/final/final_statistics_plan.json"
 )
@@ -210,9 +208,7 @@ def build_rivf_status(root: Path) -> dict:
         "manifest": {
             "path": RIVF_MANIFEST,
             "sha256": _sha256(root / RIVF_MANIFEST),
-            "reconciliation_manifest_sha256": reconciliation.get(
-                "manifest_sha256_current_local"
-            ),
+            "reconciliation_manifest_sha256": reconciliation.get("manifest_sha256_current_local"),
             "code_revision": manifest_revision,
             "status": manifest.get("status"),
             "freeze_state": manifest.get("freeze_state"),
@@ -232,9 +228,7 @@ def build_rivf_status(root: Path) -> dict:
             "sha256": _sha256(root / RIVF_ANALYSIS_V2),
             "source_sha": analysis_source_sha,
             "generated_from": analysis.get("generated_from"),
-            "primary_denominator_definition": analysis.get(
-                "primary_denominator_definition"
-            ),
+            "primary_denominator_definition": analysis.get("primary_denominator_definition"),
             "arms": arms,
             "paired_exact_mcnemar_glhs_strict_vs_unbound": {
                 "b": paired.get("b"),
@@ -304,7 +298,8 @@ def build_glhs_status(root: Path) -> dict:
             "classification": toctou03.get("ordering") if toctou03 else None,
             "commit_outcome": toctou03.get("commit_outcome") if toctou03 else None,
             "status": "INDETERMINATE"
-            if toctou03 and toctou03.get("ordering") == "indeterminate_ordering_transition_committed"
+            if toctou03
+            and toctou03.get("ordering") == "indeterminate_ordering_transition_committed"
             else "determinate",
         },
         "schedule_matrix": analysis.get("schedule_rows"),
@@ -313,9 +308,9 @@ def build_glhs_status(root: Path) -> dict:
             "case_count": agreement.get("case_count"),
             "pre_reconciliation_agreement": agreement.get("pre_reconciliation_agreement"),
             "cohens_kappa": agreement.get("cohens_kappa"),
-            "unresolved": 0 if agreement.get("unresolved_rate") is None else agreement.get(
-                "unresolved_rate"
-            ),
+            "unresolved": 0
+            if agreement.get("unresolved_rate") is None
+            else agreement.get("unresolved_rate"),
             "note": "Dual-model blinded protocol-review surrogate; not human/clinician adjudication.",
         },
         "frozen_plan": {
@@ -359,8 +354,7 @@ def _collect_claim_checks(root: Path) -> dict:
         if claim["status"] != "sealed_claim_eligible":
             continue
         missing = [
-            p for p in _expand_claim_paths(claim["evidence_artifact"])
-            if not (root / p).is_file()
+            p for p in _expand_claim_paths(claim["evidence_artifact"]) if not (root / p).is_file()
         ]
         checks.append(
             {
@@ -393,13 +387,11 @@ def build_status(root: Path) -> dict:
         ),
         "top_level": {
             "sealed": bool(
-                rivf["top_level_status"] == "SEALED"
-                and glhs["top_level_status"] == "SEALED"
+                rivf["top_level_status"] == "SEALED" and glhs["top_level_status"] == "SEALED"
             ),
             "status": (
                 "SEALED"
-                if rivf["top_level_status"] == "SEALED"
-                and glhs["top_level_status"] == "SEALED"
+                if rivf["top_level_status"] == "SEALED" and glhs["top_level_status"] == "SEALED"
                 else "SEALED_PARTIAL"
             ),
             "note": (
@@ -554,9 +546,7 @@ def render_status_md(status: dict, previous_md: Path | None) -> str:
         arm = rivf["analysis_v2"]["arms"][name]
         rate = f"{arm['primary_rate']:.3f}"
         ci = arm["wilson_95_ci"]
-        rivf_arm_lines.append(
-            f"- {name}: {rate} (95% CI {ci[0]:.3f}-{ci[1]:.3f})"
-        )
+        rivf_arm_lines.append(f"- {name}: {rate} (95% CI {ci[0]:.3f}-{ci[1]:.3f})")
     arms_text = "\n".join(rivf_arm_lines)
 
     paired = rivf["analysis_v2"]["paired_exact_mcnemar_glhs_strict_vs_unbound"]
@@ -669,9 +659,7 @@ def render_status_md(status: dict, previous_md: Path | None) -> str:
 
 def _write_status(status: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    path.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -699,9 +687,7 @@ def main(argv: list[str] | None = None) -> int:
     _write_status(status, args.status_output)
     previous = args.render_md if args.render_md.is_file() else None
     args.render_md.parent.mkdir(parents=True, exist_ok=True)
-    args.render_md.write_text(
-        render_status_md(status, previous), encoding="utf-8"
-    )
+    args.render_md.write_text(render_status_md(status, previous), encoding="utf-8")
     print(f"wrote {args.status_output}")
     print(f"wrote {args.render_md}")
     return 0

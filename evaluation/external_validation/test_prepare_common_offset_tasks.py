@@ -106,13 +106,9 @@ def test_preparer_keeps_offsets_within_encounter_and_marks_nonclinical(tmp_path:
     manifest["tasks_sha256"] = _sha(tasks_path)
     manifest.pop("manifest_payload_sha256")
     manifest["manifest_payload_sha256"] = hashlib.sha256(
-        json.dumps(
-            manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-        ).encode()
+        json.dumps(manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
     ).hexdigest()
-    (tmp_path / "out" / "cohort_manifest.json").write_text(
-        json.dumps(manifest), encoding="utf-8"
-    )
+    (tmp_path / "out" / "cohort_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ValueError, match="offset_task_source_target_invalid"):
         validate(
             tasks_path,

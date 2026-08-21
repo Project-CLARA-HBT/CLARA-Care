@@ -198,10 +198,10 @@ class HybridRetriever:
     def __init__(
         self,
         *,
-        embedder: "HttpEmbeddingClient",
+        embedder: HttpEmbeddingClient,
         sparse_index: SparseIndex,
-        reranker: "EvidenceReranker",
-        session_factory: Callable[[], "Session"] | None = None,
+        reranker: EvidenceReranker,
+        session_factory: Callable[[], Session] | None = None,
         dense_search: DenseSearchFn | None = None,
         query_expander: Any | None = None,
         candidate_n: int = DEFAULT_CANDIDATE_N,
@@ -227,15 +227,15 @@ class HybridRetriever:
     @classmethod
     def from_engine(
         cls,
-        engine: "Engine",
+        engine: Engine,
         *,
-        embedder: "HttpEmbeddingClient",
-        reranker: "EvidenceReranker",
+        embedder: HttpEmbeddingClient,
+        reranker: EvidenceReranker,
         sparse_index: SparseIndex | None = None,
         query_expander: Any | None = None,
         candidate_n: int = DEFAULT_CANDIDATE_N,
         trust_tier_ranking: bool | None = None,
-    ) -> "HybridRetriever":
+    ) -> HybridRetriever:
         """Build a retriever from a SQLAlchemy ``Engine`` (no connection opened)."""
 
         factory = sessionmaker(bind=engine, expire_on_commit=False)
@@ -407,7 +407,7 @@ class HybridRetriever:
         return "[" + ",".join(str(float(value)) for value in vector) + "]"
 
     @contextmanager
-    def _session(self) -> Iterator["Session"]:
+    def _session(self) -> Iterator[Session]:
         if self._session_factory is None:  # pragma: no cover - guarded by caller
             raise RuntimeError("HybridRetriever has no session_factory for dense search")
         session = self._session_factory()

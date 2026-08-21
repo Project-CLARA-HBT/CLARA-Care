@@ -74,15 +74,26 @@ class FakeGateway:
         self, db: object, *, profile_id: int, actor_user_id: int, data: object, evidence: object
     ) -> object:
         self.calls.append(("propose_assertion", str(profile_id)))
-        return type("Assertion", (), {
-            "id": 1,
-            "public_id": "prop-notrun",
-            "base_state_version": 0,
-        })()
+        return type(
+            "Assertion",
+            (),
+            {
+                "id": 1,
+                "public_id": "prop-notrun",
+                "base_state_version": 0,
+            },
+        )()
 
     def apply_transition(
-        self, db: object, *, scope: object, assertion: object, action: str,
-        expected_state_version: int, idempotency_key: str, transition_kind: str,
+        self,
+        db: object,
+        *,
+        scope: object,
+        assertion: object,
+        action: str,
+        expected_state_version: int,
+        idempotency_key: str,
+        transition_kind: str,
         reason_code: str,
     ) -> object:
         self.calls.append(("apply_transition", reason_code))

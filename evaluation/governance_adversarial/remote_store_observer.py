@@ -17,7 +17,9 @@ def _require_isolated_research_project(*, postgres_container: str, redis_contain
     """Refuse to inspect stores unless the caller attests an isolated RIVF deployment."""
     if os.environ.get("CLARA_GOVRED_ISOLATED_RESEARCH") != "1":
         raise RuntimeError("govred_remote_observer_requires_isolated_research_attestation")
-    if not all(container.startswith("clara-rivf-") for container in (postgres_container, redis_container)):
+    if not all(
+        container.startswith("clara-rivf-") for container in (postgres_container, redis_container)
+    ):
         raise RuntimeError("govred_remote_observer_container_outside_isolated_project")
 
 
@@ -41,14 +43,21 @@ def observe(*, postgres_container: str, redis_container: str, redis_pattern: str
     )
     postgres = _capture(
         [
-            "docker", "exec", postgres_container, "sh", "-c",
-            'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c '
-            + json.dumps(postgres_query),
+            "docker",
+            "exec",
+            postgres_container,
+            "sh",
+            "-c",
+            'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c ' + json.dumps(postgres_query),
         ]
     )
     audit = _capture(
         [
-            "docker", "exec", postgres_container, "sh", "-c",
+            "docker",
+            "exec",
+            postgres_container,
+            "sh",
+            "-c",
             'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c '
             + json.dumps(
                 "SELECT action, entity, entity_id, profile_id, actor_user_id, scope "

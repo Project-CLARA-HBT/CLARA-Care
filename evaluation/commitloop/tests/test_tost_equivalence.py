@@ -203,21 +203,31 @@ class TestStatisticalPower:
     """Test statistical power calculations across exact, shifted-t, and normal methods."""
 
     def test_power_monotonicity_and_bounds(self) -> None:
-        p_exact = compute_tost_power(n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="exact")
-        p_shifted = compute_tost_power(n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="shifted_t")
-        p_norm = compute_tost_power(n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="normal")
+        p_exact = compute_tost_power(
+            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="exact"
+        )
+        p_shifted = compute_tost_power(
+            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="shifted_t"
+        )
+        p_norm = compute_tost_power(
+            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="normal"
+        )
 
         assert 0.9999 <= p_exact <= 1.0
         assert 0.9999 <= p_shifted <= 1.0
         assert 0.9999 <= p_norm <= 1.0
 
         # Power decreases as true mean difference moves away from 0 towards delta
-        p_diff = compute_tost_power(n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=-0.0078125, method="exact")
+        p_diff = compute_tost_power(
+            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=-0.0078125, method="exact"
+        )
         assert p_diff < p_exact
         assert p_diff == pytest.approx(0.99987, abs=1e-4)
 
         # Power near boundary delta is close to alpha
-        p_edge = compute_tost_power(n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.02, method="normal")
+        p_edge = compute_tost_power(
+            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.02, method="normal"
+        )
         assert p_edge == pytest.approx(0.05, abs=0.01)
 
 
@@ -286,7 +296,9 @@ class TestGLHSStudyVerification:
         assert study.systems_metrics.latency_reduction_pct == 68.2
         assert study.systems_metrics.phi_over_disclosure_pct == 0.0
         assert study.systems_metrics.toctou_elimination_pct == 100.0
-        assert study.systems_metrics.toctou_elimination_p_value == pytest.approx(1.727e-77, rel=1e-3)
+        assert study.systems_metrics.toctou_elimination_p_value == pytest.approx(
+            1.727e-77, rel=1e-3
+        )
 
     def test_json_and_latex_generation(self, tmp_path: Path) -> None:
         study = evaluate_glhs_384_study()
@@ -365,4 +377,7 @@ class TestGLHSStudyVerification:
             systems_metrics=sys_metrics,
         )
         s_dict = study.to_dict()
-        assert s_dict["conclusion"] == "STATISTICAL_EQUIVALENCE_ESTABLISHED_WITH_PARETO_DOMINANT_SYSTEMS_PROFILE"
+        assert (
+            s_dict["conclusion"]
+            == "STATISTICAL_EQUIVALENCE_ESTABLISHED_WITH_PARETO_DOMINANT_SYSTEMS_PROFILE"
+        )

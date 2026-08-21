@@ -71,7 +71,9 @@ def test_prepared_packets_use_unique_blinded_ids_and_common_reference_context(tm
         randomization_seed="fixed-test-seed",
     )
     assert result["status"] == "READY_FOR_EXTERNAL_ADJUDICATION"
-    packets = [json.loads(line) for line in (output / "blinded_packets.jsonl").read_text().splitlines()]
+    packets = [
+        json.loads(line) for line in (output / "blinded_packets.jsonl").read_text().splitlines()
+    ]
     assert len(packets) == 9
     assert len({packet["packet_id"] for packet in packets}) == len(packets)
     assert len({json.dumps(packet["source_context"], sort_keys=True) for packet in packets}) == 1

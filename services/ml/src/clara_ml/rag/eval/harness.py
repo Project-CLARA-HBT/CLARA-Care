@@ -44,7 +44,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from time import perf_counter
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from clara_ml.rag.eval.golden_set import GoldenItem, load_golden_set
 from clara_ml.rag.eval.metrics import (
@@ -205,7 +205,7 @@ class ResultWriter(Protocol):
 
     def __enter__(self) -> ResultWriter: ...
 
-    def __exit__(self, *exc: Any) -> bool: ...
+    def __exit__(self, *exc: Any) -> bool | None: ...
 
     def write(self, row: EvalResultRow) -> None: ...
 
@@ -223,7 +223,7 @@ class InMemoryResultWriter:
     def __enter__(self) -> InMemoryResultWriter:
         return self
 
-    def __exit__(self, *exc: Any) -> bool:
+    def __exit__(self, *exc: Any) -> Literal[False]:
         return False
 
     def write(self, row: EvalResultRow) -> None:

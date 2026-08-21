@@ -99,7 +99,7 @@ class CorpusStatsSource:
         self._session_factory = session_factory
 
     @classmethod
-    def from_engine(cls, engine: Engine) -> "CorpusStatsSource":
+    def from_engine(cls, engine: Engine) -> CorpusStatsSource:
         """Build a stats source from a SQLAlchemy ``Engine`` (no connection opened)."""
 
         return cls(sessionmaker(bind=engine, expire_on_commit=False))

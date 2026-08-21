@@ -86,14 +86,14 @@ def build_solver_packets(
 ) -> dict[str, dict[str, Any]]:
     if case.status != "ELIGIBLE" or case.target is None:
         return {}
-    if not conditions or len(conditions) != len(set(conditions)) or not set(conditions).issubset(
-        EXPLORATORY_V7_CONDITIONS
+    if (
+        not conditions
+        or len(conditions) != len(set(conditions))
+        or not set(conditions).issubset(EXPLORATORY_V7_CONDITIONS)
     ):
         raise ValueError("solver_packet_condition_inventory_invalid")
     valid_visible = [
-        item
-        for item in events
-        if item.valid_at is not None and item.valid_at <= valid_cutoff
+        item for item in events if item.valid_at is not None and item.valid_at <= valid_cutoff
     ]
     visible = [item for item in valid_visible if item.known_at <= known_cutoff]
     chronological = sorted(
@@ -113,9 +113,7 @@ def build_solver_packets(
     serialized_visible = [_event(item) for item in visible]
     serialized_chronological = [_event(item) for item in chronological]
     conflicts = [
-        item.evidence_id
-        for item in visible
-        if item.source.get("relation") == "contradicts"
+        item.evidence_id for item in visible if item.source.get("relation") == "contradicts"
     ]
     serialized_retrieved = [_event(item) for item in retrieved]
     assertion_hashes = [
@@ -123,9 +121,7 @@ def build_solver_packets(
         for item in serialized_retrieved
     ]
     strict_sufficiency = (
-        "CONFLICTED"
-        if conflicts
-        else ("INSUFFICIENT_EVIDENCE" if not retrieved else "CLEAR")
+        "CONFLICTED" if conflicts else ("INSUFFICIENT_EVIDENCE" if not retrieved else "CLEAR")
     )
     strict_thss = {
         "representation": "strict_task_purpose_thss",
@@ -143,9 +139,7 @@ def build_solver_packets(
         "included_assertion_ids": [item.evidence_id for item in retrieved],
         "assertion_hashes": assertion_hashes,
         "events": serialized_retrieved,
-        "exclusion_summary": {
-            "not_selected_for_task_count": len(visible) - len(retrieved)
-        },
+        "exclusion_summary": {"not_selected_for_task_count": len(visible) - len(retrieved)},
         "conflicts": conflicts,
         "critical_fact_coverage": {
             "covered": int(bool(retrieved)),
@@ -154,9 +148,7 @@ def build_solver_packets(
         "authority_classes": sorted({item.resource_type for item in retrieved}),
         "missing_fields": [] if retrieved else ["fulfillment_evidence"],
         "evidence_sufficiency": strict_sufficiency,
-        "decision": (
-            "ESCALATE" if conflicts else ("ABSTAIN" if not retrieved else "DISCLOSE")
-        ),
+        "decision": ("ESCALATE" if conflicts else ("ABSTAIN" if not retrieved else "DISCLOSE")),
         "expires_at": (known_cutoff + timedelta(minutes=5)).isoformat(),
     }
     strict_thss["snapshot_sha256"] = _hash(strict_thss)

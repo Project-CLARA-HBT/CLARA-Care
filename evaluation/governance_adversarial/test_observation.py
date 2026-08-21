@@ -19,7 +19,9 @@ def test_oracle_detects_synthetic_sentinel_without_persisting_body() -> None:
         latency_ms=12.3,
         availability_error=False,
     )
-    classified = classify(observation=observation, sentinel_token="RIVF_SENTINEL_X", expected_rejection=True)
+    classified = classify(
+        observation=observation, sentinel_token="RIVF_SENTINEL_X", expected_rejection=True
+    )
     assert classified["unauthorized_disclosure"] == "true"
     assert classified["successful_bypass"] == "true"
     assert "response_body" not in sanitized_observation_metadata(observation)

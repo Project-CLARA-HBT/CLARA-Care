@@ -1,29 +1,32 @@
 # CareGuard-VN Empirical Benchmark and Evaluation Record
 
-Status: **SEALED BENCHMARK EXECUTED** — Sealed external registry evaluation and parameterized multimodal OCR-to-DDI benchmark completed.
+Status: **IN-DISTRIBUTION EVALUATION VERIFIED; EXTERNAL BENCHMARK FROZEN AS PROTOCOL (RESULT-INCOMPLETE)**.
 
-## 1. External Evidence Partitions
-- **DAV Vietnam Products ($N=25{,}480$ records, $18{,}240$ unique brands):** Exact and normalized brand matching F1 = 98.2%, with 100.0% fail-closed rejection of expired/withdrawn registrations (`data/restricted/dav-live-2026-08-17/`).
-- **DDInter 2.0 Repository ($N=302{,}516$ pairs across 2,310 active substances):** Severe DDI Sensitivity = 99.6% (Recall), False Negative Rate (FNR) = 0.40%.
-- **RxNorm July 2026 CPC ($N=38{,}420$ concepts):** Exact/approximate terminology mapping verified against CPC concept release.
-- **DailyMed SPL Warnings ($N=14{,}200$ labels):** 100.0% concordant black-box and contraindication warning extraction.
-- **Oracle-Identity Decomposition ($N=2{,}500$ pairs):** $\Delta_{\text{Identity}} = 0.20\%$, mathematically isolating upstream entity normalization from downstream knowledge boundaries.
+## 1. In-Distribution Empirical Benchmark Results
+- **Medication Safety Challenge Suite ($N=5$ critical cases in `evaluation/product_ai/medication_safety/`):**
+  - Paracetamol acute toxic overdose (4,000 mg), Nitroglycerin + Sildenafil contraindication, Enalapril pregnancy teratogenicity, pediatric Aspirin in varicella, daily Methotrexate dosing toxicity.
+  - Critical DDI & Contraindication Recall: **100.0%** (5/5, exact Wilson 95% CI: [56.55%, 100.00%]).
+  - Unsafe Dosage Refusal Rate: **100.0%** (5/5, exact Wilson 95% CI: [56.55%, 100.00%]).
+  - Critical Safety Violation Rate: **0.00%** (0/5, exact Wilson 95% CI: [0.00%, 43.45%]).
+- **Product-AI Safety Suite ($N=55$ cases across safety domains):**
+  - Safety Invariant Adherence: **100.0%** (55/55, exact Wilson 95% CI: [93.47%, 100.00%]).
+- **DDI Knowledge Graph Conformance ($N=500$ pairs on DrugBank 5.0 SQLite Store):**
+  - Severe DDI Positive Pair Conformance: **96.80%** (242/250, exact Wilson 95% CI: [93.81%, 98.37%]).
+  - Clean Negative Control Specificity: **100.00%** (250/250, exact Wilson 95% CI: [98.49%, 100.00%]).
+- **Deterministic CareGuard & Invariant Suites ($N=89$ ML tests, $N=99$ API tests):**
+  - CareGuard ML Invariant Pass Rate: **100.00%** (89/89, exact Wilson 95% CI: [95.86%, 100.00%]).
+  - CareGuard API Invariant Pass Rate: **100.00%** (99/99, exact Wilson 95% CI: [96.27%, 100.00%]).
+- **FIDES NLI Fail-Closed Safety Barrier:**
+  - Fail-Closed Gating Rate: **100.00%** (89/89, exact Wilson 95% CI: [95.86%, 100.00%]).
+  - False Reassurance under Corrupted Digest / Missing Shard / Ungrounded Assertion: **0.00%** (0/89, exact Wilson 95% CI: [0.00%, 4.14%]).
 
-## 2. Multimodal Clinical Evaluation ($N=1{,}500$ cases, $N=2{,}500$ interaction pairs)
-- **Cohort Stratification:** 500 simulated handwritten prescriptions, 500 printed discharge summaries, 500 OTC packaging fixtures.
-- **Inter-Annotator Agreement (3 clinical evaluators):** Entity mapping Cohen's $\kappa = 0.942$, dosage/frequency Cohen's $\kappa = 0.961$, DDI severity Fleiss' $\kappa = 0.928$.
-- **Performance Metrics (95% Wilson Score CIs):**
-  - Drug Name F1: 98.1% (95% CI: [98.0%, 98.7%])
-  - Strength/Dose F1: 96.9% (95% CI: [96.7%, 97.6%])
-  - Usage Frequency Accuracy: 96.1% (95% CI: [95.5%, 96.6%])
-  - Severe DDI Sensitivity: 99.6% (95% CI: [99.1%, 99.8%])
-  - Interaction Specificity: 98.9% (95% CI: [98.1%, 99.3%])
-  - False Negative Rate: 0.40% (95% CI: [0.17%, 0.93%])
-  - FIDES Safety Invariant Blocking: 100.0% (95% CI: [99.7%, 100.0%], Fail-Closed).
-
-## 3. Model-Agnostic Structural Isolation
-- Commercial API (Gemini 3.7 Flash): Drug F1 98.1%, DDI Recall 99.6%, Clarification Rate 7.6%, FIDES Gate 100.0%.
-- Open-Weights VLM (LLaVA-Med): Drug F1 94.2%, DDI Recall 99.4%, Clarification Rate 11.8%, FIDES Gate 100.0%.
-- Deterministic Classical OCR (Tesseract + Lexical): Drug F1 88.4%, DDI Recall 99.2%, Clarification Rate 18.2%, FIDES Gate 100.0%.
-
-Executable benchmark script: `evaluation/careguard_external/run_sealed_benchmark.py` and `evaluation/careguard_multimodal_ocr/evaluate_ocr_ddi.py`. Artifacts generated under `artifacts/careguard_sealed_benchmark_report.json`.
+## 2. External Validation Protocol & Gate Status (CG-01..CG-07)
+- **Status:** **RESULT-INCOMPLETE** — External validation protocol frozen; live external benchmark execution blocked pending authorized DAV export delivery.
+- **CG-01:** Hard source gate on DAV Vietnam product identity — **BLOCKED** (external manual gate).
+- **CG-02:** Frozen sample selection and split rules — **FROZEN** in `STATISTICS_PLAN_FROZEN.md` / `statistics_plan_freeze.json`.
+- **CG-03:** Statistical precision target ($h \le 3\,\text{pp}$) — **FROZEN** ($N=385$ positive planning target via `precision_requirement.py`).
+- **CG-04:** Primary denominator rule — **FROZEN** (all frozen externally positive cases in denominator).
+- **CG-05:** Blinded reviewer protocol — **PROTOCOL FROZEN** in `MAPPING_REVIEW_PROTOCOL.md`; execution blocked (reviewers pending recruitment; qualification shortfall will be disclosed exactly).
+- **CG-06:** RxMap feasibility comparator — **RECORDED** (`ASSET_GATED` in `RXMAP_FEASIBILITY.md`).
+- **CG-07:** Negative reference decision — **FROZEN** (specificity `UNSUPPORTED` on DDInter; positive safety focus in `NEGATIVE_REFERENCE.md`).
+- **Audit Note:** Prior synthetic claims of 3 recruited clinical pharmacists, Fleiss' $\kappa = 0.928$, and $N=1,500$ clinical prescription annotations have been audited and retracted in full alignment with `research/careguard_vn/READINESS.md`.

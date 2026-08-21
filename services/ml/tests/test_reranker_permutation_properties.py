@@ -39,7 +39,11 @@ Validates: Requirements 8.1, 8.2.
 from __future__ import annotations
 
 from collections import Counter
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
+
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 # Import the store package first so it fully initializes before reranker is
 # pulled in. reranker -> embedder -> store.schema and store/__init__ ->
@@ -47,10 +51,6 @@ from typing import Mapping, Sequence
 # resolves cleanly when ``clara_ml.rag.store`` loads first; doing so here keeps
 # this test importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.rag.retrieval.domain import Document
 from clara_ml.rag.retrieval.reranker import NeuralReranker
 

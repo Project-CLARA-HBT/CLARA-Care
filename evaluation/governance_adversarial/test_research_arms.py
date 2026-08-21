@@ -20,8 +20,12 @@ def test_arms_have_distinct_prespecified_revalidation_semantics(
     invalid_snapshot = CommitCoordinates(True, False, True, True)
 
     assert evaluate_commit_admission(arm_name="UNBOUND", coordinates=stale_state).accepted
-    assert evaluate_commit_admission(arm_name="STATE_VERSION_ONLY", coordinates=stale_governance).accepted
-    assert not evaluate_commit_admission(arm_name="STATE_VERSION_ONLY", coordinates=stale_state).accepted
+    assert evaluate_commit_admission(
+        arm_name="STATE_VERSION_ONLY", coordinates=stale_governance
+    ).accepted
+    assert not evaluate_commit_admission(
+        arm_name="STATE_VERSION_ONLY", coordinates=stale_state
+    ).accepted
     assert evaluate_commit_admission(
         arm_name="SNAPSHOT_BOUND_STATE_ONLY", coordinates=stale_governance
     ).accepted

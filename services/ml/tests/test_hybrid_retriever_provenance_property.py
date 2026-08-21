@@ -53,17 +53,17 @@ Validates: Requirements 7.6.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 # Import the store package first so it fully initializes before the retriever /
 # reranker modules are pulled in. ``store/__init__`` -> hybrid_retriever ->
 # score_engine -> embedder -> store.schema form an import cycle that only
 # resolves cleanly when ``clara_ml.rag.store`` loads first; doing so here keeps
 # this test importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-from collections.abc import Mapping, Sequence
-
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.rag.retrieval.domain import Document
 from clara_ml.rag.retrieval.reranker import NeuralReranker
 from clara_ml.rag.store.hybrid_retriever import HybridRetriever

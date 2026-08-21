@@ -52,7 +52,11 @@ def probe_commit_timestamp_availability(connection: Any) -> dict[str, object]:
     """
     try:
         setting = str(connection.scalar(text("SHOW track_commit_timestamp")) or "").strip().lower()
-    except (SQLAlchemyError, TypeError, ValueError) as exc:  # pragma: no cover - defensive; never fabricate
+    except (
+        SQLAlchemyError,
+        TypeError,
+        ValueError,
+    ) as exc:  # pragma: no cover - defensive; never fabricate
         return {
             "available": False,
             "track_commit_timestamp": "unknown",

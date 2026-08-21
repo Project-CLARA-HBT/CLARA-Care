@@ -14,10 +14,17 @@ from pathlib import Path
 
 from evaluation.evidence_program.freeze import FreezeError
 
-FORBIDDEN_KEYS = frozenset({
-    "expected_state", "expected_error", "oracle", "oracle_label", "synthetic",
-    "developer_authored", "governance_perturbation",
-})
+FORBIDDEN_KEYS = frozenset(
+    {
+        "expected_state",
+        "expected_error",
+        "oracle",
+        "oracle_label",
+        "synthetic",
+        "developer_authored",
+        "governance_perturbation",
+    }
+)
 REQUIRED_RECORD_KEYS = frozenset({"subject_token", "task_id", "domain", "index_time"})
 
 
@@ -67,13 +74,15 @@ def prepare(
             for key, value in record.items():
                 if value is None or value == "":
                     missingness[key] += 1
-            rows.append({
-                "subject_token": token,
-                "task_id": task_id,
-                "domain": domain,
-                "index_time": record["index_time"],
-                "structured_events": record.get("structured_events", []),
-            })
+            rows.append(
+                {
+                    "subject_token": token,
+                    "task_id": task_id,
+                    "domain": domain,
+                    "index_time": record["index_time"],
+                    "structured_events": record.get("structured_events", []),
+                }
+            )
     if not rows:
         raise FreezeError("cohort_empty")
     if development_tokens.intersection(subjects):
@@ -105,7 +114,9 @@ def prepare(
         "derived_records_sha256": hashlib.sha256(derived.read_bytes()).hexdigest(),
     }
     manifest_path = output_dir / "cohort_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return manifest_path
 
 
@@ -121,15 +132,17 @@ if __name__ == "__main__":
     parser.add_argument("--development-subjects", type=Path, required=True)
     args = parser.parse_args()
     try:
-        print(prepare(
-            args.input_jsonl,
-            args.output_dir,
-            dataset=args.dataset,
-            dataset_version=args.dataset_version,
-            lawful_attestation=args.lawful_attestation,
-            curator_attestation=args.curator_attestation,
-            freeze_id=args.freeze_id,
-            development_subjects=args.development_subjects,
-        ))
+        print(
+            prepare(
+                args.input_jsonl,
+                args.output_dir,
+                dataset=args.dataset,
+                dataset_version=args.dataset_version,
+                lawful_attestation=args.lawful_attestation,
+                curator_attestation=args.curator_attestation,
+                freeze_id=args.freeze_id,
+                development_subjects=args.development_subjects,
+            )
+        )
     except FreezeError as exc:
         parser.error(str(exc))

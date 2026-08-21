@@ -48,9 +48,6 @@ from typing import Any
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from clara_ml.ingestion.connectors.base import ConnectorContext, FetchWindow, RawRecord
-from clara_ml.ingestion.orchestrator import IngestionOrchestrator, SourceResolution
-
 # Reuse the task 3.17 in-memory doubles + record generators verbatim so the two
 # ingestion property tests model the Document_Store / embedding-builder contract
 # identically (the instruction for task 3.18).
@@ -62,6 +59,9 @@ from test_ingestion_idempotent_property import (
     _record_specs,
     _records_from_specs,
 )
+
+from clara_ml.ingestion.connectors.base import ConnectorContext, FetchWindow, RawRecord
+from clara_ml.ingestion.orchestrator import IngestionOrchestrator, SourceResolution
 
 _CONTEXT = ConnectorContext(source_key=_SOURCE_KEY, trust_tier=1)
 

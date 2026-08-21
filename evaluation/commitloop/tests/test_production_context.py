@@ -62,8 +62,7 @@ def test_strict_context_executes_real_gst_and_commitment_thss_path() -> None:
         "known_at": cutoff.isoformat(),
     }
     event_order = [
-        (event["valid_at"], event["known_at"], event["evidence_id"])
-        for event in context["events"]
+        (event["valid_at"], event["known_at"], event["evidence_id"]) for event in context["events"]
     ]
     assert event_order == sorted(event_order)
     assert len(json.dumps(context)) < 8_000
@@ -75,9 +74,7 @@ def test_production_context_covers_each_v5_lifecycle_template_family() -> None:
     for row in rows:
         representatives.setdefault(row["stratum"], row)
     for row in representatives.values():
-        subject, events = ingest_bundle(
-            row["bundle"], fhir_version="R4", ingested_at=KNOWN_CUTOFF
-        )
+        subject, events = ingest_bundle(row["bundle"], fhir_version="R4", ingested_at=KNOWN_CUTOFF)
         case = mine_candidates(subject, events)[0]
         context = compile_production_commitment_context(
             case,
@@ -99,9 +96,7 @@ def test_production_context_retains_documented_source_contradictions() -> None:
             if isinstance((resource := entry.get("resource")), dict)
         )
     )
-    subject, events = ingest_bundle(
-        row["bundle"], fhir_version="R4", ingested_at=KNOWN_CUTOFF
-    )
+    subject, events = ingest_bundle(row["bundle"], fhir_version="R4", ingested_at=KNOWN_CUTOFF)
     case = mine_candidates(subject, events)[0]
     context = compile_production_commitment_context(
         case,

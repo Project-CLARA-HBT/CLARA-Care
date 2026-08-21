@@ -14,7 +14,7 @@ from html import unescape
 from html.parser import HTMLParser
 from io import BytesIO
 from threading import Lock, Thread
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote, urljoin, urlparse
 from uuid import uuid4
 
@@ -783,7 +783,7 @@ def _serialize_research_conversation(
         query_id=query_obj.id,
         query=query_obj.user_input,
         result=result_payload,
-        tier=tier,
+        tier=cast(Any, tier),
         created_at=created_at,
     )
 
@@ -1207,13 +1207,13 @@ def _normalize_trace_value(value: Any) -> Any:
         compact = [item for item in value if isinstance(item, str | int | float | bool)]
         return compact[:20] if compact else None
     if isinstance(value, dict):
-        compact: dict[str, Any] = {}
+        compact_dict: dict[str, Any] = {}
         for raw_key, nested_value in value.items():
             normalized_nested = _normalize_trace_value(nested_value)
             if normalized_nested is None:
                 continue
-            compact[str(raw_key)] = normalized_nested
-        return compact or None
+            compact_dict[str(raw_key)] = normalized_nested
+        return compact_dict or None
     return None
 
 
@@ -1263,16 +1263,10 @@ def _build_tier2_telemetry(
         context_debug_obj.get("telemetry") if context_debug_obj else None,
     )
     telemetry = dict(telemetry_root) if telemetry_root else {}
-    retrieval_trace = (
-        context_debug_obj.get("retrieval_trace")
-        if context_debug_obj and isinstance(context_debug_obj.get("retrieval_trace"), dict)
-        else {}
-    )
-    retriever_debug = (
-        retrieval_trace.get("retriever_debug")
-        if isinstance(retrieval_trace.get("retriever_debug"), dict)
-        else {}
-    )
+    _rt = context_debug_obj.get("retrieval_trace") if context_debug_obj else None
+    retrieval_trace = _rt if isinstance(_rt, dict) else {}
+    _rd = retrieval_trace.get("retriever_debug") if retrieval_trace else None
+    retriever_debug = _rd if isinstance(_rd, dict) else {}
 
     debug_obj = _first_dict(
         normalized.get("debug"),
@@ -1681,12 +1675,10 @@ def _normalize_tier2_response(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _extract_research_source_used(normalized: dict[str, Any]) -> list[str]:
-    metadata_obj = (
-        normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
-    )
-    telemetry_obj = (
-        normalized.get("telemetry") if isinstance(normalized.get("telemetry"), dict) else {}
-    )
+    _raw_meta = normalized.get("metadata")
+    metadata_obj: dict[str, Any] = _raw_meta if isinstance(_raw_meta, dict) else {}
+    _raw_tel = normalized.get("telemetry")
+    telemetry_obj: dict[str, Any] = _raw_tel if isinstance(_raw_tel, dict) else {}
 
     source_used = normalize_source_used(
         normalized.get("source_used") or metadata_obj.get("source_used") or []
@@ -1731,12 +1723,10 @@ def _extract_research_source_used(normalized: dict[str, Any]) -> list[str]:
 def _attach_research_attribution(normalized: dict[str, Any]) -> dict[str, Any]:
     normalized = _canonicalize_research_payload_contract(normalized)
     rich_citations = normalized.get("citations")
-    metadata_obj = (
-        normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
-    )
-    telemetry_obj = (
-        normalized.get("telemetry") if isinstance(normalized.get("telemetry"), dict) else {}
-    )
+    _raw_meta = normalized.get("metadata")
+    metadata_obj: dict[str, Any] = _raw_meta if isinstance(_raw_meta, dict) else {}
+    _raw_tel = normalized.get("telemetry")
+    telemetry_obj: dict[str, Any] = _raw_tel if isinstance(_raw_tel, dict) else {}
     source_used = _extract_research_source_used(normalized)
     source_errors = normalize_source_errors(
         normalized.get("source_errors")
@@ -2561,24 +2551,24 @@ def _apply_research_quality_gates(
             return False
         return math.isfinite(numeric) and 0.0 <= numeric <= 1.0
 
-    real_citations = [item for item in citations if is_resolvable_citation(item)]
+    raw_citations = gated.get("citations")
+    citations_list = raw_citations if isinstance(raw_citations, list) else []
+    real_citations = [item for item in citations_list if is_resolvable_citation(item)]
     unsupported = gated.get("unsupported_claims")
     unsupported_count = len(unsupported) if isinstance(unsupported, list) else 0
     citation_count = len(real_citations)
     answer_present = bool(str(gated.get("answer_markdown") or gated.get("answer") or "").strip())
     mode = _coerce_research_mode(request_payload)
     raw_verification_matrix = gated.get("verification_matrix")
-    verification_matrix = (
+    verification_matrix: dict[str, Any] = (
         raw_verification_matrix if isinstance(raw_verification_matrix, dict) else {}
     )
-    verification_summary = (
-        verification_matrix.get("summary")
-        if isinstance(verification_matrix.get("summary"), dict)
-        else {}
+    _raw_summary = verification_matrix.get("summary")
+    verification_summary: dict[str, Any] = (
+        _raw_summary if isinstance(_raw_summary, dict) else {}
     )
-    verification_rows = (
-        verification_matrix.get("rows") if isinstance(verification_matrix.get("rows"), list) else []
-    )
+    _raw_rows = verification_matrix.get("rows")
+    verification_rows: list[Any] = _raw_rows if isinstance(_raw_rows, list) else []
     verification_state = str(verification_matrix.get("state") or "").strip().lower()
     verification_version = str(verification_matrix.get("version") or "").strip()
     verifier_counts_well_formed = is_nonnegative_integral_number(
@@ -2590,11 +2580,11 @@ def _apply_research_quality_gates(
     verifier_ratio_matches_counts = False
     if is_unit_interval_number(verifier_support_ratio) and verifier_counts_well_formed:
         if verifier_total_claims == 0:
-            verifier_ratio_matches_counts = float(verifier_support_ratio) == 0.0
+            verifier_ratio_matches_counts = float(cast(float, verifier_support_ratio)) == 0.0
         elif verifier_supported_claims <= verifier_total_claims:
             verifier_ratio_matches_counts = (
                 abs(
-                    float(verifier_support_ratio)
+                    float(cast(float, verifier_support_ratio))
                     - (verifier_supported_claims / verifier_total_claims)
                 )
                 <= 0.0001
@@ -2629,13 +2619,16 @@ def _apply_research_quality_gates(
         in {"unsupported", "insufficient", "contradicted", "failed", "error"}
     )
     unsupported_count = max(unsupported_count, unsupported_from_verifier)
-    metadata_input = gated.get("metadata") if isinstance(gated.get("metadata"), dict) else {}
-    source_target = (
-        gated.get("source_target_achieved")
-        if isinstance(gated.get("source_target_achieved"), dict)
-        else metadata_input.get("source_target_achieved")
-        if isinstance(metadata_input.get("source_target_achieved"), dict)
-        else {}
+    _raw_meta_input = gated.get("metadata")
+    metadata_input: dict[str, Any] = (
+        _raw_meta_input if isinstance(_raw_meta_input, dict) else {}
+    )
+    _raw_st = gated.get("source_target_achieved")
+    _st_meta = metadata_input.get("source_target_achieved")
+    source_target: dict[str, Any] = (
+        _raw_st
+        if isinstance(_raw_st, dict)
+        else (_st_meta if isinstance(_st_meta, dict) else {})
     )
     achieved_documents = safe_nonnegative_int(source_target.get("achieved_document_count"))
     retrieved_ids = gated.get("retrieved_ids")
@@ -2742,7 +2735,8 @@ def _attach_verified_research_presentation(
     if not isinstance(quality_gate, dict) or quality_gate.get("passed") is not True:
         return gated
 
-    metadata = gated.get("metadata") if isinstance(gated.get("metadata"), dict) else {}
+    _raw_meta = gated.get("metadata")
+    metadata: dict[str, Any] = _raw_meta if isinstance(_raw_meta, dict) else {}
     expected_mode = _resolve_research_output_mode(
         request_payload.get("output_mode"),
         role=str(request_payload.get("role") or ""),
@@ -2944,7 +2938,7 @@ def _claim_research_job(db: Session, *, job_id: str, worker_id: str) -> bool:
         )
     )
     db.commit()
-    return bool(claimed.rowcount)
+    return bool(getattr(claimed, "rowcount", 0))
 
 
 def _run_research_job(job_id: str) -> None:
@@ -2958,14 +2952,15 @@ def _run_research_job(job_id: str) -> None:
         ).scalar_one_or_none()
         if job is None:
             return
+        current_job: ResearchJob = job
         _append_job_event(
             db,
-            job=job,
+            job=current_job,
             stage="dispatch_ml",
             status_text="in_progress",
             note="Đã gửi yêu cầu lên ML service, đang chạy reasoning nhiều bước.",
         )
-        request_payload = job.request_payload if isinstance(job.request_payload, dict) else {}
+        request_payload = current_job.request_payload if isinstance(current_job.request_payload, dict) else {}
         last_heartbeat_bucket = -1
 
         def _heartbeat(elapsed_seconds: float, ml_event: dict[str, Any] | None) -> None:
@@ -2975,7 +2970,7 @@ def _run_research_job(job_id: str) -> None:
                 stage, status_text, note = ml_signal
                 _append_job_event(
                     db,
-                    job=job,
+                    job=current_job,
                     stage=stage,
                     status_text=status_text,
                     note=note or "ML đang cập nhật tiến trình reasoning.",
@@ -2996,7 +2991,7 @@ def _run_research_job(job_id: str) -> None:
             phase, note, progress_percent = _estimate_reasoning_phase(elapsed_seconds)
             _append_job_event(
                 db,
-                job=job,
+                job=current_job,
                 stage="reasoning",
                 status_text="in_progress",
                 note=note,
@@ -4991,13 +4986,13 @@ def research_clarify(
         and research_mode in _CLARIFY_DEEP_MODES
     )
     if not gate_open or not query_text:
-        return ResearchClarifyResponse(ambiguous=False, research_mode=research_mode, questions=[])
+        return ResearchClarifyResponse(ambiguous=False, research_mode=cast(Any, research_mode), questions=[])
 
     ambiguous = _detect_query_ambiguity(query_text)
     questions = _build_clarifying_questions(ui_language=payload.ui_language) if ambiguous else []
     return ResearchClarifyResponse(
         ambiguous=ambiguous,
-        research_mode=research_mode,
+        research_mode=cast(Any, research_mode),
         questions=questions,
     )
 

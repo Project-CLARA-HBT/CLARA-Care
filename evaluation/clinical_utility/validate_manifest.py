@@ -9,7 +9,14 @@ from evaluation.evidence_program.freeze import (
     verify_freeze,
 )
 
-CONDITIONS = {"full_authorized", "naive_rag", "btsa_or_tpr", "glhs_no_thss", "thss_default", "thss_strict"}
+CONDITIONS = {
+    "full_authorized",
+    "naive_rag",
+    "btsa_or_tpr",
+    "glhs_no_thss",
+    "thss_default",
+    "thss_strict",
+}
 
 
 def validate(task_manifest: Path, model_manifest: Path, freeze_manifest: Path) -> None:

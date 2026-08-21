@@ -13,25 +13,27 @@ from evaluation.clinical_utility.validate_manifest import (
 )
 from evaluation.evidence_program.freeze import FreezeError
 
-REQUIRED_COLUMNS = frozenset({
-    "task_id",
-    "context_condition",
-    "model_id",
-    "model_family",
-    "correct",
-    "critical_omission",
-    "unsupported_assertion",
-    "conflict_handling",
-    "evidence_fidelity",
-    "authorized_disclosure",
-    "prohibited_disclosure",
-    "input_tokens",
-    "output_tokens",
-    "latency_ms",
-    "provider_cost",
-    "completion_status",
-    "error_code",
-})
+REQUIRED_COLUMNS = frozenset(
+    {
+        "task_id",
+        "context_condition",
+        "model_id",
+        "model_family",
+        "correct",
+        "critical_omission",
+        "unsupported_assertion",
+        "conflict_handling",
+        "evidence_fidelity",
+        "authorized_disclosure",
+        "prohibited_disclosure",
+        "input_tokens",
+        "output_tokens",
+        "latency_ms",
+        "provider_cost",
+        "completion_status",
+        "error_code",
+    }
+)
 
 
 def validate_output(
@@ -63,9 +65,13 @@ def validate_output(
         raise FreezeError("utility_output_empty")
     if len(families) < 2:
         raise FreezeError("utility_output_two_model_families_required")
-    incomplete = [f"{task}:{model}" for (task, model), values in groups.items() if values != CONDITIONS]
+    incomplete = [
+        f"{task}:{model}" for (task, model), values in groups.items() if values != CONDITIONS
+    ]
     if incomplete:
-        raise FreezeError("utility_output_incomplete_condition_grid:" + ",".join(sorted(incomplete)))
+        raise FreezeError(
+            "utility_output_incomplete_condition_grid:" + ",".join(sorted(incomplete))
+        )
 
 
 if __name__ == "__main__":

@@ -867,11 +867,15 @@ class DynamicDAGLockManager:
     ) -> None:
         """Validate that all recorded snapshot versions still match current database state."""
         txn.check_not_wounded()
-        coords_to_check = (
-            target_coordinates if target_coordinates is not None else txn.held_coordinates
-        )
+        with self._lock:
+            coords_to_check = (
+                list(target_coordinates)
+                if target_coordinates is not None
+                else list(txn.held_coordinates)
+            )
+            snapshot_versions = dict(txn.snapshot_versions)
         for coord in coords_to_check:
-            expected_ver = txn.snapshot_versions.get(coord)
+            expected_ver = snapshot_versions.get(coord)
             if expected_ver is None:
                 continue
             partition = db.execute(
@@ -1751,6 +1755,7 @@ def apply_commitment_transition(
         return cast(GlhsClinicalCommitmentTransition, existing)
     dep_keys = _resolve_dependency_partition_keys(commitment.domain, data.dependencies)
     target_and_dep_keys = list({(commitment.domain, commitment.semantic_key)} | dep_keys)
+    # Canonical lock order: (1) Entity partitions (ordered), (2) Profile state, (3) Governed consent/policy
     locked_partitions = lock_entity_partitions(
         db,
         profile_id=scope.profile.id,
@@ -1788,7 +1793,7 @@ def apply_commitment_transition(
     if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json or ())):
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
     consent_version = _governed_consent_version(
-        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
+        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose, for_update=True
     )
     # GLHS-B05/B-010: after acquiring the profile/state lock, re-resolve the
     # root inference binding from the database (never from the proposal payload)

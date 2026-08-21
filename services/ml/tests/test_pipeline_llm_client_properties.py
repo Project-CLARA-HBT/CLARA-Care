@@ -17,7 +17,6 @@ from hypothesis import strategies as st
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.rag.pipeline import RagPipelineP1
 
-
 _CONFIGURED_API_KEY = "configured-deepseek-key"
 _CONFIGURED_BASE_URL = "https://configured.example.com"
 _CONFIGURED_MODEL = "deepseek-v4-pro"

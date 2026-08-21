@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 _SPACE_RE = re.compile(r"\s+")
 _WORD_RE = re.compile(r"\b[\w-]+\b", flags=re.UNICODE)
@@ -344,7 +344,16 @@ def analyze_vietnamese_clinical_text(text: str) -> VietnameseClinicalAnalysis:
     normalized = normalize_vietnamese_clinical_text(text)
     folded = fold_vietnamese_for_matching(normalized)
     negated = any(_contains_phrase(folded, cue) for cue in _NEGATION_FOLDED)
-    temporality = _first_matching_label(normalized, _TEMPORALITY_CUES) or "unspecified"
+    raw_temporality = _first_matching_label(normalized, _TEMPORALITY_CUES) or "unspecified"
+    temporality: Literal["current", "historical", "planned", "unspecified"] = cast(
+        Literal["current", "historical", "planned", "unspecified"], raw_temporality
+    )
+    raw_severity = _first_matching_label(normalized, _SEVERITY_CUES)
+    severity: Literal["moderate", "high", "critical"] | None = (
+        cast(Literal["moderate", "high", "critical"], raw_severity)
+        if raw_severity is not None
+        else None
+    )
     return VietnameseClinicalAnalysis(
         original_text=str(text or ""),
         normalized_text=normalized,
@@ -352,7 +361,7 @@ def analyze_vietnamese_clinical_text(text: str) -> VietnameseClinicalAnalysis:
         negated=negated,
         experiencer=_experiencer(normalized),
         temporality=temporality,
-        severity=_first_matching_label(normalized, _SEVERITY_CUES),
+        severity=severity,
         units=_extract_units(text),
         medication_mentions=_medication_mentions(normalized),
     )

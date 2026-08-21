@@ -24,9 +24,10 @@ from __future__ import annotations
 import hashlib
 import logging
 from collections import defaultdict
+from collections.abc import Iterable
 from concurrent.futures import Future, ThreadPoolExecutor
 from threading import BoundedSemaphore
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urlparse
 
 from clara_ml.config import settings
@@ -83,7 +84,7 @@ def _external_id(document: Any, *, source_key: str, url: str, text: str) -> str:
     document_id = _clean_text(getattr(document, "id", ""), max_length=240)
     if document_id:
         return document_id
-    digest = hashlib.sha256(f"{source_key}\n{url}\n{text}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(f"{source_key}\n{url}\n{text}".encode()).hexdigest()
     return f"live-{digest}"
 
 
@@ -142,7 +143,10 @@ def _persist_buckets(buckets: dict[str, list[RawRecord]]) -> None:
     """Run outside the request thread; failures are aggregate-only telemetry."""
 
     try:
-        from clara_ml.ingestion.scheduler import _build_default_orchestrator, _resolve_session_factory
+        from clara_ml.ingestion.scheduler import (
+            _build_default_orchestrator,
+            _resolve_session_factory,
+        )
 
         session_factory = _resolve_session_factory()
         orchestrator = _build_default_orchestrator(session_factory)

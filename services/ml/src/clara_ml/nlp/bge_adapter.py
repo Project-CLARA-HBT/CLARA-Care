@@ -25,13 +25,13 @@ an explicit, opt-in decision by the caller.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
+from typing import Any
 
 
 @dataclass
 class EmbeddingResult:
     text: str
-    vector: List[float]
+    vector: list[float]
 
 
 class BgeM3Pipeline:
@@ -51,13 +51,13 @@ class BgeM3Pipeline:
             # embedding client (and, transitively, the rag store wiring).
             from clara_ml.rag.embedder import HttpEmbeddingClient
 
-            self._embedder: object = HttpEmbeddingClient()
+            self._embedder: Any = HttpEmbeddingClient()
         else:
             from clara_ml.rag.embedder import BgeM3EmbedderStub
 
             self._embedder = BgeM3EmbedderStub()
 
-    def embed_batch(self, texts: List[str]) -> List[EmbeddingResult]:
+    def embed_batch(self, texts: list[str]) -> list[EmbeddingResult]:
         vectors = self._embedder.embed_batch(list(texts))
         return [
             EmbeddingResult(text=text, vector=[float(value) for value in vector])

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -134,7 +134,7 @@ def main() -> int:
 
     failed = [item for item in checks if not bool(item.get("passed"))]
     report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "current_path": str(current_path),
         "previous_path": str(previous_path),
         "max_drop_rate": float(args.max_drop_rate),

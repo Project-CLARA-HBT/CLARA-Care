@@ -22,9 +22,7 @@ class DatasetManifestTests(unittest.TestCase):
     ) -> None:
         manifest = load_dataset_manifest(MANIFEST, repository_root=ROOT)
 
-        self.assertEqual(
-            {entry.track_id for entry in manifest.datasets}, REQUIRED_TRACK_IDS
-        )
+        self.assertEqual({entry.track_id for entry in manifest.datasets}, REQUIRED_TRACK_IDS)
         self.assertTrue(manifest.data_policy["synthetic_fixtures_only"])
         for entry in manifest.datasets:
             self.assertFalse(entry.contains_phi)
@@ -43,9 +41,7 @@ class DatasetManifestTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             candidate = Path(temporary_directory) / "manifest.json"
             candidate.write_text(json.dumps(raw), encoding="utf-8")
-            with self.assertRaisesRegex(
-                ManifestValidationError, "dataset_checksum_mismatch"
-            ):
+            with self.assertRaisesRegex(ManifestValidationError, "dataset_checksum_mismatch"):
                 load_dataset_manifest(candidate, repository_root=ROOT)
 
     def test_metric_without_measurement_reason_and_command_is_rejected(self) -> None:
@@ -54,9 +50,7 @@ class DatasetManifestTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             candidate = Path(temporary_directory) / "manifest.json"
             candidate.write_text(json.dumps(raw), encoding="utf-8")
-            with self.assertRaisesRegex(
-                ManifestValidationError, "dataset_entry_invalid"
-            ):
+            with self.assertRaisesRegex(ManifestValidationError, "dataset_entry_invalid"):
                 load_dataset_manifest(candidate, repository_root=ROOT)
 
 

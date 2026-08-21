@@ -45,9 +45,7 @@ COLUMNS = (
 )
 
 
-def call(
-    base: str, key: str, model: str, prompt: str
-) -> tuple[dict, float, str | None]:
+def call(base: str, key: str, model: str, prompt: str) -> tuple[dict, float, str | None]:
     body = json.dumps(
         {
             "model": model,
@@ -96,9 +94,7 @@ def main() -> None:
                     f"Context condition: {condition}. Scenario: {case['scenario']}. "
                     "Do not diagnose, prescribe, or invent patient facts."
                 )
-                payload, latency, error = call(
-                    args.base_url, args.api_key, model, prompt
-                )
+                payload, latency, error = call(args.base_url, args.api_key, model, prompt)
                 choice = ((payload.get("choices") or [{}])[0].get("message") or {}).get(
                     "content", ""
                 )
@@ -115,8 +111,7 @@ def main() -> None:
                         "model_id": model,
                         "model_family": family,
                         "correct": str(
-                            parsed.get("state") == case["expected_state"]
-                            and error is None
+                            parsed.get("state") == case["expected_state"] and error is None
                         ).lower(),
                         "critical_omission": "unknown",
                         "unsupported_assertion": "unknown",
@@ -132,9 +127,7 @@ def main() -> None:
                         "error_code": error or ("invalid_json" if not parsed else ""),
                     }
                 )
-    with (args.output / "thss_utility.csv").open(
-        "w", encoding="utf-8", newline=""
-    ) as stream:
+    with (args.output / "thss_utility.csv").open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=COLUMNS)
         writer.writeheader()
         writer.writerows(rows)

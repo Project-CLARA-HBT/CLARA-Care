@@ -11,8 +11,14 @@ from evaluation.governance_adversarial.opportunity_schema import (
 )
 
 _COLUMNS = [
-    "case_id", "family", "arm", "run_status", "normalized_outcome",
-    "audit_reconstruction_complete", "rejection_reason_code", "transaction_trace",
+    "case_id",
+    "family",
+    "arm",
+    "run_status",
+    "normalized_outcome",
+    "audit_reconstruction_complete",
+    "rejection_reason_code",
+    "transaction_trace",
 ]
 
 
@@ -22,27 +28,31 @@ def _write_raw(tmp_path: Path, *, committed: int, rejected: int, audit_complete:
         arm_dir.mkdir(parents=True, exist_ok=True)
         rows = []
         for index in range(committed):
-            rows.append({
-                "case_id": f"{arm}-commit-{index}",
-                "family": "role_mismatch",
-                "arm": arm,
-                "run_status": "EXECUTED",
-                "normalized_outcome": "committed",
-                "audit_reconstruction_complete": "true" if index < audit_complete else "false",
-                "rejection_reason_code": "",
-                "transaction_trace": "",
-            })
+            rows.append(
+                {
+                    "case_id": f"{arm}-commit-{index}",
+                    "family": "role_mismatch",
+                    "arm": arm,
+                    "run_status": "EXECUTED",
+                    "normalized_outcome": "committed",
+                    "audit_reconstruction_complete": "true" if index < audit_complete else "false",
+                    "rejection_reason_code": "",
+                    "transaction_trace": "",
+                }
+            )
         for index in range(rejected):
-            rows.append({
-                "case_id": f"{arm}-reject-{index}",
-                "family": "authorization_consent_toctou",
-                "arm": arm,
-                "run_status": "EXECUTED",
-                "normalized_outcome": "rejected",
-                "audit_reconstruction_complete": "false",
-                "rejection_reason_code": "",
-                "transaction_trace": "",
-            })
+            rows.append(
+                {
+                    "case_id": f"{arm}-reject-{index}",
+                    "family": "authorization_consent_toctou",
+                    "arm": arm,
+                    "run_status": "EXECUTED",
+                    "normalized_outcome": "rejected",
+                    "audit_reconstruction_complete": "false",
+                    "rejection_reason_code": "",
+                    "transaction_trace": "",
+                }
+            )
         with (arm_dir / "raw_results.csv").open("w", encoding="utf-8", newline="") as stream:
             writer = csv.DictWriter(stream, fieldnames=_COLUMNS, lineterminator="\n")
             writer.writeheader()

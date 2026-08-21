@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -134,7 +135,7 @@ async def get_optional_current_token(
         return None
 
 
-def require_roles(*roles: str) -> Callable[[TokenPayload], TokenPayload]:
+def require_roles(*roles: str) -> Callable[..., Any]:
     async def _checker(token: TokenPayload = Depends(get_current_token)) -> TokenPayload:
         if token.role == "admin":
             return token

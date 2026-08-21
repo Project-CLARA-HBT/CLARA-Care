@@ -2,12 +2,12 @@ from .fides_lite import FactCheckResult, run_fides_lite
 from .nli_verifier import (
     ClaimVerdict,
     NliClaimVerdict,
-    build_verification_matrix,
     build_contradiction_summary,
+    build_verification_matrix,
     classify_claim,
     contradiction_summary,
-    summarize_verification_matrix,
     summarize_verdicts,
+    summarize_verification_matrix,
     verify_claims,
 )
 

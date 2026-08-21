@@ -358,40 +358,46 @@ def resolve_encoder_shadow_selection(settings: Any) -> EncoderShadowSelection:
     if not contract.shadow_only or contract.allowed_model_tiers != ("encoder_slm",):
         raise ValueError("encoder_shadow_task_contract_invalid")
 
-    shared = {
-        "task": task,
-        "prompt_version": contract.prompt_version,
-        "contract_schema_version": TASK_CONTRACT_SCHEMA_VERSION,
-    }
+    prompt_version = contract.prompt_version
+    schema_version = TASK_CONTRACT_SCHEMA_VERSION
     if not _bool(settings, "model_registry_enabled", True):
         return EncoderShadowSelection(
+            task=task,
             state="disabled",
             reason="model_registry_disabled",
-            **shared,
+            prompt_version=prompt_version,
+            contract_schema_version=schema_version,
         )
     if not _bool(settings, "encoder_slm_shadow_enabled", False):
         return EncoderShadowSelection(
+            task=task,
             state="disabled",
             reason="feature_flag_disabled",
-            **shared,
+            prompt_version=prompt_version,
+            contract_schema_version=schema_version,
         )
 
     endpoint = _text(settings, "encoder_slm_shadow_url")
     if not endpoint:
         return EncoderShadowSelection(
+            task=task,
             state="unavailable",
             reason="endpoint_not_configured",
-            **shared,
+            prompt_version=prompt_version,
+            contract_schema_version=schema_version,
         )
     if not _valid_http_endpoint(endpoint):
         return EncoderShadowSelection(
+            task=task,
             state="unavailable",
             reason="endpoint_invalid",
-            **shared,
+            prompt_version=prompt_version,
+            contract_schema_version=schema_version,
         )
 
     model_id = _text(settings, "encoder_slm_shadow_model_id")[:160]
     selection = EncoderShadowSelection(
+        task=task,
         state="available",
         reason="registry_resolved",
         endpoint=endpoint,
@@ -412,7 +418,8 @@ def resolve_encoder_shadow_selection(settings: Any) -> EncoderShadowSelection:
             minimum=64,
             maximum=4000,
         ),
-        **shared,
+        prompt_version=prompt_version,
+        contract_schema_version=schema_version,
     )
     logger.info(
         "model_task_selected task=%s provider=external_encoder_slm prompt=%s shadow_only=true",

@@ -44,7 +44,9 @@ class Outcome:
     idempotent: bool = False
 
 
-def issue_disclosure(state: State, *, evidence: frozenset[str] = frozenset(), expiry: int = TTL) -> Outcome:
+def issue_disclosure(
+    state: State, *, evidence: frozenset[str] = frozenset(), expiry: int = TTL
+) -> Outcome:
     if state.consent_state != CONSENT_GRANTED:
         return Outcome(False, state, "consent_revoked")
     ev = frozenset(evidence)
@@ -242,7 +244,9 @@ def _try_commit(state: State) -> Outcome:
         return Outcome(True, state, "idempotent_replay", idempotent=True)
     failure = _admission_failure(state)
     if failure is not None:
-        return Outcome(False, replace(state, origin="commit", commit_status=COMMIT_REJECTED), failure)
+        return Outcome(
+            False, replace(state, origin="commit", commit_status=COMMIT_REJECTED), failure
+        )
     keys = state.committed_keys | frozenset({key}) if key is not None else state.committed_keys
     nxt = replace(
         state,

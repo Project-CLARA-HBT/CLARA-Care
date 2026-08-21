@@ -150,7 +150,7 @@ class _NoOpSpan:
     @contextmanager
     def stage(
         self, name: str, attributes: Mapping[str, Any] | None = None
-    ) -> Iterator["_NoOpSpan"]:
+    ) -> Iterator[_NoOpSpan]:
         _ = (name, attributes)
         yield self
 
@@ -158,7 +158,7 @@ class _NoOpSpan:
 class SpanHandle:
     """Active span handle that can open PII-free stage child spans."""
 
-    def __init__(self, tracer: "Tracer", span: Any) -> None:
+    def __init__(self, tracer: Tracer, span: Any) -> None:
         self._tracer = tracer
         self._span = span
 
@@ -227,7 +227,7 @@ class Tracer:
 
 @contextmanager
 def _span_scope(
-    tracer: "Tracer | None",
+    tracer: Tracer | None,
     name: str,
     attributes: Mapping[str, Any] | None,
 ) -> Iterator[Any]:
@@ -238,12 +238,14 @@ def _span_scope(
     served (Requirement 6.5).
     """
 
-    if tracer is None or not getattr(tracer, "enabled", False):
+    if tracer is None or not getattr(tracer, "enabled", False) or tracer._otel is None:
         yield _NoOpSpan()
         return
 
     try:
-        span_cm = tracer._otel.start_as_current_span(name)
+        otel = tracer._otel
+        assert otel is not None
+        span_cm = otel.start_as_current_span(name)
         span = span_cm.__enter__()
     except Exception:  # noqa: BLE001 - never break the request on span start
         logger.debug("failed to start span %s", name, exc_info=True)

@@ -35,8 +35,7 @@ class _DummyStreamResponse(_DummyResponse):
         return None
 
     def iter_lines(self):
-        for line in self._lines:
-            yield line
+        yield from self._lines
 
 
 class _DummySseResponse(_DummyResponse):
@@ -48,8 +47,7 @@ class _DummySseResponse(_DummyResponse):
         self.headers = {"content-type": "text/event-stream; charset=utf-8"}
 
     def iter_lines(self):
-        for line in self._lines:
-            yield line
+        yield from self._lines
 
 
 def test_generate_enforces_registry_generation_contract_values(

@@ -37,9 +37,7 @@ def test_v5_validator_checks_complete_grid_cohort_and_reproduction(tmp_path) -> 
         json.dumps(cohort[0], sort_keys=True, separators=(",", ":")) + "\n",
         encoding="utf-8",
     )
-    cohort_manifest_path.write_text(
-        json.dumps(cohort_manifest, sort_keys=True), encoding="utf-8"
-    )
+    cohort_manifest_path.write_text(json.dumps(cohort_manifest, sort_keys=True), encoding="utf-8")
 
     limits = RunLimits(
         max_subjects=1,

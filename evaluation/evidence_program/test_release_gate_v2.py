@@ -103,9 +103,7 @@ def test_v2_gate_refuses_available_with_evidence_outside_repository(tmp_path: Pa
             },
         ),
     )
-    with pytest.raises(
-        FreezeError, match="clinical_human_validation_evidence_outside_repository"
-    ):
+    with pytest.raises(FreezeError, match="clinical_human_validation_evidence_outside_repository"):
         validate(path, repository_root=tmp_path)
 
 

@@ -41,7 +41,9 @@ def _sha256(context: dict[str, Any]) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def _v7_packet(context: dict[str, Any], *, case: Any, events: tuple[Any, ...], cutoff: datetime) -> dict[str, Any]:
+def _v7_packet(
+    context: dict[str, Any], *, case: Any, events: tuple[Any, ...], cutoff: datetime
+) -> dict[str, Any]:
     hybrid = build_solver_packets(
         case,
         events,
@@ -64,9 +66,7 @@ def test_glhs_v2_full_is_registered_in_the_production_adapter_inventory() -> Non
 
 def test_glhs_v2_full_context_differs_from_glhs_hybrid_bytes() -> None:
     case, events, cutoff = _case()
-    context = compile_glhs_v2_full_context(
-        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
-    )
+    context = compile_glhs_v2_full_context(case, events, valid_cutoff=cutoff, known_cutoff=cutoff)
     hybrid = build_solver_packets(
         case,
         events,
@@ -76,16 +76,12 @@ def test_glhs_v2_full_context_differs_from_glhs_hybrid_bytes() -> None:
     )["glhs_hybrid"]["context"]
     assert context["representation"] != hybrid["representation"]
     assert _sha256(context) != _sha256(hybrid)
-    assert context["production_path"]["reconciliation_engine"] == (
-        "commitment-reconciliation.v1"
-    )
+    assert context["production_path"]["reconciliation_engine"] == ("commitment-reconciliation.v1")
 
 
 def test_glhs_v2_full_context_exposes_the_upgraded_production_information() -> None:
     case, events, cutoff = _case()
-    context = compile_glhs_v2_full_context(
-        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
-    )
+    context = compile_glhs_v2_full_context(case, events, valid_cutoff=cutoff, known_cutoff=cutoff)
     assert context["production_path"]["component"] == "api_owned_gst_commitment_thss"
     assert context["production_path"]["pipeline"] == [
         "authorization",
@@ -107,7 +103,14 @@ def test_glhs_v2_full_context_exposes_the_upgraded_production_information() -> N
     assert context["selection"]["blocked"] is False
 
     # Fact-level coverage with the same facts the compiler reports.
-    for fact in ("anchor", "target", "predicate_inputs", "dependencies", "authority", "minimum_evidence"):
+    for fact in (
+        "anchor",
+        "target",
+        "predicate_inputs",
+        "dependencies",
+        "authority",
+        "minimum_evidence",
+    ):
         assert fact in context["fact_coverage"]
     assert context["fact_coverage"]["anchor"]["covered"] is True
 
@@ -175,12 +178,8 @@ def test_glhs_v2_full_context_exposes_the_upgraded_production_information() -> N
 
 def test_glhs_v2_full_context_is_deterministic() -> None:
     case, events, cutoff = _case()
-    first = compile_glhs_v2_full_context(
-        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
-    )
-    second = compile_glhs_v2_full_context(
-        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
-    )
+    first = compile_glhs_v2_full_context(case, events, valid_cutoff=cutoff, known_cutoff=cutoff)
+    second = compile_glhs_v2_full_context(case, events, valid_cutoff=cutoff, known_cutoff=cutoff)
     assert _sha256(first) == _sha256(second)
     assert first["commitments"][0]["evidence_ids"] == [
         "Observation/observation-one",
@@ -193,13 +192,13 @@ def test_glhs_v2_full_context_is_deterministic() -> None:
 
 def test_glhs_v2_full_context_has_no_clinical_payload_leakage() -> None:
     case, events, cutoff = _case()
-    context = compile_glhs_v2_full_context(
-        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
-    )
+    context = compile_glhs_v2_full_context(case, events, valid_cutoff=cutoff, known_cutoff=cutoff)
     # The harness's own fail-closed leakage gate accepts the v7 packet: no
     # construction gold, no derived label in canonical state, no future
     # knowledge.
-    validate_solver_packet(_v7_packet(context, case=case, events=events, cutoff=cutoff), known_cutoff=cutoff)
+    validate_solver_packet(
+        _v7_packet(context, case=case, events=events, cutoff=cutoff), known_cutoff=cutoff
+    )
     raw = json.dumps(context, sort_keys=True, default=str)
     lowered = raw.lower()
     for key in ("construction_gold", "gold_label", "escalation_state"):

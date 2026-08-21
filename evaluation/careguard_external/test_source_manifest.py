@@ -15,11 +15,18 @@ from evaluation.evidence_program.freeze import FreezeError
 
 def _manifest(role: str) -> dict[str, object]:
     return {
-        "schema_version": "careguard-vn.source-manifest.v1", "status": "FROZEN_ACQUIRED",
-        "source_name": role, "independence_role": role, "source_url": f"https://example.test/{role}",
-        "retrieved_at_utc": "2026-08-16T00:00:00Z", "version_or_release": "v1",
-        "access_terms": "reviewed", "license": "reviewed", "redistribution_policy": "derived_only",
-        "payload_sha256": sha256(role.encode()).hexdigest(), "row_count": 1,
+        "schema_version": "careguard-vn.source-manifest.v1",
+        "status": "FROZEN_ACQUIRED",
+        "source_name": role,
+        "independence_role": role,
+        "source_url": f"https://example.test/{role}",
+        "retrieved_at_utc": "2026-08-16T00:00:00Z",
+        "version_or_release": "v1",
+        "access_terms": "reviewed",
+        "license": "reviewed",
+        "redistribution_policy": "derived_only",
+        "payload_sha256": sha256(role.encode()).hexdigest(),
+        "row_count": 1,
         "record_hash_algorithm": "sha256(canonical_record_json)",
         "record_hash_inventory": [{"source_record_id": "record", "source_record_hash": "b" * 64}],
         "raw_retention_location": "/controlled/archive/source-v1",
@@ -48,9 +55,15 @@ def test_pending_public_redistribution_review_is_not_an_acquisition_blocker(tmp_
 
 
 def test_final_source_set_requires_all_independent_roles(tmp_path: Path) -> None:
-    paths = [_write(tmp_path / f"{role}.json", _manifest(role)) for role in (
-        "identity_frame", "terminology", "positive_ddi_reference", "regulatory_confirmation",
-    )]
+    paths = [
+        _write(tmp_path / f"{role}.json", _manifest(role))
+        for role in (
+            "identity_frame",
+            "terminology",
+            "positive_ddi_reference",
+            "regulatory_confirmation",
+        )
+    ]
     assert len(validate_source_set(paths)) == 4
 
 
@@ -61,7 +74,9 @@ def test_final_source_set_rejects_one_payload_relabelled_as_multiple_roles(tmp_p
         value["source_url"] = f"https://example.test/source-{index}"
         value["payload_sha256"] = f"{index:x}" * 64
     values[1]["payload_sha256"] = values[0]["payload_sha256"]
-    paths = [_write(tmp_path / f"{role}.json", value) for role, value in zip(roles, values, strict=True)]
+    paths = [
+        _write(tmp_path / f"{role}.json", value) for role, value in zip(roles, values, strict=True)
+    ]
 
     with pytest.raises(FreezeError, match="careguard_source_set_sources_not_independent"):
         validate_source_set(paths)
@@ -76,7 +91,9 @@ def test_final_source_set_rejects_one_source_name_relabelled_as_multiple_roles(
         value["source_url"] = f"https://example.test/source-{index}"
         value["payload_sha256"] = f"{index:x}" * 64
     values[1]["source_name"] = values[0]["source_name"]
-    paths = [_write(tmp_path / f"{role}.json", value) for role, value in zip(roles, values, strict=True)]
+    paths = [
+        _write(tmp_path / f"{role}.json", value) for role, value in zip(roles, values, strict=True)
+    ]
 
     with pytest.raises(FreezeError, match="careguard_source_set_sources_not_independent"):
         validate_source_set(paths)
@@ -92,13 +109,17 @@ def test_final_source_set_normalizes_cosmetic_source_name_variations(
         value["payload_sha256"] = f"{index:x}" * 64
     values[0]["source_name"] = "Independent   Source"
     values[1]["source_name"] = " independent source "
-    paths = [_write(tmp_path / f"{role}.json", value) for role, value in zip(roles, values, strict=True)]
+    paths = [
+        _write(tmp_path / f"{role}.json", value) for role, value in zip(roles, values, strict=True)
+    ]
 
     with pytest.raises(FreezeError, match="careguard_source_set_sources_not_independent"):
         validate_source_set(paths)
 
 
-def test_final_manifest_requires_full_unique_inventory_and_retrieval_metadata(tmp_path: Path) -> None:
+def test_final_manifest_requires_full_unique_inventory_and_retrieval_metadata(
+    tmp_path: Path,
+) -> None:
     value = _manifest("identity_frame")
     value["row_count"] = 2
     with pytest.raises(FreezeError, match="careguard_source_manifest_inventory_count_mismatch"):

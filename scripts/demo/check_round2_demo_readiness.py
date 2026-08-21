@@ -5,7 +5,7 @@ import argparse
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -52,7 +52,7 @@ def _write_report(out_dir: Path, run_id: str, gates: list[Gate]) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = {
         "run_id": run_id,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "ready": all(g.passed for g in gates),
         "gates": [{"id": g.id, "passed": g.passed, "detail": g.detail} for g in gates],
     }

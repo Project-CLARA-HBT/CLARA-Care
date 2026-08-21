@@ -80,7 +80,10 @@ def main() -> int:
     snapshot = repository_snapshot(args.repository_root)
     inventory = sealed_run_inventory(args.repository_root)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    for name, value in (("repository_snapshot.json", snapshot), ("sealed_run_inventory.json", inventory)):
+    for name, value in (
+        ("repository_snapshot.json", snapshot),
+        ("sealed_run_inventory.json", inventory),
+    ):
         payload = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
         (args.output_dir / name).write_bytes(payload)
         print(f"{name}: sha256={_sha256_bytes(payload)}")

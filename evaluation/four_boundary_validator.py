@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-class BoundaryViolationType(str, enum.Enum):
+class BoundaryViolationType(enum.StrEnum):
     NONE = "none"
     FRESHNESS_VIOLATION = "freshness_boundary_violation"
     CAUSAL_PRECEDENCE_VIOLATION = "causal_precedence_boundary_violation"
@@ -128,12 +128,18 @@ class SantosGrueiroFourBoundaryValidator:
         """Boundary 1: Check lease expiry and bitemporal validity."""
         # 1. Lease TTL Check
         if current_time > lease.expires_at:
-            return False, f"Temporary authority lease {lease.lease_id} expired at {lease.expires_at:.2f} (current={current_time:.2f})"
+            return (
+                False,
+                f"Temporary authority lease {lease.lease_id} expired at {lease.expires_at:.2f} (current={current_time:.2f})",
+            )
 
         # 2. Bitemporal fact interval check
         for mut in mutations:
             if not mut.temporal_validity.is_known_at(current_time):
-                return False, f"Mutation for {mut.coordinate.to_key()} knowledge time not current ({mut.temporal_validity})"
+                return (
+                    False,
+                    f"Mutation for {mut.coordinate.to_key()} knowledge time not current ({mut.temporal_validity})",
+                )
         return True, None
 
     def validate_causal_precedence_boundary(
@@ -150,9 +156,15 @@ class SantosGrueiroFourBoundaryValidator:
             committed_v = committed_partition_versions.get(key, 0)
 
             if claimed_v != snapshot_v:
-                return False, f"Claimed base version for {key} ({claimed_v}) != snapshot version ({snapshot_v})"
+                return (
+                    False,
+                    f"Claimed base version for {key} ({claimed_v}) != snapshot version ({snapshot_v})",
+                )
             if committed_v > snapshot_v:
-                return False, f"Causal precedence conflict on {key}: committed DB version ({committed_v}) > snapshot version ({snapshot_v})"
+                return (
+                    False,
+                    f"Causal precedence conflict on {key}: committed DB version ({committed_v}) > snapshot version ({snapshot_v})",
+                )
         return True, None
 
     def validate_effect_scoping_boundary(
@@ -164,9 +176,15 @@ class SantosGrueiroFourBoundaryValidator:
         for mut in mutations:
             key = mut.coordinate.to_key()
             if mut.coordinate.profile_id != lease.profile_id:
-                return False, f"Cross-tenant effect escalation: mutation target {mut.coordinate.profile_id} != lease {lease.profile_id}"
+                return (
+                    False,
+                    f"Cross-tenant effect escalation: mutation target {mut.coordinate.profile_id} != lease {lease.profile_id}",
+                )
             if key not in lease.authorized_coordinates:
-                return False, f"Effect scoping violation: coordinate {key} not in authorized lease set {lease.authorized_coordinates}"
+                return (
+                    False,
+                    f"Effect scoping violation: coordinate {key} not in authorized lease set {lease.authorized_coordinates}",
+                )
         return True, None
 
     def validate_admissibility_boundary(
@@ -180,15 +198,24 @@ class SantosGrueiroFourBoundaryValidator:
         """Boundary 4: Deterministic clinical safety invariants (DDI, Consent, Policy Epoch)."""
         # 1. Policy & Consent Epoch Invariance
         if current_policy_epoch != lease.policy_epoch:
-            return False, f"Policy epoch mismatch: current {current_policy_epoch} != lease {lease.policy_epoch}", []
+            return (
+                False,
+                f"Policy epoch mismatch: current {current_policy_epoch} != lease {lease.policy_epoch}",
+                [],
+            )
         if current_consent_epoch != lease.consent_epoch:
-            return False, f"Consent epoch mismatch: patient consent modified/revoked ({current_consent_epoch} != {lease.consent_epoch})", []
+            return (
+                False,
+                f"Consent epoch mismatch: patient consent modified/revoked ({current_consent_epoch} != {lease.consent_epoch})",
+                [],
+            )
 
         # 2. Severe Drug-Drug Interaction Barrier
         proposed_meds = {
             mut.payload.get("drug_name", "").strip().lower()
             for mut in mutations
-            if mut.coordinate.domain == "medication" and mut.action in ("insert", "update", "adjust_dose")
+            if mut.coordinate.domain == "medication"
+            and mut.action in ("insert", "update", "adjust_dose")
         }
         proposed_meds.discard("")
 
@@ -202,7 +229,11 @@ class SantosGrueiroFourBoundaryValidator:
                 conflicts.append(f"{p_list[0]} + {p_list[1]}")
 
         if conflicts:
-            return False, f"Deterministic DDI safety barrier triggered: severe interactions detected ({', '.join(conflicts)})", conflicts
+            return (
+                False,
+                f"Deterministic DDI safety barrier triggered: severe interactions detected ({', '.join(conflicts)})",
+                conflicts,
+            )
 
         return True, None, []
 
@@ -244,7 +275,9 @@ class SantosGrueiroFourBoundaryValidator:
             )
 
         # Boundary 3: Causal Precedence
-        c_ok, c_msg = self.validate_causal_precedence_boundary(lease, mutations, committed_partition_versions)
+        c_ok, c_msg = self.validate_causal_precedence_boundary(
+            lease, mutations, committed_partition_versions
+        )
         if not c_ok:
             return FourBoundaryValidationResult(
                 is_admissible=False,
@@ -305,15 +338,27 @@ def run_four_boundary_stress_evaluation(num_cases: int = 100) -> dict[str, Any]:
         actor_id="clinician_01",
         actor_role="physician",
         purpose="chronic_disease_mgmt",
-        authorized_coordinates={coord_met.to_key(), coord_lis.to_key(), coord_war.to_key(), coord_asp.to_key()},
-        snapshot_base_versions={coord_met.to_key(): 1, coord_lis.to_key(): 1, coord_war.to_key(): 1, coord_asp.to_key(): 1},
+        authorized_coordinates={
+            coord_met.to_key(),
+            coord_lis.to_key(),
+            coord_war.to_key(),
+            coord_asp.to_key(),
+        },
+        snapshot_base_versions={
+            coord_met.to_key(): 1,
+            coord_lis.to_key(): 1,
+            coord_war.to_key(): 1,
+            coord_asp.to_key(): 1,
+        },
         policy_epoch=1,
         consent_epoch=1,
         issued_at=t0,
         expires_at=t0 + 60.0,
     )
 
-    interval = BitemporalInterval(valid_start=t0 - 100, valid_end=None, know_start=t0 - 100, know_end=None)
+    interval = BitemporalInterval(
+        valid_start=t0 - 100, valid_end=None, know_start=t0 - 100, know_end=None
+    )
 
     valid_mutation = ClinicalMutation(
         coordinate=coord_met,
@@ -353,7 +398,10 @@ def run_four_boundary_stress_evaluation(num_cases: int = 100) -> dict[str, Any]:
             current_consent_epoch=1,
             current_time=t0 + 70.0,
         )
-        if not res_f.is_admissible and res_f.primary_violation == BoundaryViolationType.FRESHNESS_VIOLATION:
+        if (
+            not res_f.is_admissible
+            and res_f.primary_violation == BoundaryViolationType.FRESHNESS_VIOLATION
+        ):
             freshness_blocked += 1
 
         # 3. Causal conflict
@@ -366,7 +414,10 @@ def run_four_boundary_stress_evaluation(num_cases: int = 100) -> dict[str, Any]:
             current_consent_epoch=1,
             current_time=t0 + 10.0,
         )
-        if not res_c.is_admissible and res_c.primary_violation == BoundaryViolationType.CAUSAL_PRECEDENCE_VIOLATION:
+        if (
+            not res_c.is_admissible
+            and res_c.primary_violation == BoundaryViolationType.CAUSAL_PRECEDENCE_VIOLATION
+        ):
             causal_blocked += 1
 
         # 4. Out of scope mutation
@@ -386,7 +437,10 @@ def run_four_boundary_stress_evaluation(num_cases: int = 100) -> dict[str, Any]:
             current_consent_epoch=1,
             current_time=t0 + 10.0,
         )
-        if not res_e.is_admissible and res_e.primary_violation == BoundaryViolationType.EFFECT_SCOPING_VIOLATION:
+        if (
+            not res_e.is_admissible
+            and res_e.primary_violation == BoundaryViolationType.EFFECT_SCOPING_VIOLATION
+        ):
             scoping_blocked += 1
 
         # 5. Admissibility DDI conflict (Warfarin + Aspirin)
@@ -406,7 +460,10 @@ def run_four_boundary_stress_evaluation(num_cases: int = 100) -> dict[str, Any]:
             current_consent_epoch=1,
             current_time=t0 + 10.0,
         )
-        if not res_a.is_admissible and res_a.primary_violation == BoundaryViolationType.ADMISSIBILITY_VIOLATION:
+        if (
+            not res_a.is_admissible
+            and res_a.primary_violation == BoundaryViolationType.ADMISSIBILITY_VIOLATION
+        ):
             admissibility_blocked += 1
 
     return {

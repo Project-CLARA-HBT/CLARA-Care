@@ -168,7 +168,9 @@ class GlhsGovernancePolicyEpochRow(Base):
     created_at = Column(DateTime(timezone=True), nullable=False)
 
 
-def _real_consent_record(*, user_id: int, consent_type: str, consent_version: str, revoked_at: datetime) -> object:
+def _real_consent_record(
+    *, user_id: int, consent_type: str, consent_version: str, revoked_at: datetime
+) -> object:
     return UserConsent(
         user_id=user_id,
         consent_type=consent_type,
@@ -177,7 +179,15 @@ def _real_consent_record(*, user_id: int, consent_type: str, consent_version: st
     )
 
 
-def _real_epoch_row(*, id: str, policy_domain: str, version: str, active_from: datetime, canonical_digest: str, created_at: datetime) -> object:
+def _real_epoch_row(
+    *,
+    id: str,
+    policy_domain: str,
+    version: str,
+    active_from: datetime,
+    canonical_digest: str,
+    created_at: datetime,
+) -> object:
     return GlhsGovernancePolicyEpochRow(
         id=id,
         policy_domain=policy_domain,
@@ -188,7 +198,15 @@ def _real_epoch_row(*, id: str, policy_domain: str, version: str, active_from: d
     )
 
 
-def _real_api_epoch_row(*, id: str, policy_domain: str, version: str, active_from: datetime, canonical_digest: str, created_at: datetime) -> object:
+def _real_api_epoch_row(
+    *,
+    id: str,
+    policy_domain: str,
+    version: str,
+    active_from: datetime,
+    canonical_digest: str,
+    created_at: datetime,
+) -> object:
     """Create the real API ``GovernancePolicyEpoch`` row (database-assigned id).
 
     The v2.1 persisted-epoch path writes the production ORM row so the real
@@ -252,19 +270,27 @@ class SessionAdapter:
         return self._session.scalar(statement)
 
     def load_consent_target(self, *, user_id: int, consent_type: str) -> UserConsent | None:
-        return self._session.execute(
-            select(UserConsent)
-            .where(UserConsent.user_id == user_id, UserConsent.consent_type == consent_type)
-            .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
-        ).scalars().first()
+        return (
+            self._session.execute(
+                select(UserConsent)
+                .where(UserConsent.user_id == user_id, UserConsent.consent_type == consent_type)
+                .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
+            )
+            .scalars()
+            .first()
+        )
 
     def load_policy_epoch(self, *, policy_domain: str) -> object | None:
         model = self._epoch_model
-        return self._session.execute(
-            select(model)
-            .where(model.policy_domain == policy_domain)
-            .order_by(model.created_at.desc())
-        ).scalars().first()
+        return (
+            self._session.execute(
+                select(model)
+                .where(model.policy_domain == policy_domain)
+                .order_by(model.created_at.desc())
+            )
+            .scalars()
+            .first()
+        )
 
 
 @dataclass
@@ -275,13 +301,16 @@ class ExecutorEnv:
     adapter_factory: Callable[[Any], Any] = lambda session: session
     gateway: Any = gateway_module
     barrier_factory: Callable[[int], Any] = lambda parties: PhasedBarrier(parties, timeout_s=30.0)
-    lock_factory: Callable[[str, TransactionTrace | None], Any] = lambda name, trace: CompetingLock(name, trace)
+    lock_factory: Callable[[str, TransactionTrace | None], Any] = lambda name, trace: CompetingLock(
+        name, trace
+    )
     consent_record_factory: Callable[..., object] | None = None
     epoch_factory: Callable[..., object] | None = None
     postgres_metadata: Mapping[str, object] = field(default_factory=dict)
 
 
 # --- fail-closed gates --------------------------------------------------------
+
 
 def load_protocol(path: Path) -> dict[str, object]:
     try:
@@ -301,9 +330,10 @@ def validate_protocol(protocol: Mapping[str, object]) -> dict[str, object]:
         raise ValueError("v2_protocol_schema_invalid")
     if protocol.get("isolation") != V2_ISOLATION_CONTRACT:
         raise ValueError("v2_isolation_contract_invalid")
-    if schema_version == V21_PROTOCOL_SCHEMA_VERSION and protocol.get(
-        "persisted_epoch_required"
-    ) is not True:
+    if (
+        schema_version == V21_PROTOCOL_SCHEMA_VERSION
+        and protocol.get("persisted_epoch_required") is not True
+    ):
         raise ValueError("v21_persisted_epoch_required_missing")
     schedules = protocol.get("schedules")
     if not isinstance(schedules, list):
@@ -359,6 +389,7 @@ def _source_revision() -> str:
 
 # --- synthetic seed helpers (real gateway + real models) ----------------------
 
+
 def _seed_owner_scope(db: Any) -> ProfileScope:
     user = User(email=f"v2-owner-{uuid4().hex}@example.test", hashed_password="x", role="normal")
     db.add(user)
@@ -406,7 +437,9 @@ def _delegated_actor_role(account_role: str) -> str:
 def _seed_delegated_scope(db: Any) -> tuple[ProfileScope, User]:
     """Synthetic delegated scope governed by a persisted Family grant + role."""
     owner = User(email=f"v2-owner-{uuid4().hex}@example.test", hashed_password="x", role="normal")
-    delegate = User(email=f"v2-delegate-{uuid4().hex}@example.test", hashed_password="x", role="doctor")
+    delegate = User(
+        email=f"v2-delegate-{uuid4().hex}@example.test", hashed_password="x", role="doctor"
+    )
     db.add_all([owner, delegate])
     db.flush()
     profile = PhrProfile(user_id=owner.id)
@@ -482,7 +515,9 @@ def _seed_snapshot(env: ExecutorEnv, db: Any, scope: ProfileScope) -> Snapshot:
     )
 
 
-def _seed_proposal(env: ExecutorEnv, db: Any, scope: ProfileScope, snapshot: Snapshot) -> tuple[object, str]:
+def _seed_proposal(
+    env: ExecutorEnv, db: Any, scope: ProfileScope, snapshot: Snapshot
+) -> tuple[object, str]:
     evidence = _seed_evidence(env, db, scope)
     digest, _binding_field = snapshot_binding_digest(snapshot)
     proposal = env.gateway.propose_assertion(
@@ -520,7 +555,9 @@ def _setup_owner(env: ExecutorEnv) -> tuple[ProfileScope, Snapshot, object, str]
 
 def _transition_item_count(db: Any, *, assertion_id: int) -> int:
     value = db.scalar(
-        select(func.count(GlhsTransitionItem.id)).where(GlhsTransitionItem.assertion_id == assertion_id)
+        select(func.count(GlhsTransitionItem.id)).where(
+            GlhsTransitionItem.assertion_id == assertion_id
+        )
     )
     return int(value or 0)
 
@@ -538,7 +575,9 @@ def _committed_transition_total(db: Any, *, assertion_id: int) -> int:
     if callable(explicit):
         return int(explicit(assertion_id=assertion_id) or 0)
     value = db.scalar(
-        select(func.count(GlhsTransitionItem.id)).where(GlhsTransitionItem.assertion_id == assertion_id)
+        select(func.count(GlhsTransitionItem.id)).where(
+            GlhsTransitionItem.assertion_id == assertion_id
+        )
     )
     return int(value or 0)
 
@@ -621,6 +660,7 @@ def _attempt_commit(
 
 # --- schedule drivers ---------------------------------------------------------
 
+
 def _driver_v2_01(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
     """TOCTOU-V2-01: persisted consent writer revokes, then bound commit is rejected."""
     started = now_monotonic_ns()
@@ -650,13 +690,16 @@ def _driver_v2_01(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 
     cdb = env.session_factory()
     try:
-        attempt_scope = _existing_owner_scope(cdb, user_id=scope.actor.id, profile_id=scope.profile.id)
+        attempt_scope = _existing_owner_scope(
+            cdb, user_id=scope.actor.id, profile_id=scope.profile.id
+        )
         assertion = cdb.get(GlhsAssertion, proposal_id)
         if assertion is None:
             raise RuntimeError("v2_proposal_reload_failed")
         commit_start_ns = now_monotonic_ns()
         outcome, _transition = _attempt_commit(
-            env, cdb,
+            env,
+            cdb,
             scope=attempt_scope,
             assertion=assertion,
             expected_state_version=base_state_version,
@@ -763,7 +806,8 @@ def _driver_v2_02(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
             raise RuntimeError("v2_proposal_reload_failed")
         commit_start_ns = now_monotonic_ns()
         outcome, _transition = _attempt_commit(
-            env, cdb,
+            env,
+            cdb,
             scope=changed_scope,
             assertion=assertion,
             expected_state_version=base_state_version,
@@ -867,14 +911,17 @@ def _driver_v2_03(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 
     cdb = env.session_factory()
     try:
-        attempt_scope = _existing_owner_scope(cdb, user_id=scope.actor.id, profile_id=scope.profile.id)
+        attempt_scope = _existing_owner_scope(
+            cdb, user_id=scope.actor.id, profile_id=scope.profile.id
+        )
         assertion = cdb.get(GlhsAssertion, proposal_id)
         if assertion is None:
             raise RuntimeError("v2_proposal_reload_failed")
         commit_start_ns = now_monotonic_ns()
         with _policy_version_override(epoch_version):
             outcome, _transition = _attempt_commit(
-                env, cdb,
+                env,
+                cdb,
                 scope=attempt_scope,
                 assertion=assertion,
                 expected_state_version=base_state_version,
@@ -936,14 +983,17 @@ def _driver_v2_04(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 
     cdb = env.session_factory()
     try:
-        attempt_scope = _existing_owner_scope(cdb, user_id=scope.actor.id, profile_id=scope.profile.id)
+        attempt_scope = _existing_owner_scope(
+            cdb, user_id=scope.actor.id, profile_id=scope.profile.id
+        )
         assertion = cdb.get(GlhsAssertion, proposal_id)
         if assertion is None:
             raise RuntimeError("v2_proposal_reload_failed")
         trace.begin(cdb)
         commit_start_ns = now_monotonic_ns()
         outcome, _transition = _attempt_commit(
-            env, cdb,
+            env,
+            cdb,
             scope=attempt_scope,
             assertion=assertion,
             expected_state_version=base_state_version + 1,
@@ -1104,7 +1154,10 @@ def _driver_v2_05(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
     if outcome != "proposal_committed":
         rejection = _rejection_subcontract(
             reason_code=outcome,
-            proposal_coordinate={"snapshot_id": snapshot_id, "snapshot_digest_sha256": digest_sha256},
+            proposal_coordinate={
+                "snapshot_id": snapshot_id,
+                "snapshot_digest_sha256": digest_sha256,
+            },
             snapshot_coordinate={"snapshot_id": snapshot_id, "digest_sha256": digest_sha256},
             zero_state_transition_rows=True,
         )
@@ -1171,7 +1224,9 @@ def _race_consent_vs_commit(
         try:
             cdb = env.session_factory()
             try:
-                scope_attempt = _existing_owner_scope(cdb, user_id=scope.actor.id, profile_id=scope.profile.id)
+                scope_attempt = _existing_owner_scope(
+                    cdb, user_id=scope.actor.id, profile_id=scope.profile.id
+                )
                 assertion = cdb.get(GlhsAssertion, proposal_id)
                 if assertion is None:
                     raise RuntimeError("v2_proposal_reload_failed")
@@ -1182,7 +1237,8 @@ def _race_consent_vs_commit(
                 with mutex:
                     observed["commit_start_ns"] = now_monotonic_ns()
                 outcome, transition = _attempt_commit(
-                    env, cdb,
+                    env,
+                    cdb,
                     scope=scope_attempt,
                     assertion=assertion,
                     expected_state_version=base_state_version,
@@ -1194,7 +1250,9 @@ def _race_consent_vs_commit(
                     observed["commit_outcome"] = outcome
                     observed["commit_complete_ns"] = now_monotonic_ns()
                     observed["transition_id"] = getattr(transition, "public_id", None)
-                    observed["resulting_state_version"] = getattr(transition, "resulting_state_version", None)
+                    observed["resulting_state_version"] = getattr(
+                        transition, "resulting_state_version", None
+                    )
                     observed["item_count"] = item_count
                 if release_order == "commit_first":
                     first_done.set()
@@ -1401,7 +1459,9 @@ def _driver_v2_08(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
         try:
             cdb = env.session_factory()
             try:
-                scope_attempt = _existing_owner_scope(cdb, user_id=scope.actor.id, profile_id=scope.profile.id)
+                scope_attempt = _existing_owner_scope(
+                    cdb, user_id=scope.actor.id, profile_id=scope.profile.id
+                )
                 assertion = cdb.get(GlhsAssertion, proposal_id)
                 if assertion is None:
                     raise RuntimeError("v2_proposal_reload_failed")
@@ -1409,7 +1469,8 @@ def _driver_v2_08(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
                 acquired = lock.acquire()
                 try:
                     outcome, _transition = _attempt_commit(
-                        env, cdb,
+                        env,
+                        cdb,
                         scope=scope_attempt,
                         assertion=assertion,
                         expected_state_version=base_state_version,
@@ -1569,12 +1630,15 @@ def _driver_v2_10(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 
     warm = env.session_factory()
     try:
-        scope_attempt = _existing_owner_scope(warm, user_id=scope.actor.id, profile_id=scope.profile.id)
+        scope_attempt = _existing_owner_scope(
+            warm, user_id=scope.actor.id, profile_id=scope.profile.id
+        )
         assertion0 = warm.get(GlhsAssertion, proposal0_id)
         if assertion0 is None:
             raise RuntimeError("v2_proposal_reload_failed")
         outcome0, transition0 = _attempt_commit(
-            env, warm,
+            env,
+            warm,
             scope=scope_attempt,
             assertion=assertion0,
             expected_state_version=base0,
@@ -1590,13 +1654,16 @@ def _driver_v2_10(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 
     rollback_db = env.session_factory()
     try:
-        scope_attempt = _existing_owner_scope(rollback_db, user_id=scope.actor.id, profile_id=scope.profile.id)
+        scope_attempt = _existing_owner_scope(
+            rollback_db, user_id=scope.actor.id, profile_id=scope.profile.id
+        )
         assertion0 = rollback_db.get(GlhsAssertion, proposal0_id)
         if assertion0 is None:
             raise RuntimeError("v2_proposal_reload_failed")
         trace.begin(rollback_db)
         stale_outcome, _transition = _attempt_commit(
-            env, rollback_db,
+            env,
+            rollback_db,
             scope=scope_attempt,
             assertion=assertion0,
             expected_state_version=base0,
@@ -1611,7 +1678,9 @@ def _driver_v2_10(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 
     retry = env.session_factory()
     try:
-        scope_attempt = _existing_owner_scope(retry, user_id=scope.actor.id, profile_id=scope.profile.id)
+        scope_attempt = _existing_owner_scope(
+            retry, user_id=scope.actor.id, profile_id=scope.profile.id
+        )
         snapshot1 = _seed_snapshot(env, retry, scope_attempt)
         proposal1, digest1 = _seed_proposal(env, retry, scope_attempt, snapshot1)
         retry.commit()
@@ -1624,12 +1693,15 @@ def _driver_v2_10(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 
     commit_db = env.session_factory()
     try:
-        scope_attempt = _existing_owner_scope(commit_db, user_id=scope.actor.id, profile_id=scope.profile.id)
+        scope_attempt = _existing_owner_scope(
+            commit_db, user_id=scope.actor.id, profile_id=scope.profile.id
+        )
         assertion1 = commit_db.get(GlhsAssertion, proposal1_id)
         if assertion1 is None:
             raise RuntimeError("v2_proposal_reload_failed")
         outcome, transition1 = _attempt_commit(
-            env, commit_db,
+            env,
+            commit_db,
             scope=scope_attempt,
             assertion=assertion1,
             expected_state_version=base1,
@@ -1741,7 +1813,8 @@ def _driver_v2_11(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
             raise RuntimeError("v2_proposal_reload_failed")
         commit_start_ns = now_monotonic_ns()
         outcome, _transition = _attempt_commit(
-            env, cdb,
+            env,
+            cdb,
             scope=changed_scope,
             assertion=assertion,
             expected_state_version=base_state_version + 1,
@@ -1876,7 +1949,8 @@ def _driver_v2_12(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
         commit_start_ns = now_monotonic_ns()
         with _policy_version_override(epoch_version):
             outcome, _transition = _attempt_commit(
-                env, cdb,
+                env,
+                cdb,
                 scope=changed_scope,
                 assertion=assertion,
                 expected_state_version=base_state_version + 1,
@@ -1928,6 +2002,7 @@ def _driver_v2_12(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 
 
 # --- v2.1 false-stale burden + concurrency scaling helpers --------------------
+
 
 def _percentile(sorted_values: list[float], percentile: float) -> float:
     """Nearest-rank percentile over a sorted latency list (ms)."""
@@ -2028,9 +2103,7 @@ def _independent_write_race(
         wdb = env.session_factory()
         try:
             proposal = proposals[index]
-            attempt_scope = _existing_owner_scope(
-                wdb, user_id=user_id, profile_id=profile_id
-            )
+            attempt_scope = _existing_owner_scope(wdb, user_id=user_id, profile_id=profile_id)
             assertion = wdb.get(GlhsAssertion, proposal.proposal_id)
             if assertion is None:
                 raise RuntimeError("v21_proposal_reload_failed")
@@ -2047,17 +2120,13 @@ def _independent_write_race(
             if outcome == RACE_COMMIT_OUTCOME:
                 wdb.commit()
             latency = elapsed_ms(attempt_start)
-            item_count = _committed_transition_total(
-                wdb, assertion_id=proposal.proposal_id
-            )
+            item_count = _committed_transition_total(wdb, assertion_id=proposal.proposal_id)
             with mutex:
                 results[index] = {
                     "outcome": outcome,
                     "item_count": item_count,
                     "latency_ms": latency,
-                    "resulting_state_version": getattr(
-                        transition, "resulting_state_version", None
-                    ),
+                    "resulting_state_version": getattr(transition, "resulting_state_version", None),
                 }
                 latencies.append(latency)
         except WORKER_EXCEPTIONS as exc:  # pragma: no cover - surfaced below
@@ -2083,24 +2152,16 @@ def _independent_write_race(
 
     outcomes = {index: str(record["outcome"]) for index, record in results.items()}
     accepted = [index for index, outcome in outcomes.items() if outcome == RACE_COMMIT_OUTCOME]
-    rejected = [
-        index
-        for index, outcome in outcomes.items()
-        if outcome == "stale_state_version"
-    ]
+    rejected = [index for index, outcome in outcomes.items() if outcome == "stale_state_version"]
     operational = [
-        index
-        for index, outcome in outcomes.items()
-        if outcome in OPERATIONAL_COMMIT_OUTCOMES
+        index for index, outcome in outcomes.items() if outcome in OPERATIONAL_COMMIT_OUTCOMES
     ]
     if operational and accepted:
         raise RuntimeError(f"v21_race_mixed_operational_and_committed:{outcomes}")
     if not operational and len(accepted) != 1:
         raise AssertionError(f"v21_race_winner_count_invalid:{outcomes}")
     if rejected and any(
-        int(record["item_count"]) != 0
-        for index, record in results.items()
-        if index in rejected
+        int(record["item_count"]) != 0 for index, record in results.items() if index in rejected
     ):
         raise AssertionError("v21_rejected_race_writer_created_transition_item")
     if accepted and int(results[accepted[0]]["item_count"]) != 1:
@@ -2217,13 +2278,9 @@ def _driver_v2_13(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
     unrelated-profile version advance rejects no independent write.
     """
     trace = TransactionTrace()
-    race = _independent_write_race(
-        env, schedule, writer_count=2, trace=trace, prefix="v2-13"
-    )
+    race = _independent_write_race(env, schedule, writer_count=2, trace=trace, prefix="v2-13")
     metrics = dict(race["metrics"])
-    metrics["cross_profile_independent_writes_completed"] = (
-        _cross_profile_independence_control(env)
-    )
+    metrics["cross_profile_independent_writes_completed"] = _cross_profile_independence_control(env)
     return _race_outcome(
         env,
         schedule,
@@ -2237,9 +2294,7 @@ def _driver_v2_13(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 def _driver_v2_14(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
     """TOCTOU-V2-14: concurrency scaling at one writer (baseline)."""
     trace = TransactionTrace()
-    race = _independent_write_race(
-        env, schedule, writer_count=1, trace=trace, prefix="v2-14"
-    )
+    race = _independent_write_race(env, schedule, writer_count=1, trace=trace, prefix="v2-14")
     return _race_outcome(
         env,
         schedule,
@@ -2253,9 +2308,7 @@ def _driver_v2_14(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 def _driver_v2_15(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
     """TOCTOU-V2-15: concurrency scaling at two writers."""
     trace = TransactionTrace()
-    race = _independent_write_race(
-        env, schedule, writer_count=2, trace=trace, prefix="v2-15"
-    )
+    race = _independent_write_race(env, schedule, writer_count=2, trace=trace, prefix="v2-15")
     return _race_outcome(
         env,
         schedule,
@@ -2269,9 +2322,7 @@ def _driver_v2_15(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 def _driver_v2_16(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
     """TOCTOU-V2-16: concurrency scaling at four writers."""
     trace = TransactionTrace()
-    race = _independent_write_race(
-        env, schedule, writer_count=4, trace=trace, prefix="v2-16"
-    )
+    race = _independent_write_race(env, schedule, writer_count=4, trace=trace, prefix="v2-16")
     return _race_outcome(
         env,
         schedule,
@@ -2285,9 +2336,7 @@ def _driver_v2_16(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawSchedu
 def _driver_v2_17(env: ExecutorEnv, schedule: Mapping[str, object]) -> RawScheduleOutcome:
     """TOCTOU-V2-17: concurrency scaling at eight writers."""
     trace = TransactionTrace()
-    race = _independent_write_race(
-        env, schedule, writer_count=8, trace=trace, prefix="v2-17"
-    )
+    race = _independent_write_race(env, schedule, writer_count=8, trace=trace, prefix="v2-17")
     return _race_outcome(
         env,
         schedule,
@@ -2443,9 +2492,7 @@ def _classification_matches(expected: object, observed: str) -> bool:
     if e == "indeterminate_ordering":
         return "indeterminate" in o
     if e == "operational_deadlock":
-        return (
-            "deadlock" in o or "could_not_serialize" in o or "lock_wait_timeout" in o
-        )
+        return "deadlock" in o or "could_not_serialize" in o or "lock_wait_timeout" in o
     if e == "false_stale_expected":
         return o == "committed_with_expected_false_stale"
     return False
@@ -2622,9 +2669,7 @@ def run_schedules(
     observations: list[dict[str, object]] = []
     audits: list[dict[str, object]] = []
     for schedule in schedules:
-        observation, audit, raw = _run_one_schedule(
-            env, schedule, drivers=drivers
-        )
+        observation, audit, raw = _run_one_schedule(env, schedule, drivers=drivers)
         if is_v21:
             metrics = _metrics_for_raw(raw)
             observation["metrics"] = metrics
@@ -2641,8 +2686,10 @@ def run_schedules(
                 audit["false_stale_matches"] = None
         observations.append(observation)
         audits.append(audit)
-    validation = validate_v21(observations, protocol=protocol) if is_v21 else validate_v2(
-        observations, protocol=protocol
+    validation = (
+        validate_v21(observations, protocol=protocol)
+        if is_v21
+        else validate_v2(observations, protocol=protocol)
     )
     matches = [bool(item["matches"]) for item in audits]
     if is_v21:

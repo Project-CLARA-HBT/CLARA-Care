@@ -52,8 +52,7 @@ def _validate_probe(path: Path, *, freeze_sha: str) -> str:
     if set(payload.get("requested_models") or []) != _EXACT_MODELS:
         raise ValueError("phase_b_probe_models_invalid")
     if (
-        payload.get("exact_model_policy")
-        != "reported_must_match_declared_mapping"
+        payload.get("exact_model_policy") != "reported_must_match_declared_mapping"
         or payload.get("reported_model_mapping") != REPORTED_MODEL_ID_BY_REQUESTED
         or payload.get("fallback_allowed") is not False
     ):
@@ -68,8 +67,7 @@ def _validate_probe(path: Path, *, freeze_sha: str) -> str:
         requested = item.get("requested_model_id")
         if (
             requested not in _EXACT_MODELS
-            or item.get("reported_model_id")
-            != REPORTED_MODEL_ID_BY_REQUESTED[requested]
+            or item.get("reported_model_id") != REPORTED_MODEL_ID_BY_REQUESTED[requested]
             or item.get("json_contract_supported") is not True
             or item.get("stream_requested") is not False
             or item.get("streaming_behavior") != "non_streaming_response"
@@ -204,9 +202,7 @@ def main() -> int:
                 max_subjects=limits.max_subjects,
             )
         )
-        bundles = _load_bundles(
-            bundle_paths, fhir_version=args.fhir_version, limits=limits
-        )
+        bundles = _load_bundles(bundle_paths, fhir_version=args.fhir_version, limits=limits)
         source_cohort = "injected_fhir_bundles"
     base_url = os.environ.get("ROUTER_BASE_URL", "")
     api_key = os.environ.get("ROUTER_API_KEY", "")

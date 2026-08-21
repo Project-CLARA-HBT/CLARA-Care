@@ -109,9 +109,9 @@ def _frozen_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
             ),
             "tasks_sha256": _sha(tasks),
             "cohort_manifest_sha256": _sha(cohort),
-            "cohort_manifest_payload_sha256": json.loads(
-                cohort.read_text(encoding="utf-8")
-            )["manifest_payload_sha256"],
+            "cohort_manifest_payload_sha256": json.loads(cohort.read_text(encoding="utf-8"))[
+                "manifest_payload_sha256"
+            ],
             "runner_sha256": _sha(runner),
             "validator_sha256": _sha(validator),
             "implementation_git_sha": "0" * 40,

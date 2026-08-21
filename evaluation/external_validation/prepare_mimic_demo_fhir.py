@@ -120,7 +120,11 @@ def _lab_event(resource: dict[str, object]) -> tuple[str, str, str, str, str] | 
 
 def _encounter_times(fhir_root: Path) -> dict[str, str]:
     result: dict[str, str] = {}
-    for name in ("MimicEncounter.ndjson.gz", "MimicEncounterED.ndjson.gz", "MimicEncounterICU.ndjson.gz"):
+    for name in (
+        "MimicEncounter.ndjson.gz",
+        "MimicEncounterED.ndjson.gz",
+        "MimicEncounterICU.ndjson.gz",
+    ):
         path = fhir_root / name
         for resource in _resources(path):
             period = resource.get("period")
@@ -174,16 +178,21 @@ def prepare(
             if subject not in evaluation_raw:
                 continue
             event_id = _sha({"domain": domain, "resource_id": resource.get("id")})[:24]
-            grouped[(subject, domain, _sha(raw_slot)[:24])].append({
-                "event_id": event_id,
-                "valid_time": timestamp,
-                "knowledge_time": knowledge_time,
-                "value_fingerprint": value_fingerprint,
-            })
+            grouped[(subject, domain, _sha(raw_slot)[:24])].append(
+                {
+                    "event_id": event_id,
+                    "valid_time": timestamp,
+                    "knowledge_time": knowledge_time,
+                    "value_fingerprint": value_fingerprint,
+                }
+            )
         source_rows[name] = count
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    token = lambda subject: hashlib.sha256(salt + b":" + subject.encode()).hexdigest()[:32]
+
+    def token(subject):
+        return hashlib.sha256(salt + b":" + subject.encode()).hexdigest()[:32]
+
     tasks: list[dict[str, object]] = []
     represented_subjects: set[str] = set()
     domain_counts: dict[str, int] = defaultdict(int)
@@ -194,16 +203,18 @@ def prepare(
         subject_token = token(subject)
         represented_subjects.add(subject_token)
         domain_counts[domain] += 1
-        tasks.append({
-            "task_id": _sha({"subject": subject_token, "domain": domain, "slot": slot})[:24],
-            "subject_token": subject_token,
-            "domain": domain,
-            "slot_fingerprint": slot,
-            "index_time": events[-1]["valid_time"],
-            "structured_events": events,
-            "source_target_event_id": events[-1]["event_id"],
-            "ground_truth_kind": "source_timestamp_derived_not_clinician_adjudicated",
-        })
+        tasks.append(
+            {
+                "task_id": _sha({"subject": subject_token, "domain": domain, "slot": slot})[:24],
+                "subject_token": subject_token,
+                "domain": domain,
+                "slot_fingerprint": slot,
+                "index_time": events[-1]["valid_time"],
+                "structured_events": events,
+                "source_target_event_id": events[-1]["event_id"],
+                "ground_truth_kind": "source_timestamp_derived_not_clinician_adjudicated",
+            }
+        )
     if set(domain_counts) != set(RESOURCE_FILES):
         raise ValueError("three_domain_coverage_required")
 
@@ -248,15 +259,22 @@ def prepare(
         "records_sha256": _file_sha(records_path),
         "source_checksum": {
             name: _file_sha(fhir_root / name)
-            for name in sorted(set(RESOURCE_FILES.values()) | {
-                "MimicPatient.ndjson.gz", "MimicEncounter.ndjson.gz",
-                "MimicEncounterED.ndjson.gz", "MimicEncounterICU.ndjson.gz",
-            })
+            for name in sorted(
+                set(RESOURCE_FILES.values())
+                | {
+                    "MimicPatient.ndjson.gz",
+                    "MimicEncounter.ndjson.gz",
+                    "MimicEncounterED.ndjson.gz",
+                    "MimicEncounterICU.ndjson.gz",
+                }
+            )
         },
         "source_rows": source_rows,
     }
     manifest_path = output_dir / "cohort_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return manifest
 
 

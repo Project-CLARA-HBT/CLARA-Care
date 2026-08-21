@@ -15,13 +15,19 @@ def _write(path: Path, value: str) -> Path:
 
 
 def test_preparer_freezes_deidentified_subject_disjoint_cohort(tmp_path: Path) -> None:
-    source = _write(tmp_path / "source.jsonl", json.dumps({
-        "subject_token": "sealed-subject-1",
-        "task_id": "task-1",
-        "domain": "medication",
-        "index_time": "2026-01-01T00:00:00Z",
-        "structured_events": [],
-    }) + "\n")
+    source = _write(
+        tmp_path / "source.jsonl",
+        json.dumps(
+            {
+                "subject_token": "sealed-subject-1",
+                "task_id": "task-1",
+                "domain": "medication",
+                "index_time": "2026-01-01T00:00:00Z",
+                "structured_events": [],
+            }
+        )
+        + "\n",
+    )
     development = _write(tmp_path / "development.txt", "development-subject-1\n")
     manifest_path = prepare(
         source,
@@ -40,13 +46,19 @@ def test_preparer_freezes_deidentified_subject_disjoint_cohort(tmp_path: Path) -
 
 
 def test_preparer_rejects_synthetic_oracle_and_overlap(tmp_path: Path) -> None:
-    source = _write(tmp_path / "source.jsonl", json.dumps({
-        "subject_token": "shared",
-        "task_id": "task-1",
-        "domain": "medication",
-        "index_time": "2026-01-01T00:00:00Z",
-        "expected_state": "oracle",
-    }) + "\n")
+    source = _write(
+        tmp_path / "source.jsonl",
+        json.dumps(
+            {
+                "subject_token": "shared",
+                "task_id": "task-1",
+                "domain": "medication",
+                "index_time": "2026-01-01T00:00:00Z",
+                "expected_state": "oracle",
+            }
+        )
+        + "\n",
+    )
     development = _write(tmp_path / "development.txt", "shared\n")
     with pytest.raises(FreezeError, match="synthetic_oracle_field_forbidden"):
         prepare(

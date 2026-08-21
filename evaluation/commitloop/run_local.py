@@ -60,9 +60,9 @@ _MODULE_ROOT = Path(__file__).parent
 _SOLVER_SYSTEM = (
     (_MODULE_ROOT / "prompts" / "solver_system.txt").read_text(encoding="utf-8").strip()
 )
-_PREDICTION_SCHEMA_RAW = (
-    _MODULE_ROOT / "schemas" / "prediction.schema.json"
-).read_text(encoding="utf-8")
+_PREDICTION_SCHEMA_RAW = (_MODULE_ROOT / "schemas" / "prediction.schema.json").read_text(
+    encoding="utf-8"
+)
 _SOLVER_RESPONSE_SCHEMA = {
     "name": "commitloop_prediction_v2",
     "schema": json.loads(_PREDICTION_SCHEMA_RAW),
@@ -119,11 +119,7 @@ def _prediction_shape_signature(value: object) -> dict[str, object]:
     unexpected_count = len(set(value) - expected_fields)
     enum_status = {
         field: (
-            "missing"
-            if field not in value
-            else "valid"
-            if value[field] in allowed
-            else "invalid"
+            "missing" if field not in value else "valid" if value[field] in allowed else "invalid"
         )
         for field, allowed in sorted(_PREDICTION_ENUMS.items())
     }
@@ -187,11 +183,7 @@ def _read_json(path: Path, default: Any) -> Any:
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
-    return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line
-    ]
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
 def _safe_error_detail(exc: Exception) -> str:
@@ -212,9 +204,7 @@ def _safe_error_detail(exc: Exception) -> str:
 
 def _write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _write_jsonl(path: Path, values: Sequence[object]) -> None:
@@ -292,9 +282,7 @@ def _expand_adversarial_cases(
     """Materialize bounded opaque variants from fulfillment evidence only."""
 
     selected_base_cases = list(base_cases[:max_cases])
-    events_by_case = {
-        case.case_id: base_events[case.case_id] for case in selected_base_cases
-    }
+    events_by_case = {case.case_id: base_events[case.case_id] for case in selected_base_cases}
     pending_variants: list[
         tuple[str, ConstructedCase, tuple[TimelineEvent, ...], dict[str, Any]]
     ] = []
@@ -346,9 +334,7 @@ def _expand_adversarial_cases(
                 variant_events = (*source_events, edited_event)
             else:
                 variant_events = tuple(
-                    edited_event
-                    if item.evidence_id == fulfillment.evidence_id
-                    else item
+                    edited_event if item.evidence_id == fulfillment.evidence_id else item
                     for item in source_events
                 )
             pending_variants.append(
@@ -396,9 +382,7 @@ def expected_solver_case_count(
     base_cases: list[ConstructedCase] = []
     base_events: dict[str, tuple[TimelineEvent, ...]] = {}
     for bundle, version in bundles[:max_subjects]:
-        token, events = ingest_bundle(
-            bundle, fhir_version=version, ingested_at=known_cutoff
-        )
+        token, events = ingest_bundle(bundle, fhir_version=version, ingested_at=known_cutoff)
         for case in mine_candidates(token, events):
             if case.status != "ELIGIBLE" or len(base_cases) >= max_base_cases:
                 continue
@@ -424,9 +408,7 @@ def run_local_e2e(
     valid_cutoff: datetime,
     known_cutoff: datetime,
     limits: RunLimits,
-    execution_mode: Literal[
-        "phase_a_fake", "phase_b_router", "glhs_bench_router"
-    ] = "phase_a_fake",
+    execution_mode: Literal["phase_a_fake", "phase_b_router", "glhs_bench_router"] = "phase_a_fake",
     phase_a_freeze_sha: str | None = None,
     provider_probe_sha256: str | None = None,
     provider_approval_sha256: str | None = None,
@@ -476,10 +458,7 @@ def run_local_e2e(
             64,
         }:
             raise ValueError("glhs_bench_freeze_sha_required")
-        if (
-            not isinstance(provider_probe_sha256, str)
-            or len(provider_probe_sha256) != 64
-        ):
+        if not isinstance(provider_probe_sha256, str) or len(provider_probe_sha256) != 64:
             raise ValueError("glhs_bench_provider_probe_required")
         if production_strict_context_builder is None:
             raise ValueError("glhs_bench_production_thss_context_required")
@@ -497,9 +476,7 @@ def run_local_e2e(
     }
     subject_tokens = set()
     for bundle, version in bundles[: limits.max_subjects]:
-        token, events = ingest_bundle(
-            bundle, fhir_version=version, ingested_at=known_cutoff
-        )
+        token, events = ingest_bundle(bundle, fhir_version=version, ingested_at=known_cutoff)
         subject_tokens.add(token)
         timeline.extend(
             {
@@ -571,15 +548,11 @@ def run_local_e2e(
             packets_by_condition[condition].append(packet)
     if subject_splits is not None and (
         set(subject_splits) != subject_tokens
-        or not set(subject_splits.values()).issubset(
-            {"development", "validation", "sealed_test"}
-        )
+        or not set(subject_splits.values()).issubset({"development", "validation", "sealed_test"})
     ):
         raise ValueError("preassigned_subject_split_inventory_invalid")
     generation_outputs = list(_read_json(output_dir / "model_generation.json", []))
-    generation_errors = list(
-        _read_json(output_dir / "generation_error_ledger.json", [])
-    )
+    generation_errors = list(_read_json(output_dir / "generation_error_ledger.json", []))
     generated_case_ids = {
         str(item["case_id"])
         for item in [*generation_outputs, *generation_errors]
@@ -588,9 +561,7 @@ def run_local_e2e(
     generation_request_count = sum(
         len(item.get("stages", [])) for item in generation_outputs
     ) + sum(
-        int(item.get("request_count", 0))
-        for item in generation_errors
-        if isinstance(item, dict)
+        int(item.get("request_count", 0)) for item in generation_errors if isinstance(item, dict)
     )
     generation_budget_exhausted = False
     if construction_clients is not None:
@@ -598,10 +569,7 @@ def run_local_e2e(
         for case in base_cases:
             if case.case_id in generated_case_ids:
                 continue
-            if (
-                limits.max_requests - generation_request_count
-                < REQUESTS_PER_ACCEPTED_CASE
-            ):
+            if limits.max_requests - generation_request_count < REQUESTS_PER_ACCEPTED_CASE:
                 generation_budget_exhausted = True
                 break
             before = generator.request_count + reviewer.request_count
@@ -630,16 +598,12 @@ def run_local_e2e(
                         "error": type(exc).__name__,
                         "request_count": consumed,
                         "attempt_count": (
-                            generator.attempt_count
-                            + reviewer.attempt_count
-                            - attempts_before
+                            generator.attempt_count + reviewer.attempt_count - attempts_before
                         ),
                         "requested_models": [GENERATOR_MODEL, REVIEWER_MODEL],
                     }
                 )
-            generation_request_count += (
-                generator.request_count + reviewer.request_count - before
-            )
+            generation_request_count += generator.request_count + reviewer.request_count - before
             _write_json(output_dir / "generation_error_ledger.json", generation_errors)
             _write_json(output_dir / "model_generation.json", generation_outputs)
     _write_json(output_dir / "model_generation.json", generation_outputs)
@@ -678,16 +642,10 @@ def run_local_e2e(
     # The durable output/error ledgers are authoritative if a process crashes
     # after persisting a response but before the next checkpoint write.
     completed.update(attempted_keys)
-    request_budget = max(
-        0, limits.max_requests - generation_request_count - len(attempted_keys)
-    )
+    request_budget = max(0, limits.max_requests - generation_request_count - len(attempted_keys))
     budget_exhausted = generation_budget_exhausted
     pending: list[tuple[str, str, dict[str, Any], EvaluationClient]] = []
-    ordered_models = (
-        tuple(model_order)
-        if model_order is not None
-        else tuple(clients.keys())
-    )
+    ordered_models = tuple(model_order) if model_order is not None else tuple(clients.keys())
     if not ordered_models or set(ordered_models) != set(clients):
         raise ValueError("benchmark_model_order_invalid")
     for model in ordered_models:
@@ -931,20 +889,16 @@ def run_local_e2e(
                         "output_present": int(output is not None),
                         "failure": str(error.get("error", "")) if error else "",
                         "lifecycle_correct": int(
-                            prediction.get("lifecycle_state")
-                            == expected.get("lifecycle_state")
+                            prediction.get("lifecycle_state") == expected.get("lifecycle_state")
                         ),
                         "evidence_correct": int(
-                            prediction.get("evidence_state")
-                            == expected.get("evidence_state")
+                            prediction.get("evidence_state") == expected.get("evidence_state")
                         ),
                         "timeliness_correct": int(
-                            prediction.get("timeliness_state")
-                            == expected.get("timeliness_state")
+                            prediction.get("timeliness_state") == expected.get("timeliness_state")
                         ),
                         "escalation_correct": int(
-                            prediction.get("escalation_state")
-                            == expected.get("escalation_state")
+                            prediction.get("escalation_state") == expected.get("escalation_state")
                         ),
                         "all_axes_exact": int(
                             all(
@@ -1025,9 +979,7 @@ def run_local_e2e(
         output_dir / "source_manifest.json",
         {
             "source": source_cohort,
-            "fhir_versions": sorted(
-                {version for _, version in bundles[: limits.max_subjects]}
-            ),
+            "fhir_versions": sorted({version for _, version in bundles[: limits.max_subjects]}),
             "subject_identity": "sha256_pseudonymized",
             "raw_patient_resources_persisted": False,
             "bundle_payload_sha256": sorted(
@@ -1048,9 +1000,7 @@ def run_local_e2e(
             "execution_mode": execution_mode,
             "solver_prompt_sha256": _SOLVER_PROMPT_SHA256,
             "prediction_schema_sha256": _PREDICTION_SCHEMA_SHA256,
-            "endpoint_sha256": {
-                model: clients[model].base_url_sha256 for model in sorted(clients)
-            },
+            "endpoint_sha256": {model: clients[model].base_url_sha256 for model in sorted(clients)},
         },
     )
     protocol_payload = {
@@ -1079,9 +1029,7 @@ def run_local_e2e(
         output_dir / "protocol_manifest.json",
         {
             **protocol_payload,
-            "protocol_sha256": hashlib.sha256(
-                _json(protocol_payload).encode()
-            ).hexdigest(),
+            "protocol_sha256": hashlib.sha256(_json(protocol_payload).encode()).hexdigest(),
         },
     )
     manifest = {
@@ -1142,8 +1090,7 @@ def run_local_e2e(
         else "This run uses injected transports and synthetic protocol-oracle labels."
     )
     (output_dir / "report.md").write_text(
-        report_title
-        + f"Status: `{manifest['run_status']}`. Clinical adjudication: `NOT_RUN`. "
+        report_title + f"Status: `{manifest['run_status']}`. Clinical adjudication: `NOT_RUN`. "
         f"{execution_note}\n",
         encoding="utf-8",
     )

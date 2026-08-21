@@ -88,16 +88,10 @@ def _build_chat_attribution(
 
     context_debug = ml_response.get("context_debug")
     context_debug_obj = context_debug if isinstance(context_debug, dict) else {}
-    retrieval_trace_obj = (
-        context_debug_obj.get("retrieval_trace")
-        if isinstance(context_debug_obj.get("retrieval_trace"), dict)
-        else {}
-    )
-    search_phase_obj = (
-        retrieval_trace_obj.get("search_phase")
-        if isinstance(retrieval_trace_obj.get("search_phase"), dict)
-        else {}
-    )
+    _rt = context_debug_obj.get("retrieval_trace")
+    retrieval_trace_obj = _rt if isinstance(_rt, dict) else {}
+    _sp = retrieval_trace_obj.get("search_phase")
+    search_phase_obj = _sp if isinstance(_sp, dict) else {}
     raw_source_errors = (
         ml_response.get("source_errors")
         or context_debug_obj.get("source_errors")
@@ -440,7 +434,8 @@ def _call_ml_service(
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException) as exc:
         primary_reason = f"ml_unavailable:{exc.__class__.__name__}"
     except httpx.HTTPError as exc:
-        upstream_status = exc.response.status_code if exc.response is not None else None
+        resp = getattr(exc, "response", None)
+        upstream_status = resp.status_code if resp is not None else None
         if upstream_status is None:
             primary_reason = f"ml_http_error:{exc.__class__.__name__}"
         elif upstream_status >= 500:

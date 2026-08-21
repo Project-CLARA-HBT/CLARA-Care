@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import copy
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
-import xml.etree.ElementTree as ET
-
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"

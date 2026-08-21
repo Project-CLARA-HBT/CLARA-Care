@@ -52,7 +52,9 @@ def test_timeout_is_not_counted_as_a_killed_mutant(monkeypatch, tmp_path: Path) 
 
 def test_catalog_loader_rejects_missing_or_ambiguous_mutant(tmp_path: Path) -> None:
     catalog = tmp_path / "catalog.json"
-    catalog.write_text('{"candidates": [{"id": "M", "source_path": "a", "anchor": "b", "replacement": "c"}]}')
+    catalog.write_text(
+        '{"candidates": [{"id": "M", "source_path": "a", "anchor": "b", "replacement": "c"}]}'
+    )
     assert load_catalog_mutant(catalog_path=catalog, mutant_id="M").source_path == "a"
     try:
         load_catalog_mutant(catalog_path=catalog, mutant_id="unknown")
@@ -118,7 +120,9 @@ def test_runner_uses_staged_cwd_and_absolute_test_target(monkeypatch, tmp_path: 
         observed.update({"args": args, "cwd": kwargs["cwd"], "env": kwargs["env"]})
         if "-c" in args:
             imported = Path(kwargs["cwd"]) / "services/api/src/clara_api/__init__.py"
-            return subprocess.CompletedProcess(args=args, returncode=0, stdout=str(imported), stderr="")
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=str(imported), stderr=""
+            )
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
 
     monkeypatch.setattr("evaluation.property_assurance.mutation_runner.subprocess.run", completed)
@@ -132,9 +136,7 @@ def test_runner_uses_staged_cwd_and_absolute_test_target(monkeypatch, tmp_path: 
 
     assert result["classification"] == "SURVIVED"
     assert observed["cwd"] != tmp_path
-    assert observed["args"][-1] == str(
-        Path(observed["cwd"]) / "services/api/tests/test_gate.py"
-    )
+    assert observed["args"][-1] == str(Path(observed["cwd"]) / "services/api/tests/test_gate.py")
     assert str(observed["env"]["PYTHONPATH"]).startswith(
         str(Path(observed["cwd"]) / "services/api/src")
     )
@@ -151,13 +153,17 @@ def test_runner_records_and_forwards_hypothesis_seed(monkeypatch, tmp_path: Path
         commands.append(args)
         if "-c" in args:
             imported = Path(kwargs["cwd"]) / "services/api/src/clara_api/__init__.py"
-            return subprocess.CompletedProcess(args=args, returncode=0, stdout=str(imported), stderr="")
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=str(imported), stderr=""
+            )
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
 
     monkeypatch.setattr("evaluation.property_assurance.mutation_runner.subprocess.run", completed)
     result = execute_mutant(
         repository_root=tmp_path,
-        mutant=MutantOverlay("M02-A", "services/api/src/clara_api/gate.py", "policy_check", "False"),
+        mutant=MutantOverlay(
+            "M02-A", "services/api/src/clara_api/gate.py", "policy_check", "False"
+        ),
         pytest_targets=["services/api/tests/test_gate.py"],
         hypothesis_seed=20260817,
     )
@@ -174,7 +180,9 @@ def test_runner_rejects_workspace_import_during_probe(monkeypatch, tmp_path: Pat
             args=args, returncode=0, stdout=str(tmp_path / "services/api/src/clara_api/__init__.py")
         )
 
-    monkeypatch.setattr("evaluation.property_assurance.mutation_runner.subprocess.run", workspace_import)
+    monkeypatch.setattr(
+        "evaluation.property_assurance.mutation_runner.subprocess.run", workspace_import
+    )
     try:
         execute_mutant(
             repository_root=tmp_path,

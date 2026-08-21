@@ -6,9 +6,9 @@ import logging
 import re
 import unicodedata
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from time import perf_counter
-from typing import TYPE_CHECKING, Any, List, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 from uuid import uuid4
 
 # Import-ordering fix (task 5.11): eagerly initialize the ``rag.store`` package
@@ -174,7 +174,7 @@ def _trust_recency_tighten_signal(
 
     best_tier = min(tiers) if tiers else None
     newest_year = max(years) if years else None
-    current_year = int(now_year) if now_year is not None else datetime.now(timezone.utc).year
+    current_year = int(now_year) if now_year is not None else datetime.now(UTC).year
 
     weak_authority = best_tier is not None and best_tier >= _FIDES_LOW_AUTHORITY_TIER_FLOOR
     weak_recency = newest_year is not None and (current_year - newest_year) > max(
@@ -189,13 +189,13 @@ def _trust_recency_tighten_signal(
 
 
 def tighten_fides_verdict_with_trust(
-    factcheck: "FactCheckResult | None",
+    factcheck: FactCheckResult | None,
     retrieved_context: Any,
     *,
     settings: Any = None,
     recency_stale_years: int = _FIDES_RECENCY_STALE_YEARS,
     now_year: int | None = None,
-) -> "FactCheckResult | None":
+) -> FactCheckResult | None:
     """Apply trust-tier + recency as a *tighten-only* input to a FIDES verdict.
 
     Pure function (no I/O). Gated behind ``RAG_TRUST_TIER_RANKING_ENABLED``:
@@ -277,8 +277,8 @@ def tighten_fides_verdict_with_trust(
             )
         except TypeError:
             # ``factcheck`` is not a dataclass instance — mutate defensively.
-            setattr(factcheck, "verdict", new_verdict)
-            setattr(factcheck, "severity", new_severity)
+            factcheck.verdict = new_verdict
+            factcheck.severity = new_severity
             return factcheck
     except Exception:  # pragma: no cover - never let tightening crash the path
         logger.debug("trust-tier FIDES tightening skipped due to error", exc_info=True)
@@ -288,12 +288,12 @@ def tighten_fides_verdict_with_trust(
 @dataclass
 class RagResult:
     query: str
-    retrieved_ids: List[str]
+    retrieved_ids: list[str]
     answer: str
     model_used: str
-    retrieved_context: List[dict[str, Any]] = field(default_factory=list)
+    retrieved_context: list[dict[str, Any]] = field(default_factory=list)
     context_debug: dict[str, Any] = field(default_factory=dict)
-    flow_events: List[dict[str, Any]] = field(default_factory=list)
+    flow_events: list[dict[str, Any]] = field(default_factory=list)
     trace: dict[str, Any] = field(default_factory=dict)
 
 
@@ -388,7 +388,7 @@ class RagPipelineP1:
         self._semantic_cache_embedder_unavailable = False
 
     @staticmethod
-    def _local_synthesis(query: str, docs: List[Document], *, answer_language: str = "vi") -> str:
+    def _local_synthesis(query: str, docs: list[Document], *, answer_language: str = "vi") -> str:
         def _compact(text: str, max_len: int = 180) -> str:
             clean = " ".join(str(text or "").split()).strip()
             if len(clean) <= max_len:
@@ -635,9 +635,10 @@ class RagPipelineP1:
 
     @staticmethod
     def _source_query(query_plan: dict[str, Any], source_key: str, fallback: str) -> str:
-        source_queries = (
-            query_plan.get("source_queries")
-            if isinstance(query_plan.get("source_queries"), dict)
+        source_queries_raw = query_plan.get("source_queries")
+        source_queries: dict[str, Any] = (
+            source_queries_raw
+            if isinstance(source_queries_raw, dict)
             else {}
         )
         selected = source_queries.get(source_key)
@@ -650,10 +651,10 @@ class RagPipelineP1:
 
     @staticmethod
     def _now_iso() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     @staticmethod
-    def _source_counts(docs: List[Document]) -> dict[str, int]:
+    def _source_counts(docs: list[Document]) -> dict[str, int]:
         counts: dict[str, int] = {}
         for doc in docs:
             source = str((doc.metadata or {}).get("source") or "unknown")
@@ -661,7 +662,7 @@ class RagPipelineP1:
         return counts
 
     @staticmethod
-    def _trace_doc_rows(docs: List[Document], *, limit: int = 5) -> list[dict[str, Any]]:
+    def _trace_doc_rows(docs: list[Document], *, limit: int = 5) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         for doc in docs[: max(int(limit), 1)]:
             metadata = doc.metadata or {}
@@ -682,7 +683,7 @@ class RagPipelineP1:
 
     def _build_index_summary(
         self,
-        docs: List[Document],
+        docs: list[Document],
         *,
         before_dedupe_count: Any = None,
         after_dedupe_count: Any = None,
@@ -707,11 +708,13 @@ class RagPipelineP1:
             parsed_duration = None
 
         rerank_payload = dict(rerank) if isinstance(rerank, dict) else {}
-        evidence_payload = (
-            rerank_payload.get("evidence")
-            if isinstance(rerank_payload.get("evidence"), dict)
-            else rerank_payload.get("neural")
-            if isinstance(rerank_payload.get("neural"), dict)
+        evidence_raw = rerank_payload.get("evidence")
+        neural_raw = rerank_payload.get("neural")
+        evidence_payload: dict[str, Any] = (
+            evidence_raw
+            if isinstance(evidence_raw, dict)
+            else neural_raw
+            if isinstance(neural_raw, dict)
             else {}
         )
         if "rerank_latency_ms" not in rerank_payload:
@@ -747,7 +750,7 @@ class RagPipelineP1:
             "rerank": rerank_payload,
         }
 
-    def _should_force_external_retrieval(self, query: str, docs: List[Document]) -> bool:
+    def _should_force_external_retrieval(self, query: str, docs: list[Document]) -> bool:
         profile = analyze_query_profile(query)
         if bool(profile.get("is_ddi_query")):
             return True
@@ -776,7 +779,10 @@ class RagPipelineP1:
 
         def _as_int(value: object, default: int, *, min_value: int = 1, max_value: int = 12) -> int:
             try:
-                parsed = int(value)  # type: ignore[arg-type]
+                if isinstance(value, (int, float, str, bytes, bytearray)):
+                    parsed = int(value)
+                else:
+                    return default
             except (TypeError, ValueError):
                 return default
             return max(min_value, min(max_value, parsed))
@@ -1071,9 +1077,10 @@ class RagPipelineP1:
         )
         complexity_level = str(complexity.get("level") or "medium")
         budgets = cls._orchestrator_budgets(mode=mode, complexity_level=complexity_level)
-        retrieval_budget_override = (
-            planner_hints.get("retrieval_budget")
-            if isinstance(planner_hints.get("retrieval_budget"), dict)
+        retrieval_budget_raw = planner_hints.get("retrieval_budget")
+        retrieval_budget_override: dict[str, Any] = (
+            retrieval_budget_raw
+            if isinstance(retrieval_budget_raw, dict)
             else {}
         )
         if retrieval_budget_override:
@@ -1310,7 +1317,7 @@ class RagPipelineP1:
         *,
         stage: str,
         status: str,
-        docs: List[Document],
+        docs: list[Document],
         note: str,
         component: str | None = None,
         payload: dict[str, Any] | None = None,
@@ -1334,7 +1341,7 @@ class RagPipelineP1:
             "payload": enriched_payload,
         }
 
-    def _context_relevance(self, query: str, docs: List[Document]) -> float:
+    def _context_relevance(self, query: str, docs: list[Document]) -> float:
         query_tokens = self._tokenize(query)
         if not query_tokens or not docs:
             return 0.0
@@ -1415,7 +1422,7 @@ class RagPipelineP1:
     def _build_prompt(
         cls,
         query: str,
-        docs: List[Document],
+        docs: list[Document],
         *,
         report_depth: str = "standard",
         answer_language: str = "vi",
@@ -1514,7 +1521,7 @@ class RagPipelineP1:
     def _build_compact_retry_prompt(
         cls,
         query: str,
-        docs: List[Document],
+        docs: list[Document],
         *,
         answer_language: str = "vi",
     ) -> str:
@@ -1623,7 +1630,7 @@ class RagPipelineP1:
 
     @staticmethod
     def _safe_helpful_answer(
-        query: str, docs: List[Document], *, answer_language: str = "vi"
+        query: str, docs: list[Document], *, answer_language: str = "vi"
     ) -> str:
         if docs:
             summary = " ".join(doc.text for doc in docs[:2]).strip()
@@ -1693,7 +1700,7 @@ class RagPipelineP1:
         cls,
         answer: str,
         query: str,
-        docs: List[Document],
+        docs: list[Document],
         *,
         answer_language: str = "vi",
     ) -> str:
@@ -1718,8 +1725,8 @@ class RagPipelineP1:
         *,
         relevance: float,
         threshold: float,
-        used_stages: List[str],
-        docs: List[Document],
+        used_stages: list[str],
+        docs: list[Document],
         low_context_before_external: bool,
         external_attempted: bool,
         planner_hints: dict[str, Any],
@@ -1780,7 +1787,7 @@ class RagPipelineP1:
         return context_debug
 
     @staticmethod
-    def _serialize_context(docs: List[Document]) -> List[dict[str, Any]]:
+    def _serialize_context(docs: list[Document]) -> list[dict[str, Any]]:
         serialized: list[dict[str, Any]] = []
         for doc in docs:
             metadata = doc.metadata or {}
@@ -1816,13 +1823,13 @@ class RagPipelineP1:
 
     @staticmethod
     def tighten_fides_verdict_with_trust(
-        factcheck: "FactCheckResult | None",
+        factcheck: FactCheckResult | None,
         retrieved_context: Any,
         *,
         settings: Any = None,
         recency_stale_years: int = _FIDES_RECENCY_STALE_YEARS,
         now_year: int | None = None,
-    ) -> "FactCheckResult | None":
+    ) -> FactCheckResult | None:
         """Tighten-only trust-tier/recency → FIDES combiner (task 8.6 / Req 10.3).
 
         Thin static wrapper over :func:`tighten_fides_verdict_with_trust` so the
@@ -1841,7 +1848,7 @@ class RagPipelineP1:
         )
 
     @staticmethod
-    def _merge_documents_by_id(docs: List[Document]) -> List[Document]:
+    def _merge_documents_by_id(docs: list[Document]) -> list[Document]:
         merged: list[Document] = []
         seen: set[str] = set()
         for doc in docs:
@@ -1888,11 +1895,11 @@ class RagPipelineP1:
     @classmethod
     def _exclude_explicitly_retracted_documents(
         cls,
-        docs: List[Document],
-    ) -> tuple[List[Document], int]:
+        docs: list[Document],
+    ) -> tuple[list[Document], int]:
         """Return eligible evidence documents and an auditable rejected count."""
 
-        retained: List[Document] = []
+        retained: list[Document] = []
         rejected = 0
         for document in docs:
             if cls._is_explicitly_retracted_document(document):
@@ -2055,11 +2062,13 @@ class RagPipelineP1:
 
         tier = (doc.metadata or {}).get("trust_tier")
         try:
-            return int(tier) <= int(trust_floor)
+            if isinstance(tier, (int, float, str, bytes, bytearray)):
+                return int(tier) <= int(trust_floor)
+            return True
         except (TypeError, ValueError):
             return True
 
-    def _persistent_needs_gap_fill(self, docs: List[Document]) -> bool:
+    def _persistent_needs_gap_fill(self, docs: list[Document]) -> bool:
         """Req 3.5 coverage check for the persistent path.
 
         Gap-fill is needed when the persistent path returns fewer than
@@ -2082,7 +2091,7 @@ class RagPipelineP1:
         rag_sources: object,
         scientific_provider_query_overrides: dict[str, Any] | None,
         rag_reranker_enabled: bool | None,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Fetch a bounded set of live-connector docs to fill a persistent gap.
 
         Reuses the EXISTING live connectors via the in-memory retriever's
@@ -2110,7 +2119,7 @@ class RagPipelineP1:
             )
             return []
 
-    def _schedule_async_persist(self, docs: List[Document]) -> None:
+    def _schedule_async_persist(self, docs: list[Document]) -> None:
         """Best-effort, bounded persistence of provenance-checked gap-fill docs.
 
         The user query is intentionally absent from this API: it is neither
@@ -2140,7 +2149,7 @@ class RagPipelineP1:
         rag_reranker_enabled: bool | None,
         scientific_retrieval_enabled: bool,
         web_retrieval_enabled: bool,
-    ) -> List[Document] | None:
+    ) -> list[Document] | None:
         """Persistent (embed-query-only) retrieval with live-connector gap-fill.
 
         Returns the retrieved documents, or ``None`` to signal the caller should
@@ -2278,7 +2287,7 @@ class RagPipelineP1:
         return list(client.embed_query(query))
 
     @staticmethod
-    def _semantic_cache_lookup(cache: Any, query: str) -> List[Document] | None:
+    def _semantic_cache_lookup(cache: Any, query: str) -> list[Document] | None:
         """Return cached retrieval docs for ``query`` or ``None`` (defensive).
 
         A non-list / empty cached value is treated as a miss so an empty result
@@ -2298,7 +2307,7 @@ class RagPipelineP1:
             return None
 
     @staticmethod
-    def _semantic_cache_store(cache: Any, query: str, docs: List[Document]) -> None:
+    def _semantic_cache_store(cache: Any, query: str, docs: list[Document]) -> None:
         """Populate the semantic cache with a retrieval result (best-effort).
 
         A *shallow copy* of ``docs`` is stored so a later request cannot mutate
@@ -2521,14 +2530,16 @@ class RagPipelineP1:
         provider_query_overrides = (
             provider_query_overrides_raw if isinstance(provider_query_overrides_raw, dict) else {}
         )
-        scientific_provider_query_overrides = (
-            provider_query_overrides.get("scientific")
-            if isinstance(provider_query_overrides.get("scientific"), dict)
+        sci_override_raw = provider_query_overrides.get("scientific")
+        scientific_provider_query_overrides: dict[str, Any] = (
+            sci_override_raw
+            if isinstance(sci_override_raw, dict)
             else {}
         )
-        web_provider_query_overrides = (
-            provider_query_overrides.get("web")
-            if isinstance(provider_query_overrides.get("web"), dict)
+        web_override_raw = provider_query_overrides.get("web")
+        web_provider_query_overrides: dict[str, Any] = (
+            web_override_raw
+            if isinstance(web_override_raw, dict)
             else {}
         )
         web_query_override = str(web_provider_query_overrides.get("searxng") or web_query).strip()
@@ -2608,7 +2619,7 @@ class RagPipelineP1:
                 },
             )
         )
-        docs: List[Document] = []
+        docs: list[Document] = []
         persistent_used = False
         # Semantic query cache (task 9.9, Req 12.2). ``None`` when disabled, in
         # which case the block below is byte-identical to the legacy path.
@@ -2644,7 +2655,7 @@ class RagPipelineP1:
                 semantic_cache_hit = True
                 docs = cached_docs
             else:
-                persistent_docs: List[Document] | None = None
+                persistent_docs: list[Document] | None = None
                 if self._persistent_retrieval_active():
                     persistent_docs = self._persistent_retrieve(
                         internal_query,
@@ -2743,17 +2754,20 @@ class RagPipelineP1:
             if semantic_cache_hit
             else ("persistent" if persistent_used else "legacy_in_memory")
         )
-        internal_trace = (
-            retrieval_trace["internal"] if isinstance(retrieval_trace["internal"], dict) else {}
+        internal_raw = retrieval_trace.get("internal")
+        internal_trace: dict[str, Any] = (
+            internal_raw if isinstance(internal_raw, dict) else {}
         )
-        internal_search = (
-            internal_trace.get("search_phase")
-            if isinstance(internal_trace.get("search_phase"), dict)
+        search_phase_raw = internal_trace.get("search_phase")
+        internal_search: dict[str, Any] = (
+            search_phase_raw
+            if isinstance(search_phase_raw, dict)
             else {}
         )
-        internal_index = (
-            internal_trace.get("index_phase")
-            if isinstance(internal_trace.get("index_phase"), dict)
+        index_phase_raw = internal_trace.get("index_phase")
+        internal_index: dict[str, Any] = (
+            index_phase_raw
+            if isinstance(index_phase_raw, dict)
             else {}
         )
         retrieval_trace["search_phase"] = internal_search
@@ -2968,17 +2982,20 @@ class RagPipelineP1:
                         **retrieve_kwargs,
                     )
                 retrieval_trace["hybrid"] = self._extract_retriever_trace(self.retriever)
-                hybrid_trace = (
-                    retrieval_trace["hybrid"] if isinstance(retrieval_trace["hybrid"], dict) else {}
+                hybrid_raw = retrieval_trace.get("hybrid")
+                hybrid_trace: dict[str, Any] = (
+                    hybrid_raw if isinstance(hybrid_raw, dict) else {}
                 )
-                hybrid_search = (
-                    hybrid_trace.get("search_phase")
-                    if isinstance(hybrid_trace.get("search_phase"), dict)
+                hybrid_search_raw = hybrid_trace.get("search_phase")
+                hybrid_search: dict[str, Any] = (
+                    hybrid_search_raw
+                    if isinstance(hybrid_search_raw, dict)
                     else {}
                 )
-                hybrid_index = (
-                    hybrid_trace.get("index_phase")
-                    if isinstance(hybrid_trace.get("index_phase"), dict)
+                hybrid_index_raw = hybrid_trace.get("index_phase")
+                hybrid_index: dict[str, Any] = (
+                    hybrid_index_raw
+                    if isinstance(hybrid_index_raw, dict)
                     else {}
                 )
                 retrieval_trace["search_phase"] = hybrid_search
@@ -3006,9 +3023,10 @@ class RagPipelineP1:
                     duration_ms=hybrid_index.get("duration_ms"),
                     rerank=hybrid_index.get("rerank"),
                 )
+                crawl_summary_raw = hybrid_search.get("crawl_summary")
                 retrieval_trace["crawl_summary"] = (
-                    hybrid_search.get("crawl_summary")
-                    if isinstance(hybrid_search.get("crawl_summary"), dict)
+                    crawl_summary_raw
+                    if isinstance(crawl_summary_raw, dict)
                     else {}
                 )
                 relevance_score = self._context_relevance(query, docs)
@@ -3264,9 +3282,10 @@ class RagPipelineP1:
         if isinstance(source_attempts, list):
             retrieval_trace["source_attempts"] = self._normalize_source_attempts(source_attempts)
         else:
-            search_phase = (
-                active_trace.get("search_phase")
-                if isinstance(active_trace.get("search_phase"), dict)
+            search_phase_raw = active_trace.get("search_phase")
+            search_phase: dict[str, Any] = (
+                search_phase_raw
+                if isinstance(search_phase_raw, dict)
                 else {}
             )
             retrieval_trace["source_attempts"] = self._normalize_source_attempts(
@@ -3288,9 +3307,10 @@ class RagPipelineP1:
         )
         retrieval_trace["query_plan"] = query_plan
 
-        active_index_summary = (
-            active_trace.get("index_summary")
-            if isinstance(active_trace.get("index_summary"), dict)
+        active_index_summary_raw = active_trace.get("index_summary")
+        active_index_summary: dict[str, Any] = (
+            active_index_summary_raw
+            if isinstance(active_index_summary_raw, dict)
             else {}
         )
         retrieval_trace["index_summary"] = self._build_index_summary(
@@ -3690,7 +3710,7 @@ class RagPipelineP1:
                         exc = retry_exc
 
                 if recovered_from_retry:
-                    raise RuntimeError("llm_retry_state_inconsistent")
+                    raise RuntimeError("llm_retry_state_inconsistent") from exc
                 if strict_deepseek_required or not deepseek_fallback_enabled:
                     raise RuntimeError("deepseek_generation_failed") from exc
                 used_stages.append("llm_error_fallback")

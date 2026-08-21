@@ -5,7 +5,14 @@ Re-exports fine-grained latency benchmarking from evaluation.glhs_assurance.micr
 
 from __future__ import annotations
 
-from evaluation.glhs_assurance.microbench_governance_profile import (
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from evaluation.glhs_assurance.microbench_governance_profile import (  # noqa: E402
     DEFAULT_T_LLM_MS,
     TARGET_OVERHEAD_PCT,
     TARGET_T_COMMIT_MS,
@@ -34,3 +41,7 @@ __all__ = [
     "format_latex_table",
     "run_governance_microbenchmark",
 ]
+
+if __name__ == "__main__":
+    result = run_governance_microbenchmark(iterations=100, warmup_iterations=20)
+    print(format_ascii_table(result))

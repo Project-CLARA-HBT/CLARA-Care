@@ -48,9 +48,13 @@ def run_benchmark(
 
     if gateway is None:
         gateway = ModelGateway()
-        gateway.register_adapter(provider, MockEvaluationAdapter(provider_alias=provider, model_name=model))
+        gateway.register_adapter(
+            provider, MockEvaluationAdapter(provider_alias=provider, model_name=model)
+        )
 
-    gateway._custom_adapters[provider] = MockEvaluationAdapter(provider_alias=provider, model_name=model)
+    gateway._custom_adapters[provider] = MockEvaluationAdapter(
+        provider_alias=provider, model_name=model
+    )
     os.environ["CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_PROVIDER"] = provider
     os.environ["CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_MODEL"] = model
 
@@ -59,9 +63,8 @@ def run_benchmark(
 
     try:
         for case in cases:
-            prompt_full = case.prompt
             if case.context:
-                prompt_full = f"Security Policy Context:\n{case.context}\n\nUser Request:\n{case.prompt}"
+                pass
 
             req = ModelRequest(
                 prompt=case.prompt,
@@ -131,5 +134,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     report = run_benchmark(provider=args.provider, model=args.model, output_dir=Path(args.output))
-    print(f"[{report.task_id}] Provider: {report.provider} ({report.model}) | Passed: {report.overall_passed} | Pass Rate: {report.pass_rate*100:.1f}%")
+    print(
+        f"[{report.task_id}] Provider: {report.provider} ({report.model}) | Passed: {report.overall_passed} | Pass Rate: {report.pass_rate * 100:.1f}%"
+    )
     sys.exit(0 if report.overall_passed else 1)

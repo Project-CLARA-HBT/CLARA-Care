@@ -96,9 +96,7 @@ def test_baseline_reauthorizes_but_intentionally_does_not_bind_exact_snapshot() 
     )
     assert state.apply(altered).accepted is True
 
-    next_proposal = replace(
-        _proposal(), proposal_id="revoked", observed_base_version=1
-    )
+    next_proposal = replace(_proposal(), proposal_id="revoked", observed_base_version=1)
     state.revoke(actor_id="actor-1", purpose="self_care")
     assert state.apply(next_proposal).reason_code == "current_authorization_denied"
 

@@ -26,12 +26,14 @@ def _rows_fixture() -> list[dict[str, str]]:
     rows = []
     for family in families:
         for arm in ("UNBOUND", "STATE_VERSION_ONLY", "SNAPSHOT_BOUND_STATE_ONLY", "GLHS_STRICT"):
-            rows.append({
-                "family": family,
-                "arm": arm,
-                "not_run_n": "30",
-                "executed_n": "0",
-            })
+            rows.append(
+                {
+                    "family": family,
+                    "arm": arm,
+                    "not_run_n": "30",
+                    "executed_n": "0",
+                }
+            )
     return rows
 
 
@@ -56,11 +58,7 @@ def test_classifies_all_not_run_families() -> None:
 
 def test_completed_primary_families_noted_with_commit() -> None:
     audit = build_capability_audit(_rows_fixture())
-    completed = {
-        row["family"]
-        for row in audit["rows"]
-        if row["completed_since_final_003"]
-    }
+    completed = {row["family"] for row in audit["rows"] if row["completed_since_final_003"]}
     assert completed == {"cross_subject_retrieval", "purpose_mismatch", "policy_version_change"}
     for row in audit["rows"]:
         if row["family"] in completed:

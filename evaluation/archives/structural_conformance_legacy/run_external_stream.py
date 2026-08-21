@@ -116,7 +116,12 @@ def _ratio(counts: dict[str, int], name: str, *, inverse: bool = False) -> dict[
     if inverse:
         numerator = total - numerator
     lower, upper = wilson(numerator, total)
-    return {"numerator": numerator, "denominator": total, "rate": numerator / total, "wilson95": [lower, upper]}
+    return {
+        "numerator": numerator,
+        "denominator": total,
+        "rate": numerator / total,
+        "wilson95": [lower, upper],
+    }
 
 
 def _metrics(counts: dict[str, int], latencies: array[float]) -> dict[str, object]:
@@ -169,7 +174,11 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
         raise ValueError("external_stream_requires_development_partition")
     relative = manifest.get("perturbations_file")
     expected_hash = manifest.get("perturbations_sha256")
-    if not isinstance(relative, str) or Path(relative).is_absolute() or not isinstance(expected_hash, str):
+    if (
+        not isinstance(relative, str)
+        or Path(relative).is_absolute()
+        or not isinstance(expected_hash, str)
+    ):
         raise ValueError("external_stream_manifest_perturbation_invalid")
     perturbations = (manifest_path.parent / relative).resolve()
     if manifest_path.parent.resolve() not in perturbations.parents:
@@ -183,7 +192,31 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
     # moves.  It carries checksums/counts only, never raw FHIR resources.
     (output / "source-manifest.json").write_bytes(manifest_bytes)
     case_fields = list(asdict(Case("", "", 0, "", "", None, 0, 0, False, "", "")).keys())
-    outcome_fields = list(asdict(Outcome("", "", "", "", False, False, False, False, False, False, 0.0, 0, False, False, "", None, 0.0, "", "")).keys())
+    outcome_fields = list(
+        asdict(
+            Outcome(
+                "",
+                "",
+                "",
+                "",
+                False,
+                False,
+                False,
+                False,
+                False,
+                False,
+                0.0,
+                0,
+                False,
+                False,
+                "",
+                None,
+                0.0,
+                "",
+                "",
+            )
+        ).keys()
+    )
     counts = {system: _new_counts() for system in SYSTEMS}
     latencies = {system: array("d") for system in SYSTEMS}
     # A full Synthea run can contain more than one million rows.  Keep the
@@ -197,9 +230,13 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
         "CREATE TABLE identifiers (case_id TEXT PRIMARY KEY NOT NULL, subject_id TEXT UNIQUE NOT NULL)"
     )
     case_count = 0
-    with (output / "external_cases.csv").open("w", encoding="utf-8", newline="") as cases_handle, (
-        output / "external_outcomes.csv"
-    ).open("w", encoding="utf-8", newline="") as outcomes_handle, perturbations.open(encoding="utf-8") as source:
+    with (
+        (output / "external_cases.csv").open("w", encoding="utf-8", newline="") as cases_handle,
+        (output / "external_outcomes.csv").open(
+            "w", encoding="utf-8", newline=""
+        ) as outcomes_handle,
+        perturbations.open(encoding="utf-8") as source,
+    ):
         case_writer = csv.DictWriter(cases_handle, fieldnames=case_fields)
         outcome_writer = csv.DictWriter(outcomes_handle, fieldnames=outcome_fields)
         case_writer.writeheader()
@@ -220,7 +257,9 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
                     (case.case_id, case.subject_id),
                 )
             except sqlite3.IntegrityError as error:
-                raise ValueError(f"external_stream_duplicate_case_or_subject:{case.case_id}") from error
+                raise ValueError(
+                    f"external_stream_duplicate_case_or_subject:{case.case_id}"
+                ) from error
             case_count += 1
             case_writer.writerow(asdict(case))
             for system in SYSTEMS:
@@ -257,7 +296,9 @@ def run_stream(*, manifest_path: Path, output: Path) -> dict[str, object]:
             "Development partition is ineligible for final benchmark score release.",
         ],
     }
-    (output / "summary.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (output / "summary.json").write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     uniqueness_db.unlink(missing_ok=True)
     return result
 

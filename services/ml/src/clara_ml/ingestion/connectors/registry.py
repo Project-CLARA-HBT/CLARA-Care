@@ -46,7 +46,7 @@ __all__ = [
 
 
 def get_json(
-    client: "httpx.Client",
+    client: httpx.Client,
     url: str,
     params: dict[str, Any] | None = None,
     *,
@@ -145,7 +145,7 @@ def coerce_iso_date(value: Any) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def connector_classes() -> dict[str, type["BaseSourceConnector"]]:
+def connector_classes() -> dict[str, type[BaseSourceConnector]]:
     """Return the ``source_key`` → connector-class map (imported lazily).
 
     The imports live inside the function so importing :mod:`registry` never
@@ -172,9 +172,9 @@ def connector_classes() -> dict[str, type["BaseSourceConnector"]]:
 
 def build_connector(
     source_key: str,
-    context: "ConnectorContext",
+    context: ConnectorContext,
     **kwargs: Any,
-) -> "BaseSourceConnector":
+) -> BaseSourceConnector:
     """Construct the connector registered for ``source_key``.
 
     Raises :class:`KeyError` for an unknown source key. Extra ``kwargs`` (e.g.

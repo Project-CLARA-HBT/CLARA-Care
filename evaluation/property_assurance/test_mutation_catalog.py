@@ -9,7 +9,9 @@ from evaluation.property_assurance.mutation_overlay import MutantOverlay, apply_
 def test_anchor_catalog_applies_one_real_source_overlay_per_candidate(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[2]
     catalog = json.loads(
-        (root / "research/assurance_soict/mutation_site_candidates.json").read_text(encoding="utf-8")
+        (root / "research/assurance_soict/mutation_site_candidates.json").read_text(
+            encoding="utf-8"
+        )
     )
     applied = [
         apply_overlay(

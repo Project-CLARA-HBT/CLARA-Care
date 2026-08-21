@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
-from .domain import Document, TRUST_TIER_FACTOR
-
+from .domain import TRUST_TIER_FACTOR, Document
 
 _INTERACTION_SIGNALS = {
     "tuong",

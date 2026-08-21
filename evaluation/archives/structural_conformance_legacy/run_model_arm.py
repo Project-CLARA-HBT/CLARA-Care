@@ -4,6 +4,7 @@ This runner sends synthetic structural cases only.  It never transmits patient
 data and never falls back to another model or a heuristic answer.  The endpoint
 must return normally; timeout/HTTP/schema failures are recorded per case.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -62,6 +63,7 @@ def _direct_selection_contract() -> dict[str, object]:
         ).hexdigest(),
     }
 
+
 def _selected(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     # Fixed stratified selection: 30 direct, 72 compositional, 18 ambiguity.
     buckets = {"direct_conformance": 30, "compositional_stress": 72, "ambiguity_escalation": 18}
@@ -75,22 +77,43 @@ def _selected(rows: list[dict[str, str]]) -> list[dict[str, str]]:
         raise ValueError("frozen_subset_must_have_120_cases")
     return selected
 
+
 def _query(row: dict[str, str], seed: int) -> str:
     # Opaque labels avoid accidentally asking the medical hard guard to reason
     # about a dose string.  This is a structural benchmark, not a medication
     # task; the one-to-one label mapping is fixed above before any run.
-    return ("Bạn là bộ phân loại cấu trúc cho bài tập tin học mô phỏng; đây không phải nội dung sức khỏe và không có người dùng thật. "
-            f"Scenario={row['scenario']}; state_code phải là một trong {{CURRENT,STALE_REJECTED,CONFLICT,WITHHELD}}. "
-            "Dựa duy nhất vào quy tắc an toàn: bằng chứng muộn không được reset hiện tại; "
-            "mâu thuẫn phải giữ conflict; thiếu provenance hoặc sai consent phải withheld; "
-            "stale/direct-write phải không được xác nhận. "
-            "Chỉ trả một JSON object không markdown với keys state_code và decision. "
-            "decision là keep, escalate, hoặc reject. "
-            f"seed={seed}; case={row['case_id']}.")
+    return (
+        "Bạn là bộ phân loại cấu trúc cho bài tập tin học mô phỏng; đây không phải nội dung sức khỏe và không có người dùng thật. "
+        f"Scenario={row['scenario']}; state_code phải là một trong {{CURRENT,STALE_REJECTED,CONFLICT,WITHHELD}}. "
+        "Dựa duy nhất vào quy tắc an toàn: bằng chứng muộn không được reset hiện tại; "
+        "mâu thuẫn phải giữ conflict; thiếu provenance hoặc sai consent phải withheld; "
+        "stale/direct-write phải không được xác nhận. "
+        "Chỉ trả một JSON object không markdown với keys state_code và decision. "
+        "decision là keep, escalate, hoặc reject. "
+        f"seed={seed}; case={row['case_id']}."
+    )
 
-def _request_http(url: str, key: str, row: dict[str, str], seed: int, timeout: float) -> tuple[dict, float]:
-    payload = {"query": _query(row, seed), "role": "admin", "protocol": "chat", "rag_flow": {"scientific_retrieval_enabled": False, "web_retrieval_enabled": False, "file_retrieval_enabled": False, "verification_enabled": False}}
-    request = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json", "X-ML-Internal-Key": key}, method="POST")
+
+def _request_http(
+    url: str, key: str, row: dict[str, str], seed: int, timeout: float
+) -> tuple[dict, float]:
+    payload = {
+        "query": _query(row, seed),
+        "role": "admin",
+        "protocol": "chat",
+        "rag_flow": {
+            "scientific_retrieval_enabled": False,
+            "web_retrieval_enabled": False,
+            "file_retrieval_enabled": False,
+            "verification_enabled": False,
+        },
+    }
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "X-ML-Internal-Key": key},
+        method="POST",
+    )
     started = time.perf_counter()
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.loads(response.read()), (time.perf_counter() - started) * 1000
@@ -130,36 +153,81 @@ def _request_direct(row: dict[str, str], seed: int) -> tuple[dict, float]:
         "selection_profile": selection.model_profile,
     }, (time.perf_counter() - started) * 1000
 
+
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--cases", type=Path, required=True); p.add_argument("--output", type=Path, required=True)
-    p.add_argument("--code-revision", required=True, help="Frozen git commit that owns this runner and protocol.")
+    p.add_argument("--cases", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+    p.add_argument(
+        "--code-revision",
+        required=True,
+        help="Frozen git commit that owns this runner and protocol.",
+    )
     p.add_argument("--transport", choices=("direct", "http"), default="direct")
-    p.add_argument("--url", default="http://127.0.0.1:8010/v1/chat/routed"); p.add_argument("--timeout", type=float, default=90.0)
-    args = p.parse_args(); key = os.environ.get("ML_INTERNAL_API_KEY", "")
+    p.add_argument("--url", default="http://127.0.0.1:8010/v1/chat/routed")
+    p.add_argument("--timeout", type=float, default=90.0)
+    args = p.parse_args()
+    key = os.environ.get("ML_INTERNAL_API_KEY", "")
     rows = _selected(list(csv.DictReader(args.cases.open(encoding="utf-8"))))
     args.output.mkdir(parents=True, exist_ok=True)
     if len(args.code_revision) < 7:
         raise ValueError("model_arm_code_revision_invalid")
-    contract = {"version": PROMPT_VERSION, "code_revision": args.code_revision, "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "seeds": list(SEEDS), "case_count": len(rows), "case_ids_sha256": hashlib.sha256("\n".join(r["case_id"] for r in rows).encode()).hexdigest(), "transport": args.transport, "endpoint": args.url if args.transport == "http" else "governed_direct_task_client", "no_fallback": True, "synthetic_only": True}
+    contract = {
+        "version": PROMPT_VERSION,
+        "code_revision": args.code_revision,
+        "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "seeds": list(SEEDS),
+        "case_count": len(rows),
+        "case_ids_sha256": hashlib.sha256(
+            "\n".join(r["case_id"] for r in rows).encode()
+        ).hexdigest(),
+        "transport": args.transport,
+        "endpoint": args.url if args.transport == "http" else "governed_direct_task_client",
+        "no_fallback": True,
+        "synthetic_only": True,
+    }
     if args.transport == "direct":
         contract["runtime_selection"] = _direct_selection_contract()
     (args.output / "model_arm_contract.json").write_text(json.dumps(contract, indent=2) + "\n")
-    results=[]
+    results = []
     checkpoint = args.output / "model_per_run.partial.csv"
-    fieldnames = ["case_id", "seed", "expected_state", "scenario", "experiment", "status", "latency_ms", "model_used", "policy_action", "guard_reason", "degraded", "json_valid", "state", "state_correct", "answer_sha256", "error_class"]
+    fieldnames = [
+        "case_id",
+        "seed",
+        "expected_state",
+        "scenario",
+        "experiment",
+        "status",
+        "latency_ms",
+        "model_used",
+        "policy_action",
+        "guard_reason",
+        "degraded",
+        "json_valid",
+        "state",
+        "state_correct",
+        "answer_sha256",
+        "error_class",
+    ]
     with checkpoint.open("w", newline="", encoding="utf-8") as handle:
         csv.DictWriter(handle, fieldnames=fieldnames).writeheader()
     for seed in SEEDS:
         for row in rows:
-            record={"case_id": row["case_id"], "seed": seed, "expected_state": row["expected_state"], "scenario": row["scenario"], "experiment": row["experiment"]}
+            record = {
+                "case_id": row["case_id"],
+                "seed": seed,
+                "expected_state": row["expected_state"],
+                "scenario": row["scenario"],
+                "experiment": row["experiment"],
+            }
             try:
                 response, latency = (
                     _request_direct(row, seed)
                     if args.transport == "direct"
                     else _request_http(args.url, key, row, seed, args.timeout)
                 )
-                answer = str(response.get("answer") or "").strip(); parsed = json.loads(answer) if answer.startswith("{") else {}
+                answer = str(response.get("answer") or "").strip()
+                parsed = json.loads(answer) if answer.startswith("{") else {}
                 code = parsed.get("state_code") if isinstance(parsed, dict) else None
                 state = CODE_TO_STATE.get(code) if isinstance(code, str) else None
                 model_used = str(response.get("model_used") or "")
@@ -167,16 +235,66 @@ def main() -> None:
                 # Missing provider provenance or a policy refusal invalidates
                 # the run; neither can be silently counted as completion.
                 completed = bool(model_used) and policy_action != "block"
-                record.update({"status":"completed" if completed else "invalid_runtime", "latency_ms":round(latency,3), "model_used":model_used, "policy_action":policy_action, "guard_reason":str(response.get("guard_reason") or ""), "degraded": model_used.startswith(("local-synth", "api-safe", "api-local")), "json_valid": isinstance(parsed,dict), "state":state or "", "state_correct": state == row["expected_state"], "answer_sha256":hashlib.sha256(answer.encode()).hexdigest()})
-            except (OSError, ValueError, urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
-                record.update({"status":"error", "error_class":type(exc).__name__, "latency_ms":"", "model_used":"", "policy_action":"", "guard_reason":"", "degraded":"", "json_valid":False, "state":"", "state_correct":False, "answer_sha256":""})
+                record.update(
+                    {
+                        "status": "completed" if completed else "invalid_runtime",
+                        "latency_ms": round(latency, 3),
+                        "model_used": model_used,
+                        "policy_action": policy_action,
+                        "guard_reason": str(response.get("guard_reason") or ""),
+                        "degraded": model_used.startswith(("local-synth", "api-safe", "api-local")),
+                        "json_valid": isinstance(parsed, dict),
+                        "state": state or "",
+                        "state_correct": state == row["expected_state"],
+                        "answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
+                    }
+                )
+            except (
+                OSError,
+                ValueError,
+                urllib.error.URLError,
+                urllib.error.HTTPError,
+                json.JSONDecodeError,
+            ) as exc:
+                record.update(
+                    {
+                        "status": "error",
+                        "error_class": type(exc).__name__,
+                        "latency_ms": "",
+                        "model_used": "",
+                        "policy_action": "",
+                        "guard_reason": "",
+                        "degraded": "",
+                        "json_valid": False,
+                        "state": "",
+                        "state_correct": False,
+                        "answer_sha256": "",
+                    }
+                )
             results.append(record)
             with checkpoint.open("a", newline="", encoding="utf-8") as handle:
                 writer = csv.DictWriter(handle, fieldnames=fieldnames)
                 writer.writerow({key: record.get(key, "") for key in fieldnames})
     with (args.output / "model_per_run.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer=csv.DictWriter(handle, fieldnames=fieldnames); writer.writeheader(); writer.writerows([{key: record.get(key, "") for key in fieldnames} for record in results])
-    completed=[r for r in results if r["status"]=="completed"]
-    summary={"contract":contract,"total":len(results),"completed":len(completed),"errors":len(results)-len(completed),"json_valid":sum(bool(r["json_valid"]) for r in completed),"state_correct":sum(bool(r["state_correct"]) for r in completed),"latency_ms":{"p50":sorted([float(r["latency_ms"]) for r in completed])[len(completed)//2] if completed else None}}
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows([{key: record.get(key, "") for key in fieldnames} for record in results])
+    completed = [r for r in results if r["status"] == "completed"]
+    summary = {
+        "contract": contract,
+        "total": len(results),
+        "completed": len(completed),
+        "errors": len(results) - len(completed),
+        "json_valid": sum(bool(r["json_valid"]) for r in completed),
+        "state_correct": sum(bool(r["state_correct"]) for r in completed),
+        "latency_ms": {
+            "p50": sorted([float(r["latency_ms"]) for r in completed])[len(completed) // 2]
+            if completed
+            else None
+        },
+    }
     (args.output / "model_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-if __name__ == "__main__": main()
+
+
+if __name__ == "__main__":
+    main()

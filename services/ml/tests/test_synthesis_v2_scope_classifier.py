@@ -20,10 +20,9 @@ from __future__ import annotations
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from synthesis_v2.harness import PROPERTY_TAGS
 
 from clara_ml.agents import research_tier2 as rt
-
-from synthesis_v2.harness import PROPERTY_TAGS
 
 # Ensure the property tag this module pins still exists in the design map.
 assert "P2" in PROPERTY_TAGS

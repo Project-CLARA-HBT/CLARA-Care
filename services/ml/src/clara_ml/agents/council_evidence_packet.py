@@ -123,7 +123,7 @@ def public_evidence_packet_summary(packet: dict[str, Any] | None) -> dict[str, A
         return {"status": "rejected", "evidence_count": 0, "categories": []}
     categories = sorted(
         {
-            item.get("category")
+            str(item["category"])
             for item in items
             if isinstance(item, dict) and isinstance(item.get("category"), str)
         }

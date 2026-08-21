@@ -6,6 +6,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from typing import Any, Literal, TypedDict
+
 from pydantic import BaseModel, ConfigDict, Field
 
 CAPTURE_SCHEMA_VERSION = "lifemap.capture.v1"

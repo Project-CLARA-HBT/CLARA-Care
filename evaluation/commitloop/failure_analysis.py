@@ -59,9 +59,7 @@ def _read_json(path: Path) -> Any:
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 
@@ -84,16 +82,19 @@ def _taxonomy(
         if gold.get("evidence_state") == "CONFLICTED":
             return "CONFLICT_COLLAPSE"
         if prediction.get("evidence_state") == "INSUFFICIENT_EVIDENCE":
-            return "OVER_REDACTION" if condition == "glhs_hybrid_thss_strict" else "CRITICAL_OMISSION"
+            return (
+                "OVER_REDACTION" if condition == "glhs_hybrid_thss_strict" else "CRITICAL_OMISSION"
+            )
         return "UNSUPPORTED_ASSERTION"
     if prediction.get("timeliness_state") != gold.get("timeliness_state"):
         return "KNOWLEDGE_TIME_ERROR"
     if prediction.get("lifecycle_state") != gold.get("lifecycle_state"):
-        if (
-            prediction.get("lifecycle_state") == "OPEN"
-            and gold.get("lifecycle_state")
-            in {"CANCELLED", "SUPERSEDED", "SATISFIED", "PARTIALLY_SATISFIED"}
-        ):
+        if prediction.get("lifecycle_state") == "OPEN" and gold.get("lifecycle_state") in {
+            "CANCELLED",
+            "SUPERSEDED",
+            "SATISFIED",
+            "PARTIALLY_SATISFIED",
+        }:
             return "STALE_STATE_LEAK"
         return "TEMPORAL_SELECTION_ERROR"
     return "UNSUPPORTED_ASSERTION"
@@ -189,12 +190,8 @@ def analyze_development_run(
         for item in _read_jsonl(run_dir / "construction_gold.jsonl")
         if str(item.get("case_id")) in selected_cases
     }
-    outputs = {
-        str(item["key"]): item for item in _read_json(run_dir / "solver_outputs.json")
-    }
-    errors = {
-        str(item["key"]): item for item in _read_json(run_dir / "error_ledger.json")
-    }
+    outputs = {str(item["key"]): item for item in _read_json(run_dir / "solver_outputs.json")}
+    errors = {str(item["key"]): item for item in _read_json(run_dir / "error_ledger.json")}
     models = [str(item) for item in manifest["models"]]
     conditions = [str(item) for item in manifest["conditions"]]
     if not selected_cases or not selected_cases.issubset(gold):
@@ -277,11 +274,19 @@ def analyze_development_run(
         ["taxonomy", "model", "condition", "domain", "stratum", "variant_kind", "count", "split"],
     )
     clusters = [
-        {**row, "cluster_id": f"{row['taxonomy']}:{row['model']}:{row['condition']}:{row['domain']}:{row['stratum']}:{row['variant_kind']}"}
+        {
+            **row,
+            "cluster_id": f"{row['taxonomy']}:{row['model']}:{row['condition']}:{row['domain']}:{row['stratum']}:{row['variant_kind']}",
+        }
         for row in taxonomy_rows
     ]
     (output_dir / "failure_clusters.json").write_text(
-        json.dumps({"schema_version": "glhs-bench.failure-clusters.v1", "clusters": clusters}, indent=2, sort_keys=True) + "\n",
+        json.dumps(
+            {"schema_version": "glhs-bench.failure-clusters.v1", "clusters": clusters},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -296,7 +301,11 @@ def analyze_development_run(
         }
         for (model, condition, domain), total in sorted(cell_totals.items())
     ]
-    _write_csv(output_dir / "benchmark_gap_matrix.csv", gap_rows, ["model", "condition", "domain", "correct", "denominator", "accuracy"])
+    _write_csv(
+        output_dir / "benchmark_gap_matrix.csv",
+        gap_rows,
+        ["model", "condition", "domain", "correct", "denominator", "accuracy"],
+    )
     _write_csv(
         output_dir / "stratum_gap_matrix.csv",
         _gap_rows(totals=stratum_totals, correct=stratum_correct, dimension="stratum"),
@@ -310,20 +319,67 @@ def analyze_development_run(
     model_rows = []
     for model in models:
         rows = [row for row in gap_rows if row["model"] == model]
-        correct, denominator = sum(int(row["correct"]) for row in rows), sum(int(row["denominator"]) for row in rows)
-        model_rows.append({"model": model, "correct": correct, "denominator": denominator, "accuracy": correct / denominator})
-    _write_csv(output_dir / "model_gap_matrix.csv", model_rows, ["model", "correct", "denominator", "accuracy"])
+        correct, denominator = (
+            sum(int(row["correct"]) for row in rows),
+            sum(int(row["denominator"]) for row in rows),
+        )
+        model_rows.append(
+            {
+                "model": model,
+                "correct": correct,
+                "denominator": denominator,
+                "accuracy": correct / denominator,
+            }
+        )
+    _write_csv(
+        output_dir / "model_gap_matrix.csv",
+        model_rows,
+        ["model", "correct", "denominator", "accuracy"],
+    )
     source = str(_read_json(run_dir / "source_manifest.json").get("source", "unknown"))
-    correct, denominator = sum(int(row["correct"]) for row in gap_rows), sum(int(row["denominator"]) for row in gap_rows)
-    _write_csv(output_dir / "dataset_gap_matrix.csv", [{"dataset": source, "correct": correct, "denominator": denominator, "accuracy": correct / denominator}], ["dataset", "correct", "denominator", "accuracy"])
+    correct, denominator = (
+        sum(int(row["correct"]) for row in gap_rows),
+        sum(int(row["denominator"]) for row in gap_rows),
+    )
+    _write_csv(
+        output_dir / "dataset_gap_matrix.csv",
+        [
+            {
+                "dataset": source,
+                "correct": correct,
+                "denominator": denominator,
+                "accuracy": correct / denominator,
+            }
+        ],
+        ["dataset", "correct", "denominator", "accuracy"],
+    )
     domain_rows = []
     for domain in sorted({str(row["domain"]) for row in gap_rows}):
         rows = [row for row in gap_rows if row["domain"] == domain]
-        d_correct, d_denominator = sum(int(row["correct"]) for row in rows), sum(int(row["denominator"]) for row in rows)
-        domain_rows.append({"domain": domain, "correct": d_correct, "denominator": d_denominator, "accuracy": d_correct / d_denominator})
-    _write_csv(output_dir / "domain_gap_matrix.csv", domain_rows, ["domain", "correct", "denominator", "accuracy"])
+        d_correct, d_denominator = (
+            sum(int(row["correct"]) for row in rows),
+            sum(int(row["denominator"]) for row in rows),
+        )
+        domain_rows.append(
+            {
+                "domain": domain,
+                "correct": d_correct,
+                "denominator": d_denominator,
+                "accuracy": d_correct / d_denominator,
+            }
+        )
+    _write_csv(
+        output_dir / "domain_gap_matrix.csv",
+        domain_rows,
+        ["domain", "correct", "denominator", "accuracy"],
+    )
 
-    counts = Counter({label: sum(count for (name, *_rest), count in failures.items() if name == label) for label in TAXONOMY})
+    counts = Counter(
+        {
+            label: sum(count for (name, *_rest), count in failures.items() if name == label)
+            for label in TAXONOMY
+        }
+    )
     observed = [(name, count) for name, count in counts.items() if count]
     root_cause = [
         "# Development-only root-cause hypotheses",
@@ -332,9 +388,14 @@ def analyze_development_run(
         "",
         "| Failure taxonomy | Count | Production investigation |",
         "| --- | ---: | --- |",
-        *[f"| {name} | {count} | {_CANDIDATES.get(name, 'Classify with a focused production-path regression test.')} |" for name, count in observed],
+        *[
+            f"| {name} | {count} | {_CANDIDATES.get(name, 'Classify with a focused production-path regression test.')} |"
+            for name, count in observed
+        ],
     ]
-    (output_dir / "root_cause_analysis.md").write_text("\n".join(root_cause) + "\n", encoding="utf-8")
+    (output_dir / "root_cause_analysis.md").write_text(
+        "\n".join(root_cause) + "\n", encoding="utf-8"
+    )
     candidates = [
         "# Improvement candidates",
         "",
@@ -342,7 +403,14 @@ def analyze_development_run(
         "",
     ]
     for index, (name, _count) in enumerate(observed, start=1):
-        candidates.extend([f"## IMP-{index:03d}: {name}", "", _CANDIDATES.get(name, "Add focused classification and regression coverage."), ""])
+        candidates.extend(
+            [
+                f"## IMP-{index:03d}: {name}",
+                "",
+                _CANDIDATES.get(name, "Add focused classification and regression coverage."),
+                "",
+            ]
+        )
     (output_dir / "improvement_candidates.md").write_text("\n".join(candidates), encoding="utf-8")
     return {
         "schema_version": "glhs-bench.failure-analysis.v1",
@@ -363,7 +431,18 @@ def main() -> int:
     parser.add_argument("--frozen-cohort", type=Path)
     parser.add_argument("--freeze", type=Path)
     args = parser.parse_args()
-    print(json.dumps(analyze_development_run(run_dir=args.run_dir, output_dir=args.output, analysis_split=args.split, frozen_cohort_path=args.frozen_cohort, freeze_path=args.freeze), sort_keys=True))
+    print(
+        json.dumps(
+            analyze_development_run(
+                run_dir=args.run_dir,
+                output_dir=args.output,
+                analysis_split=args.split,
+                frozen_cohort_path=args.frozen_cohort,
+                freeze_path=args.freeze,
+            ),
+            sort_keys=True,
+        )
+    )
     return 0
 
 

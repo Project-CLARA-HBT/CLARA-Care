@@ -3,8 +3,8 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from clara_api.core.config import get_settings
 from clara_api.core.auth_email import dispatch_action_email
+from clara_api.core.config import get_settings
 from clara_api.main import app
 
 client = TestClient(app)

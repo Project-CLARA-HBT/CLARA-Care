@@ -4,10 +4,11 @@ import argparse
 import csv
 import json
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .acquisition import acquire_seed_pdfs, to_acquisition_report, to_seed_documents
 from .build_authoritative_pubmed_seed import build_seed_documents
@@ -319,7 +320,7 @@ def build_manifest(
     by_trust = Counter(source.trust_tier for source in sources)
     by_strategy = Counter(source.ingest_strategy for source in sources)
     by_action = Counter(source.seed_action for source in sources)
-    generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    generated_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     return {
         "pack_id": "medical-safety-corpus-pack-2026-03-31",

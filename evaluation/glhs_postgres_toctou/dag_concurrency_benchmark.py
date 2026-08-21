@@ -47,7 +47,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from threading import BrokenBarrierError
 from typing import Any, cast
@@ -87,7 +87,7 @@ BENCHMARK_WORKER_EXCEPTIONS: tuple[type[BaseException], ...] = (
 )
 
 
-class BenchmarkArmType(str, Enum):
+class BenchmarkArmType(StrEnum):
     """The three evaluated concurrency regimes."""
 
     MONOLITHIC_DISJOINT = "monolithic_profile_locking_disjoint_entities"
@@ -95,7 +95,7 @@ class BenchmarkArmType(str, Enum):
     DAG_OVERLAPPING = "entity_dag_partition_locking_overlapping_entities"
 
 
-class WriterOutcome(str, Enum):
+class WriterOutcome(StrEnum):
     """Outcome of an individual writer transaction attempt."""
 
     COMMITTED = "committed"
@@ -240,9 +240,7 @@ class BenchmarkComparisonReport:
         }
 
 
-def calculate_percentile(
-    sorted_values: list[float], percentile: float
-) -> float:
+def calculate_percentile(sorted_values: list[float], percentile: float) -> float:
     """Nearest-rank percentile over a pre-sorted list of floats."""
     if not sorted_values:
         return 0.0
@@ -311,9 +309,7 @@ def seed_benchmark_fixtures(
         )
         session.add(part)
 
-    shared_key = PartitionKey(
-        domain=domain, semantic_key=DEFAULT_SHARED_SEMANTIC_KEY
-    )
+    shared_key = PartitionKey(domain=domain, semantic_key=DEFAULT_SHARED_SEMANTIC_KEY)
     shared_part = GlhsEntityVersionPartition(
         profile_id=profile.id,
         domain=shared_key.domain,
@@ -339,17 +335,13 @@ def execute_monolithic_disjoint_writer(
     task: WriterTask,
     barrier: PhasedBarrier,
 ) -> WriterResult:
-    target_key_str = (
-        f"{task.target_keys[0].domain}:{task.target_keys[0].semantic_key}"
-    )
+    target_key_str = f"{task.target_keys[0].domain}:{task.target_keys[0].semantic_key}"
     barrier.wait("release")
     start_ns = now_monotonic_ns()
 
     try:
         session.execute(
-            select(PhrProfile.id)
-            .where(PhrProfile.id == task.profile_id)
-            .with_for_update()
+            select(PhrProfile.id).where(PhrProfile.id == task.profile_id).with_for_update()
         ).scalar_one()
 
         current_ver = (
@@ -434,12 +426,8 @@ def execute_dag_partition_writer(
     task: WriterTask,
     barrier: PhasedBarrier,
 ) -> WriterResult:
-    target_key_strs = [
-        f"{pk.domain}:{pk.semantic_key}" for pk in task.target_keys
-    ]
-    sorted_keys = sorted(
-        task.target_keys, key=lambda k: (k.domain, k.semantic_key)
-    )
+    target_key_strs = [f"{pk.domain}:{pk.semantic_key}" for pk in task.target_keys]
+    sorted_keys = sorted(task.target_keys, key=lambda k: (k.domain, k.semantic_key))
 
     barrier.wait("release")
     start_ns = now_monotonic_ns()
@@ -499,9 +487,7 @@ def execute_dag_partition_writer(
             end_ns=end_ns,
             latency_ms=elapsed_ms(start_ns, end_ns),
             target_keys=target_key_strs,
-            expected_version=task.expected_partition_versions.get(
-                target_key_strs[0], 1
-            ),
+            expected_version=task.expected_partition_versions.get(target_key_strs[0], 1),
             observed_version=last_version - 1,
             resulting_version=last_version,
         )
@@ -516,9 +502,7 @@ def execute_dag_partition_writer(
             end_ns=end_ns,
             latency_ms=elapsed_ms(start_ns, end_ns),
             target_keys=target_key_strs,
-            expected_version=task.expected_partition_versions.get(
-                target_key_strs[0], 1
-            ),
+            expected_version=task.expected_partition_versions.get(target_key_strs[0], 1),
             error_message=f"{type(exc).__name__}: {exc}",
         )
 
@@ -545,9 +529,7 @@ def run_simulated_monolithic_writer(
     task: WriterTask,
     barrier: PhasedBarrier,
 ) -> WriterResult:
-    target_key_str = (
-        f"{task.target_keys[0].domain}:{task.target_keys[0].semantic_key}"
-    )
+    target_key_str = f"{task.target_keys[0].domain}:{task.target_keys[0].semantic_key}"
     barrier.wait("release")
     start_ns = now_monotonic_ns()
 
@@ -591,9 +573,7 @@ def run_simulated_dag_writer(
     task: WriterTask,
     barrier: PhasedBarrier,
 ) -> WriterResult:
-    target_key_strs = [
-        f"{pk.domain}:{pk.semantic_key}" for pk in task.target_keys
-    ]
+    target_key_strs = [f"{pk.domain}:{pk.semantic_key}" for pk in task.target_keys]
     barrier.wait("release")
     start_ns = now_monotonic_ns()
 
@@ -639,9 +619,7 @@ def run_simulated_dag_writer(
             end_ns=end_ns,
             latency_ms=elapsed_ms(start_ns, end_ns),
             target_keys=target_key_strs,
-            expected_version=task.expected_partition_versions.get(
-                target_key_strs[0], 1
-            ),
+            expected_version=task.expected_partition_versions.get(target_key_strs[0], 1),
             observed_version=res_ver - 1,
             resulting_version=res_ver,
         )
@@ -694,26 +672,18 @@ def execute_benchmark_arm(
         if is_simulated:
             assert simulated_coordinator is not None
             if arm_type == BenchmarkArmType.MONOLITHIC_DISJOINT:
-                res = run_simulated_monolithic_writer(
-                    simulated_coordinator, tasks[index], barrier
-                )
+                res = run_simulated_monolithic_writer(simulated_coordinator, tasks[index], barrier)
             else:
-                res = run_simulated_dag_writer(
-                    simulated_coordinator, tasks[index], barrier
-                )
+                res = run_simulated_dag_writer(simulated_coordinator, tasks[index], barrier)
             results[index] = res
         else:
             assert session_factory is not None
             session = session_factory()
             try:
                 if arm_type == BenchmarkArmType.MONOLITHIC_DISJOINT:
-                    res = execute_monolithic_disjoint_writer(
-                        session, tasks[index], barrier
-                    )
+                    res = execute_monolithic_disjoint_writer(session, tasks[index], barrier)
                 else:
-                    res = execute_dag_partition_writer(
-                        session, tasks[index], barrier
-                    )
+                    res = execute_dag_partition_writer(session, tasks[index], barrier)
                 results[index] = res
             finally:
                 session.close()
@@ -740,24 +710,12 @@ def execute_benchmark_arm(
 
     collected_results = [cast(WriterResult, r) for r in results]
 
-    committed = sum(
-        1 for r in collected_results if r.outcome == WriterOutcome.COMMITTED
-    )
+    committed = sum(1 for r in collected_results if r.outcome == WriterOutcome.COMMITTED)
     false_stale = sum(
-        1
-        for r in collected_results
-        if r.outcome == WriterOutcome.FALSE_STALE_REJECTED
+        1 for r in collected_results if r.outcome == WriterOutcome.FALSE_STALE_REJECTED
     )
-    true_stale = sum(
-        1
-        for r in collected_results
-        if r.outcome == WriterOutcome.TRUE_STALE_REJECTED
-    )
-    errors = sum(
-        1
-        for r in collected_results
-        if r.outcome == WriterOutcome.OPERATIONAL_ERROR
-    )
+    true_stale = sum(1 for r in collected_results if r.outcome == WriterOutcome.TRUE_STALE_REJECTED)
+    errors = sum(1 for r in collected_results if r.outcome == WriterOutcome.OPERATIONAL_ERROR)
 
     total_attempts = writer_count
     false_stale_rate = round(false_stale / total_attempts, 4)
@@ -768,44 +726,27 @@ def execute_benchmark_arm(
     p50 = calculate_percentile(sorted_latencies, 0.50)
     p95 = calculate_percentile(sorted_latencies, 0.95)
     p99 = calculate_percentile(sorted_latencies, 0.99)
-    mean_lat = (
-        round(sum(sorted_latencies) / len(sorted_latencies), 3)
-        if sorted_latencies
-        else 0.0
-    )
-    min_lat = (
-        round(min(sorted_latencies), 3) if sorted_latencies else 0.0
-    )
-    max_lat = (
-        round(max(sorted_latencies), 3) if sorted_latencies else 0.0
-    )
+    mean_lat = round(sum(sorted_latencies) / len(sorted_latencies), 3) if sorted_latencies else 0.0
+    min_lat = round(min(sorted_latencies), 3) if sorted_latencies else 0.0
+    max_lat = round(max(sorted_latencies), 3) if sorted_latencies else 0.0
 
     invariant_passed = False
     verification_msg = ""
 
     if arm_type == BenchmarkArmType.MONOLITHIC_DISJOINT:
         title = "Monolithic Profile Locking (Disjoint Entities)"
-        desc = (
-            "16 writers on disjoint entities -> false-stale rejection rate (~93.75%)"
-        )
+        desc = "16 writers on disjoint entities -> false-stale rejection rate (~93.75%)"
         expected_rejections = total_attempts - 1
         if committed == 1 and false_stale == expected_rejections and errors == 0:
             invariant_passed = True
-            verification_msg = (
-                f"PASS: Exactly 1 winner and {expected_rejections} false-stale rejections observed ({false_stale_rate * 100:.2f}%)."
-            )
+            verification_msg = f"PASS: Exactly 1 winner and {expected_rejections} false-stale rejections observed ({false_stale_rate * 100:.2f}%)."
         else:
             verification_msg = f"FAIL: Expected 1 commit and {expected_rejections} false-stale rejections, got {committed} commits, {false_stale} false-stale, {errors} errors."
 
     elif arm_type == BenchmarkArmType.DAG_DISJOINT:
         title = "Entity DAG Partition Locking (Disjoint Entities)"
         desc = "16 writers on disjoint entities -> false-stale rejection rate (0%)"
-        if (
-            committed == total_attempts
-            and false_stale == 0
-            and true_stale == 0
-            and errors == 0
-        ):
+        if committed == total_attempts and false_stale == 0 and true_stale == 0 and errors == 0:
             invariant_passed = True
             verification_msg = f"PASS: All {total_attempts} writers committed successfully with 0.00% false-stale rejection."
         else:
@@ -822,9 +763,7 @@ def execute_benchmark_arm(
             and errors == 0
         ):
             invariant_passed = True
-            verification_msg = (
-                f"PASS: Exactly 1 atomic winner and {expected_rejections} true-stale rejections observed ({true_stale_rate * 100:.2f}%)."
-            )
+            verification_msg = f"PASS: Exactly 1 atomic winner and {expected_rejections} true-stale rejections observed ({true_stale_rate * 100:.2f}%)."
         else:
             verification_msg = f"FAIL: Expected 1 commit and {expected_rejections} true-stale rejections, got {committed} commits, {true_stale} true-stale, {errors} errors."
 
@@ -863,9 +802,7 @@ def run_dag_concurrency_benchmark(
     use_simulation_fallback: bool = True,
 ) -> BenchmarkComparisonReport:
     """Execute all three benchmark arms and produce a verified comparison report."""
-    run_id = (
-        f"GLHS-DAG-BENCHMARK-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
-    )
+    run_id = f"GLHS-DAG-BENCHMARK-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
     timestamp_utc = datetime.now(UTC).isoformat()
 
     engine: Engine | None = None
@@ -873,9 +810,7 @@ def run_dag_concurrency_benchmark(
     backend_desc = "simulated_in_memory_concurrency"
 
     resolved_db_url = (
-        database_url
-        or os.getenv("GLHS_TOCTOU_FINAL_DATABASE_URL")
-        or os.getenv("DATABASE_URL")
+        database_url or os.getenv("GLHS_TOCTOU_FINAL_DATABASE_URL") or os.getenv("DATABASE_URL")
     )
     if resolved_db_url and resolved_db_url.startswith("postgres"):
         backend_desc = "postgresql_isolated_schema"
@@ -896,13 +831,13 @@ def run_dag_concurrency_benchmark(
 
     try:
         if engine is not None:
-            session_factory = lambda: Session(engine, expire_on_commit=False)
+
+            def session_factory():
+                return Session(engine, expire_on_commit=False)
 
             init_session = session_factory()
             try:
-                fixtures_arm1 = seed_benchmark_fixtures(
-                    init_session, writer_count=writer_count
-                )
+                fixtures_arm1 = seed_benchmark_fixtures(init_session, writer_count=writer_count)
             finally:
                 init_session.close()
             arms["monolithic_disjoint"] = execute_benchmark_arm(
@@ -914,9 +849,7 @@ def run_dag_concurrency_benchmark(
 
             init_session = session_factory()
             try:
-                fixtures_arm2 = seed_benchmark_fixtures(
-                    init_session, writer_count=writer_count
-                )
+                fixtures_arm2 = seed_benchmark_fixtures(init_session, writer_count=writer_count)
             finally:
                 init_session.close()
             arms["dag_disjoint"] = execute_benchmark_arm(
@@ -928,9 +861,7 @@ def run_dag_concurrency_benchmark(
 
             init_session = session_factory()
             try:
-                fixtures_arm3 = seed_benchmark_fixtures(
-                    init_session, writer_count=writer_count
-                )
+                fixtures_arm3 = seed_benchmark_fixtures(init_session, writer_count=writer_count)
             finally:
                 init_session.close()
             arms["dag_overlapping"] = execute_benchmark_arm(
@@ -948,9 +879,7 @@ def run_dag_concurrency_benchmark(
             sim_coord1 = SimulatedLockCoordinator()
             sim_coord1.profile_versions[1] = 1
             for i in range(writer_count):
-                sim_coord1.partition_versions[
-                    f"{DEFAULT_BENCHMARK_DOMAIN}:rx_entity_{i:02d}"
-                ] = 1
+                sim_coord1.partition_versions[f"{DEFAULT_BENCHMARK_DOMAIN}:rx_entity_{i:02d}"] = 1
             arms["monolithic_disjoint"] = execute_benchmark_arm(
                 BenchmarkArmType.MONOLITHIC_DISJOINT,
                 writer_count=writer_count,
@@ -960,9 +889,7 @@ def run_dag_concurrency_benchmark(
             sim_coord2 = SimulatedLockCoordinator()
             sim_coord2.profile_versions[1] = 1
             for i in range(writer_count):
-                sim_coord2.partition_versions[
-                    f"{DEFAULT_BENCHMARK_DOMAIN}:rx_entity_{i:02d}"
-                ] = 1
+                sim_coord2.partition_versions[f"{DEFAULT_BENCHMARK_DOMAIN}:rx_entity_{i:02d}"] = 1
             arms["dag_disjoint"] = execute_benchmark_arm(
                 BenchmarkArmType.DAG_DISJOINT,
                 writer_count=writer_count,
@@ -985,15 +912,11 @@ def run_dag_concurrency_benchmark(
         if schema_name is not None and resolved_db_url is not None:
             cleanup_engine = create_engine(resolved_db_url, pool_pre_ping=True)
             with cleanup_engine.begin() as conn:
-                conn.execute(
-                    text(f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE')
-                )
+                conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE'))
             cleanup_engine.dispose()
 
     all_passed = all(a.invariant_passed for a in arms.values())
-    summary_table = render_summary_table(
-        arms, num_writers=writer_count, backend=backend_desc
-    )
+    summary_table = render_summary_table(arms, num_writers=writer_count, backend=backend_desc)
 
     return BenchmarkComparisonReport(
         benchmark_id=run_id,
@@ -1037,7 +960,7 @@ def render_summary_table(
 
     lines.append("=" * 118)
     lines.append("INVARIANT VERIFICATION SUMMARY:")
-    for arm_key, res in arms.items():
+    for _arm_key, res in arms.items():
         status = "PASSED" if res.invariant_passed else "FAILED"
         lines.append(f"  [{status}] {res.title}: {res.verification_message}")
     lines.append("=" * 118)
@@ -1089,9 +1012,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(
-                json.dumps(report.to_dict(), indent=2) + "\n", encoding="utf-8"
-            )
+            args.output.write_text(json.dumps(report.to_dict(), indent=2) + "\n", encoding="utf-8")
 
         if args.json:
             print(json.dumps(report.to_dict(), indent=2))

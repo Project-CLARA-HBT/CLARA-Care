@@ -101,12 +101,8 @@ def seal(
     missing = [str(path) for path in artifact_paths if not path.exists()]
     if missing:
         raise RuntimeError(f"glhs_binding_ablation_seal_artifact_missing:{missing}")
-    artifact_hashes = {
-        str(path): sha256_file(path) for path in artifact_paths
-    }
-    raw_hashes = {
-        str(path): sha256_file(path) for path in raw_paths
-    }
+    artifact_hashes = {str(path): sha256_file(path) for path in artifact_paths}
+    raw_hashes = {str(path): sha256_file(path) for path in raw_paths}
     raw_blob = b"".join(path.read_bytes() for path in raw_paths)
     run_manifest = _run_manifest(results_dir, run_id)
     if run_manifest is None:
@@ -114,7 +110,10 @@ def seal(
     backend = str(run_manifest.get("backend"))
     if backend not in {"sqlite_smoke", "isolated_postgresql_random_schema"}:
         raise RuntimeError(f"glhs_binding_ablation_seal_backend_invalid:{backend}")
-    if run_manifest.get("executed_executions") != 640 or run_manifest.get("expected_executions") != 640:
+    if (
+        run_manifest.get("executed_executions") != 640
+        or run_manifest.get("expected_executions") != 640
+    ):
         raise RuntimeError("glhs_binding_ablation_seal_execution_count_invalid")
     if len(raw_paths) != 1:
         raise RuntimeError("glhs_binding_ablation_seal_requires_one_raw_stream")
@@ -163,20 +162,44 @@ def seal(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--protocol", type=Path, default=Path("evaluation/glhs_binding_only_ablation/protocol.json"))
-    parser.add_argument("--schedules", type=Path, default=Path("evaluation/glhs_binding_only_ablation/schedules.json"))
-    parser.add_argument("--adapter", type=Path, default=Path("evaluation/glhs_binding_only_ablation/adapter.py"))
-    parser.add_argument("--runner", type=Path, default=Path("evaluation/glhs_binding_only_ablation/postgres_runner.py"))
-    parser.add_argument("--observer", type=Path, default=Path("evaluation/glhs_binding_only_ablation/observer.py"))
-    parser.add_argument("--analyze", type=Path, default=Path("evaluation/glhs_binding_only_ablation/analyze.py"))
-    parser.add_argument("--validate", type=Path, default=Path("evaluation/glhs_binding_only_ablation/validate.py"))
+    parser.add_argument(
+        "--protocol", type=Path, default=Path("evaluation/glhs_binding_only_ablation/protocol.json")
+    )
+    parser.add_argument(
+        "--schedules",
+        type=Path,
+        default=Path("evaluation/glhs_binding_only_ablation/schedules.json"),
+    )
+    parser.add_argument(
+        "--adapter", type=Path, default=Path("evaluation/glhs_binding_only_ablation/adapter.py")
+    )
+    parser.add_argument(
+        "--runner",
+        type=Path,
+        default=Path("evaluation/glhs_binding_only_ablation/postgres_runner.py"),
+    )
+    parser.add_argument(
+        "--observer", type=Path, default=Path("evaluation/glhs_binding_only_ablation/observer.py")
+    )
+    parser.add_argument(
+        "--analyze", type=Path, default=Path("evaluation/glhs_binding_only_ablation/analyze.py")
+    )
+    parser.add_argument(
+        "--validate", type=Path, default=Path("evaluation/glhs_binding_only_ablation/validate.py")
+    )
     parser.add_argument(
         "--claims",
         type=Path,
         default=Path("research/glhs_journal/binding_only_ablation/claim_to_evidence.csv"),
     )
-    parser.add_argument("--results-dir", type=Path, default=Path("research/glhs_journal/binding_only_ablation/results"))
-    parser.add_argument("--seal-dir", type=Path, default=Path("research/glhs_journal/binding_only_ablation/seal"))
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path("research/glhs_journal/binding_only_ablation/results"),
+    )
+    parser.add_argument(
+        "--seal-dir", type=Path, default=Path("research/glhs_journal/binding_only_ablation/seal")
+    )
     parser.add_argument("--run-id", required=True)
     args = parser.parse_args()
     protocol = json.loads(args.protocol.read_text(encoding="utf-8"))

@@ -37,10 +37,10 @@ def _build_jwt(service_account: dict[str, str]) -> str:
     payload_b64 = _b64url(json.dumps(payload, separators=(",", ":")).encode())
     signing_input = f"{header_b64}.{payload_b64}".encode()
 
-    private_key = serialization.load_pem_private_key(
+    private_key: Any = serialization.load_pem_private_key(
         service_account["private_key"].encode(), password=None
     )
-    signature = private_key.sign(signing_input, padding.PKCS1v15(), hashes.SHA256())  # type: ignore[union-attr]
+    signature = private_key.sign(signing_input, padding.PKCS1v15(), hashes.SHA256())
     return f"{header_b64}.{payload_b64}.{_b64url(signature)}"
 
 

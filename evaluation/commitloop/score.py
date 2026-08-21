@@ -36,9 +36,7 @@ def _percentile(values: list[float], percentile: float) -> float | None:
     return ordered[lower] + (ordered[upper] - ordered[lower]) * (rank - lower)
 
 
-def _axis_metrics(
-    expected: list[str], predicted: list[object], axis: str
-) -> dict[str, Any]:
+def _axis_metrics(expected: list[str], predicted: list[object], axis: str) -> dict[str, Any]:
     per_class = {}
     for label in AXIS_CLASSES[axis]:
         true_positive = sum(
@@ -79,13 +77,9 @@ def _axis_metrics(
             "f1": f1,
         }
     supported_f1 = [
-        item["f1"]
-        for item in per_class.values()
-        if item["support"] and item["f1"] is not None
+        item["f1"] for item in per_class.values() if item["support"] and item["f1"] is not None
     ]
-    correct = sum(
-        actual == forecast for actual, forecast in zip(expected, predicted, strict=True)
-    )
+    correct = sum(actual == forecast for actual, forecast in zip(expected, predicted, strict=True))
     return {
         "correct": correct,
         "denominator": len(expected),
@@ -107,11 +101,7 @@ def score_outputs(
 ) -> dict[str, Any]:
     errors = errors or []
     models = models or sorted(
-        {
-            str(item.get("requested_model_id"))
-            for item in outputs
-            if item.get("requested_model_id")
-        }
+        {str(item.get("requested_model_id")) for item in outputs if item.get("requested_model_id")}
     )
     conditions = conditions or sorted(
         {str(item.get("condition")) for item in outputs if item.get("condition")}
@@ -152,9 +142,7 @@ def score_outputs(
         escalation_correct += int(
             prediction.get("escalation_state") == gold.get("escalation_state")
         )
-        group = grouped.setdefault(
-            f"{model}:{condition}", {"correct": 0, "denominator": 0}
-        )
+        group = grouped.setdefault(f"{model}:{condition}", {"correct": 0, "denominator": 0})
         group["correct"] += correct
         group["denominator"] += 1
     latencies = [
@@ -176,9 +164,7 @@ def score_outputs(
             if isinstance(value, (int, float)):
                 usage[key] += value
     retries = sum(
-        max(0, int(item.get("attempts", 1)) - 1)
-        for item in outputs
-        if isinstance(item, dict)
+        max(0, int(item.get("attempts", 1)) - 1) for item in outputs if isinstance(item, dict)
     )
     expected_count = len(expected_cells)
     observed_seconds = sum(latencies) / 1000
@@ -189,18 +175,13 @@ def score_outputs(
         members = [
             (confidence, correct)
             for confidence, correct in calibration_pairs
-            if lower <= confidence < upper
-            or bin_index == 9 and confidence == 1
+            if lower <= confidence < upper or bin_index == 9 and confidence == 1
         ]
         mean_confidence = (
-            sum(confidence for confidence, _correct in members) / len(members)
-            if members
-            else None
+            sum(confidence for confidence, _correct in members) / len(members) if members else None
         )
         accuracy = (
-            sum(correct for _confidence, correct in members) / len(members)
-            if members
-            else None
+            sum(correct for _confidence, correct in members) / len(members) if members else None
         )
         calibration_bins.append(
             {
@@ -215,8 +196,7 @@ def score_outputs(
     calibration_denominator = len(calibration_pairs)
     expected_calibration_error = (
         sum(
-            item["count"]
-            * abs(float(item["mean_confidence"]) - float(item["accuracy"]))
+            item["count"] * abs(float(item["mean_confidence"]) - float(item["accuracy"]))
             for item in calibration_bins
             if item["count"]
         )
@@ -237,20 +217,14 @@ def score_outputs(
         "escalation_accuracy": {
             "correct": escalation_correct,
             "denominator": expected_count,
-            "accuracy": (
-                escalation_correct / expected_count if expected_count else None
-            ),
+            "accuracy": (escalation_correct / expected_count if expected_count else None),
         },
         "calibration_all_axes_exact": {
             "definition": "reported_probability_all_three_axes_jointly_exact",
             "denominator": calibration_denominator,
             "expected_cell_count": expected_count,
-            "missing_or_invalid_confidence_count": (
-                expected_count - calibration_denominator
-            ),
-            "coverage": (
-                calibration_denominator / expected_count if expected_count else None
-            ),
+            "missing_or_invalid_confidence_count": (expected_count - calibration_denominator),
+            "coverage": (calibration_denominator / expected_count if expected_count else None),
             "brier_score": (
                 sum((confidence - correct) ** 2 for confidence, correct in calibration_pairs)
                 / calibration_denominator
@@ -309,9 +283,7 @@ def score_generation(
     due_correct = due_denominator = 0
     for case_id, expected in expected_candidates.items():
         output = outputs_by_case.get(case_id, {})
-        candidate = (
-            output.get("candidate") if output.get("status") == "ACCEPTED" else None
-        )
+        candidate = output.get("candidate") if output.get("status") == "ACCEPTED" else None
         candidate = candidate if isinstance(candidate, dict) else {}
         for slot in ("anchor_evidence_id", "action", "target", "due_time"):
             expected_value = expected.get(slot)
@@ -326,14 +298,10 @@ def score_generation(
             due_denominator += 1
             due_correct += int(candidate.get("due_time") == expected["due_time"])
     precision = (
-        true_positive / (true_positive + false_positive)
-        if true_positive + false_positive
-        else None
+        true_positive / (true_positive + false_positive) if true_positive + false_positive else None
     )
     recall = (
-        true_positive / (true_positive + false_negative)
-        if true_positive + false_negative
-        else None
+        true_positive / (true_positive + false_negative) if true_positive + false_negative else None
     )
     f1 = (
         2 * precision * recall / (precision + recall)
@@ -415,9 +383,7 @@ def score_adversarial_variants(
     missed_conflict_numerator = missed_conflict_denominator = 0
     escalation_correct = escalation_denominator = 0
     for kind in sorted(set(kind_by_case.values())):
-        case_ids = sorted(
-            case_id for case_id, value in kind_by_case.items() if value == kind
-        )
+        case_ids = sorted(case_id for case_id, value in kind_by_case.items() if value == kind)
         expected_by_axis: dict[str, list[str]] = {axis: [] for axis in AXES}
         predicted_by_axis: dict[str, list[object]] = {axis: [] for axis in AXES}
         observed = exact = 0
@@ -426,21 +392,16 @@ def score_adversarial_variants(
             for model in models:
                 for condition in conditions:
                     output = outputs_by_key.get(f"{model}:{condition}:{case_id}")
-                    prediction = (
-                        output.get("prediction") if output is not None else None
-                    )
+                    prediction = output.get("prediction") if output is not None else None
                     prediction = prediction if isinstance(prediction, dict) else {}
                     observed += int(output is not None)
-                    exact += int(
-                        all(prediction.get(axis) == gold.get(axis) for axis in AXES)
-                    )
+                    exact += int(all(prediction.get(axis) == gold.get(axis) for axis in AXES))
                     for axis in AXES:
                         expected_by_axis[axis].append(str(gold[axis]))
                         predicted_by_axis[axis].append(prediction.get(axis))
                     escalation_denominator += 1
                     escalation_correct += int(
-                        prediction.get("escalation_state")
-                        == gold.get("escalation_state")
+                        prediction.get("escalation_state") == gold.get("escalation_state")
                     )
                     expected_lifecycle = gold.get("lifecycle_state")
                     predicted_lifecycle = prediction.get("lifecycle_state")
@@ -466,9 +427,7 @@ def score_adversarial_variants(
                 "accuracy": exact / denominator if denominator else None,
             },
             "axes": {
-                axis: _axis_metrics(
-                    expected_by_axis[axis], predicted_by_axis[axis], axis
-                )
+                axis: _axis_metrics(expected_by_axis[axis], predicted_by_axis[axis], axis)
                 for axis in AXES
             },
         }
@@ -478,9 +437,7 @@ def score_adversarial_variants(
             item for item in perturbations if item.get("variant_kind") == "late_ingestion"
         ],
         "valid_time": [
-            item
-            for item in perturbations
-            if item.get("variant_kind") == "post_cutoff_evidence"
+            item for item in perturbations if item.get("variant_kind") == "post_cutoff_evidence"
         ],
     }
     boundary_metrics: dict[str, dict[str, int | float | None | str]] = {}
@@ -491,24 +448,16 @@ def score_adversarial_variants(
         for manifest in manifests:
             source_case_id = manifest.get("source_case_id")
             variant_case_id = manifest.get("case_id")
-            if not isinstance(source_case_id, str) or not isinstance(
-                variant_case_id, str
-            ):
+            if not isinstance(source_case_id, str) or not isinstance(variant_case_id, str):
                 continue
             source_gold = gold_by_case.get(source_case_id, {})
             variant_gold = gold_by_case.get(variant_case_id, {})
             for model in models:
                 for condition in conditions:
-                    source_output = outputs_by_key.get(
-                        f"{model}:{condition}:{source_case_id}"
-                    )
-                    variant_output = outputs_by_key.get(
-                        f"{model}:{condition}:{variant_case_id}"
-                    )
+                    source_output = outputs_by_key.get(f"{model}:{condition}:{source_case_id}")
+                    variant_output = outputs_by_key.get(f"{model}:{condition}:{variant_case_id}")
                     source_prediction = (
-                        source_output.get("prediction")
-                        if isinstance(source_output, dict)
-                        else None
+                        source_output.get("prediction") if isinstance(source_output, dict) else None
                     )
                     variant_prediction = (
                         variant_output.get("prediction")
@@ -516,21 +465,16 @@ def score_adversarial_variants(
                         else None
                     )
                     source_prediction = (
-                        source_prediction
-                        if isinstance(source_prediction, dict)
-                        else {}
+                        source_prediction if isinstance(source_prediction, dict) else {}
                     )
                     variant_prediction = (
-                        variant_prediction
-                        if isinstance(variant_prediction, dict)
-                        else {}
+                        variant_prediction if isinstance(variant_prediction, dict) else {}
                     )
                     denominator += 1
                     correct += int(
                         all(
                             source_prediction.get(field) == source_gold.get(field)
-                            and variant_prediction.get(field)
-                            == variant_gold.get(field)
+                            and variant_prediction.get(field) == variant_gold.get(field)
                             for field in compared_fields
                         )
                     )
@@ -555,16 +499,12 @@ def score_adversarial_variants(
         "by_variant": by_variant,
         "false_alerts": rate(false_alert_numerator, false_alert_denominator),
         "missed_loops": rate(missed_loop_numerator, missed_loop_denominator),
-        "missed_conflicts": rate(
-            missed_conflict_numerator, missed_conflict_denominator
-        ),
+        "missed_conflicts": rate(missed_conflict_numerator, missed_conflict_denominator),
         "transition_sequence_accuracy": {
             "correct": transition_correct,
             "denominator": transition_denominator,
             "accuracy": (
-                transition_correct / transition_denominator
-                if transition_denominator
-                else None
+                transition_correct / transition_denominator if transition_denominator else None
             ),
             "scope": "two_snapshot_minimal_valid_or_known_boundary_pair",
             "longitudinal_replay": "NOT_MEASURED",
@@ -574,9 +514,7 @@ def score_adversarial_variants(
             "correct": escalation_correct,
             "denominator": escalation_denominator,
             "accuracy": (
-                escalation_correct / escalation_denominator
-                if escalation_denominator
-                else None
+                escalation_correct / escalation_denominator if escalation_denominator else None
             ),
         },
         "clinical_adjudication": "NOT_RUN",

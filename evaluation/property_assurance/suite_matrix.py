@@ -30,8 +30,10 @@ def load_development_suite_matrix(path: Path) -> dict[str, list[str]]:
     normalized: dict[str, list[str]] = {}
     for method in METHOD_IDS:
         targets = suites[method]
-        if not isinstance(targets, list) or not targets or not all(
-            isinstance(target, str) and target.endswith(".py") for target in targets
+        if (
+            not isinstance(targets, list)
+            or not targets
+            or not all(isinstance(target, str) and target.endswith(".py") for target in targets)
         ):
             raise ValueError("govmut_suite_matrix_targets_invalid")
         if len(set(targets)) != len(targets):

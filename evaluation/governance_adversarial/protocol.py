@@ -59,7 +59,9 @@ def current_revision() -> str:
     ).stdout.strip()
 
 
-def build_development_manifest(*, seed: int, statistics_plan_sha256: str, repetitions: int = 30) -> dict[str, object]:
+def build_development_manifest(
+    *, seed: int, statistics_plan_sha256: str, repetitions: int = 30
+) -> dict[str, object]:
     """Build a balanced synthetic *development* manifest, never a final freeze."""
 
     if repetitions < 1:
@@ -68,29 +70,31 @@ def build_development_manifest(*, seed: int, statistics_plan_sha256: str, repeti
     for family in FAMILIES:
         for index in range(repetitions):
             case_id = f"dev-{family}-{index + 1:03d}"
-            cases.append({
-                "case_id": case_id,
-                "family": family,
-                "reporting_scope": family_scope(family),
-                "subject": f"synthetic-sentinel-{index + 1:03d}",
-                "actor": "research-attacker",
-                "purpose": "research-boundary-evaluation",
-                "initial_state": {
-                    "state_version": 1,
-                    "policy_version": "research-policy-v1",
-                    "consent": "granted",
-                },
-                "schedule": [
-                    {"step": 1, "operation": "authorized_setup"},
-                    {"step": 2, "operation": family},
-                ],
-                "expected_invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
-                "oracle": {
-                    "kind": "synthetic_sentinel_and_persistence_observer",
-                    "sentinel_token": f"RIVF_SENTINEL_{family.upper()}_{index + 1:03d}",
-                },
-                "arm_applicability": list(ARMS),
-            })
+            cases.append(
+                {
+                    "case_id": case_id,
+                    "family": family,
+                    "reporting_scope": family_scope(family),
+                    "subject": f"synthetic-sentinel-{index + 1:03d}",
+                    "actor": "research-attacker",
+                    "purpose": "research-boundary-evaluation",
+                    "initial_state": {
+                        "state_version": 1,
+                        "policy_version": "research-policy-v1",
+                        "consent": "granted",
+                    },
+                    "schedule": [
+                        {"step": 1, "operation": "authorized_setup"},
+                        {"step": 2, "operation": family},
+                    ],
+                    "expected_invariant": "prohibited_disclosure_or_unauthorized_commit_rejected",
+                    "oracle": {
+                        "kind": "synthetic_sentinel_and_persistence_observer",
+                        "sentinel_token": f"RIVF_SENTINEL_{family.upper()}_{index + 1:03d}",
+                    },
+                    "arm_applicability": list(ARMS),
+                }
+            )
     return {
         "schema_version": "govred-attack-manifest-v1",
         "status": "draft",
@@ -110,8 +114,16 @@ def validate_manifest(value: object, *, require_frozen: bool) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise FreezeError("govred_manifest_must_be_object")
     required = {
-        "schema_version", "status", "study_id", "manifest_id", "created_at",
-        "code_revision", "seed", "statistics_plan_sha256", "primary_family_ids", "cases",
+        "schema_version",
+        "status",
+        "study_id",
+        "manifest_id",
+        "created_at",
+        "code_revision",
+        "seed",
+        "statistics_plan_sha256",
+        "primary_family_ids",
+        "cases",
     }
     if missing := required.difference(value):
         raise FreezeError("govred_manifest_missing:" + ",".join(sorted(missing)))
@@ -125,7 +137,10 @@ def validate_manifest(value: object, *, require_frozen: bool) -> dict[str, Any]:
         raise FreezeError("govred_manifest_status_invalid")
     if not isinstance(value["seed"], int):
         raise FreezeError("govred_manifest_seed_invalid")
-    if not isinstance(value["statistics_plan_sha256"], str) or len(value["statistics_plan_sha256"]) != 64:
+    if (
+        not isinstance(value["statistics_plan_sha256"], str)
+        or len(value["statistics_plan_sha256"]) != 64
+    ):
         raise FreezeError("govred_statistics_plan_hash_invalid")
     if value["primary_family_ids"] != list(PRIMARY_FAMILIES):
         raise FreezeError("govred_primary_family_schedule_invalid")
@@ -137,7 +152,19 @@ def validate_manifest(value: object, *, require_frozen: bool) -> dict[str, Any]:
     for case in cases:
         if not isinstance(case, dict):
             raise FreezeError("govred_case_invalid")
-        fields = {"case_id", "family", "reporting_scope", "subject", "actor", "purpose", "initial_state", "schedule", "expected_invariant", "oracle", "arm_applicability"}
+        fields = {
+            "case_id",
+            "family",
+            "reporting_scope",
+            "subject",
+            "actor",
+            "purpose",
+            "initial_state",
+            "schedule",
+            "expected_invariant",
+            "oracle",
+            "arm_applicability",
+        }
         if missing := fields.difference(case):
             raise FreezeError("govred_case_missing:" + ",".join(sorted(missing)))
         case_id = case["case_id"]
@@ -150,15 +177,29 @@ def validate_manifest(value: object, *, require_frozen: bool) -> dict[str, Any]:
         if case["reporting_scope"] != family_scope(family):
             raise FreezeError("govred_case_reporting_scope_invalid")
         family_counts[family] += 1
-        if not isinstance(case["subject"], str) or not case["subject"].startswith("synthetic-sentinel-"):
+        if not isinstance(case["subject"], str) or not case["subject"].startswith(
+            "synthetic-sentinel-"
+        ):
             raise FreezeError("govred_case_subject_not_synthetic")
-        if not isinstance(case["initial_state"], dict) or not isinstance(case["schedule"], list) or not case["schedule"]:
+        if (
+            not isinstance(case["initial_state"], dict)
+            or not isinstance(case["schedule"], list)
+            or not case["schedule"]
+        ):
             raise FreezeError("govred_case_schedule_invalid")
         oracle = case["oracle"]
-        if not isinstance(oracle, dict) or not isinstance(oracle.get("kind"), str) or not isinstance(oracle.get("sentinel_token"), str):
+        if (
+            not isinstance(oracle, dict)
+            or not isinstance(oracle.get("kind"), str)
+            or not isinstance(oracle.get("sentinel_token"), str)
+        ):
             raise FreezeError("govred_case_oracle_invalid")
         applicability = case["arm_applicability"]
-        if not isinstance(applicability, list) or not set(applicability) or not set(applicability).issubset(ARMS):
+        if (
+            not isinstance(applicability, list)
+            or not set(applicability)
+            or not set(applicability).issubset(ARMS)
+        ):
             raise FreezeError("govred_case_arm_applicability_invalid")
     if set(family_counts) != set(FAMILIES):
         raise FreezeError("govred_families_incomplete")

@@ -193,9 +193,7 @@ def validate_classification(*, analysis_path: Path) -> dict[str, object]:
         )
     )
     if set(all_survive) != set(CLASSIFICATION):
-        raise ValueError(
-            "govmut_w8_classifier_mismatch: classified set != sealed all-survive set"
-        )
+        raise ValueError("govmut_w8_classifier_mismatch: classified set != sealed all-survive set")
     for mutant_id, (category, rationale) in CLASSIFICATION.items():
         if category not in CATEGORIES:
             raise ValueError(f"govmut_w8_classifier_bad_category:{mutant_id}")

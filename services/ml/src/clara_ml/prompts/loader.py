@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -11,7 +11,7 @@ class PromptLoader:
     def __init__(self, base_dir: Path) -> None:
         self.base_dir = base_dir.resolve()
 
-    def load(self, role: str, intent: str) -> Dict[str, Any]:
+    def load(self, role: str, intent: str) -> dict[str, Any]:
         if not re.fullmatch(r"[A-Za-z0-9_-]+", role):
             raise KeyError(f"Role '{role}' not found")
 

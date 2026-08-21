@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-import sys
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -15,7 +15,6 @@ if str(ML_SRC) not in sys.path:
     sys.path.insert(0, str(ML_SRC))
 
 from clara_ml.agents.careguard import run_careguard_analyze  # noqa: E402
-
 
 DEFAULT_BRAND_CASES_PATH = ROOT / "data" / "demo" / "vn_brand_combo_eval.json"
 DEFAULT_DDI_GOLDSET_PATH = ROOT / "data" / "demo" / "ddi-goldset.jsonl"

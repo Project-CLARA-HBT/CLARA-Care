@@ -25,8 +25,7 @@ class FakeTransport:
     def __call__(self, path, headers, payload, timeout):
         self.calls.append((path, headers, payload, timeout))
         return {
-            "model": self.reported_model
-            or expected_reported_model_id(payload["model"]),
+            "model": self.reported_model or expected_reported_model_id(payload["model"]),
             "choices": [{"message": {"content": json.dumps({"ok": True})}}],
             "usage": {"prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13},
         }
@@ -84,16 +83,10 @@ def test_substitution_and_undeclared_models_fail_closed() -> None:
         api_key="fixture-secret-not-real",
         transport=FakeTransport(reported_model="fallback/model"),
     )
-    with pytest.raises(
-        ProviderError, match="model_substitution_detected:fallback/model"
-    ):
-        client.complete(
-            model=GENERATOR_MODEL, messages=[{"role": "user", "content": "fixture"}]
-        )
+    with pytest.raises(ProviderError, match="model_substitution_detected:fallback/model"):
+        client.complete(model=GENERATOR_MODEL, messages=[{"role": "user", "content": "fixture"}])
     with pytest.raises(ProviderError, match="undeclared_model"):
-        client.complete(
-            model="other/model", messages=[{"role": "user", "content": "fixture"}]
-        )
+        client.complete(model="other/model", messages=[{"role": "user", "content": "fixture"}])
 
 
 def test_canonical_requested_id_must_be_echoed_by_the_router() -> None:
@@ -114,17 +107,15 @@ def test_router_claude_alias_is_explicitly_frozen() -> None:
 
 
 def test_json_object_mode_accepts_a_fenced_object_but_not_an_array() -> None:
-    assert parse_json_object_content('```json\n{"status": "ok"}\n```') == {
-        "status": "ok"
-    }
+    assert parse_json_object_content('```json\n{"status": "ok"}\n```') == {"status": "ok"}
     with pytest.raises(TypeError, match="provider_json_object_required"):
         parse_json_object_content("[]")
 
 
 def test_json_object_mode_accepts_router_prose_wrapper() -> None:
-    assert parse_json_object_content(
-        'Here is the result: {"status": "ok"} Thanks.'
-    ) == {"status": "ok"}
+    assert parse_json_object_content('Here is the result: {"status": "ok"} Thanks.') == {
+        "status": "ok"
+    }
 
 
 def test_request_shape_and_decoding_budget_fail_closed() -> None:

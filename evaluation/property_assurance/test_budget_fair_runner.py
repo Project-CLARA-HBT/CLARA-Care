@@ -17,9 +17,7 @@ def test_budget_runner_passes_remaining_budget_to_each_seed(monkeypatch) -> None
     monkeypatch.setattr(budget_fair_runner, "execute_mutant", fake_execute_mutant)
     result = budget_fair_runner._run_strategy(
         repository_root=Path("."),
-        mutant=MutantOverlay(
-            mutant_id="W9-C01", source_path="a.py", anchor="a", replacement="b"
-        ),
+        mutant=MutantOverlay(mutant_id="W9-C01", source_path="a.py", anchor="a", replacement="b"),
         method="M1_stateless_property",
         targets=["tests/test_contract.py"],
         seeds=[17, 23, 41],

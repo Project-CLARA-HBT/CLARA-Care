@@ -228,7 +228,7 @@ def compute_statistics(
 
 class DualLayerStateBarrier:
     """Layer 1 Deterministic State Barrier Engine.
-    
+
     Implements the non-LLM clinical governance barrier providing:
     - Profile queries with bitemporal cutoff filtering.
     - Dynamic medical consent and policy epoch enforcement.
@@ -424,7 +424,7 @@ class DualLayerStateBarrier:
         known_cutoff: float,
     ) -> THSSSnapshot:
         """Phase 1: Task-Bounded Health State Snapshot (THSS) Compilation.
-        
+
         Sub-steps measured:
         a) Profile query & domain scoping.
         b) Consent check & policy epoch validation.
@@ -531,9 +531,7 @@ class DualLayerStateBarrier:
                     evidence_hashes.append(ev_hash)
 
         # Canonical SHA-256 Merkle root digest computation
-        payload_bytes = json.dumps(
-            disclosed_facts, sort_keys=True, separators=(",", ":")
-        ).encode()
+        payload_bytes = json.dumps(disclosed_facts, sort_keys=True, separators=(",", ":")).encode()
         manifest_digest = hashlib.sha256(payload_bytes).hexdigest()
         snapshot_id = f"thss-v2-{manifest_digest[:16]}"
 
@@ -560,7 +558,7 @@ class DualLayerStateBarrier:
         expected_base_version: int,
     ) -> list[tuple[str, str]]:
         """Phase 2: DAG Entity Lease Acquisition.
-        
+
         Sub-steps measured:
         a) Canonical lock sorting: Deterministic lexicographical ordering <domain, semantic_key>
            guaranteeing deadlock freedom across concurrent multi-agent executions (O(M log M)).
@@ -603,7 +601,7 @@ class DualLayerStateBarrier:
         transition_payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Phase 3: Epistemic State Commit Verification.
-        
+
         Sub-steps measured:
         a) Snapshot hash validation: Cryptographic SHA-256 digest validation against bound token.
         b) State transition assertion: Epistemic lifecycle transition evaluation, immutable
@@ -650,7 +648,7 @@ def run_governance_microbenchmark(
     profile_id: int = 42,
 ) -> MicrobenchResult:
     """Execute the fine-grained micro-benchmark over the GLHS Dual-Layer State Barrier.
-    
+
     Measures 1,000 iterations using high-resolution timing (time.perf_counter_ns) for:
     - T_THSS (THSS Compilation)
     - T_DAG (DAG Entity Lease Acquisition)
@@ -803,6 +801,7 @@ def run_governance_microbenchmark(
 
 def format_ascii_table(result: MicrobenchResult) -> str:
     """Format benchmark results into a clear ASCII table."""
+
     def status_str(met: bool) -> str:
         return "PASSED" if met else "FAILED"
 

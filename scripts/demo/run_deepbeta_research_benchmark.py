@@ -7,7 +7,7 @@ import math
 import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib import error, request
@@ -146,11 +146,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def now_tag() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
 
 
 def read_json(path: Path) -> Any:
@@ -782,15 +782,8 @@ def main() -> int:
         )
 
         print(
-            "[deepbeta-benchmark] case={case_id} status={status} latency_ms={lat:.1f} "
-            "fallback={fallback} correct={correct} citations={cit}".format(
-                case_id=case_id,
-                status=status,
-                lat=result.elapsed_ms,
-                fallback=int(fallback_used),
-                correct=int(classification_correct),
-                cit=citation_count,
-            )
+            f"[deepbeta-benchmark] case={case_id} status={status} latency_ms={result.elapsed_ms:.1f} "
+            f"fallback={int(fallback_used)} correct={int(classification_correct)} citations={citation_count}"
         )
 
     finished_at = utcnow()

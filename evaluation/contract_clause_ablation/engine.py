@@ -61,11 +61,7 @@ def evaluate(variant: str, case: ContractCase) -> ClauseOutcome:
         reason = "authorization_at_disclosure_denied"
     if reason == "accepted" and "provenance_audit" in clauses and not case.provenance_present:
         reason = "provenance_required"
-    if (
-        reason == "accepted"
-        and "snapshot_id_binding" in clauses
-        and not case.snapshot_id_matches
-    ):
+    if reason == "accepted" and "snapshot_id_binding" in clauses and not case.snapshot_id_matches:
         reason = "snapshot_id_mismatch"
     if reason == "accepted" and "snapshot_context_binding" in clauses:
         for matches, mismatch_reason in (

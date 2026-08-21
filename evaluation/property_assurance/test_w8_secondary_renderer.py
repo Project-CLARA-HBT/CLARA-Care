@@ -68,9 +68,7 @@ def test_renderer_available_fields_match_sealed_analysis() -> None:
         assert row["mutant_id"] in sealed["per_mutant_method"]
     for method in METHODS:
         sealed_stats = sealed["runtime_stats"]["per_method"][method]
-        rendered = next(
-            row for row in report["efficiency"] if row["method"] == method
-        )
+        rendered = next(row for row in report["efficiency"] if row["method"] == method)
         assert rendered["total_ms"] == round(sealed_stats["total_ms"], 3)
         assert rendered["killed"] == sealed["mutation_scores"][method]["killed"]
 

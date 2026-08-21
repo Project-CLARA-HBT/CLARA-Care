@@ -44,10 +44,15 @@ def test_development_seal_detects_post_seal_mutation(tmp_path: Path) -> None:
 
 def test_development_seal_accepts_isolated_http_admission_probe(tmp_path: Path) -> None:
     probe = tmp_path / "http_admission_probe.json"
-    probe.write_text(json.dumps({
-        "schema_version": "govred-isolated-http-admission-development-v1",
-        "status": "development_probe_not_headline",
-    }), encoding="utf-8")
+    probe.write_text(
+        json.dumps(
+            {
+                "schema_version": "govred-isolated-http-admission-development-v1",
+                "status": "development_probe_not_headline",
+            }
+        ),
+        encoding="utf-8",
+    )
     expected = hashlib.sha256(probe.read_bytes()).hexdigest()
 
     seal(run_dir=tmp_path, expected_probe_sha256=expected, probe_filename=probe.name)
@@ -57,10 +62,15 @@ def test_development_seal_accepts_isolated_http_admission_probe(tmp_path: Path) 
 
 def test_development_seal_accepts_case_matrix(tmp_path: Path) -> None:
     probe = tmp_path / "development_case_matrix.json"
-    probe.write_text(json.dumps({
-        "schema_version": "govred-development-case-matrix-v1",
-        "status": "development_matrix_not_headline",
-    }), encoding="utf-8")
+    probe.write_text(
+        json.dumps(
+            {
+                "schema_version": "govred-development-case-matrix-v1",
+                "status": "development_matrix_not_headline",
+            }
+        ),
+        encoding="utf-8",
+    )
     expected = hashlib.sha256(probe.read_bytes()).hexdigest()
 
     seal(run_dir=tmp_path, expected_probe_sha256=expected, probe_filename=probe.name)
@@ -70,10 +80,15 @@ def test_development_seal_accepts_case_matrix(tmp_path: Path) -> None:
 
 def test_development_seal_accepts_cache_audit_probe(tmp_path: Path) -> None:
     probe = tmp_path / "cache_audit_probe.json"
-    probe.write_text(json.dumps({
-        "schema_version": "govred-cache-audit-development-probe-v1",
-        "status": "development_cache_audit_probe_not_headline",
-    }), encoding="utf-8")
+    probe.write_text(
+        json.dumps(
+            {
+                "schema_version": "govred-cache-audit-development-probe-v1",
+                "status": "development_cache_audit_probe_not_headline",
+            }
+        ),
+        encoding="utf-8",
+    )
     expected = hashlib.sha256(probe.read_bytes()).hexdigest()
 
     seal(run_dir=tmp_path, expected_probe_sha256=expected, probe_filename=probe.name)

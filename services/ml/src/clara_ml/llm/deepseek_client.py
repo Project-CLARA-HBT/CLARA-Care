@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import json
+import random
+from contextlib import contextmanager
 from dataclasses import dataclass
 from threading import BoundedSemaphore, Lock
 from time import monotonic, sleep
-import random
-from contextlib import contextmanager
-import json
 
 import httpx
 
@@ -191,7 +191,7 @@ class DeepSeekClient:
                             content, response_model = self._consume_chat_stream(response)
                             if not content:
                                 raise RuntimeError("DeepSeek SSE response content is empty")
-                            data = {
+                            data: dict[str, object] = {
                                 "choices": [{"message": {"content": content}}],
                                 "model": response_model or model,
                             }
@@ -230,13 +230,13 @@ class DeepSeekClient:
                 parts.extend(DeepSeekClient._extract_text_parts(item, trim_strings=trim_strings))
             return parts
         if isinstance(value, dict):
-            parts: list[str] = []
+            dict_parts: list[str] = []
             for key in ("text", "content", "output_text", "value"):
                 if key in value:
-                    parts.extend(
+                    dict_parts.extend(
                         DeepSeekClient._extract_text_parts(value.get(key), trim_strings=trim_strings)
                     )
-            return parts
+            return dict_parts
         return []
 
     @classmethod
@@ -371,6 +371,7 @@ class DeepSeekClient:
         system_prompt: str | None = None,
         *,
         max_tokens: int | None = None,
+        model: str | None = None,
     ) -> DeepSeekResponse:
         if not self._api_key:
             raise ValueError("Missing DEEPSEEK_API_KEY")
@@ -380,8 +381,9 @@ class DeepSeekClient:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
+        target_model = model or self._model
         payload = {
-            "model": self._model,
+            "model": target_model,
             "stream": False,
             "temperature": self._generation_temperature,
             "messages": messages,

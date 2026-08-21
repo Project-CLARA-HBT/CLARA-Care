@@ -3,8 +3,8 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 

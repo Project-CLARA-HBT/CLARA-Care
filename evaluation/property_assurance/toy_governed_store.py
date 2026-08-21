@@ -74,7 +74,14 @@ class ToyGovernedStore:
         if _digest(snapshot_coordinates) != snapshot.digest:
             raise ToyGovernanceError("snapshot_digest_mismatch")
         coordinates = self._coordinates(expires_at=snapshot.expires_at)
-        for name in ("subject", "actor", "purpose", "state_version", "policy_version", "consent_version"):
+        for name in (
+            "subject",
+            "actor",
+            "purpose",
+            "state_version",
+            "policy_version",
+            "consent_version",
+        ):
             if getattr(snapshot, name) != coordinates[name]:
                 raise ToyGovernanceError(f"snapshot_{name}_mismatch")
         self.state_version += 1

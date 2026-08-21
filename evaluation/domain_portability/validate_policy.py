@@ -7,15 +7,17 @@ from pathlib import Path
 
 from evaluation.evidence_program.freeze import FreezeError, load_frozen_json
 
-REQUIRED_DOMAIN_FIELDS = frozenset({
-    "semantic_slots",
-    "evidence_classes",
-    "authority_rule",
-    "valid_time",
-    "lifecycle",
-    "protected_conflict",
-    "escalation",
-})
+REQUIRED_DOMAIN_FIELDS = frozenset(
+    {
+        "semantic_slots",
+        "evidence_classes",
+        "authority_rule",
+        "valid_time",
+        "lifecycle",
+        "protected_conflict",
+        "escalation",
+    }
+)
 
 
 def validate(path: Path, *, final: bool = False) -> None:

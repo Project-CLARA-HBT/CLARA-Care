@@ -52,7 +52,19 @@ def test_w9_catalogs_have_eleven_entries_matching_proposal() -> None:
 
     expected = _catalog_ids(proposal)
     assert len(expected) == 11
-    assert expected == ["W9-C01", "W9-C02", "W9-C03", "W9-C04", "W9-C05", "W9-G01", "W9-G02", "W9-G03", "W9-P01", "W9-P02", "W9-P03"]
+    assert expected == [
+        "W9-C01",
+        "W9-C02",
+        "W9-C03",
+        "W9-C04",
+        "W9-C05",
+        "W9-G01",
+        "W9-G02",
+        "W9-G03",
+        "W9-P01",
+        "W9-P02",
+        "W9-P03",
+    ]
 
     assert _catalog_ids(full) == expected
     assert _catalog_ids(machine) == expected
@@ -62,10 +74,17 @@ def test_w9_catalogs_have_eleven_entries_matching_proposal() -> None:
     assert machine["anchor_verification"]["revision_verified"] == verification_revision
     for candidate in full["candidates"]:
         assert isinstance(candidate, dict), "full catalog candidate not an object"
-        assert candidate["status"] in {"anchor_verified_not_executed", "anchor_reanchored_not_executed"}
+        assert candidate["status"] in {
+            "anchor_verified_not_executed",
+            "anchor_reanchored_not_executed",
+        }
         assert candidate["anchor_status"] in {"VERIFIED", "REANCHORED", "INVALIDATED"}
         assert candidate["anchor_verified_revision"] == verification_revision
-        assert candidate["layer"] in {"commitment gateway", "governance-cache", "persistence-reconstruction"}
+        assert candidate["layer"] in {
+            "commitment gateway",
+            "governance-cache",
+            "persistence-reconstruction",
+        }
         assert candidate["id"].startswith("W9-")
     for candidate in machine["candidates"]:
         assert isinstance(candidate, dict), "machine catalog candidate not an object"
@@ -79,7 +98,10 @@ def test_w9_catalogs_have_eleven_entries_matching_proposal() -> None:
             "anchor_status",
             "anchor_verified_revision",
         }
-        assert candidate["status"] in {"anchor_verified_not_executed", "anchor_reanchored_not_executed"}
+        assert candidate["status"] in {
+            "anchor_verified_not_executed",
+            "anchor_reanchored_not_executed",
+        }
         assert candidate["anchor_status"] in {"VERIFIED", "REANCHORED", "INVALIDATED"}
         assert candidate["anchor_verified_revision"] == verification_revision
 
@@ -120,7 +142,9 @@ def test_w9_review_manifest_passes_strict_v2_loader_and_covers_catalog() -> None
     for case, candidate in zip(cases, full["candidates"], strict=True):
         assert set(case["evidence"]) == {"E1", "E2", "E3", "E4"}
         assert "Fault family:" in case["evidence"]["E1"]
-        assert case["evidence"]["E1"].startswith(f"Fault family: {candidate['fault_family']}. Layer: {candidate['layer']}")
+        assert case["evidence"]["E1"].startswith(
+            f"Fault family: {candidate['fault_family']}. Layer: {candidate['layer']}"
+        )
         assert candidate["anchor"] in case["evidence"]["E2"]
         assert candidate["replacement"] in case["evidence"]["E2"]
         assert candidate["source_path"] in case["evidence"]["E2"]
@@ -141,14 +165,22 @@ def test_w9_freeze_input_matches_sealed_methods_hypothesis_and_limits() -> None:
     assert w9["catalog"] == "w9_catalog.json"
     assert w9["statistics_plan"] == "statistics_plan.json"
     assert w9["catalog_sha256"] == hashlib.sha256(W9_CATALOG.read_bytes()).hexdigest()
-    assert w9["statistics_plan_sha256"] == hashlib.sha256((RESEARCH / "statistics_plan.json").read_bytes()).hexdigest()
+    assert (
+        w9["statistics_plan_sha256"]
+        == hashlib.sha256((RESEARCH / "statistics_plan.json").read_bytes()).hexdigest()
+    )
     assert w9["non_equivalence_review"]["manifest"] == "w9_review_manifest.json"
-    assert w9["non_equivalence_review"]["result_artifact"] == "model_review_run_w9/dual_model_review.json"
+    assert (
+        w9["non_equivalence_review"]["result_artifact"]
+        == "model_review_run_w9/dual_model_review.json"
+    )
     assert w9["non_equivalence_review"]["results_sha256"] is None
     assert "NON_EQUIVALENT" in w9["promotion_rule"] and "UNRESOLVED" in w9["promotion_rule"]
 
 
-def test_w9_final_runner_uses_only_w9_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_w9_final_runner_uses_only_w9_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = tmp_path / "repository"
     (root / "research/assurance_soict").mkdir(parents=True)
     (root / "research/assurance_soict/w9_final_freeze.json").write_text("{}", encoding="utf-8")
@@ -161,7 +193,10 @@ def test_w9_final_runner_uses_only_w9_paths(tmp_path: Path, monkeypatch: pytest.
     monkeypatch.setattr(w9_final_runner, "execute_final_run", fake_execute_final_run)
     monkeypatch.setattr(w9_final_runner, "validate_human_review_gate", lambda **_kwargs: {})
     output = tmp_path / "output.json"
-    assert w9_final_runner.run_w9_final(repository_root=root, output_path=output)["status"] == "COMPLETED_NOT_ANALYZED"
+    assert (
+        w9_final_runner.run_w9_final(repository_root=root, output_path=output)["status"]
+        == "COMPLETED_NOT_ANALYZED"
+    )
     assert calls == {
         "manifest_path": root / "research/assurance_soict/w9_final_freeze.json",
         "repository_root": root,
@@ -189,9 +224,7 @@ def test_w9_final_runner_refuses_promoted_freeze_without_manual_review(
         json.dumps({"candidates": [{"id": "W9-C01"}]}), encoding="utf-8"
     )
     with pytest.raises(FreezeError, match="govmut_w9_human_review_gate_open"):
-        w9_final_runner.run_w9_final(
-            repository_root=tmp_path, output_path=tmp_path / "output.json"
-        )
+        w9_final_runner.run_w9_final(repository_root=tmp_path, output_path=tmp_path / "output.json")
 
 
 def test_w8_sealed_artifacts_remain_immutable() -> None:

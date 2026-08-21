@@ -46,15 +46,15 @@ object (restored after each example).
 
 from __future__ import annotations
 
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 # ``clara_ml.rag.store`` eagerly pulls in rag submodules; importing it before
 # ``clara_ml.rag.pipeline`` (and the harness, which imports other ``clara_ml``
 # modules) sidesteps the known rag circular-import quirk and keeps this test
 # importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.config import settings as _settings
 from clara_ml.factcheck import run_fides_lite
 from clara_ml.rag.pipeline import RagPipelineP1

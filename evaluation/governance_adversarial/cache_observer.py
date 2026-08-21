@@ -153,9 +153,7 @@ def measure(
 
     entry_exists = store.exists(cache_key)
     latency_ms = (
-        0.0
-        if not entry_exists
-        else max(0.0, (now_monotonic - revoked_at_monotonic) * 1000.0)
+        0.0 if not entry_exists else max(0.0, (now_monotonic - revoked_at_monotonic) * 1000.0)
     )
     return CacheObservation(
         stale_cache_entry_exists=entry_exists,

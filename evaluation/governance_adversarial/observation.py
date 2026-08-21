@@ -19,7 +19,9 @@ class BoundaryObservation:
     availability_error: bool
 
 
-def classify(*, observation: BoundaryObservation, sentinel_token: str, expected_rejection: bool) -> dict[str, str]:
+def classify(
+    *, observation: BoundaryObservation, sentinel_token: str, expected_rejection: bool
+) -> dict[str, str]:
     """Return a raw-result-safe deterministic observation classification.
 
     Response content is inspected in memory solely for the synthetic sentinel;
@@ -27,7 +29,9 @@ def classify(*, observation: BoundaryObservation, sentinel_token: str, expected_
     """
 
     exposed = sentinel_token.encode("utf-8") in observation.response_body
-    bypass = expected_rejection and observation.status_code is not None and observation.status_code < 400
+    bypass = (
+        expected_rejection and observation.status_code is not None and observation.status_code < 400
+    )
     return {
         "response_sha256": hashlib.sha256(observation.response_body).hexdigest(),
         "unauthorized_disclosure": str(exposed).lower(),
@@ -38,7 +42,9 @@ def classify(*, observation: BoundaryObservation, sentinel_token: str, expected_
         "audit_reconstruction_complete": str(observation.audit_reconstruction_complete).lower(),
         "availability_error": str(observation.availability_error).lower(),
         "latency_ms": str(observation.latency_ms),
-        "db_state_changed": str(observation.db_before_sha256 != observation.db_after_sha256).lower(),
+        "db_state_changed": str(
+            observation.db_before_sha256 != observation.db_after_sha256
+        ).lower(),
     }
 
 

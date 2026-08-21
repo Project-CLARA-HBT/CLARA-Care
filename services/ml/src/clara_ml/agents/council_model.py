@@ -13,7 +13,15 @@ import json
 import re
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, StrictBool, StrictStr, ValidationError
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictStr,
+    ValidationError,
+)
 
 from clara_ml.agents.council_evidence_packet import (
     public_evidence_packet_summary,

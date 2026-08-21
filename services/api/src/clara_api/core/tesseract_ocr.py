@@ -37,10 +37,9 @@ def detect_text(
         return ""
 
     try:
-        image = Image.open(io.BytesIO(image_bytes))
+        raw_image = Image.open(io.BytesIO(image_bytes))
         # Convert to RGB if necessary (Tesseract handles RGB best)
-        if image.mode not in ("RGB", "L"):
-            image = image.convert("RGB")
+        image = raw_image.convert("RGB") if raw_image.mode not in ("RGB", "L") else raw_image
         config = f"--psm {psm}"
         text = pytesseract.image_to_string(image, lang=languages, config=config)
         return text.strip()

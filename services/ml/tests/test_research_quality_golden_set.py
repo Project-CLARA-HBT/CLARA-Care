@@ -23,7 +23,6 @@ from clara_ml.research_quality import (
 )
 from clara_ml.research_quality.harness import research_quality_gate
 
-
 # ---------------------------------------------------------------------------
 # Fakes
 # ---------------------------------------------------------------------------

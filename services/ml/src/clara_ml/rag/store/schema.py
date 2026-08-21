@@ -349,7 +349,7 @@ class KbSourceRegistry(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    documents: Mapped[list["KbDocument"]] = relationship(
+    documents: Mapped[list[KbDocument]] = relationship(
         "KbDocument", back_populates="source", cascade="all, delete-orphan"
     )
 
@@ -391,7 +391,7 @@ class KbDocument(Base):
     )
 
     source: Mapped[KbSourceRegistry] = relationship("KbSourceRegistry", back_populates="documents")
-    chunks: Mapped[list["KbChunk"]] = relationship(
+    chunks: Mapped[list[KbChunk]] = relationship(
         "KbChunk", back_populates="document", cascade="all, delete-orphan"
     )
 
@@ -434,19 +434,19 @@ class KbChunk(Base):
     )
 
     document: Mapped[KbDocument] = relationship("KbDocument", back_populates="chunks")
-    parent: Mapped["KbChunk | None"] = relationship(
+    parent: Mapped[KbChunk | None] = relationship(
         "KbChunk", remote_side="KbChunk.id", back_populates="children"
     )
-    children: Mapped[list["KbChunk"]] = relationship(
+    children: Mapped[list[KbChunk]] = relationship(
         "KbChunk", back_populates="parent", cascade="all, delete-orphan"
     )
-    embedding: Mapped["KbChunkEmbedding | None"] = relationship(
+    embedding: Mapped[KbChunkEmbedding | None] = relationship(
         "KbChunkEmbedding", back_populates="chunk", uselist=False, cascade="all, delete-orphan"
     )
-    sparse_terms: Mapped[list["KbChunkSparseTerm"]] = relationship(
+    sparse_terms: Mapped[list[KbChunkSparseTerm]] = relationship(
         "KbChunkSparseTerm", back_populates="chunk", cascade="all, delete-orphan"
     )
-    entity_links: Mapped[list["KbChunkEntity"]] = relationship(
+    entity_links: Mapped[list[KbChunkEntity]] = relationship(
         "KbChunkEntity", back_populates="chunk", cascade="all, delete-orphan"
     )
 
@@ -515,7 +515,7 @@ class KbEntity(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
-    chunk_links: Mapped[list["KbChunkEntity"]] = relationship(
+    chunk_links: Mapped[list[KbChunkEntity]] = relationship(
         "KbChunkEntity", back_populates="entity", cascade="all, delete-orphan"
     )
 
@@ -586,7 +586,7 @@ class EvalSet(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
-    results: Mapped[list["EvalRunResult"]] = relationship(
+    results: Mapped[list[EvalRunResult]] = relationship(
         "EvalRunResult", back_populates="eval_item", cascade="all, delete-orphan"
     )
 

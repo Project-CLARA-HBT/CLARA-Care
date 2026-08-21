@@ -297,14 +297,20 @@ def prepare_packets(
     (output_dir / "review_manifest.json").write_text(
         json.dumps(review_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    return {"status": review_manifest["status"], "packet_count": len(review_packets), "split": split}
+    return {
+        "status": review_manifest["status"],
+        "packet_count": len(review_packets),
+        "split": split,
+    }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--split", choices=("development", "validation", "sealed_test"), default="validation")
+    parser.add_argument(
+        "--split", choices=("development", "validation", "sealed_test"), default="validation"
+    )
     parser.add_argument(
         "--randomization-seed-file",
         type=Path,

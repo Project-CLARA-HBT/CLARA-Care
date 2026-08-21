@@ -32,7 +32,9 @@ _DEVELOPMENT_PROBE_CONTRACTS = {
 }
 
 
-def seal(*, run_dir: Path, expected_probe_sha256: str, probe_filename: str = "boundary_path_probe.json") -> Path:
+def seal(
+    *, run_dir: Path, expected_probe_sha256: str, probe_filename: str = "boundary_path_probe.json"
+) -> Path:
     expected_contract = _DEVELOPMENT_PROBE_CONTRACTS.get(probe_filename)
     if expected_contract is None:
         raise ValueError("govred_development_probe_filename_invalid")

@@ -52,7 +52,8 @@ STATUS_BOILERPLATE = "boilerplate"
 
 
 class _HasSections(Protocol):
-    sections: Mapping[str, str]
+    @property
+    def sections(self) -> Mapping[str, str]: ...
 
 
 # --- clinical-significance + critical-safety lexicons ----------------------

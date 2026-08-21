@@ -27,8 +27,8 @@ from clara_ml.research_quality.gate import (
     run_regression_gate,
 )
 from clara_ml.research_quality.golden_set_vi import (
-    RESEARCH_CATEGORIES,
     DEFAULT_RESEARCH_GOLDEN_SET,
+    RESEARCH_CATEGORIES,
     ResearchGoldenItem,
     load_research_golden_set,
 )
@@ -41,11 +41,11 @@ from clara_ml.research_quality.harness import (
     research_quality_gate,
 )
 from clara_ml.research_quality.metrics import (
-    recall_at_k,
-    faithfulness,
     citation_accuracy,
-    unsupported_claim_rate,
+    faithfulness,
+    recall_at_k,
     refusal_compliance,
+    unsupported_claim_rate,
 )
 
 __all__ = [

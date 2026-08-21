@@ -5,12 +5,22 @@ from pathlib import Path
 
 from evaluation.evidence_program.freeze import FreezeError, load_frozen_json
 
-REQUIRED = frozenset({
-    "version", "status", "source_reference", "direct_empirical_comparison_allowed",
-    "paper_to_code_mapping", "implementation_module", "unit_test_module",
-    "adapter_module", "adapter_test_module", "capabilities_manifest",
-    "unspecified_choices_recorded", "excluded_glhs_features",
-})
+REQUIRED = frozenset(
+    {
+        "version",
+        "status",
+        "source_reference",
+        "direct_empirical_comparison_allowed",
+        "paper_to_code_mapping",
+        "implementation_module",
+        "unit_test_module",
+        "adapter_module",
+        "adapter_test_module",
+        "capabilities_manifest",
+        "unspecified_choices_recorded",
+        "excluded_glhs_features",
+    }
+)
 
 
 def validate(path: Path, *, repository_root: Path | None = None) -> None:
@@ -20,7 +30,10 @@ def validate(path: Path, *, repository_root: Path | None = None) -> None:
         raise FreezeError("comparator_manifest_fields_missing:" + ",".join(sorted(missing)))
     if manifest["status"] not in {"mechanism_only_not_faithful", "faithful_source_reviewed"}:
         raise FreezeError("comparator_status_invalid")
-    if manifest["status"] == "mechanism_only_not_faithful" and manifest["direct_empirical_comparison_allowed"] is not False:
+    if (
+        manifest["status"] == "mechanism_only_not_faithful"
+        and manifest["direct_empirical_comparison_allowed"] is not False
+    ):
         raise FreezeError("mechanism_only_comparator_cannot_release_direct_claim")
     if manifest["unspecified_choices_recorded"] is not True:
         raise FreezeError("comparator_unspecified_choices_unrecorded")

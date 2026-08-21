@@ -22,9 +22,12 @@ def repair_artifact_cohort_redaction(run_dir: Path) -> dict[str, object]:
 
     manifest_path = run_dir / "run_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    source = str(manifest.get("source_cohort") or json.loads(
-        (run_dir / "source_manifest.json").read_text(encoding="utf-8")
-    ).get("source", ""))
+    source = str(
+        manifest.get("source_cohort")
+        or json.loads((run_dir / "source_manifest.json").read_text(encoding="utf-8")).get(
+            "source", ""
+        )
+    )
     if not source.startswith("glhs_bench_") or source.rsplit(":", 1)[-1] not in {
         "development",
         "validation",
@@ -39,7 +42,9 @@ def repair_artifact_cohort_redaction(run_dir: Path) -> dict[str, object]:
         raise ValueError("artifact_redaction_inputs_missing")
     original_cohort_sha256 = hashlib.sha256(cohort_path.read_bytes()).hexdigest()
     prior_checksums_sha256 = hashlib.sha256(checksum_path.read_bytes()).hexdigest()
-    rows = [json.loads(line) for line in cohort_path.read_text(encoding="utf-8").splitlines() if line]
+    rows = [
+        json.loads(line) for line in cohort_path.read_text(encoding="utf-8").splitlines() if line
+    ]
     sanitized_rows: list[dict[str, object]] = []
     redactions = 0
     for row in rows:
@@ -51,7 +56,9 @@ def repair_artifact_cohort_redaction(run_dir: Path) -> dict[str, object]:
     if redactions < 1:
         raise ValueError("artifact_redaction_no_subject_references_found")
     cohort_path.write_text(
-        "".join(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in sanitized_rows),
+        "".join(
+            json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in sanitized_rows
+        ),
         encoding="utf-8",
     )
     provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
@@ -63,9 +70,13 @@ def repair_artifact_cohort_redaction(run_dir: Path) -> dict[str, object]:
         "algorithm": "fhir_subject_reference_v1",
         "subject_reference_redactions": redactions,
     }
-    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    provenance_path.write_text(
+        json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     manifest["source_cohort"] = source
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     deviation = {
         "schema_version": "glhs-bench-artifact-redaction-repair.v1",
         "reason": "validator_forbidden_fhir_subject_reference",

@@ -31,11 +31,7 @@ def _read_json(path: Path) -> Any:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line
-    ]
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
 def validate_v5_run(
@@ -54,10 +50,7 @@ def validate_v5_run(
     models = [str(item) for item in manifest.get("models", [])]
     if conditions != list(CONDITIONS):
         raise ValueError("v5_condition_inventory_mismatch")
-    if (
-        models != list(CONFIRMATORY_MODELS)
-        or manifest.get("primary_model") != REVIEWER_MODEL
-    ):
+    if models != list(CONFIRMATORY_MODELS) or manifest.get("primary_model") != REVIEWER_MODEL:
         raise ValueError("v5_primary_model_mismatch")
     if (
         cohort_manifest.get("cohort_name") != COHORT_NAME
@@ -82,9 +75,7 @@ def validate_v5_run(
         raise TypeError("v5_solver_ledger_invalid")
     commitments = _read_jsonl(run_dir / "commitments.jsonl")
     gold = _read_jsonl(run_dir / "construction_gold.jsonl")
-    subject_by_case = {
-        str(item["case_id"]): str(item["subject_token"]) for item in commitments
-    }
+    subject_by_case = {str(item["case_id"]): str(item["subject_token"]) for item in commitments}
     if (
         len(subject_by_case) != expected_subject_count
         or set(subject_by_case.values()) != set(cohort_tokens)
@@ -116,8 +107,7 @@ def validate_v5_run(
     model_manifest = _read_json(run_dir / "model_manifest.json")
     if (
         model_manifest.get("requested_models") != list(CONFIRMATORY_MODELS)
-        or model_manifest.get("reported_model_mapping")
-        != REPORTED_MODEL_ID_BY_REQUESTED
+        or model_manifest.get("reported_model_mapping") != REPORTED_MODEL_ID_BY_REQUESTED
         or model_manifest.get("fallback") is not False
         or model_manifest.get("temperature") != 0
         or model_manifest.get("solver_prompt_sha256") != _SOLVER_PROMPT_SHA256
@@ -172,13 +162,10 @@ def validate_v5_run(
         or metrics.get("all_axes_exact_match", {}).get("denominator") != expected_cells
         or metrics.get("calibration_all_axes_exact", {}).get("expected_cell_count")
         != expected_cells
-        or metrics.get("generation", {}).get("mode")
-        != "deterministic_construction_only"
+        or metrics.get("generation", {}).get("mode") != "deterministic_construction_only"
     ):
         raise ValueError("v5_metric_denominator_invalid")
-    with (run_dir / "per_case_metrics.csv").open(
-        encoding="utf-8", newline=""
-    ) as stream:
+    with (run_dir / "per_case_metrics.csv").open(encoding="utf-8", newline="") as stream:
         rows = list(csv.DictReader(stream))
     if len(rows) != expected_cells:
         raise ValueError("v5_per_case_grid_incomplete")

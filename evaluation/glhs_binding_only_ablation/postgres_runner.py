@@ -292,7 +292,11 @@ def _seed(db: Session, schedule: dict[str, Any]) -> SeedContext:
     seed.scope = scope
     evidence_count = int(context["evidence_count"])
     for index in range(1, evidence_count + 1):
-        seed.evidence_rows.append(_seed_evidence(db, profile_id=profile.id, schedule_id=schedule_id, label=f"E{index}", at=VALID_AT))
+        seed.evidence_rows.append(
+            _seed_evidence(
+                db, profile_id=profile.id, schedule_id=schedule_id, label=f"E{index}", at=VALID_AT
+            )
+        )
     commitment = get_or_create_commitment(
         db,
         scope=scope,
@@ -383,7 +387,9 @@ def _seed_foreign(db: Session, schedule: dict[str, Any]) -> SeedContext:
         allowed_data_classes=frozenset({"medications", "allergies", "conditions", "observations"}),
     )
     seed.foreign_scope = scope
-    evidence = _seed_evidence(db, profile_id=profile.id, schedule_id=schedule_id, label="Y1", at=VALID_AT)
+    evidence = _seed_evidence(
+        db, profile_id=profile.id, schedule_id=schedule_id, label="Y1", at=VALID_AT
+    )
     seed.foreign_evidence = evidence
     snapshot = compile_commitment_thss(
         db,
@@ -510,7 +516,9 @@ def _insert_tampered_manifest(
     return row
 
 
-def _extra_evidence(db: Session, seed: SeedContext, schedule: dict[str, Any], label: str) -> GlhsEvidence:
+def _extra_evidence(
+    db: Session, seed: SeedContext, schedule: dict[str, Any], label: str
+) -> GlhsEvidence:
     """Create (or reuse) an evidence row outside A2's disclosed provenance."""
     schedule_id = str(schedule["schedule_id"])
     scope = seed.scope
@@ -518,7 +526,9 @@ def _extra_evidence(db: Session, seed: SeedContext, schedule: dict[str, Any], la
     if label in ("X1", "X2", "X3"):
         if label in seed.extra_rows:
             return seed.extra_rows[label]
-        row = _seed_evidence(db, profile_id=scope.profile.id, schedule_id=schedule_id, label=label, at=VALID_AT2)
+        row = _seed_evidence(
+            db, profile_id=scope.profile.id, schedule_id=schedule_id, label=label, at=VALID_AT2
+        )
         seed.extra_rows[label] = row
         return row
     if label == "Y1":
@@ -568,7 +578,9 @@ def _insert_candidate_proposal(
         actor_user_id=scope.actor.id,
         actor_role=scope.actor_role,
         inference_context_binding_id=inference_context_binding_id,
-        inference_actor_user_id=scope.actor.id if inference_context_binding_id is not None else None,
+        inference_actor_user_id=scope.actor.id
+        if inference_context_binding_id is not None
+        else None,
         inference_actor_role=scope.actor_role if inference_context_binding_id is not None else "",
         context_binding_mode="snapshot_bound",
         model_manifest_ref=model_manifest_ref,
@@ -585,7 +597,9 @@ def _insert_candidate_proposal(
     return proposal
 
 
-def _prepare_candidate(db: Session, seed: SeedContext, schedule: dict[str, Any]) -> GlhsClinicalCommitmentProposal:
+def _prepare_candidate(
+    db: Session, seed: SeedContext, schedule: dict[str, Any]
+) -> GlhsClinicalCommitmentProposal:
     """Create the admission candidate with the schedule's disclosure-delta.
 
     Controls go through the production proposal path unchanged.  Adversarial
@@ -686,7 +700,11 @@ def _prepare_candidate(db: Session, seed: SeedContext, schedule: dict[str, Any])
                     supersession_key=f"ba-other:{schedule_id}",
                 )
                 other_evidence = _seed_evidence(
-                    db, profile_id=scope.profile.id, schedule_id=schedule_id, label="Z1", at=VALID_AT2
+                    db,
+                    profile_id=scope.profile.id,
+                    schedule_id=schedule_id,
+                    label="Z1",
+                    at=VALID_AT2,
                 )
                 seed.extra_rows["Z1"] = other_evidence
                 observed.append(str(other_evidence.public_id))
@@ -758,7 +776,9 @@ def _prepare_candidate(db: Session, seed: SeedContext, schedule: dict[str, Any])
     )
 
 
-def _find_transition_by_key(db: Session, *, profile_id: int, key_hash: str) -> GlhsClinicalCommitmentTransition | None:
+def _find_transition_by_key(
+    db: Session, *, profile_id: int, key_hash: str
+) -> GlhsClinicalCommitmentTransition | None:
     return db.execute(
         select(GlhsClinicalCommitmentTransition).where(
             GlhsClinicalCommitmentTransition.profile_id == profile_id,
@@ -954,7 +974,9 @@ def _attempt_admission(
         )
         add_outbox(
             db,
-            event_id=_canonical_digest({"kind": "commitment.transition", "id": transition.public_id}),
+            event_id=_canonical_digest(
+                {"kind": "commitment.transition", "id": transition.public_id}
+            ),
             profile_id=scope.profile.id,
             aggregate_type="glhs_clinical_commitment",
             aggregate_public_id=commitment.public_id,
@@ -968,7 +990,9 @@ def _attempt_admission(
         return "rejected", str(exc)
 
 
-def _evidence_for_admission(seed: SeedContext, schedule: dict[str, Any]) -> tuple[GlhsEvidence, ...]:
+def _evidence_for_admission(
+    seed: SeedContext, schedule: dict[str, Any]
+) -> tuple[GlhsEvidence, ...]:
     variant = dict(schedule.get("variant") or {})
     if schedule["kind"] != "adversarial":
         return tuple(seed.evidence_rows)
@@ -1016,7 +1040,9 @@ def _governance_coordinates(
         "lifecycle_state": "OPEN",
         "authority_class": "patient_report",
         "allowed_actions": sorted(scope.allowed_actions),
-        "target": TARGET_SYSTEMS[str(context["domain"])] + "/" + TARGET_CODES[str(context["domain"])],
+        "target": TARGET_SYSTEMS[str(context["domain"])]
+        + "/"
+        + TARGET_CODES[str(context["domain"])],
         "evidence_fingerprints": sorted(row.fingerprint for row in evidence),
     }
 
@@ -1052,7 +1078,9 @@ def _run_execution(
     db = env.session_factory()
     try:
         seed = _seed(db, schedule)
-        assert seed.scope is not None and seed.commitment is not None and seed.snapshot_a2 is not None
+        assert (
+            seed.scope is not None and seed.commitment is not None and seed.snapshot_a2 is not None
+        )
         _prepare_candidate(db, seed, schedule)
         base = current_state_version(db, profile_id=seed.scope.profile.id)
         evidence = _evidence_for_admission(seed, schedule)
@@ -1089,7 +1117,9 @@ def _run_execution(
             admitted=outcome == "admitted",
             rejection_reason_code=reason_code,
             snapshot_coordinates=_snapshot_coordinates(seed, schedule),
-            governance_coordinates=_governance_coordinates(seed, schedule, base=base, evidence=evidence),
+            governance_coordinates=_governance_coordinates(
+                seed, schedule, base=base, evidence=evidence
+            ),
             binding_check_applied=binding_check_applied(arm),
             expected_admissibility=str(schedule["expected_admissibility"]),
             txid=txid,
@@ -1118,7 +1148,9 @@ def _sqlite_metadata(engine: Engine) -> dict[str, object]:
     return {"version": version, "backend": "sqlite", "smoke_note": "NOT the final run"}
 
 
-def _engine_for(backend: str, database_url: str | None, results_dir: Path) -> tuple[Engine, dict[str, object], Callable[[], None], str | None]:
+def _engine_for(
+    backend: str, database_url: str | None, results_dir: Path
+) -> tuple[Engine, dict[str, object], Callable[[], None], str | None]:
     if backend == "postgres":
         url = _require_isolated_postgres(database_url)
         schema = _random_schema_name()
@@ -1194,7 +1226,9 @@ def execute(
         manifest = {
             "run_id": run_id,
             "freeze_id": str(protocol.get("freeze_id")),
-            "backend": "isolated_postgresql_random_schema" if backend == "postgres" else "sqlite_smoke",
+            "backend": "isolated_postgresql_random_schema"
+            if backend == "postgres"
+            else "sqlite_smoke",
             "backend_detail": metadata,
             "schema_retained": False,
             "executed_executions": executed,
@@ -1222,7 +1256,9 @@ def execute(
             ),
         }
         manifest_path = results_dir / f"manifest_{run_id}.json"
-        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
         return manifest
     finally:
         engine.dispose()
@@ -1231,9 +1267,19 @@ def execute(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--protocol", type=Path, default=Path("evaluation/glhs_binding_only_ablation/protocol.json"))
-    parser.add_argument("--schedules", type=Path, default=Path("evaluation/glhs_binding_only_ablation/schedules.json"))
-    parser.add_argument("--results-dir", type=Path, default=Path("research/glhs_journal/binding_only_ablation/results"))
+    parser.add_argument(
+        "--protocol", type=Path, default=Path("evaluation/glhs_binding_only_ablation/protocol.json")
+    )
+    parser.add_argument(
+        "--schedules",
+        type=Path,
+        default=Path("evaluation/glhs_binding_only_ablation/schedules.json"),
+    )
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path("research/glhs_journal/binding_only_ablation/results"),
+    )
     parser.add_argument("--backend", choices=sorted(BACKENDS), default="postgres")
     parser.add_argument("--database-url", default=None)
     parser.add_argument("--run-id", default=None)

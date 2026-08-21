@@ -143,19 +143,37 @@ def validate_schedules(document: dict[str, Any]) -> dict[str, Any]:
             variant = dict(schedule.get("variant") or {})
             if family_id == 1 and str(variant.get("wrong_id_kind")) not in FAMILY_VARIANT_KINDS[1]:
                 raise ValueError(f"family1_variant_invalid:{schedule_id}")
-            if family_id == 2 and str(variant.get("wrong_digest_kind")) not in FAMILY_VARIANT_KINDS[2]:
+            if (
+                family_id == 2
+                and str(variant.get("wrong_digest_kind")) not in FAMILY_VARIANT_KINDS[2]
+            ):
                 raise ValueError(f"family2_variant_invalid:{schedule_id}")
-            if family_id == 3 and str(variant.get("payload_mutation_target")) not in FAMILY_VARIANT_KINDS[3]:
+            if (
+                family_id == 3
+                and str(variant.get("payload_mutation_target")) not in FAMILY_VARIANT_KINDS[3]
+            ):
                 raise ValueError(f"family3_variant_invalid:{schedule_id}")
-            if family_id == 4 and str(variant.get("extra_evidence_kind")) not in FAMILY_VARIANT_KINDS[4]:
+            if (
+                family_id == 4
+                and str(variant.get("extra_evidence_kind")) not in FAMILY_VARIANT_KINDS[4]
+            ):
                 raise ValueError(f"family4_variant_invalid:{schedule_id}")
-            if family_id == 5 and str(variant.get("substitution_kind")) not in FAMILY_VARIANT_KINDS[5]:
+            if (
+                family_id == 5
+                and str(variant.get("substitution_kind")) not in FAMILY_VARIANT_KINDS[5]
+            ):
                 raise ValueError(f"family5_variant_invalid:{schedule_id}")
-            if family_id == 6 and int(variant.get("expiry_offset_seconds")) not in FAMILY_VARIANT_KINDS[6]:
+            if (
+                family_id == 6
+                and int(variant.get("expiry_offset_seconds")) not in FAMILY_VARIANT_KINDS[6]
+            ):
                 raise ValueError(f"family6_variant_invalid:{schedule_id}")
             if family_id == 7 and str(variant.get("swap_kind")) not in FAMILY_VARIANT_KINDS[7]:
                 raise ValueError(f"family7_variant_invalid:{schedule_id}")
-            if family_id == 8 and str(variant.get("substitution_kind")) not in FAMILY_VARIANT_KINDS[8]:
+            if (
+                family_id == 8
+                and str(variant.get("substitution_kind")) not in FAMILY_VARIANT_KINDS[8]
+            ):
                 raise ValueError(f"family8_variant_invalid:{schedule_id}")
             if not isinstance(schedule.get("snapshot_fields"), dict) or not schedule.get("reason"):
                 raise ValueError(f"adversarial_schedule_incomplete:{schedule_id}")
@@ -226,7 +244,10 @@ def validate_arm_diff(
                 }
             )
     return {
-        "valid": not mismatches and not missing_arm and not duplicate_pairs and not unexpected_schedule_ids,
+        "valid": not mismatches
+        and not missing_arm
+        and not duplicate_pairs
+        and not unexpected_schedule_ids,
         "checked_schedules": len(by_schedule),
         "missing_arm_schedule_ids": missing_arm,
         "unexpected_schedule_ids": unexpected_schedule_ids,
@@ -279,7 +300,15 @@ def validate_no_production_flag(services_root: Path) -> list[str]:
         raise ValueError(f"services_root_missing:{services_root}")
     offenders: list[str] = []
     for path in sorted(services_root.rglob("*")):
-        if not path.is_file() or path.suffix not in {".py", ".toml", ".yaml", ".yml", ".env.example", ".md", ".json"}:
+        if not path.is_file() or path.suffix not in {
+            ".py",
+            ".toml",
+            ".yaml",
+            ".yml",
+            ".env.example",
+            ".md",
+            ".json",
+        }:
             continue
         if any(part.startswith(".") for part in path.parts):
             continue

@@ -71,9 +71,7 @@ from evaluation.glhs_postgres_toctou.repeat_manifest import (
     validate_repeat_manifest,
 )
 
-DEFAULT_MANIFEST_PATH = Path(
-    "research/glhs_journal/concurrency_repetition_v1/repeat_manifest.json"
-)
+DEFAULT_MANIFEST_PATH = Path("research/glhs_journal/concurrency_repetition_v1/repeat_manifest.json")
 DEFAULT_OUTPUT_DIR = Path("research/glhs_journal/concurrency_repetition_v1")
 
 
@@ -200,9 +198,7 @@ def build_repeat_record(
         {"party": "trace", "backend_pid": event.get("backend_pid")}
         for event in trace["events"]
         if event.get("backend_pid") is not None
-    ] or [
-        {"party": party, "backend_pid": None} for party in resolved_commit
-    ]
+    ] or [{"party": party, "backend_pid": None} for party in resolved_commit]
     return {
         "schedule_id": schedule_id,
         "repeat_id": repeat_id,
@@ -234,15 +230,11 @@ def build_repeat_record(
         },
         "reconstruction": {
             "rejection_auditability": dict(rejection) if rejection is not None else None,
-            "committed_reconstructability": (
-                dict(committed) if committed is not None else None
-            ),
+            "committed_reconstructability": (dict(committed) if committed is not None else None),
         },
         "ordering_confidence": ordering_confidence,
         "ordering_reason": ordering_reason,
-        "resolved_commit_timestamps": {
-            party: item for party, item in resolved_commit.items()
-        },
+        "resolved_commit_timestamps": {party: item for party, item in resolved_commit.items()},
         "latency_ms": round(float(observation.get("latency_ms", 0.0)), 3),
     }
 
@@ -380,9 +372,7 @@ def run_repeat_study(
                 commit_probe=probe,
                 interleaving_mode=interleaving_mode,
             )
-            observation, audit, raw = _run_one_schedule(
-                repeat_env, schedule, drivers=drivers
-            )
+            observation, audit, raw = _run_one_schedule(repeat_env, schedule, drivers=drivers)
             resolved_all = resolved_default(probe)
             trace_txids = (
                 {
@@ -432,9 +422,7 @@ def run_repeat_study(
         "source_revision": source_revision,
         "executed_at": datetime.now(UTC).isoformat(),
         "scientific_n": int(manifest["scientific_n"]),
-        "repetitions_per_logical_schedule": int(
-            manifest["repetitions_per_logical_schedule"]
-        ),
+        "repetitions_per_logical_schedule": int(manifest["repetitions_per_logical_schedule"]),
         "repetition_role": str(manifest["repetition_role"]),
         "total_repetitions_executed": len(all_records),
         "logical_schedule_count": len(schedules),
@@ -461,7 +449,9 @@ def run_repeat_study(
     analysis_path = out_dir / "analysis.json"
     out_dir.mkdir(parents=True, exist_ok=True)
     raw_path.write_text("".join(raw_lines), encoding="utf-8")
-    analysis_path.write_text(json.dumps(analysis, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    analysis_path.write_text(
+        json.dumps(analysis, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return analysis
 
 

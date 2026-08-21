@@ -38,7 +38,9 @@ DDINTER_FILE_BASE_URL = "https://ddinter2.scbdd.com/static/media/download/"
 
 
 def _canonical_json(value: object) -> bytes:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
 
 
 def _sha256_file(path: Path) -> str:
@@ -53,9 +55,12 @@ def download_file(*, url: str, destination: Path) -> None:
     """Download atomically so partial licensed payloads are never mistaken for data."""
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with urlopen(url, timeout=60) as response, NamedTemporaryFile(
-        mode="wb", dir=destination.parent, prefix=f".{destination.name}.", delete=False
-    ) as temporary:
+    with (
+        urlopen(url, timeout=60) as response,
+        NamedTemporaryFile(
+            mode="wb", dir=destination.parent, prefix=f".{destination.name}.", delete=False
+        ) as temporary,
+    ):
         temporary_path = Path(temporary.name)
         try:
             while chunk := response.read(1024 * 1024):
@@ -140,7 +145,9 @@ def verify_archive(*, manifest_path: Path) -> dict[str, object]:
     manifest = validate_source_manifest(manifest_path)
     archive_dir = Path(str(manifest["raw_retention_location"]))
     expected_file_hashes = manifest.get("payload_files_sha256")
-    if not isinstance(expected_file_hashes, dict) or set(expected_file_hashes) != set(DDINTER_FILES):
+    if not isinstance(expected_file_hashes, dict) or set(expected_file_hashes) != set(
+        DDINTER_FILES
+    ):
         raise ValueError("careguard_ddinter_manifest_payload_files_invalid")
     paths = [archive_dir / name for name in DDINTER_FILES]
     if any(not path.is_file() for path in paths):
@@ -169,7 +176,9 @@ def acquire(*, archive_dir: Path, manifest_path: Path) -> dict[str, Any]:
         download_file(url=f"{DDINTER_FILE_BASE_URL}{name}", destination=archive_dir / name)
     manifest = build_manifest(archive_dir=archive_dir, retrieved_at=retrieved_at)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return manifest
 
 
@@ -187,7 +196,11 @@ def main() -> int:
     if args.archive_dir is None or args.manifest is None:
         parser.error("--archive-dir and --manifest are required for acquisition")
     manifest = acquire(archive_dir=args.archive_dir, manifest_path=args.manifest)
-    print(json.dumps({"row_count": manifest["row_count"], "payload_sha256": manifest["payload_sha256"]}))
+    print(
+        json.dumps(
+            {"row_count": manifest["row_count"], "payload_sha256": manifest["payload_sha256"]}
+        )
+    )
     return 0
 
 

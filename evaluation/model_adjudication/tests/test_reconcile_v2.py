@@ -12,7 +12,9 @@ from evaluation.model_adjudication.reconcile_v2 import reconcile
 from evaluation.model_adjudication.run_v2 import MODELS
 
 
-def _row(*, case_id: str, left: str, right: str, evidence_ids: list[str] | None = None) -> dict[str, Any]:
+def _row(
+    *, case_id: str, left: str, right: str, evidence_ids: list[str] | None = None
+) -> dict[str, Any]:
     evidence_ids = evidence_ids or ["e1", "e2"]
 
     def _review(label: str) -> dict[str, Any]:
@@ -64,14 +66,21 @@ class _FakeResponse:
 
 
 def _payload_with_label(label: str) -> bytes:
-    review = {"label": label, "rationale": "revised", "evidence_ids": ["e1", "e2"], "confidence": 0.8}
+    review = {
+        "label": label,
+        "rationale": "revised",
+        "evidence_ids": ["e1", "e2"],
+        "confidence": 0.8,
+    }
     return json.dumps({"choices": [{"message": {"content": json.dumps(review)}}]}).encode()
 
 
 def _write_raw(raw_dir: Path, rows: list[dict[str, Any]]) -> None:
     raw_dir.mkdir(parents=True, exist_ok=True)
     for row in rows:
-        (raw_dir / f"{row['case_id']}.json").write_text(json.dumps(row, sort_keys=True), encoding="utf-8")
+        (raw_dir / f"{row['case_id']}.json").write_text(
+            json.dumps(row, sort_keys=True), encoding="utf-8"
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -83,7 +92,11 @@ def test_agreed_case_passes_through_without_reconciliation(tmp_path: Path) -> No
     raw_dir = tmp_path / "raw"
     out_dir = tmp_path / "out"
     _write_raw(raw_dir, [_row(case_id="c1", left="PASS", right="PASS")])
-    summary = reconcile(raw_dir=raw_dir, output_dir=out_dir, urlopen=lambda _req, **_kw: _FakeResponse(_payload_with_label("PASS")))
+    summary = reconcile(
+        raw_dir=raw_dir,
+        output_dir=out_dir,
+        urlopen=lambda _req, **_kw: _FakeResponse(_payload_with_label("PASS")),
+    )
     assert summary["reconciliation_rounds"] == 1
     result = json.loads((out_dir / "c1.json").read_text())
     assert result["status"] == "AGREED"
@@ -95,7 +108,11 @@ def test_disagreement_records_separate_prompt_hashes_and_revised_hashes(tmp_path
     raw_dir = tmp_path / "raw"
     out_dir = tmp_path / "out"
     _write_raw(raw_dir, [_row(case_id="c1", left="PASS", right="FAIL")])
-    summary = reconcile(raw_dir=raw_dir, output_dir=out_dir, urlopen=lambda _req, **_kw: _FakeResponse(_payload_with_label("PASS")))
+    summary = reconcile(
+        raw_dir=raw_dir,
+        output_dir=out_dir,
+        urlopen=lambda _req, **_kw: _FakeResponse(_payload_with_label("PASS")),
+    )
     assert summary["case_count"] == 1
     assert summary["unresolved_count"] == 0
     result = json.loads((out_dir / "c1.json").read_text())
@@ -138,7 +155,11 @@ def test_mixed_cases_and_duplicate_markers_preserved(tmp_path: Path) -> None:
     dup["frozen_duplicate"] = True
     dup["duplicate_of"] = "c2"
     _write_raw(raw_dir, [*rows, dup])
-    summary = reconcile(raw_dir=raw_dir, output_dir=out_dir, urlopen=lambda _req, **_kw: _FakeResponse(_payload_with_label("PASS")))
+    summary = reconcile(
+        raw_dir=raw_dir,
+        output_dir=out_dir,
+        urlopen=lambda _req, **_kw: _FakeResponse(_payload_with_label("PASS")),
+    )
     assert summary["case_count"] == 3
     assert summary["unresolved_count"] == 0
     result = json.loads((out_dir / "c2__dup1.json").read_text())

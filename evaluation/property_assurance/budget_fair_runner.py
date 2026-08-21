@@ -72,9 +72,7 @@ def _run_strategy(
         remaining_ms = budget_ms - used_ms
         if remaining_ms < 1000:
             break
-        invocation_timeout = min(
-            pytest_timeout_seconds, max(1, math.ceil(remaining_ms / 1000))
-        )
+        invocation_timeout = min(pytest_timeout_seconds, max(1, math.ceil(remaining_ms / 1000)))
         result = execute_mutant(
             repository_root=repository_root,
             mutant=mutant,
@@ -205,9 +203,7 @@ def run_budget_fair(
             "incremental_mutants": incremental[method],
             "total_used_ms": round(sum(r["used_ms"] for r in records), 3),
             "total_unused_ms": round(sum(r["unused_budget_ms"] for r in records), 3),
-            "kills_per_minute": (
-                round(kills / total_used_min, 3) if total_used_min else None
-            ),
+            "kills_per_minute": (round(kills / total_used_min, 3) if total_used_min else None),
             "time_to_first_kill_mean_ms": (
                 round(sum(times_to_kill) / len(times_to_kill), 3) if times_to_kill else None
             ),
@@ -255,7 +251,9 @@ def main() -> int:
         output_path=args.output,
         execute=args.execute,
     )
-    print(json.dumps({"status": report["status"], "freeze_id": report["freeze_id"]}, sort_keys=True))
+    print(
+        json.dumps({"status": report["status"], "freeze_id": report["freeze_id"]}, sort_keys=True)
+    )
     return 0
 
 

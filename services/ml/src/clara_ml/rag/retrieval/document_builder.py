@@ -136,7 +136,8 @@ class DocumentBuilder:
             text = str(entry.get("text") or entry.get("content") or "").strip()
             entry_source = str(entry.get("source") or default_source).strip().lower() or default_source
 
-            entry_pdf = entry.get("pdf") if isinstance(entry.get("pdf"), dict) else {}
+            entry_pdf_raw = entry.get("pdf")
+            entry_pdf: dict[str, Any] = entry_pdf_raw if isinstance(entry_pdf_raw, dict) else {}
             url = str(entry.get("url") or entry_pdf.get("url") or "").strip()
             tags = normalize_tags(default_tags + normalize_tags(entry.get("tags") or entry_pdf.get("tags")))
             tier = normalize_trust_tier(entry.get("trust_tier") or entry.get("tier") or default_tier)

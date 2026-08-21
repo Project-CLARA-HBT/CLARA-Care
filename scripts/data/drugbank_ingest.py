@@ -48,9 +48,10 @@ import argparse
 import hashlib
 import json
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 NS = "http://www.drugbank.ca"
 
@@ -223,21 +224,21 @@ def parse_drugbank(
         drugbank_id = _primary_drugbank_id(drug)
 
         # --- Dictionary: canonical self-record + alias records. ---
-        def _add_dictionary_record(brand_value: str) -> None:
+        def _add_dictionary_record(brand_value: str, norm_name: str, db_id: str) -> None:
             brand = brand_value.strip().lower()
             if not brand or brand in dictionary_by_brand:
                 return
             dictionary_by_brand[brand] = {
                 "brand_vn": brand,
-                "normalized_name": canonical,
-                "active_ingredients": [canonical],
+                "normalized_name": norm_name,
+                "active_ingredients": [norm_name],
                 "rxcui": "",
-                "drugbank_id": drugbank_id,
+                "drugbank_id": db_id,
             }
 
-        _add_dictionary_record(canonical)
+        _add_dictionary_record(canonical, canonical, drugbank_id)
         for alias in _collect_aliases(drug):
-            _add_dictionary_record(alias)
+            _add_dictionary_record(alias, canonical, drugbank_id)
 
         # --- DDI rules. ---
         interactions = drug.find(_q("drug-interactions"))
@@ -375,7 +376,7 @@ def write_shards(
         "source_version": source_version,
         "source_sha256": source_sha256,
         "license": "commercial",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "drugs_parsed": drugs_seen,
         "ddi_rule_count": len(ddi_rules),
         "dictionary_record_count": len(dict_records),
@@ -446,7 +447,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"input not found: {input_path}")
 
     version = (
-        args.version or f"drugbank-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+        args.version or f"drugbank-{datetime.now(UTC).strftime('%Y-%m-%d')}"
     )
 
     ddi_by_pair, dictionary_by_brand, drugs_seen = parse_drugbank(

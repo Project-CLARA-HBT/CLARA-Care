@@ -14,7 +14,10 @@ def test_offline_v5_dry_run_has_no_provider_calls_and_is_valid(tmp_path) -> None
     from evaluation.commitloop.v5_cohort import build_cohort
 
     rows, manifest = build_cohort()
-    monkeypatched = (rows[:1], {**manifest, "subject_count": 1, "subject_token_count": 1, "bundle_hash_count": 1})
+    monkeypatched = (
+        rows[:1],
+        {**manifest, "subject_count": 1, "subject_token_count": 1, "bundle_hash_count": 1},
+    )
     original = v5_offline_dry_run.write_cohort
 
     def write_one(output):

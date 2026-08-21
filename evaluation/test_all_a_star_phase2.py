@@ -23,8 +23,16 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+# Ensure repository root and API source are on sys.path
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+_API_SRC = _REPO_ROOT / "services" / "api" / "src"
+if str(_API_SRC) not in sys.path:
+    sys.path.insert(0, str(_API_SRC))
+
 # Module 4: Wound-Wait Dynamic DAG Locking
-from clara_api.glhs.commitment_gateway import (
+from clara_api.glhs.commitment_gateway import (  # noqa: E402
     LeaseState,
     canonical_sort_coordinates,
     get_dag_lock_manager,
@@ -33,12 +41,12 @@ from clara_api.glhs.commitment_gateway import (
 )
 
 # Module 9: CareGuard-VN Multimodal OCR-to-DDI
-from evaluation.careguard_multimodal_ocr.evaluate_ocr_ddi import (
+from evaluation.careguard_multimodal_ocr.evaluate_ocr_ddi import (  # noqa: E402
     run_careguard_multimodal_evaluation,
 )
 
 # Module 1: TOST Equivalence
-from evaluation.commitloop.tost_equivalence import (
+from evaluation.commitloop.tost_equivalence import (  # noqa: E402
     compute_tost_paired,
     evaluate_glhs_384_study,
     t_cdf,
@@ -46,7 +54,7 @@ from evaluation.commitloop.tost_equivalence import (
 )
 
 # Module 2: Cryptographic Security Proofs
-from evaluation.crypto_security_proof import (
+from evaluation.crypto_security_proof import (  # noqa: E402
     GSTCryptographicVerifier,
     MerkleTree,
     compile_thss_cryptographic_snapshot,
@@ -57,19 +65,19 @@ from evaluation.crypto_security_proof import (
 )
 
 # Module 5: Santos-Grueiro 4-Boundary Validator
-from evaluation.four_boundary_validator import (
+from evaluation.four_boundary_validator import (  # noqa: E402
     AuthorizationLease,
     BitemporalInterval,
     ClinicalMutation,
     SantosGrueiroFourBoundaryValidator,
     run_four_boundary_stress_evaluation,
 )
-from evaluation.four_boundary_validator import (
+from evaluation.four_boundary_validator import (  # noqa: E402
     EntityDAGCoordinate as FourBoundaryCoordinate,
 )
 
 # Module 8: Micro-Benchmark Governance Latency
-from evaluation.glhs_assurance.microbench_governance_profile import (
+from evaluation.glhs_assurance.microbench_governance_profile import (  # noqa: E402
     TARGET_OVERHEAD_PCT,
     TARGET_T_COMMIT_MS,
     TARGET_T_DAG_MS,
@@ -79,20 +87,20 @@ from evaluation.glhs_assurance.microbench_governance_profile import (
 )
 
 # Module 7: MIMIC-IV Real-World Evaluator
-from evaluation.mimic_real_world_eval import (
+from evaluation.mimic_real_world_eval import (  # noqa: E402
     evaluate_mimic_notes_pipeline,
     generate_mimic_clinical_case_suite,
 )
 
 # Module 3: OCC Thrashing Model
-from evaluation.occ_thrashing_model import (
+from evaluation.occ_thrashing_model import (  # noqa: E402
     ZipfianSkewSampler,
     run_full_concurrency_scaling_suite,
     simulate_concurrency_workload,
 )
 
 # Module 6: SOTA Peer Transactional Baselines
-from evaluation.peer_transactional_baselines import (
+from evaluation.peer_transactional_baselines import (  # noqa: E402
     generate_benchmark_workload,
     run_peer_transactional_benchmarks,
 )
@@ -235,7 +243,9 @@ class TestOCCThrashingModel:
         assert count_0 > count_9
 
     def test_monolithic_thrashing_vs_glhs_scaling(self):
-        res = simulate_concurrency_workload(workers=16, num_partitions=16, theta_skew=0.6, tx_per_worker=100)
+        res = simulate_concurrency_workload(
+            workers=16, num_partitions=16, theta_skew=0.6, tx_per_worker=100
+        )
         mono = res["monolithic"]
         glhs = res["glhs_ww_dag"]
 
@@ -329,7 +339,9 @@ class TestSantosGrueiroFourBoundaries:
             issued_at=t0,
             expires_at=t0 + 30.0,
         )
-        interval = BitemporalInterval(valid_start=t0 - 10, valid_end=None, know_start=t0 - 10, know_end=None)
+        interval = BitemporalInterval(
+            valid_start=t0 - 10, valid_end=None, know_start=t0 - 10, know_end=None
+        )
         mutation = ClinicalMutation(
             coordinate=c_met,
             action="update",
@@ -436,7 +448,9 @@ class TestCareGuardMultimodalOCRDDI:
         assert report.total_test_cases >= 150
         drug_f1 = getattr(report, "drug_name_f1", None) or report.drug_name_metrics["f1"]
         str_f1 = getattr(report, "strength_f1", None) or report.strength_metrics["f1"]
-        freq_acc = getattr(report, "frequency_accuracy", None) or report.frequency_metrics["accuracy"]
+        freq_acc = (
+            getattr(report, "frequency_accuracy", None) or report.frequency_metrics["accuracy"]
+        )
         sens = getattr(report, "ddi_sensitivity", None) or report.ddi_metrics["sensitivity"]
         fnr = getattr(report, "ddi_fnr", None) or report.ddi_metrics["fnr"]
 
@@ -508,17 +522,19 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 1 failed: {e}", file=sys.stderr)
     elapsed_m1 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=1,
-        module_name="TOST Equivalence Statistics",
-        target_source="evaluation/commitloop/tost_equivalence.py",
-        tests_executed=m1_tests,
-        tests_passed=m1_passed,
-        tests_failed=m1_failed,
-        execution_time_ms=elapsed_m1,
-        status="PASSED" if m1_failed == 0 else "FAILED",
-        key_metrics={"schuirmann_tost": "verified", "pareto_synthesis": "verified"},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=1,
+            module_name="TOST Equivalence Statistics",
+            target_source="evaluation/commitloop/tost_equivalence.py",
+            tests_executed=m1_tests,
+            tests_passed=m1_passed,
+            tests_failed=m1_failed,
+            execution_time_ms=elapsed_m1,
+            status="PASSED" if m1_failed == 0 else "FAILED",
+            key_metrics={"schuirmann_tost": "verified", "pareto_synthesis": "verified"},
+        )
+    )
 
     # 2. Module 2: Cryptographic Security Proofs
     t0 = time.perf_counter()
@@ -538,17 +554,19 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 2 failed: {e}", file=sys.stderr)
     elapsed_m2 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=2,
-        module_name="Cryptographic Security Proofs (Theorem 3)",
-        target_source="evaluation/crypto_security_proof.py",
-        tests_executed=m2_tests,
-        tests_passed=m2_passed,
-        tests_failed=m2_failed,
-        execution_time_ms=elapsed_m2,
-        status="PASSED" if m2_failed == 0 else "FAILED",
-        key_metrics={"euf_cma_forgery_rate": "0.00%", "replay_block_rate": "100.0%"},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=2,
+            module_name="Cryptographic Security Proofs (Theorem 3)",
+            target_source="evaluation/crypto_security_proof.py",
+            tests_executed=m2_tests,
+            tests_passed=m2_passed,
+            tests_failed=m2_failed,
+            execution_time_ms=elapsed_m2,
+            status="PASSED" if m2_failed == 0 else "FAILED",
+            key_metrics={"euf_cma_forgery_rate": "0.00%", "replay_block_rate": "100.0%"},
+        )
+    )
 
     # 3. Module 3: OCC Thrashing Model
     t0 = time.perf_counter()
@@ -568,17 +586,23 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 3 failed: {e}", file=sys.stderr)
     elapsed_m3 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=3,
-        module_name="OCC Thrashing Model & WW Concurrency Scaling",
-        target_source="evaluation/occ_thrashing_model.py",
-        tests_executed=m3_tests,
-        tests_passed=m3_passed,
-        tests_failed=m3_failed,
-        execution_time_ms=elapsed_m3,
-        status="PASSED" if m3_failed == 0 else "FAILED",
-        key_metrics={"deadlock_rate": "0.00%", "false_stale_rate": "0.00%", "scaling_w128": "verified"},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=3,
+            module_name="OCC Thrashing Model & WW Concurrency Scaling",
+            target_source="evaluation/occ_thrashing_model.py",
+            tests_executed=m3_tests,
+            tests_passed=m3_passed,
+            tests_failed=m3_failed,
+            execution_time_ms=elapsed_m3,
+            status="PASSED" if m3_failed == 0 else "FAILED",
+            key_metrics={
+                "deadlock_rate": "0.00%",
+                "false_stale_rate": "0.00%",
+                "scaling_w128": "verified",
+            },
+        )
+    )
 
     # 4. Module 4: Wound-Wait Dynamic DAG Locking
     t0 = time.perf_counter()
@@ -596,17 +620,19 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 4 failed: {e}", file=sys.stderr)
     elapsed_m4 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=4,
-        module_name="Wound-Wait Dynamic DAG Locking",
-        target_source="services/api/tests/test_glhs_dynamic_ww_locking.py",
-        tests_executed=m4_tests,
-        tests_passed=m4_passed,
-        tests_failed=m4_failed,
-        execution_time_ms=elapsed_m4,
-        status="PASSED" if m4_failed == 0 else "FAILED",
-        key_metrics={"canonical_ordering": "verified", "ww_preemption": "verified"},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=4,
+            module_name="Wound-Wait Dynamic DAG Locking",
+            target_source="services/api/tests/test_glhs_dynamic_ww_locking.py",
+            tests_executed=m4_tests,
+            tests_passed=m4_passed,
+            tests_failed=m4_failed,
+            execution_time_ms=elapsed_m4,
+            status="PASSED" if m4_failed == 0 else "FAILED",
+            key_metrics={"canonical_ordering": "verified", "ww_preemption": "verified"},
+        )
+    )
 
     # 5. Module 5: Santos-Grueiro 4-Boundary Validator
     t0 = time.perf_counter()
@@ -624,17 +650,24 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 5 failed: {e}", file=sys.stderr)
     elapsed_m5 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=5,
-        module_name="Santos-Grueiro 4-Boundary Validator",
-        target_source="evaluation/four_boundary_validator.py",
-        tests_executed=m5_tests,
-        tests_passed=m5_passed,
-        tests_failed=m5_failed,
-        execution_time_ms=elapsed_m5,
-        status="PASSED" if m5_failed == 0 else "FAILED",
-        key_metrics={"freshness_block": "100%", "causal_block": "100%", "scoping_block": "100%", "admissibility_block": "100%"},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=5,
+            module_name="Santos-Grueiro 4-Boundary Validator",
+            target_source="evaluation/four_boundary_validator.py",
+            tests_executed=m5_tests,
+            tests_passed=m5_passed,
+            tests_failed=m5_failed,
+            execution_time_ms=elapsed_m5,
+            status="PASSED" if m5_failed == 0 else "FAILED",
+            key_metrics={
+                "freshness_block": "100%",
+                "causal_block": "100%",
+                "scoping_block": "100%",
+                "admissibility_block": "100%",
+            },
+        )
+    )
 
     # 6. Module 6: SOTA Peer Transactional Baselines
     t0 = time.perf_counter()
@@ -652,17 +685,23 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 6 failed: {e}", file=sys.stderr)
     elapsed_m6 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=6,
-        module_name="SOTA Peer Transactional Baselines",
-        target_source="evaluation/peer_transactional_baselines.py",
-        tests_executed=m6_tests,
-        tests_passed=m6_passed,
-        tests_failed=m6_failed,
-        execution_time_ms=elapsed_m6,
-        status="PASSED" if m6_failed == 0 else "FAILED",
-        key_metrics={"glhs_vs_fhir_rest": "superior", "glhs_vs_memtx": "superior", "glhs_vs_provenact": "superior"},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=6,
+            module_name="SOTA Peer Transactional Baselines",
+            target_source="evaluation/peer_transactional_baselines.py",
+            tests_executed=m6_tests,
+            tests_passed=m6_passed,
+            tests_failed=m6_failed,
+            execution_time_ms=elapsed_m6,
+            status="PASSED" if m6_failed == 0 else "FAILED",
+            key_metrics={
+                "glhs_vs_fhir_rest": "superior",
+                "glhs_vs_memtx": "superior",
+                "glhs_vs_provenact": "superior",
+            },
+        )
+    )
 
     # 7. Module 7: MIMIC-IV Real-World Clinical Notes Evaluator
     t0 = time.perf_counter()
@@ -678,17 +717,23 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 7 failed: {e}", file=sys.stderr)
     elapsed_m7 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=7,
-        module_name="MIMIC-IV Real-World Clinical Notes Evaluator",
-        target_source="evaluation/mimic_real_world_eval.py",
-        tests_executed=m7_tests,
-        tests_passed=m7_passed,
-        tests_failed=m7_failed,
-        execution_time_ms=elapsed_m7,
-        status="PASSED" if m7_failed == 0 else "FAILED",
-        key_metrics={"temporal_f1": "100.0%", "hallucination_blocked": "100.0%", "allergy_blocked": "100.0%"},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=7,
+            module_name="MIMIC-IV Real-World Clinical Notes Evaluator",
+            target_source="evaluation/mimic_real_world_eval.py",
+            tests_executed=m7_tests,
+            tests_passed=m7_passed,
+            tests_failed=m7_failed,
+            execution_time_ms=elapsed_m7,
+            status="PASSED" if m7_failed == 0 else "FAILED",
+            key_metrics={
+                "temporal_f1": "100.0%",
+                "hallucination_blocked": "100.0%",
+                "allergy_blocked": "100.0%",
+            },
+        )
+    )
 
     # 8. Module 8: Micro-Benchmark Governance Latency
     t0 = time.perf_counter()
@@ -704,17 +749,23 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 8 failed: {e}", file=sys.stderr)
     elapsed_m8 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=8,
-        module_name="Micro-Benchmark Governance Latency Profile",
-        target_source="evaluation/glhs_assurance/microbench_governance_profile.py",
-        tests_executed=m8_tests,
-        tests_passed=m8_passed,
-        tests_failed=m8_failed,
-        execution_time_ms=elapsed_m8,
-        status="PASSED" if m8_failed == 0 else "FAILED",
-        key_metrics={"t_gov_mean": "< 0.06 ms", "overhead_pct": "< 0.006%", "all_slas_met": True},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=8,
+            module_name="Micro-Benchmark Governance Latency Profile",
+            target_source="evaluation/glhs_assurance/microbench_governance_profile.py",
+            tests_executed=m8_tests,
+            tests_passed=m8_passed,
+            tests_failed=m8_failed,
+            execution_time_ms=elapsed_m8,
+            status="PASSED" if m8_failed == 0 else "FAILED",
+            key_metrics={
+                "t_gov_mean": "< 0.06 ms",
+                "overhead_pct": "< 0.006%",
+                "all_slas_met": True,
+            },
+        )
+    )
 
     # 9. Module 9: CareGuard-VN Multimodal OCR-to-DDI
     t0 = time.perf_counter()
@@ -730,17 +781,23 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         if verbose:
             print(f"[ERROR] Module 9 failed: {e}", file=sys.stderr)
     elapsed_m9 = (time.perf_counter() - t0) * 1000.0
-    modules_summary.append(ModuleAuditSummary(
-        module_index=9,
-        module_name="CareGuard-VN Multimodal OCR-to-DDI",
-        target_source="evaluation/careguard_multimodal_ocr/evaluate_ocr_ddi.py",
-        tests_executed=m9_tests,
-        tests_passed=m9_passed,
-        tests_failed=m9_failed,
-        execution_time_ms=elapsed_m9,
-        status="PASSED" if m9_failed == 0 else "FAILED",
-        key_metrics={"drug_name_f1": "98.1%", "ddi_sensitivity": "99.6%", "fides_fail_closed": "100.0%"},
-    ))
+    modules_summary.append(
+        ModuleAuditSummary(
+            module_index=9,
+            module_name="CareGuard-VN Multimodal OCR-to-DDI",
+            target_source="evaluation/careguard_multimodal_ocr/evaluate_ocr_ddi.py",
+            tests_executed=m9_tests,
+            tests_passed=m9_passed,
+            tests_failed=m9_failed,
+            execution_time_ms=elapsed_m9,
+            status="PASSED" if m9_failed == 0 else "FAILED",
+            key_metrics={
+                "drug_name_f1": "98.1%",
+                "ddi_sensitivity": "99.6%",
+                "fides_fail_closed": "100.0%",
+            },
+        )
+    )
 
     total_elapsed = (time.perf_counter() - start_total_t) * 1000.0
     for mod in modules_summary:
@@ -748,7 +805,7 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         total_passed += mod.tests_passed
         total_failed += mod.tests_failed
 
-    all_passed = (total_failed == 0 and total_passed == total_tests)
+    all_passed = total_failed == 0 and total_passed == total_tests
     pass_rate = (total_passed / total_tests * 100.0) if total_tests > 0 else 0.0
 
     return ExecutivePhase2AuditReport(
@@ -769,22 +826,32 @@ def print_executive_report(report: ExecutivePhase2AuditReport) -> None:
     """Render executive audit report to stdout."""
     print("=" * 90)
     print("CLARA-CARE A* PHASE 2 MASTER INTEGRATION TEST AUDIT REPORT")
-    print(f"Timestamp: {report.timestamp_utc} | Total Modules: {report.total_modules} | Total Tests: {report.total_tests_executed}")
+    print(
+        f"Timestamp: {report.timestamp_utc} | Total Modules: {report.total_modules} | Total Tests: {report.total_tests_executed}"
+    )
     print(f"Verdict:   {report.audit_verdict}")
     print("=" * 90)
     print(f"{'Idx':<4} | {'Module Name':<44} | {'Tests':<7} | {'Time (ms)':<10} | {'Status'}")
     print("-" * 90)
     for m in report.modules:
         test_str = f"{m.tests_passed}/{m.tests_executed}"
-        print(f"{m.module_index:<4} | {m.module_name:<44} | {test_str:<7} | {m.execution_time_ms:10.2f} | {m.status}")
+        print(
+            f"{m.module_index:<4} | {m.module_name:<44} | {test_str:<7} | {m.execution_time_ms:10.2f} | {m.status}"
+        )
     print("-" * 90)
-    print(f"OVERALL SUMMARY: {report.total_tests_passed}/{report.total_tests_executed} tests passed ({report.overall_pass_rate_pct:.1f}%) in {report.total_execution_time_ms:.2f} ms")
+    print(
+        f"OVERALL SUMMARY: {report.total_tests_passed}/{report.total_tests_executed} tests passed ({report.overall_pass_rate_pct:.1f}%) in {report.total_execution_time_ms:.2f} ms"
+    )
     print("=" * 90)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Master Integration Test Suite for All Phase 2 Modules")
-    parser.add_argument("--output", type=Path, default=Path("artifacts/phase2_master_audit_report.json"))
+    parser = argparse.ArgumentParser(
+        description="Master Integration Test Suite for All Phase 2 Modules"
+    )
+    parser.add_argument(
+        "--output", type=Path, default=Path("artifacts/phase2_master_audit_report.json")
+    )
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

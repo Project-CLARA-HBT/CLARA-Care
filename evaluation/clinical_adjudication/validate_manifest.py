@@ -28,7 +28,9 @@ def validate(path: Path) -> None:
         value["status"] != "frozen"
         or not isinstance(annotators, list)
         or len(annotators) != 2
-        or not all(isinstance(item, str) and _PSEUDONYMOUS_CODE.fullmatch(item) for item in annotators)
+        or not all(
+            isinstance(item, str) and _PSEUDONYMOUS_CODE.fullmatch(item) for item in annotators
+        )
         or len(set(annotators)) != 2
         or not isinstance(adjudicator, str)
         or not _PSEUDONYMOUS_CODE.fullmatch(adjudicator)

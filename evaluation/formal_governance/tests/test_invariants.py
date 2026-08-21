@@ -61,14 +61,18 @@ class StateInvariantTests(unittest.TestCase):
         self.assertEqual(state_invariants(_admissible_bound_source()), [])
 
     def test_flags_bad_vocab(self) -> None:
-        st = build_state(initial_state(), consent_state="weird", commit_status="bogus", origin="nope")
+        st = build_state(
+            initial_state(), consent_state="weird", commit_status="bogus", origin="nope"
+        )
         flagged = state_invariants(st)
         self.assertIn("vocab_consent_state", flagged)
         self.assertIn("vocab_commit_status", flagged)
         self.assertIn("vocab_origin", flagged)
 
     def test_flags_version_and_expiry_domain(self) -> None:
-        st = build_state(initial_state(), state_version=-1, policy_version=9, consent_version=-2, expiry=42)
+        st = build_state(
+            initial_state(), state_version=-1, policy_version=9, consent_version=-2, expiry=42
+        )
         flagged = state_invariants(st)
         self.assertIn("version_state_in_domain", flagged)
         self.assertIn("version_policy_in_domain", flagged)
@@ -86,7 +90,11 @@ class StateInvariantTests(unittest.TestCase):
         self.assertIn("digest_consistent", state_invariants(st))
 
     def test_flags_evidence_outside_universe(self) -> None:
-        st = build_state(initial_state(), proposal_evidence=frozenset({"zx"}), disclosed_evidence_set=frozenset({"zz"}))
+        st = build_state(
+            initial_state(),
+            proposal_evidence=frozenset({"zx"}),
+            disclosed_evidence_set=frozenset({"zz"}),
+        )
         flagged = state_invariants(st)
         self.assertIn("evidence_in_universe", flagged)
         self.assertIn("disclosed_in_universe", flagged)
@@ -121,7 +129,12 @@ class TransitionInvariantTests(unittest.TestCase):
         self.assertIn("I2_no_post_revocation_commit", flagged)
 
     def test_I3_wrong_coordinate_commit(self) -> None:
-        for field_name, wrong in (("actor", "a9"), ("role", "r9"), ("purpose", "p9"), ("task", "t9")):
+        for field_name, wrong in (
+            ("actor", "a9"),
+            ("role", "r9"),
+            ("purpose", "p9"),
+            ("task", "t9"),
+        ):
             source = build_state(_admissible_bound_source(), **{f"proposal_{field_name}": wrong})
             flagged = transition_invariants(
                 source, "commit", {}, synthetic_success(source, _committed_target(source))
@@ -157,7 +170,9 @@ class TransitionInvariantTests(unittest.TestCase):
         source = _admissible_bound_source()
         target = _committed_target(source)
         wrong_target = build_state(target, state_version=source.state_version)  # did not advance
-        flagged = transition_invariants(source, "commit", {}, synthetic_success(source, wrong_target))
+        flagged = transition_invariants(
+            source, "commit", {}, synthetic_success(source, wrong_target)
+        )
         self.assertIn("I7_commit_advances_once", flagged)
 
     def test_I10_stale_policy_commit(self) -> None:
@@ -192,7 +207,11 @@ class TransitionInvariantTests(unittest.TestCase):
 class PositivePropertyTests(unittest.TestCase):
     def test_I11_clean_commit_reachable(self) -> None:
         self.assertTrue(check_i11(initial_state()))
-        self.assertTrue(apply(initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL).admitted)
+        self.assertTrue(
+            apply(
+                initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL
+            ).admitted
+        )
 
 
 class InventoryTests(unittest.TestCase):

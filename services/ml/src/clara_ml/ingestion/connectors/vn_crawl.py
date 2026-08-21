@@ -264,11 +264,11 @@ class VnCrawlConnector(BaseSourceConnector):
         status = int(getattr(response, "status_code", 200) or 200)
         if status in (401, 403):
             # Unauthorized/forbidden robots.txt -> treat the whole site as off-limits.
-            parser.disallow_all = True
+            parser.disallow_all = True  # type: ignore[attr-defined]
             return parser
         if status >= 400:
             # Missing robots.txt (e.g. 404) -> standard convention allows all.
-            parser.allow_all = True
+            parser.allow_all = True  # type: ignore[attr-defined]
             return parser
 
         body = getattr(response, "text", "") or ""

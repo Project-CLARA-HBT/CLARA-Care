@@ -27,7 +27,9 @@ def generate(run_dir: Path) -> None:
     elapsed = re.search(r"Elapsed .*: (.+)", time_text)
     rss = re.search(r"Maximum resident set size \(kbytes\): (\d+)", time_text)
     junit_root = ET.parse(run_dir / "assurance/junit.xml").getroot()
-    suites = [junit_root] if junit_root.tag == "testsuite" else list(junit_root.findall("testsuite"))
+    suites = (
+        [junit_root] if junit_root.tag == "testsuite" else list(junit_root.findall("testsuite"))
+    )
     test_count = sum(int(suite.attrib.get("tests", "0")) for suite in suites)
     failures = sum(
         int(suite.attrib.get("failures", "0")) + int(suite.attrib.get("errors", "0"))

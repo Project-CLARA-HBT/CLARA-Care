@@ -88,7 +88,9 @@ def test_human_review_gate_rejects_open_gate(tmp_path: Path) -> None:
     catalog = tmp_path / "w9_catalog.json"
     catalog.write_text(json.dumps({"candidates": [{"id": "W9-C01"}]}), encoding="utf-8")
     manifest = tmp_path / "w9_final_freeze.json"
-    manifest.write_text(json.dumps({"human_review": {"status": "MANUAL_REQUIRED"}}), encoding="utf-8")
+    manifest.write_text(
+        json.dumps({"human_review": {"status": "MANUAL_REQUIRED"}}), encoding="utf-8"
+    )
     with pytest.raises(FreezeError, match="govmut_w9_human_review_gate_open"):
         validate_human_review_gate(manifest_path=manifest, catalog_path=catalog)
 

@@ -290,7 +290,7 @@ class ExternalSourceGateway:
             citation = article_node.find("./MedlineCitation")
             article = citation.find("./Article") if citation is not None else None
             pmid = cls._xml_text(citation.find("./PMID") if citation is not None else None)
-            if not pmid or article is None:
+            if not pmid or article is None or citation is None:
                 continue
 
             title = cls._xml_text(article.find("./ArticleTitle"))

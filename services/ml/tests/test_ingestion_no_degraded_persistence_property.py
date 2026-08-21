@@ -116,7 +116,7 @@ class _FakeSession:
     the store's committed state, mirroring the real query.
     """
 
-    def __init__(self, store: "FakeDocumentStore") -> None:
+    def __init__(self, store: FakeDocumentStore) -> None:
         self._store = store
 
     def execute(self, statement: Any) -> _FakeResult:

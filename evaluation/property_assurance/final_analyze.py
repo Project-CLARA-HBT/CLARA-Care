@@ -67,10 +67,8 @@ def _mcnemar_exact_two_sided(b: int, c: int) -> float:
     if n == 0:
         return 1.0
     observed = min(b, c)
-    total = 2 ** n
-    probability = sum(
-        math.comb(n, k) for k in range(observed + 1)
-    ) / total
+    total = 2**n
+    probability = sum(math.comb(n, k) for k in range(observed + 1)) / total
     return min(1.0, 2.0 * probability)
 
 
@@ -89,9 +87,7 @@ def aggregate_mutant_method(
 ) -> MethodAggregate:
     """Summarize one mutant x method across its frozen ordered seed slots."""
 
-    ordered: list[int | None] = (
-        [None] if method == "M0_regression" else list(run.seed_order)
-    )
+    ordered: list[int | None] = [None] if method == "M0_regression" else list(run.seed_order)
     executable: list[Execution] = []
     for seed in ordered:
         execution = executions[(mutant_id, method, seed)]
@@ -261,10 +257,7 @@ def _catalog_fields(catalog_path: Path) -> dict[str, dict[str, str]]:
         if not isinstance(candidate, dict):
             raise FreezeError("govmut_final_analyze_catalog_invalid")
         mutant_id = candidate.get("id")
-        row = {
-            field: candidate.get(field)
-            for field in ("family_seed", "source_path", "anchor")
-        }
+        row = {field: candidate.get(field) for field in ("family_seed", "source_path", "anchor")}
         if (
             not isinstance(mutant_id, str)
             or not mutant_id
@@ -317,9 +310,7 @@ def _runtime_stats(
     per_method: dict[str, dict[str, Any]] = {}
     for method in _METHODS:
         values = [
-            e.runtime_ms
-            for e in run.executions
-            if e.method == method and e.runtime_ms is not None
+            e.runtime_ms for e in run.executions if e.method == method and e.runtime_ms is not None
         ]
         per_method[method] = {
             "count": len(values),
@@ -341,9 +332,7 @@ def _runtime_stats(
         ),
         "time_to_first_kill_ms": {
             "count": len(time_to_kill),
-            "mean_ms": round(sum(time_to_kill) / len(time_to_kill), 3)
-            if time_to_kill
-            else None,
+            "mean_ms": round(sum(time_to_kill) / len(time_to_kill), 3) if time_to_kill else None,
             "median_ms": round(_median(time_to_kill), 3) if time_to_kill else None,
         },
     }
@@ -417,8 +406,7 @@ def analyze_final_run(
         },
         "per_mutant_method": {
             mutant_id: {
-                method: _aggregate_dict(aggregates[mutant_id][method])
-                for method in _METHODS
+                method: _aggregate_dict(aggregates[mutant_id][method]) for method in _METHODS
             }
             for mutant_id in run.included_mutant_ids
         },
@@ -455,9 +443,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
-        analyze_final_run(
-            run_path=args.run, catalog_path=args.catalog, output_path=args.output
-        )
+        analyze_final_run(run_path=args.run, catalog_path=args.catalog, output_path=args.output)
     except FreezeError as exc:
         parser.error(str(exc))
     return 0

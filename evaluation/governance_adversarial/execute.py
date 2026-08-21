@@ -21,25 +21,38 @@ from evaluation.governance_adversarial.protocol import ARMS, validate_manifest
 from evaluation.governance_adversarial.research_arms import isolated_arm_config
 
 RESULT_COLUMNS = (
-    "case_id", "family", "arm", "execution_id", "run_status", "retry_count",
-    "observation_artifact_ref", "observation_artifact_sha256", "boundary_path_attested",
-    "normalized_outcome", "unauthorized_disclosure", "successful_bypass",
-    "stale_or_unauthorized_commit", "wrong_subject_exposure",
-    "cache_index_revocation_failure", "audit_reconstruction_complete",
-    "response_sha256", "latency_ms", "availability_error",
+    "case_id",
+    "family",
+    "arm",
+    "execution_id",
+    "run_status",
+    "retry_count",
+    "observation_artifact_ref",
+    "observation_artifact_sha256",
+    "boundary_path_attested",
+    "normalized_outcome",
+    "unauthorized_disclosure",
+    "successful_bypass",
+    "stale_or_unauthorized_commit",
+    "wrong_subject_exposure",
+    "cache_index_revocation_failure",
+    "audit_reconstruction_complete",
+    "response_sha256",
+    "latency_ms",
+    "availability_error",
 )
 
 
 class BoundaryAdapter(Protocol):
-    def __call__(
-        self, *, case: dict[str, object], arm: dict[str, object]
-    ) -> dict[str, object]: ...
+    def __call__(self, *, case: dict[str, object], arm: dict[str, object]) -> dict[str, object]: ...
 
 
 _REQUIRED_BOUNDARY_STAGES = frozenset({"http", "postgres", "cache", "audit"})
 
 
-def _validate_artifact_binding(*, artifact_root: Path, artifact_ref: object, artifact_sha256: object) -> tuple[str, str]:
+def _validate_artifact_binding(
+    *, artifact_root: Path, artifact_ref: object, artifact_sha256: object
+) -> tuple[str, str]:
     """Require a hash-bound, root-contained artifact instead of adapter self-report."""
 
     if not isinstance(artifact_ref, str) or not artifact_ref:
@@ -99,7 +112,13 @@ def _validate_arm_implementation(
     attestation = value.get("arm_implementation_attestation")
     if not isinstance(attestation, dict):
         raise FreezeError("govred_adapter_arm_implementation_attestation_missing")
-    for key in ("name", "bind_snapshot", "revalidate_state", "revalidate_governance", "research_only"):
+    for key in (
+        "name",
+        "bind_snapshot",
+        "revalidate_state",
+        "revalidate_governance",
+        "research_only",
+    ):
         if attestation.get(key) != expected[key]:
             raise FreezeError("govred_adapter_arm_implementation_semantics_invalid")
     if attestation.get("runtime_mode") != "isolated_research_only":
@@ -144,14 +163,24 @@ def _load_adapter(reference: str) -> BoundaryAdapter:
 
 def _not_run(case: dict[str, object], arm: str) -> dict[str, str]:
     return {
-        "case_id": str(case["case_id"]), "family": str(case["family"]), "arm": arm,
-        "execution_id": "", "run_status": "NOT_RUN", "retry_count": "0",
-        "observation_artifact_ref": "", "observation_artifact_sha256": "",
+        "case_id": str(case["case_id"]),
+        "family": str(case["family"]),
+        "arm": arm,
+        "execution_id": "",
+        "run_status": "NOT_RUN",
+        "retry_count": "0",
+        "observation_artifact_ref": "",
+        "observation_artifact_sha256": "",
         "boundary_path_attested": "false",
-        "normalized_outcome": "", "unauthorized_disclosure": "",
-        "successful_bypass": "", "stale_or_unauthorized_commit": "",
-        "wrong_subject_exposure": "", "cache_index_revocation_failure": "",
-        "audit_reconstruction_complete": "", "response_sha256": "", "latency_ms": "0",
+        "normalized_outcome": "",
+        "unauthorized_disclosure": "",
+        "successful_bypass": "",
+        "stale_or_unauthorized_commit": "",
+        "wrong_subject_exposure": "",
+        "cache_index_revocation_failure": "",
+        "audit_reconstruction_complete": "",
+        "response_sha256": "",
+        "latency_ms": "0",
         "availability_error": "",
     }
 
@@ -177,7 +206,12 @@ def _executed(
     execution_id = value.get("execution_id")
     retry_count = value.get("retry_count", 0)
     normalized_outcome = value.get("normalized_outcome")
-    if not isinstance(execution_id, str) or not execution_id or not isinstance(normalized_outcome, str) or not normalized_outcome:
+    if (
+        not isinstance(execution_id, str)
+        or not execution_id
+        or not isinstance(normalized_outcome, str)
+        or not normalized_outcome
+    ):
         raise FreezeError("govred_adapter_execution_metadata_invalid")
     if not isinstance(retry_count, int) or retry_count < 0:
         raise FreezeError("govred_adapter_retry_count_invalid")
@@ -185,8 +219,12 @@ def _executed(
         value, artifact_root=artifact_root
     )
     return {
-        "case_id": str(case["case_id"]), "family": str(case["family"]), "arm": arm,
-        "execution_id": execution_id, "run_status": "EXECUTED", "retry_count": str(retry_count),
+        "case_id": str(case["case_id"]),
+        "family": str(case["family"]),
+        "arm": arm,
+        "execution_id": execution_id,
+        "run_status": "EXECUTED",
+        "retry_count": str(retry_count),
         "observation_artifact_ref": observation_ref,
         "observation_artifact_sha256": observation_sha256,
         "boundary_path_attested": "true",
@@ -215,9 +253,7 @@ def execute(
             if result.get("run_status") == "NOT_RUN":
                 rows.append(_not_run(case, str(arm_name)))
             else:
-                rows.append(
-                    _executed(case, str(arm_name), result, artifact_root=artifact_root)
-                )
+                rows.append(_executed(case, str(arm_name), result, artifact_root=artifact_root))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=RESULT_COLUMNS)

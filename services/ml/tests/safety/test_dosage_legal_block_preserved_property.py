@@ -34,13 +34,13 @@ from __future__ import annotations
 import contextlib
 from collections.abc import Iterator, Mapping
 
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 # ``clara_ml.rag.store`` eagerly pulls in rag submodules; importing it before
 # the harness (which imports other ``clara_ml`` modules) sidesteps the known
 # rag circular-import quirk and keeps this test importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.config import settings as _settings
 
 from . import fixtures as fx
@@ -65,12 +65,12 @@ def _flag_combination(values: Mapping[str, bool]) -> Iterator[None]:
     try:
         for flag, enabled in values.items():
             setattr(_settings, flag, enabled)
-        setattr(_settings, "rag_nli_llm_enabled", False)
+        _settings.rag_nli_llm_enabled = False
         yield
     finally:
         for flag, original in originals.items():
             setattr(_settings, flag, original)
-        setattr(_settings, "rag_nli_llm_enabled", nli_original)
+        _settings.rag_nli_llm_enabled = nli_original
 
 
 def _all_off() -> dict[str, bool]:

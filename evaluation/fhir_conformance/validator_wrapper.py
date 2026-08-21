@@ -212,12 +212,11 @@ def validate_file(
         "exit_status": completed.returncode,
         "messages": messages,
         "severity": severity,
-            "structural": (
-                "valid"
-                if completed.returncode == 0
-                and severity["error"] + severity["fatal"] == 0
-                else "error"
-            ),
+        "structural": (
+            "valid"
+            if completed.returncode == 0 and severity["error"] + severity["fatal"] == 0
+            else "error"
+        ),
         "output_tail": output[-MAX_RECORDED_OUTPUT:],
     }
 

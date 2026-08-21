@@ -29,8 +29,12 @@ def test_residual_lines_have_required_no_phi_fields() -> None:
         return
     residuals, _ = build_residuals(DEFAULT_RAW, DEFAULT_MANIFEST)
     required = {
-        "case_id", "family", "mutation_class", "expected_invariant",
-        "normalized_observed_outcome", "observation_artifact_sha256",
+        "case_id",
+        "family",
+        "mutation_class",
+        "expected_invariant",
+        "normalized_observed_outcome",
+        "observation_artifact_sha256",
     }
     for item in residuals:
         assert required.issubset(set(item.keys()))

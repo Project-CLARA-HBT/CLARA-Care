@@ -27,9 +27,12 @@ def download_json(*, url: str, destination: Path) -> None:
     """Persist the exact API response atomically in a controlled archive."""
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with urlopen(url, timeout=60) as response, NamedTemporaryFile(
-        mode="wb", dir=destination.parent, prefix=f".{destination.name}.", delete=False
-    ) as temporary:
+    with (
+        urlopen(url, timeout=60) as response,
+        NamedTemporaryFile(
+            mode="wb", dir=destination.parent, prefix=f".{destination.name}.", delete=False
+        ) as temporary,
+    ):
         temporary_path = Path(temporary.name)
         try:
             while chunk := response.read(1024 * 1024):
@@ -61,10 +64,12 @@ def build_manifest(*, archive_dir: Path, retrieved_at: datetime) -> dict[str, An
             "published_date": row.get("published_date"),
             "title": row.get("title"),
         }
-        inventory.append({
-            "source_record_id": row["setid"],
-            "source_record_hash": hashlib.sha256(_canonical_json(record)).hexdigest(),
-        })
+        inventory.append(
+            {
+                "source_record_id": row["setid"],
+                "source_record_hash": hashlib.sha256(_canonical_json(record)).hexdigest(),
+            }
+        )
     if len({item["source_record_id"] for item in inventory}) != len(inventory):
         raise ValueError("careguard_dailymed_record_identifier_duplicate")
     release = metadata.get("db_published_date")
@@ -98,7 +103,9 @@ def acquire(*, archive_dir: Path, manifest_path: Path) -> dict[str, Any]:
     download_json(url=DEFAULT_QUERY_URL, destination=archive_dir / RAW_FILENAME)
     manifest = build_manifest(archive_dir=archive_dir, retrieved_at=datetime.now(UTC))
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     validate_source_manifest(manifest_path)
     return manifest
 
@@ -109,7 +116,11 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, required=True)
     args = parser.parse_args()
     manifest = acquire(archive_dir=args.archive_dir, manifest_path=args.manifest)
-    print(json.dumps({"row_count": manifest["row_count"], "payload_sha256": manifest["payload_sha256"]}))
+    print(
+        json.dumps(
+            {"row_count": manifest["row_count"], "payload_sha256": manifest["payload_sha256"]}
+        )
+    )
     return 0
 
 

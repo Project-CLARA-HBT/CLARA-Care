@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from itertools import combinations
 from typing import Any
 
@@ -927,7 +927,7 @@ def _build_citations(
                 }
             )
 
-    for index, item in enumerate(history[:4], start=1):
+    for index, history_item in enumerate(history[:4], start=1):
         citations.append(
             {
                 "source_id": f"history-{index}",
@@ -935,7 +935,7 @@ def _build_citations(
                 "title": f"Relevant history {index}",
                 "url": None,
                 "relevance": "History item used for baseline risk context.",
-                "snippet": item,
+                "snippet": history_item,
                 "section": "history",
                 "evidence_type": "history",
             }
@@ -1099,7 +1099,7 @@ def _build_escalation_metadata(
             recommended_sla_minutes = 720
             requires_human_handoff = False
 
-    created_at_utc = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    created_at_utc = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     trigger_evidence = [
         {
             "flag": item["flag"],

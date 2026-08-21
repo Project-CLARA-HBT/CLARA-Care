@@ -39,13 +39,16 @@ _INJECTION_PATTERNS = tuple(
 
 
 class Generator(Protocol):
-    model: str
+    @property
+    def model(self) -> str: ...
 
     def generate(
         self,
         prompt: str,
         system_prompt: str | None = None,
-        **kwargs: object,
+        *,
+        max_tokens: int | None = None,
+        model: str | None = None,
     ) -> object: ...
 
 

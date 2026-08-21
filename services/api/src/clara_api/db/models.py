@@ -2681,9 +2681,12 @@ def _reject_glhs_canonical_content_mutation(
 ) -> None:
     """Permit compatibility projections while protecting canonical row content."""
 
+    inspection = sa_inspect(target)
+    if inspection is None:
+        return
     changed = {
         key
-        for key, attribute in sa_inspect(target).attrs.items()
+        for key, attribute in inspection.attrs.items()
         if attribute.history.has_changes()
     }
     if not changed.issubset(projection_fields):

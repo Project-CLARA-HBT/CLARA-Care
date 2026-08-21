@@ -115,7 +115,7 @@ def build_seed_documents(
     timeout_seconds: float,
     sleep_seconds: float,
 ) -> list[dict[str, Any]]:
-    docs_by_id: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+    docs_by_id: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
     for query in queries:
         ids = esearch(query, retmax=per_query, timeout=timeout_seconds)

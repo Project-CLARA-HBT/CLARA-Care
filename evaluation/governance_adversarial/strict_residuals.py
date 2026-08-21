@@ -39,28 +39,32 @@ DEFAULT_MANIFEST = Path(
 DEFAULT_OUTPUT = Path("research/govred_rivf/strict_residual_failure_manifest.jsonl")
 DEFAULT_TAXONOMY_OUTPUT = Path("research/govred_rivf/strict_residual_root_cause_taxonomy.json")
 
-ROOT_CAUSES = frozenset({
-    "IMPLEMENTATION_DEFECT",
-    "MISSING_CONTRACT_COORDINATE",
-    "NON_ATOMIC_GOVERNANCE_READ",
-    "CACHE_ONLY_FAILURE",
-    "OBSERVER_CLASSIFICATION_ERROR",
-    "PROTOCOL_EXPECTATION_ERROR",
-    "EXPECTED_VALID_OPERATION",
-    "INDETERMINATE_ORDERING",
-    "OTHER_EXPLAINED",
-})
+ROOT_CAUSES = frozenset(
+    {
+        "IMPLEMENTATION_DEFECT",
+        "MISSING_CONTRACT_COORDINATE",
+        "NON_ATOMIC_GOVERNANCE_READ",
+        "CACHE_ONLY_FAILURE",
+        "OBSERVER_CLASSIFICATION_ERROR",
+        "PROTOCOL_EXPECTATION_ERROR",
+        "EXPECTED_VALID_OPERATION",
+        "INDETERMINATE_ORDERING",
+        "OTHER_EXPLAINED",
+    }
+)
 
 # Mandatory-primary families retained for the strict endpoint denominator.
-PRIMARY_ENDPOINT_FAMILIES = frozenset({
-    "authorization_consent_toctou",
-    "concurrent_stale_state_write",
-    "cross_subject_proposal_write",
-    "revoked_consent_cache_index_reuse",
-    "role_mismatch",
-    "stale_thss_replay",
-    "audit_reconstruction_failure",
-})
+PRIMARY_ENDPOINT_FAMILIES = frozenset(
+    {
+        "authorization_consent_toctou",
+        "concurrent_stale_state_write",
+        "cross_subject_proposal_write",
+        "revoked_consent_cache_index_reuse",
+        "role_mismatch",
+        "stale_thss_replay",
+        "audit_reconstruction_failure",
+    }
+)
 
 # Prespecified established facts (regression-locked W1 findings).
 PRIMARY_DENOMINATOR = 210
@@ -116,7 +120,12 @@ def root_cause_for(row: dict[str, str]) -> tuple[str, list[str]]:
     """
     family = row["family"]
     if family == "concurrent_stale_state_write":
-        return "INDETERMINATE_ORDERING", ["concurrent_stale_state_write", "concurrency", "ordering", "toctou"]
+        return "INDETERMINATE_ORDERING", [
+            "concurrent_stale_state_write",
+            "concurrency",
+            "ordering",
+            "toctou",
+        ]
     if family == "audit_reconstruction_failure":
         return "EXPECTED_VALID_OPERATION", ["audit_reconstruction_failure", "by_design_commit"]
     return "OTHER_EXPLAINED", [family]
@@ -155,17 +164,19 @@ def build_residuals(raw: Path, manifest: Path) -> tuple[list[dict[str, Any]], di
             raise ValueError(f"govred_unexpected_strict_residual_family:{family}")
         case = cases[row["case_id"]]
         primary_root_cause, secondary_tags = root_cause_for(row)
-        residuals.append({
-            "case_id": row["case_id"],
-            "family": family,
-            "reporting_scope": family_scope(family),
-            "mutation_class": MUTATION_CLASS_BY_FAMILY.get(family, family),
-            "expected_invariant": case["expected_invariant"],
-            "normalized_observed_outcome": row["normalized_outcome"],
-            "observation_artifact_sha256": row["observation_artifact_sha256"],
-            "primary_root_cause": primary_root_cause,
-            "secondary_tags": secondary_tags,
-        })
+        residuals.append(
+            {
+                "case_id": row["case_id"],
+                "family": family,
+                "reporting_scope": family_scope(family),
+                "mutation_class": MUTATION_CLASS_BY_FAMILY.get(family, family),
+                "expected_invariant": case["expected_invariant"],
+                "normalized_observed_outcome": row["normalized_outcome"],
+                "observation_artifact_sha256": row["observation_artifact_sha256"],
+                "primary_root_cause": primary_root_cause,
+                "secondary_tags": secondary_tags,
+            }
+        )
 
     # Serial drift families must have zero invalid commits in the strict arm.
     strict_executed = [row for row in rows if row["run_status"] == "EXECUTED"]
@@ -182,9 +193,9 @@ def build_residuals(raw: Path, manifest: Path) -> tuple[list[dict[str, Any]], di
         "run_id": "2026-08-17-rivf-final-003",
         "arm": "GLHS_STRICT",
         "total_residuals": len(residuals),
-        "by_primary_root_cause": dict(Counter(
-            str(item["primary_root_cause"]) for item in residuals
-        )),
+        "by_primary_root_cause": dict(
+            Counter(str(item["primary_root_cause"]) for item in residuals)
+        ),
         "by_family": dict(Counter(str(item["family"]) for item in residuals)),
         "secondary_tags": sorted({tag for item in residuals for tag in item["secondary_tags"]}),
         "by_design_commits_excluded": dict(by_design),
@@ -199,7 +210,9 @@ def build_residuals(raw: Path, manifest: Path) -> tuple[list[dict[str, Any]], di
     return residuals, taxonomy
 
 
-def write_residuals(raw: Path, manifest: Path, output: Path, taxonomy_output: Path) -> dict[str, object]:
+def write_residuals(
+    raw: Path, manifest: Path, output: Path, taxonomy_output: Path
+) -> dict[str, object]:
     residuals, taxonomy = build_residuals(raw, manifest)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8") as stream:

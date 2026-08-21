@@ -62,15 +62,11 @@ def test_anchor_note_oracle_and_packets_remain_isolated() -> None:
     note = render_anchor_note(case)
     assert note is not None and "fulfillment" not in note
     cutoff = datetime(2026, 1, 20, tzinfo=UTC)
-    gold = compile_construction_gold(
-        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
-    )
+    gold = compile_construction_gold(case, events, valid_cutoff=cutoff, known_cutoff=cutoff)
     assert gold["lifecycle_state"] == "SATISFIED"
     assert gold["timeliness_state"] == "BEFORE_DUE"
     assert gold["clinical_adjudication"] == "NOT_RUN"
-    packets = build_solver_packets(
-        case, events, valid_cutoff=cutoff, known_cutoff=cutoff
-    )
+    packets = build_solver_packets(case, events, valid_cutoff=cutoff, known_cutoff=cutoff)
     for packet in packets.values():
         validate_solver_packet(packet, known_cutoff=cutoff)
         assert packet["due_time"] == "2026-02-01T00:00:00+00:00"
@@ -182,9 +178,7 @@ def test_perturbation_replay_rejects_tampered_source_or_manifest() -> None:
         materialize_perturbation(event, manifest={**variant, "new_value": "wrong"})
 
 
-def test_typed_adversarial_replay_changes_oracle_visibility_at_bitemporal_cutoff() -> (
-    None
-):
+def test_typed_adversarial_replay_changes_oracle_visibility_at_bitemporal_cutoff() -> None:
     _, events, case = _construction()
     fulfillment = next(item for item in events if item.resource_type == "Observation")
     cutoff = datetime(2026, 1, 20, tzinfo=UTC)
@@ -198,12 +192,8 @@ def test_typed_adversarial_replay_changes_oracle_visibility_at_bitemporal_cutoff
         item["variant_kind"]: item
         for item in generate_adversarial_perturbations(raw, cutoff=cutoff, seed=3)
     }
-    late = materialize_timeline_perturbation(
-        fulfillment, manifest=variants["late_ingestion"]
-    )
-    conflict = materialize_timeline_perturbation(
-        fulfillment, manifest=variants["conflict"]
-    )
+    late = materialize_timeline_perturbation(fulfillment, manifest=variants["late_ingestion"])
+    conflict = materialize_timeline_perturbation(fulfillment, manifest=variants["conflict"])
     assert (
         compile_construction_gold(
             case, (events[0], late), valid_cutoff=cutoff, known_cutoff=cutoff
@@ -260,9 +250,7 @@ def test_adversarial_variants_become_opaque_scorable_solver_cases() -> None:
     }
     assert gold_by_kind["cancellation"]["lifecycle_state"] == "CANCELLED"
     assert gold_by_kind["supersession"]["lifecycle_state"] == "SUPERSEDED"
-    assert (
-        gold_by_kind["partial_completion"]["lifecycle_state"] == "PARTIALLY_SATISFIED"
-    )
+    assert gold_by_kind["partial_completion"]["lifecycle_state"] == "PARTIALLY_SATISFIED"
     assert gold_by_kind["conflict"]["evidence_state"] == "CONFLICTED"
     assert gold_by_kind["duplicate"]["lifecycle_state"] == "SATISFIED"
     for kind in (

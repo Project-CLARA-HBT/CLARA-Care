@@ -34,7 +34,6 @@ from clara_ml.scribe.eval.harness import (
 from clara_ml.scribe.generator import Note
 from clara_ml.scribe.templates import get_template
 
-
 # ---------------------------------------------------------------------------
 # Pure value objects + threshold enforcement (Req 20.3/20.4)
 # ---------------------------------------------------------------------------

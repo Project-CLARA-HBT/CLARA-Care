@@ -80,9 +80,7 @@ def _git_revision(root: Path) -> str | None:
     return value or None
 
 
-def _wilson_interval(
-    successes: int, total: int, confidence: float = 0.95
-) -> dict[str, Any]:
+def _wilson_interval(successes: int, total: int, confidence: float = 0.95) -> dict[str, Any]:
     """Return a Wilson interval only for an actually observed binary result."""
 
     if total <= 0 or successes < 0 or successes > total:
@@ -93,8 +91,7 @@ def _wilson_interval(
     center = (proportion + (z * z) / (2 * total)) / denominator
     half_width = (
         z
-        * ((proportion * (1 - proportion) / total) + (z * z) / (4 * total * total))
-        ** 0.5
+        * ((proportion * (1 - proportion) / total) + (z * z) / (4 * total * total)) ** 0.5
         / denominator
     )
     return {
@@ -138,7 +135,11 @@ def _observed_binary_metrics(
         passed = trace.get("passed")
         track_id = trace.get("track_id")
         metric_id = trace.get("metric_id")
-        if not isinstance(passed, bool) or not isinstance(track_id, str) or not isinstance(metric_id, str):
+        if (
+            not isinstance(passed, bool)
+            or not isinstance(track_id, str)
+            or not isinstance(metric_id, str)
+        ):
             continue
         grouped.setdefault((track_id, metric_id), []).append(passed)
     rows: dict[tuple[str, str], dict[str, Any]] = {}
@@ -173,9 +174,7 @@ def _track_metrics(
     for configured_track in sorted(config.tracks, key=lambda item: item.track_id):
         track = configured_track.track_id
         entry = entries[track]
-        declared_by_id = {
-            declared.metric_id: declared for declared in entry.measurements
-        }
+        declared_by_id = {declared.metric_id: declared for declared in entry.measurements}
         for metric_id in configured_track.required_metrics:
             declared = declared_by_id.get(metric_id)
             observed_row = observed.get((track, metric_id))
@@ -352,9 +351,7 @@ def _model_manifest(
     }
 
 
-def _retrieval_snapshot(
-    config: SuiteConfig, live_execution: dict[str, Any]
-) -> dict[str, Any]:
+def _retrieval_snapshot(config: SuiteConfig, live_execution: dict[str, Any]) -> dict[str, Any]:
     snapshot = live_execution.get("retrieval_snapshot")
     if live_execution.get("state") == "executed" and isinstance(snapshot, dict):
         return {
@@ -375,9 +372,7 @@ def _retrieval_snapshot(
     }
 
 
-def _critical_error_rows(
-    config: SuiteConfig, traces: list[dict[str, Any]]
-) -> list[dict[str, str]]:
+def _critical_error_rows(config: SuiteConfig, traces: list[dict[str, Any]]) -> list[dict[str, str]]:
     command = _required_live_command(config)
     categories = (
         ("medical_qa_patient_communication", "unsafe_patient_guidance"),
@@ -397,11 +392,7 @@ def _critical_error_rows(
         track = trace.get("track_id")
         category = trace.get("critical_error_type")
         passed = trace.get("passed")
-        if (
-            isinstance(track, str)
-            and isinstance(category, str)
-            and isinstance(passed, bool)
-        ):
+        if isinstance(track, str) and isinstance(category, str) and isinstance(passed, bool):
             observed.setdefault((track, category), []).append(passed)
 
     all_categories = (*categories, *sorted(observed))
@@ -439,9 +430,7 @@ def _critical_error_rows(
     return rows
 
 
-def _ablation_rows(
-    config: SuiteConfig, traces: list[dict[str, Any]]
-) -> list[dict[str, str]]:
+def _ablation_rows(config: SuiteConfig, traces: list[dict[str, Any]]) -> list[dict[str, str]]:
     command = _required_live_command(config)
     variants = (
         ("C0", "baseline policy and emergency hard guard"),
@@ -643,12 +632,8 @@ def _summary_json(report: dict[str, Any]) -> dict[str, Any]:
         "suite": report["suite"],
         "generated_at": report["generated_at"],
         "status": "evidence_only_not_a_clinical_benchmark",
-        "measured_metric_count": sum(
-            metric["state"] == "measured" for metric in metrics
-        ),
-        "not_measured_metric_count": sum(
-            metric["state"] == "not_measured" for metric in metrics
-        ),
+        "measured_metric_count": sum(metric["state"] == "measured" for metric in metrics),
+        "not_measured_metric_count": sum(metric["state"] == "not_measured" for metric in metrics),
         "integrity": report["integrity"],
         "release_evidence_binding": report["release_evidence_binding"],
         "judge_headlines": report["judge_headlines"],
@@ -679,9 +664,7 @@ def build_report(
     for track in EvalTrack:
         if track.value not in config.enabled_tracks:
             continue
-        track_metrics = [
-            metric for metric in metric_rows if metric.get("track_id") == track.value
-        ]
+        track_metrics = [metric for metric in metric_rows if metric.get("track_id") == track.value]
         measured_count = sum(metric["state"] == "measured" for metric in track_metrics)
         state = (
             "measured"
@@ -719,12 +702,9 @@ def build_report(
     product_metrics = metric_rows[1:]
     release_binding = live_execution.get("release_binding")
     release_binding_valid = (
-        isinstance(release_binding, dict)
-        and release_binding.get("state") == "validated"
+        isinstance(release_binding, dict) and release_binding.get("state") == "validated"
     )
-    retrieval_snapshot_present = isinstance(
-        live_execution.get("retrieval_snapshot"), dict
-    )
+    retrieval_snapshot_present = isinstance(live_execution.get("retrieval_snapshot"), dict)
     release_gate_passed = (
         live_execution["state"] == "executed"
         and not live_execution.get("failed_request_count")
@@ -746,9 +726,7 @@ def build_report(
         "live_dependencies_executed": live_execution["state"] == "executed",
         "live_execution": live_execution,
         "release_evidence_binding": (
-            release_binding
-            if isinstance(release_binding, dict)
-            else {"state": "not_observed"}
+            release_binding if isinstance(release_binding, dict) else {"state": "not_observed"}
         ),
         "release_gate_passed": release_gate_passed,
         "next_measurement_command": _required_live_command(config),
@@ -775,21 +753,11 @@ def build_report(
             # Preserve actual observation state.  A previous implementation
             # incorrectly classified newly observed live metrics as unavailable
             # even when metrics.json carried their Wilson interval.
-            "measured": [
-                metric
-                for metric in metric_rows
-                if metric["state"] == "measured"
-            ],
-            "not_measured": [
-                metric
-                for metric in metric_rows
-                if metric["state"] != "measured"
-            ],
+            "measured": [metric for metric in metric_rows if metric["state"] == "measured"],
+            "not_measured": [metric for metric in metric_rows if metric["state"] != "measured"],
         },
     )
-    _write_csv(
-        target / "critical-errors.csv", _critical_error_rows(config, live_traces)
-    )
+    _write_csv(target / "critical-errors.csv", _critical_error_rows(config, live_traces))
     _write_csv(target / "ablations.csv", _ablation_rows(config, live_traces))
     _write_summary(target / "summary.md", report)
     _write_html(target / "index.html", report)
@@ -812,21 +780,15 @@ def build_report(
         },
     )
     missing_required = [
-        artifact
-        for artifact in config.required_artifacts
-        if not (target / artifact).exists()
+        artifact for artifact in config.required_artifacts if not (target / artifact).exists()
     ]
     if missing_required:
-        raise ValueError(
-            f"required_report_artifacts_missing:{','.join(missing_required)}"
-        )
+        raise ValueError(f"required_report_artifacts_missing:{','.join(missing_required)}")
     return report, target
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Run CLARA-Eval VN evidence-first suite"
-    )
+    parser = argparse.ArgumentParser(description="Run CLARA-Eval VN evidence-first suite")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--repository-root", type=Path, default=Path("."))

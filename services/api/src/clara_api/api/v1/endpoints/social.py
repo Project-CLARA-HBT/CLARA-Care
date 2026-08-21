@@ -346,7 +346,7 @@ def _profile_out(p: SocialProfile) -> ProfileResponse:
         handle=p.handle,
         display_name=p.display_name,
         bio=p.bio,
-        role_badge=p.role_badge or "",
+        role_badge="clinician" if p.is_verified_clinician else "",
     )
 
 
@@ -615,7 +615,7 @@ def _posts_out(db: Session, posts: list[SocialPost]) -> list[PostResponse]:
     return [
         PostResponse(
             id=post.id,
-            community_id=post.community_id,
+            community_id=post.community_id or 0,
             author_handle=handles[post.author_id],
             title=post.title,
             body=post.body,
@@ -711,7 +711,7 @@ def list_community_posts(
         .scalars()
         .all()
     )
-    return _posts_out(db, posts)
+    return _posts_out(db, list(posts))
 
 
 @router.get("/feed", response_model=list[PostResponse])
@@ -738,7 +738,7 @@ def get_feed(
         stmt = stmt.where(SocialPost.community_id.in_(joined_ids))
     stmt = stmt.order_by(SocialPost.created_at.desc(), SocialPost.id.desc()).limit(limit).offset(offset)
     posts = db.execute(stmt).scalars().all()
-    return _posts_out(db, posts)
+    return _posts_out(db, list(posts))
 
 
 @router.post(

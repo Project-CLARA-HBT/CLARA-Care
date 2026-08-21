@@ -101,9 +101,7 @@ def _slot_key(execution: Execution) -> tuple[str, str, int | None]:
     return (execution.mutant_id, execution.method, execution.hypothesis_seed)
 
 
-def _parse_execution(
-    entry: object, *, included_ids: set[str], index: int
-) -> Execution:
+def _parse_execution(entry: object, *, included_ids: set[str], index: int) -> Execution:
     if not isinstance(entry, dict):
         raise FreezeError("govmut_final_validate_execution_not_object")
     method = entry.get("method")
@@ -128,11 +126,7 @@ def _parse_execution(
         raise FreezeError("govmut_final_validate_outcome_invalid")
     if outcome is None:
         raise FreezeError("govmut_final_validate_outcome_invalid")
-    if (
-        isinstance(explicit, str)
-        and explicit in ALLOWED_OUTCOMES
-        and explicit != outcome
-    ):
+    if isinstance(explicit, str) and explicit in ALLOWED_OUTCOMES and explicit != outcome:
         raise FreezeError("govmut_final_validate_outcome_conflict")
     raw_runtime = result.get("runtime_ms")
     runtime_ms: float | None
@@ -205,9 +199,7 @@ def validate_final_run(path: Path) -> ValidatedRun:
     for execution in parsed:
         if execution.mutant_id == included_ids[0]:
             template[execution.method].append(execution.hypothesis_seed)
-    generated_templates = {
-        method: tuple(template[method]) for method in GENERATED_METHODS
-    }
+    generated_templates = {method: tuple(template[method]) for method in GENERATED_METHODS}
     if template["M0_regression"] != [None]:
         raise FreezeError("govmut_final_validate_template_m0_invalid")
     if not generated_templates or len(set(generated_templates.values())) != 1:

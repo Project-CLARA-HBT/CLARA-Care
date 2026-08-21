@@ -136,11 +136,7 @@ def t_pdf(t: float, df: float) -> float:
     """Probability density function of Student's t distribution with df degrees of freedom."""
     if df <= 0:
         raise ValueError("df must be positive")
-    log_c = (
-        math.lgamma((df + 1.0) / 2.0)
-        - math.lgamma(df / 2.0)
-        - 0.5 * math.log(df * math.pi)
-    )
+    log_c = math.lgamma((df + 1.0) / 2.0) - math.lgamma(df / 2.0) - 0.5 * math.log(df * math.pi)
     return math.exp(log_c - ((df + 1.0) / 2.0) * math.log(1.0 + (t * t) / df))
 
 
@@ -666,9 +662,15 @@ def evaluate_glhs_384_study(
         test_type="paired_glhs_cohort",
     )
 
-    power_exact = compute_tost_power(n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="exact")
-    power_shifted_t = compute_tost_power(n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="shifted_t")
-    power_normal = compute_tost_power(n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="normal")
+    power_exact = compute_tost_power(
+        n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="exact"
+    )
+    power_shifted_t = compute_tost_power(
+        n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="shifted_t"
+    )
+    power_normal = compute_tost_power(
+        n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="normal"
+    )
 
     systems_profile = SystemsParetoMetrics()
 
@@ -775,9 +777,15 @@ def build_parser() -> argparse.ArgumentParser:
         description="Two One-Sided Tests (TOST) Biostatistical Equivalence Engine."
     )
     parser.add_argument("--n", type=int, default=384, help="Sample size (default: 384)")
-    parser.add_argument("--delta", type=float, default=0.02, help="Equivalence margin bound (default: 0.02)")
-    parser.add_argument("--sigma", type=float, default=0.045, help="Standard deviation (default: 0.045)")
-    parser.add_argument("--alpha", type=float, default=0.05, help="Significance level (default: 0.05)")
+    parser.add_argument(
+        "--delta", type=float, default=0.02, help="Equivalence margin bound (default: 0.02)"
+    )
+    parser.add_argument(
+        "--sigma", type=float, default=0.045, help="Standard deviation (default: 0.045)"
+    )
+    parser.add_argument(
+        "--alpha", type=float, default=0.05, help="Significance level (default: 0.05)"
+    )
     parser.add_argument("--wins", type=int, default=70, help="Number of wins (default: 70)")
     parser.add_argument("--losses", type=int, default=73, help="Number of losses (default: 73)")
     parser.add_argument("--ties", type=int, default=241, help="Number of ties (default: 241)")
@@ -815,9 +823,15 @@ def main() -> int:
         print("TWO ONE-SIDED TESTS (TOST) BIOSTATISTICAL EQUIVALENCE REPORT")
         print("=" * 78)
         print(f"Sample Size (N):            {study.n_subjects}")
-        print(f"Observed Contingency:       {study.wins} wins, {study.losses} losses, {study.ties} ties")
-        print(f"Decision Accuracy Delta:    {study.tost.mean_diff:+.6f} ({study.tost.mean_diff * 100:+.3f}%)")
-        print(f"Equivalence Bound (delta):  {study.equivalence_margin_delta:.4f} (+/- {study.equivalence_margin_delta * 100:.1f}%)")
+        print(
+            f"Observed Contingency:       {study.wins} wins, {study.losses} losses, {study.ties} ties"
+        )
+        print(
+            f"Decision Accuracy Delta:    {study.tost.mean_diff:+.6f} ({study.tost.mean_diff * 100:+.3f}%)"
+        )
+        print(
+            f"Equivalence Bound (delta):  {study.equivalence_margin_delta:.4f} (+/- {study.equivalence_margin_delta * 100:.1f}%)"
+        )
         print(f"Standard Error (SE):        {study.tost.se:.6f} ({study.tost.se * 100:.3f}%)")
         print(f"Degrees of Freedom (df):    {study.tost.df:.1f}")
         print(f"Lower Bound t1 (H01):       {study.tost.t1:+.6f} (p1 = {study.tost.p1:.10e})")
@@ -825,16 +839,24 @@ def main() -> int:
         print(f"Overall p_TOST:             {study.tost.p_tost:.10e}")
         print(f"Significance Level (alpha): {study.significance_level_alpha}")
         print(f"Equivalence Established:    {study.tost.is_equivalent}")
-        print(f"90% Confidence Interval:    [{study.tost.ci_90[0]:+.6f}, {study.tost.ci_90[1]:+.6f}] ([{study.tost.ci_90[0]*100:+.3f}%, {study.tost.ci_90[1]*100:+.3f}%])")
-        print(f"95% Confidence Interval:    [{study.tost.ci_95[0]:+.6f}, {study.tost.ci_95[1]:+.6f}] ([{study.tost.ci_95[0]*100:+.3f}%, {study.tost.ci_95[1]*100:+.3f}%])")
+        print(
+            f"90% Confidence Interval:    [{study.tost.ci_90[0]:+.6f}, {study.tost.ci_90[1]:+.6f}] ([{study.tost.ci_90[0] * 100:+.3f}%, {study.tost.ci_90[1] * 100:+.3f}%])"
+        )
+        print(
+            f"95% Confidence Interval:    [{study.tost.ci_95[0]:+.6f}, {study.tost.ci_95[1]:+.6f}] ([{study.tost.ci_95[0] * 100:+.3f}%, {study.tost.ci_95[1] * 100:+.3f}%])"
+        )
         print(f"95% CI Inside [-delta, +delta]: {study.tost.ci_95_contained}")
-        print(f"Equivalence Power (1-beta): {study.statistical_power_exact:.8f} ({study.statistical_power_exact * 100:.4f}%)")
+        print(
+            f"Equivalence Power (1-beta): {study.statistical_power_exact:.8f} ({study.statistical_power_exact * 100:.4f}%)"
+        )
         print("-" * 78)
         print("PARETO DOMINANCE SYSTEMS & SAFETY METRICS:")
         print(f"  - Token Reduction:        {study.systems_metrics.token_reduction_pct:.1f}%")
         print(f"  - Latency Reduction:      {study.systems_metrics.latency_reduction_pct:.1f}%")
         print(f"  - Zero PHI Disclosure:    {study.systems_metrics.phi_over_disclosure_pct:.1f}%")
-        print(f"  - TOCTOU Elimination:     {study.systems_metrics.toctou_elimination_pct:.1f}% (p = {study.systems_metrics.toctou_elimination_p_value:.3e})")
+        print(
+            f"  - TOCTOU Elimination:     {study.systems_metrics.toctou_elimination_pct:.1f}% (p = {study.systems_metrics.toctou_elimination_p_value:.3e})"
+        )
         print("=" * 78)
 
     return 0

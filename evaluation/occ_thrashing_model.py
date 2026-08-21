@@ -69,7 +69,7 @@ def thomasian_monolithic_contention(workers: int, k_keys: int = 2) -> float:
         return 0.0
     # In monolithic locking, all keys map to 1 monolithic lock
     # Collision probability approaches 1 - 1/W^0.95
-    return min(1.0, 1.0 - (1.0 / (workers ** 0.95)))
+    return min(1.0, 1.0 - (1.0 / (workers**0.95)))
 
 
 def thomasian_monolithic_throughput(
@@ -93,7 +93,7 @@ def glhs_dag_contention(workers: int, num_partitions: int = 16, k_keys: int = 2)
     if workers <= 1:
         return 0.0
     # Contention scales as O(W^2 * k^2 / (2 * M))
-    exponent = -(workers * (workers - 1) * (k_keys ** 2)) / (2.0 * num_partitions * 10.0)
+    exponent = -(workers * (workers - 1) * (k_keys**2)) / (2.0 * num_partitions * 10.0)
     return min(0.99, 1.0 - math.exp(exponent))
 
 
@@ -156,7 +156,7 @@ def simulate_concurrency_workload(
     true_conflict_mono = 0
     latencies_mono: list[float] = []
 
-    for i in range(total_txns):
+    for _i in range(total_txns):
         target_keys = {sampler.sample() for _ in range(keys_per_tx)}
         base_lat = 2.0 + rng.uniform(0.1, 0.4)
 
@@ -208,7 +208,7 @@ def simulate_concurrency_workload(
     deadlocks_occ = 0
     latencies_occ: list[float] = []
 
-    for i in range(total_txns):
+    for _i in range(total_txns):
         target_keys = [sampler.sample() for _ in range(keys_per_tx)]
         base_lat = 0.8 + rng.uniform(0.05, 0.2)
 
@@ -217,7 +217,9 @@ def simulate_concurrency_workload(
             latencies_occ.append(base_lat)
         else:
             # Multi-row OCC without canonical sorting suffers uncoordinated live-locks & deadlocks
-            occ_conflict_prob = 1.0 - math.exp(- (workers * (workers - 1)) / (2.0 * num_partitions * 3.0))
+            occ_conflict_prob = 1.0 - math.exp(
+                -(workers * (workers - 1)) / (2.0 * num_partitions * 3.0)
+            )
             if rng.random() < occ_conflict_prob:
                 true_conflict_occ += 1
                 # Non-canonical lock order creates deadlock potential
@@ -379,13 +381,15 @@ def run_full_concurrency_scaling_suite(
         elif w == 128:
             speedup_w128 = ratio
 
-        scaling_results.append({
-            "workers": w,
-            "monolithic": asdict(mono_m),
-            "naive_occ": asdict(res["naive_occ"]),
-            "glhs_ww_dag": asdict(glhs_m),
-            "glhs_speedup_over_monolithic": ratio,
-        })
+        scaling_results.append(
+            {
+                "workers": w,
+                "monolithic": asdict(mono_m),
+                "naive_occ": asdict(res["naive_occ"]),
+                "glhs_ww_dag": asdict(glhs_m),
+                "glhs_speedup_over_monolithic": ratio,
+            }
+        )
 
     return ConcurrencyScalingSuiteReport(
         worker_levels=list(workers_list),
@@ -408,8 +412,8 @@ def generate_latex_concurrency_table(report: ConcurrencyScalingSuiteReport) -> s
         m = entry["monolithic"]
         g = entry["glhs_ww_dag"]
         sp = entry["glhs_speedup_over_monolithic"]
-        m_fs = m['false_stale_rate'] * 100
-        g_fs = g['false_stale_rate'] * 100
+        m_fs = m["false_stale_rate"] * 100
+        g_fs = g["false_stale_rate"] * 100
         rows.append(
             f"{w:3d} & {m['throughput_tps']:7.1f} & {m_fs:5.1f}\\% & {m['p99_latency_ms']:6.2f} & "
             f"\\textbf{{{g['throughput_tps']:7.1f}}} & \\textbf{{{g_fs:4.1f}\\%}} & "
@@ -435,11 +439,15 @@ def generate_latex_concurrency_table(report: ConcurrencyScalingSuiteReport) -> s
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="OCC Thrashing Model & Wound-Wait Concurrency Scaling")
+    parser = argparse.ArgumentParser(
+        description="OCC Thrashing Model & Wound-Wait Concurrency Scaling"
+    )
     parser.add_argument("--workers", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128])
     parser.add_argument("--partitions", type=int, default=16)
     parser.add_argument("--skew", type=float, default=0.6)
-    parser.add_argument("--output", type=Path, default=Path("artifacts/occ_thrashing_model_report.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("artifacts/occ_thrashing_model_report.json")
+    )
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -457,8 +465,12 @@ if __name__ == "__main__":
         f.write(latex_table)
 
     print("=== Concurrency Scaling & Thrashing Avoidance Report ===")
-    print(f"Zero Deadlocks Verified:     {report.glhs_zero_deadlocks_verified} (Deadlock Rate: 0.00%)")
-    print(f"Zero False-Stale Verified:   {report.glhs_zero_false_stale_verified} (False-Stale Rate: 0.00%)")
+    print(
+        f"Zero Deadlocks Verified:     {report.glhs_zero_deadlocks_verified} (Deadlock Rate: 0.00%)"
+    )
+    print(
+        f"Zero False-Stale Verified:   {report.glhs_zero_false_stale_verified} (False-Stale Rate: 0.00%)"
+    )
     print(f"GLHS Speedup at W=16:        {report.glhs_speedup_at_w16:.2f}x")
     print(f"GLHS Speedup at W=64:        {report.glhs_speedup_at_w64:.2f}x")
     print(f"GLHS Speedup at W=128:       {report.glhs_speedup_at_w128:.2f}x")

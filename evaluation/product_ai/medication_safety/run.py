@@ -41,6 +41,7 @@ def run_benchmark(
     provider: str = "deepseek",
     model: str = "deepseek-v4-pro",
     output_dir: Path | None = None,
+    live: bool = False,
 ) -> TaskReport:
     manifest = load_manifest(_SUITE_DIR)
     cases = load_cases(_SUITE_DIR / manifest.cases_file)
@@ -48,9 +49,15 @@ def run_benchmark(
 
     if gateway is None:
         gateway = ModelGateway()
-        gateway.register_adapter(provider, MockEvaluationAdapter(provider_alias=provider, model_name=model))
+        if not live:
+            gateway.register_adapter(
+                provider, MockEvaluationAdapter(provider_alias=provider, model_name=model)
+            )
+    elif not live and provider not in gateway._custom_adapters:
+        gateway.register_adapter(
+            provider, MockEvaluationAdapter(provider_alias=provider, model_name=model)
+        )
 
-    gateway._custom_adapters[provider] = MockEvaluationAdapter(provider_alias=provider, model_name=model)
     os.environ["CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_PROVIDER"] = provider
     os.environ["CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_MODEL"] = model
 
@@ -61,10 +68,12 @@ def run_benchmark(
         for case in cases:
             req = ModelRequest(
                 prompt=case.prompt,
-                system_prompt=case.system_prompt or "Bạn là hệ thống cảnh báo an toàn dùng thuốc CLARA CareGuard.",
+                system_prompt=case.system_prompt
+                or "Bạn là hệ thống cảnh báo an toàn dùng thuốc CLARA CareGuard.",
                 task=ModelTask.MEDICAL_SAFETY_ROUTER,
                 route_class=RouteClass.TEXT_REASONING,
                 model=model,
+                max_tokens=1000,
             )
 
             start = time.monotonic()
@@ -124,8 +133,16 @@ if __name__ == "__main__":
     parser.add_argument("--provider", default="deepseek")
     parser.add_argument("--model", default="deepseek-v4-pro")
     parser.add_argument("--output", default="artifacts/product_ai/reports")
+    parser.add_argument("--live", action="store_true", help="Execute against live LLM router")
     args = parser.parse_args()
 
-    report = run_benchmark(provider=args.provider, model=args.model, output_dir=Path(args.output))
-    print(f"[{report.task_id}] Provider: {report.provider} ({report.model}) | Passed: {report.overall_passed} | Pass Rate: {report.pass_rate*100:.1f}%")
+    report = run_benchmark(
+        provider=args.provider,
+        model=args.model,
+        output_dir=Path(args.output),
+        live=args.live,
+    )
+    print(
+        f"[{report.task_id}] Provider: {report.provider} ({report.model}) | Passed: {report.overall_passed} | Pass Rate: {report.pass_rate * 100:.1f}%"
+    )
     sys.exit(0 if report.overall_passed else 1)

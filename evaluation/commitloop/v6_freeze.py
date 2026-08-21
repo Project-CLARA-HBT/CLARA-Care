@@ -131,9 +131,7 @@ def create_v6_freeze(
         },
     }
     freeze_path = output_dir / "freeze.json"
-    freeze_path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    freeze_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return freeze_path
 
 
@@ -147,9 +145,9 @@ def verify_v6_freeze(*, freeze_path: Path, repository_root: Path) -> dict[str, A
         or payload.get("provider_calls_before_freeze") != 0
     ):
         raise V6FreezeError("v6_freeze_provider_contract_invalid")
-    if not _tracked_worktree_clean(root) or _git(
-        root, "rev-parse", "HEAD"
-    ) != payload.get("git_sha"):
+    if not _tracked_worktree_clean(root) or _git(root, "rev-parse", "HEAD") != payload.get(
+        "git_sha"
+    ):
         raise V6FreezeError("v6_freeze_git_drift")
     inputs = freeze_inputs(root)
     hashes = payload.get("input_sha256")

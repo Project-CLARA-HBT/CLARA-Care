@@ -97,9 +97,7 @@ def test_primary_contrast_rejects_missing_subject_cell() -> None:
         )
 
 
-def test_paired_statistics_are_subject_clustered_deterministic_and_holm_adjusted() -> (
-    None
-):
+def test_paired_statistics_are_subject_clustered_deterministic_and_holm_adjusted() -> None:
     rows = [
         {
             "subject_token": "a",
@@ -248,9 +246,7 @@ def test_statistical_correction_binds_to_sealed_predictions_without_calls(
     ]
     (run_dir / "solver_outputs.json").write_text(json.dumps(outputs))
     (run_dir / "construction_gold.jsonl").write_text(
-        "".join(
-            json.dumps({"case_id": case_id, **gold}) + "\n" for case_id in ("a1", "a2")
-        )
+        "".join(json.dumps({"case_id": case_id, **gold}) + "\n" for case_id in ("a1", "a2"))
     )
     (run_dir / "commitments.jsonl").write_text(
         "".join(

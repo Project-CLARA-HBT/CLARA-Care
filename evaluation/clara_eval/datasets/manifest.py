@@ -52,9 +52,7 @@ class Measurement:
         command = raw.get("command")
         if state != "measured" and (not isinstance(reason, str) or not reason.strip()):
             raise ManifestValidationError("measurement_reason_required")
-        if state != "measured" and (
-            not isinstance(command, str) or not command.strip()
-        ):
+        if state != "measured" and (not isinstance(command, str) or not command.strip()):
             raise ManifestValidationError("measurement_command_required")
         return cls(
             metric_id=metric_id,
@@ -103,8 +101,7 @@ class DatasetEntry:
                 contains_secrets=raw["contains_secrets"],
                 clinically_representative=raw["clinically_representative"],
                 measurements=tuple(
-                    Measurement.from_mapping(item)
-                    for item in raw.get("measurements", [])
+                    Measurement.from_mapping(item) for item in raw.get("measurements", [])
                 ),
             )
         except (KeyError, TypeError, ValueError) as exc:
@@ -117,15 +114,9 @@ class DatasetEntry:
             raise ManifestValidationError("dataset_track_invalid")
         if self.split not in {"smoke", "nightly", "release_locked", "judge_demo"}:
             raise ManifestValidationError("dataset_split_invalid")
-        if (
-            not self.path
-            or Path(self.path).is_absolute()
-            or ".." in Path(self.path).parts
-        ):
+        if not self.path or Path(self.path).is_absolute() or ".." in Path(self.path).parts:
             raise ManifestValidationError("dataset_path_invalid")
-        if len(self.sha256) != 64 or any(
-            char not in "0123456789abcdef" for char in self.sha256
-        ):
+        if len(self.sha256) != 64 or any(char not in "0123456789abcdef" for char in self.sha256):
             raise ManifestValidationError("dataset_sha256_invalid")
         if self.record_count < 1:
             raise ManifestValidationError("dataset_record_count_invalid")
@@ -135,13 +126,8 @@ class DatasetEntry:
             raise ManifestValidationError("dataset_license_missing")
         if self.contains_phi or self.contains_secrets:
             raise ManifestValidationError("dataset_sensitive_content_forbidden")
-        if (
-            self.provenance == "synthetic_safety_fixture"
-            and self.clinically_representative
-        ):
-            raise ManifestValidationError(
-                "synthetic_fixture_cannot_be_clinically_representative"
-            )
+        if self.provenance == "synthetic_safety_fixture" and self.clinically_representative:
+            raise ManifestValidationError("synthetic_fixture_cannot_be_clinically_representative")
         if not self.measurements:
             raise ManifestValidationError("dataset_measurements_missing")
         metric_ids = [measurement.metric_id for measurement in self.measurements]
@@ -168,9 +154,9 @@ class DatasetManifest:
 
 
 def canonical_json_sha256(value: Any) -> str:
-    encoded = json.dumps(
-        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
     return sha256(encoded).hexdigest()
 
 
@@ -213,9 +199,7 @@ def _validate_data_policy(raw: Any) -> dict[str, bool]:
     return {key: bool(raw[key]) for key in required}
 
 
-def load_dataset_manifest(
-    path: Path, *, repository_root: Path | None = None
-) -> DatasetManifest:
+def load_dataset_manifest(path: Path, *, repository_root: Path | None = None) -> DatasetManifest:
     """Load a manifest and verify all referenced JSONL assets by checksum/count."""
 
     try:
@@ -229,19 +213,13 @@ def load_dataset_manifest(
     suite_version = raw.get("suite_version")
     if schema_version != "clara-eval-vn.dataset-manifest.v1":
         raise ManifestValidationError("dataset_manifest_schema_unsupported")
-    if (
-        not isinstance(suite_id, str)
-        or not suite_id.strip()
-        or not isinstance(suite_version, str)
-    ):
+    if not isinstance(suite_id, str) or not suite_id.strip() or not isinstance(suite_version, str):
         raise ManifestValidationError("dataset_manifest_identity_invalid")
     datasets_raw = raw.get("datasets")
     if not isinstance(datasets_raw, list):
         raise ManifestValidationError("dataset_manifest_datasets_invalid")
     entries = tuple(
-        DatasetEntry.from_mapping(item)
-        for item in datasets_raw
-        if isinstance(item, dict)
+        DatasetEntry.from_mapping(item) for item in datasets_raw if isinstance(item, dict)
     )
     if len(entries) != len(datasets_raw):
         raise ManifestValidationError("dataset_manifest_dataset_not_object")
@@ -256,13 +234,9 @@ def load_dataset_manifest(
         if not asset_path.is_file():
             raise ManifestValidationError(f"dataset_asset_missing:{entry.dataset_id}")
         if file_sha256(asset_path) != entry.sha256:
-            raise ManifestValidationError(
-                f"dataset_checksum_mismatch:{entry.dataset_id}"
-            )
+            raise ManifestValidationError(f"dataset_checksum_mismatch:{entry.dataset_id}")
         if jsonl_record_count(asset_path) != entry.record_count:
-            raise ManifestValidationError(
-                f"dataset_record_count_mismatch:{entry.dataset_id}"
-            )
+            raise ManifestValidationError(f"dataset_record_count_mismatch:{entry.dataset_id}")
     return DatasetManifest(
         schema_version=schema_version,
         suite_id=suite_id.strip(),

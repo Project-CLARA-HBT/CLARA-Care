@@ -5,9 +5,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any
-
-import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _ML_SRC = _REPO_ROOT / "services" / "ml" / "src"
@@ -16,52 +13,28 @@ for p in (str(_REPO_ROOT), str(_ML_SRC), str(_API_SRC)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from evaluation.product_ai.care_navigation.scorer import (
-    compute_suite_metrics as compute_care_metrics,
+from evaluation.product_ai.care_navigation.scorer import (  # noqa: E402
     score_case as score_care_case,
 )
-from evaluation.product_ai.common import (
-    MockEvaluationAdapter,
+from evaluation.product_ai.common import (  # noqa: E402
     TaskCase,
-    TaskManifest,
-    TaskReport,
-    evaluate_thresholds,
     load_cases,
     load_locked_thresholds,
     load_manifest,
 )
-from evaluation.product_ai.disclosure_safety.scorer import (
-    compute_suite_metrics as compute_disclosure_metrics,
+from evaluation.product_ai.disclosure_safety.scorer import (  # noqa: E402
     score_case as score_disclosure_case,
 )
-from evaluation.product_ai.document_extraction.scorer import (
-    compute_suite_metrics as compute_doc_metrics,
-    score_case as score_doc_case,
-)
-from evaluation.product_ai.grounded_answer.scorer import (
-    compute_suite_metrics as compute_grounded_metrics,
+from evaluation.product_ai.grounded_answer.scorer import (  # noqa: E402
     score_case as score_grounded_case,
 )
-from evaluation.product_ai.medication_safety.scorer import (
-    compute_suite_metrics as compute_med_metrics,
-    score_case as score_med_case,
-)
-from evaluation.product_ai.prompt_injection.scorer import (
-    compute_suite_metrics as compute_inj_metrics,
+from evaluation.product_ai.prompt_injection.scorer import (  # noqa: E402
     score_case as score_inj_case,
 )
-from evaluation.product_ai.run_all_evals import (
+from evaluation.product_ai.run_all_evals import (  # noqa: E402
     BENCHMARK_SUITES,
     EVALUATION_TARGETS,
     run_all_benchmarks,
-)
-from evaluation.product_ai.temporal_qa.scorer import (
-    compute_suite_metrics as compute_temporal_metrics,
-    score_case as score_temporal_case,
-)
-from evaluation.product_ai.vietnamese_nlp.scorer import (
-    compute_suite_metrics as compute_vn_nlp_metrics,
-    score_case as score_vn_nlp_case,
 )
 
 _EVAL_DIR = Path(__file__).resolve().parents[3] / "evaluation" / "product_ai"

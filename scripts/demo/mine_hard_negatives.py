@@ -5,9 +5,10 @@ import argparse
 import hashlib
 import json
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "data/demo/hard-negative-seed.jsonl"
@@ -42,7 +43,7 @@ class Candidate:
 
     def to_record(self) -> dict[str, Any]:
         digest = hashlib.sha1(
-            f"{self.query}|{self.reason}|{self.source_run}".encode("utf-8")
+            f"{self.query}|{self.reason}|{self.source_run}".encode()
         ).hexdigest()[:12]
         return {
             "id": f"HN-{digest}",

@@ -37,14 +37,14 @@ state and flag toggling mutates only the in-process ``settings`` object
 
 from __future__ import annotations
 
-# ``clara_ml.rag.store`` eagerly pulls in rag submodules; importing it before
-# the harness (which imports other ``clara_ml`` modules) sidesteps the known
-# rag circular-import quirk and keeps this test importable in isolation.
-import clara_ml.rag.store  # noqa: F401
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+# ``clara_ml.rag.store`` eagerly pulls in rag submodules; importing it before
+# the harness (which imports other ``clara_ml`` modules) sidesteps the known
+# rag circular-import quirk and keeps this test importable in isolation.
+import clara_ml.rag.store  # noqa: F401
 from clara_ml.config import settings as _settings
 
 from . import fixtures as fx

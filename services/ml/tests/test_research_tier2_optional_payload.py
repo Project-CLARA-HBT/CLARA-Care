@@ -5,7 +5,6 @@ from dataclasses import asdict
 from clara_ml.agents import research_tier2 as tier2
 from clara_ml.agents.research_tier2 import Citation, PicoFrame
 
-
 # --- Citation payload: additive provenance fields omitted when unset (R6.2, R11.2, R20.2) ---
 
 _LEGACY_CITATION_KEYS = {"source_id", "source", "title", "url", "relevance"}

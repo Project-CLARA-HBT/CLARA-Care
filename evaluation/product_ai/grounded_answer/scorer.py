@@ -29,10 +29,21 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
     # Check abstention if required
     abstention_passed = True
     if should_abstain:
-        abstention_keywords = ["chưa có dữ liệu", "chưa có bằng chứng", "không có thông tin", "tham khảo ý kiến", "bác sĩ"]
+        abstention_keywords = [
+            "chưa có dữ liệu",
+            "chưa có bằng chứng",
+            "không có thông tin",
+            "tham khảo ý kiến",
+            "bác sĩ",
+        ]
         abstention_passed = any(kw in content_lower for kw in abstention_keywords)
 
-    passed = (claim_precision >= 0.5) and (citation_precision >= 0.5) and (not has_hallucination) and abstention_passed
+    passed = (
+        (claim_precision >= 0.5)
+        and (citation_precision >= 0.5)
+        and (not has_hallucination)
+        and abstention_passed
+    )
     score = 1.0 if passed else 0.0
 
     metrics = {
@@ -56,7 +67,12 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
 
 def compute_suite_metrics(results: list[CaseEvaluationResult]) -> dict[str, float]:
     if not results:
-        return {"groundedness": 0.0, "citation_precision": 0.0, "hallucination_rate": 0.0, "unsupported_claim_rate": 0.0}
+        return {
+            "groundedness": 0.0,
+            "citation_precision": 0.0,
+            "hallucination_rate": 0.0,
+            "unsupported_claim_rate": 0.0,
+        }
 
     total = len(results)
     grounded_count = sum(1 for r in results if r.metrics.get("groundedness", 0.0) >= 1.0)

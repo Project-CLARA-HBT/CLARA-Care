@@ -18,7 +18,7 @@
 \thispagestyle{empty}\pagestyle{empty}
 
 \begin{abstract}
-Stateful health-AI governance failures often depend on an ordered sequence of operations rather than an isolated malformed input. A system may behave correctly when a disclosure snapshot is compiled, consent is active, and a proposal is generated, yet still admit an unauthorized persistent write if patient consent is revoked, policy epochs advance, a stale proposal is retried, or un-invalidated cache rows are re-inflated before durability. While general mutation testing evaluates syntactic AST mutations (e.g., SWE-Mutation) and formal agent verification tests idealized state machines (e.g., MemTX), neither captures sequence-sensitive governance failures in stateful health architectures. GovMut-Health establishes the first domain-specific mutation benchmark for healthcare AI, mapping 15 multi-action defect classes directly to clinical data lifecycle invariants and cryptographic Merkle state transition verification. We formalize Theorem~3 (Cryptographic Merkle Digest State Transition Verification and Bound-Commit Security), proving that under standard collision resistance, proposals bound to stale or drifted states are rejected with overwhelming probability ($\le 2^{-128}$). In a large-scale evaluation spanning a core curated corpus ($N = 45$) and a systematic domain expansion ($N = 1{,}440$ non-equivalent mutants across 12 clinical subsystems $\times$ 8 perturbations, totaling 23,040 test executions), mutation scores were 35.6\% for regression tests alone, 8.9\% for stateless properties, 13.3\% for state-machine testing, and 100.0\% for the combined GLHS governance strategy ($p < 10^{-50}$ vs.\ regression), demonstrating comprehensive fault-detection efficacy across complex multi-step clinical workflows.
+Stateful health-AI governance failures often depend on an ordered sequence of operations rather than an isolated malformed input. A system may behave correctly when a disclosure snapshot is compiled, consent is active, and a proposal is generated, yet still admit an unauthorized persistent write if patient consent is revoked, policy epochs advance, a stale proposal is retried, or un-invalidated cache rows are re-inflated before durability. While general mutation testing evaluates syntactic AST mutations (e.g., SWE-Mutation) and formal agent verification tests idealized state machines (e.g., MemTX), neither captures sequence-sensitive governance failures in stateful health architectures. GovMut-Health establishes the first domain-specific mutation benchmark for healthcare AI, mapping 15 multi-action defect classes directly to clinical data lifecycle invariants and cryptographic Merkle state transition verification. We formalize Theorem~3 (Cryptographic Merkle Digest State Transition Verification and Bound-Commit Security), proving that under standard collision resistance, proposals bound to stale or drifted states are rejected with overwhelming probability ($\le 2^{-128}$). In an empirical evaluation on a sealed corpus of $N = 45$ non-equivalent mutants across 720 executions (4 testing strategies across multiple deterministic seeds), mutation scores were 35.6\% (16/45) for regression testing (M0), 8.9\% (4/45) for stateless property testing (M1), 13.3\% (6/45) for state-machine testing (M2), and 44.4\% (20/45) for the combined governance strategy (M3). Exact McNemar paired tests show that M3 adds 4 kills over regression alone ($p = 0.125$) while significantly outperforming stateless properties ($p = 3.05 \times 10^{-5}$) and state-machine testing ($p = 1.22 \times 10^{-4}$). The 25 surviving mutants (55.6\% survival) demonstrate structural complementarity and provide an empirical roadmap for adding read-side reconstruction and commitment-gateway test oracles.
 \end{abstract}
 
 \section{Introduction}
@@ -139,7 +139,7 @@ FHIR Version OCC~\cite{fhirhttp} & \checkmark & $\times$ & $\times$ & $\times$ &
 \end{table}
 
 \subsection{15 Multi-Action Defect Classes}
-Unlike traditional mutation testing where operators mutate single AST tokens, GovMut-Health defines **15 multi-action defect classes** ($C_1$--$C_{15}$). Each class represents a realistic governance defect whose observable violation manifests only across an ordered sequence of state-machine actions (e.g., Disclose $\to$ Mutate Governance $\to$ Generate Proposal $\to$ Commit/Retry):
+Unlike traditional mutation testing where operators mutate single AST tokens, GovMut-Health defines \textbf{15 multi-action defect classes} ($C_1$--$C_{15}$). Each class represents a realistic governance defect whose observable violation manifests only across an ordered sequence of state-machine actions (e.g., Disclose $\to$ Mutate Governance $\to$ Generate Proposal $\to$ Commit/Retry):
 
 \begin{enumerate}
     \item \textbf{$C_1$ (MUT1 -- Stale Base Version Overwrite):} Disables optimistic version check ($V(e_k) == v_s(e_k)$), allowing writes based on stale snapshots to overwrite concurrent updates (violating P2).
@@ -187,7 +187,7 @@ MUT15 & Unauthorized Retry & RejectConflict($P$) $\to$ ImmediateRetry($P$) $\to$
 \end{table}
 
 \subsection{Mutant Corpus and Dual-Model Non-Equivalence Screening}
-The mutation manifest incorporates both a core foundational corpus ($N = 45$) and an expanded systematic domain matrix ($N = 1{,}440$ non-equivalent mutants generated across 15 defect classes $\times$ 12 clinical subsystems $\times$ 8 execution perturbations). To guarantee rigorous screening without bias, candidate mutants underwent blinded dual-model review using Gemini 3.6 Flash High and Claude Sonnet 4.6 against formal contract semantics. Only candidates mutually classified as executable and non-equivalent were included in the benchmark denominator, completely avoiding cosmetic or unexecutable padding.
+The mutation manifest comprises a sealed benchmark corpus of $N = 45$ non-equivalent mutants spanning 10 active mutation fault families across generic gateway ($n = 27$) and commitment gateway ($n = 18$) enforcement layers. To guarantee rigorous screening without bias, candidate mutants underwent blinded dual-model review using Gemini 3.6 Flash High and Claude Sonnet 4.6 against formal contract semantics. Only candidates mutually classified as executable and non-equivalent were included in the benchmark denominator ($N_{\text{included}} = 45, N_{\text{eq}} = 0$), completely avoiding cosmetic or unexecutable padding.
 
 \section{Evaluation Protocol}
 \subsection{Primary Endpoint}
@@ -195,38 +195,56 @@ For any strategy $T$, the mutation score is defined as:
 \begin{equation}
 MS(T) = \frac{K_T}{N_{\text{included}} - N_{\text{eq}}},
 \end{equation}
-where $K_T$ is the number of non-equivalent mutants killed by $T$, evaluated across both the core corpus ($N = 45$) and the expanded systematic domain matrix ($N = 1{,}440$, 23,040 executions).
+where $K_T$ is the number of non-equivalent mutants killed by $T$, evaluated over the sealed denominator ($N_{\text{included}} = 45, N_{\text{eq}} = 0$).
 
 \subsection{Execution Protocol and Reproducibility Freeze}
-The protocol frozen under run identifier \texttt{govmut-soict-2026-final-v2} executed all 45 core mutants across 16 method/seed combinations on revision \texttt{ab877e04} (720 executions), alongside the expanded 23,040-execution domain matrix. Unmutated baseline preflight passed all slots with zero false kills and zero infrastructure failures.
+The protocol frozen under run identifier \texttt{govmut-soict-2026-final-v2} executed all 45 sealed mutants across 16 method/seed combinations on revision \texttt{ab877e04} (4 strategies $\times$ 5 seeds for randomized/stateful generators and 1 baseline seed for regression, totaling 720 executions). Unmutated baseline preflight passed all slots with zero false kills and zero infrastructure failures.
 
 \section{Results}
-Table~\ref{tab:res} details the comparative evaluation across the four strategies on the core corpus and the expanded systematic domain benchmark.
+Table~\ref{tab:res} details the comparative evaluation across the four strategies on the sealed 45-mutant benchmark under run identifier \texttt{govmut-soict-2026-final-v2}.
 
 \begin{table}[t]
-\caption{Sealed mutant-level strategy comparison across core corpus ($N=45$) and expanded domain matrix ($N=1{,}440$ mutants, 23,040 executions).}
+\caption{Sealed mutant-level strategy comparison on $N = 45$ non-equivalent mutants (720 total executions under \texttt{govmut-soict-2026-final-v2}).}
 \label{tab:res}
 \centering\small
-\begin{tabularx}{\textwidth}{p{0.24\textwidth}c c c}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}c c c c}
 \toprule
-Strategy & Core Killed / 45 & Expanded Killed / 1,440 & Mutation Score (Expanded)\\
+Strategy & Mutants Killed / 45 & Mutation Score ($MS$) & McNemar $p$ (vs.\ M3) & McNemar $p$ (vs.\ M0) \\
 \midrule
-M0 Regression & 16 (35.6\%) & 512 / 1,440 & 35.6\% (95\% CI: 33.1--38.1\%)\\
-M1 Stateless properties & 4 (8.9\%) & 128 / 1,440 & 8.9\% (95\% CI: 7.5--10.5\%)\\
-M2 State machine & 6 (13.3\%) & 192 / 1,440 & 13.3\% (95\% CI: 11.6--15.2\%)\\
-M3 Combined GLHS & \textbf{20 (44.4\%)} & \textbf{1,440 / 1,440} & \textbf{100.0\%} ($p < 10^{-50}$ vs.\ M0)\\
+M0 Regression & 16 / 45 & 35.6\% & $p = 0.125$ & --- \\
+M1 Stateless properties & 4 / 45 & 8.9\% & $p = 3.05 \times 10^{-5}$ & $p = 0.00183$ \\
+M2 State machine & 6 / 45 & 13.3\% & $p = 1.22 \times 10^{-4}$ & $p = 0.0213$ \\
+M3 Combined GLHS & \textbf{20 / 45} & \textbf{44.4\%} & --- & $p = 0.125$ \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-M3 detected all 16 mutants killed by M0 and four additional mutants ($M0\text{-only} = 0, M3\text{-only} = 4$). The four additional kills achieved by M3 were complex multi-action defects (MUT8 digest tampering under race conditions, MUT12 cache re-inflation, MUT13 superseded re-selection, and MUT15 unauthorized retry escalation). While the 8.9 percentage point improvement over regression alone was not statistically significant in exact paired testing ($p = 0.125$), M3 significantly outperformed M1 ($p = 3.05 \times 10^{-5}$) and M2 ($p = 1.22 \times 10^{-4}$). Across all 720 individual method/seed executions, the terminal ledger recorded 161 \textsc{Killed}, 559 \textsc{Survived}, and zero \textsc{Infrastructure Error} events.
+M3 detected all 16 mutants killed by M0 and four additional mutants ($M0\text{-only} = 0, M3\text{-only} = 4$). The four additional kills achieved by M3 were:
+\begin{enumerate}
+    \item \textbf{M02-A} (MUT2 -- policy version revalidation in snapshot manifest validation, killed by M2 and M3);
+    \item \textbf{M03-A} (MUT3 -- consent version revalidation in snapshot manifest validation, killed by M2 and M3);
+    \item \textbf{M03-B} (MUT3 -- consent revalidation in transition application, killed by M2 and M3);
+    \item \textbf{M11-A} (MUT11 -- provenance edge enforcement in THSS compiler, killed by M1 and M3).
+\end{enumerate}
+While the 8.9 percentage point improvement over regression alone was not statistically significant in exact paired testing ($p = 0.125$), M3 significantly outperformed M1 ($p = 3.05 \times 10^{-5}$) and M2 ($p = 1.22 \times 10^{-4}$). In pairwise baseline comparisons, M0 also significantly outperformed M1 ($p = 0.00183$) and M2 ($p = 0.0213$). Across all 720 individual method/seed executions, the terminal ledger recorded 161 \textsc{Killed}, 559 \textsc{Survived}, and zero \textsc{Infrastructure Error} events.
 
 \section{Interpretation and Discussion}
-The empirical findings demonstrate clear **complementarity** rather than unilateral replacement. Regression suites excel at guarding known single-point enforcement gates, whereas state-machine testing explores multi-hop transition orderings that expose subtle sequence-dependent vulnerabilities. Surviving mutants highlight specific areas for test suite expansion (e.g., deeper multi-actor interleaving and bitemporal conflict fuzzing) rather than benign faults.
+\subsection{Complementarity vs.\ Universal Superiority}
+The empirical findings demonstrate clear \textbf{structural complementarity} rather than unilateral replacement. Regression suites excel at guarding known single-point enforcement gates, whereas state-machine testing explores multi-hop transition orderings that expose subtle sequence-dependent vulnerabilities (such as policy and consent drift across manifest validation). Combining regression with generated property and state-machine tests (M3) achieved the highest overall defect coverage (44.4\%).
+
+\subsection{Survivor Analysis and Empirical Oracle Roadmap}
+A crucial finding of this sealed study is that 25 of the 45 mutants (55.6\%) survived all four testing strategies ($M0, M1, M2, M3 = 0$). Rather than viewing these survivors as proof of mutant equivalence or benign faults, a rigorous descriptive engineering diagnosis categorizes them into four distinct structural gaps:
+\begin{enumerate}
+    \item \textbf{Missing Oracles ($n = 17$, 68.0\%):} The method matrix reaches and executes the relevant code sites (sibling mutants at the same sites are killed), but no test constructs the specific violating condition. Examples include stale base state on commitment transition apply (M01-C, M01-D), outdated consent version tags on active proposals (M03-C, M03-D), foreign profile scope mismatch inside snapshot validation (M04-B, M04-C, M04-D), and unexercised idempotency request digest mismatches (M14-B, M14-C).
+    \item \textbf{Replay and Reconstruction Blind Spots ($n = 3$, 12.0\%):} Faults situated on read-side historical state and snapshot reconstruction paths (\texttt{reconstruct\_snapshot\_artifact}, \texttt{reconstruct\_state}) such as tampered snapshot digests (M08-B), corrupted manifest self-digests (M08-C), and overlapping superseded intervals (M13-B) survive because the frozen test matrix only drives admission-time write paths.
+    \item \textbf{Missing Path and Test Targets ($n = 3$, 12.0\%):} Enforcement sites located in unexplored control flows, including the commitment review flow (M05-C) and cross-mode binding admission paths in \texttt{validate\_bound} and \texttt{validate\_base} (M09-B, M09-E).
+    \item \textbf{Possible Weak Mutants ($n = 2$, 8.0\%):} Redundant or deeper guard checks that mask upstream faults on all exercised paths, such as stale policy coordinates in \texttt{validate\_base} masked by \texttt{validate\_current} (M02-C) and expired scope checks in compiler masked by upstream scope rejection (M07-C).
+\end{enumerate}
+This diagnosis provides an actionable empirical roadmap: achieving full sequence-sensitive governance assurance requires augmenting automated fuzzers with dedicated read-side reconstruction oracles, multi-actor commitment review targets, and cross-mode transition generators.
 
 \section{Threats to Validity}
 \textbf{Construct Validity:} Fault operators directly reflect real-world healthcare governance hazards. Non-equivalence was screened via blinded dual-model evaluation; future iterations will incorporate panel adjudication.
-\textbf{Internal Validity:} Fixed seeds, frozen budgets, and persistent shrunk counterexample logs ensure deterministic reproducibility.
+\textbf{Internal Validity:} Fixed seeds, frozen budgets, and persistent shrunk counterexample logs ensure deterministic reproducibility across all 720 executions.
 \textbf{External Validity:} Evaluation was conducted on CLARA-Care/GLHS; replication on other agentic EHR platforms is encouraged.
 \textbf{Clinical Safety Boundary:} This study evaluates software contract assurance and does not claim medical diagnosis accuracy or clinical efficacy.
 
@@ -237,7 +255,7 @@ All evaluation artifacts, test seeds, shrunk counterexamples, and the complete m
 While the GLHS architecture manuscript investigates the co-versioned disclosure-to-commit protocol~\cite{glhs}, GovMut-Health addresses the orthogonal software-engineering problem of benchmarking test adequacy for sequence-sensitive governance contracts.
 
 \section{Conclusion}
-GovMut-Health provides the first domain-specific mutation benchmark for stateful healthcare AI systems. By formalizing 15 multi-action defect classes, establishing cryptographic Merkle state transition verification (Theorem~3), and comparing four testing strategies under sealed execution, the benchmark demonstrates that combining regression and generated state-machine testing achieves the highest defect coverage (44.4\%).
+GovMut-Health provides the first domain-specific mutation benchmark for stateful healthcare AI systems. By formalizing 15 multi-action defect classes, establishing cryptographic Merkle state transition verification (Theorem~3), and comparing four testing strategies under sealed execution on $N = 45$ non-equivalent mutants (720 executions), the benchmark demonstrates that combining regression and generated state-machine testing achieves the highest defect coverage (44.4\%, 20/45 kills). The 25 surviving mutants (55.6\% survival) establish an empirical roadmap for augmenting testing suites with read-side reconstruction and commitment-path governance oracles.
 
 \begin{thebibliography}{16}
 \bibitem{quickcheck} Claessen, K., Hughes, J.: QuickCheck: A lightweight tool for random testing of Haskell programs. In: ICFP 2000, pp. 268--279. ACM (2000)

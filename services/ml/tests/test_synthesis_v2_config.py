@@ -23,15 +23,13 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from pydantic import ValidationError
-
-from clara_ml.config import Settings
-from clara_ml.config import settings as app_settings
-
 from synthesis_v2.harness import (
     HARD_MAX_WORDS,
     synthesis_v2_flag,
 )
 
+from clara_ml.config import Settings
+from clara_ml.config import settings as app_settings
 
 # ---------------------------------------------------------------------------
 # Defaults (declared field defaults — env-independent)

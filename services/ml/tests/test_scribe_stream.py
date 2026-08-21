@@ -194,8 +194,7 @@ class _StreamAsr:
         self._events = events
 
     def stream(self, audio_iter, *, language):  # noqa: ANN001
-        for evt in self._events:
-            yield evt
+        yield from self._events
 
     def transcribe(self, audio, *, language, content_type):  # noqa: ANN001
         # Should not be reached when the stream produces usable segments.

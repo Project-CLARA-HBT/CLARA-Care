@@ -6,7 +6,14 @@ from evaluation.commitloop.tost_equivalence.
 
 from __future__ import annotations
 
-from evaluation.commitloop.tost_equivalence import (
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from evaluation.commitloop.tost_equivalence import (  # noqa: E402
     GLHSStudyResult,
     SystemsParetoMetrics,
     TOSTResult,
@@ -59,3 +66,13 @@ __all__ = [
     "t_sf",
     "variance",
 ]
+
+if __name__ == "__main__":
+    study = evaluate_glhs_384_study()
+    print("TOST Biostatistical Equivalence Study:")
+    print(f"Sample Size: {study.n_subjects}")
+    print(f"Is Equivalent: {study.tost.is_equivalent}")
+    print(f"p_TOST: {study.tost.p_tost:.6e}")
+    print(f"90% CI: [{study.tost.ci_90[0]:.4f}, {study.tost.ci_90[1]:.4f}]")
+    print(f"Token Reduction: {study.systems_metrics.token_reduction_pct:.1f}%")
+    print(f"Latency Reduction: {study.systems_metrics.latency_reduction_pct:.1f}%")

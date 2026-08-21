@@ -13,9 +13,7 @@ from evaluation.commitloop.power import (
 
 
 def test_exact_sign_test_and_tie_aware_power_are_locked() -> None:
-    assert exact_two_sided_sign_p_value(wins=13, losses=1) == pytest.approx(
-        0.0018310546875
-    )
+    assert exact_two_sided_sign_p_value(wins=13, losses=1) == pytest.approx(0.0018310546875)
     assert exact_two_sided_sign_p_value(wins=0, losses=0) == 1.0
     assert exact_unconditional_power(
         subjects=384,

@@ -18,11 +18,10 @@ import argparse
 import json
 import os
 import random
-import statistics
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -227,7 +226,7 @@ def main() -> int:
     negative_result = _evaluate("negative", negatives, args.base_url, api_key, args.timeout_seconds)
     report = {
         "schema_version": "clara.drugbank-runtime-conformance.v1",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "study_type": "drugbank_runtime_conformance_not_independent_clinical_benchmark",
         "interpretation": (
             "This checks a strict running CareGuard deployment against deterministic samples "

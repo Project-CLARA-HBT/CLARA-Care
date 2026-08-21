@@ -2,11 +2,35 @@
   "artifacts_dir_ignored_in_git": true,
   "schema_version": "clara-sealed-run-inventory.v1",
   "sealed_runs": {
+    "glhs-binding-ablation-20260819-01": {
+      "evidence_class": "postgres_binding_ablation",
+      "immutable": true,
+      "raw_root": "research/glhs_journal/binding_only_ablation",
+      "source_sha": "7bd677e4"
+    },
+    "glhs-concurrency-repetition-v1-20260819": {
+      "evidence_class": "postgres_concurrency_repetition",
+      "immutable": true,
+      "raw_root": "research/glhs_journal/concurrency_repetition_v1",
+      "source_sha": "7bd677e4"
+    },
     "glhs-postgres-toctou-final-20260817-01": {
       "evidence_class": "postgres_concurrency",
       "immutable": true,
       "raw_root": "artifacts/glhs-postgres-toctou/GLHS-POSTGRES-TOCTOU-FINAL-20260817-01",
       "source_sha": "2074f87550c5ee32302bde47bc0b9e6be6af36b5"
+    },
+    "glhs-postgres-toctou-final-v2-20260817-01": {
+      "evidence_class": "postgres_concurrency_v2",
+      "immutable": true,
+      "raw_root": "research/glhs_journal/protocol_v2",
+      "source_sha": "67e528b61512aabc201b344e54f9e3e724490e41"
+    },
+    "govmut-soict-2026-final-v2": {
+      "evidence_class": "mutation_adequacy_w8",
+      "immutable": true,
+      "raw_root": "research/assurance_soict/seal",
+      "source_sha": "ab877e041895f8817a2798a95f360f658de9635d"
     },
     "rivf-final-003": {
       "evidence_class": "real_boundary_governance",

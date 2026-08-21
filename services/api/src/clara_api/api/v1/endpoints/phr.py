@@ -22,7 +22,7 @@ import json
 import secrets
 import time
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from fastapi import (
     APIRouter,
@@ -171,9 +171,9 @@ def _serialize_profile(profile: PhrProfile | None) -> PhrRecordResponse:
         emergency_contact_phone=profile.emergency_contact_phone or "",
         insurance_id=profile.insurance_id or "",
         notes=profile.notes or "",
-        allergies=_clean_object_list(profile.allergies_json),
-        conditions=_clean_object_list(profile.conditions_json),
-        medications=_clean_object_list(profile.medications_json),
+        allergies=cast(Any, _clean_object_list(profile.allergies_json)),
+        conditions=cast(Any, _clean_object_list(profile.conditions_json)),
+        medications=cast(Any, _clean_object_list(profile.medications_json)),
         created_at=profile.created_at,
         updated_at=profile.updated_at,
     )
@@ -184,7 +184,7 @@ def _serialize_onboarding(db: Session, *, user: User, profile: PhrProfile) -> Ph
     if onboarding_status not in {"pending", "completed", "skipped"}:
         onboarding_status = "pending"
     return PhrOnboardingResponse(
-        status=onboarding_status,
+        status=cast(Any, onboarding_status),
         needs_onboarding=onboarding_status == "pending",
         version=profile.onboarding_version or PHR_ONBOARDING_VERSION,
         completed_at=profile.onboarding_completed_at,
@@ -562,11 +562,11 @@ def _enhanced_response(profile: PhrProfile) -> PhrEnhancedRecordResponse:
         insurance_provider=profile.insurance_provider or "",
         insurance_id=profile.insurance_id or "",
         insurance_expiry=profile.insurance_expiry,
-        allergy_status=_allergy_status(profile),
+        allergy_status=cast(Any, _allergy_status(profile)),
         notes=profile.notes or "",
-        allergies=_clean_object_list(profile.allergies_json),
-        conditions=_clean_object_list(profile.conditions_json),
-        medications=_clean_object_list(profile.medications_json),
+        allergies=cast(Any, _clean_object_list(profile.allergies_json)),
+        conditions=cast(Any, _clean_object_list(profile.conditions_json)),
+        medications=cast(Any, _clean_object_list(profile.medications_json)),
         current_version_no=profile.current_version_no or 0,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
@@ -1552,15 +1552,18 @@ async def scan_phr_ocr(
     )
     candidate_ids = [str(candidate["candidate_id"]) for candidate in candidates]
     return PhrOcrScanResponse(
-        candidates=candidates,
+        candidates=cast(Any, candidates),
         review_token=_make_ocr_review_token(user_id=user.id, candidate_ids=candidate_ids),
-        processing_disclosure={
-            "processing_purpose": "medication_candidate_extraction",
-            "provider_category": provider_category,
-            "upload_persisted_by_clara": False,
-            "raw_text_logged_by_clara": False,
-            "human_confirmation_required": True,
-        },
+        processing_disclosure=cast(
+            Any,
+            {
+                "processing_purpose": "medication_candidate_extraction",
+                "provider_category": provider_category,
+                "upload_persisted_by_clara": False,
+                "raw_text_logged_by_clara": False,
+                "human_confirmation_required": True,
+            },
+        ),
     )
 
 

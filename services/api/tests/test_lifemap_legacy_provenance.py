@@ -19,6 +19,8 @@ from clara_api.lifemap.legacy.provenance import (
 )
 from clara_api.lifemap.legacy_provenance import (
     REPORT_CATEGORIES as REPORT_CATEGORIES_COMPAT,
+)
+from clara_api.lifemap.legacy_provenance import (
     legacy_provenance_counts as legacy_provenance_counts_compat,
 )
 

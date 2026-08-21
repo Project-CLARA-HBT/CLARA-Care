@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Dict
 
 PHONE_RE = re.compile(r"\b(?:\+84|0)\d{9,10}\b")
 ID_RE = re.compile(r"\b\d{9,12}\b")
@@ -12,7 +11,7 @@ EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 @dataclass
 class PiiResult:
     redacted_text: str
-    flags: Dict[str, int]
+    flags: dict[str, int]
 
 
 def redact_pii(text: str) -> PiiResult:

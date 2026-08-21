@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Sequence, TypeVar
 import unicodedata
+from collections.abc import Sequence
+from typing import Any, TypeVar
 
 from clara_ml.config import settings
 from clara_ml.rag.embedder import HttpEmbeddingClient
 
-from .domain import Document, SOURCE_SCORE_BIAS
+from .domain import SOURCE_SCORE_BIAS, Document
 from .text_utils import (
     analyze_query_profile,
     normalize_tags,

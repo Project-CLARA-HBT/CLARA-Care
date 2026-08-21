@@ -298,6 +298,7 @@ def purpose_or_authorization_change(
 
 # --- governance policy epoch writer --------------------------------------------
 
+
 @dataclass(frozen=True)
 class GovernancePolicyEpoch:
     """A row of the persisted ``governance_policy_epochs`` concept.
@@ -418,6 +419,7 @@ def advance_governance_policy_epoch(
 
 
 # --- compound drift helper ----------------------------------------------------
+
 
 def compound_drift_detected(metadata: Sequence[WriterMetadata]) -> bool:
     """True when a schedule combined two or more distinct governance dimensions."""

@@ -37,9 +37,7 @@ def _parse_time(value: object) -> datetime | None:
         parsed = datetime.fromisoformat(normalized)
     except ValueError:
         return None
-    return (
-        parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
-    )
+    return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
 
 
 def _patient_reference(resource: dict[str, Any]) -> str | None:
@@ -118,9 +116,7 @@ def ingest_bundle(
     raw_resources: list[object] = [
         item.get("resource") for item in entries if isinstance(item, dict)
     ]
-    resources: list[dict[str, Any]] = [
-        item for item in raw_resources if isinstance(item, dict)
-    ]
+    resources: list[dict[str, Any]] = [item for item in raw_resources if isinstance(item, dict)]
     patients = [item for item in resources if item.get("resourceType") == "Patient"]
     if len(patients) != 1 or not isinstance(patients[0].get("id"), str):
         raise FhirIngestError("bundle_must_contain_one_patient")
@@ -130,9 +126,9 @@ def ingest_bundle(
     for resource in resources:
         resource_type = resource.get("resourceType")
         resource_id = resource.get("id")
-        if resource_type not in SUPPORTED_RESOURCE_TYPES_BY_VERSION[
-            fhir_version
-        ] or not isinstance(resource_id, str):
+        if resource_type not in SUPPORTED_RESOURCE_TYPES_BY_VERSION[fhir_version] or not isinstance(
+            resource_id, str
+        ):
             continue
         reference = _patient_reference(resource)
         if reference not in {None, f"Patient/{patient_id}", patient_id}:
@@ -146,18 +142,14 @@ def ingest_bundle(
             else normalized_ingested_at
         )
         encounter = resource.get("encounter")
-        encounter_reference = (
-            encounter.get("reference") if isinstance(encounter, dict) else None
-        )
+        encounter_reference = encounter.get("reference") if isinstance(encounter, dict) else None
         events.append(
             TimelineEvent(
                 evidence_id=f"{resource_type}/{resource_id}",
                 resource_type=resource_type,
                 resource_id=resource_id,
                 subject_token=subject_token,
-                status=resource.get("status")
-                if isinstance(resource.get("status"), str)
-                else None,
+                status=resource.get("status") if isinstance(resource.get("status"), str) else None,
                 codes=_codes(resource),
                 valid_at=_valid_time(resource),
                 known_at=known_at,

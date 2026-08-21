@@ -23,9 +23,7 @@ from sqlalchemy.engine import Engine
 
 PROTOCOL_SCHEMA_VERSION = "glhs-postgres-governance-toctou-final-v1"
 PROTOCOL_STATUS = "FROZEN_FINAL_REVIEWED"
-SCHEDULE_IDS = frozenset(
-    {"TOCTOU-01", "TOCTOU-02", "TOCTOU-03", "TOCTOU-04", "TOCTOU-05"}
-)
+SCHEDULE_IDS = frozenset({"TOCTOU-01", "TOCTOU-02", "TOCTOU-03", "TOCTOU-04", "TOCTOU-05"})
 PERSISTED_WRITER_SCHEDULE_IDS = frozenset({"TOCTOU-02", "TOCTOU-03", "TOCTOU-05"})
 FINAL_ISOLATION_ATTESTATION = "GLHS_TOCTOU_FINAL_ISOLATED_RESEARCH"
 FINAL_DATABASE_URL = "GLHS_TOCTOU_FINAL_DATABASE_URL"
@@ -128,8 +126,7 @@ def observer_import_for_protocol(protocol_path: Path) -> str:
     protocol = _load_object(protocol_path)
     contract = _load_object(_bound_file(protocol_path, protocol, "observer_contract"))
     if (
-        contract.get("schema_version")
-        != "glhs-postgres-governance-toctou-observer-contract.v1"
+        contract.get("schema_version") != "glhs-postgres-governance-toctou-observer-contract.v1"
         or contract.get("status") != PROTOCOL_STATUS
         or set(contract.get("required_observation_fields", [])) != REQUIRED_OBSERVATION_KEYS
     ):

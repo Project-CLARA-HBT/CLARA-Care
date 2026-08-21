@@ -90,7 +90,9 @@ def execute_mutant(
         stage = Path(temporary) / "stage"
         source_root = root / "services/api/src"
         staged_source = stage / "services/api/src"
-        shutil.copytree(source_root, staged_source, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        shutil.copytree(
+            source_root, staged_source, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
+        )
         shutil.copytree(
             root / "services/api/tests",
             stage / "services/api/tests",
@@ -199,7 +201,9 @@ def load_catalog_mutant(*, catalog_path: Path, mutant_id: str) -> MutantOverlay:
     candidates = catalog.get("candidates")
     if not isinstance(candidates, list):
         raise TypeError("govmut_catalog_candidates_invalid")
-    matches = [item for item in candidates if isinstance(item, dict) and item.get("id") == mutant_id]
+    matches = [
+        item for item in candidates if isinstance(item, dict) and item.get("id") == mutant_id
+    ]
     if len(matches) != 1:
         raise ValueError("govmut_catalog_mutant_not_unique")
     match = matches[0]
@@ -238,7 +242,10 @@ if __name__ == "__main__":
         parser.error("govmut_suite_matrix_and_method_required_together")
     if args.suite_matrix:
         pytest_targets = suite_targets(matrix_path=args.suite_matrix, method=args.method)
-        if args.method in {"M1_stateless_property", "M2_state_machine", "M3_combined"} and args.hypothesis_seed is None:
+        if (
+            args.method in {"M1_stateless_property", "M2_state_machine", "M3_combined"}
+            and args.hypothesis_seed is None
+        ):
             parser.error("govmut_hypothesis_seed_required_for_generated_method")
     elif args.target:
         pytest_targets = args.target

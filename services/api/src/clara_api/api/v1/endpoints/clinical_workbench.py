@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -167,7 +167,7 @@ def _execute_real_protocol(
             chat_completion(
                 ChatRequest(
                     message=message,
-                    protocol=protocol,
+                    protocol=cast(Any, protocol),
                     clinical_context=context,
                 ),
                 token=token,

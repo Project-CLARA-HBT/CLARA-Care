@@ -27,7 +27,7 @@ class HarnessPreflight:
 
 
 def _missing_information(context: dict[str, Any], intent: str) -> list[dict[str, str]]:
-    fields = (
+    fields: tuple[tuple[str, str], ...] = (
         ("age", "Age can change risk thresholds and treatment choices."),
         ("conditions", "Relevant conditions can change contraindications and urgency."),
         ("medications", "Current medicines are needed for interaction and duplication checks."),

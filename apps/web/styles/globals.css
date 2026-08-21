@@ -614,11 +614,38 @@ select:focus {
 }
 
 .medical-markdown table tbody tr:nth-child(odd) {
-  background: rgb(248 250 252 / 72%);
+  background: var(--surface-muted);
+}
+
+.medical-markdown table tbody tr:nth-child(even) {
+  background: var(--surface-panel);
+}
+
+.medical-markdown table th {
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.medical-markdown table td {
+  color: var(--text-primary);
 }
 
 html.dark .medical-markdown table tbody tr:nth-child(odd) {
-  background: rgb(15 23 42 / 42%);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+html.dark .medical-markdown table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+html.dark .medical-markdown table th {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+html.dark .medical-markdown table td {
+  color: #f1f5f9;
 }
 
 html.dark .medical-markdown::before,

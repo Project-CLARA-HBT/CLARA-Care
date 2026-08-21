@@ -81,9 +81,7 @@ def run_probe(
                 "requested_model_id": result.requested_model_id,
                 "reported_model_id": result.reported_model_id,
                 "model_family": (
-                    "gemini"
-                    if result.requested_model_id == GENERATOR_MODEL
-                    else "claude"
+                    "gemini" if result.requested_model_id == GENERATOR_MODEL else "claude"
                 ),
                 "request_sha256": result.request_sha256,
                 "response_sha256": result.response_sha256,
@@ -116,9 +114,7 @@ def run_probe(
         "recorded_at": datetime.now(UTC).isoformat(),
     }
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
 
 
@@ -146,9 +142,7 @@ def main() -> int:
         clients=clients,
         repository_root=args.repo_root,
     )
-    print(
-        json.dumps({"models": result["requested_models"], "status": "probe_complete"})
-    )
+    print(json.dumps({"models": result["requested_models"], "status": "probe_complete"}))
     return 0
 
 

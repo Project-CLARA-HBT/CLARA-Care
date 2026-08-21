@@ -153,7 +153,13 @@ class FakeGateway:
         return SimpleNamespace(id=1, profile_id=profile_id)
 
     def propose_assertion(
-        self, db: object, *, profile_id: int, actor_user_id: int | None, data: object, evidence: object
+        self,
+        db: object,
+        *,
+        profile_id: int,
+        actor_user_id: int | None,
+        data: object,
+        evidence: object,
     ) -> SimpleNamespace:
         with self._lock:
             self.calls.append(("propose_assertion", profile_id))
@@ -195,9 +201,7 @@ class FakeGateway:
                 # rejected as stale (no cross-schedule state needed).
                 writer_index = int(idempotency_key.rsplit("-", 1)[1].split(":")[0])
                 if self.race_winner_cap is not None:
-                    raise exc.OperationalError(
-                        "SELECT 1", {}, RuntimeError("deadlock detected")
-                    )
+                    raise exc.OperationalError("SELECT 1", {}, RuntimeError("deadlock detected"))
                 if writer_index != 0:
                     raise GlhsInvariantError("stale_state_version")
                 self.winner_assertion_ids.add(int(assertion.id))
@@ -252,6 +256,7 @@ def _schedule(protocol: dict[str, object], schedule_id: str) -> dict[str, object
 
 # --- protocol gate -----------------------------------------------------------
 
+
 def test_validate_protocol_accepts_frozen_v21_protocol() -> None:
     result = validate_protocol(_load_v21_protocol())
     assert result["status"] == "VALIDATED_V21_PROTOCOL_NOT_EXECUTED"
@@ -273,9 +278,8 @@ def test_validate_protocol_refuses_unknown_schema() -> None:
         validate_protocol(protocol)
 
 
-
-
 # --- false-stale burden driver (TOCTOU-V2-13) --------------------------------
+
 
 def test_driver_v2_13_measures_false_stale_burden() -> None:
     env = _fake_env()
@@ -320,6 +324,7 @@ def test_driver_v2_13_cross_profile_control_completes_independent_write() -> Non
 
 
 # --- concurrency scaling drivers (TOCTOU-V2-14..17) --------------------------
+
 
 def test_driver_v2_14_single_writer_commits_with_zero_false_stale() -> None:
     env = _fake_env()
@@ -405,6 +410,7 @@ def test_scaling_race_no_fabricated_forbidden_commit() -> None:
 
 # --- full v2.1 run orchestration ---------------------------------------------
 
+
 def test_run_schedules_v21_runs_all_seventeen_schedules(tmp_path: Path) -> None:
     env = _fake_env()
     out = tmp_path / "run_v2_1_raw.json"
@@ -427,9 +433,7 @@ def test_run_schedules_v21_runs_all_seventeen_schedules(tmp_path: Path) -> None:
     assert validation["status"] == "VALIDATED_V21_OBSERVATIONS_NOT_EXECUTED"
     assert validation["database_executed"] is False
     assert validation["observation_count"] == 17
-    assert {"false_stale_burden", "concurrency_scaling"} <= set(
-        validation["interleaving_coverage"]
-    )
+    assert {"false_stale_burden", "concurrency_scaling"} <= set(validation["interleaving_coverage"])
     assert validation["observed_false_stale_rates"] == {
         "TOCTOU-V2-13": 0.5,
         "TOCTOU-V2-14": 0.0,
@@ -446,7 +450,13 @@ def test_run_schedules_v21_runs_all_seventeen_schedules(tmp_path: Path) -> None:
         assert audit["matches"] in {True, False}
         assert audit["false_stale_matches"] in {True, False, None}
     for audit in audits:
-        if audit["id"] in {"TOCTOU-V2-13", "TOCTOU-V2-14", "TOCTOU-V2-15", "TOCTOU-V2-16", "TOCTOU-V2-17"}:
+        if audit["id"] in {
+            "TOCTOU-V2-13",
+            "TOCTOU-V2-14",
+            "TOCTOU-V2-15",
+            "TOCTOU-V2-16",
+            "TOCTOU-V2-17",
+        }:
             assert audit["matches"] is True
             assert audit["false_stale_matches"] is True
 
@@ -474,9 +484,7 @@ def test_run_schedules_v21_operational_race_is_recorded_mismatch_not_claim_eligi
     assert race_audit["observed_classification"] == "deadlock_detected"
     assert race_audit["false_stale_matches"] is False
     race_observation = next(
-        observation
-        for observation in written["schedules"]
-        if observation["id"] == "TOCTOU-V2-15"
+        observation for observation in written["schedules"] if observation["id"] == "TOCTOU-V2-15"
     )
     assert race_observation["outcome"]["operational_outcome"] is True
     assert race_observation["outcome"]["safety_success"] is False

@@ -21,7 +21,10 @@ def test_matrix_covers_all_families_and_arms() -> None:
     rows, _checks = build_family_arm_matrix(DEFAULT_RAW_ROOT, DEFAULT_MANIFEST)
     assert len(rows) == 15 * 4
     assert {row["arm"] for row in rows} == {
-        "UNBOUND", "STATE_VERSION_ONLY", "SNAPSHOT_BOUND_STATE_ONLY", "GLHS_STRICT",
+        "UNBOUND",
+        "STATE_VERSION_ONLY",
+        "SNAPSHOT_BOUND_STATE_ONLY",
+        "GLHS_STRICT",
     }
     assert len({row["family"] for row in rows}) == 15
 
@@ -31,10 +34,21 @@ def test_matrix_columns_and_counts() -> None:
         return
     rows, _checks = build_family_arm_matrix(DEFAULT_RAW_ROOT, DEFAULT_MANIFEST)
     expected = {
-        "family", "reporting_scope", "arm", "eligible_n", "executed_n", "not_run_n",
-        "invalid_commit_acceptance", "unintended_disclosure", "wrong_subject_exposure",
-        "cache_revocation_failure", "availability_error", "committed_count",
-        "rejected_count", "rejection_auditability", "committed_reconstructability",
+        "family",
+        "reporting_scope",
+        "arm",
+        "eligible_n",
+        "executed_n",
+        "not_run_n",
+        "invalid_commit_acceptance",
+        "unintended_disclosure",
+        "wrong_subject_exposure",
+        "cache_revocation_failure",
+        "availability_error",
+        "committed_count",
+        "rejected_count",
+        "rejection_auditability",
+        "committed_reconstructability",
         "latency_ms",
     }
     assert expected.issubset(set(rows[0].keys()))

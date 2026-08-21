@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import importlib
 import inspect
+from collections.abc import Iterable
 from types import ModuleType
-from typing import Dict, Iterable, Type
 
 from clara_ml.agents.base import BaseAgent
 
@@ -12,9 +12,9 @@ class AgentRegistry:
     """Registry động cho đăng ký/khám phá agent."""
 
     def __init__(self) -> None:
-        self._agents: Dict[str, Type[BaseAgent]] = {}
+        self._agents: dict[str, type[BaseAgent]] = {}
 
-    def register(self, key: str, agent_cls: Type[BaseAgent]) -> None:
+    def register(self, key: str, agent_cls: type[BaseAgent]) -> None:
         if key in self._agents:
             raise ValueError(f"Agent key already exists: {key}")
         self._agents[key] = agent_cls
@@ -22,13 +22,13 @@ class AgentRegistry:
     def register_class(self, key: str):
         """Decorator tiện dụng cho dynamic registration."""
 
-        def _wrap(agent_cls: Type[BaseAgent]) -> Type[BaseAgent]:
+        def _wrap(agent_cls: type[BaseAgent]) -> type[BaseAgent]:
             self.register(key, agent_cls)
             return agent_cls
 
         return _wrap
 
-    def get(self, key: str) -> Type[BaseAgent]:
+    def get(self, key: str) -> type[BaseAgent]:
         if key not in self._agents:
             raise KeyError(f"Unknown agent key: {key}")
         return self._agents[key]

@@ -41,7 +41,9 @@ def test_commit_revalidates_each_governance_coordinate() -> None:
             store.commit(proposal=proposal, now=now)
 
 
-def test_commit_is_idempotent_and_expired_snapshot_is_rejected(governed_store: ToyGovernedStore) -> None:
+def test_commit_is_idempotent_and_expired_snapshot_is_rejected(
+    governed_store: ToyGovernedStore,
+) -> None:
     now = datetime(2026, 8, 17, tzinfo=UTC)
     snapshot = governed_store.issue_snapshot(now=now)
     proposal = governed_store.propose(proposal_id="retry", snapshot=snapshot)

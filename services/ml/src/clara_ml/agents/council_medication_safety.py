@@ -14,7 +14,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Literal
 
-
 CouncilTriage = Literal[
     "routine_follow_up",
     "same_day_review",

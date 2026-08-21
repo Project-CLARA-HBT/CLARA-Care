@@ -36,9 +36,9 @@ Design constraints honoured here:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import logging
 import os
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - typing only, no runtime import cost
@@ -201,7 +201,7 @@ def _vector_extension_installed(connection: Any) -> bool:
     return result.first() is not None
 
 
-def check_persistent_store_ready(engine: "Engine | None") -> PersistentStoreStatus:
+def check_persistent_store_ready(engine: Engine | None) -> PersistentStoreStatus:
     """Validate that the persistent store is ready to serve.
 
     Validates Requirement 3.4: the ``vector`` extension must be installed AND
@@ -337,7 +337,7 @@ def resolve_effective_persistent_flags(
 # ---------------------------------------------------------------------------
 
 
-def resolve_default_engine(settings: Any | None = None) -> "Engine | None":
+def resolve_default_engine(settings: Any | None = None) -> Engine | None:
     """Build a SQLAlchemy engine for the self-check, or ``None`` if unavailable.
 
     The database URL is read from settings (``database_url``) when present, then
@@ -372,7 +372,7 @@ def resolve_default_engine(settings: Any | None = None) -> "Engine | None":
 
 
 def run_startup_self_check(
-    settings: Any | None = None, engine: "Engine | None" = None
+    settings: Any | None = None, engine: Engine | None = None
 ) -> EffectivePersistentFlags:
     """Run the persistent-store self-check and resolve effective flags.
 

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 
-def load_seed_json(seed_dir: Path) -> List[Dict[str, Any]]:
-    data: List[Dict[str, Any]] = []
+def load_seed_json(seed_dir: Path) -> list[dict[str, Any]]:
+    data: list[dict[str, Any]] = []
     if not seed_dir.exists():
         return data
     for p in sorted(seed_dir.glob("*.json")):

@@ -153,7 +153,7 @@ class P1RoleIntentRouter:
             role: self._count_hits(normalized_query, keywords)
             for role, keywords in self.ROLE_KEYWORDS.items()
         }
-        role = max(role_scores, key=role_scores.get)
+        role = max(role_scores, key=lambda r: role_scores[r])
         hits = role_scores[role]
         if hits == 0:
             return "normal", 0.56

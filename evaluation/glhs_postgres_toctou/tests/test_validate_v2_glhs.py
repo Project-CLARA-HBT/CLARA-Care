@@ -229,9 +229,7 @@ def test_validate_refuses_missing_interleaving_coverage(missing: str) -> None:
         observation["interleaving"]["coverage"] = [
             label for label in observation["interleaving"]["coverage"] if label != missing
         ]
-    with pytest.raises(
-        ValueError, match=f"v2_interleaving_coverage_missing:{missing}"
-    ):
+    with pytest.raises(ValueError, match=f"v2_interleaving_coverage_missing:{missing}"):
         validate_v2(observations, protocol=_protocol())
 
 

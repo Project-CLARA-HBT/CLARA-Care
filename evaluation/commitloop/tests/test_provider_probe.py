@@ -56,16 +56,13 @@ def test_probe_requires_sealed_phase_a_freeze_and_records_exact_models(
     )
     validated: list[object] = []
     monkeypatch.setattr(provider_probe, "validate_run", validated.append)
-    monkeypatch.setattr(
-        provider_probe, "verify_live_repository_matches_freeze", lambda *_: None
-    )
+    monkeypatch.setattr(provider_probe, "verify_live_repository_matches_freeze", lambda *_: None)
     output = tmp_path / "phase-b" / "probe.json"
     result = run_probe(freeze_path=freeze, output=output, clients=_clients())
     assert validated == [phase_a]
     assert result["requested_models"] == sorted([GENERATOR_MODEL, REVIEWER_MODEL])
     assert all(
-        item["reported_model_id"]
-        == REPORTED_MODEL_ID_BY_REQUESTED[item["requested_model_id"]]
+        item["reported_model_id"] == REPORTED_MODEL_ID_BY_REQUESTED[item["requested_model_id"]]
         for item in result["results"]
     )
     assert result["schema_version"] == "commitloop-provider-probe.v2"
@@ -133,9 +130,7 @@ def test_probe_rejects_repository_drift_before_transport(
     def reject_drift(*_args) -> None:
         raise FreezeError("phase_b_requires_clean_frozen_worktree")
 
-    monkeypatch.setattr(
-        provider_probe, "verify_live_repository_matches_freeze", reject_drift
-    )
+    monkeypatch.setattr(provider_probe, "verify_live_repository_matches_freeze", reject_drift)
     clients = _clients()
     with pytest.raises(FreezeError, match="phase_b_requires_clean_frozen_worktree"):
         run_probe(
@@ -162,9 +157,7 @@ def test_probe_refuses_to_mutate_the_sealed_phase_a_directory(
         )
     )
     monkeypatch.setattr(provider_probe, "validate_run", lambda *_: None)
-    monkeypatch.setattr(
-        provider_probe, "verify_live_repository_matches_freeze", lambda *_: None
-    )
+    monkeypatch.setattr(provider_probe, "verify_live_repository_matches_freeze", lambda *_: None)
     clients = _clients()
     with pytest.raises(ValueError, match="probe_output_must_not_modify_phase_a_seal"):
         run_probe(freeze_path=freeze, output=phase_a / "probe.json", clients=clients)

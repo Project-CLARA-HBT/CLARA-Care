@@ -3,14 +3,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import socket
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib import error, request
-
 
 
 @dataclass
@@ -110,10 +108,9 @@ def _http_json(
         return int(exc.code), _json_or_default(payload, {})
     except error.URLError as exc:  # pragma: no cover - network failure path
         return 0, {"error": str(exc)}
-    except socket.timeout as exc:  # pragma: no cover - network timeout path
-        return 0, {"error": f"timeout: {exc}"}
     except TimeoutError as exc:  # pragma: no cover - network timeout path
-        return 0, {"error": str(exc)}
+        return 0, {"error": f"timeout: {exc}"}
+
 
 
 def _read_json_file(path: Path) -> dict[str, Any]:
@@ -317,7 +314,7 @@ def main() -> int:
 
     payload = {
         "run_id": args.run_id,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "api_base_url": args.api_base_url.rstrip("/"),
         "overall_pass": all(check.passed for check in checks),
         "checks": [

@@ -78,9 +78,7 @@ def _git(root: Path, *args: str) -> str:
 def freeze_inputs(root: Path) -> tuple[str, ...]:
     tracked = _git(root, "ls-files").splitlines()
     selected = sorted(
-        path
-        for path in tracked
-        if path in FREEZE_EXPLICIT or path.startswith(FREEZE_PREFIXES)
+        path for path in tracked if path in FREEZE_EXPLICIT or path.startswith(FREEZE_PREFIXES)
     )
     if not selected or any(not (root / path).is_file() for path in selected):
         raise V5FreezeError("v5_freeze_input_inventory_invalid")
@@ -130,9 +128,7 @@ def _prior_registry(prior_runs: list[Path]) -> dict[str, Any]:
         verify_seal(run)
         timeline = [
             json.loads(line)
-            for line in (run / "timeline.jsonl")
-            .read_text(encoding="utf-8")
-            .splitlines()
+            for line in (run / "timeline.jsonl").read_text(encoding="utf-8").splitlines()
             if line
         ]
         source = json.loads((run / "source_manifest.json").read_text(encoding="utf-8"))
@@ -203,9 +199,7 @@ def create_v5_freeze(
     cohort_dir = output_dir / "cohort"
     cohort_path, cohort_manifest_path = write_cohort(cohort_dir)
     cohort_rows = [
-        json.loads(line)
-        for line in cohort_path.read_text(encoding="utf-8").splitlines()
-        if line
+        json.loads(line) for line in cohort_path.read_text(encoding="utf-8").splitlines() if line
     ]
     registry = _prior_registry(prior_runs)
     prior_tokens = set(registry["subject_tokens"])
@@ -270,9 +264,7 @@ def create_v5_freeze(
         "validation_evidence_sha256": _sha256(evidence_path),
         "environment_manifest_sha256": _sha256(environment_path),
         "protocol_sha256": {
-            path.name: _sha256(path)
-            for path in sorted(protocol_copy.iterdir())
-            if path.is_file()
+            path.name: _sha256(path) for path in sorted(protocol_copy.iterdir()) if path.is_file()
         },
         "execution_contract": {
             "primary_model": "claude-sonnet-4.6",
@@ -292,9 +284,7 @@ def create_v5_freeze(
         },
     }
     freeze_path = output_dir / "freeze.json"
-    freeze_path.write_text(
-        json.dumps(freeze, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    freeze_path.write_text(json.dumps(freeze, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     for path in output_dir.rglob("*"):
         if path.is_file() and contains_secret_material(path.read_bytes()):
             raise V5FreezeError("v5_freeze_contains_secret:" + str(path.name))

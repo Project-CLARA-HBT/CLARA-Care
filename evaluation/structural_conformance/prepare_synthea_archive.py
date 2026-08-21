@@ -139,7 +139,11 @@ def prepare(
                     continue
                 with tarfile.open(fileobj=nested_stream, mode="r|gz") as inner:
                     for member in inner:
-                        if not member.isfile() or "/fhir/" not in member.name or not member.name.endswith(".json"):
+                        if (
+                            not member.isfile()
+                            or "/fhir/" not in member.name
+                            or not member.name.endswith(".json")
+                        ):
                             continue
                         source = inner.extractfile(member)
                         if source is None:
@@ -175,7 +179,11 @@ def prepare(
                                 if isinstance(kind, str):
                                     resource_kinds[kind] += 1
                         token = _token(patient_id, salt)
-                        if int(hashlib.sha256(token.encode("ascii")).hexdigest(), 16) % selection_modulus == 0:
+                        if (
+                            int(hashlib.sha256(token.encode("ascii")).hexdigest(), 16)
+                            % selection_modulus
+                            == 0
+                        ):
                             connection.execute(
                                 "INSERT OR REPLACE INTO selected (token, episodes) VALUES (?, ?)",
                                 (token, episodes),

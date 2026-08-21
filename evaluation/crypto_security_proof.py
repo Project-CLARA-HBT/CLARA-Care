@@ -80,10 +80,7 @@ class MerkleTree:
             return
 
         # Leaf hashes: H(0x00 || canonical_json(elem)) (domain separation for leaf nodes)
-        self.leaves = [
-            sha256_hash(b"\x00" + canonical_json_bytes(elem))
-            for elem in raw_elements
-        ]
+        self.leaves = [sha256_hash(b"\x00" + canonical_json_bytes(elem)) for elem in raw_elements]
         self._build_tree()
 
     def _build_tree(self) -> None:
@@ -226,12 +223,14 @@ def compile_thss_cryptographic_snapshot(
     merkle_tree = MerkleTree(evidence_items)
 
     snapshot_id = sha256_hash(
-        canonical_json_bytes({
-            "profile_id": profile_id,
-            "merkle_root": merkle_tree.root,
-            "issued_at": now,
-            "gov_sig": gov_sig.signature_digest,
-        })
+        canonical_json_bytes(
+            {
+                "profile_id": profile_id,
+                "merkle_root": merkle_tree.root,
+                "issued_at": now,
+                "gov_sig": gov_sig.signature_digest,
+            }
+        )
     )[:32]
 
     manifest = {
@@ -289,8 +288,7 @@ def create_commit_proposal(
 
     audit_proofs = [merkle_tree.get_proof(idx) for idx in evidence_indices]
     claimed_base_versions = {
-        k: snapshot.entity_partition_versions.get(k, 0)
-        for k in dependent_partitions
+        k: snapshot.entity_partition_versions.get(k, 0) for k in dependent_partitions
     }
 
     body = {
@@ -392,7 +390,9 @@ class GSTCryptographicVerifier:
             )
 
         # 4. Merkle Audit Path Inclusion Proofs
-        for idx, proof in zip(proposal.claimed_evidence_indices, proposal.audit_proofs):
+        for idx, proof in zip(
+            proposal.claimed_evidence_indices, proposal.audit_proofs, strict=False
+        ):
             if idx < 0 or idx >= len(snapshot.disclosed_evidence):
                 return CommitVerificationResult(
                     is_admissible=False,
@@ -520,7 +520,9 @@ def run_cryptographic_security_proof_suite(
     valid_proposal = create_commit_proposal(
         snapshot=snapshot,
         merkle_tree=tree,
-        delta_operations=[{"action": "adjust_dose", "medication": "Metformin", "new_dose": "850mg"}],
+        delta_operations=[
+            {"action": "adjust_dose", "medication": "Metformin", "new_dose": "850mg"}
+        ],
         dependent_partitions=["medication/metformin"],
         evidence_indices=[0, 2, 3],
         current_time=t1 + 5.0,
@@ -600,12 +602,14 @@ def run_cryptographic_security_proof_suite(
 
     # 4. Merkle Audit Path Tampering & Undisclosed Evidence Substitution
     merkle_blocked = 0
-    for i in range(trials_per_attack):
+    for _i in range(trials_per_attack):
         tampered_proofs = list(valid_proposal.audit_proofs)
         # Flip bit in first proof step sibling hash
         if tampered_proofs and tampered_proofs[0]:
             orig_step = tampered_proofs[0][0]
-            mutated_hash = ("0" if orig_step.sibling_hash[0] != "0" else "1") + orig_step.sibling_hash[1:]
+            mutated_hash = (
+                "0" if orig_step.sibling_hash[0] != "0" else "1"
+            ) + orig_step.sibling_hash[1:]
             tampered_proofs[0] = [
                 MerkleProofStep(sibling_hash=mutated_hash, is_left=orig_step.is_left),
                 *tampered_proofs[0][1:],
@@ -701,9 +705,7 @@ def run_cryptographic_security_proof_suite(
         false_rejection_of_valid_proposals=false_rejection,
         adversary_success_rate=success_rate,
         theoretical_collision_bound_bits=256,
-        theorem3_security_bound_satisfied=(
-            success_rate == 0.0 and false_rejection == 0
-        ),
+        theorem3_security_bound_satisfied=(success_rate == 0.0 and false_rejection == 0),
     )
     return report
 
@@ -746,7 +748,9 @@ $\Pr[\operatorname{GST\_Commit}(P, t_2) = \text{True} \mid \text{Invalid}] \le \
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Cryptographic Security Proofs for Theorem 3")
     parser.add_argument("--trials", type=int, default=100, help="Number of trials per attack")
-    parser.add_argument("--output", type=Path, default=Path("artifacts/crypto_security_proof_report.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("artifacts/crypto_security_proof_report.json")
+    )
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

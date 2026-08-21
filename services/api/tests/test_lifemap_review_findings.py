@@ -3,8 +3,8 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from clara_api.core.config import get_settings
 from clara_api.api.v1.endpoints import lifemap_review
+from clara_api.core.config import get_settings
 from clara_api.lifemap.review_findings import (
     ReviewFact,
     rule_first_findings,

@@ -48,9 +48,13 @@ def run_benchmark(
 
     if gateway is None:
         gateway = ModelGateway()
-        gateway.register_adapter(provider, MockEvaluationAdapter(provider_alias=provider, model_name=model))
+        gateway.register_adapter(
+            provider, MockEvaluationAdapter(provider_alias=provider, model_name=model)
+        )
 
-    gateway._custom_adapters[provider] = MockEvaluationAdapter(provider_alias=provider, model_name=model)
+    gateway._custom_adapters[provider] = MockEvaluationAdapter(
+        provider_alias=provider, model_name=model
+    )
     os.environ["CLARA_MODEL_ROUTE_TASK_LIFEMAP_CAPTURE_TRIAGE_PROVIDER"] = provider
     os.environ["CLARA_MODEL_ROUTE_TASK_LIFEMAP_CAPTURE_TRIAGE_MODEL"] = model
 
@@ -61,7 +65,8 @@ def run_benchmark(
         for case in cases:
             req = ModelRequest(
                 prompt=case.prompt,
-                system_prompt=case.system_prompt or "Bạn là hệ thống điều hướng chăm sóc y tế CLARA Care Navigation. Phân loại mức độ khẩn cấp (EMERGENCY, URGENT, ROUTINE, SELF_CARE) và giải thích lý do mà không đưa ra chẩn đoán bệnh xác định.",
+                system_prompt=case.system_prompt
+                or "Bạn là hệ thống điều hướng chăm sóc y tế CLARA Care Navigation. Phân loại mức độ khẩn cấp (EMERGENCY, URGENT, ROUTINE, SELF_CARE) và giải thích lý do mà không đưa ra chẩn đoán bệnh xác định.",
                 task=ModelTask.LIFEMAP_CAPTURE_TRIAGE,
                 route_class=RouteClass.FAST_MULTIMODAL,
                 model=model,
@@ -128,5 +133,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     report = run_benchmark(provider=args.provider, model=args.model, output_dir=Path(args.output))
-    print(f"[{report.task_id}] Provider: {report.provider} ({report.model}) | Passed: {report.overall_passed} | Pass Rate: {report.pass_rate*100:.1f}%")
+    print(
+        f"[{report.task_id}] Provider: {report.provider} ({report.model}) | Passed: {report.overall_passed} | Pass Rate: {report.pass_rate * 100:.1f}%"
+    )
     sys.exit(0 if report.overall_passed else 1)

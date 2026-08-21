@@ -26,9 +26,7 @@ def proposals(workload: str, concurrency: int) -> tuple[ModelProposal, ...]:
                 "medication:shared" if workload == "same_dependency" else f"medication:{index}"
             ),
             dependencies=frozenset(
-                {"medication:shared"}
-                if workload == "same_dependency"
-                else {f"medication:{index}"}
+                {"medication:shared"} if workload == "same_dependency" else {f"medication:{index}"}
             ),
         )
         for index in range(concurrency)

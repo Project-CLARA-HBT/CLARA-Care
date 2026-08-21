@@ -286,7 +286,7 @@ class UmlsClient:
                     pass
             self._owned_client = None
 
-    def __enter__(self) -> "UmlsClient":
+    def __enter__(self) -> UmlsClient:
         return self
 
     def __exit__(self, *exc: object) -> None:

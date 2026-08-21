@@ -43,13 +43,9 @@ class SnapshotDigestTests(unittest.TestCase):
     def test_sensitive_to_coordinates(self) -> None:
         st = initial_state()
         base = snapshot_digest(st, evidence=frozenset({"e0"}), expiry=TTL)
-        self.assertNotEqual(
-            base, snapshot_digest(st, evidence=frozenset({"e0", "e1"}), expiry=TTL)
-        )
+        self.assertNotEqual(base, snapshot_digest(st, evidence=frozenset({"e0", "e1"}), expiry=TTL))
         advanced = apply(st, "advance_state").state
-        self.assertNotEqual(
-            base, snapshot_digest(advanced, evidence=frozenset({"e0"}), expiry=TTL)
-        )
+        self.assertNotEqual(base, snapshot_digest(advanced, evidence=frozenset({"e0"}), expiry=TTL))
 
 
 class InitialStateTests(unittest.TestCase):
@@ -110,7 +106,9 @@ class ProposalTests(unittest.TestCase):
         self.assertEqual(outcome.reason, "no_valid_disclosure")
 
     def test_bound_proposal_rejects_undisclosed_evidence(self) -> None:
-        st = apply(initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL).state
+        st = apply(
+            initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL
+        ).state
         outcome = apply(
             st, "create_proposal", binding=True, evidence=frozenset({"e1"}), idempotency_key="k0"
         )
@@ -120,7 +118,9 @@ class ProposalTests(unittest.TestCase):
 
 class CommitTests(unittest.TestCase):
     def _clean_bound(self) -> State:
-        st = apply(initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL).state
+        st = apply(
+            initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL
+        ).state
         st = apply(
             st, "create_proposal", binding=True, evidence=frozenset({"e0"}), idempotency_key="k0"
         ).state
@@ -206,7 +206,9 @@ class CommitTests(unittest.TestCase):
 
 class ReplayAndRetryTests(unittest.TestCase):
     def test_idempotent_replay_is_one_logical_transition(self) -> None:
-        st = apply(initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL).state
+        st = apply(
+            initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL
+        ).state
         st = apply(
             st, "create_proposal", binding=True, evidence=frozenset({"e0"}), idempotency_key="k0"
         ).state
@@ -214,9 +216,7 @@ class ReplayAndRetryTests(unittest.TestCase):
         self.assertTrue(first.admitted)
         self.assertEqual(first.state.state_version, st.state_version + 1)
         # Client resends the same proposal with the same key after a success.
-        st2 = apply(
-            first.state, "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL
-        ).state
+        st2 = apply(first.state, "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL).state
         st2 = apply(
             st2, "create_proposal", binding=True, evidence=frozenset({"e0"}), idempotency_key="k0"
         ).state
@@ -228,7 +228,9 @@ class ReplayAndRetryTests(unittest.TestCase):
         self.assertEqual(replay.state.state_version, st2.state_version)
 
     def test_retry_after_rejection_stays_rejected_without_reauthorization(self) -> None:
-        st = apply(initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL).state
+        st = apply(
+            initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL
+        ).state
         st = apply(
             st, "create_proposal", binding=True, evidence=frozenset({"e0"}), idempotency_key="k0"
         ).state
@@ -250,7 +252,9 @@ class ReplayAndRetryTests(unittest.TestCase):
 
 class RollbackTests(unittest.TestCase):
     def _committed(self) -> State:
-        st = apply(initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL).state
+        st = apply(
+            initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL
+        ).state
         st = apply(
             st, "create_proposal", binding=True, evidence=frozenset({"e0"}), idempotency_key="k0"
         ).state
@@ -307,7 +311,9 @@ class DispatchTests(unittest.TestCase):
 
 class CanonicalPreservationTests(unittest.TestCase):
     def test_rejected_commit_preserves_canonical_coordinates(self) -> None:
-        st = apply(initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL).state
+        st = apply(
+            initial_state(), "issue_disclosure", evidence=frozenset({"e0"}), expiry=TTL
+        ).state
         st = apply(
             st, "create_proposal", binding=True, evidence=frozenset({"e0"}), idempotency_key="k0"
         ).state

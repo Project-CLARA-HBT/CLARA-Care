@@ -17,13 +17,22 @@ def test_soict_final_inputs_cover_catalog_and_bind_complete_matrix(tmp_path: Pat
     review = json.loads(outputs["review_manifest"].read_text(encoding="utf-8"))
     freeze = json.loads(outputs["corpus_freeze_input"].read_text(encoding="utf-8"))
     catalog = json.loads(
-        (root / "research/assurance_soict/mutation_site_candidates.json").read_text(encoding="utf-8")
+        (root / "research/assurance_soict/mutation_site_candidates.json").read_text(
+            encoding="utf-8"
+        )
     )
 
     assert review["status"] == "frozen"
-    assert [case["case_id"] for case in review["cases"]] == [item["id"] for item in catalog["candidates"]]
+    assert [case["case_id"] for case in review["cases"]] == [
+        item["id"] for item in catalog["candidates"]
+    ]
     assert freeze["status"] == "awaiting_dual_model_review_and_hypothesis_environment"
-    assert set(freeze["methods"]) == {"M0_regression", "M1_stateless_property", "M2_state_machine", "M3_combined"}
+    assert set(freeze["methods"]) == {
+        "M0_regression",
+        "M1_stateless_property",
+        "M2_state_machine",
+        "M3_combined",
+    }
     assert freeze["methods"]["M3_combined"]["targets"] == [
         *freeze["methods"]["M0_regression"]["targets"],
         *freeze["methods"]["M1_stateless_property"]["targets"],
@@ -31,9 +40,7 @@ def test_soict_final_inputs_cover_catalog_and_bind_complete_matrix(tmp_path: Pat
     ]
 
 
-def test_soict_final_runner_uses_only_soict_fixed_paths(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_soict_final_runner_uses_only_soict_fixed_paths(tmp_path: Path, monkeypatch) -> None:
     root = tmp_path / "repository"
     (root / "research/assurance_soict").mkdir(parents=True)
     (root / "research/assurance_soict/final_freeze.json").write_text("{}", encoding="utf-8")
@@ -45,7 +52,10 @@ def test_soict_final_runner_uses_only_soict_fixed_paths(
 
     monkeypatch.setattr(soict_final_runner, "execute_final_run", fake_execute_final_run)
     output = tmp_path / "output.json"
-    assert soict_final_runner.run_soict_final(repository_root=root, output_path=output)["status"] == "COMPLETED_NOT_ANALYZED"
+    assert (
+        soict_final_runner.run_soict_final(repository_root=root, output_path=output)["status"]
+        == "COMPLETED_NOT_ANALYZED"
+    )
     assert calls == {
         "manifest_path": root / "research/assurance_soict/final_freeze.json",
         "repository_root": root,

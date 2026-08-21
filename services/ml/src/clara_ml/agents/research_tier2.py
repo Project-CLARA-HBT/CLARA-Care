@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 import json
 import logging
 import random
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from time import perf_counter, sleep
-from typing import Any
 import unicodedata
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from time import perf_counter, sleep
+from typing import Any
 from uuid import uuid4
 
 from clara_ml.config import settings
@@ -23,6 +23,8 @@ from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.retrieval.source_router import (
     SourceRouterDecision,
     decide_source_route,
+)
+from clara_ml.rag.retrieval.source_router import (
     to_metadata_payload as source_route_metadata_payload,
 )
 from clara_ml.rag.retrieval.text_utils import analyze_query_profile, query_terms
@@ -563,7 +565,7 @@ _VI_GENERIC_KEYWORD_HINTS = {
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _normalized_identifier(value: Any) -> str:
@@ -753,27 +755,20 @@ def _build_personal_context_suffix(
     profile = (
         personal_context.get("profile") if isinstance(personal_context.get("profile"), dict) else {}
     )
-    allergies = (
-        personal_context.get("allergies")
-        if isinstance(personal_context.get("allergies"), list)
-        else []
-    )
-    conditions = (
-        personal_context.get("conditions")
-        if isinstance(personal_context.get("conditions"), list)
-        else []
-    )
-    medications = (
-        personal_context.get("medications")
-        if isinstance(personal_context.get("medications"), list)
-        else []
-    )
-    cabinet = (
-        personal_context.get("medicine_cabinet")
-        if isinstance(personal_context.get("medicine_cabinet"), dict)
+    allergies_raw = personal_context.get("allergies")
+    allergies: list[Any] = allergies_raw if isinstance(allergies_raw, list) else []
+    conditions_raw = personal_context.get("conditions")
+    conditions: list[Any] = conditions_raw if isinstance(conditions_raw, list) else []
+    medications_raw = personal_context.get("medications")
+    medications: list[Any] = medications_raw if isinstance(medications_raw, list) else []
+    cabinet_raw = personal_context.get("medicine_cabinet")
+    cabinet: dict[str, Any] = (
+        cabinet_raw
+        if isinstance(cabinet_raw, dict)
         else {}
     )
-    cabinet_items = cabinet.get("items") if isinstance(cabinet.get("items"), list) else []
+    cabinet_items_raw = cabinet.get("items")
+    cabinet_items: list[Any] = cabinet_items_raw if isinstance(cabinet_items_raw, list) else []
 
     allergy_names = [
         _compact_personal_text(item.get("name"), limit=100)
@@ -1529,21 +1524,22 @@ def _build_claim_trace(
         citation_id = citation.source_id
         if not citation_id or citation_id in valid_ids:
             continue
-        row = context_by_id.get(_ascii_fold(citation_id).strip())
-        if row is None:
+        row_obj = context_by_id.get(_ascii_fold(citation_id).strip())
+        if row_obj is None:
             continue
         valid_ids.add(citation_id)
-        source_type = (_row_source_type(row) if row else None) or citation.source_type or "unknown"
-        trust_tier = _row_trust_tier(row) if row else None
+        row_dict: dict[str, Any] = row_obj
+        source_type = (_row_source_type(row_dict) if row_dict else None) or citation.source_type or "unknown"
+        trust_tier = _row_trust_tier(row_dict) if row_dict else None
         if trust_tier is None:
             trust_tier = citation.trust_tier
         if trust_tier is None:
             trust_tier = _DEFAULT_CITATION_TRUST_TIER
-        published_at = (_row_effective_date(row) if row else None) or citation.published_at
+        published_at = (_row_effective_date(row_dict) if row_dict else None) or citation.published_at
         registry.append(
             CitationRef(
                 citation_id=citation_id,
-                study_id=_derive_citation_study_id(citation, row),
+                study_id=_derive_citation_study_id(citation, row_dict),
                 source_type=source_type,
                 trust_tier=trust_tier,
                 published_at=published_at,
@@ -1929,7 +1925,7 @@ def _sanitize_llm_must_keep_terms(payload: dict[str, Any], *, original_query: st
     original_folded = original_query.casefold()
     verified: list[str] = []
     seen: set[str] = set()
-    for item in proposed:
+    for item in (proposed or []):
         term = " ".join(str(item or "").split()).strip()
         folded = term.casefold()
         if not term or len(term) > 64 or folded not in original_folded or folded in seen:
@@ -2369,7 +2365,11 @@ def _sanitize_llm_query_plan_payload(
         limit=deep_beta_limit,
     )
     fast_pass_queries = _dedupe_query_list(
-        [canonical_query, base_query_plan.get("original_query"), " ".join(keywords[:6])],
+        [
+            canonical_query,
+            str(base_query_plan.get("original_query") or ""),
+            " ".join(keywords[:6]),
+        ],
         limit=4,
     )
     fallback_provider_queries = _build_provider_query_overrides(
@@ -3373,10 +3373,10 @@ def _dedupe_duplicate_h2_headings(markdown_text: str) -> str:
             singleton_key = str(payload)
             if singleton_key in emitted_singleton:
                 continue
-            block_lines = singleton_best_blocks.get(singleton_key)
-            if block_lines:
+            block_lines_raw = singleton_best_blocks.get(singleton_key)
+            if block_lines_raw:
                 canonical_heading = required_heading_by_key.get(singleton_key)
-                normalized_block = list(block_lines)
+                normalized_block = list(block_lines_raw)
                 if canonical_heading:
                     normalized_block[0] = canonical_heading
                 output.extend(normalized_block)
@@ -4688,9 +4688,9 @@ def _synthesize_deep_beta_long_report(
                     f"{_escape_markdown_cell(title_text)} |"
                 )
 
-            supported_claims = []
-            contradicted_claims = []
-            unsupported_claims = []
+            supported_claims: list[Any] = []
+            contradicted_claims: list[Any] = []
+            unsupported_claims: list[Any] = []
             if isinstance(evidence_verification, dict):
                 if isinstance(evidence_verification.get("supported_claims"), list):
                     supported_claims = evidence_verification.get("supported_claims") or []
@@ -5558,9 +5558,10 @@ def _build_contradiction_summary(
 
     claims = raw_summary.get("claims")
     details = raw_summary.get("details")
+    default_count: int = len(contradicted_rows)
     contradiction_count = max(
         0,
-        _safe_int(raw_summary.get("contradiction_count"), defaults["contradiction_count"]),
+        _safe_int(raw_summary.get("contradiction_count"), default_count),
     )
     return {
         "version": str(raw_summary.get("version") or defaults["version"]),
@@ -5937,9 +5938,10 @@ def _build_retrieval_trace(
     planner_hints: dict[str, Any],
 ) -> dict[str, Any]:
     context_debug = rag_result.context_debug if isinstance(rag_result.context_debug, dict) else {}
-    retrieval_debug = (
-        context_debug.get("retrieval_trace")
-        if isinstance(context_debug.get("retrieval_trace"), dict)
+    retrieval_trace_raw = context_debug.get("retrieval_trace")
+    retrieval_debug: dict[str, Any] = (
+        retrieval_trace_raw
+        if isinstance(retrieval_trace_raw, dict)
         else {}
     )
     source_errors = retrieval_debug.get("source_errors")
@@ -5948,10 +5950,11 @@ def _build_retrieval_trace(
     query_plan = retrieval_debug.get("query_plan")
     if not isinstance(query_plan, dict):
         query_plan = {}
-    generation_trace = (
-        rag_result.trace.get("generation")
-        if isinstance(getattr(rag_result, "trace", None), dict)
-        and isinstance(rag_result.trace.get("generation"), dict)
+    rag_trace: dict[str, Any] = rag_result.trace if isinstance(getattr(rag_result, "trace", None), dict) else {}
+    gen_raw = rag_trace.get("generation")
+    generation_trace: dict[str, Any] = (
+        dict(gen_raw)
+        if isinstance(gen_raw, dict)
         else {}
     )
     fallback_reason_raw = generation_trace.get("fallback_reason")
@@ -6044,7 +6047,8 @@ def _normalize_retrieval_events(
     for item in events:
         if not isinstance(item, dict):
             continue
-        payload = item.get("payload") if isinstance(item.get("payload"), dict) else {}
+        payload_raw = item.get("payload")
+        payload: dict[str, Any] = payload_raw if isinstance(payload_raw, dict) else {}
         source_count_raw = item.get("source_count", 0)
         try:
             source_count = int(source_count_raw)
@@ -6684,17 +6688,18 @@ def _final_context_passed_llm_relevance_floor(
         if isinstance(getattr(rag_result, "retrieved_context", None), list)
         else []
     )
-    policy = {
+    minimum_context_count = max(int(settings.rag_min_results), 1)
+    policy: dict[str, Any] = {
         "name": "merge_all_passes",
         "applied": False,
         "final_context_count": len(context),
-        "minimum_context_count": max(int(settings.rag_min_results), 1),
+        "minimum_context_count": minimum_context_count,
         "reason": "final_llm_floor_not_verified",
     }
     if research_mode not in {"deep", "deep_beta"}:
         policy["reason"] = "not_deep_mode"
         return False, policy
-    if len(context) < policy["minimum_context_count"]:
+    if len(context) < minimum_context_count:
         policy["reason"] = "final_context_below_minimum"
         return False, policy
 
@@ -6703,9 +6708,10 @@ def _final_context_passed_llm_relevance_floor(
         if isinstance(getattr(rag_result, "context_debug", None), dict)
         else {}
     )
-    retrieval_debug = (
-        context_debug.get("retrieval_trace")
-        if isinstance(context_debug.get("retrieval_trace"), dict)
+    retrieval_trace_raw = context_debug.get("retrieval_trace")
+    retrieval_debug: dict[str, Any] = (
+        retrieval_trace_raw
+        if isinstance(retrieval_trace_raw, dict)
         else {}
     )
     for path in ("hybrid", "internal"):
@@ -6904,8 +6910,9 @@ def _filter_context_for_topic(topic: str, rows: list[dict[str, Any]]) -> list[di
 
 
 def _infer_fallback_used(rag_result: Any) -> bool:
-    trace = rag_result.trace if isinstance(getattr(rag_result, "trace", None), dict) else {}
-    generation = trace.get("generation") if isinstance(trace.get("generation"), dict) else {}
+    trace: dict[str, Any] = rag_result.trace if isinstance(getattr(rag_result, "trace", None), dict) else {}
+    gen_obj = trace.get("generation")
+    generation: dict[str, Any] = dict(gen_obj) if isinstance(gen_obj, dict) else {}
     generation_mode = str(generation.get("mode") or "").strip().lower()
     if generation_mode in {"llm", "retrieval_only"}:
         return False
@@ -6924,9 +6931,10 @@ def _trace_rows_for_citation(
     research_mode: str | None = None,
 ) -> list[dict[str, Any]]:
     handoff_profile = _resolve_evidence_handoff_profile(research_mode)
-    retriever_debug = (
-        retrieval_trace.get("retriever_debug")
-        if isinstance(retrieval_trace.get("retriever_debug"), dict)
+    retriever_debug_raw = retrieval_trace.get("retriever_debug")
+    retriever_debug: dict[str, Any] = (
+        retriever_debug_raw
+        if isinstance(retriever_debug_raw, dict)
         else {}
     )
     top_documents = retriever_debug.get("top_documents")
@@ -7056,9 +7064,10 @@ def _build_chart_specs(
         }
     ]
 
-    summary = (
-        verification_matrix_payload.get("summary")
-        if isinstance(verification_matrix_payload.get("summary"), dict)
+    summary_raw = verification_matrix_payload.get("summary")
+    summary: dict[str, Any] = (
+        summary_raw
+        if isinstance(summary_raw, dict)
         else {}
     )
     support_values = [
@@ -7133,14 +7142,16 @@ def _build_reasoning_digest(
     parallel_reasoning_nodes: list[dict[str, Any]] | None = None,
     evidence_verification: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    summary = (
-        verification_matrix_payload.get("summary")
-        if isinstance(verification_matrix_payload.get("summary"), dict)
+    summary_raw = verification_matrix_payload.get("summary")
+    summary: dict[str, Any] = (
+        summary_raw
+        if isinstance(summary_raw, dict)
         else {}
     )
-    contradiction_summary = (
-        verification_matrix_payload.get("contradiction_summary")
-        if isinstance(verification_matrix_payload.get("contradiction_summary"), dict)
+    contra_raw = verification_matrix_payload.get("contradiction_summary")
+    contradiction_summary: dict[str, Any] = (
+        contra_raw
+        if isinstance(contra_raw, dict)
         else {}
     )
     sources = [citation.source for citation in citations if citation.source]
@@ -7153,9 +7164,10 @@ def _build_reasoning_digest(
             break
 
     llm_status = "disabled"
-    reason_codes = (
-        planner_hints.get("reason_codes")
-        if isinstance(planner_hints.get("reason_codes"), list)
+    reason_codes_raw = planner_hints.get("reason_codes")
+    reason_codes: list[str] = (
+        [str(item) for item in reason_codes_raw]
+        if isinstance(reason_codes_raw, list)
         else []
     )
     if "llm_query_planner_enabled" in reason_codes:
@@ -9479,15 +9491,19 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             },
         )
     )
+    query_plan_raw = planner_hints.get("query_plan")
+    planner_keywords_raw = planner_hints.get("keywords")
     keyword_filter_report = _apply_keyword_filter_to_query_plan(
         topic=topic,
         query_plan=(
-            planner_hints.get("query_plan")
-            if isinstance(planner_hints.get("query_plan"), dict)
+            dict(query_plan_raw)
+            if isinstance(query_plan_raw, dict)
             else {}
         ),
         planner_keywords=(
-            planner_hints.get("keywords") if isinstance(planner_hints.get("keywords"), list) else []
+            [str(k) for k in planner_keywords_raw]
+            if isinstance(planner_keywords_raw, list)
+            else []
         ),
         source_mode=source_mode,
     )
@@ -9718,14 +9734,16 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         return resolved
 
     if research_mode == "deep":
-        query_plan = (
-            planner_hints.get("query_plan")
-            if isinstance(planner_hints.get("query_plan"), dict)
+        query_plan_raw = planner_hints.get("query_plan")
+        query_plan: dict[str, Any] = (
+            query_plan_raw
+            if isinstance(query_plan_raw, dict)
             else {}
         )
-        decomposition = (
-            query_plan.get("decomposition")
-            if isinstance(query_plan.get("decomposition"), dict)
+        decomposition_raw = query_plan.get("decomposition")
+        decomposition: dict[str, Any] = (
+            decomposition_raw
+            if isinstance(decomposition_raw, dict)
             else {}
         )
         deep_seed_queries = (
@@ -9737,11 +9755,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             str(query_plan.get("canonical_query") or topic),
             planner_hints.get("keywords", []),
             deep_pass_count,
-            seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
+            seed_queries=[str(item) for item in (deep_seed_queries or []) if str(item).strip()],
         )
         subqueries = _apply_query_decomposition(
             subqueries,
-            seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
+            seed_queries=[str(item) for item in (deep_seed_queries or []) if str(item).strip()],
         )
         deep_subqueries = subqueries
         deep_research_method = _deep_research_methodology(topic=topic, subqueries=subqueries)
@@ -9825,31 +9843,39 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 rag_graphrag_enabled=rag_graphrag_enabled_override,
                 llm_runtime=llm_runtime,
             )
-            pass_trace = (
-                pass_result.trace.get("retrieval")
-                if isinstance(pass_result.trace.get("retrieval"), dict)
+            beta_pass_trace_raw = pass_result.trace.get("retrieval")
+            beta_pass_trace: dict[str, Any] = (
+                beta_pass_trace_raw
+                if isinstance(beta_pass_trace_raw, dict)
                 else {}
             )
-            pass_source_attempts = (
-                pass_trace.get("source_attempts")
-                if isinstance(pass_trace.get("source_attempts"), list)
+            beta_pass_source_attempts = (
+                beta_pass_trace.get("source_attempts")
+                if isinstance(beta_pass_trace.get("source_attempts"), list)
                 else []
             )
-            pass_index_summary = (
-                pass_trace.get("index_summary")
-                if isinstance(pass_trace.get("index_summary"), dict)
+            beta_pass_index_summary_raw = beta_pass_trace.get("index_summary")
+            beta_pass_index_summary: dict[str, Any] = (
+                beta_pass_index_summary_raw
+                if isinstance(beta_pass_index_summary_raw, dict)
                 else {}
             )
-            pass_crawl_summary = (
-                pass_trace.get("crawl_summary")
-                if isinstance(pass_trace.get("crawl_summary"), dict)
+            beta_pass_crawl_summary_raw = beta_pass_trace.get("crawl_summary")
+            beta_pass_crawl_summary: dict[str, Any] = (
+                beta_pass_crawl_summary_raw
+                if isinstance(beta_pass_crawl_summary_raw, dict)
                 else {}
             )
-            retriever_debug = (
-                pass_trace.get("hybrid")
-                if isinstance(pass_trace.get("hybrid"), dict)
-                else pass_trace.get("internal")
-                if isinstance(pass_trace.get("internal"), dict)
+            beta_retriever_debug_raw = (
+                beta_pass_trace.get("hybrid")
+                if isinstance(beta_pass_trace.get("hybrid"), dict)
+                else beta_pass_trace.get("internal")
+                if isinstance(beta_pass_trace.get("internal"), dict)
+                else {}
+            )
+            beta_retriever_debug: dict[str, Any] = (
+                beta_retriever_debug_raw
+                if isinstance(beta_retriever_debug_raw, dict)
                 else {}
             )
             deep_pass_contexts.append(pass_result.retrieved_context)
@@ -9863,12 +9889,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                     if isinstance(pass_result.context_debug, dict)
                     else None,
                     "duration_ms": round((perf_counter() - pass_started) * 1000.0, 3),
-                    "source_errors": retriever_debug.get("source_errors", {})
-                    if isinstance(retriever_debug, dict)
+                    "source_errors": beta_retriever_debug.get("source_errors", {})
+                    if isinstance(beta_retriever_debug, dict)
                     else {},
-                    "source_attempts": pass_source_attempts,
-                    "index_summary": pass_index_summary,
-                    "crawl_summary": pass_crawl_summary,
+                    "source_attempts": beta_pass_source_attempts,
+                    "index_summary": beta_pass_index_summary,
+                    "crawl_summary": beta_pass_crawl_summary,
                 }
             )
             source_errors = (
@@ -10028,48 +10054,50 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             )
         )
     elif research_mode == "deep_beta":
-        query_plan = (
-            planner_hints.get("query_plan")
-            if isinstance(planner_hints.get("query_plan"), dict)
+        beta_query_plan_raw = planner_hints.get("query_plan")
+        beta_query_plan: dict[str, Any] = (
+            beta_query_plan_raw
+            if isinstance(beta_query_plan_raw, dict)
             else {}
         )
-        decomposition = (
-            query_plan.get("decomposition")
-            if isinstance(query_plan.get("decomposition"), dict)
+        beta_decomp_raw = beta_query_plan.get("decomposition")
+        beta_decomposition: dict[str, Any] = (
+            beta_decomp_raw
+            if isinstance(beta_decomp_raw, dict)
             else {}
         )
+        deep_beta_seed = beta_decomposition.get("deep_beta_pass_queries")
+        deep_pass_seed = beta_decomposition.get("deep_pass_queries")
         deep_seed_queries = (
-            decomposition.get("deep_beta_pass_queries")
-            if isinstance(decomposition.get("deep_beta_pass_queries"), list)
-            else decomposition.get("deep_pass_queries")
-            if isinstance(decomposition.get("deep_pass_queries"), list)
+            deep_beta_seed
+            if isinstance(deep_beta_seed, list)
+            else deep_pass_seed
+            if isinstance(deep_pass_seed, list)
             else []
         )
         subqueries = _build_deep_subqueries(
-            str(query_plan.get("canonical_query") or topic),
+            str(beta_query_plan.get("canonical_query") or topic),
             planner_hints.get("keywords", []),
             deep_pass_count,
-            seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
+            seed_queries=[str(item) for item in (deep_seed_queries or []) if str(item).strip()],
         )
         subqueries = _apply_query_decomposition(
             subqueries,
-            seed_queries=[str(item) for item in deep_seed_queries if str(item).strip()],
+            seed_queries=[str(item) for item in (deep_seed_queries or []) if str(item).strip()],
         )
         deep_subqueries = subqueries
+        retrieval_budget_raw = planner_hints.get("retrieval_budget")
+        retrieval_budget_dict: dict[str, Any] = (
+            retrieval_budget_raw
+            if isinstance(retrieval_budget_raw, dict)
+            else {}
+        )
         budget_pass_cap = _safe_int(
-            (
-                planner_hints.get("retrieval_budget", {}).get("pass_cap")
-                if isinstance(planner_hints.get("retrieval_budget"), dict)
-                else None
-            ),
+            retrieval_budget_dict.get("pass_cap"),
             _DEEP_BETA_PASS_CAP,
         )
         deep_beta_retrieval_budgets = {
-            **(
-                planner_hints.get("retrieval_budget")
-                if isinstance(planner_hints.get("retrieval_budget"), dict)
-                else {}
-            ),
+            **retrieval_budget_dict,
             "mode": "deep_beta",
             "pass_cap": max(1, budget_pass_cap),
             "target_pass_count": len(subqueries),
@@ -10290,9 +10318,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 rag_graphrag_enabled=rag_graphrag_enabled_override,
                 llm_runtime=llm_runtime,
             )
-            pass_trace = (
-                pass_result.trace.get("retrieval")
-                if isinstance(pass_result.trace.get("retrieval"), dict)
+            pass_trace_raw = pass_result.trace.get("retrieval")
+            pass_trace: dict[str, Any] = (
+                pass_trace_raw
+                if isinstance(pass_trace_raw, dict)
                 else {}
             )
             pass_source_attempts = (
@@ -10300,21 +10329,28 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 if isinstance(pass_trace.get("source_attempts"), list)
                 else []
             )
-            pass_index_summary = (
-                pass_trace.get("index_summary")
-                if isinstance(pass_trace.get("index_summary"), dict)
+            pass_index_summary_raw = pass_trace.get("index_summary")
+            pass_index_summary: dict[str, Any] = (
+                pass_index_summary_raw
+                if isinstance(pass_index_summary_raw, dict)
                 else {}
             )
-            pass_crawl_summary = (
-                pass_trace.get("crawl_summary")
-                if isinstance(pass_trace.get("crawl_summary"), dict)
+            pass_crawl_summary_raw = pass_trace.get("crawl_summary")
+            pass_crawl_summary: dict[str, Any] = (
+                pass_crawl_summary_raw
+                if isinstance(pass_crawl_summary_raw, dict)
                 else {}
             )
-            retriever_debug = (
+            retriever_debug_raw = (
                 pass_trace.get("hybrid")
                 if isinstance(pass_trace.get("hybrid"), dict)
                 else pass_trace.get("internal")
                 if isinstance(pass_trace.get("internal"), dict)
+                else {}
+            )
+            retriever_debug: dict[str, Any] = (
+                retriever_debug_raw
+                if isinstance(retriever_debug_raw, dict)
                 else {}
             )
             deep_pass_contexts.append(pass_result.retrieved_context)
@@ -10443,7 +10479,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             )
         deep_beta_parallel_reasoning_nodes = _run_deep_beta_parallel_reasoning_nodes(
             topic=topic,
-            query_plan=query_plan if isinstance(query_plan, dict) else {},
+            query_plan=beta_query_plan if isinstance(beta_query_plan, dict) else {},
             retrieval_budget=deep_beta_retrieval_budgets,
             deep_pass_summaries=deep_pass_summaries,
             evidence_rows=_merge_retrieved_context([], deep_pass_contexts),
@@ -10885,10 +10921,11 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
     if not citations and strict_deepseek_required:
         raise RuntimeError("tier2_evidence_unavailable")
     fallback_used = _infer_fallback_used(rag_result)
-    generation_trace = (
-        rag_result.trace.get("generation")
-        if isinstance(getattr(rag_result, "trace", None), dict)
-        and isinstance(rag_result.trace.get("generation"), dict)
+    rag_trace: dict[str, Any] = rag_result.trace if isinstance(getattr(rag_result, "trace", None), dict) else {}
+    gen_raw = rag_trace.get("generation")
+    generation_trace: dict[str, Any] = (
+        dict(gen_raw)
+        if isinstance(gen_raw, dict)
         else {}
     )
     fallback_reason_raw = generation_trace.get("fallback_reason")
@@ -10971,7 +11008,7 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             str(rewritten_report or "").strip()
             and str(rewritten_report).strip() != str(answer_markdown).strip()
         )
-        if report_changed:
+        if report_changed and rewritten_report is not None:
             answer_markdown = _ensure_markdown_structure(
                 topic,
                 rewritten_report,
@@ -11581,17 +11618,17 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             **stage_entry,
             "start_at": (
                 stage_spans_by_stage.get(str(stage_entry.get("name")), {}).get("start_at")
-                if stage_spans_by_stage
+                if stage_spans_by_stage and isinstance(stage_spans_by_stage.get(str(stage_entry.get("name"))), dict)
                 else None
             ),
             "end_at": (
                 stage_spans_by_stage.get(str(stage_entry.get("name")), {}).get("end_at")
-                if stage_spans_by_stage
+                if stage_spans_by_stage and isinstance(stage_spans_by_stage.get(str(stage_entry.get("name"))), dict)
                 else None
             ),
             "duration_ms": (
                 stage_spans_by_stage.get(str(stage_entry.get("name")), {}).get("duration_ms")
-                if stage_spans_by_stage
+                if stage_spans_by_stage and isinstance(stage_spans_by_stage.get(str(stage_entry.get("name"))), dict)
                 else None
             ),
         }
@@ -11623,13 +11660,14 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         "otel_export": otel_export_status,
     }
     source_reasoning: list[dict[str, Any]] = []
-    retriever_debug = (
-        retrieval_trace.get("retriever_debug")
-        if isinstance(retrieval_trace.get("retriever_debug"), dict)
+    r_debug_raw = retrieval_trace.get("retriever_debug")
+    trace_retriever_debug: dict[str, Any] = (
+        dict(r_debug_raw)
+        if isinstance(r_debug_raw, dict)
         else {}
     )
     for score_key in ("score_trace", "final_score_trace"):
-        rows = retriever_debug.get(score_key)
+        rows = trace_retriever_debug.get(score_key)
         if not isinstance(rows, list):
             continue
         for row in rows[:24]:
@@ -11649,10 +11687,12 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             )
 
     aggregated_errors: dict[str, Any] = {}
-    if isinstance(retriever_debug.get("source_errors"), dict):
-        aggregated_errors.update(retriever_debug.get("source_errors", {}))
-    elif isinstance(retrieval_trace.get("source_errors"), dict):
-        aggregated_errors.update(retrieval_trace.get("source_errors", {}))
+    r_errors = trace_retriever_debug.get("source_errors")
+    t_errors = retrieval_trace.get("source_errors")
+    if isinstance(r_errors, dict):
+        aggregated_errors.update(r_errors)
+    elif isinstance(t_errors, dict):
+        aggregated_errors.update(t_errors)
     for summary in deep_pass_summaries:
         source_errors = summary.get("source_errors")
         if not isinstance(source_errors, dict):
@@ -11675,15 +11715,19 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             "file_retrieval_enabled": planner_hints.get("file_retrieval_enabled"),
         }
 
-    query_plan = (
-        retrieval_trace.get("query_plan")
-        if isinstance(retrieval_trace.get("query_plan"), dict)
+    if "query_plan" in locals():
+        pass
+    q_plan_raw = retrieval_trace.get("query_plan")
+    final_query_plan: dict[str, Any] = (
+        q_plan_raw
+        if isinstance(q_plan_raw, dict)
         else {}
     )
-    if not query_plan and isinstance(planner_hints.get("query_plan"), dict):
-        query_plan = dict(planner_hints.get("query_plan", {}))
-    if not query_plan:
-        query_plan = {
+    hints_plan = planner_hints.get("query_plan")
+    if not final_query_plan and isinstance(hints_plan, dict):
+        final_query_plan = dict(hints_plan)
+    if not final_query_plan:
+        final_query_plan = {
             "original_query": topic,
             "canonical_query": topic,
             "source_queries": {"internal": [topic], "scientific": [topic], "web": [topic]},
@@ -11714,9 +11758,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
                 }
             )
 
-    index_summary = (
-        retrieval_trace.get("index_summary")
-        if isinstance(retrieval_trace.get("index_summary"), dict)
+    raw_index_summary = retrieval_trace.get("index_summary")
+    index_summary: dict[str, Any] = (
+        raw_index_summary
+        if isinstance(raw_index_summary, dict)
         else {}
     )
     index_summary = {
@@ -11748,9 +11793,10 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
             retrieval_trace.get("retrieved_count"),
         ),
     }
-    crawl_summary = (
-        retrieval_trace.get("crawl_summary")
-        if isinstance(retrieval_trace.get("crawl_summary"), dict)
+    raw_crawl_summary = retrieval_trace.get("crawl_summary")
+    crawl_summary: dict[str, Any] = (
+        raw_crawl_summary
+        if isinstance(raw_crawl_summary, dict)
         else {}
     )
     if not isinstance(crawl_summary.get("domains"), list):
@@ -11928,13 +11974,13 @@ def run_research_tier2(payload: dict[str, Any]) -> dict:
         evidence_verification=deep_beta_evidence_verification,
     )
     retrieval_route = _normalize_retrieval_route(
-        query_plan.get("retrieval_route")
+        final_query_plan.get("retrieval_route")
         or planner_hints.get("retrieval_route")
         or "internal-heavy"
     )
     router_confidence = _normalize_router_confidence(
-        query_plan.get("router_confidence")
-        if isinstance(query_plan.get("router_confidence"), (int, float))
+        final_query_plan.get("router_confidence")
+        if isinstance(final_query_plan.get("router_confidence"), (int, float))
         else planner_hints.get("router_confidence")
         if isinstance(planner_hints.get("router_confidence"), (int, float))
         else 0.0

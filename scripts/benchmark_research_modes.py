@@ -11,7 +11,6 @@ from typing import Any
 
 import httpx
 
-
 CASES = (
     ("study_design", "Compare cohort and case-control study designs for evidence appraisal.", False),
     ("diagnostic_education", "Explain sensitivity and specificity in diagnostic test evaluation.", False),

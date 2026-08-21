@@ -31,7 +31,9 @@ UrlOpen = Callable[..., Any]
 
 
 def _sha(value: object) -> str:
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 def _reject_unexpected_keys(value: Mapping[str, Any], allowed: set[str], where: str) -> None:
@@ -53,7 +55,12 @@ def _validate_evidence(evidence: Any) -> list[str]:
             raise ValueError("model_review_evidence_empty")
         ids: list[str] = []
         for item in evidence:
-            if not isinstance(item, dict) or "id" not in item or not isinstance(item.get("id"), str) or not item["id"]:
+            if (
+                not isinstance(item, dict)
+                or "id" not in item
+                or not isinstance(item.get("id"), str)
+                or not item["id"]
+            ):
                 raise TypeError("model_review_evidence_item_invalid")
             ids.append(item["id"])
         if len(set(ids)) != len(ids):
@@ -69,7 +76,11 @@ def _load_manifest(path: Path) -> dict[str, Any]:
         raise ValueError("model_review_manifest_malformed") from exc
     if not isinstance(value, dict):
         raise TypeError("model_review_manifest_not_object")
-    _reject_unexpected_keys(value, {"schema_version", "status", "study_id", "models", "protocols", "rubric", "cases"}, "manifest")
+    _reject_unexpected_keys(
+        value,
+        {"schema_version", "status", "study_id", "models", "protocols", "rubric", "cases"},
+        "manifest",
+    )
     if value.get("schema_version") != SCHEMA_VERSION:
         raise ValueError("model_review_manifest_schema_version_unsupported")
     if value.get("status") != "frozen":
@@ -118,14 +129,23 @@ def _load_manifest(path: Path) -> dict[str, Any]:
         if not isinstance(protocol, str) or protocol not in allowed_by_protocol:
             raise ValueError(f"model_review_case_protocol_unknown:{case_id}")
         evidence_ids = _validate_evidence(case.get("evidence"))
-        normalized_cases.append({"case_id": case_id, "protocol": protocol, "evidence": case["evidence"], "evidence_ids": evidence_ids})
+        normalized_cases.append(
+            {
+                "case_id": case_id,
+                "protocol": protocol,
+                "evidence": case["evidence"],
+                "evidence_ids": evidence_ids,
+            }
+        )
     manifest = dict(value)
     manifest["cases"] = normalized_cases
     manifest["_allowed_by_protocol"] = allowed_by_protocol
     return manifest
 
 
-def _parse_review_v2(*, content: str, allowed_labels: tuple[str, ...], available_evidence_ids: list[str]) -> dict[str, Any]:
+def _parse_review_v2(
+    *, content: str, allowed_labels: tuple[str, ...], available_evidence_ids: list[str]
+) -> dict[str, Any]:
     text = content.strip()
     if text.startswith("```json") and text.endswith("```"):
         text = text[7:-3].strip()
@@ -159,7 +179,12 @@ def _parse_review_v2(*, content: str, allowed_labels: tuple[str, ...], available
         raise TypeError("model_review_confidence_not_numeric")
     if not (0 <= confidence <= 1):
         raise ValueError("model_review_confidence_out_of_range")
-    return {"label": label, "rationale": rationale, "evidence_ids": evidence_ids, "confidence": confidence}
+    return {
+        "label": label,
+        "rationale": rationale,
+        "evidence_ids": evidence_ids,
+        "confidence": confidence,
+    }
 
 
 def _structured_content_v2(*, payload_bytes: bytes, content_type: str) -> str:
@@ -205,7 +230,11 @@ def _structured_content_v2(*, payload_bytes: bytes, content_type: str) -> str:
         parsed = json.loads(payload_bytes)
     except json.JSONDecodeError as exc:
         raise ValueError("model_review_response_malformed_json") from exc
-    if not isinstance(parsed, dict) or not isinstance(parsed.get("choices"), list) or not parsed["choices"]:
+    if (
+        not isinstance(parsed, dict)
+        or not isinstance(parsed.get("choices"), list)
+        or not parsed["choices"]
+    ):
         raise ValueError("model_review_response_malformed_json")
     message = parsed["choices"][0].get("message")
     if not isinstance(message, dict):
@@ -229,7 +258,12 @@ def _call(
     if not key:
         raise RuntimeError("model_review_router_key_missing")
     opener = urlopen or urllib.request.urlopen
-    payload = {"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0, "stream": False}
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,
+        "stream": False,
+    }
     body = json.dumps(payload).encode()
     last_error = ""
     for attempt in range(1, retries + 2):
@@ -246,7 +280,11 @@ def _call(
                 content_type = response.headers.get_content_type()
                 http_status = int(getattr(response, "status", getattr(response, "code", 200)))
             content = _structured_content_v2(payload_bytes=raw, content_type=content_type)
-            review = _parse_review_v2(content=content, allowed_labels=allowed_labels, available_evidence_ids=available_evidence_ids)
+            review = _parse_review_v2(
+                content=content,
+                allowed_labels=allowed_labels,
+                available_evidence_ids=available_evidence_ids,
+            )
             return {
                 "model_id": model,
                 "timestamp_utc": datetime.now(UTC).isoformat(),
@@ -262,14 +300,27 @@ def _call(
                 },
                 "review": review,
             }
-        except (urllib.error.URLError, urllib.error.HTTPError, KeyError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        except (
+            urllib.error.URLError,
+            urllib.error.HTTPError,
+            KeyError,
+            ValueError,
+            TypeError,
+            json.JSONDecodeError,
+        ) as exc:
             last_error = type(exc).__name__
             if attempt > retries:
                 raise RuntimeError(f"model_review_call_failed:{last_error}:{exc}") from exc
     raise RuntimeError(f"model_review_call_failed:{last_error}")
 
 
-def run(*, manifest_path: Path, output_dir: Path, retries: int = RETRY_COUNT, urlopen: UrlOpen | None = None) -> dict[str, Any]:
+def run(
+    *,
+    manifest_path: Path,
+    output_dir: Path,
+    retries: int = RETRY_COUNT,
+    urlopen: UrlOpen | None = None,
+) -> dict[str, Any]:
     manifest = _load_manifest(manifest_path)
     allowed_by_protocol = manifest.pop("_allowed_by_protocol")
     prompt_template = (
@@ -306,7 +357,9 @@ def run(*, manifest_path: Path, output_dir: Path, retries: int = RETRY_COUNT, ur
             )
             result["reviewer_id"] = reviewer_id
             row["reviews"].append(result)
-        (raw / f"{case['case_id']}.json").write_text(json.dumps(row, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        (raw / f"{case['case_id']}.json").write_text(
+            json.dumps(row, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
         records.append(row)
     summary = {
         "schema_version": RUN_VERSION,
@@ -318,7 +371,9 @@ def run(*, manifest_path: Path, output_dir: Path, retries: int = RETRY_COUNT, ur
         "case_count": len(records),
         "raw_outputs": [f"raw/{row['case_id']}.json" for row in records],
     }
-    (output_dir / "model_review_results.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (output_dir / "model_review_results.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return summary
 
 
@@ -328,4 +383,9 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--retries", type=int, default=RETRY_COUNT)
     args = parser.parse_args()
-    print(json.dumps(run(manifest_path=args.manifest, output_dir=args.output_dir, retries=args.retries), sort_keys=True))
+    print(
+        json.dumps(
+            run(manifest_path=args.manifest, output_dir=args.output_dir, retries=args.retries),
+            sort_keys=True,
+        )
+    )

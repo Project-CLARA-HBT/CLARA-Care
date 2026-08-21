@@ -23,7 +23,6 @@ from urllib import error, parse, request
 from .config import DEFAULT_REQUIRED_METRICS, SuiteConfig
 from .tracks import REQUIRED_TRACK_IDS
 
-
 LIVE_MANIFEST_SCHEMA_VERSION = "clara-eval-vn.live-execution-manifest.v1"
 MAX_RECORDS = 5000
 MAX_REQUEST_BYTES = 32 * 1024
@@ -136,13 +135,12 @@ def _parse_record(raw: Any) -> LiveExecutionRecord:
         raise LiveEvaluationError("live_manifest_scorer_not_supported")
     metric_id = scorer.get("metric_id")
     json_path = scorer.get("json_path")
-    if (
-        not isinstance(metric_id, str)
-        or metric_id not in DEFAULT_REQUIRED_METRICS[track_id]
-    ):
+    if not isinstance(metric_id, str) or metric_id not in DEFAULT_REQUIRED_METRICS[track_id]:
         raise LiveEvaluationError("live_manifest_metric_not_declared_for_track")
-    if not isinstance(json_path, str) or not json_path or not all(
-        part and part.replace("_", "").isalnum() for part in json_path.split(".")
+    if (
+        not isinstance(json_path, str)
+        or not json_path
+        or not all(part and part.replace("_", "").isalnum() for part in json_path.split("."))
     ):
         raise LiveEvaluationError("live_manifest_json_path_invalid")
     critical_error_type = raw.get("critical_error_type")
@@ -283,7 +281,9 @@ def _base_url(endpoint: str) -> str:
         raise LiveEvaluationError(f"live_endpoint_{endpoint}_missing_or_invalid")
     if parsed.username or parsed.password or parsed.query or parsed.fragment:
         raise LiveEvaluationError(f"live_endpoint_{endpoint}_unsafe")
-    if parsed.scheme != "https" and not _is_enabled(os.environ.get("CLARA_EVAL_ALLOW_INSECURE_HTTP")):
+    if parsed.scheme != "https" and not _is_enabled(
+        os.environ.get("CLARA_EVAL_ALLOW_INSECURE_HTTP")
+    ):
         raise LiveEvaluationError(f"live_endpoint_{endpoint}_requires_https")
     return base
 
@@ -423,7 +423,9 @@ def maybe_execute_live(
         raise LiveEvaluationError("live_timeout_invalid") from exc
     if not 1 <= timeout_seconds <= 120:
         raise LiveEvaluationError("live_timeout_out_of_range")
-    traces = [_execute_record(record, timeout_seconds=timeout_seconds) for record in manifest.records]
+    traces = [
+        _execute_record(record, timeout_seconds=timeout_seconds) for record in manifest.records
+    ]
     return (
         {
             "state": "executed",

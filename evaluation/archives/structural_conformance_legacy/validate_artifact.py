@@ -64,7 +64,10 @@ def validate(artifact: Path) -> dict[str, object]:
             raise ArtifactValidationError("external_case_subject_accounting_invalid")
         if summary.get("partition") != "development":
             raise ArtifactValidationError("external_partition_must_be_development")
-        if summary.get("eligible_for_final_score") is not False or summary.get("clinical_validation") is not False:
+        if (
+            summary.get("eligible_for_final_score") is not False
+            or summary.get("clinical_validation") is not False
+        ):
             raise ArtifactValidationError("external_release_boundary_invalid")
         source_copy = artifact / str(summary.get("source_manifest_copy") or "")
         expected_source_hash = summary.get("source_manifest_sha256")
@@ -101,7 +104,9 @@ def validate(artifact: Path) -> dict[str, object]:
             system_metrics = metrics[system]
             if not isinstance(system_metrics, dict):
                 raise ArtifactValidationError(f"external_metrics_not_object:{system}")
-            _require_metric(system_metrics.get("state_correct"), cases=cases, label=f"{system}:state_correct")
+            _require_metric(
+                system_metrics.get("state_correct"), cases=cases, label=f"{system}:state_correct"
+            )
         return {
             "valid": True,
             "schema_version": schema,
@@ -115,7 +120,10 @@ def validate(artifact: Path) -> dict[str, object]:
     cases = protocol.get("cases") if isinstance(protocol, dict) else None
     if cases != 400:
         raise ArtifactValidationError("q2_case_count_not_exactly_400")
-    if not isinstance(score_release, dict) or score_release.get("final_score_released") is not False:
+    if (
+        not isinstance(score_release, dict)
+        or score_release.get("final_score_released") is not False
+    ):
         raise ArtifactValidationError("q2_final_score_release_boundary_invalid")
     evidence = _read_object(artifact / "evidence-manifest.json")
     expected_summary_hash = evidence.get("summary_sha256")

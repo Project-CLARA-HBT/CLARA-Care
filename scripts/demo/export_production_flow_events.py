@@ -8,7 +8,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -142,7 +142,7 @@ def main() -> int:
         items = [row for row in raw_items if isinstance(row, dict)] if isinstance(raw_items, list) else []
         normalized = [_normalize_item(row) for row in items]
         output = {
-            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "exported_at": datetime.now(UTC).isoformat(),
             "api_base": args.api_base.rstrip("/"),
             "source": str(args.source or "research").strip(),
             "count": len(normalized),

@@ -34,22 +34,31 @@ def _sealed_analysis_fixture() -> dict:
         "run_id": "2026-08-17-rivf-final-003",
         "source_sha": "5b2c0dbf17e2cd1e31c0499cf5334f89a99cdecb",
         "arms": {
-            "UNBOUND": arm(120, {
-                "authorization_consent_toctou": 30,
-                "concurrent_stale_state_write": 30,
-                "role_mismatch": 30,
-                "stale_thss_replay": 30,
-            }),
-            "STATE_VERSION_ONLY": arm(90, {
-                "authorization_consent_toctou": 30,
-                "concurrent_stale_state_write": 30,
-                "role_mismatch": 30,
-            }),
-            "SNAPSHOT_BOUND_STATE_ONLY": arm(90, {
-                "authorization_consent_toctou": 30,
-                "concurrent_stale_state_write": 30,
-                "role_mismatch": 30,
-            }),
+            "UNBOUND": arm(
+                120,
+                {
+                    "authorization_consent_toctou": 30,
+                    "concurrent_stale_state_write": 30,
+                    "role_mismatch": 30,
+                    "stale_thss_replay": 30,
+                },
+            ),
+            "STATE_VERSION_ONLY": arm(
+                90,
+                {
+                    "authorization_consent_toctou": 30,
+                    "concurrent_stale_state_write": 30,
+                    "role_mismatch": 30,
+                },
+            ),
+            "SNAPSHOT_BOUND_STATE_ONLY": arm(
+                90,
+                {
+                    "authorization_consent_toctou": 30,
+                    "concurrent_stale_state_write": 30,
+                    "role_mismatch": 30,
+                },
+            ),
             "GLHS_STRICT": arm(30, {"concurrent_stale_state_write": 30}),
         },
     }
@@ -85,7 +94,9 @@ def test_weaker_arm_residuals_are_attributed_arm_omission() -> None:
     table = derive_three_state_primary(_sealed_analysis_fixture())
     unbound = next(row for row in table["rows"] if row["arm"] == "UNBOUND")
     assert unbound[STATE_CONFIRMED_INVALID] == 90
-    assert all(item["attribution"] == "arm_omitted_coordinate" for item in unbound["invalid_breakdown"])
+    assert all(
+        item["attribution"] == "arm_omitted_coordinate" for item in unbound["invalid_breakdown"]
+    )
     assert all(item["arm_omits_coordinate"] for item in unbound["invalid_breakdown"])
 
 

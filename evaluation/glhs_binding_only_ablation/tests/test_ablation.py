@@ -151,7 +151,11 @@ def test_adapter_arm_a_skips_exact_binding(monkeypatch: pytest.MonkeyPatch) -> N
     db = type(
         "DB",
         (),
-        {"execute": lambda self, statement: type("Result", (), {"scalar_one_or_none": lambda self: None})()},
+        {
+            "execute": lambda self, statement: type(
+                "Result", (), {"scalar_one_or_none": lambda self: None}
+            )()
+        },
     )()
 
     def _gov(*args, **kwargs):
@@ -234,7 +238,9 @@ def test_adapter_imports_real_production_primitives() -> None:
         validate_exact_disclosure_dependency,
     )
 
-    assert adapter.validate_current_governance_coordinates is validate_current_governance_coordinates
+    assert (
+        adapter.validate_current_governance_coordinates is validate_current_governance_coordinates
+    )
     assert adapter.validate_exact_disclosure_dependency is validate_exact_disclosure_dependency
     assert not hasattr(adapter, "PRODUCTION_PRIMITIVES_AVAILABLE")
 
@@ -270,7 +276,9 @@ def test_no_production_import_of_ablation_package() -> None:
     assert offenders == []
 
 
-def _synthetic_records(schedules_document: dict, *, adversarial_arm_a_admits: bool = True) -> list[dict]:
+def _synthetic_records(
+    schedules_document: dict, *, adversarial_arm_a_admits: bool = True
+) -> list[dict]:
     records: list[dict] = []
     sequence = 0
     for schedule in schedules_document["schedules"]:
@@ -278,9 +286,10 @@ def _synthetic_records(schedules_document: dict, *, adversarial_arm_a_admits: bo
         for arm in (adapter.FULL_GOVERNANCE_NO_EXACT_BINDING, adapter.GLHS_EXACT_BINDING):
             sequence += 1
             admitted = (
-                (adversarial and arm == adapter.FULL_GOVERNANCE_NO_EXACT_BINDING and adversarial_arm_a_admits)
-                or (not adversarial)
-            )
+                adversarial
+                and arm == adapter.FULL_GOVERNANCE_NO_EXACT_BINDING
+                and adversarial_arm_a_admits
+            ) or (not adversarial)
             reason = None if admitted else "proposal_snapshot_scope_forbidden"
             governance = {
                 "current_state_version": 1,
@@ -302,7 +311,9 @@ def _synthetic_records(schedules_document: dict, *, adversarial_arm_a_admits: bo
                             sequence=sequence,
                             admitted=admitted,
                             rejection_reason_code=reason,
-                            snapshot_coordinates={"disclosure_delta_type": schedule["disclosure_delta_type"]},
+                            snapshot_coordinates={
+                                "disclosure_delta_type": schedule["disclosure_delta_type"]
+                            },
                             governance_coordinates=governance,
                             binding_check_applied=adapter.binding_check_applied(arm),
                             expected_admissibility=schedule["expected_admissibility"],
@@ -341,8 +352,16 @@ def test_analyze_pipeline_on_synthetic_data(protocol: dict, schedules_document: 
         family = result["per_family"][str(family_id)]
         assert family["denominator"] == 32
         assert family["risk_difference_arm_a_minus_arm_b"] == 1.0
-    assert result["controls"]["acceptance"][adapter.FULL_GOVERNANCE_NO_EXACT_BINDING]["valid_commit_acceptance"] == 1.0
-    assert result["controls"]["acceptance"][adapter.GLHS_EXACT_BINDING]["valid_commit_acceptance"] == 1.0
+    assert (
+        result["controls"]["acceptance"][adapter.FULL_GOVERNANCE_NO_EXACT_BINDING][
+            "valid_commit_acceptance"
+        ]
+        == 1.0
+    )
+    assert (
+        result["controls"]["acceptance"][adapter.GLHS_EXACT_BINDING]["valid_commit_acceptance"]
+        == 1.0
+    )
 
 
 def test_bootstrap_is_deterministic(protocol: dict, schedules_document: dict) -> None:
@@ -378,7 +397,10 @@ def test_observer_rejects_tampered_existing_stream(tmp_path: Path) -> None:
         backend_pid=None,
     )
     observer.append(record)
-    path.write_text(path.read_text(encoding="utf-8").replace('"admitted":false', '"admitted":true'), encoding="utf-8")
+    path.write_text(
+        path.read_text(encoding="utf-8").replace('"admitted":false', '"admitted":true'),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="hash_mismatch"):
         read_records(path)
     with pytest.raises(ValueError, match="hash_mismatch"):
@@ -399,13 +421,17 @@ def test_runner_pipeline_on_sqlite(schedules_document: dict, memory_db: Session)
     adversarial = by_id["GLHS-BA-F01-A01"]
     control = by_id["GLHS-BA-F01-C01"]
     env = RunnerEnv(session_factory=lambda: memory_db)
-    rec_a = _run_execution(env, adversarial, arm=adapter.FULL_GOVERNANCE_NO_EXACT_BINDING, run_id="T", sequence=1)
+    rec_a = _run_execution(
+        env, adversarial, arm=adapter.FULL_GOVERNANCE_NO_EXACT_BINDING, run_id="T", sequence=1
+    )
     rec_b = _run_execution(env, adversarial, arm=adapter.GLHS_EXACT_BINDING, run_id="T", sequence=2)
     assert rec_a.admitted is True
     assert rec_b.admitted is False
     assert rec_b.rejection_reason_code == "proposal_snapshot_scope_forbidden"
     assert rec_a.governance_coordinates == rec_b.governance_coordinates
-    rec_c1 = _run_execution(env, control, arm=adapter.FULL_GOVERNANCE_NO_EXACT_BINDING, run_id="T", sequence=3)
+    rec_c1 = _run_execution(
+        env, control, arm=adapter.FULL_GOVERNANCE_NO_EXACT_BINDING, run_id="T", sequence=3
+    )
     rec_c2 = _run_execution(env, control, arm=adapter.GLHS_EXACT_BINDING, run_id="T", sequence=4)
     assert rec_c1.admitted is True
     assert rec_c2.admitted is True

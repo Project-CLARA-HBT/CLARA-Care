@@ -9,23 +9,43 @@ from typing import Any
 
 from evaluation.evidence_program.freeze import FreezeError
 
-REQUIRED_ROLES = frozenset({
-    "identity_frame", "terminology", "positive_ddi_reference", "regulatory_confirmation",
-})
-REQUIRED_FIELDS = frozenset({
-    "schema_version", "status", "source_name", "independence_role", "source_url",
-    "retrieved_at_utc", "version_or_release", "access_terms", "license",
-    "redistribution_policy", "payload_sha256", "row_count", "record_hash_algorithm",
-    "record_hash_inventory", "raw_retention_location",
-})
+REQUIRED_ROLES = frozenset(
+    {
+        "identity_frame",
+        "terminology",
+        "positive_ddi_reference",
+        "regulatory_confirmation",
+    }
+)
+REQUIRED_FIELDS = frozenset(
+    {
+        "schema_version",
+        "status",
+        "source_name",
+        "independence_role",
+        "source_url",
+        "retrieved_at_utc",
+        "version_or_release",
+        "access_terms",
+        "license",
+        "redistribution_policy",
+        "payload_sha256",
+        "row_count",
+        "record_hash_algorithm",
+        "record_hash_inventory",
+        "raw_retention_location",
+    }
+)
 _REDISTRIBUTION_POLICIES = frozenset({"raw_prohibited", "derived_only", "permitted"})
 _REDISTRIBUTION_REVIEW_STATUSES = frozenset({"PENDING", "RESOLVED", "NOT_APPLICABLE"})
 _RECORD_HASH_ALGORITHM = "sha256(canonical_record_json)"
 
 
 def _is_sha256(value: object) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(
-        character in "0123456789abcdef" for character in value
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
     )
 
 

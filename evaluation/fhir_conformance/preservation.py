@@ -393,9 +393,7 @@ def provenance_candidate_retention(
         d=retained,
         ratio=retained / expected if expected else None,
         na=expected == 0,
-        note=(
-            "Provenance is parsed but excluded from import candidates by product policy"
-        ),
+        note=("Provenance is parsed but excluded from import candidates by product policy"),
     )
 
 

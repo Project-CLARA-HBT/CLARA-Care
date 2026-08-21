@@ -50,15 +50,14 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 # Import the store package first so it fully initializes before any other rag
 # module is pulled in; store/__init__ wires an import cycle that only resolves
 # cleanly when ``clara_ml.rag.store`` loads first. Importing it has no DB side
 # effects and keeps this test importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.rag.eval.golden_set import GoldenItem
 from clara_ml.rag.eval.harness import EvalHarness, gate
 

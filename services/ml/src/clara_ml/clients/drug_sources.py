@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from itertools import combinations
 import re
 import time
+from dataclasses import dataclass, field
+from itertools import combinations
 from typing import Any
 
 import httpx
 
 from clara_ml.config import settings
-
 
 _OPENFDA_BASE_URL = "https://api.fda.gov/drug"
 _CACHE_TTL_SECONDS = 600.0
@@ -36,7 +35,7 @@ _LABEL_SEVERITY_MEDIUM_CUES = (
 )
 _LABEL_WINDOW = 160
 
-_DDI_CONTEXT_CACHE: dict[tuple[str, ...], tuple[float, "ExternalDDIResult"]] = {}
+_DDI_CONTEXT_CACHE: dict[tuple[str, ...], tuple[float, ExternalDDIResult]] = {}
 
 
 @dataclass
@@ -119,7 +118,7 @@ class DrugSourceClient:
             rxnav_alerts=[dict(item) for item in result.rxnav_alerts],
             openfda_alerts=[dict(item) for item in result.openfda_alerts],
             openfda_evidence={
-                tuple(pair): dict(values)
+                pair: dict(values)
                 for pair, values in result.openfda_evidence.items()
             },
             openfda_pairs_checked=int(result.openfda_pairs_checked),
@@ -174,7 +173,7 @@ class DrugSourceClient:
 
         # Quét in-memory mọi cặp (không tốn thêm HTTP).
         for med_a, med_b in combinations(medications, 2):
-            pair_key = tuple(sorted((med_a, med_b)))
+            pair_key: tuple[str, str] = (med_a, med_b) if med_a < med_b else (med_b, med_a)
             match = self._match_in_label(label_text.get(med_a, ""), med_b)
             if match is None:
                 match = self._match_in_label(label_text.get(med_b, ""), med_a)
@@ -225,7 +224,8 @@ class DrugSourceClient:
                 success = True
                 hits = self._extract_total_count(data)
                 if hits > 0:
-                    counts[tuple(sorted((med_a, med_b)))] = hits
+                    pair_key: tuple[str, str] = (med_a, med_b) if med_a < med_b else (med_b, med_a)
+                    counts[pair_key] = hits
 
         return counts, errors, success, pairs_checked
 

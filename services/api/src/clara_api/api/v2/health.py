@@ -11,13 +11,12 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, Literal
+from datetime import UTC, datetime
+from typing import Any, Literal, cast
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -26,9 +25,6 @@ from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.api.v2.conventions import (
     ApiV2HTTPException,
     ApiV2ResponseEnvelope,
-    CursorPaginationParams,
-    IdempotencyKeyHelper,
-    PaginatedResponse,
 )
 from clara_api.core.rbac import get_current_token
 from clara_api.core.security import TokenPayload
@@ -37,7 +33,6 @@ from clara_api.db.models import (
     MedicationCourse,
     MedicineCabinet,
     MedicineItem,
-    PhrAudit,
     PhrObservation,
     PhrProfile,
 )
@@ -249,7 +244,7 @@ def _resolve_profile(db: Session, user: Any, profile_id: str | None, header_prof
 
 
 def _get_profile_version(profile: PhrProfile) -> int:
-    return getattr(profile, "version_no", 1) or 1
+    return getattr(profile, "current_version_no", 1) or 1
 
 
 def _check_etag_precondition(expected_version: int, current_version: int) -> None:
@@ -359,26 +354,26 @@ def get_health_summary(
 
     # 4. Medications (Reconcile confirmed courses + cabinet items)
     medications_list: list[HealthMedicationCourseItem] = []
-    active_courses = list(
+    active_courses: list[MedicationCourse] = list(
         db.execute(
             select(MedicationCourse).where(
                 MedicationCourse.profile_id == profile.id,
             ).order_by(MedicationCourse.created_at.desc())
         ).scalars()
     )
-    for c in active_courses:
+    for course in active_courses:
         medications_list.append(
             HealthMedicationCourseItem(
-                id=c.public_id,
-                name=c.medication_name,
-                dose=c.dose_text,
-                schedule=c.schedule_text,
-                status=c.status if c.status in {"active", "stopped", "paused", "completed"} else "active",
-                truth_state=c.truth_state or "confirmed",
+                id=course.public_id,
+                name=course.medication_name,
+                dose=course.dose_text,
+                schedule=course.schedule_text,
+                status=cast(Any, course.status if course.status in {"active", "stopped", "paused", "completed"} else "active"),
+                truth_state=course.truth_state or "confirmed",
                 source_name="Đơn thuốc bác sĩ",
                 source_kind="course",
-                start_date=str(c.started_at) if c.started_at else None,
-                end_date=str(c.ended_at) if c.ended_at else None,
+                start_date=str(course.started_at) if course.started_at else None,
+                end_date=str(course.ended_at) if course.ended_at else None,
             )
         )
 
@@ -515,7 +510,7 @@ def get_health_summary(
                 unit=obs.unit,
                 reference_range=ref_range,
                 flag=flag,
-                specimen_date=str(obs.observed_on or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+                specimen_date=str(obs.observed_on or datetime.now(UTC).strftime("%Y-%m-%d")),
                 source_name="Kết quả xét nghiệm đã lưu" if getattr(obs, "information_source", "") == "lab_document" else "Người dùng ghi nhận",
                 category=cat,
             )
@@ -530,7 +525,7 @@ def get_health_summary(
                 unit="mmol/L",
                 reference_range="3.9 - 6.4",
                 flag="normal",
-                specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                specimen_date=datetime.now(UTC).strftime("%Y-%m-%d"),
                 source_name="Bệnh viện Đại học Y Dược",
                 category="Sinh hóa máu",
             ),
@@ -541,7 +536,7 @@ def get_health_summary(
                 unit="mmol/L",
                 reference_range="3.6 - 5.2",
                 flag="high",
-                specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                specimen_date=datetime.now(UTC).strftime("%Y-%m-%d"),
                 source_name="Bệnh viện Đại học Y Dược",
                 category="Bộ mỡ máu (Lipid panel)",
             ),
@@ -552,7 +547,7 @@ def get_health_summary(
                 unit="µmol/L",
                 reference_range="62 - 106",
                 flag="normal",
-                specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                specimen_date=datetime.now(UTC).strftime("%Y-%m-%d"),
                 source_name="Bệnh viện Đại học Y Dược",
                 category="Chức năng thận",
             ),
@@ -563,7 +558,7 @@ def get_health_summary(
                 unit="µmol/L",
                 reference_range="200 - 420",
                 flag="normal",
-                specimen_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                specimen_date=datetime.now(UTC).strftime("%Y-%m-%d"),
                 source_name="Bệnh viện Đại học Y Dược",
                 category="Sinh hóa máu",
             ),
@@ -575,7 +570,7 @@ def get_health_summary(
             id="doc_lab_01",
             title="Phiếu kết quả xét nghiệm tổng quát",
             kind="lab_report",
-            created_at=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            created_at=datetime.now(UTC).strftime("%Y-%m-%d"),
             source_name="Bệnh viện Đại học Y Dược",
             media_type="application/pdf",
             extracted_summary="23 chỉ số sinh hóa và huyết học đã được nhận dạng và lưu trữ.",
@@ -613,7 +608,7 @@ def get_health_summary(
         conflicts=[],
         completeness=completeness,
         context_version=context_ver,
-        generated_at=datetime.now(timezone.utc).isoformat(),
+        generated_at=datetime.now(UTC).isoformat(),
     )
 
     return ApiV2ResponseEnvelope.wrap(data=response_data)
@@ -649,7 +644,11 @@ def get_health_timeline(
 
     timeline_items: list[HealthTimelineItem] = []
     for ev in events:
-        kind = ev.event_type if ev.event_type in {"medication", "symptom", "condition", "visit", "result", "measurement", "document", "task"} else "task"
+        kind: Literal["medication", "symptom", "condition", "visit", "result", "measurement", "document", "task"] = (
+            ev.event_type  # type: ignore[assignment]
+            if ev.event_type in {"medication", "symptom", "condition", "visit", "result", "measurement", "document", "task"}
+            else "task"
+        )
         if allowed_types and kind not in allowed_types:
             continue
 
@@ -666,8 +665,8 @@ def get_health_timeline(
                 kind=kind,
                 title=title,
                 summary=summary,
-                effective_at=str(ev.occurred_at or ev.created_at or datetime.now(timezone.utc)),
-                recorded_at=str(ev.created_at or datetime.now(timezone.utc)),
+                effective_at=str(ev.occurred_at or ev.created_at or datetime.now(UTC)),
+                recorded_at=str(ev.created_at or datetime.now(UTC)),
                 state="confirmed" if ev.truth_state == "confirmed" else "user_reported",
                 source_kind=ev.source_kind or "lifemap",
                 source_label="Hành trình sức khỏe",
@@ -689,8 +688,8 @@ def get_health_timeline(
                     kind="medication",
                     title=f"Đơn thuốc: {c.medication_name}",
                     summary=f"Liều dùng: {c.dose_text or 'Theo chỉ định'} - {c.schedule_text or ''}",
-                    effective_at=str(c.started_at or c.created_at or datetime.now(timezone.utc)),
-                    recorded_at=str(c.created_at or datetime.now(timezone.utc)),
+                    effective_at=str(c.started_at or c.created_at or datetime.now(UTC)),
+                    recorded_at=str(c.created_at or datetime.now(UTC)),
                     state="confirmed" if c.status == "active" else "stopped",
                     source_kind="course",
                     source_label="Đơn thuốc điện tử",
@@ -769,8 +768,8 @@ def update_demographics(
     if payload.allergies_status is not None:
         profile.allergy_status = payload.allergies_status
 
-    profile.version_no = current_ver + 1
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.current_version_no = current_ver + 1
+    profile.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(profile)
 
@@ -786,7 +785,7 @@ def update_demographics(
             emergency_contact_phone=profile.emergency_contact_phone,
             emergency_contact_relationship=profile.emergency_contact_relationship,
             allergies_status=profile.allergy_status or "unknown",
-            base_version=profile.version_no,
+            base_version=profile.current_version_no,
         )
     )
 
@@ -817,16 +816,16 @@ def add_allergy(
         "reaction": payload.reaction,
         "verification_status": payload.verification_status,
         "source_name": payload.source_name or "Người dùng tự ghi",
-        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "recorded_at": datetime.now(UTC).isoformat(),
     }
     allergies.append(item_dict)
     profile.allergies_json = allergies
     profile.allergy_status = "has_allergies"
-    profile.version_no = _get_profile_version(profile) + 1
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.current_version_no = _get_profile_version(profile) + 1
+    profile.updated_at = datetime.now(UTC)
     db.commit()
 
-    return ApiV2ResponseEnvelope.wrap(data=HealthAllergyItem(**item_dict))
+    return ApiV2ResponseEnvelope.wrap(data=HealthAllergyItem(**item_dict))  # type: ignore[arg-type]
 
 
 @router.patch(
@@ -867,15 +866,15 @@ def update_allergy(
         "severity": payload.severity,
         "reaction": payload.reaction,
         "verification_status": payload.verification_status,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
     }
     allergies[found_idx] = updated_item
     profile.allergies_json = allergies
-    profile.version_no = _get_profile_version(profile) + 1
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.current_version_no = _get_profile_version(profile) + 1
+    profile.updated_at = datetime.now(UTC)
     db.commit()
 
-    return ApiV2ResponseEnvelope.wrap(data=HealthAllergyItem(**updated_item))
+    return ApiV2ResponseEnvelope.wrap(data=HealthAllergyItem(**updated_item))  # type: ignore[arg-type]
 
 
 @router.delete(
@@ -898,8 +897,8 @@ def delete_allergy(
     profile.allergies_json = allergies
     if not allergies:
         profile.allergy_status = "none_known"
-    profile.version_no = _get_profile_version(profile) + 1
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.current_version_no = _get_profile_version(profile) + 1
+    profile.updated_at = datetime.now(UTC)
     db.commit()
 
     return ApiV2ResponseEnvelope.wrap(data={"deleted": True})
@@ -932,15 +931,15 @@ def add_condition(
         "onset_date": payload.onset_date,
         "notes": payload.notes,
         "source_name": payload.source_name or "Người dùng tự ghi",
-        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "recorded_at": datetime.now(UTC).isoformat(),
     }
     conditions.append(item_dict)
     profile.conditions_json = conditions
-    profile.version_no = _get_profile_version(profile) + 1
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.current_version_no = _get_profile_version(profile) + 1
+    profile.updated_at = datetime.now(UTC)
     db.commit()
 
-    return ApiV2ResponseEnvelope.wrap(data=HealthConditionItem(**item_dict))
+    return ApiV2ResponseEnvelope.wrap(data=HealthConditionItem(**item_dict))  # type: ignore[arg-type]
 
 
 @router.patch(
@@ -982,15 +981,15 @@ def update_condition(
         "verification_status": payload.verification_status,
         "onset_date": payload.onset_date,
         "notes": payload.notes,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
     }
     conditions[found_idx] = updated_item
     profile.conditions_json = conditions
-    profile.version_no = _get_profile_version(profile) + 1
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.current_version_no = _get_profile_version(profile) + 1
+    profile.updated_at = datetime.now(UTC)
     db.commit()
 
-    return ApiV2ResponseEnvelope.wrap(data=HealthConditionItem(**updated_item))
+    return ApiV2ResponseEnvelope.wrap(data=HealthConditionItem(**updated_item))  # type: ignore[arg-type]
 
 
 @router.delete(
@@ -1011,8 +1010,8 @@ def delete_condition(
 
     conditions = [c for c in (profile.conditions_json or []) if isinstance(c, dict) and str(c.get("id")) != condition_id]
     profile.conditions_json = conditions
-    profile.version_no = _get_profile_version(profile) + 1
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.current_version_no = _get_profile_version(profile) + 1
+    profile.updated_at = datetime.now(UTC)
     db.commit()
 
     return ApiV2ResponseEnvelope.wrap(data={"deleted": True})
@@ -1040,7 +1039,7 @@ def add_measurement(
         name=payload.label or payload.type,
         value=str(payload.value),
         unit=payload.unit,
-        observed_on=datetime.now(timezone.utc).date(),
+        observed_on=datetime.now(UTC).date(),
         information_source=payload.source_system or "self-declared",
     )
     db.add(obs)

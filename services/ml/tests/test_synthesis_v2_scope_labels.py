@@ -18,14 +18,13 @@ its canonical label mapping, and is monotonic in scope rank
 from __future__ import annotations
 
 import pytest
-
-from clara_ml.agents import research_tier2 as rt
-
 from synthesis_v2.harness import (
     BROAD_COMPARATIVE_TOPIC,
     NARROW_TOPIC,
     STANDARD_TOPIC,
 )
+
+from clara_ml.agents import research_tier2 as rt
 
 # Documented ``scope_factor`` envelope (design / docstring): [0.4, 1.0].
 _FACTOR_MIN = 0.4

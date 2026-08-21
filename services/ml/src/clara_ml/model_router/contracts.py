@@ -57,7 +57,7 @@ class SemanticSafetyDecision(BaseModel):
     model_used: str = Field(min_length=1, max_length=160)
 
     @model_validator(mode="after")
-    def _emergency_task_is_consistent(self) -> "SemanticSafetyDecision":
+    def _emergency_task_is_consistent(self) -> SemanticSafetyDecision:
         if (self.task == "emergency") != self.emergency:
             raise ValueError("semantic_router_emergency_task_mismatch")
         if self.emergency and self.action != "allow":
@@ -129,7 +129,7 @@ class EncoderShadowPrediction(BaseModel):
     language: Language = "unknown"
 
     @model_validator(mode="after")
-    def _categories_are_unique(self) -> "EncoderShadowPrediction":
+    def _categories_are_unique(self) -> EncoderShadowPrediction:
         """Reject duplicate categories as malformed model output.
 
         A duplicate category does not add signal and often indicates a loosely

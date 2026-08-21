@@ -80,9 +80,8 @@ def run_v6_development_partition(
     if split not in {"development", "validation"}:
         raise ValueError("v6_nonfinal_split_required")
     unverified_bundles, _unverified_splits = bundles_for_split(rows, split=split)
-    if (
-        limits.max_subjects != len(unverified_bundles)
-        or limits.max_cases != len(unverified_bundles)
+    if limits.max_subjects != len(unverified_bundles) or limits.max_cases != len(
+        unverified_bundles
     ):
         raise ValueError("v6_partition_limits_must_match_split")
     freeze = verify_v6_freeze(freeze_path=freeze_path, repository_root=repository_root)
@@ -120,12 +119,9 @@ def run_v6_development_partition(
         not isinstance(execution_contract, dict)
         or limits.max_concurrency != execution_contract.get("max_concurrency")
         or limits.max_retries != execution_contract.get("max_retries")
-        or execution_contract
-        .get("case_counts_including_all_adversarial_variants", {})
-        .get(split)
+        or execution_contract.get("case_counts_including_all_adversarial_variants", {}).get(split)
         != expected_cases
-        or execution_contract.get("solver_request_counts", {}).get(split)
-        != expected_requests
+        or execution_contract.get("solver_request_counts", {}).get(split) != expected_requests
     ):
         raise ValueError("v6_frozen_case_inventory_contract_invalid")
     probe = json.loads(provider_probe_path.read_text(encoding="utf-8"))
@@ -133,8 +129,7 @@ def run_v6_development_partition(
     if (
         probe.get("schema_version") != "glhs-bench-v6-provider-probe.v1"
         or probe.get("git_sha") != freeze["git_sha"]
-        or probe.get("freeze_sha256")
-        != hashlib.sha256(freeze_path.read_bytes()).hexdigest()
+        or probe.get("freeze_sha256") != hashlib.sha256(freeze_path.read_bytes()).hexdigest()
         or probe.get("requested_models") != list(CONFIRMATORY_MODELS)
         or probe.get("reported_model_mapping") != REPORTED_MODEL_ID_BY_REQUESTED
         or probe.get("fallback") is not False
@@ -162,9 +157,7 @@ def run_v6_development_partition(
     # artifact. The original pre-provider freeze remains immutable elsewhere.
     artifact_inputs = output_dir / "frozen_inputs"
     artifact_inputs.mkdir(exist_ok=False)
-    selected_rows = [
-        row for row in frozen_rows if str(row.get("split")) == split
-    ]
+    selected_rows = [row for row in frozen_rows if str(row.get("split")) == split]
     selected_cohort = artifact_inputs / f"cohort_{split}.jsonl"
     sanitized_rows: list[dict[str, Any]] = []
     subject_reference_redactions = 0
@@ -176,8 +169,7 @@ def run_v6_development_partition(
         subject_reference_redactions += count
     selected_cohort.write_text(
         "".join(
-            json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
-            for row in sanitized_rows
+            json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in sanitized_rows
         ),
         encoding="utf-8",
     )

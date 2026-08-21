@@ -79,7 +79,9 @@ SCHEMA_DEFAULTS = {
 }
 
 
-def _attempt_transition(env: AdapterEnv, db: Any, *, scope: Any, assertion: Any, reason_code: str) -> tuple[str, Any]:
+def _attempt_transition(
+    env: AdapterEnv, db: Any, *, scope: Any, assertion: Any, reason_code: str
+) -> tuple[str, Any]:
     """Attempt one bound transition; return ``(outcome, transition|None)``.
 
     A gateway ``GlhsInvariantError`` (or a missing ``GlhsInvariantError``
@@ -122,7 +124,9 @@ class ScenarioObservation:
             "classification": self.classification,
             "rejection_auditability": self.rejection.to_dict() if self.rejection else None,
             "committed_reconstructability": self.committed.to_dict() if self.committed else None,
-            "transaction_trace": self.trace.to_dict() if self.trace else {"events": [], "lock_waits": []},
+            "transaction_trace": self.trace.to_dict()
+            if self.trace
+            else {"events": [], "lock_waits": []},
             "persisted_writers": sorted(self.persisted_writers),
             "drift_coordinates": dict(self.drift_coordinates),
             "safety_success": self.safety_success,
@@ -227,8 +231,12 @@ def _finish(
 
 # --- policy-version change (two-phase deployment override) --------------------
 
+
 def policy_version_change_scenario(
-    env: AdapterEnv, *, scenario_id: str = "policy_version_change-001", epoch_version: str = "policy-v2"
+    env: AdapterEnv,
+    *,
+    scenario_id: str = "policy_version_change-001",
+    epoch_version: str = "policy-v2",
 ) -> ScenarioObservation:
     """Advance the persisted governance policy epoch, then attempt a bound commit."""
     started = now_monotonic_ns()
@@ -257,7 +265,13 @@ def policy_version_change_scenario(
         scope = env.gateway.compile_thss(cdb, purpose="self_care")
         assertion = SimpleNamespace(id=1, public_id="prop-notrun", base_state_version=0)
         try:
-            _attempt_transition(env, cdb, scope=scope, assertion=assertion, reason_code="synthetic_policy_epoch_advanced")
+            _attempt_transition(
+                env,
+                cdb,
+                scope=scope,
+                assertion=assertion,
+                reason_code="synthetic_policy_epoch_advanced",
+            )
             rejection, committed = None, _committed_subcontract()
             outcome = "transition_committed"
         except env.gateway.GlhsInvariantError as exc:
@@ -266,8 +280,13 @@ def policy_version_change_scenario(
             outcome = str(exc)
         trace.commit(cdb)
         return _finish(
-            scenario_id=scenario_id, family="policy_version_change", started_ns=started,
-            trace=trace, outcome=outcome, rejection=rejection, committed=committed,
+            scenario_id=scenario_id,
+            family="policy_version_change",
+            started_ns=started,
+            trace=trace,
+            outcome=outcome,
+            rejection=rejection,
+            committed=committed,
             writers=("advance_governance_policy_epoch",),
             coords={"persisted_policy_version": epoch_version, "drift": "policy_version_change"},
         )
@@ -277,8 +296,12 @@ def policy_version_change_scenario(
 
 # --- purpose / authorization drift --------------------------------------------
 
+
 def purpose_mismatch_scenario(
-    env: AdapterEnv, *, scenario_id: str = "purpose_mismatch-001", new_purpose: str = "research-adversarial"
+    env: AdapterEnv,
+    *,
+    scenario_id: str = "purpose_mismatch-001",
+    new_purpose: str = "research-adversarial",
 ) -> ScenarioObservation:
     """Persist a purpose switch, re-resolve scope, then attempt a bound commit."""
     started = now_monotonic_ns()
@@ -302,10 +325,17 @@ def purpose_mismatch_scenario(
 
     cdb = env.session_factory()
     try:
-        scope = SimpleNamespace(actor_role="owner", purpose=new_purpose, allowed_actions=frozenset({"create"}), allowed_data_classes=frozenset({"medications"}))
+        scope = SimpleNamespace(
+            actor_role="owner",
+            purpose=new_purpose,
+            allowed_actions=frozenset({"create"}),
+            allowed_data_classes=frozenset({"medications"}),
+        )
         assertion = SimpleNamespace(id=1, public_id="prop-notrun", base_state_version=0)
         try:
-            _attempt_transition(env, cdb, scope=scope, assertion=assertion, reason_code="synthetic_purpose_switch")
+            _attempt_transition(
+                env, cdb, scope=scope, assertion=assertion, reason_code="synthetic_purpose_switch"
+            )
             rejection, committed = None, _committed_subcontract()
             outcome = "transition_committed"
         except env.gateway.GlhsInvariantError as exc:
@@ -314,16 +344,26 @@ def purpose_mismatch_scenario(
             outcome = str(exc)
         trace.commit(cdb)
         return _finish(
-            scenario_id=scenario_id, family="purpose_mismatch", started_ns=started,
-            trace=trace, outcome=outcome, rejection=rejection, committed=committed,
+            scenario_id=scenario_id,
+            family="purpose_mismatch",
+            started_ns=started,
+            trace=trace,
+            outcome=outcome,
+            rejection=rejection,
+            committed=committed,
             writers=("purpose_or_authorization_change",),
-            coords={"before_purpose": "self_care", "after_purpose": new_purpose, "drift": "purpose_mismatch"},
+            coords={
+                "before_purpose": "self_care",
+                "after_purpose": new_purpose,
+                "drift": "purpose_mismatch",
+            },
         )
     finally:
         cdb.close()
 
 
 # --- role / authorization drift ------------------------------------------------
+
 
 def role_mismatch_scenario(
     env: AdapterEnv, *, scenario_id: str = "role_mismatch-001", new_role: str = "normal"
@@ -358,10 +398,21 @@ def role_mismatch_scenario(
 
     cdb = env.session_factory()
     try:
-        attempt_scope = SimpleNamespace(actor_role=new_role, purpose="self_care", allowed_actions=frozenset({"create"}), allowed_data_classes=frozenset({"medications"}))
+        attempt_scope = SimpleNamespace(
+            actor_role=new_role,
+            purpose="self_care",
+            allowed_actions=frozenset({"create"}),
+            allowed_data_classes=frozenset({"medications"}),
+        )
         assertion = SimpleNamespace(id=1, public_id="prop-notrun", base_state_version=0)
         try:
-            _attempt_transition(env, cdb, scope=attempt_scope, assertion=assertion, reason_code="synthetic_role_coordinate_changed")
+            _attempt_transition(
+                env,
+                cdb,
+                scope=attempt_scope,
+                assertion=assertion,
+                reason_code="synthetic_role_coordinate_changed",
+            )
             rejection, committed = None, _committed_subcontract()
             outcome = "transition_committed"
         except env.gateway.GlhsInvariantError as exc:
@@ -370,8 +421,13 @@ def role_mismatch_scenario(
             outcome = str(exc)
         trace.commit(cdb)
         return _finish(
-            scenario_id=scenario_id, family="role_mismatch", started_ns=started,
-            trace=trace, outcome=outcome, rejection=rejection, committed=committed,
+            scenario_id=scenario_id,
+            family="role_mismatch",
+            started_ns=started,
+            trace=trace,
+            outcome=outcome,
+            rejection=rejection,
+            committed=committed,
             writers=("role_change",),
             coords={"before_role": "doctor", "after_role": new_role, "drift": "role_mismatch"},
         )
@@ -381,7 +437,10 @@ def role_mismatch_scenario(
 
 # --- request-time disclosure scope enforcement ---------------------------------
 
-def _disclosure_attempt(env: AdapterEnv, db: Any, *, subject_id: str, purpose: str, reason_code: str) -> str:
+
+def _disclosure_attempt(
+    env: AdapterEnv, db: Any, *, subject_id: str, purpose: str, reason_code: str
+) -> str:
     """Ask the gateway's disclosure scope resolver for a disclosure.
 
     A denial raises ``GlhsInvariantError`` (or returns ``False`` on a fake);
@@ -408,7 +467,8 @@ def cross_subject_retrieval_scenario(
         trace.begin(db)
         try:
             _disclosure_attempt(
-                env, db,
+                env,
+                db,
                 subject_id="subject-B",
                 purpose="self_care",
                 reason_code="scope_forbidden_cross_subject",
@@ -421,9 +481,15 @@ def cross_subject_retrieval_scenario(
             outcome = str(exc)
         trace.commit(db)
         return _finish(
-            scenario_id=scenario_id, family="cross_subject_retrieval", started_ns=started,
-            trace=trace, outcome=outcome, rejection=rejection, committed=committed,
-            writers=(), coords={"target_subject": "subject-B", "drift": "cross_subject_retrieval"},
+            scenario_id=scenario_id,
+            family="cross_subject_retrieval",
+            started_ns=started,
+            trace=trace,
+            outcome=outcome,
+            rejection=rejection,
+            committed=committed,
+            writers=(),
+            coords={"target_subject": "subject-B", "drift": "cross_subject_retrieval"},
         )
     finally:
         db.close()
@@ -440,7 +506,8 @@ def unrelated_disclosure_request_scenario(
         trace.begin(db)
         try:
             _disclosure_attempt(
-                env, db,
+                env,
+                db,
                 subject_id="self",
                 purpose="research-adversarial",
                 reason_code="scope_forbidden_unrelated_purpose",
@@ -453,9 +520,18 @@ def unrelated_disclosure_request_scenario(
             outcome = str(exc)
         trace.commit(db)
         return _finish(
-            scenario_id=scenario_id, family="unrelated_disclosure_request", started_ns=started,
-            trace=trace, outcome=outcome, rejection=rejection, committed=committed,
-            writers=(), coords={"target_purpose": "research-adversarial", "drift": "unrelated_disclosure_request"},
+            scenario_id=scenario_id,
+            family="unrelated_disclosure_request",
+            started_ns=started,
+            trace=trace,
+            outcome=outcome,
+            rejection=rejection,
+            committed=committed,
+            writers=(),
+            coords={
+                "target_purpose": "research-adversarial",
+                "drift": "unrelated_disclosure_request",
+            },
         )
     finally:
         db.close()
@@ -470,13 +546,13 @@ DRIVERS: dict[str, Callable[[AdapterEnv], ScenarioObservation]] = {
 }
 
 
-def run_scenario(env: AdapterEnv, family: str, *, scenario_id: str | None = None) -> ScenarioObservation:
+def run_scenario(
+    env: AdapterEnv, family: str, *, scenario_id: str | None = None
+) -> ScenarioObservation:
     """Run the named family's scenario driver with its default coordinates."""
     if family not in DRIVERS:
         if family in REQUIRES_LLM_ATTACK_STUDY_FAMILIES:
-            raise ValueError(
-                "govred_prompt_injection_families_require_model_mediated_protocol"
-            )
+            raise ValueError("govred_prompt_injection_families_require_model_mediated_protocol")
         raise ValueError(f"govred_not_run_scenario_unsupported:{family}")
     driver = DRIVERS[family]
     observation = driver(env, scenario_id=scenario_id or f"{family}-001")
@@ -497,7 +573,9 @@ def scenario_manifest() -> dict[str, object]:
         ],
         "notes": [
             "prompt-injection families are NOT implemented (E-006)",
-            ("drivers are DB-free and unit-testable; execution requires the "
-            "isolated GovRed stack and is not claimed here"),
+            (
+                "drivers are DB-free and unit-testable; execution requires the "
+                "isolated GovRed stack and is not claimed here"
+            ),
         ],
     }

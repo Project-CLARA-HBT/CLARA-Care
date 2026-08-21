@@ -99,9 +99,7 @@ def test_probe_captures_xid_before_commit_and_resolves() -> None:
 
     assert probe.capture_xid_before_commit(FakeSession(), party="governance") == 9001
 
-    resolved = probe.resolve_commit_timestamps(
-        FakeScalar("2026-08-19T00:00:00.000Z")
-    )
+    resolved = probe.resolve_commit_timestamps(FakeScalar("2026-08-19T00:00:00.000Z"))
     assert resolved["governance"]["txid"] == 9001
     assert resolved["governance"]["durable_available"] is True
     assert resolved["governance"]["commit_timestamp"] == "2026-08-19T00:00:00.000Z"

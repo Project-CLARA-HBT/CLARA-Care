@@ -11,14 +11,24 @@ from evaluation.careguard_external.source_manifest import validate_source_manife
 def test_dailymed_subset_manifest_is_source_valid(tmp_path: Path) -> None:
     archive = tmp_path / "controlled-dailymed"
     archive.mkdir()
-    (archive / RAW_FILENAME).write_text(json.dumps({
-        "data": [{"setid": "a", "spl_version": 1, "published_date": "Aug 1, 2026", "title": "A"}],
-        "metadata": {"db_published_date": "Aug 2, 2026"},
-    }), encoding="utf-8")
+    (archive / RAW_FILENAME).write_text(
+        json.dumps(
+            {
+                "data": [
+                    {"setid": "a", "spl_version": 1, "published_date": "Aug 1, 2026", "title": "A"}
+                ],
+                "metadata": {"db_published_date": "Aug 2, 2026"},
+            }
+        ),
+        encoding="utf-8",
+    )
     path = tmp_path / "manifest.json"
-    path.write_text(json.dumps(build_manifest(
-        archive_dir=archive, retrieved_at=datetime(2026, 8, 17, tzinfo=UTC)
-    )), encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            build_manifest(archive_dir=archive, retrieved_at=datetime(2026, 8, 17, tzinfo=UTC))
+        ),
+        encoding="utf-8",
+    )
     manifest = validate_source_manifest(path)
     assert manifest["independence_role"] == "regulatory_confirmation"
     assert manifest["row_count"] == 1

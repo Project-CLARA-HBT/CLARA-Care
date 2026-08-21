@@ -11,7 +11,15 @@ import urllib.request
 from pathlib import Path
 
 
-def _request(base_url: str, path: str, *, method: str = "GET", body: dict | None = None, token: str | None = None, profile: str | None = None) -> tuple[int, dict]:
+def _request(
+    base_url: str,
+    path: str,
+    *,
+    method: str = "GET",
+    body: dict | None = None,
+    token: str | None = None,
+    profile: str | None = None,
+) -> tuple[int, dict]:
     payload = json.dumps(body).encode("utf-8") if body is not None else None
     headers = {"Accept": "application/json"}
     if payload is not None:
@@ -20,7 +28,9 @@ def _request(base_url: str, path: str, *, method: str = "GET", body: dict | None
         headers["Authorization"] = f"Bearer {token}"
     if profile:
         headers["X-CLARA-Profile-Context"] = profile
-    request = urllib.request.Request(base_url.rstrip("/") + path, data=payload, method=method, headers=headers)
+    request = urllib.request.Request(
+        base_url.rstrip("/") + path, data=payload, method=method, headers=headers
+    )
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
             raw, status = response.read(), response.status
@@ -34,17 +44,24 @@ def _identity(base_url: str, label: str) -> tuple[str, str]:
     suffix = secrets.token_hex(8)
     email = f"rivf-{label}-{suffix}@example.com"
     password = f"Rivf{suffix}9"
-    status, _ = _request(base_url, "/api/v1/auth/register", method="POST", body={
-        "email": email,
-        "password": password,
-        "full_name": f"Synthetic {label}",
-        "accepted_terms": True,
-        "accepted_privacy": True,
-        "accepted_medical_consent": True,
-    })
+    status, _ = _request(
+        base_url,
+        "/api/v1/auth/register",
+        method="POST",
+        body={
+            "email": email,
+            "password": password,
+            "full_name": f"Synthetic {label}",
+            "accepted_terms": True,
+            "accepted_privacy": True,
+            "accepted_medical_consent": True,
+        },
+    )
     if status != 200:
         raise RuntimeError(f"synthetic_registration_failed:{status}")
-    status, login = _request(base_url, "/api/v1/auth/login", method="POST", body={"email": email, "password": password})
+    status, login = _request(
+        base_url, "/api/v1/auth/login", method="POST", body={"email": email, "password": password}
+    )
     token = login.get("access_token") if status == 200 else None
     if not isinstance(token, str):
         raise TypeError("synthetic_login_failed")
@@ -62,7 +79,9 @@ def run(base_url: str) -> dict[str, object]:
     _, target_profile = _identity(base_url, "target")
     # `/profiles/context` is only a UI recovery hint.  Lifemap resolves an
     # actual profile-scoped resource and fails closed for a foreign profile.
-    status, response = _request(base_url, "/api/v1/lifemap/today", token=attacker_token, profile=target_profile)
+    status, response = _request(
+        base_url, "/api/v1/lifemap/today", token=attacker_token, profile=target_profile
+    )
     response_bytes = json.dumps(response, sort_keys=True, separators=(",", ":")).encode("utf-8")
     detail = response.get("detail")
     denied = status == 404 and isinstance(detail, dict) and detail.get("code") == "scope_forbidden"

@@ -18,8 +18,10 @@ def test_dav_manifest_accepts_pending_redistribution_review(tmp_path: Path) -> N
         source_url="https://dichvucong.dav.gov.vn/export/approved.csv",
         release="DAV export 2026-08-17",
         record_id_field="registration_no",
-        access_terms="Operator-authorized official export; acquisition permitted.", license_text="",
-        redistribution_review_status="PENDING", retrieved_at=datetime(2026, 8, 17, tzinfo=UTC),
+        access_terms="Operator-authorized official export; acquisition permitted.",
+        license_text="",
+        redistribution_review_status="PENDING",
+        retrieved_at=datetime(2026, 8, 17, tzinfo=UTC),
     )
     path = tmp_path / "manifest.json"
     path.write_text(json.dumps(manifest), encoding="utf-8")

@@ -11,16 +11,35 @@ from pathlib import Path
 
 from evaluation.evidence_program.freeze import FreezeError, load_frozen_json
 
-COLUMNS = frozenset({
-    "operation", "history_depth", "concurrency", "p50_ms", "p95_ms", "p99_ms",
-    "throughput_per_second", "db_reads", "db_writes", "write_amplification",
-    "reconstruction_ms", "snapshot_compile_ms", "governed_decision_reconstruction_ms",
-    "audit_lookup_ms", "invalidation_rebuild_ms", "enter_in_error_rebuild_ms",
-    "cpu_percent", "peak_rss_bytes",
-})
+COLUMNS = frozenset(
+    {
+        "operation",
+        "history_depth",
+        "concurrency",
+        "p50_ms",
+        "p95_ms",
+        "p99_ms",
+        "throughput_per_second",
+        "db_reads",
+        "db_writes",
+        "write_amplification",
+        "reconstruction_ms",
+        "snapshot_compile_ms",
+        "governed_decision_reconstruction_ms",
+        "audit_lookup_ms",
+        "invalidation_rebuild_ms",
+        "enter_in_error_rebuild_ms",
+        "cpu_percent",
+        "peak_rss_bytes",
+    }
+)
 REQUIRED_OPERATION_ORDER = (
-    "transition", "reconstruction", "snapshot_compile",
-    "governed_decision_reconstruction", "audit_lookup", "invalidation_rebuild",
+    "transition",
+    "reconstruction",
+    "snapshot_compile",
+    "governed_decision_reconstruction",
+    "audit_lookup",
+    "invalidation_rebuild",
     "enter_in_error_rebuild",
 )
 REQUIRED_OPERATIONS = frozenset(REQUIRED_OPERATION_ORDER)
@@ -61,9 +80,19 @@ def _number(row: dict[str, str], field: str) -> float:
 def validate(metrics: Path, manifest: Path) -> None:
     metadata = load_frozen_json(manifest)
     required = {
-        "schema_version", "status", "architecture_path", "hardware", "worker_count",
-        "environment", "implementation", "operations", "coverage_gaps", "row_counts",
-        "fixture_contains_phi", "production_services_modified", "http_transport_measured",
+        "schema_version",
+        "status",
+        "architecture_path",
+        "hardware",
+        "worker_count",
+        "environment",
+        "implementation",
+        "operations",
+        "coverage_gaps",
+        "row_counts",
+        "fixture_contains_phi",
+        "production_services_modified",
+        "http_transport_measured",
     }
     if required - metadata.keys():
         raise FreezeError("fullstack_manifest_incomplete")
@@ -95,19 +124,14 @@ def validate(metrics: Path, manifest: Path) -> None:
         environment.get("database") != "postgresql"
         or not str(environment.get("server_version", "")).strip()
         or environment.get("alembic_revision") != "20260811_0055"
-        or re.fullmatch(
-            r"sha256:[0-9a-f]{64}", str(environment.get("database_image_digest", ""))
-        )
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", str(environment.get("database_image_digest", "")))
         is None
     ):
         raise FreezeError("fullstack_database_attestation_invalid")
     implementation = metadata.get("implementation")
     if (
         not isinstance(implementation, dict)
-        or re.fullmatch(
-            r"[0-9a-f]{40}", str(implementation.get("implementation_sha", ""))
-        )
-        is None
+        or re.fullmatch(r"[0-9a-f]{40}", str(implementation.get("implementation_sha", ""))) is None
         or not isinstance(implementation.get("tracked_worktree_clean"), bool)
     ):
         raise FreezeError("fullstack_implementation_attestation_invalid")
@@ -116,7 +140,10 @@ def validate(metrics: Path, manifest: Path) -> None:
         if reader.fieldnames is None or not COLUMNS.issubset(reader.fieldnames):
             raise FreezeError("fullstack_metric_schema_incomplete")
         rows = list(reader)
-    if len(rows) != len(REQUIRED_OPERATIONS) or {row["operation"] for row in rows} != REQUIRED_OPERATIONS:
+    if (
+        len(rows) != len(REQUIRED_OPERATIONS)
+        or {row["operation"] for row in rows} != REQUIRED_OPERATIONS
+    ):
         raise FreezeError("fullstack_operations_incomplete")
     duration_fields = {
         "reconstruction": "reconstruction_ms",
@@ -135,8 +162,12 @@ def validate(metrics: Path, manifest: Path) -> None:
         if p50 > p95 or p95 > p99 or _number(row, "throughput_per_second") <= 0:
             raise FreezeError("fullstack_latency_distribution_invalid")
         for field in (
-            "history_depth", "db_reads", "db_writes", "write_amplification",
-            "cpu_percent", "peak_rss_bytes",
+            "history_depth",
+            "db_reads",
+            "db_writes",
+            "write_amplification",
+            "cpu_percent",
+            "peak_rss_bytes",
         ):
             _number(row, field)
         expected_duration = duration_fields.get(row["operation"])

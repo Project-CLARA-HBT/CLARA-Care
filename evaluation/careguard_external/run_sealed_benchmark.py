@@ -7,11 +7,11 @@ Evaluates:
 4. Chow Selective Classification Risk-Coverage Pareto Trade-off.
 5. FIDES Safety Gate Gating Rate (100% fail-closed).
 """
+
 from __future__ import annotations
 
 import argparse
 import json
-import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -65,7 +65,7 @@ def run_full_careguard_external_benchmark() -> CareGuardSealedBenchmarkReport:
             "printed": 500,
             "otc_packaging": 500,
             "status": "FROZEN_SEALED",
-        }
+        },
     }
 
     # 2. Upstream Identity Normalization Metrics
@@ -77,16 +77,16 @@ def run_full_careguard_external_benchmark() -> CareGuardSealedBenchmarkReport:
         "dav_frequency_accuracy": 0.961,
         "ambiguity_detection_rate": 0.994,
         "clarification_request_rate": 0.076,  # 7.6% human-in-the-loop review
-        "stale_identity_rejection_rate": 1.000, # 100% fail-closed on stale version
+        "stale_identity_rejection_rate": 1.000,  # 100% fail-closed on stale version
     }
 
     # 3. Downstream DDI Detection Metrics
     downstream_ddi_metrics = {
-        "severe_ddi_sensitivity": 0.996,       # 99.6% Recall
-        "severe_ddi_specificity": 0.989,       # 98.9% Specificity
+        "severe_ddi_sensitivity": 0.996,  # 99.6% Recall
+        "severe_ddi_specificity": 0.989,  # 98.9% Specificity
         "severe_ddi_precision": 0.985,
-        "false_negative_rate": 0.004,          # 0.40% FNR
-        "false_positive_rate": 0.011,          # 1.10% FPR
+        "false_negative_rate": 0.004,  # 0.40% FNR
+        "false_positive_rate": 0.011,  # 1.10% FPR
         "total_adjudicated_pairs_evaluated": 2500,
         "positive_severe_pairs": 1250,
         "clean_negative_controls": 1250,
@@ -97,19 +97,49 @@ def run_full_careguard_external_benchmark() -> CareGuardSealedBenchmarkReport:
     oracle_decomposition = {
         "oracle_identity_ddi_recall": 0.998,
         "end_to_end_sbmi_ddi_recall": 0.996,
-        "delta_identity_error": 0.002,         # Only 0.20% drop from identity resolution
-        "knowledge_base_omission_error": 0.002, # 0.20% from unindexed literature gaps
+        "delta_identity_error": 0.002,  # Only 0.20% drop from identity resolution
+        "knowledge_base_omission_error": 0.002,  # 0.20% from unindexed literature gaps
         "interpretation": "The SBMI release contract isolates upstream ambiguity so effectively that identity errors contribute less than 0.2% to downstream interaction misses.",
     }
 
     # 5. Chow Risk-Coverage Pareto Trade-off Curve
     risk_coverage_curve = [
-        {"operating_point": "Legacy Unbound Matching", "coverage_phi": 1.000, "false_clear_risk": 0.0680, "description": "Unbounded lexical matching"},
-        {"operating_point": "Standard Confidence Gate (theta=0.80)", "coverage_phi": 0.974, "false_clear_risk": 0.0410, "description": "Soft probability threshold"},
-        {"operating_point": "Standard Confidence Gate (theta=0.85)", "coverage_phi": 0.962, "false_clear_risk": 0.0320, "description": "High probability threshold"},
-        {"operating_point": "CrossDDI Baseline (Canonical Assumption)", "coverage_phi": 0.951, "false_clear_risk": 0.0290, "description": "Assumes canonical input pairs"},
-        {"operating_point": "RxMap Baseline + Unbound DDI", "coverage_phi": 0.966, "false_clear_risk": 0.0340, "description": "Isolated RxCUI normalization"},
-        {"operating_point": "CareGuard-VN Strict SBMI Gating", "coverage_phi": 0.924, "false_clear_risk": 0.0040, "description": "Mandatory source-pinned release contract"},
+        {
+            "operating_point": "Legacy Unbound Matching",
+            "coverage_phi": 1.000,
+            "false_clear_risk": 0.0680,
+            "description": "Unbounded lexical matching",
+        },
+        {
+            "operating_point": "Standard Confidence Gate (theta=0.80)",
+            "coverage_phi": 0.974,
+            "false_clear_risk": 0.0410,
+            "description": "Soft probability threshold",
+        },
+        {
+            "operating_point": "Standard Confidence Gate (theta=0.85)",
+            "coverage_phi": 0.962,
+            "false_clear_risk": 0.0320,
+            "description": "High probability threshold",
+        },
+        {
+            "operating_point": "CrossDDI Baseline (Canonical Assumption)",
+            "coverage_phi": 0.951,
+            "false_clear_risk": 0.0290,
+            "description": "Assumes canonical input pairs",
+        },
+        {
+            "operating_point": "RxMap Baseline + Unbound DDI",
+            "coverage_phi": 0.966,
+            "false_clear_risk": 0.0340,
+            "description": "Isolated RxCUI normalization",
+        },
+        {
+            "operating_point": "CareGuard-VN Strict SBMI Gating",
+            "coverage_phi": 0.924,
+            "false_clear_risk": 0.0040,
+            "description": "Mandatory source-pinned release contract",
+        },
     ]
 
     # 6. SOTA Comparative Matrix
@@ -150,7 +180,7 @@ def run_full_careguard_external_benchmark() -> CareGuardSealedBenchmarkReport:
 
     # 7. FIDES Safety Invariants
     fides_safety_invariants = {
-        "unverified_assertion_blocking_rate": 1.000, # 100.0% fail-closed
+        "unverified_assertion_blocking_rate": 1.000,  # 100.0% fail-closed
         "stale_version_rejection_rate": 1.000,
         "contraindicated_allergy_blocking_rate": 1.000,
         "governance_admissibility_enforced": True,
@@ -242,7 +272,9 @@ CrossDDI~\cite{crossddi2026} & N/A & 95.2\% & 2.90\% & No & Evidence verificatio
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=Path("artifacts/careguard_sealed_benchmark_report.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("artifacts/careguard_sealed_benchmark_report.json")
+    )
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

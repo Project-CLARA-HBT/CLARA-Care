@@ -15,7 +15,6 @@ import re
 import sys
 from pathlib import Path
 
-
 RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("email", re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")),
     ("phone", re.compile(r"(?<!\d)(?:\+?84|0)\s?(?:\d[ .-]?){8,10}\d(?!\d)")),

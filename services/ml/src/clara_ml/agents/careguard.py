@@ -639,7 +639,7 @@ def _strict_drugbank_input_rows(
         _canonicalize_medication_token(_normalize_text_token(medication))
         for medication in medications
     ]
-    rows = [(alias, None) for alias in aliases if alias]
+    rows: list[tuple[str, int | None]] = [(alias, None) for alias in aliases if alias]
     if not isinstance(medications_with_meta, list):
         return rows
 
@@ -773,11 +773,10 @@ def _normalize_medications_with_strict_drugbank_choices(
         selected: dict[str, object] | None = None
         clarification_reason = ""
         if requested is not None and selection_alias_matches_item:
-            selected_id, selected_version = (
-                (requested[1], requested[2])
-                if cabinet_item_id is not None
-                else requested
-            )
+            if len(requested) == 3:
+                selected_id, selected_version = requested[1], requested[2]
+            else:
+                selected_id, selected_version = requested[0], requested[1]
             selected = store.resolve_medication_choice(
                 input_token,
                 drugbank_id=selected_id,
@@ -829,7 +828,12 @@ def _normalize_medications_with_strict_drugbank_choices(
             clarifications.append(clarification)
             continue
         canonical = str(selected_view["normalized_name"])
-        active_ingredients = list(selected_view["active_ingredients"])
+        raw_ingredients = selected_view.get("active_ingredients")
+        active_ingredients = (
+            [str(item) for item in raw_ingredients]
+            if isinstance(raw_ingredients, list)
+            else []
+        )
         normalized_inputs.append(
             {
                 "input": input_token,
@@ -1035,7 +1039,7 @@ def _free_text_medication_candidates(
             unresolved_context = True
             break
     unresolved_text = not candidates or unresolved_context
-    metadata = {
+    metadata: dict[str, object] = {
         "state": "requires_clarification"
         if unresolved_text or ambiguous_candidate_count
         else "used",
@@ -2009,7 +2013,7 @@ def _drugbank_required_unavailable_result(
             "drugbank": {
                 "state": readiness_state,
                 "version": str(readiness.get("version") or ""),
-                "pair_count": int(readiness.get("pair_count") or 0),
+                "pair_count": int(str(readiness.get("pair_count") or 0)),
                 "manifest_matches_index": bool(readiness.get("manifest_matches_index")),
                 "matched_alert_count": 0,
             },

@@ -34,11 +34,11 @@ the module is unit-testable with fakes.
 from __future__ import annotations
 
 import logging
-from queue import Empty, Queue
-from threading import Thread
 import time
 from collections.abc import Callable, Iterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from queue import Empty, Queue
+from threading import Thread
 from typing import Any
 
 from clara_ml.streaming.chat_stream import iter_answer_chunks, sse_event
@@ -103,7 +103,7 @@ def _flow_event(*, stage: str, status: str, source_count: int, note: str) -> dic
 
     return {
         "stage": stage,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "status": status,
         "source_count": max(int(source_count), 0),
         "note": note,

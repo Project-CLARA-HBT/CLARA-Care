@@ -361,9 +361,7 @@ def test_fhir_normalization_preserves_source_times_and_missing_knowledge(
     assert condition["knowledge_time_field"] is None
     assert condition["temporal_precision"] == "day"
     assert condition["estimated_time"] is False
-    manifest = json.loads(
-        (output / "normalization_manifest.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((output / "normalization_manifest.json").read_text(encoding="utf-8"))
     assert manifest["metrics"]["subject_count"] == 1
     assert manifest["estimated_times_created"] == 0
 
@@ -461,10 +459,10 @@ def test_diabetes_normalization_preserves_unknown_time_and_source_row(
     assert all(record["valid_time"] is None for record in records)
     assert all(record["knowledge_time"] is None for record in records)
     assert all(record["estimated_time"] is False for record in records)
-    assert all(record["original_payload_pointer"].endswith("diabetic_data.csv#L2") for record in records)
-    manifest = json.loads(
-        (output / "normalization_manifest.json").read_text(encoding="utf-8")
+    assert all(
+        record["original_payload_pointer"].endswith("diabetic_data.csv#L2") for record in records
     )
+    manifest = json.loads((output / "normalization_manifest.json").read_text(encoding="utf-8"))
     assert manifest["metrics"]["source_row_count"] == 1
     assert manifest["metrics"]["duplicate_encounter_id_count"] == 0
 
@@ -527,9 +525,7 @@ def test_omop_normalization_minimizes_demographics_and_preserves_source_time(
     assert "unmapped_concept_id" in records[0]["uncertainty"]
     assert "private-source-id" not in rendered
     assert "Synthetic Name" not in rendered
-    manifest = json.loads(
-        (normalized / "normalization_manifest.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((normalized / "normalization_manifest.json").read_text(encoding="utf-8"))
     assert manifest["metrics"]["record_count"] == 1
     assert "person" in manifest["metrics"]["omitted_reference_or_derived_tables"]
 
@@ -651,17 +647,13 @@ def test_nested_fhir_bundle_normalization_minimizes_patient_demographics(
                     "patient": {"reference": patient_full_url},
                     "encounter": {"reference": encounter_full_url},
                     "authoredOn": "2020-01-01",
-                    "medicationCodeableConcept": {
-                        "coding": [{"code": "synthetic-medication"}]
-                    },
+                    "medicationCodeableConcept": {"coding": [{"code": "synthetic-medication"}]},
                     "status": "active",
                 },
             },
         ],
     }
-    nested = _tar_gz(
-        {"output/fhir/00/patient-1.json": json.dumps(bundle).encode()}
-    )
+    nested = _tar_gz({"output/fhir/00/patient-1.json": json.dumps(bundle).encode()})
     outer = _tar_gz({"chunk-1.tar.gz": nested})
     archive_path = tmp_path / "fixture.tar.gz"
     archive_path.write_bytes(outer)
@@ -692,9 +684,7 @@ def test_nested_fhir_bundle_normalization_minimizes_patient_demographics(
     assert all("chunk-1.tar.gz" in record["original_payload_pointer"] for record in records)
     assert "SyntheticName" not in rendered
     assert "SyntheticAddress" not in rendered
-    manifest = json.loads(
-        (output / "normalization_manifest.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((output / "normalization_manifest.json").read_text(encoding="utf-8"))
     assert manifest["records_file"] == "records.jsonl.gz"
     assert manifest["metrics"]["subject_count"] == 1
 
@@ -767,12 +757,9 @@ def test_coherent_multimodal_normalization_minimizes_patient_and_counts_modaliti
     assert "SyntheticName" not in rendered
     assert "patient-bundle.json" not in rendered
     assert all(
-        record["original_payload_pointer"].startswith("zip-member-sha256://")
-        for record in records
+        record["original_payload_pointer"].startswith("zip-member-sha256://") for record in records
     )
-    manifest = json.loads(
-        (output / "normalization_manifest.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((output / "normalization_manifest.json").read_text(encoding="utf-8"))
     assert manifest["metrics"]["bundle_count"] == 1
     assert manifest["metrics"]["modality_member_counts"] == {
         "csv": 1,

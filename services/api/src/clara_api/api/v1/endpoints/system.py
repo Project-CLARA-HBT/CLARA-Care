@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -33,6 +33,7 @@ from clara_api.db.session import get_db
 from clara_api.schemas import (
     CareguardRuntimeConfig,
     SystemControlTowerConfig,
+    SystemSourceRegistryItem,
     SystemSourcesRegistryResponse,
 )
 
@@ -257,9 +258,7 @@ def get_dashboard_snapshot(
     flow_flags: dict[str, bool] = {
         "role_router_enabled": bool(rag_flow.role_router_enabled),
         "intent_router_enabled": bool(rag_flow.intent_router_enabled),
-        "rule_verification_enabled": bool(
-            rag_flow.rule_verification_enabled or rag_flow.verification_enabled
-        ),
+        "rule_verification_enabled": bool(rag_flow.rule_verification_enabled),
         "nli_model_enabled": bool(rag_flow.nli_model_enabled),
         "rag_nli_enabled": bool(rag_flow.rag_nli_enabled),
         "rag_reranker_enabled": bool(rag_flow.rag_reranker_enabled),
@@ -277,12 +276,10 @@ def get_dashboard_snapshot(
     ).scalar_one_or_none()
     cabinet_items: list[MedicineItem] = []
     if cabinet is not None:
-        cabinet_items = (
+        cabinet_items = list(
             db.execute(
                 select(MedicineItem).where(MedicineItem.cabinet_id == cabinet.id)
-            )
-            .scalars()
-            .all()
+            ).scalars().all()
         )
 
     soon_boundary = now_utc + timedelta(days=30)
@@ -1078,11 +1075,11 @@ def get_sources_registry(
             "notes": "Nguồn bài báo/bibliometrics chuyên sâu theo license.",
         },
     ]
-    return {
-        "public_no_key": public_no_key,
-        "key_required": key_required,
-        "commercial": commercial,
-    }
+    return SystemSourcesRegistryResponse(
+        public_no_key=cast(list[SystemSourceRegistryItem], public_no_key),
+        key_required=cast(list[SystemSourceRegistryItem], key_required),
+        commercial=cast(list[SystemSourceRegistryItem], commercial),
+    )
 
 
 @router.get("/control-tower/config", response_model=SystemControlTowerConfig)

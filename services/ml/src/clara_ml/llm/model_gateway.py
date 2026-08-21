@@ -89,7 +89,13 @@ class ModelGateway:
     """Provider-neutral model router and execution engine."""
 
     def __init__(self, settings: Any = None) -> None:
-        self._settings = settings
+        self._settings: Any = settings
+        if self._settings is None:
+            try:
+                from clara_ml.config import settings as default_settings
+                self._settings = default_settings
+            except Exception:
+                self._settings = None
         self._custom_adapters: dict[str, ModelProviderAdapter] = {}
         self._health_cache: dict[str, ProbeResult] = {}
 
@@ -239,8 +245,16 @@ class ModelGateway:
             return DeepSeekAdapter(client=client)
 
         if provider_id == "unofficial_gemini_gateway":
-            base_url = str(self._get_setting("clara_unofficial_gemini_base_url", "")).strip()
-            api_key = str(self._get_setting("clara_unofficial_gemini_api_key", "")).strip()
+            base_url = (
+                str(self._get_setting("clara_unofficial_gemini_base_url", "")).strip()
+                or str(self._get_setting("deepseek_base_url", "")).strip()
+                or str(self._get_setting("router_base_url", "")).strip()
+            )
+            api_key = (
+                str(self._get_setting("clara_unofficial_gemini_api_key", "")).strip()
+                or str(self._get_setting("deepseek_api_key", "")).strip()
+                or str(self._get_setting("router_api_key", "")).strip()
+            )
             default_model = (
                 (route.model if route and route.model else "")
                 or "gemini-3.6-flash-high"

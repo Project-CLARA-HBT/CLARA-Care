@@ -217,7 +217,7 @@ Cleaner = Callable[..., str]
 Hasher = Callable[[str], str]
 
 # A chunker splits a (record, clean_text) into structure-aware chunks.
-Chunker = Callable[[RawRecord, str], "list[Chunk]"]
+Chunker = Callable[..., "list[Chunk]"]
 
 
 class EntityLinker(Protocol):

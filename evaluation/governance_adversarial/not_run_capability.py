@@ -51,44 +51,56 @@ COMPLETION_COMMIT = "bd0d7d65"
 _CAPABILITY: dict[str, tuple[str, str]] = {
     "cross_subject_retrieval": (
         IMPLEMENTABLE_FAITHFULLY,
-        ("Two-phase subject_cross_replay schedule is implemented in the "
-        f"isolated adapter (commit {COMPLETION_COMMIT}); faithful disclosure "
-        "retrieval for a foreign subject is an HTTP scope-enforcement probe "
-        "with a persisted-writer scenario."),
+        (
+            "Two-phase subject_cross_replay schedule is implemented in the "
+            f"isolated adapter (commit {COMPLETION_COMMIT}); faithful disclosure "
+            "retrieval for a foreign subject is an HTTP scope-enforcement probe "
+            "with a persisted-writer scenario."
+        ),
     ),
     "purpose_mismatch": (
         IMPLEMENTABLE_FAITHFULLY,
-        ("Narrow synthetic purpose_switch_replay grant mutation (two-phase "
-        "create/commit) is implemented in the isolated adapter "
-        f"(commit {COMPLETION_COMMIT}) and maps to the persisted "
-        "purpose_or_authorization_change governance writer."),
+        (
+            "Narrow synthetic purpose_switch_replay grant mutation (two-phase "
+            "create/commit) is implemented in the isolated adapter "
+            f"(commit {COMPLETION_COMMIT}) and maps to the persisted "
+            "purpose_or_authorization_change governance writer."
+        ),
     ),
     "policy_version_change": (
         IMPLEMENTABLE_FAITHFULLY,
-        ("Two-phase deployment-level GOVRED_RESEARCH_POLICY_VERSION override "
-        f"plus the persisted advance_governance_policy_epoch writer (commit "
-        f"{COMPLETION_COMMIT}); policy epochs are real persisted rows."),
+        (
+            "Two-phase deployment-level GOVRED_RESEARCH_POLICY_VERSION override "
+            f"plus the persisted advance_governance_policy_epoch writer (commit "
+            f"{COMPLETION_COMMIT}); policy epochs are real persisted rows."
+        ),
     ),
     "gst_bypass_prompt": (
         REQUIRES_LLM_ATTACK_STUDY,
-        ("Prompt-injection bypass of GST requires a real model-mediated "
-        "security protocol (E-006). No frozen LLM-attack protocol exists; a "
-        "synthetic request label would fake the attack and must not enter the "
-        "core authorization-drift endpoint."),
+        (
+            "Prompt-injection bypass of GST requires a real model-mediated "
+            "security protocol (E-006). No frozen LLM-attack protocol exists; a "
+            "synthetic request label would fake the attack and must not enter the "
+            "core authorization-drift endpoint."
+        ),
     ),
     "patient_evidence_prompt_injection": (
         REQUIRES_LLM_ATTACK_STUDY,
-        ("Prompt-injection into patient evidence requires a real model-mediated "
-        "security protocol (E-006). Kept outside the core authorization-drift "
-        "endpoint until one is frozen."),
+        (
+            "Prompt-injection into patient evidence requires a real model-mediated "
+            "security protocol (E-006). Kept outside the core authorization-drift "
+            "endpoint until one is frozen."
+        ),
     ),
     "unrelated_disclosure_request": (
         IMPLEMENTABLE_FAITHFULLY,
-        ("Request-time scope enforcement: an HTTP disclosure request for an "
-        "out-of-scope subject/purpose is denied at the scope resolver "
-        "(documented 404 scope_forbidden development probes). Requires a "
-        "disclosure-probe mutation in the adapter; no governance writer or LLM "
-        "is involved."),
+        (
+            "Request-time scope enforcement: an HTTP disclosure request for an "
+            "out-of-scope subject/purpose is denied at the scope resolver "
+            "(documented 404 scope_forbidden development probes). Requires a "
+            "disclosure-probe mutation in the adapter; no governance writer or LLM "
+            "is involved."
+        ),
     ),
 }
 
@@ -103,11 +115,7 @@ def _load_matrix_rows(matrix_path: Path) -> list[dict[str, str]]:
 
 
 def _not_run_families(rows: list[dict[str, str]]) -> tuple[str, ...]:
-    families = {
-        row["family"]
-        for row in rows
-        if int(row["not_run_n"]) > 0 and row["arm"] in ARMS
-    }
+    families = {row["family"] for row in rows if int(row["not_run_n"]) > 0 and row["arm"] in ARMS}
     return tuple(sorted(families))
 
 
@@ -127,32 +135,41 @@ def build_capability_audit(rows: list[dict[str, str]]) -> dict[str, Any]:
             not_run_n = int(matrix["not_run_n"]) if matrix else 30
             contract = family_contract(family)
             capability, reason = _CAPABILITY[family]
-            rows_out.append({
-                "family": family,
-                "reporting_scope": family_scope(family),
-                "arm": arm,
-                "not_run_n": not_run_n,
-                "capability": capability,
-                "technical_reason": reason,
-                "governance_writer_type": contract.governance_writer_type,
-                "adapter_mutation": _MUTATIONS.get(family),
-                "completed_since_final_003": family in {
-                    "cross_subject_retrieval",
-                    "purpose_mismatch",
-                    "policy_version_change",
-                },
-                "completion_commit": COMPLETION_COMMIT if family in {
-                    "cross_subject_retrieval",
-                    "purpose_mismatch",
-                    "policy_version_change",
-                } else None,
-                "in_core_authorization_drift_endpoint": family_scope(family)
-                == "primary_authorization_drift",
-            })
+            rows_out.append(
+                {
+                    "family": family,
+                    "reporting_scope": family_scope(family),
+                    "arm": arm,
+                    "not_run_n": not_run_n,
+                    "capability": capability,
+                    "technical_reason": reason,
+                    "governance_writer_type": contract.governance_writer_type,
+                    "adapter_mutation": _MUTATIONS.get(family),
+                    "completed_since_final_003": family
+                    in {
+                        "cross_subject_retrieval",
+                        "purpose_mismatch",
+                        "policy_version_change",
+                    },
+                    "completion_commit": COMPLETION_COMMIT
+                    if family
+                    in {
+                        "cross_subject_retrieval",
+                        "purpose_mismatch",
+                        "policy_version_change",
+                    }
+                    else None,
+                    "in_core_authorization_drift_endpoint": family_scope(family)
+                    == "primary_authorization_drift",
+                }
+            )
     counts = {category: 0 for category in CAPABILITY_CATEGORIES}
     for item in rows_out:
         counts[str(item["capability"])] += 1
-    families_by_category = {category: sorted({str(i["family"]) for i in rows_out if i["capability"] == category}) for category in CAPABILITY_CATEGORIES}
+    families_by_category = {
+        category: sorted({str(i["family"]) for i in rows_out if i["capability"] == category})
+        for category in CAPABILITY_CATEGORIES
+    }
     return {
         "schema_version": SCHEMA_VERSION,
         "source": "final-003 family-arm matrix (research/govred_rivf/family_arm_matrix.csv)",
@@ -161,13 +178,17 @@ def build_capability_audit(rows: list[dict[str, str]]) -> dict[str, Any]:
         "families_by_category": families_by_category,
         "rows": rows_out,
         "completion_notes": [
-            (f"The three mandatory-primary NOT_RUN families were completed in "
-            f"the adapter (commit {COMPLETION_COMMIT}): cross_subject_retrieval "
-            "-> subject_cross_replay, purpose_mismatch -> purpose_switch_replay, "
-            "policy_version_change two-phase. Completion is capability, not result."),
-            ("Prompt-injection families stay REQUIRES_LLM_ATTACK_STUDY (E-006): "
-            "no real model-mediated security protocol is frozen, so they are "
-            "not faked with synthetic request labels."),
+            (
+                f"The three mandatory-primary NOT_RUN families were completed in "
+                f"the adapter (commit {COMPLETION_COMMIT}): cross_subject_retrieval "
+                "-> subject_cross_replay, purpose_mismatch -> purpose_switch_replay, "
+                "policy_version_change two-phase. Completion is capability, not result."
+            ),
+            (
+                "Prompt-injection families stay REQUIRES_LLM_ATTACK_STUDY (E-006): "
+                "no real model-mediated security protocol is frozen, so they are "
+                "not faked with synthetic request labels."
+            ),
         ],
     }
 
@@ -176,9 +197,11 @@ def render_markdown(audit: dict[str, Any]) -> str:
     lines: list[str] = [
         "# GovRed RIVF — Not Run capability audit (E-004 / GRD-03)",
         "",
-        ("Capability decision for every family/arm that was `NOT_RUN` in "
-        "final-003 (180 per arm). A `NOT_RUN` row contributes to no "
-        "denominator and is never a zero-failure result."),
+        (
+            "Capability decision for every family/arm that was `NOT_RUN` in "
+            "final-003 (180 per arm). A `NOT_RUN` row contributes to no "
+            "denominator and is never a zero-failure result."
+        ),
         "",
         "## Classification counts",
         "",
@@ -220,11 +243,15 @@ def render_markdown(audit: dict[str, Any]) -> str:
     lines += [
         "## Notes",
         "",
-        ("- The three mandatory-primary families were completed in the adapter "
-        f"(`{audit['completion_notes'][0]}`)."),
+        (
+            "- The three mandatory-primary families were completed in the adapter "
+            f"(`{audit['completion_notes'][0]}`)."
+        ),
         f"- {audit['completion_notes'][1]}",
-        ("- `TASK_OR_ARM_SEMANTICS_UNSUPPORTED` is not forced: no family needed "
-        "it, and no family is forced to execute by weakening semantics."),
+        (
+            "- `TASK_OR_ARM_SEMANTICS_UNSUPPORTED` is not forced: no family needed "
+            "it, and no family is forced to execute by weakening semantics."
+        ),
         "",
     ]
     return "\n".join(lines)

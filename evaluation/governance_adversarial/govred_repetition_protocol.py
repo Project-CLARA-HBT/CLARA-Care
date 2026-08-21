@@ -64,7 +64,9 @@ ISOLATION_ATTESTATION = "GOVRED_REPETITION_ISOLATED_RESEARCH"
 DATABASE_URL_ENV = "GOVRED_REPETITION_DATABASE_URL"
 
 
-def scenario_ids(family: str = CONCURRENT_SCENARIO_FAMILY, count: int = SCENARIO_COUNT) -> tuple[str, ...]:
+def scenario_ids(
+    family: str = CONCURRENT_SCENARIO_FAMILY, count: int = SCENARIO_COUNT
+) -> tuple[str, ...]:
     """Return the frozen logical scenario ids for the concurrent family."""
     if count < 1:
         raise ValueError("govred_repetition_scenario_count_must_be_positive")
@@ -179,6 +181,7 @@ def validate_repeat_manifest(manifest: Mapping[str, object]) -> dict[str, object
 
 # --- commit-order evidence (GLHS spec §3.5) -----------------------------------
 
+
 @dataclass(frozen=True)
 class CommitOrderEvidence:
     """DB-level ordering evidence for one repetition.
@@ -213,15 +216,19 @@ class CommitOrderEvidence:
             return (
                 ORDER_GOVERNANCE_BEFORE_COMMIT,
                 "high",
-                (f"governance commit ts {self.governance_commit_ts.isoformat()} "
-                f"< proposal commit ts {self.proposal_commit_ts.isoformat()}"),
+                (
+                    f"governance commit ts {self.governance_commit_ts.isoformat()} "
+                    f"< proposal commit ts {self.proposal_commit_ts.isoformat()}"
+                ),
             )
         if self.proposal_commit_ts < self.governance_commit_ts:
             return (
                 ORDER_PROPOSAL_BEFORE_GOVERNANCE,
                 "high",
-                (f"proposal commit ts {self.proposal_commit_ts.isoformat()} "
-                f"< governance commit ts {self.governance_commit_ts.isoformat()}"),
+                (
+                    f"proposal commit ts {self.proposal_commit_ts.isoformat()} "
+                    f"< governance commit ts {self.governance_commit_ts.isoformat()}"
+                ),
             )
         return (ORDER_SAME_TIMESTAMP, "none", "equal commit timestamps; order unresolvable")
 
@@ -238,9 +245,17 @@ def _monotonic_fallback(evidence: Mapping[str, object]) -> tuple[str, str, str]:
     commit_complete_ns = evidence.get("proposal_complete_ns")
     if isinstance(revoke_commit_ns, int) and isinstance(commit_start_ns, int):
         if revoke_commit_ns < commit_start_ns:
-            return (ORDER_GOVERNANCE_BEFORE_COMMIT, "medium", "observer monotonic: governance commit before proposal start")
+            return (
+                ORDER_GOVERNANCE_BEFORE_COMMIT,
+                "medium",
+                "observer monotonic: governance commit before proposal start",
+            )
         if isinstance(commit_complete_ns, int) and commit_complete_ns < revoke_commit_ns:
-            return (ORDER_PROPOSAL_BEFORE_GOVERNANCE, "medium", "observer monotonic: proposal complete before governance commit")
+            return (
+                ORDER_PROPOSAL_BEFORE_GOVERNANCE,
+                "medium",
+                "observer monotonic: proposal complete before governance commit",
+            )
     return (ORDER_UNKNOWABLE, "none", "observer windows overlap; ordering not directly supported")
 
 
@@ -274,6 +289,7 @@ def ordering_to_state(
 
 
 # --- logical-schedule aggregation (GLHS spec §3.4) -----------------------------
+
 
 @dataclass(frozen=True)
 class RepetitionRecord:
@@ -339,9 +355,7 @@ def aggregate_at_logical_schedule(
         "repetitions_total": len(repetitions),
         "valid_repetitions": len(repetitions),
         "repetitions_invalid": 0,
-        "state_counts": {
-            state: states.count(state) for state in sorted(set(states))
-        },
+        "state_counts": {state: states.count(state) for state in sorted(set(states))},
         "robust": robust,
         "verdict": "robust" if robust else "not_robust",
         "ordering_resolved_repetitions": resolved,
@@ -388,6 +402,7 @@ def run_repetition(
 
 # --- fail-closed execution gate ------------------------------------------------
 
+
 def require_isolated_postgres() -> str:
     """Refuse to execute without the isolated-research attestation + URL."""
     import os
@@ -408,7 +423,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest-output", type=Path, default=DEFAULT_MANIFEST_OUTPUT)
     parser.add_argument("--pending-output", type=Path, default=DEFAULT_PENDING_OUTPUT)
-    parser.add_argument("--execute", action="store_true", help="Execute against an isolated PostgreSQL (requires attestation + URL).")
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="Execute against an isolated PostgreSQL (requires attestation + URL).",
+    )
     args = parser.parse_args()
 
     manifest = build_repeat_manifest()
@@ -420,7 +439,9 @@ def main() -> int:
 
     if args.execute:
         require_isolated_postgres()
-        raise SystemExit("govred_repetition_execution_not_yet_wired: run the real DB driver separately")
+        raise SystemExit(
+            "govred_repetition_execution_not_yet_wired: run the real DB driver separately"
+        )
 
     pending = {
         "schema_version": SCHEMA_VERSION,
@@ -432,7 +453,9 @@ def main() -> int:
         "frozen_at": datetime.now(UTC).isoformat(),
     }
     args.pending_output.parent.mkdir(parents=True, exist_ok=True)
-    args.pending_output.write_text(json.dumps(pending, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    args.pending_output.write_text(
+        json.dumps(pending, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     print(json.dumps(pending, indent=2, sort_keys=True))
     return 0
 

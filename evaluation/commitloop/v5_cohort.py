@@ -67,9 +67,7 @@ def _observation(
 
 def _relevant_specs(stratum: str) -> tuple[str | None, list[dict[str, str]]]:
     if stratum == "due_edge_final_interleaved":
-        return "2027-03-20T00:00:00Z", [
-            {"status": "final", "valid_at": "2027-03-20T00:00:00Z"}
-        ]
+        return "2027-03-20T00:00:00Z", [{"status": "final", "valid_at": "2027-03-20T00:00:00Z"}]
     if stratum == "grace_edge_partial_interleaved":
         return "2027-03-10T00:00:00Z", [
             {"status": "preliminary", "valid_at": "2027-03-17T00:00:00Z"}
@@ -135,9 +133,7 @@ def _bundle(*, stratum: str, index: int, seed: int) -> dict[str, Any]:
         "subject": {"reference": f"Patient/{subject_id}"},
         "authoredOn": "2027-03-01T00:00:00Z",
         "meta": {"lastUpdated": "2027-03-02T00:00:00Z"},
-        "code": {
-            "coding": [{"system": "http://loinc.org", "code": target_code}]
-        },
+        "code": {"coding": [{"system": "http://loinc.org", "code": target_code}]},
     }
     if due_time is not None:
         request["occurrencePeriod"] = {"end": due_time}
@@ -190,9 +186,7 @@ def build_cohort() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         for index in range(SUBJECTS_PER_STRATUM):
             seed = MASTER_SEED + stratum_index * 10000 + index
             bundle = _bundle(stratum=stratum, index=index, seed=seed)
-            token, events = ingest_bundle(
-                bundle, fhir_version="R4", ingested_at=KNOWN_CUTOFF
-            )
+            token, events = ingest_bundle(bundle, fhir_version="R4", ingested_at=KNOWN_CUTOFF)
             cases = mine_candidates(token, events)
             if len(cases) != 1 or cases[0].status != "ELIGIBLE":
                 raise ValueError("v5_cohort_requires_one_eligible_case_per_subject")
@@ -259,9 +253,7 @@ def write_cohort(output_dir: Path) -> tuple[Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     cohort_path = output_dir / "cohort.jsonl"
     manifest_path = output_dir / "cohort_manifest.json"
-    cohort_path.write_text(
-        "".join(_canonical(item) + "\n" for item in rows), encoding="utf-8"
-    )
+    cohort_path.write_text("".join(_canonical(item) + "\n" for item in rows), encoding="utf-8")
     manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

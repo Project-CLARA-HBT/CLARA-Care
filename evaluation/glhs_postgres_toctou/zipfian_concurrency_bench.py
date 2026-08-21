@@ -4,16 +4,15 @@ Evaluates throughput, false-stale abort rate, true-conflict abort rate,
 and latency under parameterized access skew (alpha in {0.0, 0.5, 0.9, 1.2})
 and concurrency levels W in {1, 2, 4, 8, 16, 32, 64, 128}.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import math
 import random
-import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
 
 
 class ZipfianGenerator:
@@ -23,14 +22,14 @@ class ZipfianGenerator:
         self.n_items = max(1, n_items)
         self.alpha = float(alpha)
         self.rng = random.Random(seed)
-        
+
         if self.alpha == 0.0:
             self.probabilities = [1.0 / self.n_items] * self.n_items
         else:
             weights = [1.0 / math.pow(i + 1, self.alpha) for i in range(self.n_items)]
             total_weight = sum(weights)
             self.probabilities = [w / total_weight for w in weights]
-            
+
         self.cumulative = []
         cum = 0.0
         for p in self.probabilities:
@@ -76,14 +75,13 @@ def run_zipfian_simulation(
 ) -> dict[str, BenchmarkResult]:
     """Simulates concurrent transaction execution under Zipfian entity access."""
     results: dict[str, BenchmarkResult] = {}
-    
+
     # 1. Monolithic Profile Lock
     # Any concurrent write to any entity in the profile invalidates other writers
     gen_mono = ZipfianGenerator(n_entities, alpha, seed=seed)
     total_mono = writers * tx_per_writer
     committed_mono = 0
     false_stale_mono = 0
-    true_conflict_mono = 0
     latencies_mono: list[float] = []
 
     # Monolithic collision probability scales with W
@@ -97,7 +95,7 @@ def run_zipfian_simulation(
             latencies_mono.append(t_base)
         else:
             # P(conflict) ~ 1 - (1/W)
-            collision_prob = 1.0 - (1.0 / (writers ** 0.95))
+            collision_prob = 1.0 - (1.0 / (writers**0.95))
             if random.random() < collision_prob:
                 false_stale_mono += 1
                 latencies_mono.append(t_base * 1.8)
@@ -253,10 +251,14 @@ def generate_latex_table(results: list[BenchmarkResult]) -> str:
     ]
 
     selected_points = [
-        (0.0, 16), (0.0, 128),
-        (0.5, 16), (0.5, 128),
-        (0.9, 16), (0.9, 128),
-        (1.2, 16), (1.2, 128),
+        (0.0, 16),
+        (0.0, 128),
+        (0.5, 16),
+        (0.5, 128),
+        (0.9, 16),
+        (0.9, 128),
+        (1.2, 16),
+        (1.2, 128),
     ]
 
     for alpha, w in selected_points:
@@ -268,16 +270,20 @@ def generate_latex_table(results: list[BenchmarkResult]) -> str:
         lines.append(r"\midrule")
 
     lines[-1] = r"\bottomrule"
-    lines.extend([
-        r"\end{tabular}",
-        r"\end{table*}",
-    ])
+    lines.extend(
+        [
+            r"\end{tabular}",
+            r"\end{table*}",
+        ]
+    )
     return "\n".join(lines)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=Path("artifacts/zipfian_concurrency_report.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("artifacts/zipfian_concurrency_report.json")
+    )
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, cast
 
 from clara_ml.llm.model_registry import ModelTask, build_task_client
 
@@ -141,13 +141,13 @@ def extract_source_spans(
             raise ValueError("clinical_language_span_invalid")
         spans.append(
             ClinicalSourceSpan(
-                category=category,
+                category=cast(Any, category),
                 start=start,
                 end=end,
                 negated=negated,
-                experiencer=experiencer,
-                temporality=temporality,
-                severity=severity,
+                experiencer=cast(Any, experiencer),
+                temporality=cast(Any, temporality),
+                severity=cast(Any, severity),
             )
         )
         previous_end = end

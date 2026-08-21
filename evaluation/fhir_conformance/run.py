@@ -229,9 +229,7 @@ def run_batch() -> dict[str, Any]:
                     )
                 )
         structural = {v["gate"]: v for v in verdicts if v["gate"].startswith("hl7_")}
-        application = {
-            v["gate"]: v for v in verdicts if not v["gate"].startswith("hl7_")
-        }
+        application = {v["gate"]: v for v in verdicts if not v["gate"].startswith("hl7_")}
         fixtures_out.append(
             {
                 "id": fixture["id"],

@@ -15,7 +15,6 @@ from typing import Any
 
 from clara_ml.llm.deepseek_client import DeepSeekClient
 
-
 MODELS = (
     "antigravity/gemini-3.6-flash-high",
     "antigravity/gemini-3.6-flash-medium",

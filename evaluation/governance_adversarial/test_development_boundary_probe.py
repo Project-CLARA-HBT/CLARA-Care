@@ -10,7 +10,9 @@ from evaluation.governance_adversarial import development_boundary_probe as prob
 
 def test_probe_records_sanitized_before_after_observations(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(probe, "_identity", lambda *_: ("token", "profile"))
-    monkeypatch.setattr(probe, "_request", lambda *_args, **_kwargs: (404, {"detail": {"code": "scope_forbidden"}}))
+    monkeypatch.setattr(
+        probe, "_request", lambda *_args, **_kwargs: (404, {"detail": {"code": "scope_forbidden"}})
+    )
     snapshots = iter(
         (
             {"postgres_sha256": "a" * 64, "redis_sha256": "b" * 64, "audit_sha256": "c" * 64},

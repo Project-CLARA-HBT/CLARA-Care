@@ -163,14 +163,18 @@ def _prometheus_label_escape(value: str) -> str:
 
 def _coerce_non_negative_int(value: object) -> int:
     try:
-        return max(int(value), 0)
+        if isinstance(value, (int, float, str, bytes, bytearray)):
+            return max(int(value), 0)
+        return 0
     except (TypeError, ValueError):
         return 0
 
 
 def _coerce_non_negative_float(value: object) -> float:
     try:
-        return max(float(value), 0.0)
+        if isinstance(value, (int, float, str, bytes, bytearray)):
+            return max(float(value), 0.0)
+        return 0.0
     except (TypeError, ValueError):
         return 0.0
 

@@ -174,9 +174,7 @@ def test_role_writer_supports_grant_mutation() -> None:
         actor=grant,
         new_role="caregiver",
         mutator=mutator,
-        scope_resolver=lambda _session, subject: SimpleNamespace(
-            actor_role=subject.role
-        ),
+        scope_resolver=lambda _session, subject: SimpleNamespace(actor_role=subject.role),
     )
 
     assert result.details["before_role"] == "clinician"
@@ -304,9 +302,7 @@ def test_writers_do_not_mutate_module_global_state() -> None:
             session,
             actor=SimpleNamespace(role="doctor"),
             new_role="normal",
-            scope_resolver=lambda _session, subject: SimpleNamespace(
-                actor_role=subject.role
-            ),
+            scope_resolver=lambda _session, subject: SimpleNamespace(actor_role=subject.role),
         )
         advance_governance_policy_epoch(
             session,

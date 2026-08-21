@@ -8,17 +8,33 @@ from pathlib import Path
 
 from evaluation.evidence_program.freeze import FreezeError, load_frozen_json
 
-REQUIRED = frozenset({
-    "status", "dataset", "dataset_version", "lawful_access_attestation", "partition",
-    "subject_count", "test_subject_tokens_sha256", "development_subject_tokens_sha256",
-    "inclusion_exclusion", "event_count", "domain_coverage", "missingness",
-    "curator_attestation", "selection_frozen_at", "source_checksum", "synthetic_governance_separate",
-    "independent_curator",
-})
+REQUIRED = frozenset(
+    {
+        "status",
+        "dataset",
+        "dataset_version",
+        "lawful_access_attestation",
+        "partition",
+        "subject_count",
+        "test_subject_tokens_sha256",
+        "development_subject_tokens_sha256",
+        "inclusion_exclusion",
+        "event_count",
+        "domain_coverage",
+        "missingness",
+        "curator_attestation",
+        "selection_frozen_at",
+        "source_checksum",
+        "synthetic_governance_separate",
+        "independent_curator",
+    }
+)
 
 
 def _token_hash(path: Path) -> str:
-    tokens = {line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()}
+    tokens = {
+        line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    }
     return hashlib.sha256("\n".join(sorted(tokens)).encode()).hexdigest()
 
 

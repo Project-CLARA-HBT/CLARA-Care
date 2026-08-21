@@ -108,7 +108,11 @@ def _config() -> AdapterConfig:
 
 
 def _request(
-    config: AdapterConfig, path: str, *, method: str = "GET", body: dict[str, object] | None = None,
+    config: AdapterConfig,
+    path: str,
+    *,
+    method: str = "GET",
+    body: dict[str, object] | None = None,
     token: str | None = None,
 ) -> tuple[int | None, bytes, bool]:
     payload = json.dumps(body, separators=(",", ":")).encode("utf-8") if body is not None else None
@@ -117,7 +121,9 @@ def _request(
         headers["Content-Type"] = "application/json"
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    request = urllib.request.Request(config.base_url + path, data=payload, method=method, headers=headers)
+    request = urllib.request.Request(
+        config.base_url + path, data=payload, method=method, headers=headers
+    )
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
             return response.status, response.read(), False
@@ -141,10 +147,19 @@ def _identity(config: AdapterConfig) -> str:
     suffix = uuid4().hex
     email = f"rivf-boundary-{suffix}@example.org"
     password = f"Rivf{suffix[:16]}9"
-    status, _, unavailable = _request(config, "/api/v1/auth/register", method="POST", body={
-        "email": email, "password": password, "full_name": "Synthetic GovRed Boundary",
-        "accepted_terms": True, "accepted_privacy": True, "accepted_medical_consent": True,
-    })
+    status, _, unavailable = _request(
+        config,
+        "/api/v1/auth/register",
+        method="POST",
+        body={
+            "email": email,
+            "password": password,
+            "full_name": "Synthetic GovRed Boundary",
+            "accepted_terms": True,
+            "accepted_privacy": True,
+            "accepted_medical_consent": True,
+        },
+    )
     if unavailable or status != 200:
         raise RuntimeError("govred_adapter_synthetic_registration_failed")
     status, raw, unavailable = _request(
@@ -188,10 +203,13 @@ def _write_artifact(config: AdapterConfig, name: str, value: dict[str, object]) 
 
 def _arm_attestation(config: AdapterConfig, arm: dict[str, object]) -> dict[str, object]:
     value = {
-        "name": arm["name"], "bind_snapshot": arm["bind_snapshot"],
+        "name": arm["name"],
+        "bind_snapshot": arm["bind_snapshot"],
         "revalidate_state": arm["revalidate_state"],
-        "revalidate_governance": arm["revalidate_governance"], "research_only": True,
-        "runtime_mode": "isolated_research_only", "production_defaults_unchanged": True,
+        "revalidate_governance": arm["revalidate_governance"],
+        "research_only": True,
+        "runtime_mode": "isolated_research_only",
+        "production_defaults_unchanged": True,
         "implementation_revision": config.revision,
     }
     ref, digest = _write_artifact(config, f"arm-{arm['name']}.json", value)
@@ -216,8 +234,7 @@ def _boundary_path_attestation(family: str) -> dict[str, bool]:
     if contract.cache_required:
         traversed = frozenset(traversed | {"cache"})
     return {
-        stage: stage in traversed and stage in contract.permitted_stages()
-        for stage in STAGE_NAMES
+        stage: stage in traversed and stage in contract.permitted_stages() for stage in STAGE_NAMES
     }
 
 
@@ -237,7 +254,10 @@ def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, obj
     status, raw, unavailable = _request(config, "/api/v1/govred-research/arm", token=token)
     report = _json_response(raw) if status == 200 and not unavailable else {}
     if tuple(report.get(field) for field in _ARM_FIELDS) != (
-        arm["name"], arm["bind_snapshot"], arm["revalidate_state"], arm["revalidate_governance"],
+        arm["name"],
+        arm["bind_snapshot"],
+        arm["revalidate_state"],
+        arm["revalidate_governance"],
     ):
         raise RuntimeError("govred_adapter_arm_endpoint_mismatch")
     family = str(case["family"])
@@ -283,15 +303,26 @@ def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, obj
             probe_id = created_probe_id
     before = _snapshot(config)
     started = time.monotonic()
-    status, raw, unavailable = _request(config, "/api/v1/govred-research/synthetic-commit-probe", method="POST", token=token, body={
-        "mutation": mutation, "sentinel_id": sentinel, "probe_id": probe_id,
-        "phase": "commit" if family in _TWO_PHASE_FAMILIES else "full",
-    })
+    status, raw, unavailable = _request(
+        config,
+        "/api/v1/govred-research/synthetic-commit-probe",
+        method="POST",
+        token=token,
+        body={
+            "mutation": mutation,
+            "sentinel_id": sentinel,
+            "probe_id": probe_id,
+            "phase": "commit" if family in _TWO_PHASE_FAMILIES else "full",
+        },
+    )
     latency_ms = (time.monotonic() - started) * 1000
     response = _json_response(raw) if raw else {}
     commit_occurred = False
     if status is not None and status < 400:
-        commit_occurred = response.get("outcome") in {"transition_committed", "indeterminate_ordering_transition_committed"}
+        commit_occurred = response.get("outcome") in {
+            "transition_committed",
+            "indeterminate_ordering_transition_committed",
+        }
     _, audit_raw, audit_unavailable = _request(
         config,
         f"/api/v1/govred-research/synthetic-audit-observation?sentinel_id={sentinel}&probe_id={probe_id}",
@@ -324,22 +355,50 @@ def adapter(*, case: dict[str, object], arm: dict[str, object]) -> dict[str, obj
         cache_stale_entry_present = cache.get("cache_present_after_revoke") is True
         cache_failure = cache_stale_entry_present and commit_occurred
     after = _snapshot(config)
-    observation = BoundaryObservation(status, raw, before["postgres_sha256"], after["postgres_sha256"], audit_complete, cache_failure, commit_occurred, latency_ms, unavailable or audit_unavailable or cache_unavailable)
+    observation = BoundaryObservation(
+        status,
+        raw,
+        before["postgres_sha256"],
+        after["postgres_sha256"],
+        audit_complete,
+        cache_failure,
+        commit_occurred,
+        latency_ms,
+        unavailable or audit_unavailable or cache_unavailable,
+    )
     artifact_value = {
-        "schema_version": "govred-isolated-boundary-observation-v2", "case_id": case["case_id"],
-        "arm": arm["name"], "mutation": mutation, "mutation_class": mutation,
-        "http_status": status, "response_sha256": hashlib.sha256(raw).hexdigest(),
-        "observer_before": before, "observer_after": after,
+        "schema_version": "govred-isolated-boundary-observation-v2",
+        "case_id": case["case_id"],
+        "arm": arm["name"],
+        "mutation": mutation,
+        "mutation_class": mutation,
+        "http_status": status,
+        "response_sha256": hashlib.sha256(raw).hexdigest(),
+        "observer_before": before,
+        "observer_after": after,
         "cache_index_revocation_failure": cache_failure,
         "rejection_audit_event": rejection_audit_event,
-        "observation": sanitized_observation_metadata(observation), "raw_response_persisted": False,
+        "observation": sanitized_observation_metadata(observation),
+        "raw_response_persisted": False,
     }
-    ref, digest = _write_artifact(config, f"{case['case_id']}-{arm['name']}-{probe_id}.json", artifact_value)
+    ref, digest = _write_artifact(
+        config, f"{case['case_id']}-{arm['name']}-{probe_id}.json", artifact_value
+    )
     return {
-        "isolated_attestation": True, "arm_name": arm["name"], "arm_implementation_attestation": _arm_attestation(config, arm),
-        "observation": observation, "execution_id": probe_id, "mutation": mutation,
-        "mutation_class": mutation, "rejection_audit_event": rejection_audit_event,
-        "normalized_outcome": "unavailable" if unavailable else "committed" if commit_occurred else "rejected",
+        "isolated_attestation": True,
+        "arm_name": arm["name"],
+        "arm_implementation_attestation": _arm_attestation(config, arm),
+        "observation": observation,
+        "execution_id": probe_id,
+        "mutation": mutation,
+        "mutation_class": mutation,
+        "rejection_audit_event": rejection_audit_event,
+        "normalized_outcome": "unavailable"
+        if unavailable
+        else "committed"
+        if commit_occurred
+        else "rejected",
         "boundary_path_attestation": _boundary_path_attestation(family),
-        "observation_artifact_ref": ref, "observation_artifact_sha256": digest,
+        "observation_artifact_ref": ref,
+        "observation_artifact_sha256": digest,
     }

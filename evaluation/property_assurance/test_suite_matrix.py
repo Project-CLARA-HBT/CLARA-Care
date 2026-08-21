@@ -26,14 +26,19 @@ def test_development_matrix_has_all_prespecified_methods() -> None:
 
 def test_matrix_rejects_a_combined_suite_with_missing_method_target(tmp_path: Path) -> None:
     path = tmp_path / "matrix.json"
-    path.write_text(json.dumps({
-        "status": "development_only_not_frozen",
-        "suites": {
-            "M0_regression": ["m0.py"],
-            "M1_stateless_property": ["m1.py"],
-            "M2_state_machine": ["m2.py"],
-            "M3_combined": ["m0.py", "m1.py"],
-        },
-    }), encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            {
+                "status": "development_only_not_frozen",
+                "suites": {
+                    "M0_regression": ["m0.py"],
+                    "M1_stateless_property": ["m1.py"],
+                    "M2_state_machine": ["m2.py"],
+                    "M3_combined": ["m0.py", "m1.py"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="govmut_suite_matrix_combined_invalid"):
         load_development_suite_matrix(path)

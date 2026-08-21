@@ -76,18 +76,18 @@ def test_top_level_sealed_without_all_run_seals_fails() -> None:
 def test_claimed_frozen_plan_with_missing_bytes_fails() -> None:
     status = _status()
     status["runs"]["rivf_final_003"]["frozen_statistics_plan"]["bytes_exist"] = False
-    status["runs"]["rivf_final_003"]["frozen_statistics_plan"][
-        "hash_matches_reconciliation"
-    ] = False
+    status["runs"]["rivf_final_003"]["frozen_statistics_plan"]["hash_matches_reconciliation"] = (
+        False
+    )
     errors = validate_status(status, ROOT)
     assert any("no exact historical bytes exist" in error for error in errors)
 
 
 def test_claimed_frozen_plan_with_hash_mismatch_fails() -> None:
     status = _status()
-    status["runs"]["rivf_final_003"]["frozen_statistics_plan"][
-        "hash_matches_reconciliation"
-    ] = False
+    status["runs"]["rivf_final_003"]["frozen_statistics_plan"]["hash_matches_reconciliation"] = (
+        False
+    )
     errors = validate_status(status, ROOT)
     assert any("no exact historical bytes exist" in error for error in errors)
 

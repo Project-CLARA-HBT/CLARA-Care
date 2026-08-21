@@ -103,26 +103,30 @@ def _breakdown(residuals: dict[str, int], *, arm: str) -> tuple[dict[str, object
         if count <= 0:
             continue
         if family in INDETERMINATE_FAMILIES:
-            indeterminate.append({
-                "family": family,
-                "n": count,
-                "state": STATE_INDETERMINATE,
-                "reason": "concurrency/ordering residual; ordering not resolvable "
-                "from the frozen final-003 observer (never relabelled as a "
-                "confirmed violation)",
-            })
+            indeterminate.append(
+                {
+                    "family": family,
+                    "n": count,
+                    "state": STATE_INDETERMINATE,
+                    "reason": "concurrency/ordering residual; ordering not resolvable "
+                    "from the frozen final-003 observer (never relabelled as a "
+                    "confirmed violation)",
+                }
+            )
             continue
         omitted = _OMITTED_COORDINATE.get(family, "unknown")
-        invalid.append({
-            "family": family,
-            "n": count,
-            "state": STATE_CONFIRMED_INVALID,
-            "attribution": "arm_omitted_coordinate",
-            "omitted_coordinate": omitted,
-            "note": "controlled ablation outcome: the arm design removes the "
-            f"{omitted} coordinate; not a production defect",
-            "arm_omits_coordinate": omitted in _ARM_OMITS[arm],
-        })
+        invalid.append(
+            {
+                "family": family,
+                "n": count,
+                "state": STATE_CONFIRMED_INVALID,
+                "attribution": "arm_omitted_coordinate",
+                "omitted_coordinate": omitted,
+                "note": "controlled ablation outcome: the arm design removes the "
+                f"{omitted} coordinate; not a production defect",
+                "arm_omits_coordinate": omitted in _ARM_OMITS[arm],
+            }
+        )
     return tuple(invalid), tuple(indeterminate)
 
 
@@ -177,15 +181,21 @@ def derive_three_state_primary(analysis: dict[str, Any]) -> dict[str, object]:
         "source_schema_version": str(analysis.get("schema_version")),
         "source_sha": str(analysis.get("source_sha")),
         "derivation_notes": [
-            ("CONFIRMED_INVALID counts confirmed invalid-commit acceptances with "
-            "attribution arm_omitted_coordinate for weaker-arm residuals; "
-            "never presented as production defects."),
-            ("INDETERMINATE counts concurrent_stale_state_write residuals per the "
-            "frozen GLHS TOCTOU wording; never relabelled as confirmed violations."),
+            (
+                "CONFIRMED_INVALID counts confirmed invalid-commit acceptances with "
+                "attribution arm_omitted_coordinate for weaker-arm residuals; "
+                "never presented as production defects."
+            ),
+            (
+                "INDETERMINATE counts concurrent_stale_state_write residuals per the "
+                "frozen GLHS TOCTOU wording; never relabelled as confirmed violations."
+            ),
             "OPERATIONAL_FAILURE counts availability failures (zero in final-003).",
             "CONFIRMED_SAFE_OR_REJECTED is the remainder of the primary denominator.",
-            ("The historical binary non-safe composite remains a secondary frozen "
-            "endpoint and is reported unchanged below."),
+            (
+                "The historical binary non-safe composite remains a secondary frozen "
+                "endpoint and is reported unchanged below."
+            ),
         ],
         "rows": rows,
         "secondary_frozen_binary_endpoint": {
@@ -232,7 +242,9 @@ def main() -> int:
         "sealed file is the only source.",
     )
     args = parser.parse_args()
-    table = write_three_state_primary(args.analysis, args.output, sealed_analysis=args.sealed_analysis)
+    table = write_three_state_primary(
+        args.analysis, args.output, sealed_analysis=args.sealed_analysis
+    )
     print(json.dumps(table, indent=2, sort_keys=True))
     return 0
 

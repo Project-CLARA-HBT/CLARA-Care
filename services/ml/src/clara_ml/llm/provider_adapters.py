@@ -185,10 +185,15 @@ class DeepSeekAdapter:
     def generate(self, request: ModelRequest) -> ModelResponse:
         start_time = time.monotonic()
         try:
+            kwargs: dict[str, Any] = {}
+            if request.max_tokens > 0:
+                kwargs["max_tokens"] = request.max_tokens
+            if request.model is not None:
+                kwargs["model"] = request.model
             raw_response = self._client.generate(
                 prompt=request.prompt,
                 system_prompt=request.system_prompt,
-                max_tokens=request.max_tokens if request.max_tokens > 0 else None,
+                **kwargs,
             )
             latency_ms = (time.monotonic() - start_time) * 1000
             return ModelResponse(

@@ -96,9 +96,7 @@ def _require(task: Mapping[str, object], key: str) -> object:
 def _require_str(task: Mapping[str, object], key: str) -> str:
     value = _require(task, key)
     if not isinstance(value, str):
-        raise TypeError(
-            f"task field {key!r} must be a string, got {type(value).__name__}"
-        )
+        raise TypeError(f"task field {key!r} must be a string, got {type(value).__name__}")
     return value
 
 
@@ -136,10 +134,7 @@ class _StateOnly:
     def build(self, task: Mapping[str, object]) -> BuiltContext:
         scenario = _require_str(task, "scenario")
         state_version = _require_str(task, "state_version")
-        text = (
-            f"Scenario: {scenario}\n"
-            f"[{_STATE_MARKER}] current state version: {state_version}"
-        )
+        text = f"Scenario: {scenario}\n[{_STATE_MARKER}] current state version: {state_version}"
         return BuiltContext(
             condition=self.condition,
             task_id=_require_str(task, "task_id"),
@@ -217,8 +212,7 @@ class _ThssStrict:
 
 
 BUILDERS: dict[str, ContextBuilder] = {
-    builder.condition: builder()
-    for builder in (_Unbound, _StateOnly, _ThssBound, _ThssStrict)
+    builder.condition: builder() for builder in (_Unbound, _StateOnly, _ThssBound, _ThssStrict)
 }
 
 

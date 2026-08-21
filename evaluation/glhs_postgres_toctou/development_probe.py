@@ -74,11 +74,13 @@ def _scope(db: Session) -> ProfileScope:
     profile = PhrProfile(user_id=user.id)
     db.add(profile)
     db.flush()
-    db.add(UserConsent(
-        user_id=user.id,
-        consent_type=MEDICAL_CONSENT_TYPE,
-        consent_version=required_medical_disclaimer_version(),
-    ))
+    db.add(
+        UserConsent(
+            user_id=user.id,
+            consent_type=MEDICAL_CONSENT_TYPE,
+            consent_version=required_medical_disclaimer_version(),
+        )
+    )
     db.flush()
     return ProfileScope(
         actor=user,
@@ -109,7 +111,9 @@ def _delegated_scope_with_persisted_role(db: Session) -> tuple[ProfileScope, Tok
     """Create a synthetic delegated scope resolved from persisted grant/role data."""
 
     owner = User(email=f"glhs-owner-{uuid4().hex}@example.test", hashed_password="x", role="normal")
-    delegate = User(email=f"glhs-delegate-{uuid4().hex}@example.test", hashed_password="x", role="doctor")
+    delegate = User(
+        email=f"glhs-delegate-{uuid4().hex}@example.test", hashed_password="x", role="doctor"
+    )
     db.add_all((owner, delegate))
     db.flush()
     profile = PhrProfile(user_id=owner.id)
@@ -118,25 +122,29 @@ def _delegated_scope_with_persisted_role(db: Session) -> tuple[ProfileScope, Tok
     # profile before constructing its persisted grant rather than relying on
     # a later unit-of-work flush to infer this scalar foreign key.
     db.flush()
-    db.add(UserConsent(
-        user_id=owner.id,
-        consent_type=MEDICAL_CONSENT_TYPE,
-        consent_version=required_medical_disclaimer_version(),
-    ))
+    db.add(
+        UserConsent(
+            user_id=owner.id,
+            consent_type=MEDICAL_CONSENT_TYPE,
+            consent_version=required_medical_disclaimer_version(),
+        )
+    )
     now = datetime.now(UTC)
-    db.add(FamilyAccessGrant(
-        profile_id=profile.id,
-        grantor_user_id=owner.id,
-        grantee_user_id=delegate.id,
-        object_type="lifemap",
-        object_id=profile.public_id,
-        allowed_actions_json=["view", "create", "correct", "resolve"],
-        data_classes_json=["medications"],
-        purpose="self_care",
-        status="active",
-        starts_at=now - timedelta(minutes=1),
-        expires_at=now + timedelta(days=1),
-    ))
+    db.add(
+        FamilyAccessGrant(
+            profile_id=profile.id,
+            grantor_user_id=owner.id,
+            grantee_user_id=delegate.id,
+            object_type="lifemap",
+            object_id=profile.public_id,
+            allowed_actions_json=["view", "create", "correct", "resolve"],
+            data_classes_json=["medications"],
+            purpose="self_care",
+            status="active",
+            starts_at=now - timedelta(minutes=1),
+            expires_at=now + timedelta(days=1),
+        )
+    )
     db.flush()
     token = TokenPayload(sub=delegate.email, role="normal")
     scope = resolve_profile_scope(
@@ -284,24 +292,31 @@ def _sanitized_ledger_observation(
     )
     return {
         "transition_item_count": transition_item_count,
-        "reconstruction_status": "exact_snapshot_linkage" if exact_linkage else "linkage_incomplete",
+        "reconstruction_status": "exact_snapshot_linkage"
+        if exact_linkage
+        else "linkage_incomplete",
     }
 
 
 def _consent_revoke_schedule(db: Session, scope: ProfileScope) -> dict[str, object]:
     started = time.perf_counter()
     snapshot = compile_thss(
-        db, scope=scope, task="glhs-toctou-development", purpose="self_care",
+        db,
+        scope=scope,
+        task="glhs-toctou-development",
+        purpose="self_care",
         allowed_data_classes=frozenset({"medications"}),
     )
     binding_digest, binding_field = _binding_digest(snapshot)
     proposal = _proposal_after_snapshot(db, scope, snapshot.snapshot_id, binding_digest)
-    db.add(UserConsent(
-        user_id=scope.actor.id,
-        consent_type=MEDICAL_CONSENT_TYPE,
-        consent_version=required_medical_disclaimer_version(),
-        revoked_at=datetime.now(UTC),
-    ))
+    db.add(
+        UserConsent(
+            user_id=scope.actor.id,
+            consent_type=MEDICAL_CONSENT_TYPE,
+            consent_version=required_medical_disclaimer_version(),
+            revoked_at=datetime.now(UTC),
+        )
+    )
     db.flush()
     try:
         apply_transition(
@@ -345,7 +360,10 @@ def _consent_revoke_schedule(db: Session, scope: ProfileScope) -> dict[str, obje
 def _policy_change_schedule(db: Session, scope: ProfileScope) -> dict[str, object]:
     started = time.perf_counter()
     snapshot = compile_thss(
-        db, scope=scope, task="glhs-toctou-development", purpose="self_care",
+        db,
+        scope=scope,
+        task="glhs-toctou-development",
+        purpose="self_care",
         allowed_data_classes=frozenset({"medications"}),
     )
     binding_digest, binding_field = _binding_digest(snapshot)
@@ -379,7 +397,10 @@ def _role_change_schedule(db: Session) -> dict[str, object]:
     started = time.perf_counter()
     scope, token = _delegated_scope_with_persisted_role(db)
     snapshot = compile_thss(
-        db, scope=scope, task="glhs-toctou-development", purpose="self_care",
+        db,
+        scope=scope,
+        task="glhs-toctou-development",
+        purpose="self_care",
         allowed_data_classes=frozenset({"medications"}),
     )
     binding_digest, binding_field = _binding_digest(snapshot)
@@ -452,7 +473,10 @@ def _concurrent_consent_writer_vs_commit_schedule(engine: Engine) -> dict[str, o
         scope = _scope(setup)
         setup.commit()
         snapshot = compile_thss(
-            setup, scope=scope, task="glhs-toctou-development", purpose="self_care",
+            setup,
+            scope=scope,
+            task="glhs-toctou-development",
+            purpose="self_care",
             allowed_data_classes=frozenset({"medications"}),
         )
         binding_digest, binding_field = _binding_digest(snapshot)
@@ -468,12 +492,14 @@ def _concurrent_consent_writer_vs_commit_schedule(engine: Engine) -> dict[str, o
         try:
             with Session(engine) as db:
                 barrier.wait(timeout=10)
-                db.add(UserConsent(
-                    user_id=user_id,
-                    consent_type=MEDICAL_CONSENT_TYPE,
-                    consent_version=required_medical_disclaimer_version(),
-                    revoked_at=datetime.now(UTC),
-                ))
+                db.add(
+                    UserConsent(
+                        user_id=user_id,
+                        consent_type=MEDICAL_CONSENT_TYPE,
+                        consent_version=required_medical_disclaimer_version(),
+                        revoked_at=datetime.now(UTC),
+                    )
+                )
                 db.commit()
                 with mutex:
                     observed["revoke_commit_ns"] = time.monotonic_ns()
@@ -574,7 +600,10 @@ def _concurrent_consent_writer_schedule(engine: Engine) -> dict[str, object]:
         scope = _scope(setup)
         setup.commit()
         snapshot = compile_thss(
-            setup, scope=scope, task="glhs-toctou-development", purpose="self_care",
+            setup,
+            scope=scope,
+            task="glhs-toctou-development",
+            purpose="self_care",
             allowed_data_classes=frozenset({"medications"}),
         )
         binding_digest, binding_field = _binding_digest(snapshot)
@@ -589,12 +618,14 @@ def _concurrent_consent_writer_schedule(engine: Engine) -> dict[str, object]:
         try:
             with Session(engine) as db:
                 barrier.wait(timeout=10)
-                db.add(UserConsent(
-                    user_id=user_id,
-                    consent_type=MEDICAL_CONSENT_TYPE,
-                    consent_version=required_medical_disclaimer_version(),
-                    revoked_at=datetime.now(UTC),
-                ))
+                db.add(
+                    UserConsent(
+                        user_id=user_id,
+                        consent_type=MEDICAL_CONSENT_TYPE,
+                        consent_version=required_medical_disclaimer_version(),
+                        revoked_at=datetime.now(UTC),
+                    )
+                )
                 db.commit()
                 with mutex:
                     observed["revoke_commit_ns"] = time.time_ns()

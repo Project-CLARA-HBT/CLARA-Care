@@ -50,7 +50,7 @@ from collections.abc import Callable, Sequence
 from math import sqrt
 from pathlib import Path
 from threading import Lock
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from clara_ml.config import settings
 
@@ -128,7 +128,7 @@ class CacheBackend(Protocol):
     two methods without changing :class:`EmbeddingCache`.
     """
 
-    def get(self, key: str) -> Optional[list[float]]:
+    def get(self, key: str) -> list[float] | None:
         """Return the stored vector for ``key`` or ``None`` if absent."""
         ...
 
@@ -148,7 +148,7 @@ class InMemoryCacheBackend:
         self._store: dict[str, list[float]] = {}
         self._lock = Lock()
 
-    def get(self, key: str) -> Optional[list[float]]:
+    def get(self, key: str) -> list[float] | None:
         with self._lock:
             stored = self._store.get(key)
             return list(stored) if stored is not None else None
@@ -226,7 +226,7 @@ class JsonFileCacheBackend:
         except OSError as exc:  # disk full / permission: keep in-memory state
             logger.warning("embedding_cache_flush_failed", extra={"reason": str(exc)})
 
-    def get(self, key: str) -> Optional[list[float]]:
+    def get(self, key: str) -> list[float] | None:
         with self._lock:
             stored = self._store.get(key)
             return list(stored) if stored is not None else None

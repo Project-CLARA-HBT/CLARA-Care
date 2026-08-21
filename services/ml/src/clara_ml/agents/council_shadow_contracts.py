@@ -21,7 +21,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, field_validator
 
-COUNCIL_SHADOW_CONTRACT_VERSION = "council-specialist-shadow.v5"
+CouncilShadowContractVersion = Literal["council-specialist-shadow.v5"]
+COUNCIL_SHADOW_CONTRACT_VERSION: CouncilShadowContractVersion = (
+    "council-specialist-shadow.v5"
+)
 COUNCIL_SHADOW_PROMPT_FAMILY_VERSION = "council-specialist-profiles.vi.v1"
 
 CouncilShadowSpecialty = Literal[
@@ -102,7 +105,7 @@ def _profile(specialty: CouncilShadowSpecialty) -> CouncilShadowSpecialistProfil
 # The allowlist is deliberately code-owned, frozen, and shared by all future
 # call sites.  There is no caller-controlled prompt/template selection.
 COUNCIL_SHADOW_SPECIALIST_PROFILES: Mapping[
-    CouncilShadowSpecialty, CouncilShadowSpecialistProfile
+    str, CouncilShadowSpecialistProfile
 ] = {
     "cardiology": _profile("cardiology"),
     "neurology": _profile("neurology"),
@@ -120,7 +123,7 @@ def resolve_council_shadow_specialist_profile(
     if not isinstance(specialty, str):
         return None
     canonical = specialty.strip().lower()
-    return COUNCIL_SHADOW_SPECIALIST_PROFILES.get(canonical)  # type: ignore[arg-type]
+    return COUNCIL_SHADOW_SPECIALIST_PROFILES.get(canonical)
 
 
 def resolve_council_shadow_specialist_profiles(
@@ -167,7 +170,7 @@ class CouncilShadowSpecialistOpinion(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    contract_version: Literal[COUNCIL_SHADOW_CONTRACT_VERSION]
+    contract_version: CouncilShadowContractVersion = COUNCIL_SHADOW_CONTRACT_VERSION
     specialty: CouncilShadowSpecialty
     prompt_version: StrictStr = Field(min_length=1, max_length=160)
     source_class: CouncilShadowSourceClass
@@ -194,7 +197,7 @@ class CouncilShadowVerifierResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    contract_version: Literal[COUNCIL_SHADOW_CONTRACT_VERSION]
+    contract_version: CouncilShadowContractVersion = COUNCIL_SHADOW_CONTRACT_VERSION
     specialty: CouncilShadowSpecialty
     prompt_version: StrictStr = Field(min_length=1, max_length=160)
     status: CouncilShadowVerifierStatus
@@ -210,7 +213,7 @@ class CouncilShadowAdjudication(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    contract_version: Literal[COUNCIL_SHADOW_CONTRACT_VERSION]
+    contract_version: CouncilShadowContractVersion = COUNCIL_SHADOW_CONTRACT_VERSION
     stage: Literal["deterministic_shadow_adjudication"]
     release_effect: Literal["none_shadow_only"]
     baseline_triage: CouncilShadowTriage

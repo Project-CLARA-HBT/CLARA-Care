@@ -1,11 +1,13 @@
 """Tests for the parameterized Zipfian concurrency benchmark."""
+
 from __future__ import annotations
 
 import pytest
+
 from evaluation.glhs_postgres_toctou.zipfian_concurrency_bench import (
     ZipfianGenerator,
-    run_zipfian_simulation,
     run_full_benchmark_grid,
+    run_zipfian_simulation,
 )
 
 

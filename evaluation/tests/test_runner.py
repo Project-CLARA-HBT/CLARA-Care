@@ -70,16 +70,12 @@ class EvalRunnerTests(unittest.TestCase):
                 )
 
             metric = next(
-                row
-                for row in report["metrics"]
-                if row["metric_id"] == "emergency_recall"
+                row for row in report["metrics"] if row["metric_id"] == "emergency_recall"
             )
             self.assertEqual(metric["state"], "measured")
             self.assertEqual(metric["value"], 1.0)
             self.assertEqual(metric["confidence_interval"]["method"], "wilson")
-            live_artifact = json.loads(
-                (output / "live-execution.json").read_text(encoding="utf-8")
-            )
+            live_artifact = json.loads((output / "live-execution.json").read_text(encoding="utf-8"))
             serialized = json.dumps(live_artifact, ensure_ascii=False)
             self.assertNotIn("deidentified-emergency-contract", serialized)
             self.assertNotIn("eval-vcu-001", serialized)
@@ -92,18 +88,14 @@ class EvalRunnerTests(unittest.TestCase):
                 (output / "confidence-intervals.json").read_text(encoding="utf-8")
             )
             measured_ids = {row["metric_id"] for row in intervals["measured"]}
-            unavailable_ids = {
-                row["metric_id"] for row in intervals["not_measured"]
-            }
+            unavailable_ids = {row["metric_id"] for row in intervals["not_measured"]}
             self.assertIn("emergency_recall", measured_ids)
             self.assertNotIn("emergency_recall", unavailable_ids)
 
             with (output / "critical-errors.csv").open(encoding="utf-8") as handle:
                 critical_rows = list(csv.DictReader(handle))
             observed_critical = [
-                row
-                for row in critical_rows
-                if row["critical_error_type"] == "missed_emergency"
+                row for row in critical_rows if row["critical_error_type"] == "missed_emergency"
             ]
             self.assertEqual(len(observed_critical), 1)
             self.assertEqual(observed_critical[0]["state"], "measured")
@@ -164,9 +156,7 @@ class EvalRunnerTests(unittest.TestCase):
             ],
         )
         c2_rows = [
-            row
-            for row in rows
-            if row["variant"] == "C2" and row["metric_id"] == "red_flag_recall"
+            row for row in rows if row["variant"] == "C2" and row["metric_id"] == "red_flag_recall"
         ]
         self.assertEqual(len(c2_rows), 1)
         self.assertEqual(c2_rows[0]["state"], "measured")
@@ -261,12 +251,8 @@ class EvalRunnerTests(unittest.TestCase):
             self.assertEqual(target, output)
             self.assertEqual(report["integrity"]["state"], "measured")
             self.assertEqual(report["integrity"]["value"], 1.0)
-            self.assertEqual(
-                {track["track_id"] for track in report["tracks"]}, REQUIRED_TRACK_IDS
-            )
-            self.assertTrue(
-                all(track["state"] == "not_measured" for track in report["tracks"])
-            )
+            self.assertEqual({track["track_id"] for track in report["tracks"]}, REQUIRED_TRACK_IDS)
+            self.assertTrue(all(track["state"] == "not_measured" for track in report["tracks"]))
             for filename in (
                 "metrics.json",
                 "dataset-manifest.json",
@@ -283,14 +269,10 @@ class EvalRunnerTests(unittest.TestCase):
 
             metrics = json.loads((output / "metrics.json").read_text(encoding="utf-8"))
             product_metrics = [
-                row
-                for row in metrics["metrics"]
-                if row["track_id"] != "evaluation_governance"
+                row for row in metrics["metrics"] if row["track_id"] != "evaluation_governance"
             ]
             self.assertTrue(product_metrics)
-            self.assertTrue(
-                all(row["state"] == "not_measured" for row in product_metrics)
-            )
+            self.assertTrue(all(row["state"] == "not_measured" for row in product_metrics))
             self.assertTrue(all(row["measurement_command"] for row in product_metrics))
             model_manifest = json.loads(
                 (output / "model-manifest.json").read_text(encoding="utf-8")

@@ -171,9 +171,7 @@ def _parse_tracks(raw: Any) -> tuple[TrackConfig, ...]:
         dataset = item.get("dataset")
         mode = item.get("mode")
         required_metrics = item.get("required_metrics", [])
-        if dataset is not None and (
-            not isinstance(dataset, str) or not dataset.strip()
-        ):
+        if dataset is not None and (not isinstance(dataset, str) or not dataset.strip()):
             raise SuiteConfigError(f"suite_track_dataset_invalid:{track_id}")
         if mode is not None and (not isinstance(mode, str) or not mode.strip()):
             raise SuiteConfigError(f"suite_track_mode_invalid:{track_id}")
@@ -255,9 +253,7 @@ def _load_flat_v1(raw: dict[str, Any]) -> SuiteConfig:
             TrackConfig(
                 track_id=track,
                 dataset=None,
-                mode="fixture"
-                if suite in {"smoke", "judge_demo"}
-                else "live-or-not-measured",
+                mode="fixture" if suite in {"smoke", "judge_demo"} else "live-or-not-measured",
                 required_metrics=DEFAULT_REQUIRED_METRICS[track],
             )
             for track in tracks
@@ -293,9 +289,7 @@ def load_suite_config(path: Path) -> SuiteConfig:
     if (
         not isinstance(required_artifacts, list)
         or not required_artifacts
-        or not all(
-            isinstance(item, str) and item.strip() for item in required_artifacts
-        )
+        or not all(isinstance(item, str) and item.strip() for item in required_artifacts)
     ):
         raise SuiteConfigError("suite_required_artifacts_invalid")
     config = SuiteConfig(
@@ -316,9 +310,7 @@ def load_suite_config(path: Path) -> SuiteConfig:
     if config.suite == "release":
         if not config.release_locked:
             raise SuiteConfigError("release_must_be_locked")
-        if not config.strict_gate or not config.gates.get(
-            "fail_on_unmeasured_required_metric"
-        ):
+        if not config.strict_gate or not config.gates.get("fail_on_unmeasured_required_metric"):
             raise SuiteConfigError("release_must_fail_on_unmeasured_metrics")
     if config.allow_synthetic_metrics:
         raise SuiteConfigError("synthetic_metrics_are_never_allowed")

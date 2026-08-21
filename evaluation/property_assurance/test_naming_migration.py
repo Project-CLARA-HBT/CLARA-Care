@@ -4,6 +4,7 @@ Historical bytes may retain their old protocol vocabulary only below the
 explicit generalized archive root.  This guard is deliberately path-based so
 that it cannot mistake a prose citation for an active executable protocol.
 """
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]

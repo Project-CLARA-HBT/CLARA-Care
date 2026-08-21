@@ -34,7 +34,9 @@ def _load_object(path: Path, error: str) -> dict[str, Any]:
     return value
 
 
-def _included_mutant_ids(*, manifest_path: Path, catalog_path: Path, manifest: dict[str, Any]) -> list[str]:
+def _included_mutant_ids(
+    *, manifest_path: Path, catalog_path: Path, manifest: dict[str, Any]
+) -> list[str]:
     review = manifest["non_equivalence_review"]
     review_path = (manifest_path.parent / review["artifact"]).resolve()
     reviewed = _load_object(review_path, "govmut_final_runner_review_invalid")
@@ -45,7 +47,9 @@ def _included_mutant_ids(*, manifest_path: Path, catalog_path: Path, manifest: d
         raise FreezeError("govmut_final_runner_catalog_invalid")
 
     catalog_ids = [candidate.get("id") for candidate in candidates if isinstance(candidate, dict)]
-    if len(catalog_ids) != len(candidates) or not all(isinstance(item, str) for item in catalog_ids):
+    if len(catalog_ids) != len(candidates) or not all(
+        isinstance(item, str) for item in catalog_ids
+    ):
         raise FreezeError("govmut_final_runner_catalog_invalid")
     disposition_by_id = {
         item.get("mutant_id"): item.get("disposition")
@@ -53,7 +57,9 @@ def _included_mutant_ids(*, manifest_path: Path, catalog_path: Path, manifest: d
         if isinstance(item, dict)
     }
     # Preserve catalog order: the manifest/review decides eligibility, never this runner.
-    return [mutant_id for mutant_id in catalog_ids if disposition_by_id.get(mutant_id) == "included"]
+    return [
+        mutant_id for mutant_id in catalog_ids if disposition_by_id.get(mutant_id) == "included"
+    ]
 
 
 def _hypothesis_version() -> str:
@@ -146,7 +152,9 @@ def main() -> int:
         )
     except (FreezeError, ValueError) as exc:
         parser.error(str(exc))
-    print(json.dumps({"status": result["status"], "freeze_id": result["freeze_id"]}, sort_keys=True))
+    print(
+        json.dumps({"status": result["status"], "freeze_id": result["freeze_id"]}, sort_keys=True)
+    )
     return 0
 
 

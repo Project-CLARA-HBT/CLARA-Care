@@ -244,10 +244,12 @@ def seal_result_root(
             "## Claims",
             "",
             "See `claim_to_evidence.csv` for claim-to-evidence mapping.",
-            ("Aggregation follows the frozen rule in "
-            "`research/assurance_soict/ANALYSIS_PLAN.md` (primary "
-            "`detected_any_seed`; robustness `detected_all_seeds`; seeds are "
-            "deterministic streams, not independent N)."),
+            (
+                "Aggregation follows the frozen rule in "
+                "`research/assurance_soict/ANALYSIS_PLAN.md` (primary "
+                "`detected_any_seed`; robustness `detected_all_seeds`; seeds are "
+                "deterministic streams, not independent N)."
+            ),
             "",
             "This work stream is not external clinical validation.",
         ]

@@ -61,9 +61,7 @@ def test_missing_grounded_code_yields_no_eligible_case() -> None:
     assert mine_candidates(token, events)[0].status == "NO_ELIGIBLE_CASE"
 
 
-def test_stu3_procedure_request_is_source_grounded_without_relabeling_provenance() -> (
-    None
-):
+def test_stu3_procedure_request_is_source_grounded_without_relabeling_provenance() -> None:
     token, events = ingest_bundle(
         _bundle(
             [
@@ -75,11 +73,7 @@ def test_stu3_procedure_request_is_source_grounded_without_relabeling_provenance
                     "subject": {"reference": "Patient/patient-stu3"},
                     "authoredOn": "2026-01-01T00:00:00Z",
                     "scheduledPeriod": {"end": "2026-02-01T00:00:00Z"},
-                    "code": {
-                        "coding": [
-                            {"system": "http://loinc.org", "code": "example-stu3"}
-                        ]
-                    },
+                    "code": {"coding": [{"system": "http://loinc.org", "code": "example-stu3"}]},
                 },
             ]
         ),

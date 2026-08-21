@@ -16,7 +16,9 @@ from evaluation.model_adjudication.run_v2 import MODELS
 
 
 def _initial_labels(result: dict[str, Any]) -> tuple[str, str]:
-    reviews = result.get("initial_reviews") if "initial_reviews" in result else result.get("reviews")
+    reviews = (
+        result.get("initial_reviews") if "initial_reviews" in result else result.get("reviews")
+    )
     if not isinstance(reviews, list) or len(reviews) < 2:
         raise ValueError("model_review_analysis_reviews_missing")
     return (reviews[0]["review"]["label"], reviews[1]["review"]["label"])
@@ -45,7 +47,9 @@ def _cohens_kappa(pairs: list[tuple[str, str]]) -> float | None:
     return (observed - expected) / (1 - expected)
 
 
-def _self_consistency(canonical: list[dict[str, Any]], duplicates: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _self_consistency(
+    canonical: list[dict[str, Any]], duplicates: list[dict[str, Any]]
+) -> dict[str, Any] | None:
     primary = {r["case_id"]: r for r in canonical}
     comparisons = 0
     consistent = 0
@@ -70,7 +74,9 @@ def _self_consistency(canonical: list[dict[str, Any]], duplicates: list[dict[str
 
 
 def analyze(data_dir: Path) -> dict[str, Any]:
-    results: list[dict[str, Any]] = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(data_dir.glob("*.json"))]
+    results: list[dict[str, Any]] = [
+        json.loads(path.read_text(encoding="utf-8")) for path in sorted(data_dir.glob("*.json"))
+    ]
     canonical = [r for r in results if not r.get("frozen_duplicate")]
     duplicates = [r for r in results if r.get("frozen_duplicate")]
     if not canonical:
@@ -80,7 +86,9 @@ def analyze(data_dir: Path) -> dict[str, Any]:
     n = len(canonical)
     initial_agreement = sum(a == b for a, b in initial_pairs) / n
     disagreement_count = sum(a != b for a, b in initial_pairs)
-    reconciliation_count = sum(r.get("status") in ("AGREED_AFTER_RECONCILIATION", "UNRESOLVED") for r in canonical)
+    reconciliation_count = sum(
+        r.get("status") in ("AGREED_AFTER_RECONCILIATION", "UNRESOLVED") for r in canonical
+    )
     post_agreement = sum(a == b for a, b in final_pairs) / n
     unresolved_count = sum(r.get("status") == "UNRESOLVED" for r in canonical)
     left_dist = Counter(a for a, _ in initial_pairs)
@@ -111,5 +119,7 @@ if __name__ == "__main__":
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    args.output.write_text(json.dumps(analyze(args.data_dir), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(analyze(args.data_dir), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     print(args.output)

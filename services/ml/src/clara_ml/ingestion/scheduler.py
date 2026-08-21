@@ -56,7 +56,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Protocol, runtime_checkable
 
 from sqlalchemy import select
@@ -340,15 +340,15 @@ class RegistryScheduleReader:
 def _utcnow() -> datetime:
     """Current UTC time (injectable ``now`` overrides this in the public API)."""
 
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _as_utc(value: datetime) -> datetime:
     """Normalize a datetime to timezone-aware UTC (naive is assumed UTC)."""
 
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def _coerce_interval(value: Any, fallback: int) -> int:
@@ -420,7 +420,7 @@ class Scheduler:
         session_factory: Callable[[], Session],
         *,
         default_interval_seconds: int = DEFAULT_INTERVAL_SECONDS,
-    ) -> "Scheduler":
+    ) -> Scheduler:
         """Build a scheduler whose reader queries ``kb_source_registry``."""
 
         reader = RegistryScheduleReader(

@@ -47,11 +47,25 @@ class FakeTransport:
                 return 409, {"detail": {"code": outcome}}
         return 201, {"outcome": "transition_committed"}
 
-    def __call__(self, base_url: str, path: str, *, method: str = "GET", body: dict | None = None, token: str | None = None, profile: str | None = None) -> tuple[int, dict]:
+    def __call__(
+        self,
+        base_url: str,
+        path: str,
+        *,
+        method: str = "GET",
+        body: dict | None = None,
+        token: str | None = None,
+        profile: str | None = None,
+    ) -> tuple[int, dict]:
         if path == "/health":
             return 200, {}
         if path == "/api/v1/govred-research/arm":
-            return 200, {"arm": self.arm, "bind_snapshot": True, "revalidate_state": True, "revalidate_governance": True}
+            return 200, {
+                "arm": self.arm,
+                "bind_snapshot": True,
+                "revalidate_state": True,
+                "revalidate_governance": True,
+            }
         self.requests.append((path, body or {}))
         if path == "/api/v1/auth/register":
             return 200, {}
@@ -74,7 +88,10 @@ class FakeTransport:
 
 def test_normalized_outcome_maps_http_errors() -> None:
     assert _normalized_outcome(201, {"outcome": "transition_committed"}) == "transition_committed"
-    assert _normalized_outcome(409, {"detail": {"code": "stale_state_version"}}) == "stale_state_version"
+    assert (
+        _normalized_outcome(409, {"detail": {"code": "stale_state_version"}})
+        == "stale_state_version"
+    )
     assert _normalized_outcome(500, {"detail": "boom"}) == "http_500"
 
 
@@ -120,7 +137,10 @@ def test_run_case_marks_not_applicable_mutation_not_run() -> None:
 
 def test_run_case_records_pass_and_sanitized_observation() -> None:
     transport = FakeTransport(arm="GLHS_STRICT")
-    transport.probe_plan["consent_revoke"] = (409, {"detail": {"code": "assertion_consent_mismatch"}})
+    transport.probe_plan["consent_revoke"] = (
+        409,
+        {"detail": {"code": "assertion_consent_mismatch"}},
+    )
     outcome = run_single_case(
         base_url="http://127.0.0.1:1",
         arm="GLHS_STRICT",

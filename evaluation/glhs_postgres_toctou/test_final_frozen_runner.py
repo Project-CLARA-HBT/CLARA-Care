@@ -101,10 +101,10 @@ def test_final_runner_refuses_missing_persisted_writer(tmp_path: Path) -> None:
 
 
 def test_final_runner_refuses_incomplete_audit_contract(tmp_path: Path) -> None:
-    with pytest.raises(
-        ValueError, match="glhs_toctou_final_audit_completeness_contract_invalid"
-    ):
-        validate(_write_protocol(tmp_path, audit_completeness={"persisted_audit_row_required": True}))
+    with pytest.raises(ValueError, match="glhs_toctou_final_audit_completeness_contract_invalid"):
+        validate(
+            _write_protocol(tmp_path, audit_completeness={"persisted_audit_row_required": True})
+        )
 
 
 def test_final_executor_refuses_draft_before_database_access(tmp_path: Path) -> None:
@@ -127,7 +127,9 @@ def test_final_executor_requires_explicit_isolation_attestation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv(runner.FINAL_ISOLATION_ATTESTATION, raising=False)
-    with pytest.raises(RuntimeError, match="glhs_toctou_final_requires_isolated_research_attestation"):
+    with pytest.raises(
+        RuntimeError, match="glhs_toctou_final_requires_isolated_research_attestation"
+    ):
         execute(
             _write_protocol(tmp_path),
             schedule_observer=lambda _engine, _schedule: pytest.fail("must not execute"),
@@ -171,7 +173,11 @@ def test_final_executor_preserves_frozen_order_and_observations(
     monkeypatch.setattr(runner, "create_engine", lambda *_args, **_kwargs: _Engine())
     seen: list[str] = []
     ordering = {"classification": "indeterminate_ordering_transition_committed"}
-    audit = {"persisted_audit_row": True, "reconstruction": "exact_snapshot_linkage", "observer_complete": True}
+    audit = {
+        "persisted_audit_row": True,
+        "reconstruction": "exact_snapshot_linkage",
+        "observer_complete": True,
+    }
 
     def observe(_engine: object, schedule: dict[str, object]) -> dict[str, object]:
         schedule_id = str(schedule["id"])

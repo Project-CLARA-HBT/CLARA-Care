@@ -101,9 +101,7 @@ def temporal_bm25(
             "governance_status": "UNSUPPORTED_BY_METHOD",
         }
     average_length = sum(len(document) for document in documents) / document_count
-    document_frequency = Counter(
-        term for document in documents for term in set(document)
-    )
+    document_frequency = Counter(term for document in documents for term in set(document))
     k1, b = 1.2, 0.75
     ranked: list[tuple[float, str, str, dict[str, Any]]] = []
     for event, document in zip(events, documents, strict=True):
@@ -114,11 +112,13 @@ def temporal_bm25(
             if not frequency:
                 continue
             inverse_frequency = math.log(
-                1 + (document_count - document_frequency[term] + 0.5)
+                1
+                + (document_count - document_frequency[term] + 0.5)
                 / (document_frequency[term] + 0.5)
             )
             lexical_score += inverse_frequency * (
-                frequency * (k1 + 1)
+                frequency
+                * (k1 + 1)
                 / (frequency + k1 * (1 - b + b * len(document) / average_length))
             )
         event_time = _timestamp(event.get("valid_at"))

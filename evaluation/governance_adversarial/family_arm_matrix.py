@@ -41,28 +41,32 @@ NOT_RUN_PER_ARM = 180
 # Sum of executed cases over these families is the primary endpoint denominator
 # (210); audit_reconstruction_failure commits by design and is never counted as
 # a primary failure.
-PRIMARY_ENDPOINT_FAMILIES = frozenset({
-    "authorization_consent_toctou",
-    "concurrent_stale_state_write",
-    "cross_subject_proposal_write",
-    "revoked_consent_cache_index_reuse",
-    "role_mismatch",
-    "stale_thss_replay",
-    "audit_reconstruction_failure",
-})
+PRIMARY_ENDPOINT_FAMILIES = frozenset(
+    {
+        "authorization_consent_toctou",
+        "concurrent_stale_state_write",
+        "cross_subject_proposal_write",
+        "revoked_consent_cache_index_reuse",
+        "role_mismatch",
+        "stale_thss_replay",
+        "audit_reconstruction_failure",
+    }
+)
 
 # Serial authorization-drift families that show zero invalid commits in the
 # strict arm (GLHS_STRICT) -- the residual is exclusively a concurrency/ordering
 # family (concurrent_stale_state_write).
-SERIAL_DRIFT_FAMILIES = frozenset({
-    "consent_revoke",
-    "policy_change",
-    "role_mismatch",
-    "stale_state",
-    "digest_corrupt",
-    "cross_subject",
-    "cache_revoke",
-})
+SERIAL_DRIFT_FAMILIES = frozenset(
+    {
+        "consent_revoke",
+        "policy_change",
+        "role_mismatch",
+        "stale_state",
+        "digest_corrupt",
+        "cross_subject",
+        "cache_revoke",
+    }
+)
 
 
 def _flag(row: dict[str, str], name: str) -> bool:
@@ -126,61 +130,63 @@ def build_family_arm_matrix(
             family_rows = [row for row in raw if row["family"] == family]
             executed = [row for row in family_rows if row["run_status"] == "EXECUTED"]
             not_run = [row for row in family_rows if row["run_status"] == "NOT_RUN"]
-            latencies = [
-                float(row["latency_ms"]) for row in executed if row["latency_ms"]
-            ]
+            latencies = [float(row["latency_ms"]) for row in executed if row["latency_ms"]]
             scope = family_scope(family)
-            rows.append({
-                "family": family,
-                "reporting_scope": "primary" if scope == "primary_authorization_drift" else "secondary",
-                "arm": arm,
-                "eligible_n": str(eligible[family]),
-                "executed_n": str(len(executed)),
-                "not_run_n": str(len(not_run)),
-                "invalid_commit_acceptance": str(
-                    sum(_flag(row, "stale_or_unauthorized_commit") for row in executed)
-                ),
-                "unintended_disclosure": str(
-                    sum(_flag(row, "unauthorized_disclosure") for row in executed)
-                ),
-                "wrong_subject_exposure": str(
-                    sum(_flag(row, "wrong_subject_exposure") for row in executed)
-                ),
-                "cache_revocation_failure": str(
-                    sum(_flag(row, "cache_index_revocation_failure") for row in executed)
-                ),
-                "availability_error": str(
-                    sum(_flag(row, "availability_error") for row in executed)
-                ),
-                "committed_count": str(
-                    sum(row["normalized_outcome"] == "committed" for row in executed)
-                ),
-                "rejected_count": str(
-                    sum(row["normalized_outcome"] == "rejected" for row in executed)
-                ),
-                # AUD-012 split: rejection auditability = rejected operations
-                # whose rejection decision is reconstructable; committed
-                # reconstructability = committed operations whose transition is
-                # reconstructable. The final-003 observer records the single
-                # audit_reconstruction_complete boolean (AUD-021: no persisted
-                # audit row is expected for rejected operations).
-                "rejection_auditability": str(
-                    sum(
-                        row["normalized_outcome"] == "rejected"
-                        and _flag(row, "audit_reconstruction_complete")
-                        for row in executed
-                    )
-                ),
-                "committed_reconstructability": str(
-                    sum(
-                        row["normalized_outcome"] == "committed"
-                        and _flag(row, "audit_reconstruction_complete")
-                        for row in executed
-                    )
-                ),
-                "latency_ms": _latency_format(_median(latencies)),
-                "latency_p95_ms": _latency_format(_p95(latencies)),
-            })
+            rows.append(
+                {
+                    "family": family,
+                    "reporting_scope": "primary"
+                    if scope == "primary_authorization_drift"
+                    else "secondary",
+                    "arm": arm,
+                    "eligible_n": str(eligible[family]),
+                    "executed_n": str(len(executed)),
+                    "not_run_n": str(len(not_run)),
+                    "invalid_commit_acceptance": str(
+                        sum(_flag(row, "stale_or_unauthorized_commit") for row in executed)
+                    ),
+                    "unintended_disclosure": str(
+                        sum(_flag(row, "unauthorized_disclosure") for row in executed)
+                    ),
+                    "wrong_subject_exposure": str(
+                        sum(_flag(row, "wrong_subject_exposure") for row in executed)
+                    ),
+                    "cache_revocation_failure": str(
+                        sum(_flag(row, "cache_index_revocation_failure") for row in executed)
+                    ),
+                    "availability_error": str(
+                        sum(_flag(row, "availability_error") for row in executed)
+                    ),
+                    "committed_count": str(
+                        sum(row["normalized_outcome"] == "committed" for row in executed)
+                    ),
+                    "rejected_count": str(
+                        sum(row["normalized_outcome"] == "rejected" for row in executed)
+                    ),
+                    # AUD-012 split: rejection auditability = rejected operations
+                    # whose rejection decision is reconstructable; committed
+                    # reconstructability = committed operations whose transition is
+                    # reconstructable. The final-003 observer records the single
+                    # audit_reconstruction_complete boolean (AUD-021: no persisted
+                    # audit row is expected for rejected operations).
+                    "rejection_auditability": str(
+                        sum(
+                            row["normalized_outcome"] == "rejected"
+                            and _flag(row, "audit_reconstruction_complete")
+                            for row in executed
+                        )
+                    ),
+                    "committed_reconstructability": str(
+                        sum(
+                            row["normalized_outcome"] == "committed"
+                            and _flag(row, "audit_reconstruction_complete")
+                            for row in executed
+                        )
+                    ),
+                    "latency_ms": _latency_format(_median(latencies)),
+                    "latency_p95_ms": _latency_format(_p95(latencies)),
+                }
+            )
     checks = _endpoint_checks(raw_root)
     return rows, checks
 
@@ -199,11 +205,7 @@ def _endpoint_checks(raw_root: Path) -> dict[str, int]:
         and row["family"] in PRIMARY_ENDPOINT_FAMILIES
         and row["family"] != "audit_reconstruction_failure"
     }
-    primary_executed = sum(
-        1
-        for row in executed
-        if row["family"] in PRIMARY_ENDPOINT_FAMILIES
-    )
+    primary_executed = sum(1 for row in executed if row["family"] in PRIMARY_ENDPOINT_FAMILIES)
     audit_by_design = sum(
         1
         for row in executed

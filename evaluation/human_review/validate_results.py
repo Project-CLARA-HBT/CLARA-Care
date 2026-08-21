@@ -8,11 +8,20 @@ from pathlib import Path
 
 from evaluation.evidence_program.freeze import FreezeError, load_frozen_json
 
-COLUMNS = frozenset({
-    "case_id", "system", "reviewer_id", "escalated", "escalation_correct",
-    "material_conflict_missed", "unnecessary_escalation", "review_seconds",
-    "resolved", "reviewed_at",
-})
+COLUMNS = frozenset(
+    {
+        "case_id",
+        "system",
+        "reviewer_id",
+        "escalated",
+        "escalation_correct",
+        "material_conflict_missed",
+        "unnecessary_escalation",
+        "review_seconds",
+        "resolved",
+        "reviewed_at",
+    }
+)
 
 
 def validate(results: Path, manifest: Path) -> None:

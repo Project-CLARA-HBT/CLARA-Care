@@ -3,6 +3,7 @@
 This module only contacts the three official DAV domains. Raw responses are
 immutable content-addressed objects; derived records always retain their SHA.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -91,7 +92,9 @@ def classify(title: str, url: str) -> str | None:
         "otc": ("không kê đơn", "otc"),
         "registration_publications": ("đăng ký lưu hành", "đăng ký thuốc", "cấp giấy đăng ký"),
     }
-    return next((kind for kind, words in rules.items() if any(word in text for word in words)), None)
+    return next(
+        (kind for kind, words in rules.items() if any(word in text for word in words)), None
+    )
 
 
 def fetch(url: str) -> tuple[int, str, bytes, str]:
@@ -100,9 +103,20 @@ def fetch(url: str) -> tuple[int, str, bytes, str]:
     last_error = "unknown"
     for attempt in range(MAX_RETRIES):
         try:
-            request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.*,*/*"})
+            request = Request(
+                url,
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Accept": "text/html,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.*,*/*",
+                },
+            )
             with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-                return response.status, response.headers.get_content_type(), response.read(), response.url
+                return (
+                    response.status,
+                    response.headers.get_content_type(),
+                    response.read(),
+                    response.url,
+                )
         except HTTPError as exc:
             return exc.code, exc.headers.get_content_type() if exc.headers else "", exc.read(), url
         except (URLError, TimeoutError) as exc:
@@ -135,7 +149,16 @@ class Store:
                     return row
         return None
 
-    def retain(self, *, bucket: str, url: str, payload: bytes, content_type: str, status: int, filename: str | None = None) -> dict[str, Any]:
+    def retain(
+        self,
+        *,
+        bucket: str,
+        url: str,
+        payload: bytes,
+        content_type: str,
+        status: int,
+        filename: str | None = None,
+    ) -> dict[str, Any]:
         digest = sha256(payload)
         suffix = Path(filename or urlparse(url).path).suffix.lower()
         if not suffix or len(suffix) > 10:
@@ -146,7 +169,15 @@ class Store:
             raise RuntimeError("content_address_collision")
         if not target.exists():
             target.write_bytes(payload)
-        return {"url": url, "raw_path": str(target), "sha256": digest, "bytes": len(payload), "http_status": status, "content_type": content_type, "retrieved_at_utc": now()}
+        return {
+            "url": url,
+            "raw_path": str(target),
+            "sha256": digest,
+            "bytes": len(payload),
+            "http_status": status,
+            "content_type": content_type,
+            "retrieved_at_utc": now(),
+        }
 
     def append(self, name: str, row: dict[str, Any]) -> None:
         with (self.manifests / name).open("a", encoding="utf-8") as file:

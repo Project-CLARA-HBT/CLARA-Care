@@ -29,13 +29,18 @@ def _initial(a: str, b: str) -> list[dict[str, Any]]:
     return [_review_result("reviewer_a", a), _review_result("reviewer_b", b)]
 
 
-def _case(*, case_id: str, status: str, initial: tuple[str, str], revised: tuple[str, str] | None = None) -> dict[str, Any]:
+def _case(
+    *, case_id: str, status: str, initial: tuple[str, str], revised: tuple[str, str] | None = None
+) -> dict[str, Any]:
     result: dict[str, Any] = {"case_id": case_id, "status": status}
     if status == "AGREED":
         result["reviews"] = _initial(*initial)
         return result
     result["initial_reviews"] = _initial(*initial)
-    result["revised_reviews"] = [_review_result("reviewer_a", revised[0]), _review_result("reviewer_b", revised[1])]
+    result["revised_reviews"] = [
+        _review_result("reviewer_a", revised[0]),
+        _review_result("reviewer_b", revised[1]),
+    ]
     result["reconciliation_prompts"] = {"reviewer_a": "a" * 64, "reviewer_b": "b" * 64}
     result["revised_response_hashes"] = {"reviewer_a": "ra" * 32, "reviewer_b": "rb" * 32}
     return result
@@ -44,7 +49,9 @@ def _case(*, case_id: str, status: str, initial: tuple[str, str], revised: tuple
 def _write(data_dir: Path, results: list[dict[str, Any]]) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
     for result in results:
-        (data_dir / f"{result['case_id']}.json").write_text(json.dumps(result, sort_keys=True), encoding="utf-8")
+        (data_dir / f"{result['case_id']}.json").write_text(
+            json.dumps(result, sort_keys=True), encoding="utf-8"
+        )
 
 
 def test_initial_and_post_reconciliation_stats(tmp_path: Path) -> None:
@@ -52,8 +59,18 @@ def test_initial_and_post_reconciliation_stats(tmp_path: Path) -> None:
         tmp_path,
         [
             _case(case_id="c1", status="AGREED", initial=("PASS", "PASS")),
-            _case(case_id="c2", status="AGREED_AFTER_RECONCILIATION", initial=("FAIL", "PASS"), revised=("PASS", "PASS")),
-            _case(case_id="c3", status="UNRESOLVED", initial=("FAIL", "PASS"), revised=("FAIL", "PASS")),
+            _case(
+                case_id="c2",
+                status="AGREED_AFTER_RECONCILIATION",
+                initial=("FAIL", "PASS"),
+                revised=("PASS", "PASS"),
+            ),
+            _case(
+                case_id="c3",
+                status="UNRESOLVED",
+                initial=("FAIL", "PASS"),
+                revised=("FAIL", "PASS"),
+            ),
         ],
     )
     result = analyze(tmp_path)
@@ -114,15 +131,27 @@ def test_raw_dir_without_reconciliation_is_handled(tmp_path: Path) -> None:
     result = analyze(tmp_path)
     assert result["reconciliation_count"] == 0
     assert result["unresolved_count"] == 0
-    assert result["post_reconciliation_agreement"] == result["initial_agreement"] == pytest.approx(0.5)
+    assert (
+        result["post_reconciliation_agreement"] == result["initial_agreement"] == pytest.approx(0.5)
+    )
 
 
 def test_frozen_duplicates_do_not_increase_n(tmp_path: Path) -> None:
     primary = [
         _case(case_id="c1", status="AGREED", initial=("PASS", "PASS")),
-        _case(case_id="c2", status="AGREED_AFTER_RECONCILIATION", initial=("FAIL", "PASS"), revised=("PASS", "PASS")),
+        _case(
+            case_id="c2",
+            status="AGREED_AFTER_RECONCILIATION",
+            initial=("FAIL", "PASS"),
+            revised=("PASS", "PASS"),
+        ),
     ]
-    dup = _case(case_id="c2__dup1", status="AGREED_AFTER_RECONCILIATION", initial=("FAIL", "PASS"), revised=("PASS", "PASS"))
+    dup = _case(
+        case_id="c2__dup1",
+        status="AGREED_AFTER_RECONCILIATION",
+        initial=("FAIL", "PASS"),
+        revised=("PASS", "PASS"),
+    )
     dup["frozen_duplicate"] = True
     dup["duplicate_of"] = "c2"
     _write(tmp_path, [*primary, dup])

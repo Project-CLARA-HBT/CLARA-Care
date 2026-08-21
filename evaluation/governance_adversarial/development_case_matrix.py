@@ -159,17 +159,24 @@ def _identity_with_transport(
     suffix = secrets.token_hex(8)
     email = f"rivf-{label}-{suffix}@example.com"
     password = f"Rivf{suffix}9"
-    status, _ = transport(base_url, "/api/v1/auth/register", method="POST", body={
-        "email": email,
-        "password": password,
-        "full_name": f"Synthetic {label}",
-        "accepted_terms": True,
-        "accepted_privacy": True,
-        "accepted_medical_consent": True,
-    })
+    status, _ = transport(
+        base_url,
+        "/api/v1/auth/register",
+        method="POST",
+        body={
+            "email": email,
+            "password": password,
+            "full_name": f"Synthetic {label}",
+            "accepted_terms": True,
+            "accepted_privacy": True,
+            "accepted_medical_consent": True,
+        },
+    )
     if status != 200:
         raise RuntimeError(f"synthetic_registration_failed:{status}")
-    status, login = transport(base_url, "/api/v1/auth/login", method="POST", body={"email": email, "password": password})
+    status, login = transport(
+        base_url, "/api/v1/auth/login", method="POST", body={"email": email, "password": password}
+    )
     token = login.get("access_token") if status == 200 else None
     if not isinstance(token, str):
         raise TypeError("synthetic_login_failed")
@@ -600,9 +607,7 @@ def run_matrix(
         transport = _request
     report = arm_report(base_url, transport)
     if report["arm"] != arm:
-        raise RuntimeError(
-            f"govred_arm_mismatch:expected={arm},reported={report['arm']}"
-        )
+        raise RuntimeError(f"govred_arm_mismatch:expected={arm},reported={report['arm']}")
     rows: list[dict[str, object]] = []
     failed: list[str] = []
     for case_id, spec in DEVELOPMENT_MATRIX.items():

@@ -78,14 +78,14 @@ def run(records: Path, output_dir: Path) -> dict[str, object]:
             task = json.loads(line)
             events = task["structured_events"]
             latest_valid = max(event["valid_time"] for event in events)
-            latest_candidates = [
-                event for event in events if event["valid_time"] == latest_valid
-            ]
+            latest_candidates = [event for event in events if event["valid_time"] == latest_valid]
             if len(latest_candidates) != 1:
                 excluded_ties += 1
                 continue
             target = latest_candidates[0]["event_id"]
-            lww = max(events, key=lambda item: (item["knowledge_time"], item["event_id"]))["event_id"]
+            lww = max(events, key=lambda item: (item["knowledge_time"], item["event_id"]))[
+                "event_id"
+            ]
             resolver = target
             btsa, conflict = _btsa(events, task["index_time"])
             selections = {
@@ -98,17 +98,19 @@ def run(records: Path, output_dir: Path) -> dict[str, object]:
                 correct = selected == target
                 counts[(task["domain"], system)][1] += 1
                 counts[(task["domain"], system)][0] += int(correct)
-                outputs.append({
-                    "task_id": task["task_id"],
-                    "subject_token": task["subject_token"],
-                    "domain": task["domain"],
-                    "system": system,
-                    "selected_event_id": selected or "",
-                    "source_target_event_id": target,
-                    "state_correct": correct,
-                    "conflict_preserved": conflict if system == "btsa_mechanism_mapped" else "",
-                    "ground_truth_kind": task["ground_truth_kind"],
-                })
+                outputs.append(
+                    {
+                        "task_id": task["task_id"],
+                        "subject_token": task["subject_token"],
+                        "domain": task["domain"],
+                        "system": system,
+                        "selected_event_id": selected or "",
+                        "source_target_event_id": target,
+                        "state_correct": correct,
+                        "conflict_preserved": conflict if system == "btsa_mechanism_mapped" else "",
+                        "ground_truth_kind": task["ground_truth_kind"],
+                    }
+                )
     domain_rows = [
         {
             "domain": domain,

@@ -168,9 +168,7 @@ def build_seal(run_output: dict, manifest: dict, git_sha: str) -> dict:
         "verdict_summary": _verdict_counts(run_output),
         "layer_verdict_summary": {
             "hl7_structural": _layer_verdict_counts(run_output, structural=True),
-            "clara_application_semantic": _layer_verdict_counts(
-                run_output, structural=False
-            ),
+            "clara_application_semantic": _layer_verdict_counts(run_output, structural=False),
         },
         "preservation": run_output["preservation"],
         "gaps": run_output["gaps"],

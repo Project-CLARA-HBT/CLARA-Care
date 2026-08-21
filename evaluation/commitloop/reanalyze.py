@@ -43,31 +43,22 @@ def create_statistical_correction(
     """Recompute paired statistics without changing sealed predictions or gold."""
 
     validate_run(run_dir)
-    outputs_raw = json.loads(
-        (run_dir / "solver_outputs.json").read_text(encoding="utf-8")
-    )
+    outputs_raw = json.loads((run_dir / "solver_outputs.json").read_text(encoding="utf-8"))
     if not isinstance(outputs_raw, list):
         raise TypeError("invalid_solver_outputs")
     outputs = [item for item in outputs_raw if isinstance(item, dict)]
-    gold = {
-        item["case_id"]: item for item in _jsonl(run_dir / "construction_gold.jsonl")
-    }
+    gold = {item["case_id"]: item for item in _jsonl(run_dir / "construction_gold.jsonl")}
     subjects = {
-        item["case_id"]: item["subject_token"]
-        for item in _jsonl(run_dir / "commitments.jsonl")
+        item["case_id"]: item["subject_token"] for item in _jsonl(run_dir / "commitments.jsonl")
     }
     manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, dict):
         raise TypeError("invalid_run_manifest")
     models = manifest.get("models")
     conditions = manifest.get("conditions")
-    if not isinstance(models, list) or not all(
-        isinstance(item, str) for item in models
-    ):
+    if not isinstance(models, list) or not all(isinstance(item, str) for item in models):
         raise TypeError("invalid_run_models")
-    if not isinstance(conditions, list) or not all(
-        isinstance(item, str) for item in conditions
-    ):
+    if not isinstance(conditions, list) or not all(isinstance(item, str) for item in conditions):
         raise TypeError("invalid_run_conditions")
     corrected = paired_condition_statistics(
         per_case_rows_with_subject(
@@ -82,13 +73,9 @@ def create_statistical_correction(
     payload = {
         "schema_version": "commitloop-statistical-correction.v1",
         "analysis_git_sha": _git_sha(repository_root),
-        "source_run_checksums_sha256": hashlib.sha256(
-            source_seal.read_bytes()
-        ).hexdigest(),
+        "source_run_checksums_sha256": hashlib.sha256(source_seal.read_bytes()).hexdigest(),
         "source_prediction_count": len(outputs),
-        "source_expected_prediction_count": (
-            len(subjects) * len(models) * len(conditions)
-        ),
+        "source_expected_prediction_count": (len(subjects) * len(models) * len(conditions)),
         "external_calls": 0,
         "correction_reason": (
             "v1 paired statistics overwrote repeated subject-condition rows instead "
@@ -100,9 +87,7 @@ def create_statistical_correction(
         "clinical_adjudication": "NOT_RUN",
     }
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
 
 

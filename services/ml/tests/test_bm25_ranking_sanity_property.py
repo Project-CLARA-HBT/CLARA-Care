@@ -58,14 +58,14 @@ Validates: Requirements 7.5.
 
 from __future__ import annotations
 
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 # Import the store package first so it fully initializes before sparse_index is
 # pulled in as a top-level import; store/__init__ -> hybrid_retriever -> ...
 # forms an import cycle that only resolves cleanly when ``clara_ml.rag.store``
 # loads first. Doing so here keeps this test importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.rag.store.sparse_index import (
     bm25_sanity_holds,
     build_tsquery_terms,

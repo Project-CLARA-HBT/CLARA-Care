@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import unicodedata
 
-
 VIET_TONE_MARKS = {"\u0300", "\u0301", "\u0303", "\u0309", "\u0323"}
 
 

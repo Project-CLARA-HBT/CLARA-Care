@@ -30,9 +30,7 @@ def main() -> int:
         raise TypeError("v7_cli_freeze_contract_missing")
     cohort_path = args.freeze.parent / "cohort" / "cohort.jsonl"
     rows = [
-        json.loads(line)
-        for line in cohort_path.read_text(encoding="utf-8").splitlines()
-        if line
+        json.loads(line) for line in cohort_path.read_text(encoding="utf-8").splitlines() if line
     ]
     split_subjects = contract.get(f"{args.split}_subjects")
     request_count = contract.get("solver_request_counts", {}).get(args.split)

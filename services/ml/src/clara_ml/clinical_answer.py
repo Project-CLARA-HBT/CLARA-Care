@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 _URGENT_INTENTS = {"emergency_triage"}
 _MEDICAL_INTENTS = {
     "symptom_triage",
@@ -29,10 +28,12 @@ def _evidence(context: Any) -> list[dict[str, Any]]:
     if not isinstance(context, list):
         return []
     output: list[dict[str, Any]] = []
-    for index, raw in enumerate(context[:12], start=1):
-        if not isinstance(raw, dict):
+    for index, raw_item in enumerate(context[:12], start=1):
+        if not isinstance(raw_item, dict):
             continue
-        metadata = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}
+        raw: dict[str, Any] = raw_item
+        raw_meta = raw.get("metadata")
+        metadata: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
         source = _text(raw.get("source") or metadata.get("source") or raw.get("id"), 200)
         url = _text(raw.get("url") or metadata.get("url"), 1000)
         title = _text(raw.get("title") or metadata.get("title") or source, 300)
@@ -45,10 +46,10 @@ def _evidence(context: Any) -> list[dict[str, Any]]:
         }
         if url:
             record["url"] = url
-        trust_tier = raw.get("trust_tier", metadata.get("trust_tier"))
+        trust_tier = raw.get("trust_tier") or metadata.get("trust_tier")
         if trust_tier is not None:
             record["trust_tier"] = trust_tier
-        effective_date = raw.get("effective_date", metadata.get("effective_date"))
+        effective_date = raw.get("effective_date") or metadata.get("effective_date")
         if effective_date is not None:
             record["effective_date"] = str(effective_date)
         output.append(record)

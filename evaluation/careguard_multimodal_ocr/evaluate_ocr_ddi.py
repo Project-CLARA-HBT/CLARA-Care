@@ -6,6 +6,7 @@ Evaluates:
 3. Model-Agnostic Upstream Drift Verification (Gemini 3.7 Flash vs LLaVA-Med vs Deterministic Tesseract).
 4. Clinical Economics of the 7.6% Clarification Rate vs Preventable Adverse Drug Events (ADEs).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -16,15 +17,17 @@ from pathlib import Path
 from typing import Any
 
 
-def wilson_score_interval(successes: int, total: int, confidence: float = 0.95) -> tuple[float, float]:
+def wilson_score_interval(
+    successes: int, total: int, confidence: float = 0.95
+) -> tuple[float, float]:
     """Calculates exact Wilson score interval for binomial proportions."""
     if total <= 0:
         return (0.0, 0.0)
     z = 1.959963984540054  # 95% two-sided z-score
     p = successes / total
-    denominator = 1.0 + (z ** 2) / total
-    center = (p + (z ** 2) / (2.0 * total)) / denominator
-    margin = (z * math.sqrt((p * (1.0 - p) / total) + ((z ** 2) / (4.0 * (total ** 2))))) / denominator
+    denominator = 1.0 + (z**2) / total
+    center = (p + (z**2) / (2.0 * total)) / denominator
+    margin = (z * math.sqrt((p * (1.0 - p) / total) + ((z**2) / (4.0 * (total**2))))) / denominator
     lower = max(0.0, center - margin)
     upper = min(1.0, center + margin)
     return (lower, upper)
@@ -54,7 +57,6 @@ def run_scaled_careguard_evaluation() -> ScaledOcrDdiReport:
     otc = 500
 
     # 1. Drug Name Recognition (over 4,800 mentions across 1,500 cases)
-    total_mentions = 4800
     tp_name = 4694
     fp_name = 76
     fn_name = 106
@@ -65,7 +67,6 @@ def run_scaled_careguard_evaluation() -> ScaledOcrDdiReport:
     ci_r_name = wilson_score_interval(tp_name, tp_name + fn_name)
 
     # 2. Strength / Dosage Form (over 4,500 instances)
-    total_strengths = 4500
     tp_str = 4374
     fp_str = 126
     fn_str = 158
@@ -86,15 +87,15 @@ def run_scaled_careguard_evaluation() -> ScaledOcrDdiReport:
     tp_ddi = 1245
     fn_ddi = 5
     sensitivity = tp_ddi / total_ddi_pos  # 0.9960
-    fnr = fn_ddi / total_ddi_pos        # 0.0040
+    fnr = fn_ddi / total_ddi_pos  # 0.0040
     ci_sens = wilson_score_interval(tp_ddi, total_ddi_pos)
     ci_fnr = wilson_score_interval(fn_ddi, total_ddi_pos)
 
     total_ddi_neg = 1250
     tn_ddi = 1236
     fp_ddi = 14
-    specificity = tn_ddi / total_ddi_neg # 0.9888
-    fpr = fp_ddi / total_ddi_neg        # 0.0112
+    specificity = tn_ddi / total_ddi_neg  # 0.9888
+    fpr = fp_ddi / total_ddi_neg  # 0.0112
     ci_spec = wilson_score_interval(tn_ddi, total_ddi_neg)
 
     # 5. Model-Agnostic Robustness Comparison across Upstream Vision Engines
@@ -133,10 +134,12 @@ def run_scaled_careguard_evaluation() -> ScaledOcrDdiReport:
         "careguard_sbmi_false_clear_rate": 0.0040,
         "careguard_daily_undetected_lethal_ddis": 20,
         "daily_prevented_hazardous_interactions": 320,
-        "daily_clarification_queue_items": 380, # 7.6% rate
+        "daily_clarification_queue_items": 380,  # 7.6% rate
         "avg_pharmacist_review_time_seconds": 15,
         "daily_pharmacist_review_hours": 1.58,  # Highly manageable for clinical pharmacy dept
-        "estimated_prevented_inpatient_cost_daily_usd": 320 * 5857 * 0.12, # ~12% lead to acute hospital admission ($224,908 saved/day)
+        "estimated_prevented_inpatient_cost_daily_usd": 320
+        * 5857
+        * 0.12,  # ~12% lead to acute hospital admission ($224,908 saved/day)
         "clinical_verdict": "A 1.58-hour daily pharmacist review load eliminates 320 severe adverse interaction exposures, delivering profound clinical and economic value.",
     }
 
@@ -184,27 +187,27 @@ def run_scaled_careguard_evaluation() -> ScaledOcrDdiReport:
 
 
 def generate_scaled_latex_tables(report: ScaledOcrDdiReport) -> str:
-    p_ci0 = report.drug_name_metrics['precision_ci95'][0] * 100
-    p_ci1 = report.drug_name_metrics['precision_ci95'][1] * 100
-    s_ci0 = report.strength_metrics['precision_ci95'][0] * 100
-    s_ci1 = report.strength_metrics['precision_ci95'][1] * 100
-    f_ci0 = report.frequency_metrics['accuracy_ci95'][0] * 100
-    f_ci1 = report.frequency_metrics['accuracy_ci95'][1] * 100
-    ddi_s_ci0 = report.ddi_metrics['sensitivity_ci95'][0] * 100
-    ddi_s_ci1 = report.ddi_metrics['sensitivity_ci95'][1] * 100
-    ddi_sp_ci0 = report.ddi_metrics['specificity_ci95'][0] * 100
-    ddi_sp_ci1 = report.ddi_metrics['specificity_ci95'][1] * 100
-    ddi_fn_ci0 = report.ddi_metrics['fnr_ci95'][0] * 100
-    ddi_fn_ci1 = report.ddi_metrics['fnr_ci95'][1] * 100
+    p_ci0 = report.drug_name_metrics["precision_ci95"][0] * 100
+    p_ci1 = report.drug_name_metrics["precision_ci95"][1] * 100
+    s_ci0 = report.strength_metrics["precision_ci95"][0] * 100
+    s_ci1 = report.strength_metrics["precision_ci95"][1] * 100
+    f_ci0 = report.frequency_metrics["accuracy_ci95"][0] * 100
+    f_ci1 = report.frequency_metrics["accuracy_ci95"][1] * 100
+    ddi_s_ci0 = report.ddi_metrics["sensitivity_ci95"][0] * 100
+    ddi_s_ci1 = report.ddi_metrics["sensitivity_ci95"][1] * 100
+    ddi_sp_ci0 = report.ddi_metrics["specificity_ci95"][0] * 100
+    ddi_sp_ci1 = report.ddi_metrics["specificity_ci95"][1] * 100
+    ddi_fn_ci0 = report.ddi_metrics["fnr_ci95"][0] * 100
+    ddi_fn_ci1 = report.ddi_metrics["fnr_ci95"][1] * 100
     fid_ci0 = report.fides_gate_ci95[0] * 100
     fid_ci1 = report.fides_gate_ci95[1] * 100
 
-    f1_drug = report.drug_name_metrics['f1'] * 100
-    f1_str = report.strength_metrics['f1'] * 100
-    acc_freq = report.frequency_metrics['accuracy'] * 100
-    sens = report.ddi_metrics['sensitivity'] * 100
-    spec = report.ddi_metrics['specificity'] * 100
-    fnr = report.ddi_metrics['fnr'] * 100
+    f1_drug = report.drug_name_metrics["f1"] * 100
+    f1_str = report.strength_metrics["f1"] * 100
+    acc_freq = report.frequency_metrics["accuracy"] * 100
+    sens = report.ddi_metrics["sensitivity"] * 100
+    spec = report.ddi_metrics["specificity"] * 100
+    fnr = report.ddi_metrics["fnr"] * 100
     fides = report.fides_gate_blocking_rate * 100
 
     lines = [
@@ -240,7 +243,9 @@ OcrDdiMetricReport = ScaledOcrDdiReport
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=Path("artifacts/careguard_scaled_1500_eval.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("artifacts/careguard_scaled_1500_eval.json")
+    )
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -195,9 +195,7 @@ def build_cohort(
     for stratum_index, stratum in enumerate(STRATA):
         for split_index, (split, count) in enumerate(SPLIT_COUNTS.items()):
             for index in range(count):
-                seed = (
-                    master_seed + stratum_index * 100_000 + split_index * 10_000 + index
-                )
+                seed = master_seed + stratum_index * 100_000 + split_index * 10_000 + index
                 bundle = _bundle(
                     stratum=stratum,
                     split=split,
@@ -205,9 +203,7 @@ def build_cohort(
                     seed=seed,
                     schema_version=schema_version,
                 )
-                token, events = ingest_bundle(
-                    bundle, fhir_version="R4", ingested_at=KNOWN_CUTOFF
-                )
+                token, events = ingest_bundle(bundle, fhir_version="R4", ingested_at=KNOWN_CUTOFF)
                 cases = mine_candidates(token, events)
                 if len(cases) != 1 or cases[0].status != "ELIGIBLE":
                     raise ValueError("v7_cohort_requires_one_eligible_case_per_subject")
@@ -239,9 +235,7 @@ def build_cohort(
                         "bundle": bundle,
                     }
                 )
-    rows.sort(
-        key=lambda item: (str(item["split"]), str(item["stratum"]), int(item["seed"]))
-    )
+    rows.sort(key=lambda item: (str(item["split"]), str(item["stratum"]), int(item["seed"])))
     manifest = {
         "schema_version": schema_version,
         "status": "GENERATED_NOT_FROZEN",
@@ -252,8 +246,7 @@ def build_cohort(
         "seed_reuse_prohibited": True,
         "subject_count": len(rows),
         "split_counts": {
-            split: sum(1 for row in rows if row["split"] == split)
-            for split in SPLIT_COUNTS
+            split: sum(1 for row in rows if row["split"] == split) for split in SPLIT_COUNTS
         },
         "strata": {name: sum(SPLIT_COUNTS.values()) for name in STRATA},
         "template_families": list(STRATA),
@@ -285,9 +278,7 @@ def write_cohort(
         output_dir / "cohort.jsonl",
         output_dir / "cohort_manifest.json",
     )
-    cohort_path.write_text(
-        "".join(_canonical(row) + "\n" for row in rows), encoding="utf-8"
-    )
+    cohort_path.write_text("".join(_canonical(row) + "\n" for row in rows), encoding="utf-8")
     manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

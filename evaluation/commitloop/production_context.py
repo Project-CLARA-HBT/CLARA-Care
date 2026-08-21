@@ -178,8 +178,7 @@ def _compact_solver_context(
             event.get("evidence_id") == anchor
             or event.get("relation") == "contradicts"
             or any(
-                isinstance(code, dict)
-                and (code.get("system"), code.get("code")) == target_pair
+                isinstance(code, dict) and (code.get("system"), code.get("code")) == target_pair
                 for code in event.get("codes", [])
             )
         )
@@ -197,22 +196,26 @@ def _compact_solver_context(
     )
     if not any(event.get("evidence_id") == anchor for event in events):
         raise ValueError("production_context_anchor_lost_by_minimization")
-    compact_commitment = {
-        key: commitment.get(key)
-        for key in (
-            "commitment_id",
-            "action",
-            "target",
-            "anchor_valid_time",
-            "anchor_known_time",
-            "due_time",
-            "fulfillment_predicate",
-            "authority_class",
-            "base_state_version",
-            "resulting_state_version",
-            "policy_version",
-        )
-    } if isinstance(commitment, dict) else None
+    compact_commitment = (
+        {
+            key: commitment.get(key)
+            for key in (
+                "commitment_id",
+                "action",
+                "target",
+                "anchor_valid_time",
+                "anchor_known_time",
+                "due_time",
+                "fulfillment_predicate",
+                "authority_class",
+                "base_state_version",
+                "resulting_state_version",
+                "policy_version",
+            )
+        }
+        if isinstance(commitment, dict)
+        else None
+    )
     # ``snapshot_payload_json`` intentionally cannot contain its own public ID
     # or manifest digest: both are assigned only after payload canonicalization
     # and persistence.  The caller supplies those persisted manifest fields
@@ -306,12 +309,8 @@ def compile_production_commitment_context(
 
     if case.target is None or case.anchor_evidence_id is None:
         raise ValueError("production_context_target_or_anchor_required")
-    visible = _visible_events(
-        events, valid_cutoff=valid_cutoff, known_cutoff=known_cutoff
-    )
-    anchor = next(
-        (item for item in visible if item.evidence_id == case.anchor_evidence_id), None
-    )
+    visible = _visible_events(events, valid_cutoff=valid_cutoff, known_cutoff=known_cutoff)
+    anchor = next((item for item in visible if item.evidence_id == case.anchor_evidence_id), None)
     if anchor is None or anchor.valid_at is None:
         raise ValueError("production_context_anchor_not_visible")
     with Session(_FIXTURE_ENGINE) as db:
@@ -385,9 +384,7 @@ def compile_production_commitment_context(
                         "anchor_evidence_id": case.anchor_evidence_id,
                         "action": case.action,
                         "target": case.target,
-                        "due_time": case.due_time.isoformat()
-                        if case.due_time
-                        else None,
+                        "due_time": case.due_time.isoformat() if case.due_time else None,
                         "fulfillment_predicate": case.fulfillment_predicate,
                         "events": [_timeline_event(event) for event in visible],
                     },
@@ -514,9 +511,7 @@ def compile_production_commitment_context(
                 "pipeline": [stage["name"] for stage in final.pipeline_trace],
                 "gold_derived": False,
             }
-            compact = _compact_solver_context(
-                payload, fallback_events=visible, case=case
-            )
+            compact = _compact_solver_context(payload, fallback_events=visible, case=case)
             db.rollback()
             return compact
         finally:
@@ -557,9 +552,7 @@ def _deterministic_remap(value: object, mapping: dict[str, str]) -> Any:
 
 def _iso(value: object) -> object:
     if isinstance(value, datetime):
-        normalized = (
-            value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
-        )
+        normalized = value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
         return normalized.isoformat()
     return value
 
@@ -656,9 +649,7 @@ def _product_state_disclosure(
     }
 
 
-def _projection_disclosure(
-    product: CommitmentProductState, commitment_id: str
-) -> dict[str, Any]:
+def _projection_disclosure(product: CommitmentProductState, commitment_id: str) -> dict[str, Any]:
     """Run the production P10 projection, then adapt its disclosure key names."""
 
     projected = project_commitment(
@@ -713,20 +704,14 @@ def compile_glhs_v2_full_context(
 
     if case.target is None or case.anchor_evidence_id is None:
         raise ValueError("production_context_target_or_anchor_required")
-    visible = _visible_events(
-        events, valid_cutoff=valid_cutoff, known_cutoff=known_cutoff
-    )
-    anchor = next(
-        (item for item in visible if item.evidence_id == case.anchor_evidence_id), None
-    )
+    visible = _visible_events(events, valid_cutoff=valid_cutoff, known_cutoff=known_cutoff)
+    anchor = next((item for item in visible if item.evidence_id == case.anchor_evidence_id), None)
     if anchor is None or anchor.valid_at is None:
         raise ValueError("production_context_anchor_not_visible")
     # The mined candidate declares the task coordinates: the commitment is
     # opened under the same deterministic semantic key its compiler selection
     # must target, and the synthetic candidate carries no dependency edges.
-    target_semantic_key = (
-        f"observation:{case.target['system']}:{case.target['code']}"
-    )
+    target_semantic_key = f"observation:{case.target['system']}:{case.target['code']}"
     dependencies: tuple[str, ...] = ()
     with Session(_FIXTURE_ENGINE) as db:
         # Session close rolls back on exceptional paths; the normal path below
@@ -797,9 +782,7 @@ def compile_glhs_v2_full_context(
                         "anchor_evidence_id": case.anchor_evidence_id,
                         "action": case.action,
                         "target": case.target,
-                        "due_time": case.due_time.isoformat()
-                        if case.due_time
-                        else None,
+                        "due_time": case.due_time.isoformat() if case.due_time else None,
                         "fulfillment_predicate": case.fulfillment_predicate,
                         "events": [_timeline_event(event) for event in visible],
                     },
@@ -943,9 +926,7 @@ def compile_glhs_v2_full_context(
                 result = freshness_for_commitment(item, cutoff=valid_cutoff)
                 freshness.append({"commitment_id": commitment_id, **result.to_dict()})
 
-            minimal_evidence = _deterministic_remap(
-                dict(final.minimal_evidence), id_map
-            )
+            minimal_evidence = _deterministic_remap(dict(final.minimal_evidence), id_map)
             roles = {
                 str(evidence_id): str(role)
                 for evidence_id, role in minimal_evidence["roles"].items()
@@ -965,9 +946,7 @@ def compile_glhs_v2_full_context(
 
             role_topology = {
                 "hierarchy": role_hierarchy,
-                "role_distribution": {
-                    role: len(ids) for role, ids in grouped_roles.items() if ids
-                },
+                "role_distribution": {role: len(ids) for role, ids in grouped_roles.items() if ids},
                 "roles_by_evidence_id": roles,
                 "evidence_by_role": {
                     role: sorted(ids) for role, ids in grouped_roles.items() if ids

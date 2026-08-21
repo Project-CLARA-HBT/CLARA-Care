@@ -171,7 +171,10 @@ def test_admissibility_boundary_blocks_severe_ddi(validator, base_context):
     assert res.is_admissible is False
     assert res.primary_violation == BoundaryViolationType.ADMISSIBILITY_VIOLATION
     assert res.admissibility_passed is False
-    assert "warfarin + aspirin" in res.ddi_conflicts_detected or "aspirin + warfarin" in res.ddi_conflicts_detected
+    assert (
+        "warfarin + aspirin" in res.ddi_conflicts_detected
+        or "aspirin + warfarin" in res.ddi_conflicts_detected
+    )
 
 
 def test_admissibility_boundary_blocks_consent_revocation(validator, base_context):

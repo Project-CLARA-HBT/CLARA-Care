@@ -39,17 +39,11 @@ def _read_json(path: Path) -> Any:
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line
-    ]
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
 def _write_json(path: Path, value: object) -> None:
-    path.write_text(
-        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _write_csv(path: Path, rows: list[dict[str, object]], fields: list[str]) -> None:
@@ -79,10 +73,7 @@ def verify_seal(root: Path) -> None:
         ):
             raise ValueError("malformed_artifact_checksum")
         target = root / path
-        if (
-            not target.is_file()
-            or hashlib.sha256(target.read_bytes()).hexdigest() != digest
-        ):
+        if not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != digest:
             raise ValueError("artifact_checksum_mismatch")
         sealed.add(relative)
     actual = {
@@ -140,20 +131,16 @@ def _per_case_rows(
                         "output_present": int(output is not None),
                         "failure": str(error.get("error", "")) if error else "",
                         "lifecycle_correct": int(
-                            prediction.get("lifecycle_state")
-                            == expected.get("lifecycle_state")
+                            prediction.get("lifecycle_state") == expected.get("lifecycle_state")
                         ),
                         "evidence_correct": int(
-                            prediction.get("evidence_state")
-                            == expected.get("evidence_state")
+                            prediction.get("evidence_state") == expected.get("evidence_state")
                         ),
                         "timeliness_correct": int(
-                            prediction.get("timeliness_state")
-                            == expected.get("timeliness_state")
+                            prediction.get("timeliness_state") == expected.get("timeliness_state")
                         ),
                         "escalation_correct": int(
-                            prediction.get("escalation_state")
-                            == expected.get("escalation_state")
+                            prediction.get("escalation_state") == expected.get("escalation_state")
                         ),
                         "all_axes_exact": int(
                             all(
@@ -192,9 +179,7 @@ def reproduce(source: Path, output: Path) -> dict[str, Any]:
     if primary_model not in models:
         raise ValueError("v5_primary_model_manifest_invalid")
     gold_by_case = {str(item["case_id"]): item for item in gold}
-    subject_by_case = {
-        str(item["case_id"]): str(item["subject_token"]) for item in commitments
-    }
+    subject_by_case = {str(item["case_id"]): str(item["subject_token"]) for item in commitments}
     if set(gold_by_case) != set(subject_by_case):
         raise ValueError("gold_commitment_case_inventory_mismatch")
 
@@ -265,10 +250,7 @@ def reproduce(source: Path, output: Path) -> dict[str, Any]:
     # Preserve byte-identical reproduction for sealed artifacts created before
     # the sanitized error-detail taxonomy was introduced.
     source_error_header = (
-        (source / "error_ledger.csv")
-        .read_text(encoding="utf-8")
-        .splitlines()[0]
-        .split(",")
+        (source / "error_ledger.csv").read_text(encoding="utf-8").splitlines()[0].split(",")
     )
     if "error_detail" in source_error_header:
         error_fields.insert(error_fields.index("attempts"), "error_detail")

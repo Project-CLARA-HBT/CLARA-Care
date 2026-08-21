@@ -33,9 +33,7 @@ def grace_end_for_case(case: ConstructedCase) -> datetime | None:
     return case.due_time + policy_for(case.domain).default_grace
 
 
-def _first_satisfied_at(
-    predicate: dict[str, Any], events: list[dict[str, Any]]
-) -> datetime | None:
+def _first_satisfied_at(predicate: dict[str, Any], events: list[dict[str, Any]]) -> datetime | None:
     prefix: list[dict[str, Any]] = []
     for event in events:
         prefix.append(event)
@@ -45,9 +43,7 @@ def _first_satisfied_at(
     return None
 
 
-def _timeliness(
-    case: ConstructedCase, *, cutoff: datetime, decisive_at: datetime | None
-) -> str:
+def _timeliness(case: ConstructedCase, *, cutoff: datetime, decisive_at: datetime | None) -> str:
     """Mirror production reconciliation: compare completion time, else cutoff."""
 
     if case.due_time is None:
@@ -87,9 +83,7 @@ def compile_construction_gold(
         key=lambda item: (str(item["valid_at"]), str(item["evidence_id"])),
     )
     fulfillment_at = _first_satisfied_at(case.fulfillment_predicate, normalized)
-    conflicts = [
-        item["evidence_id"] for item in normalized if item["relation"] == "contradicts"
-    ]
+    conflicts = [item["evidence_id"] for item in normalized if item["relation"] == "contradicts"]
     target_pair = (
         (case.target.get("system"), case.target.get("code"))
         if isinstance(case.target, dict)
@@ -137,7 +131,8 @@ def compile_construction_gold(
     escalation = (
         "ESCALATE"
         if evidence_state in {"CONFLICTED", "INSUFFICIENT_EVIDENCE"}
-        or lifecycle_state == "OPEN" and timeliness == "OVERDUE"
+        or lifecycle_state == "OPEN"
+        and timeliness == "OVERDUE"
         else "NO_ESCALATION"
     )
     return {

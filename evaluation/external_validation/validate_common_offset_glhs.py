@@ -125,8 +125,7 @@ def validate(
         or manifest.get("clinical_oracle") is not False
         or manifest.get("headline_eligible") is not False
         or manifest.get("provider_calls") != 0
-        or manifest.get("execution_boundary")
-        != "in_process_api_owned_service_layer_sqlite"
+        or manifest.get("execution_boundary") != "in_process_api_owned_service_layer_sqlite"
         or manifest.get("postgresql_or_http_measured") is not False
     ):
         raise ValueError("common_offset_result_contract_invalid")
@@ -134,11 +133,9 @@ def validate(
         manifest.get("tasks_sha256") != _sha_file(tasks_path)
         or manifest.get("cohort_manifest_sha256") != _sha_file(cohort_manifest_path)
         or manifest.get("protocol_file_sha256") != _sha_file(protocol_path)
-        or manifest.get("protocol_payload_sha256")
-        != protocol.get("protocol_payload_sha256")
+        or manifest.get("protocol_payload_sha256") != protocol.get("protocol_payload_sha256")
         or protocol.get("tasks_sha256") != manifest.get("tasks_sha256")
-        or protocol.get("cohort_manifest_sha256")
-        != manifest.get("cohort_manifest_sha256")
+        or protocol.get("cohort_manifest_sha256") != manifest.get("cohort_manifest_sha256")
     ):
         raise ValueError("common_offset_result_input_binding_mismatch")
     task_count = 0
@@ -212,9 +209,7 @@ def validate(
         _count_row(row, key_field="subject_token")
         for row in _read_csv(output_dir / "subject_results.csv")
     )
-    expected_subjects = {
-        key: (subject_counts[key], total) for key, total in subject_totals.items()
-    }
+    expected_subjects = {key: (subject_counts[key], total) for key, total in subject_totals.items()}
     if subject_declared != expected_subjects:
         raise ValueError("common_offset_result_subject_aggregate_mismatch")
     domain_totals: Counter[tuple[str, str]] = Counter()
@@ -224,12 +219,9 @@ def validate(
             for system in SYSTEMS:
                 domain_totals[(str(row["domain"]), system)] += 1
     domain_declared = dict(
-        _count_row(row, key_field="domain")
-        for row in _read_csv(output_dir / "domain_results.csv")
+        _count_row(row, key_field="domain") for row in _read_csv(output_dir / "domain_results.csv")
     )
-    expected_domains = {
-        key: (domain_counts[key], total) for key, total in domain_totals.items()
-    }
+    expected_domains = {key: (domain_counts[key], total) for key, total in domain_totals.items()}
     if domain_declared != expected_domains:
         raise ValueError("common_offset_result_domain_aggregate_mismatch")
     declared_systems = manifest.get("system_results")

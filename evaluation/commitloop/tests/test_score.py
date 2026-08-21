@@ -49,9 +49,7 @@ def test_grid_scoring_counts_missing_errors_and_per_class_f1() -> None:
     assert result["axes"]["lifecycle_state"]["correct"] == 1
     assert result["axes"]["lifecycle_state"]["denominator"] == 2
     assert result["axes"]["lifecycle_state"]["accuracy"] == 0.5
-    assert result["axes"]["lifecycle_state"]["per_class"]["SATISFIED"][
-        "f1"
-    ] == pytest.approx(2 / 3)
+    assert result["axes"]["lifecycle_state"]["per_class"]["SATISFIED"]["f1"] == pytest.approx(2 / 3)
     assert result["provider_error_count"] == 1
     assert result["missing_output_count"] == 0
     assert result["operational"]["retry_count"] == 1
@@ -238,9 +236,5 @@ def test_temporal_boundary_pairs_have_explicit_transition_denominators() -> None
     )
     assert metrics["transition_sequence_accuracy"]["denominator"] == 2
     assert metrics["transition_sequence_accuracy"]["accuracy"] == 1.0
-    assert metrics["valid_known_time_boundary_accuracy"]["known_time"][
-        "denominator"
-    ] == 1
-    assert metrics["valid_known_time_boundary_accuracy"]["valid_time"][
-        "denominator"
-    ] == 1
+    assert metrics["valid_known_time_boundary_accuracy"]["known_time"]["denominator"] == 1
+    assert metrics["valid_known_time_boundary_accuracy"]["valid_time"]["denominator"] == 1

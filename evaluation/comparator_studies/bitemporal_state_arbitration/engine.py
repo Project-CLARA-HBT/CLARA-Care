@@ -34,12 +34,16 @@ class ArbitrationResult:
 
 def _overlaps(left: ArbitrationEvent, right: ArbitrationEvent) -> bool:
     return not (
-        left.valid_to is not None and left.valid_to < right.valid_from
-        or right.valid_to is not None and right.valid_to < left.valid_from
+        left.valid_to is not None
+        and left.valid_to < right.valid_from
+        or right.valid_to is not None
+        and right.valid_to < left.valid_from
     )
 
 
-def arbitrate(events: list[ArbitrationEvent], *, valid_at: datetime, known_at: datetime) -> ArbitrationResult:
+def arbitrate(
+    events: list[ArbitrationEvent], *, valid_at: datetime, known_at: datetime
+) -> ArbitrationResult:
     """Arbitrate a single slot at bitemporal cut-offs without deleting history.
 
     Operators are explicit inputs: SUPPORT retains evidence, REFINE replaces a
@@ -47,8 +51,13 @@ def arbitrate(events: list[ArbitrationEvent], *, valid_at: datetime, known_at: d
     BRANCH-CONFLICT retains comparable contradictory active branches.
     """
     visible = sorted(
-        (item for item in events if item.known_at <= known_at and item.valid_from <= valid_at
-         and (item.valid_to is None or item.valid_to >= valid_at)),
+        (
+            item
+            for item in events
+            if item.known_at <= known_at
+            and item.valid_from <= valid_at
+            and (item.valid_to is None or item.valid_to >= valid_at)
+        ),
         key=lambda item: (item.known_at, item.event_id),
     )
     active: dict[str, ArbitrationEvent] = {}

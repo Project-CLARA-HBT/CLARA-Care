@@ -1299,17 +1299,17 @@ export default function MarkdownAnswer({
             return <CodeFence code={code} language={language} isChartSpec={isChartSpec} uiLanguage={uiLanguage} />;
           },
           table: ({ children }) => (
-            <div className="mt-3 overflow-x-auto rounded-[14px] border border-[color:var(--shell-border)] bg-[var(--surface-panel)]">
-              <table className="w-full border-collapse text-sm leading-6">{children}</table>
+            <div className="my-3 overflow-x-auto rounded-[12px] border border-[color:var(--shell-border)] bg-[var(--surface-panel)] shadow-sm">
+              <table className="w-full border-collapse text-left text-sm leading-6">{children}</table>
             </div>
           ),
           th: ({ children }) => (
-            <th className="border border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-primary)]">
+            <th className="border-b border-[color:var(--shell-border)] bg-[var(--surface-muted)] px-3.5 py-2.5 text-left text-xs font-bold uppercase tracking-[0.06em] text-[var(--text-primary)]">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="border border-[color:var(--shell-border)] px-3 py-2 align-top text-sm text-[var(--text-primary)]">
+            <td className="border-b border-[color:var(--shell-border)]/60 px-3.5 py-2.5 align-top text-sm text-[var(--text-primary)] last:border-b-0">
               {children}
             </td>
           ),

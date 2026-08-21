@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import asdict
 from pathlib import Path
-from typing import Iterable
 from urllib.parse import urlparse
 
 from .html_discovery import discover_pdf_links

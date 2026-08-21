@@ -56,16 +56,8 @@ def run(output: Path) -> dict[str, object]:
     aggregate = {
         variant: {
             "case_count": len(cases()),
-            "accepted": sum(
-                int(row["accepted"])
-                for row in rows
-                if row["variant"] == variant
-            ),
-            "rejected": sum(
-                int(not row["accepted"])
-                for row in rows
-                if row["variant"] == variant
-            ),
+            "accepted": sum(int(row["accepted"]) for row in rows if row["variant"] == variant),
+            "rejected": sum(int(not row["accepted"]) for row in rows if row["variant"] == variant),
             "exact_seen_context_reconstructable": sum(
                 int(row["exact_seen_context_reconstructable"])
                 for row in rows

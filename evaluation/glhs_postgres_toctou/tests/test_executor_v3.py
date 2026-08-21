@@ -125,7 +125,13 @@ class FakeGateway:
         return SimpleNamespace(id=1, profile_id=profile_id)
 
     def propose_assertion(
-        self, db: object, *, profile_id: int, actor_user_id: int | None, data: object, evidence: object
+        self,
+        db: object,
+        *,
+        profile_id: int,
+        actor_user_id: int | None,
+        data: object,
+        evidence: object,
     ) -> SimpleNamespace:
         return SimpleNamespace(
             id=101,
@@ -183,7 +189,11 @@ def _minimal_protocol() -> dict[str, object]:
             {
                 "id": "TOCTOU-V2-01",
                 "schedule_type": "consent_mutation_via_persisted_consent_writer",
-                "sequence": ["seed_scope_snapshot_proposal", "persisted_consent_writer_revoke", "bound_transition_attempt"],
+                "sequence": [
+                    "seed_scope_snapshot_proposal",
+                    "persisted_consent_writer_revoke",
+                    "bound_transition_attempt",
+                ],
                 "barrier_phases": ["release"],
                 "interleaving_coverage": ["mutation_before_commit"],
                 "persisted_governance_writer": True,
@@ -239,7 +249,9 @@ def test_repetition_satisfies_invariant_rules() -> None:
     assert repetition_satisfies_invariant(mismatch) is False
 
 
-def _record(schedule_id: str, repeat_id: int, *, operational: bool = False, matches: bool = True) -> dict[str, object]:
+def _record(
+    schedule_id: str, repeat_id: int, *, operational: bool = False, matches: bool = True
+) -> dict[str, object]:
     return {
         "schedule_id": schedule_id,
         "repeat_id": repeat_id,
@@ -316,10 +328,16 @@ def test_build_repeat_record_contains_frozen_fields() -> None:
         seed=123,
         interleaving_mode="a_first",
         observation=observation,
-        audit={"expected_classification": "rejected", "observed_classification": "rejected", "matches": True},
+        audit={
+            "expected_classification": "rejected",
+            "observed_classification": "rejected",
+            "matches": True,
+        },
         raw=raw,
         barrier_log=BarrierLog(),
-        resolved_commit={"tx-0": {"txid": 9001, "commit_timestamp": None, "durable_available": False}},
+        resolved_commit={
+            "tx-0": {"txid": 9001, "commit_timestamp": None, "durable_available": False}
+        },
         ordering_confidence=ORDERING_CONFIDENCE_INDETERMINATE,
         ordering_reason="track_commit_timestamp_unavailable_no_durable_order",
     )

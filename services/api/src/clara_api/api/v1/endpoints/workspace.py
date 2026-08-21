@@ -5,7 +5,7 @@ import json
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
@@ -1180,23 +1180,31 @@ def list_workspace_shares(
         .all()
     )
     session_by_id = {session_obj.id: session_obj for session_obj in sessions}
-    message_counts = dict(
-        db.execute(
-            select(QueryModel.session_id, func.count(QueryModel.id))
-            .where(QueryModel.session_id.in_(session_ids))
-            .group_by(QueryModel.session_id)
-        ).all()
+    message_counts: dict[int, int] = dict(
+        cast(
+            list[tuple[int, int]],
+            db.execute(
+                select(QueryModel.session_id, func.count(QueryModel.id))
+                .where(QueryModel.session_id.in_(session_ids))
+                .group_by(QueryModel.session_id)
+            ).all(),
+        )
     )
-    last_message_map = dict(
-        db.execute(
-            select(QueryModel.session_id, func.max(QueryModel.created_at))
-            .where(QueryModel.session_id.in_(session_ids))
-            .group_by(QueryModel.session_id)
-        ).all()
+    last_message_map: dict[int, datetime] = dict(
+        cast(
+            list[tuple[int, datetime]],
+            db.execute(
+                select(QueryModel.session_id, func.max(QueryModel.created_at))
+                .where(QueryModel.session_id.in_(session_ids))
+                .group_by(QueryModel.session_id)
+            ).all(),
+        )
     )
 
     payload: list[WorkspaceConversationShareListItem] = []
     for share in shares:
+        if share.session_id is None:
+            continue
         session_obj = session_by_id.get(share.session_id)
         if session_obj is None:
             continue
@@ -1249,7 +1257,7 @@ def export_workspace_conversation(
     markdown_text = _build_conversation_export_markdown(
         conversation_id=conversation_id,
         title=title,
-        rows=rows,
+        rows=list(rows),
     )
     safe_name = _slug_file_name(title)
     selected_format = format.strip().lower()

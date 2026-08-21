@@ -30,7 +30,9 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def apply_overlay(*, repository_root: Path, overlay_root: Path, mutant: MutantOverlay) -> AppliedOverlay:
+def apply_overlay(
+    *, repository_root: Path, overlay_root: Path, mutant: MutantOverlay
+) -> AppliedOverlay:
     """Copy exactly one source file and make one anchored semantic mutation.
 
     The original file remains unchanged. An anchor must occur exactly once so a

@@ -8,7 +8,7 @@ import unicodedata
 from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
 from time import perf_counter
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -514,7 +514,7 @@ def _collect_db_candidate_mappings(db: Session, normalized_input: str) -> list[V
             ]
         )
 
-    return (
+    return list(
         db.execute(
             select(VnDrugMapping)
             .options(selectinload(VnDrugMapping.aliases))
@@ -786,9 +786,9 @@ def _to_item_response(
         brand_name=brand_name,
         manufacturer=manufacturer,
         normalized_name=item.normalized_name,
-        normalization_source=normalization_source,
+        normalization_source=cast(Any, normalization_source),
         normalization_confidence=normalization_confidence,
-        normalization_status=normalization_status,
+        normalization_status=cast(Any, normalization_status),
         needs_review=normalization_status == "needs_review",
         dosage=item.dosage,
         dosage_form=item.dosage_form,
@@ -797,7 +797,7 @@ def _to_item_response(
         rx_cui=item.rx_cui,
         ocr_confidence=item.ocr_confidence,
         expires_on=item.expires_on,
-        expiry_status=expiry_status,
+        expiry_status=cast(Any, expiry_status),
         expiry_reminder=expiry_reminder,
         note=clean_note,
         created_at=item.created_at,
@@ -1230,10 +1230,13 @@ def _detect_drugs_from_text(
                     manufacturer=manufacturer_hint or None,
                     confidence=confidence,
                     evidence=alias,
-                    mapping_source=mapping_source,
+                    mapping_source=cast(Any, mapping_source),
                     mapping_confidence=mapping_confidence,
-                    normalization_status=_derive_normalization_status(
-                        mapping_source, mapping_confidence
+                    normalization_status=cast(
+                        Any,
+                        _derive_normalization_status(
+                            mapping_source, mapping_confidence
+                        ),
                     ),
                     requires_manual_confirm=requires_manual_confirm,
                     confirmed=not requires_manual_confirm,
@@ -1288,10 +1291,13 @@ def _detect_drugs_from_text(
                 manufacturer=manufacturer_hint or None,
                 confidence=detection_confidence,
                 evidence=f"fuzzy:{token}->{best_alias}",
-                mapping_source=mapping_source,
+                mapping_source=cast(Any, mapping_source),
                 mapping_confidence=mapping_confidence,
-                normalization_status=_derive_normalization_status(
-                    mapping_source, mapping_confidence
+                normalization_status=cast(
+                    Any,
+                    _derive_normalization_status(
+                        mapping_source, mapping_confidence
+                    ),
                 ),
                 requires_manual_confirm=True,
                 confirmed=False,
@@ -2686,7 +2692,7 @@ def run_auto_ddi_check(
     if observability_enabled:
         latency_ms = (perf_counter() - started_at) * 1000
         normalization_confidences = [
-            meta["mapping_confidence"]
+            float(cast(float, meta["mapping_confidence"]))
             for meta in medications_with_meta
             if isinstance(meta.get("mapping_confidence"), (int, float))
         ]
@@ -3040,7 +3046,7 @@ def resolve_vn_drug_mapping(
         display_name=display_name,
         normalized_name=normalized_name,
         rx_cui=rx_cui,
-        mapping_source=source,
+        mapping_source=cast(Any, source),
         mapping_confidence=mapping_confidence,
     )
 

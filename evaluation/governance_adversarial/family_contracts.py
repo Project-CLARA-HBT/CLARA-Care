@@ -172,9 +172,7 @@ def _standard_stages(*, cache: bool, audit: bool) -> tuple[StageContract, ...]:
     """
 
     return (
-        StageContract(
-            "http", permitted=True, required=True, observed=True, artifact_sha256=True
-        ),
+        StageContract("http", permitted=True, required=True, observed=True, artifact_sha256=True),
         StageContract(
             "postgres", permitted=True, required=True, observed=True, artifact_sha256=True
         ),

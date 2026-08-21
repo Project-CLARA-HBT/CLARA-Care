@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 import hashlib
 import json
 import logging
 import re
 import secrets
 import unicodedata
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
@@ -64,6 +64,8 @@ from clara_ml.result_explanation import LabResultExplainer, LabResultInput
 from clara_ml.routing import P1RoleIntentRouter
 from clara_ml.streaming.chat_stream import (
     iter_answer_chunks,
+)
+from clara_ml.streaming.chat_stream import (
     stream_chat_sse as chat_stream_sse,
 )
 from clara_ml.streaming.council_stream import stream_council_sse
@@ -1157,6 +1159,7 @@ def routed_chat_infer(payload: dict) -> dict:
     # it must not turn explicitly negated symptoms into an emergency.
     safety_route = router.route(query, role_hint=role_hint)
     semantic_route: SemanticSafetyDecision | None = None
+    legal_guard_reason: str | None = None
     try:
         semantic_route = _classify_medical_request_with_llm(
             redact_pii(query).redacted_text,

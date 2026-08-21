@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from typing import Any, Literal, cast
 
 from clara_ml.nlp.vietnamese_clinical import (
     analyze_vietnamese_clinical_text,
@@ -79,7 +80,7 @@ def _entities(text: str) -> tuple[list[ClinicalEntity], list[str]]:
             if not _contains_phrase(text, phrase):
                 continue
             is_negated = is_phrase_negated(text, phrase)
-            entities.append(ClinicalEntity(text=phrase, category=category, negated=is_negated))
+            entities.append(ClinicalEntity(text=phrase, category=cast(Any, category), negated=is_negated))
             if is_negated:
                 negated.append(phrase)
     return entities, negated
@@ -143,11 +144,12 @@ def analyze_clinical_utterance(text: str, *, intent: str = "unknown") -> Clinica
     medications, ambiguities = _medications(normalized)
     labs, lab_ambiguities = _labs(text)
     ambiguities.extend(lab_ambiguities)
-    experiencer = {
+    experiencer_map: dict[str, Literal["self", "family", "patient", "unknown"]] = {
         "other": "family",
         "patient": "patient",
         "self_or_unspecified": "self",
-    }[analysis.experiencer]
+    }
+    experiencer = experiencer_map[analysis.experiencer]
     urgency = [
         phrase
         for phrase in _EMERGENCY

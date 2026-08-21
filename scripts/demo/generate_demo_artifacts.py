@@ -4,7 +4,7 @@ import argparse
 import ast
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import md5
 from pathlib import Path
 from typing import Any
@@ -234,7 +234,7 @@ def build_manifest(
         )
 
     return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "generator": {
             "script": "scripts/demo/generate_demo_artifacts.py",
             "run_id": run_id or None,
@@ -326,7 +326,7 @@ def build_kpi_snapshot(
     lines = [
         "# CLARA Hackathon KPI Snapshot",
         "",
-        f"Generated at (UTC): {datetime.now(timezone.utc).isoformat()}",
+        f"Generated at (UTC): {datetime.now(UTC).isoformat()}",
     ]
     if run_id:
         lines.append(f"Round2 run_id: `{run_id}`")

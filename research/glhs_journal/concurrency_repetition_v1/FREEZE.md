@@ -34,29 +34,32 @@
 
 ## Execution status
 
-**STATUS: NOT EXECUTED — PENDING.**
+**STATUS: EXECUTED.**
 
-PostgreSQL was **not reachable** during this freeze (no running isolated
-research PostgreSQL; `docker` unavailable in the working environment; no
-`GLHS_TOCTOU_FINAL_DATABASE_URL`). Per the fail-closed contract, **no results
-were fabricated** and no `repeat_raw.jsonl` / `analysis.json` were emitted.
+- **Run ID:** `GLHS-CONCURRENCY-REPETITION-V1-20260819-RUN01`
+- **Execution timestamp:** `2026-08-19T08:38:58.493508+00:00`
+- **Code revision SHA:** `7bd677e4`
+- **Backend:** `isolated_postgresql_random_schema` (isolated research PostgreSQL with dynamic schema creation/drop)
+- **Commit timestamp instrumentation:** `track_commit_timestamp = on` (`durable_commit_timestamps_available`)
+- **Total executions:** 600 runs (12 logical schedules × 50 deterministic repetitions each)
+- **Scientific N:** 12 logical schedules (repetitions are robustness executions, NOT new scientific N)
 
-To execute after an operator provisions the isolated research PostgreSQL:
+### Robustness & classification findings
 
-```bash
-export GLHS_TOCTOU_FINAL_ISOLATED_RESEARCH=1
-export GLHS_TOCTOU_FINAL_DATABASE_URL="postgresql+psycopg://USER:PASS@HOST:PORT/glhs_repeat_research_db"
-services/api/.venv/bin/python -m evaluation.glhs_postgres_toctou.executor_v3 \
-  --protocol research/glhs_journal/protocol_v2/postgres_toctou_protocol_v2.json \
-  --manifest research/glhs_journal/concurrency_repetition_v1/repeat_manifest.json \
-  --output-dir research/glhs_journal/concurrency_repetition_v1
-```
+| Category | Count | Schedule IDs / Distributions |
+| --- | --- | --- |
+| Robust schedules (50/50 satisfy invariant) | 10 | `TOCTOU-V2-01`, `TOCTOU-V2-02`, `TOCTOU-V2-03`, `TOCTOU-V2-04`, `TOCTOU-V2-06`, `TOCTOU-V2-07`, `TOCTOU-V2-08`, `TOCTOU-V2-10`, `TOCTOU-V2-11`, `TOCTOU-V2-12` |
+| Nonrobust schedules (mismatch expected) | 2 | `TOCTOU-V2-05` (50 rejected vs expected indeterminate), `TOCTOU-V2-09` (34 committed, 14 rejected, 2 indeterminate vs expected indeterminate) |
+| Mixed classifications | 0 | None majority-voted into safety; all raw distributions preserved |
+| Operational failures (deadlock/timeout) | 0 | 0 across all 600 runs |
+| Ordering confidence | 600 | `PARTIAL: 600` (captured commit metadata & transaction traces; no txid numeric order inference) |
 
-The runner refuses non-isolated/shared databases and non-frozen protocols or
-manifests. Post-execution, `repeat_raw.jsonl` (50 × 12 records) and
-`analysis.json` (schedule-level robustness + ordering-confidence distribution)
-must be committed with their checksums and this freeze updated to
-`EXECUTED`, or this record stays `PENDING` — it is never claimed as evidence.
+### Sealed output artifacts
+
+- `repeat_raw.jsonl`: SHA-256 `f98ce492e54a4478d929a0b8a7e800929e3c7a9b6316d4acca07d04ca77357a5`
+- `analysis.json`: SHA-256 `6915dfbd764c2b54ba0befd0f5fd93cd81cc2dfe18d443651958e06d3b3f737a`
+- `repeat_manifest.json`: SHA-256 `4b66c774bb8f16bbb697d0efc1c1da69953ffbb2b7521602cae9accd12a5e62e`
+- `seal/seal.json` + `seal/artifact-sha256.json`
 
 ## No-tamper statements
 

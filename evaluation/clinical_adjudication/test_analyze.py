@@ -20,9 +20,21 @@ def test_agreement_report_preserves_field_level_disagreement(tmp_path: Path) -> 
         "oracle_sha256": "oracle-sha",
         "blinding": "system-blinded",
         "reviewer_qualifications": {
-            "qualified-a": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
-            "qualified-b": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
-            "qualified-c": {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True},
+            "qualified-a": {
+                "role_code": "licensed_clinician",
+                "eligibility_attested": True,
+                "independence_attested": True,
+            },
+            "qualified-b": {
+                "role_code": "licensed_clinician",
+                "eligibility_attested": True,
+                "independence_attested": True,
+            },
+            "qualified-c": {
+                "role_code": "licensed_clinician",
+                "eligibility_attested": True,
+                "independence_attested": True,
+            },
         },
     }
     manifest_path = tmp_path / "annotation.json"
@@ -31,12 +43,34 @@ def test_agreement_report_preserves_field_level_disagreement(tmp_path: Path) -> 
     with labels_path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=["case_id", "annotator_id", "field", "label"])
         writer.writeheader()
-        writer.writerows([
-            {"case_id": "c1", "annotator_id": "qualified-a", "field": "current_state", "label": "active"},
-            {"case_id": "c1", "annotator_id": "qualified-b", "field": "current_state", "label": "active"},
-            {"case_id": "c2", "annotator_id": "qualified-a", "field": "current_state", "label": "resolved"},
-            {"case_id": "c2", "annotator_id": "qualified-b", "field": "current_state", "label": "active"},
-        ])
+        writer.writerows(
+            [
+                {
+                    "case_id": "c1",
+                    "annotator_id": "qualified-a",
+                    "field": "current_state",
+                    "label": "active",
+                },
+                {
+                    "case_id": "c1",
+                    "annotator_id": "qualified-b",
+                    "field": "current_state",
+                    "label": "active",
+                },
+                {
+                    "case_id": "c2",
+                    "annotator_id": "qualified-a",
+                    "field": "current_state",
+                    "label": "resolved",
+                },
+                {
+                    "case_id": "c2",
+                    "annotator_id": "qualified-b",
+                    "field": "current_state",
+                    "label": "active",
+                },
+            ]
+        )
     report = analyze(labels_path, manifest_path)
     field = report["fields"]["current_state"]
     assert field["paired_cases"] == 2
@@ -54,7 +88,11 @@ def test_annotation_manifest_requires_exactly_two_pseudonymous_reviewers(tmp_pat
         "oracle_sha256": "oracle-sha",
         "blinding": "system-blinded",
         "reviewer_qualifications": {
-            reviewer: {"role_code": "licensed_clinician", "eligibility_attested": True, "independence_attested": True}
+            reviewer: {
+                "role_code": "licensed_clinician",
+                "eligibility_attested": True,
+                "independence_attested": True,
+            }
             for reviewer in ("reviewer-a", "reviewer-b", "reviewer-c", "adjudicator-d")
         },
     }

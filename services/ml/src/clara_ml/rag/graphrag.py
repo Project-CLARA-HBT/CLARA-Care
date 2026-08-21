@@ -4,10 +4,10 @@ import json
 import logging
 import re
 import threading
-from time import monotonic
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from time import monotonic
 from typing import TYPE_CHECKING, Any
 
 from clara_ml.config import settings
@@ -81,8 +81,8 @@ class GraphRagSidecar:
     def __init__(
         self,
         *,
-        engine: "Engine | None" = None,
-        graph_store: "GraphStore | None" = None,
+        engine: Engine | None = None,
+        graph_store: GraphStore | None = None,
     ) -> None:
         # DB-backed graph wiring (task 8.2, Requirement 10.1). Both are optional
         # and injectable for DI/tests; when neither is supplied the engine is
@@ -191,7 +191,7 @@ class GraphRagSidecar:
 
     # -- DB-backed edge load (task 8.2) --------------------------------------
 
-    def _resolve_db_access(self) -> tuple["GraphStore | None", Any]:
+    def _resolve_db_access(self) -> tuple[GraphStore | None, Any]:
         """Resolve a ``(GraphStore, session_factory)`` pair for the DB load path.
 
         An explicitly injected ``GraphStore`` wins (DI/tests). Otherwise an engine

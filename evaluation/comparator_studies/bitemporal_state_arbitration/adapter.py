@@ -54,8 +54,10 @@ def btsa_context(
         if not isinstance(status, str) or not status:
             excluded.append({"evidence_id": event_id, "reason": "VALUE_MISSING"})
             continue
-        if not isinstance(relation, str) or target_id is not None and not isinstance(
-            target_id, str
+        if (
+            not isinstance(relation, str)
+            or target_id is not None
+            and not isinstance(target_id, str)
         ):
             raise ValueError("btsa_relation_invalid")
         arbitration_events.append(

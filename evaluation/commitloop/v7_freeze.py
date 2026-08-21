@@ -88,9 +88,7 @@ def _build_prior_registry(prior_runs: list[Path]) -> dict[str, Any]:
         verify_seal(run)
         timeline = [
             json.loads(line)
-            for line in (run / "timeline.jsonl")
-            .read_text(encoding="utf-8")
-            .splitlines()
+            for line in (run / "timeline.jsonl").read_text(encoding="utf-8").splitlines()
             if line
         ]
         source = json.loads((run / "source_manifest.json").read_text(encoding="utf-8"))
@@ -259,9 +257,7 @@ def create_v7_freeze(
             "development_subjects": 192,
             "validation_subjects": 192,
             "sealed_final_subjects": 384,
-            "nominal_subject_level_solver_cells": 768 * len(CONDITIONS) * len(
-                CONFIRMATORY_MODELS
-            ),
+            "nominal_subject_level_solver_cells": 768 * len(CONDITIONS) * len(CONFIRMATORY_MODELS),
             "case_counts_including_all_adversarial_variants": case_counts,
             "solver_request_counts": {
                 split: count * len(CONDITIONS) * len(CONFIRMATORY_MODELS)
@@ -292,9 +288,7 @@ def create_v7_freeze(
         },
     }
     freeze_path = output_dir / "freeze.json"
-    freeze_path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    freeze_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return freeze_path
 
 
@@ -308,9 +302,9 @@ def verify_v7_freeze(*, freeze_path: Path, repository_root: Path) -> dict[str, A
         or payload.get("provider_calls_before_freeze") != 0
     ):
         raise V7FreezeError("v7_freeze_provider_contract_invalid")
-    if not _tracked_worktree_clean(root) or _git(
-        root, "rev-parse", "HEAD"
-    ) != payload.get("git_sha"):
+    if not _tracked_worktree_clean(root) or _git(root, "rev-parse", "HEAD") != payload.get(
+        "git_sha"
+    ):
         raise V7FreezeError("v7_freeze_git_drift")
     inputs = freeze_inputs(root)
     hashes = payload.get("input_sha256")

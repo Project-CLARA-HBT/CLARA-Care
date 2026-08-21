@@ -24,7 +24,9 @@ from evaluation.careguard_external.source_manifest import validate_source_manife
 
 
 def _canonical_json(value: object) -> bytes:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode(
+        "utf-8"
+    )
 
 
 def _sha256(payload: bytes) -> str:
@@ -33,7 +35,9 @@ def _sha256(payload: bytes) -> str:
 
 def _validate_expected_md5(value: str) -> str:
     normalized = value.strip().lower()
-    if len(normalized) != 32 or any(character not in "0123456789abcdef" for character in normalized):
+    if len(normalized) != 32 or any(
+        character not in "0123456789abcdef" for character in normalized
+    ):
         raise ValueError("careguard_rxnorm_expected_md5_invalid")
     return normalized
 
@@ -46,7 +50,8 @@ def _archive_inventory(archive_path: Path) -> list[dict[str, str]]:
         with zipfile.ZipFile(archive_path) as archive:
             members = sorted(
                 (
-                    member for member in archive.infolist()
+                    member
+                    for member in archive.infolist()
                     if not member.is_dir() and member.filename.upper().endswith(".RRF")
                 ),
                 key=lambda member: member.filename,
@@ -60,13 +65,19 @@ def _archive_inventory(archive_path: Path) -> list[dict[str, str]]:
                             line = raw.decode("utf-8").rstrip("\r\n")
                         except UnicodeDecodeError as exc:
                             raise ValueError("careguard_rxnorm_rrf_not_utf8") from exc
-                        inventory.append({
-                            "source_record_id": f"{member.filename}:{index}",
-                            "source_record_hash": _sha256(_canonical_json({
-                                "member": member.filename,
-                                "line": line,
-                            })),
-                        })
+                        inventory.append(
+                            {
+                                "source_record_id": f"{member.filename}:{index}",
+                                "source_record_hash": _sha256(
+                                    _canonical_json(
+                                        {
+                                            "member": member.filename,
+                                            "line": line,
+                                        }
+                                    )
+                                ),
+                            }
+                        )
     except zipfile.BadZipFile as exc:
         raise ValueError("careguard_rxnorm_payload_not_zip") from exc
     if not inventory:
@@ -145,7 +156,9 @@ def acquire(
         retrieved_at=datetime.now(UTC),
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     validate_source_manifest(manifest_path)
     return manifest
 
@@ -176,7 +189,9 @@ def manifest_from_retained_archive(
         retrieved_at=datetime.now(UTC),
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     validate_source_manifest(manifest_path)
     return manifest
 
@@ -208,7 +223,11 @@ def main() -> int:
             expected_md5=args.expected_md5,
             manifest_path=args.manifest,
         )
-    print(json.dumps({"row_count": manifest["row_count"], "payload_sha256": manifest["payload_sha256"]}))
+    print(
+        json.dumps(
+            {"row_count": manifest["row_count"], "payload_sha256": manifest["payload_sha256"]}
+        )
+    )
     return 0
 
 

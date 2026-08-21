@@ -4,6 +4,7 @@ This is deliberately an artefact integrator, not a scorer which can invent
 missing runs.  Every claimed numerator is derived from ``model_per_run.csv``;
 an incomplete grid or a changed frozen contract is a hard error.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -17,9 +18,22 @@ from pathlib import Path
 from evaluation.glhs_q2.run_model_arm import PROMPT_VERSION, SEEDS
 
 REQUIRED_FIELDS = {
-    "case_id", "seed", "expected_state", "scenario", "experiment", "status",
-    "latency_ms", "model_used", "policy_action", "guard_reason", "degraded", "json_valid", "state",
-    "state_correct", "answer_sha256", "error_class",
+    "case_id",
+    "seed",
+    "expected_state",
+    "scenario",
+    "experiment",
+    "status",
+    "latency_ms",
+    "model_used",
+    "policy_action",
+    "guard_reason",
+    "degraded",
+    "json_valid",
+    "state",
+    "state_correct",
+    "answer_sha256",
+    "error_class",
 }
 
 
@@ -55,10 +69,19 @@ def integrate(source: Path, output: Path) -> dict[str, object]:
     if contract.get("transport") == "direct":
         selection = contract.get("runtime_selection")
         required_selection = {
-            "task", "provider", "configured_model", "model_version", "model_profile",
-            "prompt_version", "task_contract_schema_version", "risk_level",
-            "fallback_model", "rollback_applied", "generation_temperature",
-            "generation_max_tokens", "configured_base_url_sha256",
+            "task",
+            "provider",
+            "configured_model",
+            "model_version",
+            "model_profile",
+            "prompt_version",
+            "task_contract_schema_version",
+            "risk_level",
+            "fallback_model",
+            "rollback_applied",
+            "generation_temperature",
+            "generation_max_tokens",
+            "configured_base_url_sha256",
         }
         if not isinstance(selection, dict) or not required_selection.issubset(selection):
             raise ValueError("model_arm_runtime_selection_missing")
@@ -88,17 +111,46 @@ def integrate(source: Path, output: Path) -> dict[str, object]:
         "degraded_or_fallback_indicated": sum(_bool(row["degraded"]) for row in completed),
         "latency_ms": {"p50": _percentile(latencies, 0.5), "p95": _percentile(latencies, 0.95)},
         "models": dict(sorted(Counter(row["model_used"] for row in completed).items())),
-        "errors_by_class": dict(sorted(Counter(row["error_class"] for row in rows if row["error_class"]).items())),
+        "errors_by_class": dict(
+            sorted(Counter(row["error_class"] for row in rows if row["error_class"]).items())
+        ),
     }
     output.mkdir(parents=True, exist_ok=True)
     with (output / "model_arm_by_experiment.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["experiment", "runs", "completed", "json_valid", "state_correct", "completion_rate"])
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "experiment",
+                "runs",
+                "completed",
+                "json_valid",
+                "state_correct",
+                "completion_rate",
+            ],
+        )
         writer.writeheader()
         for experiment, group in sorted(by_experiment.items()):
             complete = [row for row in group if row["status"] == "completed"]
-            writer.writerow({"experiment": experiment, "runs": len(group), "completed": len(complete), "json_valid": sum(_bool(row["json_valid"]) for row in complete), "state_correct": sum(_bool(row["state_correct"]) for row in complete), "completion_rate": len(complete) / len(group)})
-    summary = {"schema_version": "glhs-q2-model-arm-summary-v1", "contract": contract, "per_run_sha256": hashlib.sha256(per_run_path.read_bytes()).hexdigest(), "aggregate": aggregate, "interpretation": "Synthetic structural prompt-following experiment only; it is not clinical validation, safety validation, or a comparison against another clinical model."}
-    (output / "model_arm_summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            writer.writerow(
+                {
+                    "experiment": experiment,
+                    "runs": len(group),
+                    "completed": len(complete),
+                    "json_valid": sum(_bool(row["json_valid"]) for row in complete),
+                    "state_correct": sum(_bool(row["state_correct"]) for row in complete),
+                    "completion_rate": len(complete) / len(group),
+                }
+            )
+    summary = {
+        "schema_version": "glhs-q2-model-arm-summary-v1",
+        "contract": contract,
+        "per_run_sha256": hashlib.sha256(per_run_path.read_bytes()).hexdigest(),
+        "aggregate": aggregate,
+        "interpretation": "Synthetic structural prompt-following experiment only; it is not clinical validation, safety validation, or a comparison against another clinical model.",
+    }
+    (output / "model_arm_summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return summary
 
 

@@ -25,9 +25,7 @@ def test_secret_scan_permits_blank_placeholders_and_nonsecret_identifiers(tmp_pa
 
 def test_secret_scan_permits_explicit_redaction_marker(tmp_path) -> None:
     placeholder = tmp_path / "redacted.md"
-    placeholder.write_text(
-        "ROUTER_API_KEY=[REDACTED]\nOPENAI_API_KEY = [REDACTED]\n"
-    )
+    placeholder.write_text("ROUTER_API_KEY=[REDACTED]\nOPENAI_API_KEY = [REDACTED]\n")
     assert scan_paths([placeholder]) == []
 
 

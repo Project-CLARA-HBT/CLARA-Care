@@ -63,7 +63,11 @@ def _validate_frozen_target_hashes(*, repository_root: Path, methods: dict[str, 
             raise FreezeError("govmut_calibration_method_invalid")
         targets = definition.get("targets")
         hashes = definition.get("target_sha256")
-        if not isinstance(targets, list) or not isinstance(hashes, dict) or set(hashes) != set(targets):
+        if (
+            not isinstance(targets, list)
+            or not isinstance(hashes, dict)
+            or set(hashes) != set(targets)
+        ):
             raise FreezeError("govmut_calibration_target_hashes_invalid")
         for target in targets:
             relative = target.partition("::")[0]
@@ -80,7 +84,11 @@ def _stage_repository(repository_root: Path) -> str:
     temporary = tempfile.mkdtemp(prefix="govmut-calibration-")
     stage = Path(temporary) / "stage"
     staged_source = stage / "services/api/src"
-    shutil.copytree(root / "services/api/src", staged_source, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copytree(
+        root / "services/api/src",
+        staged_source,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
     shutil.copytree(
         root / "services/api/tests",
         stage / "services/api/tests",
@@ -176,7 +184,9 @@ def calibrate_budget(
     _validate_frozen_target_hashes(repository_root=repository_root, methods=methods)
 
     catalog_path = repository_root / "research" / "assurance_soict" / str(freeze_input["catalog"])
-    plan_path = repository_root / "research" / "assurance_soict" / str(freeze_input["statistics_plan"])
+    plan_path = (
+        repository_root / "research" / "assurance_soict" / str(freeze_input["statistics_plan"])
+    )
     catalog_sha = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
     plan_sha = hashlib.sha256(plan_path.read_bytes()).hexdigest()
     if freeze_input["catalog_sha256"] != catalog_sha:

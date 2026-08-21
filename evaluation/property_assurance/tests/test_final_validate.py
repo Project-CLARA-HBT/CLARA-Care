@@ -38,9 +38,7 @@ def _write_run(
     executions = []
     for mutant_id in mutant_ids:
         for method in METHOD_IDS:
-            slot_seeds: list[int | None] = (
-                [None] if method == "M0_regression" else list(seeds)
-            )
+            slot_seeds: list[int | None] = [None] if method == "M0_regression" else list(seeds)
             for seed in slot_seeds:
                 classification = outcome_map.get((mutant_id, method, seed), "SURVIVED")
                 executions.append(

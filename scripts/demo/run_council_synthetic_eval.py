@@ -26,7 +26,7 @@ import json
 import os
 import statistics
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib import error, request
@@ -317,7 +317,7 @@ def _build_baseline_template(
     return {
         "meta": {
             "template": "council_manual_baseline_compare_v1",
-            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+            "generated_at_utc": datetime.now(UTC).isoformat(),
             "summary_artifact": run_summary.get("artifact"),
             "case_count": len(comparisons),
         },
@@ -392,7 +392,7 @@ def main() -> int:
     if not cases:
         raise SystemExit("No valid cases found in input file.")
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     if args.output_json.strip():
         output_json_path = Path(args.output_json).resolve()
     else:
@@ -494,7 +494,7 @@ def main() -> int:
         }
 
     summary: dict[str, Any] = {
-        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "generated_at_utc": datetime.now(UTC).isoformat(),
         "artifact": str(output_json_path),
         "input_cases": str(cases_path),
         "input_meta": meta,

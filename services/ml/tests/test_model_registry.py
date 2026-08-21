@@ -10,15 +10,15 @@ import pytest
 from clara_ml.llm.model_registry import (
     FLASH_MODEL_VERSION,
     PRIMARY_MODEL_VERSION,
-    TASK_CONTRACTS,
     TASK_CONTRACT_SCHEMA_VERSION,
+    TASK_CONTRACTS,
     ModelTask,
     build_asr_task_client,
     build_task_client,
     load_task_contracts,
-    resolve_encoder_shadow_selection,
     resolve_asr_model_selection,
     resolve_asr_provider_selection,
+    resolve_encoder_shadow_selection,
     resolve_model_selection,
 )
 from clara_ml.observability import model_routing_evidence

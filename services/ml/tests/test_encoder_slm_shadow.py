@@ -26,7 +26,7 @@ class _Client:
         self.response = response
         self.calls: list[dict[str, object]] = []
 
-    def __enter__(self) -> "_Client":
+    def __enter__(self) -> _Client:
         return self
 
     def __exit__(self, *_: object) -> None:

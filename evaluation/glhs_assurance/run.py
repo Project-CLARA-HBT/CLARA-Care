@@ -116,9 +116,7 @@ def run_assurance(*, output: Path, subjects: int = 32) -> dict[str, Any]:
                         valid_from=anchor,
                     ),
                 )
-                stage_latencies["evidence_ingestion"].append(
-                    (time.perf_counter() - began) * 1000.0
-                )
+                stage_latencies["evidence_ingestion"].append((time.perf_counter() - began) * 1000.0)
 
                 commitment = get_or_create_commitment(
                     db,
@@ -138,9 +136,7 @@ def run_assurance(*, output: Path, subjects: int = 32) -> dict[str, Any]:
                     allowed_domains=frozenset({"observations"}),
                     disclosed_evidence=(evidence,),
                 )
-                stage_latencies["thss_compile"].append(
-                    (time.perf_counter() - began) * 1000.0
-                )
+                stage_latencies["thss_compile"].append((time.perf_counter() - began) * 1000.0)
 
                 began = time.perf_counter()
                 proposal = propose_bound_commitment_transition(
@@ -191,9 +187,7 @@ def run_assurance(*, output: Path, subjects: int = 32) -> dict[str, Any]:
                     reason_code="synthetic_assurance",
                 )
                 db.commit()
-                stage_latencies["gst_commit"].append(
-                    (time.perf_counter() - began) * 1000.0
-                )
+                stage_latencies["gst_commit"].append((time.perf_counter() - began) * 1000.0)
             transition_loop_elapsed = time.perf_counter() - loop_started
 
             began = time.perf_counter()
@@ -236,12 +230,8 @@ def run_assurance(*, output: Path, subjects: int = 32) -> dict[str, Any]:
         "transitions": subjects,
         "final_state_version": final_state_version,
         "reconstructed_commitments": len(reconstructed),
-        "thss_pipeline_order": [
-            str(stage["name"]) for stage in final_snapshot.pipeline_trace
-        ],
-        "latency": {
-            stage: _latency_summary(values) for stage, values in stage_latencies.items()
-        },
+        "thss_pipeline_order": [str(stage["name"]) for stage in final_snapshot.pipeline_trace],
+        "latency": {stage: _latency_summary(values) for stage, values in stage_latencies.items()},
         "final_compile_ms": final_compile_ms,
         "replay_ms": replay_ms,
         "throughput_transitions_per_second": subjects / transition_loop_elapsed,
@@ -254,13 +244,9 @@ def run_assurance(*, output: Path, subjects: int = 32) -> dict[str, Any]:
         "context": {
             "snapshot_payload_bytes": context_bytes,
             "canonical_product_bytes": canonical_product_bytes,
-            "governance_overhead_bytes": max(
-                0, context_bytes - canonical_product_bytes
-            ),
+            "governance_overhead_bytes": max(0, context_bytes - canonical_product_bytes),
             "context_to_canonical_ratio": (
-                context_bytes / canonical_product_bytes
-                if canonical_product_bytes
-                else None
+                context_bytes / canonical_product_bytes if canonical_product_bytes else None
             ),
         },
         "environment": {
@@ -271,13 +257,9 @@ def run_assurance(*, output: Path, subjects: int = 32) -> dict[str, Any]:
         "clinical_adjudication": "NOT_RUN",
     }
     metrics_path = output / "metrics.json"
-    metrics_path.write_text(
-        json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    metrics_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     digest = hashlib.sha256(metrics_path.read_bytes()).hexdigest()
-    (output / "checksums.sha256").write_text(
-        f"{digest}  metrics.json\n", encoding="utf-8"
-    )
+    (output / "checksums.sha256").write_text(f"{digest}  metrics.json\n", encoding="utf-8")
     return metrics
 
 

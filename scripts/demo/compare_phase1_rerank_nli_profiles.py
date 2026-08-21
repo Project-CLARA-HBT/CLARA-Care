@@ -6,7 +6,7 @@ import json
 import statistics
 import sys
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +17,6 @@ if str(ML_SRC) not in sys.path:
 
 from clara_ml.agents.research_tier2 import run_research_tier2  # noqa: E402
 from clara_ml.config import settings  # noqa: E402
-
 
 DEFAULT_QUERIES: list[str] = [
     "Tương tác warfarin với ibuprofen có nguy cơ gì?",
@@ -383,7 +382,7 @@ def main() -> int:
     )
 
     report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "query_count": len(queries),
         "modes": modes,
         "queries": queries,

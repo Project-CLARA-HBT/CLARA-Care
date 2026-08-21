@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -86,7 +86,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -1561,7 +1561,7 @@ def ensure_run_id(raw_value: str) -> str:
     normalized = raw_value.strip()
     if normalized:
         return normalized
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
 
 
 def load_hard_negative_cases(path_text: str) -> tuple[list[dict[str, Any]], str]:

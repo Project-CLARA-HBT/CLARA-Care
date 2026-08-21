@@ -43,15 +43,15 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import date
 
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 # Import the store package first so it fully initializes before
 # hybrid_retriever is pulled in. hybrid_retriever -> score_engine -> embedder ->
 # store.schema and store/__init__ -> hybrid_retriever form an import cycle that
 # only resolves cleanly when ``clara_ml.rag.store`` loads first; doing so here
 # keeps this test importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.rag.store.hybrid_retriever import HybridRetriever
 from clara_ml.rag.store.schema import VALID_TRUST_TIERS
 from clara_ml.rag.store.sparse_index import RankedChunk

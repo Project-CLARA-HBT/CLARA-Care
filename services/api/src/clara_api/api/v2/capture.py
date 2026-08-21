@@ -10,33 +10,30 @@ Provides:
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, Header, Query, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    Query,
+    UploadFile,
+)
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from clara_api.api.v1.endpoints.profiles import current_user
 from clara_api.api.v2.conventions import (
-    ApiV2HTTPException,
     ApiV2ResponseEnvelope,
 )
 from clara_api.core.rbac import get_current_token
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
-    LifeMapCaptureArtifact,
-    LifeMapCaptureCandidate,
-    LifeMapCaptureJob,
-    LifeMapCaptureReviewAction,
-    LifeMapCaptureSession,
-    LifeMapEvent,
-    MedicationCourse,
     PhrProfile,
 )
 from clara_api.db.session import get_db
@@ -121,11 +118,12 @@ def create_session(
         try:
             scope = require_profile_scope(db, user=user, profile_id=req_profile)
             profile = scope.profile
+            _ = profile
         except Exception:
             pass
 
     session_id = f"cap_{uuid4().hex[:12]}"
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     return ApiV2ResponseEnvelope.wrap(
         data=CaptureSessionResponse(
@@ -152,8 +150,8 @@ async def upload_artifact(
     token: TokenPayload = Depends(get_current_token),
     db: Session = Depends(get_db),
 ) -> ApiV2ResponseEnvelope[CaptureSessionResponse]:
-    content = await file.read()
-    now = datetime.now(timezone.utc).isoformat()
+    _content = await file.read()
+    now = datetime.now(UTC).isoformat()
     fn = file.filename or "uploaded_document"
 
     # Produce reviewable candidate extractions from the artifact
@@ -230,7 +228,7 @@ def get_session(
             input_kind="photo",
             candidates=[],
             artifact_count=1,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
         )
     )
 
@@ -281,8 +279,8 @@ def commit_session(
             pass
 
     if profile:
-        profile.version_no = (profile.version_no or 1) + 1
-        profile.updated_at = datetime.now(timezone.utc)
+        profile.current_version_no = (profile.current_version_no or 1) + 1
+        profile.updated_at = datetime.now(UTC)
         db.commit()
 
     return ApiV2ResponseEnvelope.wrap(

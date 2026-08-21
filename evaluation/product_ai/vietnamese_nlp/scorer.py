@@ -20,7 +20,9 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
     except Exception:
         parsed_json = {}
 
-    full_search_text = (json.dumps(parsed_json, ensure_ascii=False) if parsed_json else response_text).lower()
+    full_search_text = (
+        json.dumps(parsed_json, ensure_ascii=False) if parsed_json else response_text
+    ).lower()
 
     passed = True
     abbr_score = 1.0
@@ -47,10 +49,15 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
             # Verify negation is correctly identified
             found = False
             for act_s in act_sym:
-                if s_name.lower() in str(act_s.get("name", "")).lower() and act_s.get("negated", False) == s.get("negated", True):
+                if s_name.lower() in str(act_s.get("name", "")).lower() and act_s.get(
+                    "negated", False
+                ) == s.get("negated", True):
                     found = True
                     break
-            if found or (s_name.lower() in full_search_text and ("không" in full_search_text or "chưa" in full_search_text)):
+            if found or (
+                s_name.lower() in full_search_text
+                and ("không" in full_search_text or "chưa" in full_search_text)
+            ):
                 matches += 1
         neg_score = matches / len(exp_sym)
         if neg_score < 0.75:

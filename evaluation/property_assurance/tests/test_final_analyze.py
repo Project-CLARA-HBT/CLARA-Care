@@ -58,9 +58,7 @@ def _write_run(
     executions = []
     for mutant_id in mutant_ids:
         for method in METHOD_IDS:
-            slot_seeds: list[int | None] = (
-                [None] if method == "M0_regression" else list(SEEDS)
-            )
+            slot_seeds: list[int | None] = [None] if method == "M0_regression" else list(SEEDS)
             for seed in slot_seeds:
                 key = (mutant_id, method, seed)
                 executions.append(

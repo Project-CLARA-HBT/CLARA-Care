@@ -59,9 +59,7 @@ def paired_primary_statistics(
         comparator = cells.get((subject, comparator_condition))
         if reference is None or comparator is None:
             raise ValueError("incomplete_primary_subject_grid")
-        differences.append(
-            sum(reference) / len(reference) - sum(comparator) / len(comparator)
-        )
+        differences.append(sum(reference) / len(reference) - sum(comparator) / len(comparator))
     if not differences:
         raise ValueError("empty_primary_subject_grid")
     wins = sum(value > 0 for value in differences)
@@ -89,9 +87,7 @@ def paired_primary_statistics(
         "ties": ties,
         "effect_mean_reference_minus_comparator": effect,
         "bootstrap_ci_95": confidence_interval,
-        "exact_two_sided_sign_p_value": exact_two_sided_sign_p_value(
-            wins=wins, losses=losses
-        ),
+        "exact_two_sided_sign_p_value": exact_two_sided_sign_p_value(wins=wins, losses=losses),
         "bootstrap_samples": bootstrap_samples,
         "seed": seed,
         "primary_multiplicity": "none_one_primary_contrast",
@@ -134,15 +130,11 @@ def paired_condition_statistics(
         by_cell.setdefault(cell_key, []).append(float(row["all_axes_exact"]))
     models = sorted({str(row["model"]) for row in rows})
     observed_conditions = {str(row["condition"]) for row in rows}
-    conditions = [
-        condition for condition in comparators if condition in observed_conditions
-    ]
+    conditions = [condition for condition in comparators if condition in observed_conditions]
     result: dict[str, Any] = {}
     rng = random.Random(seed)
     for model in models:
-        subjects = sorted(
-            {str(row["subject_token"]) for row in rows if str(row["model"]) == model}
-        )
+        subjects = sorted({str(row["subject_token"]) for row in rows if str(row["model"]) == model})
         for condition in conditions:
             differences = []
             excluded = []
@@ -170,8 +162,7 @@ def paired_condition_statistics(
                 positive = sum(value > 0 for value in nonzero)
                 count = len(nonzero)
                 lower_tail = sum(
-                    comb(count, observed)
-                    for observed in range(min(positive, count - positive) + 1)
+                    comb(count, observed) for observed in range(min(positive, count - positive) + 1)
                 ) / (2**count)
                 sign_p = min(1.0, 2 * lower_tail)
             result[f"{model}:{condition}"] = {

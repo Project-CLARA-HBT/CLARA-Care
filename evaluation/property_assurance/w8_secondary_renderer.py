@@ -113,8 +113,10 @@ def _load_family_manifest(research_dir: Path) -> dict[str, dict[str, str]]:
         seed_id = seed.get("id")
         fault = seed.get("fault")
         invariants = seed.get("invariants")
-        if not isinstance(seed_id, str) or not isinstance(fault, str) or not isinstance(
-            invariants, list
+        if (
+            not isinstance(seed_id, str)
+            or not isinstance(fault, str)
+            or not isinstance(invariants, list)
         ):
             raise FreezeError("govmut_w8_secondary_manifest_invalid")
         by_id[seed_id] = {
@@ -176,11 +178,9 @@ def _render_seed_stability(
 
 
 def _unique_and_incremental_kills(
-    per_mutant_method: dict[str, dict[str, dict[str, Any]]]
+    per_mutant_method: dict[str, dict[str, dict[str, Any]]],
 ) -> dict[str, Any]:
-    killed_by: dict[str, set[str]] = {
-        method: set() for method in METHOD_IDS
-    }
+    killed_by: dict[str, set[str]] = {method: set() for method in METHOD_IDS}
     for mutant_id, by_method in per_mutant_method.items():
         for method in METHOD_IDS:
             if by_method[method]["detected_any_seed"] == 1:
@@ -215,9 +215,7 @@ def _render_efficiency(
         total_ms = runtime[method]["total_ms"]
         killed = scores[method]["killed"]
         denominator = scores[method]["denominator"]
-        kills_per_minute = (
-            round(killed / (total_ms / 60000.0), 3) if total_ms and killed else None
-        )
+        kills_per_minute = round(killed / (total_ms / 60000.0), 3) if total_ms and killed else None
         rows.append(
             {
                 "method": method,
@@ -269,9 +267,7 @@ def _field_availability(
             aggregate = per_mutant_method[mutant_id][method]
             for field in ("first_killing_seed", "time_to_first_kill_ms"):
                 if aggregate[field] is None:
-                    rendered_as_na.append(
-                        f"seed_stability[{mutant_id},{method}].{field}"
-                    )
+                    rendered_as_na.append(f"seed_stability[{mutant_id},{method}].{field}")
     for row in efficiency:
         for field in ("kills_per_minute", "cost_per_incremental_kill_ms"):
             if row[field] is None or row[field] == "N/A":
@@ -286,9 +282,7 @@ def _field_availability(
     }
 
 
-def render_secondary_report(
-    *, research_dir: Path, output_dir: Path
-) -> dict[str, Any]:
+def render_secondary_report(*, research_dir: Path, output_dir: Path) -> dict[str, Any]:
     """Render all W8 secondary endpoints deterministically and persist tables."""
     analysis = _read_sealed_analysis(research_dir)
     catalog_fields = _load_catalog(research_dir)
@@ -324,8 +318,7 @@ def render_secondary_report(
         mutant_id
         for mutant_id in sorted(per_mutant_method)
         if all(
-            per_mutant_method[mutant_id][method]["detected_any_seed"] == 0
-            for method in METHOD_IDS
+            per_mutant_method[mutant_id][method]["detected_any_seed"] == 0 for method in METHOD_IDS
         )
     ]
     unique_incremental = _unique_and_incremental_kills(per_mutant_method)
@@ -346,9 +339,7 @@ def render_secondary_report(
         "sealed_analysis_sha256": SEALED_ANALYSIS_SHA256,
         "source_artifacts": {
             "analysis": str((research_dir / "results" / "final-analysis.json").resolve()),
-            "seal": str(
-                (research_dir / "seal" / "govmut-soict-2026-final_analysis-v2").resolve()
-            ),
+            "seal": str((research_dir / "seal" / "govmut-soict-2026-final_analysis-v2").resolve()),
         },
         "note": (
             "Rendered deterministically from the sealed W8 analysis; W8 was not "
@@ -386,7 +377,12 @@ def _md_escape(value: Any) -> str:
 
 
 def _write_markdown_tables(report: dict[str, Any], output_dir: Path) -> None:
-    header = ["Mutant", "Family", "Layer", *[f"{label} killed" for label in ("M0", "M1", "M2", "M3")]]
+    header = [
+        "Mutant",
+        "Family",
+        "Layer",
+        *[f"{label} killed" for label in ("M0", "M1", "M2", "M3")],
+    ]
     lines = ["# W8 kill matrix (45 x strategy, detected_any_seed)", ""]
     lines.append("| " + " | ".join(header) + " |")
     lines.append("|" + "---|" * len(header))
@@ -443,11 +439,18 @@ def _write_markdown_tables(report: dict[str, Any], output_dir: Path) -> None:
     ]
     for mutant_id in report["all_survive"]:
         survive_lines.append(f"| {mutant_id} |")
-    (output_dir / "w8_all_survive.md").write_text(
-        "\n".join(survive_lines) + "\n", encoding="utf-8"
-    )
+    (output_dir / "w8_all_survive.md").write_text("\n".join(survive_lines) + "\n", encoding="utf-8")
 
-    stab_header = ["Mutant", "Method", "kill_fraction", "seed_instability", "first_killing_seed", "time_to_first_kill_ms", "executable_seeds", "infra_seeds"]
+    stab_header = [
+        "Mutant",
+        "Method",
+        "kill_fraction",
+        "seed_instability",
+        "first_killing_seed",
+        "time_to_first_kill_ms",
+        "executable_seeds",
+        "infra_seeds",
+    ]
     stab_lines = ["# W8 seed stability / kill fraction / time to first kill", ""]
     stab_lines.append("| " + " | ".join(stab_header) + " |")
     stab_lines.append("|" + "---|" * len(stab_header))
@@ -469,9 +472,7 @@ def _write_markdown_tables(report: dict[str, Any], output_dir: Path) -> None:
             )
             + " |"
         )
-    (output_dir / "w8_seed_stability.md").write_text(
-        "\n".join(stab_lines) + "\n", encoding="utf-8"
-    )
+    (output_dir / "w8_seed_stability.md").write_text("\n".join(stab_lines) + "\n", encoding="utf-8")
 
     eff_header = [
         "method",
@@ -499,11 +500,7 @@ def _write_markdown_tables(report: dict[str, Any], output_dir: Path) -> None:
     eff_lines.append("| " + " | ".join(eff_header) + " |")
     eff_lines.append("|" + "---|" * len(eff_header))
     for row in report["efficiency"]:
-        eff_lines.append(
-            "| "
-            + " | ".join(_md_escape(row[key]) for key in eff_header)
-            + " |"
-        )
+        eff_lines.append("| " + " | ".join(_md_escape(row[key]) for key in eff_header) + " |")
     (output_dir / "w8_runtime_efficiency.md").write_text(
         "\n".join(eff_lines) + "\n", encoding="utf-8"
     )
@@ -519,9 +516,7 @@ def _write_markdown_tables(report: dict[str, Any], output_dir: Path) -> None:
         "## Available",
         "",
     ]
-    availability_lines.extend(
-        f"- `{field}`" for field in report["field_availability"]["available"]
-    )
+    availability_lines.extend(f"- `{field}`" for field in report["field_availability"]["available"])
     availability_lines.extend(["", "## Rendered as N/A", ""])
     availability_lines.extend(
         f"- `{field}`" for field in report["field_availability"]["rendered_as_na"]

@@ -36,9 +36,7 @@ def _conditional_rejection_probability(
 ) -> float:
     critical = _critical_wins(non_ties, alpha)
     return sum(
-        comb(non_ties, wins)
-        * win_probability**wins
-        * (1.0 - win_probability) ** (non_ties - wins)
+        comb(non_ties, wins) * win_probability**wins * (1.0 - win_probability) ** (non_ties - wins)
         for wins in range(critical, non_ties + 1)
     )
 

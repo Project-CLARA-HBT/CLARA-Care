@@ -135,7 +135,7 @@ class _FakeCatalogConnection:
 class _FakeCatalogTransaction:
     """Context manager mirroring ``engine.begin()`` usage in run_migrations."""
 
-    def __init__(self, engine: "_FakeCatalogEngine") -> None:
+    def __init__(self, engine: _FakeCatalogEngine) -> None:
         self._engine = engine
         self.connection = _FakeCatalogConnection(engine.catalog, engine.executed)
 

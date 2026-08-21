@@ -74,9 +74,7 @@ def test_phase_b_runner_is_freeze_and_probe_bound_with_fake_transport(
         "_freeze",
         lambda *_args, **_kwargs: {"git_sha": freeze_sha},
     )
-    limits = RunLimits(
-        max_subjects=2, max_cases=20, max_requests=500, checkpoint_every=3
-    )
+    limits = RunLimits(max_subjects=2, max_cases=20, max_requests=500, checkpoint_every=3)
     transport = DeterministicFakeTransport()
     cutoff = datetime(2026, 2, 1, tzinfo=UTC)
     output = tmp_path / "phase-b"
@@ -98,10 +96,7 @@ def test_phase_b_runner_is_freeze_and_probe_bound_with_fake_transport(
 
     assert manifest["execution_mode"] == "phase_b_router"
     assert manifest["phase_a_freeze_sha"] == freeze_sha
-    assert (
-        manifest["provider_probe_sha256"]
-        == hashlib.sha256(probe_path.read_bytes()).hexdigest()
-    )
+    assert manifest["provider_probe_sha256"] == hashlib.sha256(probe_path.read_bytes()).hexdigest()
     assert manifest["source_case_count"] == 2
     assert manifest["variant_case_count"] == 18
     assert manifest["request_count"] == 364

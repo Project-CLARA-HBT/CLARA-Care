@@ -28,7 +28,6 @@ import pytest
 from clara_ml.ingestion.connectors.base import ConnectorContext, FetchWindow
 from clara_ml.ingestion.connectors.vn_crawl import VnCrawlConnector
 
-
 # ---------------------------------------------------------------------------
 # Injected HTTP transport doubles (no real sockets)
 # ---------------------------------------------------------------------------

@@ -74,6 +74,7 @@ def read_current_policy_epoch(
     db: Session,
     *,
     policy_domain: str | None = None,
+    for_update: bool = False,
 ) -> GovernancePolicyEpoch | None:
     """Return the active persisted governance policy epoch, or ``None``.
 
@@ -93,10 +94,12 @@ def read_current_policy_epoch(
     statement = statement.order_by(
         GovernancePolicyEpoch.version.desc(), GovernancePolicyEpoch.id.desc()
     )
+    if for_update:
+        statement = statement.with_for_update()
     return db.execute(statement).scalars().first()
 
 
-def _effective_policy_version(db: Session | None = None) -> str:
+def _effective_policy_version(db: Session | None = None, *, for_update: bool = False) -> str:
     """Return the policy version governing admission at this moment.
 
     A real policy update advances the deployment-time constant at deploy time.
@@ -112,7 +115,7 @@ def _effective_policy_version(db: Session | None = None) -> str:
     """
 
     if isolated_govred_arm() is not None:
-        epoch = read_current_policy_epoch(db) if db is not None else None
+        epoch = read_current_policy_epoch(db, for_update=for_update) if db is not None else None
         if epoch is not None:
             return epoch.version
         override = os.environ.get("GOVRED_RESEARCH_POLICY_VERSION")
@@ -221,13 +224,20 @@ def _lock_profile_state(db: Session, *, profile_id: int) -> int:
     return current_state_version(db, profile_id=profile_id)
 
 
-def _governed_consent_version(db: Session, *, owner_user_id: int, purpose: str) -> str:
+def _governed_consent_version(
+    db: Session,
+    *,
+    owner_user_id: int,
+    purpose: str,
+    for_update: bool = False,
+) -> str:
     """Return the versioned consent actually governing a THSS/write decision.
 
     Authorization gates remain at their route/service boundaries; this helper
     provides durable reconstruction metadata without turning the ledger into a
     second consent authority.  ``not_required`` is explicit rather than an
     absent value for internal and currently ungated workflows.
+    When ``for_update=True``, row-level locks are acquired to eliminate TOCTOU races.
     """
 
     consent_type = {
@@ -235,7 +245,7 @@ def _governed_consent_version(db: Session, *, owner_user_id: int, purpose: str) 
         "sharing": "phr_sharing",
         "personalization": "phr_personalization",
     }.get(purpose, "medical_disclaimer")
-    row = db.execute(
+    stmt = (
         select(UserConsent)
         .where(
             UserConsent.user_id == owner_user_id,
@@ -243,7 +253,10 @@ def _governed_consent_version(db: Session, *, owner_user_id: int, purpose: str) 
         )
         .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
         .limit(1)
-    ).scalar_one_or_none()
+    )
+    if for_update:
+        stmt = stmt.with_for_update()
+    row = db.execute(stmt).scalar_one_or_none()
     if row is None or row.revoked_at is not None:
         return "not_required"
     return f"{consent_type}:{row.consent_version}"
@@ -1235,13 +1248,6 @@ def apply_transition(
         raise GlhsInvariantError("model_cannot_apply_transition")
     if _digest(assertion.value_json) != assertion.value_fingerprint:
         raise GlhsInvariantError("assertion_value_digest_mismatch")
-    if revalidate_governance and assertion.policy_version != _effective_policy_version(db):
-        raise GlhsInvariantError("assertion_policy_mismatch")
-    current_consent_version = _governed_consent_version(
-        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose
-    )
-    if revalidate_governance and assertion.consent_version != current_consent_version:
-        raise GlhsInvariantError("assertion_consent_mismatch")
     if action == "activate" and assertion.epistemic_state == "confirmed" and not allow_confirmed:
         raise GlhsInvariantError("confirmed_transition_requires_review")
     if not _assertion_evidence_ids(db, assertion_id=assertion.id):
@@ -1262,16 +1268,6 @@ def apply_transition(
             "source_snapshot_digest": assertion.source_snapshot_digest,
         }
     )
-    existing = db.execute(
-        select(GlhsTransition).where(
-            GlhsTransition.profile_id == scope.profile.id,
-            GlhsTransition.idempotency_key_hash == key_hash,
-        )
-    ).scalar_one_or_none()
-    if existing is not None:
-        if existing.request_digest != request_digest:
-            raise GlhsInvariantError("idempotency_key_reuse_mismatch")
-        return cast(GlhsTransition, existing)
     base_version = _lock_profile_state(db, profile_id=scope.profile.id)
     # A concurrent request may have committed this idempotency key while this
     # transaction waited for the profile row lock. Re-read under the serialized
@@ -1287,6 +1283,13 @@ def apply_transition(
         if existing.request_digest != request_digest:
             raise GlhsInvariantError("idempotency_key_reuse_mismatch")
         return cast(GlhsTransition, existing)
+    if revalidate_governance and assertion.policy_version != _effective_policy_version(db, for_update=True):
+        raise GlhsInvariantError("assertion_policy_mismatch")
+    current_consent_version = _governed_consent_version(
+        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose, for_update=True
+    )
+    if revalidate_governance and assertion.consent_version != current_consent_version:
+        raise GlhsInvariantError("assertion_consent_mismatch")
     if revalidate_state and base_version != expected_state_version:
         raise GlhsInvariantError("stale_state_version")
     # The candidate itself is the persisted proposal for an activation.  Other

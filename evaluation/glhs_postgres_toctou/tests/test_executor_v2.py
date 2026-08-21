@@ -115,7 +115,9 @@ class FakeGateway:
 
     GlhsInvariantError = GlhsInvariantError
 
-    def __init__(self, *, rejections: dict[str, str] | None = None, propose_commit: bool = True) -> None:
+    def __init__(
+        self, *, rejections: dict[str, str] | None = None, propose_commit: bool = True
+    ) -> None:
         self.calls: list[tuple[str, object]] = []
         self._lock = threading.Lock()
         self.rejections = dict(rejections or {})
@@ -139,7 +141,13 @@ class FakeGateway:
         return SimpleNamespace(id=1, profile_id=profile_id)
 
     def propose_assertion(
-        self, db: object, *, profile_id: int, actor_user_id: int | None, data: object, evidence: object
+        self,
+        db: object,
+        *,
+        profile_id: int,
+        actor_user_id: int | None,
+        data: object,
+        evidence: object,
     ) -> SimpleNamespace:
         with self._lock:
             self.calls.append(("propose_assertion", profile_id))
@@ -233,33 +241,44 @@ def _schedule(protocol: dict[str, object], schedule_id: str) -> dict[str, object
 
 # --- fail-closed gates -------------------------------------------------------
 
-def test_require_isolated_postgres_refuses_missing_attestation(monkeypatch: pytest.MonkeyPatch) -> None:
+
+def test_require_isolated_postgres_refuses_missing_attestation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv(FINAL_ISOLATION_ATTESTATION, raising=False)
     monkeypatch.delenv(FINAL_DATABASE_URL, raising=False)
     with pytest.raises(RuntimeError, match="requires_isolated_research_attestation"):
         _require_final_isolated_postgres(None)
 
 
-def test_require_isolated_postgres_refuses_missing_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_require_isolated_postgres_refuses_missing_database_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv(FINAL_ISOLATION_ATTESTATION, "1")
     monkeypatch.delenv(FINAL_DATABASE_URL, raising=False)
     with pytest.raises(RuntimeError, match="requires_postgresql_database_url"):
         _require_final_isolated_postgres(None)
 
 
-def test_require_isolated_postgres_refuses_non_postgres_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_require_isolated_postgres_refuses_non_postgres_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv(FINAL_ISOLATION_ATTESTATION, "1")
     with pytest.raises(RuntimeError, match="requires_postgresql_database_url"):
         _require_final_isolated_postgres("sqlite:///tmp/x.db")
 
 
-def test_require_isolated_postgres_refuses_default_database(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_require_isolated_postgres_refuses_default_database(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv(FINAL_ISOLATION_ATTESTATION, "1")
     with pytest.raises(RuntimeError, match="requires_non_default_database"):
         _require_final_isolated_postgres("postgresql://user:pass@localhost/postgres")
 
 
-def test_require_isolated_postgres_accepts_isolated_database(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_require_isolated_postgres_accepts_isolated_database(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv(FINAL_ISOLATION_ATTESTATION, "1")
     url = "postgresql+psycopg://user:pass@localhost/glhs_final_v2"
     assert _require_final_isolated_postgres(url) == url
@@ -294,6 +313,7 @@ def test_validate_protocol_accepts_frozen_protocol() -> None:
 
 
 # --- deterministic schedule drivers ------------------------------------------
+
 
 def test_driver_v2_01_consent_writer_rejects_and_is_auditable() -> None:
     env = _fake_env()
@@ -443,6 +463,7 @@ def test_driver_v2_09_simultaneous_release_is_never_fabricated_forbidden() -> No
 
 # --- no fabrication + orchestration ------------------------------------------
 
+
 def test_run_schedules_writes_raw_json_and_validates(tmp_path: Path) -> None:
     env = _fake_env(committed_item_count=1)
     out = tmp_path / "run_v2_raw.json"
@@ -505,8 +526,12 @@ def test_run_schedules_does_not_write_output_when_a_driver_fails(tmp_path: Path)
 
 def test_classification_matches() -> None:
     assert _classification_matches("rejected", "rejected_after_observed_revoke_commit")
-    assert _classification_matches("committed", "transition_committed_before_observed_revoke_commit")
-    assert _classification_matches("indeterminate_ordering", "indeterminate_ordering_transition_committed")
+    assert _classification_matches(
+        "committed", "transition_committed_before_observed_revoke_commit"
+    )
+    assert _classification_matches(
+        "indeterminate_ordering", "indeterminate_ordering_transition_committed"
+    )
     assert _classification_matches("operational_deadlock", "deadlock_detected")
     assert not _classification_matches("rejected", "transition_committed")
 

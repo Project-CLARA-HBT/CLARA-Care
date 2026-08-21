@@ -126,8 +126,7 @@ def _validate_protocol(
         or protocol.get("analysis_unit") != "source_subject"
         or protocol.get("failure_policy") != "missing_invalid_or_error_is_failure"
         or protocol.get("production_path") != PRODUCTION_PATH
-        or protocol.get("execution_boundary")
-        != "in_process_api_owned_service_layer_sqlite"
+        or protocol.get("execution_boundary") != "in_process_api_owned_service_layer_sqlite"
         or protocol.get("temporal_mapping") != TEMPORAL_MAPPING
         or protocol.get("clinical_oracle") is not False
         or protocol.get("headline_eligible") is not False
@@ -213,9 +212,7 @@ def _event_windows(events: list[dict[str, Any]]) -> dict[str, tuple[datetime, da
         offset = int(event["valid_offset_minutes"])
         following = next_offset.get(offset)
         valid_to = (
-            _relative_time(following) - timedelta(microseconds=1)
-            if following is not None
-            else None
+            _relative_time(following) - timedelta(microseconds=1) if following is not None else None
         )
         result[str(event["event_id"])] = (_relative_time(offset), valid_to)
     return result
@@ -408,7 +405,13 @@ def run(
                 try:
                     with db.begin_nested():
                         selections[SYSTEMS[2]] = _ingest_and_reconstruct(db, scope, task)
-                except (KeyError, TypeError, ValueError, RuntimeError, sa.exc.SQLAlchemyError) as exc:
+                except (
+                    KeyError,
+                    TypeError,
+                    ValueError,
+                    RuntimeError,
+                    sa.exc.SQLAlchemyError,
+                ) as exc:
                     selections[SYSTEMS[2]] = None
                     error_code = str(exc) or type(exc).__name__
                     counts[f"error:{error_code}"] += 1
@@ -428,14 +431,19 @@ def run(
                         "status": "PASS" if correct else "FAIL",
                     }
                 output_stream.write(
-                    (_canonical({
-                        "task_id": task["task_id"],
-                        "subject_token": subject,
-                        "domain": domain,
-                        "source_target_event_id": target,
-                        "systems": row_systems,
-                        "error_code": error_code,
-                    }) + "\n").encode()
+                    (
+                        _canonical(
+                            {
+                                "task_id": task["task_id"],
+                                "subject_token": subject,
+                                "domain": domain,
+                                "source_target_event_id": target,
+                                "systems": row_systems,
+                                "error_code": error_code,
+                            }
+                        )
+                        + "\n"
+                    ).encode()
                 )
                 counts["tasks"] += 1
                 counts["events"] += len(events)
@@ -443,9 +451,15 @@ def run(
         database_bytes = database_path.stat().st_size
         with factory() as db:
             row_counts = {
-                "evidence": int(db.scalar(sa.select(sa.func.count()).select_from(GlhsEvidence)) or 0),
-                "assertions": int(db.scalar(sa.select(sa.func.count()).select_from(GlhsAssertion)) or 0),
-                "transitions": int(db.scalar(sa.select(sa.func.count()).select_from(GlhsTransition)) or 0),
+                "evidence": int(
+                    db.scalar(sa.select(sa.func.count()).select_from(GlhsEvidence)) or 0
+                ),
+                "assertions": int(
+                    db.scalar(sa.select(sa.func.count()).select_from(GlhsAssertion)) or 0
+                ),
+                "transitions": int(
+                    db.scalar(sa.select(sa.func.count()).select_from(GlhsTransition)) or 0
+                ),
                 "state_versions": int(
                     db.scalar(sa.select(sa.func.count()).select_from(GlhsStateVersion)) or 0
                 ),

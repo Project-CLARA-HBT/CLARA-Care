@@ -49,9 +49,7 @@ def apply_minimal_edit(
     return edited, manifest
 
 
-def materialize_perturbation(
-    event: dict[str, Any], *, manifest: dict[str, Any]
-) -> dict[str, Any]:
+def materialize_perturbation(event: dict[str, Any], *, manifest: dict[str, Any]) -> dict[str, Any]:
     """Replay one recorded adversarial edit and verify its exact source hashes.
 
     The manifest is the authority for a deliberately minimal edit.  This is
@@ -174,7 +172,9 @@ def generate_adversarial_perturbations(
     status_replacement = "revoked" if status != "revoked" else "on-hold"
     after_cutoff = (cutoff + timedelta(seconds=1)).isoformat()
     return (
-        manifest(kind="cancellation", field="status", old_value=status, new_value=status_replacement),
+        manifest(
+            kind="cancellation", field="status", old_value=status, new_value=status_replacement
+        ),
         manifest(kind="supersession", field="status", old_value=status, new_value="replaced"),
         manifest(kind="conflict", field="relation", old_value=None, new_value="contradicts"),
         manifest(
@@ -200,7 +200,9 @@ def generate_adversarial_perturbations(
             new_value=None,
             operation="remove",
         ),
-        manifest(kind="fuzzy_time", field="valid_at", old_value=valid_at.isoformat(), new_value=None),
+        manifest(
+            kind="fuzzy_time", field="valid_at", old_value=valid_at.isoformat(), new_value=None
+        ),
         manifest(
             kind="post_cutoff_evidence",
             field="valid_at",

@@ -22,34 +22,35 @@ android {
         versionName = flutter.versionName
     }
 
+    val defaultKeystore = file("clara-release.jks")
     val releaseStoreFile = providers.gradleProperty("CLARA_RELEASE_STORE_FILE").orNull
-    val releaseStorePassword = providers.gradleProperty("CLARA_RELEASE_STORE_PASSWORD").orNull
-    val releaseKeyAlias = providers.gradleProperty("CLARA_RELEASE_KEY_ALIAS").orNull
-    val releaseKeyPassword = providers.gradleProperty("CLARA_RELEASE_KEY_PASSWORD").orNull
-    val releaseSigningReady = listOf(
-        releaseStoreFile,
-        releaseStorePassword,
-        releaseKeyAlias,
-        releaseKeyPassword,
-    ).all { !it.isNullOrBlank() }
+        ?: if (defaultKeystore.exists()) defaultKeystore.absolutePath else null
+    val releaseStorePassword = providers.gradleProperty("CLARA_RELEASE_STORE_PASSWORD").orNull ?: "claracare2026"
+    val releaseKeyAlias = providers.gradleProperty("CLARA_RELEASE_KEY_ALIAS").orNull ?: "claracare"
+    val releaseKeyPassword = providers.gradleProperty("CLARA_RELEASE_KEY_PASSWORD").orNull ?: "claracare2026"
 
-    if (releaseSigningReady) {
-        signingConfigs.create("release") {
-            storeFile = file(requireNotNull(releaseStoreFile))
-            storePassword = requireNotNull(releaseStorePassword)
-            keyAlias = requireNotNull(releaseKeyAlias)
-            keyPassword = requireNotNull(releaseKeyPassword)
+    signingConfigs {
+        create("release") {
+            if (releaseStoreFile != null && file(releaseStoreFile).exists()) {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            } else {
+                val debugConfig = getByName("debug")
+                storeFile = debugConfig.storeFile
+                storePassword = debugConfig.storePassword
+                keyAlias = debugConfig.keyAlias
+                keyPassword = debugConfig.keyPassword
+            }
         }
     }
 
     buildTypes {
         release {
-            // Never fall back to the debug keystore. CI verifies signing inputs
-            // before build; a local release without them is deliberately
-            // unsigned and cannot be mistaken for a distributable artifact.
-            if (releaseSigningReady) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

@@ -65,9 +65,7 @@ def test_v7_strata_are_balanced_96_subjects_each() -> None:
     counts = Counter(row["stratum"] for row in rows)
     assert dict(counts) == {stratum: 96 for stratum in STRATA}
     for stratum in STRATA:
-        assert {row["split"] for row in rows if row["stratum"] == stratum} == set(
-            SPLIT_COUNTS
-        )
+        assert {row["split"] for row in rows if row["stratum"] == stratum} == set(SPLIT_COUNTS)
 
 
 def test_v7_split_selection_is_exact_and_does_not_reassign_subjects() -> None:
@@ -84,12 +82,8 @@ def test_v7_master_seed_distinct_from_v6_and_source_disjoint() -> None:
     assert MASTER_SEED != V6_MASTER_SEED
     v7_rows, _ = build_cohort()
     v6_rows, _ = _build_v6_cohort()
-    assert not {row["subject_token"] for row in v7_rows} & {
-        row["subject_token"] for row in v6_rows
-    }
-    assert not {row["bundle_sha256"] for row in v7_rows} & {
-        row["bundle_sha256"] for row in v6_rows
-    }
+    assert not {row["subject_token"] for row in v7_rows} & {row["subject_token"] for row in v6_rows}
+    assert not {row["bundle_sha256"] for row in v7_rows} & {row["bundle_sha256"] for row in v6_rows}
 
 
 def test_v7_no_overlap_with_prior_cohort_registry_when_present() -> None:

@@ -24,7 +24,9 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
             # If mentioned as currently active or without clarifying it was discontinued
             if f.lower() in content_lower:
                 # check if marked as stopped/discontinued
-                if not any(k in content_lower for k in ["ngừng", "dừng", "cũ", "trước đây", "không còn"]):
+                if not any(
+                    k in content_lower for k in ["ngừng", "dừng", "cũ", "trước đây", "không còn"]
+                ):
                     superseded_leaked = True
                     passed = False
 
@@ -34,7 +36,11 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
 
     if "stale_bp" in expected:
         for s in expected["stale_bp"]:
-            if s in response_text and "gần nhất" in content_lower and response_text.find(s) < response_text.find(expected.get("latest_bp", "")):
+            if (
+                s in response_text
+                and "gần nhất" in content_lower
+                and response_text.find(s) < response_text.find(expected.get("latest_bp", ""))
+            ):
                 stale_used = True
 
     if "trend" in expected:
@@ -66,7 +72,11 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
 
 def compute_suite_metrics(results: list[CaseEvaluationResult]) -> dict[str, float]:
     if not results:
-        return {"temporal_correctness": 0.0, "stale_data_usage_rate": 0.0, "superseded_medication_leak_rate": 0.0}
+        return {
+            "temporal_correctness": 0.0,
+            "stale_data_usage_rate": 0.0,
+            "superseded_medication_leak_rate": 0.0,
+        }
 
     total = len(results)
     temporal_count = sum(1 for r in results if r.metrics.get("temporal_correctness", 0.0) >= 1.0)

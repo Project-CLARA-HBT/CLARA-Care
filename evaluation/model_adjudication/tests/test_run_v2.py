@@ -34,7 +34,9 @@ class _FakeHeaders:
 
 
 class _FakeResponse:
-    def __init__(self, payload: bytes, content_type: str = "application/json", status: int = 200) -> None:
+    def __init__(
+        self, payload: bytes, content_type: str = "application/json", status: int = 200
+    ) -> None:
         self._payload = payload
         self.headers = _FakeHeaders(content_type)
         self.status = status
@@ -63,8 +65,19 @@ def _sse_payload(content: str, *, complete: bool = True, chunk_size: int = 8) ->
     return b"\n".join(parts) + b"\n"
 
 
-def _review(*, label: str = "PASS", rationale: str = "ok", evidence_ids: list[str] | None = None, confidence: float = 0.9) -> dict[str, Any]:
-    return {"label": label, "rationale": rationale, "evidence_ids": evidence_ids or ["e1", "e2"], "confidence": confidence}
+def _review(
+    *,
+    label: str = "PASS",
+    rationale: str = "ok",
+    evidence_ids: list[str] | None = None,
+    confidence: float = 0.9,
+) -> dict[str, Any]:
+    return {
+        "label": label,
+        "rationale": rationale,
+        "evidence_ids": evidence_ids or ["e1", "e2"],
+        "confidence": confidence,
+    }
 
 
 def _manifest(*, status: str = "frozen") -> dict[str, Any]:
@@ -75,11 +88,22 @@ def _manifest(*, status: str = "frozen") -> dict[str, Any]:
         "models": list(MODELS),
         "protocols": {"safety": {"allowed_labels": ["PASS", "FAIL"]}},
         "rubric": {"dimensions": ["safety"]},
-        "cases": [{"case_id": "c1", "protocol": "safety", "evidence": {"e1": {"text": "x"}, "e2": {"text": "y"}}}],
+        "cases": [
+            {
+                "case_id": "c1",
+                "protocol": "safety",
+                "evidence": {"e1": {"text": "x"}, "e2": {"text": "y"}},
+            }
+        ],
     }
 
 
-def _fake_urlopen(*, response: _FakeResponse | None = None, error: Exception | None = None, calls: list[Any] | None = None) -> Any:
+def _fake_urlopen(
+    *,
+    response: _FakeResponse | None = None,
+    error: Exception | None = None,
+    calls: list[Any] | None = None,
+) -> Any:
     def _urlopen(request: Any, **_kwargs: Any) -> Any:
         if calls is not None:
             calls.append(request)
@@ -136,16 +160,23 @@ def test_sse_supported_despite_stream_false() -> None:
 
 def test_structured_content_parses_split_sse_json() -> None:
     content = json.dumps(_review())
-    assert _parse_review_v2(
-        content=_structured_content_v2(payload_bytes=_sse_payload(content), content_type="text/event-stream"),
-        allowed_labels=ALLOWED,
-        available_evidence_ids=["e1", "e2"],
-    ) == _review()
+    assert (
+        _parse_review_v2(
+            content=_structured_content_v2(
+                payload_bytes=_sse_payload(content), content_type="text/event-stream"
+            ),
+            allowed_labels=ALLOWED,
+            available_evidence_ids=["e1", "e2"],
+        )
+        == _review()
+    )
 
 
 def test_truncated_sse_fails_closed() -> None:
     content = json.dumps(_review())
-    response = _FakeResponse(_sse_payload(content, complete=False), content_type="text/event-stream")
+    response = _FakeResponse(
+        _sse_payload(content, complete=False), content_type="text/event-stream"
+    )
     with pytest.raises(RuntimeError, match="call_failed:ValueError"):
         _call(
             model=MODELS[0],
@@ -177,7 +208,9 @@ def test_malformed_json_fails_closed() -> None:
 
 
 def test_empty_response_fails_closed() -> None:
-    response = _FakeResponse(b'{"choices":[{"message":{"content":""}}]}', content_type="application/json")
+    response = _FakeResponse(
+        b'{"choices":[{"message":{"content":""}}]}', content_type="application/json"
+    )
     with pytest.raises(RuntimeError, match="call_failed:ValueError"):
         _call(
             model=MODELS[0],
@@ -190,7 +223,9 @@ def test_empty_response_fails_closed() -> None:
 
 
 def test_http_error_fails_closed() -> None:
-    error = urllib.error.HTTPError(url=BASE_URL, code=503, msg="Service Unavailable", hdrs={}, fp=io.BytesIO(b"oops"))
+    error = urllib.error.HTTPError(
+        url=BASE_URL, code=503, msg="Service Unavailable", hdrs={}, fp=io.BytesIO(b"oops")
+    )
     with pytest.raises(RuntimeError, match="call_failed:HTTPError"):
         _call(
             model=MODELS[0],
@@ -251,7 +286,9 @@ def test_credentials_never_retained_in_result() -> None:
 
 
 def test_review_rejects_unknown_evidence_id() -> None:
-    response = _FakeResponse(_json_payload(_review(evidence_ids=["nope"])), content_type="application/json")
+    response = _FakeResponse(
+        _json_payload(_review(evidence_ids=["nope"])), content_type="application/json"
+    )
     with pytest.raises(RuntimeError, match="evidence_ids_unknown"):
         _call(
             model=MODELS[0],
@@ -277,7 +314,9 @@ def test_review_rejects_unallowed_label() -> None:
 
 
 def test_review_rejects_out_of_range_confidence() -> None:
-    response = _FakeResponse(_json_payload(_review(confidence=1.5)), content_type="application/json")
+    response = _FakeResponse(
+        _json_payload(_review(confidence=1.5)), content_type="application/json"
+    )
     with pytest.raises(RuntimeError, match="confidence_out_of_range"):
         _call(
             model=MODELS[0],
@@ -306,7 +345,11 @@ def test_run_end_to_end_writes_rows_and_summary(tmp_path: Path) -> None:
     manifest_path.write_text(json.dumps(_manifest()))
     calls: list[Any] = []
     response = _FakeResponse(_json_payload(_review()), content_type="application/json")
-    summary = run(manifest_path=manifest_path, output_dir=tmp_path / "out", urlopen=_fake_urlopen(response=response, calls=calls))
+    summary = run(
+        manifest_path=manifest_path,
+        output_dir=tmp_path / "out",
+        urlopen=_fake_urlopen(response=response, calls=calls),
+    )
     assert summary["case_count"] == 1
     assert summary["schema_version"] == "clara-model-review-run.v2"
     assert summary["models"] == list(MODELS)
@@ -321,4 +364,10 @@ def test_run_end_to_end_writes_rows_and_summary(tmp_path: Path) -> None:
 def test_run_fails_closed_without_router_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CLARA_ROUTER_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="router_key_missing"):
-        _call(model=MODELS[0], prompt="{}", allowed_labels=ALLOWED, available_evidence_ids=["e1", "e2"], urlopen=_fake_urlopen())
+        _call(
+            model=MODELS[0],
+            prompt="{}",
+            allowed_labels=ALLOWED,
+            available_evidence_ids=["e1", "e2"],
+            urlopen=_fake_urlopen(),
+        )

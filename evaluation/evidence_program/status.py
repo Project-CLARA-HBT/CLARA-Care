@@ -70,8 +70,7 @@ def audit(repository_root: Path, artifact_root: Path) -> dict[str, object]:
             if path.is_file()
         )
     protocol_inventory_complete = bool(sealed_runs) and all(
-        result["status"] == "PRESENT_PROTOCOL"
-        for result in results.values()
+        result["status"] == "PRESENT_PROTOCOL" for result in results.values()
     )
     release_attestation = artifact_root / "headline-release-attestation.json"
     release_gate_passed = False

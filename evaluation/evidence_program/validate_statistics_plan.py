@@ -5,11 +5,21 @@ from pathlib import Path
 
 from evaluation.evidence_program.freeze import FreezeError, load_frozen_json
 
-REQUIRED = frozenset({
-    "version", "status", "primary_cluster", "external_primary_endpoints",
-    "comparisons", "uncertainty", "agreement", "multiplicity", "stratification",
-    "negative_results_visible", "clinical_inference",
-})
+REQUIRED = frozenset(
+    {
+        "version",
+        "status",
+        "primary_cluster",
+        "external_primary_endpoints",
+        "comparisons",
+        "uncertainty",
+        "agreement",
+        "multiplicity",
+        "stratification",
+        "negative_results_visible",
+        "clinical_inference",
+    }
+)
 
 
 def validate(path: Path, *, final: bool = False) -> None:

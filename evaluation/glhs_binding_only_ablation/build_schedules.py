@@ -236,7 +236,9 @@ def _schedule(
     }
 
 
-def _adversarial_variant_params(family_id: int, kind_index: int, context: dict[str, Any]) -> dict[str, Any]:
+def _adversarial_variant_params(
+    family_id: int, kind_index: int, context: dict[str, Any]
+) -> dict[str, Any]:
     family = FAMILY_NAMES[family_id]
     kind = FAMILY_VARIANT_KINDS[family_id][kind_index]
     evidence_count = int(context["evidence_count"])

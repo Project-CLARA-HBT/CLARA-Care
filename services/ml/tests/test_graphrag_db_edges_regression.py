@@ -26,13 +26,13 @@ Everything is injected, so no real (Postgres or SQLite) database is required.
 
 from __future__ import annotations
 
-# Import the store package before the other rag modules to avoid the known
-# circular-import ordering issue between ``clara_ml.rag`` submodules.
-from clara_ml.rag.store.graph_store import EntityEdge
 from clara_ml.config import settings
 from clara_ml.rag.graphrag import GraphRagSidecar
 from clara_ml.rag.retriever import Document
 
+# Import the store package before the other rag modules to avoid the known
+# circular-import ordering issue between ``clara_ml.rag`` submodules.
+from clara_ml.rag.store.graph_store import EntityEdge
 
 # ---------------------------------------------------------------------------
 # Test doubles: a fake GraphStore returning known edges + a fake session that

@@ -434,9 +434,10 @@ class InMemoryRetriever:
             rag_sources=rag_sources,
             rag_reranker_enabled=rag_reranker_enabled,
         )
-        provider_events = (
-            gateway_trace.get("provider_events")
-            if isinstance(gateway_trace.get("provider_events"), list)
+        provider_events_raw = gateway_trace.get("provider_events")
+        provider_events: list[dict[str, Any]] = (
+            [evt for evt in provider_events_raw if isinstance(evt, dict)]
+            if isinstance(provider_events_raw, list)
             else []
         )
         source_errors = self._source_errors_from_provider_events(provider_events)
@@ -531,7 +532,7 @@ class InMemoryRetriever:
             rag_sources=rag_sources,
             uploaded_documents=uploaded_documents,
         )
-        search_phase = {
+        search_phase: dict[str, Any] = {
             "query_terms": query_terms(query),
             "connectors_attempted": [
                 {
@@ -698,9 +699,10 @@ class InMemoryRetriever:
                 )
                 staged_docs.extend(scientific_docs)
                 after_external_scientific_count = len(staged_docs)
-                provider_events = (
-                    external_scientific_trace.get("provider_events")
-                    if isinstance(external_scientific_trace.get("provider_events"), list)
+                provider_events_raw = external_scientific_trace.get("provider_events")
+                provider_events: list[dict[str, Any]] = (
+                    [evt for evt in provider_events_raw if isinstance(evt, dict)]
+                    if isinstance(provider_events_raw, list)
                     else []
                 )
                 connectors_attempted.extend(provider_events)
@@ -750,9 +752,10 @@ class InMemoryRetriever:
                     "documents": len(searxng_docs),
                     "duration_ms": round((perf_counter() - web_started) * 1000.0, 3),
                 }
+                crawl_summary = searxng_trace.get("crawl_summary")
                 crawl_trace = (
-                    searxng_trace.get("crawl_summary")
-                    if isinstance(searxng_trace.get("crawl_summary"), dict)
+                    dict(crawl_summary)
+                    if isinstance(crawl_summary, dict)
                     else {}
                 )
                 source_attempts = (

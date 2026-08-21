@@ -488,15 +488,15 @@ class AnalyticsAggregator:
                 fallback_total += 1
 
             # Per-tier latency samples.
-            latency = self._extract_latency(event)
-            if latency is not None:
-                latency_samples.setdefault(self._classify_tier(record), []).append(latency)
+            event_latency = self._extract_latency(event)
+            if event_latency is not None:
+                latency_samples.setdefault(self._classify_tier(record), []).append(event_latency)
 
         fallback_rate_pct = (
             round((fallback_total / in_range_total) * 100.0, 3) if in_range_total else 0.0
         )
 
-        latency = [
+        latency_percentiles: list[LatencyPercentiles] = [
             LatencyPercentiles(
                 tier=tier,
                 p50_ms=round(self._percentile(samples, 50.0), 3),
@@ -510,8 +510,8 @@ class AnalyticsAggregator:
         # samples are present, so the dashboard still has a data point.
         requests_total = self._coerce_int(metrics_snapshot.get("requests_total"))
         avg_latency_ms = self._coerce_float(metrics_snapshot.get("avg_latency_ms"))
-        if not latency and requests_total > 0 and avg_latency_ms > 0.0:
-            latency = [
+        if not latency_percentiles and requests_total > 0 and avg_latency_ms > 0.0:
+            latency_percentiles = [
                 LatencyPercentiles(
                     tier="tier1",
                     p50_ms=round(avg_latency_ms, 3),
@@ -529,7 +529,7 @@ class AnalyticsAggregator:
             ddi_severity=ddi_severity,
             router_confidence=confidence_buckets,
             fallback_rate_pct=fallback_rate_pct,
-            latency=latency,
+            latency=latency_percentiles,
             has_data=has_data,
         )
 

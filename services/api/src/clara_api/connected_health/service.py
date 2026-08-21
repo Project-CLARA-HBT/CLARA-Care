@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select
@@ -10,8 +11,11 @@ from sqlalchemy.orm import Session
 
 from clara_api.connected_health.control import (
     ConnectorOperationResponse,
+    ConnectorProvider,
+    ConnectorPurpose,
     ConnectorResponse,
     DeviceConnectorCreateRequest,
+    HealthRecordType,
     ImportedDataDeletionResponse,
 )
 from clara_api.db.models import (
@@ -71,11 +75,11 @@ def serialize_connector(db: Session, connector: ConnectorAccount) -> ConnectorRe
     purposes = raw_purposes if isinstance(raw_purposes, list) else []
     return ConnectorResponse(
         id=str(connector.id),
-        provider=connector.provider,
+        provider=cast(ConnectorProvider, connector.provider),
         display_label=connector.display_label,
         status=connector.status,
-        data_types=data_types,
-        purposes=purposes,
+        data_types=cast(list[HealthRecordType], data_types),
+        purposes=cast(list[ConnectorPurpose], purposes),
         last_synced_at=connector.last_synced_at,
         created_at=connector.created_at,
         updated_at=connector.updated_at,

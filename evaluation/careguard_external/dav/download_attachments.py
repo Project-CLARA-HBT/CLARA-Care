@@ -1,4 +1,5 @@
 """Download every publicly linked, product-relevant DAV attachment once."""
+
 from __future__ import annotations
 
 import argparse
@@ -16,7 +17,10 @@ def download(root: Path, retrieval_date: str, max_workers: int = 8) -> int:
     known = {row["url"] for row in rows}
     failed_path = store.manifests / "failed_or_unavailable.jsonl"
     if failed_path.exists():
-        known |= {json.loads(line).get("url") for line in failed_path.read_text(encoding="utf-8").splitlines()}
+        known |= {
+            json.loads(line).get("url")
+            for line in failed_path.read_text(encoding="utf-8").splitlines()
+        }
 
     count = 0
     seen_in_batch = set()
@@ -49,13 +53,17 @@ def download(root: Path, retrieval_date: str, max_workers: int = 8) -> int:
             return source, url, label, exc
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for idx, (source, url, label, response) in enumerate(executor.map(retrieve, candidates), start=1):
+        for idx, (source, url, label, response) in enumerate(
+            executor.map(retrieve, candidates), start=1
+        ):
             try:
                 if isinstance(response, Exception):
                     raise response
                 status, content_type, body, final_url = response
                 if status != 200 or "html" in content_type:
-                    raise RuntimeError(f"attachment_content_invalid:status={status}:content_type={content_type}")
+                    raise RuntimeError(
+                        f"attachment_content_invalid:status={status}:content_type={content_type}"
+                    )
                 artifact = store.retain(
                     bucket="attachments",
                     url=final_url,
@@ -64,12 +72,14 @@ def download(root: Path, retrieval_date: str, max_workers: int = 8) -> int:
                     status=status,
                     filename=label or None,
                 )
-                artifact.update({
-                    "source_url": final_url,
-                    "document_type": source["document_type"],
-                    "parent_source_sha256": source["sha256"],
-                    "attachment_filename": label,
-                })
+                artifact.update(
+                    {
+                        "source_url": final_url,
+                        "document_type": source["document_type"],
+                        "parent_source_sha256": source["sha256"],
+                        "attachment_filename": label,
+                    }
+                )
                 store.append("source_inventory.jsonl", artifact)
                 count += 1
             except Exception as exc:  # noqa: BLE001 - retain every attachment failure receipt
@@ -83,7 +93,9 @@ def download(root: Path, retrieval_date: str, max_workers: int = 8) -> int:
                     },
                 )
             if idx % 100 == 0 or idx == len(candidates):
-                print(f"Progress: {idx}/{len(candidates)} attachments processed (downloaded: {count})")
+                print(
+                    f"Progress: {idx}/{len(candidates)} attachments processed (downloaded: {count})"
+                )
     return count
 
 

@@ -6,11 +6,21 @@ import hashlib
 import json
 from pathlib import Path
 
-REQUIRED_FREEZE_FIELDS = frozenset({
-    "protocol_version", "freeze_id", "frozen_at", "code_revision", "cohort_manifest_sha256",
-    "annotation_guide_sha256", "domain_policy_manifest_sha256", "comparator_version",
-    "task_manifest_sha256", "model_manifest_sha256", "statistics_plan_sha256",
-})
+REQUIRED_FREEZE_FIELDS = frozenset(
+    {
+        "protocol_version",
+        "freeze_id",
+        "frozen_at",
+        "code_revision",
+        "cohort_manifest_sha256",
+        "annotation_guide_sha256",
+        "domain_policy_manifest_sha256",
+        "comparator_version",
+        "task_manifest_sha256",
+        "model_manifest_sha256",
+        "statistics_plan_sha256",
+    }
+)
 
 
 class FreezeError(ValueError):

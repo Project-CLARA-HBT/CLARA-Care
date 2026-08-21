@@ -26,9 +26,7 @@ class GenerationFakeTransport:
         del path, headers, timeout
         self.calls.append(payload)
         stage = payload["messages"][0]["content"]
-        reject = self.reject_note and stage.startswith(
-            "commitloop-review-deterministic-note.v3"
-        )
+        reject = self.reject_note and stage.startswith("commitloop-review-deterministic-note.v3")
         content = {
             "faithful": not reject,
             "executable": True,
@@ -72,9 +70,7 @@ def test_typed_generation_is_source_bound_reviewed_and_gold_free() -> None:
     assert result["status"] == "ACCEPTED"
     assert result["synthetic_note"] == render_anchor_note(case)
     assert result["clinical_adjudication"] == "NOT_RUN"
-    assert result["construction_mode"] == (
-        "deterministic_projection_with_dual_model_review"
-    )
+    assert result["construction_mode"] == ("deterministic_projection_with_dual_model_review")
     assert len(result["stages"]) == len(transport.calls) == 2
     assert "gold" not in json.dumps(result).lower()
     first_payload = json.loads(transport.calls[0]["messages"][1]["content"])
@@ -82,19 +78,16 @@ def test_typed_generation_is_source_bound_reviewed_and_gold_free() -> None:
     assert first_payload["deterministic_candidate"] == result["candidate"]
     assert first_payload["source"]["source_scope"] == "anchor_event_only"
     assert first_payload["source"]["source_event_ids"] == [case.anchor_evidence_id]
-    assert [
-        item["resource_type"] for item in first_payload["source"]["source_events"]
-    ] == ["ServiceRequest"]
+    assert [item["resource_type"] for item in first_payload["source"]["source_events"]] == [
+        "ServiceRequest"
+    ]
     assert all(
         item["evidence_id"] == case.anchor_evidence_id
         for item in first_payload["source"]["source_events"]
     )
+    assert all(call["response_format"]["type"] == "json_object" for call in transport.calls)
     assert all(
-        call["response_format"]["type"] == "json_object" for call in transport.calls
-    )
-    assert all(
-        item["reported_model_id"]
-        == REPORTED_MODEL_ID_BY_REQUESTED[item["requested_model_id"]]
+        item["reported_model_id"] == REPORTED_MODEL_ID_BY_REQUESTED[item["requested_model_id"]]
         for item in result["stages"]
     )
 

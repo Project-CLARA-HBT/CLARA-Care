@@ -104,7 +104,8 @@ class OpenFdaConnector(BaseSourceConnector):
         if not isinstance(item, dict):
             return None
         try:
-            openfda = item.get("openfda") if isinstance(item.get("openfda"), dict) else {}
+            openfda_raw = item.get("openfda")
+            openfda: dict[str, Any] = openfda_raw if isinstance(openfda_raw, dict) else {}
             generic = first_text(openfda.get("generic_name"))
             brand = first_text(openfda.get("brand_name"))
             set_id = first_text(item.get("set_id"), item.get("id"))

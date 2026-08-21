@@ -133,11 +133,7 @@ def _bundle(patient_id: str, suffix: str) -> dict:
                     "subject": {"reference": f"Patient/{patient_id}"},
                     "authoredOn": "2026-01-01T00:00:00Z",
                     "occurrencePeriod": {"end": "2026-01-20T00:00:00Z"},
-                    "code": {
-                        "coding": [
-                            {"system": "http://loinc.org", "code": f"test-{suffix}"}
-                        ]
-                    },
+                    "code": {"coding": [{"system": "http://loinc.org", "code": f"test-{suffix}"}]},
                 }
             },
             {
@@ -148,11 +144,7 @@ def _bundle(patient_id: str, suffix: str) -> dict:
                     "subject": {"reference": f"Patient/{patient_id}"},
                     "effectiveDateTime": "2026-01-10T00:00:00Z",
                     "meta": {"lastUpdated": "2026-01-11T00:00:00Z"},
-                    "code": {
-                        "coding": [
-                            {"system": "http://loinc.org", "code": f"test-{suffix}"}
-                        ]
-                    },
+                    "code": {"coding": [{"system": "http://loinc.org", "code": f"test-{suffix}"}]},
                 }
             },
         ],
@@ -172,9 +164,7 @@ def _clients(transport, limits: RunLimits):
 
 
 def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> None:
-    limits = RunLimits(
-        max_subjects=2, max_cases=2, max_requests=100, checkpoint_every=3
-    )
+    limits = RunLimits(max_subjects=2, max_cases=2, max_requests=100, checkpoint_every=3)
     bundles = [(_bundle("patient-a", "a"), "R4"), (_bundle("patient-b", "b"), "R4")]
     cutoff = datetime(2026, 2, 1, tzinfo=UTC)
 
@@ -208,9 +198,7 @@ def test_local_multi_patient_grid_resumes_without_external_calls(tmp_path) -> No
     )
     assert json.loads((tmp_path / "error_ledger.json").read_text()) == []
     assert (
-        json.loads((tmp_path / "metrics.json").read_text())["axes"]["lifecycle_state"][
-            "accuracy"
-        ]
+        json.loads((tmp_path / "metrics.json").read_text())["axes"]["lifecycle_state"]["accuracy"]
         == 1.0
     )
     validate_run(tmp_path)
@@ -327,14 +315,10 @@ def test_glhs_bench_router_requires_exact_global_five_and_retry_policy(
         "phase_a_freeze_sha": "a" * 40,
         "provider_probe_sha256": "b" * 64,
     }
-    with pytest.raises(
-        ValueError, match="glhs_bench_requires_exact_global_concurrency_5"
-    ):
+    with pytest.raises(ValueError, match="glhs_bench_requires_exact_global_concurrency_5"):
         run_local_e2e(
             **common,
-            limits=RunLimits(
-                max_subjects=1, max_cases=1, max_requests=100, max_concurrency=4
-            ),
+            limits=RunLimits(max_subjects=1, max_cases=1, max_requests=100, max_concurrency=4),
         )
     with pytest.raises(ValueError, match="glhs_bench_requires_retry_policy"):
         run_local_e2e(
@@ -420,8 +404,7 @@ def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(
         "controlled_r4_mechanism_cohort.v1"
     )
     gold = [
-        json.loads(line)
-        for line in (tmp_path / "construction_gold.jsonl").read_text().splitlines()
+        json.loads(line) for line in (tmp_path / "construction_gold.jsonl").read_text().splitlines()
     ]
     assert {item["timeliness_state"] for item in gold} >= {
         "NOT_APPLICABLE",
@@ -442,9 +425,7 @@ def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(
         item for item in packets("naive_rag") if item["target"]["code"] == "test-depth"
     )
     hybrid_depth = next(
-        item
-        for item in packets("glhs_hybrid")
-        if item["target"]["code"] == "test-depth"
+        item for item in packets("glhs_hybrid") if item["target"]["code"] == "test-depth"
     )
     strict_depth = next(
         item
@@ -455,13 +436,9 @@ def test_controlled_cohort_has_temporal_classes_and_mechanism_pressure(
     assert "replaced" in {e["status"] for e in hybrid_depth["context"]["events"]}
     assert "replaced" in {e["status"] for e in strict_depth["context"]["events"]}
 
-    lww_history = next(
-        item for item in packets("lww") if item["target"]["code"] == "test-history"
-    )
+    lww_history = next(item for item in packets("lww") if item["target"]["code"] == "test-history")
     hybrid_history = next(
-        item
-        for item in packets("glhs_hybrid")
-        if item["target"]["code"] == "test-history"
+        item for item in packets("glhs_hybrid") if item["target"]["code"] == "test-history"
     )
     assert {e["status"] for e in lww_history["context"]["events"]} == {
         "active",
@@ -575,9 +552,7 @@ def test_provider_failures_remain_in_structured_error_ledger(tmp_path) -> None:
     assert manifest["solver_request_count"] == 18
     assert len(errors) == 18
     append_errors = (
-        (tmp_path / "error_ledger.append.jsonl")
-        .read_text(encoding="utf-8")
-        .splitlines()
+        (tmp_path / "error_ledger.append.jsonl").read_text(encoding="utf-8").splitlines()
     )
     assert len(append_errors) == 18
     assert transport.calls == 36
@@ -634,9 +609,7 @@ def test_single_primary_model_grid_uses_subject_level_analysis(tmp_path) -> None
     assert manifest["expected_cell_count"] == 2
     assert manifest["conditions"] == list(conditions)
     assert manifest["primary_model"] == REVIEWER_MODEL
-    statistics = json.loads(
-        (tmp_path / "statistical_results.json").read_text(encoding="utf-8")
-    )
+    statistics = json.loads((tmp_path / "statistical_results.json").read_text(encoding="utf-8"))
     assert statistics["schema_version"] == "commitloop-primary-statistics.v1"
     assert statistics["subject_count"] == 1
     assert statistics["wins"] == 0

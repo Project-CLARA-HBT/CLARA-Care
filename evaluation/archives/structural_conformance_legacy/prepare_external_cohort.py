@@ -100,7 +100,9 @@ def prepare(
         source_table_rows[relative] = count
         source_table_subjects[relative] = len(unique_subjects)
     if len(source_counts) < minimum_subjects:
-        raise ValueError(f"cohort_has_too_few_distinct_subjects:{len(source_counts)}<{minimum_subjects}")
+        raise ValueError(
+            f"cohort_has_too_few_distinct_subjects:{len(source_counts)}<{minimum_subjects}"
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     perturbations = output_dir / "perturbations.jsonl"
@@ -118,9 +120,17 @@ def prepare(
         elif scenario == "insufficient_provenance":
             expected_state, expected_error = "withheld", "insufficient_provenance"
         elif scenario == "family_isolation":
-            expected_state, expected_error, authorized = "withheld", "subject_profile_ambiguity", False
+            expected_state, expected_error, authorized = (
+                "withheld",
+                "subject_profile_ambiguity",
+                False,
+            )
         elif scenario == "consent_revocation":
-            expected_state, expected_error, authorized = "withheld", "consent_purpose_mismatch", False
+            expected_state, expected_error, authorized = (
+                "withheld",
+                "consent_purpose_mismatch",
+                False,
+            )
         elif scenario == "stale_state_version":
             expected_error = "stale_state_version"
         elif scenario == "direct_write_attack":
@@ -163,7 +173,9 @@ def prepare(
     if freeze is not None:
         manifest["freeze"] = freeze
     manifest_path = output_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return manifest
 
 
@@ -173,7 +185,9 @@ def main() -> None:
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--token-salt-file", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--partition", choices=("development", "sealed_holdout"), default="development")
+    parser.add_argument(
+        "--partition", choices=("development", "sealed_holdout"), default="development"
+    )
     parser.add_argument("--lawful-access-attestation", required=True)
     parser.add_argument(
         "--freeze-json",

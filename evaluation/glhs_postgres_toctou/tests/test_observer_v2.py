@@ -86,7 +86,10 @@ def test_normalize_builds_committed_reconstructability_contract() -> None:
         classification="transition_committed_before_observed_revoke_commit",
         committed=_committed(),
         trace=raw.trace,
-        interleaving={"schedule_type": "control_commit_before_mutation", "coverage": ["commit_before_mutation_control"]},
+        interleaving={
+            "schedule_type": "control_commit_before_mutation",
+            "coverage": ["commit_before_mutation_control"],
+        },
         persisted_writers=["role_change"],
         latency_ms=2.0,
     )

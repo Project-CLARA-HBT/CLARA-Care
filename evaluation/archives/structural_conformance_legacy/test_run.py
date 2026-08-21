@@ -11,7 +11,6 @@ import tarfile
 from xml.etree import ElementTree
 
 import pytest
-
 from evaluation.glhs_q2.integrate_model_arm import integrate
 from evaluation.glhs_q2.prepare_synthea_archive import prepare as prepare_synthea
 from evaluation.glhs_q2.run import SYSTEMS, THSS_PROFILES, _case, run, write
@@ -73,24 +72,58 @@ def test_writer_emits_pre_execution_contracts_and_all_required_tables(tmp_path) 
     write(result, tmp_path, frozen_input_sha256=frozen)
 
     expected = {
-        "summary.json", "environment.json", "cases.csv", "outcomes.csv", "external_cases.csv", "external_outcomes.csv", "external_stratified_metrics.csv", "external_baseline_comparison.csv", "operational_metrics.csv", "cost_of_success.csv", "per_run.csv",
-        "conformance.csv", "baseline_comparison.csv", "ablation.csv", "thss_ablation.csv",
-        "error_analysis.csv", "stratified_metrics.csv", "scalability.csv", "policy.json", "task_relevance_manifest.json",
-        "oracle_manifest.json", "holdout_manifest.json", "mechanism_evidence.json", "report.md",
+        "summary.json",
+        "environment.json",
+        "cases.csv",
+        "outcomes.csv",
+        "external_cases.csv",
+        "external_outcomes.csv",
+        "external_stratified_metrics.csv",
+        "external_baseline_comparison.csv",
+        "operational_metrics.csv",
+        "cost_of_success.csv",
+        "per_run.csv",
+        "conformance.csv",
+        "baseline_comparison.csv",
+        "ablation.csv",
+        "thss_ablation.csv",
+        "error_analysis.csv",
+        "stratified_metrics.csv",
+        "scalability.csv",
+        "policy.json",
+        "task_relevance_manifest.json",
+        "oracle_manifest.json",
+        "holdout_manifest.json",
+        "mechanism_evidence.json",
+        "report.md",
         "evidence-manifest.json",
     }
     assert expected <= {path.name for path in tmp_path.iterdir()}
     summary = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
     manifest = json.loads((tmp_path / "evidence-manifest.json").read_text(encoding="utf-8"))
     assert summary["protocol"]["frozen_input_sha256"] == frozen
-    assert manifest["summary_sha256"] == hashlib.sha256((tmp_path / "summary.json").read_bytes()).hexdigest()
+    assert (
+        manifest["summary_sha256"]
+        == hashlib.sha256((tmp_path / "summary.json").read_bytes()).hexdigest()
+    )
     with (tmp_path / "conformance.csv").open(encoding="utf-8", newline="") as handle:
         assert len(list(csv.DictReader(handle))) == 100 * len(SYSTEMS)
     with (tmp_path / "per_run.csv").open(encoding="utf-8", newline="") as handle:
         assert len(list(csv.DictReader(handle))) == 3
-    assert json.loads((tmp_path / "holdout_manifest.json").read_text(encoding="utf-8"))["case_ids"] == [f"Q2-{index:04d}" for index in range(281, 341)]
-    for name in ("baseline-comparison.svg", "thss-privacy-utility.svg", "conflict-automation.svg", "error-breakdown.svg", "latency.svg", "scalability.svg"):
-        assert ElementTree.fromstring((tmp_path / name).read_text(encoding="utf-8")).tag.endswith("svg")
+    assert json.loads((tmp_path / "holdout_manifest.json").read_text(encoding="utf-8"))[
+        "case_ids"
+    ] == [f"Q2-{index:04d}" for index in range(281, 341)]
+    for name in (
+        "baseline-comparison.svg",
+        "thss-privacy-utility.svg",
+        "conflict-automation.svg",
+        "error-breakdown.svg",
+        "latency.svg",
+        "scalability.svg",
+    ):
+        assert ElementTree.fromstring((tmp_path / name).read_text(encoding="utf-8")).tag.endswith(
+            "svg"
+        )
 
 
 def test_comparisons_use_one_predeclared_subject_summary_and_required_strata() -> None:
@@ -99,7 +132,10 @@ def test_comparisons_use_one_predeclared_subject_summary_and_required_strata() -
         assert "state_correct_mcnemar_exact_subject_summary" in value
         assert value["state_correct_mcnemar_exact_subject_summary"]["discordant"] <= 200
     assert {row["stratum"] for row in result["stratified_metrics"]} == {
-        "late_evidence", "conflict", "authorization_revocation", "stale_transition"
+        "late_evidence",
+        "conflict",
+        "authorization_revocation",
+        "stale_transition",
     }
 
 
@@ -128,7 +164,10 @@ def test_cost_of_success_reports_only_declared_measurement_scopes() -> None:
     assert rows["glhs_full_vs_glhs_no_gst"]["context_tokens_proxy_delta"] == 0
     assert rows["glhs_full_vs_glhs_no_thss"]["context_tokens_proxy_delta"] == -60
     assert rows["glhs_full_vs_temporal_provenance_resolver"]["context_tokens_proxy_delta"] is None
-    assert rows["glhs_full_vs_temporal_provenance_resolver"]["context_scope"] == "not_measured_tpr_has_no_thss_compiler_in_protocol"
+    assert (
+        rows["glhs_full_vs_temporal_provenance_resolver"]["context_scope"]
+        == "not_measured_tpr_has_no_thss_compiler_in_protocol"
+    )
 
 
 def test_external_stream_writes_full_raw_csv_without_loading_raw_source_fields(tmp_path) -> None:
@@ -138,26 +177,37 @@ def test_external_stream_writes_full_raw_csv_without_loading_raw_source_fields(t
     with perturbations.open("w", encoding="utf-8") as handle:
         for index in range(1, 101):
             case = _case(index)
-            handle.write(json.dumps({
-                "case_id": f"stream-{index:03d}",
-                "subject_token": f"token-{index:03d}",
-                "scenario": case.scenario,
-                "expected_state": case.expected_state,
-                "expected_error": case.expected_error,
-                "critical_fact_count": case.critical_fact_count,
-                "nonessential_authorized_fact_count": case.nonessential_authorized_fact_count,
-                "authorized": case.authorized,
-                "episode_count": case.episode_count,
-            }, sort_keys=True) + "\n")
+            handle.write(
+                json.dumps(
+                    {
+                        "case_id": f"stream-{index:03d}",
+                        "subject_token": f"token-{index:03d}",
+                        "scenario": case.scenario,
+                        "expected_state": case.expected_state,
+                        "expected_error": case.expected_error,
+                        "critical_fact_count": case.critical_fact_count,
+                        "nonessential_authorized_fact_count": case.nonessential_authorized_fact_count,
+                        "authorized": case.authorized,
+                        "episode_count": case.episode_count,
+                    },
+                    sort_keys=True,
+                )
+                + "\n"
+            )
     manifest = source / "manifest.json"
-    manifest.write_text(json.dumps({
-        "schema_version": "glhs-q2-external-structural-v2",
-        "cohort": "synthea_fhir_stu3",
-            "partition": "development",
-            "perturbations_file": perturbations.name,
-            "perturbations_sha256": hashlib.sha256(perturbations.read_bytes()).hexdigest(),
-            "source_scan": {"fhir_patient_bundles": 100, "selected_cases": 100},
-        }), encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": "glhs-q2-external-structural-v2",
+                "cohort": "synthea_fhir_stu3",
+                "partition": "development",
+                "perturbations_file": perturbations.name,
+                "perturbations_sha256": hashlib.sha256(perturbations.read_bytes()).hexdigest(),
+                "source_scan": {"fhir_patient_bundles": 100, "selected_cases": 100},
+            }
+        ),
+        encoding="utf-8",
+    )
     output = tmp_path / "output"
     result = run_stream(manifest_path=manifest, output=output)
     assert result["cases"] == result["subjects"] == 100
@@ -203,8 +253,12 @@ def test_synthea_preparer_resumes_from_durable_token_only_checkpoint(tmp_path) -
     output.mkdir()
     checkpoint = output / ".synthea-selection.sqlite3"
     connection = sqlite3.connect(checkpoint)
-    connection.execute("CREATE TABLE selected (token TEXT PRIMARY KEY NOT NULL, episodes INTEGER NOT NULL)")
-    connection.execute("INSERT INTO selected (token, episodes) VALUES (?, ?)", ("checkpoint-only-token", 1))
+    connection.execute(
+        "CREATE TABLE selected (token TEXT PRIMARY KEY NOT NULL, episodes INTEGER NOT NULL)"
+    )
+    connection.execute(
+        "INSERT INTO selected (token, episodes) VALUES (?, ?)", ("checkpoint-only-token", 1)
+    )
     connection.commit()
     connection.close()
 
@@ -239,12 +293,18 @@ def test_model_arm_integrator_requires_full_frozen_grid(tmp_path) -> None:
                 "synthetic_only": True,
                 "transport": "direct",
                 "runtime_selection": {
-                    "task": "medical_safety_router", "provider": "deepseek",
-                    "configured_model": "frozen-model", "model_version": "v1",
-                    "model_profile": "pro", "prompt_version": "p1",
-                    "task_contract_schema_version": "c1", "risk_level": "high",
-                    "fallback_model": "", "rollback_applied": False,
-                    "generation_temperature": 0.0, "generation_max_tokens": 100,
+                    "task": "medical_safety_router",
+                    "provider": "deepseek",
+                    "configured_model": "frozen-model",
+                    "model_version": "v1",
+                    "model_profile": "pro",
+                    "prompt_version": "p1",
+                    "task_contract_schema_version": "c1",
+                    "risk_level": "high",
+                    "fallback_model": "",
+                    "rollback_applied": False,
+                    "generation_temperature": 0.0,
+                    "generation_max_tokens": 100,
                     "configured_base_url_sha256": "a" * 64,
                 },
             }
@@ -252,21 +312,47 @@ def test_model_arm_integrator_requires_full_frozen_grid(tmp_path) -> None:
         encoding="utf-8",
     )
     fields = [
-        "case_id", "seed", "expected_state", "scenario", "experiment", "status",
-        "latency_ms", "model_used", "policy_action", "guard_reason", "degraded", "json_valid", "state",
-        "state_correct", "answer_sha256", "error_class",
+        "case_id",
+        "seed",
+        "expected_state",
+        "scenario",
+        "experiment",
+        "status",
+        "latency_ms",
+        "model_used",
+        "policy_action",
+        "guard_reason",
+        "degraded",
+        "json_valid",
+        "state",
+        "state_correct",
+        "answer_sha256",
+        "error_class",
     ]
     with (source / "model_per_run.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         for seed in SEEDS:
-            writer.writerow({
-                "case_id": "Q2-0001", "seed": seed, "expected_state": "state_current",
-                "scenario": "ordinary_latest", "experiment": "direct_conformance",
-                "status": "completed", "latency_ms": "10", "model_used": "frozen-model",
-                "policy_action": "direct_model_arm", "guard_reason": "", "degraded": "False", "json_valid": "True", "state": "state_current",
-                "state_correct": "True", "answer_sha256": "a", "error_class": "",
-            })
+            writer.writerow(
+                {
+                    "case_id": "Q2-0001",
+                    "seed": seed,
+                    "expected_state": "state_current",
+                    "scenario": "ordinary_latest",
+                    "experiment": "direct_conformance",
+                    "status": "completed",
+                    "latency_ms": "10",
+                    "model_used": "frozen-model",
+                    "policy_action": "direct_model_arm",
+                    "guard_reason": "",
+                    "degraded": "False",
+                    "json_valid": "True",
+                    "state": "state_current",
+                    "state_correct": "True",
+                    "answer_sha256": "a",
+                    "error_class": "",
+                }
+            )
     summary = integrate(source, tmp_path / "out")
     assert summary["aggregate"]["completed"] == 3
     assert summary["aggregate"]["state_correct"] == 3

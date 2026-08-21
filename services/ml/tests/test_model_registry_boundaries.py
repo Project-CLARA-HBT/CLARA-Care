@@ -14,7 +14,6 @@ from pathlib import Path
 from clara_ml.llm.deepseek_client import DeepSeekClient
 from clara_ml.llm.model_registry import build_task_client
 
-
 ML_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = ML_ROOT / "src" / "clara_ml"
 REGISTRY_SOURCE = SOURCE_ROOT / "llm" / "model_registry.py"

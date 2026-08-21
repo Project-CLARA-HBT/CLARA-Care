@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import timedelta
 import json
-from types import SimpleNamespace
 import urllib.error
+from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 

@@ -28,7 +28,10 @@ def mine_candidates(
 ) -> tuple[ConstructedCase, ...]:
     cases = []
     for event in events:
-        if event.resource_type not in {"ServiceRequest", "ProcedureRequest"} or event.status not in {
+        if event.resource_type not in {
+            "ServiceRequest",
+            "ProcedureRequest",
+        } or event.status not in {
             "active",
             "draft",
             "on-hold",

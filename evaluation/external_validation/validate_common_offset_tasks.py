@@ -100,8 +100,7 @@ def validate(
     if (
         manifest.get("source_manifest_payload_sha256")
         != source_manifest.get("manifest_payload_sha256")
-        or manifest.get("normalized_records_sha256")
-        != normalization.get("records_sha256")
+        or manifest.get("normalized_records_sha256") != normalization.get("records_sha256")
         or manifest.get("normalization_manifest_sha256")
         != normalization_evidence.get("normalization_manifest_sha256")
     ):
@@ -125,8 +124,7 @@ def validate(
             ):
                 raise ValueError("offset_task_identity_invalid")
             if (
-                task["ground_truth_kind"]
-                != "source_offset_derived_not_clinician_adjudicated"
+                task["ground_truth_kind"] != "source_offset_derived_not_clinician_adjudicated"
                 or task["knowledge_time_status"] != "UNAVAILABLE_NOT_ESTIMATED"
             ):
                 raise ValueError("offset_task_claim_boundary_invalid")

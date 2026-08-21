@@ -29,34 +29,25 @@ Trong y học gia đình và chăm sóc sức khỏe ban đầu, hồ sơ bệnh
 \item \textbf{Rào chắn an toàn Tầng~1 phi-LLM (Deterministic Reconciliation Kernel tại API Gateway):} Một động cơ tất định chạy bằng Python/PostgreSQL thực thi toàn bộ các ràng buộc lâm sàng cứng trước khi chuyển dữ liệu cho AI:
 \begin{itemize}
   \item Thực hiện phép toán thời gian hai chiều nghiêm ngặt ($\tau_{\text{valid}} \cap \tau_{\text{known}}$) để ngăn ngừa nhiễm bẩn dữ liệu hồi cứu.
-  \item Tính toán cửa sổ thời hạn tái khám, lịch tiêm chủng và thời gian ân hạn (grace period) theo đúng phác đồ y học gia đình với độ chính xác và độ nhạy $100\%$ (loại bỏ hoàn toàn ảo giác tính toán số học thời gian).
+  \item Tính toán cửa sổ thời hạn tái khám, lịch tiêm chủng và thời gian ân hạn (grace period) theo đúng phác đồ y học gia đình bằng phép toán tất định (loại bỏ hoàn toàn ảo giác tính toán số học thời gian của LLM).
   \item Đối soát tự động ma trận tương tác thuốc nguy cơ cao (DDI) và chống chỉ định điều trị dựa trên các bộ mã chuẩn (RxNorm, SNOMED CT, LOINC).
   \item Xác thực trạng thái đồng thuận động của bệnh nhân, phân quyền RBAC và phiên bản chính sách quản trị.
-  \item Đóng gói và tạo mã băm Merkle ($\Pi_{\text{Merkle}}$) thành Bản chụp trạng thái sức khỏe giới hạn theo tác vụ (\textbf{Task-Bounded Health State Snapshot -- THSS}), đảm bảo tiêu chuẩn \textbf{Zero-PHI over-disclosure} (chỉ trích xuất đúng lát cắt dữ liệu cần thiết cho tác vụ lâm sàng cụ thể).
+  \item Đóng gói và tạo mã băm Merkle ($\Pi_{\text{Merkle}}$) thành Bản chụp trạng thái sức khỏe giới hạn theo tác vụ (\textbf{Task-Bounded Health State Snapshot -- THSS}), thực thi nguyên tắc giảm thiểu dữ liệu theo tác vụ (chỉ trích xuất đúng lát cắt dữ liệu cần thiết cho tác vụ lâm sàng cụ thể).
 \end{itemize}
 \item \textbf{Tầng~2 (Epistemic Arbiter -- LLM):} Mô hình ngôn ngữ lớn chỉ tập trung suy luận ngữ nghĩa định tính, tổng hợp bệnh sử và giải thích lâm sàng, hoàn toàn được cách ly khỏi các phép tính số học thời gian thô và quy tắc an toàn cứng.
 \item \textbf{Chuyển trạng thái có quản trị (Governed State Transition -- GST):} Đề xuất cập nhật do LLM tạo ra bắt buộc phải mang theo mã định danh THSS đã sử dụng. Trước khi ghi dữ liệu vào cơ sở dữ liệu bệnh án, GST tự động kiểm tra lại độ mới của trạng thái và thẩm quyền quản trị. Nếu dữ liệu hoặc đồng thuận đã bị thay đổi trong lúc mô hình suy luận, giao dịch ghi sẽ bị từ chối ngay lập tức (fail-closed).
 \end{itemize}
 
-\section*{3. Chứng minh Tương đương Sinh Thống kê Schuirmann TOST}
-Nhằm trả lời câu hỏi tin học y tế quan trọng: \emph{``Việc giảm thiểu bối cảnh qua Strict THSS có làm suy giảm chất lượng ra quyết định lâm sàng của AI so với việc nạp toàn bộ bệnh án hay không?''}, chúng tôi thực hiện kiểm định tương đương sinh thống kê Schuirmann TOST (Two One-Sided Tests) trên đoàn hệ độc lập gồm 384 đối tượng y học gia đình ($N=384$, mức ý nghĩa $\alpha=0{,}05$, biên độ tương đương lâm sàng định trước $\delta = \pm 0{,}020$ hay $\pm 2{,}0\%$).
+\section*{3. Đánh giá Tương quan Quyết định Lâm sàng và Giảm thiểu Bối cảnh ($N=384$)}
+Nhằm đánh giá thực nghiệm câu hỏi: \emph{``Việc giảm thiểu bối cảnh qua Strict THSS ảnh hưởng như thế nào đến chất lượng ra quyết định lâm sàng so với việc nạp toàn bộ bệnh án?''}, chúng tôi thực hiện phân tích đối chiếu ghép cặp cấp đối tượng trên đoàn hệ độc lập gồm 384 đối tượng y học gia đình ($N=384$, 3.456 ô thực thi).
 
-Hai giả thuyết một phía được thiết lập:
-\begin{align*}
-H_{01}&: \mu_{\text{Strict}} - \mu_{\text{Full}} \le -\delta \quad \text{(Strict THSS làm giảm độ chính xác vượt quá ngưỡng lâm sàng)} \\
-H_{02}&: \mu_{\text{Strict}} - \mu_{\text{Full}} \ge +\delta \quad \text{(Strict THSS làm tăng sai lệch vượt quá ngưỡng lâm sàng)}
-\end{align*}
-
-Kết quả kiểm định thống kê:
+Kết quả đánh giá đối đầu:
 \begin{itemize}[leftmargin=1.8em]
-\item \textbf{TOST Biên Dưới ($H_{01}$):} $t_1 = +5{,}3072$, $p_1 = 9{,}44 \times 10^{-8}$ (Bác bỏ $H_{01}$ với ý nghĩa thống kê vượt bậc).
-\item \textbf{TOST Biên Trên ($H_{02}$):} $t_2 = -12{,}1114$, $p_2 = 4{,}15 \times 10^{-29}$ (Bác bỏ $H_{02}$ với ý nghĩa thống kê vượt bậc).
-\item \textbf{TOST Tổng thể:} $p_{\text{TOST}} = \max(p_1, p_2) = 9{,}44 \times 10^{-8} \ll 0{,}001$ $\to$ \textbf{Xác nhận tương đương sinh thống kê tuyệt đối}.
-\item \textbf{Khoảng tin cậy 95\%:} Khoảng tin cậy cho độ chênh lệch trung bình ($\hat{\Delta} = -0{,}781\%$) là $[-1{,}233\%, -0{,}330\%]$, nằm hoàn toàn bên trong biên độ cho phép $[-\delta, +\delta] = [-2{,}0\%, +2{,}0\%]$.
-\item \textbf{Kiểm định dấu ghép cặp (Sign-Test):} Trên 384 đối tượng, ghi nhận 70 ca Strict tốt hơn, 73 ca Full tốt hơn và 241 ca hòa ($p = 0{,}8672$; khoảng tin cậy bootstrap 95\% $[-0{,}0677, +0{,}0521]$).
+\item \textbf{Kết quả ghép cặp (Sign-Test):} Trên 384 đối tượng, ghi nhận 70 ca Strict tốt hơn, 73 ca Full tốt hơn và 241 ca hòa ($\hat{\Delta} = -0{,}781\%$, $SE = 3{,}12\%$, kiểm định dấu hai phía $p = 0{,}8672$).
+\item \textbf{Khoảng tin cậy Bootstrap 95\%:} Khoảng tin cậy thực nghiệm cho độ chênh lệch là $[-6{,}77\%, +5{,}21\%]$. Do khoảng tin cậy này cắt qua biên độ hẹp $\pm 2{,}0\%$, nghiên cứu ở quy mô $N=384$ chưa đủ lực thống kê để xác nhận tính không thua kém hoặc tương đương thống kê biên hẹp (đòi hỏi cỡ mẫu $N \ge 7.500$ đối tượng).
+\item \textbf{Ý nghĩa thực tiễn:} Thay vì tuyên bố không suy giảm chất lượng lâm sàng tuyệt đối hay tối ưu Pareto, kết quả chỉ ra rằng độ lệch chất lượng quyết định nằm trong phạm vi phương sai thực nghiệm, trong khi việc giảm thiểu bối cảnh giúp giảm 87{,}4\% lượng token tiêu thụ (trung bình 412 so với 3.280 tokens, $p < 10^{-40}$) và giảm 68{,}2\% độ trễ suy luận.
+\item \textbf{Giảm thiểu dữ liệu và an toàn trạng thái:} Hệ thống đảm bảo giảm thiểu phơi nhiễm dữ liệu ngoài phạm vi tác vụ (0{,}0\% lộ lọt thực thể nhạy cảm trong bộ kiểm thử) và ngăn chặn 256/256 lần ghi sai TOCTOU ($p = 1{,}727 \times 10^{-77}$ so với baseline không ràng buộc).
 \end{itemize}
-
-Kết quả khẳng định việc giảm thiểu bối cảnh theo tác vụ bảo toàn trọn vẹn độ chính xác ra quyết định lâm sàng trong khi mang lại hồ sơ tối ưu Pareto vượt trội: giảm 87{,}4\% lượng token tiêu thụ (trung bình 412 so với 3.280 tokens), giảm 68{,}2\% độ trễ suy luận, đạt tiêu chuẩn \textbf{Zero-PHI over-disclosure} (0{,}0\% lộ lọt thực thể nhạy cảm) và loại bỏ 100\% lỗi ghi đè TOCTOU ($p = 1{,}727 \times 10^{-77}$).
 
 \section*{4. Kết quả Đánh giá Hệ thống Bổ trợ}
 \begin{enumerate}[leftmargin=1.8em]
@@ -72,9 +63,9 @@ Kết quả khẳng định việc giảm thiểu bối cảnh theo tác vụ b�
 \toprule
 \textbf{Thành phần đánh giá} & \textbf{Quy mô / Phương pháp} & \textbf{Kết quả \& Ý nghĩa lâm sàng} \\
 \midrule
-Tương đương sinh thống kê TOST & $N=384$ đối tượng, $\delta=\pm 0{,}020$ & $p_{\text{TOST}} = 9{,}44 \times 10^{-8} \ll 0{,}001$; KTC 95\% $[-1{,}233\%, -0{,}330\%]$ nằm trọn trong $[\pm 2{,}0\%]$ \\
-Giảm thiểu dữ liệu (Zero-PHI) & Đo lường thực thể nhạy cảm & 0{,}0\% lộ lọt PHI ngoài phạm vi tác vụ; giảm 87{,}4\% token tiêu thụ \\
-Rào chắn Tầng~1 phi-LLM & $N=1.000$ phép tính thời hạn & 100\% chính xác số học thời gian, loại bỏ hoàn toàn ảo giác tiêm chủng/tái khám \\
+Đối chiếu cấp đối tượng & $N=384$ đối tượng, 3.456 ô & $\hat{\Delta} = -0{,}781\%$ ($p=0{,}867$); KTC bootstrap 95\% $[-6{,}77\%, +5{,}21\%]$ \\
+Giảm thiểu dữ liệu & Đo lường thực thể nhạy cảm & 0{,}0\% lộ lọt PHI ngoài phạm vi tác vụ; giảm 87{,}4\% token tiêu thụ \\
+Rào chắn Tầng~1 phi-LLM & $N=1.000$ phép tính thời hạn & Tính toán số học thời gian tất định, loại bỏ ảo giác tiêm chủng/tái khám \\
 Ngăn chặn xung đột TOCTOU & Matched ablation ($N=320$) & Chặn 256/256 lần ghi sai ($p=1{,}727 \times 10^{-77}$); 0 vi phạm trên 12 lịch PostgreSQL \\
 Duyệt bất biến trạng thái & Formal model checking & 21.361 trạng thái, 90.432 chuyển trạng thái, 0 lỗi trên 11 bất biến \\
 \bottomrule
@@ -84,7 +75,7 @@ Duyệt bất biến trạng thái & Formal model checking & 21.361 trạng thá
 \section*{5. Thảo luận, Ranh giới Tuyên bố và Kết luận}
 \textbf{Ranh giới tuyên bố an toàn:} GLHS được thiết kế như một cơ chế tin học y tế quản trị tính nhất quán và bảo mật luồng dữ liệu đọc--ghi, \emph{không phải là một thiết bị y tế hay hệ thống chẩn đoán tự động thay thế vai trò chuyên môn của bác sĩ gia đình}. Bằng chứng hiện tại dựa trên đoàn hệ tổng hợp và đo đạc kỹ thuật phần mềm; việc triển khai thực tế đòi hỏi các thử nghiệm lâm sàng tiến cứu được hội đồng đạo đức y sinh phê duyệt.
 
-\textbf{Kết luận:} GLHS chứng minh rằng việc kết hợp rào chắn an toàn Tầng~1 phi-LLM với hợp đồng đồng phiên bản từ công bố dữ liệu đến ghi thay đổi giúp bảo vệ toàn diện dữ liệu người bệnh (Zero-PHI) và loại bỏ hoàn toàn rủi ro sai lệch dữ liệu trong y học gia đình, trong khi vẫn bảo toàn tuyệt đối chất lượng suy luận lâm sàng theo kiểm định sinh thống kê TOST.
+\textbf{Kết luận:} GLHS chứng minh rằng việc kết hợp rào chắn an toàn Tầng~1 phi-LLM với hợp đồng đồng phiên bản từ công bố dữ liệu đến ghi thay đổi giúp giảm thiểu phơi nhiễm dữ liệu người bệnh và ngăn chặn rủi ro sai lệch dữ liệu trong y học gia đình, trong khi vẫn duy trì chất lượng suy luận lâm sàng trong phạm vi phương sai thực nghiệm.
 
-\textbf{Từ khóa:} tin học y học gia đình; AI chăm sóc ban đầu; giảm thiểu dữ liệu; Zero-PHI; tương đương sinh thống kê; TOST; rào chắn an toàn phi-LLM; nhất quán trạng thái; quản trị lâm sàng.
+\textbf{Từ khóa:} tin học y học gia đình; AI chăm sóc ban đầu; giảm thiểu dữ liệu; bối cảnh theo tác vụ; rào chắn an toàn phi-LLM; nhất quán trạng thái; quản trị lâm sàng.
 \end{document}

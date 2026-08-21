@@ -174,7 +174,9 @@ def test_transition_rejects_broken_provenance_closure(db: Session) -> None:
         ),
         evidence=((evidence, "supports"),),
     )
-    db.query(GlhsAssertionEvidence).filter(GlhsAssertionEvidence.assertion_id == assertion.id).delete()
+    db.query(GlhsAssertionEvidence).filter(
+        GlhsAssertionEvidence.assertion_id == assertion.id
+    ).delete()
     db.flush()
     with pytest.raises(GlhsInvariantError, match="active_assertion_requires_provenance"):
         apply_transition(

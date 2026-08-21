@@ -81,9 +81,9 @@ def test_unbound_has_no_governance_context() -> None:
         "p2",
     )
     for marker in governance_markers:
-        assert (
-            marker not in built.text
-        ), f"unbound context must not contain governance content {marker!r}"
+        assert marker not in built.text, (
+            f"unbound context must not contain governance content {marker!r}"
+        )
 
 
 def test_state_only_contains_state_version_but_no_consent_or_policy() -> None:

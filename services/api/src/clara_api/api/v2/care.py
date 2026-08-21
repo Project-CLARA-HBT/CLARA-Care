@@ -12,9 +12,7 @@ from __future__ import annotations
 import hashlib
 
 # Ensure clara_ml path resolution in monorepo if needed
-import sys
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, status
@@ -30,6 +28,12 @@ from clara_api.api.v2.conventions import (
     IdempotencyKeyHelper,
     PaginatedResponse,
 )
+from clara_api.core.care_navigation import (
+    CareNavigationEngine,
+    CareNavigationResult,
+    CareUrgency,
+    TriageInput,
+)
 from clara_api.core.rbac import get_current_token
 from clara_api.core.security import TokenPayload
 from clara_api.db.models import (
@@ -43,13 +47,6 @@ from clara_api.db.models import (
 )
 from clara_api.db.session import get_db
 from clara_api.lifemap.profile_scope import require_profile_scope
-
-from clara_api.core.care_navigation import (
-    CareNavigationEngine,
-    CareNavigationResult,
-    CareUrgency,
-    TriageInput,
-)
 
 router = APIRouter()
 

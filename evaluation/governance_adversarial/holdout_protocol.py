@@ -86,9 +86,7 @@ def build_holdout_schedules(count: int | None = None) -> list[dict[str, object]]
     ids = list(_skeleton_ids())
     if count is not None:
         if count < MIN_SCHEDULES or count > MAX_SCHEDULES:
-            raise ValueError(
-                f"govred_holdout_count_out_of_range:{count} (required 30-60)"
-            )
+            raise ValueError(f"govred_holdout_count_out_of_range:{count} (required 30-60)")
         if count > len(ids):
             raise ValueError(f"govred_holdout_count_exceeds_skeleton:{count}")
         ids = ids[:count]
@@ -119,9 +117,7 @@ def build_holdout_freeze(
     independent human, or if the schedule count is out of range.
     """
     if not MIN_SCHEDULES <= len(schedules) <= MAX_SCHEDULES:
-        raise ValueError(
-            f"govred_holdout_count_out_of_range:{len(schedules)} (required 30-60)"
-        )
+        raise ValueError(f"govred_holdout_count_out_of_range:{len(schedules)} (required 30-60)")
     for schedule in schedules:
         schedule_id = str(schedule["schedule_id"])
         author_id = authors.get(schedule_id)
@@ -190,8 +186,12 @@ DEFAULT_OUTPUT_DIR = Path("research/govred_rivf/holdout_v1")
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--count", type=int, default=None, help="Optional schedule count in [30, 60].")
-    parser.add_argument("--freeze", action="store_true", help="Write the frozen (authorship-gated) manifest.")
+    parser.add_argument(
+        "--count", type=int, default=None, help="Optional schedule count in [30, 60]."
+    )
+    parser.add_argument(
+        "--freeze", action="store_true", help="Write the frozen (authorship-gated) manifest."
+    )
     args = parser.parse_args()
 
     schedules = build_holdout_schedules(args.count)

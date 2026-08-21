@@ -40,19 +40,20 @@ Validates: Requirements 2.1, 2.2.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 from unittest import mock
 
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+import clara_ml.rag.embedder as embedder_mod
+
 # Import the store package first: ``clara_ml.rag.store`` eagerly pulls in
 # ``hybrid_retriever`` -> ``score_engine`` -> ``HttpEmbeddingClient``; importing
 # it before the embedder avoids a partially-initialized-module import cycle.
 import clara_ml.rag.store  # noqa: F401  (import-order guard for the known circular-import quirk)
-import clara_ml.rag.embedder as embedder_mod
 from clara_ml.rag.embedder import EmbeddingUnavailableError, HttpEmbeddingClient
 
 # --- configuration strategies ------------------------------------------------

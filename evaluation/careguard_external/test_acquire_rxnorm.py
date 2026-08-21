@@ -69,7 +69,9 @@ class _Response:
 def test_acquisition_refuses_login_html_without_retaining_a_false_release(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(rxnorm, "urlopen", lambda *_args, **_kwargs: _Response(b"<html>UTS login</html>"))
+    monkeypatch.setattr(
+        rxnorm, "urlopen", lambda *_args, **_kwargs: _Response(b"<html>UTS login</html>")
+    )
     with pytest.raises(ValueError, match="careguard_rxnorm_payload_not_zip"):
         rxnorm.acquire(
             archive_dir=tmp_path / "archive",

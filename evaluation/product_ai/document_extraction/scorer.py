@@ -34,7 +34,9 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
             act_meds = parsed_json.get("medications", [])
             for em in exp_meds:
                 total_fields += 1
-                name_match = any(em["name"].lower() in str(am.get("name", "")).lower() for am in act_meds)
+                name_match = any(
+                    em["name"].lower() in str(am.get("name", "")).lower() for am in act_meds
+                )
                 if name_match:
                     field_matches += 1
 
@@ -45,7 +47,11 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
                 total_fields += 1
                 analyte_match = any(
                     em["analyte"].lower() in str(am.get("analyte", "")).lower()
-                    and (abs(float(am.get("value", 0.0)) - float(em.get("value", 0.0))) < 0.1 if "value" in em else True)
+                    and (
+                        abs(float(am.get("value", 0.0)) - float(em.get("value", 0.0))) < 0.1
+                        if "value" in em
+                        else True
+                    )
                     for am in act_meas
                 )
                 if analyte_match:
@@ -59,7 +65,9 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
                 if ed.lower() in act_diag.lower():
                     field_matches += 1
 
-    precision = (field_matches / total_fields) if total_fields > 0 else (1.0 if schema_valid else 0.0)
+    precision = (
+        (field_matches / total_fields) if total_fields > 0 else (1.0 if schema_valid else 0.0)
+    )
     passed = schema_valid and (precision >= 0.75)
     score = precision if schema_valid else 0.0
 
@@ -83,7 +91,12 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
 
 def compute_suite_metrics(results: list[CaseEvaluationResult]) -> dict[str, float]:
     if not results:
-        return {"extraction_accuracy": 0.0, "field_precision": 0.0, "field_recall": 0.0, "schema_validity_rate": 0.0}
+        return {
+            "extraction_accuracy": 0.0,
+            "field_precision": 0.0,
+            "field_recall": 0.0,
+            "schema_validity_rate": 0.0,
+        }
 
     total = len(results)
     acc_count = sum(1 for r in results if r.passed)

@@ -174,7 +174,10 @@ class GovernedGatewayMachine(RuleBasedStateMachine):
             # It must still not create a duplicate transition.
             assert self.governance_epoch > proposal_governance_epoch
             assert str(exc) == "assertion_consent_mismatch"
-            assert current_state_version(self.db, profile_id=self.scope.profile.id) == self.expected_version
+            assert (
+                current_state_version(self.db, profile_id=self.scope.profile.id)
+                == self.expected_version
+            )
         else:
             assert self.governance_epoch == proposal_governance_epoch
             assert replay.id == transition_id
@@ -257,7 +260,10 @@ class GovernedGatewayMachine(RuleBasedStateMachine):
 
     @invariant()
     def version_matches_reference_model(self) -> None:
-        assert current_state_version(self.db, profile_id=self.scope.profile.id) == self.expected_version
+        assert (
+            current_state_version(self.db, profile_id=self.scope.profile.id)
+            == self.expected_version
+        )
 
     def teardown(self) -> None:
         self.db.close()
@@ -265,4 +271,6 @@ class GovernedGatewayMachine(RuleBasedStateMachine):
 
 
 TestGovernedGatewayMachine = GovernedGatewayMachine.TestCase
-TestGovernedGatewayMachine.settings = settings(max_examples=10, stateful_step_count=12, deadline=None)
+TestGovernedGatewayMachine.settings = settings(
+    max_examples=10, stateful_step_count=12, deadline=None
+)

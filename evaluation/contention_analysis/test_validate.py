@@ -125,10 +125,7 @@ def _fixture(root: Path, repetitions: int = 3) -> None:
     )
     paths = (attempts_path, summary_path, strategy_model_path, manifest_path)
     (root / "checksums.sha256").write_text(
-        "\n".join(
-            f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}"
-            for path in paths
-        )
+        "\n".join(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}" for path in paths)
         + "\n",
         encoding="utf-8",
     )

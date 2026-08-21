@@ -48,14 +48,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 # Import the store package first so it initializes before the retriever module
 # is pulled in: ``clara_ml.rag.store`` -> hybrid_retriever -> score_engine ->
 # embedder form an import cycle that only resolves cleanly when the store
 # package loads first. Doing so here keeps this test importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.rag.retrieval.domain import Document
 from clara_ml.rag.store.hybrid_retriever import HybridRetriever, RetrievalFilters
 from clara_ml.rag.store.sparse_index import RankedChunk

@@ -52,11 +52,7 @@ def _canonical(value: object) -> str:
 
 def _prompt_text(stage: str) -> str:
     stage_id, filename = _PROMPTS[stage]
-    template = (
-        (Path(__file__).parent / "prompts" / filename)
-        .read_text(encoding="utf-8")
-        .strip()
-    )
+    template = (Path(__file__).parent / "prompts" / filename).read_text(encoding="utf-8").strip()
     return f"{stage_id}\n{template}"
 
 
@@ -158,9 +154,7 @@ def construct_with_model_review(
             "clinical_adjudication": "NOT_RUN",
             "stages": [],
         }
-    anchor_events = tuple(
-        item for item in events if item.evidence_id == case.anchor_evidence_id
-    )
+    anchor_events = tuple(item for item in events if item.evidence_id == case.anchor_evidence_id)
     if len(anchor_events) != 1:
         raise ValueError("candidate_anchor_not_in_source")
     candidate = _expected_candidate(case)

@@ -75,7 +75,9 @@ NO_MAJORITY_VOTING_INTO_SAFETY = True
 NO_TXID_NUMERIC_ORDER_INFERENCE = True
 
 
-def derive_seed_list(freeze_id: str = FREEZE_ID, count: int = REPETITIONS_PER_LOGICAL_SCHEDULE) -> list[int]:
+def derive_seed_list(
+    freeze_id: str = FREEZE_ID, count: int = REPETITIONS_PER_LOGICAL_SCHEDULE
+) -> list[int]:
     """Deterministic jitter seed list for the frozen study.
 
     Seed ``i`` is the first 8 bytes of
@@ -180,7 +182,9 @@ def validate_repeat_manifest(manifest: Mapping[str, object]) -> dict[str, object
         or not all(isinstance(seed, int) and not isinstance(seed, bool) for seed in seeds)
     ):
         raise ValueError("repeat_manifest_jitter_seed_list_invalid")
-    expected_seeds = derive_seed_list(str(manifest.get("freeze_id")), REPETITIONS_PER_LOGICAL_SCHEDULE)
+    expected_seeds = derive_seed_list(
+        str(manifest.get("freeze_id")), REPETITIONS_PER_LOGICAL_SCHEDULE
+    )
     if list(seeds) != expected_seeds:
         raise ValueError("repeat_manifest_jitter_seed_list_mismatch")
 

@@ -58,9 +58,9 @@ def test_all_conditions_build_distinct_gold_free_packets() -> None:
     assert EXPLORATORY_V7_CONDITIONS == (*CONDITIONS, "temporal_bm25", "glhs_v2_full")
     assert "temporal_bm25" not in packets
     assert len({item["packet_sha256"] for item in packets.values()}) == len(CONDITIONS)
-    assert len(
-        {json.dumps(item["context"], sort_keys=True) for item in packets.values()}
-    ) == len(CONDITIONS)
+    assert len({json.dumps(item["context"], sort_keys=True) for item in packets.values()}) == len(
+        CONDITIONS
+    )
 
     serialized = json.dumps(packets, sort_keys=True).lower()
     assert "construction_gold" not in serialized
@@ -133,9 +133,4 @@ def test_strict_packet_supports_keyword_only_production_context_builder() -> Non
         known_cutoff=cutoff,
         production_strict_context=compile_production_commitment_context,
     )
-    assert (
-        packets["glhs_hybrid_thss_strict"]["context"]["production_path"][
-            "gold_derived"
-        ]
-        is False
-    )
+    assert packets["glhs_hybrid_thss_strict"]["context"]["production_path"]["gold_derived"] is False

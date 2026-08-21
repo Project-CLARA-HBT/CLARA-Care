@@ -11,9 +11,7 @@ from .manifest import ManifestValidationError, validate_dataset_manifest
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Validate a CLARA-Eval VN dataset manifest"
-    )
+    parser = argparse.ArgumentParser(description="Validate a CLARA-Eval VN dataset manifest")
     parser.add_argument(
         "--manifest",
         type=Path,
@@ -22,9 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repository-root", type=Path, default=Path("."))
     args = parser.parse_args(argv)
     try:
-        manifest = validate_dataset_manifest(
-            args.manifest, repository_root=args.repository_root
-        )
+        manifest = validate_dataset_manifest(args.manifest, repository_root=args.repository_root)
     except ManifestValidationError as exc:
         print(
             json.dumps({"valid": False, "reason": str(exc)}, ensure_ascii=False),

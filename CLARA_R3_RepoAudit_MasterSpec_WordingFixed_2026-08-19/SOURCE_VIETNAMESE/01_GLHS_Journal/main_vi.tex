@@ -18,7 +18,7 @@ Tác giả liên hệ: \texttt{kakangocthien109@gmail.com}}
 \begin{abstract}
 Trong các hệ thống trí tuệ nhân tạo (AI) y tế có trạng thái, việc truy xuất chính xác thông tin bệnh án là điều kiện cần nhưng chưa đủ để bảo đảm an toàn dữ liệu. Thách thức cốt lõi nằm ở tính nhất quán dữ liệu qua thời gian: mô hình có thể tiếp nhận và suy luận trên một phần bệnh án hợp lệ tại thời điểm đọc, nhưng đến khi đưa ra đề xuất cập nhật hồ sơ thì bệnh án, trạng thái đồng thuận của người bệnh, vai trò người dùng hoặc chính sách y tế đã bị thay đổi. GLHS xem khoảng trễ từ lúc đọc đến lúc ghi (Read-to-Write interval) như một ranh giới quản trị mang tính sống còn. 
 
-Cơ chế trung tâm của GLHS là một hợp đồng \emph{đồng phiên bản}: trên đường đề xuất được ràng buộc với ảnh chụp, chính \textbf{Bản chụp trạng thái sức khỏe theo tác vụ (THSS)} mà mô hình đã đọc sẽ được niêm phong mã băm mật mã Merkle và trở thành một phụ thuộc có thể kiểm toán bắt buộc của đề xuất ghi về sau. Trước khi thao tác ghi bền vững được chấp thuận, cơ chế \textbf{Chuyển trạng thái có quản trị (GST)} sẽ tự động tái thẩm định toàn bộ phiên bản dữ liệu và thẩm quyền trên cơ sở dữ liệu thực. Để loại bỏ hoàn toàn ảo giác tính toán thời gian của mô hình ngôn ngữ lớn (LLM), GLHS thiết lập \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}: một Nhân đối soát xác định phi-LLM tại API Gateway phụ trách toàn bộ phép toán thời gian bitemporal, chuẩn hóa mã lâm sàng và phát hiện xung đột, trong khi LLM chỉ tập trung vào suy luận ngữ nghĩa định tính. Đồng thời, nhằm khắc phục hiện tượng từ chối nhầm khi ghi đồng thời trên các phân vùng độc lập, GLHS giới thiệu cơ chế \textbf{Quản lý phiên bản phân vùng thực thể (Entity DAG)}, triệt tiêu hiện tượng từ chối nhầm ($0{,}00\%$ false-stale) trên các phân vùng rời rạc.
+Cơ chế trung tâm của GLHS là một hợp đồng \emph{đồng phiên bản}: trên đường đề xuất được ràng buộc với ảnh chụp, chính \textbf{Bản chụp trạng thái sức khỏe theo tác vụ (THSS)} mà mô hình đã đọc sẽ được niêm phong mã băm mật mã Merkle và trở thành một phụ thuộc có thể kiểm toán bắt buộc của đề xuất ghi về sau. Trước khi thao tác ghi bền vững được chấp thuận, cơ chế \textbf{Chuyển trạng thái có quản trị (GST)} sẽ tự động tái thẩm định toàn bộ phiên bản dữ liệu và thẩm quyền trên cơ sở dữ liệu thực. Để phòng ngừa ảo giác tính toán thời gian của mô hình ngôn ngữ lớn (LLM), GLHS thiết lập \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}: một Nhân đối soát xác định phi-LLM tại API Gateway phụ trách toàn bộ phép toán thời gian bitemporal, chuẩn hóa mã lâm sàng và phát hiện xung đột, trong khi LLM chỉ tập trung vào suy luận ngữ nghĩa định tính. Đồng thời, nhằm khắc phục hiện tượng từ chối nhầm khi ghi đồng thời trên các phân vùng độc lập, GLHS giới thiệu cơ chế \textbf{Quản lý phiên bản phân vùng thực thể (Entity DAG)}, triệt tiêu hiện tượng từ chối nhầm ($0{,}00\%$ false-stale) trên các phân vùng rời rạc.
 
 Thực nghiệm đối kháng cách ly nhân quả ($N=320$ kịch bản, 640 lượt chạy trên PostgreSQL 16) chứng minh cơ chế ràng buộc của GLHS đã ngăn chặn $256/256$ hành vi tấn công giả mạo bối cảnh (chênh lệch nguy cơ tuyệt đối $1{,}000$, $95\%$ CI $[1{,}000; 1{,}000]$, kiểm định McNemar chính xác đạt $p = 1{,}727 \times 10^{-77}$). Trong 600 lượt chạy stress-test TOCTOU với thời gian dao động thật, không có bất kỳ thao tác ghi trái phép nào lọt qua hệ thống ($0/600$, gồm 10 lịch đạt độ bền vững tuyệt đối và 2 lịch lệch phân loại so với kỳ vọng). Trên đoàn hệ 384 đối tượng, việc giảm thiểu bối cảnh theo tác vụ giúp giảm $87{,}4\%$ prompt tokens ($p < 10^{-40}$) và $68{,}2\%$ độ trễ suy luận với độ lệch chẩn đoán null (70 thắng, 73 thua, 241 hòa, $p = 0{,}867$). Hệ thống bảo đảm tính tuần tự nguyên tử và kiểm soát bế tắc, tạo nền tảng tin cậy cho việc triển khai AI trong hệ sinh thái y tế.
 \end{abstract}
@@ -41,7 +41,7 @@ Những bước tiến này khiến câu hỏi nghiên cứu trở nên tập tr
 GLHS giải quyết khoảng trống này bằng một hợp đồng đọc--ghi đồng phiên bản được bảo vệ bởi \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}. Bài báo mang lại bốn đóng góp khoa học cốt lõi:
 \begin{enumerate}
     \item Đề xuất \textbf{Hợp đồng cam kết đồng phiên bản có điều kiện công bố} bảo đảm định danh bối cảnh AI đã thấy trở thành một phần của ngữ cảnh thẩm định ghi.
-    \item Xây dựng mô hình \textbf{Quản lý phiên bản phân vùng thực thể (Entity-Partitioned DAG Versioning)} triệt tiêu hoàn toàn hiện tượng từ chối nhầm (False-stale) dưới tải ghi đồng thời cao trong khi bảo toàn tính tuần tự nguyên tử.
+    \item Xây dựng mô hình \textbf{Quản lý phiên bản phân vùng thực thể (Entity-Partitioned DAG Versioning)} loại bỏ hiện tượng từ chối nhầm (False-stale) trên các phân vùng độc lập dưới tải ghi đồng thời cao trong khi bảo toàn tính tuần tự nguyên tử.
     \item Cung cấp bản triển khai mẫu trong CLARA-Care thẩm định đầy đủ định danh ảnh chụp, mã băm Merkle, bằng chứng, phiên bản trạng thái, chính sách, đồng thuận, tác nhân, vai trò, mục đích, tác vụ và thời hạn trước khi bền vững hóa.
     \item Thiết kế phương pháp đánh giá phân tách độc lập giữa kiểm thử tuân thủ hợp đồng / cách ly nhân quả, thực nghiệm đồng thời trên PostgreSQL 16 thật ($W=1 \dots 128$), và phân tích độ trễ chi phí dịch vụ.
 \end{enumerate}
@@ -90,7 +90,7 @@ với tập phụ thuộc $\operatorname{Deps}(P) = \{ \text{target\_key} \} \cu
 \operatorname{Commit}(P) \iff \operatorname{Bound}(P, H) \land \operatorname{StateCurrent}(P) \land \operatorname{GovernanceCurrent}(P) \land \operatorname{SnapshotValid}(P).
 \label{eq:commit_vi}
 \end{equation}
-Khi commit, GST thu thập các khóa hàng \texttt{SELECT ... FOR UPDATE} trên các phân vùng trong $\operatorname{Deps}(P)$ theo thứ tự từ điển nghiêm ngặt, loại bỏ hoàn toàn nguy cơ Deadlock.
+Khi commit, GST thu thập các khóa hàng \texttt{SELECT ... FOR UPDATE} trên các phân vùng trong $\operatorname{Deps}(P)$ theo thứ tự từ điển nghiêm ngặt, ngăn ngừa chu trình bế tắc (deadlock).
 
 \begin{figure}[H]
 \centering
@@ -247,12 +247,12 @@ Lực Thống kê & Lực Mẫu ($N=384, \delta=\pm 2\%$) & Chưa đủ lực & 
 Tiết kiệm Token & Giảm thiểu Prompt Token & $87{,}4\%$ & 412 so với 3.280 tokens ($p < 10^{-40}$) \\
 Độ trễ Suy luận & Giảm Độ trễ Tổng thể & $68{,}2\%$ & Tối ưu hóa KV Cache \& Sinh từ \\
 Bảo mật Dữ liệu & Rò rỉ PHI Ngoài Tác vụ & $0{,}0\%$ & Bảo vệ Dữ liệu Tối thiểu (HIPAA/GDPR) \\
-An toàn Ghi đè & Triệt tiêu Trôi dạt TOCTOU & $100{,}0\%$ & $p = 1{,}73 \times 10^{-77}$ so với Baseline \\
+An toàn Ghi đè & Ngăn chặn Vi phạm TOCTOU & 0/256 commit sai & $p = 1{,}727 \times 10^{-77}$ so với Baseline \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Đối chiếu cấp đối tượng ghi nhận 70 thắng, 73 thua và 241 hòa ($\hat{\Delta} = -0{,}781\%$, $p=0{,}867$). Do các tác vụ chẩn đoán nhị phân rời rạc có độ biến thiên cặp tự nhiên ($s_{\Delta} = 0{,}610, SE = 3{,}12\%$), khoảng tin cậy bootstrap 95\% $[-6{,}77\%, +5{,}21\%]$ cắt qua biên độ hẹp $\pm 2{,}0\%$. Một nghiên cứu xác nhận tương đương biên hẹp $\pm 2{,}0\%$ đòi hỏi cỡ mẫu $N \ge 7.500$ đối tượng. Tuy nhiên, việc giảm thiểu bối cảnh theo tác vụ đã giúp giảm $87{,}4\%$ prompt tokens (trung bình 412 so với 3.280 tokens, $p < 10^{-40}$), giảm $68{,}2\%$ độ trễ suy luận và loại bỏ hoàn toàn nguy cơ rò rỉ quyền TOCTOU.
+Đối chiếu cấp đối tượng ghi nhận 70 thắng, 73 thua và 241 hòa ($\hat{\Delta} = -0{,}781\%$, $p=0{,}867$). Do các tác vụ chẩn đoán nhị phân rời rạc có độ biến thiên cặp tự nhiên ($s_{\Delta} = 0{,}610, SE = 3{,}12\%$), khoảng tin cậy bootstrap 95\% $[-6{,}77\%, +5{,}21\%]$ cắt qua biên độ hẹp $\pm 2{,}0\%$. Một nghiên cứu xác nhận tương đương biên hẹp $\pm 2{,}0\%$ đòi hỏi cỡ mẫu $N \ge 7.500$ đối tượng. Tuy nhiên, việc giảm thiểu bối cảnh theo tác vụ đã giúp giảm $87{,}4\%$ prompt tokens (trung bình 412 so với 3.280 tokens, $p < 10^{-40}$), giảm $68{,}2\%$ độ trễ suy luận và ngăn chặn vi phạm sai lệch quyền TOCTOU trên các lịch đã kiểm thử.
 
 \paragraph{Phân tích chẩn đoán đối với các đầu ra lỗi fail-closed.}
 Trong số 3.456 ô thực thi của thử nghiệm mở rộng này, có 220 lượt sinh (6,36\%) tạo ra đầu ra lỗi cấu trúc (malformed outputs) và bị chặn đứng an toàn theo cơ chế fail-closed bởi bộ kiểm tra ngữ pháp Pydantic JSON tại gateway (chủ yếu do mô hình sinh thừa định dạng markdown hoặc thiếu trường dữ liệu dưới bối cảnh nén cực độ). Thay vì làm hỏng dữ liệu bệnh án bền vững, Rào chắn trạng thái Tầng 1 đã nhận diện và từ chối $100\%$ các đầu ra lỗi này trước khi ghi. Theo quy trình đánh giá intent-to-treat đã đăng ký trước, mọi đầu ra lỗi đều bị tính là một thất bại chẩn đoán ($0/1$). Điều này tái khẳng định bảo đảm an toàn fail-closed của kiến trúc và định vị tính nghiêm ngặt của schema như một hiệu chỉnh kỹ thuật cho việc trích xuất.
@@ -288,7 +288,7 @@ Kết quả thực nghiệm chứng minh GLHS giải quyết triệt để vấn
 Nghiên cứu hiện tại dựa trên dữ liệu tổng hợp và môi trường mô phỏng PostgreSQL. Hướng phát triển tiếp theo bao gồm tích hợp chính sách kiểm soát nguồn gốc bắt buộc trên mọi luồng duyệt bệnh án và tiến hành thử nghiệm lâm sàng thực tế tại các bệnh viện.
 
 \section{Kết luận}
-GLHS thiết lập mô hình quản trị đọc--ghi đồng phiên bản chuẩn mực cho AI y tế có trạng thái. Bằng việc niêm phong mã băm bối cảnh đọc THSS và tái thẩm định tại bước GST, hệ thống loại bỏ hoàn toàn vi phạm TOCTOU ($0/256$), triệt tiêu từ chối nhầm đồng thời ($0{,}00\%$) và đảm bảo tính tuần tự toán học, mở đường cho việc ứng dụng AI an toàn vào hệ thống y tế thế hệ mới.
+GLHS thiết lập mô hình quản trị đọc--ghi đồng phiên bản chuẩn mực cho AI y tế có trạng thái. Bằng việc niêm phong mã băm bối cảnh đọc THSS và tái thẩm định tại bước GST, hệ thống ngăn chặn vi phạm TOCTOU trên tập kiểm thử ($0/256$), triệt tiêu từ chối nhầm đồng thời ($0{,}00\%$) và đảm bảo tính tuần tự toán học, mở đường cho việc ứng dụng AI an toàn vào hệ thống y tế thế hệ mới.
 
 \section*{Tuyên bố và Cam kết}
 Các tác giả khẳng định không có xung đột lợi ích tài chính hoặc phi tài chính. Mã nguồn và bộ dữ liệu thực nghiệm được công khai tại: \url{https://github.com/Project-CLARA-HBT/CLARA-Care}.

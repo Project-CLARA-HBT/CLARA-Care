@@ -74,9 +74,7 @@ def validate(output: Path) -> dict[str, object]:
         raise TypeError("ablation_rows_missing")
     expected_grid = {(case.case_id, variant) for case in cases() for variant in VARIANTS}
     observed_grid = {
-        (str(row.get("case_id")), str(row.get("variant")))
-        for row in rows
-        if isinstance(row, dict)
+        (str(row.get("case_id")), str(row.get("variant"))) for row in rows if isinstance(row, dict)
     }
     if observed_grid != expected_grid or len(rows) != len(expected_grid):
         raise ValueError("ablation_grid_incomplete")
@@ -84,14 +82,10 @@ def validate(output: Path) -> dict[str, object]:
         variant: {
             "case_count": len(cases()),
             "accepted": sum(
-                int(bool(row["accepted"]))
-                for row in rows
-                if row["variant"] == variant
+                int(bool(row["accepted"])) for row in rows if row["variant"] == variant
             ),
             "rejected": sum(
-                int(not bool(row["accepted"]))
-                for row in rows
-                if row["variant"] == variant
+                int(not bool(row["accepted"])) for row in rows if row["variant"] == variant
             ),
             "exact_seen_context_reconstructable": sum(
                 int(bool(row["exact_seen_context_reconstructable"]))

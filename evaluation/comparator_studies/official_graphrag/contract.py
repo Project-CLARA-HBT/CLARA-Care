@@ -30,9 +30,9 @@ class GraphRAGContractError(RuntimeError):
 
 
 def _canonical_json(value: object) -> bytes:
-    return json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    ).encode("utf-8")
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode(
+        "utf-8"
+    )
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -221,9 +221,10 @@ def dry_validate_upstream_run_root(
     its explicit probes and index/query ledger separately.
     """
 
-    if not (run_root / "settings.yaml").is_file() or not (
-        run_root / "input" / "visible_evidence.jsonl"
-    ).is_file():
+    if (
+        not (run_root / "settings.yaml").is_file()
+        or not (run_root / "input" / "visible_evidence.jsonl").is_file()
+    ):
         raise GraphRAGContractError("graphrag_dry_validation_artifacts_missing")
     if not api_base:
         raise GraphRAGContractError("graphrag_api_base_required")
@@ -294,9 +295,7 @@ def materialize_visible_evidence(
         raise GraphRAGContractError("duplicate_evidence_id_in_graphrag_input")
     documents.sort(key=lambda document: str(document["id"]))
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(
-        b"".join(_canonical_json(document) + b"\n" for document in documents)
-    )
+    output_path.write_bytes(b"".join(_canonical_json(document) + b"\n" for document in documents))
     return {
         "schema_version": "glhs-bench-graphrag-input.v1",
         "document_count": len(documents),

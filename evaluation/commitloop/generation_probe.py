@@ -77,9 +77,7 @@ def run_generation_probe(
         status = "REJECTED"
         error_type = type(exc).__name__
     request_count = sum(client.request_count for client in clients.values()) - before
-    attempt_count = (
-        sum(client.attempt_count for client in clients.values()) - attempts_before
-    )
+    attempt_count = sum(client.attempt_count for client in clients.values()) - attempts_before
     result_summary = None
     if result is not None:
         stages = result.get("stages")
@@ -114,9 +112,7 @@ def run_generation_probe(
     if request_count > 2 or attempt_count > 2:
         raise ValueError("generation_probe_request_budget_exceeded")
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
 
 

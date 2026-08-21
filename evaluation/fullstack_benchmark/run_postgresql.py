@@ -153,9 +153,7 @@ def scope_for(db: Session, suffix: str) -> ProfileScope:
         profile=profile,
         actor_role="owner",
         purpose="self_care",
-        allowed_actions=frozenset(
-            {"create", "view", "correct", "invalidate", "resolve"}
-        ),
+        allowed_actions=frozenset({"create", "view", "correct", "invalidate", "resolve"}),
         allowed_data_classes=frozenset({"medications", "evidence"}),
     )
 
@@ -630,9 +628,7 @@ def main() -> None:
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}"
         for path in (metrics_path, manifest_path)
     ]
-    (args.output / "checksums.sha256").write_text(
-        "\n".join(checksums) + "\n", encoding="utf-8"
-    )
+    (args.output / "checksums.sha256").write_text("\n".join(checksums) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

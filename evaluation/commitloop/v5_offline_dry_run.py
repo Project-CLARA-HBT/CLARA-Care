@@ -28,10 +28,7 @@ def run_offline_v5_dry_run(*, output_dir: Path, cohort_dir: Path) -> dict[str, o
     """Create a sealed v5-shaped run without a provider or network request."""
 
     cohort_path, cohort_manifest_path = write_cohort(cohort_dir)
-    rows = [
-        json.loads(line)
-        for line in cohort_path.read_text(encoding="utf-8").splitlines()
-    ]
+    rows = [json.loads(line) for line in cohort_path.read_text(encoding="utf-8").splitlines()]
     limits = RunLimits(
         max_subjects=len(rows),
         max_cases=len(rows),
@@ -83,9 +80,7 @@ def main() -> int:
     args = parser.parse_args()
     print(
         json.dumps(
-            run_offline_v5_dry_run(
-                output_dir=args.output, cohort_dir=args.cohort_output
-            ),
+            run_offline_v5_dry_run(output_dir=args.output, cohort_dir=args.cohort_output),
             sort_keys=True,
         )
     )

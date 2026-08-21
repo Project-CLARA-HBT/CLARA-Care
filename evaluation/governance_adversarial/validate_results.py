@@ -12,19 +12,41 @@ from evaluation.governance_adversarial.protocol import ARMS, FAMILIES, validate_
 # Compatibility name retained for callers that previously imported it.  These
 # are now the complete RIVF family identifiers rather than a transport subset.
 SCENARIOS = frozenset(FAMILIES)
-COLUMNS = frozenset({
-    "case_id", "family", "arm", "execution_id", "run_status", "retry_count",
-    "observation_artifact_ref", "observation_artifact_sha256", "boundary_path_attested",
-    "normalized_outcome", "unauthorized_disclosure", "successful_bypass",
-    "stale_or_unauthorized_commit", "wrong_subject_exposure",
-    "cache_index_revocation_failure", "audit_reconstruction_complete",
-    "response_sha256", "latency_ms", "availability_error",
-})
-BOOLEAN_COLUMNS = COLUMNS.intersection({
-    "unauthorized_disclosure", "successful_bypass", "stale_or_unauthorized_commit",
-    "wrong_subject_exposure", "cache_index_revocation_failure", "audit_reconstruction_complete",
-    "availability_error", "boundary_path_attested",
-})
+COLUMNS = frozenset(
+    {
+        "case_id",
+        "family",
+        "arm",
+        "execution_id",
+        "run_status",
+        "retry_count",
+        "observation_artifact_ref",
+        "observation_artifact_sha256",
+        "boundary_path_attested",
+        "normalized_outcome",
+        "unauthorized_disclosure",
+        "successful_bypass",
+        "stale_or_unauthorized_commit",
+        "wrong_subject_exposure",
+        "cache_index_revocation_failure",
+        "audit_reconstruction_complete",
+        "response_sha256",
+        "latency_ms",
+        "availability_error",
+    }
+)
+BOOLEAN_COLUMNS = COLUMNS.intersection(
+    {
+        "unauthorized_disclosure",
+        "successful_bypass",
+        "stale_or_unauthorized_commit",
+        "wrong_subject_exposure",
+        "cache_index_revocation_failure",
+        "audit_reconstruction_complete",
+        "availability_error",
+        "boundary_path_attested",
+    }
+)
 
 
 def _bool(value: str) -> bool:
@@ -41,14 +63,16 @@ def _validate_result_evidence(row: dict[str, str]) -> None:
     """Validate evidence fields independent of frozen-manifest pairing."""
 
     if row["run_status"] == "EXECUTED":
-        if not row["observation_artifact_ref"] or not _is_sha256(row["observation_artifact_sha256"]):
+        if not row["observation_artifact_ref"] or not _is_sha256(
+            row["observation_artifact_sha256"]
+        ):
             raise FreezeError("govred_executed_result_evidence_incomplete")
         if row["boundary_path_attested"] != "true":
             raise FreezeError("govred_executed_result_boundary_path_incomplete")
-    elif any(
-        row[name]
-        for name in ("observation_artifact_ref", "observation_artifact_sha256")
-    ) or row["boundary_path_attested"] != "false":
+    elif (
+        any(row[name] for name in ("observation_artifact_ref", "observation_artifact_sha256"))
+        or row["boundary_path_attested"] != "false"
+    ):
         raise FreezeError("govred_not_run_must_not_claim_evidence")
 
 
@@ -89,7 +113,11 @@ def validate(results: Path, manifest: Path) -> None:
         if retries < 0 or latency < 0:
             raise FreezeError("govred_result_numeric_invalid")
         if row["run_status"] == "EXECUTED":
-            if not row["execution_id"] or not row["normalized_outcome"] or not _is_sha256(row["response_sha256"]):
+            if (
+                not row["execution_id"]
+                or not row["normalized_outcome"]
+                or not _is_sha256(row["response_sha256"])
+            ):
                 raise FreezeError("govred_executed_result_observation_incomplete")
             for name in BOOLEAN_COLUMNS:
                 _bool(row[name])
@@ -97,9 +125,7 @@ def validate(results: Path, manifest: Path) -> None:
             raise FreezeError("govred_not_run_must_not_claim_observation")
         _validate_result_evidence(row)
     expected = {
-        (case_id, arm)
-        for case_id, case in cases.items()
-        for arm in case["arm_applicability"]
+        (case_id, arm) for case_id, case in cases.items() for arm in case["arm_applicability"]
     }
     if seen != expected:
         raise FreezeError("govred_result_pairing_incomplete")

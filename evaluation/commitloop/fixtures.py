@@ -22,11 +22,7 @@ def synthetic_bundle(patient_id: str, suffix: str) -> dict[str, Any]:
                     "subject": {"reference": f"Patient/{patient_id}"},
                     "authoredOn": "2026-01-01T00:00:00Z",
                     "occurrencePeriod": {"end": "2026-01-20T00:00:00Z"},
-                    "code": {
-                        "coding": [
-                            {"system": "http://loinc.org", "code": f"test-{suffix}"}
-                        ]
-                    },
+                    "code": {"coding": [{"system": "http://loinc.org", "code": f"test-{suffix}"}]},
                 }
             },
             {
@@ -37,11 +33,7 @@ def synthetic_bundle(patient_id: str, suffix: str) -> dict[str, Any]:
                     "subject": {"reference": f"Patient/{patient_id}"},
                     "effectiveDateTime": "2026-01-10T00:00:00Z",
                     "meta": {"lastUpdated": "2026-01-11T00:00:00Z"},
-                    "code": {
-                        "coding": [
-                            {"system": "http://loinc.org", "code": f"test-{suffix}"}
-                        ]
-                    },
+                    "code": {"coding": [{"system": "http://loinc.org", "code": f"test-{suffix}"}]},
                 }
             },
         ],
@@ -63,9 +55,7 @@ def _controlled_bundle(
         "status": "active",
         "subject": {"reference": f"Patient/{patient_id}"},
         "authoredOn": "2026-01-01T00:00:00Z",
-        "code": {
-            "coding": [{"system": "http://loinc.org", "code": f"test-{suffix}"}]
-        },
+        "code": {"coding": [{"system": "http://loinc.org", "code": f"test-{suffix}"}]},
     }
     if due_time is not None:
         request["occurrencePeriod"] = {"end": due_time}
@@ -81,11 +71,7 @@ def _controlled_bundle(
             "subject": {"reference": f"Patient/{patient_id}"},
             "effectiveDateTime": spec["valid_at"],
             "meta": {"lastUpdated": spec.get("known_at", spec["valid_at"])},
-            "code": {
-                "coding": [
-                    {"system": "http://loinc.org", "code": f"test-{suffix}"}
-                ]
-            },
+            "code": {"coding": [{"system": "http://loinc.org", "code": f"test-{suffix}"}]},
         }
         if "relation" in spec:
             observation["relation"] = spec["relation"]
@@ -112,9 +98,7 @@ def controlled_benchmark_bundles() -> tuple[dict[str, Any], ...]:
         _controlled_bundle(
             suffix="grace",
             due_time="2026-01-05T00:00:00Z",
-            observations=[
-                {"status": "preliminary", "valid_at": "2026-01-10T00:00:00Z"}
-            ],
+            observations=[{"status": "preliminary", "valid_at": "2026-01-10T00:00:00Z"}],
         ),
         _controlled_bundle(
             suffix="conflict",
@@ -197,12 +181,6 @@ class DeterministicFakeTransport:
             }
         return {
             "model": expected_reported_model_id(payload["model"]),
-            "choices": [
-                {
-                    "message": {
-                        "content": json.dumps(content, sort_keys=True)
-                    }
-                }
-            ],
+            "choices": [{"message": {"content": json.dumps(content, sort_keys=True)}}],
             "usage": {"prompt_tokens": 8, "completion_tokens": 4, "total_tokens": 12},
         }

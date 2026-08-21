@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
     """Populate admin@example.com with natural, realistic Vietnamese medical records."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 1. Ensure Profile
     profile = db.execute(
@@ -90,7 +90,7 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
             user_id=admin_user.id,
             public_id=f"prof_{uuid4().hex[:12]}",
             full_name="BS. Nguyễn Tuấn Anh",
-            date_of_birth=datetime(1985, 6, 15, tzinfo=timezone.utc).date(),
+            date_of_birth=datetime(1985, 6, 15, tzinfo=UTC).date(),
             gender="male",
             blood_type="O+",
             height_cm=172.0,
@@ -111,7 +111,7 @@ def seed_admin_clinical_data(db: Session, admin_user: User) -> None:
         db.refresh(profile)
     else:
         profile.full_name = "BS. Nguyễn Tuấn Anh"
-        profile.date_of_birth = datetime(1985, 6, 15, tzinfo=timezone.utc).date()
+        profile.date_of_birth = datetime(1985, 6, 15, tzinfo=UTC).date()
         profile.gender = "male"
         profile.blood_type = "O+"
         profile.height_cm = 172.0

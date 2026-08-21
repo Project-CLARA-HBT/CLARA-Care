@@ -18,9 +18,7 @@ def test_v5_cohort_is_deterministic_balanced_unique_and_scorable(tmp_path) -> No
     assert len(first_rows) == len(STRATA) * SUBJECTS_PER_STRATUM == 384
     assert len({row["subject_token"] for row in first_rows}) == 384
     assert len({row["bundle_sha256"] for row in first_rows}) == 384
-    assert first_manifest["strata"] == {
-        stratum: SUBJECTS_PER_STRATUM for stratum in STRATA
-    }
+    assert first_manifest["strata"] == {stratum: SUBJECTS_PER_STRATUM for stratum in STRATA}
     assert first_manifest["prior_cohort_overlap_check"] == "PENDING_FREEZE_REGISTRY"
 
     cohort_path, manifest_path = write_cohort(tmp_path)

@@ -231,9 +231,7 @@ def _seed(
         return scope.profile.id, assertion_ids
 
 
-def _summaries(
-    attempts: list[dict[str, object]], *, repetitions: int
-) -> list[dict[str, object]]:
+def _summaries(attempts: list[dict[str, object]], *, repetitions: int) -> list[dict[str, object]]:
     summaries = []
     for workload in WORKLOADS:
         for concurrency in CONCURRENCY_LEVELS:
@@ -243,16 +241,9 @@ def _summaries(
                 if row["workload"] == workload and row["concurrency"] == concurrency
             ]
             latencies = [_as_float(row["latency_ms"]) for row in rows]
-            batch_wall = {
-                _as_int(row["batch"]): _as_float(row["batch_wall_ms"]) for row in rows
-            }
-            batch_reads = {
-                _as_int(row["batch"]): _as_int(row["batch_db_reads"]) for row in rows
-            }
-            batch_writes = {
-                _as_int(row["batch"]): _as_int(row["batch_db_writes"])
-                for row in rows
-            }
+            batch_wall = {_as_int(row["batch"]): _as_float(row["batch_wall_ms"]) for row in rows}
+            batch_reads = {_as_int(row["batch"]): _as_int(row["batch_db_reads"]) for row in rows}
+            batch_writes = {_as_int(row["batch"]): _as_int(row["batch_db_writes"]) for row in rows}
             accepted = sum(row["result"] == "accepted" for row in rows)
             false_stale = sum(row["stale_class"] == "false_stale" for row in rows)
             summaries.append(
@@ -273,16 +264,13 @@ def _summaries(
                     "p50_ms": round(percentile(latencies, 0.50), 3),
                     "p95_ms": round(percentile(latencies, 0.95), 3),
                     "p99_ms": round(percentile(latencies, 0.99), 3),
-                    "throughput_per_second": round(
-                        1000 * len(rows) / sum(batch_wall.values()), 3
-                    ),
+                    "throughput_per_second": round(1000 * len(rows) / sum(batch_wall.values()), 3),
                     "db_reads": sum(batch_reads.values()),
                     "db_writes": sum(batch_writes.values()),
                     "writes_per_accepted_commit": round(
                         sum(batch_writes.values()) / max(accepted, 1), 3
                     ),
-                    "peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                    * 1024,
+                    "peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
                 }
             )
     return summaries

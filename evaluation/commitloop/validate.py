@@ -65,18 +65,11 @@ def validate_run(root: Path) -> None:
         if not re.fullmatch(r"[0-9a-f]{64}", digest):
             raise ValueError("malformed_artifact_checksum")
         relative_path = Path(relative)
-        if (
-            relative_path.is_absolute()
-            or ".." in relative_path.parts
-            or relative in sealed_paths
-        ):
+        if relative_path.is_absolute() or ".." in relative_path.parts or relative in sealed_paths:
             raise ValueError("unsafe_artifact_checksum_path")
         sealed_paths.add(relative)
         path = root / relative_path
-        if (
-            not path.is_file()
-            or hashlib.sha256(path.read_bytes()).hexdigest() != digest
-        ):
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
             raise ValueError("artifact_checksum_mismatch")
     actual_paths = {
         str(path.relative_to(root))
@@ -88,9 +81,7 @@ def validate_run(root: Path) -> None:
     manifest = json.loads((root / "run_manifest.json").read_text(encoding="utf-8"))
     perturbations = [
         json.loads(line)
-        for line in (root / "perturbation_manifest.jsonl")
-        .read_text(encoding="utf-8")
-        .splitlines()
+        for line in (root / "perturbation_manifest.jsonl").read_text(encoding="utf-8").splitlines()
         if line
     ]
     outputs = json.loads((root / "solver_outputs.json").read_text(encoding="utf-8"))
@@ -102,9 +93,7 @@ def validate_run(root: Path) -> None:
         raise ValueError("duplicate_or_invalid_run_key")
     if manifest.get("solver_request_count") != len(keys):
         raise ValueError("run_request_count_mismatch")
-    generation = json.loads(
-        (root / "model_generation.json").read_text(encoding="utf-8")
-    )
+    generation = json.loads((root / "model_generation.json").read_text(encoding="utf-8"))
     generation_errors = json.loads(
         (root / "generation_error_ledger.json").read_text(encoding="utf-8")
     )
@@ -113,9 +102,7 @@ def validate_run(root: Path) -> None:
     generation_requests = sum(
         len(item.get("stages", [])) for item in generation if isinstance(item, dict)
     ) + sum(
-        int(item.get("request_count", 0))
-        for item in generation_errors
-        if isinstance(item, dict)
+        int(item.get("request_count", 0)) for item in generation_errors if isinstance(item, dict)
     )
     if manifest.get("generation_request_count") != generation_requests:
         raise ValueError("generation_request_count_mismatch")
@@ -134,13 +121,8 @@ def validate_run(root: Path) -> None:
                 raise ValueError("model_substitution_detected")
             if stage.get("requested_model_id") not in expected_models:
                 raise ValueError("unexpected_model_id")
-    statistics = json.loads(
-        (root / "statistical_results.json").read_text(encoding="utf-8")
-    )
-    if (
-        not isinstance(statistics, dict)
-        or statistics.get("clinical_adjudication") != "NOT_RUN"
-    ):
+    statistics = json.loads((root / "statistical_results.json").read_text(encoding="utf-8"))
+    if not isinstance(statistics, dict) or statistics.get("clinical_adjudication") != "NOT_RUN":
         raise ValueError("invalid_statistical_results")
     if manifest.get("request_count") != len(keys) + generation_requests:
         raise ValueError("run_request_count_mismatch")
@@ -150,20 +132,14 @@ def validate_run(root: Path) -> None:
         raise ValueError("run_conditions_mismatch")
     if manifest.get("models") != expected_models:
         raise ValueError("run_models_mismatch")
-    protocol_manifest = json.loads(
-        (root / "protocol_manifest.json").read_text(encoding="utf-8")
-    )
+    protocol_manifest = json.loads((root / "protocol_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(protocol_manifest, dict):
         raise TypeError("protocol_manifest_invalid")
     protocol_payload = {
-        key: value
-        for key, value in protocol_manifest.items()
-        if key != "protocol_sha256"
+        key: value for key, value in protocol_manifest.items() if key != "protocol_sha256"
     }
     protocol_hash = hashlib.sha256(
-        json.dumps(
-            protocol_payload, sort_keys=True, separators=(",", ":"), default=str
-        ).encode()
+        json.dumps(protocol_payload, sort_keys=True, separators=(",", ":"), default=str).encode()
     ).hexdigest()
     if (
         protocol_payload.get("schema_version") != "commitloop-protocol.v2"
@@ -173,15 +149,11 @@ def validate_run(root: Path) -> None:
         or protocol_manifest.get("protocol_sha256") != protocol_hash
     ):
         raise ValueError("protocol_manifest_invalid")
-    model_manifest = json.loads(
-        (root / "model_manifest.json").read_text(encoding="utf-8")
-    )
+    model_manifest = json.loads((root / "model_manifest.json").read_text(encoding="utf-8"))
     if (
         not isinstance(model_manifest, dict)
-        or model_manifest.get("reported_model_policy")
-        != "must_match_declared_mapping"
-        or model_manifest.get("reported_model_mapping")
-        != REPORTED_MODEL_ID_BY_REQUESTED
+        or model_manifest.get("reported_model_policy") != "must_match_declared_mapping"
+        or model_manifest.get("reported_model_mapping") != REPORTED_MODEL_ID_BY_REQUESTED
         or model_manifest.get("fallback") is not False
     ):
         raise ValueError("model_manifest_mapping_invalid")
@@ -198,9 +170,7 @@ def validate_run(root: Path) -> None:
             str(manifest.get("phase_a_freeze_sha") or ""),
         ):
             raise ValueError("phase_b_provenance_missing:phase_a_freeze_sha")
-        if not re.fullmatch(
-            r"[0-9a-f]{64}", str(manifest.get("provider_probe_sha256") or "")
-        ):
+        if not re.fullmatch(r"[0-9a-f]{64}", str(manifest.get("provider_probe_sha256") or "")):
             raise ValueError("phase_b_provenance_missing:provider_probe_sha256")
     source_manifest = json.loads((root / "source_manifest.json").read_text(encoding="utf-8"))
     source_cohort = str(manifest.get("source_cohort") or source_manifest.get("source", ""))
@@ -230,8 +200,7 @@ def validate_run(root: Path) -> None:
             or provenance.get("selected_cohort_sha256")
             != hashlib.sha256(selected_cohort.read_bytes()).hexdigest()
             or not isinstance(provenance.get("redaction"), dict)
-            or provenance["redaction"].get("algorithm")
-            != "fhir_subject_reference_v1"
+            or provenance["redaction"].get("algorithm") != "fhir_subject_reference_v1"
             or not isinstance(provenance["redaction"].get("subject_reference_redactions"), int)
             or provenance["redaction"]["subject_reference_redactions"] < 1
         ):
@@ -247,11 +216,8 @@ def validate_run(root: Path) -> None:
             not isinstance(partitions, dict)
             or not selected_rows
             or any(str(row.get("split")) != split for row in selected_rows)
-            or selected_tokens != {
-                str(subject)
-                for subject, assigned in partitions.items()
-                if assigned == split
-            }
+            or selected_tokens
+            != {str(subject) for subject, assigned in partitions.items() if assigned == split}
         ):
             raise ValueError("glhs_bench_frozen_input_subject_inventory_invalid")
     expected_cells = manifest.get("expected_cell_count")
@@ -269,16 +235,10 @@ def validate_run(root: Path) -> None:
     }:
         raise ValueError("metrics_axes_mismatch")
     for axis_metrics in metrics["axes"].values():
-        if (
-            not isinstance(axis_metrics, dict)
-            or axis_metrics.get("denominator") != expected_cells
-        ):
+        if not isinstance(axis_metrics, dict) or axis_metrics.get("denominator") != expected_cells:
             raise ValueError("metrics_axis_denominator_mismatch")
     exact_metrics = metrics.get("all_axes_exact_match")
-    if (
-        not isinstance(exact_metrics, dict)
-        or exact_metrics.get("denominator") != expected_cells
-    ):
+    if not isinstance(exact_metrics, dict) or exact_metrics.get("denominator") != expected_cells:
         raise ValueError("metrics_exact_denominator_mismatch")
     escalation_metrics = metrics.get("escalation_accuracy")
     if (
@@ -296,9 +256,9 @@ def validate_run(root: Path) -> None:
             raise ValueError("deterministic_generation_request_count_invalid")
     else:
         candidate_slots = generation_metrics.get("candidate_slot")
-        if not isinstance(candidate_slots, dict) or candidate_slots.get(
-            "denominator"
-        ) != (manifest.get("source_case_count", manifest.get("case_count", 0)) * 4):
+        if not isinstance(candidate_slots, dict) or candidate_slots.get("denominator") != (
+            manifest.get("source_case_count", manifest.get("case_count", 0)) * 4
+        ):
             raise ValueError("generation_metrics_candidate_denominator_mismatch")
     variant_metrics = metrics.get("adversarial_variants")
     if not isinstance(variant_metrics, dict) or variant_metrics.get(
@@ -311,15 +271,19 @@ def validate_run(root: Path) -> None:
     ) != manifest.get("variant_case_count", 0) * len(expected_models) * len(CONDITIONS):
         raise ValueError("variant_escalation_denominator_mismatch")
     transition_metrics = variant_metrics.get("transition_sequence_accuracy")
-    expected_boundary_pairs = sum(
-        item.get("variant_kind")
-        in {"late_ingestion", "post_cutoff_evidence"}
-        for item in perturbations
-        if isinstance(item, dict)
-    ) * len(expected_models) * len(CONDITIONS)
-    if not isinstance(transition_metrics, dict) or transition_metrics.get(
-        "denominator"
-    ) != expected_boundary_pairs:
+    expected_boundary_pairs = (
+        sum(
+            item.get("variant_kind") in {"late_ingestion", "post_cutoff_evidence"}
+            for item in perturbations
+            if isinstance(item, dict)
+        )
+        * len(expected_models)
+        * len(CONDITIONS)
+    )
+    if (
+        not isinstance(transition_metrics, dict)
+        or transition_metrics.get("denominator") != expected_boundary_pairs
+    ):
         raise ValueError("transition_sequence_denominator_mismatch")
     boundary_metrics = variant_metrics.get("valid_known_time_boundary_accuracy")
     if not isinstance(boundary_metrics, dict):
@@ -328,11 +292,15 @@ def validate_run(root: Path) -> None:
         ("known_time", "late_ingestion"),
         ("valid_time", "post_cutoff_evidence"),
     ):
-        expected = sum(
-            item.get("variant_kind") == variant_kind
-            for item in perturbations
-            if isinstance(item, dict)
-        ) * len(expected_models) * len(CONDITIONS)
+        expected = (
+            sum(
+                item.get("variant_kind") == variant_kind
+                for item in perturbations
+                if isinstance(item, dict)
+            )
+            * len(expected_models)
+            * len(CONDITIONS)
+        )
         item = boundary_metrics.get(boundary)
         if not isinstance(item, dict) or item.get("denominator") != expected:
             raise ValueError("boundary_metrics_denominator_mismatch")

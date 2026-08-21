@@ -57,6 +57,7 @@ _REQUIRED_FIELDS = {
     GOVERNANCE_MUTATION_TRACE_LINKAGE: ("transaction_trace", "commit_order_evidence"),
 }
 
+
 #: Families exercising a persisted governance mutation (writer type neither
 #: ``none`` nor the prompt-attempt stub). These form the governance-mutation
 #: trace-linkage opportunity set.
@@ -134,7 +135,7 @@ def build_opportunity_denominators(raw_root: Path) -> dict[str, Any]:
     rows_out: list[dict[str, object]] = []
     for kind in OPPORTUNITY_KINDS:
         required = _REQUIRED_FIELDS[kind]
-        for (arm, family) in sorted(eligible[kind]):
+        for arm, family in sorted(eligible[kind]):
             group = eligible[kind][(arm, family)]
             complete_n = 0
             missing_fields: dict[str, int] = defaultdict(int)
@@ -151,28 +152,34 @@ def build_opportunity_denominators(raw_root: Path) -> dict[str, Any]:
                 "primary_authorization_drift"
                 if family
                 in {
-                    "authorization_consent_toctou", "concurrent_stale_state_write",
-                    "cross_subject_retrieval", "cross_subject_proposal_write",
-                    "policy_version_change", "purpose_mismatch",
+                    "authorization_consent_toctou",
+                    "concurrent_stale_state_write",
+                    "cross_subject_retrieval",
+                    "cross_subject_proposal_write",
+                    "policy_version_change",
+                    "purpose_mismatch",
                     "revoked_consent_cache_index_reuse",
-                    "role_mismatch", "stale_thss_replay",
+                    "role_mismatch",
+                    "stale_thss_replay",
                 }
                 else "secondary_robustness_stress"
             )
-            rows_out.append({
-                "opportunity_kind": kind,
-                "arm": arm,
-                "family": family,
-                "reporting_scope": reporting_scope,
-                "eligible_opportunity_n": len(group),
-                "complete_n": complete_n,
-                "completeness_within_eligible_set": (
-                    complete_n / len(group) if group else None
-                ),
-                "required_record": list(required),
-                "missing_fields": dict(missing_fields),
-                "observer_emitted_required_record": emitted_count == len(group),
-            })
+            rows_out.append(
+                {
+                    "opportunity_kind": kind,
+                    "arm": arm,
+                    "family": family,
+                    "reporting_scope": reporting_scope,
+                    "eligible_opportunity_n": len(group),
+                    "complete_n": complete_n,
+                    "completeness_within_eligible_set": (
+                        complete_n / len(group) if group else None
+                    ),
+                    "required_record": list(required),
+                    "missing_fields": dict(missing_fields),
+                    "observer_emitted_required_record": emitted_count == len(group),
+                }
+            )
     summary: dict[str, dict[str, object]] = {}
     for kind in OPPORTUNITY_KINDS:
         kind_rows = [row for row in rows_out if row["opportunity_kind"] == kind]
@@ -200,10 +207,12 @@ def render_markdown(payload: dict[str, Any]) -> str:
     lines: list[str] = [
         "# GovRed RIVF — Audit opportunity denominators (E-007/E-008, GRD-04)",
         "",
-        ("GRD-04 defines separate denominators and requires completeness to be "
-        "reported **only within each eligible opportunity set**. Raw cross-arm "
-        "counts (e.g. ``audit_reconstruction_complete`` totals) are never "
-        "completeness."),
+        (
+            "GRD-04 defines separate denominators and requires completeness to be "
+            "reported **only within each eligible opportunity set**. Raw cross-arm "
+            "counts (e.g. ``audit_reconstruction_complete`` totals) are never "
+            "completeness."
+        ),
         "",
         "## Opportunity kinds and eligibility",
         "",
@@ -247,24 +256,32 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "",
         "## Honest interpretation",
         "",
-        ("- The frozen final-003 observer emits only the single "
-        "``audit_reconstruction_complete`` boolean and no persisted rejection "
-        "decision row (AUD-021). Its per-kind completeness is therefore "
-        "reported as `not_emitted`/0 within the eligible set — this is a "
-        "record-format statement, not a completeness claim and not a failure "
-        "count."),
-        ("- The structured rejection record and transaction trace are defined by "
-        "the newer observer schema "
-        "(`glhs-postgres-governance-toctou-final-v2.1`); a future freeze can "
-        "raise completeness within the same eligible sets."),
-        ("- Never divide eligible counts of one kind by the total of another; "
-        "each completeness fraction uses its own denominator."),
+        (
+            "- The frozen final-003 observer emits only the single "
+            "``audit_reconstruction_complete`` boolean and no persisted rejection "
+            "decision row (AUD-021). Its per-kind completeness is therefore "
+            "reported as `not_emitted`/0 within the eligible set — this is a "
+            "record-format statement, not a completeness claim and not a failure "
+            "count."
+        ),
+        (
+            "- The structured rejection record and transaction trace are defined by "
+            "the newer observer schema "
+            "(`glhs-postgres-governance-toctou-final-v2.1`); a future freeze can "
+            "raise completeness within the same eligible sets."
+        ),
+        (
+            "- Never divide eligible counts of one kind by the total of another; "
+            "each completeness fraction uses its own denominator."
+        ),
         "",
     ]
     return "\n".join(lines)
 
 
-def write_opportunity_denominators(raw_root: Path, output_json: Path, output_md: Path) -> dict[str, Any]:
+def write_opportunity_denominators(
+    raw_root: Path, output_json: Path, output_md: Path
+) -> dict[str, Any]:
     payload = build_opportunity_denominators(raw_root)
     output_json.parent.mkdir(parents=True, exist_ok=True)
     output_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

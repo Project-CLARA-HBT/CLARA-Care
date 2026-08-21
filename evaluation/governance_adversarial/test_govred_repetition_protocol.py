@@ -212,11 +212,13 @@ def test_indeterminate_repetition_blocks_robust_verdict() -> None:
 
 def test_aggregation_rejects_mixed_scenarios() -> None:
     with pytest.raises(ValueError, match="mixed_scenarios"):
-        aggregate_at_logical_schedule([
-            run_repetition(
-                "concurrent_stale_state_write-001", 0, _evidence(gov_ts=None, prop_ts=None)
-            ),
-            run_repetition(
-                "concurrent_stale_state_write-002", 0, _evidence(gov_ts=None, prop_ts=None)
-            ),
-        ])
+        aggregate_at_logical_schedule(
+            [
+                run_repetition(
+                    "concurrent_stale_state_write-001", 0, _evidence(gov_ts=None, prop_ts=None)
+                ),
+                run_repetition(
+                    "concurrent_stale_state_write-002", 0, _evidence(gov_ts=None, prop_ts=None)
+                ),
+            ]
+        )

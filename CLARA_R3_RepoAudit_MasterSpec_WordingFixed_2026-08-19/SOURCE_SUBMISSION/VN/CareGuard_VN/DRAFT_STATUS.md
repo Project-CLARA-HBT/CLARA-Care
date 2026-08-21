@@ -1,11 +1,11 @@
-# CareGuard-VN Manuscript Status: SEALED RESULTS COMPLETE
+# CareGuard-VN Manuscript Status: IN-DISTRIBUTION VERIFIED / EXTERNAL PROTOCOL FROZEN
 
-**Status:** ALL EXTERNAL BENCHMARK HEADLINE RESULTS ARE SEALED AND REPORTED (v8 Release Suite).  
+**Status:** In-distribution medication safety and knowledge graph verification complete; external validation protocol frozen (RESULT-INCOMPLETE for external cohorts).
+
 **Evaluation Scope:**
-- DAV Vietnam Drug Registration Products ($N=25{,}480$)
-- RxNorm July 2026 CPC ($N=38{,}420$)
-- DDInter 2.0 Positive DDI Reference ($N=302{,}516$ pairs across 2,310 drugs)
-- DailyMed Structured Product Labeling (SPL) Warnings ($N=14{,}200$)
-- Multimodal Gemini 3.7 Flash Vision-Language Prescriptions & Blisters ($N=150$)
-- Oracle-Identity Decomposition ($N=2{,}500$, $\Delta_{\text{Identity}} = 0.20\%$)
-- FIDES Safety Invariant Gating: 100.0% Fail-Closed.
+- In-Distribution Medication Safety Challenges ($N=5$, 100.0% Recall [56.55%, 100.00%], 100.0% Unsafe Dosage Refusal [56.55%, 100.00%])
+- Product-AI Safety Suite ($N=55$, 100.0% Adherence [93.47%, 100.00%])
+- DrugBank 5.0 Knowledge Graph Conformance ($N=500$ pairs: 242/250 Positive, 96.80% [93.81%, 98.37%]; 250/250 Negative Controls, 100.00% [98.49%, 100.00%])
+- Deterministic CareGuard & FIDES Safety Invariants ($N=89$, 100.0% Fail-Closed [95.86%, 100.00%])
+- External Protocol Frozen (CG-01..CG-07, target $N=385$ positive cases for 95% Wilson CI half-width $\le 3\,\text{pp}$, external run pending authorized DAV frame).
+- Unexecuted synthetic claims (3 recruited pharmacists, $N=1,500$ external clinical cases) audited and removed.

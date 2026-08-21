@@ -54,9 +54,7 @@ def _catalog_ids(catalog_path: Path) -> list[str]:
     return ids
 
 
-def validate_human_review_gate(
-    *, manifest_path: Path, catalog_path: Path
-) -> dict[str, Any]:
+def validate_human_review_gate(*, manifest_path: Path, catalog_path: Path) -> dict[str, Any]:
     """Validate a completed, outcome-blind human review before execution."""
 
     manifest = _load_json(manifest_path, "govmut_w9_human_manifest_invalid")
@@ -93,7 +91,9 @@ def validate_human_review_gate(
         if not isinstance(reviewer, dict):
             raise FreezeError("govmut_w9_human_review_reviewer_invalid")
         required = ("reviewer_id", "background", "independence_declaration", "review_date")
-        if not all(isinstance(reviewer.get(field), str) and reviewer[field].strip() for field in required):
+        if not all(
+            isinstance(reviewer.get(field), str) and reviewer[field].strip() for field in required
+        ):
             raise FreezeError("govmut_w9_human_review_reviewer_invalid")
         reviewer_ids.append(reviewer["reviewer_id"])
     if len(set(reviewer_ids)) != len(reviewer_ids):
@@ -126,9 +126,7 @@ def validate_human_review_gate(
                 or not isinstance(disposition.get("rationale"), str)
                 or not disposition["rationale"].strip()
             ):
-                raise FreezeError(
-                    f"govmut_w9_human_review_disposition_invalid:{reviewer_id}"
-                )
+                raise FreezeError(f"govmut_w9_human_review_disposition_invalid:{reviewer_id}")
         expected_disposition = _disposition_for_labels(
             [dispositions[reviewer_id]["label"] for reviewer_id in reviewer_ids]
         )

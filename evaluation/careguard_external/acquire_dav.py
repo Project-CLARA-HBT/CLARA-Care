@@ -23,9 +23,7 @@ from evaluation.careguard_external.source_manifest import validate_source_manife
 def _official_dav_url(source_url: str) -> bool:
     parsed = urlparse(source_url)
     host = parsed.hostname or ""
-    return parsed.scheme == "https" and (
-        host == "dav.gov.vn" or host.endswith(".dav.gov.vn")
-    )
+    return parsed.scheme == "https" and (host == "dav.gov.vn" or host.endswith(".dav.gov.vn"))
 
 
 def _records(source_path: Path) -> list[dict[str, Any]]:
@@ -80,10 +78,12 @@ def build_manifest(
         if not isinstance(record_id, str) or not record_id.strip() or record_id in ids:
             raise ValueError("careguard_dav_record_identifier_invalid")
         ids.add(record_id)
-        inventory.append({
-            "source_record_id": record_id,
-            "source_record_hash": hashlib.sha256(_canonical_json(row)).hexdigest(),
-        })
+        inventory.append(
+            {
+                "source_record_id": record_id,
+                "source_record_hash": hashlib.sha256(_canonical_json(row)).hexdigest(),
+            }
+        )
     return {
         "schema_version": "careguard-vn.source-manifest.v1",
         "status": "FROZEN_ACQUIRED",
@@ -93,7 +93,8 @@ def build_manifest(
         "retrieved_at_utc": retrieved_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
         "version_or_release": release,
         "access_terms": access_terms,
-        "license": license_text or "Not published; acquisition authorization recorded in access_terms.",
+        "license": license_text
+        or "Not published; acquisition authorization recorded in access_terms.",
         "redistribution_policy": "raw_prohibited",
         "redistribution_review_status": redistribution_review_status,
         "payload_sha256": _sha256_file(source_path),
@@ -133,7 +134,9 @@ def main() -> int:
         retrieved_at=datetime.now(UTC),
     )
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
-    args.manifest.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    args.manifest.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     validate_source_manifest(args.manifest)
     print(
         json.dumps(

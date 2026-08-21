@@ -59,9 +59,7 @@ def test_freeze_requires_a_clean_worktree_before_reading_run_artifacts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(freeze, "_git", lambda *_: " M user-owned-file")
-    with pytest.raises(
-        FreezeError, match="implementation_freeze_requires_clean_worktree"
-    ):
+    with pytest.raises(FreezeError, match="implementation_freeze_requires_clean_worktree"):
         create_implementation_freeze(
             run_dir=tmp_path / "absent-run",
             repository_root=tmp_path,
@@ -165,9 +163,7 @@ def test_freeze_fails_on_any_tracked_repository_secret_finding(
     monkeypatch.setattr(
         freeze,
         "_git",
-        lambda _, *args: (
-            "" if args == ("status", "--porcelain") else "phase-a-test-sha"
-        ),
+        lambda _, *args: "" if args == ("status", "--porcelain") else "phase-a-test-sha",
     )
     sentinel = Path("tracked-unsafe-history.md")
     monkeypatch.setattr(freeze, "tracked_paths", lambda _: [sentinel])
@@ -196,14 +192,10 @@ def test_freeze_rejects_a_bounded_incomplete_local_run(
     monkeypatch.setattr(
         freeze,
         "_git",
-        lambda _, *args: (
-            "" if args == ("status", "--porcelain") else "phase-a-test-sha"
-        ),
+        lambda _, *args: "" if args == ("status", "--porcelain") else "phase-a-test-sha",
     )
     monkeypatch.setattr(freeze, "scan_paths", lambda _: [])
-    with pytest.raises(
-        FreezeError, match="implementation_freeze_requires_complete_local_run"
-    ):
+    with pytest.raises(FreezeError, match="implementation_freeze_requires_complete_local_run"):
         create_implementation_freeze(
             run_dir=run_dir,
             repository_root=Path.cwd(),
@@ -237,9 +229,7 @@ def test_freeze_rejects_secret_bearing_evidence_before_writing_artifact(
     monkeypatch.setattr(
         freeze,
         "_git",
-        lambda _, *args: (
-            "" if args == ("status", "--porcelain") else "phase-a-test-sha"
-        ),
+        lambda _, *args: "" if args == ("status", "--porcelain") else "phase-a-test-sha",
     )
     run_dir = tmp_path / "run"
     with pytest.raises(FreezeError, match="local_validation_evidence_contains_secret"):

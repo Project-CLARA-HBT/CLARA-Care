@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -146,7 +146,7 @@ def main() -> None:
     gate_passed = mapping_pass and critical_pass
 
     report = {
-        "generated_at": datetime.now(tz=timezone.utc).isoformat(),
+        "generated_at": datetime.now(tz=UTC).isoformat(),
         "gate_passed": gate_passed,
         "checks": {
             "mapping_accuracy": {
@@ -176,7 +176,7 @@ def main() -> None:
         },
     }
 
-    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now(tz=UTC).strftime("%Y%m%d-%H%M%S")
     output_json_path = out_dir / f"day18-phase2-gate-{timestamp}.json"
     output_json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 

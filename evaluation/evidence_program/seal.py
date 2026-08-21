@@ -65,10 +65,7 @@ def seal(run_dir: Path, freeze_path: Path) -> Path:
         actual = sha256(run_dir / name)
         if actual != expected:
             raise FreezeError("frozen_artifact_hash_mismatch:" + name)
-    files = {
-        name: sha256(run_dir / name)
-        for name in sorted(HEADLINE_REQUIRED)
-    }
+    files = {name: sha256(run_dir / name) for name in sorted(HEADLINE_REQUIRED)}
     seal_path = run_dir / "artifact-sha256.json"
     payload = {
         "schema_version": "evidence-program-artifact-seal-v1",

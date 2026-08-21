@@ -17,11 +17,15 @@ def _reconcile_prompt(other_review: dict[str, Any]) -> str:
     return (
         "Reconsider exactly once. Return strict JSON "
         "{label,rationale,evidence_ids,confidence}. Other anonymous review:\n"
-        + json.dumps({"label": other_review["label"], "rationale": other_review["rationale"]}, sort_keys=True)
+        + json.dumps(
+            {"label": other_review["label"], "rationale": other_review["rationale"]}, sort_keys=True
+        )
     )
 
 
-def reconcile(*, raw_dir: Path, output_dir: Path, retries: int = RETRY_COUNT, urlopen: UrlOpen | None = None) -> dict[str, Any]:
+def reconcile(
+    *, raw_dir: Path, output_dir: Path, retries: int = RETRY_COUNT, urlopen: UrlOpen | None = None
+) -> dict[str, Any]:
     """Exactly one reconciliation round; remaining disagreement stays UNRESOLVED."""
     output_dir.mkdir(parents=True, exist_ok=True)
     unresolved = 0
@@ -76,7 +80,9 @@ def reconcile(*, raw_dir: Path, output_dir: Path, retries: int = RETRY_COUNT, ur
         if row.get("frozen_duplicate"):
             result["frozen_duplicate"] = True
             result["duplicate_of"] = row["duplicate_of"]
-        (output_dir / path.name).write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        (output_dir / path.name).write_text(
+            json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
     return {
         "schema_version": "clara-model-reconcile.v2",
         "reconciliation_rounds": 1,
@@ -92,4 +98,9 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--retries", type=int, default=RETRY_COUNT)
     args = parser.parse_args()
-    print(json.dumps(reconcile(raw_dir=args.raw_dir, output_dir=args.output_dir, retries=args.retries), sort_keys=True))
+    print(
+        json.dumps(
+            reconcile(raw_dir=args.raw_dir, output_dir=args.output_dir, retries=args.retries),
+            sort_keys=True,
+        )
+    )

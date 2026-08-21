@@ -109,13 +109,16 @@ def test_arm3_dag_partition_locking_overlapping_entities_16_writers() -> None:
     assert "atomic winner" in result.verification_message
 
 
-@pytest.mark.parametrize("writer_count, expected_rejections, expected_rate", [
-    (1, 0, 0.0),
-    (2, 1, 0.5),
-    (4, 3, 0.75),
-    (8, 7, 0.875),
-    (16, 15, 0.9375),
-])
+@pytest.mark.parametrize(
+    "writer_count, expected_rejections, expected_rate",
+    [
+        (1, 0, 0.0),
+        (2, 1, 0.5),
+        (4, 3, 0.75),
+        (8, 7, 0.875),
+        (16, 15, 0.9375),
+    ],
+)
 def test_concurrency_scaling_monolithic_disjoint(
     writer_count: int,
     expected_rejections: int,

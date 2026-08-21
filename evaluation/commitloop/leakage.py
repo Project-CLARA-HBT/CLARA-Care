@@ -60,8 +60,5 @@ def validate_solver_packet(packet: dict[str, Any], *, known_cutoff: datetime) ->
         if not isinstance(event, dict):
             raise TypeError("invalid_solver_event")
         known_at = event.get("known_at")
-        if (
-            isinstance(known_at, str)
-            and datetime.fromisoformat(known_at) > known_cutoff
-        ):
+        if isinstance(known_at, str) and datetime.fromisoformat(known_at) > known_cutoff:
             raise ValueError("solver_packet_future_knowledge_leakage")

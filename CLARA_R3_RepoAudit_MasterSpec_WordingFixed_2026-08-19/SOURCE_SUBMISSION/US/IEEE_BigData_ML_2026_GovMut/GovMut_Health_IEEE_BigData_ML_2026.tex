@@ -15,7 +15,7 @@ Corresponding author: kakangocthien109@gmail.com}}
 \maketitle
 
 \begin{abstract}
-Stateful health-AI governance defects often emerge only across a sequence of operations, such as disclosure, consent change, proposal retry, and persistence. GovMut-Health evaluates how well established testing strategies detect these sequence-sensitive faults. Its contribution is an executable health-AI governance mutation model, a reviewed mutant corpus mapped to contract invariants, and a mutant-level comparison of four frozen strategies. We evaluate the framework across both a foundational core corpus ($N=45$) and an expanded domain matrix ($N=1{,}440$ non-equivalent mutants across 12 clinical subsystems, yielding 23,040 test executions with zero infrastructure errors). Mutation scores were 35.6\% for regression alone, 8.9\% for stateless properties, 13.3\% for state-machine testing, and 100.0\% for the combined GLHS governance strategy ($p < 10^{-50}$ vs.\ regression). The results demonstrate comprehensive fault-detection efficacy and structural complementarity for stateful health AI governance.
+Stateful health-AI governance defects often emerge only across a sequence of operations, such as disclosure, consent change, proposal retry, and persistence. GovMut-Health evaluates how well established testing strategies detect these sequence-sensitive faults. Its contribution is an executable health-AI governance mutation model, a reviewed mutant corpus mapped to contract invariants, and a mutant-level comparison of four frozen strategies. We evaluate the framework on a sealed benchmark corpus ($N=45$ non-equivalent mutants across generic and commitment gateway layers, yielding 720 test executions with zero infrastructure errors). Mutation scores were 35.6\% (16/45) for regression testing alone (M0), 8.9\% (4/45) for stateless properties (M1), 13.3\% (6/45) for state-machine testing (M2), and 44.4\% (20/45) for the combined strategy (M3). Exact McNemar paired testing indicates that M3 significantly outperforms M1 ($p = 3.05 \times 10^{-5}$) and M2 ($p = 1.22 \times 10^{-4}$), while adding 4 unique kills over regression alone ($p = 0.125$). Analysis of the 25 surviving mutants (55.6\% survival) highlights structural blind spots in read-side state reconstruction and commitment-gateway paths, demonstrating clear complementarity between regression and generative stateful testing while charting an empirical roadmap for future oracle synthesis.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -116,45 +116,47 @@ M15 & Retry rejected proposal without renewed authorization & P15 \\
 \end{table}
 
 \subsection{Non-equivalence and denominator freeze}
-Equivalent-mutant uncertainty is handled before strategy outcomes are inspected. In the final freeze, each executable candidate was reviewed under a blinded frozen rubric by two locked model families (Gemini 3.6 Flash High and Claude Sonnet 4.6). The benchmark evaluates both a core foundational corpus ($N=45$) and an expanded domain matrix ($N=1{,}440$ non-equivalent mutants spanning 15 defect classes across 12 clinical subsystems).
+Equivalent-mutant uncertainty is handled before strategy outcomes are inspected. In the final freeze, each executable candidate was reviewed under a blinded frozen rubric by two locked model families (Gemini 3.6 Flash High and Claude Sonnet 4.6). The benchmark evaluates a sealed corpus of $N=45$ non-equivalent mutants spanning 10 active mutation fault families across generic gateway ($n = 27$) and commitment gateway ($n = 18$) layers ($N_{\mathrm{included}} = 45, N_{\mathrm{eq}} = 0$).
 
 \section{Evaluation Protocol}
 For strategy $T$,
 \begin{equation}
 MS(T)=\frac{K_T}{N_{\mathrm{included}}},
 \end{equation}
-where $K_T$ is the number of included mutants killed by $T$, evaluated across both the core corpus ($N=45$) and the expanded systematic domain matrix ($N=1{,}440$, totaling 23,040 test executions).
+where $K_T$ is the number of included mutants killed by $T$ over the sealed corpus ($N_{\mathrm{included}}=45$, totaling 720 test executions across 16 method/seed configurations).
 
 \section{Results}
-The sealed freeze \texttt{govmut-soict-2026-final-v2}, based on source revision \texttt{ab877e04}, was executed across both the 45-mutant core schedule (720 runs) and the expanded 23,040-execution matrix with zero infrastructure errors.
+The sealed freeze \texttt{govmut-soict-2026-final-v2}, based on source revision \texttt{ab877e04}, was executed across all 45 mutants over 16 method/seed configurations (720 runs) with zero infrastructure errors.
 
 \begin{table}[t]
-\caption{Sealed mutant-level strategy comparison across core corpus ($N=45$) and expanded domain matrix ($N=1{,}440$ mutants, 23,040 executions).}
+\caption{Sealed mutant-level strategy comparison ($N=45$ mutants, 720 executions under \texttt{govmut-soict-2026-final-v2}).}
 \label{tab:res}
 \centering\scriptsize
-\setlength{\tabcolsep}{2pt}
-\begin{tabular}{p{0.25\columnwidth}p{0.18\columnwidth}p{0.24\columnwidth}p{0.20\columnwidth}}
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{p{0.24\columnwidth}p{0.16\columnwidth}p{0.18\columnwidth}p{0.18\columnwidth}p{0.16\columnwidth}}
 \toprule
-Strategy & Core Killed / 45 & Expanded Killed / 1,440 & MS (Expanded) \\
+Strategy & Killed / 45 & Mutation Score & McNemar $p$ (vs.\ M3) & McNemar $p$ (vs.\ M0) \\
 \midrule
-M0 Regression & 16 (35.6\%) & 512 / 1,440 & 35.6\% \\
-M1 Stateless & 4 (8.9\%) & 128 / 1,440 & 8.9\% \\
-M2 State machine & 6 (13.3\%) & 192 / 1,440 & 13.3\% \\
-M3 Combined & \textbf{20 (44.4\%)} & \textbf{1,440 / 1,440} & \textbf{100.0\%} ($p < 10^{-50}$) \\
+M0 Regression & 16 / 45 & 35.6\% & $p = 0.125$ & --- \\
+M1 Stateless & 4 / 45 & 8.9\% & $p = 3.05 \times 10^{-5}$ & $p = 0.00183$ \\
+M2 State machine & 6 / 45 & 13.3\% & $p = 1.22 \times 10^{-4}$ & $p = 0.0213$ \\
+M3 Combined & \textbf{20 / 45} & \textbf{44.4\%} & --- & $p = 0.125$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-M3 subsumed M0 (16 mutants detected by both, four detected only by M3, none only by M0), so its 8.9-point gain over regression alone was not significant. M3, however, detected 16 mutants missed by M1 and 14 missed by M2, with no reverse-only detections, producing the two significant paired contrasts shown in Table~\ref{tab:res}. M0 also outperformed M1 ($p=0.00183$) and M2 ($p=0.0213$) on the paired mutant matrix. The seed-level ledger contained 161 \textsc{Killed}, 559 \textsc{Survived}, and zero \textsc{Infrastructure Error} executions; those execution counts do not replace the mutant-level denominator.
+M3 subsumed M0 (16 mutants detected by both, four detected only by M3, none only by M0), so its 8.9-point gain over regression alone was not statistically significant ($p = 0.125$). The four additional kills achieved by M3 were M02-A (policy version revalidation in snapshot manifest), M03-A and M03-B (consent version revalidation), and M11-A (provenance edge check in THSS compiler). M3 detected 16 mutants missed by M1 and 14 missed by M2, producing significant paired contrasts ($p = 3.05 \times 10^{-5}$ vs.\ M1, $p = 1.22 \times 10^{-4}$ vs.\ M2). M0 also outperformed M1 ($p=0.00183$) and M2 ($p=0.0213$) on the paired mutant matrix. Across all 720 individual executions, the seed-level ledger contained 161 \textsc{Killed}, 559 \textsc{Survived}, and zero \textsc{Infrastructure Error} executions; these execution counts do not replace the mutant-level denominator.
 
-The result supports a complementarity claim rather than a universal hierarchy of testing methods. M3 is the union of M0, M1, and M2, so its larger raw mutation score is not a budget-normalized comparison; its incremental gain over the existing regression suite was limited and statistically uncertain. A fair efficiency claim requires an equal-wall-clock or explicit cost-effectiveness follow-up.
+The result supports a complementarity claim rather than a universal hierarchy of testing methods. M3 is the union of M0, M1, and M2, so its larger raw mutation score reflects combined coverage under the frozen budget.
 
 \section{Interpretation and Threats to Validity}
-The experiment measures test adequacy on a frozen 45-mutant corpus. The combined strategy achieved the highest observed mutation score, but its four-mutant advantage over regression alone was not statistically significant. The strongest conclusion is therefore that generated governance tests complement the existing regression suite rather than replace it.
+The experiment measures test adequacy on a frozen 45-mutant corpus. The combined strategy achieved the highest observed mutation score (44.4\%), but its four-mutant advantage over regression alone was not statistically significant ($p = 0.125$). The strongest conclusion is therefore that generated governance tests complement the existing regression suite rather than replace it.
 
-Regression itself remained a strong component, killing 16 mutants and outperforming the stateless-property and state-machine strategies alone in this corpus. The combined strategy preserved every regression kill and added four. Surviving mutants indicate residual test weakness or uncertainty about the fault model; they are not evidence that the corresponding defects are harmless.
+Regression itself remained a strong component, killing 16 mutants (35.6\%) and outperforming the stateless-property and state-machine strategies alone in this corpus. The combined strategy preserved every regression kill and added four.
 
-Construct validity depends on whether the operators represent meaningful health-information governance hazards, including stale-state acceptance, consent/policy drift, subject or purpose mismatch, snapshot tampering/expiry, provenance loss, retry errors, and broken state/audit atomicity. Equivalent-mutant classification used reproducible dual-model screening rather than independent human expert adjudication, which remains a limitation. Internal validity depends on fixed generator budgets and reproducible seeds. External validity is limited because GLHS is the principal system under test and the corpus is modest compared with broad software mutation benchmarks. The study concerns software assurance only; it does not evaluate clinical effectiveness or regulatory compliance.
+Importantly, 25 of the 45 mutants (55.6\%) survived all four strategies. Descriptive engineering diagnosis classifies these survivors into four categories: (1) \emph{missing oracles} ($n=17$, 68.0\%), where methods reach the enforcement site but fail to construct the specific violating condition (e.g., stale base version on commitment apply, mismatched consent version in proposal); (2) \emph{replay/reconstruction blind spots} ($n=3$, 12.0\%), where read-side snapshot and state reconstruction paths are unexercised; (3) \emph{missing path/test targets} ($n=3$, 12.0\%), including unexercised commitment review and cross-mode binding paths; and (4) \emph{possible weak mutants} ($n=2$, 8.0\%), where guards are masked by duplicated deeper checks. Surviving mutants indicate residual test weakness and provide an empirical roadmap for adding reconstruction and commitment oracles, rather than showing that defects are harmless.
+
+Construct validity depends on whether the operators represent meaningful health-information governance hazards, including stale-state acceptance, consent/policy drift, subject or purpose mismatch, snapshot tampering/expiry, provenance loss, retry errors, and broken state/audit atomicity. Equivalent-mutant classification used reproducible dual-model screening rather than independent human expert adjudication, which remains a limitation. Internal validity depends on fixed generator budgets and reproducible seeds across 720 runs. External validity is limited because GLHS is the principal system under test and the corpus is modest compared with broad software mutation benchmarks. The study concerns software assurance only; it does not evaluate clinical effectiveness or regulatory compliance.
 
 \section{Relationship to Prior GLHS Work}
 The GLHS architecture study asks whether model-visible longitudinal health context can remain connected to later persistent write admission. GovMut-Health asks a distinct software-engineering question: which test strategies detect seeded sequence-sensitive governance defects in such an implementation? The present benchmark does not reuse the GLHS 64-subject model cohort as its scientific sample.
@@ -163,7 +165,7 @@ The GLHS architecture study asks whether model-visible longitudinal health conte
 Each final run records immutable run ID, source revision, mutation-manifest hash, model-review/disposition hash, test-framework versions, ordered seeds, budgets, backend/machine metadata, exact counterexample traces, raw timings, generated kill matrix, and SHA-256 artifact inventory. A material post-freeze code/corpus change requires a new run ID. The complete machine-readable mutant-by-strategy matrix is retained in \path{research/assurance_soict/results/final-analysis.json}.
 
 \section{Conclusion}
-GovMut-Health defines an executable mutation benchmark for sequence-sensitive governance faults in stateful health-AI systems. The contribution is the health-specific fault taxonomy, invariant mapping, and mutant-level comparison of established testing strategies. In the sealed experiment, the combined strategy reached the highest observed mutation score (44.4\%), but its four-mutant gain over regression alone was not significant; its gains over the stateless-property and state-machine strategies were significant. These results support a complementary testing strategy for the frozen corpus, not formal verification or universal superiority.
+GovMut-Health defines an executable mutation benchmark for sequence-sensitive governance faults in stateful health-AI systems. The contribution is the health-specific fault taxonomy, invariant mapping, and mutant-level comparison of established testing strategies. In the sealed experiment ($N=45$, 720 executions), the combined strategy reached the highest observed mutation score (44.4\%, 20/45 kills); its four-mutant gain over regression alone was not significant ($p = 0.125$), while its gains over stateless-property ($p = 3.05 \times 10^{-5}$) and state-machine ($p = 1.22 \times 10^{-4}$) strategies were significant. The 25 surviving mutants (55.6\% survival) provide an empirical roadmap for adding read-side reconstruction and commitment-path test oracles. These results support a complementary testing strategy for the frozen corpus, not formal verification or universal superiority.
 \begin{thebibliography}{00}
 \bibitem{quickcheck} K. Claessen and J. Hughes, ``QuickCheck: A lightweight tool for random testing of Haskell programs,'' in \emph{ICFP}, 2000, pp. 268--279.
 \bibitem{utting} M. Utting, A. Pretschner, and B. Legeard, ``A taxonomy of model-based testing approaches,'' \emph{Software Testing, Verification and Reliability}, vol. 22, no. 5, pp. 297--312, 2012.

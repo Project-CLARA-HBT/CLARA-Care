@@ -251,7 +251,7 @@ class SparseIndex:
     # -- construction helpers ------------------------------------------------
 
     @classmethod
-    def from_engine(cls, engine: Engine) -> "SparseIndex":
+    def from_engine(cls, engine: Engine) -> SparseIndex:
         """Build an index from a SQLAlchemy ``Engine`` (no connection opened)."""
 
         factory = sessionmaker(bind=engine, expire_on_commit=False)

@@ -43,9 +43,7 @@ def expected_reported_model_id(requested_model_id: str) -> str:
         raise ProviderError("undeclared_model") from exc
 
 
-def reported_model_matches_requested(
-    requested_model_id: str, reported_model_id: object
-) -> bool:
+def reported_model_matches_requested(requested_model_id: str, reported_model_id: object) -> bool:
     return (
         requested_model_id in ALLOWED_MODELS
         and reported_model_id == REPORTED_MODEL_ID_BY_REQUESTED[requested_model_id]
@@ -118,12 +116,8 @@ class RunLimits:
             max_cases=min(int(os.getenv("COMMITLOOP_MAX_CASES", "50")), 5000),
             max_requests=min(int(os.getenv("COMMITLOOP_MAX_REQUESTS", "100")), 20000),
             max_concurrency=min(int(os.getenv("COMMITLOOP_MAX_CONCURRENCY", "2")), 16),
-            timeout_seconds=min(
-                float(os.getenv("COMMITLOOP_TIMEOUT_SECONDS", "60")), 300.0
-            ),
-            checkpoint_every=max(
-                1, int(os.getenv("COMMITLOOP_CHECKPOINT_EVERY", "10"))
-            ),
+            timeout_seconds=min(float(os.getenv("COMMITLOOP_TIMEOUT_SECONDS", "60")), 300.0),
+            checkpoint_every=max(1, int(os.getenv("COMMITLOOP_CHECKPOINT_EVERY", "10"))),
             max_retries=min(max(0, int(os.getenv("COMMITLOOP_MAX_RETRIES", "2"))), 5),
             retry_backoff_seconds=min(
                 max(0.0, float(os.getenv("COMMITLOOP_RETRY_BACKOFF_SECONDS", "0.25"))),
@@ -266,30 +260,20 @@ class EvaluationClient:
                 self._sleeper(self._limits.retry_backoff_seconds * (2**attempt))
             except (OSError, TimeoutError) as exc:
                 if attempt >= self._limits.max_retries:
-                    raise ProviderError(
-                        "provider_transport_exhausted", attempts=attempts
-                    ) from exc
+                    raise ProviderError("provider_transport_exhausted", attempts=attempts) from exc
                 self._sleeper(self._limits.retry_backoff_seconds * (2**attempt))
         if response is None:
             raise ProviderError("provider_transport_exhausted", attempts=attempts)
         latency_ms = (time.perf_counter() - started) * 1000.0
         reported = response.get("model")
         if not isinstance(reported, str):
-            raise ProviderError(
-                "model_substitution_detected:missing", attempts=attempts
-            )
+            raise ProviderError("model_substitution_detected:missing", attempts=attempts)
         if reported != self._reported_model_mapping[model]:
             # This contains only a bounded model identifier, never router
             # content or credentials, so a probe can diagnose exact-ID drift.
-            raise ProviderError(
-                f"model_substitution_detected:{reported}", attempts=attempts
-            )
+            raise ProviderError(f"model_substitution_detected:{reported}", attempts=attempts)
         choices = response.get("choices")
-        if (
-            not isinstance(choices, list)
-            or not choices
-            or not isinstance(choices[0], dict)
-        ):
+        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
             raise ProviderError("malformed_provider_response", attempts=attempts)
         message = choices[0].get("message")
         content = message.get("content") if isinstance(message, dict) else None

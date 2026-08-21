@@ -37,7 +37,7 @@ Kiến trúc CLARA-Care được tổ chức thành các tầng rõ ràng:
 \section{Đánh giá và tính bền vững}
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Quy mô nhập dữ liệu}: Đã kiểm chứng cục bộ 1.307.771 FHIR Bundle từ SyntheticMass; 927.109 bản ghi FHIR của 100 chủ thể từ MIMIC-IV Demo; và 540.237 bản ghi eICU Demo chuẩn hóa cho 1.841 chủ thể và 2.520 đợt nằm ICU, bảo tồn 100\% tải trọng nguồn và mã băm provenance.
-\item \textbf{Hiệu quả bối cảnh AI}: Trong đoàn hệ 64 chủ thể tổng hợp, THSS nghiêm ngặt đạt khớp chính xác toàn trục ở 63/64 ca với Claude Sonnet 4.6 và 64/64 ca với Gemini 3.6 Flash High. Lưới 6 tác vụ đạt 11/12 ô đúng so với 9/12 ở bối cảnh không ràng buộc. Đánh giá mù trên 384 chủ thể với Claude cho kết quả tương đương giữa THSS nghiêm ngặt và toàn bộ lịch sử, chứng minh việc giới hạn phạm vi giảm thiểu phơi nhiễm dữ liệu mà không làm giảm độ chính xác suy luận.
+\item \textbf{Hiệu quả bối cảnh AI}: Trong đoàn hệ 64 chủ thể tổng hợp, THSS nghiêm ngặt đạt khớp chính xác toàn trục ở 63/64 ca với Claude Sonnet 4.6 và 64/64 ca với Gemini 3.6 Flash High. Lưới 6 tác vụ đạt 11/12 ô đúng so với 9/12 ở bối cảnh không ràng buộc. Đánh giá mù trên 384 chủ thể với Claude cho kết quả độ lệch null giữa THSS nghiêm ngặt và toàn bộ lịch sử ($\hat{\Delta} = -0{,}781\%$, $p=0{,}867$), cho thấy việc giới hạn phạm vi giảm thiểu đáng kể token và độ trễ trong khi độ lệch chính xác nằm trong phương sai thực nghiệm.
 \item \textbf{Kiểm thử tương tranh và an toàn quản trị so với FHIR REST ETag}:
 Trên bộ chuẩn tương tranh PostgreSQL 16 gồm 16 luồng xử lý 500 giao dịch lâm sàng thuộc 5 nhóm kịch bản:
 \begin{itemize}[nosep]

@@ -68,9 +68,10 @@ def test_writer_emits_frozen_machine_readable_artifacts(tmp_path) -> None:
     manifest = json.loads((tmp_path / "evidence-manifest.json").read_text(encoding="utf-8"))
     assert summary["schema_version"] == "glhs-q3-structural-v3"
     assert summary["score_release"]["final_score_released"] is False
-    assert manifest["summary_sha256"] == hashlib.sha256(
-        (tmp_path / "summary.json").read_bytes()
-    ).hexdigest()
+    assert (
+        manifest["summary_sha256"]
+        == hashlib.sha256((tmp_path / "summary.json").read_bytes()).hexdigest()
+    )
     with (tmp_path / "baseline_comparison.csv").open(encoding="utf-8", newline="") as handle:
         assert len(list(csv.DictReader(handle))) == 5
     for name in (
@@ -81,7 +82,9 @@ def test_writer_emits_frozen_machine_readable_artifacts(tmp_path) -> None:
         "latency.svg",
         "scalability.svg",
     ):
-        assert ElementTree.fromstring((tmp_path / name).read_text(encoding="utf-8")).tag.endswith("svg")
+        assert ElementTree.fromstring((tmp_path / name).read_text(encoding="utf-8")).tag.endswith(
+            "svg"
+        )
 
 
 def test_explicit_mimic_demo_structural_manifest_never_loads_raw_clinical_data(tmp_path) -> None:
@@ -128,7 +131,9 @@ def test_explicit_mimic_demo_structural_manifest_never_loads_raw_clinical_data(t
     assert demo["eligible_for_final_score"] is False
 
 
-def test_sealed_external_holdout_requires_freeze_metadata_and_releases_only_that_score(tmp_path) -> None:
+def test_sealed_external_holdout_requires_freeze_metadata_and_releases_only_that_score(
+    tmp_path,
+) -> None:
     perturbations = tmp_path / "sealed.jsonl"
     rows = [
         {
@@ -136,7 +141,9 @@ def test_sealed_external_holdout_requires_freeze_metadata_and_releases_only_that
             "subject_token": f"synthea-token-{index:03d}",
             "scenario": "late_evidence" if index % 2 else "conflict",
             "expected_state": "1000mg" if index % 2 else "conflict",
-            "expected_error": "stale_state_version" if index % 2 else "comparable_authority_conflict",
+            "expected_error": "stale_state_version"
+            if index % 2
+            else "comparable_authority_conflict",
             "critical_fact_count": 3,
             "nonessential_authorized_fact_count": 7,
             "authorized": True,
@@ -187,7 +194,9 @@ def test_temporal_provenance_baseline_is_stronger_than_lww_but_has_no_policy_gat
     assert stronger["gst_bypass"]["numerator"] > 0
 
 
-def test_preparer_consumes_all_declared_source_tables_without_emitting_raw_identifiers(tmp_path) -> None:
+def test_preparer_consumes_all_declared_source_tables_without_emitting_raw_identifiers(
+    tmp_path,
+) -> None:
     root = tmp_path / "source"
     hosp = root / "hosp"
     hosp.mkdir(parents=True)

@@ -34,9 +34,7 @@ def _sha(path: Path) -> str:
 
 
 def _git(*args: str) -> str:
-    result = subprocess.run(
-        ["git", *args], cwd=_root(), check=True, capture_output=True, text=True
-    )
+    result = subprocess.run(["git", *args], cwd=_root(), check=True, capture_output=True, text=True)
     return result.stdout.strip()
 
 
@@ -127,9 +125,7 @@ def freeze(
         "cohort_manifest_path_local_only": _record_path(
             cohort_manifest_path, allow_external=not enforce_repository_freeze
         ),
-        "protocol_path": _record_path(
-            protocol_path, allow_external=not enforce_repository_freeze
-        ),
+        "protocol_path": _record_path(protocol_path, allow_external=not enforce_repository_freeze),
         "artifact_files": artifact_files,
         "protocol_payload_sha256": protocol["protocol_payload_sha256"],
         "run_manifest_payload_sha256": run_manifest["manifest_payload_sha256"],
@@ -148,13 +144,9 @@ def freeze(
         "postgresql_or_http_measured": run_manifest["postgresql_or_http_measured"],
         "claim_limit": run_manifest["claim_limit"],
     }
-    payload["freeze_payload_sha256"] = hashlib.sha256(
-        _canonical(payload).encode()
-    ).hexdigest()
+    payload["freeze_payload_sha256"] = hashlib.sha256(_canonical(payload).encode()).hexdigest()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    destination.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
 
 
@@ -220,9 +212,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.verify:
-            result = verify_freeze(
-                args.destination, verify_local_artifact=not args.metadata_only
-            )
+            result = verify_freeze(args.destination, verify_local_artifact=not args.metadata_only)
         else:
             if not all((args.output, args.tasks, args.cohort_manifest, args.protocol)):
                 parser.error("freeze requires --output, --tasks, --cohort-manifest and --protocol")

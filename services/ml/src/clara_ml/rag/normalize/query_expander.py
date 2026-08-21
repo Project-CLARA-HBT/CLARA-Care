@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
@@ -123,7 +124,7 @@ class _EntityLinkerLike(Protocol):
     and so does any fake exposing ``link(text, *, lang) -> list[LinkedEntity]``.
     """
 
-    def link(self, text: str, *, lang: str) -> list["LinkedEntity"]: ...
+    def link(self, text: str, *, lang: str) -> list[LinkedEntity]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -150,7 +151,7 @@ def _normalize_phrase(text: str) -> str:
     return " ".join(_tokenize(text))
 
 
-def _dedupe(items: list[str]) -> list[str]:
+def _dedupe(items: Iterable[str]) -> list[str]:
     """Order-preserving de-duplication, dropping empty strings."""
 
     seen: set[str] = set()

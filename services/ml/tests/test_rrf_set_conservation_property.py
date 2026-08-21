@@ -37,15 +37,15 @@ Validates: Requirements 7.3.
 
 from __future__ import annotations
 
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 # Import the store package first so it fully initializes before score_engine is
 # pulled in as a top-level import. score_engine -> embedder -> store.schema and
 # store/__init__ -> hybrid_retriever -> score_engine form an import cycle that
 # only resolves when ``clara_ml.rag.store`` loads first; doing so here keeps
 # this test importable in isolation.
 import clara_ml.rag.store  # noqa: F401
-from hypothesis import given, settings
-from hypothesis import strategies as st
-
 from clara_ml.rag.retrieval.domain import Document
 from clara_ml.rag.retrieval.score_engine import rrf_fuse
 

@@ -31,6 +31,7 @@ from sqlalchemy import create_engine
 # Import the store package first to avoid the documented circular-import quirk
 # (pipeline.py relies on the same ordering).
 import clara_ml.rag.store  # noqa: F401
+from clara_ml.rag.pipeline import RagPipelineP1
 from clara_ml.rag.store import health
 from clara_ml.rag.store.health import (
     PersistentStoreStatus,
@@ -40,7 +41,6 @@ from clara_ml.rag.store.health import (
     run_startup_self_check,
     set_resolved_persistent_flags,
 )
-from clara_ml.rag.pipeline import RagPipelineP1
 
 
 def _settings(*, store: bool = False, retrieval: bool = False, database_url: str = ""):

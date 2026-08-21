@@ -48,23 +48,28 @@ def is_valid_purpose(purpose: str) -> bool:
     return purpose in COMPLIANCE_PURPOSES
 
 
-def _latest_row(db: Session, *, user_id: int, purpose: str) -> UserConsent | None:
+def _latest_row(
+    db: Session,
+    *,
+    user_id: int,
+    purpose: str,
+    for_update: bool = False,
+) -> UserConsent | None:
     # The ledger is append-only, so several rows can exist for one purpose; take
     # the most recent (``.first()``, never ``scalar_one_or_none`` which would
     # raise on >1 row).
     consent_type = consent_type_for(purpose)
-    return (
-        db.execute(
-            select(UserConsent)
-            .where(
-                UserConsent.user_id == user_id,
-                UserConsent.consent_type == consent_type,
-            )
-            .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
+    stmt = (
+        select(UserConsent)
+        .where(
+            UserConsent.user_id == user_id,
+            UserConsent.consent_type == consent_type,
         )
-        .scalars()
-        .first()
+        .order_by(UserConsent.accepted_at.desc(), UserConsent.id.desc())
     )
+    if for_update:
+        stmt = stmt.with_for_update()
+    return db.execute(stmt).scalars().first()
 
 
 def has_consent(db: Session, *, user_id: int, purpose: str) -> bool:

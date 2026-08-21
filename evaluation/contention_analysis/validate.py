@@ -80,8 +80,7 @@ def validate(root: Path) -> dict[str, object]:
     strategy_model_path = root / "strategy_model.json"
     manifest_path = root / "manifest.json"
     if not all(
-        path.is_file()
-        for path in (attempts_path, summary_path, strategy_model_path, manifest_path)
+        path.is_file() for path in (attempts_path, summary_path, strategy_model_path, manifest_path)
     ):
         raise FreezeError("contention_artifact_incomplete")
     manifest = load_frozen_json(manifest_path)
@@ -95,12 +94,10 @@ def validate(root: Path) -> dict[str, object]:
         or manifest.get("fixture_contains_phi") is not False
         or manifest.get("inference") != "descriptive_no_hypothesis_test"
         or manifest.get("dependency_operationalization") != "assertion_semantic_key"
-        or manifest.get("experimental_unit")
-        != "independently_seeded_profile_race_batch"
+        or manifest.get("experimental_unit") != "independently_seeded_profile_race_batch"
         or manifest.get("observational_unit") != "writer_attempt"
         or manifest.get("aggregation") != "workload_by_concurrency_level"
-        or manifest.get("missing_output_policy")
-        != "missing_or_unclassified_attempt_is_failure"
+        or manifest.get("missing_output_policy") != "missing_or_unclassified_attempt_is_failure"
         or manifest.get("retry_policy") != "no_retry_in_primary_race"
     ):
         raise FreezeError("contention_manifest_contract_invalid")
@@ -114,10 +111,7 @@ def validate(root: Path) -> dict[str, object]:
     environment = manifest.get("environment")
     if (
         not isinstance(implementation, dict)
-        or re.fullmatch(
-            r"[0-9a-f]{40}", str(implementation.get("implementation_sha", ""))
-        )
-        is None
+        or re.fullmatch(r"[0-9a-f]{40}", str(implementation.get("implementation_sha", ""))) is None
         or not isinstance(implementation.get("tracked_worktree_clean"), bool)
         or not isinstance(implementation.get("implementation_paths_tracked"), bool)
         or not isinstance(implementation.get("files_sha256"), dict)
@@ -129,9 +123,7 @@ def validate(root: Path) -> dict[str, object]:
         or not isinstance(environment, dict)
         or environment.get("database") != "postgresql"
         or environment.get("alembic_revision") != "20260811_0055"
-        or re.fullmatch(
-            r"sha256:[0-9a-f]{64}", str(environment.get("database_image_digest", ""))
-        )
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", str(environment.get("database_image_digest", "")))
         is None
         or not isinstance(environment.get("database_size_bytes"), int)
     ):
@@ -140,8 +132,7 @@ def validate(root: Path) -> dict[str, object]:
     strategy_model = load_frozen_json(strategy_model_path)
     if (
         strategy_model.get("schema_version") != "glhs-version-strategy-model.v1"
-        or strategy_model.get("status")
-        != "DETERMINISTIC_MECHANISM_MODEL_NOT_PRODUCTION_EXECUTION"
+        or strategy_model.get("status") != "DETERMINISTIC_MECHANISM_MODEL_NOT_PRODUCTION_EXECUTION"
         or strategy_model.get("latency_measured") is not False
         or strategy_model.get("strategies") != list(STRATEGIES)
         or strategy_model.get("rows") != matrix(WORKLOADS, CONCURRENCY_LEVELS)
@@ -174,13 +165,9 @@ def validate(root: Path) -> dict[str, object]:
         _integer(row, "batch_db_reads")
         _integer(row, "batch_db_writes")
 
-    summary_by_key = {
-        (row["workload"], _integer(row, "concurrency")): row for row in summaries
-    }
+    summary_by_key = {(row["workload"], _integer(row, "concurrency")): row for row in summaries}
     expected_summary_keys = {
-        (workload, concurrency)
-        for workload in WORKLOADS
-        for concurrency in CONCURRENCY_LEVELS
+        (workload, concurrency) for workload in WORKLOADS for concurrency in CONCURRENCY_LEVELS
     }
     if len(summaries) != len(expected_summary_keys) or set(summary_by_key) != expected_summary_keys:
         raise FreezeError("contention_summary_grid_incomplete")
@@ -189,8 +176,7 @@ def validate(root: Path) -> dict[str, object]:
         rows = [
             row
             for row in attempts
-            if row["workload"] == workload
-            and _integer(row, "concurrency") == concurrency
+            if row["workload"] == workload and _integer(row, "concurrency") == concurrency
         ]
         for batch in range(repetitions):
             batch_rows = [row for row in rows if _integer(row, "batch") == batch]
@@ -199,9 +185,7 @@ def validate(root: Path) -> dict[str, object]:
                     raise FreezeError("contention_batch_metric_inconsistent")
             accepted = [row for row in batch_rows if row["result"] == "accepted"]
             rejected = [row for row in batch_rows if row["result"] == "rejected"]
-            expected_stale_class = (
-                "true_stale" if workload == "same_dependency" else "false_stale"
-            )
+            expected_stale_class = "true_stale" if workload == "same_dependency" else "false_stale"
             if (
                 len(accepted) != 1
                 or len(rejected) != concurrency - 1
@@ -230,36 +214,24 @@ def validate(root: Path) -> dict[str, object]:
         if any(_integer(summary, field) != value for field, value in expected_integers.items()):
             raise FreezeError("contention_summary_count_mismatch")
         latencies = [_number(row, "latency_ms") for row in rows]
-        batch_wall = {
-            _integer(row, "batch"): _number(row, "batch_wall_ms") for row in rows
-        }
-        batch_reads = {
-            _integer(row, "batch"): _integer(row, "batch_db_reads") for row in rows
-        }
-        batch_writes = {
-            _integer(row, "batch"): _integer(row, "batch_db_writes") for row in rows
-        }
+        batch_wall = {_integer(row, "batch"): _number(row, "batch_wall_ms") for row in rows}
+        batch_reads = {_integer(row, "batch"): _integer(row, "batch_db_reads") for row in rows}
+        batch_writes = {_integer(row, "batch"): _integer(row, "batch_db_writes") for row in rows}
         expected_numbers = {
             "false_stale_rate_per_attempt": round(expected_false / expected_attempts, 6),
             "p50_ms": round(percentile(latencies, 0.50), 3),
             "p95_ms": round(percentile(latencies, 0.95), 3),
             "p99_ms": round(percentile(latencies, 0.99), 3),
-            "throughput_per_second": round(
-                1000 * expected_attempts / sum(batch_wall.values()), 3
-            ),
+            "throughput_per_second": round(1000 * expected_attempts / sum(batch_wall.values()), 3),
             "db_reads": float(sum(batch_reads.values())),
             "db_writes": float(sum(batch_writes.values())),
-            "writes_per_accepted_commit": round(
-                sum(batch_writes.values()) / repetitions, 3
-            ),
+            "writes_per_accepted_commit": round(sum(batch_writes.values()) / repetitions, 3),
         }
         if any(_number(summary, field) != value for field, value in expected_numbers.items()):
             raise FreezeError("contention_summary_metric_mismatch")
         if _number(summary, "peak_rss_bytes") <= 0:
             raise FreezeError("contention_peak_rss_invalid")
-    _validate_checksums(
-        root, (attempts_path, summary_path, strategy_model_path, manifest_path)
-    )
+    _validate_checksums(root, (attempts_path, summary_path, strategy_model_path, manifest_path))
     return manifest
 
 
