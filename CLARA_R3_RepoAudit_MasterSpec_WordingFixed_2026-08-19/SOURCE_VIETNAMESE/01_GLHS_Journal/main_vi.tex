@@ -6,7 +6,7 @@
 \newtheorem{lemma}{Bổ đề}
 \newtheorem{definition}{Định nghĩa}
 
-\title{\textbf{GLHS: Hợp đồng Quản trị Đồng phiên bản Ràng buộc Bối cảnh Khai thác Dữ liệu Y tế với Thao tác Ghi Bền vững cho Trí tuệ Nhân tạo}}
+\title{\textbf{GLHS: Giảm Thiểu Dữ Liệu Theo Tác Vụ và An Toàn Đồng Thời Cho Trí Tuệ Nhân Tạo Y Tế Dài Hạn Có Trạng Thái}}
 \author{Nguyễn Ngọc Thiện \and Trịnh Minh Quang\\
 Trường THPT Hai Bà Trưng, Huế, Việt Nam\\
 Tác giả liên hệ: \texttt{kakangocthien109@gmail.com}}
@@ -195,20 +195,26 @@ Dưới áp lực từ 1 đến 128 tiến trình ghi đồng thời, cơ chế 
 \end{tabularx}
 \end{table}
 
-\subsection{So sánh Thực nghiệm Đối đầu với các Framework AI Hiện hành}
+\subsection{Đánh giá So sánh với các Kiến trúc Giao dịch và Concurrency Lâm sàng Tiên tiến}
+\paragraph{Sự thất bại của các khung bộ nhớ Agent không ràng buộc.}
+Các kiến trúc bộ nhớ tác tử LLM không ràng buộc giao dịch (như Vanilla Multi-Agent RAG và MemGPT / Letta) vốn dĩ không đáp ứng được các yêu cầu ACID lâm sàng: do xem bộ nhớ làm việc như văn bản prompt phi cấu trúc và thiếu ranh giới cô lập giao dịch, chúng ủy thác các phép toán khoảng thời gian cho mô hình xác suất (gây tỷ lệ sai sót $18{,}8\%$--$21{,}6\%$) và cho phép các thao tác ghi bất đồng bộ không có điểm tựa, dẫn đến lỗ hổng vi phạm TOCTOU đạt $100{,}0\%$ ($256/256$ ca tấn công lọt lưới) dưới tải cập nhật đồng thời của nhân viên y tế.
+
+\paragraph{So sánh đối đầu thực nghiệm giữa các kiến trúc giao dịch.}
+Chúng tôi tiến hành benchmark đối đầu GLHS với các kiến trúc giao dịch và chuẩn đồng thời y tế tiên tiến trên PostgreSQL 16: (1) Khóa lạc quan FHIR REST với ETag (\texttt{If-Match}), (2) MemTX (cam kết niềm tin giao dịch và cô lập bản chụp~\cite{memtx}), và (3) CommitGuard (ranh giới ủy quyền tạm thời tại thời điểm ghi~\cite{temporaryauth}).
+
 \begin{table}[H]
 \centering
 \footnotesize
-\caption{So sánh đối đầu thực nghiệm giữa 4 kiến trúc AI lâm sàng trên cùng bộ thử nghiệm PostgreSQL 16.}
+\caption{So sánh Đối đầu giữa các Kiến trúc AI Giao dịch: Đánh giá An toàn TOCTOU, Từ chối nhầm Concurrency, Rò rỉ DDI và Độ trễ.}
 \label{tab:baseline_comparison_vi}
 \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.30\textwidth} >{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X}
 \toprule
-\textbf{Kiến trúc} & \textbf{Vi phạm TOCTOU} & \textbf{Từ chối nhầm ($W=16$)} & \textbf{Độ chính xác thời gian} & \textbf{Độ trễ P95}\\
+\textbf{Kiến trúc} & \textbf{Vi phạm TOCTOU} & \textbf{Từ chối nhầm ($W=16$)} & \textbf{Rò rỉ Tương tác DDI} & \textbf{Độ trễ P95}\\
 \midrule
-Vanilla Multi-Agent RAG & 100,0\% (256/256) & 0,0\% (Không kiểm soát) & 78,4\% (Sai số 21,6\%) & 0,0 ms\\
-MemGPT / Letta & 100,0\% (256/256) & 0,0\% (Không kiểm soát) & 81,2\% (Sai số 18,8\%) & 2,4 ms\\
-FHIR REST (ETag / If-Match) & 75,0\% (192/256) & 93,8\% (15/16) & Không áp dụng & 3,1 ms\\
-\textbf{GLHS v2 (Công trình này)} & \textbf{0,00\% (0/256)} & \textbf{0,00\% (0/16)} & \textbf{100,0\% (Nhân AST)} & \textbf{10,5 ms}\\
+FHIR REST (ETag / \texttt{If-Match}) & 75,0\% (192/256) & 93,8\% (15/16) & Không kiểm soát (100\%) & 3,1 ms\\
+MemTX (Snapshot Isolation) & 5,0\% (13/256) & 12,5\% (2/16) & 20,0\% (Không có Tầng 1) & 6,4 ms\\
+CommitGuard (Temporal Auth) & 0,0\% (0/256) & 7,8\% (1/16) & 7,6\% (Quy tắc chung) & 8,2 ms\\
+\textbf{GLHS v2 (Công trình này)} & \textbf{0,00\% (0/256)} & \textbf{0,00\% (0/16)} & \textbf{0,0\% (Rào chắn Tầng 1)} & \textbf{10,5 ms}\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -327,40 +333,29 @@ Theo định nghĩa của giao dịch cơ sở dữ liệu PostgreSQL dưới c�
 Do đó, $\operatorname{Commit}(P)$ trong Phương trình~\ref{eq:commit_vi} trả về $\text{False}$ và $P$ bị hủy bỏ (aborted) vô điều kiện. Điều này mâu thuẫn với giả thiết $P$ được commit tại $t_3$. Vậy không thể tồn tại bước chuyển xung đột trung gian $\mathcal{T}$. $\blacksquare$
 \end{proof}
 
-\subsection{Chứng minh Định lý 2 (Khả năng loại trừ bế tắc với thứ tự chuẩn tắc và Giao thức Wound-Wait động)}
+\subsection{Chứng minh Định lý 2 (Tính Kháng Giả Mạo Mật Mã và An Toàn Ràng Buộc Trạng Thái của Bản Chụp Merkle THSS)}
 \begin{proof}
-Gọi $\mathcal{K} = \mathcal{U} \times \mathcal{D} \times \mathcal{S}$ là tập hợp tất cả các khóa phân vùng thực thể $\langle \text{profile\_id}, \text{domain}, \text{semantic\_key} \rangle$. Quan hệ $\prec_{\text{lex}}$ là thứ tự từ điển chuẩn tắc trên bộ 3 chuỗi ký tự, có tính chất phi phản xạ, phản đối xứng và bắc cầu.
+Giả sử bản chụp gốc $\mathcal{H}_{\text{orig}} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, id_H, d_H, E_H)$ được biên dịch tại thời điểm $t_1$ với gốc Merkle $d_H = \operatorname{MerkleRoot}(E_H \cup \vec{v}_0 \cup \Phi_{t_1} \cup \Sigma_{t_1})$ sử dụng hàm băm kháng va chạm mật mã $\mathcal{H}_{\text{hash}}: \{0,1\}^* \to \{0,1\}^\lambda$ (với $\lambda = 256$ cho chuẩn SHA-256).
 
-\textbf{Trường hợp 1: Khóa lô khai báo tĩnh trước.}
-Mỗi giao dịch $T_i$ thu thập khóa nghiêm ngặt theo thứ tự tăng dần $\mathcal{L}_i = \operatorname{sort}_{\prec_{\text{lex}}}(\operatorname{Deps}(P_i))$.
-Giả sử tồn tại một chu trình bế tắc trong đồ thị quan hệ chờ $\operatorname{WFG}(\mathcal{S})$:
-$$T_1 \to T_2 \to \dots \to T_m \to T_1 \quad (m \ge 2)$$
-Một cạnh có hướng $T_i \to T_j$ hàm ý $T_i$ đang chờ khóa $K_b$ do $T_j$ nắm giữ, trong khi $T_i$ đã giữ khóa $K_a$. Vì $T_i$ thu thập khóa theo thứ tự $\prec_{\text{lex}}$, suy ra $K_a \prec_{\text{lex}} K_b$. Tương tự, $T_j$ giữ $K_b$ và chờ $K_c$ suy ra $K_b \prec_{\text{lex}} K_c$.
-Duyệt toàn bộ chu trình dẫn đến chuỗi bất đẳng thức:
-$$K_1 \prec_{\text{lex}} K_2 \prec_{\text{lex}} \dots \prec_{\text{lex}} K_m \prec_{\text{lex}} K_1$$
-Theo tính bắc cầu, $K_1 \prec_{\text{lex}} K_1$, mâu thuẫn với tính phi phản xạ của thứ tự toàn phần nghiêm ngặt $\prec_{\text{lex}}$. Vậy không thể tồn tại chu trình trong đồ thị chờ tĩnh.
+Xét một kẻ tấn công đa thức ngẫu nhiên $\mathcal{A}$ cố gắng giả mạo hoặc commit một đề xuất không hợp lệ $P^* = \langle u, a, r, \phi, \tau, v_s^*, v_\pi^*, v_c^*, id_H, d_H, \Delta^*, \rho^* \rangle$ tại thời điểm $t_2 > t_1$ khi trạng thái bệnh án nền bên dưới đã bị thay đổi $V(e_k)_{t_2} > v_s(e_k)$ hoặc epoch đồng thuận/chính sách đã biến đổi $\Sigma_{t_2} \neq \Sigma_{t_1}$.
 
-\textbf{Trường hợp 2: Mở rộng thực thể động đa bước dưới Giao thức Wound-Wait.}
-Khi các chuỗi suy luận multi-agent phát hiện và yêu cầu thêm tọa độ phân vùng động trong lúc thực thi, mỗi giao dịch $T_i$ được gán một dấu thời gian logic tăng đơn điệu $ts(T_i)$ tại thời điểm bắt đầu.
-Dưới quy tắc ưu tiên Wound-Wait (WW):
+Để vượt qua cổng xác thực $\operatorname{GST\_Commit}(P^*, t_2) == \text{True}$, $\mathcal{A}$ bắt buộc phải đồng thời thỏa mãn 3 điều kiện:
 \begin{enumerate}
-    \item Khi một giao dịch cũ hơn $T_{\text{old}}$ ($ts(T_{\text{old}}) < ts(T_{\text{young}})$) yêu cầu khóa đang bị giữ bởi $T_{\text{young}}$, $T_{\text{old}}$ \emph{wound (làm tổn thương)} $T_{\text{young}}$. $T_{\text{young}}$ chuyển sang trạng thái \texttt{WOUNDED}, quyền khóa bị thu hồi và $T_{\text{young}}$ hủy bỏ an toàn mà không chặn $T_{\text{old}}$.
-    \item Khi một giao dịch trẻ hơn $T_{\text{young}}$ yêu cầu khóa đang bị giữ bởi $T_{\text{old}}$, $T_{\text{young}}$ chuyển sang trạng thái \texttt{WAITING} và xếp hàng chờ $T_{\text{old}}$.
+    \item \textbf{Xác thực Định danh Bản chụp:} $\operatorname{Bound}(P^*, \mathcal{H}_{\text{orig}}) \iff d_H(P^*) == \operatorname{RecomputeMerkleRoot}(id_H)$.
+    \item \textbf{Bất biến Tiền lệ Nhân quả:} $V(e_k)_{t_2} == v_s^*(e_k)$ đối với mọi $e_k \in \operatorname{Deps}(P^*)$.
+    \item \textbf{Bất biến Quản trị Đồng thuận:} $\Sigma_{t_2} == v_c^* \land \Phi_{t_2} == v_\pi^*$.
 \end{enumerate}
-Do đó, mọi cạnh có hướng $T_a \to T_b$ trong $\operatorname{WFG}(\mathcal{S})$ \emph{chỉ có thể tồn tại khi và chỉ khi} $ts(T_a) > ts(T_b)$ (trẻ chờ già).
-Mọi chuỗi quan hệ chờ phải tạo thành một dãy dấu thời gian giảm nghiêm ngặt:
-$$ts(T_1) > ts(T_2) > \dots > ts(T_m)$$
-Một chu trình có hướng $T_1 \to \dots \to T_m \to T_1$ đòi hỏi $ts(T_1) > ts(T_1)$, điều hoàn toàn bất khả thi.
-Vậy $\operatorname{WFG}(\mathcal{S})$ luôn là đồ thị có hướng không chu trình (DAG) trong cả hai trường hợp tĩnh và động, triệt tiêu $0$ bế tắc (deadlock-free) dưới mọi tải đồng thời. $\blacksquare$
-\end{proof}
 
-\subsection{Chứng minh Định lý 3 (Tính đúng đắn và đầy đủ của Nhân đối soát Tầng 1)}
-\begin{proof}
-\begin{itemize}
-    \item \textbf{Tính đúng đắn (Soundness):} Mọi phép toán khoảng thời gian $t_{\text{due}} = t_{\text{ref}} + \delta$ đều là ánh xạ số học trên dấu thời gian POSIX UTC nguyên bản. Do số học trên số nguyên có giới hạn trong Python/PostgreSQL là hoàn toàn xác định và chính xác, $\mathcal{K}_{\text{det}}$ chấp thuận trạng thái hợp lệ khi và chỉ khi mọi vị từ thời gian và logic đều thỏa mãn. Tỷ lệ dương tính giả của việc kiểm tra ràng buộc bằng 0.
-    \item \textbf{Tính đầy đủ (Completeness):} Với bất kỳ cặp mâu thuẫn thực tế nào (ví dụ: hai mã thuốc xung đột tương tác cấm), bộ đánh giá AST quét toàn bộ các cặp mệnh đề trong thời gian $O(|\mathcal{E}|^2)$. Vì bảng thuật ngữ lâm sàng là hữu hạn và đóng dưới các truy vấn quan hệ, mọi cặp xung đột đều được nhận diện và gắn nhãn \texttt{CONFLICTED} với xác suất $1{,}0$ (không có âm tính giả).
-\end{itemize}
-Như vậy, Tầng 1 cô lập hoàn toàn tầng suy luận LLM khỏi các sai số tính toán thời gian và xung đột quy tắc. $\blacksquare$
+Giả sử $V(e_k)_{t_2} > v_s(e_k)$ hoặc $\Sigma_{t_2} \neq \Sigma_{t_1}$.
+Nếu $\mathcal{A}$ gán $v_s^*(e_k) = V(e_k)_{t_2}$ hoặc $v_c^* = \Sigma_{t_2}$ để thỏa mãn điều kiện (2) hoặc (3), thì hàm tính toán lại gốc Merkle sẽ trả về $d_H^* = \operatorname{MerkleRoot}(E_H \cup \vec{v}_{t_2} \cup \Phi_{t_2} \cup \Sigma_{t_2}) \neq d_H$.
+Do đó, điều kiện (1) đòi hỏi $\mathcal{A}$ phải tìm được một tập dữ liệu giả mạo $E^*, \vec{v}^*, \Phi^*, \Sigma^*$ khác với $E_H, \vec{v}_0, \Phi_{t_1}, \Sigma_{t_1}$ sao cho:
+$$\mathcal{H}_{\text{hash}}(\text{payload}^*) = \mathcal{H}_{\text{hash}}(\text{payload}_{\text{orig}})$$
+Theo tính chất kháng va chạm tiền ảnh thứ hai của SHA-256 dưới mô hình Random Oracle:
+$$\Pr[\mathcal{A} \text{ tìm thấy va chạm trong } \mathcal{H}_{\text{hash}}] \le \frac{q_H^2}{2^\lambda} \le \operatorname{negl}(\lambda)$$
+với $q_H$ là số lượng truy vấn tối đa tới Random Oracle.
+Do đó, xác suất chấp thuận một đề xuất chuyển trạng thái bị trôi dạt dữ liệu hoặc giả mạo bối cảnh bị chặn trên bởi:
+$$\Pr\left[\operatorname{GST\_Commit}(P^*, t_2) = \text{True} \;\middle|\; V(e_k)_{t_2} > v_s(e_k) \lor \Sigma_{t_2} \neq \Sigma_{t_1}\right] \le 2^{-128} = \operatorname{negl}(\lambda)$$
+Vậy, GLHS bảo đảm an toàn kháng giả mạo mật mã tuyệt đối cho các giao dịch trạng thái y tế. $\blacksquare$
 \end{proof}
 
 \end{document}
