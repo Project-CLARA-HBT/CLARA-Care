@@ -85,7 +85,12 @@ def read_current_policy_epoch(
     active version across domains wins, which is the deployment-level policy
     version read by ``_effective_policy_version``.  Returns ``None`` when the
     epoch table has no matching row, which leaves every default path unchanged.
+    When ``for_update=True``, acquires the Policy Lock Anchor before query.
     """
+    if for_update:
+        from clara_api.glhs.lock_hierarchy import acquire_policy_lock_anchor
+
+        acquire_policy_lock_anchor(db, policy_domain=policy_domain)
 
     statement = select(GovernancePolicyEpoch).where(
         GovernancePolicyEpoch.active_from <= datetime.now(UTC)
@@ -100,17 +105,25 @@ def read_current_policy_epoch(
     return db.execute(statement).scalar_one_or_none()
 
 
-def _effective_policy_version(db: Session | None = None, *, for_update: bool = False) -> str:
+def _effective_policy_version(
+    db: Session | None = None,
+    *,
+    for_update: bool = False,
+    policy_domain: str | None = None,
+) -> str:
     """Return the policy version governing admission at this moment.
 
     If an active persisted epoch exists in the database, its version is returned
     in all modes. Otherwise, in an attested isolated GovRed deployment, an
     environment override may simulate a policy update; if no epoch or override is
     active, the deployment-time POLICY_VERSION constant is returned.
+    When ``for_update=True``, acquires the Policy Lock Anchor before reading the epoch.
     """
 
     if db is not None:
-        epoch = read_current_policy_epoch(db, for_update=for_update)
+        epoch = read_current_policy_epoch(
+            db, policy_domain=policy_domain, for_update=for_update
+        )
         if epoch is not None:
             return epoch.version
     if isolated_govred_arm() is not None:
@@ -297,12 +310,11 @@ def _profile_lock_statement(profile_id: int):
 
 
 def _lock_profile_state(db: Session, *, profile_id: int) -> int:
-    """Serialize profile writers where the database supports row locks."""
+    """Serialize profile writers and acquire profile & consent lock anchor."""
+    from clara_api.glhs.lock_hierarchy import acquire_profile_and_consent_anchor
 
-    found = db.execute(_profile_lock_statement(profile_id)).scalar_one_or_none()
-    if found is None:
-        raise GlhsInvariantError("profile_not_found")
-    return current_state_version(db, profile_id=profile_id)
+    base_version, _ = acquire_profile_and_consent_anchor(db, profile_id=profile_id)
+    return base_version
 
 
 def _governed_consent_version(
@@ -318,8 +330,12 @@ def _governed_consent_version(
     provides durable reconstruction metadata without turning the ledger into a
     second consent authority.  ``not_required`` is explicit rather than an
     absent value for internal and currently ungated workflows.
-    When ``for_update=True``, row-level locks are acquired to eliminate TOCTOU races.
+    When ``for_update=True``, acquires the consent lock anchor to eliminate phantom races.
     """
+    if for_update:
+        from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
+
+        acquire_consent_lock_anchor(db, user_id=owner_user_id)
 
     consent_type = {
         "research": "phr_research",
@@ -1371,8 +1387,15 @@ def apply_transition(
             "source_snapshot_digest": assertion.source_snapshot_digest,
         }
     )
-    # Canonical lock hierarchy:
-    # 1. Profile state PhrProfile with SELECT ... FOR UPDATE
+    # Unified Canonical Lock Hierarchy:
+    # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
+    #
+    # Step 1: Policy Lock Anchor
+    from clara_api.glhs.lock_hierarchy import acquire_policy_lock_anchor
+
+    acquire_policy_lock_anchor(db)
+
+    # Step 2: Profile & Consent Lock Anchor (_lock_profile_state)
     base_version = _lock_profile_state(db, profile_id=scope.profile.id)
     # A concurrent request may have committed this idempotency key while this
     # transaction waited for the profile row lock. Re-read under the serialized
@@ -1388,12 +1411,12 @@ def apply_transition(
         if existing.request_digest != request_digest:
             raise GlhsInvariantError("idempotency_key_reuse_mismatch")
         return cast(GlhsTransition, existing)
-    # 2. Active GovernancePolicyEpoch with SELECT ... FOR UPDATE via _effective_policy_version(db, for_update=True)
+    # Step 3: Re-read & verify active UserConsent and GovernancePolicyEpoch under active locks
     current_policy_version = _effective_policy_version(db, for_update=True)
-    # 3. Active UserConsent with SELECT ... FOR UPDATE via _governed_consent_version(db, ..., for_update=True)
     current_consent_version = _governed_consent_version(
         db, owner_user_id=scope.profile.user_id, purpose=scope.purpose, for_update=True
     )
+    # Step 4: Entity partitions in lexicographical canonical order
     locked_partitions = lock_entity_partitions(
         db,
         profile_id=scope.profile.id,

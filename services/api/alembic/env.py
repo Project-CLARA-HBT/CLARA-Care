@@ -1,11 +1,11 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 from clara_api.core.config import get_settings
-from clara_api.db.base import Base
 from clara_api.db import models  # noqa: F401
+from clara_api.db.base import Base
 
 config = context.config
 settings = get_settings()

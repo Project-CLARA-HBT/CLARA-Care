@@ -180,7 +180,10 @@ class TestConfidenceIntervals:
 
     def test_ci_properties(self) -> None:
         mean_diff = -0.0078125
-        se = 0.045 / math.sqrt(384)
+        # Empirical standard deviation sd = 0.6109885037356532
+        # SE = 0.6109885037356532 / sqrt(384) = 0.03117926133096054
+        sd = 0.6109885037356532
+        se = sd / math.sqrt(384)
         df = 383.0
 
         ci_90 = compute_confidence_interval(mean_diff, se, df, 0.90)
@@ -192,41 +195,43 @@ class TestConfidenceIntervals:
         assert (ci_90[0] + ci_90[1]) / 2.0 == pytest.approx(mean_diff, abs=1e-12)
         assert (ci_95[0] + ci_95[1]) / 2.0 == pytest.approx(mean_diff, abs=1e-12)
 
-        # Exact values for GLHS
-        assert ci_90[0] == pytest.approx(-0.01159889, abs=1e-6)
-        assert ci_90[1] == pytest.approx(-0.00402611, abs=1e-6)
-        assert ci_95[0] == pytest.approx(-0.01232762, abs=1e-6)
-        assert ci_95[1] == pytest.approx(-0.00329738, abs=1e-6)
+        # Exact empirical CI values for GLHS:
+        # 90% CI: [-5.922%, +4.360%]
+        # 95% CI: [-6.912%, +5.349%]
+        assert ci_90[0] == pytest.approx(-0.059222, abs=1e-4)
+        assert ci_90[1] == pytest.approx(0.043597, abs=1e-4)
+        assert ci_95[0] == pytest.approx(-0.069117, abs=1e-4)
+        assert ci_95[1] == pytest.approx(0.053492, abs=1e-4)
 
 
 class TestStatisticalPower:
     """Test statistical power calculations across exact, shifted-t, and normal methods."""
 
     def test_power_monotonicity_and_bounds(self) -> None:
+        # When sample size is sufficiently large (e.g. N=10000) for sigma=0.6110 and delta=0.02
         p_exact = compute_tost_power(
-            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="exact"
+            n=10000, delta=0.02, sigma=0.6110, alpha=0.05, diff=0.0, method="exact"
         )
         p_shifted = compute_tost_power(
-            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="shifted_t"
+            n=10000, delta=0.02, sigma=0.6110, alpha=0.05, diff=0.0, method="shifted_t"
         )
         p_norm = compute_tost_power(
-            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.0, method="normal"
+            n=10000, delta=0.02, sigma=0.6110, alpha=0.05, diff=0.0, method="normal"
         )
 
-        assert 0.9999 <= p_exact <= 1.0
-        assert 0.9999 <= p_shifted <= 1.0
-        assert 0.9999 <= p_norm <= 1.0
+        assert 0.89 <= p_exact <= 1.0
+        assert 0.89 <= p_shifted <= 1.0
+        assert 0.89 <= p_norm <= 1.0
 
-        # Power decreases as true mean difference moves away from 0 towards delta
-        p_diff = compute_tost_power(
-            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=-0.0078125, method="exact"
+        # At N=384, statistical power for delta=0.02 and sigma=0.6110 is underpowered (<0.05)
+        p_underpowered = compute_tost_power(
+            n=384, delta=0.02, sigma=0.6110, alpha=0.05, diff=-0.0078125, method="exact"
         )
-        assert p_diff < p_exact
-        assert p_diff == pytest.approx(0.99987, abs=1e-4)
+        assert p_underpowered < 0.05
 
         # Power near boundary delta is close to alpha
         p_edge = compute_tost_power(
-            n=384, delta=0.02, sigma=0.045, alpha=0.05, diff=0.02, method="normal"
+            n=10000, delta=0.02, sigma=0.6110, alpha=0.05, diff=0.02, method="normal"
         )
         assert p_edge == pytest.approx(0.05, abs=0.01)
 
@@ -238,7 +243,6 @@ class TestGLHSStudyVerification:
         study = evaluate_glhs_384_study(
             n=384,
             delta=0.02,
-            sigma=0.045,
             alpha=0.05,
             wins=70,
             losses=73,
@@ -251,47 +255,46 @@ class TestGLHSStudyVerification:
         assert study.losses == 73
         assert study.ties == 241
 
-        # Mean difference = (70 - 73) / 384 = -3 / 384 = -0.0078125
+        # Mean difference = (70 - 73) / 384 = -3 / 384 = -0.0078125 (-0.781%)
         assert study.tost.mean_diff == pytest.approx(-0.0078125, abs=1e-12)
 
-        # Standard error = 0.045 / sqrt(384) = 0.00229639663...
-        assert study.tost.se == pytest.approx(0.0022963966338592295, abs=1e-12)
+        # Sample standard deviation sd = 0.6109885... (≈ 0.6110)
+        assert study.sample_sd == pytest.approx(0.6109885037356532, abs=1e-5)
+
+        # Standard error = sd / sqrt(384) = 0.03117926... (≈ 0.03118)
+        assert study.tost.se == pytest.approx(0.03117926133096054, abs=1e-5)
         assert study.tost.df == 383.0
 
         # Test statistics:
-        # t1 = (-0.0078125 - (-0.02)) / 0.0022963966 = +0.0121875 / 0.0022963966 = +5.307228
-        # t2 = (-0.0078125 - 0.02) / 0.0022963966 = -0.0278125 / 0.0022963966 = -12.111366
-        assert study.tost.t1 == pytest.approx(5.307227776, abs=1e-5)
-        assert study.tost.t2 == pytest.approx(-12.11136595, abs=1e-5)
+        # t1 = (-0.0078125 + 0.02) / 0.03117926 = +0.0121875 / 0.03117926 = +0.390885 ≈ +0.391
+        # t2 = (-0.0078125 - 0.02) / 0.03117926 = -0.0278125 / 0.03117926 = -0.892019 ≈ -0.892
+        assert study.tost.t1 == pytest.approx(0.390883, abs=1e-4)
+        assert study.tost.t2 == pytest.approx(-0.892016, abs=1e-4)
 
         # p-values:
-        # p1 = t_sf(5.3072, 383) ~= 9.44e-08
-        # p2 = t_cdf(-12.1114, 383) ~= 4.15e-29
-        # p_TOST = max(p1, p2) = 9.44e-08 < 0.05
-        assert study.tost.p1 == pytest.approx(9.443339e-08, rel=1e-3)
-        assert study.tost.p2 == pytest.approx(4.150469e-29, rel=1e-3)
-        assert study.tost.p_tost == pytest.approx(study.tost.p1, abs=1e-14)
-        assert study.tost.p_tost < 0.001
-        assert study.tost.is_equivalent is True
+        # p1 = t_sf(0.3909, 383) ≈ 0.34805 ≈ 0.348
+        # p2 = t_cdf(-0.8920, 383) ≈ 0.18647 ≈ 0.187
+        # p_TOST = max(p1, p2) ≈ 0.34805 ≈ 0.348
+        assert study.tost.p1 == pytest.approx(0.34805, abs=1e-3)
+        assert study.tost.p2 == pytest.approx(0.18647, abs=1e-3)
+        assert study.tost.p_tost == pytest.approx(0.34805, abs=1e-3)
+        assert study.tost.is_equivalent is False  # Equivalence inconclusive at N=384
 
-        # Assert 95% CI is strictly contained within [-delta, +delta] = [-0.02, +0.02]
-        ci_95 = study.tost.ci_95
-        assert -0.02 < ci_95[0] < ci_95[1] < 0.02
-        assert study.tost.ci_95_contained is True
-        assert ci_95[0] == pytest.approx(-0.012328, abs=1e-5)
-        assert ci_95[1] == pytest.approx(-0.003297, abs=1e-5)
-
-        # Assert 90% CI is also strictly contained
+        # 90% and 95% Confidence Intervals cross the [-0.02, +0.02] margin:
+        # 90% CI: [-5.922%, +4.360%]
+        # 95% CI: [-6.912%, +5.349%]
         ci_90 = study.tost.ci_90
-        assert -0.02 < ci_90[0] < ci_90[1] < 0.02
-        assert ci_90[0] == pytest.approx(-0.011599, abs=1e-5)
-        assert ci_90[1] == pytest.approx(-0.004026, abs=1e-5)
+        ci_95 = study.tost.ci_95
+        assert ci_90[0] == pytest.approx(-0.05922, abs=1e-3)
+        assert ci_90[1] == pytest.approx(0.04360, abs=1e-3)
+        assert ci_95[0] == pytest.approx(-0.06912, abs=1e-3)
+        assert ci_95[1] == pytest.approx(0.05349, abs=1e-3)
 
-        # Statistical power
-        assert study.statistical_power_exact >= 0.999
-        assert study.statistical_power_exact == pytest.approx(0.999870, abs=1e-5)
+        assert study.tost.ci_95_contained is False
+        assert study.is_underpowered is True
+        assert study.required_n_90_power >= 7500
 
-        # Systems Pareto metrics
+        # Systems metrics (efficiency, minimization, safety)
         assert study.systems_metrics.token_reduction_pct == 87.4
         assert study.systems_metrics.latency_reduction_pct == 68.2
         assert study.systems_metrics.phi_over_disclosure_pct == 0.0
@@ -308,8 +311,11 @@ class TestGLHSStudyVerification:
         # Verify JSON parseability and structure
         data = json.loads(json_str)
         assert data["n_subjects"] == 384
-        assert data["tost_analysis"]["is_equivalent"] is True
-        assert data["tost_analysis"]["ci_95_contained"] is True
+        assert data["tost_analysis"]["is_equivalent"] is False
+        assert data["tost_analysis"]["ci_95_contained"] is False
+        assert data["tost_analysis"]["p_tost"] == pytest.approx(0.34805, abs=1e-3)
+        assert data["power_assessment"]["is_underpowered"] is True
+        assert data["power_assessment"]["required_sample_size_non_inferiority"] >= 7500
         assert data["systems_pareto_profile"]["token_reduction_pct"] == 87.4
 
         # Verify LaTeX table contents
@@ -335,24 +341,24 @@ class TestGLHSStudyVerification:
         tost_res = TOSTResult(
             mean_diff=-0.0078125,
             delta=0.02,
-            se=0.002296,
+            se=0.03118,
             df=383.0,
-            t1=5.3072,
-            p1=9.44e-8,
-            t2=-12.1114,
-            p2=4.15e-29,
-            p_tost=9.44e-8,
+            t1=0.3909,
+            p1=0.3480,
+            t2=-0.8920,
+            p2=0.1865,
+            p_tost=0.3480,
             alpha=0.05,
-            is_equivalent=True,
-            ci_90=(-0.0116, -0.0040),
-            ci_95=(-0.0123, -0.0033),
-            ci_95_contained=True,
+            is_equivalent=False,
+            ci_90=(-0.0592, 0.0436),
+            ci_95=(-0.0691, 0.0535),
+            ci_95_contained=False,
             test_type="custom",
         )
         d = tost_res.to_dict()
-        assert d["is_equivalent"] is True
+        assert d["is_equivalent"] is False
         assert d["test_type"] == "custom"
-        assert d["ci_95"] == [-0.0123, -0.0033]
+        assert d["ci_95"] == [-0.0691, 0.0535]
 
         sys_metrics = SystemsParetoMetrics()
         sys_dict = sys_metrics.to_dict()
@@ -368,16 +374,19 @@ class TestGLHSStudyVerification:
             ties=241,
             legacy_sign_test_p=0.8672,
             equivalence_margin_delta=0.02,
-            assumed_sigma=0.045,
+            sample_sd=0.6110,
             significance_level_alpha=0.05,
             tost=tost_res,
-            statistical_power_exact=0.99987,
-            statistical_power_shifted_t=0.99987,
-            statistical_power_normal=0.99987,
+            statistical_power_exact=0.0,
+            statistical_power_shifted_t=0.0,
+            statistical_power_normal=0.0,
             systems_metrics=sys_metrics,
+            required_n_90_power=7500,
+            is_underpowered=True,
+            assumed_sigma=0.6110,
         )
         s_dict = study.to_dict()
         assert (
             s_dict["conclusion"]
-            == "STATISTICAL_EQUIVALENCE_ESTABLISHED_WITH_PARETO_DOMINANT_SYSTEMS_PROFILE"
+            == "EQUIVALENCE_INCONCLUSIVE_UNDERPOWERED_AT_N384"
         )

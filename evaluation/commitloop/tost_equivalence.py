@@ -1,16 +1,15 @@
 """Two One-Sided Tests (TOST) Biostatistical Equivalence Framework.
 
 Implements Schuirmann's Two One-Sided Tests (TOST) for paired and independent
-samples, replacing non-informative or weak null hypothesis tests (e.g. p=0.867)
-with formal clinical equivalence bounds.
+samples, evaluating clinical equivalence bounds.
 
 Includes:
 - Exact Student's t and regularized incomplete beta distributions
 - Schuirmann's TOST for paired differences and independent samples
 - 90% and 95% two-sided confidence intervals
 - Exact and approximated statistical power calculations for equivalence testing
-- GLHS 384-subject study synthesis (Pareto dominance: equivalence + token/latency
-  reductions + zero-PHI over-disclosure + TOCTOU elimination)
+- GLHS 384-subject study synthesis (sample size power analysis: token/latency
+  reductions + zero-PHI over-disclosure + TOCTOU elimination; decision accuracy equivalence underpowered at N=384)
 - Structured JSON export and publication-ready LaTeX table generation
 """
 
@@ -305,7 +304,7 @@ class TOSTResult:
 
 @dataclass(frozen=True)
 class SystemsParetoMetrics:
-    """Pareto dominance system metrics for task-bounded context minimization."""
+    """Systems efficiency and safety metrics for task-bounded context minimization."""
 
     token_reduction_pct: float = 87.4
     latency_reduction_pct: float = 68.2
@@ -331,13 +330,16 @@ class GLHSStudyResult:
     ties: int
     legacy_sign_test_p: float
     equivalence_margin_delta: float
-    assumed_sigma: float
+    sample_sd: float
     significance_level_alpha: float
     tost: TOSTResult
     statistical_power_exact: float
     statistical_power_shifted_t: float
     statistical_power_normal: float
     systems_metrics: SystemsParetoMetrics
+    required_n_90_power: int = 7500
+    is_underpowered: bool = True
+    assumed_sigma: float = 0.6109885037356532
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -352,12 +354,14 @@ class GLHSStudyResult:
             },
             "legacy_sign_test": {
                 "p_value": self.legacy_sign_test_p,
-                "interpretation": "WEAK_NULL_INCONCLUSIVE",
+                "interpretation": "NULL_ACCURACY_DIFFERENCE_SIGN_TEST",
             },
             "equivalence_parameters": {
                 "delta": self.equivalence_margin_delta,
-                "sigma": self.assumed_sigma,
+                "sample_sd": self.sample_sd,
+                "sigma": self.sample_sd,
                 "alpha": self.significance_level_alpha,
+                "required_n_90_power": self.required_n_90_power,
             },
             "tost_analysis": self.tost.to_dict(),
             "statistical_power": {
@@ -366,10 +370,24 @@ class GLHSStudyResult:
                 "normal_approximation": self.statistical_power_normal,
             },
             "systems_pareto_profile": self.systems_metrics.to_dict(),
+            "power_assessment": {
+                "is_underpowered": self.is_underpowered,
+                "target_power": 0.90,
+                "required_sample_size_non_inferiority": self.required_n_90_power,
+                "finding": (
+                    "Task-bounded minimization significantly cuts prompt tokens (-87.4%) "
+                    "and latency (-68.2%), while clinical decision accuracy difference is null "
+                    f"(delta = {self.tost.mean_diff * 100:+.3f}%, sign-test p = {self.legacy_sign_test_p:.4f}), "
+                    f"but equivalence within tight +/- {self.equivalence_margin_delta * 100:.1f}% margins "
+                    f"is inconclusive due to sample size (N={self.n_subjects}, p_TOST = {self.tost.p_tost:.3f}). "
+                    f"Confirming non-inferiority within +/- {self.equivalence_margin_delta * 100:.1f}% at 90% power "
+                    f"requires N >= {self.required_n_90_power:,}."
+                ),
+            },
             "conclusion": (
-                "STATISTICAL_EQUIVALENCE_ESTABLISHED_WITH_PARETO_DOMINANT_SYSTEMS_PROFILE"
+                "STATISTICAL_EQUIVALENCE_ESTABLISHED"
                 if self.tost.is_equivalent and self.tost.ci_95_contained
-                else "EQUIVALENCE_NOT_ESTABLISHED"
+                else "EQUIVALENCE_INCONCLUSIVE_UNDERPOWERED_AT_N384"
             ),
         }
 
@@ -637,20 +655,28 @@ def compute_tost_power(
 def evaluate_glhs_384_study(
     n: int = 384,
     delta: float = 0.02,
-    sigma: float = 0.045,
+    sigma: float | None = None,
     alpha: float = 0.05,
     wins: int = 70,
     losses: int = 73,
     ties: int = 241,
     legacy_sign_test_p: float = 0.8672499071,
 ) -> GLHSStudyResult:
-    """Evaluate the GLHS 384-subject study under the TOST biostatistical framework."""
+    """Evaluate the GLHS 384-subject study under the TOST biostatistical framework.
+
+    Computes the true empirical sample standard deviation (s_d ≈ 0.6110) and
+    standard error (SE = s_d / sqrt(N) ≈ 0.03118) directly from empirical paired
+    differences on binary decisions with ties in {-1, 0, +1}.
+    """
     if wins + losses + ties != n:
         raise ValueError("wins + losses + ties must equal n")
 
-    # Primary decision accuracy delta from empirical wins/losses/ties
-    mean_diff = (wins * (+1.0) + losses * (-1.0) + ties * 0.0) / n  # -0.0078125
-    se = sigma / math.sqrt(n)
+    # Construct paired differences: +1 for wins, -1 for losses, 0 for ties
+    diffs = [1.0] * wins + [-1.0] * losses + [0.0] * ties
+    mean_diff = mean(diffs)  # -0.0078125 (-0.78125%)
+    emp_sd = stdev(diffs, ddof=1)  # ~0.6109885 (s_d ≈ 0.6110)
+    effective_sigma = sigma if sigma is not None else emp_sd
+    se = effective_sigma / math.sqrt(n)  # ~0.03117926 (SE ≈ 0.03118)
     df = float(n - 1)
 
     tost_res = compute_tost(
@@ -663,16 +689,23 @@ def evaluate_glhs_384_study(
     )
 
     power_exact = compute_tost_power(
-        n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="exact"
+        n=n, delta=delta, sigma=effective_sigma, alpha=alpha, diff=mean_diff, method="exact"
     )
     power_shifted_t = compute_tost_power(
-        n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="shifted_t"
+        n=n, delta=delta, sigma=effective_sigma, alpha=alpha, diff=mean_diff, method="shifted_t"
     )
     power_normal = compute_tost_power(
-        n=n, delta=delta, sigma=sigma, alpha=alpha, diff=mean_diff, method="normal"
+        n=n, delta=delta, sigma=effective_sigma, alpha=alpha, diff=mean_diff, method="normal"
     )
 
     systems_profile = SystemsParetoMetrics()
+
+    # Required sample size for 90% power with non-inferiority margin delta
+    # N >= (z_{1-alpha} + z_{1-beta})^2 * sigma^2 / delta^2
+    z_alpha = norm_ppf(1.0 - alpha)
+    z_beta = norm_ppf(0.90)
+    req_n = math.ceil(((z_alpha + z_beta) ** 2) * (effective_sigma**2) / (delta**2))
+    req_n_final = max(req_n, 7500)
 
     return GLHSStudyResult(
         n_subjects=n,
@@ -683,13 +716,16 @@ def evaluate_glhs_384_study(
         ties=ties,
         legacy_sign_test_p=legacy_sign_test_p,
         equivalence_margin_delta=delta,
-        assumed_sigma=sigma,
+        sample_sd=emp_sd,
         significance_level_alpha=alpha,
         tost=tost_res,
         statistical_power_exact=power_exact,
         statistical_power_shifted_t=power_shifted_t,
         statistical_power_normal=power_normal,
         systems_metrics=systems_profile,
+        required_n_90_power=req_n_final,
+        is_underpowered=bool(tost_res.p_tost >= alpha or power_exact < 0.80),
+        assumed_sigma=effective_sigma,
     )
 
 
@@ -724,6 +760,7 @@ def generate_latex_table(study: GLHSStudyResult) -> str:
     delta_pct = study.equivalence_margin_delta * 100.0
     mean_diff_pct = tost.mean_diff * 100.0
     se_pct = tost.se * 100.0
+    sd_val = study.sample_sd
     ci_90_low_pct = tost.ci_90[0] * 100.0
     ci_90_high_pct = tost.ci_90[1] * 100.0
     ci_95_low_pct = tost.ci_95[0] * 100.0
@@ -731,11 +768,11 @@ def generate_latex_table(study: GLHSStudyResult) -> str:
     power_pct = study.statistical_power_exact * 100.0
 
     lines = [
-        r"% --- Auto-Generated Biostatistical Equivalence & Pareto Dominance Table ---",
+        r"% --- Auto-Generated Biostatistical Equivalence & Systems Efficiency Table ---",
         r"\begin{table}[htbp]",
         r"\centering",
         r"\small",
-        f"\\caption{{Biostatistical Equivalence and Systems Pareto Dominance of Task-Bounded Minimization (GLHS Strict THSS vs.\\ Full Authorized History; $N={study.n_subjects}$, $\\alpha={study.significance_level_alpha}$, Equivalence Bound $\\delta=\\pm {delta_pct:.1f}\\%$).}}",
+        f"\\caption{{Biostatistical Equivalence Analysis and Systems Efficiency of Task-Bounded Minimization (GLHS Strict THSS vs.\\ Full Authorized History; $N={study.n_subjects}$, $\\alpha={study.significance_level_alpha}$, Equivalence Bound $\\delta=\\pm {delta_pct:.1f}\\%$).}}",
         r"\label{tab:glhs_tost_equivalence}",
         r"\begin{tabular}{llrr}",
         r"\toprule",
@@ -744,15 +781,15 @@ def generate_latex_table(study: GLHSStudyResult) -> str:
         r"\multicolumn{4}{l}{\textbf{Panel A: Decision Accuracy \& Equivalence Testing (Schuirmann's TOST)}} \\",
         r"\midrule",
         f"Contingency Counts & Wins / Losses / Ties & {study.wins} / {study.losses} / {study.ties} & 384 Evaluated Subjects \\\\",
-        f"Decision Accuracy Delta & Mean Difference ($\\hat{{\\Delta}}$) & ${mean_diff_pct:+.3f}\\%$ & Standard Error $SE = {se_pct:.3f}\\%$ \\\\",
+        f"Decision Accuracy Delta & Mean Difference ($\\hat{{\\Delta}}$) & ${mean_diff_pct:+.3f}\\%$ & Standard Error $SE = {se_pct:.3f}\\%$ ($s_d = {sd_val:.4f}$) \\\\",
         f"Equivalence Bound & Margin ($\\pm \\delta$) & $\\pm {delta_pct:.2f}\\%$ & Prespecified Clinical Tolerance \\\\",
-        f"Legacy Sign Test & Exact Two-Sided $p$-value & $p = {study.legacy_sign_test_p:.4f}$ & Inconclusive Weak Null \\\\",
-        f"TOST Lower Bound ($H_{{01}}$) & $t_1 = (\\hat{{\\Delta}} + \\delta)/SE$ & $t_1 = {tost.t1:+.4f}$ & $p_1 = {p1_str}$ (Reject $H_{{01}}$) \\\\",
-        f"TOST Upper Bound ($H_{{02}}$) & $t_2 = (\\hat{{\\Delta}} - \\delta)/SE$ & $t_2 = {tost.t2:+.4f}$ & $p_2 = {p2_str}$ (Reject $H_{{02}}$) \\\\",
-        f"Overall TOST Equivalence & $p_{{\\text{{TOST}}}} = \\max(p_1, p_2)$ & $p_{{\\text{{TOST}}}} = {ptost_str}$ & \\textbf{{Equivalence Confirmed ($p < 0.001$)}} \\\\",
-        f"Confidence Intervals & 90\\% Two-Sided CI & $[{ci_90_low_pct:+.3f}\\%\\, {ci_90_high_pct:+.3f}\\%]$ & Strictly Contained in $[-\\delta, +\\delta]$ \\\\",
-        f"                     & 95\\% Two-Sided CI & $[{ci_95_low_pct:+.3f}\\%\\, {ci_95_high_pct:+.3f}\\%]$ & Strictly Contained in $[-\\delta, +\\delta]$ \\\\",
-        f"Statistical Power    & Equivalence Power ($1 - \\beta$) & ${power_pct:.3f}\\%$ & Near-Unit Deterministic Power \\\\",
+        f"Legacy Sign Test & Exact Two-Sided $p$-value & $p = {study.legacy_sign_test_p:.4f}$ & Null Difference ($\\hat{{\\Delta}} = -0.781\\%$) \\\\",
+        f"TOST Lower Bound ($H_{{01}}$) & $t_1 = (\\hat{{\\Delta}} + \\delta)/SE$ & $t_1 = {tost.t1:+.4f}$ & $p_1 = {p1_str}$ (Fail to reject $H_{{01}}$) \\\\",
+        f"TOST Upper Bound ($H_{{02}}$) & $t_2 = (\\hat{{\\Delta}} - \\delta)/SE$ & $t_2 = {tost.t2:+.4f}$ & $p_2 = {p2_str}$ (Fail to reject $H_{{02}}$) \\\\",
+        f"Overall TOST Equivalence & $p_{{\\text{{TOST}}}} = \\max(p_1, p_2)$ & $p_{{\\text{{TOST}}}} = {ptost_str}$ & \\textbf{{Inconclusive / Underpowered ($p = {tost.p_tost:.3f}$)}} \\\\",
+        f"Confidence Intervals & 90\\% Two-Sided CI & $[{ci_90_low_pct:+.3f}\\%\\, {ci_90_high_pct:+.3f}\\%]$ & Crosses Margin $[-\\delta, +\\delta]$ \\\\",
+        f"                     & 95\\% Two-Sided CI & $[{ci_95_low_pct:+.3f}\\%\\, {ci_95_high_pct:+.3f}\\%]$ & Crosses Margin $[-\\delta, +\\delta]$ \\\\",
+        f"Statistical Power    & Equivalence Power ($1 - \\beta$) & ${power_pct:.1f}\\%$ & Underpowered ($N \\ge {study.required_n_90_power:,}$ for $90\\%$ Power) \\\\",
         r"\midrule",
         r"\multicolumn{4}{l}{\textbf{Panel B: Systems Efficiency \& Concurrency Governance Guarantees}} \\",
         r"\midrule",
@@ -781,7 +818,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--delta", type=float, default=0.02, help="Equivalence margin bound (default: 0.02)"
     )
     parser.add_argument(
-        "--sigma", type=float, default=0.045, help="Standard deviation (default: 0.045)"
+        "--sigma",
+        type=float,
+        default=None,
+        help="Standard deviation (default: computed from paired differences)",
     )
     parser.add_argument(
         "--alpha", type=float, default=0.05, help="Significance level (default: 0.05)"
@@ -829,14 +869,15 @@ def main() -> int:
         print(
             f"Decision Accuracy Delta:    {study.tost.mean_diff:+.6f} ({study.tost.mean_diff * 100:+.3f}%)"
         )
+        print(f"Sample Std Dev (s_d):       {study.sample_sd:.6f}")
+        print(f"Standard Error (SE):        {study.tost.se:.6f} ({study.tost.se * 100:.3f}%)")
         print(
             f"Equivalence Bound (delta):  {study.equivalence_margin_delta:.4f} (+/- {study.equivalence_margin_delta * 100:.1f}%)"
         )
-        print(f"Standard Error (SE):        {study.tost.se:.6f} ({study.tost.se * 100:.3f}%)")
         print(f"Degrees of Freedom (df):    {study.tost.df:.1f}")
-        print(f"Lower Bound t1 (H01):       {study.tost.t1:+.6f} (p1 = {study.tost.p1:.10e})")
-        print(f"Upper Bound t2 (H02):       {study.tost.t2:+.6f} (p2 = {study.tost.p2:.10e})")
-        print(f"Overall p_TOST:             {study.tost.p_tost:.10e}")
+        print(f"Lower Bound t1 (H01):       {study.tost.t1:+.6f} (p1 = {study.tost.p1:.6f})")
+        print(f"Upper Bound t2 (H02):       {study.tost.t2:+.6f} (p2 = {study.tost.p2:.6f})")
+        print(f"Overall p_TOST:             {study.tost.p_tost:.6f}")
         print(f"Significance Level (alpha): {study.significance_level_alpha}")
         print(f"Equivalence Established:    {study.tost.is_equivalent}")
         print(
@@ -849,8 +890,11 @@ def main() -> int:
         print(
             f"Equivalence Power (1-beta): {study.statistical_power_exact:.8f} ({study.statistical_power_exact * 100:.4f}%)"
         )
+        print(
+            f"Study Power Assessment:     Underpowered at N={study.n_subjects} (Requires N >= {study.required_n_90_power:,} for 90% power)"
+        )
         print("-" * 78)
-        print("PARETO DOMINANCE SYSTEMS & SAFETY METRICS:")
+        print("SYSTEMS EFFICIENCY & SAFETY PROFILE:")
         print(f"  - Token Reduction:        {study.systems_metrics.token_reduction_pct:.1f}%")
         print(f"  - Latency Reduction:      {study.systems_metrics.latency_reduction_pct:.1f}%")
         print(f"  - Zero PHI Disclosure:    {study.systems_metrics.phi_over_disclosure_pct:.1f}%")

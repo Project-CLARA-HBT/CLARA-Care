@@ -218,7 +218,7 @@ def test_rag_pipeline_uses_injected_provider_client_without_network():
 def test_rag_pipeline_ignores_legacy_connection_override_constructor_values(monkeypatch):
     calls: list[dict[str, object]] = []
 
-    def _registered_client(task, task_settings, *, timeout_seconds, retries_per_base):
+    def _registered_client(task, task_settings, *, timeout_seconds=None, retries_per_base=None):
         calls.append(
             {
                 "task": task,

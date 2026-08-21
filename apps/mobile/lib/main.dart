@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
@@ -9,13 +10,12 @@ import 'experience/language_controller.dart';
 import 'experience/theme_controller.dart';
 import 'widgets/screen_error_boundary.dart';
 
-// Default to the documented local dev API port (8100). The web app and API
-// docs (README) run the gateway on 8100; the previous 8000 default was config
-// drift (audit MOB-5). Override at build time with
-// `--dart-define=CLARA_API_BASE_URL=...`.
+// In release builds, default to production endpoint (https://theclaracare.com).
+// In debug builds, default to local dev API port (8100).
+// Override at build time with `--dart-define=CLARA_API_BASE_URL=...`.
 const _defaultApiBaseUrl = String.fromEnvironment(
   'CLARA_API_BASE_URL',
-  defaultValue: 'http://localhost:8100',
+  defaultValue: kReleaseMode ? 'https://theclaracare.com' : 'http://localhost:8100',
 );
 
 void main() async {

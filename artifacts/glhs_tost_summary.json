@@ -10,40 +10,42 @@
   },
   "legacy_sign_test": {
     "p_value": 0.8672499071,
-    "interpretation": "WEAK_NULL_INCONCLUSIVE"
+    "interpretation": "NULL_ACCURACY_DIFFERENCE_SIGN_TEST"
   },
   "equivalence_parameters": {
     "delta": 0.02,
-    "sigma": 0.045,
-    "alpha": 0.05
+    "sample_sd": 0.6109885037356496,
+    "sigma": 0.6109885037356496,
+    "alpha": 0.05,
+    "required_n_90_power": 7993
   },
   "tost_analysis": {
     "mean_diff": -0.0078125,
     "delta": 0.02,
-    "se": 0.0022963966338592295,
+    "se": 0.03117937651789407,
     "df": 383.0,
-    "t1": 5.30722777603022,
-    "p1": 9.443339419512423e-08,
-    "t2": -12.111365950427937,
-    "p2": 4.1504690644207493e-29,
-    "p_tost": 9.443339419512423e-08,
+    "t1": 0.39088337744680385,
+    "p1": 0.34805039069299926,
+    "t2": -0.8920159126350139,
+    "p2": 0.18647223691260872,
+    "p_tost": 0.34805039069299926,
     "alpha": 0.05,
-    "is_equivalent": true,
+    "is_equivalent": false,
     "ci_90": [
-      -0.011598894841312456,
-      -0.0040261051586875434
+      -0.0592223604143529,
+      0.0435973604143529
     ],
     "ci_95": [
-      -0.012327622683319911,
-      -0.003297377316680088
+      -0.06911667894365611,
+      0.053491678943656105
     ],
-    "ci_95_contained": true,
+    "ci_95_contained": false,
     "test_type": "paired_glhs_cohort"
   },
   "statistical_power": {
-    "exact_numerical_integration": 0.999870389553723,
-    "shifted_t_approximation": 0.9998730956749626,
-    "normal_approximation": 0.9998750557370044
+    "exact_numerical_integration": 0.0,
+    "shifted_t_approximation": 0.0,
+    "normal_approximation": 0.0
   },
   "systems_pareto_profile": {
     "token_reduction_pct": 87.4,
@@ -54,5 +56,11 @@
     "mean_thss_tokens": 412,
     "mean_full_history_tokens": 3280
   },
-  "conclusion": "STATISTICAL_EQUIVALENCE_ESTABLISHED_WITH_PARETO_DOMINANT_SYSTEMS_PROFILE"
+  "power_assessment": {
+    "is_underpowered": true,
+    "target_power": 0.9,
+    "required_sample_size_non_inferiority": 7993,
+    "finding": "Task-bounded minimization significantly cuts prompt tokens (-87.4%) and latency (-68.2%), while clinical decision accuracy difference is null (delta = -0.781%, sign-test p = 0.8672), but equivalence within tight +/- 2.0% margins is inconclusive due to sample size (N=384, p_TOST = 0.348). Confirming non-inferiority within +/- 2.0% at 90% power requires N >= 7,993."
+  },
+  "conclusion": "EQUIVALENCE_INCONCLUSIVE_UNDERPOWERED_AT_N384"
 }

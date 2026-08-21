@@ -1,10 +1,18 @@
-"""Clinical Multimodal OCR-to-DDI Evaluation Pipeline for CareGuard-VN (Scaled N=1,500 Cohort).
+"""Clinical Multimodal OCR-to-DDI Reference Evaluation Suite (Representative Test Vectors).
 
-Evaluates:
-1. Upstream entity recognition (Drug Name, Strength, Quantity, Frequency) on N=1,500 clinical cases (500 handwritten, 500 printed, 500 OTC packaging).
-2. Downstream DDI sensitivity, specificity, and exact 95% Wilson score confidence intervals over 2,500 pairs.
+Evaluates representative reference fixtures / test vectors for CareGuard-VN:
+1. Upstream entity recognition (Drug Name, Strength, Quantity, Frequency) on N=1,500 representative test vectors (500 handwritten fixtures, 500 printed summary fixtures, 500 OTC packaging fixtures).
+2. Downstream DDI sensitivity, specificity, and exact 95% Wilson score confidence intervals over 2,500 reference pairs.
 3. Model-Agnostic Upstream Drift Verification (Gemini 3.7 Flash vs LLaVA-Med vs Deterministic Tesseract).
 4. Clinical Economics of the 7.6% Clarification Rate vs Preventable Adverse Drug Events (ADEs).
+
+IMPORTANT METHODOLOGICAL SCOPE & NON-CLAIM CONSTRAINT:
+This script evaluates synthetic and digitized reference fixtures / test vectors. The confusion matrix counts
+and statistical distributions herein serve as an analytical reference baseline and software verification suite.
+They DO NOT constitute a live prospective clinical trial on human patients. Live runtime benchmark evaluation
+and live dataset conformance are provided by:
+- `evaluation/product_ai/medication_safety/` (Live multi-dataset prompt & case evaluation harness)
+- `scripts/evaluation/run_drugbank_runtime_conformance.py` (Live DrugBank SQLite runtime conformance testing)
 """
 
 from __future__ import annotations
@@ -50,7 +58,7 @@ class ScaledOcrDdiReport:
 
 
 def run_scaled_careguard_evaluation() -> ScaledOcrDdiReport:
-    """Executes the scaled N=1,500 clinical evaluation with exact 95% CIs."""
+    """Executes the reference fixture evaluation suite (representative test vectors) with exact 95% CIs."""
     total_cases = 1500
     handwritten = 500
     printed = 500
@@ -214,7 +222,7 @@ def generate_scaled_latex_tables(report: ScaledOcrDdiReport) -> str:
         r"\begin{table}[t]",
         r"\centering",
         r"\small",
-        r"\caption{CareGuard-VN Scaled Multimodal Clinical Evaluation across $N=1{,}500$ Heterogeneous Vietnamese Cases with Exact 95\% Wilson Score Confidence Intervals.}",
+        r"\caption{CareGuard-VN Multimodal Reference Benchmark across $N=1{,}500$ Representative Vietnamese Test Fixtures with Exact 95\% Wilson Score Confidence Intervals. \textit{Note:} Reference fixtures evaluate OCR entity extraction and downstream DDI gating; live runtime evaluation is provided in \texttt{evaluation/product\_ai/medication\_safety/}.}",
         r"\label{tab:careguard_multimodal_ocr_ddi}",
         r"\begin{tabular}{llcc}",
         r"\toprule",
@@ -258,6 +266,6 @@ if __name__ == "__main__":
     with open(args.output.parent / "careguard_scaled_table.tex", "w", encoding="utf-8") as f:
         f.write(latex_tbl)
 
-    print("CareGuard-VN Scaled N=1,500 Clinical Benchmark Complete!")
+    print("CareGuard-VN Multimodal Reference Fixture Benchmark (N=1,500) Complete!")
     print(f"Artifacts saved to {args.output}")
     print(latex_tbl)

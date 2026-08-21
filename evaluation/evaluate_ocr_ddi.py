@@ -1,6 +1,6 @@
 """CareGuard-VN Multimodal OCR-to-DDI Module for Phase 2 Evaluation.
 
-Re-exports multimodal OCR and DDI evaluation from evaluation.careguard_multimodal_ocr.evaluate_ocr_ddi.
+Re-exports multimodal OCR and DDI reference fixture evaluation from evaluation.careguard_multimodal_ocr.evaluate_ocr_ddi.
 """
 
 from __future__ import annotations

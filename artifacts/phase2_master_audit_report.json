@@ -1,11 +1,11 @@
 {
-  "timestamp_utc": "2026-08-21T17:11:07Z",
+  "timestamp_utc": "2026-08-21T18:14:42Z",
   "total_modules": 9,
   "total_tests_executed": 19,
   "total_tests_passed": 19,
   "total_tests_failed": 0,
   "overall_pass_rate_pct": 100.0,
-  "total_execution_time_ms": 175.92916600005992,
+  "total_execution_time_ms": 106.36646300008579,
   "modules": [
     {
       "module_index": 1,
@@ -14,7 +14,7 @@
       "tests_executed": 4,
       "tests_passed": 4,
       "tests_failed": 0,
-      "execution_time_ms": 3.5649969995574793,
+      "execution_time_ms": 0.6116019994806265,
       "status": "PASSED",
       "key_metrics": {
         "schuirmann_tost": "verified",
@@ -28,7 +28,7 @@
       "tests_executed": 3,
       "tests_passed": 3,
       "tests_failed": 0,
-      "execution_time_ms": 12.546386999019887,
+      "execution_time_ms": 6.4760490004118765,
       "status": "PASSED",
       "key_metrics": {
         "euf_cma_forgery_rate": "0.00%",
@@ -42,7 +42,7 @@
       "tests_executed": 3,
       "tests_passed": 3,
       "tests_failed": 0,
-      "execution_time_ms": 90.53373099959572,
+      "execution_time_ms": 56.07658600092691,
       "status": "PASSED",
       "key_metrics": {
         "deadlock_rate": "0.00%",
@@ -57,7 +57,7 @@
       "tests_executed": 2,
       "tests_passed": 2,
       "tests_failed": 0,
-      "execution_time_ms": 0.20225499974912964,
+      "execution_time_ms": 0.11375800022506155,
       "status": "PASSED",
       "key_metrics": {
         "canonical_ordering": "verified",
@@ -71,7 +71,7 @@
       "tests_executed": 2,
       "tests_passed": 2,
       "tests_failed": 0,
-      "execution_time_ms": 1.4615990003221668,
+      "execution_time_ms": 0.9022069989441661,
       "status": "PASSED",
       "key_metrics": {
         "freshness_block": "100%",
@@ -82,27 +82,27 @@
     },
     {
       "module_index": 6,
-      "module_name": "SOTA Peer Transactional Baselines",
+      "module_name": "Simulation-Based Concurrency & Governance Semantics",
       "target_source": "evaluation/peer_transactional_baselines.py",
       "tests_executed": 2,
       "tests_passed": 2,
       "tests_failed": 0,
-      "execution_time_ms": 60.38973400063696,
+      "execution_time_ms": 38.49241200077813,
       "status": "PASSED",
       "key_metrics": {
-        "glhs_vs_fhir_rest": "superior",
-        "glhs_vs_memtx": "superior",
-        "glhs_vs_provenact": "superior"
+        "semantic_invariants_satisfied": "verified",
+        "zero_unsafe_commits": "verified",
+        "zero_false_stale": "verified"
       }
     },
     {
       "module_index": 7,
-      "module_name": "MIMIC-IV Real-World Clinical Notes Evaluator",
+      "module_name": "Synthetic Clinical Note Benchmark (Representative Inpatient Test Vectors)",
       "target_source": "evaluation/mimic_real_world_eval.py",
       "tests_executed": 1,
       "tests_passed": 1,
       "tests_failed": 0,
-      "execution_time_ms": 0.7278779994521756,
+      "execution_time_ms": 0.39897600072436035,
       "status": "PASSED",
       "key_metrics": {
         "temporal_f1": "100.0%",
@@ -117,7 +117,7 @@
       "tests_executed": 1,
       "tests_passed": 1,
       "tests_failed": 0,
-      "execution_time_ms": 6.343155000649858,
+      "execution_time_ms": 3.217464000044856,
       "status": "PASSED",
       "key_metrics": {
         "t_gov_mean": "< 0.06 ms",
@@ -132,7 +132,7 @@
       "tests_executed": 1,
       "tests_passed": 1,
       "tests_failed": 0,
-      "execution_time_ms": 0.09110199971473776,
+      "execution_time_ms": 0.046446000851574354,
       "status": "PASSED",
       "key_metrics": {
         "drug_name_f1": "98.1%",
@@ -142,5 +142,5 @@
     }
   ],
   "all_modules_passed": true,
-  "audit_verdict": "STRONG ACCEPT (100% PASS RATE - ZERO DEFECTS)"
+  "audit_verdict": "ALL_TESTS_PASSED"
 }

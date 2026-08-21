@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from clara_api.db.models import UserConsent
+from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
 
 # Purpose vocabulary (Requirement 2.1). Stored in ``UserConsent.consent_type``
 # with a ``compliance:`` namespace prefix so it never collides with the legacy
@@ -102,7 +103,7 @@ def acknowledged_version(db: Session, *, user_id: int, purpose: str) -> str | No
 
 def grant(db: Session, *, user_id: int, purpose: str, version: str) -> UserConsent:
     """Append a new grant row to the ledger (never mutates a prior row)."""
-
+    acquire_consent_lock_anchor(db, user_id=user_id)
     row = UserConsent(
         user_id=user_id,
         consent_type=consent_type_for(purpose),
@@ -115,7 +116,7 @@ def grant(db: Session, *, user_id: int, purpose: str, version: str) -> UserConse
 
 def withdraw(db: Session, *, user_id: int, purpose: str, version: str = "") -> UserConsent:
     """Append a withdrawal row (``revoked_at`` set) — append-only (Property 1)."""
-
+    acquire_consent_lock_anchor(db, user_id=user_id)
     latest = _latest_row(db, user_id=user_id, purpose=purpose)
     effective_version = version or (latest.consent_version if latest else "")
     row = UserConsent(

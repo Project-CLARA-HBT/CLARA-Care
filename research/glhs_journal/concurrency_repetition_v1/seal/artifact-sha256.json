@@ -2,13 +2,14 @@
   "schema_version": "glhs-concurrency-repetition-seal.v1",
   "freeze_id": "GLHS-CONCURRENCY-REPETITION-V1-20260819",
   "run_id": "GLHS-CONCURRENCY-REPETITION-V1-20260819-RUN01",
-  "code_sha": "383c6df2",
+  "code_sha": "7bd677e4",
   "artifacts": {
-    "FREEZE.md": "254dcbf4dcfc73d2a36f1a73c908ec2954781be723dd2845666a61cf2b0ee46a",
+    "FREEZE.md": "8618c6fb49dbfec83ce77152ce4706ea6ffd48d8abd6346489b8748645fcd0ff",
     "README.md": "8408d43e9ea58b65310aca8af4d9153aaea1c54f02d3f3f974b72e42caa0c3f9",
+    "REVERIFICATION_RECORD.md": "ad59191d651e4e0bc6aded6821d615b4e85bbc1ce6615e7212b31e849522729a",
+    "analysis.json": "91f126c4fae88366853b24bd874a9898319c8de148eecac0c5dc375fc3fe46da",
     "repeat_manifest.json": "4b66c774bb8f16bbb697d0efc1c1da69953ffbb2b7521602cae9accd12a5e62e",
-    "repeat_raw.jsonl": "f98ce492e54a4478d929a0b8a7e800929e3c7a9b6316d4acca07d04ca77357a5",
-    "analysis.json": "877da64356bb37bd8e7bb66ef937004ab86d988d019b83eab3c5a404ed18728a"
+    "repeat_raw.jsonl": "f98ce492e54a4478d929a0b8a7e800929e3c7a9b6316d4acca07d04ca77357a5"
   },
   "backend": "isolated_postgresql_random_schema",
   "track_commit_timestamp": "on",

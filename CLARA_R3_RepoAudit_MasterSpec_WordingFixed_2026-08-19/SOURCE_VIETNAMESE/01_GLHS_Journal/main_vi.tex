@@ -20,7 +20,7 @@ Trong các hệ thống trí tuệ nhân tạo (AI) y tế có trạng thái, vi
 
 Cơ chế trung tâm của GLHS là một hợp đồng \emph{đồng phiên bản}: trên đường đề xuất được ràng buộc với ảnh chụp, chính \textbf{Bản chụp trạng thái sức khỏe theo tác vụ (THSS)} mà mô hình đã đọc sẽ được niêm phong mã băm mật mã Merkle và trở thành một phụ thuộc có thể kiểm toán bắt buộc của đề xuất ghi về sau. Trước khi thao tác ghi bền vững được chấp thuận, cơ chế \textbf{Chuyển trạng thái có quản trị (GST)} sẽ tự động tái thẩm định toàn bộ phiên bản dữ liệu và thẩm quyền trên cơ sở dữ liệu thực. Để phòng ngừa ảo giác tính toán thời gian của mô hình ngôn ngữ lớn (LLM), GLHS thiết lập \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}: một Nhân đối soát xác định phi-LLM tại API Gateway phụ trách toàn bộ phép toán thời gian bitemporal, chuẩn hóa mã lâm sàng và phát hiện xung đột, trong khi LLM chỉ tập trung vào suy luận ngữ nghĩa định tính. Đồng thời, nhằm khắc phục hiện tượng từ chối nhầm khi ghi đồng thời trên các phân vùng độc lập, GLHS giới thiệu cơ chế \textbf{Quản lý phiên bản phân vùng thực thể (Entity DAG)}, triệt tiêu hiện tượng từ chối nhầm ($0{,}00\%$ false-stale) trên các phân vùng rời rạc.
 
-Thực nghiệm đối kháng cách ly nhân quả ($N=320$ kịch bản, 640 lượt chạy trên PostgreSQL 16) chứng minh cơ chế ràng buộc của GLHS đã ngăn chặn $256/256$ hành vi tấn công giả mạo bối cảnh (chênh lệch nguy cơ tuyệt đối $1{,}000$, $95\%$ CI $[1{,}000; 1{,}000]$, kiểm định McNemar chính xác đạt $p = 1{,}727 \times 10^{-77}$). Trong 600 lượt chạy stress-test TOCTOU với thời gian dao động thật, không có bất kỳ thao tác ghi trái phép nào lọt qua hệ thống ($0/600$, gồm 10 lịch đạt độ bền vững tuyệt đối và 2 lịch lệch phân loại so với kỳ vọng). Trên đoàn hệ 384 đối tượng, việc giảm thiểu bối cảnh theo tác vụ giúp giảm $87{,}4\%$ prompt tokens ($p < 10^{-40}$) và $68{,}2\%$ độ trễ suy luận với độ lệch chẩn đoán null (70 thắng, 73 thua, 241 hòa, $p = 0{,}867$). Hệ thống bảo đảm tính tuần tự nguyên tử và kiểm soát bế tắc, tạo nền tảng tin cậy cho việc triển khai AI trong hệ sinh thái y tế.
+Thực nghiệm đối kháng cách ly nhân quả ($N=320$ kịch bản, 640 lượt chạy trên PostgreSQL 16) chứng minh cơ chế ràng buộc của GLHS đã ngăn chặn $256/256$ hành vi tấn công giả mạo bối cảnh (chênh lệch nguy cơ tuyệt đối $1{,}000$, $95\%$ CI $[1{,}000; 1{,}000]$, kiểm định McNemar chính xác đạt $p = 1{,}727 \times 10^{-77}$). Trong 600 lượt chạy stress-test TOCTOU với thời gian dao động thật, không có bất kỳ thao tác ghi trái phép nào lọt qua hệ thống ($0/600$, gồm 10 lịch đạt độ bền vững tuyệt đối và 2 lịch lệch phân loại so với kỳ vọng). Trên đoàn hệ 384 đối tượng, việc giảm thiểu bối cảnh theo tác vụ giúp giảm $87{,}4\%$ prompt tokens ($p < 10^{-40}$) và $68{,}2\%$ độ trễ suy luận với độ lệch chẩn đoán null (70 thắng, 73 thua, 241 hòa, $\hat{\Delta} = -0{,}78\%$, $SE = 3{,}12\%$, $p_{\text{TOST}} = 0{,}348$, KTC 90\% $[-5{,}91\%, +4{,}35\%]$, kiểm định dấu $p = 0{,}867$; cần $N \ge 7.500$ đối tượng cho lực thống kê biên $\pm 2\%$). Hệ thống bảo đảm tính tuần tự nguyên tử và kiểm soát bế tắc, tạo nền tảng tin cậy cho việc triển khai AI trong hệ sinh thái y tế.
 \end{abstract}
 
 \textbf{Từ khóa:} AI y tế dài hạn, AI có trạng thái, quản trị dữ liệu y tế, kiểm soát đồng thời, bitemporal, Merkle snapshot, đồng thuận động, an toàn lâm sàng.
@@ -90,7 +90,7 @@ với tập phụ thuộc $\operatorname{Deps}(P) = \{ \text{target\_key} \} \cu
 \operatorname{Commit}(P) \iff \operatorname{Bound}(P, H) \land \operatorname{StateCurrent}(P) \land \operatorname{GovernanceCurrent}(P) \land \operatorname{SnapshotValid}(P).
 \label{eq:commit_vi}
 \end{equation}
-Khi commit, GST thu thập các khóa hàng \texttt{SELECT ... FOR UPDATE} trên các phân vùng trong $\operatorname{Deps}(P)$ theo thứ tự từ điển nghiêm ngặt, ngăn ngừa chu trình bế tắc (deadlock).
+Khi commit, GST thu thập các khóa hàng độc quyền \texttt{SELECT ... FOR UPDATE} theo thứ tự phân cấp khóa chuẩn tắc (canonical lock hierarchy) nghiêm ngặt: $\operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState} \prec \text{GovEpochs}$ (khóa các phân vùng thực thể trong $\operatorname{Deps}(P)$ theo thứ tự từ điển $\prec_{\text{lex}}$, tiếp theo là bản ghi trạng thái hồ sơ gốc $\text{ProfileState}(u)$, và cuối cùng là các bản ghi kỷ nguyên quản trị $\text{GovEpochs}(v_{\pi}, v_c)$ gồm đồng thuận và chính sách). Thứ tự phân cấp khóa chuẩn tắc này triệt tiêu hoàn toàn chu trình bế tắc ($\operatorname{Cycle}(\mathcal{W}) = \emptyset$), trong khi quy trình khóa hai pha nghiêm ngặt (Strict 2PL / SS2PL) bảo đảm tính tuần tự xung đột và tính nguyên tử giữa chuyển trạng thái, thẩm định ảnh chụp quản trị và ghi nhận bản ghi kiểm toán nguồn gốc trong cùng một phiên giao dịch cơ sở dữ liệu.
 
 \begin{figure}[H]
 \centering
@@ -100,10 +100,10 @@ Khi commit, GST thu thập các khóa hàng \texttt{SELECT ... FOR UPDATE} trên
 \end{figure}
 
 \subsection{Các Đảm Bảo Hình Thức về Tính Tuần Tự và An Toàn Mật Mã}
-Chúng tôi hình thức hóa đảm bảo tính tuần tự cốt lõi của Rào chắn trạng thái hai tầng GLHS thông qua Định lý 1 (chứng minh toán học hình thức trong Phụ lục~\ref{sec:proofs_vi}). Tính toàn vẹn và kháng giả mạo của ảnh chụp dựa trên tính chất kháng va chạm tiêu chuẩn của SHA-256 (xác suất giả mạo đề xuất hợp lệ dưới trạng thái nền bị biến đổi là không đáng kể $\le 2^{-128}$), trong khi thứ tự khóa đa phân vùng tuân thủ trật tự từ điển chuẩn tắc ($\prec_{\text{lex}}$) trên tọa độ thực thể.
+Chúng tôi hình thức hóa đảm bảo tính tuần tự cốt lõi của Rào chắn trạng thái hai tầng GLHS thông qua Định lý 1 (chứng minh toán học hình thức trong Phụ lục~\ref{sec:proofs_vi}). Tính toàn vẹn và kháng giả mạo của ảnh chụp dựa trên tính chất kháng va chạm và kháng tiền ảnh thứ hai tiêu chuẩn của SHA-256 (xác suất giả mạo đề xuất hợp lệ dưới trạng thái nền bị biến đổi là không đáng kể $\le 2^{-128}$), trong khi thứ tự thu thập khóa tuân thủ trật tự phân cấp khóa chuẩn tắc ($\operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState} \prec \text{GovEpochs}$) dưới giao thức Khóa Hai Pha Nghiêm ngặt (SS2PL).
 
 \begin{theorem}[Tính tuần tự chống TOCTOU từ đọc đến ghi]
-Cho bất kỳ lịch thực thi xen kẽ $\mathcal{S}$ nào, nếu đề xuất $P$ sinh từ ảnh chụp $\mathcal{H}$ được chấp thuận ghi tại $t_{\text{commit}}$, thì không tồn tại bất kỳ bước chuyển trạng thái hoặc thay đổi quản trị $\mathcal{T}$ nào làm biến đổi các phân vùng phụ thuộc $\operatorname{Deps}(P)$ trong khoảng thời gian $(t_{\text{disclose}}(\mathcal{H}), t_{\text{commit}}(P))$.
+Cho bất kỳ lịch thực thi xen kẽ $\mathcal{S}$ nào của các thao tác đọc, chuyển trạng thái lâm sàng đồng thời $\mathcal{T}_{\text{state}}$, sửa đổi quản trị $\mathcal{T}_{\text{gov}}$ (như thu hồi đồng thuận, đổi vai trò, tăng kỷ nguyên chính sách) và chấp thuận đề xuất $\mathcal{T}_{\text{admit}}$ tuân thủ Khóa Hai Pha Nghiêm ngặt (SS2PL) với thứ tự khóa chuẩn tắc ($\operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState} \prec \text{GovEpochs}$): nếu đề xuất $P$ biên dịch từ ảnh chụp $\mathcal{H}$ tại mốc thời gian công bố $t_{\text{disclose}}(\mathcal{H})$ được chấp thuận ghi tại mốc thời gian cam kết $t_{\text{commit}}(P)$, thì đối với mọi phân vùng thực thể $e_k \in \operatorname{Deps}(P)$ và tọa độ quản trị $\langle v_{\pi}, v_c \rangle$, không tồn tại bất kỳ bước chuyển trạng thái hoặc sửa đổi quản trị trung gian $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ nào tác động lên $e_k$ hoặc $\langle v_{\pi}, v_c \rangle$ có mốc thời gian cam kết $t_{\mathcal{T}}$ thỏa mãn $t_{\text{disclose}}(\mathcal{H}) < t_{\mathcal{T}} < t_{\text{commit}}(P)$.
 \end{theorem}
 
 \begin{table}[H]
@@ -238,11 +238,11 @@ Nhằm đánh giá việc giảm thiểu bối cảnh theo tác vụ có làm su
 \textbf{Chiều Đánh giá} & \textbf{Chỉ số Thống kê / Hệ thống} & \textbf{Giá trị} & \textbf{Diễn giải Khoa học} \\
 \midrule
 Số lượng Đối đầu & Thắng / Thua / Hòa & 70 / 73 / 241 & 384 Đối tượng Đánh giá \\
-Độ lệch Chính xác & Chênh lệch Trung bình ($\hat{\Delta}$) & $-0{,}781\%$ & Sai số Chuẩn $SE = 3{,}12\%$ ($s_{\Delta} = 0{,}610$) \\
-Khoảng Tin cậy & KTC Bootstrap Thực nghiệm 95\% & $[-6{,}77\%, +5{,}21\%]$ & Độ Biến thiên Quyết định Giới hạn \\
-Kiểm định Dấu Cặp & Giá trị $p$-value Hai phía & $p = 0{,}8672$ & Độ Lệch Chính xác Null \\
+Độ lệch Chính xác & Chênh lệch Trung bình ($\hat{\Delta}$) & $-0{,}78\%$ ($-0{,}781\%$) & Sai số Chuẩn $SE = 3{,}12\%$ ($s_{\Delta} = 0{,}610$) \\
+Khoảng Tin cậy TOST & KTC TOST 90\% ($\hat{\Delta} \pm 1{,}645 \cdot SE$) & $[-5{,}91\%, +4{,}35\%]$ & Cắt qua biên tương đương $\pm 2{,}00\%$ \\
+Kiểm định Tương đương & Giá trị $p_{\text{TOST}}$ ($t_1 = +0{,}391$) & $p_{\text{TOST}} = 0{,}348$ & Kiểm định dấu chính xác $p = 0{,}8672$ \\
 Biên Tương đương & Ngưỡng Lâm sàng ($\pm \delta$) & $\pm 2{,}00\%$ & Dung sai Tương đương Định trước \\
-Lực Thống kê & Lực Mẫu ($N=384, \delta=\pm 2\%$) & Chưa đủ lực & Cần $N \ge 7.500$ cho Xác nhận Biên hẹp \\
+Lực Thống kê & Lực Mẫu ($N=384, \delta=\pm 2\%$) & Chưa đủ lực & Cần $N \ge 7.500$ cho Lực Thống kê Biên $\pm 2\%$ \\
 \midrule
 Tiết kiệm Token & Giảm thiểu Prompt Token & $87{,}4\%$ & 412 so với 3.280 tokens ($p < 10^{-40}$) \\
 Độ trễ Suy luận & Giảm Độ trễ Tổng thể & $68{,}2\%$ & Tối ưu hóa KV Cache \& Sinh từ \\
@@ -252,7 +252,7 @@ An toàn Ghi đè & Ngăn chặn Vi phạm TOCTOU & 0/256 commit sai & $p = 1{,}
 \end{tabularx}
 \end{table}
 
-Đối chiếu cấp đối tượng ghi nhận 70 thắng, 73 thua và 241 hòa ($\hat{\Delta} = -0{,}781\%$, $p=0{,}867$). Do các tác vụ chẩn đoán nhị phân rời rạc có độ biến thiên cặp tự nhiên ($s_{\Delta} = 0{,}610, SE = 3{,}12\%$), khoảng tin cậy bootstrap 95\% $[-6{,}77\%, +5{,}21\%]$ cắt qua biên độ hẹp $\pm 2{,}0\%$. Một nghiên cứu xác nhận tương đương biên hẹp $\pm 2{,}0\%$ đòi hỏi cỡ mẫu $N \ge 7.500$ đối tượng. Tuy nhiên, việc giảm thiểu bối cảnh theo tác vụ đã giúp giảm $87{,}4\%$ prompt tokens (trung bình 412 so với 3.280 tokens, $p < 10^{-40}$), giảm $68{,}2\%$ độ trễ suy luận và ngăn chặn vi phạm sai lệch quyền TOCTOU trên các lịch đã kiểm thử.
+Đối chiếu cấp đối tượng ghi nhận 70 thắng, 73 thua và 241 hòa ($\hat{\Delta} = -0{,}78\%$ hay $-0{,}781\%$, sai số chuẩn $SE = 3{,}12\%$, kiểm định dấu chính xác hai phía $p=0{,}867$). Khoảng tin cậy TOST 90\% tương ứng $[-5{,}91\%, +4{,}35\%]$ ($p_{\text{TOST}} = 0{,}348$; KTC bootstrap 95\% $[-6{,}77\%, +5{,}21\%]$) cắt qua biên độ tương đương định trước $\pm 2{,}0\%$. Do đó, với cỡ mẫu $N=384$, nghiên cứu chưa đủ lực thống kê để khẳng định tương đương sinh học/lâm sàng hẹp (đòi hỏi $N \ge 7.500$ đối tượng để đạt công suất kiểm định cho biên $\pm 2{,}0\%$). Tuy nhiên, việc giảm thiểu bối cảnh theo tác vụ đã giúp giảm $87{,}4\%$ prompt tokens (trung bình 412 so với 3.280 tokens, $p < 10^{-40}$), giảm $68{,}2\%$ độ trễ suy luận và ngăn chặn vi phạm sai lệch quyền TOCTOU trên toàn bộ các lịch đã kiểm thử ($0/256$ commit sai, $p = 1{,}727 \times 10^{-77}$).
 
 \paragraph{Phân tích chẩn đoán đối với các đầu ra lỗi fail-closed.}
 Trong số 3.456 ô thực thi của thử nghiệm mở rộng này, có 220 lượt sinh (6,36\%) tạo ra đầu ra lỗi cấu trúc (malformed outputs) và bị chặn đứng an toàn theo cơ chế fail-closed bởi bộ kiểm tra ngữ pháp Pydantic JSON tại gateway (chủ yếu do mô hình sinh thừa định dạng markdown hoặc thiếu trường dữ liệu dưới bối cảnh nén cực độ). Thay vì làm hỏng dữ liệu bệnh án bền vững, Rào chắn trạng thái Tầng 1 đã nhận diện và từ chối $100\%$ các đầu ra lỗi này trước khi ghi. Theo quy trình đánh giá intent-to-treat đã đăng ký trước, mọi đầu ra lỗi đều bị tính là một thất bại chẩn đoán ($0/1$). Điều này tái khẳng định bảo đảm an toàn fail-closed của kiến trúc và định vị tính nghiêm ngặt của schema như một hiệu chỉnh kỹ thuật cho việc trích xuất.
@@ -285,7 +285,7 @@ Suy luận Mô hình LLM ($T_{\text{LLM}}$) & $\approx 1200{,}0$ & 1200,000 & 12
 Kết quả thực nghiệm chứng minh GLHS giải quyết triệt để vấn đề trôi dạt quyền hạn tại ranh giới đọc--ghi. Nhờ Rào chắn trạng thái hai tầng, hệ thống tránh phụ thuộc vào khả năng tính toán số học thiếu tin cậy của LLM. Khóa phân vùng DAG bảo đảm hệ thống mở rộng thông lượng vượt bậc mà không đánh đổi tính toàn vẹn dữ liệu.
 
 \section{Giới hạn và Hướng phát triển}
-Nghiên cứu hiện tại dựa trên dữ liệu tổng hợp và môi trường mô phỏng PostgreSQL. Hướng phát triển tiếp theo bao gồm tích hợp chính sách kiểm soát nguồn gốc bắt buộc trên mọi luồng duyệt bệnh án và tiến hành thử nghiệm lâm sàng thực tế tại các bệnh viện.
+Nghiên cứu hiện tại dựa trên các đoàn hệ bệnh nhân tổng hợp và thực nghiệm trên cơ sở dữ liệu PostgreSQL 16 thực tế (cùng nghiên cứu mô phỏng ngữ nghĩa cho các mô hình đối sánh giao dịch). Hướng phát triển tiếp theo bao gồm tích hợp chính sách kiểm soát nguồn gốc bắt buộc trên mọi luồng duyệt bệnh án và tiến hành thử nghiệm lâm sàng thực tế tại các bệnh viện.
 
 \section{Kết luận}
 GLHS thiết lập mô hình quản trị đọc--ghi đồng phiên bản chuẩn mực cho AI y tế có trạng thái. Bằng việc niêm phong mã băm bối cảnh đọc THSS và tái thẩm định tại bước GST, hệ thống ngăn chặn vi phạm TOCTOU trên tập kiểm thử ($0/256$), triệt tiêu từ chối nhầm đồng thời ($0{,}00\%$) và đảm bảo tính tuần tự toán học, mở đường cho việc ứng dụng AI an toàn vào hệ thống y tế thế hệ mới.
@@ -324,18 +324,23 @@ Các tác giả khẳng định không có xung đột lợi ích tài chính ho
 \label{sec:proofs_vi}
 
 \begin{proof}
-Giả sử phản chứng rằng đề xuất $P$ sinh từ bản chụp $\mathcal{H}$ được commit thành công tại thời điểm $t_3 = t_{\text{commit}}(P)$, nhưng tồn tại một bước chuyển trung gian $\mathcal{T}$ được commit tại $t_2$ ($t_1 < t_2 < t_3$) làm biến đổi phân vùng $e_k \in \operatorname{Deps}(P)$ hoặc thay đổi trạng thái quản trị $\langle \Phi, \Sigma \rangle$.
+Giả sử phản chứng rằng đề xuất $P$ sinh từ bản chụp $\mathcal{H}$ được commit thành công tại thời điểm $t_3 = t_{\text{commit}}(P)$, nhưng tồn tại một bước chuyển trung gian $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ được commit tại $t_2$ ($t_1 < t_2 < t_3$) làm biến đổi phân vùng $e_k \in \operatorname{Deps}(P)$ hoặc thay đổi trạng thái quản trị $\langle v_{\pi}, v_c \rangle$.
 
-Theo định nghĩa của giao dịch cơ sở dữ liệu PostgreSQL dưới cơ chế MVCC:
+Giao thức chấp thuận GST tuân thủ Khóa Hai Pha Nghiêm ngặt (SS2PL) với trật tự phân cấp khóa chuẩn tắc toàn phần:
+\begin{equation}
+\mathcal{L}_{\text{canonical}} = \operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState}(u) \prec \text{GovEpochs}(v_{\pi}, v_c).
+\end{equation}
+
+Theo định nghĩa của giao dịch cơ sở dữ liệu dưới cơ chế khóa hàng nghiêm ngặt:
 \begin{enumerate}
-    \item Nếu $\mathcal{T}$ thay đổi trạng thái lâm sàng của $e_k$, phiên bản tăng đơn điệu: $V(e_k)_{t_2} = V(e_k)_{t_1} + 1 > V(e_k)_{t_1}$.
-    \item Tại $t_3$, GST thực thi và thu thập khóa hàng \texttt{SELECT ... FOR UPDATE} trên phân vùng $e_k$.
-    \item GST đánh giá vị từ $\operatorname{StateCurrent}(P)$, so sánh phiên bản nền khai báo trong $P$ với hàng đang khóa: $V(e_k)_{\text{current}} == v_s(e_k)$.
-    \item Vì $V(e_k)_{\text{current}} = V(e_k)_{t_2} > v_s(e_k)$, điều kiện $\operatorname{StateCurrent}(P)$ trả về $\text{False}$.
-    \item Tương tự, nếu $\mathcal{T}$ thu hồi đồng thuận hoặc tăng epoch chính sách, $\operatorname{GovernanceCurrent}(P)$ trả về $\text{False}$ khi đọc lại trạng thái đã commit dưới khóa hàng.
-    \item Nếu tiến trình cố ý giả mạo dữ liệu trong $P$, kiểm tra ràng buộc mật mã $\operatorname{Bound}(P, \mathcal{H})$ phát hiện mã băm $d_H(P) \neq \operatorname{RecomputeMerkleRoot}(id_H)$, trả về $\text{False}$.
+    \item Theo bất biến tăng phiên bản đơn điệu, khi $\mathcal{T}$ commit tại $t_2$, nó giữ khóa độc quyền trên phân vùng $e_k$ và đã tăng phiên bản trạng thái: $V(e_k)_{t_2} \ge V(e_k)_{t_1} + 1 > V(e_k)_{t_1}$.
+    \item Tại $t_3$, GST bắt đầu giai đoạn phát triển khóa theo SS2PL, thu thập các khóa hàng độc quyền (\texttt{SELECT ... FOR UPDATE}) theo đúng thứ tự từ điển $\prec_{\text{lex}}$ trên các phân vùng trong $\operatorname{Deps}(P)$, bao gồm $e_k$.
+    \item Đang giữ khóa độc quyền trên $e_k$, GST đánh giá vị từ $\operatorname{StateCurrent}(P)$, so sánh phiên bản nền khai báo trong $P$ với hàng đang khóa: $V(e_k)_{\text{current}} == v_s(e_k) = V(e_k)_{t_1}$.
+    \item Do $V(e_k)_{\text{current}} = V(e_k)_{t_2} > v_s(e_k)$, điều kiện $\operatorname{StateCurrent}(P)$ trả về $\text{False}$.
+    \item Tại $t_3$, tuân theo thứ tự $\mathcal{L}_{\text{canonical}}$, GST thu thập khóa độc quyền trên $\text{ProfileState}(u)$ và các bản ghi kỷ nguyên quản trị $\text{GovEpochs}(v_{\pi}, v_c)$. GST đánh giá vị từ $\operatorname{GovernanceCurrent}(P)$. Nếu $\mathcal{T}$ thu hồi đồng thuận hoặc tăng kỷ nguyên chính sách tại $t_2$, các bản ghi quản trị bị khóa phản ánh phiên bản mới, buộc $\operatorname{GovernanceCurrent}(P)$ trả về $\text{False}$.
+    \item Nếu dữ liệu trong $P$ bị sửa đổi hoặc tráo đổi, kiểm tra ràng buộc mật mã $\operatorname{Bound}(P, \mathcal{H})$ phát hiện mã băm $d_H(P) \neq \operatorname{RecomputeMerkleRoot}(id_H)$, trả về $\text{False}$ với xác suất áp đảo nhờ tính kháng va chạm SHA-256.
 \end{enumerate}
-Do đó, $\operatorname{Commit}(P)$ trong Phương trình~\ref{eq:commit_vi} trả về $\text{False}$ và $P$ bị hủy bỏ (aborted) vô điều kiện. Điều này mâu thuẫn với giả thiết $P$ được commit tại $t_3$. Vậy không thể tồn tại bước chuyển xung đột trung gian $\mathcal{T}$. $\blacksquare$
+Do đó, điều kiện $\operatorname{Commit}(P)$ trong Phương trình~\ref{eq:commit_vi} bắt buộc trả về $\text{False}$ và giao dịch $P$ bị hủy bỏ (aborted) nguyên tử vô điều kiện. Điều này mâu thuẫn với giả thiết $P$ được commit thành công tại $t_3$. Hơn nữa, vì mọi giao dịch đồng thời đều thu thập khóa theo trật tự toàn phần $\mathcal{L}_{\text{canonical}}$, đồ thị chờ khóa không có chu trình ($\operatorname{Cycle}(\mathcal{W}) = \emptyset$), triệt tiêu hoàn toàn bế tắc. Theo định lý Khóa Hai Pha kinh điển (Eswaran et al., 1976), mọi lịch thực thi xen kẽ hợp lệ $\mathcal{S}$ đều bảo đảm tính tuần tự xung đột nghiêm ngặt. $\blacksquare$
 \end{proof}
 
 \end{document}

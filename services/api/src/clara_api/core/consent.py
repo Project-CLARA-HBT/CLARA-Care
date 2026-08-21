@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from clara_api.core.config import get_settings
 from clara_api.db.models import UserConsent
+from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
 
 MEDICAL_CONSENT_TYPE = "medical_disclaimer"
 
@@ -134,7 +135,7 @@ class PhrConsentService:
         version: str = DEFAULT_PHR_CONSENT_VERSION,
     ) -> UserConsent:
         """Append a new typed/versioned grant row (Req 2.1, 2.6)."""
-
+        acquire_consent_lock_anchor(db, user_id=user_id)
         row = UserConsent(
             user_id=user_id,
             consent_type=_phr_consent_type(purpose),
@@ -147,7 +148,7 @@ class PhrConsentService:
     @classmethod
     def revoke(cls, db: Session, *, user_id: int, purpose: str) -> UserConsent:
         """Append a revoked row setting ``revoked_at`` — append-only (Req 2.4, 2.6)."""
-
+        acquire_consent_lock_anchor(db, user_id=user_id)
         latest = cls._latest_row(db, user_id=user_id, purpose=purpose)
         version = latest.consent_version if latest else DEFAULT_PHR_CONSENT_VERSION
         row = UserConsent(

@@ -1,9 +1,16 @@
-"""MIMIC-IV Real-World Clinical Notes & Discharge Summary Evaluation Engine.
+"""Synthetic Clinical Note Benchmark (Representative Inpatient Test Vectors).
 
-Section 1.5: Real-World EHR MIMIC-IV Clinical Notes Evaluator.
-Evaluates the GLHS Dual-Layer State Barrier on complex, messy clinical narratives,
-progress notes, and discharge summaries against temporal contradictions, due-window
-arithmetic breaches, allergy contraindications, and hallucinated medication additions.
+Section 1.5: Synthetic Clinical Note Benchmark (Representative Inpatient Test Vectors).
+Evaluates the GLHS Dual-Layer State Barrier on representative inpatient test vectors
+modeled after complex clinical narratives, progress notes, and discharge summaries
+against temporal contradictions, due-window arithmetic breaches, allergy contraindications,
+and hallucinated medication additions.
+
+IMPORTANT SCOPE & PROVENANCE NOTICE:
+This benchmark evaluates synthesized representative clinical note test vectors with grounded
+EHR schema structures. It is designed to verify bitemporal reconciliation and safety invariants
+under realistic clinical documentation patterns; it is NOT an unmediated full-hospital MIMIC-IV
+cohort extraction.
 """
 
 from __future__ import annotations
@@ -40,7 +47,7 @@ class ClinicalNoteCase:
 
 @dataclass
 class MimicEvaluationMetrics:
-    """Evaluation metrics on MIMIC-IV real-world clinical notes."""
+    """Evaluation metrics on synthetic clinical note benchmark (representative inpatient test vectors)."""
 
     total_clinical_cases: int
     temporal_contradiction_tp: int
@@ -60,7 +67,7 @@ class MimicEvaluationMetrics:
 def generate_mimic_clinical_case_suite(
     num_cases: int = 120, seed: int = 20260819
 ) -> list[ClinicalNoteCase]:
-    """Synthesize representative real-world MIMIC-IV clinical cases with grounded EHR structures."""
+    """Synthesize representative clinical note test vectors with grounded EHR structures."""
     rng = random.Random(seed)
     cases: list[ClinicalNoteCase] = []
 
@@ -188,7 +195,7 @@ def generate_mimic_clinical_case_suite(
 def evaluate_mimic_notes_pipeline(
     cases: Sequence[ClinicalNoteCase],
 ) -> MimicEvaluationMetrics:
-    """Run GLHS Dual-Layer Barrier evaluation over MIMIC-IV clinical cases."""
+    """Run GLHS Dual-Layer Barrier evaluation over synthetic clinical note test vectors."""
     tc_tp = 0
     tc_fp = 0
     tc_fn = 0
@@ -264,11 +271,11 @@ def evaluate_mimic_notes_pipeline(
 
 
 def generate_latex_mimic_table(metrics: MimicEvaluationMetrics) -> str:
-    """Generate LaTeX table reporting MIMIC-IV evaluation results."""
+    """Generate LaTeX table reporting Synthetic Clinical Note Benchmark results."""
     return f"""\\begin{{table}}[t]
 \\centering
 \\small
-\\caption{{GLHS Dual-Layer State Barrier Performance on MIMIC-IV Real-World Messy Clinical Notes ($N={metrics.total_clinical_cases}$ Inpatient Cases).}}
+\\caption{{GLHS Dual-Layer State Barrier Performance on Synthetic Clinical Note Benchmark (Representative Inpatient Test Vectors, $N={metrics.total_clinical_cases}$ Inpatient Cases).}}
 \\label{{tab:mimic_real_world_eval}}
 \\begin{{tabularx}}{{\\textwidth}}{{lXcc}}
 \\toprule
@@ -286,9 +293,15 @@ Bitemporal Fact Reconciliation & Snodgrass (1995) interval reconciliation accura
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="MIMIC-IV Real-World Clinical Notes Evaluator")
+    parser = argparse.ArgumentParser(
+        description="Synthetic Clinical Note Benchmark (Representative Inpatient Test Vectors)"
+    )
     parser.add_argument("--cases", type=int, default=120)
-    parser.add_argument("--output", type=Path, default=Path("artifacts/mimic_real_world_eval.json"))
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/mimic_real_world_eval_report.json"),
+    )
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -302,7 +315,7 @@ if __name__ == "__main__":
     with open(args.output.with_suffix(".tex"), "w", encoding="utf-8") as f:
         f.write(latex_tbl)
 
-    print("=== MIMIC-IV Clinical Notes Evaluation ===")
+    print("=== Synthetic Clinical Note Benchmark (Representative Inpatient Test Vectors) ===")
     print(f"Total Inpatient Cases: {metrics.total_clinical_cases}")
     print(f"Temporal Contradiction F1: {metrics.temporal_f1 * 100:.1f}%")
     print(f"Due-Window Breach Accuracy: {metrics.due_window_breach_accuracy * 100:.1f}%")
@@ -310,5 +323,6 @@ if __name__ == "__main__":
         f"Hallucination Blocking Rate: {metrics.hallucinated_prescription_blocking_rate * 100:.1f}%"
     )
     print(f"Allergy Blocking Rate: {metrics.allergy_contraindication_blocking_rate * 100:.1f}%")
+    print(f"Artifacts saved to: {args.output} and {args.output.with_suffix('.tex')}")
     print("\nLaTeX Table:\n")
     print(latex_tbl)

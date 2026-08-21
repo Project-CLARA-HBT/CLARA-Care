@@ -1,4 +1,4 @@
-"""Architectural & Semantic Simulation Study of Peer Transactional Baselines & Governance Invariants.
+"""Simulation-Based Comparative Analysis of Concurrency Control & Governance Semantics.
 
 This benchmark is an Architectural & Semantic Simulation Study evaluating formal concurrency
 control and governance invariants across simulated peer paradigms:
@@ -108,7 +108,7 @@ class PeerBenchmarkSuiteReport:
     num_trials: int
     concurrency_workers: int
     metrics_by_paradigm: dict[str, BaselinePerformanceMetrics]
-    glhs_superiority_verified: bool
+    semantic_invariants_satisfied: bool
 
 
 def generate_benchmark_workload(
@@ -773,7 +773,7 @@ def run_peer_transactional_benchmarks(
         metrics_map[p.name] = m
 
     glhs_m = metrics_map[BaselineParadigm.GLHS_V2.value]
-    glhs_superiority = (
+    semantic_invariants = (
         glhs_m.unsafe_commits == 0
         and glhs_m.toctou_violation_rate == 0.0
         and glhs_m.severe_ddi_leak_rate == 0.0
@@ -785,7 +785,7 @@ def run_peer_transactional_benchmarks(
         num_trials=total,
         concurrency_workers=workers,
         metrics_by_paradigm=metrics_map,
-        glhs_superiority_verified=glhs_superiority,
+        semantic_invariants_satisfied=semantic_invariants,
     )
 
 
@@ -795,7 +795,7 @@ def generate_peer_latex_table(report: PeerBenchmarkSuiteReport) -> str:
         r"\begin{table*}[t]",
         r"\centering",
         r"\small",
-        rf"\caption{{Architectural \& Semantic Simulation Comparison of Transactional \& Governance Paradigms ($N={report.num_trials}$ Workloads, $W={report.concurrency_workers}$ Concurrent Simulated Workers). \textit{{Note:}} Throughput (TPS) and p95 latency reflect in-memory semantic simulation dispatch and conflict-evaluation times on identical hardware.}}",
+        rf"\caption{{Simulation-Based Comparative Analysis of Concurrency Control \& Governance Semantics ($N={report.num_trials}$ Workloads, $W={report.concurrency_workers}$ Concurrent Simulated Workers). \textit{{Note:}} Throughput (TPS) and p95 latency reflect in-memory semantic simulation dispatch and conflict-evaluation times on identical hardware.}}",
         r"\label{tab:peer_transactional_baselines}",
         r"\begin{tabularx}{\textwidth}{p{4.2cm} c c c c c c}",
         r"\toprule",
@@ -845,7 +845,7 @@ def generate_peer_latex_table(report: PeerBenchmarkSuiteReport) -> str:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Architectural & Semantic Simulation Benchmark Suite for Peer Transactional Baselines"
+        description="Simulation-Based Comparative Analysis of Concurrency Control & Governance Semantics"
     )
     parser.add_argument("--trials", type=int, default=500)
     parser.add_argument("--workers", type=int, default=16)
@@ -861,8 +861,13 @@ if __name__ == "__main__":
         json.dump(asdict(report), f, indent=2, ensure_ascii=False)
 
     latex_tbl = generate_peer_latex_table(report)
+    with open(args.output.with_suffix(".tex"), "w", encoding="utf-8") as f:
+        f.write(latex_tbl)
+
     print("=== Peer Transactional Baselines Evaluation ===")
-    print(f"GLHS Superiority Verified: {report.glhs_superiority_verified}")
-    print(f"Artifacts saved to: {args.output}")
+    print(
+        f"GLHS Semantic Invariants Satisfied (0 unsafe commits, 0 false-stale aborts): {report.semantic_invariants_satisfied}"
+    )
+    print(f"Artifacts saved to: {args.output} and {args.output.with_suffix('.tex')}")
     print("\nLaTeX Table:\n")
     print(latex_tbl)

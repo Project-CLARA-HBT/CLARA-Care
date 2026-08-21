@@ -6,9 +6,11 @@ missing boundary observation into a negative attack result.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from collections import Counter
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from evaluation.evidence_program.freeze import FreezeError
@@ -54,9 +56,19 @@ def family_scope(family: str) -> str:
 
 
 def current_revision() -> str:
-    return subprocess.run(
-        ["git", "rev-parse", "HEAD"], check=True, text=True, capture_output=True
-    ).stdout.strip()
+    if os.environ.get("GOVRED_IMPLEMENTATION_REVISION"):
+        return os.environ["GOVRED_IMPLEMENTATION_REVISION"]
+    rev_file = Path(".deployed-source-revision")
+    if rev_file.is_file():
+        text = rev_file.read_text().strip()
+        if text:
+            return text
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"], check=True, text=True, capture_output=True
+        ).stdout.strip()
+    except Exception:
+        return "0" * 40
 
 
 def build_development_manifest(

@@ -1,17 +1,18 @@
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \small
-\caption{Empirical Comparison of SOTA Transactional Baselines vs. GLHS v2 ($N=500$ Clinical Workloads, $W=16$ Concurrent Workers).}
+\caption{Simulation-Based Comparative Analysis of Concurrency Control \& Governance Semantics ($N=500$ Workloads, $W=16$ Concurrent Simulated Workers). \textit{Note:} Throughput (TPS) and p95 latency reflect in-memory semantic simulation dispatch and conflict-evaluation times on identical hardware.}
 \label{tab:peer_transactional_baselines}
-\begin{tabularx}{\textwidth}{lccccc}
+\begin{tabularx}{\textwidth}{p{4.2cm} c c c c c c}
 \toprule
-\textbf{Transactional Paradigm} & \textbf{TOCTOU Rate} & \textbf{DDI Leak Rate} & \textbf{Deadlock Rate} & \textbf{False-Stale Rate} & \textbf{Throughput (TPS)} \\
+\textbf{Transactional Paradigm} & \textbf{Valid Commits} & \textbf{Safe Aborts} & \textbf{Unsafe Commits} & \textbf{False-Stale} & \textbf{TPS} & \textbf{p95 Latency} \\
 \midrule
-FHIR REST Conditional Update (ETag) & 25.8\% & 20.0\% & 0.0\% & 16.6\% &  2187.0 \\
-MemTX (Li et al., 2026) & 4.6\% & 20.0\% & 0.0\% & 3.0\% &  6615.7 \\
-CommitGuard (Santos-Grueiro, 2026) & 0.0\% & 6.0\% & 0.0\% & 9.4\% &  6281.6 \\
-Provenact (Peng & Wu, 2026) & 0.0\% & 6.0\% & 1.6\% & 0.0\% &  3978.1 \\
-GLHS v2 (Dual-Layer Barrier + Merkle WW-DAG) & \textbf{0.0\%} & \textbf{0.0\%} & \textbf{0.0\%} & \textbf{0.0\%} & \textbf{17445.0} \\
+FHIR R4 Atomic Bundle (If-Match) & 231 & 69 & 200 (40.0\%) & 9.2\% & 46,946.4 & 0.01 ms \\
+PostgreSQL SSI (Serializable) & 248 & 52 & 200 (40.0\%) & 10.4\% & 64,318.9 & 0.00 ms \\
+MemTX (Li et al., 2026) & 274 & 26 & 200 (40.0\%) & 0.6\% & 68,734.4 & 0.00 ms \\
+CommitGuard (Santos-Grueiro, 2026) & 282 & 118 & 100 (20.0\%) & 0.8\% & 52,321.7 & 0.01 ms \\
+MasuGate (Peng & Wu, 2026) & 284 & 116 & 100 (20.0\%) & 0.0\% & 63,315.3 & 0.00 ms \\
+\textbf{GLHS v2 (Dual-Layer Barrier + Merkle WW-DAG)} & 299 & 201 & \textbf{0 (0.0\%)} & \textbf{0.0\%} & \textbf{55,513.8} & \textbf{0.01 ms} \\
 \bottomrule
 \end{tabularx}
-\end{table}
+\end{table*}

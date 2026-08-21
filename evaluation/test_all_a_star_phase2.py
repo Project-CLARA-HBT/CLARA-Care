@@ -6,10 +6,10 @@ Executes comprehensive integration testing and formal validation across:
 3. OCC thrashing model (occ_thrashing_model.py)
 4. Wound-Wait dynamic DAG locking (test_glhs_dynamic_ww_locking.py)
 5. Santos-Grueiro 4-boundary validator (test_four_boundary_validator.py)
-6. SOTA peer transactional baselines (peer_transactional_baselines.py)
-7. MIMIC-IV real-world clinical notes evaluator (mimic_real_world_eval.py)
+6. Simulation-based concurrency & governance semantics (peer_transactional_baselines.py)
+7. Synthetic clinical note benchmark (mimic_real_world_eval.py)
 8. Micro-benchmark governance latency (microbench_governance_profile.py)
-9. CareGuard-VN Multimodal OCR-to-DDI (evaluate_ocr_ddi.py)
+9. CareGuard-VN Multimodal OCR-to-DDI reference suite (evaluate_ocr_ddi.py)
 """
 
 from __future__ import annotations
@@ -141,7 +141,8 @@ class TestTostEquivalence:
 
     def test_pareto_synthesis(self):
         study = evaluate_glhs_384_study()
-        assert study.tost.is_equivalent is True
+        assert study.tost.is_equivalent is False
+        assert study.is_underpowered is True
         assert study.systems_metrics.token_reduction_pct > 80.0
         assert study.systems_metrics.phi_over_disclosure_pct == 0.0
 
@@ -369,12 +370,12 @@ class TestSantosGrueiroFourBoundaries:
 
 
 # ===========================================================================
-# 6. SOTA Peer Transactional Baselines Tests
+# 6. Simulation-Based Concurrency & Governance Semantics Tests
 # ===========================================================================
 
 
 class TestSOTAPeerTransactionalBaselines:
-    """Test comparative performance against SOTA peer transactional baselines."""
+    """Test simulation-based comparative analysis of concurrency control & governance semantics."""
 
     def test_workload_generation(self):
         workload = generate_benchmark_workload(num_txns=100, seed=123)
@@ -386,9 +387,9 @@ class TestSOTAPeerTransactionalBaselines:
         assert "severe_ddi" in types
         assert "disjoint_parallel" in types
 
-    def test_glhs_peer_superiority(self):
+    def test_glhs_semantic_invariants(self):
         report = run_peer_transactional_benchmarks(num_txns=200, workers=16, seed=42)
-        assert report.glhs_superiority_verified is True
+        assert report.semantic_invariants_satisfied is True
         glhs = report.metrics_by_paradigm["GLHS_V2"]
         assert glhs.toctou_violation_rate == 0.0
         assert glhs.severe_ddi_leak_rate == 0.0
@@ -397,12 +398,12 @@ class TestSOTAPeerTransactionalBaselines:
 
 
 # ===========================================================================
-# 7. MIMIC-IV Real-World Evaluator Tests
+# 7. Synthetic Clinical Note Benchmark Tests
 # ===========================================================================
 
 
 class TestMIMICRealWorldEvaluator:
-    """Test evaluation pipeline on MIMIC-IV real-world messy clinical notes."""
+    """Test evaluation pipeline on synthetic clinical note benchmark (representative inpatient test vectors)."""
 
     def test_case_generation_and_evaluation(self):
         cases = generate_mimic_clinical_case_suite(num_cases=60, seed=42)
@@ -669,7 +670,7 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         )
     )
 
-    # 6. Module 6: SOTA Peer Transactional Baselines
+    # 6. Module 6: Simulation-Based Concurrency & Governance Semantics
     t0 = time.perf_counter()
     m6_tests = 2
     m6_passed = 0
@@ -678,7 +679,7 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         t_m6 = TestSOTAPeerTransactionalBaselines()
         t_m6.test_workload_generation()
         m6_passed += 1
-        t_m6.test_glhs_peer_superiority()
+        t_m6.test_glhs_semantic_invariants()
         m6_passed += 1
     except Exception as e:  # noqa: BLE001
         m6_failed = m6_tests - m6_passed
@@ -688,7 +689,7 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
     modules_summary.append(
         ModuleAuditSummary(
             module_index=6,
-            module_name="SOTA Peer Transactional Baselines",
+            module_name="Simulation-Based Concurrency & Governance Semantics",
             target_source="evaluation/peer_transactional_baselines.py",
             tests_executed=m6_tests,
             tests_passed=m6_passed,
@@ -696,14 +697,14 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
             execution_time_ms=elapsed_m6,
             status="PASSED" if m6_failed == 0 else "FAILED",
             key_metrics={
-                "glhs_vs_fhir_rest": "superior",
-                "glhs_vs_memtx": "superior",
-                "glhs_vs_provenact": "superior",
+                "semantic_invariants_satisfied": "verified",
+                "zero_unsafe_commits": "verified",
+                "zero_false_stale": "verified",
             },
         )
     )
 
-    # 7. Module 7: MIMIC-IV Real-World Clinical Notes Evaluator
+    # 7. Module 7: Synthetic Clinical Note Benchmark
     t0 = time.perf_counter()
     m7_tests = 1
     m7_passed = 0
@@ -720,7 +721,7 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
     modules_summary.append(
         ModuleAuditSummary(
             module_index=7,
-            module_name="MIMIC-IV Real-World Clinical Notes Evaluator",
+            module_name="Synthetic Clinical Note Benchmark (Representative Inpatient Test Vectors)",
             target_source="evaluation/mimic_real_world_eval.py",
             tests_executed=m7_tests,
             tests_passed=m7_passed,
@@ -818,7 +819,7 @@ def run_all_phase2_integration_suite(verbose: bool = True) -> ExecutivePhase2Aud
         total_execution_time_ms=total_elapsed,
         modules=modules_summary,
         all_modules_passed=all_passed,
-        audit_verdict="STRONG ACCEPT (100% PASS RATE - ZERO DEFECTS)" if all_passed else "REJECT",
+        audit_verdict="ALL_TESTS_PASSED" if all_passed else "TESTS_FAILED",
     )
 
 

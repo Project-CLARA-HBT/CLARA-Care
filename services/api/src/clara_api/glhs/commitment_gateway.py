@@ -1688,16 +1688,15 @@ def apply_commitment_transition(
         return cast(GlhsClinicalCommitmentTransition, existing)
     dep_keys = _resolve_dependency_partition_keys(commitment.domain, data.dependencies)
     target_and_dep_keys = list({(commitment.domain, commitment.semantic_key)} | dep_keys)
-    # Canonical lock hierarchy:
-    # 1. Entity partitions (sorted canonically (domain, semantic_key) with SELECT ... FOR UPDATE)
-    locked_partitions = lock_entity_partitions(
-        db,
-        profile_id=scope.profile.id,
-        partitions=target_and_dep_keys,
-        policy_version=COMMITMENT_POLICY_VERSION,
-        consent_version="not_required",
-    )
-    # 2. Profile state PhrProfile with SELECT ... FOR UPDATE
+    # Unified Canonical Lock Hierarchy:
+    # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
+    #
+    # Step 1: Policy Lock Anchor
+    from clara_api.glhs.lock_hierarchy import acquire_policy_lock_anchor
+
+    acquire_policy_lock_anchor(db, policy_domain=commitment.domain)
+
+    # Step 2: Profile state PhrProfile with SELECT ... FOR UPDATE & advisory locks
     base = _lock_profile_state(db, profile_id=scope.profile.id)
     # Re-check after lock acquisition: another transaction may have committed
     # the same key while this writer waited. This prevents a raw unique-key
@@ -1727,13 +1726,20 @@ def apply_commitment_transition(
         raise GlhsInvariantError("commitment_proposal_transition_mismatch")
     if not set(evidence_ids).issubset(set(proposal.observed_evidence_ids_json or ())):
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
-    # 3. Active UserConsent with SELECT ... FOR UPDATE via _governed_consent_version(db, ..., for_update=True)
+    # Step 3: Re-read & verify active UserConsent and GovernancePolicyEpoch under active locks
     consent_version = _governed_consent_version(
         db, owner_user_id=scope.profile.user_id, purpose=scope.purpose, for_update=True
     )
-    # 4. Active GovernancePolicyEpoch with SELECT ... FOR UPDATE via _effective_policy_version(db, for_update=True)
     epoch = read_current_policy_epoch(db, for_update=True)
     policy_version = epoch.version if epoch is not None else COMMITMENT_POLICY_VERSION
+    # Step 4: Entity partitions in lexicographical canonical order
+    locked_partitions = lock_entity_partitions(
+        db,
+        profile_id=scope.profile.id,
+        partitions=target_and_dep_keys,
+        policy_version=policy_version,
+        consent_version="not_required",
+    )
     # GLHS-B05/B-010: after acquiring the profile/state lock, re-resolve the
     # root inference binding from the database (never from the proposal payload)
     # and re-read the exact root snapshot before persisting anything.

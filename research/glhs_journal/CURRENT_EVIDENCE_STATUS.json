@@ -24,14 +24,14 @@
         "claim_id": "GLHS-TOCTOU-V2-001",
         "ledger": "research/glhs_journal/revision_claim_ledger.csv",
         "missing_artifacts": [],
-        "notes": "V2 seal hashes pass (BYTE_VERIFIED_OBSERVATION_MISMATCH), but TOCTOU-V2-05 and TOCTOU-V2-09 mismatch frozen expected classifications; status is NOT_CLAIM_ELIGIBLE under frozen v2 expected rules, noting that observed mismatches were safe rejections rather than unsafe commits (0 forbidden commits observed across all 12 schedules).",
+        "notes": "Historical single-run protocol v2 seal hashes pass (BYTE_VERIFIED_OBSERVATION_MISMATCH), but TOCTOU-V2-05 and TOCTOU-V2-09 mismatch frozen expected classifications; status is NOT_CLAIM_ELIGIBLE due to frozen expected rule, observing safe rejections rather than unsafe commits (0 forbidden commits observed across all 12 schedules).",
         "status": "byte_verified_not_claim_eligible"
       },
       {
         "claim_id": "GLHS-TOCTOU-R3-REPETITION-001",
         "ledger": "research/glhs_journal/r3_claim_to_evidence.csv",
         "missing_artifacts": [],
-        "notes": "600 robustness repetitions across 12 logical schedules; 0 forbidden/unsafe commits observed (10 robust schedules with 100% safe rejections/linearization, 2 non-robust schedules with 0 forbidden commits). Repetitions are robustness executions, not new scientific N.",
+        "notes": "Historical 600-run concurrency repetition artifact (EXECUTED_ROBUST_ANALYZED) executed at historical revision 7bd677e4 with ongoing modern re-verification baseline (383c6df2 and current HEAD); across all 600 executions (12 logical schedules x 50 deterministic repetitions), 0 forbidden commits occur: 10 robust schedules with 100% safe rejections/linearization (50/50 each), 2 non-robust schedules (TOCTOU-V2-05, TOCTOU-V2-09) with 0 forbidden commits. Repetitions are robustness executions, not new scientific N.",
         "status": "sealed_descriptive"
       }
     ]
@@ -161,7 +161,7 @@
     "glhs_concurrency_repetition_v1": {
       "analysis": {
         "path": "research/glhs_journal/concurrency_repetition_v1/analysis.json",
-        "sha256": "877da64356bb37bd8e7bb66ef937004ab86d988d019b83eab3c5a404ed18728a"
+        "sha256": "91f126c4fae88366853b24bd874a9898319c8de148eecac0c5dc375fc3fe46da"
       },
       "claim_eligibility": "SEALED_DESCRIPTIVE",
       "forbidden_commit_observed": 0,
@@ -171,7 +171,7 @@
         "TOCTOU-V2-05",
         "TOCTOU-V2-09"
       ],
-      "notes": "Across all 600 runs (12 logical schedules x 50 deterministic repetitions), 0 forbidden/unsafe commits occurred: 10 robust schedules with 100% safe rejections/linearization (50/50 each), 2 non-robust schedules (TOCTOU-V2-05, TOCTOU-V2-09) with 0 forbidden commits. Repetitions are robustness executions, not new scientific N.",
+      "notes": "Historical 600-run concurrency repetition artifact (EXECUTED_ROBUST_ANALYZED) with authentic execution provenance at historical revision 7bd677e4 (2026-08-19T08:38:58Z) and ongoing modern re-verification baseline (such as 383c6df2 and current HEAD). Across all 600 runs (12 logical schedules x 50 deterministic repetitions), 0 forbidden/unsafe commits occurred: 10 robust schedules with 100% safe rejections/linearization (50/50 each), 2 non-robust schedules (TOCTOU-V2-05, TOCTOU-V2-09) with 0 forbidden commits. Repetitions are robustness executions, not new scientific N.",
       "operational_failures": 0,
       "ordering_confidence": {
         "PARTIAL": 600
@@ -193,14 +193,14 @@
       "run_id": "GLHS-CONCURRENCY-REPETITION-V1-20260819-RUN01",
       "scientific_n": 12,
       "seal": {
-        "entries": 5,
+        "entries": 6,
         "mismatches": [],
         "missing": [],
         "path": "research/glhs_journal/concurrency_repetition_v1/seal/artifact-sha256.json",
         "resolved": true
       },
-      "source_sha": "383c6df2",
-      "top_level_status": "EXECUTED",
+      "source_sha": "7bd677e4",
+      "top_level_status": "EXECUTED_ROBUST_ANALYZED",
       "total_repetitions_executed": 600
     },
     "glhs_final_v2": {
@@ -215,7 +215,7 @@
       ],
       "committed": 2,
       "forbidden_commit_observed": 0,
-      "notes": "GLHS v2 single-run protocol status is BYTE_VERIFIED_OBSERVATION_MISMATCH and NOT_CLAIM_ELIGIBLE under frozen v2 expected rules. Observed classification mismatches on TOCTOU-V2-05 and TOCTOU-V2-09 were safe rejections rather than unsafe commits (0 forbidden commits observed across all 12 schedules).",
+      "notes": "Historical single-run protocol v2 status is BYTE_VERIFIED_OBSERVATION_MISMATCH and NOT_CLAIM_ELIGIBLE due to frozen expected rule (TOCTOU-V2-05 and TOCTOU-V2-09 mismatch frozen expected classifications). Observed classification mismatches were safe rejections rather than unsafe commits (0 forbidden commits observed across all 12 schedules).",
       "rejected": 10,
       "run_id": "GLHS-POSTGRES-TOCTOU-FINAL-V2-20260817-01",
       "schedules_executed": 12,
@@ -363,7 +363,7 @@
       "evidence_class": "postgres_concurrency_repetition",
       "immutable": true,
       "raw_root": "research/glhs_journal/concurrency_repetition_v1",
-      "source_sha": "383c6df2"
+      "source_sha": "7bd677e4"
     },
     "glhs-postgres-toctou-final-20260817-01": {
       "evidence_class": "postgres_concurrency",
