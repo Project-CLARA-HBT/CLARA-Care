@@ -6,6 +6,7 @@ metrics.  No patient data, free-text answer or credential is written.
 
 from __future__ import annotations
 
+import argparse
 import concurrent.futures
 import json
 import os
@@ -30,6 +31,7 @@ if VENV_PYTHON.exists() and Path(sys.executable).resolve() != VENV_PYTHON.resolv
     except ImportError:
         os.execv(str(VENV_PYTHON), [str(VENV_PYTHON)] + sys.argv)
 
+from clara_ml.config import Settings  # noqa: E402
 from clara_ml.llm.deepseek_client import DeepSeekClient  # noqa: E402
 
 DEFAULT_MODELS = (
@@ -64,11 +66,24 @@ DEFAULT_MODELS = (
 )
 
 
-def get_models() -> list[str]:
+def get_models(
+    cli_models: list[str] | None = None,
+    api_key: str = "",
+    base_url: str = "",
+) -> list[str]:
+    if cli_models:
+        models = []
+        for m in cli_models:
+            for part in m.split(","):
+                if part.strip():
+                    models.append(part.strip())
+        if models:
+            return models
+
     raw = os.environ.get("BENCHMARK_MODELS", "").strip()
     if raw.lower() == "all":
-        base_url = os.environ.get("DEEPSEEK_BASE_URL", "").rstrip("/")
-        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+        base_url = (base_url or os.environ.get("DEEPSEEK_BASE_URL", "")).rstrip("/")
+        api_key = api_key or os.environ.get("DEEPSEEK_API_KEY", "")
         if base_url and api_key:
             req = urllib.request.Request(
                 f"{base_url}/models",
@@ -85,12 +100,18 @@ def get_models() -> list[str]:
     return list(DEFAULT_MODELS)
 
 
-def _one(model: str, run: int, timeout_seconds: int = 15) -> dict[str, Any]:
+def _one(
+    model: str,
+    run: int,
+    api_key: str,
+    base_url: str,
+    timeout_seconds: int = 15,
+) -> dict[str, Any]:
     started = time.perf_counter()
     try:
         client = DeepSeekClient(
-            api_key=os.environ["DEEPSEEK_API_KEY"],
-            base_url=os.environ["DEEPSEEK_BASE_URL"],
+            api_key=api_key,
+            base_url=base_url,
             model=model,
             fallback_model="",
             timeout_seconds=timeout_seconds,
@@ -126,15 +147,57 @@ def _one(model: str, run: int, timeout_seconds: int = 15) -> dict[str, Any]:
 
 
 def main() -> None:
-    models = get_models()
-    runs_per_model = int(os.environ.get("BENCHMARK_RUNS", "3"))
-    max_workers = int(os.environ.get("BENCHMARK_WORKERS", "6"))
-    timeout_seconds = int(os.environ.get("BENCHMARK_TIMEOUT", "15"))
+    parser = argparse.ArgumentParser(
+        description="Benchmark OpenAI-compatible model routers for stability, latency, and conformance."
+    )
+    parser.add_argument(
+        "--model",
+        "--models",
+        dest="models",
+        action="append",
+        help="Target model(s) to benchmark. Can be specified multiple times or comma-separated.",
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        dest="output",
+        type=str,
+        default=os.environ.get("BENCHMARK_OUTPUT", ""),
+        help="Path to write the JSON results file.",
+    )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=int(os.environ.get("BENCHMARK_RUNS", "3")),
+        help="Number of benchmark runs per model (default: 3).",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=int(os.environ.get("BENCHMARK_WORKERS", "6")),
+        help="Max concurrent worker threads (default: 6).",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=int(os.environ.get("BENCHMARK_TIMEOUT", "15")),
+        help="Request timeout in seconds (default: 15).",
+    )
+    args = parser.parse_args()
+
+    settings = Settings()
+    api_key = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("ROUTER_API_KEY") or settings.deepseek_api_key
+    base_url = os.environ.get("DEEPSEEK_BASE_URL") or os.environ.get("ROUTER_BASE_URL") or settings.deepseek_base_url
+
+    models = get_models(cli_models=args.models, api_key=api_key, base_url=base_url)
+    runs_per_model = args.runs
+    max_workers = args.workers
+    timeout_seconds = args.timeout
 
     records: list[dict[str, Any]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
-            executor.submit(_one, model, run, timeout_seconds)
+            executor.submit(_one, model, run, api_key, base_url, timeout_seconds)
             for model in models
             for run in range(1, runs_per_model + 1)
         ]
@@ -162,7 +225,16 @@ def main() -> None:
                 ),
             }
         )
-    print(json.dumps({"schema_version": "router-smoke-v1", "models": aggregate}))
+
+    output_data = {"schema_version": "router-smoke-v1", "models": aggregate}
+    output_json = json.dumps(output_data, indent=2)
+
+    if args.output:
+        out_path = Path(args.output).resolve()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(output_json + "\n", encoding="utf-8")
+
+    print(output_json)
 
 
 if __name__ == "__main__":

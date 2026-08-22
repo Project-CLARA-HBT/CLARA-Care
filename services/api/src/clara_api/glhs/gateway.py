@@ -1264,7 +1264,7 @@ def propose_assertion(
         if evidence_row.profile_id != profile_id:
             raise GlhsInvariantError("assertion_evidence_scope_forbidden")
         require_member(relation, EVIDENCE_RELATIONS, field="evidence_relation")
-    partition = get_or_create_entity_partition(
+    get_or_create_entity_partition(
         db,
         profile_id=profile_id,
         domain=data.assertion_type.strip(),

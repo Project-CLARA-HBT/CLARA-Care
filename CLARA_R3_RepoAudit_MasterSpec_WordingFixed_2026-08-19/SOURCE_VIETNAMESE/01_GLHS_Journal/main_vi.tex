@@ -65,10 +65,6 @@ Trong kiểm soát truy cập phân tán, Tang và cộng sự (Google Zanzibar)
 Các nghiên cứu hệ thống gần đây mở rộng các khái niệm giao dịch kinh điển cho các hệ thống LLM đa tác tử. Các công trình về Agentic Transactions~\cite{agentictransaction2026} và Kiểm soát tương tranh giao dịch tác tử (ATCC)~\cite{atcc2026} hình thức hóa các cấp độ cô lập, cơ chế hủy/rollback và tuần tự hóa đồ thị phụ thuộc cho việc sử dụng công cụ của tác tử và các quy trình suy luận đa bước. Mặc dù Agentic Transactions và ATCC giải quyết các rủi ro tương tranh và thực thi trong quy trình tác tử tổng quát, chúng coi trạng thái bên dưới như các thanh ghi bộ nhớ phi cấu trúc chung hoặc các điểm cuối gọi công cụ tùy ý mà không có các ràng buộc lâm sàng đặc thù miền. Chúng không thực thi ngữ nghĩa hai thời gian hợp lệ và tri thức đặc thù y tế ($t_v \le \text{valid\_cutoff} \land t_k \le \text{known\_cutoff}$), không thể ràng buộc các bằng chứng công bố Merkle mật mã của bệnh án tối thiểu hóa theo tác vụ vào các đề xuất ghi lùi bền vững, và bỏ sót các kỷ nguyên sự kiện đồng thuận đơn điệu ($e_{\text{consent}}$) cần thiết để triệt tiêu hiện tượng mù thu hồi A-B-A.
 
 \paragraph{Định vị Học thuật của GLHS: Tính Nguyên tử giữa Ảnh chụp Quản trị và Trạng thái Ghi.}
-\begin{quote}
-\emph{``Prior work has already established that durable agent effects require commit-time authority validation (CommitGuard, Santos-Grueiro 2026) and that stateful policies must be serialized with the effects they govern (Provenact, Peng \& Wu 2026; MemTX, Li et al. 2026). GLHS does not claim to discover stale authorization or transactional agent memory. Instead, it targets a narrower healthcare-specific compound invariant: a persistent clinical proposal must remain bound to the exact task-minimized, bitemporal health disclosure actually consumed during inference, including its clinical evidence, consent event, policy epoch, and state dependencies, and those coordinates must be revalidated atomically with the resulting mutation. Relative to CommitGuard, this adds a reconstructable clinical disclosure and evidence contract; relative to policy-state serializability, it integrates that contract with longitudinal health-state versioning and provenance. Our claims are limited to the snapshot-bound paths and deployment conditions directly exercised by the accompanying PostgreSQL evidence.''}
-\end{quote}
-
 Các nghiên cứu trước đây đã chứng minh rằng các hiệu ứng tác tử bền vững đòi hỏi phải thẩm định thẩm quyền tại thời điểm commit (CommitGuard, Santos-Grueiro 2026)~\cite{temporaryauth} và các chính sách có trạng thái phải được tuần tự hóa cùng với các hiệu ứng mà chúng quản trị (Provenact, Peng \& Wu 2026~\cite{statefulgov}; MemTX, Li et al. 2026~\cite{memtx}). GLHS không tuyên bố phát hiện ra sự lỗi thời của ủy quyền hay bộ nhớ tác tử có tính giao dịch. Thay vào đó, hệ thống hướng tới một bất biến phức hợp hẹp chuyên biệt cho y tế: một đề xuất lâm sàng bền vững bắt buộc phải duy trì ràng buộc với chính xác bản công bố y tế hai thời gian đã được tối thiểu hóa theo tác vụ mà mô hình thực sự đã tiếp nhận trong quá trình suy luận, bao gồm bằng chứng lâm sàng, sự kiện đồng thuận, kỷ nguyên chính sách, và các phụ thuộc trạng thái, và các tọa độ này phải được tái thẩm định nguyên tử cùng với đột biến dữ liệu sinh ra. So với CommitGuard, GLHS bổ sung hợp đồng bằng chứng và bản công bố lâm sàng có thể tái dựng; so với tính tuần tự hóa trạng thái chính sách, GLHS tích hợp hợp đồng đó với việc quản lý phiên bản trạng thái y tế dọc và nguồn gốc dữ liệu. Các tuyên bố của chúng tôi giới hạn trong các luồng ràng buộc ảnh chụp và các điều kiện triển khai được kiểm chứng trực tiếp bởi bằng chứng thực nghiệm trên PostgreSQL đi kèm.
 
 Sự phân biệt này mang tính quyết định vì giảm thiểu dữ liệu khi đọc và ủy quyền khi ghi giải quyết hai bài toán bổ trợ nhưng không trùng lặp. Một hệ thống có thể thu hẹp bối cảnh chính xác khi truy xuất nhưng lại cho phép ghi mà không biết mô hình đã dựa trên bản chụp nào. Hệ thống cũng có thể kiểm tra phiên bản trạng thái hiện tại nhưng đánh mất nguồn gốc, mục đích, sự đồng thuận hoặc tác vụ của bối cảnh suy luận. GLHS liên kết chặt chẽ các tọa độ này qua ranh giới thao tác thông qua hợp đồng đồng phiên bản. Đóng góp mang tính hợp thành: các nguyên hàm về thời gian, nguồn gốc, ủy quyền và tương tranh đã được hợp nhất để một bản chụp y tế cụ thể mà mô hình nhìn thấy trở thành một phụ thuộc có thể kiểm chứng của bước chuyển trạng thái lâm sàng bền vững cuối cùng.
@@ -106,17 +102,12 @@ H = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, e_{\text{consent}}, t_v, t_k, id_
 P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, e_{\text{consent}}, id_H, d_H, \Delta, \rho \rangle,
 \label{eq:proposal_vi}
 \end{equation}
-với tập phụ thuộc $\operatorname{Deps}(P) = \{ \text{target\_key} \} \cup \{ \text{dependency\_keys} \}$. Thao tác ghi GST chỉ thành công khi thỏa mãn:
+với tập phụ thuộc $\operatorname{Deps}(P) = \{ \text{target\_key} \} \cup \{ \text{dependency\_keys} \}$. Thao tác ghi GST chỉ thành công khi thỏa mãn (xem Hình~\ref{fig:contract_vi}):
 \begin{equation}
 \operatorname{Commit}(P) \iff \operatorname{Bound}(P, H) \land \operatorname{StateCurrent}(P) \land \operatorname{GovernanceCurrent}(P) \land \operatorname{SnapshotValid}(P).
 \label{eq:commit_vi}
 \end{equation}
-Khi commit, GST thu thập các khóa hàng độc quyền \texttt{SELECT ... FOR UPDATE} theo thứ tự phân cấp khóa chuẩn tắc toàn cục (global canonical lock hierarchy) $\mathcal{L}_{\text{canonical}}$ nghiêm ngặt:
-\begin{equation}
-\mathcal{L}_{\text{canonical}} = \text{PolicyAnchor}(d) \prec \text{ProfileAndConsentAnchor}(u) \prec_{\text{lex}} \text{EntityPartitions}(u, k) \prec \text{LeaseState}(l),
-\label{eq:canonical_lock_hierarchy_vi}
-\end{equation}
-trong đó $\text{PolicyAnchor}(d)$ khóa neo kỷ nguyên chính sách ổn định của miền $d$, $\text{ProfileAndConsentAnchor}(u)$ khóa hồ sơ gốc và kỷ nguyên sự kiện đồng thuận tăng đơn điệu $e_{\text{consent}}$, $\text{EntityPartitions}(u, k)$ khóa các phân vùng thực thể trong $\operatorname{Deps}(P)$ sắp xếp theo thứ tự từ điển $\prec_{\text{lex}}$, và $\text{LeaseState}(l)$ khóa các hợp đồng thuê ủy quyền. Thứ tự phân cấp khóa chuẩn tắc này triệt tiêu hoàn toàn chu trình bế tắc ($\operatorname{Cycle}(\mathcal{W}) = \emptyset$), trong khi quy trình khóa hai pha nghiêm ngặt (Strict 2PL / SS2PL) bảo đảm tính tuần tự xung đột và tính nguyên tử giữa chuyển trạng thái, thẩm định ảnh chụp quản trị và ghi nhận bản ghi kiểm toán nguồn gốc trong cùng một phiên giao dịch cơ sở dữ liệu.
+Khi commit, GST thu thập các khóa hàng độc quyền \texttt{SELECT ... FOR UPDATE} theo thứ tự phân cấp khóa chuẩn tắc toàn cục (global canonical lock hierarchy) $\mathcal{L}_{\text{canonical}}$ nghiêm ngặt, trong khi quy trình khóa hai pha nghiêm ngặt (Strict 2PL / SS2PL) bảo đảm tính tuần tự xung đột và tính nguyên tử giữa chuyển trạng thái, thẩm định ảnh chụp quản trị và ghi nhận bản ghi kiểm toán nguồn gốc trong cùng một phiên giao dịch cơ sở dữ liệu.
 
 \begin{figure}[H]
 \centering
@@ -159,6 +150,7 @@ Sai lệch tác nhân/vai trò/tác vụ & So khớp tọa độ chính xác tro
 Thay thế tập bằng chứng & Kiểm tra thành viên bằng chứng đã công bố & Kiểm thử xác định và ablation đối kháng.\\
 Rút đồng thuận khi AI đang chạy & Đọc lại trạng thái tại thời điểm commit & Thực nghiệm 600 lượt PostgreSQL TOCTOU; 0 lượt ghi trái phép ($0/600$).\\
 Bản chụp hết hạn & \texttt{SnapshotValid} & Đã kiểm thử trong ma trận tuân thủ và ablation.\\
+Hạ cấp về đề xuất chỉ có phiên bản cơ sở & Yêu cầu chính sách bắt buộc nhạy với nguồn gốc & Việc chấp thuận khẳng định chung từ chối các fallback tiêu thụ THSS/mô hình, nhưng nguồn gốc cấp cam kết chưa chứng minh ràng buộc snapshot bắt buộc trên mọi tuyến hạ nguồn.\\
 Tranh chấp ghi giữa các dữ liệu độc lập & Entity-Partitioned DAG Versioning & Thử nghiệm 16--128 writers: từ chối nhầm giảm từ $93{,}75\%$ về đúng $0{,}00\%$.\\
 \bottomrule
 \end{tabularx}
@@ -319,6 +311,54 @@ Suy luận Mô hình LLM ($T_{\text{LLM}}$) & $\approx 1200{,}0$ & 1200,000 & 12
 \end{table}
 
 \subsection{Chi phí Dịch vụ và Hiệu năng Tầng Dữ liệu}
+Các phép đo lường benchmark trên tầng dịch vụ đối với các thao tác giao dịch cốt lõi được tổng hợp trong Bảng~\ref{tab:perf_vi}.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Benchmark mô tả tầng dịch vụ PostgreSQL: một luồng làm việc, độ sâu lịch sử 50, 30 lần lặp cho mỗi thao tác. Các giá trị đã bao gồm hoàn tất giao dịch nhưng loại trừ độ trễ HTTP và suy luận mô hình.}
+\label{tab:perf_vi}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Thao tác} & \textbf{p50 ms} & \textbf{p95 ms} & \textbf{Thao tác tuần tự/s}\\
+\midrule
+Chuyển trạng thái GST & 30{,}967 & 54{,}685 & 29{,}952\\
+Tái dựng trạng thái & 7{,}298 & 12{,}299 & 129{,}688\\
+Biên dịch THSS & 61{,}806 & 68{,}889 & 16{,}937\\
+Tái dựng quyết định có quản trị & 10{,}537 & 17{,}011 & 95{,}350\\
+Tra cứu kiểm toán & 2{,}122 & 5{,}501 & 399{,}149\\
+Vô hiệu hóa + tái lập & 52{,}996 & 74{,}336 & 18{,}295\\
+Ghi nhận sai sót + tái lập & 69{,}314 & 87{,}309 & 13{,}818\\
+\bottomrule
+\end{tabular}
+\end{table}
+Bộ nhớ RSS đỉnh của tiến trình đạt khoảng 109 MiB. Các phép đo này mô tả môi trường tầng dịch vụ cục bộ trong tiến trình và không đại diện cho độ trễ HTTP công khai hay công suất mở rộng toàn cụm.
+
+\subsection{Đánh giá Mô hình Tiên nghiệm (Prospective Two-Model Evaluation)}
+Quy trình đánh giá đoàn hệ solver-v5 hoàn thành toàn bộ 1.152 ô điều kiện-mô hình với 0 lỗi và 0 lần thử lại (Bảng~\ref{tab:models_vi}). Trên các ô điều kiện, độ chính xác đạt 93{,}06\% cho vòng đời, 96{,}79\% cho bằng chứng, 99{,}22\% cho tính kịp thời, và 99{,}83\% cho phân cấp xử lý; 1.027/1.152 ô (89{,}15\%) đạt độ chính xác tuyệt đối trên cả bốn trục. Trên tiêu chí chính cấp đối tượng, Strict THSS đạt 63/64 (98{,}44\%) với Claude và 64/64 (100\%) với Gemini. 128 yêu cầu đánh giá kiến tạo phục vụ mục đích kiểm tra độc lập việc xây dựng neo xác định trong khi mã hệ thống giữ thẩm quyền quyết định cuối cùng. Toàn bộ 64 cấu trúc đều được chấp thuận; chỉ số F1 vùng ứng viên và độ chính xác tuyệt đối khung thời hạn đều đạt 1{,}0.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Mười phép đối sánh cấp đối tượng đã đăng ký trước cho Strict THSS. Hiệu ứng dương phản ánh ưu thế nghiêng về Strict THSS; điều chỉnh Holm áp dụng trên toàn bộ họ 10 phép thử.}
+\label{tab:models_vi}
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Mô hình} & \textbf{Mô hình đối sánh} & \textbf{Hiệu ứng (pp)} & \textbf{KTC 95\% bootstrap} & \textbf{Kết quả Holm} & \textbf{Bất đồng}\\
+\midrule
+Claude & Naive RAG & +32{,}81 & +21{,}88 đến +43{,}75 & $p=0{,}00000954$ & 21\\
+Claude & LWW & +25{,}00 & +15{,}63 đến +35{,}94 & $p=0{,}00027466$ & 16\\
+Claude & Lịch sử đầy đủ & +18{,}75 & +7{,}81 đến +29{,}69 & $p=0{,}01098633$ & 14\\
+Claude & Ngữ cảnh dài & +14{,}06 & +6{,}25 đến +23{,}44 & $p=0{,}01953125$ & 9\\
+Claude & BTSA & +4{,}69 & không báo cáo & $p=1{,}0$, n.s. & không báo cáo\\
+Gemini & Naive RAG & +25{,}00 & +14{,}06 đến +35{,}94 & $p=0{,}00027466$ & 16\\
+Gemini & LWW & +25{,}00 & +15{,}63 đến +37{,}50 & $p=0{,}00027466$ & 16\\
+Gemini & BTSA & 0{,}00 & hòa tuyệt đối & n.s. & hòa tuyệt đối\\
+Gemini & Lịch sử đầy đủ & 0{,}00 & hòa tuyệt đối & n.s. & hòa tuyệt đối\\
+Gemini & Ngữ cảnh dài & 0{,}00 & hòa tuyệt đối & n.s. & hòa tuyệt đối\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Bàn luận và Đánh đổi Vận hành}
 Kết quả thực nghiệm chứng minh GLHS giải quyết triệt để vấn đề trôi dạt quyền hạn tại ranh giới đọc--ghi. Nhờ Rào chắn trạng thái hai tầng, hệ thống tránh phụ thuộc vào khả năng tính toán số học thiếu tin cậy của LLM. Khóa phân vùng DAG bảo đảm hệ thống mở rộng thông lượng vượt bậc mà không đánh đổi tính toàn vẹn dữ liệu.
