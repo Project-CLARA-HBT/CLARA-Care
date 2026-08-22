@@ -6,15 +6,30 @@ import fcntl
 import hashlib
 import json
 import os
+import sys
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from csv import DictWriter
 from dataclasses import replace
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import wraps
 from io import StringIO
 from pathlib import Path
 from typing import Any, Literal, Protocol
+
+# Ensure proper python runtime and sys.path
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_API_SRC = _REPO_ROOT / "services" / "api" / "src"
+_ML_SRC = _REPO_ROOT / "services" / "ml" / "src"
+_VENV_PY = _REPO_ROOT / "services" / "api" / ".venv" / "bin" / "python"
+
+if (sys.version_info < (3, 11) or sys.version_info >= (3, 12)) and _VENV_PY.is_file():
+    _script_args = sys.argv[1:] if len(sys.argv) > 1 else []
+    os.execv(str(_VENV_PY), [str(_VENV_PY), "-m", "evaluation.commitloop.run_local", *_script_args])
+
+for _p in (str(_REPO_ROOT), str(_API_SRC), str(_ML_SRC)):
+    if _p not in sys.path and Path(_p).exists():
+        sys.path.insert(0, _p)
 
 from evaluation.commitloop.candidate_mining import mine_candidates
 from evaluation.commitloop.fhir_ingest import ingest_bundle
@@ -1096,3 +1111,344 @@ def run_local_e2e(
     )
     seal_artifacts(output_dir)
     return manifest
+
+
+def _format_summary_report(output_dir: Path, manifest: dict[str, Any]) -> str:
+    """Format an honest, structured terminal evaluation report."""
+
+    metrics_path = output_dir / "metrics.json"
+    metrics = _read_json(metrics_path, {})
+    outputs = _read_json(output_dir / "solver_outputs.json", [])
+    errors = _read_json(output_dir / "error_ledger.json", [])
+    stats = _read_json(output_dir / "statistical_results.json", {})
+
+    lines: list[str] = []
+    lines.append("=" * 80)
+    lines.append(" COMMITLOOP EVALUATION REPORT")
+    lines.append("=" * 80)
+    lines.append(f"Status: {manifest.get('run_status', 'UNKNOWN')}")
+    lines.append(f"Execution Mode: {manifest.get('execution_mode', 'UNKNOWN')}")
+    lines.append(f"Output Directory: {output_dir}")
+    lines.append(f"Cohort Subjects: {manifest.get('subject_count', 0)} (Base Cases: {manifest.get('source_case_count', 0)}, Variant Cases: {manifest.get('variant_case_count', 0)}, Total Cases: {manifest.get('case_count', 0)})")
+    lines.append(f"Completed Cells: {manifest.get('completed_cell_count', 0)} / {manifest.get('expected_cell_count', 0)}")
+    lines.append(f"Total Requests: {manifest.get('request_count', 0)} (Outputs: {len(outputs)}, Format/Transport Errors: {len(errors)})")
+    lines.append("")
+
+    # --- ALL-AXIS EXACT MATCH ACCURACY ---
+    lines.append("-" * 80)
+    lines.append(" ALL-AXIS EXACT MATCH ACCURACY ACROSS MODELS & CONDITIONS")
+    lines.append("-" * 80)
+
+    overall_exact = metrics.get("all_axes_exact_match", {})
+    overall_acc = overall_exact.get("accuracy", 0.0)
+    overall_cor = overall_exact.get("correct", 0)
+    overall_den = overall_exact.get("denominator", 0)
+    lines.append(f"Overall Exact Match Accuracy: {overall_acc * 100:.2f}% ({overall_cor}/{overall_den})")
+    lines.append("")
+
+    lines.append("Model-Level Summary:")
+    by_model = metrics.get("by_model", {})
+    for model_name, model_metrics in sorted(by_model.items()):
+        m_exact = model_metrics.get("all_axes_exact", {})
+        m_axes = model_metrics.get("axes", {})
+        lc_acc = m_axes.get("lifecycle_state", {}).get("accuracy", 0.0)
+        ev_acc = m_axes.get("evidence_state", {}).get("accuracy", 0.0)
+        tm_acc = m_axes.get("timeliness_state", {}).get("accuracy", 0.0)
+        esc_acc = m_axes.get("escalation_state", {}).get("accuracy", 0.0)
+        lines.append(
+            f"  * {model_name:24s}: Exact Match = {m_exact.get('accuracy', 0.0) * 100:6.2f}% "
+            f"({m_exact.get('correct', 0)}/{m_exact.get('denominator', 0)}) | "
+            f"Lifecycle: {lc_acc * 100:5.1f}% | Evidence: {ev_acc * 100:5.1f}% | "
+            f"Timeliness: {tm_acc * 100:5.1f}% | Escalation: {esc_acc * 100:5.1f}%"
+        )
+    lines.append("")
+
+    lines.append("Condition Breakdown (All-Axis Exact Match Accuracy):")
+    lines.append(f"  {'Condition':<35s} | {'Gemini':<12s} | {'Claude':<12s} | {'Overall':<12s}")
+    lines.append("  " + "-" * 75)
+
+    # Compute per-cell exact match
+    cell_accuracy: dict[tuple[str, str], tuple[int, int]] = {}
+    cond_accuracy: dict[str, tuple[int, int]] = {}
+    gold_by_case = {item["case_id"]: item for item in _read_jsonl(output_dir / "construction_gold.jsonl")}
+    for output in outputs:
+        model = str(output["requested_model_id"])
+        cond = str(output["condition"])
+        case_id = str(output["case_id"])
+        pred = output.get("prediction", {})
+        gold_case = gold_by_case.get(case_id, {})
+        exact = int(
+            all(
+                pred.get(axis) == gold_case.get(axis)
+                for axis in ("lifecycle_state", "evidence_state", "timeliness_state")
+            )
+        )
+        c_cor, c_den = cell_accuracy.get((model, cond), (0, 0))
+        cell_accuracy[(model, cond)] = (c_cor + exact, c_den + 1)
+        o_cor, o_den = cond_accuracy.get(cond, (0, 0))
+        cond_accuracy[cond] = (o_cor + exact, o_den + 1)
+
+    conditions_list = list(manifest.get("conditions", CONDITIONS))
+    for cond in conditions_list:
+        gemini_cor, gemini_den = cell_accuracy.get(("gemini-3.6-flash-high", cond), (0, 0))
+        claude_cor, claude_den = cell_accuracy.get(("claude-sonnet-4.6", cond), (0, 0))
+        all_cor, all_den = cond_accuracy.get(cond, (0, 0))
+
+        gem_str = f"{gemini_cor / gemini_den * 100:5.1f}% ({gemini_cor}/{gemini_den})" if gemini_den else "N/A"
+        cla_str = f"{claude_cor / claude_den * 100:5.1f}% ({claude_cor}/{claude_den})" if claude_den else "N/A"
+        all_str = f"{all_cor / all_den * 100:5.1f}% ({all_cor}/{all_den})" if all_den else "N/A"
+        lines.append(f"  {cond:<35s} | {gem_str:<12s} | {cla_str:<12s} | {all_str:<12s}")
+    lines.append("")
+
+    # Adversarial Variants
+    adv_variants = metrics.get("adversarial_variants", {}).get("by_variant", {})
+    if adv_variants:
+        lines.append("Adversarial Perturbation Robustness:")
+        for v_name, v_metrics in sorted(adv_variants.items()):
+            v_exact = v_metrics.get("all_axes_exact", {})
+            lines.append(
+                f"  * Variant '{v_name}': {v_exact.get('accuracy', 0.0) * 100:5.1f}% exact match "
+                f"({v_exact.get('correct', 0)}/{v_exact.get('denominator', 0)})"
+            )
+        lines.append("")
+
+    # --- TOKEN MINIMIZATION METRICS ---
+    lines.append("-" * 80)
+    lines.append(" TOKEN MINIMIZATION METRICS")
+    lines.append("-" * 80)
+
+    prompt_tokens_by_cond: dict[str, list[int]] = {}
+    compl_tokens_by_cond: dict[str, list[int]] = {}
+    total_tokens_by_cond: dict[str, list[int]] = {}
+    latencies_by_cond: dict[str, list[float]] = {}
+    latencies_by_model: dict[str, list[float]] = {}
+    latencies_by_model_cond: dict[tuple[str, str], list[float]] = {}
+
+    for output in outputs:
+        cond = str(output["condition"])
+        model = str(output["requested_model_id"])
+        usage = output.get("usage", {})
+        pt = usage.get("prompt_tokens")
+        ct = usage.get("completion_tokens")
+        tt = usage.get("total_tokens")
+        lat = output.get("latency_ms")
+
+        if isinstance(pt, (int, float)):
+            prompt_tokens_by_cond.setdefault(cond, []).append(int(pt))
+        if isinstance(ct, (int, float)):
+            compl_tokens_by_cond.setdefault(cond, []).append(int(ct))
+        if isinstance(tt, (int, float)):
+            total_tokens_by_cond.setdefault(cond, []).append(int(tt))
+        if isinstance(lat, (int, float)) and lat > 0:
+            latencies_by_cond.setdefault(cond, []).append(float(lat))
+            latencies_by_model.setdefault(model, []).append(float(lat))
+            latencies_by_model_cond.setdefault((model, cond), []).append(float(lat))
+
+    lines.append(f"  {'Condition':<35s} | {'Mean Prompt':<12s} | {'Mean Compl':<12s} | {'Mean Total':<12s} | {'Context Bytes':<12s}")
+    lines.append("  " + "-" * 90)
+
+    ctx_bytes = metrics.get("context_volume_bytes", {})
+    full_prompt_mean = (
+        sum(prompt_tokens_by_cond.get("full_authorized_history", [1]))
+        / max(1, len(prompt_tokens_by_cond.get("full_authorized_history", [1])))
+    )
+
+    for cond in conditions_list:
+        pts = prompt_tokens_by_cond.get(cond, [])
+        cts = compl_tokens_by_cond.get(cond, [])
+        tts = total_tokens_by_cond.get(cond, [])
+        mean_pt = f"{sum(pts) / len(pts):.1f}" if pts else "N/A"
+        mean_ct = f"{sum(cts) / len(cts):.1f}" if cts else "N/A"
+        mean_tt = f"{sum(tts) / len(tts):.1f}" if tts else "N/A"
+        bytes_str = f"{ctx_bytes.get(cond, 0):,d} B"
+        lines.append(f"  {cond:<35s} | {mean_pt:<12s} | {mean_ct:<12s} | {mean_tt:<12s} | {bytes_str:<12s}")
+    lines.append("")
+
+    strict_pts = prompt_tokens_by_cond.get("glhs_hybrid_thss_strict", [])
+    if strict_pts and full_prompt_mean > 0:
+        strict_prompt_mean = sum(strict_pts) / len(strict_pts)
+        prompt_reduction = (full_prompt_mean - strict_prompt_mean) / full_prompt_mean * 100
+        full_bytes = ctx_bytes.get("full_authorized_history", 1)
+        strict_bytes = ctx_bytes.get("glhs_hybrid_thss_strict", 0)
+        bytes_reduction = (full_bytes - strict_bytes) / max(1, full_bytes) * 100
+        lines.append(f"  Strict THSS Prompt Token Reduction vs Full History: {prompt_reduction:.1f}% savings "
+                     f"({strict_prompt_mean:.1f} vs {full_prompt_mean:.1f} tokens)")
+        lines.append(f"  Strict THSS Context Byte Reduction vs Full History: {bytes_reduction:.1f}% savings "
+                     f"({strict_bytes:,d} vs {full_bytes:,d} bytes)")
+    lines.append("")
+
+    # --- LATENCY METRICS ---
+    lines.append("-" * 80)
+    lines.append(" LATENCY METRICS (MILLISECONDS)")
+    lines.append("-" * 80)
+
+    lines.append("Latency by Model:")
+    for model_name, lats in sorted(latencies_by_model.items()):
+        if not lats:
+            continue
+        sorted_lats = sorted(lats)
+        mean_lat = sum(lats) / len(lats)
+        p50_lat = sorted_lats[int(len(sorted_lats) * 0.50)]
+        p95_lat = sorted_lats[int(len(sorted_lats) * 0.95)]
+        lines.append(f"  * {model_name:24s}: Mean = {mean_lat:6.1f} ms | p50 = {p50_lat:6.1f} ms | p95 = {p95_lat:6.1f} ms")
+    lines.append("")
+
+    lines.append("Latency by Condition:")
+    lines.append(f"  {'Condition':<35s} | {'Mean Latency':<14s} | {'p50 (Median)':<14s} | {'p95 Latency':<14s}")
+    lines.append("  " + "-" * 80)
+
+    full_lat_mean = 0.0
+    strict_lat_mean = 0.0
+
+    for cond in conditions_list:
+        lats = latencies_by_cond.get(cond, [])
+        if not lats:
+            lines.append(f"  {cond:<35s} | {'N/A':<14s} | {'N/A':<14s} | {'N/A':<14s}")
+            continue
+        sorted_lats = sorted(lats)
+        mean_lat = sum(lats) / len(lats)
+        p50_lat = sorted_lats[int(len(sorted_lats) * 0.50)]
+        p95_lat = sorted_lats[int(len(sorted_lats) * 0.95)]
+        if cond == "full_authorized_history":
+            full_lat_mean = mean_lat
+        elif cond == "glhs_hybrid_thss_strict":
+            strict_lat_mean = mean_lat
+        lines.append(f"  {cond:<35s} | {mean_lat:8.1f} ms    | {p50_lat:8.1f} ms    | {p95_lat:8.1f} ms")
+    lines.append("")
+
+    if full_lat_mean > 0 and strict_lat_mean > 0:
+        lat_reduction = (full_lat_mean - strict_lat_mean) / full_lat_mean * 100
+        lines.append(f"  Strict THSS Latency Reduction vs Full History: {lat_reduction:.1f}% "
+                     f"({strict_lat_mean:.1f} ms vs {full_lat_mean:.1f} ms)")
+    lines.append("")
+
+    # --- PAIRED STATISTICAL COMPARISON ---
+    if "primary_model" in stats or "wins" in stats or "ties" in stats:
+        lines.append("-" * 80)
+        lines.append(" PAIRED COMPARISON: Strict THSS vs. Full Authorized History")
+        lines.append("-" * 80)
+        wins = stats.get("wins", "N/A")
+        losses = stats.get("losses", "N/A")
+        ties = stats.get("ties", "N/A")
+        sign_p = stats.get("sign_test_p_value")
+        p_str = f"{sign_p:.4f}" if isinstance(sign_p, (int, float)) else str(sign_p)
+        lines.append(f"  Subject-level Decision Deltas: Wins = {wins}, Losses = {losses}, Ties = {ties}")
+        lines.append(f"  Exact Sign Test p-value: {p_str}")
+        lines.append("")
+
+    lines.append("=" * 80)
+    lines.append(" Artifacts sealed and verified with SHA-256 in " + str(output_dir))
+    lines.append("=" * 80)
+    return "\n".join(lines)
+
+
+def main() -> int:
+    """CLI entrypoint for running CommitLoop evaluations."""
+
+    import argparse
+    from evaluation.commitloop.fixtures import (
+        DeterministicFakeTransport,
+        controlled_benchmark_bundles,
+    )
+    from evaluation.commitloop.http_transport import UrllibJsonTransport
+    from evaluation.commitloop.validate import validate_run
+
+    parser = argparse.ArgumentParser(
+        description="Run CommitLoop evaluation with live providers or offline fixtures"
+    )
+    parser.add_argument(
+        "--output", type=Path, default=None, help="Output directory for evaluation artifacts"
+    )
+    parser.add_argument("--base-url", default=None, help="Provider router base URL")
+    parser.add_argument("--api-key", default=None, help="Provider router API key")
+    parser.add_argument("--max-subjects", type=int, default=None, help="Max subject count")
+    parser.add_argument("--max-cases", type=int, default=None, help="Max case count")
+    parser.add_argument("--max-requests", type=int, default=None, help="Max request budget")
+    parser.add_argument("--max-concurrency", type=int, default=None, help="Max worker concurrency")
+    parser.add_argument("--fake", action="store_true", help="Force deterministic fake transport")
+    args = parser.parse_args()
+
+    base_url = (
+        args.base_url
+        or os.environ.get("ROUTER_BASE_URL")
+        or os.environ.get("DEEPSEEK_BASE_URL")
+        or "https://router.theclaracare.com/v1"
+    )
+    api_key = (
+        args.api_key
+        or os.environ.get("ROUTER_API_KEY")
+        or os.environ.get("CLARA_ROUTER_API_KEY")
+        or os.environ.get("DEEPSEEK_API_KEY")
+        or ""
+    )
+    output_dir = args.output or Path(
+        os.environ.get("COMMITLOOP_RUN_DIR", "artifacts/commitloop/live_evaluation")
+    )
+
+    live_mode = bool(api_key and base_url.startswith("https://") and not args.fake)
+    transport = UrllibJsonTransport() if live_mode else DeterministicFakeTransport()
+
+    max_subjects = args.max_subjects or int(os.environ.get("COMMITLOOP_MAX_SUBJECTS", "8"))
+    max_cases = args.max_cases or int(os.environ.get("COMMITLOOP_MAX_CASES", "50"))
+    max_requests = args.max_requests or int(os.environ.get("COMMITLOOP_MAX_REQUESTS", "1000"))
+    max_concurrency = args.max_concurrency or int(
+        os.environ.get("COMMITLOOP_MAX_CONCURRENCY", "5" if live_mode else "2")
+    )
+
+    limits = RunLimits(
+        max_subjects=min(max_subjects, 1000),
+        max_cases=min(max_cases, 5000),
+        max_requests=min(max_requests, 20000),
+        max_concurrency=min(max_concurrency, 16),
+        timeout_seconds=float(os.environ.get("COMMITLOOP_TIMEOUT_SECONDS", "60.0")),
+        checkpoint_every=int(os.environ.get("COMMITLOOP_CHECKPOINT_EVERY", "5")),
+        max_retries=int(os.environ.get("COMMITLOOP_MAX_RETRIES", "3" if live_mode else "0")),
+        retry_backoff_seconds=float(
+            os.environ.get("COMMITLOOP_RETRY_BACKOFF_SECONDS", "1.0" if live_mode else "0.0")
+        ),
+    )
+
+    clients = {
+        model: EvaluationClient(
+            base_url=base_url if live_mode else "https://offline.invalid/v1",
+            api_key=api_key if live_mode else "offline-fixture-token",
+            transport=transport,
+            limits=limits,
+        )
+        for model in (GENERATOR_MODEL, REVIEWER_MODEL)
+    }
+
+    cutoff = datetime(2026, 2, 1, tzinfo=UTC)
+    bundles = [(bundle, "R4") for bundle in controlled_benchmark_bundles()[: limits.max_subjects]]
+
+    print(
+        f"[CommitLoop] Initializing evaluation in {'LIVE ROUTER' if live_mode else 'OFFLINE_FAKE'} mode..."
+    )
+    print(f"[CommitLoop] Target Models: {sorted(clients.keys())}")
+    print(f"[CommitLoop] Output Directory: {output_dir}")
+    print(
+        f"[CommitLoop] Subjects: {len(bundles)}, Max Requests: {limits.max_requests}, Concurrency: {limits.max_concurrency}"
+    )
+
+    manifest = run_local_e2e(
+        bundles=bundles,
+        output_dir=output_dir,
+        clients=clients,
+        valid_cutoff=cutoff,
+        known_cutoff=cutoff,
+        limits=limits,
+        conditions=CONDITIONS,
+        include_all_adversarial_variants=True,
+        model_order=(GENERATOR_MODEL, REVIEWER_MODEL),
+    )
+
+    validate_run(output_dir)
+
+    report_text = _format_summary_report(output_dir, manifest)
+    print("\n" + report_text)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

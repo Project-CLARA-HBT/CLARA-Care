@@ -1,8 +1,7 @@
 """Standard Two-Phase Locking (2PL) Baseline.
 
-Locks entity partitions without governance anchors (PolicyAnchor or ProfileAndConsentAnchor).
-Lacks the Layer 1 Deterministic Clinical Safety Barrier, allowing TOCTOU drift and severe DDI leaks,
-and is vulnerable to lock acquisition ordering deadlocks.
+Locks entity partitions using traditional Two-Phase Locking without canonical lock hierarchy ordering.
+Vulnerable to lock contention and deadlocks under concurrent multi-resource access.
 """
 
 from __future__ import annotations
@@ -17,9 +16,12 @@ from evaluation.glhs_systems_benchmark.baselines.base import (
     BaselineEngine,
     TxnResult,
     TxnStatus,
-    UnsafeCommitCategory,
+    verify_clinical_safety_and_consent,
 )
-from evaluation.glhs_systems_benchmark.workload_generator import ClinicalWorkloadItem
+from evaluation.glhs_systems_benchmark.workload_generator import (
+    SEVERE_DDI_PAIRS,
+    ClinicalWorkloadItem,
+)
 
 try:
     import psycopg
@@ -30,13 +32,17 @@ except ImportError:
 
 
 class Standard2PLEngine(BaselineEngine):
-    """Standard 2PL Engine locking only entity partitions without governance anchors."""
+    """Standard 2PL Engine locking entity partitions without canonical DAG hierarchy ordering."""
 
     def __init__(self, db_url: str | None = None, enable_random_lock_order: bool = False) -> None:
         super().__init__(db_url)
         self.lock = threading.RLock()
+        self.policy_epochs: dict[str, int] = {"glhs_policy_v1": 1}
+        self.consent_epochs: dict[str, int] = defaultdict(lambda: 1)
         self.partition_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
         self.partition_versions: dict[str, int] = defaultdict(lambda: 1)
+        self.active_medications: dict[str, set[str]] = defaultdict(set)
+        self.ddi_pairs = [frozenset(pair) for pair in SEVERE_DDI_PAIRS]
         self.enable_random_lock_order = enable_random_lock_order
 
     @property
@@ -56,14 +62,27 @@ class Standard2PLEngine(BaselineEngine):
                                 version INT NOT NULL DEFAULT 1,
                                 updated_at TIMESTAMPTZ DEFAULT NOW()
                             );
+                            CREATE TABLE IF NOT EXISTS glhs_policy_anchors (
+                                policy_id VARCHAR(64) PRIMARY KEY,
+                                epoch INT NOT NULL DEFAULT 1,
+                                updated_at TIMESTAMPTZ DEFAULT NOW()
+                            );
+                            CREATE TABLE IF NOT EXISTS glhs_profile_consent_anchors (
+                                profile_id VARCHAR(64) PRIMARY KEY,
+                                consent_epoch INT NOT NULL DEFAULT 1,
+                                updated_at TIMESTAMPTZ DEFAULT NOW()
+                            );
                         """)
             except Exception:
                 self.is_postgres = False
 
     def reset(self) -> None:
         with self.lock:
+            self.policy_epochs = {"glhs_policy_v1": 1}
+            self.consent_epochs.clear()
             self.partition_locks.clear()
             self.partition_versions.clear()
+            self.active_medications.clear()
             self.simulated.reset()
 
     def execute_transaction(self, tx: ClinicalWorkloadItem) -> TxnResult:
@@ -78,45 +97,59 @@ class Standard2PLEngine(BaselineEngine):
             return self._execute_simulated_2pl(tx, t_start)
 
     def _execute_postgres_2pl(self, tx: ClinicalWorkloadItem, t_start: float) -> TxnResult:
-        """Executes 2PL in PostgreSQL without governance anchors."""
+        """Executes 2PL in PostgreSQL with entity partition locking."""
         if not self.db_url:
             return self._execute_simulated_2pl(tx, t_start)
         try:
             with psycopg.connect(self.db_url) as conn:
                 conn.isolation_level = psycopg.IsolationLevel.READ_COMMITTED
                 with conn.cursor(row_factory=dict_row) as cur:
-                    # Lock entity partitions (unordered)
-                    for pid in tx.target_partitions:
+                    # 1. Read Policy and Consent anchors
+                    cur.execute(
+                        "SELECT policy_id, epoch FROM glhs_policy_anchors WHERE policy_id = %s",
+                        (tx.policy_id,),
+                    )
+                    p_row = cur.fetchone()
+                    curr_policy_epoch = p_row["epoch"] if p_row else 1
+
+                    cur.execute(
+                        "SELECT profile_id, consent_epoch FROM glhs_profile_consent_anchors WHERE profile_id = %s",
+                        (tx.profile_id,),
+                    )
+                    c_row = cur.fetchone()
+                    curr_consent_epoch = c_row["consent_epoch"] if c_row else 1
+
+                    # 2. Lock entity partitions (unordered acquisition)
+                    partitions = list(tx.target_partitions)
+                    if self.enable_random_lock_order and len(partitions) > 1:
+                        random.shuffle(partitions)
+
+                    for pid in partitions:
                         cur.execute(
                             "SELECT partition_id, version FROM benchmark_std2pl_partitions WHERE partition_id = %s FOR UPDATE",
                             (pid,),
                         )
 
-                    # TOCTOU governance drift passes through because 2PL lacks governance anchors
-                    if tx.has_governance_drift:
-                        conn.commit()
+                    # 3. Normalized application verification & clinical safety check
+                    ok, status, abort_cat, reason = verify_clinical_safety_and_consent(
+                        tx=tx,
+                        current_policy_epoch=curr_policy_epoch,
+                        current_consent_epoch=curr_consent_epoch,
+                        active_medications=list(self.active_medications[tx.profile_id]),
+                        ddi_pairs=self.ddi_pairs,
+                    )
+                    if not ok:
+                        conn.rollback()
                         t_end = time.perf_counter()
                         return TxnResult(
                             workload_id=tx.workload_id,
-                            status=TxnStatus.UNSAFE_COMMIT,
-                            unsafe_category=UnsafeCommitCategory.TOCTOU_VIOLATION,
+                            status=status,
+                            abort_category=abort_cat,
                             latency_ms=(t_end - t_start) * 1000.0,
-                            violation_reason="TOCTOU consent drift committed unsafely (missing ProfileAndConsentAnchor)",
+                            violation_reason=reason,
                         )
 
-                    # Severe DDI passes through because standard 2PL lacks clinical DDI barrier
-                    if tx.has_severe_ddi:
-                        conn.commit()
-                        t_end = time.perf_counter()
-                        return TxnResult(
-                            workload_id=tx.workload_id,
-                            status=TxnStatus.UNSAFE_COMMIT,
-                            unsafe_category=UnsafeCommitCategory.DDI_LEAK,
-                            latency_ms=(t_end - t_start) * 1000.0,
-                            violation_reason="Severe DDI committed unsafely (missing Layer 1 Clinical Barrier)",
-                        )
-
-                    for pid in tx.target_partitions:
+                    for pid in partitions:
                         cur.execute("""
                             INSERT INTO benchmark_std2pl_partitions (partition_id, profile_id, version, updated_at)
                             VALUES (%s, %s, 1, NOW())
@@ -148,6 +181,27 @@ class Standard2PLEngine(BaselineEngine):
         if self.enable_random_lock_order and len(partitions) > 1:
             random.shuffle(partitions)
 
+        # 1. Normalized application verification & clinical safety check
+        curr_policy_epoch = self.policy_epochs.get(tx.policy_id, 1)
+        curr_consent_epoch = self.consent_epochs[tx.profile_id]
+
+        ok, status, abort_cat, reason = verify_clinical_safety_and_consent(
+            tx=tx,
+            current_policy_epoch=curr_policy_epoch,
+            current_consent_epoch=curr_consent_epoch,
+            active_medications=list(self.active_medications[tx.profile_id]),
+            ddi_pairs=self.ddi_pairs,
+        )
+        if not ok:
+            t_end = time.perf_counter()
+            return TxnResult(
+                workload_id=tx.workload_id,
+                status=status,
+                abort_category=abort_cat,
+                latency_ms=(t_end - t_start) * 1000.0,
+                violation_reason=reason,
+            )
+
         acquired_locks: list[threading.Lock] = []
         try:
             for p in partitions:
@@ -165,31 +219,11 @@ class Standard2PLEngine(BaselineEngine):
                     )
                 acquired_locks.append(lk)
 
-            # 1. TOCTOU Revocation Race (No governance anchor)
-            if tx.has_governance_drift:
-                t_end = time.perf_counter()
-                return TxnResult(
-                    workload_id=tx.workload_id,
-                    status=TxnStatus.UNSAFE_COMMIT,
-                    unsafe_category=UnsafeCommitCategory.TOCTOU_VIOLATION,
-                    latency_ms=(t_end - t_start) * 1000.0,
-                    violation_reason="TOCTOU consent drift passed 2PL without governance anchor check",
-                )
-
-            # 2. Severe DDI (No clinical barrier)
-            if tx.has_severe_ddi:
-                t_end = time.perf_counter()
-                return TxnResult(
-                    workload_id=tx.workload_id,
-                    status=TxnStatus.UNSAFE_COMMIT,
-                    unsafe_category=UnsafeCommitCategory.DDI_LEAK,
-                    latency_ms=(t_end - t_start) * 1000.0,
-                    violation_reason="Severe DDI passed Standard 2PL without clinical safety gate",
-                )
-
-            # 3. Valid Commit
+            # Valid Commit
             for p in partitions:
                 self.partition_versions[p] += 1
+            for med in tx.proposed_medications:
+                self.active_medications[tx.profile_id].add(med.strip().lower())
 
             t_end = time.perf_counter()
             return TxnResult(

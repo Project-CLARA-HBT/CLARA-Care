@@ -55,6 +55,18 @@ def acquire_advisory_xact_lock(db: Session, key: str) -> None:
         )
 
 
+def acquire_advisory_xact_lock_shared(db: Session, key: str) -> None:
+    """Acquire a transaction-scoped shared advisory lock in PostgreSQL.
+
+    Allows concurrent shared readers (GST transitions) while blocking exclusive writers.
+    """
+    if is_postgres(db):
+        db.execute(
+            text("SELECT pg_advisory_xact_lock_shared(hashtext(:key))"),
+            {"key": key},
+        )
+
+
 # --- Policy Lock Anchor -------------------------------------------------------
 
 
@@ -182,12 +194,13 @@ def acquire_profile_and_consent_anchor(
     db: Session,
     *,
     profile_id: int,
+    exclusive: bool = False,
 ) -> tuple[int, int]:
     """Acquire Profile & Consent Lock Anchor (Step 2 in Canonical Lock Hierarchy).
 
     Strict unified canonical acquisition sequence:
-    Step 2a: Always lock User row: SELECT id FROM users WHERE id = :user_id FOR UPDATE
-    Step 2b: Lock PhrProfile row: SELECT id, user_id FROM phr_profiles WHERE id = :profile_id FOR UPDATE
+    Step 2a: Always lock User row (FOR UPDATE if exclusive, FOR SHARE if shared)
+    Step 2b: Lock PhrProfile row (FOR UPDATE if exclusive, FOR SHARE if shared)
     Step 2c: Transactional advisory locks: user_consent:<user_id> then phr_profile:<profile_id>
 
     Returns (base_state_version, owner_user_id).
@@ -202,26 +215,29 @@ def acquire_profile_and_consent_anchor(
     owner_user_id = profile_lookup.user_id
 
     # Step 2a: Lock User row FIRST
-    db.execute(
-        select(User.id)
-        .where(User.id == owner_user_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    ).fetchall()
+    user_stmt = select(User.id).where(User.id == owner_user_id)
+    user_stmt = user_stmt.with_for_update(read=not exclusive)
+    db.execute(user_stmt.execution_options(populate_existing=True)).fetchall()
 
     # Step 2b: Lock PhrProfile row SECOND
-    profile = db.execute(
+    profile_stmt = (
         select(PhrProfile.id, PhrProfile.user_id)
         .where(PhrProfile.id == profile_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
+        .with_for_update(read=not exclusive)
+    )
+    profile = db.execute(
+        profile_stmt.execution_options(populate_existing=True)
     ).first()
     if profile is None:
         raise GlhsInvariantError("profile_not_found")
 
-    # Step 2c: Transactional advisory locks
-    acquire_advisory_xact_lock(db, f"user_consent:{owner_user_id}")
-    acquire_advisory_xact_lock(db, f"phr_profile:{profile_id}")
+    # Step 2c: Transactional advisory locks (Shared vs. Exclusive)
+    if exclusive:
+        acquire_advisory_xact_lock(db, f"user_consent:{owner_user_id}")
+        acquire_advisory_xact_lock(db, f"phr_profile:{profile_id}")
+    else:
+        acquire_advisory_xact_lock_shared(db, f"user_consent:{owner_user_id}")
+        acquire_advisory_xact_lock_shared(db, f"phr_profile:{profile_id}")
 
     base_version = current_state_version(db, profile_id=profile_id)
     return base_version, owner_user_id

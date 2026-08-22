@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from evaluation.glhs_systems_benchmark.workload_generator import (
+    SEVERE_DDI_PAIRS,
     ClinicalWorkloadItem,
 )
 
@@ -217,6 +218,71 @@ def compute_metrics(paradigm: str, results: Sequence[TxnResult], elapsed_seconds
         false_stale_rate=false_stale / total,
         true_stale_rate=true_stale / total,
     )
+
+
+# ---------------------------------------------------------------------------
+# Normalized Application Verification & Clinical Safety Checks
+# ---------------------------------------------------------------------------
+
+
+def verify_clinical_safety_and_consent(
+    tx: ClinicalWorkloadItem,
+    current_policy_epoch: int = 1,
+    current_consent_epoch: int = 1,
+    active_medications: set[str] | list[str] | None = None,
+    ddi_pairs: Sequence[tuple[str, str] | frozenset[str]] | None = None,
+) -> tuple[bool, TxnStatus, AbortCategory, str | None]:
+    """Normalized application verification and clinical safety checks.
+
+    Shared identically across all 6 concurrency paradigms so the benchmark
+    strictly measures concurrency control, lock contention, false-stale aborts,
+    throughput (TPS), and latency, without unfair feature penalties.
+    """
+    # 1. Policy Epoch Freshness Verification
+    if current_policy_epoch != tx.expected_policy_epoch:
+        return (
+            False,
+            TxnStatus.SAFE_ABORT,
+            AbortCategory.GOVERNANCE_REVOCATION,
+            f"Policy epoch drift: expected {tx.expected_policy_epoch}, got {current_policy_epoch}",
+        )
+
+    # 2. Consent Freshness / Revocation Check (TOCTOU Defense)
+    effective_consent_epoch = current_consent_epoch + (1 if tx.has_governance_drift else 0)
+    if effective_consent_epoch != tx.expected_consent_epoch:
+        return (
+            False,
+            TxnStatus.SAFE_ABORT,
+            AbortCategory.GOVERNANCE_REVOCATION,
+            f"Consent epoch revoked/modified during inference (expected {tx.expected_consent_epoch}, got {effective_consent_epoch})",
+        )
+
+    # 3. Deterministic Clinical DDI Safety Matrix Check
+    if tx.has_severe_ddi or tx.proposed_medications:
+        proposed_set = {m.strip().lower() for m in tx.proposed_medications}
+        existing_active = {m.strip().lower() for m in (active_medications or [])}
+        tx_active = {m.strip().lower() for m in tx.active_medications}
+        combined_meds = proposed_set | existing_active | tx_active
+
+        pairs = ddi_pairs or [frozenset(pair) for pair in SEVERE_DDI_PAIRS]
+        for pair in pairs:
+            pair_set = set(pair)
+            if pair_set.issubset(combined_meds):
+                return (
+                    False,
+                    TxnStatus.SAFE_ABORT,
+                    AbortCategory.CLINICAL_DDI_SAFETY,
+                    f"Deterministic clinical safety barrier: blocked severe DDI {pair_set}",
+                )
+        if tx.has_severe_ddi:
+            return (
+                False,
+                TxnStatus.SAFE_ABORT,
+                AbortCategory.CLINICAL_DDI_SAFETY,
+                "Deterministic clinical safety barrier: blocked severe DDI in transaction payload",
+            )
+
+    return True, TxnStatus.VALID_COMMIT, AbortCategory.NONE, None
 
 
 # ---------------------------------------------------------------------------

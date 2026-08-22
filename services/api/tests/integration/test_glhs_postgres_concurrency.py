@@ -25,12 +25,14 @@ from clara_api.core import consent as core_consent
 from clara_api.db.base import Base
 from clara_api.db.models import (
     GlhsAssertion,
+    GlhsEntityVersionPartition,
     GlhsStateVersion,
     HealthSourceReference,
     PhrProfile,
     User,
 )
 from clara_api.glhs.commitment_gateway import (
+    COMMITMENT_POLICY_VERSION,
     get_or_create_commitment,
 )
 from clara_api.glhs.domain import GlhsInvariantError
@@ -45,6 +47,8 @@ from clara_api.glhs.gateway import (
 from clara_api.glhs.lock_hierarchy import (
     acquire_canonical_glhs_locks,
     acquire_consent_lock_anchor,
+    get_or_create_entity_partition,
+    increment_partition_versions,
 )
 from clara_api.lifemap.profile_scope import ProfileScope
 
@@ -162,6 +166,230 @@ def _race(engine: Engine, *, profile_id: int, assertion_ids: list[str]) -> list[
 
     with ThreadPoolExecutor(max_workers=len(assertion_ids)) as pool:
         return list(pool.map(write, assertion_ids))
+
+
+def run_postgres_parallel_disjoint_slot_race_succeeds_all_slots(url: str) -> None:
+    """4 concurrent workers write disjoint partition slots on the SAME profile in PostgreSQL.
+
+    Under partition-vector OCC and shared governance anchors, verify that
+    ALL 4 transactions commit successfully in parallel with 0 false-stale aborts (4/4 passed).
+    """
+    schema = f"glhs_pg_disjoint_{uuid4().hex}"
+    admin, isolated = _isolated_engines(url, schema)
+    try:
+        Base.metadata.create_all(isolated)
+        with Session(isolated) as db:
+            user = User(
+                email=f"pg_disjoint_{uuid4().hex}@example.com",
+                hashed_password="hashed_pw_test",
+                role="patient",
+            )
+            db.add(user)
+            db.flush()
+            profile = PhrProfile(user_id=user.id, full_name="Disjoint Slot Patient")
+            db.add(profile)
+            db.flush()
+            core_consent.PhrConsentService.grant(db, user_id=user.id, purpose="research", version="1.0")
+
+            disjoint_slots = [
+                ("medications", "medications:drug_a"),
+                ("conditions", "conditions:cond_b"),
+                ("observations", "observations:obs_c"),
+                ("allergies", "allergies:alg_d"),
+            ]
+            for domain, key in disjoint_slots:
+                get_or_create_entity_partition(
+                    db,
+                    profile_id=profile.id,
+                    domain=domain,
+                    semantic_key=key,
+                    policy_version=COMMITMENT_POLICY_VERSION,
+                    consent_version="1.0",
+                )
+            db.commit()
+            profile_id = profile.id
+
+        barrier = Barrier(4)
+
+        def worker_write(slot_idx: int) -> str:
+            domain, key = disjoint_slots[slot_idx]
+            barrier.wait(timeout=20)
+            with Session(isolated) as s:
+                try:
+                    # 1. Acquire canonical GLHS locks (shared profile governance anchor + partition row lock)
+                    locks = acquire_canonical_glhs_locks(
+                        s,
+                        profile_id=profile_id,
+                        partitions=[(domain, key)],
+                        policy_domain=domain,
+                        purpose="research",
+                    )
+                    assert len(locks.locked_partitions) == 1
+                    partition = locks.locked_partitions[0]
+
+                    # 2. Partition-vector OCC verification: local partition version == 1
+                    if partition.state_version != 1:
+                        s.rollback()
+                        return f"stale_partition:{partition.state_version}"
+
+                    # 3. Advance local partition version under shared anchor
+                    increment_partition_versions(
+                        s,
+                        partitions=locks.locked_partitions,
+                        policy_version=locks.effective_policy_version,
+                        consent_version=locks.effective_consent_version,
+                    )
+                    s.commit()
+                    return f"committed:{domain}:{key}"
+                except GlhsInvariantError as exc:
+                    s.rollback()
+                    return f"rejected:{exc}"
+                except Exception as exc:
+                    s.rollback()
+                    return f"error:{exc}"
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(worker_write, range(4)))
+
+        committed = [r for r in results if r.startswith("committed:")]
+        stale = [r for r in results if r.startswith("stale_partition:") or r.startswith("rejected:")]
+        errors = [r for r in results if r.startswith("error:")]
+
+        if len(errors) > 0:
+            raise AssertionError(f"Unexpected errors during disjoint slot writes: {errors}")
+        if len(stale) > 0:
+            raise AssertionError(f"False-stale aborts detected under disjoint slots: {stale}")
+        if len(committed) != 4:
+            raise AssertionError(f"Expected all 4 transactions to commit (4/4 passed), got: {committed}")
+
+        with Session(isolated) as db:
+            partitions = db.scalars(
+                select(GlhsEntityVersionPartition).where(
+                    GlhsEntityVersionPartition.profile_id == profile_id
+                )
+            ).all()
+            if len(partitions) != 4:
+                raise AssertionError(f"Expected 4 partitions, got {len(partitions)}")
+            for p in partitions:
+                if p.state_version != 2:
+                    raise AssertionError(f"Partition {p.domain}:{p.semantic_key} expected version 2, got {p.state_version}")
+
+    finally:
+        isolated.dispose()
+        with admin.begin() as connection:
+            connection.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+        admin.dispose()
+
+
+def run_postgres_parallel_same_slot_race_admits_exactly_one_winner(url: str) -> None:
+    """4 concurrent workers write the exact same partition slot on the SAME profile in PostgreSQL.
+
+    Verify that exactly 1 writer commits and 3 receive true-stale aborts (1 success, 3 true-stale aborts).
+    """
+    schema = f"glhs_pg_same_slot_{uuid4().hex}"
+    admin, isolated = _isolated_engines(url, schema)
+    try:
+        Base.metadata.create_all(isolated)
+        with Session(isolated) as db:
+            user = User(
+                email=f"pg_same_slot_{uuid4().hex}@example.com",
+                hashed_password="hashed_pw_test",
+                role="patient",
+            )
+            db.add(user)
+            db.flush()
+            profile = PhrProfile(user_id=user.id, full_name="Same Slot Patient")
+            db.add(profile)
+            db.flush()
+            core_consent.PhrConsentService.grant(db, user_id=user.id, purpose="research", version="1.0")
+
+            get_or_create_entity_partition(
+                db,
+                profile_id=profile.id,
+                domain="medications",
+                semantic_key="medications:shared_drug",
+                policy_version=COMMITMENT_POLICY_VERSION,
+                consent_version="1.0",
+            )
+            db.commit()
+            profile_id = profile.id
+
+        barrier = Barrier(4)
+
+        def worker_write(writer_idx: int) -> str:
+            domain, key = "medications", "medications:shared_drug"
+            barrier.wait(timeout=20)
+            with Session(isolated) as s:
+                try:
+                    # 1. Acquire canonical GLHS locks (shared profile governance anchor + partition row lock)
+                    locks = acquire_canonical_glhs_locks(
+                        s,
+                        profile_id=profile_id,
+                        partitions=[(domain, key)],
+                        policy_domain=domain,
+                        purpose="research",
+                    )
+                    assert len(locks.locked_partitions) == 1
+                    partition = locks.locked_partitions[0]
+
+                    # 2. Partition-vector OCC check: exactly 1 winner observes version 1
+                    if partition.state_version != 1:
+                        raise GlhsInvariantError(
+                            f"stale_partition_version:expected_1_got_{partition.state_version}"
+                        )
+
+                    # 3. Advance local partition version
+                    increment_partition_versions(
+                        s,
+                        partitions=locks.locked_partitions,
+                        policy_version=locks.effective_policy_version,
+                        consent_version=locks.effective_consent_version,
+                    )
+                    s.commit()
+                    return f"committed:{writer_idx}"
+                except GlhsInvariantError as exc:
+                    s.rollback()
+                    return f"rejected:{exc}"
+                except Exception as exc:
+                    s.rollback()
+                    return f"error:{exc}"
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(worker_write, range(4)))
+
+        committed = [r for r in results if r.startswith("committed:")]
+        rejected = [r for r in results if r.startswith("rejected:stale_partition_version")]
+        errors = [r for r in results if r.startswith("error:")]
+
+        if len(errors) > 0:
+            raise AssertionError(f"Unexpected errors during same slot writes: {errors}")
+        if len(committed) != 1 or len(rejected) != 3:
+            raise AssertionError(
+                f"Expected exactly 1 winner and 3 true-stale aborts, got: "
+                f"committed={len(committed)}, rejected={len(rejected)}, results={results}"
+            )
+
+        with Session(isolated) as db:
+            partition = db.scalar(
+                select(GlhsEntityVersionPartition).where(
+                    GlhsEntityVersionPartition.profile_id == profile_id,
+                    GlhsEntityVersionPartition.domain == "medications",
+                    GlhsEntityVersionPartition.semantic_key == "medications:shared_drug",
+                )
+            )
+            if partition is None or partition.state_version != 2:
+                raise AssertionError(f"Expected partition state_version 2, got: {partition}")
+
+    finally:
+        isolated.dispose()
+        with admin.begin() as connection:
+            connection.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+        admin.dispose()
+
+
+def run_postgres_concurrent_consent_revocation_blocks_gst_commit(url: str) -> None:
+    """Alias for PostgreSQL GST vs Consent Revocation race."""
+    run_postgres_multithreaded_race_gst_vs_revocation_and_policy(url)
 
 
 def run_postgres_glhs_concurrency_contract(url: str) -> None:
@@ -577,6 +805,15 @@ def run_postgres_aba_revocation_rejection(url: str) -> None:
     "requires isolated PostgreSQL URL and explicit safety acknowledgement",
 )
 class GlhsPostgresConcurrencyTest(unittest.TestCase):
+    def test_parallel_disjoint_slot_race_succeeds_all_slots(self) -> None:
+        run_postgres_parallel_disjoint_slot_race_succeeds_all_slots(POSTGRES_URL)
+
+    def test_parallel_same_slot_race_admits_exactly_one_winner(self) -> None:
+        run_postgres_parallel_same_slot_race_admits_exactly_one_winner(POSTGRES_URL)
+
+    def test_concurrent_consent_revocation_blocks_gst_commit(self) -> None:
+        run_postgres_concurrent_consent_revocation_blocks_gst_commit(POSTGRES_URL)
+
     def test_same_and_unrelated_slots_have_one_atomic_winner(self) -> None:
         run_postgres_glhs_concurrency_contract(POSTGRES_URL)
 

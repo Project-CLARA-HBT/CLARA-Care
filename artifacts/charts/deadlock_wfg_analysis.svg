@@ -18,7 +18,7 @@
   </defs>
   <rect width="800" height="450" fill="#FFFFFF"/>
   <text x="400" y="30" text-anchor="middle" class="title">Wait-For Graph (WFG) Deadlock Cycle Analysis</text>
-  <text x="400" y="48" text-anchor="middle" class="subtitle">Canonical SS2PL (0 Deadlocks) vs. Unordered 2PL (112 Deadlocks Detected)</text>
+  <text x="400" y="48" text-anchor="middle" class="subtitle">Canonical SS2PL (0 Deadlocks) vs. Unordered 2PL (40 Deadlocks Detected)</text>
 
   <!-- Panel A: Canonical SS2PL -->
   <rect x="50" y="70" width="330" height="340" fill="#F8FAFC" stroke="#E2E8F0" rx="8"/>
@@ -45,5 +45,5 @@
   <path d="M 525 195 L 565 260" class="cycle-edge"/>
   <path d="M 605 260 L 645 195" class="cycle-edge"/>
   <path d="M 645 170 L 525 170" class="cycle-edge"/>
-  <text x="585" y="360" text-anchor="middle" class="node-text" style="fill:#DC2626">Cycle Detected: A &#8594; B &#8594; C &#8594; A (112 Deadlocks)</text>
+  <text x="585" y="360" text-anchor="middle" class="node-text" style="fill:#DC2626">Cycle Detected: A &#8594; B &#8594; C &#8594; A (40 Deadlocks)</text>
 </svg>

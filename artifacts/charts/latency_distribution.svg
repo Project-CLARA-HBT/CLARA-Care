@@ -12,41 +12,50 @@
   <text x="400" y="30" text-anchor="middle" class="title">GLHS Latency Percentile Distribution (p50, p95, p99)</text>
   <text x="400" y="48" text-anchor="middle" class="subtitle">Micro-Benchmark Tail Latency SLA Verification (W = 16)</text>
   
-  <line x1="100" y1="380" x2="720" y2="380" class="axis"/>
-  <line x1="100" y1="80" x2="100" y2="380" class="axis"/>
-  <line x1="100" y1="300" x2="720" y2="300" class="grid"/>
-  <line x1="100" y1="220" x2="720" y2="220" class="grid"/>
-  <line x1="100" y1="140" x2="720" y2="140" class="grid"/>
+  <line x1="80" y1="380" x2="740" y2="380" class="axis"/>
+  <line x1="80" y1="100" x2="80" y2="380" class="axis"/>
+  <line x1="80" y1="380" x2="740" y2="380" class="grid"/>
+  <line x1="80" y1="310" x2="740" y2="310" class="grid"/>
+  <line x1="80" y1="240" x2="740" y2="240" class="grid"/>
+  <line x1="80" y1="170" x2="740" y2="170" class="grid"/>
+  <line x1="80" y1="100" x2="740" y2="100" class="grid"/>
 
-  <text x="90" y="384" text-anchor="end" class="label">0.00 ms</text>
-  <text x="90" y="304" text-anchor="end" class="label">0.05 ms</text>
-  <text x="90" y="224" text-anchor="end" class="label">0.10 ms</text>
-  <text x="90" y="144" text-anchor="end" class="label">0.15 ms</text>
+  <text x="70" y="384" text-anchor="end" class="label">0.00 ms</text>
+  <text x="70" y="314" text-anchor="end" class="label">4.55 ms</text>
+  <text x="70" y="244" text-anchor="end" class="label">9.10 ms</text>
+  <text x="70" y="174" text-anchor="end" class="label">13.65 ms</text>
+  <text x="70" y="104" text-anchor="end" class="label">18.20 ms</text>
 
-  <!-- THSS Compile Group -->
-  <rect x="150" y="300" width="35" height="80" fill="#93C5FD" rx="2"/>
-  <rect x="195" y="220" width="35" height="160" fill="#3B82F6" rx="2"/>
-  <rect x="240" y="140" width="35" height="240" fill="#1D4ED8" rx="2"/>
-  <text x="212" y="405" text-anchor="middle" class="label" font-weight="bold">THSS Compile</text>
+  <!-- GLHS SS2PL Group -->
+  <rect x="142" y="376" width="28" height="4" fill="#93C5FD" rx="2"/>
+  <rect x="173" y="376" width="28" height="4" fill="#3B82F6" rx="2"/>
+  <rect x="204" y="376" width="28" height="4" fill="#1D4ED8" rx="2"/>
+  <text x="187" y="405" text-anchor="middle" class="label" font-weight="bold">GLHS SS2PL</text>
 
-  <!-- DAG Lease Group -->
-  <rect x="340" y="364" width="35" height="16" fill="#A7F3D0" rx="2"/>
-  <rect x="385" y="332" width="35" height="48" fill="#10B981" rx="2"/>
-  <rect x="430" y="284" width="35" height="96" fill="#047857" rx="2"/>
-  <text x="402" y="405" text-anchor="middle" class="label" font-weight="bold">DAG Lease</text>
+  <!-- PostgreSQL SSI Group -->
+  <rect x="277" y="376" width="28" height="4" fill="#93C5FD" rx="2"/>
+  <rect x="308" y="376" width="28" height="4" fill="#3B82F6" rx="2"/>
+  <rect x="339" y="157" width="28" height="223" fill="#1D4ED8" rx="2"/>
+  <text x="322" y="405" text-anchor="middle" class="label" font-weight="bold">PostgreSQL SSI</text>
 
-  <!-- GST Commit Group -->
-  <rect x="530" y="332" width="35" height="48" fill="#DDD6FE" rx="2"/>
-  <rect x="575" y="252" width="35" height="128" fill="#8B5CF6" rx="2"/>
-  <rect x="620" y="156" width="35" height="224" fill="#6D28D9" rx="2"/>
-  <text x="592" y="405" text-anchor="middle" class="label" font-weight="bold">GST Commit</text>
+  <!-- Standard 2PL Group -->
+  <rect x="412" y="376" width="28" height="4" fill="#93C5FD" rx="2"/>
+  <rect x="443" y="376" width="28" height="4" fill="#3B82F6" rx="2"/>
+  <rect x="474" y="376" width="28" height="4" fill="#1D4ED8" rx="2"/>
+  <text x="457" y="405" text-anchor="middle" class="label" font-weight="bold">Standard 2PL</text>
+
+  <!-- Standard OCC Group -->
+  <rect x="547" y="376" width="28" height="4" fill="#93C5FD" rx="2"/>
+  <rect x="578" y="259" width="28" height="121" fill="#3B82F6" rx="2"/>
+  <rect x="609" y="170" width="28" height="210" fill="#1D4ED8" rx="2"/>
+  <text x="592" y="405" text-anchor="middle" class="label" font-weight="bold">Standard OCC</text>
 
   <!-- Legend -->
-  <rect x="560" y="70" width="160" height="70" fill="#F9FAFB" stroke="#E5E7EB" rx="4"/>
-  <rect x="575" y="82" width="14" height="14" fill="#93C5FD" rx="2"/>
-  <text x="600" y="94" class="legend-text">p50 Latency</text>
-  <rect x="575" y="102" width="14" height="14" fill="#3B82F6" rx="2"/>
-  <text x="600" y="114" class="legend-text">p95 Latency</text>
-  <rect x="575" y="122" width="14" height="14" fill="#1D4ED8" rx="2"/>
-  <text x="600" y="134" class="legend-text">p99 Latency</text>
+  <rect x="560" y="55" width="160" height="70" fill="#F9FAFB" stroke="#E5E7EB" rx="4"/>
+  <rect x="575" y="67" width="14" height="14" fill="#93C5FD" rx="2"/>
+  <text x="600" y="79" class="legend-text">p50 Latency</text>
+  <rect x="575" y="87" width="14" height="14" fill="#3B82F6" rx="2"/>
+  <text x="600" y="99" class="legend-text">p95 Latency</text>
+  <rect x="575" y="107" width="14" height="14" fill="#1D4ED8" rx="2"/>
+  <text x="600" y="119" class="legend-text">p99 Latency</text>
 </svg>

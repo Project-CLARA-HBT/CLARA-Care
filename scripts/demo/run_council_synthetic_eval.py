@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import statistics
+import sys
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,7 +33,16 @@ from typing import Any
 from urllib import error, request
 
 ROOT = Path(__file__).resolve().parents[2]
+ML_SRC = ROOT / "services" / "ml" / "src"
+if str(ML_SRC) not in sys.path:
+    sys.path.insert(0, str(ML_SRC))
+
+if os.getenv("DEEPSEEK_API_KEY") or os.getenv("ROUTER_API_KEY"):
+    os.environ.setdefault("COUNCIL_LLM_SHADOW_ENABLED", "true")
+    os.environ.setdefault("COUNCIL_MEDICATION_SAFETY_ENABLED", "true")
+
 DEFAULT_OUT_DIR = ROOT / "data" / "demo"
+DEFAULT_CASES_PATH = ROOT / "data" / "demo" / "council-synthetic-cases-seed20260406-n12.json"
 TRIAGE_RANK = {
     "routine_follow_up": 1,
     "same_day_review": 2,
@@ -48,7 +58,11 @@ SCORING_FIELDS = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run synthetic Council endpoint evaluation.")
-    parser.add_argument("--cases", required=True, help="Input synthetic case JSON file.")
+    parser.add_argument(
+        "--cases",
+        default=str(DEFAULT_CASES_PATH),
+        help="Input synthetic case JSON file (defaults to standard synthetic cases).",
+    )
     parser.add_argument("--base-url", default="http://127.0.0.1:8110")
     parser.add_argument("--endpoint", default="/v1/council/run")
     parser.add_argument("--timeout-sec", type=float, default=25.0)
@@ -77,6 +91,28 @@ def _safe_bool(value: Any) -> bool | None:
 
 
 def _load_cases(path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    if not path.exists():
+        # Look for any council-synthetic-cases in DEFAULT_OUT_DIR
+        candidates = sorted(DEFAULT_OUT_DIR.glob("council-synthetic-cases-*.json"))
+        if candidates:
+            path = candidates[0]
+        else:
+            # Generate cases dynamically if none exist
+            try:
+                from scripts.demo.generate_council_synthetic_cases import (
+                    generate_cases,  # type: ignore
+                )
+            except ImportError:
+                sys.path.insert(0, str(ROOT))
+                from scripts.demo.generate_council_synthetic_cases import (
+                    generate_cases,  # type: ignore
+                )
+            path.parent.mkdir(parents=True, exist_ok=True)
+            meta, gen_cases = generate_cases(seed=20260406, total_cases=12)
+            payload_data = {"meta": meta, "cases": gen_cases}
+            path.write_text(json.dumps(payload_data, ensure_ascii=False, indent=2), encoding="utf-8")
+            return meta, gen_cases
+
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, dict):
         meta = payload.get("meta")
@@ -233,6 +269,19 @@ def _evaluate_case(case: dict[str, Any], status_code: int, body: dict[str, Any] 
         )
 
     passed_all = all(bool(item.get("passed")) for item in checks)
+    specialist_assessments = body.get("per_specialist_assessments") or body.get("per_specialist_reasoning_logs") or []
+    if not isinstance(specialist_assessments, list):
+        specialist_assessments = []
+    conflict_list = body.get("conflict_list") or []
+    if not isinstance(conflict_list, list):
+        conflict_list = []
+    medication_safety = body.get("medication_safety")
+    if not isinstance(medication_safety, dict):
+        medication_safety = None
+    model_council = body.get("model_council")
+    if not isinstance(model_council, dict):
+        model_council = None
+
     return {
         "case_id": case_id,
         "severity": severity,
@@ -251,6 +300,11 @@ def _evaluate_case(case: dict[str, Any], status_code: int, body: dict[str, Any] 
             "data_quality_level": body.get("data_quality_level"),
             "final_recommendation": body.get("final_recommendation"),
             "reasoning_timeline_steps": len(body.get("reasoning_timeline")) if isinstance(body.get("reasoning_timeline"), list) else 0,
+            "specialist_assessments": specialist_assessments,
+            "conflicts": conflict_list,
+            "medication_safety": medication_safety,
+            "model_council": model_council,
+            "clinician_review_directive": body.get("clinician_review_directive"),
         },
     }
 
@@ -344,34 +398,72 @@ def _render_markdown(summary: dict[str, Any]) -> str:
     triage_distribution = metrics.get("triage_distribution")
     if not isinstance(triage_distribution, dict):
         triage_distribution = {}
+    specialist_metrics = metrics.get("specialist_agreement") or {}
+    med_metrics = metrics.get("medication_safety") or {}
 
     lines = [
         "# Council Synthetic Eval Report",
         "",
         f"- Generated at: `{summary.get('generated_at_utc', '-')}`",
         f"- Endpoint: `{summary.get('endpoint_url', '-')}`",
+        f"- Execution mode: `{summary.get('execution_mode', 'standard')}`",
         f"- Cases evaluated: `{metrics.get('evaluated_cases', 0)}`",
         f"- Pass rate: `{metrics.get('pass_rate', 0.0):.3f}`",
         f"- Escalation ratio: `{metrics.get('escalation_ratio', 0.0):.3f}`",
         "",
-        "## Triage Distribution",
+        "## 1. Consensus Metrics",
         "",
-        "| Triage | Count |",
-        "|---|---:|",
+        "| Triage | Count | Percentage |",
+        "|---|---:|---:|",
     ]
+    total_eval = max(1, int(metrics.get("evaluated_cases", 0)))
     for key in ("routine_follow_up", "same_day_review", "emergency_escalation", "unknown"):
         value = int(triage_distribution.get(key, 0))
-        lines.append(f"| {key} | {value} |")
+        pct = (value / total_eval) * 100.0
+        lines.append(f"| {key} | {value} | {pct:.1f}% |")
 
     lines.extend(
         [
             "",
-            "## Confidence-like Proxies",
+            "### Confidence & Quality Proxies",
             "",
             f"- average_confidence_score: `{metrics.get('average_confidence_score')}`",
             f"- average_support_ratio: `{metrics.get('average_support_ratio')}`",
             f"- average_disagreement_index: `{metrics.get('average_disagreement_index')}`",
             f"- average_data_quality_score: `{metrics.get('average_data_quality_score')}`",
+            "",
+            "## 2. Specialist Agent Agreement",
+            "",
+            f"- Average Specialist Agreement (Support Ratio): `{specialist_metrics.get('average_support_ratio', 0.0):.3f}`",
+            f"- Average Disagreement Index: `{specialist_metrics.get('average_disagreement_index', 0.0):.3f}`",
+            f"- Total Cross-Specialty Conflicts Detected: `{specialist_metrics.get('total_conflicts', 0)}`",
+            f"- Average Conflicts per Case: `{specialist_metrics.get('average_conflicts_per_case', 0.0):.2f}`",
+            f"- Specialist Votes Cast: `{specialist_metrics.get('total_specialist_votes', 0)}`",
+            "",
+            "| Specialty | Participation Count | Routine Votes | Same-Day Votes | Emergency Votes |",
+            "|---|---:|---:|---:|---:|",
+        ]
+    )
+    specialty_breakdown = specialist_metrics.get("by_specialty") or {}
+    for spec, data in specialty_breakdown.items():
+        count = data.get("count", 0)
+        votes = data.get("votes", {})
+        r_v = votes.get("routine_follow_up", 0)
+        s_v = votes.get("same_day_review", 0)
+        e_v = votes.get("emergency_escalation", 0)
+        lines.append(f"| {spec} | {count} | {r_v} | {s_v} | {e_v} |")
+
+    lines.extend(
+        [
+            "",
+            "## 3. Medication Safety Validation",
+            "",
+            f"- Cases with Medications Evaluated: `{med_metrics.get('cases_with_medications', 0)}`",
+            f"- DrugBank/CareGuard Checks Performed: `{med_metrics.get('checks_performed', 0)}`",
+            f"- DDI Alerts Detected: `{med_metrics.get('total_ddi_alerts', 0)}`",
+            f"- Safety Triage Floor Overrides: `{med_metrics.get('triage_floor_overrides', 0)}`",
+            f"- Clinician Review Required Flags: `{med_metrics.get('review_required_count', 0)}`",
+            f"- Clinician Review Directive Compliance: `{med_metrics.get('directive_compliance_rate', 1.0) * 100.0:.1f}%`",
             "",
             "## Notes",
             "",
@@ -398,6 +490,16 @@ def main() -> int:
     else:
         output_json_path = DEFAULT_OUT_DIR / f"council-synthetic-eval-{timestamp}.json"
 
+    try:
+        from clara_ml.agents.council import run_council
+        from clara_ml.config import settings
+
+        if os.getenv("DEEPSEEK_API_KEY") or os.getenv("ROUTER_API_KEY"):
+            settings.council_llm_shadow_enabled = True
+        settings.council_medication_safety_enabled = True
+    except Exception:
+        pass
+
     if args.output_md.strip():
         output_md_path = Path(args.output_md).resolve()
     else:
@@ -416,17 +518,36 @@ def main() -> int:
 
     endpoint_url = _build_url(args.base_url, args.endpoint)
     results: list[dict[str, Any]] = []
+    in_process_fallback = False
+
+    # Check if local endpoint is reachable, otherwise fallback to in-process ML agent
     for case in cases:
         payload = case.get("payload")
         if not isinstance(payload, dict):
             payload = {}
-        status_code, body, err_text = _http_post_json(
-            url=endpoint_url,
-            payload=payload,
-            timeout_sec=float(args.timeout_sec),
-            internal_key=args.internal_key,
-            bearer_token=args.bearer_token,
-        )
+
+        if not in_process_fallback:
+            status_code, body, err_text = _http_post_json(
+                url=endpoint_url,
+                payload=payload,
+                timeout_sec=float(args.timeout_sec),
+                internal_key=args.internal_key,
+                bearer_token=args.bearer_token,
+            )
+            if status_code == 0 and ("127.0.0.1" in endpoint_url or "localhost" in endpoint_url):
+                in_process_fallback = True
+
+        if in_process_fallback:
+            try:
+                from clara_ml.agents.council import run_council
+                body = run_council(payload)
+                status_code = 200
+                err_text = None
+            except Exception as exc:
+                status_code = 0
+                body = None
+                err_text = f"in_process_error:{exc.__class__.__name__}:{exc}"
+
         evaluated = _evaluate_case(case, status_code, body, err_text)
         results.append(evaluated)
 
@@ -441,6 +562,22 @@ def main() -> int:
     data_quality_scores: list[float | None] = []
 
     severity_summary: dict[str, dict[str, Any]] = {}
+
+    # Specialist agreement tracking
+    specialist_participation: Counter[str] = Counter()
+    specialist_votes_by_specialty: dict[str, Counter[str]] = {}
+    total_conflicts = 0
+    total_specialist_votes = 0
+    model_shadow_count = 0
+
+    # Medication safety tracking
+    cases_with_meds = 0
+    med_checks_performed = 0
+    med_states: Counter[str] = Counter()
+    total_ddi_alerts = 0
+    triage_floor_overrides = 0
+    med_review_required = 0
+    directive_present_count = 0
 
     for item in results:
         severity = str(item.get("severity") or "unknown")
@@ -477,6 +614,42 @@ def main() -> int:
         disagreement_indexes.append(_safe_float(actual.get("disagreement_index")))
         data_quality_scores.append(_safe_float(actual.get("data_quality_score")))
 
+        # Specialist tracking
+        specs = actual.get("specialist_assessments") or []
+        for spec_item in specs:
+            if isinstance(spec_item, dict):
+                spec_name = str(spec_item.get("specialist") or "unknown")
+                spec_triage = str(spec_item.get("triage") or "unknown")
+                specialist_participation[spec_name] += 1
+                if spec_name not in specialist_votes_by_specialty:
+                    specialist_votes_by_specialty[spec_name] = Counter()
+                specialist_votes_by_specialty[spec_name][spec_triage] += 1
+                total_specialist_votes += 1
+
+        conflicts = actual.get("conflicts") or []
+        total_conflicts += len(conflicts)
+
+        if actual.get("model_council"):
+            model_shadow_count += 1
+
+        # Medication safety tracking
+        med_safety = actual.get("medication_safety")
+        if med_safety:
+            cases_with_meds += 1
+            state = str(med_safety.get("state") or "unknown")
+            med_states[state] += 1
+            if state != "unavailable":
+                med_checks_performed += 1
+            alert_ids = med_safety.get("alert_ids") or []
+            total_ddi_alerts += len(alert_ids)
+            if med_safety.get("triage_floor"):
+                triage_floor_overrides += 1
+            if med_safety.get("review_required"):
+                med_review_required += 1
+
+        if actual.get("clinician_review_directive"):
+            directive_present_count += 1
+
     evaluated_cases = len(results)
     pass_rate = (passed_count / evaluated_cases) if evaluated_cases else 0.0
     escalation_ratio = (emergency_hits / evaluated_cases) if evaluated_cases else 0.0
@@ -493,12 +666,20 @@ def main() -> int:
             "triage_distribution": triage_dist,
         }
 
+    specialty_agreement_serializable: dict[str, Any] = {}
+    for spec_name, count in specialist_participation.items():
+        specialty_agreement_serializable[spec_name] = {
+            "count": count,
+            "votes": dict(specialist_votes_by_specialty.get(spec_name, {})),
+        }
+
     summary: dict[str, Any] = {
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "artifact": str(output_json_path),
         "input_cases": str(cases_path),
         "input_meta": meta,
-        "endpoint_url": endpoint_url,
+        "endpoint_url": "in-process-agent" if in_process_fallback else endpoint_url,
+        "execution_mode": "in-process-agent" if in_process_fallback else "http-endpoint",
         "metrics": {
             "evaluated_cases": evaluated_cases,
             "passed_cases": passed_count,
@@ -511,6 +692,23 @@ def main() -> int:
             "average_data_quality_score": _mean(data_quality_scores),
             "failed_check_breakdown": dict(failed_check_counter),
             "by_severity": severity_serializable,
+            "specialist_agreement": {
+                "average_support_ratio": _mean(support_ratios),
+                "average_disagreement_index": _mean(disagreement_indexes),
+                "total_conflicts": total_conflicts,
+                "average_conflicts_per_case": (total_conflicts / evaluated_cases) if evaluated_cases else 0.0,
+                "total_specialist_votes": total_specialist_votes,
+                "by_specialty": specialty_agreement_serializable,
+            },
+            "medication_safety": {
+                "cases_with_medications": cases_with_meds,
+                "checks_performed": med_checks_performed,
+                "states": dict(med_states),
+                "total_ddi_alerts": total_ddi_alerts,
+                "triage_floor_overrides": triage_floor_overrides,
+                "review_required_count": med_review_required,
+                "directive_compliance_rate": (directive_present_count / evaluated_cases) if evaluated_cases else 1.0,
+            },
         },
         "checks": {
             "all_cases_passed": passed_count == evaluated_cases,
@@ -540,10 +738,15 @@ def main() -> int:
     output_md_path.write_text(_render_markdown(summary), encoding="utf-8")
 
     print("[run-council-synthetic-eval] complete")
-    print(f"- endpoint: {endpoint_url}")
+    print(f"- mode: {'in-process-agent' if in_process_fallback else endpoint_url}")
     print(f"- evaluated_cases: {evaluated_cases}")
     print(f"- pass_rate: {pass_rate:.3f}")
     print(f"- escalation_ratio: {escalation_ratio:.3f}")
+    print(f"- average_support_ratio (specialist agreement): {_mean(support_ratios):.3f}")
+    print(f"- average_disagreement_index: {_mean(disagreement_indexes):.3f}")
+    print(f"- total_cross_specialty_conflicts: {total_conflicts}")
+    print(f"- medication_safety_evaluated: {cases_with_meds}")
+    print(f"- ddi_alerts_detected: {total_ddi_alerts}")
     print(f"- output_json: {output_json_path}")
     print(f"- output_md: {output_md_path}")
     print(f"- baseline_template: {baseline_template_path}")

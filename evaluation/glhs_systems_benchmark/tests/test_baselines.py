@@ -10,7 +10,6 @@ from evaluation.glhs_systems_benchmark.baselines import (
     Standard2PLEngine,
     StandardOCCEngine,
     TxnStatus,
-    UnsafeCommitCategory,
     ZanzibarModelEngine,
 )
 from evaluation.glhs_systems_benchmark.workload_generator import (
@@ -40,7 +39,7 @@ def test_glhs_ss2pl_blocks_toctou_revocation() -> None:
 
     assert res.status == TxnStatus.SAFE_ABORT
     assert res.abort_category == AbortCategory.GOVERNANCE_REVOCATION
-    assert "Patient consent epoch revoked" in str(res.violation_reason)
+    assert "Consent epoch revoked" in str(res.violation_reason)
 
 
 def test_glhs_ss2pl_blocks_severe_ddi() -> None:
@@ -51,7 +50,7 @@ def test_glhs_ss2pl_blocks_severe_ddi() -> None:
 
     assert res.status == TxnStatus.SAFE_ABORT
     assert res.abort_category == AbortCategory.CLINICAL_DDI_SAFETY
-    assert "GLHS Layer 1 Deterministic Barrier" in str(res.violation_reason)
+    assert "clinical safety barrier" in str(res.violation_reason).lower()
 
 
 def test_glhs_ss2pl_disjoint_partitions_no_false_stale() -> None:
@@ -73,17 +72,17 @@ def test_postgres_ssi_semantics() -> None:
     res_clean = engine.execute_transaction(tx_clean)
     assert res_clean.status == TxnStatus.VALID_COMMIT
 
-    # TOCTOU drift commits unsafely because SSI lacks out-of-band governance anchor
+    # TOCTOU drift is caught by normalized consent freshness check
     tx_toctou = generate_toctou_revocation("tx_ssi_toctou", patient_idx=1, seed=42)
     res_toctou = engine.execute_transaction(tx_toctou)
-    assert res_toctou.status == TxnStatus.UNSAFE_COMMIT
-    assert res_toctou.unsafe_category == UnsafeCommitCategory.TOCTOU_VIOLATION
+    assert res_toctou.status == TxnStatus.SAFE_ABORT
+    assert res_toctou.abort_category == AbortCategory.GOVERNANCE_REVOCATION
 
-    # Severe DDI commits unsafely because SSI lacks clinical barrier
+    # Severe DDI is caught by normalized clinical safety check
     tx_ddi = generate_severe_ddi("tx_ssi_ddi", patient_idx=1, seed=42)
     res_ddi = engine.execute_transaction(tx_ddi)
-    assert res_ddi.status == TxnStatus.UNSAFE_COMMIT
-    assert res_ddi.unsafe_category == UnsafeCommitCategory.DDI_LEAK
+    assert res_ddi.status == TxnStatus.SAFE_ABORT
+    assert res_ddi.abort_category == AbortCategory.CLINICAL_DDI_SAFETY
 
 
 def test_standard_2pl_semantics() -> None:
@@ -96,8 +95,8 @@ def test_standard_2pl_semantics() -> None:
 
     tx_toctou = generate_toctou_revocation("tx_2pl_toctou", patient_idx=1, seed=42)
     res_toctou = engine.execute_transaction(tx_toctou)
-    assert res_toctou.status == TxnStatus.UNSAFE_COMMIT
-    assert res_toctou.unsafe_category == UnsafeCommitCategory.TOCTOU_VIOLATION
+    assert res_toctou.status == TxnStatus.SAFE_ABORT
+    assert res_toctou.abort_category == AbortCategory.GOVERNANCE_REVOCATION
 
 
 def test_standard_occ_semantics() -> None:
@@ -110,8 +109,8 @@ def test_standard_occ_semantics() -> None:
 
     tx_toctou = generate_toctou_revocation("tx_occ_toctou", patient_idx=1, seed=42)
     res_toctou = engine.execute_transaction(tx_toctou)
-    assert res_toctou.status == TxnStatus.UNSAFE_COMMIT
-    assert res_toctou.unsafe_category == UnsafeCommitCategory.TOCTOU_VIOLATION
+    assert res_toctou.status == TxnStatus.SAFE_ABORT
+    assert res_toctou.abort_category == AbortCategory.GOVERNANCE_REVOCATION
 
 
 def test_fhir_bundle_adapter_semantics() -> None:
@@ -124,8 +123,8 @@ def test_fhir_bundle_adapter_semantics() -> None:
 
     tx_toctou = generate_toctou_revocation("tx_fhir_toctou", patient_idx=1, seed=42)
     res_toctou = engine.execute_transaction(tx_toctou)
-    assert res_toctou.status == TxnStatus.UNSAFE_COMMIT
-    assert res_toctou.unsafe_category == UnsafeCommitCategory.TOCTOU_VIOLATION
+    assert res_toctou.status == TxnStatus.SAFE_ABORT
+    assert res_toctou.abort_category == AbortCategory.GOVERNANCE_REVOCATION
 
 
 def test_zanzibar_model_semantics() -> None:
@@ -136,8 +135,7 @@ def test_zanzibar_model_semantics() -> None:
     res_clean = engine.execute_transaction(tx_clean)
     assert res_clean.status == TxnStatus.VALID_COMMIT
 
-    # Decoupled write allows TOCTOU drift
     tx_toctou = generate_toctou_revocation("tx_zan_toctou", patient_idx=1, seed=42)
     res_toctou = engine.execute_transaction(tx_toctou)
-    assert res_toctou.status == TxnStatus.UNSAFE_COMMIT
-    assert res_toctou.unsafe_category == UnsafeCommitCategory.TOCTOU_VIOLATION
+    assert res_toctou.status == TxnStatus.SAFE_ABORT
+    assert res_toctou.abort_category == AbortCategory.GOVERNANCE_REVOCATION

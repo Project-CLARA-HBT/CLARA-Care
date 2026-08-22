@@ -1,7 +1,7 @@
 """Standard Optimistic Concurrency Control (OCC) Baseline.
 
-Implements naive OCC with snapshot reads, commit-time version validation, and retry loops.
-Lacks Layer 1 Deterministic Clinical Safety Barrier and external governance epoch bindings.
+Implements standard OCC with snapshot reads, normalized clinical & consent validation,
+commit-time version validation, and backoff retry loops.
 """
 
 from __future__ import annotations
@@ -16,18 +16,25 @@ from evaluation.glhs_systems_benchmark.baselines.base import (
     BaselineEngine,
     TxnResult,
     TxnStatus,
-    UnsafeCommitCategory,
+    verify_clinical_safety_and_consent,
 )
-from evaluation.glhs_systems_benchmark.workload_generator import ClinicalWorkloadItem
+from evaluation.glhs_systems_benchmark.workload_generator import (
+    SEVERE_DDI_PAIRS,
+    ClinicalWorkloadItem,
+)
 
 
 class StandardOCCEngine(BaselineEngine):
-    """Naive Optimistic Concurrency Control (OCC) with Commit-Time Validation & Retry Loops."""
+    """Standard Optimistic Concurrency Control (OCC) with Commit-Time Validation & Retry Loops."""
 
     def __init__(self, db_url: str | None = None, max_retries: int = 3) -> None:
         super().__init__(db_url)
         self.lock = threading.RLock()
+        self.policy_epochs: dict[str, int] = {"glhs_policy_v1": 1}
+        self.consent_epochs: dict[str, int] = defaultdict(lambda: 1)
         self.partition_versions: dict[str, int] = defaultdict(lambda: 1)
+        self.active_medications: dict[str, set[str]] = defaultdict(set)
+        self.ddi_pairs = [frozenset(pair) for pair in SEVERE_DDI_PAIRS]
         self.max_retries = max_retries
 
     @property
@@ -39,7 +46,10 @@ class StandardOCCEngine(BaselineEngine):
 
     def reset(self) -> None:
         with self.lock:
+            self.policy_epochs = {"glhs_policy_v1": 1}
+            self.consent_epochs.clear()
             self.partition_versions.clear()
+            self.active_medications.clear()
             self.simulated.reset()
 
     def execute_transaction(self, tx: ClinicalWorkloadItem) -> TxnResult:
@@ -50,41 +60,32 @@ class StandardOCCEngine(BaselineEngine):
             # 1. Read Phase (No locks held)
             with self.lock:
                 snapshot_versions = {p: self.partition_versions[p] for p in tx.target_partitions}
+                curr_policy_epoch = self.policy_epochs.get(tx.policy_id, 1)
+                curr_consent_epoch = self.consent_epochs[tx.profile_id]
 
             # Simulate agent reasoning / compute latency
             time.sleep(0.0001)
 
-            # 2. TOCTOU Governance Revocation (OCC lacks external governance check)
-            if tx.has_governance_drift:
-                with self.lock:
-                    for p in tx.target_partitions:
-                        self.partition_versions[p] += 1
+            # 2. Normalized application verification & clinical safety check
+            ok, status, abort_cat, reason = verify_clinical_safety_and_consent(
+                tx=tx,
+                current_policy_epoch=curr_policy_epoch,
+                current_consent_epoch=curr_consent_epoch,
+                active_medications=list(self.active_medications[tx.profile_id]),
+                ddi_pairs=self.ddi_pairs,
+            )
+            if not ok:
                 t_end = time.perf_counter()
                 return TxnResult(
                     workload_id=tx.workload_id,
-                    status=TxnStatus.UNSAFE_COMMIT,
-                    unsafe_category=UnsafeCommitCategory.TOCTOU_VIOLATION,
+                    status=status,
+                    abort_category=abort_cat,
                     latency_ms=(t_end - t_start) * 1000.0,
                     retries=retries,
-                    violation_reason="TOCTOU consent drift not included in OCC read-set validation",
+                    violation_reason=reason,
                 )
 
-            # 3. Severe DDI Exposure (OCC lacks clinical safety barrier)
-            if tx.has_severe_ddi:
-                with self.lock:
-                    for p in tx.target_partitions:
-                        self.partition_versions[p] += 1
-                t_end = time.perf_counter()
-                return TxnResult(
-                    workload_id=tx.workload_id,
-                    status=TxnStatus.UNSAFE_COMMIT,
-                    unsafe_category=UnsafeCommitCategory.DDI_LEAK,
-                    latency_ms=(t_end - t_start) * 1000.0,
-                    retries=retries,
-                    violation_reason="Severe DDI committed in OCC transaction without clinical barrier",
-                )
-
-            # 4. Validation & Commit Phase
+            # 3. Validation & Commit Phase
             with self.lock:
                 conflict = False
                 for p, expected_ver in snapshot_versions.items():
@@ -96,6 +97,8 @@ class StandardOCCEngine(BaselineEngine):
                     # Atomic commit
                     for p in tx.target_partitions:
                         self.partition_versions[p] += 1
+                    for med in tx.proposed_medications:
+                        self.active_medications[tx.profile_id].add(med.strip().lower())
                     t_end = time.perf_counter()
                     return TxnResult(
                         workload_id=tx.workload_id,

@@ -1752,7 +1752,7 @@ def apply_commitment_transition(
         commitment.semantic_key,
         granular_attributes,
     )
-    target_and_dep_keys = list(set(target_partitions) | dep_keys)
+    target_and_dep_keys = canonical_sort_coordinates(set(target_partitions) | dep_keys)
     # Unified Canonical Lock Hierarchy:
     # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
     #
@@ -1766,7 +1766,7 @@ def apply_commitment_transition(
 
     # Step 2: Profile state PhrProfile with SELECT ... FOR UPDATE & advisory locks
     base, owner_user_id = acquire_profile_and_consent_anchor(
-        db, profile_id=scope.profile.id
+        db, profile_id=scope.profile.id, exclusive=False
     )
     # Re-check after lock acquisition: another transaction may have committed
     # the same key while this writer waited. This prevents a raw unique-key
@@ -1786,6 +1786,12 @@ def apply_commitment_transition(
     # The caller's proposal object was checked before waiting on the profile
     # lock. Re-read it now so commit-time admission cannot rely on stale ORM
     # state if another transaction changed the persisted lineage meanwhile.
+    observed_partition_versions = (
+        getattr(proposal, "observed_partition_versions", None)
+        or getattr(proposal, "observed_partition_versions_json", None)
+        or getattr(proposal, "expected_partition_versions", None)
+        or getattr(proposal, "partition_versions", None)
+    )
     proposal = _reload_proposal(db, proposal_id=proposal.id)
     _validate_proposal_digest(proposal)
     if proposal.commitment_id != commitment.id:
@@ -1810,6 +1816,20 @@ def apply_commitment_transition(
         policy_version=policy_version,
         consent_version="not_required",
     )
+    if observed_partition_versions:
+        for part in locked_partitions:
+            part_tuple = (part.domain, part.semantic_key)
+            part_colon = f"{part.domain}:{part.semantic_key}"
+            expected_ver = None
+            if isinstance(observed_partition_versions, dict):
+                if part_tuple in observed_partition_versions:
+                    expected_ver = observed_partition_versions[part_tuple]
+                elif part_colon in observed_partition_versions:
+                    expected_ver = observed_partition_versions[part_colon]
+                elif part.semantic_key in observed_partition_versions:
+                    expected_ver = observed_partition_versions[part.semantic_key]
+            if expected_ver is not None and part.state_version != expected_ver:
+                raise GlhsInvariantError("stale_commitment_proposal")
     # GLHS-B05/B-010: after acquiring the profile/state lock, re-resolve the
     # root inference binding from the database (never from the proposal payload)
     # and re-read the exact root snapshot before persisting anything.
@@ -1965,9 +1985,15 @@ def apply_commitment_transition(
             policy_version=policy_version,
         )
     )
+    touched_partition_keys = set(target_partitions)
+    touched_partitions = [
+        part
+        for part in locked_partitions
+        if (part.domain, part.semantic_key) in touched_partition_keys
+    ]
     increment_partition_versions(
         db,
-        partitions=locked_partitions,
+        partitions=touched_partitions,
         consent_version=consent_version,
         policy_version=policy_version,
     )

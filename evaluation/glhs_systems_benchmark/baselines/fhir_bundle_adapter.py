@@ -2,8 +2,7 @@
 
 Simulates and evaluates standard FHIR R4 atomic transaction bundles with per-resource
 and bundle-level ETag (If-Match) preconditions.
-Exhibits false-stale aborts under monolithic bundle ETag advancing and lacks
-bitemporal inference binding and deterministic clinical DDI barriers.
+Exhibits false-stale aborts under monolithic bundle ETag advancing when concurrent writes target disjoint slots.
 """
 
 from __future__ import annotations
@@ -18,9 +17,12 @@ from evaluation.glhs_systems_benchmark.baselines.base import (
     BaselineEngine,
     TxnResult,
     TxnStatus,
-    UnsafeCommitCategory,
+    verify_clinical_safety_and_consent,
 )
-from evaluation.glhs_systems_benchmark.workload_generator import ClinicalWorkloadItem
+from evaluation.glhs_systems_benchmark.workload_generator import (
+    SEVERE_DDI_PAIRS,
+    ClinicalWorkloadItem,
+)
 
 
 class FHIRBundleAdapterEngine(BaselineEngine):
@@ -29,8 +31,12 @@ class FHIRBundleAdapterEngine(BaselineEngine):
     def __init__(self, db_url: str | None = None) -> None:
         super().__init__(db_url)
         self.lock = threading.RLock()
+        self.policy_epochs: dict[str, int] = {"glhs_policy_v1": 1}
+        self.consent_epochs: dict[str, int] = defaultdict(lambda: 1)
         self.resource_etags: dict[str, int] = defaultdict(lambda: 1)
         self.bundle_etags: dict[str, int] = defaultdict(lambda: 1)
+        self.active_medications: dict[str, set[str]] = defaultdict(set)
+        self.ddi_pairs = [frozenset(pair) for pair in SEVERE_DDI_PAIRS]
 
     @property
     def name(self) -> str:
@@ -41,8 +47,11 @@ class FHIRBundleAdapterEngine(BaselineEngine):
 
     def reset(self) -> None:
         with self.lock:
+            self.policy_epochs = {"glhs_policy_v1": 1}
+            self.consent_epochs.clear()
             self.resource_etags.clear()
             self.bundle_etags.clear()
+            self.active_medications.clear()
             self.simulated.reset()
 
     def execute_transaction(self, tx: ClinicalWorkloadItem) -> TxnResult:
@@ -53,8 +62,28 @@ class FHIRBundleAdapterEngine(BaselineEngine):
 
         with self.lock:
             bundle_key = tx.profile_id
+            curr_policy_epoch = self.policy_epochs.get(tx.policy_id, 1)
+            curr_consent_epoch = self.consent_epochs[tx.profile_id]
 
-            # 1. Monolithic Bundle / Resource ETag check for disjoint slots
+            # 1. Normalized application verification & clinical safety check
+            ok, status, abort_cat, reason = verify_clinical_safety_and_consent(
+                tx=tx,
+                current_policy_epoch=curr_policy_epoch,
+                current_consent_epoch=curr_consent_epoch,
+                active_medications=list(self.active_medications[tx.profile_id]),
+                ddi_pairs=self.ddi_pairs,
+            )
+            if not ok:
+                t_end = time.perf_counter()
+                return TxnResult(
+                    workload_id=tx.workload_id,
+                    status=status,
+                    abort_category=abort_cat,
+                    latency_ms=(t_end - t_start) * 1000.0,
+                    violation_reason=reason,
+                )
+
+            # 2. Monolithic Bundle / Resource ETag check for disjoint slots
             # In standard FHIR servers (e.g. HAPI FHIR), bundle-level versioning or coarse
             # resource container updates cause false-stale 412 Precondition Failed aborts
             if tx.is_disjoint:
@@ -68,37 +97,7 @@ class FHIRBundleAdapterEngine(BaselineEngine):
                         violation_reason="HTTP 412 Precondition Failed: Bundle container ETag mismatch on disjoint write",
                     )
 
-            # 2. TOCTOU Governance Drift Vulnerability
-            # FHIR R4 Bundle processor does NOT validate out-of-band consent epochs or snapshot tokens
-            if tx.has_governance_drift:
-                self.bundle_etags[bundle_key] += 1
-                for p in tx.target_partitions:
-                    self.resource_etags[p] += 1
-                t_end = time.perf_counter()
-                return TxnResult(
-                    workload_id=tx.workload_id,
-                    status=TxnStatus.UNSAFE_COMMIT,
-                    unsafe_category=UnsafeCommitCategory.TOCTOU_VIOLATION,
-                    latency_ms=(t_end - t_start) * 1000.0,
-                    violation_reason="TOCTOU Consent Drift missed by standard FHIR ETag / If-Match",
-                )
-
-            # 3. Severe DDI Exposure Vulnerability
-            # Standard FHIR server lacks Layer 1 deterministic clinical DDI safety barrier
-            if tx.has_severe_ddi:
-                self.bundle_etags[bundle_key] += 1
-                for p in tx.target_partitions:
-                    self.resource_etags[p] += 1
-                t_end = time.perf_counter()
-                return TxnResult(
-                    workload_id=tx.workload_id,
-                    status=TxnStatus.UNSAFE_COMMIT,
-                    unsafe_category=UnsafeCommitCategory.DDI_LEAK,
-                    latency_ms=(t_end - t_start) * 1000.0,
-                    violation_reason="Severe DDI committed through standard FHIR R4 atomic bundle",
-                )
-
-            # 4. Standard Resource ETag Validation
+            # 3. Standard Resource ETag Validation
             for p in tx.target_partitions:
                 if self.resource_etags[p] > 15 and (hash(tx.workload_id) % 11 == 0):
                     t_end = time.perf_counter()
@@ -110,10 +109,12 @@ class FHIRBundleAdapterEngine(BaselineEngine):
                         violation_reason="HTTP 412 Precondition Failed: Resource ETag conflict (W/\"version\" mismatch)",
                     )
 
-            # 5. Valid Commit
+            # 4. Valid Commit
             self.bundle_etags[bundle_key] += 1
             for p in tx.target_partitions:
                 self.resource_etags[p] += 1
+            for med in tx.proposed_medications:
+                self.active_medications[tx.profile_id].add(med.strip().lower())
 
             t_end = time.perf_counter()
             return TxnResult(

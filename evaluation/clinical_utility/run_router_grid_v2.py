@@ -13,14 +13,19 @@ import argparse
 import csv
 import json
 import os
+import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from evaluation.clinical_utility.context_builders import CONDITIONS, build_context
 
-ROUTER_BASE_URL = "https://router.theclaracare.com/v1"
+ROUTER_BASE_URL = os.environ.get("ROUTER_BASE_URL", "https://router.theclaracare.com/v1").rstrip("/")
 MODELS = (
     ("gemini-3.6-flash-high", "gemini"),
     ("claude-sonnet-4-6", "claude"),
@@ -66,8 +71,15 @@ class CallResult:
 
 
 def _call(base: str, key: str, model: str, prompt: str) -> CallResult:
+    import time
+
     body = json.dumps(
-        {"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0}
+        {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0,
+            "stream": False,
+        }
     ).encode("utf-8")
     request = urllib.request.Request(
         f"{base}/chat/completions",
@@ -75,40 +87,56 @@ def _call(base: str, key: str, model: str, prompt: str) -> CallResult:
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
         method="POST",
     )
-    import time
 
-    started = time.monotonic()
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            payload_bytes = response.read()
-            content_type = response.headers.get_content_type()
-        if content_type == "text/event-stream":
-            chunks: list[str] = []
-            for line in payload_bytes.decode("utf-8").splitlines():
-                if not line.startswith("data:"):
-                    continue
-                event_data = line.removeprefix("data:").strip()
-                if event_data == "[DONE]":
-                    continue
-                event = json.loads(event_data)
-                choices = event.get("choices")
-                if not isinstance(choices, list) or not choices:
-                    continue
-                delta = choices[0].get("delta", {})
-                if isinstance(delta.get("content"), str):
-                    chunks.append(delta["content"])
-            content = "".join(chunks)
-            payload = {"choices": [{"message": {"content": content}}], "usage": {}}
-        else:
-            payload = json.loads(payload_bytes)
-        return CallResult(payload, (time.monotonic() - started) * 1000.0, None)
-    except (
-        urllib.error.HTTPError,
-        urllib.error.URLError,
-        TimeoutError,
-        json.JSONDecodeError,
-    ) as exc:
-        return CallResult({}, (time.monotonic() - started) * 1000.0, type(exc).__name__)
+    max_retries = 8
+    backoff = 5.0
+    for attempt in range(max_retries):
+        started = time.monotonic()
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response:
+                payload_bytes = response.read()
+                content_type = response.headers.get_content_type()
+            if content_type == "text/event-stream":
+                chunks: list[str] = []
+                usage: dict[str, object] = {}
+                for line in payload_bytes.decode("utf-8").splitlines():
+                    if not line.startswith("data:"):
+                        continue
+                    event_data = line.removeprefix("data:").strip()
+                    if event_data == "[DONE]":
+                        continue
+                    event = json.loads(event_data)
+                    if isinstance(event.get("usage"), dict):
+                        usage = event["usage"]
+                    choices = event.get("choices")
+                    if not isinstance(choices, list) or not choices:
+                        continue
+                    delta = choices[0].get("delta", {})
+                    if isinstance(delta.get("content"), str):
+                        chunks.append(delta["content"])
+                content = "".join(chunks)
+                payload = {"choices": [{"message": {"content": content}}], "usage": usage}
+            else:
+                payload = json.loads(payload_bytes)
+            return CallResult(payload, (time.monotonic() - started) * 1000.0, None)
+        except urllib.error.HTTPError as exc:
+            if exc.code in (429, 500, 502, 503, 504) and attempt < max_retries - 1:
+                time.sleep(backoff)
+                backoff = min(backoff * 1.5, 30.0)
+                continue
+            return CallResult({}, (time.monotonic() - started) * 1000.0, f"HTTP_{exc.code}")
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            json.JSONDecodeError,
+        ) as exc:
+            if attempt < max_retries - 1:
+                time.sleep(backoff)
+                backoff = min(backoff * 1.5, 30.0)
+                continue
+            return CallResult({}, (time.monotonic() - started) * 1000.0, type(exc).__name__)
+
+    return CallResult({}, 0.0, "max_retries_exceeded")
 
 
 def _parse(choice: str) -> dict[str, object]:
@@ -129,9 +157,25 @@ def _parse(choice: str) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tasks", type=Path, required=True, help="JSON array of task dicts")
-    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--limit", type=int, default=0, help="0 = all tasks")
     args = parser.parse_args()
+
+    if not args.output and not args.output_dir:
+        parser.error("Either --output or --output-dir is required")
+
+    if args.output:
+        if args.output.suffix == ".csv":
+            csv_path = args.output
+            output_dir = args.output.parent
+        else:
+            output_dir = args.output
+            csv_path = output_dir / "utility_grid_v2.csv"
+    else:
+        assert args.output_dir is not None
+        output_dir = args.output_dir
+        csv_path = output_dir / "utility_grid_v2.csv"
 
     key = (
         os.environ.get("ROUTER_API_KEY", "")
@@ -152,7 +196,7 @@ def main() -> int:
     if args.limit > 0:
         tasks = tasks[: args.limit]
 
-    args.output_dir.mkdir(parents=True, exist_ok=False)
+    output_dir.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, object]] = []
     for task in tasks:
         task_id = str(task["task_id"])
@@ -215,10 +259,12 @@ def main() -> int:
                         "error_code": result.error or ("invalid_json" if not parsed else ""),
                     }
                 )
+                print(
+                    f"[{len(rows)}/{len(tasks) * len(CONDITIONS) * len(MODELS)}] {task_id} {condition} {model} -> correct={correct} latency={result.latency_ms:.0f}ms",
+                    flush=True,
+                )
 
-    with (args.output_dir / "utility_grid_v2.csv").open(
-        "w", encoding="utf-8", newline=""
-    ) as stream:
+    with csv_path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=COLUMNS)
         writer.writeheader()
         writer.writerows(rows)
@@ -234,7 +280,7 @@ def main() -> int:
         "raw_model_text_retained": False,
         "api_key_retained": False,
     }
-    (args.output_dir / "grid_manifest.json").write_text(
+    (output_dir / "grid_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n"
     )
     print(json.dumps(manifest, indent=2, sort_keys=True))

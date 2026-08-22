@@ -20,6 +20,7 @@ from evaluation.glhs_systems_benchmark.baselines.base import (
     TxnStatus,
     UnsafeCommitCategory,
     compute_metrics,
+    verify_clinical_safety_and_consent,
 )
 from evaluation.glhs_systems_benchmark.baselines.fhir_bundle_adapter import FHIRBundleAdapterEngine
 from evaluation.glhs_systems_benchmark.baselines.glhs_ss2pl import GLHSSS2PLEngine
@@ -43,4 +44,5 @@ __all__ = [
     "UnsafeCommitCategory",
     "ZanzibarModelEngine",
     "compute_metrics",
+    "verify_clinical_safety_and_consent",
 ]

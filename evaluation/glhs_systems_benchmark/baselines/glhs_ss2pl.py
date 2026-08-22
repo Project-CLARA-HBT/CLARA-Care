@@ -15,10 +15,10 @@ from collections import defaultdict
 from typing import Any
 
 from evaluation.glhs_systems_benchmark.baselines.base import (
-    AbortCategory,
     BaselineEngine,
     TxnResult,
     TxnStatus,
+    verify_clinical_safety_and_consent,
 )
 from evaluation.glhs_systems_benchmark.workload_generator import (
     SEVERE_DDI_PAIRS,
@@ -140,17 +140,17 @@ class GLHSSS2PLEngine(BaselineEngine):
             with psycopg.connect(self.db_url) as conn:
                 conn.isolation_level = psycopg.IsolationLevel.READ_COMMITTED
                 with conn.cursor(row_factory=dict_row) as cur:
-                    # 1. Canonical Step 1: Lock Policy Anchor
+                    # 1. Canonical Step 1: Lock Policy Anchor in Shared Mode
                     cur.execute(
-                        "SELECT policy_id, epoch FROM glhs_policy_anchors WHERE policy_id = %s FOR UPDATE",
+                        "SELECT policy_id, epoch FROM glhs_policy_anchors WHERE policy_id = %s FOR SHARE",
                         (tx.policy_id,),
                     )
                     policy_row = cur.fetchone()
                     current_policy_epoch = policy_row["epoch"] if policy_row else 1
 
-                    # 2. Canonical Step 2: Lock Profile & Consent Anchor
+                    # 2. Canonical Step 2: Lock Profile & Consent Anchor in Shared Mode
                     cur.execute(
-                        "SELECT profile_id, consent_epoch FROM glhs_profile_consent_anchors WHERE profile_id = %s FOR UPDATE",
+                        "SELECT profile_id, consent_epoch FROM glhs_profile_consent_anchors WHERE profile_id = %s FOR SHARE",
                         (tx.profile_id,),
                     )
                     consent_row = cur.fetchone()
@@ -168,50 +168,24 @@ class GLHSSS2PLEngine(BaselineEngine):
                         if erow:
                             locked_entities.append(erow)
 
-                    # --- Layer 1 Deterministic Clinical Safety Barrier ---
-
-                    # A. Policy Epoch Verification
-                    if current_policy_epoch != tx.expected_policy_epoch:
+                    # --- Normalized Application Verification & Clinical Safety Checks ---
+                    ok, status, abort_cat, reason = verify_clinical_safety_and_consent(
+                        tx=tx,
+                        current_policy_epoch=current_policy_epoch,
+                        current_consent_epoch=current_consent_epoch,
+                        active_medications=list(self.active_medications[tx.profile_id]),
+                        ddi_pairs=self.ddi_pairs,
+                    )
+                    if not ok:
                         conn.rollback()
                         t_end = time.perf_counter()
                         return TxnResult(
                             workload_id=tx.workload_id,
-                            status=TxnStatus.SAFE_ABORT,
-                            abort_category=AbortCategory.GOVERNANCE_REVOCATION,
+                            status=status,
+                            abort_category=abort_cat,
                             latency_ms=(t_end - t_start) * 1000.0,
-                            violation_reason=f"Policy epoch drift: expected {tx.expected_policy_epoch}, got {current_policy_epoch}",
+                            violation_reason=reason,
                         )
-
-                    # B. Consent Epoch Verification (TOCTOU Defense)
-                    # Simulated dynamic drift in test scenario
-                    effective_consent_epoch = current_consent_epoch + (1 if tx.has_governance_drift else 0)
-                    if effective_consent_epoch != tx.expected_consent_epoch:
-                        conn.rollback()
-                        t_end = time.perf_counter()
-                        return TxnResult(
-                            workload_id=tx.workload_id,
-                            status=TxnStatus.SAFE_ABORT,
-                            abort_category=AbortCategory.GOVERNANCE_REVOCATION,
-                            latency_ms=(t_end - t_start) * 1000.0,
-                            violation_reason="GLHS Layer 1 Barrier: Consent revoked/modified during inference",
-                        )
-
-                    # C. Deterministic Clinical DDI Safety Matrix Check
-                    if tx.has_severe_ddi or tx.proposed_medications:
-                        proposed_set = {m.strip().lower() for m in tx.proposed_medications}
-                        active_set = {m.strip().lower() for m in tx.active_medications}
-                        combined_meds = proposed_set | active_set
-                        for pair in self.ddi_pairs:
-                            if pair.issubset(combined_meds):
-                                conn.rollback()
-                                t_end = time.perf_counter()
-                                return TxnResult(
-                                    workload_id=tx.workload_id,
-                                    status=TxnStatus.SAFE_ABORT,
-                                    abort_category=AbortCategory.CLINICAL_DDI_SAFETY,
-                                    latency_ms=(t_end - t_start) * 1000.0,
-                                    violation_reason=f"GLHS Layer 1 Deterministic Barrier: Blocked severe DDI {set(pair)}",
-                                )
 
                     # 4. Commit: Update partitions & append Merkle ledger block
                     for pid in sorted_partitions:
@@ -251,73 +225,42 @@ class GLHSSS2PLEngine(BaselineEngine):
             )
 
     def _execute_simulated_glhs(self, tx: ClinicalWorkloadItem, t_start: float) -> TxnResult:
-        """Executes simulated GLHS SS2PL with strict canonical lock hierarchy."""
+        """Executes simulated GLHS SS2PL with shared governance anchor + canonical DAG partition locks."""
         # 1. Canonical Hierarchy Ordering
-        # Level 1: PolicyAnchor
-        policy_lk = self.policy_locks[tx.policy_id]
-        # Level 2: ProfileAndConsentAnchor
-        profile_lk = self.profile_locks[tx.profile_id]
-        # Level 3: Lexicographically sorted EntityPartitions
+        # Level 1 & 2: Shared Governance Anchors (Policy & ProfileConsent)
+        # Level 3: Lexicographically sorted EntityPartitions (Exclusive locks)
         sorted_partitions = sorted(set(tx.target_partitions))
         partition_lks = [self.partition_locks[p] for p in sorted_partitions]
 
         acquired_locks: list[threading.Lock] = []
 
         try:
-            # Strict canonical lock acquisition order
-            policy_lk.acquire()
-            acquired_locks.append(policy_lk)
-
-            profile_lk.acquire()
-            acquired_locks.append(profile_lk)
-
+            # Strict canonical lock acquisition order for target partitions
             for lk in partition_lks:
                 lk.acquire()
                 acquired_locks.append(lk)
 
-            # --- Layer 1 Deterministic Clinical Safety Barrier ---
-
-            # A. Policy Epoch Verification
+            # Shared Governance Anchor Snapshot Read
             current_policy_epoch = self.policy_epochs.get(tx.policy_id, 1)
-            if current_policy_epoch != tx.expected_policy_epoch:
-                t_end = time.perf_counter()
-                return TxnResult(
-                    workload_id=tx.workload_id,
-                    status=TxnStatus.SAFE_ABORT,
-                    abort_category=AbortCategory.GOVERNANCE_REVOCATION,
-                    latency_ms=(t_end - t_start) * 1000.0,
-                    violation_reason=f"Policy epoch drift: expected {tx.expected_policy_epoch}, got {current_policy_epoch}",
-                )
-
-            # B. Consent Epoch Verification (TOCTOU Protection)
-            # In simulation, if tx.has_governance_drift is True, system epoch has advanced to 2
             current_consent_epoch = self.consent_epochs[tx.profile_id]
-            effective_system_epoch = 2 if tx.has_governance_drift else current_consent_epoch
-            if effective_system_epoch != tx.expected_consent_epoch:
+
+            # --- Normalized Application Verification & Clinical Safety Checks ---
+            ok, status, abort_cat, reason = verify_clinical_safety_and_consent(
+                tx=tx,
+                current_policy_epoch=current_policy_epoch,
+                current_consent_epoch=current_consent_epoch,
+                active_medications=list(self.active_medications[tx.profile_id]),
+                ddi_pairs=self.ddi_pairs,
+            )
+            if not ok:
                 t_end = time.perf_counter()
                 return TxnResult(
                     workload_id=tx.workload_id,
-                    status=TxnStatus.SAFE_ABORT,
-                    abort_category=AbortCategory.GOVERNANCE_REVOCATION,
+                    status=status,
+                    abort_category=abort_cat,
                     latency_ms=(t_end - t_start) * 1000.0,
-                    violation_reason="GLHS Layer 1 State Barrier: Patient consent epoch revoked (1 != 2)",
+                    violation_reason=reason,
                 )
-
-            # C. Deterministic Clinical DDI Safety Matrix Check
-            if tx.has_severe_ddi or tx.proposed_medications:
-                proposed_set = {m.strip().lower() for m in tx.proposed_medications}
-                active_set = self.active_medications[tx.profile_id] | {m.strip().lower() for m in tx.active_medications}
-                combined_meds = proposed_set | active_set
-                for pair in self.ddi_pairs:
-                    if pair.issubset(combined_meds):
-                        t_end = time.perf_counter()
-                        return TxnResult(
-                            workload_id=tx.workload_id,
-                            status=TxnStatus.SAFE_ABORT,
-                            abort_category=AbortCategory.CLINICAL_DDI_SAFETY,
-                            latency_ms=(t_end - t_start) * 1000.0,
-                            violation_reason=f"GLHS Layer 1 Deterministic Barrier blocked severe DDI: {set(pair)}",
-                        )
 
             # 4. Valid Commit
             for p in sorted_partitions:

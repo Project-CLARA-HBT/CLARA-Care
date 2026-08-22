@@ -208,7 +208,7 @@ def test_nested_structures_zero_collisions() -> None:
         {"k": ""},
         {"k": False},
         {"k": 0},
-        {"k": 0.0},
+        {"k": 0.5},
         {"k": []},
         {"k": {}},
         {"k": [None]},
@@ -224,6 +224,112 @@ def test_nested_structures_zero_collisions() -> None:
     ]
     fingerprints = [consistency_fingerprint(s) for s in structures]
     assert len(fingerprints) == len(set(fingerprints)), "Found hash collision in distinct structures!"
+
+
+def test_rfc8785_number_formatting() -> None:
+    """Verify strict RFC 8785 (JCS) number serialization rules."""
+    # Negative zero -0.0 and 0.0 -> "0"
+    assert canonical_json_bytes(-0.0) == b"0"
+    assert canonical_json_bytes(0.0) == b"0"
+    assert canonical_json_bytes(0) == b"0"
+    assert consistency_fingerprint(-0.0) == consistency_fingerprint(0)
+    assert consistency_fingerprint(-0.0) == consistency_fingerprint(0.0)
+
+    # Integers serialized as integers
+    assert canonical_json_bytes(42) == b"42"
+    assert canonical_json_bytes(-42) == b"-42"
+    assert canonical_json_bytes(100000000000000000000) == b"100000000000000000000"
+
+    # Floats with integral values serialize as integers (ECMAScript Number::toString)
+    assert canonical_json_bytes(1.0) == b"1"
+    assert canonical_json_bytes(-1.0) == b"-1"
+    assert consistency_fingerprint(1.0) == consistency_fingerprint(1)
+    assert consistency_fingerprint(-1.0) == consistency_fingerprint(-1)
+
+    # Decimal representation for floating point numbers
+    assert canonical_json_bytes(1.5) == b"1.5"
+    assert canonical_json_bytes(-1.5) == b"-1.5"
+
+    # Exponent boundary conditions (k <= n <= 21 vs n > 21, and -6 < n <= 0 vs n <= -6)
+    assert canonical_json_bytes(1e20) == b"100000000000000000000"
+    assert canonical_json_bytes(1e21) == b"1e21"
+    assert canonical_json_bytes(1e-6) == b"0.000001"
+    assert canonical_json_bytes(1e-7) == b"1e-7"
+    assert canonical_json_bytes(1.23456789e20) == b"123456789000000000000"
+    assert canonical_json_bytes(1.23456789e21) == b"1.23456789e21"
+    assert canonical_json_bytes(1.23456789e-6) == b"0.00000123456789"
+    assert canonical_json_bytes(1.23456789e-7) == b"1.23456789e-7"
+    assert canonical_json_bytes(-1e-7) == b"-1e-7"
+    assert canonical_json_bytes(-1e21) == b"-1e21"
+
+    # Exponent notation must use lowercase 'e' and no '+' sign
+    out_exp_pos = canonical_json_bytes(1e21)
+    assert b"e" in out_exp_pos
+    assert b"E" not in out_exp_pos
+    assert b"+" not in out_exp_pos
+
+    out_exp_neg = canonical_json_bytes(1e-7)
+    assert b"e-" in out_exp_neg
+    assert b"E" not in out_exp_neg
+
+    # Nested structures with floats
+    assert canonical_json_bytes({"exp": 1e-7}) == b'{"exp":1e-7}'
+    assert canonical_json_bytes({"exp": 1e20}) == b'{"exp":100000000000000000000}'
+    assert canonical_json_bytes({"zero": -0.0}) == b'{"zero":0}'
+
+
+def test_rfc8785_utf16_key_sorting() -> None:
+    """Verify UTF-16 code unit key sorting per RFC 8785 Section 3.2.3."""
+    # Emojis (supplementary characters, surrogate pair [0xD83D, ...]) sort BEFORE \uFFFF (0xFFFF)
+    keys_surrogate = {"\uffff": 1, "\U0001f600": 2}
+    assert canonical_json_bytes(keys_surrogate) == '{"\U0001f600":2,"\uffff":1}'.encode()
+
+    # Standard ASCII and numeric strings lexicographical sorting
+    keys_ascii = {"b": 1, "a": 2, "10": 3, "2": 4}
+    assert canonical_json_bytes(keys_ascii) == b'{"10":3,"2":4,"a":2,"b":1}'
+
+    # Unicode keys sorting
+    keys_unicode = {"z": 1, "\u00e9": 2, "\u00e8": 3, "\U0001f4a9": 4}
+    assert canonical_json_bytes(keys_unicode) == '{"z":1,"\u00e8":3,"\u00e9":2,"\U0001f4a9":4}'.encode()
+
+
+def test_rfc8785_strict_character_escaping() -> None:
+    """Verify RFC 8785 string escaping rules."""
+    # Control characters 0x00-0x1F and standard escapes
+    raw = "hello\x00world\x1f\b\t\n\f\r\"\\"
+    expected = b'"hello\\u0000world\\u001f\\b\\t\\n\\f\\r\\"\\\\"'
+    assert canonical_json_bytes(raw) == expected
+
+    # Characters >= 0x20 must NOT be escaped (e.g. forward slash, unicode, emojis)
+    url = "https://clara.care/api/v1/patient?id=123&type=phr"
+    assert canonical_json_bytes(url) == b'"https://clara.care/api/v1/patient?id=123&type=phr"'
+
+    unicode_str = "Bệnh nhân uống 500mg Paracetamol 💊"
+    assert canonical_json_bytes(unicode_str) == '"Bệnh nhân uống 500mg Paracetamol 💊"'.encode()
+
+
+def test_injective_distinctness() -> None:
+    """Verify injective distinction between different types and encodings."""
+    # bool vs int vs str
+    assert consistency_fingerprint(True) != consistency_fingerprint(1)
+    assert consistency_fingerprint(True) != consistency_fingerprint("true")
+    assert consistency_fingerprint(False) != consistency_fingerprint(0)
+    assert consistency_fingerprint(False) != consistency_fingerprint("false")
+
+    # None vs empty string vs string "null"
+    assert consistency_fingerprint(None) != consistency_fingerprint("")
+    assert consistency_fingerprint(None) != consistency_fingerprint("null")
+
+    # float vs string
+    assert consistency_fingerprint(1.0) != consistency_fingerprint("1.0")
+    assert consistency_fingerprint(1.0) != consistency_fingerprint("1")
+    assert consistency_fingerprint(1e-7) != consistency_fingerprint("1e-7")
+    assert consistency_fingerprint(1e20) != consistency_fingerprint("1e20")
+
+    # list vs dict vs sentinel
+    assert consistency_fingerprint([["a", 1]]) != consistency_fingerprint({"a": 1})
+    assert consistency_fingerprint(["__dict__", [["a", 1]]]) != consistency_fingerprint({"a": 1})
+    assert consistency_fingerprint({"__dict__": [["a", 1]]}) != consistency_fingerprint({"a": 1})
 
 
 # --- Property-based tests ---

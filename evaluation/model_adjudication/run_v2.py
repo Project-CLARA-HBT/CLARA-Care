@@ -305,9 +305,14 @@ def _call(
                 },
                 "review": review,
             }
+        except urllib.error.HTTPError as exc:
+            last_error = "HTTPError"
+            if attempt > retries:
+                raise RuntimeError(f"model_review_call_failed:{last_error}:{exc}") from exc
+            sleep_time = 15.0 * attempt if exc.code == 429 else 1.0 * attempt
+            time.sleep(sleep_time)
         except (
             urllib.error.URLError,
-            urllib.error.HTTPError,
             KeyError,
             ValueError,
             TypeError,
@@ -316,6 +321,7 @@ def _call(
             last_error = type(exc).__name__
             if attempt > retries:
                 raise RuntimeError(f"model_review_call_failed:{last_error}:{exc}") from exc
+            time.sleep(1.0 * attempt)
     raise RuntimeError(f"model_review_call_failed:{last_error}")
 
 
@@ -385,12 +391,26 @@ def run(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--output-dir",
+        "--output",
+        dest="output",
+        type=Path,
+        required=True,
+        help="Output directory or JSON artifact path",
+    )
     parser.add_argument("--retries", type=int, default=RETRY_COUNT)
     args = parser.parse_args()
-    print(
-        json.dumps(
-            run(manifest_path=args.manifest, output_dir=args.output_dir, retries=args.retries),
-            sort_keys=True,
+    if args.output.suffix == ".json":
+        output_dir = args.output.parent / args.output.stem
+        output_file = args.output
+    else:
+        output_dir = args.output
+        output_file = None
+    summary = run(manifest_path=args.manifest, output_dir=output_dir, retries=args.retries)
+    if output_file is not None:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-    )
+    print(json.dumps(summary, sort_keys=True))

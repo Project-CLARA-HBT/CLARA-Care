@@ -1264,6 +1264,13 @@ def propose_assertion(
         if evidence_row.profile_id != profile_id:
             raise GlhsInvariantError("assertion_evidence_scope_forbidden")
         require_member(relation, EVIDENCE_RELATIONS, field="evidence_relation")
+    partition = get_or_create_entity_partition(
+        db,
+        profile_id=profile_id,
+        domain=data.assertion_type.strip(),
+        semantic_key=data.semantic_key.strip(),
+        policy_version=_effective_policy_version(db),
+    )
     base_state_version = current_state_version(db, profile_id=profile_id)
     if data.proposal_consumed_thss and data.source_snapshot_id is None:
         raise GlhsInvariantError("proposal_snapshot_binding_required")
@@ -1485,6 +1492,9 @@ def apply_transition(
             "source_snapshot_digest": assertion.source_snapshot_digest,
         }
     )
+    domain = assertion.assertion_type
+    semantic_key = assertion.semantic_key
+
     # Unified Canonical Lock Hierarchy:
     # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
     #
@@ -1496,9 +1506,9 @@ def apply_transition(
 
     acquire_policy_lock_anchor(db)
 
-    # Step 2: Profile & Consent Lock Anchor
+    # Step 2: Shared Profile & Consent Lock Anchor
     base_version, owner_user_id = acquire_profile_and_consent_anchor(
-        db, profile_id=scope.profile.id
+        db, profile_id=scope.profile.id, exclusive=False
     )
     # A concurrent request may have committed this idempotency key while this
     # transaction waited for the profile row lock. Re-read under the serialized
@@ -1523,7 +1533,7 @@ def apply_transition(
     locked_partitions = lock_entity_partitions(
         db,
         profile_id=scope.profile.id,
-        partitions=[(assertion.assertion_type, assertion.semantic_key)],
+        partitions=[(domain, semantic_key)],
         policy_version=current_policy_version,
         consent_version="not_required",
     )
@@ -1536,7 +1546,11 @@ def apply_transition(
     # The candidate itself is the persisted proposal for an activation.  Other
     # actions operate on an already canonical assertion and are separately
     # protected by the caller's expected state version.
-    if action == "activate" and revalidate_state and assertion.base_state_version != base_version:
+    if (
+        action == "activate"
+        and revalidate_state
+        and assertion.base_state_version != base_version
+    ):
         raise GlhsInvariantError("stale_proposal_state_version")
     if (
         action == "activate"

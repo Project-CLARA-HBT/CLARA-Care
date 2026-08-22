@@ -12,28 +12,28 @@
   <text x="400" y="48" text-anchor="middle" class="subtitle">Decision Accuracy Mean Difference (&#916;) &amp; Confidence Intervals vs. &#177;2.0% Margin</text>
 
   <!-- Green Equivalence Margin Band -->
-  <rect x="300" y="80" width="200" height="250" fill="#ECFDF5" opacity="0.7"/>
-  <line x1="300" y1="80" x2="300" y2="330" class="bound"/>
-  <line x1="500" y1="80" x2="500" y2="330" class="bound"/>
+  <rect x="310" y="80" width="180" height="250" fill="#ECFDF5" opacity="0.7"/>
+  <line x1="310" y1="80" x2="310" y2="330" class="bound"/>
+  <line x1="490" y1="80" x2="490" y2="330" class="bound"/>
   <line x1="400" y1="80" x2="400" y2="330" stroke="#9CA3AF" stroke-width="1.5"/>
 
-  <text x="300" y="70" text-anchor="middle" class="label" fill="#DC2626">-2.0% (Lower)</text>
+  <text x="310" y="70" text-anchor="middle" class="label" fill="#DC2626">-2.0% (Lower)</text>
   <text x="400" y="70" text-anchor="middle" class="label">0.0% (Null)</text>
-  <text x="500" y="70" text-anchor="middle" class="label" fill="#DC2626">+2.0% (Upper)</text>
+  <text x="490" y="70" text-anchor="middle" class="label" fill="#DC2626">+2.0% (Upper)</text>
 
   <!-- 95% Confidence Interval Line -->
-  <line x1="54" y1="180" x2="667" y2="180" stroke="#1E40AF" stroke-width="2.5"/>
-  <line x1="54" y1="170" x2="54" y2="190" stroke="#1E40AF" stroke-width="2.5"/>
-  <line x1="667" y1="170" x2="667" y2="190" stroke="#1E40AF" stroke-width="2.5"/>
+  <line x1="88" y1="180" x2="640" y2="180" stroke="#1E40AF" stroke-width="2.5"/>
+  <line x1="88" y1="170" x2="88" y2="190" stroke="#1E40AF" stroke-width="2.5"/>
+  <line x1="640" y1="170" x2="640" y2="190" stroke="#1E40AF" stroke-width="2.5"/>
 
   <!-- 90% Confidence Interval Line -->
-  <line x1="103" y1="210" x2="618" y2="210" stroke="#3B82F6" stroke-width="2"/>
-  <line x1="103" y1="203" x2="103" y2="217" stroke="#3B82F6" stroke-width="2"/>
-  <line x1="618" y1="203" x2="618" y2="217" stroke="#3B82F6" stroke-width="2"/>
+  <line x1="133" y1="210" x2="596" y2="210" stroke="#3B82F6" stroke-width="2"/>
+  <line x1="133" y1="203" x2="133" y2="217" stroke="#3B82F6" stroke-width="2"/>
+  <line x1="596" y1="203" x2="596" y2="217" stroke="#3B82F6" stroke-width="2"/>
 
   <!-- Mean Difference Point -->
-  <circle cx="360" cy="180" r="6" fill="#2563EB"/>
+  <circle cx="364" cy="180" r="6" fill="#2563EB"/>
   
-  <text x="360" y="155" text-anchor="middle" class="label" font-weight="bold">&#916; = -0.781% [95% CI: -6.91%, +5.35%]</text>
+  <text x="364" y="155" text-anchor="middle" class="label" font-weight="bold">&#916; = -0.781% [95% CI: -6.91%, +5.35%]</text>
   <text x="400" y="360" text-anchor="middle" class="label">Inconclusive Equivalence at N=384 (Requires N &#8805; 7,500 for Confirmatory Power)</text>
 </svg>

@@ -14,16 +14,17 @@
   
   <line x1="80" y1="420" x2="740" y2="420" class="axis"/>
   <line x1="80" y1="80" x2="80" y2="420" class="axis"/>
+  <line x1="80" y1="420" x2="740" y2="420" class="grid"/>
   <line x1="80" y1="340" x2="740" y2="340" class="grid"/>
   <line x1="80" y1="260" x2="740" y2="260" class="grid"/>
   <line x1="80" y1="180" x2="740" y2="180" class="grid"/>
   <line x1="80" y1="100" x2="740" y2="100" class="grid"/>
 
   <text x="70" y="424" text-anchor="end" class="label">0</text>
-  <text x="70" y="344" text-anchor="end" class="label">10k</text>
-  <text x="70" y="264" text-anchor="end" class="label">20k</text>
-  <text x="70" y="184" text-anchor="end" class="label">30k</text>
-  <text x="70" y="104" text-anchor="end" class="label">40k</text>
+  <text x="70" y="344" text-anchor="end" class="label">5k</text>
+  <text x="70" y="264" text-anchor="end" class="label">10k</text>
+  <text x="70" y="184" text-anchor="end" class="label">15k</text>
+  <text x="70" y="104" text-anchor="end" class="label">20k</text>
 
   <text x="95" y="440" text-anchor="middle" class="label">1</text>
   <text x="175" y="440" text-anchor="middle" class="label">2</text>
@@ -35,10 +36,10 @@
   <text x="655" y="440" text-anchor="middle" class="label">128</text>
   <text x="400" y="470" text-anchor="middle" class="title" style="font-size:13px">Concurrent Worker Threads (W)</text>
 
-  <polyline fill="none" stroke="#2563EB" stroke-width="3" points="95,288 175,212 255,228 335,266 415,299 495,368 575,362 655,369"/>
-  <polyline fill="none" stroke="#059669" stroke-width="2.5" stroke-dasharray="6,3" points="95,194 175,215 255,247 335,335 415,361 495,298 575,348 655,348"/>
-  <polyline fill="none" stroke="#7C3AED" stroke-width="2" stroke-dasharray="4,4" points="95,100 175,100 255,100 335,100 415,106 495,179 575,170 655,190"/>
-  <polyline fill="none" stroke="#DC2626" stroke-width="2" points="95,375 175,383 255,356 335,352 415,324 495,372 575,282 655,323"/>
+  <polyline fill="none" stroke="#2563EB" stroke-width="3" points="95,213 175,363 255,261 335,320 415,312 495,318 575,331 655,337"/>
+  <polyline fill="none" stroke="#059669" stroke-width="2.5" stroke-dasharray="6,3" points="95,180 175,226 255,327 335,246 415,301 495,239 575,317 655,298"/>
+  <polyline fill="none" stroke="#7C3AED" stroke-width="2" stroke-dasharray="4,4" points="95,203 175,233 255,145 335,258 415,291 495,304 575,279 655,301"/>
+  <polyline fill="none" stroke="#DC2626" stroke-width="2" points="95,366 175,358 255,303 335,286 415,260 495,314 575,301 655,326"/>
 
   <rect x="520" y="80" width="210" height="90" fill="#F9FAFB" stroke="#E5E7EB" rx="4"/>
   <line x1="535" y1="98" x2="565" y2="98" stroke="#2563EB" stroke-width="3"/>
