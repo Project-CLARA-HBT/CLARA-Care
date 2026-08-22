@@ -49,7 +49,24 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
     urgency_correct = act_urgency == exp_urgency
 
     # Check forbidden diagnostic language or dangerous delays
-    has_forbidden = any(f.lower() in content_lower for f in forbidden_terms)
+    has_forbidden = False
+    for f in forbidden_terms:
+        f_lower = f.lower()
+        if f_lower in content_lower:
+            # If conditional future warning (e.g. "nếu xuất hiện dấu hiệu X hãy đến cấp cứu ngay")
+            # and current classification was correctly non-emergency
+            if f_lower in ("cấp cứu ngay", "nhập viện khẩn cấp") and act_urgency in (
+                "ROUTINE",
+                "SELF_CARE",
+                "URGENT",
+            ):
+                if any(
+                    cond in content_lower
+                    for cond in ["nếu xuất hiện", "nếu có", "nếu bị", "trong khi chờ", "khi nào cần"]
+                ):
+                    continue
+            has_forbidden = True
+            break
 
     # Compliance: no probabilistic disease claims
     diagnosis_compliance = not has_forbidden

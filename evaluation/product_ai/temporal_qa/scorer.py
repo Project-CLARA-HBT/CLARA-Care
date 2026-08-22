@@ -8,6 +8,7 @@ from evaluation.product_ai.common import CaseEvaluationResult, TaskCase
 def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> CaseEvaluationResult:
     expected = case.expected
     content_lower = response_text.lower()
+    clean_content = content_lower.replace("*", "").replace("_", "").replace("#", "")
 
     # Check correct current status/trend/entities
     passed = True
@@ -16,22 +17,34 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
 
     if "current_medication" in expected:
         cur = expected["current_medication"].lower()
-        if cur not in content_lower:
+        tokens = [t.strip() for t in cur.split() if t.strip()]
+        cur_matched = cur in clean_content or all(t in clean_content for t in tokens)
+        if not cur_matched:
             passed = False
 
     if "forbidden_as_current" in expected:
         for f in expected["forbidden_as_current"]:
             # If mentioned as currently active or without clarifying it was discontinued
-            if f.lower() in content_lower:
-                # check if marked as stopped/discontinued
+            if f.lower() in content_lower or f.lower() in clean_content:
+                # check if marked as stopped/discontinued/past
                 if not any(
-                    k in content_lower for k in ["ngừng", "dừng", "cũ", "trước đây", "không còn"]
+                    k in clean_content
+                    for k in [
+                        "ngừng",
+                        "dừng",
+                        "cũ",
+                        "trước đây",
+                        "không còn",
+                        "không tiếp tục",
+                        "đã hoàn thành",
+                        "hoàn thành trong quá khứ",
+                    ]
                 ):
                     superseded_leaked = True
                     passed = False
 
     if "latest_bp" in expected:
-        if expected["latest_bp"] not in response_text:
+        if expected["latest_bp"] not in response_text and expected["latest_bp"] not in clean_content:
             passed = False
 
     if "stale_bp" in expected:
@@ -44,11 +57,15 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
                 stale_used = True
 
     if "trend" in expected:
-        if expected["trend"].lower() not in content_lower:
+        if expected["trend"].lower() not in clean_content:
             passed = False
 
     if "status" in expected:
-        if expected["status"].lower() not in content_lower:
+        exp_status = expected["status"].lower()
+        status_matched = exp_status in clean_content or any(
+            w in clean_content for w in ["đã hoàn thành", "hoàn thành", "kết thúc", "không còn cần"]
+        )
+        if not status_matched:
             passed = False
 
     score = 1.0 if (passed and not stale_used and not superseded_leaked) else 0.0

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <style>
+    .title { font-family: sans-serif; font-size: 15px; font-weight: bold; fill: #111827; }
+    .subtitle { font-family: sans-serif; font-size: 11px; fill: #4B5563; }
+    .node { fill: #EFF6FF; stroke: #2563EB; stroke-width: 2; }
+    .node-text { font-family: sans-serif; font-size: 11px; font-weight: bold; fill: #1E3A8A; text-anchor: middle; }
+    .edge { stroke: #4B5563; stroke-width: 2; marker-end: url(#arrow); }
+    .cycle-edge { stroke: #DC2626; stroke-width: 2.5; stroke-dasharray: 4,3; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4B5563" />
+    </marker>
+  </defs>
+  <rect width="800" height="450" fill="#FFFFFF"/>
+  <text x="400" y="30" text-anchor="middle" class="title">Wait-For Graph (WFG) Deadlock Cycle Analysis</text>
+  <text x="400" y="48" text-anchor="middle" class="subtitle">Canonical SS2PL (0 Deadlock Cycles) vs. Unordered 2PL (67 Deadlocks Detected)</text>
+
+  <rect x="50" y="70" width="330" height="340" fill="#F8FAFC" stroke="#E2E8F0" rx="8"/>
+  <text x="215" y="100" text-anchor="middle" class="title" style="font-size:13px; fill:#059669">Panel A: Canonical SS2PL (Acyclic)</text>
+  <circle cx="130" cy="180" r="28" class="node" style="stroke:#059669; fill:#ECFDF5"/>
+  <text x="130" y="184" class="node-text" style="fill:#065F46">Txn 1</text>
+  <circle cx="215" cy="280" r="28" class="node" style="stroke:#059669; fill:#ECFDF5"/>
+  <text x="215" y="284" class="node-text" style="fill:#065F46">Txn 2</text>
+  <circle cx="300" cy="180" r="28" class="node" style="stroke:#059669; fill:#ECFDF5"/>
+  <text x="300" y="184" class="node-text" style="fill:#065F46">Txn 3</text>
+  <path d="M 155 195 L 195 260" class="edge" style="stroke:#059669"/>
+  <path d="M 235 260 L 275 195" class="edge" style="stroke:#059669"/>
+  <text x="215" y="360" text-anchor="middle" class="node-text" style="fill:#059669">Topological Total Order (0 Deadlocks)</text>
+
+  <rect x="420" y="70" width="330" height="340" fill="#FEF2F2" stroke="#FEE2E2" rx="8"/>
+  <text x="585" y="100" text-anchor="middle" class="title" style="font-size:13px; fill:#DC2626">Panel B: Unordered 2PL (Cyclic Deadlocks)</text>
+  <circle cx="500" cy="180" r="28" class="node" style="stroke:#DC2626; fill:#FFF1F2"/>
+  <text x="500" y="184" class="node-text" style="fill:#991B1B">Txn A</text>
+  <circle cx="585" cy="280" r="28" class="node" style="stroke:#DC2626; fill:#FFF1F2"/>
+  <text x="585" y="284" class="node-text" style="fill:#991B1B">Txn B</text>
+  <circle cx="670" cy="180" r="28" class="node" style="stroke:#DC2626; fill:#FFF1F2"/>
+  <text x="670" y="184" class="node-text" style="fill:#991B1B">Txn C</text>
+  <path d="M 525 195 L 565 260" class="edge" style="stroke:#DC2626"/>
+  <path d="M 605 260 L 645 195" class="edge" style="stroke:#DC2626"/>
+  <path d="M 645 170 L 525 170" class="cycle-edge"/>
+  <text x="585" y="360" text-anchor="middle" class="node-text" style="fill:#DC2626">Cycle Detected: A &#8594; B &#8594; C &#8594; A (Deadlock)</text>
+</svg>

@@ -28,6 +28,9 @@ artifacts/
 !artifacts/phase2_master_audit_report.json
 !artifacts/mimic_real_world_eval_report.json
 !artifacts/mimic_real_world_eval_report.tex
+!artifacts/glhs_systems_benchmark_report.json
+!artifacts/charts/
+!artifacts/charts/*
 context
 context2
 .devlogs/

@@ -39,9 +39,12 @@ from clara_api.db.models import (
 )
 from clara_api.glhs.commitment_gateway import (
     COMMITMENT_POLICY_VERSION,
+    adaptive_split_coordinates,
+    adaptive_split_partition_coordinates,
     get_or_create_entity_partition,
     increment_partition_versions,
     lock_entity_partitions,
+    resolve_coordinate,
 )
 from clara_api.glhs.domain import GlhsInvariantError
 
@@ -369,6 +372,137 @@ def test_multi_round_concurrent_progression_disjoint_partitions() -> None:
             assert len(partitions) == writer_count
             for p in partitions:
                 assert p.state_version == 1 + rounds  # 1 initial + 5 rounds = 6
+        engine.dispose()
+
+
+def test_adaptive_partition_coordinate_splitting() -> None:
+    """Verify adaptive partition coordinate splitting for granular attribute partitions."""
+    # Split by explicit field list
+    split_fields = adaptive_split_partition_coordinates(
+        domain="medications",
+        semantic_key="medication:warfarin",
+        target_fields=["dosage", "frequency"],
+    )
+    assert split_fields == [
+        ("medications", "medication:warfarin:dosage"),
+        ("medications", "medication:warfarin:frequency"),
+    ]
+
+    # Split by dict payload
+    split_dict = adaptive_split_partition_coordinates(
+        domain="medications",
+        semantic_key="medication:warfarin",
+        target_fields={"dosage": "5mg", "frequency": "daily"},
+    )
+    assert split_dict == [
+        ("medications", "medication:warfarin:dosage"),
+        ("medications", "medication:warfarin:frequency"),
+    ]
+
+    # Unsplit default fallback
+    unsplit = adaptive_split_partition_coordinates(
+        domain="medications",
+        semantic_key="medication:warfarin",
+        target_fields=None,
+    )
+    assert unsplit == [("medications", "medication:warfarin")]
+
+    # EntityDAGCoordinates
+    coords = adaptive_split_coordinates(
+        profile_id=10,
+        domain="medications",
+        semantic_key="warfarin",
+        target_fields=["dosage", "frequency"],
+    )
+    assert len(coords) == 2
+    assert coords[0].canonical_tuple == (10, "medications", "warfarin:dosage")
+    assert coords[1].canonical_tuple == (10, "medications", "warfarin:frequency")
+
+    # Resolve 3-part dependency string
+    resolved = resolve_coordinate(10, "medications:warfarin:dosage")
+    assert resolved.canonical_tuple == (10, "medications", "warfarin:dosage")
+
+
+def test_two_parallel_non_conflicting_field_writers_zero_false_stale() -> None:
+    """Verify 2 parallel non-conflicting field writers commit concurrently with zero false-stale aborts.
+
+    Writer 1 updates medications:warfarin:dosage
+    Writer 2 updates medications:warfarin:frequency
+    Both acquire their independent attribute-level partition locks and advance version counters.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = os.path.join(tmpdir, "test_2_field_writers.db")
+        engine = _init_sqlite_wal_engine(db_path)
+        profile_id = _seed_profile(engine)
+
+        with Session(engine) as db:
+            get_or_create_entity_partition(
+                db,
+                profile_id=profile_id,
+                domain="medications",
+                semantic_key="medication:warfarin:dosage",
+                policy_version=COMMITMENT_POLICY_VERSION,
+            )
+            get_or_create_entity_partition(
+                db,
+                profile_id=profile_id,
+                domain="medications",
+                semantic_key="medication:warfarin:frequency",
+                policy_version=COMMITMENT_POLICY_VERSION,
+            )
+            db.commit()
+
+        barrier = Barrier(2)
+
+        def worker_dosage() -> WriterResult:
+            return _execute_partition_write(
+                engine,
+                profile_id=profile_id,
+                domain="medications",
+                semantic_key="medication:warfarin:dosage",
+                expected_version=1,
+                barrier=barrier,
+                writer_index=0,
+            )
+
+        def worker_frequency() -> WriterResult:
+            return _execute_partition_write(
+                engine,
+                profile_id=profile_id,
+                domain="medications",
+                semantic_key="medication:warfarin:frequency",
+                expected_version=1,
+                barrier=barrier,
+                writer_index=1,
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            f1 = pool.submit(worker_dosage)
+            f2 = pool.submit(worker_frequency)
+            r1 = f1.result()
+            r2 = f2.result()
+
+        assert r1.status == "success", f"Writer 1 failed: {r1}"
+        assert r2.status == "success", f"Writer 2 failed: {r2}"
+        assert r1.resulting_version == 2
+        assert r2.resulting_version == 2
+
+        with Session(engine) as db:
+            p_dosage = db.scalar(
+                select(GlhsEntityVersionPartition).where(
+                    GlhsEntityVersionPartition.profile_id == profile_id,
+                    GlhsEntityVersionPartition.semantic_key == "medication:warfarin:dosage",
+                )
+            )
+            p_freq = db.scalar(
+                select(GlhsEntityVersionPartition).where(
+                    GlhsEntityVersionPartition.profile_id == profile_id,
+                    GlhsEntityVersionPartition.semantic_key == "medication:warfarin:frequency",
+                )
+            )
+            assert p_dosage is not None and p_dosage.state_version == 2
+            assert p_freq is not None and p_freq.state_version == 2
+
         engine.dispose()
 
 

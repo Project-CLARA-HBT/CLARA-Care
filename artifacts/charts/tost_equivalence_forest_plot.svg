@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400">
+  <style>
+    .title { font-family: sans-serif; font-size: 15px; font-weight: bold; fill: #111827; }
+    .subtitle { font-family: sans-serif; font-size: 11px; fill: #4B5563; }
+    .axis { stroke: #9CA3AF; stroke-width: 1.5; }
+    .bound { stroke: #DC2626; stroke-width: 2; stroke-dasharray: 6,4; }
+    .label { font-family: sans-serif; font-size: 11px; fill: #374151; }
+  </style>
+  <rect width="800" height="400" fill="#FFFFFF"/>
+  <text x="400" y="30" text-anchor="middle" class="title">Schuirmann's TOST Clinical Equivalence Forest Plot (N = 384)</text>
+  <text x="400" y="48" text-anchor="middle" class="subtitle">Decision Accuracy Mean Difference (&#916;) &amp; Confidence Intervals vs. &#177;2.0% Margin</text>
+
+  <rect x="300" y="80" width="200" height="250" fill="#ECFDF5" opacity="0.7"/>
+  <line x1="300" y1="80" x2="300" y2="330" class="bound"/>
+  <line x1="500" y1="80" x2="500" y2="330" class="bound"/>
+  <line x1="400" y1="80" x2="400" y2="330" stroke="#9CA3AF" stroke-width="1.5"/>
+
+  <text x="300" y="70" text-anchor="middle" class="label" fill="#DC2626">-2.0% (Lower)</text>
+  <text x="400" y="70" text-anchor="middle" class="label">0.0% (Null)</text>
+  <text x="500" y="70" text-anchor="middle" class="label" fill="#DC2626">+2.0% (Upper)</text>
+
+  <line x1="160" y1="180" x2="560" y2="180" stroke="#1E40AF" stroke-width="2.5"/>
+  <line x1="160" y1="170" x2="160" y2="190" stroke="#1E40AF" stroke-width="2.5"/>
+  <line x1="560" y1="170" x2="560" y2="190" stroke="#1E40AF" stroke-width="2.5"/>
+  <circle cx="361" cy="180" r="6" fill="#2563EB"/>
+  
+  <text x="361" y="215" text-anchor="middle" class="label" font-weight="bold">&#916; = -0.781% [95% CI: -6.89%, +5.33%]</text>
+  <text x="400" y="360" text-anchor="middle" class="label">Inconclusive Equivalence at N=384 (Requires N &#8805; 7,500 for Confirmatory Power)</text>
+</svg>

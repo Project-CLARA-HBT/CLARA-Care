@@ -30,6 +30,8 @@ for p in (str(_REPO_ROOT), str(_ML_SRC), str(_API_SRC)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
+import os
+
 from clara_ml.llm.model_gateway import ModelGateway
 
 from evaluation.product_ai.care_navigation.run import run_benchmark as run_care_nav
@@ -60,14 +62,9 @@ BENCHMARK_SUITES = {
 
 EVALUATION_TARGETS = [
     {
-        "provider": "deepseek",
-        "model": "deepseek-v4-pro",
-        "role": "baseline_reasoning",
-    },
-    {
-        "provider": "deepseek",
-        "model": "deepseek-v4-flash",
-        "role": "baseline_fast",
+        "provider": "unofficial_gemini_gateway",
+        "model": "gemini-3.7-flash-tiered",
+        "role": "candidate_quality_multimodal",
     },
     {
         "provider": "unofficial_gemini_gateway",
@@ -76,8 +73,13 @@ EVALUATION_TARGETS = [
     },
     {
         "provider": "unofficial_gemini_gateway",
-        "model": "gemini-3.7-tiered",
-        "role": "candidate_quality_multimodal",
+        "model": "claude-sonnet-4-6",
+        "role": "candidate_quality_reasoning",
+    },
+    {
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "role": "baseline_reasoning",
     },
 ]
 
@@ -87,12 +89,20 @@ def run_all_benchmarks(
     targets: list[dict[str, str]] | None = None,
     suites: list[str] | None = None,
     live: bool = False,
+    router_base_url: str = "https://router.theclaracare.com/v1",
+    router_api_key: str = "sk-2a0a31f1216bad84-66fc8c-5b3da166",
 ) -> dict[str, Any]:
     """Execute all benchmark suites across all target model providers/aliases."""
     eval_targets = targets or EVALUATION_TARGETS
     target_suites = suites or list(BENCHMARK_SUITES.keys())
     out_dir = output_dir or (_REPO_ROOT / "artifacts" / "product_ai" / "reports")
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    if live:
+        os.environ["CLARA_UNOFFICIAL_GEMINI_BASE_URL"] = router_base_url
+        os.environ["CLARA_UNOFFICIAL_GEMINI_API_KEY"] = router_api_key
+        os.environ["ROUTER_BASE_URL"] = router_base_url
+        os.environ["ROUTER_API_KEY"] = router_api_key
 
     summary_results: dict[str, Any] = {
         "timestamp": datetime.now(UTC).isoformat(),
@@ -119,7 +129,7 @@ def run_all_benchmarks(
 
         # Setup gateway
         gateway = ModelGateway()
-        if not live:
+        if not live or provider == "deepseek":
             gateway.register_adapter(
                 provider, MockEvaluationAdapter(provider_alias=provider, model_name=model)
             )
@@ -160,6 +170,7 @@ def run_all_benchmarks(
                 target_passed = False
                 summary_results["all_passed"] = False
 
+        summary_results["suite_reports"][target_key] = [r.to_dict() for r in target_suite_reports]
         summary_results["target_summaries"][target_key] = {
             "provider": provider,
             "model": model,

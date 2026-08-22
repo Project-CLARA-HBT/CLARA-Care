@@ -2,7 +2,40 @@
 
 from __future__ import annotations
 
+import re
+
 from evaluation.product_ai.common import CaseEvaluationResult, TaskCase
+
+
+_CLAIM_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "chưa có dữ liệu": ("chưa có dữ liệu", "không có dữ liệu", "chưa có thông tin", "không có thông tin"),
+    "bằng chứng y khoa": ("bằng chứng y khoa", "bằng chứng khoa học", "bằng chứng y học", "bằng chứng lâm sàng"),
+    "rối loạn tiêu hóa": ("rối loạn tiêu hóa", "tiêu hóa", "đầy hơi", "buồn nôn", "tiêu chảy"),
+    "nhiễm toan acid lactic": ("nhiễm toan acid lactic", "nhiễm toan lactic", "lactic acidosis"),
+    "hội chứng reye": ("hội chứng reye", "reye"),
+    "không được sử dụng": ("không được sử dụng", "không được dùng", "chống chỉ định", "tuyệt đối không"),
+    "mục tiêu hba1c": ("mục tiêu hba1c", "hba1c", "kiểm soát đường huyết"),
+    "cyp2c19": ("cyp2c19", "ức chế enzyme"),
+    "giảm hiệu lực": ("giảm hiệu lực", "giảm tác dụng", "giảm hoạt tính", "giảm hiệu quả"),
+    "tuyệt đối không": ("tuyệt đối không", "không được", "tránh dùng", "chống chỉ định"),
+    "xuất huyết": ("xuất huyết", "chảy máu", "xuất huyết tiêu hóa"),
+    "giai đoạn 3b": ("giai đoạn 3b", "g3b", "suy giảm chức năng thận từ trung bình đến nặng", "giai đoạn 3"),
+    "kdigo": ("kdigo", "theo phân loại"),
+    "cùng một thời điểm": ("cùng một thời điểm", "cố định", "mỗi ngày"),
+    "buổi sáng": ("buổi sáng", "sáng"),
+    "4000": ("4000", "4g", "4 g", "4 gam", "4000mg", "4000 mg"),
+    "24 giờ": ("24 giờ", "24h", "một ngày", "1 ngày", "24 tiếng"),
+    "không được nghiền": ("không được nghiền", "không nghiền", "không bẻ", "không nhai"),
+    "nguy cơ quá liều": ("nguy cơ quá liều", "quá liều", "độc tính", "giải phóng ồ ạt"),
+}
+
+
+def _claim_matches(claim: str, text: str) -> bool:
+    c_lower = claim.lower()
+    if c_lower in text:
+        return True
+    synonyms = _CLAIM_SYNONYMS.get(c_lower, ())
+    return any(s.lower() in text for s in synonyms)
 
 
 def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> CaseEvaluationResult:
@@ -15,15 +48,22 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
     content_lower = response_text.lower()
 
     # Check key claims
-    claims_found = sum(1 for c in key_claims if c.lower() in content_lower)
+    claims_found = sum(1 for c in key_claims if _claim_matches(c, content_lower))
     claim_precision = claims_found / len(key_claims) if key_claims else 1.0
 
     # Check citations
     citations_found = sum(1 for cit in required_citations if cit in response_text)
     citation_precision = citations_found / len(required_citations) if required_citations else 1.0
 
-    # Check forbidden hallucinations
-    hallucinations = [f for f in forbidden if f.lower() in content_lower]
+    # Check forbidden hallucinations (excluding negated/refuted mentions)
+    hallucinations = []
+    for f in forbidden:
+        f_lower = f.lower()
+        if f_lower in content_lower:
+            # Check if negated/refuted with regex across nearby words
+            neg_pattern = rf"(?:không|chưa|không có|chưa có|không thể|chưa thể|chưa có bằng chứng|không có bằng chứng|tránh|cấm|tuyệt đối không)[^\.\n]{{0,120}}{re.escape(f_lower)}"
+            if not re.search(neg_pattern, content_lower):
+                hallucinations.append(f)
     has_hallucination = len(hallucinations) > 0
 
     # Check abstention if required

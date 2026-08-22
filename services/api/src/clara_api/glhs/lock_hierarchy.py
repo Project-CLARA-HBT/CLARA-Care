@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import cast
 
-from sqlalchemy import select, text
+from sqlalchemy import select, text, tuple_
 from sqlalchemy.orm import Session
 
 from clara_api.db.models import (
@@ -226,30 +226,89 @@ def lock_entity_partitions(
     policy_version: str = POLICY_VERSION,
     consent_version: str = "not_required",
 ) -> list[GlhsEntityVersionPartition]:
-    """Acquire SELECT ... FOR UPDATE row locks on entity partitions in canonical sorted order."""
+    """Acquire SELECT ... FOR UPDATE row locks on entity partitions in canonical sorted order.
+
+    Batches partition queries with in_() clause, reducing database round-trips
+    from O(M) to O(1) while strictly preserving canonical lexicographical lock order \\prec_{lex}.
+    """
     sorted_keys = sorted(set(partitions), key=lambda item: (item[0], item[1]))
-    locked: list[GlhsEntityVersionPartition] = []
+    if not sorted_keys:
+        return []
+
+    # Step 1: Batch query all existing partitions in O(1)
+    if len(sorted_keys) == 1:
+        d, k = sorted_keys[0]
+        existing_rows = db.execute(
+            select(GlhsEntityVersionPartition).where(
+                GlhsEntityVersionPartition.profile_id == profile_id,
+                GlhsEntityVersionPartition.domain == d,
+                GlhsEntityVersionPartition.semantic_key == k,
+            )
+        ).scalars().all()
+    else:
+        existing_rows = db.execute(
+            select(GlhsEntityVersionPartition).where(
+                GlhsEntityVersionPartition.profile_id == profile_id,
+                tuple_(
+                    GlhsEntityVersionPartition.domain,
+                    GlhsEntityVersionPartition.semantic_key,
+                ).in_(sorted_keys),
+            )
+        ).scalars().all()
+
+    existing_map = {(p.domain, p.semantic_key): p for p in existing_rows}
+    created_any = False
     for domain, semantic_key in sorted_keys:
-        get_or_create_entity_partition(
-            db,
-            profile_id=profile_id,
-            domain=domain,
-            semantic_key=semantic_key,
-            policy_version=policy_version,
-            consent_version=consent_version,
-        )
-        row = db.execute(
+        if (domain, semantic_key) not in existing_map:
+            new_partition = GlhsEntityVersionPartition(
+                profile_id=profile_id,
+                domain=domain,
+                semantic_key=semantic_key,
+                state_version=1,
+                policy_version=policy_version,
+                consent_version=consent_version,
+            )
+            db.add(new_partition)
+            created_any = True
+            existing_map[(domain, semantic_key)] = new_partition
+
+    if created_any:
+        db.flush()
+
+    # Step 2: Acquire SELECT ... FOR UPDATE row locks in a single O(1) batched query,
+    # strictly ordered by (domain, semantic_key) in SQL to preserve canonical lexicographical order \prec_lex
+    if len(sorted_keys) == 1:
+        d, k = sorted_keys[0]
+        locked_rows = db.execute(
             select(GlhsEntityVersionPartition)
             .where(
                 GlhsEntityVersionPartition.profile_id == profile_id,
-                GlhsEntityVersionPartition.domain == domain,
-                GlhsEntityVersionPartition.semantic_key == semantic_key,
+                GlhsEntityVersionPartition.domain == d,
+                GlhsEntityVersionPartition.semantic_key == k,
             )
             .with_for_update()
             .execution_options(populate_existing=True)
-        ).scalar_one()
-        locked.append(row)
-    return locked
+        ).scalars().all()
+    else:
+        locked_rows = db.execute(
+            select(GlhsEntityVersionPartition)
+            .where(
+                GlhsEntityVersionPartition.profile_id == profile_id,
+                tuple_(
+                    GlhsEntityVersionPartition.domain,
+                    GlhsEntityVersionPartition.semantic_key,
+                ).in_(sorted_keys),
+            )
+            .order_by(
+                GlhsEntityVersionPartition.domain.asc(),
+                GlhsEntityVersionPartition.semantic_key.asc(),
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalars().all()
+
+    locked_map = {(row.domain, row.semantic_key): row for row in locked_rows}
+    return [locked_map[key] for key in sorted_keys if key in locked_map]
 
 
 def increment_partition_versions(

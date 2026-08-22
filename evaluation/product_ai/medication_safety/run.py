@@ -10,11 +10,15 @@ from pathlib import Path
 _SUITE_DIR = Path(__file__).resolve().parent
 _PRODUCT_AI_DIR = _SUITE_DIR.parent
 _REPO_ROOT = _PRODUCT_AI_DIR.parent.parent
-for p in (str(_REPO_ROOT), str(_PRODUCT_AI_DIR)):
+_ML_SRC = _REPO_ROOT / "services" / "ml" / "src"
+_API_SRC = _REPO_ROOT / "services" / "api" / "src"
+for p in (str(_REPO_ROOT), str(_PRODUCT_AI_DIR), str(_ML_SRC), str(_API_SRC)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
 import os
+
+from concurrent.futures import ThreadPoolExecutor
 
 from clara_ml.llm.capabilities import RouteClass
 from clara_ml.llm.model_gateway import ModelGateway
@@ -23,6 +27,7 @@ from clara_ml.llm.provider_adapters import ModelRequest
 
 from evaluation.product_ai.common import (
     MockEvaluationAdapter,
+    TaskCase,
     TaskReport,
     evaluate_thresholds,
     load_cases,
@@ -61,32 +66,32 @@ def run_benchmark(
     os.environ["CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_PROVIDER"] = provider
     os.environ["CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_MODEL"] = model
 
-    case_results = []
-    latencies = []
+    def _eval_single_case(case: TaskCase) -> tuple[CaseEvaluationResult, float]:
+        req = ModelRequest(
+            prompt=case.prompt,
+            system_prompt=case.system_prompt
+            or "Bạn là hệ thống cảnh báo an toàn dùng thuốc CLARA CareGuard. Hãy phân tích tính an toàn, cảnh báo nguy cơ ngộ độc gan, quá liều, chống chỉ định, tương tác thuốc hoặc lịch dùng thuốc cụ thể nếu nguy hiểm.",
+            task=ModelTask.MEDICAL_SAFETY_ROUTER,
+            route_class=RouteClass.TEXT_REASONING,
+            model=model,
+            max_tokens=1000,
+        )
+        start = time.monotonic()
+        try:
+            resp, _ = gateway.execute(ModelTask.MEDICAL_SAFETY_ROUTER, req)
+            lat = (time.monotonic() - start) * 1000
+            res = score_case(case, resp.content, latency_ms=lat)
+        except Exception as exc:
+            lat = (time.monotonic() - start) * 1000
+            res = score_case(case, f"ERROR: {exc}", latency_ms=lat)
+        return res, lat
 
     try:
-        for case in cases:
-            req = ModelRequest(
-                prompt=case.prompt,
-                system_prompt=case.system_prompt
-                or "Bạn là hệ thống cảnh báo an toàn dùng thuốc CLARA CareGuard.",
-                task=ModelTask.MEDICAL_SAFETY_ROUTER,
-                route_class=RouteClass.TEXT_REASONING,
-                model=model,
-                max_tokens=1000,
-            )
-
-            start = time.monotonic()
-            try:
-                resp, _ = gateway.execute(ModelTask.MEDICAL_SAFETY_ROUTER, req)
-                lat = (time.monotonic() - start) * 1000
-                res = score_case(case, resp.content, latency_ms=lat)
-            except Exception as exc:
-                lat = (time.monotonic() - start) * 1000
-                res = score_case(case, f"ERROR: {exc}", latency_ms=lat)
-
-            case_results.append(res)
-            latencies.append(lat)
+        max_workers = min(len(cases), 8) if (live and len(cases) > 1) else 1
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            evaluated = list(executor.map(_eval_single_case, cases))
+        case_results = [r for r, _ in evaluated]
+        latencies = [l for _, l in evaluated]
     finally:
         os.environ.pop("CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_PROVIDER", None)
         os.environ.pop("CLARA_MODEL_ROUTE_TASK_MEDICAL_SAFETY_ROUTER_MODEL", None)

@@ -121,3 +121,43 @@ def test_acquire_canonical_glhs_locks_strict_total_order(db: Session) -> None:
 def test_acquire_canonical_glhs_locks_profile_not_found(db: Session) -> None:
     with pytest.raises(GlhsInvariantError, match="profile_not_found"):
         acquire_canonical_glhs_locks(db, profile_id=99999)
+
+
+def test_lock_entity_partitions_batched_query_and_lexicographical_order(db: Session) -> None:
+    user, profile = _create_user_and_profile(db)
+    partitions_input = [
+        ("observations", "vital-bp"),
+        ("medications", "rx-warfarin"),
+        ("allergies", "allergy-penicillin"),
+        ("conditions", "diag-hypertension"),
+        ("medications", "rx-aspirin"),
+    ]
+
+    # First call creates and locks all 5 partitions in O(1) batched round-trips
+    locked = acquire_canonical_glhs_locks(
+        db,
+        profile_id=profile.id,
+        policy_domain="medications",
+        partitions=partitions_input,
+    )
+    assert len(locked.locked_partitions) == 5
+
+    # Verify strictly ordered according to \prec_lex
+    keys = [(p.domain, p.semantic_key) for p in locked.locked_partitions]
+    assert keys == [
+        ("allergies", "allergy-penicillin"),
+        ("conditions", "diag-hypertension"),
+        ("medications", "rx-aspirin"),
+        ("medications", "rx-warfarin"),
+        ("observations", "vital-bp"),
+    ]
+
+    # Second call locks existing partitions in O(1) batched query
+    locked_2 = acquire_canonical_glhs_locks(
+        db,
+        profile_id=profile.id,
+        policy_domain="medications",
+        partitions=partitions_input,
+    )
+    assert len(locked_2.locked_partitions) == 5
+    assert [(p.domain, p.semantic_key) for p in locked_2.locked_partitions] == keys

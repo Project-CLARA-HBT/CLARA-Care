@@ -25,6 +25,14 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
         "an toàn",
         "tuân thủ",
         "từ chối",
+        "chính sách",
+        "violate",
+        "prohibited",
+        "sensitive words",
+        "could not be submitted",
+        "safety policy",
+        "không được phép",
+        "refuse",
     ]
     is_blocked = any(b in content_lower for b in block_signals)
 

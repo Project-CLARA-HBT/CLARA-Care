@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <style>
+    .title { font-family: sans-serif; font-size: 15px; font-weight: bold; fill: #111827; }
+    .subtitle { font-family: sans-serif; font-size: 11px; fill: #4B5563; }
+    .axis { stroke: #9CA3AF; stroke-width: 1.5; }
+    .grid { stroke: #E5E7EB; stroke-width: 1; stroke-dasharray: 4,4; }
+    .label { font-family: sans-serif; font-size: 11px; fill: #374151; }
+  </style>
+  <rect width="800" height="450" fill="#FFFFFF"/>
+  <text x="400" y="30" text-anchor="middle" class="title">Chow Risk-Coverage Pareto Frontier under SBMI Release Gating</text>
+  <text x="400" y="48" text-anchor="middle" class="subtitle">False-Clear Safety Risk R_FC(f, g) vs. Automatic Coverage &#934;(g)</text>
+
+  <line x1="100" y1="380" x2="720" y2="380" class="axis"/>
+  <line x1="100" y1="80" x2="100" y2="380" class="axis"/>
+
+  <path d="M 150 120 Q 300 200 650 350" fill="none" stroke="#2563EB" stroke-width="3"/>
+  <circle cx="150" cy="120" r="6" fill="#DC2626"/>
+  <text x="160" y="115" class="label">Legacy Unbound (6.8% Risk, 100% Cov)</text>
+
+  <circle cx="350" cy="220" r="6" fill="#D97706"/>
+  <text x="360" y="215" class="label">CrossDDI (2.9% Risk, 95.1% Cov)</text>
+
+  <circle cx="650" cy="350" r="7" fill="#059669"/>
+  <text x="630" y="340" text-anchor="end" class="label" font-weight="bold" fill="#059669">CareGuard-VN SBMI (0.4% Risk, 92.4% Cov)</text>
+</svg>

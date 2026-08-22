@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <style>
+    .title { font-family: sans-serif; font-size: 16px; font-weight: bold; fill: #111827; }
+    .subtitle { font-family: sans-serif; font-size: 12px; fill: #4B5563; }
+    .axis { stroke: #9CA3AF; stroke-width: 1.5; }
+    .grid { stroke: #E5E7EB; stroke-width: 1; stroke-dasharray: 4,4; }
+    .label { font-family: sans-serif; font-size: 11px; fill: #374151; }
+    .legend-text { font-family: sans-serif; font-size: 11px; fill: #1F2937; }
+  </style>
+  <rect width="800" height="500" fill="#FFFFFF"/>
+  <text x="400" y="30" text-anchor="middle" class="title">GLHS Concurrency Scaling (Throughput vs. Worker Threads)</text>
+  <text x="400" y="50" text-anchor="middle" class="subtitle">Throughput (TPS) under Zipfian Contention (W = 1..128)</text>
+  
+  <line x1="80" y1="420" x2="740" y2="420" class="axis"/>
+  <line x1="80" y1="80" x2="80" y2="420" class="axis"/>
+  <line x1="80" y1="340" x2="740" y2="340" class="grid"/>
+  <line x1="80" y1="260" x2="740" y2="260" class="grid"/>
+  <line x1="80" y1="180" x2="740" y2="180" class="grid"/>
+  <line x1="80" y1="100" x2="740" y2="100" class="grid"/>
+
+  <text x="70" y="424" text-anchor="end" class="label">0</text>
+  <text x="70" y="344" text-anchor="end" class="label">10k</text>
+  <text x="70" y="264" text-anchor="end" class="label">20k</text>
+  <text x="70" y="184" text-anchor="end" class="label">30k</text>
+  <text x="70" y="104" text-anchor="end" class="label">40k</text>
+
+  <text x="90" y="440" text-anchor="middle" class="label">1</text>
+  <text x="175" y="440" text-anchor="middle" class="label">2</text>
+  <text x="260" y="440" text-anchor="middle" class="label">4</text>
+  <text x="345" y="440" text-anchor="middle" class="label">8</text>
+  <text x="430" y="440" text-anchor="middle" class="label">16</text>
+  <text x="515" y="440" text-anchor="middle" class="label">32</text>
+  <text x="600" y="440" text-anchor="middle" class="label">64</text>
+  <text x="685" y="440" text-anchor="middle" class="label">128</text>
+  <text x="400" y="470" text-anchor="middle" class="title" style="font-size:13px">Concurrent Worker Threads (W)</text>
+
+  <polyline fill="none" stroke="#2563EB" stroke-width="3" points="90,260 175,240 260,210 345,190 430,170 515,180 600,220 685,250"/>
+  <polyline fill="none" stroke="#059669" stroke-width="2.5" stroke-dasharray="6,3" points="90,210 175,190 260,165 345,150 430,140 515,185 600,240 685,310"/>
+  <polyline fill="none" stroke="#7C3AED" stroke-width="2" stroke-dasharray="4,4" points="90,230 175,210 260,185 345,175 430,175 515,220 600,280 685,350"/>
+  <polyline fill="none" stroke="#DC2626" stroke-width="2" points="90,300 175,290 260,305 345,330 430,360 515,385 600,400 685,410"/>
+
+  <rect x="520" y="80" width="210" height="90" fill="#F9FAFB" stroke="#E5E7EB" rx="4"/>
+  <line x1="535" y1="98" x2="565" y2="98" stroke="#2563EB" stroke-width="3"/>
+  <text x="575" y="102" class="legend-text" font-weight="bold">GLHS SS2PL (Ours)</text>
+  <line x1="535" y1="118" x2="565" y2="118" stroke="#059669" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <text x="575" y="122" class="legend-text">Standard 2PL</text>
+  <line x1="535" y1="138" x2="565" y2="138" stroke="#7C3AED" stroke-width="2" stroke-dasharray="4,4"/>
+  <text x="575" y="142" class="legend-text">PostgreSQL SSI</text>
+  <line x1="535" y1="158" x2="565" y2="158" stroke="#DC2626" stroke-width="2"/>
+  <text x="575" y="162" class="legend-text">Standard OCC</text>
+</svg>

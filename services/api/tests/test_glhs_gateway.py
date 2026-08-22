@@ -1513,3 +1513,104 @@ def test_compile_thss_filters_out_expired_assertions_temporal_boundary(db: Sessi
     snap_mar01_keys = {item["semantic_key"] for item in snap_mar01.assertions}
     assert snap_mar01_keys == {"medication:metformin:oral"}
 
+
+def test_compile_thss_lock_free_mvcc_snapshot_reconstruction(db: Session) -> None:
+    """Verify lock-free read-side path for THSS compilation under MVCC multi-version snapshot reconstruction."""
+    owner = _scope(db)
+    t1 = _at("2026-01-01T00:00:00")
+    t2 = _at("2026-01-02T00:00:00")
+
+    ev1 = _evidence(db, scope=owner, at=t1, fingerprint="fp-1")
+    a1 = propose_assertion(
+        db,
+        profile_id=owner.profile.id,
+        actor_user_id=owner.actor.id,
+        data=AssertionInput(
+            semantic_key="medication:metformin:oral",
+            assertion_type="medications",
+            predicate="dose",
+            value={"drugbank_id": "DB00331", "dose": "500", "unit": "mg"},
+            epistemic_state="documented",
+            valid_from=t1,
+            valid_to=None,
+        ),
+        evidence=((ev1, "supports"),),
+    )
+    apply_transition(
+        db,
+        scope=owner,
+        assertion=a1,
+        action="activate",
+        expected_state_version=0,
+        idempotency_key="commit-1",
+        transition_kind="user_report",
+        reason_code="prescription",
+    )
+    db.commit()
+
+    snap_1 = compile_thss(
+        db,
+        scope=owner,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=t1,
+    )
+    assert snap_1.state_version == 1
+    assert len(snap_1.assertions) == 1
+    assert snap_1.assertions[0]["semantic_key"] == "medication:metformin:oral"
+
+    ev2 = _evidence(db, scope=owner, at=t2, fingerprint="fp-2")
+    a2 = propose_assertion(
+        db,
+        profile_id=owner.profile.id,
+        actor_user_id=owner.actor.id,
+        data=AssertionInput(
+            semantic_key="medication:lisinopril:oral",
+            assertion_type="medications",
+            predicate="dose",
+            value={"drugbank_id": "DB00722", "dose": "10", "unit": "mg"},
+            epistemic_state="documented",
+            valid_from=t2,
+            valid_to=None,
+        ),
+        evidence=((ev2, "supports"),),
+    )
+    apply_transition(
+        db,
+        scope=owner,
+        assertion=a2,
+        action="activate",
+        expected_state_version=1,
+        idempotency_key="commit-2",
+        transition_kind="user_report",
+        reason_code="prescription",
+    )
+    db.commit()
+
+    historical_snap = compile_thss(
+        db,
+        scope=owner,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=t1,
+    )
+    assert len(historical_snap.assertions) == 1
+    assert historical_snap.assertions[0]["semantic_key"] == "medication:metformin:oral"
+
+    current_snap = compile_thss(
+        db,
+        scope=owner,
+        task="careguard",
+        purpose="self_care",
+        allowed_data_classes=frozenset({"medications"}),
+        as_of=t2,
+    )
+    assert len(current_snap.assertions) == 2
+    assert {a["semantic_key"] for a in current_snap.assertions} == {
+        "medication:metformin:oral",
+        "medication:lisinopril:oral",
+    }
+
+

@@ -15,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from clara_api.core.govred_research import isolated_govred_arm
@@ -39,9 +39,15 @@ from clara_api.glhs.canonical_json import (
     CANONICALIZATION_PROFILE,
     DIGEST_ALGORITHM,
     consistency_fingerprint,
+    fast_canonical_digest,
     fingerprint_for_profile,
     legacy_consistency_fingerprint,
 )
+
+__all__ = [
+    "consistency_fingerprint",
+    "fast_canonical_digest",
+]
 from clara_api.glhs.commitment_projection import AbstentionDecision
 from clara_api.glhs.domain import (
     ACTIVE_LIFECYCLE_STATES,
@@ -173,30 +179,86 @@ def lock_entity_partitions(
     policy_version: str = POLICY_VERSION,
     consent_version: str = "not_required",
 ) -> list[GlhsEntityVersionPartition]:
-    """Acquire SELECT ... FOR UPDATE row locks on entity partitions in canonical sorted order."""
+    """Acquire SELECT ... FOR UPDATE row locks on entity partitions in canonical sorted order.
+
+    Batches partition queries with in_() clause, reducing database round-trips
+    from O(M) to O(1) while strictly preserving canonical lexicographical lock order \\prec_{lex}.
+    """
     sorted_keys = sorted(set(partitions), key=lambda item: (item[0], item[1]))
-    locked: list[GlhsEntityVersionPartition] = []
+    if not sorted_keys:
+        return []
+
+    if len(sorted_keys) == 1:
+        d, k = sorted_keys[0]
+        existing_rows = db.execute(
+            select(GlhsEntityVersionPartition).where(
+                GlhsEntityVersionPartition.profile_id == profile_id,
+                GlhsEntityVersionPartition.domain == d,
+                GlhsEntityVersionPartition.semantic_key == k,
+            )
+        ).scalars().all()
+    else:
+        existing_rows = db.execute(
+            select(GlhsEntityVersionPartition).where(
+                GlhsEntityVersionPartition.profile_id == profile_id,
+                tuple_(
+                    GlhsEntityVersionPartition.domain,
+                    GlhsEntityVersionPartition.semantic_key,
+                ).in_(sorted_keys),
+            )
+        ).scalars().all()
+
+    existing_map = {(p.domain, p.semantic_key): p for p in existing_rows}
+    created_any = False
     for domain, semantic_key in sorted_keys:
-        get_or_create_entity_partition(
-            db,
-            profile_id=profile_id,
-            domain=domain,
-            semantic_key=semantic_key,
-            policy_version=policy_version,
-            consent_version=consent_version,
-        )
-        row = db.execute(
+        if (domain, semantic_key) not in existing_map:
+            new_partition = GlhsEntityVersionPartition(
+                profile_id=profile_id,
+                domain=domain,
+                semantic_key=semantic_key,
+                state_version=1,
+                policy_version=policy_version,
+                consent_version=consent_version,
+            )
+            db.add(new_partition)
+            created_any = True
+            existing_map[(domain, semantic_key)] = new_partition
+
+    if created_any:
+        db.flush()
+
+    if len(sorted_keys) == 1:
+        d, k = sorted_keys[0]
+        locked_rows = db.execute(
             select(GlhsEntityVersionPartition)
             .where(
                 GlhsEntityVersionPartition.profile_id == profile_id,
-                GlhsEntityVersionPartition.domain == domain,
-                GlhsEntityVersionPartition.semantic_key == semantic_key,
+                GlhsEntityVersionPartition.domain == d,
+                GlhsEntityVersionPartition.semantic_key == k,
             )
             .with_for_update()
             .execution_options(populate_existing=True)
-        ).scalar_one()
-        locked.append(row)
-    return locked
+        ).scalars().all()
+    else:
+        locked_rows = db.execute(
+            select(GlhsEntityVersionPartition)
+            .where(
+                GlhsEntityVersionPartition.profile_id == profile_id,
+                tuple_(
+                    GlhsEntityVersionPartition.domain,
+                    GlhsEntityVersionPartition.semantic_key,
+                ).in_(sorted_keys),
+            )
+            .order_by(
+                GlhsEntityVersionPartition.domain.asc(),
+                GlhsEntityVersionPartition.semantic_key.asc(),
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalars().all()
+
+    locked_map = {(row.domain, row.semantic_key): row for row in locked_rows}
+    return [locked_map[key] for key in sorted_keys if key in locked_map]
 
 
 def increment_partition_versions(
@@ -225,7 +287,7 @@ def _digest(value: object) -> str:
 
 
 def _snapshot_fingerprint(value: object) -> str:
-    return consistency_fingerprint(value)
+    return fast_canonical_digest(value)
 
 
 def _idempotency_digest(value: str) -> str:
@@ -1258,6 +1320,24 @@ def _assertion_evidence_ids(db: Session, *, assertion_id: int) -> list[int]:
     )
 
 
+def _batch_assertion_evidence_ids(
+    db: Session, *, assertion_ids: Iterable[int]
+) -> dict[int, list[int]]:
+    """Batch lookup evidence IDs for multiple assertions in O(1) database round-trip."""
+    ids_set = set(assertion_ids)
+    if not ids_set:
+        return {}
+    rows = db.execute(
+        select(GlhsAssertionEvidence.assertion_id, GlhsAssertionEvidence.evidence_id).where(
+            GlhsAssertionEvidence.assertion_id.in_(ids_set)
+        )
+    ).all()
+    result: dict[int, list[int]] = {aid: [] for aid in ids_set}
+    for aid, eid in rows:
+        result[aid].append(eid)
+    return result
+
+
 def _open_conflicts(db: Session, *, profile_id: int, semantic_key: str) -> list[GlhsConflict]:
     return list(
         db.execute(
@@ -1277,7 +1357,7 @@ def _reconstruct_visible_conflicts(
     valid_at: datetime,
     known_at: datetime,
 ) -> list[GlhsConflict]:
-    """Replay conflict existence at a bitemporal cut-off.
+    """Replay conflict existence at a bitemporal cut-off under lock-free MVCC.
 
     ``GlhsConflict.status`` is a current projection updated by resolution.  It
     cannot decide whether a historical snapshot contained a conflict: the
@@ -1291,13 +1371,30 @@ def _reconstruct_visible_conflicts(
             select(GlhsConflict).where(GlhsConflict.profile_id == profile_id)
         ).scalars()
     )
+    if not conflicts:
+        return []
+
+    # Batch preload creation and resolution transitions in O(1) round-trip
+    needed_transition_ids = {
+        c.created_transition_id for c in conflicts if c.created_transition_id is not None
+    } | {
+        c.resolved_transition_id for c in conflicts if c.resolved_transition_id is not None
+    }
+
+    transitions_map: dict[int, GlhsTransition] = {}
+    if needed_transition_ids:
+        t_rows = db.execute(
+            select(GlhsTransition).where(GlhsTransition.id.in_(needed_transition_ids))
+        ).scalars().all()
+        transitions_map = {t.id: t for t in t_rows}
+
     visible: list[GlhsConflict] = []
     for conflict in conflicts:
         if conflict.created_transition_id is None:
             if conflict.status == "open":
                 visible.append(conflict)
             continue
-        created = db.get(GlhsTransition, conflict.created_transition_id)
+        created = transitions_map.get(conflict.created_transition_id)
         if created is None:
             raise GlhsInvariantError("conflict_creation_transition_missing")
         created_visible = (
@@ -1307,7 +1404,7 @@ def _reconstruct_visible_conflicts(
         if not created_visible:
             continue
         if conflict.resolved_transition_id is not None:
-            resolved = db.get(GlhsTransition, conflict.resolved_transition_id)
+            resolved = transitions_map.get(conflict.resolved_transition_id)
             if resolved is None:
                 raise GlhsInvariantError("conflict_resolution_transition_missing")
             resolved_visible = (
@@ -1669,6 +1766,10 @@ def compile_thss(
 ) -> Snapshot:
     """Compile a minimum necessary, policy-bound health context for one task.
 
+    Implements a lock-free read-side path for THSS compilation under MVCC
+    multi-version snapshot reconstruction (reading committed versions without
+    taking locks on reads, preserving full SS2PL on writes).
+
     The caller must already have proven actor/profile/grant permissions through
     ``resolve_profile_scope``.  This compiler intersects, rather than expands,
     the granted data classes at use time and persists an opaque audit manifest.
@@ -1747,9 +1848,9 @@ def compile_thss(
     expires_at = datetime.now(UTC) + expires_in
     if scope.valid_until is not None:
         expires_at = min(expires_at, _as_utc(scope.valid_until))
-    evidence_map: dict[int, list[int]] = {
-        row.id: _assertion_evidence_ids(db, assertion_id=row.id) for row in selected
-    }
+    evidence_map: dict[int, list[int]] = _batch_assertion_evidence_ids(
+        db, assertion_ids=[row.id for row in selected]
+    )
     critical_classes = critical_classes_for_task(task)
     selected_classes = {row.assertion_type for row in selected}
     missing_critical = sorted(critical_classes - selected_classes)

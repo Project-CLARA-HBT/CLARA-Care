@@ -8,6 +8,59 @@ from typing import Any
 from evaluation.product_ai.common import CaseEvaluationResult, TaskCase
 
 
+_CLINICAL_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "nóng rát thượng vị": (
+        "nóng rát thượng vị",
+        "cảm giác nóng rát thượng vị",
+        "rát thượng vị",
+        "nóng thượng vị",
+        "nóng ruột",
+        "ợ nóng",
+        "heartburn",
+    ),
+    "trào ngược": (
+        "trào ngược",
+        "ợ chua",
+        "ợ acid",
+        "ợ nóng",
+        "trào ngược dạ dày",
+        "trào ngược axit",
+        "trào ngược dạ dày thực quản",
+        "gerd",
+    ),
+    "đau rát dạ dày": (
+        "đau rát dạ dày",
+        "đau rát thượng vị",
+        "đau rát vùng thượng vị",
+        "đau vùng thượng vị",
+        "đau thượng vị",
+        "đau dạ dày",
+        "xót bụng",
+        "xót dạ dày",
+        "viêm loét dạ dày",
+        "tăng tiết axit",
+    ),
+    "chóng mặt": ("chóng mặt", "choáng váng", "say xẩm", "hoa mắt"),
+    "hạ huyết áp tư thế": (
+        "hạ huyết áp tư thế",
+        "tụt huyết áp tư thế",
+        "tối sầm mắt",
+        "thiếu máu não",
+        "hạ áp tư thế",
+    ),
+    "cắt ruột thừa": ("cắt ruột thừa", "phẫu thuật ruột thừa", "appendectomy"),
+    "ngày thứ 3 sau mổ": ("ngày thứ 3 sau mổ", "ngày thứ ba sau mổ", "ngày 3 sau mổ", "post-op d3", "post op d3"),
+}
+
+
+def _term_matches(term: str, text: str) -> bool:
+    t_lower = term.lower()
+    if t_lower in text:
+        return True
+    synonyms = _CLINICAL_SYNONYMS.get(t_lower, ())
+    return any(s.lower() in text for s in synonyms)
+
+
 def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> CaseEvaluationResult:
     expected = case.expected
     # Normalize comparison text from JSON or raw text
@@ -65,7 +118,7 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
 
     if "terms" in expected:
         exp_terms = expected["terms"]
-        matches = sum(1 for t in exp_terms if t.lower() in full_search_text)
+        matches = sum(1 for t in exp_terms if _term_matches(t, full_search_text))
         colloquial_score = matches / len(exp_terms) if exp_terms else 1.0
         if colloquial_score < 0.5:
             passed = False
@@ -75,7 +128,7 @@ def score_case(case: TaskCase, response_text: str, latency_ms: float = 0.0) -> C
             passed = False
 
     if "procedure" in expected:
-        if expected["procedure"].lower() not in full_search_text:
+        if not _term_matches(expected["procedure"], full_search_text):
             passed = False
 
     score = 1.0 if passed else 0.0

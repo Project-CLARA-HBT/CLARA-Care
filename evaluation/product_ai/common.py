@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -18,6 +19,20 @@ _API_SRC = _REPO_ROOT / "services" / "api" / "src"
 for p in (str(_REPO_ROOT), str(_ML_SRC), str(_API_SRC)):
     if p not in sys.path:
         sys.path.insert(0, p)
+
+def _load_env() -> None:
+    env_file = _REPO_ROOT / ".env"
+    if env_file.exists():
+        with open(env_file, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k, v = k.strip(), v.strip()
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+
+_load_env()
 
 from clara_ml.llm.capabilities import ModelCapability
 from clara_ml.llm.provider_adapters import (

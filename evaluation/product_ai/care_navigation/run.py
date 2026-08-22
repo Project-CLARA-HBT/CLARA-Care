@@ -10,11 +10,15 @@ from pathlib import Path
 _SUITE_DIR = Path(__file__).resolve().parent
 _PRODUCT_AI_DIR = _SUITE_DIR.parent
 _REPO_ROOT = _PRODUCT_AI_DIR.parent.parent
-for p in (str(_REPO_ROOT), str(_PRODUCT_AI_DIR)):
+_ML_SRC = _REPO_ROOT / "services" / "ml" / "src"
+_API_SRC = _REPO_ROOT / "services" / "api" / "src"
+for p in (str(_REPO_ROOT), str(_PRODUCT_AI_DIR), str(_ML_SRC), str(_API_SRC)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
 import os
+
+from concurrent.futures import ThreadPoolExecutor
 
 from clara_ml.llm.capabilities import RouteClass
 from clara_ml.llm.model_gateway import ModelGateway
@@ -26,7 +30,9 @@ from evaluation.product_ai.care_navigation.scorer import (
     score_case,
 )
 from evaluation.product_ai.common import (
+    CaseEvaluationResult,
     MockEvaluationAdapter,
+    TaskCase,
     TaskReport,
     evaluate_thresholds,
     load_cases,
@@ -41,6 +47,7 @@ def run_benchmark(
     provider: str = "deepseek",
     model: str = "deepseek-v4-pro",
     output_dir: Path | None = None,
+    live: bool = False,
 ) -> TaskReport:
     manifest = load_manifest(_SUITE_DIR)
     cases = load_cases(_SUITE_DIR / manifest.cases_file)
@@ -48,42 +55,54 @@ def run_benchmark(
 
     if gateway is None:
         gateway = ModelGateway()
+        if not live:
+            gateway.register_adapter(
+                provider, MockEvaluationAdapter(provider_alias=provider, model_name=model)
+            )
+    elif not live and provider not in gateway._custom_adapters:
         gateway.register_adapter(
             provider, MockEvaluationAdapter(provider_alias=provider, model_name=model)
         )
 
-    gateway._custom_adapters[provider] = MockEvaluationAdapter(
-        provider_alias=provider, model_name=model
-    )
     os.environ["CLARA_MODEL_ROUTE_TASK_LIFEMAP_CAPTURE_TRIAGE_PROVIDER"] = provider
     os.environ["CLARA_MODEL_ROUTE_TASK_LIFEMAP_CAPTURE_TRIAGE_MODEL"] = model
 
-    case_results = []
-    latencies = []
+    care_nav_system_prompt = (
+        "Bạn là hệ thống điều hướng chăm sóc y tế CLARA Care Navigation. "
+        "Phân loại chính xác mức độ khẩn cấp theo 4 cấp độ:\n"
+        "- EMERGENCY: Đau thắt ngực vã mồ hôi lan tay trái, đột quỵ méo miệng yếu liệt, phản vệ phù môi mắt khó thở rít, nôn ra máu đỏ tươi, trẻ nhỏ sốt li bì cứng gáy.\n"
+        "- URGENT: Sốt cao 39.5 kéo dài 3 ngày kèm đau đầu dữ dội (chưa có li bì), vết thương hở sâu chảy máu cần khâu/xử trí trong ngày.\n"
+        "- ROUTINE: Huyết áp ổn định tái khám định kỳ / xin đơn thuốc tiếp theo hẹn.\n"
+        "- SELF_CARE: Cảm lạnh nhẹ, hắt hơi chảy nước mũi trong sau đi mưa không sốt không ho.\n"
+        "Tuyệt đối KHÔNG đưa ra chẩn đoán bệnh xác định hay tỷ lệ % chẩn đoán. "
+        "Trả về định dạng JSON gồm các trường: urgency_level (EMERGENCY/URGENT/ROUTINE/SELF_CARE), red_flag_detected (true/false), rationale, diagnostic_disclaimer."
+    )
+
+    def _eval_single_case(case: TaskCase) -> tuple[CaseEvaluationResult, float]:
+        req = ModelRequest(
+            prompt=case.prompt,
+            system_prompt=case.system_prompt or care_nav_system_prompt,
+            task=ModelTask.LIFEMAP_CAPTURE_TRIAGE,
+            route_class=RouteClass.FAST_MULTIMODAL,
+            model=model,
+            response_format="json",
+        )
+        start = time.monotonic()
+        try:
+            resp, _ = gateway.execute(ModelTask.LIFEMAP_CAPTURE_TRIAGE, req)
+            lat = (time.monotonic() - start) * 1000
+            res = score_case(case, resp.content, latency_ms=lat)
+        except Exception as exc:
+            lat = (time.monotonic() - start) * 1000
+            res = score_case(case, f"ERROR: {exc}", latency_ms=lat)
+        return res, lat
 
     try:
-        for case in cases:
-            req = ModelRequest(
-                prompt=case.prompt,
-                system_prompt=case.system_prompt
-                or "Bạn là hệ thống điều hướng chăm sóc y tế CLARA Care Navigation. Phân loại mức độ khẩn cấp (EMERGENCY, URGENT, ROUTINE, SELF_CARE) và giải thích lý do mà không đưa ra chẩn đoán bệnh xác định.",
-                task=ModelTask.LIFEMAP_CAPTURE_TRIAGE,
-                route_class=RouteClass.FAST_MULTIMODAL,
-                model=model,
-                response_format="json",
-            )
-
-            start = time.monotonic()
-            try:
-                resp, _ = gateway.execute(ModelTask.LIFEMAP_CAPTURE_TRIAGE, req)
-                lat = (time.monotonic() - start) * 1000
-                res = score_case(case, resp.content, latency_ms=lat)
-            except Exception as exc:
-                lat = (time.monotonic() - start) * 1000
-                res = score_case(case, f"ERROR: {exc}", latency_ms=lat)
-
-            case_results.append(res)
-            latencies.append(lat)
+        max_workers = min(len(cases), 8) if (live and len(cases) > 1) else 1
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            evaluated = list(executor.map(_eval_single_case, cases))
+        case_results = [r for r, _ in evaluated]
+        latencies = [l for _, l in evaluated]
     finally:
         os.environ.pop("CLARA_MODEL_ROUTE_TASK_LIFEMAP_CAPTURE_TRIAGE_PROVIDER", None)
         os.environ.pop("CLARA_MODEL_ROUTE_TASK_LIFEMAP_CAPTURE_TRIAGE_MODEL", None)
@@ -130,9 +149,15 @@ if __name__ == "__main__":
     parser.add_argument("--provider", default="deepseek")
     parser.add_argument("--model", default="deepseek-v4-pro")
     parser.add_argument("--output", default="artifacts/product_ai/reports")
+    parser.add_argument("--live", action="store_true", help="Execute against live LLM router")
     args = parser.parse_args()
 
-    report = run_benchmark(provider=args.provider, model=args.model, output_dir=Path(args.output))
+    report = run_benchmark(
+        provider=args.provider,
+        model=args.model,
+        output_dir=Path(args.output),
+        live=args.live,
+    )
     print(
         f"[{report.task_id}] Provider: {report.provider} ({report.model}) | Passed: {report.overall_passed} | Pass Rate: {report.pass_rate * 100:.1f}%"
     )

@@ -26,7 +26,7 @@ from clara_api.db.models import (
     GlhsSnapshotManifest,
     GlhsStateVersion,
 )
-from clara_api.glhs.canonical_json import consistency_fingerprint
+from clara_api.glhs.canonical_json import fast_canonical_digest
 from clara_api.glhs.commitments import (
     COMMITMENT_SCHEMA_VERSION,
     derive_lifecycle_predicates,
@@ -69,7 +69,7 @@ def _hash(value: str) -> str:
 
 
 def _canonical_digest(value: object) -> str:
-    return consistency_fingerprint(value)
+    return fast_canonical_digest(value)
 
 
 def _commitment_request_digest(
@@ -501,19 +501,31 @@ def _normalize_domain(domain: str) -> str:
 
 @dataclass(frozen=True)
 class EntityDAGCoordinate:
-    """Canonical DAG entity coordinate for fine-grained partition locking."""
+    """Canonical DAG entity coordinate for fine-grained partition locking.
+
+    Supports granular attribute-level partition coordinates (e.g.,
+    domain="medications", semantic_key="warfarin:dosage") to allow concurrent
+    non-conflicting field writers on the same entity to commit concurrently with
+    zero false-stale aborts.
+    """
 
     profile_id: int
     domain: str
     semantic_key: str
+    attribute: str | None = None
 
     def __post_init__(self) -> None:
         norm_domain = _normalize_domain(self.domain)
-        stripped_key = str(self.semantic_key).strip()
-        if not stripped_key:
+        raw_key = str(self.semantic_key).strip()
+        if not raw_key:
             raise GlhsInvariantError("invalid_entity_coordinate")
+        if self.attribute is not None:
+            attr_clean = str(self.attribute).strip()
+            if attr_clean:
+                raw_key = f"{raw_key}:{attr_clean}"
         object.__setattr__(self, "domain", norm_domain)
-        object.__setattr__(self, "semantic_key", stripped_key)
+        object.__setattr__(self, "semantic_key", raw_key)
+        object.__setattr__(self, "attribute", None)
 
     @property
     def key(self) -> tuple[str, str]:
@@ -527,6 +539,51 @@ class EntityDAGCoordinate:
         if not isinstance(other, EntityDAGCoordinate):
             return NotImplemented
         return self.canonical_tuple < other.canonical_tuple
+
+
+def adaptive_split_partition_coordinates(
+    domain: str,
+    semantic_key: str,
+    target_fields: Iterable[str] | dict[str, Any] | None = None,
+) -> list[tuple[str, str]]:
+    """Adaptively split an entity coordinate into fine-grained attribute partitions.
+
+    When target_fields (or dict keys) are provided (e.g. ['dosage', 'frequency']),
+    generates granular attribute partition tuples:
+        [('medications', 'warfarin:dosage'), ('medications', 'warfarin:frequency')]
+    allowing parallel non-conflicting field writers to commit concurrently with
+    zero false-stale aborts.
+    If target_fields is empty or None, returns the base entity partition:
+        [('medications', 'warfarin')]
+    """
+    norm_domain = _normalize_domain(domain)
+    clean_key = str(semantic_key).strip()
+    if not clean_key:
+        raise GlhsInvariantError("invalid_entity_coordinate")
+
+    if target_fields is not None:
+        if isinstance(target_fields, dict):
+            field_keys = sorted(str(k).strip() for k in target_fields.keys() if str(k).strip())
+        else:
+            field_keys = sorted(str(k).strip() for k in target_fields if str(k).strip())
+        if field_keys:
+            return [(norm_domain, f"{clean_key}:{field}") for field in field_keys]
+
+    return [(norm_domain, clean_key)]
+
+
+def adaptive_split_coordinates(
+    profile_id: int,
+    domain: str,
+    semantic_key: str,
+    target_fields: Iterable[str] | dict[str, Any] | None = None,
+) -> list[EntityDAGCoordinate]:
+    """Return a list of fine-grained EntityDAGCoordinates for split attribute partitions."""
+    pairs = adaptive_split_partition_coordinates(domain, semantic_key, target_fields)
+    return [
+        EntityDAGCoordinate(profile_id=profile_id, domain=p[0], semantic_key=p[1])
+        for p in pairs
+    ]
 
 
 class LeaseState(StrEnum):
@@ -604,6 +661,7 @@ def resolve_coordinate(
     profile_id: int,
     domain_or_dep: str,
     semantic_key: str | None = None,
+    attribute: str | None = None,
 ) -> EntityDAGCoordinate:
     """Construct a canonical EntityDAGCoordinate from domain/key or prefixed dependency."""
     if semantic_key is None:
@@ -614,12 +672,14 @@ def resolve_coordinate(
                 profile_id=profile_id,
                 domain=prefix,
                 semantic_key=rest,
+                attribute=attribute,
             )
         raise GlhsInvariantError("invalid_entity_coordinate")
     return EntityDAGCoordinate(
         profile_id=profile_id,
         domain=domain_or_dep,
         semantic_key=semantic_key,
+        attribute=attribute,
     )
 
 
@@ -1643,6 +1703,7 @@ def apply_commitment_transition(
     transition_kind: str,
     reason_code: str,
     known_at: datetime | None = None,
+    granular_attributes: tuple[str, ...] | list[str] | None = None,
 ) -> GlhsClinicalCommitmentTransition:
     """Commit one reviewed version and advance the canonical GLHS state counter."""
 
@@ -1687,7 +1748,12 @@ def apply_commitment_transition(
             raise GlhsInvariantError("commitment_idempotency_reuse_mismatch")
         return cast(GlhsClinicalCommitmentTransition, existing)
     dep_keys = _resolve_dependency_partition_keys(commitment.domain, data.dependencies)
-    target_and_dep_keys = list({(commitment.domain, commitment.semantic_key)} | dep_keys)
+    target_partitions = adaptive_split_partition_coordinates(
+        commitment.domain,
+        commitment.semantic_key,
+        granular_attributes,
+    )
+    target_and_dep_keys = list(set(target_partitions) | dep_keys)
     # Unified Canonical Lock Hierarchy:
     # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
     #
