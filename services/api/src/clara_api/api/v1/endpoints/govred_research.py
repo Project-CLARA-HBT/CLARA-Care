@@ -500,6 +500,9 @@ def _apply_mutations(
             db.rollback()
             _raise_invariant(exc)
     if request.mutation == "consent_revoke":
+        from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
+
+        acquire_consent_lock_anchor(db, user_id=scope.profile.user_id)
         db.add(UserConsent(
             user_id=scope.profile.user_id,
             consent_type=MEDICAL_CONSENT_TYPE,
@@ -666,9 +669,11 @@ def _apply_mutations(
         def _revoke_writer() -> None:
             time.sleep(request.concurrent_revoke_delay_ms / 1000)
             from clara_api.db.session import SessionLocal
+            from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
 
             session = SessionLocal()
             try:
+                acquire_consent_lock_anchor(session, user_id=revoke_owner_user_id)
                 session.add(UserConsent(
                     user_id=revoke_owner_user_id,
                     consent_type=MEDICAL_CONSENT_TYPE,

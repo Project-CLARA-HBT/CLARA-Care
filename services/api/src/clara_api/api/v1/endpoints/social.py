@@ -383,12 +383,15 @@ def get_social_consent(
 
 
 @router.post("/consent", response_model=ConsentStatusResponse)
-def grant_social_consent(
+def accept_social_consent(
     token: TokenPayload = Depends(require_roles("normal", "researcher", "doctor")),
     db: Session = Depends(get_db),
 ) -> ConsentStatusResponse:
     _require_social_enabled()
     user = _require_user(token, db)
+    from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
+
+    acquire_consent_lock_anchor(db, user_id=user.id)
     if not _has_social_consent(db, user_id=user.id):
         db.add(
             UserConsent(
@@ -408,6 +411,9 @@ def revoke_social_consent(
 ) -> ConsentStatusResponse:
     _require_social_enabled()
     user = _require_user(token, db)
+    from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
+
+    acquire_consent_lock_anchor(db, user_id=user.id)
     db.add(
         UserConsent(
             user_id=user.id,

@@ -1,0 +1,105 @@
+================================================================================
+TLC MODEL CHECKER EXECUTION LOG - GLHS_GSA FORMAL VERIFICATION
+================================================================================
+
+Date: 2026-08-22
+Specification: docs/formal/GLHS_GSA.tla
+Configuration: docs/formal/GLHS_GSA.cfg
+Model Checker: TLC2 Version 2026.08.21.155922 (rev: 9787e65)
+
+--------------------------------------------------------------------------------
+1. Execution Command
+--------------------------------------------------------------------------------
+java -XX:+UseParallelGC -cp /tmp/opencode/tla2tools.jar tlc2.TLC -workers auto GLHS_GSA.tla -config GLHS_GSA.cfg
+
+--------------------------------------------------------------------------------
+2. Model Checker Configuration (GLHS_GSA.cfg)
+--------------------------------------------------------------------------------
+SPECIFICATION Spec
+
+CONSTANTS
+    Agents = {a1, a2}
+    Entities = {e1, e2}
+    Domains = {d1, d2}
+    MaxVersion = 3
+    MaxEpoch = 3
+
+INVARIANTS
+    TypeOK
+    GSA_StateIsolation
+    GSA_GovernanceFreshness
+    GSA_PhantomFree
+    DeadlockFree
+
+SYMMETRY Symmetry
+
+--------------------------------------------------------------------------------
+3. Verification Summary & State Space Exploration Counts
+--------------------------------------------------------------------------------
+Result:                       SUCCESS (No error has been found)
+Total States Generated:       148,111,792
+Distinct States Found:        26,153,860
+Unexplored States on Queue:   0 (Complete Exhaustive Search)
+State Graph Search Depth:     59
+Average Outdegree:            1 (min: 0, max: 9, 95th percentile: 3)
+Fingerprint Collision Risk:   calculated (optimistic) = 1.7E-4, actual = 3.0E-5
+Execution Duration:           12min 08s
+Workers:                      8 parallel worker threads
+
+Invariants Verified:
+  [PASS] TypeOK                  - Variable type safety across all states
+  [PASS] GSA_StateIsolation       - Causal read-dependency version stability at commit
+  [PASS] GSA_GovernanceFreshness - Monotonic consent & policy epoch freshness at commit
+  [PASS] GSA_PhantomFree         - Concurrent epoch drift forces fail-closed abort
+  [PASS] DeadlockFree            - Acyclic wait-for graph (TransitiveClosure(wait_for))
+
+--------------------------------------------------------------------------------
+4. Full TLC Raw Execution Console Log
+--------------------------------------------------------------------------------
+TLC2 Version 2026.08.21.155922 (rev: 9787e65)
+Running breadth-first search Model-Checking with fp 21 and seed 4280489686029564302 with 8 workers on 8 cores with 1730MB heap and 64MB offheap memory [pid: 818788] (Linux 6.19.10-300.fc44.x86_64 amd64, Red Hat, Inc. 25.0.2 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /home/nguyennt/Documents/CLARA-Care/docs/formal/GLHS_GSA.tla
+Parsing file /tmp/tlc-8557969468417999821/Naturals.tla (jar:file:/tmp/opencode/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-8557969468417999821/Sequences.tla (jar:file:/tmp/opencode/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /tmp/tlc-8557969468417999821/FiniteSets.tla (jar:file:/tmp/opencode/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-8557969468417999821/TLC.tla (jar:file:/tmp/opencode/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /tmp/tlc-8557969468417999821/_TLCTrace.tla (jar:file:/tmp/opencode/tla2tools.jar!/tla2sany/StandardModules/_TLCTrace.tla)
+Parsing file /tmp/tlc-8557969468417999821/TLCExt.tla (jar:file:/tmp/opencode/tla2tools.jar!/tla2sany/StandardModules/TLCExt.tla)
+Parsing file /tmp/tlc-8557969468417999821/Integers.tla (jar:file:/tmp/opencode/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Integers
+Semantic processing of module TLCExt
+Semantic processing of module _TLCTrace
+Semantic processing of module GLHS_GSA
+Linting of module TLCExt
+Linting of module _TLCTrace
+Linting of module GLHS_GSA
+Starting... (2026-08-22 16:11:46)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-08-22 16:11:46.
+Progress(12) at 2026-08-22 16:11:49: 219,779 states generated (219,779 s/min), 54,384 distinct states found (54,384 ds/min), 24,889 states left on queue.
+Progress(24) at 2026-08-22 16:12:49: 13,381,976 states generated (13,162,197 s/min), 2,628,617 distinct states found (2,574,233 ds/min), 467,247 states left on queue.
+Progress(27) at 2026-08-22 16:13:49: 23,155,601 states generated (9,773,625 s/min), 4,462,196 distinct states found (1,833,579 ds/min), 664,769 states left on queue.
+Progress(30) at 2026-08-22 16:14:49: 36,630,183 states generated (13,474,582 s/min), 6,963,522 distinct states found (2,501,326 ds/min), 872,393 states left on queue.
+Progress(33) at 2026-08-22 16:15:49: 49,549,224 states generated (12,919,041 s/min), 9,356,542 distinct states found (2,393,020 ds/min), 1,068,029 states left on queue.
+Progress(35) at 2026-08-22 16:16:49: 62,095,182 states generated (12,545,958 s/min), 11,614,728 distinct states found (2,258,186 ds/min), 1,162,584 states left on queue.
+Progress(36) at 2026-08-22 16:17:49: 72,397,051 states generated (10,301,869 s/min), 13,366,670 distinct states found (1,751,942 ds/min), 1,044,361 states left on queue.
+Progress(38) at 2026-08-22 16:18:49: 83,972,230 states generated (11,575,179 s/min), 15,417,730 distinct states found (2,051,060 ds/min), 1,053,085 states left on queue.
+Progress(41) at 2026-08-22 16:19:49: 97,018,192 states generated (13,045,962 s/min), 17,698,576 distinct states found (2,280,846 ds/min), 1,030,736 states left on queue.
+Progress(43) at 2026-08-22 16:20:49: 109,960,519 states generated (12,942,327 s/min), 19,898,107 distinct states found (2,199,531 ds/min), 860,561 states left on queue.
+Progress(46) at 2026-08-22 16:21:49: 122,207,340 states generated (12,246,821 s/min), 22,008,818 distinct states found (2,110,711 ds/min), 777,707 states left on queue.
+Progress(49) at 2026-08-22 16:22:49: 134,377,890 states generated (12,170,550 s/min), 24,028,366 distinct states found (2,019,548 ds/min), 539,943 states left on queue.
+Progress(56) at 2026-08-22 16:23:49: 147,387,755 states generated (13,009,865 s/min), 26,085,132 distinct states found (2,056,766 ds/min), 111,159 states left on queue.
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 1.7E-4
+  based on the actual fingerprints:  val = 3.0E-5
+148111792 states generated, 26153860 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 59.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 9 and the 95th percentile is 3).
+Finished in 12min 08s at (2026-08-22 16:23:54)
+================================================================================

@@ -13,7 +13,7 @@ Service mỏng làm cầu nối giữa **CLARA careguard / PHR bridge** và **Ro
 ```bash
 # Gateway Router configuration
 ROUTER_BASE_URL=https://router.theclaracare.com/v1
-ROUTER_API_KEY=<your-router-api-key>
+ROUTER_API_KEY=[REDACTED]
 OCR_MODEL=gemini-3.7-flash-tiered
 OCR_FALLBACK_MODEL=gemini-3.6-flash-high
 ```

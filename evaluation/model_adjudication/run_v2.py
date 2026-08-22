@@ -254,7 +254,12 @@ def _call(
     retries: int = RETRY_COUNT,
     urlopen: UrlOpen | None = None,
 ) -> dict[str, Any]:
-    key = os.environ.get("CLARA_ROUTER_API_KEY", "").strip()
+    key = (
+        os.environ.get("ROUTER_API_KEY", "")
+        or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY", "")
+        or os.environ.get("DEEPSEEK_API_KEY", "")
+        or os.environ.get("CLARA_ROUTER_API_KEY", "")
+    ).strip()
     if not key:
         raise RuntimeError("model_review_router_key_missing")
     opener = urlopen or urllib.request.urlopen

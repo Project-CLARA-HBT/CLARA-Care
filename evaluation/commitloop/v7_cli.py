@@ -47,7 +47,12 @@ def main() -> int:
         retry_backoff_seconds=1.5,
     )
     base_url = os.environ.get("ROUTER_BASE_URL", "")
-    api_key = os.environ.get("CLARA_ROUTER_API_KEY", "")
+    api_key = (
+        os.environ.get("ROUTER_API_KEY", "")
+        or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY", "")
+        or os.environ.get("DEEPSEEK_API_KEY", "")
+        or os.environ.get("CLARA_ROUTER_API_KEY", "")
+    )
     if not base_url or not api_key:
         raise ValueError("v7_cli_router_configuration_missing")
     clients = {

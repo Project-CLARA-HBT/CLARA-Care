@@ -43,13 +43,27 @@ TransitiveClosure(R) ==
     IN IF nextR = R THEN R ELSE TransitiveClosure(nextR)
 
 PolicyLockHolder(d) ==
-    {a \in Agents : leases[a].domain = d /\ txn_state[a] \in {"locking_consent", "locking_entity", "committing"}}
+    {a \in Agents : leases[a].active /\ leases[a].domain = d /\ txn_state[a] \in {"locking_consent", "locking_entity", "committing"}}
 
 ConsentLockHolder(d) ==
-    {a \in Agents : leases[a].domain = d /\ txn_state[a] \in {"locking_entity", "committing"}}
+    {a \in Agents : leases[a].active /\ leases[a].domain = d /\ txn_state[a] \in {"locking_entity", "committing"}}
 
 EntityLockHolder(e) ==
-    {a \in Agents : leases[a].entity = e /\ txn_state[a] \in {"committing"}}
+    {a \in Agents : leases[a].active /\ leases[a].entity = e /\ txn_state[a] \in {"committing"}}
+
+DefaultDomain == CHOOSE d \in Domains : TRUE
+DefaultEntity == CHOOSE e \in Entities : TRUE
+
+DefaultLease == [
+    domain |-> DefaultDomain,
+    entity |-> DefaultEntity,
+    v_s    |-> 0,
+    c_s    |-> 0,
+    p_s    |-> 0,
+    active |-> FALSE
+]
+
+Symmetry == Permutations(Agents) \cup Permutations(Entities) \cup Permutations(Domains)
 
 (***************************************************************************)
 (* Initial State Predicate (Init)                                          *)
@@ -59,14 +73,7 @@ Init ==
     /\ entity_versions = [e \in Entities |-> 0]
     /\ consent_epochs = [d \in Domains |-> 0]
     /\ policy_epochs = [d \in Domains |-> 0]
-    /\ leases = [a \in Agents |-> [
-           domain |-> CHOOSE d \in Domains : TRUE,
-           entity |-> CHOOSE e \in Entities : TRUE,
-           v_s    |-> 0,
-           c_s    |-> 0,
-           p_s    |-> 0,
-           active |-> FALSE
-       ]]
+    /\ leases = [a \in Agents |-> DefaultLease]
     /\ lock_state = [e \in Entities |-> "free"]
     /\ policy_lock = [d \in Domains |-> "free"]
     /\ consent_lock = [d \in Domains |-> "free"]
@@ -93,34 +100,33 @@ IssueLease(a, d, e) ==
                   lock_state, policy_lock, consent_lock, wait_for>>
 
 \* 2. Formulate State Transition Proposal during Autonomous Inference Window
-ProposeWrite(a, e) ==
+ProposeWrite(a) ==
     /\ txn_state[a] = "reading"
     /\ leases[a].active = TRUE
-    /\ leases[a].entity = e
     /\ txn_state' = [txn_state EXCEPT ![a] = "proposing"]
     /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs, leases,
                   lock_state, policy_lock, consent_lock, wait_for>>
 
 \* 3. Canonical Lock Hierarchy Level 1: Acquire Policy Lock Anchor
-LockPolicy(a, d) ==
-    /\ leases[a].domain = d
+AcquirePolicy(a) ==
+    LET d == leases[a].domain IN
     /\ txn_state[a] \in {"proposing", "locking_policy"}
     /\ IF policy_lock[d] = "free"
        THEN /\ policy_lock' = [policy_lock EXCEPT ![d] = "held"]
             /\ txn_state' = [txn_state EXCEPT ![a] = "locking_consent"]
             /\ wait_for' = {edge \in wait_for : edge[1] /= a}
+            /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs, leases,
+                          lock_state, consent_lock>>
        ELSE /\ txn_state[a] = "proposing"
             /\ policy_lock' = policy_lock
             /\ txn_state' = [txn_state EXCEPT ![a] = "locking_policy"]
             /\ wait_for' = wait_for \cup {<<a, h>> : h \in PolicyLockHolder(d)}
-    /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs, leases,
-                  lock_state, consent_lock>>
-
-AcquirePolicy(a) == LockPolicy(a, leases[a].domain)
+            /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs, leases,
+                          lock_state, consent_lock>>
 
 \* 4. Canonical Lock Hierarchy Level 2: Acquire Consent Lock Anchor
-LockConsent(a, d) ==
-    /\ leases[a].domain = d
+AcquireConsent(a) ==
+    LET d == leases[a].domain IN
     /\ txn_state[a] = "locking_consent"
     /\ IF consent_lock[d] = "free"
        THEN /\ consent_lock' = [consent_lock EXCEPT ![d] = "held"]
@@ -135,16 +141,16 @@ LockConsent(a, d) ==
             /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs, leases,
                           lock_state, policy_lock>>
 
-AcquireConsent(a) == LockConsent(a, leases[a].domain)
-
 \* 5. Canonical Lock Hierarchy Level 3: Acquire Entity Lock & Validate Invariants
-LockEntity(a, e) ==
-    /\ leases[a].entity = e
+AcquireEntity(a) ==
+    LET d == leases[a].domain
+        e == leases[a].entity
+    IN
     /\ txn_state[a] = "locking_entity"
     /\ IF lock_state[e] = "free"
        THEN IF /\ leases[a].v_s = entity_versions[e]
-               /\ leases[a].c_s = consent_epochs[leases[a].domain]
-               /\ leases[a].p_s = policy_epochs[leases[a].domain]
+               /\ leases[a].c_s = consent_epochs[d]
+               /\ leases[a].p_s = policy_epochs[d]
             THEN /\ lock_state' = [lock_state EXCEPT ![e] = "held"]
                  /\ txn_state' = [txn_state EXCEPT ![a] = "committing"]
                  /\ wait_for' = {edge \in wait_for : edge[1] /= a}
@@ -152,10 +158,10 @@ LockEntity(a, e) ==
                                leases, policy_lock, consent_lock>>
             ELSE \* Validation failed: stale snapshot, consent revoked, or policy updated. Abort immediately.
                  /\ lock_state' = lock_state
-                 /\ policy_lock' = [policy_lock EXCEPT ![leases[a].domain] = "free"]
-                 /\ consent_lock' = [consent_lock EXCEPT ![leases[a].domain] = "free"]
+                 /\ policy_lock' = [policy_lock EXCEPT ![d] = "free"]
+                 /\ consent_lock' = [consent_lock EXCEPT ![d] = "free"]
                  /\ txn_state' = [txn_state EXCEPT ![a] = "aborted"]
-                 /\ leases' = [leases EXCEPT ![a].active = FALSE]
+                 /\ leases' = [leases EXCEPT ![a] = DefaultLease]
                  /\ wait_for' = {edge \in wait_for : edge[1] /= a /\ edge[2] /= a}
                  /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs>>
        ELSE /\ ~(\E h \in EntityLockHolder(e) : <<a, h>> \in wait_for)
@@ -164,8 +170,6 @@ LockEntity(a, e) ==
             /\ wait_for' = wait_for \cup {<<a, h>> : h \in EntityLockHolder(e)}
             /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs, leases,
                           policy_lock, consent_lock>>
-
-AcquireEntity(a) == LockEntity(a, leases[a].entity)
 
 \* 6. Commit Governed State Transition (GST_Commit)
 CommitGST(a) ==
@@ -178,7 +182,7 @@ CommitGST(a) ==
         /\ lock_state' = [lock_state EXCEPT ![e] = "free"]
         /\ consent_lock' = [consent_lock EXCEPT ![d] = "free"]
         /\ policy_lock' = [policy_lock EXCEPT ![d] = "free"]
-        /\ leases' = [leases EXCEPT ![a].active = FALSE]
+        /\ leases' = [leases EXCEPT ![a] = DefaultLease]
         /\ txn_state' = [txn_state EXCEPT ![a] = "idle"]
         /\ wait_for' = {edge \in wait_for : edge[1] /= a /\ edge[2] /= a}
         /\ UNCHANGED <<consent_epochs, policy_epochs>>
@@ -208,20 +212,20 @@ Abort(a) ==
                              "locking_consent", "locking_entity", "committing", "aborted"}
         /\ IF txn_state[a] = "aborted"
            THEN /\ txn_state' = [txn_state EXCEPT ![a] = "idle"]
-                /\ leases' = [leases EXCEPT ![a].active = FALSE]
+                /\ leases' = [leases EXCEPT ![a] = DefaultLease]
                 /\ wait_for' = {edge \in wait_for : edge[1] /= a /\ edge[2] /= a}
                 /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs,
                               lock_state, policy_lock, consent_lock>>
            ELSE IF txn_state[a] \in {"reading", "proposing", "locking_policy"}
            THEN /\ txn_state' = [txn_state EXCEPT ![a] = "aborted"]
-                /\ leases' = [leases EXCEPT ![a].active = FALSE]
+                /\ leases' = [leases EXCEPT ![a] = DefaultLease]
                 /\ wait_for' = {edge \in wait_for : edge[1] /= a /\ edge[2] /= a}
                 /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs,
                               lock_state, policy_lock, consent_lock>>
            ELSE IF txn_state[a] = "locking_consent"
            THEN /\ policy_lock' = [policy_lock EXCEPT ![d] = "free"]
                 /\ txn_state' = [txn_state EXCEPT ![a] = "aborted"]
-                /\ leases' = [leases EXCEPT ![a].active = FALSE]
+                /\ leases' = [leases EXCEPT ![a] = DefaultLease]
                 /\ wait_for' = {edge \in wait_for : edge[1] /= a /\ edge[2] /= a}
                 /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs,
                               lock_state, consent_lock>>
@@ -229,7 +233,7 @@ Abort(a) ==
            THEN /\ policy_lock' = [policy_lock EXCEPT ![d] = "free"]
                 /\ consent_lock' = [consent_lock EXCEPT ![d] = "free"]
                 /\ txn_state' = [txn_state EXCEPT ![a] = "aborted"]
-                /\ leases' = [leases EXCEPT ![a].active = FALSE]
+                /\ leases' = [leases EXCEPT ![a] = DefaultLease]
                 /\ wait_for' = {edge \in wait_for : edge[1] /= a /\ edge[2] /= a}
                 /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs,
                               lock_state>>
@@ -238,7 +242,7 @@ Abort(a) ==
                 /\ consent_lock' = [consent_lock EXCEPT ![d] = "free"]
                 /\ lock_state' = [lock_state EXCEPT ![e] = "free"]
                 /\ txn_state' = [txn_state EXCEPT ![a] = "aborted"]
-                /\ leases' = [leases EXCEPT ![a].active = FALSE]
+                /\ leases' = [leases EXCEPT ![a] = DefaultLease]
                 /\ wait_for' = {edge \in wait_for : edge[1] /= a /\ edge[2] /= a}
                 /\ UNCHANGED <<entity_versions, consent_epochs, policy_epochs>>
 
@@ -248,7 +252,7 @@ Abort(a) ==
 
 Next ==
     \/ \E a \in Agents, d \in Domains, e \in Entities: IssueLease(a, d, e)
-    \/ \E a \in Agents, e \in Entities: ProposeWrite(a, e)
+    \/ \E a \in Agents: ProposeWrite(a)
     \/ \E a \in Agents: AcquirePolicy(a)
     \/ \E a \in Agents: AcquireConsent(a)
     \/ \E a \in Agents: AcquireEntity(a)

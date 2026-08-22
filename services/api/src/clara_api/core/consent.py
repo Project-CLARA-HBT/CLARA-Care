@@ -56,6 +56,7 @@ def required_medical_disclaimer_version() -> str:
 
 
 def ensure_medical_disclaimer_consent(db: Session, *, user_id: int) -> UserConsent:
+    acquire_consent_lock_anchor(db, user_id=user_id)
     required_version = required_medical_disclaimer_version()
     latest = get_latest_user_consent(
         db,

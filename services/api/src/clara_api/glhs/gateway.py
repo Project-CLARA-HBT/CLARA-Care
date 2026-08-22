@@ -1489,12 +1489,17 @@ def apply_transition(
     # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
     #
     # Step 1: Policy Lock Anchor
-    from clara_api.glhs.lock_hierarchy import acquire_policy_lock_anchor
+    from clara_api.glhs.lock_hierarchy import (
+        acquire_policy_lock_anchor,
+        acquire_profile_and_consent_anchor,
+    )
 
     acquire_policy_lock_anchor(db)
 
-    # Step 2: Profile & Consent Lock Anchor (_lock_profile_state)
-    base_version = _lock_profile_state(db, profile_id=scope.profile.id)
+    # Step 2: Profile & Consent Lock Anchor
+    base_version, owner_user_id = acquire_profile_and_consent_anchor(
+        db, profile_id=scope.profile.id
+    )
     # A concurrent request may have committed this idempotency key while this
     # transaction waited for the profile row lock. Re-read under the serialized
     # boundary so an exact retry returns the winner and a changed retry fails
@@ -1512,7 +1517,7 @@ def apply_transition(
     # Step 3: Re-read & verify active UserConsent and GovernancePolicyEpoch under active locks
     current_policy_version = _effective_policy_version(db, for_update=True)
     current_consent_version = _governed_consent_version(
-        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose, for_update=True
+        db, owner_user_id=owner_user_id, purpose=scope.purpose, for_update=True
     )
     # Step 4: Entity partitions in lexicographical canonical order
     locked_partitions = lock_entity_partitions(

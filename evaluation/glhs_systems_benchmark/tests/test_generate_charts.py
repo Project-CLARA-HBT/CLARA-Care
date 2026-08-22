@@ -13,6 +13,7 @@ from evaluation.glhs_systems_benchmark.generate_charts import (
     generate_risk_coverage_pareto_chart,
     generate_throughput_scaling_chart,
     generate_tost_forest_plot,
+    load_benchmark_data,
 )
 
 
@@ -21,52 +22,75 @@ def test_fallback_dataset_generation() -> None:
     assert "concurrency_stress" in data
     assert len(data["concurrency_stress"]["results"]) == 128
     assert "deadlock_analysis" in data
+    assert "tost_study" in data
+    assert "risk_coverage" in data
+
+
+def test_load_benchmark_data() -> None:
+    data = load_benchmark_data()
+    assert "concurrency_stress" in data
+    assert "deadlock_analysis" in data
+    assert "tost_study" in data
+    assert data["tost_study"]["n"] == 384
 
 
 def test_generate_all_charts_to_tmp_dir(tmp_path: Path) -> None:
     ret = generate_all_charts(output_dir=tmp_path)
     assert ret == 0
 
-    expected_files = [
+    expected_svg_files = [
         "throughput_scaling.svg",
-        "throughput_scaling.pdf",
         "latency_distribution.svg",
-        "latency_distribution.pdf",
         "deadlock_wfg_analysis.svg",
-        "deadlock_wfg_analysis.pdf",
         "tost_equivalence_forest_plot.svg",
-        "tost_equivalence_forest_plot.pdf",
         "risk_coverage_pareto.svg",
-        "risk_coverage_pareto.pdf",
     ]
 
-    for fname in expected_files:
+    for fname in expected_svg_files:
         fpath = tmp_path / fname
         assert fpath.is_file(), f"Expected file {fname} not found"
         assert fpath.stat().st_size > 0, f"File {fname} is empty"
 
-        # Validate SVG XML structure
-        if fname.endswith(".svg"):
-            tree = ET.parse(fpath)
-            root = tree.getroot()
-            assert root.tag.endswith("svg")
-            assert len(list(root.iter())) >= 10
+        # Validate clean standalone XML SVG structure
+        tree = ET.parse(fpath)
+        root = tree.getroot()
+        assert root.tag.endswith("svg"), f"Root element for {fname} is not svg: {root.tag}"
+        assert len(list(root.iter())) >= 10, f"SVG {fname} has insufficient XML elements"
+
+    # Verify no fake PDF shells are emitted
+    for f in tmp_path.iterdir():
+        assert f.suffix == ".svg", f"Unexpected non-SVG file emitted: {f.name}"
 
 
 def test_individual_chart_generators(tmp_path: Path) -> None:
     data = generate_fallback_dataset()
 
-    svg_tps, pdf_tps = generate_throughput_scaling_chart(data, tmp_path)
-    assert svg_tps.is_file() and pdf_tps.is_file()
+    svg_tps = generate_throughput_scaling_chart(data, tmp_path / "custom_tps.svg")
+    assert svg_tps.is_file()
+    assert svg_tps.stat().st_size > 0
+    tree = ET.parse(svg_tps)
+    assert tree.getroot().tag.endswith("svg")
 
-    svg_lat, pdf_lat = generate_latency_distribution_chart(data, tmp_path)
-    assert svg_lat.is_file() and pdf_lat.is_file()
+    svg_lat = generate_latency_distribution_chart(data, tmp_path / "custom_lat.svg")
+    assert svg_lat.is_file()
+    assert svg_lat.stat().st_size > 0
+    tree = ET.parse(svg_lat)
+    assert tree.getroot().tag.endswith("svg")
 
-    svg_dead, pdf_dead = generate_deadlock_wfg_chart(data, tmp_path)
-    assert svg_dead.is_file() and pdf_dead.is_file()
+    svg_dead = generate_deadlock_wfg_chart(data, tmp_path / "custom_dead.svg")
+    assert svg_dead.is_file()
+    assert svg_dead.stat().st_size > 0
+    tree = ET.parse(svg_dead)
+    assert tree.getroot().tag.endswith("svg")
 
-    svg_tost, pdf_tost = generate_tost_forest_plot(tmp_path)
-    assert svg_tost.is_file() and pdf_tost.is_file()
+    svg_tost = generate_tost_forest_plot(data, tmp_path / "custom_tost.svg")
+    assert svg_tost.is_file()
+    assert svg_tost.stat().st_size > 0
+    tree = ET.parse(svg_tost)
+    assert tree.getroot().tag.endswith("svg")
 
-    svg_pareto, pdf_pareto = generate_risk_coverage_pareto_chart(tmp_path)
-    assert svg_pareto.is_file() and pdf_pareto.is_file()
+    svg_pareto = generate_risk_coverage_pareto_chart(data, tmp_path / "custom_pareto.svg")
+    assert svg_pareto.is_file()
+    assert svg_pareto.stat().st_size > 0
+    tree = ET.parse(svg_pareto)
+    assert tree.getroot().tag.endswith("svg")

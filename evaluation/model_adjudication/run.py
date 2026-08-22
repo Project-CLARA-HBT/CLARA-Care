@@ -87,7 +87,12 @@ def _parse_review(content: str) -> dict[str, Any]:
 
 
 def _call(*, model: str, prompt: str, retries: int = 2) -> dict[str, Any]:
-    key = os.environ.get("CLARA_ROUTER_API_KEY", "").strip()
+    key = (
+        os.environ.get("ROUTER_API_KEY", "")
+        or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY", "")
+        or os.environ.get("DEEPSEEK_API_KEY", "")
+        or os.environ.get("CLARA_ROUTER_API_KEY", "")
+    ).strip()
     if not key:
         raise RuntimeError("model_review_router_key_missing")
     # The configured router streams when response_format is supplied, despite an

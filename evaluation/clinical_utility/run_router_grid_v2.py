@@ -133,9 +133,14 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=0, help="0 = all tasks")
     args = parser.parse_args()
 
-    key = os.environ.get("CLARA_ROUTER_API_KEY", "").strip()
+    key = (
+        os.environ.get("ROUTER_API_KEY", "")
+        or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY", "")
+        or os.environ.get("DEEPSEEK_API_KEY", "")
+        or os.environ.get("CLARA_ROUTER_API_KEY", "")
+    ).strip()
     if not key:
-        parser.error("CLARA_ROUTER_API_KEY is required")
+        parser.error("ROUTER_API_KEY (or CLARA_UNOFFICIAL_GEMINI_API_KEY / DEEPSEEK_API_KEY) is required")
 
     loaded = json.loads(args.tasks.read_text(encoding="utf-8"))
     if isinstance(loaded, dict):

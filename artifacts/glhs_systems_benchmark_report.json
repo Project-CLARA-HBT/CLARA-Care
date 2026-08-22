@@ -1,32 +1,32 @@
 {
-  "timestamp_utc": "2026-08-22T04:22:31.575376+00:00",
+  "timestamp_utc": "2026-08-22T08:27:04.005788+00:00",
   "backend_mode": "In-Memory SQLite / Simulated Coordinator",
   "database_url_configured": false,
-  "num_txns": 1000,
-  "concurrency_workers": 32,
+  "num_txns": 50,
+  "concurrency_workers": 16,
   "baseline_metrics": {
     "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)": {
       "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-      "total_tx": 1000,
-      "valid_commits": 586,
-      "safe_aborts": 414,
+      "total_tx": 50,
+      "valid_commits": 33,
+      "safe_aborts": 17,
       "unsafe_commits": 0,
       "errors": 0,
       "true_stale_aborts": 0,
       "false_stale_aborts": 0,
-      "safe_governance_aborts": 206,
-      "safe_ddi_aborts": 208,
+      "safe_governance_aborts": 7,
+      "safe_ddi_aborts": 10,
       "toctou_violations": 0,
       "ddi_leaks": 0,
       "deadlocks": 0,
-      "throughput_tps": 10177.12,
+      "throughput_tps": 4183.92,
       "latencies_ms": {
-        "mean": 1.13,
-        "p50": 0.039,
-        "p95": 4.876,
-        "p99": 5.358,
-        "min": 0.002,
-        "max": 6.871
+        "mean": 0.031,
+        "p50": 0.033,
+        "p95": 0.065,
+        "p99": 0.091,
+        "min": 0.005,
+        "max": 0.1
       },
       "unsafe_commit_rate": 0.0,
       "false_stale_rate": 0.0,
@@ -34,136 +34,136 @@
     },
     "PostgreSQL SSI (Serializable Snapshot Isolation)": {
       "paradigm": "PostgreSQL SSI (Serializable Snapshot Isolation)",
-      "total_tx": 1000,
-      "valid_commits": 555,
-      "safe_aborts": 31,
-      "unsafe_commits": 414,
-      "errors": 0,
-      "true_stale_aborts": 0,
-      "false_stale_aborts": 31,
-      "safe_governance_aborts": 0,
-      "safe_ddi_aborts": 0,
-      "toctou_violations": 206,
-      "ddi_leaks": 208,
-      "deadlocks": 0,
-      "throughput_tps": 21313.53,
-      "latencies_ms": {
-        "mean": 0.007,
-        "p50": 0.005,
-        "p95": 0.014,
-        "p99": 0.034,
-        "min": 0.002,
-        "max": 0.119
-      },
-      "unsafe_commit_rate": 0.414,
-      "false_stale_rate": 0.031,
-      "true_stale_rate": 0.0
-    },
-    "Standard 2PL (Entity Partition Locking without Governance Anchors)": {
-      "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-      "total_tx": 1000,
-      "valid_commits": 586,
+      "total_tx": 50,
+      "valid_commits": 33,
       "safe_aborts": 0,
-      "unsafe_commits": 414,
+      "unsafe_commits": 17,
       "errors": 0,
       "true_stale_aborts": 0,
       "false_stale_aborts": 0,
       "safe_governance_aborts": 0,
       "safe_ddi_aborts": 0,
-      "toctou_violations": 206,
-      "ddi_leaks": 208,
+      "toctou_violations": 7,
+      "ddi_leaks": 10,
       "deadlocks": 0,
-      "throughput_tps": 16324.03,
+      "throughput_tps": 5700.08,
+      "latencies_ms": {
+        "mean": 0.01,
+        "p50": 0.009,
+        "p95": 0.022,
+        "p99": 0.03,
+        "min": 0.004,
+        "max": 0.044
+      },
+      "unsafe_commit_rate": 0.34,
+      "false_stale_rate": 0.0,
+      "true_stale_rate": 0.0
+    },
+    "Standard 2PL (Entity Partition Locking without Governance Anchors)": {
+      "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+      "total_tx": 50,
+      "valid_commits": 33,
+      "safe_aborts": 0,
+      "unsafe_commits": 17,
+      "errors": 0,
+      "true_stale_aborts": 0,
+      "false_stale_aborts": 0,
+      "safe_governance_aborts": 0,
+      "safe_ddi_aborts": 0,
+      "toctou_violations": 7,
+      "ddi_leaks": 10,
+      "deadlocks": 0,
+      "throughput_tps": 13228.14,
       "latencies_ms": {
         "mean": 0.005,
         "p50": 0.004,
-        "p95": 0.012,
-        "p99": 0.022,
-        "min": 0.001,
-        "max": 0.048
+        "p95": 0.009,
+        "p99": 0.014,
+        "min": 0.002,
+        "max": 0.015
       },
-      "unsafe_commit_rate": 0.414,
+      "unsafe_commit_rate": 0.34,
       "false_stale_rate": 0.0,
       "true_stale_rate": 0.0
     },
     "Standard OCC (Naive Optimistic Concurrency with Retries)": {
       "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-      "total_tx": 1000,
-      "valid_commits": 586,
+      "total_tx": 50,
+      "valid_commits": 33,
       "safe_aborts": 0,
-      "unsafe_commits": 414,
+      "unsafe_commits": 17,
       "errors": 0,
       "true_stale_aborts": 0,
       "false_stale_aborts": 0,
       "safe_governance_aborts": 0,
       "safe_ddi_aborts": 0,
-      "toctou_violations": 206,
-      "ddi_leaks": 208,
+      "toctou_violations": 7,
+      "ddi_leaks": 10,
       "deadlocks": 0,
-      "throughput_tps": 16119.91,
+      "throughput_tps": 9094.36,
       "latencies_ms": {
-        "mean": 0.812,
-        "p50": 0.584,
-        "p95": 2.665,
-        "p99": 6.283,
-        "min": 0.113,
-        "max": 12.452
+        "mean": 0.344,
+        "p50": 0.273,
+        "p95": 0.796,
+        "p99": 0.941,
+        "min": 0.142,
+        "max": 1.09
       },
-      "unsafe_commit_rate": 0.414,
+      "unsafe_commit_rate": 0.34,
       "false_stale_rate": 0.0,
       "true_stale_rate": 0.0
     },
     "FHIR R4 Bundle (ETag / If-Match Preconditions)": {
       "paradigm": "FHIR R4 Bundle (ETag / If-Match Preconditions)",
-      "total_tx": 1000,
-      "valid_commits": 536,
-      "safe_aborts": 50,
-      "unsafe_commits": 414,
-      "errors": 0,
-      "true_stale_aborts": 0,
-      "false_stale_aborts": 50,
-      "safe_governance_aborts": 0,
-      "safe_ddi_aborts": 0,
-      "toctou_violations": 206,
-      "ddi_leaks": 208,
-      "deadlocks": 0,
-      "throughput_tps": 22297.64,
-      "latencies_ms": {
-        "mean": 0.005,
-        "p50": 0.004,
-        "p95": 0.011,
-        "p99": 0.021,
-        "min": 0.001,
-        "max": 0.063
-      },
-      "unsafe_commit_rate": 0.414,
-      "false_stale_rate": 0.05,
-      "true_stale_rate": 0.0
-    },
-    "Google Zanzibar (Snapshot ACL Check + Decoupled Write)": {
-      "paradigm": "Google Zanzibar (Snapshot ACL Check + Decoupled Write)",
-      "total_tx": 1000,
-      "valid_commits": 586,
+      "total_tx": 50,
+      "valid_commits": 33,
       "safe_aborts": 0,
-      "unsafe_commits": 414,
+      "unsafe_commits": 17,
       "errors": 0,
       "true_stale_aborts": 0,
       "false_stale_aborts": 0,
       "safe_governance_aborts": 0,
       "safe_ddi_aborts": 0,
-      "toctou_violations": 206,
-      "ddi_leaks": 208,
+      "toctou_violations": 7,
+      "ddi_leaks": 10,
       "deadlocks": 0,
-      "throughput_tps": 20283.51,
+      "throughput_tps": 3600.38,
       "latencies_ms": {
-        "mean": 0.704,
-        "p50": 0.613,
-        "p95": 2.242,
-        "p99": 3.573,
-        "min": 0.115,
-        "max": 8.175
+        "mean": 0.01,
+        "p50": 0.007,
+        "p95": 0.023,
+        "p99": 0.038,
+        "min": 0.003,
+        "max": 0.073
       },
-      "unsafe_commit_rate": 0.414,
+      "unsafe_commit_rate": 0.34,
+      "false_stale_rate": 0.0,
+      "true_stale_rate": 0.0
+    },
+    "Google Zanzibar (Snapshot ACL Check + Decoupled Write)": {
+      "paradigm": "Google Zanzibar (Snapshot ACL Check + Decoupled Write)",
+      "total_tx": 50,
+      "valid_commits": 33,
+      "safe_aborts": 0,
+      "unsafe_commits": 17,
+      "errors": 0,
+      "true_stale_aborts": 0,
+      "false_stale_aborts": 0,
+      "safe_governance_aborts": 0,
+      "safe_ddi_aborts": 0,
+      "toctou_violations": 7,
+      "ddi_leaks": 10,
+      "deadlocks": 0,
+      "throughput_tps": 7497.22,
+      "latencies_ms": {
+        "mean": 0.335,
+        "p50": 0.255,
+        "p95": 0.663,
+        "p99": 0.839,
+        "min": 0.127,
+        "max": 0.851
+      },
+      "unsafe_commit_rate": 0.34,
       "false_stale_rate": 0.0,
       "true_stale_rate": 0.0
     }
@@ -198,11 +198,11 @@
         "workers": 1,
         "alpha": 0.0,
         "total_tx": 30,
-        "throughput_tps": 14012.202780928234,
-        "p50_latency_ms": 0.026670000806916505,
-        "p95_latency_ms": 0.0352040005964227,
-        "p99_latency_ms": 0.036938996345270425,
-        "mean_latency_ms": 0.027926966625576217,
+        "throughput_tps": 16836.358436011422,
+        "p50_latency_ms": 0.023690001398790628,
+        "p95_latency_ms": 0.026722002075985074,
+        "p99_latency_ms": 0.030438000976573676,
+        "mean_latency_ms": 0.023850166083623964,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -216,11 +216,11 @@
         "workers": 2,
         "alpha": 0.0,
         "total_tx": 60,
-        "throughput_tps": 8998.018186592752,
-        "p50_latency_ms": 0.0251320016104728,
-        "p95_latency_ms": 0.03617999755078927,
-        "p99_latency_ms": 0.06470399966929108,
-        "mean_latency_ms": 0.0263976828136947,
+        "throughput_tps": 16687.544620701996,
+        "p50_latency_ms": 0.01738500577630475,
+        "p95_latency_ms": 0.03483299951767549,
+        "p99_latency_ms": 0.05552500078920275,
+        "mean_latency_ms": 0.019432016658053424,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -234,11 +234,11 @@
         "workers": 4,
         "alpha": 0.0,
         "total_tx": 120,
-        "throughput_tps": 11756.150407945617,
-        "p50_latency_ms": 0.015190998965408653,
-        "p95_latency_ms": 0.05074899672763422,
-        "p99_latency_ms": 0.05750200216425583,
-        "mean_latency_ms": 0.019914041937833343,
+        "throughput_tps": 10832.743704625043,
+        "p50_latency_ms": 0.022154999896883965,
+        "p95_latency_ms": 0.037878999137319624,
+        "p99_latency_ms": 0.05144500028109178,
+        "mean_latency_ms": 0.022121841720945667,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -252,11 +252,11 @@
         "workers": 8,
         "alpha": 0.0,
         "total_tx": 240,
-        "throughput_tps": 9668.03551039363,
-        "p50_latency_ms": 0.026448004064150155,
-        "p95_latency_ms": 0.0760650000302121,
-        "p99_latency_ms": 4.037644997879397,
-        "mean_latency_ms": 0.14655452514489298,
+        "throughput_tps": 6834.4250327887885,
+        "p50_latency_ms": 0.04311300290282816,
+        "p95_latency_ms": 0.08476400398649275,
+        "p99_latency_ms": 6.232440995518118,
+        "mean_latency_ms": 0.2341296832431302,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -270,11 +270,11 @@
         "workers": 16,
         "alpha": 0.0,
         "total_tx": 480,
-        "throughput_tps": 16384.059277558215,
-        "p50_latency_ms": 0.02276499435538426,
-        "p95_latency_ms": 0.047142995754256845,
-        "p99_latency_ms": 0.06112499977461994,
-        "mean_latency_ms": 0.023847239405464887,
+        "throughput_tps": 4812.323735457185,
+        "p50_latency_ms": 0.10772399400593713,
+        "p95_latency_ms": 7.418492998112924,
+        "p99_latency_ms": 8.5401370015461,
+        "mean_latency_ms": 1.7368239457937307,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -288,11 +288,11 @@
         "workers": 32,
         "alpha": 0.0,
         "total_tx": 960,
-        "throughput_tps": 11881.973681596397,
-        "p50_latency_ms": 0.02461800613673404,
-        "p95_latency_ms": 0.058830999478232116,
-        "p99_latency_ms": 10.88775300013367,
-        "mean_latency_ms": 0.2506855197528542,
+        "throughput_tps": 5359.2013947367395,
+        "p50_latency_ms": 0.07414999708998948,
+        "p95_latency_ms": 10.717269004089758,
+        "p99_latency_ms": 17.817330997786485,
+        "mean_latency_ms": 2.3597478249030246,
         "valid_commits": 864,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -306,11 +306,11 @@
         "workers": 64,
         "alpha": 0.0,
         "total_tx": 1920,
-        "throughput_tps": 8989.714656757753,
-        "p50_latency_ms": 0.03283799742348492,
-        "p95_latency_ms": 0.056146003771573305,
-        "p99_latency_ms": 0.10402000043541193,
-        "mean_latency_ms": 0.03421422303896785,
+        "throughput_tps": 5726.054494442289,
+        "p50_latency_ms": 0.04141299723414704,
+        "p95_latency_ms": 0.0797789980424568,
+        "p99_latency_ms": 0.10989399743266404,
+        "mean_latency_ms": 0.04218896615005482,
         "valid_commits": 1728,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -324,11 +324,11 @@
         "workers": 128,
         "alpha": 0.0,
         "total_tx": 3840,
-        "throughput_tps": 7745.389677884649,
-        "p50_latency_ms": 0.03522799670463428,
-        "p95_latency_ms": 0.0752909982111305,
-        "p99_latency_ms": 0.12181999773019925,
-        "mean_latency_ms": 0.0382465645695144,
+        "throughput_tps": 6680.592558964208,
+        "p50_latency_ms": 0.03061800089199096,
+        "p95_latency_ms": 0.07185200229287148,
+        "p99_latency_ms": 0.09487399802310392,
+        "mean_latency_ms": 0.036543843549452504,
         "valid_commits": 3456,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -342,11 +342,11 @@
         "workers": 1,
         "alpha": 0.5,
         "total_tx": 30,
-        "throughput_tps": 9752.003296406563,
-        "p50_latency_ms": 0.025845998607110232,
-        "p95_latency_ms": 0.030038005206733942,
-        "p99_latency_ms": 0.039910999475978315,
-        "mean_latency_ms": 0.024756599062432844,
+        "throughput_tps": 10244.75750920081,
+        "p50_latency_ms": 0.03263999678893015,
+        "p95_latency_ms": 0.05142699956195429,
+        "p99_latency_ms": 0.07626500155311078,
+        "mean_latency_ms": 0.03764396606129594,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -360,11 +360,11 @@
         "workers": 2,
         "alpha": 0.5,
         "total_tx": 60,
-        "throughput_tps": 20977.326673995543,
-        "p50_latency_ms": 0.01574600173626095,
-        "p95_latency_ms": 0.02838300133589655,
-        "p99_latency_ms": 0.05089199839858338,
-        "mean_latency_ms": 0.017388666674378328,
+        "throughput_tps": 5086.460502792196,
+        "p50_latency_ms": 0.04034500307170674,
+        "p95_latency_ms": 0.07556299533462152,
+        "p99_latency_ms": 0.11059599637519568,
+        "mean_latency_ms": 0.09274518367116495,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -378,317 +378,317 @@
         "workers": 4,
         "alpha": 0.5,
         "total_tx": 120,
-        "throughput_tps": 22085.451920164945,
-        "p50_latency_ms": 0.016060999769251794,
-        "p95_latency_ms": 0.04351000097813085,
-        "p99_latency_ms": 0.04930599970975891,
-        "mean_latency_ms": 0.018963550064654555,
-        "valid_commits": 108,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 8,
-        "alpha": 0.5,
-        "total_tx": 240,
-        "throughput_tps": 17385.62881638814,
-        "p50_latency_ms": 0.02581300213932991,
-        "p95_latency_ms": 0.04916599573334679,
-        "p99_latency_ms": 2.4340029995073564,
-        "mean_latency_ms": 0.10146381227968959,
-        "valid_commits": 216,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 16,
-        "alpha": 0.5,
-        "total_tx": 480,
-        "throughput_tps": 17243.85501828361,
-        "p50_latency_ms": 0.01563100522616878,
-        "p95_latency_ms": 0.05398099892772734,
-        "p99_latency_ms": 4.66967200190993,
-        "mean_latency_ms": 0.16926427944478442,
-        "valid_commits": 432,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 32,
-        "alpha": 0.5,
-        "total_tx": 960,
-        "throughput_tps": 9886.996063768318,
-        "p50_latency_ms": 0.02706900704652071,
-        "p95_latency_ms": 0.06777700036764145,
-        "p99_latency_ms": 10.987362002197187,
-        "mean_latency_ms": 0.27745488027145865,
-        "valid_commits": 864,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 64,
-        "alpha": 0.5,
-        "total_tx": 1920,
-        "throughput_tps": 7601.334729617464,
-        "p50_latency_ms": 0.03393600491108373,
-        "p95_latency_ms": 0.06174800364533439,
-        "p99_latency_ms": 0.1114309998229146,
-        "mean_latency_ms": 0.03702224017464081,
-        "valid_commits": 1728,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 128,
-        "alpha": 0.5,
-        "total_tx": 3840,
-        "throughput_tps": 7508.400139933007,
-        "p50_latency_ms": 0.034902004699688405,
-        "p95_latency_ms": 0.07015099981799722,
-        "p99_latency_ms": 0.11644500045804307,
-        "mean_latency_ms": 0.038191160714025806,
-        "valid_commits": 3456,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 1,
-        "alpha": 0.9,
-        "total_tx": 30,
-        "throughput_tps": 15932.31107397253,
-        "p50_latency_ms": 0.017910002497956157,
-        "p95_latency_ms": 0.031217998184729367,
-        "p99_latency_ms": 0.04347299545770511,
-        "mean_latency_ms": 0.020876100218932454,
-        "valid_commits": 27,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 2,
-        "alpha": 0.9,
-        "total_tx": 60,
-        "throughput_tps": 14417.905894805466,
-        "p50_latency_ms": 0.028313996153883636,
-        "p95_latency_ms": 0.04470200656214729,
-        "p99_latency_ms": 0.0757550005801022,
-        "mean_latency_ms": 0.02691516650277966,
-        "valid_commits": 54,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 4,
-        "alpha": 0.9,
-        "total_tx": 120,
-        "throughput_tps": 13310.762717942953,
-        "p50_latency_ms": 0.031702998967375606,
-        "p95_latency_ms": 0.051496004743967205,
-        "p99_latency_ms": 0.07143599941628054,
-        "mean_latency_ms": 0.03244044971021746,
-        "valid_commits": 108,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 8,
-        "alpha": 0.9,
-        "total_tx": 240,
-        "throughput_tps": 13026.20791184127,
-        "p50_latency_ms": 0.025576002371963114,
-        "p95_latency_ms": 0.049418995331507176,
-        "p99_latency_ms": 0.07234400254674256,
-        "mean_latency_ms": 0.025308016605170753,
-        "valid_commits": 216,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 16,
-        "alpha": 0.9,
-        "total_tx": 480,
-        "throughput_tps": 12667.005226878728,
-        "p50_latency_ms": 0.027250003768131137,
-        "p95_latency_ms": 1.2956120044691488,
-        "p99_latency_ms": 1.775324002665002,
-        "mean_latency_ms": 0.16144910212763838,
-        "valid_commits": 432,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 32,
-        "alpha": 0.9,
-        "total_tx": 960,
-        "throughput_tps": 6309.341948829187,
-        "p50_latency_ms": 0.040958002500701696,
-        "p95_latency_ms": 6.867837000754662,
-        "p99_latency_ms": 18.630088001373224,
-        "mean_latency_ms": 1.8613454385937682,
-        "valid_commits": 864,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 64,
-        "alpha": 0.9,
-        "total_tx": 1920,
-        "throughput_tps": 6729.615277725511,
-        "p50_latency_ms": 0.036386998544912785,
-        "p95_latency_ms": 0.08199500007322058,
-        "p99_latency_ms": 0.14828700659563765,
-        "mean_latency_ms": 0.04277809215030478,
-        "valid_commits": 1728,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 128,
-        "alpha": 0.9,
-        "total_tx": 3840,
-        "throughput_tps": 6886.571600175577,
-        "p50_latency_ms": 0.03529099922161549,
-        "p95_latency_ms": 0.06693599425489083,
-        "p99_latency_ms": 0.12834199878852814,
-        "mean_latency_ms": 0.03832087922243469,
-        "valid_commits": 3456,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 1,
-        "alpha": 1.2,
-        "total_tx": 30,
-        "throughput_tps": 19666.43111236303,
-        "p50_latency_ms": 0.016313002561219037,
-        "p95_latency_ms": 0.029898001230321825,
-        "p99_latency_ms": 0.036032994103152305,
-        "mean_latency_ms": 0.018764567115188886,
-        "valid_commits": 27,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 2,
-        "alpha": 1.2,
-        "total_tx": 60,
-        "throughput_tps": 21487.131483782305,
-        "p50_latency_ms": 0.01586500002304092,
-        "p95_latency_ms": 0.04336600250098854,
-        "p99_latency_ms": 0.06032200326444581,
-        "mean_latency_ms": 0.018242716638875816,
-        "valid_commits": 54,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 4,
-        "alpha": 1.2,
-        "total_tx": 120,
-        "throughput_tps": 16564.61254115272,
-        "p50_latency_ms": 0.0241899979300797,
-        "p95_latency_ms": 0.04529500438366085,
-        "p99_latency_ms": 0.07254799857037142,
-        "mean_latency_ms": 0.024084933526561752,
-        "valid_commits": 108,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 0,
-        "unsafe_commit_rate": 0.0,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
-        "workers": 8,
-        "alpha": 1.2,
-        "total_tx": 240,
-        "throughput_tps": 12274.016812320551,
+        "throughput_tps": 4435.240827435878,
         "p50_latency_ms": 0.02608900103950873,
-        "p95_latency_ms": 0.04537799395620823,
-        "p99_latency_ms": 3.221619001124054,
-        "mean_latency_ms": 0.12198507532351262,
+        "p95_latency_ms": 0.08446600259048864,
+        "p99_latency_ms": 0.08990400237962604,
+        "mean_latency_ms": 0.03535091679320127,
+        "valid_commits": 108,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 8,
+        "alpha": 0.5,
+        "total_tx": 240,
+        "throughput_tps": 17103.497107618707,
+        "p50_latency_ms": 0.019860999600496143,
+        "p95_latency_ms": 0.061682003433816135,
+        "p99_latency_ms": 1.8435660022078082,
+        "mean_latency_ms": 0.07810592924215598,
+        "valid_commits": 216,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 16,
+        "alpha": 0.5,
+        "total_tx": 480,
+        "throughput_tps": 11980.828875663257,
+        "p50_latency_ms": 0.014347999240271747,
+        "p95_latency_ms": 0.03489700611680746,
+        "p99_latency_ms": 0.0428080020355992,
+        "mean_latency_ms": 0.017812962460084236,
+        "valid_commits": 432,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 32,
+        "alpha": 0.5,
+        "total_tx": 960,
+        "throughput_tps": 7801.777317690155,
+        "p50_latency_ms": 0.025115004973486066,
+        "p95_latency_ms": 0.07489600102417171,
+        "p99_latency_ms": 0.09059999865712598,
+        "mean_latency_ms": 0.052357768883363555,
+        "valid_commits": 864,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 64,
+        "alpha": 0.5,
+        "total_tx": 1920,
+        "throughput_tps": 6419.3732404668035,
+        "p50_latency_ms": 0.03002800076501444,
+        "p95_latency_ms": 0.07540099613834172,
+        "p99_latency_ms": 0.1053160012816079,
+        "mean_latency_ms": 0.0371679712770856,
+        "valid_commits": 1728,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 128,
+        "alpha": 0.5,
+        "total_tx": 3840,
+        "throughput_tps": 6274.755360110463,
+        "p50_latency_ms": 0.029219998396001756,
+        "p95_latency_ms": 0.07051400461932644,
+        "p99_latency_ms": 0.09774100180948153,
+        "mean_latency_ms": 0.03547642458746244,
+        "valid_commits": 3456,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 1,
+        "alpha": 0.9,
+        "total_tx": 30,
+        "throughput_tps": 9640.744106036105,
+        "p50_latency_ms": 0.04396800068207085,
+        "p95_latency_ms": 0.05176100239623338,
+        "p99_latency_ms": 0.05840499943587929,
+        "mean_latency_ms": 0.042539966913561024,
+        "valid_commits": 27,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 2,
+        "alpha": 0.9,
+        "total_tx": 60,
+        "throughput_tps": 8163.952857830615,
+        "p50_latency_ms": 0.04343799810158089,
+        "p95_latency_ms": 0.08534900553058833,
+        "p99_latency_ms": 0.11827399430330843,
+        "mean_latency_ms": 0.0471250003708216,
+        "valid_commits": 54,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 4,
+        "alpha": 0.9,
+        "total_tx": 120,
+        "throughput_tps": 7606.055511612663,
+        "p50_latency_ms": 0.04459200135897845,
+        "p95_latency_ms": 0.08864099800121039,
+        "p99_latency_ms": 0.10368399671278894,
+        "mean_latency_ms": 0.04645881684458194,
+        "valid_commits": 108,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 8,
+        "alpha": 0.9,
+        "total_tx": 240,
+        "throughput_tps": 6358.7378950778675,
+        "p50_latency_ms": 0.03825000021606684,
+        "p95_latency_ms": 1.2790539985871874,
+        "p99_latency_ms": 3.363886004080996,
+        "mean_latency_ms": 0.23844990419092937,
+        "valid_commits": 216,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 16,
+        "alpha": 0.9,
+        "total_tx": 480,
+        "throughput_tps": 15113.128851617015,
+        "p50_latency_ms": 0.020168001356069,
+        "p95_latency_ms": 0.03812000068137422,
+        "p99_latency_ms": 0.053635994845535606,
+        "mean_latency_ms": 0.022760170804758673,
+        "valid_commits": 432,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 32,
+        "alpha": 0.9,
+        "total_tx": 960,
+        "throughput_tps": 5262.9959939757055,
+        "p50_latency_ms": 0.0613430020166561,
+        "p95_latency_ms": 5.829857000207994,
+        "p99_latency_ms": 7.775272999424487,
+        "mean_latency_ms": 1.42526318122691,
+        "valid_commits": 864,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 64,
+        "alpha": 0.9,
+        "total_tx": 1920,
+        "throughput_tps": 7080.071709627207,
+        "p50_latency_ms": 0.028216003556735814,
+        "p95_latency_ms": 0.07118900248315185,
+        "p99_latency_ms": 0.08765800157561898,
+        "mean_latency_ms": 0.03328986609858475,
+        "valid_commits": 1728,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 128,
+        "alpha": 0.9,
+        "total_tx": 3840,
+        "throughput_tps": 6512.476139619897,
+        "p50_latency_ms": 0.03322799602756277,
+        "p95_latency_ms": 0.07522000669268891,
+        "p99_latency_ms": 0.1016649985103868,
+        "mean_latency_ms": 0.03855809714726396,
+        "valid_commits": 3456,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 1,
+        "alpha": 1.2,
+        "total_tx": 30,
+        "throughput_tps": 16431.3604664323,
+        "p50_latency_ms": 0.022267995518632233,
+        "p95_latency_ms": 0.02970000059576705,
+        "p99_latency_ms": 0.03356600063852966,
+        "mean_latency_ms": 0.02275523341571291,
+        "valid_commits": 27,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 2,
+        "alpha": 1.2,
+        "total_tx": 60,
+        "throughput_tps": 25996.117034739207,
+        "p50_latency_ms": 0.018664999515749514,
+        "p95_latency_ms": 0.025273999199271202,
+        "p99_latency_ms": 0.03286100400146097,
+        "mean_latency_ms": 0.017445366999406058,
+        "valid_commits": 54,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 4,
+        "alpha": 1.2,
+        "total_tx": 120,
+        "throughput_tps": 23886.006411453356,
+        "p50_latency_ms": 0.018629994883667678,
+        "p95_latency_ms": 0.031956995371729136,
+        "p99_latency_ms": 0.03868900239467621,
+        "mean_latency_ms": 0.018767075016512536,
+        "valid_commits": 108,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 0,
+        "unsafe_commit_rate": 0.0,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "GLHS SS2PL (Canonical Lock Hierarchy + Layer 1 Barrier)",
+        "workers": 8,
+        "alpha": 1.2,
+        "total_tx": 240,
+        "throughput_tps": 19128.886446933047,
+        "p50_latency_ms": 0.020070998289156705,
+        "p95_latency_ms": 0.034274002246093005,
+        "p99_latency_ms": 0.045289998524822295,
+        "mean_latency_ms": 0.019045500206023764,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -702,11 +702,11 @@
         "workers": 16,
         "alpha": 1.2,
         "total_tx": 480,
-        "throughput_tps": 13899.261855082263,
-        "p50_latency_ms": 0.02646199573064223,
-        "p95_latency_ms": 1.5728290018159896,
-        "p99_latency_ms": 6.954552998649888,
-        "mean_latency_ms": 0.3572266877047999,
+        "throughput_tps": 15017.78575017514,
+        "p50_latency_ms": 0.012901997251901776,
+        "p95_latency_ms": 0.040052000258583575,
+        "p99_latency_ms": 3.260329998738598,
+        "mean_latency_ms": 0.10662282873757552,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -720,11 +720,11 @@
         "workers": 32,
         "alpha": 1.2,
         "total_tx": 960,
-        "throughput_tps": 8319.98070319623,
-        "p50_latency_ms": 0.03943600313505158,
-        "p95_latency_ms": 3.996258004917763,
-        "p99_latency_ms": 7.160137000028044,
-        "mean_latency_ms": 1.1030719072929667,
+        "throughput_tps": 6468.273445651249,
+        "p50_latency_ms": 0.04027499380754307,
+        "p95_latency_ms": 0.07462600478902459,
+        "p99_latency_ms": 0.13244099682196975,
+        "mean_latency_ms": 0.07111516672466678,
         "valid_commits": 864,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -738,11 +738,11 @@
         "workers": 64,
         "alpha": 1.2,
         "total_tx": 1920,
-        "throughput_tps": 6697.560700283635,
-        "p50_latency_ms": 0.034260992833878845,
-        "p95_latency_ms": 0.07561399979749694,
-        "p99_latency_ms": 0.12285300181247294,
-        "mean_latency_ms": 0.03905776770807279,
+        "throughput_tps": 7212.633333009274,
+        "p50_latency_ms": 0.02996599505422637,
+        "p95_latency_ms": 0.06986999505897984,
+        "p99_latency_ms": 0.08725299994694069,
+        "mean_latency_ms": 0.03476276461924499,
         "valid_commits": 1728,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -756,11 +756,11 @@
         "workers": 128,
         "alpha": 1.2,
         "total_tx": 3840,
-        "throughput_tps": 8308.215405684537,
-        "p50_latency_ms": 0.034457996662240475,
-        "p95_latency_ms": 0.05666300421580672,
-        "p99_latency_ms": 0.08486700244247913,
-        "mean_latency_ms": 0.03678068932420805,
+        "throughput_tps": 6317.769606042481,
+        "p50_latency_ms": 0.03583599755074829,
+        "p95_latency_ms": 0.07790199742885306,
+        "p99_latency_ms": 0.10878300236072391,
+        "mean_latency_ms": 0.041747350487260824,
         "valid_commits": 3456,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -774,11 +774,11 @@
         "workers": 1,
         "alpha": 0.0,
         "total_tx": 30,
-        "throughput_tps": 18514.26717031856,
-        "p50_latency_ms": 0.0034790064091794193,
-        "p95_latency_ms": 0.005842004611622542,
-        "p99_latency_ms": 0.0133259964059107,
-        "mean_latency_ms": 0.004449333209777251,
+        "throughput_tps": 8140.924833872988,
+        "p50_latency_ms": 0.00246299896389246,
+        "p95_latency_ms": 0.008235998393502086,
+        "p99_latency_ms": 0.008885996066965163,
+        "mean_latency_ms": 0.0036153993278276175,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -792,11 +792,11 @@
         "workers": 2,
         "alpha": 0.0,
         "total_tx": 60,
-        "throughput_tps": 35146.09055461911,
-        "p50_latency_ms": 0.0016509948181919754,
-        "p95_latency_ms": 0.007255999662447721,
-        "p99_latency_ms": 0.00967600499279797,
-        "mean_latency_ms": 0.002311149364686571,
+        "throughput_tps": 10361.683181298793,
+        "p50_latency_ms": 0.004736000846605748,
+        "p95_latency_ms": 0.014329001714941114,
+        "p99_latency_ms": 0.015572004485875368,
+        "mean_latency_ms": 0.005618567229248583,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -810,11 +810,11 @@
         "workers": 4,
         "alpha": 0.0,
         "total_tx": 120,
-        "throughput_tps": 15763.921609613486,
-        "p50_latency_ms": 0.0034080003388226032,
-        "p95_latency_ms": 0.010100004146806896,
-        "p99_latency_ms": 0.0185430035344325,
-        "mean_latency_ms": 0.004409833248549451,
+        "throughput_tps": 13380.372774581863,
+        "p50_latency_ms": 0.0036439960240386426,
+        "p95_latency_ms": 0.011971002095378935,
+        "p99_latency_ms": 0.013296004908625036,
+        "mean_latency_ms": 0.004643358261091635,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -828,11 +828,11 @@
         "workers": 8,
         "alpha": 0.0,
         "total_tx": 240,
-        "throughput_tps": 18107.988345285055,
-        "p50_latency_ms": 0.002348999259993434,
-        "p95_latency_ms": 0.00804100272944197,
-        "p99_latency_ms": 0.012046999472659081,
-        "mean_latency_ms": 0.003247178847232135,
+        "throughput_tps": 17356.630081055915,
+        "p50_latency_ms": 0.0037749996408820152,
+        "p95_latency_ms": 0.010181000106967986,
+        "p99_latency_ms": 0.012869997590314597,
+        "mean_latency_ms": 0.004696704248393265,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -846,11 +846,11 @@
         "workers": 16,
         "alpha": 0.0,
         "total_tx": 480,
-        "throughput_tps": 15886.17240076025,
-        "p50_latency_ms": 0.0024320033844560385,
-        "p95_latency_ms": 0.0069920060923323035,
-        "p99_latency_ms": 0.014552999346051365,
-        "mean_latency_ms": 0.0032143062981049297,
+        "throughput_tps": 9515.68720476846,
+        "p50_latency_ms": 0.003531000402290374,
+        "p95_latency_ms": 0.011185002222191542,
+        "p99_latency_ms": 0.014910998288542032,
+        "mean_latency_ms": 0.0043889103684099,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -864,11 +864,11 @@
         "workers": 32,
         "alpha": 0.0,
         "total_tx": 960,
-        "throughput_tps": 16203.029084920981,
-        "p50_latency_ms": 0.003278997610323131,
-        "p95_latency_ms": 0.008918003004509956,
-        "p99_latency_ms": 0.016464000509586185,
-        "mean_latency_ms": 0.004225713435819974,
+        "throughput_tps": 15792.992300618354,
+        "p50_latency_ms": 0.0022800013539381325,
+        "p95_latency_ms": 0.006262001988943666,
+        "p99_latency_ms": 0.013609998859465122,
+        "mean_latency_ms": 0.0030203303595044417,
         "valid_commits": 864,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -882,173 +882,173 @@
         "workers": 64,
         "alpha": 0.0,
         "total_tx": 1920,
-        "throughput_tps": 7606.213039986955,
+        "throughput_tps": 8755.96267365154,
+        "p50_latency_ms": 0.004598994564730674,
+        "p95_latency_ms": 0.010651005140971392,
+        "p99_latency_ms": 0.015060999430716038,
+        "mean_latency_ms": 0.005086503225963194,
+        "valid_commits": 1728,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 192,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 128,
+        "alpha": 0.0,
+        "total_tx": 3840,
+        "throughput_tps": 8945.956991489595,
+        "p50_latency_ms": 0.004167995939496905,
+        "p95_latency_ms": 0.010249998013023287,
+        "p99_latency_ms": 0.015158999303821474,
+        "mean_latency_ms": 0.004738262005806367,
+        "valid_commits": 3456,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 384,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 1,
+        "alpha": 0.5,
+        "total_tx": 30,
+        "throughput_tps": 16839.90249592805,
+        "p50_latency_ms": 0.00427999475505203,
+        "p95_latency_ms": 0.006035996193531901,
+        "p99_latency_ms": 0.011288997484371066,
+        "mean_latency_ms": 0.004933999783437078,
+        "valid_commits": 27,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 3,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 2,
+        "alpha": 0.5,
+        "total_tx": 60,
+        "throughput_tps": 14648.183577868534,
+        "p50_latency_ms": 0.0022230015019886196,
+        "p95_latency_ms": 0.009788993338588625,
+        "p99_latency_ms": 0.012789001630153507,
+        "mean_latency_ms": 0.003350633536077415,
+        "valid_commits": 54,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 6,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 4,
+        "alpha": 0.5,
+        "total_tx": 120,
+        "throughput_tps": 12450.447218799594,
+        "p50_latency_ms": 0.003925997589249164,
+        "p95_latency_ms": 0.010555995686445385,
+        "p99_latency_ms": 0.013796001439914107,
+        "mean_latency_ms": 0.004982050328787106,
+        "valid_commits": 108,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 12,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 8,
+        "alpha": 0.5,
+        "total_tx": 240,
+        "throughput_tps": 12725.76906383581,
+        "p50_latency_ms": 0.0032910029403865337,
+        "p95_latency_ms": 0.01060499926097691,
+        "p99_latency_ms": 0.014748002286069095,
+        "mean_latency_ms": 0.004506075219978811,
+        "valid_commits": 216,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 24,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 16,
+        "alpha": 0.5,
+        "total_tx": 480,
+        "throughput_tps": 7494.467326974096,
+        "p50_latency_ms": 0.003498003934510052,
+        "p95_latency_ms": 0.012065996997989714,
+        "p99_latency_ms": 0.01505100226495415,
+        "mean_latency_ms": 0.004537589757092064,
+        "valid_commits": 432,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 48,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 32,
+        "alpha": 0.5,
+        "total_tx": 960,
+        "throughput_tps": 15180.361432817162,
+        "p50_latency_ms": 0.0021469968487508595,
+        "p95_latency_ms": 0.005738002073485404,
+        "p99_latency_ms": 0.008770999556872994,
+        "mean_latency_ms": 0.002943434249876494,
+        "valid_commits": 864,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 96,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 64,
+        "alpha": 0.5,
+        "total_tx": 1920,
+        "throughput_tps": 9272.212364579394,
+        "p50_latency_ms": 0.0037579957279376686,
+        "p95_latency_ms": 0.01076199987437576,
+        "p99_latency_ms": 0.014402001397684216,
+        "mean_latency_ms": 0.004686579128095521,
+        "valid_commits": 1728,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 192,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
+        "workers": 128,
+        "alpha": 0.5,
+        "total_tx": 3840,
+        "throughput_tps": 9008.71218472633,
         "p50_latency_ms": 0.004182002157904208,
-        "p95_latency_ms": 0.010750998626463115,
-        "p99_latency_ms": 0.0211790029425174,
-        "mean_latency_ms": 0.005178722843387125,
-        "valid_commits": 1728,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 192,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 128,
-        "alpha": 0.0,
-        "total_tx": 3840,
-        "throughput_tps": 15037.446766848303,
-        "p50_latency_ms": 0.0036919955164194107,
-        "p95_latency_ms": 0.007624999852851033,
-        "p99_latency_ms": 0.012637996405828744,
-        "mean_latency_ms": 0.004238671037152623,
-        "valid_commits": 3456,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 384,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 1,
-        "alpha": 0.5,
-        "total_tx": 30,
-        "throughput_tps": 35201.062837047815,
-        "p50_latency_ms": 0.0016990015865303576,
-        "p95_latency_ms": 0.004483001248445362,
-        "p99_latency_ms": 0.00693300535203889,
-        "mean_latency_ms": 0.0021941001856854805,
-        "valid_commits": 27,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 3,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 2,
-        "alpha": 0.5,
-        "total_tx": 60,
-        "throughput_tps": 15361.616304706447,
-        "p50_latency_ms": 0.002998000127263367,
-        "p95_latency_ms": 0.008106006134767085,
-        "p99_latency_ms": 0.00977300078375265,
-        "mean_latency_ms": 0.0036950169790846608,
-        "valid_commits": 54,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 6,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 4,
-        "alpha": 0.5,
-        "total_tx": 120,
-        "throughput_tps": 22622.642990223278,
-        "p50_latency_ms": 0.0026089983293786645,
-        "p95_latency_ms": 0.008644004992675036,
-        "p99_latency_ms": 0.010800999007187784,
-        "mean_latency_ms": 0.0032314999771188013,
-        "valid_commits": 108,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 12,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 8,
-        "alpha": 0.5,
-        "total_tx": 240,
-        "throughput_tps": 18821.445035114506,
-        "p50_latency_ms": 0.002902001142501831,
-        "p95_latency_ms": 0.006995003786869347,
-        "p99_latency_ms": 0.01008700201055035,
-        "mean_latency_ms": 0.0035607749850896653,
-        "valid_commits": 216,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 24,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 16,
-        "alpha": 0.5,
-        "total_tx": 480,
-        "throughput_tps": 21323.917639879637,
-        "p50_latency_ms": 0.0028329959604889154,
-        "p95_latency_ms": 0.0079849996836856,
-        "p99_latency_ms": 0.01032299769576639,
-        "mean_latency_ms": 0.003690214483261419,
-        "valid_commits": 432,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 48,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 32,
-        "alpha": 0.5,
-        "total_tx": 960,
-        "throughput_tps": 17207.324691638212,
-        "p50_latency_ms": 0.0031950039556249976,
-        "p95_latency_ms": 0.007403999916277826,
-        "p99_latency_ms": 0.012293996405787766,
-        "mean_latency_ms": 0.003921230124130186,
-        "valid_commits": 864,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 96,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 64,
-        "alpha": 0.5,
-        "total_tx": 1920,
-        "throughput_tps": 10925.797073847967,
-        "p50_latency_ms": 0.0038910002331249416,
-        "p95_latency_ms": 0.01098900247598067,
-        "p99_latency_ms": 0.019847000658046454,
-        "mean_latency_ms": 0.004987958811852877,
-        "valid_commits": 1728,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 192,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard 2PL (Entity Partition Locking without Governance Anchors)",
-        "workers": 128,
-        "alpha": 0.5,
-        "total_tx": 3840,
-        "throughput_tps": 10176.489155464347,
-        "p50_latency_ms": 0.003815999662037939,
-        "p95_latency_ms": 0.01010500272968784,
-        "p99_latency_ms": 0.023451997549273074,
-        "mean_latency_ms": 0.004876279926217346,
+        "p95_latency_ms": 0.009838004189077765,
+        "p99_latency_ms": 0.01328300277236849,
+        "mean_latency_ms": 0.004599918033439583,
         "valid_commits": 3456,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1062,11 +1062,11 @@
         "workers": 1,
         "alpha": 0.9,
         "total_tx": 30,
-        "throughput_tps": 20245.36021715573,
-        "p50_latency_ms": 0.003193003067281097,
-        "p95_latency_ms": 0.005476998921949416,
-        "p99_latency_ms": 0.011153002560604364,
-        "mean_latency_ms": 0.003610599863653382,
+        "throughput_tps": 27573.45332566988,
+        "p50_latency_ms": 0.0021710002329200506,
+        "p95_latency_ms": 0.00884899782249704,
+        "p99_latency_ms": 0.010577998182270676,
+        "mean_latency_ms": 0.0030799991994475326,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1080,11 +1080,11 @@
         "workers": 2,
         "alpha": 0.9,
         "total_tx": 60,
-        "throughput_tps": 22142.631727885433,
-        "p50_latency_ms": 0.002972999936901033,
-        "p95_latency_ms": 0.008950002666097134,
-        "p99_latency_ms": 0.012402000720612705,
-        "mean_latency_ms": 0.0038979499853060893,
+        "throughput_tps": 15050.286778222024,
+        "p50_latency_ms": 0.0020600054995156825,
+        "p95_latency_ms": 0.006082998879719526,
+        "p99_latency_ms": 0.006280999514274299,
+        "mean_latency_ms": 0.0024976498631682866,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1098,11 +1098,11 @@
         "workers": 4,
         "alpha": 0.9,
         "total_tx": 120,
-        "throughput_tps": 39083.98852988245,
-        "p50_latency_ms": 0.0014569959603250027,
-        "p95_latency_ms": 0.007155002094805241,
-        "p99_latency_ms": 0.008301001798827201,
-        "mean_latency_ms": 0.0020548167109761075,
+        "throughput_tps": 13162.042513261356,
+        "p50_latency_ms": 0.0036249984987080097,
+        "p95_latency_ms": 0.0106250008684583,
+        "p99_latency_ms": 0.019168001017533243,
+        "mean_latency_ms": 0.004607691577499888,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1116,11 +1116,11 @@
         "workers": 8,
         "alpha": 0.9,
         "total_tx": 240,
-        "throughput_tps": 20332.998594513057,
-        "p50_latency_ms": 0.0015879995771683753,
-        "p95_latency_ms": 0.007713999366387725,
-        "p99_latency_ms": 0.009460003639105707,
-        "mean_latency_ms": 0.002551579170055144,
+        "throughput_tps": 12787.128987292117,
+        "p50_latency_ms": 0.003706998541019857,
+        "p95_latency_ms": 0.012609998520929366,
+        "p99_latency_ms": 0.016343998140655458,
+        "mean_latency_ms": 0.005004345742539347,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1134,11 +1134,11 @@
         "workers": 16,
         "alpha": 0.9,
         "total_tx": 480,
-        "throughput_tps": 22129.345566184093,
-        "p50_latency_ms": 0.0014309989637695253,
-        "p95_latency_ms": 0.006977999873925,
-        "p99_latency_ms": 0.01112800237024203,
-        "mean_latency_ms": 0.002515689827002158,
+        "throughput_tps": 10221.584358290278,
+        "p50_latency_ms": 0.0035439952625893056,
+        "p95_latency_ms": 0.01240900019183755,
+        "p99_latency_ms": 0.017739002942107618,
+        "mean_latency_ms": 0.005115787492589637,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1152,11 +1152,11 @@
         "workers": 32,
         "alpha": 0.9,
         "total_tx": 960,
-        "throughput_tps": 13929.607599241575,
-        "p50_latency_ms": 0.002959000994451344,
-        "p95_latency_ms": 0.008265997166745365,
-        "p99_latency_ms": 0.014374003512784839,
-        "mean_latency_ms": 0.003966567828683765,
+        "throughput_tps": 14735.30556199753,
+        "p50_latency_ms": 0.001992004399653524,
+        "p95_latency_ms": 0.006097994628362358,
+        "p99_latency_ms": 0.012709999282378703,
+        "mean_latency_ms": 0.0026983165222797347,
         "valid_commits": 864,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1170,11 +1170,11 @@
         "workers": 64,
         "alpha": 0.9,
         "total_tx": 1920,
-        "throughput_tps": 13589.059041423832,
-        "p50_latency_ms": 0.003897002898156643,
-        "p95_latency_ms": 0.008282993803732097,
-        "p99_latency_ms": 0.013592994946520776,
-        "mean_latency_ms": 0.004552083854984327,
+        "throughput_tps": 9294.976740489563,
+        "p50_latency_ms": 0.004441004421096295,
+        "p95_latency_ms": 0.010162999387830496,
+        "p99_latency_ms": 0.012714997865259647,
+        "mean_latency_ms": 0.005104215157795504,
         "valid_commits": 1728,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1188,11 +1188,11 @@
         "workers": 128,
         "alpha": 0.9,
         "total_tx": 3840,
-        "throughput_tps": 13817.131012102827,
-        "p50_latency_ms": 0.0036749988794326782,
-        "p95_latency_ms": 0.008522998541593552,
-        "p99_latency_ms": 0.016127996786963195,
-        "mean_latency_ms": 0.004436641133528004,
+        "throughput_tps": 8929.687307297696,
+        "p50_latency_ms": 0.0044720000005327165,
+        "p95_latency_ms": 0.010374002158641815,
+        "p99_latency_ms": 0.013775999832432717,
+        "mean_latency_ms": 0.005138933340731455,
         "valid_commits": 3456,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1206,11 +1206,11 @@
         "workers": 1,
         "alpha": 1.2,
         "total_tx": 30,
-        "throughput_tps": 20322.380730222332,
-        "p50_latency_ms": 0.0031279996619559824,
-        "p95_latency_ms": 0.010055999155156314,
-        "p99_latency_ms": 0.010158997611142695,
-        "mean_latency_ms": 0.004089832509635016,
+        "throughput_tps": 28184.495643386967,
+        "p50_latency_ms": 0.0018319988157600164,
+        "p95_latency_ms": 0.0031040035537444055,
+        "p99_latency_ms": 0.006437003321480006,
+        "mean_latency_ms": 0.0025972006066391864,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1224,11 +1224,11 @@
         "workers": 2,
         "alpha": 1.2,
         "total_tx": 60,
-        "throughput_tps": 7289.894312117253,
-        "p50_latency_ms": 0.0024330001906491816,
-        "p95_latency_ms": 0.0047909998102113605,
-        "p99_latency_ms": 0.010705000022426248,
-        "mean_latency_ms": 0.0032233661234689257,
+        "throughput_tps": 25501.085687117535,
+        "p50_latency_ms": 0.0019279978005215526,
+        "p95_latency_ms": 0.0055630007409490645,
+        "p99_latency_ms": 0.006743997801095247,
+        "mean_latency_ms": 0.002538767148507759,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1242,11 +1242,11 @@
         "workers": 4,
         "alpha": 1.2,
         "total_tx": 120,
-        "throughput_tps": 27220.834473571784,
-        "p50_latency_ms": 0.0020660008885897696,
-        "p95_latency_ms": 0.006836002285126597,
-        "p99_latency_ms": 0.009446004696656018,
-        "mean_latency_ms": 0.0026447418955892013,
+        "throughput_tps": 21564.423434313012,
+        "p50_latency_ms": 0.001920001523103565,
+        "p95_latency_ms": 0.004723995516542345,
+        "p99_latency_ms": 0.007663002179469913,
+        "mean_latency_ms": 0.0024187581099492186,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1260,11 +1260,11 @@
         "workers": 8,
         "alpha": 1.2,
         "total_tx": 240,
-        "throughput_tps": 32583.881429085337,
-        "p50_latency_ms": 0.0013449971447698772,
-        "p95_latency_ms": 0.006162998033687472,
-        "p99_latency_ms": 0.016354999388568103,
-        "mean_latency_ms": 0.0023332293191439626,
+        "throughput_tps": 10596.109295617362,
+        "p50_latency_ms": 0.0033869946491904557,
+        "p95_latency_ms": 0.006328999006655067,
+        "p99_latency_ms": 0.00883099710335955,
+        "mean_latency_ms": 0.003916512287105434,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1278,11 +1278,11 @@
         "workers": 16,
         "alpha": 1.2,
         "total_tx": 480,
-        "throughput_tps": 26426.00358203034,
-        "p50_latency_ms": 0.001405001967214048,
-        "p95_latency_ms": 0.00805700256023556,
-        "p99_latency_ms": 0.015490004443563521,
-        "mean_latency_ms": 0.002868439939144688,
+        "throughput_tps": 7351.281170013214,
+        "p50_latency_ms": 0.003654000465758145,
+        "p95_latency_ms": 0.01099300425266847,
+        "p99_latency_ms": 0.016985002730507404,
+        "mean_latency_ms": 0.00525540426679072,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1296,11 +1296,11 @@
         "workers": 32,
         "alpha": 1.2,
         "total_tx": 960,
-        "throughput_tps": 16122.1529867126,
-        "p50_latency_ms": 0.0030009978218004107,
-        "p95_latency_ms": 0.008896000508684665,
-        "p99_latency_ms": 0.01730299845803529,
-        "mean_latency_ms": 0.004146195654660308,
+        "throughput_tps": 15136.488316038329,
+        "p50_latency_ms": 0.002215005224570632,
+        "p95_latency_ms": 0.00717799412086606,
+        "p99_latency_ms": 0.014576995454262942,
+        "mean_latency_ms": 0.0029810479494093065,
         "valid_commits": 864,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1314,11 +1314,11 @@
         "workers": 64,
         "alpha": 1.2,
         "total_tx": 1920,
-        "throughput_tps": 12279.101364972212,
-        "p50_latency_ms": 0.0038990037865005434,
-        "p95_latency_ms": 0.008896000508684665,
-        "p99_latency_ms": 0.01635400258237496,
-        "mean_latency_ms": 0.004713310935737051,
+        "throughput_tps": 8933.382094954606,
+        "p50_latency_ms": 0.0032619936973787844,
+        "p95_latency_ms": 0.010214003850705922,
+        "p99_latency_ms": 0.01611400512047112,
+        "mean_latency_ms": 0.004290534945994295,
         "valid_commits": 1728,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1332,11 +1332,11 @@
         "workers": 128,
         "alpha": 1.2,
         "total_tx": 3840,
-        "throughput_tps": 10707.044477839958,
-        "p50_latency_ms": 0.0039769947761669755,
-        "p95_latency_ms": 0.009034003596752882,
-        "p99_latency_ms": 0.01568999869050458,
-        "mean_latency_ms": 0.0047466768800556265,
+        "throughput_tps": 8983.233678644814,
+        "p50_latency_ms": 0.0038199941627681255,
+        "p95_latency_ms": 0.010199000826105475,
+        "p99_latency_ms": 0.013743003364652395,
+        "mean_latency_ms": 0.004524923220590911,
         "valid_commits": 3456,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1350,11 +1350,11 @@
         "workers": 1,
         "alpha": 0.0,
         "total_tx": 30,
-        "throughput_tps": 4891.163464011877,
-        "p50_latency_ms": 0.16233800124609843,
-        "p95_latency_ms": 0.17207999917445704,
-        "p99_latency_ms": 0.17526199371786788,
-        "mean_latency_ms": 0.17263026675209403,
+        "throughput_tps": 2299.2482302519775,
+        "p50_latency_ms": 0.17287800437770784,
+        "p95_latency_ms": 1.3785320043098181,
+        "p99_latency_ms": 1.3859379978384823,
+        "mean_latency_ms": 0.35577103384033154,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1368,11 +1368,11 @@
         "workers": 2,
         "alpha": 0.0,
         "total_tx": 60,
-        "throughput_tps": 7873.4216239177385,
-        "p50_latency_ms": 0.16294400120386854,
-        "p95_latency_ms": 0.22060300398152322,
-        "p99_latency_ms": 0.7885779996286146,
-        "mean_latency_ms": 0.19610799972724635,
+        "throughput_tps": 6467.461659092823,
+        "p50_latency_ms": 0.16321599832735956,
+        "p95_latency_ms": 0.5570450011873618,
+        "p99_latency_ms": 0.7484759989893064,
+        "mean_latency_ms": 0.2333347170254759,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1386,11 +1386,11 @@
         "workers": 4,
         "alpha": 0.0,
         "total_tx": 120,
-        "throughput_tps": 11163.471935655622,
-        "p50_latency_ms": 0.16413300181739032,
-        "p95_latency_ms": 0.49639600183581933,
-        "p99_latency_ms": 1.8471739967935719,
-        "mean_latency_ms": 0.26154774144136655,
+        "throughput_tps": 10626.930445436123,
+        "p50_latency_ms": 0.16069100092863664,
+        "p95_latency_ms": 1.0855059954337776,
+        "p99_latency_ms": 1.6000500036170706,
+        "mean_latency_ms": 0.27899979989645846,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1404,11 +1404,11 @@
         "workers": 8,
         "alpha": 0.0,
         "total_tx": 240,
-        "throughput_tps": 9458.215298419362,
-        "p50_latency_ms": 0.1968280048458837,
-        "p95_latency_ms": 4.041927000798751,
-        "p99_latency_ms": 6.45702699694084,
-        "mean_latency_ms": 0.6577068210693445,
+        "throughput_tps": 13524.994528013607,
+        "p50_latency_ms": 0.16915600281208754,
+        "p95_latency_ms": 1.8892419975600205,
+        "p99_latency_ms": 3.7453820041264407,
+        "mean_latency_ms": 0.3925750289151135,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1422,11 +1422,11 @@
         "workers": 16,
         "alpha": 0.0,
         "total_tx": 480,
-        "throughput_tps": 12347.866567593315,
-        "p50_latency_ms": 0.29383999935816973,
-        "p95_latency_ms": 4.445947000931483,
-        "p99_latency_ms": 7.724262002739124,
-        "mean_latency_ms": 0.8702559749205344,
+        "throughput_tps": 11501.303205920613,
+        "p50_latency_ms": 0.21227099932730198,
+        "p95_latency_ms": 2.835754996340256,
+        "p99_latency_ms": 8.273810002719983,
+        "mean_latency_ms": 0.6862210042375713,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1440,353 +1440,353 @@
         "workers": 32,
         "alpha": 0.0,
         "total_tx": 960,
-        "throughput_tps": 12349.4202064286,
-        "p50_latency_ms": 0.45954500092193484,
-        "p95_latency_ms": 5.577092000748962,
-        "p99_latency_ms": 12.329908997344319,
-        "mean_latency_ms": 1.3361932426429728,
-        "valid_commits": 861,
-        "true_stale_aborts": 3,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 96,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.003125
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 64,
-        "alpha": 0.0,
-        "total_tx": 1920,
-        "throughput_tps": 10110.441087216439,
-        "p50_latency_ms": 0.7466660026693717,
-        "p95_latency_ms": 12.82052799797384,
-        "p99_latency_ms": 25.64377600356238,
-        "mean_latency_ms": 2.730018922363797,
-        "valid_commits": 1721,
-        "true_stale_aborts": 7,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 192,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0036458333333333334
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 128,
-        "alpha": 0.0,
-        "total_tx": 3840,
-        "throughput_tps": 11188.509600946047,
-        "p50_latency_ms": 0.8932929995353334,
-        "p95_latency_ms": 11.830745999759529,
-        "p99_latency_ms": 24.51770599873271,
-        "mean_latency_ms": 2.630925084637662,
-        "valid_commits": 3440,
-        "true_stale_aborts": 16,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 384,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.004166666666666667
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 1,
-        "alpha": 0.5,
-        "total_tx": 30,
-        "throughput_tps": 4493.806409995221,
-        "p50_latency_ms": 0.1633159990888089,
-        "p95_latency_ms": 0.17488699813839048,
-        "p99_latency_ms": 0.17581300198799,
-        "mean_latency_ms": 0.17559006688922332,
-        "valid_commits": 27,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 3,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 2,
-        "alpha": 0.5,
-        "total_tx": 60,
-        "throughput_tps": 5546.479355086812,
-        "p50_latency_ms": 0.16713999502826482,
-        "p95_latency_ms": 0.2955289965029806,
-        "p99_latency_ms": 2.7779809970525093,
-        "mean_latency_ms": 0.28594380006931414,
-        "valid_commits": 54,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 6,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 4,
-        "alpha": 0.5,
-        "total_tx": 120,
-        "throughput_tps": 14227.99099070967,
-        "p50_latency_ms": 0.16155000048456714,
-        "p95_latency_ms": 0.23237000277731568,
-        "p99_latency_ms": 1.4525980004691519,
-        "mean_latency_ms": 0.21472496676627392,
-        "valid_commits": 108,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 12,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 8,
-        "alpha": 0.5,
-        "total_tx": 240,
-        "throughput_tps": 14188.196613662598,
-        "p50_latency_ms": 0.17948500317288563,
-        "p95_latency_ms": 1.9469780017971061,
-        "p99_latency_ms": 3.5963429982075468,
-        "mean_latency_ms": 0.44947568327794823,
-        "valid_commits": 216,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 24,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 16,
-        "alpha": 0.5,
-        "total_tx": 480,
-        "throughput_tps": 11509.98401135317,
-        "p50_latency_ms": 0.2673029957804829,
-        "p95_latency_ms": 4.193316002783831,
-        "p99_latency_ms": 10.797094000736251,
-        "mean_latency_ms": 0.8656668476760387,
-        "valid_commits": 432,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 48,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 32,
-        "alpha": 0.5,
-        "total_tx": 960,
-        "throughput_tps": 12886.670072531122,
-        "p50_latency_ms": 0.42989900248358026,
-        "p95_latency_ms": 6.4482190064154565,
-        "p99_latency_ms": 12.032271995849442,
-        "mean_latency_ms": 1.3459715354201762,
-        "valid_commits": 852,
-        "true_stale_aborts": 12,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 96,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0125
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 64,
-        "alpha": 0.5,
-        "total_tx": 1920,
-        "throughput_tps": 8084.68491844404,
-        "p50_latency_ms": 0.8084090004558675,
-        "p95_latency_ms": 22.215065997443162,
-        "p99_latency_ms": 45.39411699806806,
-        "mean_latency_ms": 4.0868210041253406,
-        "valid_commits": 1717,
-        "true_stale_aborts": 11,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 192,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.005729166666666666
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 128,
-        "alpha": 0.5,
-        "total_tx": 3840,
-        "throughput_tps": 10240.087955554814,
-        "p50_latency_ms": 1.1209500007680617,
-        "p95_latency_ms": 15.293368996935897,
-        "p99_latency_ms": 26.568013003270607,
-        "mean_latency_ms": 3.2249356429872478,
-        "valid_commits": 3415,
-        "true_stale_aborts": 41,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 384,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.010677083333333334
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 1,
-        "alpha": 0.9,
-        "total_tx": 30,
-        "throughput_tps": 2534.3015608648107,
-        "p50_latency_ms": 0.15969800006132573,
-        "p95_latency_ms": 0.18130899843527004,
-        "p99_latency_ms": 0.19459200120763853,
-        "mean_latency_ms": 0.2707873332838062,
-        "valid_commits": 27,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 3,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 2,
-        "alpha": 0.9,
-        "total_tx": 60,
-        "throughput_tps": 6698.966100097685,
-        "p50_latency_ms": 0.16542999946977943,
-        "p95_latency_ms": 0.779037996835541,
-        "p99_latency_ms": 1.7458190050092526,
-        "mean_latency_ms": 0.26020106658203684,
-        "valid_commits": 54,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 6,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 4,
-        "alpha": 0.9,
-        "total_tx": 120,
-        "throughput_tps": 7972.316396475109,
-        "p50_latency_ms": 0.16612499894108623,
-        "p95_latency_ms": 1.831301000493113,
-        "p99_latency_ms": 4.103896004380658,
-        "mean_latency_ms": 0.40169129188143415,
-        "valid_commits": 108,
-        "true_stale_aborts": 0,
-        "false_stale_aborts": 0,
-        "unsafe_commits": 12,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0
-      },
-      {
-        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
-        "workers": 8,
-        "alpha": 0.9,
-        "total_tx": 240,
-        "throughput_tps": 8349.20203451882,
-        "p50_latency_ms": 0.16616599896224216,
-        "p95_latency_ms": 3.212634001101833,
-        "p99_latency_ms": 8.859667999786325,
-        "mean_latency_ms": 0.6242023208869796,
-        "valid_commits": 215,
+        "throughput_tps": 8144.921778722643,
+        "p50_latency_ms": 0.36843199632130563,
+        "p95_latency_ms": 8.623150999483187,
+        "p99_latency_ms": 20.876558002782986,
+        "mean_latency_ms": 1.8395764061172788,
+        "valid_commits": 863,
         "true_stale_aborts": 1,
         "false_stale_aborts": 0,
+        "unsafe_commits": 96,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0010416666666666667
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 64,
+        "alpha": 0.0,
+        "total_tx": 1920,
+        "throughput_tps": 11280.93912108862,
+        "p50_latency_ms": 0.4051450014230795,
+        "p95_latency_ms": 14.084878996072803,
+        "p99_latency_ms": 26.36856299795909,
+        "mean_latency_ms": 2.601078601533876,
+        "valid_commits": 1724,
+        "true_stale_aborts": 4,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 192,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0020833333333333333
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 128,
+        "alpha": 0.0,
+        "total_tx": 3840,
+        "throughput_tps": 13846.62473148685,
+        "p50_latency_ms": 0.8938329992815852,
+        "p95_latency_ms": 9.040523000294343,
+        "p99_latency_ms": 19.452257998636924,
+        "mean_latency_ms": 2.206558485477217,
+        "valid_commits": 3436,
+        "true_stale_aborts": 20,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 384,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.005208333333333333
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 1,
+        "alpha": 0.5,
+        "total_tx": 30,
+        "throughput_tps": 5765.051106444452,
+        "p50_latency_ms": 0.15550699754385278,
+        "p95_latency_ms": 0.15777700173202902,
+        "p99_latency_ms": 0.16327699995599687,
+        "mean_latency_ms": 0.1569977328472305,
+        "valid_commits": 27,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 3,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 2,
+        "alpha": 0.5,
+        "total_tx": 60,
+        "throughput_tps": 9713.199955168926,
+        "p50_latency_ms": 0.15710300067439675,
+        "p95_latency_ms": 0.1734769975882955,
+        "p99_latency_ms": 0.3712290053954348,
+        "mean_latency_ms": 0.18639305017131846,
+        "valid_commits": 54,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 6,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 4,
+        "alpha": 0.5,
+        "total_tx": 120,
+        "throughput_tps": 16251.596383209482,
+        "p50_latency_ms": 0.15722699754405767,
+        "p95_latency_ms": 0.23927399888634682,
+        "p99_latency_ms": 1.2272170060896315,
+        "mean_latency_ms": 0.20738015858417688,
+        "valid_commits": 108,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 12,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 8,
+        "alpha": 0.5,
+        "total_tx": 240,
+        "throughput_tps": 16195.41495220381,
+        "p50_latency_ms": 0.15939199511194602,
+        "p95_latency_ms": 1.8312070023966953,
+        "p99_latency_ms": 3.735076003067661,
+        "mean_latency_ms": 0.3884361291663178,
+        "valid_commits": 216,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
         "unsafe_commits": 24,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.004166666666666667
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 16,
+        "alpha": 0.5,
+        "total_tx": 480,
+        "throughput_tps": 21151.76191406376,
+        "p50_latency_ms": 0.19885100482497364,
+        "p95_latency_ms": 2.092873000947293,
+        "p99_latency_ms": 4.5333169982768595,
+        "mean_latency_ms": 0.54161337293408,
+        "valid_commits": 432,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 48,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 32,
+        "alpha": 0.5,
+        "total_tx": 960,
+        "throughput_tps": 8821.242861364783,
+        "p50_latency_ms": 0.7828710004105233,
+        "p95_latency_ms": 12.09087699680822,
+        "p99_latency_ms": 20.28254300239496,
+        "mean_latency_ms": 2.3607929738015323,
+        "valid_commits": 856,
+        "true_stale_aborts": 8,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 96,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.008333333333333333
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 64,
+        "alpha": 0.5,
+        "total_tx": 1920,
+        "throughput_tps": 15675.962953466003,
+        "p50_latency_ms": 0.6681970044155605,
+        "p95_latency_ms": 11.52386700414354,
+        "p99_latency_ms": 19.70646600238979,
+        "mean_latency_ms": 2.3296526120892245,
+        "valid_commits": 1702,
+        "true_stale_aborts": 26,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 192,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.013541666666666667
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 128,
+        "alpha": 0.5,
+        "total_tx": 3840,
+        "throughput_tps": 13583.649284911982,
+        "p50_latency_ms": 0.8336940009030513,
+        "p95_latency_ms": 11.491463003039826,
+        "p99_latency_ms": 18.595443994854577,
+        "mean_latency_ms": 2.4052697460831496,
+        "valid_commits": 3388,
+        "true_stale_aborts": 68,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 384,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.017708333333333333
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 1,
+        "alpha": 0.9,
+        "total_tx": 30,
+        "throughput_tps": 5455.313168386633,
+        "p50_latency_ms": 0.157552000018768,
+        "p95_latency_ms": 0.1607689991942607,
+        "p99_latency_ms": 0.1635450025787577,
+        "mean_latency_ms": 0.16276903285567337,
+        "valid_commits": 27,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 3,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 2,
+        "alpha": 0.9,
+        "total_tx": 60,
+        "throughput_tps": 7798.312755008159,
+        "p50_latency_ms": 0.16044599760789424,
+        "p95_latency_ms": 0.41894199966918677,
+        "p99_latency_ms": 1.5545200003543869,
+        "mean_latency_ms": 0.22957116622516574,
+        "valid_commits": 54,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 6,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 4,
+        "alpha": 0.9,
+        "total_tx": 120,
+        "throughput_tps": 10900.460717328162,
+        "p50_latency_ms": 0.15894399984972551,
+        "p95_latency_ms": 1.703027002804447,
+        "p99_latency_ms": 1.7460710005252622,
+        "mean_latency_ms": 0.31282253312383546,
+        "valid_commits": 108,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 12,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
+      },
+      {
+        "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
+        "workers": 8,
+        "alpha": 0.9,
+        "total_tx": 240,
+        "throughput_tps": 12015.646776700383,
+        "p50_latency_ms": 0.16046399832703173,
+        "p95_latency_ms": 1.8075229963869788,
+        "p99_latency_ms": 4.851285993936472,
+        "mean_latency_ms": 0.49344631258160615,
+        "valid_commits": 216,
+        "true_stale_aborts": 0,
+        "false_stale_aborts": 0,
+        "unsafe_commits": 24,
+        "unsafe_commit_rate": 0.1,
+        "false_stale_rate": 0.0,
+        "true_stale_rate": 0.0
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 16,
         "alpha": 0.9,
         "total_tx": 480,
-        "throughput_tps": 11777.04146729104,
-        "p50_latency_ms": 0.2037130034295842,
-        "p95_latency_ms": 5.519577003724407,
-        "p99_latency_ms": 9.799211999052204,
-        "mean_latency_ms": 1.0109703517476494,
-        "valid_commits": 426,
-        "true_stale_aborts": 6,
+        "throughput_tps": 14249.744285418383,
+        "p50_latency_ms": 0.17055700300261378,
+        "p95_latency_ms": 4.4303339964244515,
+        "p99_latency_ms": 9.609362001356203,
+        "mean_latency_ms": 0.8495531395055878,
+        "valid_commits": 427,
+        "true_stale_aborts": 5,
         "false_stale_aborts": 0,
         "unsafe_commits": 48,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.0125
+        "true_stale_rate": 0.010416666666666666
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 32,
         "alpha": 0.9,
         "total_tx": 960,
-        "throughput_tps": 10490.035334962104,
-        "p50_latency_ms": 0.3001480072271079,
-        "p95_latency_ms": 10.038977001386229,
-        "p99_latency_ms": 17.655069001193624,
-        "mean_latency_ms": 1.7154608292609435,
-        "valid_commits": 832,
-        "true_stale_aborts": 32,
+        "throughput_tps": 17342.614017231717,
+        "p50_latency_ms": 0.20930400205543265,
+        "p95_latency_ms": 9.12169499497395,
+        "p99_latency_ms": 16.589266000664793,
+        "mean_latency_ms": 1.4286625406612075,
+        "valid_commits": 830,
+        "true_stale_aborts": 34,
         "false_stale_aborts": 0,
         "unsafe_commits": 96,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.03333333333333333
+        "true_stale_rate": 0.035416666666666666
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 64,
         "alpha": 0.9,
         "total_tx": 1920,
-        "throughput_tps": 9068.823842597154,
-        "p50_latency_ms": 0.8607769996160641,
-        "p95_latency_ms": 19.386584994208533,
-        "p99_latency_ms": 40.162335004424676,
-        "mean_latency_ms": 4.4313967009960225,
-        "valid_commits": 1614,
-        "true_stale_aborts": 114,
+        "throughput_tps": 15082.374509715173,
+        "p50_latency_ms": 0.8652739998069592,
+        "p95_latency_ms": 16.39962899935199,
+        "p99_latency_ms": 20.35883600183297,
+        "mean_latency_ms": 3.2134793974516165,
+        "valid_commits": 1598,
+        "true_stale_aborts": 130,
         "false_stale_aborts": 0,
         "unsafe_commits": 192,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.059375
+        "true_stale_rate": 0.06770833333333333
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 128,
         "alpha": 0.9,
         "total_tx": 3840,
-        "throughput_tps": 10223.811671071464,
-        "p50_latency_ms": 1.343739997537341,
-        "p95_latency_ms": 21.322599997802172,
-        "p99_latency_ms": 37.29078100150218,
-        "mean_latency_ms": 4.790890356017978,
-        "valid_commits": 3226,
-        "true_stale_aborts": 230,
+        "throughput_tps": 18401.789091372502,
+        "p50_latency_ms": 0.8837889981805347,
+        "p95_latency_ms": 15.657075004128274,
+        "p99_latency_ms": 23.858036001911387,
+        "mean_latency_ms": 3.7158743370203715,
+        "valid_commits": 3100,
+        "true_stale_aborts": 356,
         "false_stale_aborts": 0,
         "unsafe_commits": 384,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.059895833333333336
+        "true_stale_rate": 0.09270833333333334
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 1,
         "alpha": 1.2,
         "total_tx": 30,
-        "throughput_tps": 4304.252083357333,
-        "p50_latency_ms": 0.16280599811580032,
-        "p95_latency_ms": 0.1811620022635907,
-        "p99_latency_ms": 0.48280500050168484,
-        "mean_latency_ms": 0.19357910035372092,
+        "throughput_tps": 5623.09939601572,
+        "p50_latency_ms": 0.15578400052618235,
+        "p95_latency_ms": 0.15873400116106495,
+        "p99_latency_ms": 0.16054700245149434,
+        "mean_latency_ms": 0.16075816723362854,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1800,11 +1800,11 @@
         "workers": 2,
         "alpha": 1.2,
         "total_tx": 60,
-        "throughput_tps": 6385.185685531187,
-        "p50_latency_ms": 0.16186999710043892,
-        "p95_latency_ms": 1.523325998277869,
-        "p99_latency_ms": 1.6965839968179353,
-        "mean_latency_ms": 0.27981413307619124,
+        "throughput_tps": 4555.351392770266,
+        "p50_latency_ms": 0.1564840058563277,
+        "p95_latency_ms": 0.5996840045554563,
+        "p99_latency_ms": 1.767285997630097,
+        "mean_latency_ms": 0.35043943353230134,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1818,11 +1818,11 @@
         "workers": 4,
         "alpha": 1.2,
         "total_tx": 120,
-        "throughput_tps": 6837.911133289936,
-        "p50_latency_ms": 0.16449599934276193,
-        "p95_latency_ms": 1.9264220027253032,
-        "p99_latency_ms": 2.7614410064416006,
-        "mean_latency_ms": 0.43857603341166396,
+        "throughput_tps": 7995.8917112049485,
+        "p50_latency_ms": 0.15954400441842154,
+        "p95_latency_ms": 1.7356590033159591,
+        "p99_latency_ms": 4.1286370033049025,
+        "mean_latency_ms": 0.3859942088941655,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -1836,107 +1836,107 @@
         "workers": 8,
         "alpha": 1.2,
         "total_tx": 240,
-        "throughput_tps": 7030.722764080677,
-        "p50_latency_ms": 0.16887699894141406,
-        "p95_latency_ms": 4.133257003559265,
-        "p99_latency_ms": 12.198675998661201,
-        "mean_latency_ms": 0.9857403794740094,
-        "valid_commits": 208,
-        "true_stale_aborts": 8,
+        "throughput_tps": 8464.021050816184,
+        "p50_latency_ms": 0.16026000230340287,
+        "p95_latency_ms": 4.0143769947462715,
+        "p99_latency_ms": 9.02773899724707,
+        "mean_latency_ms": 0.7472836500407235,
+        "valid_commits": 213,
+        "true_stale_aborts": 3,
         "false_stale_aborts": 0,
         "unsafe_commits": 24,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.03333333333333333
+        "true_stale_rate": 0.0125
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 16,
         "alpha": 1.2,
         "total_tx": 480,
-        "throughput_tps": 9764.321223006862,
-        "p50_latency_ms": 0.17590799689060077,
-        "p95_latency_ms": 8.787416001723614,
-        "p99_latency_ms": 13.027537002926692,
-        "mean_latency_ms": 1.2842542436828808,
-        "valid_commits": 416,
-        "true_stale_aborts": 16,
+        "throughput_tps": 11958.08601269927,
+        "p50_latency_ms": 0.16566400154260918,
+        "p95_latency_ms": 8.610719996795524,
+        "p99_latency_ms": 9.411626997462008,
+        "mean_latency_ms": 1.0915100249349052,
+        "valid_commits": 414,
+        "true_stale_aborts": 18,
         "false_stale_aborts": 0,
         "unsafe_commits": 48,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.03333333333333333
+        "true_stale_rate": 0.0375
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 32,
         "alpha": 1.2,
         "total_tx": 960,
-        "throughput_tps": 10941.189250271387,
-        "p50_latency_ms": 0.25923200155375525,
-        "p95_latency_ms": 10.540256997046527,
-        "p99_latency_ms": 15.854502998990938,
-        "mean_latency_ms": 2.250561700035784,
-        "valid_commits": 781,
-        "true_stale_aborts": 83,
+        "throughput_tps": 5980.893325973473,
+        "p50_latency_ms": 0.39102799928514287,
+        "p95_latency_ms": 11.337700998410583,
+        "p99_latency_ms": 16.60125499620335,
+        "mean_latency_ms": 2.5395094270834306,
+        "valid_commits": 801,
+        "true_stale_aborts": 63,
         "false_stale_aborts": 0,
         "unsafe_commits": 96,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.08645833333333333
+        "true_stale_rate": 0.065625
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 64,
         "alpha": 1.2,
         "total_tx": 1920,
-        "throughput_tps": 7821.952703669449,
-        "p50_latency_ms": 1.0496939939912409,
-        "p95_latency_ms": 23.797956004273146,
-        "p99_latency_ms": 36.76276499754749,
-        "mean_latency_ms": 5.423764916080624,
-        "valid_commits": 1531,
-        "true_stale_aborts": 197,
+        "throughput_tps": 17239.44916026298,
+        "p50_latency_ms": 0.33038199762813747,
+        "p95_latency_ms": 11.094328998296987,
+        "p99_latency_ms": 18.572685999970417,
+        "mean_latency_ms": 2.713655720284199,
+        "valid_commits": 1488,
+        "true_stale_aborts": 240,
         "false_stale_aborts": 0,
         "unsafe_commits": 192,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.10260416666666666
+        "true_stale_rate": 0.125
       },
       {
         "paradigm": "Standard OCC (Naive Optimistic Concurrency with Retries)",
         "workers": 128,
         "alpha": 1.2,
         "total_tx": 3840,
-        "throughput_tps": 7683.172935321775,
-        "p50_latency_ms": 2.4324439946212806,
-        "p95_latency_ms": 35.01451900228858,
-        "p99_latency_ms": 75.96027300314745,
-        "mean_latency_ms": 8.981642517367542,
-        "valid_commits": 2982,
-        "true_stale_aborts": 474,
+        "throughput_tps": 12091.351673468156,
+        "p50_latency_ms": 1.2936150014866143,
+        "p95_latency_ms": 18.767380999634042,
+        "p99_latency_ms": 39.182490996608976,
+        "mean_latency_ms": 5.56887940634283,
+        "valid_commits": 2825,
+        "true_stale_aborts": 631,
         "false_stale_aborts": 0,
         "unsafe_commits": 384,
         "unsafe_commit_rate": 0.1,
         "false_stale_rate": 0.0,
-        "true_stale_rate": 0.1234375
+        "true_stale_rate": 0.16432291666666668
       },
       {
         "paradigm": "PostgreSQL SSI (Serializable Snapshot Isolation)",
         "workers": 1,
         "alpha": 0.0,
         "total_tx": 30,
-        "throughput_tps": 23584.51629800469,
-        "p50_latency_ms": 0.005672001861967146,
-        "p95_latency_ms": 0.008737995813135058,
-        "p99_latency_ms": 0.013352000678423792,
-        "mean_latency_ms": 0.006729299154054995,
-        "valid_commits": 24,
+        "throughput_tps": 23060.674118884206,
+        "p50_latency_ms": 0.005494002834893763,
+        "p95_latency_ms": 0.013270000636111945,
+        "p99_latency_ms": 0.020272003894206136,
+        "mean_latency_ms": 0.007042400829959661,
+        "valid_commits": 23,
         "true_stale_aborts": 0,
-        "false_stale_aborts": 3,
+        "false_stale_aborts": 4,
         "unsafe_commits": 3,
         "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.1,
+        "false_stale_rate": 0.13333333333333333,
         "true_stale_rate": 0.0
       },
       {
@@ -1944,17 +1944,17 @@
         "workers": 2,
         "alpha": 0.0,
         "total_tx": 60,
-        "throughput_tps": 25159.722260594706,
-        "p50_latency_ms": 0.003410998033359647,
-        "p95_latency_ms": 0.018024999008048326,
-        "p99_latency_ms": 0.019843995687551796,
-        "mean_latency_ms": 0.005097899944909538,
-        "valid_commits": 49,
+        "throughput_tps": 23338.72068466927,
+        "p50_latency_ms": 0.0053679978009313345,
+        "p95_latency_ms": 0.018979997548740357,
+        "p99_latency_ms": 0.02033599594142288,
+        "mean_latency_ms": 0.007468649224999051,
+        "valid_commits": 51,
         "true_stale_aborts": 0,
-        "false_stale_aborts": 5,
+        "false_stale_aborts": 3,
         "unsafe_commits": 6,
         "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.08333333333333333,
+        "false_stale_rate": 0.05,
         "true_stale_rate": 0.0
       },
       {
@@ -1962,17 +1962,17 @@
         "workers": 4,
         "alpha": 0.0,
         "total_tx": 120,
-        "throughput_tps": 30003.277861671962,
-        "p50_latency_ms": 0.003168999683111906,
-        "p95_latency_ms": 0.013853998098056763,
-        "p99_latency_ms": 0.01624500146135688,
-        "mean_latency_ms": 0.004633657954400405,
-        "valid_commits": 88,
+        "throughput_tps": 22133.95282654916,
+        "p50_latency_ms": 0.005030000465922058,
+        "p95_latency_ms": 0.020282997866161168,
+        "p99_latency_ms": 0.025155000912491232,
+        "mean_latency_ms": 0.0068990085007195985,
+        "valid_commits": 90,
         "true_stale_aborts": 0,
-        "false_stale_aborts": 20,
-        "unsafe_commits": 12,
-        "unsafe_commit_rate": 0.1,
-        "false_stale_rate": 0.16666666666666666,
+        "false_stale_aborts": 19,
+        "unsafe_commits": 11,
+        "unsafe_commit_rate": 0.09166666666666666,
+        "false_stale_rate": 0.15833333333333333,
         "true_stale_rate": 0.0
       },
       {
@@ -1980,16 +1980,16 @@
         "workers": 8,
         "alpha": 0.0,
         "total_tx": 240,
-        "throughput_tps": 24334.98320385277,
-        "p50_latency_ms": 0.003720997483469546,
-        "p95_latency_ms": 0.012046999472659081,
-        "p99_latency_ms": 0.018103004549629986,
-        "mean_latency_ms": 0.005243533269094769,
-        "valid_commits": 177,
+        "throughput_tps": 21506.557672450304,
+        "p50_latency_ms": 0.0082949991337955,
+        "p95_latency_ms": 0.01811800029827282,
+        "p99_latency_ms": 0.022236999939195812,
+        "mean_latency_ms": 0.00922065428312635,
+        "valid_commits": 173,
         "true_stale_aborts": 0,
         "false_stale_aborts": 46,
-        "unsafe_commits": 17,
-        "unsafe_commit_rate": 0.07083333333333333,
+        "unsafe_commits": 21,
+        "unsafe_commit_rate": 0.0875,
         "false_stale_rate": 0.19166666666666668,
         "true_stale_rate": 0.0
       },
@@ -1998,17 +1998,17 @@
         "workers": 16,
         "alpha": 0.0,
         "total_tx": 480,
-        "throughput_tps": 13271.867996043648,
-        "p50_latency_ms": 0.005669004167430103,
-        "p95_latency_ms": 0.014681994798593223,
-        "p99_latency_ms": 0.025995999749284238,
-        "mean_latency_ms": 0.006977424709475599,
-        "valid_commits": 346,
+        "throughput_tps": 13700.898761408216,
+        "p50_latency_ms": 0.008644994522910565,
+        "p95_latency_ms": 0.023288994270842522,
+        "p99_latency_ms": 0.03609000123105943,
+        "mean_latency_ms": 0.011095062412399178,
+        "valid_commits": 358,
         "true_stale_aborts": 0,
-        "false_stale_aborts": 97,
-        "unsafe_commits": 37,
-        "unsafe_commit_rate": 0.07708333333333334,
-        "false_stale_rate": 0.20208333333333334,
+        "false_stale_aborts": 83,
+        "unsafe_commits": 39,
+        "unsafe_commit_rate": 0.08125,
+        "false_stale_rate": 0.17291666666666666,
         "true_stale_rate": 0.0
       },
       {
@@ -2016,17 +2016,17 @@
         "workers": 32,
         "alpha": 0.0,
         "total_tx": 960,
-        "throughput_tps": 17237.023310879096,
-        "p50_latency_ms": 0.006713999027851969,
-        "p95_latency_ms": 0.015552002878393978,
-        "p99_latency_ms": 0.023808002879377455,
-        "mean_latency_ms": 0.008184436455849209,
-        "valid_commits": 683,
+        "throughput_tps": 29013.400227162274,
+        "p50_latency_ms": 0.0042430037865415215,
+        "p95_latency_ms": 0.008577000699006021,
+        "p99_latency_ms": 0.01381299807690084,
+        "mean_latency_ms": 0.004834590587658265,
+        "valid_commits": 708,
         "true_stale_aborts": 0,
-        "false_stale_aborts": 195,
-        "unsafe_commits": 82,
-        "unsafe_commit_rate": 0.08541666666666667,
-        "false_stale_rate": 0.203125,
+        "false_stale_aborts": 179,
+        "unsafe_commits": 73,
+        "unsafe_commit_rate": 0.07604166666666666,
+        "false_stale_rate": 0.18645833333333334,
         "true_stale_rate": 0.0
       },
       {
@@ -2034,17 +2034,17 @@
         "workers": 64,
         "alpha": 0.0,
         "total_tx": 1920,
-        "throughput_tps": 14965.375149375704,
-        "p50_latency_ms": 0.008390001312363893,
-        "p95_latency_ms": 0.016214995412155986,
-        "p99_latency_ms": 0.02509299520170316,
-        "mean_latency_ms": 0.009421788039768822,
-        "valid_commits": 1449,
+        "throughput_tps": 22146.230150392686,
+        "p50_latency_ms": 0.006503993063233793,
+        "p95_latency_ms": 0.011090996849816293,
+        "p99_latency_ms": 0.01819500175770372,
+        "mean_latency_ms": 0.006867016774473693,
+        "valid_commits": 1396,
         "true_stale_aborts": 0,
-        "false_stale_aborts": 318,
-        "unsafe_commits": 153,
-        "unsafe_commit_rate": 0.0796875,
-        "false_stale_rate": 0.165625,
+        "false_stale_aborts": 373,
+        "unsafe_commits": 151,
+        "unsafe_commit_rate": 0.07864583333333333,
+        "false_stale_rate": 0.19427083333333334,
         "true_stale_rate": 0.0
       },
       {
@@ -2052,17 +2052,17 @@
         "workers": 128,
         "alpha": 0.0,
         "total_tx": 3840,
-        "throughput_tps": 10464.818457742078,
-        "p50_latency_ms": 0.010082003427669406,
-        "p95_latency_ms": 0.025478002498857677,
-        "p99_latency_ms": 0.05743699875893071,
-        "mean_latency_ms": 0.012759391192200079,
-        "valid_commits": 2795,
+        "throughput_tps": 20505.493303725903,
+        "p50_latency_ms": 0.00648699642624706,
+        "p95_latency_ms": 0.011225005437154323,
+        "p99_latency_ms": 0.020136998500674963,
+        "mean_latency_ms": 0.006956546277100036,
+        "valid_commits": 2756,
         "true_stale_aborts": 0,
-        "false_stale_aborts": 750,
-        "unsafe_commits": 295,
-        "unsafe_commit_rate": 0.07682291666666667,
-        "false_stale_rate": 0.1953125,
+        "false_stale_aborts": 781,
+        "unsafe_commits": 303,
+        "unsafe_commit_rate": 0.07890625,
+        "false_stale_rate": 0.20338541666666668,
         "true_stale_rate": 0.0
       },
       {
@@ -2070,11 +2070,11 @@
         "workers": 1,
         "alpha": 0.5,
         "total_tx": 30,
-        "throughput_tps": 18046.708460982605,
-        "p50_latency_ms": 0.004959998477715999,
-        "p95_latency_ms": 0.007034999725874513,
-        "p99_latency_ms": 0.014539000403601676,
-        "mean_latency_ms": 0.006204366218298674,
+        "throughput_tps": 29121.972511648983,
+        "p50_latency_ms": 0.003769993782043457,
+        "p95_latency_ms": 0.005715999577660114,
+        "p99_latency_ms": 0.013949000276625156,
+        "mean_latency_ms": 0.004882699674150596,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2088,11 +2088,11 @@
         "workers": 2,
         "alpha": 0.5,
         "total_tx": 60,
-        "throughput_tps": 30213.899278152927,
-        "p50_latency_ms": 0.0027120040613226593,
-        "p95_latency_ms": 0.011429001460783184,
-        "p99_latency_ms": 0.015869998605921865,
-        "mean_latency_ms": 0.003743866182048805,
+        "throughput_tps": 37860.407564440684,
+        "p50_latency_ms": 0.002111002686433494,
+        "p95_latency_ms": 0.008520000847056508,
+        "p99_latency_ms": 0.00884499604580924,
+        "mean_latency_ms": 0.0027010827276778096,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2106,11 +2106,11 @@
         "workers": 4,
         "alpha": 0.5,
         "total_tx": 120,
-        "throughput_tps": 22668.23657986517,
-        "p50_latency_ms": 0.0043769978219643235,
-        "p95_latency_ms": 0.010372001270297915,
-        "p99_latency_ms": 0.012396994861774147,
-        "mean_latency_ms": 0.005063733139346975,
+        "throughput_tps": 34103.465390611236,
+        "p50_latency_ms": 0.0037339996197260916,
+        "p95_latency_ms": 0.008266004442702979,
+        "p99_latency_ms": 0.009983996278606355,
+        "mean_latency_ms": 0.00432729217815601,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2124,11 +2124,11 @@
         "workers": 8,
         "alpha": 0.5,
         "total_tx": 240,
-        "throughput_tps": 25687.07299856498,
-        "p50_latency_ms": 0.0028180002118460834,
-        "p95_latency_ms": 0.009734001650940627,
-        "p99_latency_ms": 0.022189000446815044,
-        "mean_latency_ms": 0.004649154410193053,
+        "throughput_tps": 40392.58902820966,
+        "p50_latency_ms": 0.0019709987100213766,
+        "p95_latency_ms": 0.006959999154787511,
+        "p99_latency_ms": 0.010301999282091856,
+        "mean_latency_ms": 0.002838591505375613,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2142,11 +2142,11 @@
         "workers": 16,
         "alpha": 0.5,
         "total_tx": 480,
-        "throughput_tps": 17882.087306112444,
-        "p50_latency_ms": 0.004683999577537179,
-        "p95_latency_ms": 0.01261499710381031,
-        "p99_latency_ms": 0.017261998436879367,
-        "mean_latency_ms": 0.00609083963354351,
+        "throughput_tps": 24095.41180267615,
+        "p50_latency_ms": 0.0035229968489147723,
+        "p95_latency_ms": 0.01004699879558757,
+        "p99_latency_ms": 0.023623004381079227,
+        "mean_latency_ms": 0.004772208361221904,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2160,11 +2160,11 @@
         "workers": 32,
         "alpha": 0.5,
         "total_tx": 960,
-        "throughput_tps": 13395.540175119306,
-        "p50_latency_ms": 0.006112000846769661,
-        "p95_latency_ms": 0.014331999409478158,
-        "p99_latency_ms": 0.029276001441758126,
-        "mean_latency_ms": 0.006971804305067053,
+        "throughput_tps": 25324.330817632203,
+        "p50_latency_ms": 0.0037810023059137166,
+        "p95_latency_ms": 0.008716997399460524,
+        "p99_latency_ms": 0.014493998605757952,
+        "mean_latency_ms": 0.0048393072423399035,
         "valid_commits": 864,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2178,11 +2178,11 @@
         "workers": 64,
         "alpha": 0.5,
         "total_tx": 1920,
-        "throughput_tps": 12716.481792905091,
-        "p50_latency_ms": 0.00746700243325904,
-        "p95_latency_ms": 0.014594996173400432,
-        "p99_latency_ms": 0.025579000066500157,
-        "mean_latency_ms": 0.008493197447023704,
+        "throughput_tps": 19745.209665439837,
+        "p50_latency_ms": 0.005328998668119311,
+        "p95_latency_ms": 0.009611998393666,
+        "p99_latency_ms": 0.017048994777724147,
+        "mean_latency_ms": 0.006047565068456606,
         "valid_commits": 1728,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2196,11 +2196,11 @@
         "workers": 128,
         "alpha": 0.5,
         "total_tx": 3840,
-        "throughput_tps": 9417.168891241594,
-        "p50_latency_ms": 0.007951995939947665,
-        "p95_latency_ms": 0.018749997252598405,
-        "p99_latency_ms": 0.04489399725571275,
-        "mean_latency_ms": 0.010276981532797436,
+        "throughput_tps": 24488.5981944821,
+        "p50_latency_ms": 0.005385001713875681,
+        "p95_latency_ms": 0.009055998816620559,
+        "p99_latency_ms": 0.013775999832432717,
+        "mean_latency_ms": 0.005818576168318638,
         "valid_commits": 3456,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2214,11 +2214,11 @@
         "workers": 1,
         "alpha": 0.9,
         "total_tx": 30,
-        "throughput_tps": 32183.109143212718,
-        "p50_latency_ms": 0.0029009970603510737,
-        "p95_latency_ms": 0.004099005309399217,
-        "p99_latency_ms": 0.011945994629058987,
-        "mean_latency_ms": 0.003792200489745786,
+        "throughput_tps": 35898.13530664996,
+        "p50_latency_ms": 0.0023669999791309237,
+        "p95_latency_ms": 0.0035910052247345448,
+        "p99_latency_ms": 0.007881004421506077,
+        "mean_latency_ms": 0.0037173675082158297,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2232,11 +2232,11 @@
         "workers": 2,
         "alpha": 0.9,
         "total_tx": 60,
-        "throughput_tps": 38996.66787108762,
-        "p50_latency_ms": 0.0027220012270845473,
-        "p95_latency_ms": 0.011167001503054053,
-        "p99_latency_ms": 0.013609002053271979,
-        "mean_latency_ms": 0.0036520165546486774,
+        "throughput_tps": 46524.86401974749,
+        "p50_latency_ms": 0.0022470048861578107,
+        "p95_latency_ms": 0.00667999847792089,
+        "p99_latency_ms": 0.009889001375995576,
+        "mean_latency_ms": 0.0030815161153441295,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2250,11 +2250,11 @@
         "workers": 4,
         "alpha": 0.9,
         "total_tx": 120,
-        "throughput_tps": 21258.66908741258,
-        "p50_latency_ms": 0.004407003871165216,
-        "p95_latency_ms": 0.011692005500663072,
-        "p99_latency_ms": 0.015673002053517848,
-        "mean_latency_ms": 0.005232991012841619,
+        "throughput_tps": 37158.800912628976,
+        "p50_latency_ms": 0.0031460003810934722,
+        "p95_latency_ms": 0.0067069995566271245,
+        "p99_latency_ms": 0.008328999683726579,
+        "mean_latency_ms": 0.003521541354227035,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2268,11 +2268,11 @@
         "workers": 8,
         "alpha": 0.9,
         "total_tx": 240,
-        "throughput_tps": 16978.279405111305,
-        "p50_latency_ms": 0.004960995283909142,
-        "p95_latency_ms": 0.01604200224392116,
-        "p99_latency_ms": 0.02793000021483749,
-        "mean_latency_ms": 0.00715852074790746,
+        "throughput_tps": 27133.04146222806,
+        "p50_latency_ms": 0.0042149986256845295,
+        "p95_latency_ms": 0.013725002645514905,
+        "p99_latency_ms": 0.018208003893960267,
+        "mean_latency_ms": 0.005751150062375625,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2286,11 +2286,11 @@
         "workers": 16,
         "alpha": 0.9,
         "total_tx": 480,
-        "throughput_tps": 16024.02802940074,
-        "p50_latency_ms": 0.005330999556463212,
-        "p95_latency_ms": 0.013936994946561754,
-        "p99_latency_ms": 0.031728995963931084,
-        "mean_latency_ms": 0.00963276473460913,
+        "throughput_tps": 22267.075948867485,
+        "p50_latency_ms": 0.003959998139180243,
+        "p95_latency_ms": 0.016687998140696436,
+        "p99_latency_ms": 0.02103299630107358,
+        "mean_latency_ms": 0.006787327023024166,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2304,11 +2304,11 @@
         "workers": 32,
         "alpha": 0.9,
         "total_tx": 960,
-        "throughput_tps": 13643.98178466663,
-        "p50_latency_ms": 0.005980000423733145,
-        "p95_latency_ms": 0.014904995623510331,
-        "p99_latency_ms": 0.032256000849884,
-        "mean_latency_ms": 0.007181883158106454,
+        "throughput_tps": 18702.723025292995,
+        "p50_latency_ms": 0.007413997082039714,
+        "p95_latency_ms": 0.016739002603571862,
+        "p99_latency_ms": 0.021359999664127827,
+        "mean_latency_ms": 0.008245902010154774,
         "valid_commits": 864,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2322,11 +2322,11 @@
         "workers": 64,
         "alpha": 0.9,
         "total_tx": 1920,
-        "throughput_tps": 13470.91496885813,
-        "p50_latency_ms": 0.007387003279291093,
-        "p95_latency_ms": 0.014389006537385285,
-        "p99_latency_ms": 0.026555004296824336,
-        "mean_latency_ms": 0.008354745193628332,
+        "throughput_tps": 29749.275893675123,
+        "p50_latency_ms": 0.004704001185018569,
+        "p95_latency_ms": 0.007714996172580868,
+        "p99_latency_ms": 0.013680000847671181,
+        "mean_latency_ms": 0.0049538182793185115,
         "valid_commits": 1728,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2340,11 +2340,11 @@
         "workers": 128,
         "alpha": 0.9,
         "total_tx": 3840,
-        "throughput_tps": 11471.670803017536,
-        "p50_latency_ms": 0.0074830022640526295,
-        "p95_latency_ms": 0.01594999775988981,
-        "p99_latency_ms": 0.030887000320944935,
-        "mean_latency_ms": 0.009408154488710352,
+        "throughput_tps": 28360.283936095326,
+        "p50_latency_ms": 0.004958994395565242,
+        "p95_latency_ms": 0.008354996680282056,
+        "p99_latency_ms": 0.012336000509094447,
+        "mean_latency_ms": 0.005219438007012893,
         "valid_commits": 3456,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2358,11 +2358,11 @@
         "workers": 1,
         "alpha": 1.2,
         "total_tx": 30,
-        "throughput_tps": 20144.814352777492,
-        "p50_latency_ms": 0.00473299587611109,
-        "p95_latency_ms": 0.0065589993027970195,
-        "p99_latency_ms": 0.012947006325703114,
-        "mean_latency_ms": 0.005953566142125055,
+        "throughput_tps": 40408.285201794475,
+        "p50_latency_ms": 0.002095999661833048,
+        "p95_latency_ms": 0.006807997124269605,
+        "p99_latency_ms": 0.01481100480305031,
+        "mean_latency_ms": 0.0033073008429103843,
         "valid_commits": 27,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2376,11 +2376,11 @@
         "workers": 2,
         "alpha": 1.2,
         "total_tx": 60,
-        "throughput_tps": 15698.328358246119,
-        "p50_latency_ms": 0.004893998266197741,
-        "p95_latency_ms": 0.018552003894001245,
-        "p99_latency_ms": 0.023143998987507075,
-        "mean_latency_ms": 0.006294866519359251,
+        "throughput_tps": 55600.963230913076,
+        "p50_latency_ms": 0.0020989973563700914,
+        "p95_latency_ms": 0.008183000318240374,
+        "p99_latency_ms": 0.01270700158784166,
+        "mean_latency_ms": 0.002886016833751152,
         "valid_commits": 54,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2394,11 +2394,11 @@
         "workers": 4,
         "alpha": 1.2,
         "total_tx": 120,
-        "throughput_tps": 22908.921386448957,
-        "p50_latency_ms": 0.005027002771385014,
-        "p95_latency_ms": 0.009940995369106531,
-        "p99_latency_ms": 0.01633800275158137,
-        "mean_latency_ms": 0.006023699703897971,
+        "throughput_tps": 51320.08077447909,
+        "p50_latency_ms": 0.002062995918095112,
+        "p95_latency_ms": 0.007579998055007309,
+        "p99_latency_ms": 0.00937400182010606,
+        "mean_latency_ms": 0.0029340499168029055,
         "valid_commits": 108,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2412,11 +2412,11 @@
         "workers": 8,
         "alpha": 1.2,
         "total_tx": 240,
-        "throughput_tps": 17801.315077459003,
-        "p50_latency_ms": 0.004742003511637449,
-        "p95_latency_ms": 0.013548997230827808,
-        "p99_latency_ms": 0.02668500383151695,
-        "mean_latency_ms": 0.006271729186361578,
+        "throughput_tps": 52335.413304785914,
+        "p50_latency_ms": 0.001954002073034644,
+        "p95_latency_ms": 0.006245994882192463,
+        "p99_latency_ms": 0.008735994924791157,
+        "mean_latency_ms": 0.002640358252392616,
         "valid_commits": 216,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2430,11 +2430,11 @@
         "workers": 16,
         "alpha": 1.2,
         "total_tx": 480,
-        "throughput_tps": 21064.646739702006,
-        "p50_latency_ms": 0.004536996129900217,
-        "p95_latency_ms": 0.01298500137636438,
-        "p99_latency_ms": 0.02336800389457494,
-        "mean_latency_ms": 0.006733041497379115,
+        "throughput_tps": 39230.89145246472,
+        "p50_latency_ms": 0.00208600249607116,
+        "p95_latency_ms": 0.008591996447648853,
+        "p99_latency_ms": 0.021790001483168453,
+        "mean_latency_ms": 0.0037365000631931857,
         "valid_commits": 432,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2448,11 +2448,11 @@
         "workers": 32,
         "alpha": 1.2,
         "total_tx": 960,
-        "throughput_tps": 11438.430811898825,
-        "p50_latency_ms": 0.007328999345190823,
-        "p95_latency_ms": 0.016104000678751618,
-        "p99_latency_ms": 0.04813600389752537,
-        "mean_latency_ms": 0.009234189648547423,
+        "throughput_tps": 30077.926262050387,
+        "p50_latency_ms": 0.0036609999369829893,
+        "p95_latency_ms": 0.008364004315808415,
+        "p99_latency_ms": 0.011957003152929246,
+        "mean_latency_ms": 0.00423127492013009,
         "valid_commits": 864,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2466,11 +2466,11 @@
         "workers": 64,
         "alpha": 1.2,
         "total_tx": 1920,
-        "throughput_tps": 8856.991336612218,
-        "p50_latency_ms": 0.008397000783588737,
-        "p95_latency_ms": 0.02182000025641173,
-        "p99_latency_ms": 0.04397599695948884,
-        "mean_latency_ms": 0.010354545815971505,
+        "throughput_tps": 31156.183072744927,
+        "p50_latency_ms": 0.005164998583495617,
+        "p95_latency_ms": 0.007671005732845515,
+        "p99_latency_ms": 0.010495998139958829,
+        "mean_latency_ms": 0.005254767749344562,
         "valid_commits": 1728,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2484,11 +2484,11 @@
         "workers": 128,
         "alpha": 1.2,
         "total_tx": 3840,
-        "throughput_tps": 11706.921500508037,
-        "p50_latency_ms": 0.007566995918750763,
-        "p95_latency_ms": 0.015110999811440706,
-        "p99_latency_ms": 0.025579000066500157,
-        "mean_latency_ms": 0.008691097171246534,
+        "throughput_tps": 28717.723148819226,
+        "p50_latency_ms": 0.005216999852564186,
+        "p95_latency_ms": 0.008163995516952127,
+        "p99_latency_ms": 0.012388001778163016,
+        "mean_latency_ms": 0.0053880158873198525,
         "valid_commits": 3456,
         "true_stale_aborts": 0,
         "false_stale_aborts": 0,
@@ -2512,7 +2512,7 @@
         "expected_behavior": "Locks auto-released, version unchanged, subsequent transaction succeeds",
         "observed_behavior": "Crash caught=True, locks_free=True, sub_tx_status=valid_commit",
         "passed": true,
-        "recovery_latency_ms": 0.2572269950178452,
+        "recovery_latency_ms": 0.24565499916207045,
         "details": {
           "initial_version": 1,
           "post_crash_version": 1,
@@ -2526,7 +2526,7 @@
         "expected_behavior": "Safe abort with CLINICAL_DDI_SAFETY, state versions and ledger unchanged",
         "observed_behavior": "Status=safe_abort, category=clinical_ddi_safety, ledger_delta=0",
         "passed": true,
-        "recovery_latency_ms": 0.1916069959406741,
+        "recovery_latency_ms": 0.15111100219655782,
         "details": {
           "res_status": "safe_abort",
           "abort_category": "clinical_ddi_safety",
@@ -2540,7 +2540,7 @@
         "expected_behavior": "LedgerAuditor fails closed, flags block seq 3 with invalid signature",
         "observed_behavior": "Pre-valid=True, Post-valid=False, flagged_seq=3",
         "passed": true,
-        "recovery_latency_ms": 0.23294900165637955,
+        "recovery_latency_ms": 0.1923239979078062,
         "details": {
           "audit_message": "Invalid cryptographic signature at seq 3: 'SIG_CORRUPTED_TAMPERED_KEY_000'"
         }
@@ -2552,7 +2552,7 @@
         "expected_behavior": "LedgerAuditor catches Merkle root mismatch at seq 4",
         "observed_behavior": "Audit passed=False, flagged_seq=4",
         "passed": true,
-        "recovery_latency_ms": 0.17724099598126486,
+        "recovery_latency_ms": 0.14465800632024184,
         "details": {
           "audit_message": "Merkle root mismatch at seq 4: '3171da80d41a5a4a0d37a1722467fa99d9e22c76a92aed12b3055f0572805165' != computed '945fdd9636fccc4645a992c9d1a6df66822f4819a745a9ea7e3d6b7b45b2ff2a'"
         }
@@ -2564,7 +2564,7 @@
         "expected_behavior": "All valid transactions commit and full ledger passes cryptographic audit",
         "observed_behavior": "Valid commits=37/50, Ledger audit valid=True",
         "passed": true,
-        "recovery_latency_ms": 2.0933919950039126,
+        "recovery_latency_ms": 1.649236997764092,
         "details": {
           "valid_commits": 37,
           "total_ledger_blocks": 37
@@ -2577,304 +2577,1608 @@
       "corrupted_blocks_detected": 0,
       "first_corrupted_seq": null,
       "verification_message": "All 37 ledger blocks cryptographically verified with 0 defects",
-      "audit_duration_ms": 0.08919600077206269
+      "audit_duration_ms": 0.06849299825262278
     }
   },
   "deadlock_analysis": {
     "glhs_canonical_ss2pl": {
       "paradigm": "GLHS Canonical SS2PL",
       "canonical_ordering_enforced": true,
-      "num_threads": 32,
+      "num_threads": 16,
       "total_transactions": 200,
       "total_lock_acquisitions": 768,
-      "total_wait_events": 189,
-      "cycle_checks_performed": 20,
+      "total_wait_events": 185,
+      "cycle_checks_performed": 13,
       "deadlocks_detected": 0,
       "detected_cycles": [],
       "zero_deadlock_invariant_satisfied": true,
       "max_wait_chain_depth": 1,
-      "elapsed_ms": 80.345
+      "elapsed_ms": 37.201
     },
     "unordered_standard_2pl": {
       "paradigm": "Un-ordered Standard 2PL",
       "canonical_ordering_enforced": false,
-      "num_threads": 32,
+      "num_threads": 16,
       "total_transactions": 200,
-      "total_lock_acquisitions": 81,
-      "total_wait_events": 237,
-      "cycle_checks_performed": 208,
-      "deadlocks_detected": 17,
+      "total_lock_acquisitions": 184,
+      "total_wait_events": 215,
+      "cycle_checks_performed": 204,
+      "deadlocks_detected": 112,
       "detected_cycles": [
         {
           "cycle_id": "cycle_1",
           "thread_path": [
-            "thread_unord_30",
-            "thread_unord_19",
-            "thread_unord_30"
-          ],
-          "resource_path": [
-            "partition:profile_001:medication:lisinopril",
-            "profile:profile_001",
-            "partition:profile_001:medication:lisinopril"
-          ],
-          "detected_at": 1787372566.4591289
-        },
-        {
-          "cycle_id": "cycle_2",
-          "thread_path": [
-            "thread_unord_18",
-            "thread_unord_20",
-            "thread_unord_18"
-          ],
-          "resource_path": [
-            "policy:glhs_policy_v1",
-            "partition:profile_002:medication:metformin",
-            "policy:glhs_policy_v1"
-          ],
-          "detected_at": 1787372566.465194
-        },
-        {
-          "cycle_id": "cycle_3",
-          "thread_path": [
-            "thread_unord_04",
-            "thread_unord_22",
-            "thread_unord_18",
-            "thread_unord_20",
-            "thread_unord_04"
-          ],
-          "resource_path": [
-            "policy:glhs_policy_v1",
-            "profile:profile_001",
-            "partition:profile_001:medication:lisinopril",
-            "profile:profile_002",
-            "policy:glhs_policy_v1"
-          ],
-          "detected_at": 1787372566.5170093
-        },
-        {
-          "cycle_id": "cycle_4",
-          "thread_path": [
-            "thread_unord_10",
             "thread_unord_01",
-            "thread_unord_22",
-            "thread_unord_10"
-          ],
-          "resource_path": [
-            "partition:profile_002:medication:metformin",
-            "policy:glhs_policy_v1",
-            "profile:profile_001",
-            "partition:profile_002:medication:metformin"
-          ],
-          "detected_at": 1787372566.5172749
-        },
-        {
-          "cycle_id": "cycle_5",
-          "thread_path": [
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22",
-            "thread_unord_10"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.5173438
-        },
-        {
-          "cycle_id": "cycle_6",
-          "thread_path": [
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22",
-            "thread_unord_10"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.5173755
-        },
-        {
-          "cycle_id": "cycle_7",
-          "thread_path": [
-            "thread_unord_22",
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.5176888
-        },
-        {
-          "cycle_id": "cycle_8",
-          "thread_path": [
-            "thread_unord_22",
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.5177486
-        },
-        {
-          "cycle_id": "cycle_9",
-          "thread_path": [
-            "thread_unord_22",
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.517776
-        },
-        {
-          "cycle_id": "cycle_10",
-          "thread_path": [
-            "thread_unord_22",
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.5582128
-        },
-        {
-          "cycle_id": "cycle_11",
-          "thread_path": [
-            "thread_unord_22",
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.5583909
-        },
-        {
-          "cycle_id": "cycle_12",
-          "thread_path": [
-            "thread_unord_22",
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.5585454
-        },
-        {
-          "cycle_id": "cycle_13",
-          "thread_path": [
-            "thread_unord_22",
-            "thread_unord_10",
-            "thread_unord_01",
-            "thread_unord_22"
-          ],
-          "resource_path": [
-            "profile:profile_001",
-            "profile:profile_001",
-            "policy:glhs_policy_v1",
-            "profile:profile_001"
-          ],
-          "detected_at": 1787372566.5592837
-        },
-        {
-          "cycle_id": "cycle_14",
-          "thread_path": [
-            "thread_unord_01",
-            "thread_unord_22",
+            "thread_unord_15",
             "thread_unord_10",
             "thread_unord_01"
           ],
           "resource_path": [
             "policy:glhs_policy_v1",
-            "profile:profile_001",
-            "profile:profile_001",
+            "partition:profile_002:medication:metformin",
+            "",
             "policy:glhs_policy_v1"
           ],
-          "detected_at": 1787372566.5595167
+          "detected_at": 1787387237.8526402
         },
         {
-          "cycle_id": "cycle_15",
+          "cycle_id": "cycle_2",
           "thread_path": [
-            "thread_unord_02",
-            "thread_unord_31",
-            "thread_unord_04",
-            "thread_unord_02"
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
           ],
           "resource_path": [
-            "policy:glhs_policy_v1",
-            "profile:profile_002",
-            "partition:profile_002:medication:lisinopril",
-            "policy:glhs_policy_v1"
+            "partition:profile_002:medication:metformin",
+            "",
+            "partition:profile_002:medication:metformin"
           ],
-          "detected_at": 1787372566.5702534
+          "detected_at": 1787387237.8526707
         },
         {
-          "cycle_id": "cycle_16",
+          "cycle_id": "cycle_3",
           "thread_path": [
-            "thread_unord_18",
-            "thread_unord_22",
-            "thread_unord_18"
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
           ],
           "resource_path": [
             "profile:profile_002",
             "",
             "profile:profile_002"
           ],
-          "detected_at": 1787372566.6097622
+          "detected_at": 1787387237.8526814
+        },
+        {
+          "cycle_id": "cycle_4",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.8526897
+        },
+        {
+          "cycle_id": "cycle_5",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "profile:profile_002",
+            "",
+            "profile:profile_002"
+          ],
+          "detected_at": 1787387237.852697
+        },
+        {
+          "cycle_id": "cycle_6",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.8527038
+        },
+        {
+          "cycle_id": "cycle_7",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.8527145
+        },
+        {
+          "cycle_id": "cycle_8",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "partition:profile_002:medication:lisinopril",
+            "",
+            "partition:profile_002:medication:lisinopril"
+          ],
+          "detected_at": 1787387237.8527288
+        },
+        {
+          "cycle_id": "cycle_9",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.8527381
+        },
+        {
+          "cycle_id": "cycle_10",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.852783
+        },
+        {
+          "cycle_id": "cycle_11",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.852809
+        },
+        {
+          "cycle_id": "cycle_12",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.852827
+        },
+        {
+          "cycle_id": "cycle_13",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.852841
+        },
+        {
+          "cycle_id": "cycle_14",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.852851
+        },
+        {
+          "cycle_id": "cycle_15",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8528624
+        },
+        {
+          "cycle_id": "cycle_16",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.852872
         },
         {
           "cycle_id": "cycle_17",
           "thread_path": [
-            "thread_unord_22",
-            "thread_unord_18",
-            "thread_unord_22"
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
           ],
           "resource_path": [
             "",
-            "profile:profile_002",
+            "policy:glhs_policy_v1",
             ""
           ],
-          "detected_at": 1787372566.6098523
+          "detected_at": 1787387237.8528829
+        },
+        {
+          "cycle_id": "cycle_18",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8528903
+        },
+        {
+          "cycle_id": "cycle_19",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8529735
+        },
+        {
+          "cycle_id": "cycle_20",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.853002
+        },
+        {
+          "cycle_id": "cycle_21",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.853027
+        },
+        {
+          "cycle_id": "cycle_22",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8530424
+        },
+        {
+          "cycle_id": "cycle_23",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.853059
+        },
+        {
+          "cycle_id": "cycle_24",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.853077
+        },
+        {
+          "cycle_id": "cycle_25",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8530974
+        },
+        {
+          "cycle_id": "cycle_26",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8531144
+        },
+        {
+          "cycle_id": "cycle_27",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.853155
+        },
+        {
+          "cycle_id": "cycle_28",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8531795
+        },
+        {
+          "cycle_id": "cycle_29",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8531957
+        },
+        {
+          "cycle_id": "cycle_30",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8532116
+        },
+        {
+          "cycle_id": "cycle_31",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8532197
+        },
+        {
+          "cycle_id": "cycle_32",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8532324
+        },
+        {
+          "cycle_id": "cycle_33",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8532438
+        },
+        {
+          "cycle_id": "cycle_34",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8532565
+        },
+        {
+          "cycle_id": "cycle_35",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.8532665
+        },
+        {
+          "cycle_id": "cycle_36",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.9016275
+        },
+        {
+          "cycle_id": "cycle_37",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.9016724
+        },
+        {
+          "cycle_id": "cycle_38",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.901695
+        },
+        {
+          "cycle_id": "cycle_39",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.9017084
+        },
+        {
+          "cycle_id": "cycle_40",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.9017234
+        },
+        {
+          "cycle_id": "cycle_41",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.9017444
+        },
+        {
+          "cycle_id": "cycle_42",
+          "thread_path": [
+            "thread_unord_01",
+            "thread_unord_10",
+            "thread_unord_01"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.901771
+        },
+        {
+          "cycle_id": "cycle_43",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9018636
+        },
+        {
+          "cycle_id": "cycle_44",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.901892
+        },
+        {
+          "cycle_id": "cycle_45",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.901922
+        },
+        {
+          "cycle_id": "cycle_46",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9019427
+        },
+        {
+          "cycle_id": "cycle_47",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9019623
+        },
+        {
+          "cycle_id": "cycle_48",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9019747
+        },
+        {
+          "cycle_id": "cycle_49",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.901986
+        },
+        {
+          "cycle_id": "cycle_50",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9020348
+        },
+        {
+          "cycle_id": "cycle_51",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9020529
+        },
+        {
+          "cycle_id": "cycle_52",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.90207
+        },
+        {
+          "cycle_id": "cycle_53",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9020932
+        },
+        {
+          "cycle_id": "cycle_54",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9021115
+        },
+        {
+          "cycle_id": "cycle_55",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9021769
+        },
+        {
+          "cycle_id": "cycle_56",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.902199
+        },
+        {
+          "cycle_id": "cycle_57",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.902208
+        },
+        {
+          "cycle_id": "cycle_58",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9022183
+        },
+        {
+          "cycle_id": "cycle_59",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9022312
+        },
+        {
+          "cycle_id": "cycle_60",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9022415
+        },
+        {
+          "cycle_id": "cycle_61",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9022489
+        },
+        {
+          "cycle_id": "cycle_62",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9022555
+        },
+        {
+          "cycle_id": "cycle_63",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.902295
+        },
+        {
+          "cycle_id": "cycle_64",
+          "thread_path": [
+            "thread_unord_14",
+            "thread_unord_07",
+            "thread_unord_14"
+          ],
+          "resource_path": [
+            "profile:profile_002",
+            "",
+            "profile:profile_002"
+          ],
+          "detected_at": 1787387237.9023087
+        },
+        {
+          "cycle_id": "cycle_65",
+          "thread_path": [
+            "thread_unord_14",
+            "thread_unord_07",
+            "thread_unord_14"
+          ],
+          "resource_path": [
+            "profile:profile_002",
+            "",
+            "profile:profile_002"
+          ],
+          "detected_at": 1787387237.9023209
+        },
+        {
+          "cycle_id": "cycle_66",
+          "thread_path": [
+            "thread_unord_14",
+            "thread_unord_07",
+            "thread_unord_14"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.9023337
+        },
+        {
+          "cycle_id": "cycle_67",
+          "thread_path": [
+            "thread_unord_14",
+            "thread_unord_07",
+            "thread_unord_14"
+          ],
+          "resource_path": [
+            "partition:profile_002:medication:lisinopril",
+            "",
+            "partition:profile_002:medication:lisinopril"
+          ],
+          "detected_at": 1787387237.9023452
+        },
+        {
+          "cycle_id": "cycle_68",
+          "thread_path": [
+            "thread_unord_14",
+            "thread_unord_07",
+            "thread_unord_14"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.902361
+        },
+        {
+          "cycle_id": "cycle_69",
+          "thread_path": [
+            "thread_unord_14",
+            "thread_unord_07",
+            "thread_unord_14"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.902387
+        },
+        {
+          "cycle_id": "cycle_70",
+          "thread_path": [
+            "thread_unord_14",
+            "thread_unord_07",
+            "thread_unord_14"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.9024127
+        },
+        {
+          "cycle_id": "cycle_71",
+          "thread_path": [
+            "thread_unord_14",
+            "thread_unord_07",
+            "thread_unord_14"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.902434
+        },
+        {
+          "cycle_id": "cycle_72",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9024973
+        },
+        {
+          "cycle_id": "cycle_73",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9025187
+        },
+        {
+          "cycle_id": "cycle_74",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9025402
+        },
+        {
+          "cycle_id": "cycle_75",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9025662
+        },
+        {
+          "cycle_id": "cycle_76",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.90258
+        },
+        {
+          "cycle_id": "cycle_77",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.902595
+        },
+        {
+          "cycle_id": "cycle_78",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.902613
+        },
+        {
+          "cycle_id": "cycle_79",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.902629
+        },
+        {
+          "cycle_id": "cycle_80",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9027324
+        },
+        {
+          "cycle_id": "cycle_81",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9027433
+        },
+        {
+          "cycle_id": "cycle_82",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9027507
+        },
+        {
+          "cycle_id": "cycle_83",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.902782
+        },
+        {
+          "cycle_id": "cycle_84",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.902793
+        },
+        {
+          "cycle_id": "cycle_85",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9028018
+        },
+        {
+          "cycle_id": "cycle_86",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9028096
+        },
+        {
+          "cycle_id": "cycle_87",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9028165
+        },
+        {
+          "cycle_id": "cycle_88",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9028249
+        },
+        {
+          "cycle_id": "cycle_89",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9028563
+        },
+        {
+          "cycle_id": "cycle_90",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9028664
+        },
+        {
+          "cycle_id": "cycle_91",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "partition:profile_001:medication:lisinopril",
+            "policy:glhs_policy_v1",
+            "partition:profile_001:medication:lisinopril"
+          ],
+          "detected_at": 1787387237.9029179
+        },
+        {
+          "cycle_id": "cycle_92",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "partition:profile_001:medication:metformin",
+            "policy:glhs_policy_v1",
+            "partition:profile_001:medication:metformin"
+          ],
+          "detected_at": 1787387237.9029353
+        },
+        {
+          "cycle_id": "cycle_93",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "policy:glhs_policy_v1",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.902953
+        },
+        {
+          "cycle_id": "cycle_94",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "partition:profile_001:medication:metformin",
+            "policy:glhs_policy_v1",
+            "partition:profile_001:medication:metformin"
+          ],
+          "detected_at": 1787387237.9029665
+        },
+        {
+          "cycle_id": "cycle_95",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "profile:profile_001",
+            "policy:glhs_policy_v1",
+            "profile:profile_001"
+          ],
+          "detected_at": 1787387237.902978
+        },
+        {
+          "cycle_id": "cycle_96",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9030206
+        },
+        {
+          "cycle_id": "cycle_97",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.903032
+        },
+        {
+          "cycle_id": "cycle_98",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9033384
+        },
+        {
+          "cycle_id": "cycle_99",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9033797
+        },
+        {
+          "cycle_id": "cycle_100",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9034007
+        },
+        {
+          "cycle_id": "cycle_101",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9034173
+        },
+        {
+          "cycle_id": "cycle_102",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.903427
+        },
+        {
+          "cycle_id": "cycle_103",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9034386
+        },
+        {
+          "cycle_id": "cycle_104",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9034672
+        },
+        {
+          "cycle_id": "cycle_105",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9034925
+        },
+        {
+          "cycle_id": "cycle_106",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9035363
+        },
+        {
+          "cycle_id": "cycle_107",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.9035532
+        },
+        {
+          "cycle_id": "cycle_108",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.903562
+        },
+        {
+          "cycle_id": "cycle_109",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "",
+            "policy:glhs_policy_v1",
+            ""
+          ],
+          "detected_at": 1787387237.90357
+        },
+        {
+          "cycle_id": "cycle_110",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "profile:profile_002",
+            "policy:glhs_policy_v1",
+            "profile:profile_002"
+          ],
+          "detected_at": 1787387237.9035983
+        },
+        {
+          "cycle_id": "cycle_111",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "policy:glhs_policy_v1",
+            "policy:glhs_policy_v1",
+            "policy:glhs_policy_v1"
+          ],
+          "detected_at": 1787387237.9036293
+        },
+        {
+          "cycle_id": "cycle_112",
+          "thread_path": [
+            "thread_unord_10",
+            "thread_unord_01",
+            "thread_unord_10"
+          ],
+          "resource_path": [
+            "partition:profile_001:medication:metformin",
+            "policy:glhs_policy_v1",
+            "partition:profile_001:medication:metformin"
+          ],
+          "detected_at": 1787387237.9036434
         }
       ],
       "zero_deadlock_invariant_satisfied": false,
-      "max_wait_chain_depth": 6,
-      "elapsed_ms": 465.118
+      "max_wait_chain_depth": 5,
+      "elapsed_ms": 406.232
     }
   }
 }

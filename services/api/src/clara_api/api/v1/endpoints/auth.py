@@ -32,6 +32,7 @@ from clara_api.core.security import (
 from clara_api.core.session_security import session_security
 from clara_api.db.models import AuthToken, PhrProfile, User, UserConsent
 from clara_api.db.session import get_db
+from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
 from clara_api.schemas import (
     ChangePasswordRequest,
     ConsentAcceptRequest,
@@ -452,6 +453,15 @@ def register(
         # contains no inferred conditions, medicines, measurements, or other
         # synthetic health data; users remain the sole source of clinical facts.
         db.add(PhrProfile(user_id=user.id, full_name=user.full_name))
+        if payload.accepted_medical_consent:
+            acquire_consent_lock_anchor(db, user_id=user.id)
+            db.add(
+                UserConsent(
+                    user_id=user.id,
+                    consent_type=MEDICAL_CONSENT_TYPE,
+                    consent_version=required_medical_disclaimer_version(),
+                )
+            )
         db.commit()
         db.refresh(user)
     except SQLAlchemyError as exc:
@@ -997,6 +1007,8 @@ def accept_consent(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tồn tại"
         )
+
+    acquire_consent_lock_anchor(db, user_id=user.id)
 
     latest = get_latest_user_consent(db, user_id=user.id, consent_type=MEDICAL_CONSENT_TYPE)
     if latest and latest.consent_version == required_version and latest.revoked_at is None:

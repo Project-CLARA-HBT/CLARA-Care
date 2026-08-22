@@ -36,7 +36,6 @@ from clara_api.glhs.commitments import (
 from clara_api.glhs.domain import GlhsInvariantError
 from clara_api.glhs.gateway import (
     _governed_consent_version,
-    _lock_profile_state,
     current_state_version,
     get_or_create_entity_partition,
     increment_partition_versions,
@@ -1758,12 +1757,17 @@ def apply_commitment_transition(
     # PolicyAnchor(d) ≺ ProfileAndConsentAnchor(u) ≺_lex EntityPartitions(u, k) ≺ LeaseState(l)
     #
     # Step 1: Policy Lock Anchor
-    from clara_api.glhs.lock_hierarchy import acquire_policy_lock_anchor
+    from clara_api.glhs.lock_hierarchy import (
+        acquire_policy_lock_anchor,
+        acquire_profile_and_consent_anchor,
+    )
 
     acquire_policy_lock_anchor(db, policy_domain=commitment.domain)
 
     # Step 2: Profile state PhrProfile with SELECT ... FOR UPDATE & advisory locks
-    base = _lock_profile_state(db, profile_id=scope.profile.id)
+    base, owner_user_id = acquire_profile_and_consent_anchor(
+        db, profile_id=scope.profile.id
+    )
     # Re-check after lock acquisition: another transaction may have committed
     # the same key while this writer waited. This prevents a raw unique-key
     # failure and makes an identical concurrent retry deterministic.
@@ -1794,7 +1798,7 @@ def apply_commitment_transition(
         raise GlhsInvariantError("commitment_proposal_evidence_mismatch")
     # Step 3: Re-read & verify active UserConsent and GovernancePolicyEpoch under active locks
     consent_version = _governed_consent_version(
-        db, owner_user_id=scope.profile.user_id, purpose=scope.purpose, for_update=True
+        db, owner_user_id=owner_user_id, purpose=scope.purpose, for_update=True
     )
     epoch = read_current_policy_epoch(db, for_update=True)
     policy_version = epoch.version if epoch is not None else COMMITMENT_POLICY_VERSION
