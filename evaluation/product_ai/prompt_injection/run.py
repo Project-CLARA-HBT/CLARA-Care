@@ -135,7 +135,10 @@ def run_benchmark(
     )
 
     if output_dir:
-        report_file = output_dir / f"{manifest.task_id}_{provider}_{model}_report.json"
+        if output_dir.suffix == ".json":
+            report_file = output_dir
+        else:
+            report_file = output_dir / f"{manifest.task_id}_{provider}_{model}_report.json"
         save_report(report, report_file)
 
     return report

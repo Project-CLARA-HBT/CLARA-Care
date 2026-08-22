@@ -269,10 +269,26 @@ if __name__ == "__main__":
         default=os.environ.get("ROUTER_BASE_URL", "https://router.theclaracare.com/v1"),
         help="Base URL for router",
     )
+    parser.add_argument(
+        "--models",
+        default="gemini-3.7-flash-tiered,gemini-3.6-flash-high,claude-sonnet-4-6",
+        help="Comma-separated model names to evaluate",
+    )
+    parser.add_argument(
+        "--suites",
+        default="",
+        help="Comma-separated suite names to evaluate (default: all)",
+    )
     args = parser.parse_args()
+
+    selected_models = [m.strip() for m in args.models.split(",") if m.strip()]
+    filtered_targets = [t for t in EVALUATION_TARGETS if t["model"] in selected_models]
+    selected_suites = [s.strip() for s in args.suites.split(",") if s.strip()] or None
 
     results = run_all_benchmarks(
         output_dir=Path(args.output),
+        targets=filtered_targets if filtered_targets else None,
+        suites=selected_suites,
         live=args.live,
         router_base_url=args.router_base_url,
         router_api_key=args.router_api_key,

@@ -8,9 +8,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation.model_adjudication.run_v2 import MODELS
 
@@ -74,9 +79,28 @@ def _self_consistency(
 
 
 def analyze(data_dir: Path) -> dict[str, Any]:
-    results: list[dict[str, Any]] = [
-        json.loads(path.read_text(encoding="utf-8")) for path in sorted(data_dir.glob("*.json"))
-    ]
+    if data_dir.is_file():
+        if (data_dir.parent / data_dir.stem).is_dir():
+            data_dir = data_dir.parent / data_dir.stem
+    if data_dir.is_dir():
+        raw_items: list[Any] = [
+            json.loads(path.read_text(encoding="utf-8")) for path in sorted(data_dir.glob("*.json"))
+        ]
+        results = [
+            r
+            for r in raw_items
+            if isinstance(r, dict)
+            and "case_id" in r
+            and ("reviews" in r or "initial_reviews" in r)
+        ]
+    else:
+        parsed = json.loads(data_dir.read_text(encoding="utf-8"))
+        if isinstance(parsed, list):
+            results = [r for r in parsed if isinstance(r, dict) and "case_id" in r]
+        elif isinstance(parsed, dict) and "cases" in parsed:
+            results = [r for r in parsed["cases"] if isinstance(r, dict) and "case_id" in r]
+        else:
+            results = [parsed] if isinstance(parsed, dict) and "case_id" in parsed else []
     canonical = [r for r in results if not r.get("frozen_duplicate")]
     duplicates = [r for r in results if r.get("frozen_duplicate")]
     if not canonical:
@@ -116,9 +140,10 @@ def analyze(data_dir: Path) -> dict[str, Any]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-dir", type=Path, required=True)
+    parser.add_argument("--data-dir", "--raw-dir", "--reconciled", dest="data_dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(analyze(args.data_dir), indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

@@ -4,9 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation.model_adjudication.run_v2 import RETRY_COUNT, _call, _sha
 
@@ -94,13 +99,24 @@ def reconcile(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--raw-dir", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--raw-dir", "--run-dir", dest="raw_dir", type=Path, required=True)
+    parser.add_argument("--output-dir", "--output", dest="output", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path, default=None, help="Optional manifest path")
     parser.add_argument("--retries", type=int, default=RETRY_COUNT)
     args = parser.parse_args()
-    print(
-        json.dumps(
-            reconcile(raw_dir=args.raw_dir, output_dir=args.output_dir, retries=args.retries),
-            sort_keys=True,
+
+    raw_dir = args.raw_dir / "raw" if (args.raw_dir / "raw").is_dir() else args.raw_dir
+    if args.output.suffix == ".json":
+        output_dir = args.output.parent / args.output.stem
+        output_file = args.output
+    else:
+        output_dir = args.output
+        output_file = None
+
+    summary = reconcile(raw_dir=raw_dir, output_dir=output_dir, retries=args.retries)
+    if output_file is not None:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-    )
+    print(json.dumps(summary, sort_keys=True))
