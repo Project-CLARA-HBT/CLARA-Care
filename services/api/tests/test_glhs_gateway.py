@@ -322,14 +322,14 @@ def _assertion(
 
 def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
     scope = _scope(db)
-    db.add(
-        UserConsent(
-            user_id=scope.profile.user_id,
-            consent_type="medical_disclaimer",
-            consent_version="test-consent-v1",
-        )
+    uc = UserConsent(
+        user_id=scope.profile.user_id,
+        consent_type="medical_disclaimer",
+        consent_version="test-consent-v1",
     )
+    db.add(uc)
     db.flush()
+    expected_consent_version = f"medical_disclaimer:test-consent-v1:{uc.id}"
     at = _at("2026-08-10T09:00:00")
     assertion = _assertion(
         db,
@@ -340,7 +340,7 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
         epistemic="documented",
     )
     assert assertion.base_state_version == 0
-    assert assertion.consent_version == "medical_disclaimer:test-consent-v1"
+    assert assertion.consent_version == expected_consent_version
     transition = apply_transition(
         db,
         scope=scope,
@@ -351,7 +351,7 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
         transition_kind="user_report",
         reason_code="test",
     )
-    assert transition.consent_version == "medical_disclaimer:test-consent-v1"
+    assert transition.consent_version == expected_consent_version
     replay = apply_transition(
         db,
         scope=scope,
@@ -389,7 +389,7 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
     )
     assert snapshot.state_version == 1
     assert snapshot.policy_version == "glhs.v1"
-    assert snapshot.consent_version == "medical_disclaimer:test-consent-v1"
+    assert snapshot.consent_version == expected_consent_version
     assert [stage["name"] for stage in snapshot.pipeline_trace] == [
         "authorization",
         "temporal_lifecycle",
@@ -408,7 +408,7 @@ def test_proposal_and_thss_are_co_versioned_with_consent(db: Session) -> None:
     )
     assert manifest is not None
     assert manifest.consent_version == snapshot.consent_version
-    assert manifest.consent_basis == ("self_care:medical_disclaimer:test-consent-v1")
+    assert manifest.consent_basis == f"self_care:{expected_consent_version}"
     assert manifest.assertion_hashes_json == list(snapshot.assertion_hashes)
     assert manifest.manifest_digest == snapshot.manifest_digest
     assert db.get(GlhsTransition, transition.id).consent_version == snapshot.consent_version

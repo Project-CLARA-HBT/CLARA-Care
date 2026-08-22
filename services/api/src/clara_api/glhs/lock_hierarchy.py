@@ -107,36 +107,59 @@ def acquire_consent_lock_anchor(
     Must be held by any transaction that writes (grants/revokes) user consent,
     and by GST/Commitment transitions when locking subject state and verifying consent.
 
-    Acquires:
-    1. PostgreSQL transactional advisory locks for user_consent and phr_profile.
-    2. Row-level locks on PhrProfile and User rows (SELECT ... FOR UPDATE).
+    Strict unified canonical acquisition sequence:
+    Step 2a: Always lock User row: SELECT id FROM users WHERE id = :user_id FOR UPDATE
+    Step 2b: Lock PhrProfile row(s): SELECT id FROM phr_profiles WHERE ... FOR UPDATE
+    Step 2c: PostgreSQL transactional advisory locks: user_consent:<user_id> then phr_profile:<profile_id>
     """
-    if profile_id is not None:
-        acquire_advisory_xact_lock(db, f"phr_profile:{profile_id}")
-        profile_row = db.execute(
-            select(PhrProfile.id, PhrProfile.user_id)
-            .where(PhrProfile.id == profile_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
+    if profile_id is not None and user_id is None:
+        profile_lookup = db.execute(
+            select(PhrProfile.user_id).where(PhrProfile.id == profile_id)
         ).first()
-        if profile_row is not None and user_id is None:
-            user_id = profile_row.user_id
+        if profile_lookup is not None:
+            user_id = profile_lookup.user_id
 
     if user_id is not None:
-        acquire_advisory_xact_lock(db, f"user_consent:{user_id}")
-        if profile_id is None:
-            db.execute(
-                select(PhrProfile.id)
-                .where(PhrProfile.user_id == user_id)
-                .with_for_update()
-                .execution_options(populate_existing=True)
-            ).fetchall()
+        # Step 2a: Always lock User row first
         db.execute(
             select(User.id)
             .where(User.id == user_id)
             .with_for_update()
             .execution_options(populate_existing=True)
         ).fetchall()
+
+        # Step 2b: Lock PhrProfile row(s) second
+        profile_ids: list[int] = []
+        if profile_id is not None:
+            db.execute(
+                select(PhrProfile.id)
+                .where(PhrProfile.id == profile_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            ).fetchall()
+            profile_ids = [profile_id]
+        else:
+            p_rows = db.execute(
+                select(PhrProfile.id)
+                .where(PhrProfile.user_id == user_id)
+                .order_by(PhrProfile.id.asc())
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            ).scalars().all()
+            profile_ids = list(p_rows)
+
+        # Step 2c: Transactional advisory locks
+        acquire_advisory_xact_lock(db, f"user_consent:{user_id}")
+        for pid in profile_ids:
+            acquire_advisory_xact_lock(db, f"phr_profile:{pid}")
+    elif profile_id is not None:
+        db.execute(
+            select(PhrProfile.id)
+            .where(PhrProfile.id == profile_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).fetchall()
+        acquire_advisory_xact_lock(db, f"phr_profile:{profile_id}")
 
 
 def _profile_lock_statement(profile_id: int):
@@ -162,10 +185,31 @@ def acquire_profile_and_consent_anchor(
 ) -> tuple[int, int]:
     """Acquire Profile & Consent Lock Anchor (Step 2 in Canonical Lock Hierarchy).
 
-    Locks the PhrProfile row, acquires transactional advisory locks for both
-    profile_id and user_id, and returns (base_state_version, owner_user_id).
+    Strict unified canonical acquisition sequence:
+    Step 2a: Always lock User row: SELECT id FROM users WHERE id = :user_id FOR UPDATE
+    Step 2b: Lock PhrProfile row: SELECT id, user_id FROM phr_profiles WHERE id = :profile_id FOR UPDATE
+    Step 2c: Transactional advisory locks: user_consent:<user_id> then phr_profile:<profile_id>
+
+    Returns (base_state_version, owner_user_id).
     Raises GlhsInvariantError("profile_not_found") if the profile does not exist.
     """
+    profile_lookup = db.execute(
+        select(PhrProfile.id, PhrProfile.user_id).where(PhrProfile.id == profile_id)
+    ).first()
+    if profile_lookup is None:
+        raise GlhsInvariantError("profile_not_found")
+
+    owner_user_id = profile_lookup.user_id
+
+    # Step 2a: Lock User row FIRST
+    db.execute(
+        select(User.id)
+        .where(User.id == owner_user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).fetchall()
+
+    # Step 2b: Lock PhrProfile row SECOND
     profile = db.execute(
         select(PhrProfile.id, PhrProfile.user_id)
         .where(PhrProfile.id == profile_id)
@@ -175,9 +219,9 @@ def acquire_profile_and_consent_anchor(
     if profile is None:
         raise GlhsInvariantError("profile_not_found")
 
-    owner_user_id = profile.user_id
-    acquire_advisory_xact_lock(db, f"phr_profile:{profile_id}")
+    # Step 2c: Transactional advisory locks
     acquire_advisory_xact_lock(db, f"user_consent:{owner_user_id}")
+    acquire_advisory_xact_lock(db, f"phr_profile:{profile_id}")
 
     base_version = current_state_version(db, profile_id=profile_id)
     return base_version, owner_user_id

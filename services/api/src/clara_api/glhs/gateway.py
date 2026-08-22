@@ -393,6 +393,7 @@ def _governed_consent_version(
     second consent authority.  ``not_required`` is explicit rather than an
     absent value for internal and currently ungated workflows.
     When ``for_update=True``, acquires the consent lock anchor to eliminate phantom races.
+    Includes monotonic consent event ID/epoch to eliminate A-B-A revocation blindness.
     """
     if for_update:
         from clara_api.glhs.lock_hierarchy import acquire_consent_lock_anchor
@@ -418,7 +419,7 @@ def _governed_consent_version(
     row = db.execute(stmt).scalar_one_or_none()
     if row is None or row.revoked_at is not None:
         return "not_required"
-    return f"{consent_type}:{row.consent_version}"
+    return f"{consent_type}:{row.consent_version}:{row.id}"
 
 
 def _proposal_consent_version(db: Session, *, profile_id: int) -> str:

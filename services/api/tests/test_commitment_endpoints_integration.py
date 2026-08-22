@@ -171,8 +171,8 @@ def test_owner_commitment_route_is_consent_scoped_and_append_only() -> None:
     )
     assert snapshot.status_code == 200, snapshot.text
     assert snapshot.json()["state_version"] == transition.json()["resulting_state_version"]
-    assert snapshot.json()["consent_version"] == (
-        f"{MEDICAL_CONSENT_TYPE}:{required_medical_disclaimer_version()}"
+    assert snapshot.json()["consent_version"].startswith(
+        f"{MEDICAL_CONSENT_TYPE}:{required_medical_disclaimer_version()}:"
     )
     decision = client.get(
         f"/api/v1/commitments/{proposal.json()['commitment_id']}/decisions/"

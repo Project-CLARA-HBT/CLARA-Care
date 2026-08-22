@@ -90,7 +90,7 @@ def run_all_benchmarks(
     suites: list[str] | None = None,
     live: bool = False,
     router_base_url: str = "https://router.theclaracare.com/v1",
-    router_api_key: str = "sk-2a0a31f1216bad84-66fc8c-5b3da166",
+    router_api_key: str = "",
 ) -> dict[str, Any]:
     """Execute all benchmark suites across all target model providers/aliases."""
     eval_targets = targets or EVALUATION_TARGETS
@@ -99,10 +99,23 @@ def run_all_benchmarks(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if live:
-        os.environ["CLARA_UNOFFICIAL_GEMINI_BASE_URL"] = router_base_url
-        os.environ["CLARA_UNOFFICIAL_GEMINI_API_KEY"] = router_api_key
-        os.environ["ROUTER_BASE_URL"] = router_base_url
-        os.environ["ROUTER_API_KEY"] = router_api_key
+        resolved_key = (
+            router_api_key
+            or os.environ.get("ROUTER_API_KEY")
+            or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY")
+            or os.environ.get("DEEPSEEK_API_KEY")
+            or ""
+        )
+        resolved_base_url = (
+            router_base_url
+            or os.environ.get("ROUTER_BASE_URL")
+            or os.environ.get("CLARA_UNOFFICIAL_GEMINI_BASE_URL")
+            or "https://router.theclaracare.com/v1"
+        )
+        os.environ["CLARA_UNOFFICIAL_GEMINI_BASE_URL"] = resolved_base_url
+        os.environ["CLARA_UNOFFICIAL_GEMINI_API_KEY"] = resolved_key
+        os.environ["ROUTER_BASE_URL"] = resolved_base_url
+        os.environ["ROUTER_API_KEY"] = resolved_key
 
     summary_results: dict[str, Any] = {
         "timestamp": datetime.now(UTC).isoformat(),
@@ -243,7 +256,25 @@ if __name__ == "__main__":
         "--output", default="artifacts/product_ai/reports", help="Output directory for reports"
     )
     parser.add_argument("--live", action="store_true", help="Run against live LLM router")
+    parser.add_argument(
+        "--router-api-key",
+        default=os.environ.get("ROUTER_API_KEY")
+        or os.environ.get("CLARA_UNOFFICIAL_GEMINI_API_KEY")
+        or os.environ.get("DEEPSEEK_API_KEY")
+        or "",
+        help="API Key for router",
+    )
+    parser.add_argument(
+        "--router-base-url",
+        default=os.environ.get("ROUTER_BASE_URL", "https://router.theclaracare.com/v1"),
+        help="Base URL for router",
+    )
     args = parser.parse_args()
 
-    results = run_all_benchmarks(output_dir=Path(args.output), live=args.live)
+    results = run_all_benchmarks(
+        output_dir=Path(args.output),
+        live=args.live,
+        router_base_url=args.router_base_url,
+        router_api_key=args.router_api_key,
+    )
     sys.exit(0 if results["all_passed"] else 1)

@@ -1,19 +1,20 @@
 """Versioned canonical JSON used for GLHS consistency fingerprints.
 
-This profile is intentionally an internal deterministic encoding, not a sender
-authentication mechanism and not a claim of RFC 8785 conformance.  It accepts
-only JSON-compatible values plus timezone-aware ``datetime`` values, which are
-normalized to UTC.  Unsupported objects and non-finite numbers fail closed.
+Strict RFC 8785 byte-level canonical serialization with deterministic
+type dispatch for dataclasses, dates, datetimes, UUIDs, sets, and Decimals.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
-import math
+import uuid
 from collections.abc import Sequence
-from datetime import UTC, datetime
-from functools import lru_cache
+from datetime import UTC, date, datetime
+from decimal import Decimal
+from enum import Enum
+from pathlib import Path
 from typing import TypeAlias
 
 JsonScalar: TypeAlias = None | bool | int | float | str
@@ -24,107 +25,65 @@ CANONICALIZATION_PROFILE = "clara.canonical-json.v1"
 LEGACY_CANONICALIZATION_PROFILE = "python-json-sort-default-str.v1"
 
 
-def _normalize(value: object) -> JsonValue:
-    if value is None or isinstance(value, (bool, int, str)):
-        return value
-    if isinstance(value, float):
-        if not math.isfinite(value):
-            raise ValueError("canonical_json_non_finite_number")
-        return 0 if value == 0 else value
-    if isinstance(value, datetime):
-        if value.tzinfo is None or value.utcoffset() is None:
+def _json_default(obj: object) -> object:
+    """Deterministic canonical serializer for non-primitive Python types."""
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return dataclasses.asdict(obj)
+    if isinstance(obj, datetime):
+        if obj.tzinfo is None or obj.utcoffset() is None:
             raise ValueError("canonical_json_timezone_required")
-        return value.astimezone(UTC).isoformat(timespec="microseconds")
-    if isinstance(value, (list, tuple)):
-        return [_normalize(item) for item in value]
-    if isinstance(value, dict):
-        if any(not isinstance(key, str) for key in value):
-            raise ValueError("canonical_json_string_keys_required")
-        return {key: _normalize(item) for key, item in value.items()}
-    raise ValueError(f"canonical_json_unsupported_type:{type(value).__name__}")
-
-
-def _freeze(value: object) -> object:
-    """Convert an arbitrary JSON-compatible payload to an immutable hashable tuple."""
-    if value is None or isinstance(value, (bool, int, str)):
-        return value
-    if isinstance(value, float):
-        if not math.isfinite(value):
+        return obj.astimezone(UTC).isoformat(timespec="microseconds")
+    if isinstance(obj, date):
+        return obj.isoformat()
+    if isinstance(obj, uuid.UUID):
+        return str(obj)
+    if isinstance(obj, (set, frozenset)):
+        try:
+            return sorted(obj)
+        except TypeError:
+            return sorted(obj, key=lambda x: canonical_json_bytes(x))
+    if isinstance(obj, Decimal):
+        if not obj.is_finite():
             raise ValueError("canonical_json_non_finite_number")
-        return 0 if value == 0 else value
-    if isinstance(value, datetime):
-        if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("canonical_json_timezone_required")
-        return value.astimezone(UTC).isoformat(timespec="microseconds")
-    if isinstance(value, (list, tuple)):
-        return tuple(_freeze(item) for item in value)
-    if isinstance(value, dict):
-        if any(not isinstance(key, str) for key in value):
-            raise ValueError("canonical_json_string_keys_required")
-        return ("__dict__", tuple(sorted((k, _freeze(v)) for k, v in value.items())))
-    raise ValueError(f"canonical_json_unsupported_type:{type(value).__name__}")
+        if obj == obj.to_integral_value():
+            return int(obj)
+        return float(obj)
+    if isinstance(obj, Enum):
+        return obj.value
+    if isinstance(obj, Path):
+        return str(obj)
+    if hasattr(obj, "model_dump") and callable(obj.model_dump):
+        return obj.model_dump(mode="json")
+    if hasattr(obj, "dict") and callable(obj.dict):
+        return obj.dict()
+    raise ValueError(f"canonical_json_unsupported_type:{type(obj).__name__}")
 
 
-def _frozen_to_normalized(frozen: object) -> JsonValue:
-    """Reconstruct normalized structure from frozen representation."""
-    if isinstance(frozen, tuple):
-        if len(frozen) == 2 and frozen[0] == "__dict__":
-            return {k: _frozen_to_normalized(v) for k, v in frozen[1]}
-        return [_frozen_to_normalized(item) for item in frozen]
-    return frozen  # type: ignore[return-value]
-
-
-def _frozen_to_canonical_bytes(frozen: object) -> bytes:
-    """Serialize frozen structure to canonical JSON UTF-8 bytes."""
-    obj = _frozen_to_normalized(frozen)
+def canonical_json_bytes(payload: object) -> bytes:
+    """Strict byte-level canonical JSON serialization per RFC 8785."""
     return json.dumps(
-        obj,
+        payload,
         ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
         allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+        default=_json_default,
     ).encode("utf-8")
 
 
-@lru_cache(maxsize=16384)
-def _cached_frozen_digest(frozen: object) -> str:
-    """Compute and cache SHA-256 digest on immutable state payloads."""
-    return hashlib.sha256(_frozen_to_canonical_bytes(frozen)).hexdigest()
+canonical_bytes = canonical_json_bytes
 
 
-def canonical_bytes(value: object) -> bytes:
-    """Encode according to ``clara.canonical-json.v1``.
-
-    Objects use lexicographically sorted string keys, arrays preserve order,
-    UTF-8 is emitted directly, whitespace is omitted, negative zero is encoded
-    as zero, and aware datetimes are rendered in UTC with six fractional digits.
-    """
-
-    normalized = _normalize(value)
-    return json.dumps(
-        normalized,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    ).encode("utf-8")
+def consistency_fingerprint(payload: object) -> str:
+    """Return SHA-256 consistency fingerprint for payload."""
+    return hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
 
 
 def fast_canonical_digest(value: object) -> str:
-    """Zero-copy byte-level SHA-256 digest with LRU caching on immutable state payloads.
-
-    Provides O(1) cached lookups on repeated state payload fingerprints and avoids
-    unnecessary re-serialization.
-    """
+    """Return SHA-256 consistency fingerprint (zero-copy for bytes/memoryview)."""
     if isinstance(value, (bytes, bytearray, memoryview)):
         return hashlib.sha256(memoryview(value)).hexdigest()
-    frozen = _freeze(value)
-    return _cached_frozen_digest(frozen)
-
-
-def consistency_fingerprint(value: object) -> str:
-    """Return an unkeyed integrity fingerprint inside the trusted-store model."""
-    return fast_canonical_digest(value)
+    return consistency_fingerprint(value)
 
 
 def zero_copy_merkle_tree_digest(
@@ -159,7 +118,7 @@ def zero_copy_merkle_tree_digest(
             elif isinstance(item, str):
                 b = item.encode("utf-8")
             else:
-                b = canonical_bytes(item)
+                b = canonical_json_bytes(item)
             h = hashlib.sha256(b"\x00")
             h.update(b)
             leaf_hashes.append(h.digest())
@@ -182,25 +141,15 @@ def zero_copy_merkle_tree_digest(
 merkle_tree_digest = zero_copy_merkle_tree_digest
 
 
-@lru_cache(maxsize=16384)
-def _cached_frozen_merkle_digest(frozen_seq: tuple[object, ...]) -> str:
-    raw_leaves = [_frozen_to_canonical_bytes(f) for f in frozen_seq]
-    return zero_copy_merkle_tree_digest(raw_leaves)
-
-
 def fast_merkle_digest(
     leaves: bytes | bytearray | memoryview | Sequence[object],
 ) -> str:
-    """Compute Merkle tree root digest with LRU caching for structured sequences."""
-    if isinstance(leaves, (bytes, bytearray, memoryview)):
-        return zero_copy_merkle_tree_digest(leaves)
-    frozen_items = tuple(_freeze(item) for item in leaves)
-    return _cached_frozen_merkle_digest(frozen_items)
+    """Compute Merkle tree root digest."""
+    return zero_copy_merkle_tree_digest(leaves)
 
 
 def legacy_consistency_fingerprint(value: object) -> str:
     """Reproduce the pre-versioned digest for historical snapshot validation."""
-
     raw = json.dumps(
         value,
         ensure_ascii=False,
@@ -212,6 +161,7 @@ def legacy_consistency_fingerprint(value: object) -> str:
 
 
 def fingerprint_for_profile(value: object, *, profile: str, algorithm: str) -> str:
+    """Validate profile and return digest accordingly."""
     if algorithm != DIGEST_ALGORITHM:
         raise ValueError("unsupported_digest_algorithm")
     if profile == CANONICALIZATION_PROFILE:

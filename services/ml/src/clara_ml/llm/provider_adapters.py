@@ -408,6 +408,52 @@ class UnofficialGeminiGatewayAdapter:
                         return "".join(text_parts).strip()
         return ""
 
+    def _parse_response_body(
+        self, response: httpx.Response, fallback_model: str
+    ) -> tuple[str, str, dict[str, int] | None, dict[str, Any]]:
+        raw_text = response.text.strip()
+        content_type = response.headers.get("content-type", "")
+        if "text/event-stream" in content_type or raw_text.startswith("data:"):
+            content_parts: list[str] = []
+            res_model = fallback_model
+            usage: dict[str, int] | None = None
+            raw_data: dict[str, Any] = {"stream_events": []}
+            for raw_line in response.text.splitlines():
+                line = raw_line.strip()
+                if not line or not line.startswith("data:"):
+                    continue
+                chunk_raw = line[5:].strip()
+                if not chunk_raw or chunk_raw == "[DONE]":
+                    continue
+                try:
+                    chunk_data = json.loads(chunk_raw)
+                    raw_data["stream_events"].append(chunk_data)
+                    if "model" in chunk_data and chunk_data["model"]:
+                        res_model = str(chunk_data["model"])
+                    if "usage" in chunk_data and isinstance(chunk_data["usage"], dict):
+                        usage = chunk_data["usage"]
+                    choices = chunk_data.get("choices")
+                    if isinstance(choices, list) and choices:
+                        first = choices[0]
+                        if isinstance(first, dict):
+                            delta = first.get("delta")
+                            if isinstance(delta, dict) and "content" in delta and delta["content"]:
+                                content_parts.append(str(delta["content"]))
+                            elif "text" in first and first["text"]:
+                                content_parts.append(str(first["text"]))
+                except Exception:
+                    continue
+            content = "".join(content_parts).strip()
+            return content, res_model, usage, raw_data
+
+        data = response.json()
+        if not isinstance(data, dict):
+            raise GatewayInvalidResponseError("Gemini gateway returned non-dict JSON")
+        content = self._extract_content(data)
+        res_model = str(data.get("model") or fallback_model)
+        usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
+        return content, res_model, usage, data
+
     def generate(self, request: ModelRequest) -> ModelResponse:
         model = request.model or self._default_model
         payload = self._build_payload(request, model)
@@ -427,18 +473,12 @@ class UnofficialGeminiGatewayAdapter:
                 with httpx.Client(timeout=timeout) as client:
                     response = client.post(url, headers=headers, json=payload)
                     response.raise_for_status()
-                    data = response.json()
+                    content, res_model, usage, data = self._parse_response_body(response, model)
 
-                if not isinstance(data, dict):
-                    raise GatewayInvalidResponseError("Gemini gateway returned non-dict JSON")
-
-                content = self._extract_content(data)
                 if not content:
                     raise GatewayInvalidResponseError("Gemini gateway response content was empty")
 
                 latency_ms = (time.monotonic() - start_time) * 1000
-                res_model = str(data.get("model") or model)
-                usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
 
                 return ModelResponse(
                     content=content,

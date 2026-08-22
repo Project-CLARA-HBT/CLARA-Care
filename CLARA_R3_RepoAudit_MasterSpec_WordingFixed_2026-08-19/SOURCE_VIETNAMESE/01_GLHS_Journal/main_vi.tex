@@ -31,18 +31,20 @@ Hồ sơ sức khỏe theo chiều dọc của người bệnh không đơn thu�
 Nhiều thành phần để xử lý từng phần của bài toán đã tồn tại trong y tin học và khoa học máy tính:
 \begin{itemize}
     \item Cơ sở dữ liệu y khoa từ lâu đã phân biệt thời gian hiệu lực với thời gian giao dịch hoặc thời gian tri thức~\cite{gabrieli1992,kouramajian1994,kumar1998}.
+    \item Trong các hệ thống cơ sở dữ liệu quan hệ, Cơ chế Cô lập Ảnh chụp Tuần tự hóa (SSI) của Cahill và cộng sự~\cite{cahill2008,cahill2009} bảo đảm tính tuần tự hóa dữ liệu thông qua các khóa SIREAD bằng cách theo dõi các phản phụ thuộc đọc--ghi ($rw$-antidependencies), nhưng coi các thay đổi đồng thuận/chính sách bên ngoài như các thao tác ở tầng ứng dụng (application-layer operations).
+    \item Trong lĩnh vực ủy quyền phân tán, các hệ thống như Google Zanzibar của Tang và cộng sự~\cite{zanzibar2019} bảo đảm ủy quyền theo ảnh chụp nhất quán thông qua các token Zookies, nhưng tách rời (decouple) việc đánh giá quyền truy cập khỏi các thao tác ghi giao dịch trên cơ sở dữ liệu vật lý. Các động cơ chính sách khai báo (như Open Policy Agent~\cite{opa}, AWS Cedar~\cite{cedar}) đánh giá quyền truy cập trên các token ảnh chụp nhất quán.
     \item Chuẩn HL7 FHIR cung cấp tài nguyên Provenance, Consent và cơ chế cập nhật phiên bản HTTP (ETag)~\cite{fhirprov,fhirconsent,fhirhttp}; openEHR duy trì mô hình đóng góp có phiên bản và có thể tái dựng lịch sử~\cite{openehr}; và W3C PROV cung cấp mô hình truy vết nguồn gốc tổng quát~\cite{prov}.
     \item Các nghiên cứu AI y tế gần đây xử lý đối chiếu trạng thái theo hai thời gian, hòa giải mâu thuẫn bệnh án và duy trì bộ nhớ dọc~\cite{zhao2026,vitaltrace,dualstream,vista,healthclaw}.
-    \item Các công trình về bộ nhớ tác tử (Agent Memory) bổ sung cơ chế giao dịch, khôi phục trạng thái, lan truyền phạm vi và kiểm tra quyền tại thời điểm ghi~\cite{memtx,memtxn,memclaw,toki,cordon,verifiedconcurrency,temporaryauth,statefulgov}.
+    \item Các công trình về bộ nhớ tác tử (Agent Memory) bổ sung cơ chế giao dịch, khôi phục trạng thái, lan truyền phạm vi và kiểm tra quyền tại thời điểm ghi: verified runtimes hình thức hóa các bất thường đọc--sinh--ghi~\cite{verifiedconcurrency}, CommitGuard (Santos-Grueiro, 2026)~\cite{temporaryauth} xác lập tính tươi mới của nhân chứng thẩm quyền tại ranh giới tạo hiệu ứng bền vững, và Provenact (Peng \& Wu, 2026)~\cite{statefulgov} định nghĩa tính tuần tự hóa theo trạng thái chính sách cho các hiệu ứng tác tử đồng thời.
 \end{itemize}
 
-Những bước tiến này khiến câu hỏi nghiên cứu trở nên tập trung và sâu sắc hơn: \textbf{Liệu phần dữ liệu sức khỏe cụ thể mà mô hình AI đã thực sự tiếp nhận trong quá trình suy luận có thể tiếp tục được giữ như một phụ thuộc kiểm toán bắt buộc của đề xuất ghi về sau hay không?} Kiểm tra phiên bản trạng thái đơn thuần chỉ cho biết hồ sơ có thay đổi hay không, nhưng không xác định được AI đã dựa vào bằng chứng nào, cho mục đích gì và dưới sự đồng thuận nào. Ngược lại, việc giảm thiểu dữ liệu khi đọc sẽ trở nên vô nghĩa nếu mối liên kết giữa dữ liệu đã đọc và quyết định ghi bị đứt gãy.
+Tuy nhiên, các mô hình hiện nay bộc lộ một hạn chế kiến trúc cốt lõi xuyên suốt khoảng thời gian suy luận LLM và duyệt lâm sàng kéo dài nhiều giây. Trong khi cơ chế SSI của Cahill và cộng sự bảo đảm tính tuần tự hóa dữ liệu thông qua các khóa SIREAD nhưng coi các thay đổi đồng thuận/chính sách bên ngoài như các thao tác ở tầng ứng dụng ngoài động cơ cơ sở dữ liệu, thì Zanzibar của Tang và cộng sự bảo đảm ủy quyền theo ảnh chụp nhất quán thông qua Zookies nhưng lại tách rời việc đánh giá quyền truy cập khỏi các thao tác ghi giao dịch trên cơ sở dữ liệu vật lý và không thể ràng buộc ngữ cảnh suy luận LLM với các đột biến dữ liệu lâm sàng thực tế. Ngược lại, việc giảm thiểu dữ liệu khi đọc sẽ trở nên vô nghĩa nếu mối liên kết giữa dữ liệu đã đọc và quyết định ghi bị đứt gãy.
 
-GLHS giải quyết khoảng trống này bằng một hợp đồng đọc--ghi đồng phiên bản được bảo vệ bởi \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}. Bài báo mang lại bốn đóng góp khoa học cốt lõi:
+GLHS giải quyết khoảng trống này bằng cách thiết lập \textbf{tính nguyên tử giữa ảnh chụp quản trị và trạng thái ghi (governance-snapshot atomicity)}: ghép nối nguyên tử các đột biến thực thể lâm sàng với các tọa độ đồng thuận, chính sách và ủy quyền ổn định trong một giao dịch cơ sở dữ liệu duy nhất và ràng buộc ảnh chụp sinh ra vào một cam kết có thể kiểm toán, được bảo vệ bởi \textbf{Rào chắn trạng thái hai tầng (Dual-Layer State Barrier)}. Bài báo mang lại bốn đóng góp khoa học cốt lõi:
 \begin{enumerate}
-    \item Đề xuất \textbf{Hợp đồng cam kết đồng phiên bản có điều kiện công bố} bảo đảm định danh bối cảnh AI đã thấy trở thành một phần của ngữ cảnh thẩm định ghi.
-    \item Xây dựng mô hình \textbf{Quản lý phiên bản phân vùng thực thể (Entity-Partitioned DAG Versioning)} loại bỏ hiện tượng từ chối nhầm (False-stale) trên các phân vùng độc lập dưới tải ghi đồng thời cao trong khi bảo toàn tính tuần tự nguyên tử.
-    \item Cung cấp bản triển khai mẫu trong CLARA-Care thẩm định đầy đủ định danh ảnh chụp, mã băm Merkle, bằng chứng, phiên bản trạng thái, chính sách, đồng thuận, tác nhân, vai trò, mục đích, tác vụ và thời hạn trước khi bền vững hóa.
+    \item Đề xuất \textbf{Hợp đồng cam kết đồng phiên bản có điều kiện công bố} bảo đảm định danh bối cảnh AI đã thấy trở thành một phần của ngữ cảnh thẩm định ghi;
+    \item Xây dựng mô hình \textbf{Quản lý phiên bản phân vùng thực thể (Entity-Partitioned DAG Versioning)} loại bỏ hiện tượng từ chối nhầm (False-stale) trên các phân vùng độc lập dưới tải ghi đồng thời cao trong khi bảo toàn tính tuần tự nguyên tử;
+    \item Cung cấp bản triển khai mẫu trong CLARA-Care thẩm định đầy đủ định danh ảnh chụp, mã băm Merkle, bằng chứng, phiên bản trạng thái, chính sách, đồng thuận, tác nhân, vai trò, mục đích, tác vụ và thời hạn trước khi bền vững hóa;
     \item Thiết kế phương pháp đánh giá phân tách độc lập giữa kiểm thử tuân thủ hợp đồng / cách ly nhân quả, thực nghiệm đồng thời trên PostgreSQL 16 thật ($W=1 \dots 128$), và phân tích độ trễ chi phí dịch vụ.
 \end{enumerate}
 
@@ -51,7 +53,23 @@ GLHS giải quyết khoảng trống này bằng một hợp đồng đọc--ghi
 \section{Hệ thống Liên quan và Ranh giới Tính mới}
 Các công trình năm 2026 đã đưa cơ chế giao dịch vào bộ nhớ tác tử: MemTX và MemTxn hỗ trợ cập nhật có bằng chứng~\cite{memtx,memtxn}; Cordon quản lý giao dịch ngữ nghĩa~\cite{cordon}; TOKI xử lý đại số hai thời gian~\cite{toki}; CommitGuard kiểm tra thẩm quyền tại thời điểm ghi~\cite{temporaryauth}; và Provenact chuẩn hóa tính tuần tự theo trạng thái chính sách~\cite{statefulgov}.
 
-GLHS không định vị mình như một cơ chế giao dịch thay thế hay một hệ thống xác thực chung chung. Điểm khác biệt mang tính quyết định nằm ở \textbf{đối tượng dữ liệu sức khỏe được bảo toàn}: GLHS lưu vết chính xác bản chụp THSS mà AI đã tiêu thụ trong quá trình suy luận. Nếu CommitGuard hỏi ``quyền này còn hiệu lực không?'', thì GLHS hỏi ``đề xuất này có còn được chấp thuận khi xét đúng phần dữ liệu bệnh án, mục đích, tác vụ, đồng thuận mà mô hình đã dựa vào hay không?''.
+\paragraph{Kiểm soát Đồng thời Cơ sở Dữ liệu và Serializable Snapshot Isolation (SSI).}
+Trong các hệ thống cơ sở dữ liệu giao dịch, Cơ chế Cô lập Ảnh chụp Tuần tự hóa (SSI) do Cahill và cộng sự~\cite{cahill2008,cahill2009} đề xuất bảo đảm tính tuần tự hóa dữ liệu thông qua các khóa SIREAD (theo dõi $rw$-antidependency) để phát hiện động các chu trình phụ thuộc dưới mức cô lập snapshot. Mặc dù SSI ngăn chặn hiện tượng write-skew và bóng ma (phantom) trên các bản ghi vật lý, hệ thống này về bản chất coi các thay đổi về đồng thuận của người bệnh, ủy quyền động và chính sách quản trị bên ngoài như các thao tác ở tầng ứng dụng (application-layer operations) nằm ngoài ranh giới giao dịch cơ sở dữ liệu. SSI hoạt động hoàn toàn trên các thao tác đọc--ghi dữ liệu thô trong vòng đời của một giao dịch CSDL duy nhất và không nhận biết được chu kỳ suy luận kéo dài nhiều giây của các tác tử LLM. Do đó, SSI không thể ràng buộc ngữ cảnh nạp vào prompt hoặc sự trôi dạt quản trị bên ngoài (như việc người bệnh thu hồi đồng thuận động hay tăng kỷ nguyên chính sách) vào thao tác ghi giao dịch về sau.
+
+\paragraph{Hệ thống Ủy quyền Nhất quán và Động cơ Chính sách.}
+Trong kiểm soát truy cập phân tán, Tang và cộng sự (Google Zanzibar)~\cite{zanzibar2019} bảo đảm ủy quyền theo ảnh chụp nhất quán thông qua Zookies (các token đánh giá ảnh chụp tại thời điểm xác định), ngăn chặn bài toán ``kẻ thù mới'' (new enemy problem) và bảo đảm tính nhất quán nhân quả trên đồ thị phân quyền phân tán. Tương tự, các động cơ chính sách khai báo như Open Policy Agent (OPA)~\cite{opa} và AWS Cedar~\cite{cedar} đánh giá chính sách dựa trên thuộc tính và vai trò đối với các payload ngữ cảnh có cấu trúc. Tuy nhiên, các khung ủy quyền này tách rời (decouple) việc đánh giá quyền truy cập khỏi các thao tác ghi giao dịch trên cơ sở dữ liệu vật lý: chúng không thể kết hợp và commit nguyên tử quyết định ủy quyền cùng với đột biến trạng thái lâm sàng, trạng thái thực thể hai thời gian và bằng chứng mã băm Merkle trong một giao dịch cơ sở dữ liệu duy nhất. Sự phân tách kiến trúc này tạo ra lỗ hổng Time-of-Check to Time-of-Use (TOCTOU) nguy hiểm, nơi sự đồng thuận của người bệnh, bằng chứng lâm sàng hoặc quy tắc chính sách bị thay đổi trong lúc LLM suy luận hoặc duyệt lâm sàng mà không làm vô hiệu hóa được đề xuất ghi đang chờ tại thời điểm commit.
+
+\paragraph{Định vị Học thuật của GLHS: Tính Nguyên tử giữa Ảnh chụp Quản trị và Trạng thái Ghi.}
+GLHS do đó không được định vị như một nguyên hàm giao dịch tổng quát hay một động cơ ủy quyền độc lập. Thay vào đó, GLHS xác định đóng góp của mình chính xác là \textbf{tính nguyên tử giữa ảnh chụp quản trị và trạng thái ghi (governance-snapshot atomicity)}: ghép nối nguyên tử các đột biến thực thể lâm sàng với các tọa độ đồng thuận, chính sách và ủy quyền ổn định trong một giao dịch cơ sở dữ liệu duy nhất và ràng buộc ảnh chụp sinh ra vào một cam kết có thể kiểm toán, có thể kiểm chứng bằng mật mã.
+
+Định vị học thuật chính xác:
+\begin{quote}
+\emph{``CommitGuard (Santos-Grueiro, 2026) establishes witness freshness at the durable-effect boundary, while Provenact (Peng \& Wu, 2026) defines policy-state serializability for concurrent agent effects. GLHS specializes and extends this boundary to longitudinal healthcare by jointly binding the exact task-minimized disclosure, clinical evidence, bitemporal entity state, consent event, policy epoch, and resulting mutation into one reconstructable transaction. Its contribution is therefore a healthcare-specific compound invariant and implementation—not the discovery of stale authorization—and is evaluated directly against CommitGuard- and Provenact-style commit-time validation.''}
+\end{quote}
+
+Cụ thể, CommitGuard (Santos-Grueiro, 2026)~\cite{temporaryauth} xác lập tính tươi mới của nhân chứng tại ranh giới tạo hiệu ứng bền vững, trong khi Provenact (Peng \& Wu, 2026)~\cite{statefulgov} định nghĩa tính tuần tự hóa theo trạng thái chính sách cho các hiệu ứng tác tử đồng thời. GLHS chuyên biệt hóa và mở rộng ranh giới này cho dữ liệu y tế dài hạn bằng cách liên kết đồng thời phần dữ liệu công bố tối thiểu hóa theo tác vụ, bằng chứng lâm sàng, trạng thái thực thể hai thời gian (bitemporal), sự kiện đồng thuận, kỷ nguyên chính sách và đột biến dữ liệu sinh ra thành một giao dịch duy nhất có thể tái dựng được. Đóng góp của GLHS do đó là một bất biến phức hợp và một bản hiện thực hóa chuyên biệt cho y tế---chứ không phải phát hiện về sự lỗi thời của ủy quyền chung chung---và được đánh giá trực tiếp đối chiếu với cơ chế thẩm định tại thời điểm commit theo phong cách của CommitGuard và Provenact.
+
+Sự phân biệt này mang tính quyết định vì giảm thiểu dữ liệu khi đọc và ủy quyền khi ghi giải quyết hai bài toán bổ trợ nhưng không trùng lặp. Một hệ thống có thể thu hẹp bối cảnh chính xác khi truy xuất nhưng lại cho phép ghi mà không biết mô hình đã dựa trên bản chụp nào. Hệ thống cũng có thể kiểm tra phiên bản trạng thái hiện tại nhưng đánh mất nguồn gốc, mục đích, sự đồng thuận hoặc tác vụ của bối cảnh suy luận. GLHS liên kết chặt chẽ các tọa độ này qua ranh giới thao tác thông qua hợp đồng đồng phiên bản. Đóng góp mang tính hợp thành: các nguyên hàm về thời gian, nguồn gốc, ủy quyền và tương tranh đã được hợp nhất để một bản chụp y tế cụ thể mà mô hình nhìn thấy trở thành một phụ thuộc có thể kiểm chứng của bước chuyển trạng thái lâm sàng bền vững cuối cùng.
 
 \section{Mô hình Hệ thống và Hợp đồng Quản trị GLHS}
 
@@ -63,9 +81,10 @@ S_u(t_v, t_k) = \{ e_1, e_2, \dots, e_n \},
 \end{equation}
 trong đó mỗi phân vùng $e_i$ có khóa định danh duy nhất $\text{Key}(e_i) = \langle \text{profile\_id}, \text{domain}, \text{semantic\_key} \rangle$ (ví dụ: thuốc cụ thể, bảng dị ứng, chỉ số sinh hiệu) và duy trì vector phiên bản cục bộ:
 \begin{equation}
-V(e_i) = \langle v_s(e_i), v_{\pi}(e_i), v_c(e_i) \rangle.
+V(e_i) = \langle v_s(e_i), v_{\pi}(e_i), e_{\text{consent}}(u) \rangle.
 \label{eq:version_vector_vi}
 \end{equation}
+Đặc biệt, sự đồng thuận của người bệnh không được lưu trữ dưới dạng một cờ boolean nhị phân có thể thay đổi, mà được mô hình hóa thành một \textbf{kỷ nguyên sự kiện đồng thuận tăng đơn điệu} $e_{\text{consent}}(u) \in \mathbb{N}$. Mọi chuyển đổi vòng đời đồng thuận---bao gồm cấp quyền, thu hẹp phạm vi, thu hồi hoặc cấp lại quyền---đều làm tăng nghiêm ngặt giá trị $e_{\text{consent}}$ ($e_{\text{consent}}^{(t_2)} > e_{\text{consent}}^{(t_1)}$). Cơ chế tăng đơn điệu này loại bỏ triệt để hiện tượng \textbf{mù thu hồi A-B-A (A-B-A revocation blindness)}, trong đó một hành vi thu hồi đồng thuận ở giữa rồi cấp lại quyền sau đó ($A \to B \to A$) sẽ đánh lừa được việc kiểm tra cờ trạng thái boolean thông thường, từ đó ngăn chặn việc một đề xuất sinh ra từ bối cảnh đọc cũ bị chấp thuận ghi sai trái. Các khẳng định dữ liệu duy trì đầy đủ nguồn gốc, trạng thái nhận thức và vòng đời; các mâu thuẫn được giữ nguyên trong tầm nhìn cho đến khi có một nghị quyết vừa hợp lệ trên trục thời gian thực tế vừa được hệ thống ghi nhận.
 
 \subsection{Rào chắn Trạng thái Hai tầng và Biên dịch THSS}
 \begin{itemize}
@@ -75,14 +94,14 @@ V(e_i) = \langle v_s(e_i), v_{\pi}(e_i), v_c(e_i) \rangle.
 
 Bản chụp THSS đại diện cho bối cảnh đọc có quản trị:
 \begin{equation}
-H = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, t_v, t_k, id_H, d_H, E_H \rangle.
+H = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, e_{\text{consent}}, t_v, t_k, id_H, d_H, E_H \rangle.
 \label{eq:thss_vi}
 \end{equation}
 
 \subsection{Đề xuất Ràng buộc và Bất biến Chấp thuận Ghi}
 Đề xuất do mô hình sinh ra có dạng:
 \begin{equation}
-P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, v_c, id_H, d_H, \Delta, \rho \rangle,
+P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, e_{\text{consent}}, id_H, d_H, \Delta, \rho \rangle,
 \label{eq:proposal_vi}
 \end{equation}
 với tập phụ thuộc $\operatorname{Deps}(P) = \{ \text{target\_key} \} \cup \{ \text{dependency\_keys} \}$. Thao tác ghi GST chỉ thành công khi thỏa mãn:
@@ -90,7 +109,12 @@ với tập phụ thuộc $\operatorname{Deps}(P) = \{ \text{target\_key} \} \cu
 \operatorname{Commit}(P) \iff \operatorname{Bound}(P, H) \land \operatorname{StateCurrent}(P) \land \operatorname{GovernanceCurrent}(P) \land \operatorname{SnapshotValid}(P).
 \label{eq:commit_vi}
 \end{equation}
-Khi commit, GST thu thập các khóa hàng độc quyền \texttt{SELECT ... FOR UPDATE} theo thứ tự phân cấp khóa chuẩn tắc (canonical lock hierarchy) nghiêm ngặt: $\operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState} \prec \text{GovEpochs}$ (khóa các phân vùng thực thể trong $\operatorname{Deps}(P)$ theo thứ tự từ điển $\prec_{\text{lex}}$, tiếp theo là bản ghi trạng thái hồ sơ gốc $\text{ProfileState}(u)$, và cuối cùng là các bản ghi kỷ nguyên quản trị $\text{GovEpochs}(v_{\pi}, v_c)$ gồm đồng thuận và chính sách). Thứ tự phân cấp khóa chuẩn tắc này triệt tiêu hoàn toàn chu trình bế tắc ($\operatorname{Cycle}(\mathcal{W}) = \emptyset$), trong khi quy trình khóa hai pha nghiêm ngặt (Strict 2PL / SS2PL) bảo đảm tính tuần tự xung đột và tính nguyên tử giữa chuyển trạng thái, thẩm định ảnh chụp quản trị và ghi nhận bản ghi kiểm toán nguồn gốc trong cùng một phiên giao dịch cơ sở dữ liệu.
+Khi commit, GST thu thập các khóa hàng độc quyền \texttt{SELECT ... FOR UPDATE} theo thứ tự phân cấp khóa chuẩn tắc toàn cục (global canonical lock hierarchy) $\mathcal{L}_{\text{canonical}}$ nghiêm ngặt:
+\begin{equation}
+\mathcal{L}_{\text{canonical}} = \text{PolicyAnchor}(d) \prec \text{ProfileAndConsentAnchor}(u) \prec_{\text{lex}} \text{EntityPartitions}(u, k) \prec \text{LeaseState}(l),
+\label{eq:canonical_lock_hierarchy_vi}
+\end{equation}
+trong đó $\text{PolicyAnchor}(d)$ khóa neo kỷ nguyên chính sách ổn định của miền $d$, $\text{ProfileAndConsentAnchor}(u)$ khóa hồ sơ gốc và kỷ nguyên sự kiện đồng thuận tăng đơn điệu $e_{\text{consent}}$, $\text{EntityPartitions}(u, k)$ khóa các phân vùng thực thể trong $\operatorname{Deps}(P)$ sắp xếp theo thứ tự từ điển $\prec_{\text{lex}}$, và $\text{LeaseState}(l)$ khóa các hợp đồng thuê ủy quyền. Thứ tự phân cấp khóa chuẩn tắc này triệt tiêu hoàn toàn chu trình bế tắc ($\operatorname{Cycle}(\mathcal{W}) = \emptyset$), trong khi quy trình khóa hai pha nghiêm ngặt (Strict 2PL / SS2PL) bảo đảm tính tuần tự xung đột và tính nguyên tử giữa chuyển trạng thái, thẩm định ảnh chụp quản trị và ghi nhận bản ghi kiểm toán nguồn gốc trong cùng một phiên giao dịch cơ sở dữ liệu.
 
 \begin{figure}[H]
 \centering
@@ -100,10 +124,12 @@ Khi commit, GST thu thập các khóa hàng độc quyền \texttt{SELECT ... FO
 \end{figure}
 
 \subsection{Các Đảm Bảo Hình Thức về Tính Tuần Tự và An Toàn Mật Mã}
-Chúng tôi hình thức hóa đảm bảo tính tuần tự cốt lõi của Rào chắn trạng thái hai tầng GLHS thông qua Định lý 1 (chứng minh toán học hình thức trong Phụ lục~\ref{sec:proofs_vi}). Tính toàn vẹn và kháng giả mạo của ảnh chụp dựa trên tính chất kháng va chạm và kháng tiền ảnh thứ hai tiêu chuẩn của SHA-256 (xác suất giả mạo đề xuất hợp lệ dưới trạng thái nền bị biến đổi là không đáng kể $\le 2^{-128}$), trong khi thứ tự thu thập khóa tuân thủ trật tự phân cấp khóa chuẩn tắc ($\operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState} \prec \text{GovEpochs}$) dưới giao thức Khóa Hai Pha Nghiêm ngặt (SS2PL).
+Chúng tôi hình thức hóa đảm bảo tính tuần tự cốt lõi của Rào chắn trạng thái hai tầng GLHS thông qua Định lý 1 (chứng minh toán học hình thức trong Phụ lục~\ref{sec:proofs_vi}). Tính toàn vẹn và kháng giả mạo của ảnh chụp dựa trên tính chất kháng va chạm và kháng tiền ảnh thứ hai tiêu chuẩn của SHA-256 (xác suất giả mạo đề xuất hợp lệ dưới trạng thái nền bị biến đổi là không đáng kể $\le \operatorname{negl}(\lambda)$), trong khi thứ tự thu thập khóa tuân thủ trật tự phân cấp khóa chuẩn tắc ($\mathcal{L}_{\text{canonical}}$, Phương trình~\ref{eq:canonical_lock_hierarchy_vi}) dưới giao thức Khóa Hai Pha Nghiêm ngặt (SS2PL).
 
-\begin{theorem}[Tính tuần tự chống TOCTOU từ đọc đến ghi]
-Cho bất kỳ lịch thực thi xen kẽ $\mathcal{S}$ nào của các thao tác đọc, chuyển trạng thái lâm sàng đồng thời $\mathcal{T}_{\text{state}}$, sửa đổi quản trị $\mathcal{T}_{\text{gov}}$ (như thu hồi đồng thuận, đổi vai trò, tăng kỷ nguyên chính sách) và chấp thuận đề xuất $\mathcal{T}_{\text{admit}}$ tuân thủ Khóa Hai Pha Nghiêm ngặt (SS2PL) với thứ tự khóa chuẩn tắc ($\operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState} \prec \text{GovEpochs}$): nếu đề xuất $P$ biên dịch từ ảnh chụp $\mathcal{H}$ tại mốc thời gian công bố $t_{\text{disclose}}(\mathcal{H})$ được chấp thuận ghi tại mốc thời gian cam kết $t_{\text{commit}}(P)$, thì đối với mọi phân vùng thực thể $e_k \in \operatorname{Deps}(P)$ và tọa độ quản trị $\langle v_{\pi}, v_c \rangle$, không tồn tại bất kỳ bước chuyển trạng thái hoặc sửa đổi quản trị trung gian $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ nào tác động lên $e_k$ hoặc $\langle v_{\pi}, v_c \rangle$ có mốc thời gian cam kết $t_{\mathcal{T}}$ thỏa mãn $t_{\text{disclose}}(\mathcal{H}) < t_{\mathcal{T}} < t_{\text{commit}}(P)$.
+\begin{theorem}[Tính tuần tự chống TOCTOU từ đọc đến ghi dưới 2PL chuẩn tắc và Kỷ nguyên đồng thuận đơn điệu]
+Cho bất kỳ lịch thực thi xen kẽ $\mathcal{S}$ nào của các thao tác công bố ảnh chụp, chuyển trạng thái lâm sàng đồng thời $\mathcal{T}_{\text{state}}$, sửa đổi quản trị $\mathcal{T}_{\text{gov}}$ (bao gồm cấp đồng thuận, thu hồi, cấp lại, đổi vai trò và tăng kỷ nguyên chính sách) và chấp thuận đề xuất $\mathcal{T}_{\text{admit}}$ tuân thủ Khóa Hai Pha Nghiêm ngặt (SS2PL) với trật tự phân cấp khóa chuẩn tắc $\mathcal{L}_{\text{canonical}}$ (Phương trình~\ref{eq:canonical_lock_hierarchy_vi}):
+$$\mathcal{L}_{\text{canonical}} = \text{PolicyAnchor}(d) \prec \text{ProfileAndConsentAnchor}(u) \prec_{\text{lex}} \text{EntityPartitions}(u, k) \prec \text{LeaseState}(l).$$
+Nếu đề xuất $P$ biên dịch từ ảnh chụp $\mathcal{H}$ tại mốc thời gian công bố $t_{\text{disclose}}(\mathcal{H})$ với kỷ nguyên đồng thuận đơn điệu $e_{\text{consent}}(\mathcal{H})$ và kỷ nguyên chính sách $v_{\pi}(\mathcal{H})$ được chấp thuận ghi tại mốc thời gian giao dịch $t_{\text{commit}}(P)$, thì đối với mọi phân vùng thực thể $e_k \in \operatorname{Deps}(P)$ và tọa độ quản trị $\langle v_{\pi}, e_{\text{consent}} \rangle$, không tồn tại bất kỳ bước chuyển trạng thái hoặc sửa đổi quản trị trung gian $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ nào tác động lên $e_k$ hoặc $\langle v_{\pi}, e_{\text{consent}} \rangle$ có mốc thời gian cam kết $t_{\mathcal{T}}$ thỏa mãn $t_{\text{disclose}}(\mathcal{H}) < t_{\mathcal{T}} < t_{\text{commit}}(P)$. Hơn nữa, vì kỷ nguyên sự kiện đồng thuận $e_{\text{consent}}$ tăng nghiêm ngặt đơn điệu sau mỗi chuyển đổi vòng đời đồng thuận, giao thức miễn nhiễm toán học trước hiện tượng mù thu hồi A-B-A, và đồ thị tuần tự hóa $SG(\mathcal{S})$ bảo đảm không có chu trình, xác lập tính tuần tự hóa xung đột nghiêm ngặt mà không xảy ra bế tắc hay bóng ma (phantom).
 \end{theorem}
 
 \begin{table}[H]
@@ -293,10 +319,16 @@ GLHS thiết lập mô hình quản trị đọc--ghi đồng phiên bản chu�
 \section*{Tuyên bố và Cam kết}
 Các tác giả khẳng định không có xung đột lợi ích tài chính hoặc phi tài chính. Mã nguồn và bộ dữ liệu thực nghiệm được công khai tại: \url{https://github.com/Project-CLARA-HBT/CLARA-Care}.
 
-\begin{thebibliography}{20}
+\begin{thebibliography}{25}
 \bibitem{gabrieli1992} Gabrieli ER. Longitudinal patient record (LPR). \emph{Journal of Clinical Computing}. 1992;21(1--2):1--16.
 \bibitem{kouramajian1994} Kouramajian V, Fowler J. Modeling past, current, and future time in medical databases. \emph{Proc Annu Symp Comput Appl Med Care}. 1994:315--319.
 \bibitem{kumar1998} Kumar A, Tsotras VJ, Faloutsos C. Designing access methods for bitemporal databases. \emph{IEEE Trans Knowl Data Eng}. 1998;10(1):1--20.
+\bibitem{cahill2008} Cahill MJ, R{\"o}hm U, Fekete AD. Serializable isolation for snapshot databases. In: \emph{Proc ACM SIGMOD}. 2008:729--738.
+\bibitem{cahill2009} Cahill MJ, R{\"o}hm U, Fekete AD. Serializable isolation for snapshot databases. \emph{ACM Trans Database Syst}. 2009;34(4):20:1--20:42.
+\bibitem{zanzibar2019} Tang R, C{\'a}ceres R, Burrows M, et al. Zanzibar: Google's Consistent, Global Authorization System. In: \emph{Proc USENIX ATC}. 2019:643--656.
+\bibitem{opa} De Ocampo T, et al.; Open Policy Agent Authors. Open Policy Agent (OPA). Cloud Native Computing Foundation; 2026. \url{https://www.openpolicyagent.org/}.
+\bibitem{cedar} Amazon Web Services. Cedar: A language for expressing and evaluating fine-grained authorization policies. AWS; 2023. \url{https://www.cedarpolicy.com/}.
+\bibitem{eswaran1976} Eswaran KP, Gray JN, Lorie RA, Traiger IL. The notions of consistency and predicate locks in a database system. \emph{Commun ACM}. 1976;19(11):624--633.
 \bibitem{fhirprov} HL7 International. FHIR R4: Provenance. 2019. \url{https://hl7.org/fhir/R4/provenance.html}.
 \bibitem{fhirconsent} HL7 International. FHIR R4: Consent. 2019. \url{https://hl7.org/fhir/R4/consent.html}.
 \bibitem{fhirhttp} HL7 International. FHIR R4: RESTful API / HTTP. 2019. \url{https://hl7.org/fhir/R4/http.html}.
@@ -320,27 +352,65 @@ Các tác giả khẳng định không có xung đột lợi ích tài chính ho
 
 \newpage
 \appendix
-\section{Chứng minh Toán học Hình thức của Định lý 1 (Tính Tuần tự Chống TOCTOU)}
+\section{Chứng minh Toán học Hình thức của Định lý 1 (Tính Tuần tự Chống TOCTOU dưới Khóa Chuẩn tắc và Kỷ nguyên Đồng thuận Đơn điệu)}
 \label{sec:proofs_vi}
 
 \begin{proof}
-Giả sử phản chứng rằng đề xuất $P$ sinh từ bản chụp $\mathcal{H}$ được commit thành công tại thời điểm $t_3 = t_{\text{commit}}(P)$, nhưng tồn tại một bước chuyển trung gian $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ được commit tại $t_2$ ($t_1 < t_2 < t_3$) làm biến đổi phân vùng $e_k \in \operatorname{Deps}(P)$ hoặc thay đổi trạng thái quản trị $\langle v_{\pi}, v_c \rangle$.
+Giả sử $\mathcal{H} = \operatorname{THSS}(u, a, r, \phi, \tau, \vec{v}_0, v_{\pi}, e_{\text{consent}}, id_H, d_H, E_H)$ được biên dịch tại mốc thời gian công bố $t_1 = t_{\text{disclose}}(\mathcal{H})$ với mã băm Merkle:
+\begin{equation*}
+d_H = \operatorname{MerkleRoot}(E_H \cup \vec{v}_0 \cup \Phi_{\text{policy}} \cup \Sigma_{\text{consent}}),
+\end{equation*}
+trong đó $\vec{v}_0 = \{ V(e_k)_{t_1} \mid e_k \in \operatorname{Deps}(P) \}$ là vector phiên bản nền của các phân vùng phụ thuộc, và $\Phi_{\text{policy}}, \Sigma_{\text{consent}}$ biểu diễn kỷ nguyên chính sách $v_{\pi}$ và kỷ nguyên sự kiện đồng thuận tăng đơn điệu $e_{\text{consent}}$ tại $t_1$.
+Gọi $P = \langle u, a, r, \phi, \tau, v_s, v_{\pi}, e_{\text{consent}}, id_H, d_H, \Delta, \rho \rangle$ là đề xuất do Tầng 2 sinh ra với tập phụ thuộc $\operatorname{Deps}(P) = \{e_{(1)}, e_{(2)}, \dots, e_{(m)}\} \subset \mathcal{V}_u$.
 
-Giao thức chấp thuận GST tuân thủ Khóa Hai Pha Nghiêm ngặt (SS2PL) với trật tự phân cấp khóa chuẩn tắc toàn phần:
+Giao thức chấp thuận GST tuân thủ Khóa Hai Pha Nghiêm ngặt (SS2PL) với trật tự phân cấp khóa chuẩn tắc toàn phần $\mathcal{L}_{\text{canonical}}$:
 \begin{equation}
-\mathcal{L}_{\text{canonical}} = \operatorname{Deps}(P) \prec_{\text{lex}} \text{ProfileState}(u) \prec \text{GovEpochs}(v_{\pi}, v_c).
+\mathcal{L}_{\text{canonical}} = \text{PolicyAnchor}(d) \prec \text{ProfileAndConsentAnchor}(u) \prec_{\text{lex}} \text{EntityPartitions}(u, k) \prec \text{LeaseState}(l),
+\label{eq:proof_canonical_lock_hierarchy_vi}
 \end{equation}
-
-Theo định nghĩa của giao dịch cơ sở dữ liệu dưới cơ chế khóa hàng nghiêm ngặt:
+trong đó:
 \begin{enumerate}
-    \item Theo bất biến tăng phiên bản đơn điệu, khi $\mathcal{T}$ commit tại $t_2$, nó giữ khóa độc quyền trên phân vùng $e_k$ và đã tăng phiên bản trạng thái: $V(e_k)_{t_2} \ge V(e_k)_{t_1} + 1 > V(e_k)_{t_1}$.
-    \item Tại $t_3$, GST bắt đầu giai đoạn phát triển khóa theo SS2PL, thu thập các khóa hàng độc quyền (\texttt{SELECT ... FOR UPDATE}) theo đúng thứ tự từ điển $\prec_{\text{lex}}$ trên các phân vùng trong $\operatorname{Deps}(P)$, bao gồm $e_k$.
-    \item Đang giữ khóa độc quyền trên $e_k$, GST đánh giá vị từ $\operatorname{StateCurrent}(P)$, so sánh phiên bản nền khai báo trong $P$ với hàng đang khóa: $V(e_k)_{\text{current}} == v_s(e_k) = V(e_k)_{t_1}$.
-    \item Do $V(e_k)_{\text{current}} = V(e_k)_{t_2} > v_s(e_k)$, điều kiện $\operatorname{StateCurrent}(P)$ trả về $\text{False}$.
-    \item Tại $t_3$, tuân theo thứ tự $\mathcal{L}_{\text{canonical}}$, GST thu thập khóa độc quyền trên $\text{ProfileState}(u)$ và các bản ghi kỷ nguyên quản trị $\text{GovEpochs}(v_{\pi}, v_c)$. GST đánh giá vị từ $\operatorname{GovernanceCurrent}(P)$. Nếu $\mathcal{T}$ thu hồi đồng thuận hoặc tăng kỷ nguyên chính sách tại $t_2$, các bản ghi quản trị bị khóa phản ánh phiên bản mới, buộc $\operatorname{GovernanceCurrent}(P)$ trả về $\text{False}$.
-    \item Nếu dữ liệu trong $P$ bị sửa đổi hoặc tráo đổi, kiểm tra ràng buộc mật mã $\operatorname{Bound}(P, \mathcal{H})$ phát hiện mã băm $d_H(P) \neq \operatorname{RecomputeMerkleRoot}(id_H)$, trả về $\text{False}$ với xác suất áp đảo nhờ tính kháng va chạm SHA-256.
+    \item $\text{PolicyAnchor}(d)$ khóa neo kỷ nguyên chính sách ổn định của miền lâm sàng $d$;
+    \item $\text{ProfileAndConsentAnchor}(u)$ khóa bản ghi gốc hồ sơ bệnh nhân và kỷ nguyên sự kiện đồng thuận tăng đơn điệu $e_{\text{consent}}$;
+    \item $\text{EntityPartitions}(u, k) = \left( e_{(1)} \prec_{\text{lex}} e_{(2)} \prec_{\text{lex}} \dots \prec_{\text{lex}} e_{(m)} \right)$ thu thập các khóa hàng độc quyền (\texttt{SELECT ... FOR UPDATE}) trên các phân vùng phụ thuộc sắp xếp theo thứ tự từ điển chuẩn tắc;
+    \item $\text{LeaseState}(l)$ khóa các hợp đồng thuê ủy quyền và quyền tạm thời.
 \end{enumerate}
-Do đó, điều kiện $\operatorname{Commit}(P)$ trong Phương trình~\ref{eq:commit_vi} bắt buộc trả về $\text{False}$ và giao dịch $P$ bị hủy bỏ (aborted) nguyên tử vô điều kiện. Điều này mâu thuẫn với giả thiết $P$ được commit thành công tại $t_3$. Hơn nữa, vì mọi giao dịch đồng thời đều thu thập khóa theo trật tự toàn phần $\mathcal{L}_{\text{canonical}}$, đồ thị chờ khóa không có chu trình ($\operatorname{Cycle}(\mathcal{W}) = \emptyset$), triệt tiêu hoàn toàn bế tắc. Theo định lý Khóa Hai Pha kinh điển (Eswaran et al., 1976), mọi lịch thực thi xen kẽ hợp lệ $\mathcal{S}$ đều bảo đảm tính tuần tự xung đột nghiêm ngặt. $\blacksquare$
+
+\paragraph{1. Triệt tiêu Bế tắc nhờ Thứ tự Khóa Chuẩn tắc Toàn phần.}
+Vì mọi giao dịch $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}} \cup \mathcal{T}_{\text{admit}}$ đều yêu cầu khóa tuần tự theo đúng trật tự phân cấp toàn phần $\mathcal{L}_{\text{canonical}}$, đồ thị chờ khóa $\mathcal{W}(\mathcal{S})$ không thể chứa bất kỳ chu trình có hướng nào ($\operatorname{Cycle}(\mathcal{W}) = \emptyset$). Theo định lý kinh điển của Eswaran và cộng sự~\cite{eswaran1976}, việc khóa theo trật tự toàn phần triệt tiêu hoàn toàn bế tắc tiên nghiệm.
+
+\paragraph{2. Đồng bộ hóa Chống Hiện tượng Bóng ma (Phantom-Safe).}
+Trong mô hình khóa vị từ, hiện tượng bóng ma xảy ra khi một giao dịch đồng thời chèn thêm bản ghi mới thỏa mãn vị từ sau khi một giao dịch khác đã đọc. Trong GLHS, mọi phân vùng thực thể $e_k$ đều trực thuộc gốc hồ sơ bệnh nhân $\text{ProfileAndConsentAnchor}(u)$, và mọi quy tắc quản trị đều trực thuộc $\text{PolicyAnchor}(d)$. Bất kỳ giao dịch nào muốn chèn phân vùng mới, sửa đổi phân vùng, thu hồi đồng thuận hoặc ban hành chính sách mới đều bắt buộc phải thu thập khóa độc quyền trên các gốc neo ổn định tương ứng ($\text{ProfileAndConsentAnchor}(u)$ hoặc $\text{PolicyAnchor}(d)$) trước khi thao tác. Do các tiến trình ghi GST ($\mathcal{T}_{\text{admit}}$) và tiến trình quản trị ($\mathcal{T}_{\text{gov}}$) đều đồng bộ hóa trên các gốc khóa ổn định này, không có bản ghi bóng ma nào có thể lọt qua giữa thời điểm $t_1 = t_{\text{disclose}}(\mathcal{H})$ và $t_3 = t_{\text{commit}}(P)$.
+
+\paragraph{3. Chứng minh Tính Bất biến Chống TOCTOU và Kháng Mù Thu hồi A-B-A bằng Phản chứng.}
+Giả sử phản chứng rằng đề xuất $P$ được commit thành công tại $t_3 = t_{\text{commit}}(P)$, nhưng tồn tại một bước chuyển trung gian $\mathcal{T} \in \mathcal{T}_{\text{state}} \cup \mathcal{T}_{\text{gov}}$ được commit tại $t_2$ ($t_1 < t_2 < t_3$) tác động lên phân vùng $e_k \in \operatorname{Deps}(P)$ hoặc thay đổi tọa độ quản trị $\langle v_{\pi}, e_{\text{consent}} \rangle$.
+
+Dưới giao thức SS2PL và bất biến tăng phiên bản đơn điệu:
+\begin{itemize}
+    \item \textbf{Trường hợp 1: Đột biến trạng thái lâm sàng trung gian ($\mathcal{T} \in \mathcal{T}_{\text{state}}$ trên $e_k \in \operatorname{Deps}(P)$).}
+    Khi $\mathcal{T}$ commit tại $t_2$, nó giữ khóa độc quyền trên $e_k$ và đã tăng phiên bản trạng thái đơn điệu: $V(e_k)_{t_2} \ge V(e_k)_{t_1} + 1 > V(e_k)_{t_1}$.
+    Tại $t_3$, GST bắt đầu giai đoạn thu thập khóa theo $\mathcal{L}_{\text{canonical}}$, khóa thành công $e_k$.
+    Đang giữ khóa độc quyền, GST đánh giá vị từ $\operatorname{StateCurrent}(P)$, so sánh phiên bản nền khai báo trong $P$ với hàng đang khóa: $V(e_k)_{\text{current}} == v_s(e_k) = V(e_k)_{t_1}$.
+    Do $V(e_k)_{\text{current}} = V(e_k)_{t_2} > V(e_k)_{t_1}$, điều kiện $\operatorname{StateCurrent}(P)$ trả về $\text{False}$.
+
+    \item \textbf{Trường hợp 2: Trôi dạt quản trị / đồng thuận và Ngăn ngừa hiện tượng mù thu hồi A-B-A ($\mathcal{T} \in \mathcal{T}_{\text{gov}}$ trên $\langle v_{\pi}, e_{\text{consent}} \rangle$).}
+    Nếu $\mathcal{T}$ thực hiện chuyển đổi vòng đời đồng thuận (như thu hồi $A \to B$, thu hẹp phạm vi, hoặc cấp lại quyền $A \to B \to A$) hoặc cập nhật kỷ nguyên chính sách tại $t_2$, nó đã khóa $\text{ProfileAndConsentAnchor}(u)$ hoặc $\text{PolicyAnchor}(d)$ và tăng nghiêm ngặt các bộ đếm kỷ nguyên đơn điệu: $e_{\text{consent}}(t_2) > e_{\text{consent}}(t_1)$ hoặc $v_{\pi}(t_2) > v_{\pi}(t_1)$.
+    Tại $t_3$, theo trật tự $\mathcal{L}_{\text{canonical}}$, GST thu thập khóa độc quyền trên $\text{PolicyAnchor}(d)$ và $\text{ProfileAndConsentAnchor}(u)$.
+    GST đánh giá vị từ $\operatorname{GovernanceCurrent}(P)$, so sánh tọa độ trong $P$ với bản ghi bị khóa ($e_{\text{consent}}(\text{current}) == e_{\text{consent}}(P)$ và $v_{\pi}(\text{current}) == v_{\pi}(P)$).
+    Vì $e_{\text{consent}}(\text{current}) \ge e_{\text{consent}}(t_2) > e_{\text{consent}}(t_1)$ (hoặc $v_{\pi}(\text{current}) \ge v_{\pi}(t_2) > v_{\pi}(t_1)$), $\operatorname{GovernanceCurrent}(P)$ trả về $\text{False}$.
+    Đặc biệt, ngay cả trong kịch bản A-B-A khi bệnh nhân thu hồi tại $t_2$ ($e_2 = e_1 + 1$) và cấp lại quyền tại $t_2'$ trước $t_3$ ($e_3 = e_2 + 1$), tính chất tăng đơn điệu bảo đảm $e_{\text{consent}}(\text{current}) = e_3 > e_1 = e_{\text{consent}}(P)$. Do đó, việc cấp lại quyền không thể che giấu hành vi thu hồi trước đó (miễn nhiễm trước hiện tượng mù thu hồi A-B-A) và giao dịch bị từ chối xác định.
+
+    \item \textbf{Trường hợp 3: Tính bất khả xâm phạm mật mã của tọa độ nền.}
+    Nếu một tác tử đối kháng hoặc mô hình bị thỏa hiệp cố tình chỉnh sửa tọa độ nền $\vec{v}_0, v_{\pi}, e_{\text{consent}}$ trong $P$ để khớp với trạng thái mới tại $t_2$, vị từ $\operatorname{Bound}(P, \mathcal{H})$ sẽ tính lại Merkle Root và đối chiếu với $d_H(id_H)$. Nhờ tính chất kháng tiền ảnh thứ hai và kháng va chạm của SHA-256, xác suất tạo ra $P'$ có dữ liệu bị biến đổi nhưng vẫn thỏa mãn mã băm Merkle đã ký $d_H$ là không đáng kể $\le \operatorname{negl}(\lambda)$.
+\end{itemize}
+
+Trong mọi trường hợp, điều kiện commit $\operatorname{Commit}(P)$ trong Phương trình~\ref{eq:commit_vi} bắt buộc trả về $\text{False}$, buộc GST phải hủy bỏ giao dịch và thực hiện rollback nguyên tử. Điều này mâu thuẫn với giả thiết $P$ được commit thành công tại $t_3$.
+
+\paragraph{4. Tính Phi Chu trình của Đồ thị Tuần tự hóa $SG(\mathcal{S})$.}
+Gọi $SG(\mathcal{S}) = (\mathcal{V}, \mathcal{E})$ là đồ thị tuần tự hóa của lịch thực thi $\mathcal{S}$, với các đỉnh $\mathcal{V}$ là các giao dịch đã commit và các cạnh có hướng $(\mathcal{T}_i \to \mathcal{T}_j) \in \mathcal{E}$ đại diện cho các thao tác xung đột khi $\mathcal{T}_i$ truy cập tài nguyên trước khi $\mathcal{T}_j$ truy cập ở chế độ xung đột.
+Dưới SS2PL, bất kỳ giao dịch $\mathcal{T}_i$ nào cũng giữ toàn bộ khóa độc quyền và chia sẻ cho đến thời điểm commit $t_{\text{commit}}(\mathcal{T}_i)$. Nếu $(\mathcal{T}_i \to \mathcal{T}_j) \in \mathcal{E}$, thì $\mathcal{T}_j$ không thể thu thập khóa xung đột trên bất kỳ neo hoặc phân vùng nào cho đến khi $\mathcal{T}_i$ giải phóng khóa khi commit, suy ra $t_{\text{commit}}(\mathcal{T}_i) < t_{\text{commit}}(\mathcal{T}_j)$.
+Vì các mốc thời gian commit thực tế tạo thành một thứ tự toàn phần tăng nghiêm ngặt trên tất cả các giao dịch đã commit ($t_{\text{commit}}(\mathcal{T}_i) < t_{\text{commit}}(\mathcal{T}_j) \implies \mathcal{T}_i \prec_{\text{commit}} \mathcal{T}_j$), không thể tồn tại chu trình $\mathcal{T}_1 \to \mathcal{T}_2 \to \dots \to \mathcal{T}_k \to \mathcal{T}_1$ trong $SG(\mathcal{S})$ vì điều này dẫn đến điều vô lý $t_{\text{commit}}(\mathcal{T}_1) < t_{\text{commit}}(\mathcal{T}_1)$.
+Do đó, $SG(\mathcal{S})$ hoàn toàn không có chu trình ($\operatorname{Cycle}(SG(\mathcal{S})) = \emptyset$). Theo Định lý Tuần tự hóa kinh điển~\cite{eswaran1976}, lịch thực thi xen kẽ $\mathcal{S}$ bảo đảm tính tuần tự hóa xung đột nghiêm ngặt, thiết lập tính an toàn chống TOCTOU toàn diện từ đọc đến ghi. $\blacksquare$
 \end{proof}
 
 \end{document}

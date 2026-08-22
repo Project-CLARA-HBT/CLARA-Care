@@ -7,7 +7,7 @@ phiếu xét nghiệm (multipart hoặc JSON base64) tới `POST /ocr`; adapter 
 
 Key / router config:
     ROUTER_BASE_URL = https://router.theclaracare.com/v1
-    ROUTER_API_KEY  = sk-2a0a31f1216bad84-66fc8c-5b3da166
+    ROUTER_API_KEY  = <read from environment>
     OCR_MODEL       = gemini-3.7-flash-tiered
     OCR_FALLBACK_MODEL = gemini-3.6-flash-high
 
@@ -33,7 +33,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("clara-ocr-vision")
 
 DEFAULT_ROUTER_BASE_URL = "https://router.theclaracare.com/v1"
-DEFAULT_API_KEY = "sk-2a0a31f1216bad84-66fc8c-5b3da166"
+DEFAULT_API_KEY = ""
 DEFAULT_PRIMARY_MODEL = "gemini-3.7-flash-tiered"
 DEFAULT_FALLBACK_MODEL = "gemini-3.6-flash-high"
 DEFAULT_LANG = "vi"
@@ -58,9 +58,10 @@ def _get_base_url() -> str:
 def _get_api_key() -> str:
     key = (
         os.getenv("ROUTER_API_KEY")
+        or os.getenv("CLARA_UNOFFICIAL_GEMINI_API_KEY")
+        or os.getenv("DEEPSEEK_API_KEY")
         or os.getenv("OCR_API_KEY")
         or os.getenv("OPENAI_API_KEY")
-        or os.getenv("DEEPSEEK_API_KEY")
         or DEFAULT_API_KEY
     ).strip()
     return key

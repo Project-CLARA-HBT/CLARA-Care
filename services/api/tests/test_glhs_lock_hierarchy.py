@@ -98,7 +98,7 @@ def test_compliance_consent_grant_and_withdraw_participate_in_lock_anchor(db: Se
 
 def test_acquire_canonical_glhs_locks_strict_total_order(db: Session) -> None:
     user, profile = _create_user_and_profile(db)
-    PhrConsentService.grant(db, user_id=user.id, purpose="personalization", version="2026-v1")
+    grant_row = PhrConsentService.grant(db, user_id=user.id, purpose="personalization", version="2026-v1")
     db.commit()
 
     locks = acquire_canonical_glhs_locks(
@@ -111,7 +111,7 @@ def test_acquire_canonical_glhs_locks_strict_total_order(db: Session) -> None:
     assert locks.base_state_version == 0
     assert locks.owner_user_id == user.id
     assert locks.effective_policy_version == "glhs.v1"
-    assert locks.effective_consent_version == "phr_personalization:2026-v1"
+    assert locks.effective_consent_version == f"phr_personalization:2026-v1:{grant_row.id}"
     assert len(locks.locked_partitions) == 2
     # Verify sorted lexicographically (domain, semantic_key)
     assert (locks.locked_partitions[0].domain, locks.locked_partitions[0].semantic_key) == ("conditions", "diag-002")
